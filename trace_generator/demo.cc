@@ -52,7 +52,7 @@ int main(int, char **) {
   // The minimum duration of the trace.
   std::chrono::seconds min_duration(2);
 
-  // The pseudo-random number generator's seed.
+  // The minimum percent of queries meeting the latency bound.
   double latency_bound_percentile = 0.95;
 
   // The pseudo-random number generator's seed.

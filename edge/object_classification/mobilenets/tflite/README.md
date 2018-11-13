@@ -1,7 +1,6 @@
-<a name="mobilenets-tflite"></a>
 # MobileNets via TensorFlow Lite
 
-**TODO**: Refer to installation instructions.
+Please follow the common [installation instructions](../README.md#installation) first.
 
 **NB:** See [`ck-tensorflow:program:image-classification-tflite`](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tflite) for more details.
 

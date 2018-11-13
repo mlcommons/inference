@@ -1,7 +1,6 @@
-<a name="mobilenets-tf-py"></a>
 # MobileNets via TensorFlow (Python)
 
-**TODO**: Refer to installation instructions.
+Please follow the common [installation instructions](../README.md#installation) first.
 
 **NB:** See [`ck-tensorflow:program:image-classification-tf-py`](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tf-py) for more details.
 

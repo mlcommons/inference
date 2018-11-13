@@ -8,9 +8,9 @@
 1. [Installation](#installation)
     1. [Install prerequisites](#installation-debian) (Debian-specific)
     1. [Install CK workflows](#installation-workflows) (universal)
-1. **FIXME:** [Benchmark MobileNets via TensorFlow Lite](#mobilenets-tflite)
-1. **FIXME:** [Benchmark MobileNets via TensorFlow (C++)](#mobilenets-tf-cpp)
-1. **FIXME:** [Benchmark MobileNets via TensorFlow (Python)](#mobilenets-tf-py)
+1. [Benchmark MobileNets via TensorFlow Lite](tflite/README.md)
+1. [Benchmark MobileNets via TensorFlow (C++)](tf-cpp/README.md)
+1. [Benchmark MobileNets via TensorFlow (Python)](tf-py/README.md)
 
 <a name="installation"></a>
 # Installation

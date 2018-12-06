@@ -27,7 +27,8 @@ $ sudo apt install libblas-dev liblapack-dev
 
 ### Install Python, pip, SciPy and CK
 ```bash
-$ sudo apt install python3 python3-pip
+$ sudo apt install python3 python3-pip python3-tk
+$ sudo python3 -m pip install cython
 $ sudo python3 -m pip install scipy
 $ sudo python3 -m pip install ck
 ```

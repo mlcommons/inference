@@ -1,4 +1,4 @@
-# MobileNets via TensorFlow (Python)
+# SSD-MobileNet-v1 via TensorFlow (Python)
 
 Please follow the [installation instructions](../README.md#installation) first.
 

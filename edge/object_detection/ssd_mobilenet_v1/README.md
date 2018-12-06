@@ -1,12 +1,12 @@
 [![compatibility](https://github.com/ctuning/ck-guide-images/blob/master/ck-compatible.svg)](https://github.com/ctuning/ck)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-# MLPerf Inference - Object Detection - SSD-MobileNet-v1
+# MLPerf Edge Inference - Object Detection - SSD-MobileNet-v1
 
 1. [Installation](#installation)
     1. [Install prerequisites](#installation-debian) (Debian-specific)
     1. [Install CK workflows](#installation-workflows) (universal)
-1. [Benchmark MobileNets via TensorFlow (Python)](tf-py/README.md)
+1. [Benchmark SSD-MobileNet-v1 via TensorFlow (Python)](tf-py/README.md)
 
 <a name="installation"></a>
 # Installation

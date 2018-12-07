@@ -40,6 +40,7 @@ RUN pip install h5py \
                 python-Levenshtein \
                 librosa \
                 wget \
+                sox \
                 tensorboardX
 
 RUN apt-get update && apt-get install --yes --no-install-recommends cmake sudo

@@ -2,6 +2,7 @@
 # Script to download Librispeech Dataset
 # For best results allow downloader to use all dataset files.
 # For the inference baseline, use the clean set.
+#
 # ARG		CHOICE				HELP
 # ${1} = {all, clean, ...}		See the if statements for details.. selectively downloads data form librispeech
 

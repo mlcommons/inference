@@ -1,10 +1,16 @@
-# ShuffleNet via Caffe2
+# Caffe2 ShuffleNet Evaluation with [MLModelScope](http://docs.mlmodelscope.org)
 
 ## Model Manifest
 
-[ShuffleNet_Caffe2](https://github.com/rai-project/caffe2/blob/master/builtin_models/ShuffleNet_Caffe2.yml)
+A model manifest is defined in YAML format and contains all the information needed to reproduce a model’s evaluation results. It tells MLModelScope the HW/SW stack to instantiate and how to evaluate the model.
+
+The manifest for this model is at [ShuffleNet_Caffe2](https://github.com/rai-project/caffe2/blob/master/builtin_models/ShuffleNet_Caffe2.yml).
 
 ## Evaluation
+
+### MlModelScope Configration
+
+You must have a carml config file called .carml_config.yml under your home directory. Please refer to [carml_config.yml](https://docs.mlmodelscope.org/installation/configuration/).
 
 ### Tracer and Database
 
@@ -12,7 +18,8 @@ Please refer to [external_services](https://docs.mlmodelscope.org/installation/s
 
 ### Software Environment
 
-[Dockerfile.amd64_cpu](https://github.com/rai-project/caffe2/blob/master/caffe2-agent/dockerfiles/Dockerfile.amd64_cpu)
+[Base](https://github.com/rai-project/dlframework/blob/master/dockerfiles/base/Dockerfile.amd64_cpu)
+[Caffe2](https://github.com/rai-project/go-caffe2/blob/master/dockerfiles/Dockerfile.amd64_cpu)
 
 ### Evalution
 

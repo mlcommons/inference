@@ -6,24 +6,11 @@ A model manifest is defined in YAML format and contains all the information need
 
 The manifest for this model is at [ShuffleNet_Caffe2](https://github.com/rai-project/caffe2/blob/master/builtin_models/ShuffleNet_Caffe2.yml).
 
+The environment is run within the [Caffe2](https://github.com/rai-project/go-caffe2/blob/master/dockerfiles/Dockerfile.amd64_cpu) dockerfile.
+
 ## Evaluation
 
-### MlModelScope Configration
-
-You must have a carml config file called `.carml_config.yml` under your home directory. Please refer to [carml_config.yml](https://docs.mlmodelscope.org/installation/configuration/).
-
-### Tracer and Database
-
-## Examine Model Manifest
-
-[ShuffleNet_Caffe2](https://github.com/rai-project/caffe2/blob/master/builtin_models/ShuffleNet_Caffe2.yml)
-
-<<<<<<< Updated upstream
-[Base](https://github.com/rai-project/dlframework/blob/master/dockerfiles/base/Dockerfile.amd64_cpu)
-[Caffe2](https://github.com/rai-project/go-caffe2/blob/master/dockerfiles/Dockerfile.amd64_cpu)
-=======
-
-## Evaluating Performance
+## Performance
 
 You can test the accuracy on CPU using the following script:
 
@@ -53,11 +40,17 @@ docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest 
 
 If you need to run with gpu enabled then you need to change the docker image name from `amd64-cpu-latest` to `amd64-gpu-latest` and then set the `gpu` option to `1`.
 
-## Evaluating Accuracy
+### Accuracy
 
 TODO
 
-## Viewing Accuracy Information
+## Reporting
+
+### Performance Information
+
+TODO
+
+### Accuracy Information
 
 ```bash
 #!/bin/bash

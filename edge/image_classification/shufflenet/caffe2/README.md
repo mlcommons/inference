@@ -59,8 +59,6 @@ TODO
 
 ## Viewing Accuracy Information
 
-````bash
-
 ```bash
 #!/bin/bash
 
@@ -74,4 +72,4 @@ docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest 
       --model_version=$MODEL_VERSION \
       --database_name=$DATABASE_NAME \
       --trace_level=$TRACE_LEVEL
-````
+```

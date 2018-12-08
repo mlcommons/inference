@@ -1,6 +1,12 @@
-# MLPerf Inference - Object Classification - ShuffleNet using [MLModelScope](MLModelScope.org) [![MLModelScope](https://img.shields.io/badge/mlmodelscope-mlperf-green.svg)](https://mlmodelscope.org) [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+# MLPerf Inference - Image Classification - ShuffleNet using [MLModelScope](MLModelScope.org)
 
-# MLPerf Inference - Image Classification - ShuffleNet
+[![MLModelScope](https://img.shields.io/badge/mlmodelscope-mlperf-green.svg)](https://mlmodelscope.org)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
+To maintain the SW stack and to guarantee isolation, evaluation occurs within docker containers. One can introspect the SW stack using exsiting docker tools that allows querying a image’s SW environment, its metadata, and perform diffs between container images.
+
+Evaluations are traced by MLModelScope tracer and traces can be published to a database for later analysis.
+MLModelScope comes with reporting commands built in to aggreate and analyze the evaluation output.
 
 ## Installation
 
@@ -27,7 +33,6 @@ docker run -p 27017:27017 --restart always -d mongo:3.0
 
 You must have a carml config file called `.carml_config.yml` under your home directory. Please refer to [carml_config.yml](https://docs.mlmodelscope.org/installation/configuration/).
 
-## Evaluating
+## Evaluation
 
-1. [Benchmark ShuffleNet via MXNet](mxnet/README.md)
-2. [Benchmark ShuffleNet via Caffe2](caffe2/README.md)
+1. [Benchmark ShuffleNet via Caffe2](caffe2/README.md)

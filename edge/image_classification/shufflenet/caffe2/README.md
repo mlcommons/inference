@@ -16,6 +16,44 @@ The following command outputs the available evaluation commands in MLModelScope.
 docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest predict -h
 ```
 
+```
+Predicts using the MLModelScope agent
+
+Usage:
+  Caffe2-agent predict [command]
+
+Available Commands:
+  dataset     Evaluates the dataset using the specified model and framework
+  max-qps     Finds the maximun qps of the system using the specified model, framework and workload
+  urls        Evaluates the urls using the specified model and framework
+  workload    Evaluates the workload using the specified model and framework
+
+Flags:
+  -b, --batch_size int                        the batch size to use while performing inference (default 64)
+      --database_address database.endpoints   the address of the mongo database to store the results. By default the address in the config database.endpoints is used
+      --database_name app.name                the name of the database to publish the evaluation results to. By default the app name in the config app.name is used
+      --fail_on_error                         turning on causes the process to terminate/exit upon first inference error. This is useful since some inferences will result in an error because they run out of memory
+      --gpu                                   whether to enable the gpu. An error is returned if the gpu is not available
+  -h, --help                                  help for predict
+      --model_name string                     the name of the model to use for prediction (default "BVLC-AlexNet")
+      --model_version string                  the version of the model to use for prediction (default "1.0")
+  -p, --partition_list_size int               the chunk size to partition the input list. By default this is the same as the batch size
+      --publish                               whether to publish the evaluation to database. Turning this off will not publish anything to the database. This is ideal for using carml within profiling tools or performing experiments where the terminal output is sufficient.
+      --publish_predictions                   whether to publish prediction results to database. This will store all the probability outputs for the evaluation in the database which could be a few gigabytes of data for one dataset
+      --trace_level string                    the trace level to use while performing evaluations (default "APPLICATION_TRACE")
+      --tracer_address string                 the address of the jaeger or the zipking trace server (default "localhost:16686")
+
+Global Flags:
+      --config string   config file (default is $HOME/.carml_config.yaml)
+  -d, --debug           Toggle debug mode.
+  -l, --local           Listen on local address.
+      --profile         Enable profile mode.
+  -s, --secret string   The application secret.
+  -v, --verbose         Toggle verbose mode.
+
+Use "Caffe2-agent predict [command] --help" for more information about a command.
+```
+
 The example comands are in [example.sh](example.sh).
 
 ### Performance
@@ -25,26 +63,29 @@ You can evaluate the performance on CPU using the following script:
 ```bash
 #!/bin/bash
 
-DATABASE_ADDRESS=X.X.X.X # the ip of database to publish traces to
+DATABASE_ADDRESS=localhost # the ip of database to publish traces to
 DATABASE_NAME=shufflenet_model_trace # the name of database to publish traces to
 MODEL_NAME=ShuffleNet_Caffe2 # model name
 MODEL_VERSION=1.0 # model version
 NUM_FILE_PARTS=100 # number of batches to be processed, set to -1 to evalute the entire ImageNet
 BATCH_SIZE=1 # batch size
 TRACE_LEVEL=MODEL_TRACE # trace level
+TRACER_ADDRESS=localhost # the ip of tracer
 
-docker run --network host -t -v $HOME:/root -u `id -u`:`id -g` carml/caffe2-agent:amd64-cpu-latest predict dataset \
+docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest predict dataset \
       --fail_on_error=true \
       --verbose \
-      --publish=true \ # weather to publish to database
-      --publish_predictions=false \ # weather to publish the prediction  of each inputto database
+      --publish=true \
+      --publish_predictions=false \
       --gpu=0 \
       --num_file_parts=$NUM_FILE_PARTS \
       --batch_size=$BATCH_SIZE \
       --model_name=$MODEL_NAME \
       --model_version=$MODEL_VERSION \
       --database_name=$DATABASE_NAME \
-      --trace_level=$TRACE_LEVEL
+      --database_address=$DATABASE_ADDRESS \
+      --trace_level=$TRACE_LEVEL \
+      --tracer_address-$TRACER_ADDRESS
 ```
 
 If you need to run with gpu enabled then you need to use `nvidia-docker` instead of `docker`, change the docker image tag from `amd64-cpu-latest` to `amd64-gpu-latest` and then set the `gpu` option to `1`.

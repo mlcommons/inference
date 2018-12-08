@@ -7,6 +7,7 @@ MODEL_VERSION=1.0 # model version
 NUM_FILE_PARTS=100 # number of batches to be processed, set to -1 to evalute the entire ImageNet
 BATCH_SIZE=1 # batch size
 TRACE_LEVEL=MODEL_TRACE # trace level
+TRACER_ADDRESS=localhost # the ip of tracer
 
 docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest predict dataset \
       --fail_on_error=true \
@@ -20,7 +21,8 @@ docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest 
       --model_version=$MODEL_VERSION \
       --database_name=$DATABASE_NAME \
       --database_address=$DATABASE_ADDRESS \
-      --trace_level=$TRACE_LEVEL
+      --trace_level=$TRACE_LEVEL \
+      --tracer_address-$TRACER_ADDRESS
 
 docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest info evaluation latency \
       --batch_size=$BATCH_SIZE \

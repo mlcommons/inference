@@ -1,6 +1,6 @@
 # Caffe2 ShuffleNet Evaluation with [MLModelScope](http://docs.mlmodelscope.org)
 
-## Install Requirements
+## Model Information and Environment
 
 A model manifest is defined in YAML format and contains all the information needed to reproduce a model’s evaluation results. It tells MLModelScope the HW/SW stack to instantiate and how to evaluate the model.
 
@@ -9,6 +9,12 @@ The manifest for this model is at [ShuffleNet_Caffe2](https://github.com/rai-pro
 The environment is run within the [Caffe2](https://github.com/rai-project/go-caffe2/blob/master/dockerfiles/Dockerfile.amd64_cpu) dockerfile.
 
 ## Evaluation
+
+The following command outputs the available evaluation commands in MLModelScope.
+
+```
+docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest predict -h
+```
 
 The example comands are in [example.sh](example.sh).
 
@@ -53,7 +59,11 @@ Similar to the script above but set `NUM_FILE_PARTS` to `-1` and config the trac
 
 ## Reporting
 
-The following scirpt outputs the available reporting commands in MLModelScope.
+The following command outputs the available reporting commands in MLModelScope.
+
+```
+docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest info evaluation -h
+```
 
 ```
 Get evaluation information from MLModelScope
@@ -100,46 +110,30 @@ Global Flags:
 Use "Caffe2-agent info evaluation [command] --help" for more information about a command.
 ```
 
+Available output formats are table, json and csv.
+
 ### Performance Information
 
-To get latency information, run the following script.
+To get latency information, run the following command.
 
-```bash
-#!/bin/bash
-
-DATABASE_ADDRESS=X.X.X.X # the ip of database to publish traces to
-DATABASE_NAME=shufflenet_model_trace # the name of database to publish traces to
-MODEL_NAME=ShuffleNet_Caffe2 # model name
-MODEL_VERSION=1.0 # model version
-BATCH_SIZE=1 # batch size
-TRACE_LEVEL=MODEL_TRACE # trace level
-
-docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest info evaluation latency\
+```
+docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest info evaluation latency \
       --batch_size=$BATCH_SIZE \
       --model_name=$MODEL_NAME \
       --model_version=$MODEL_VERSION \
       --database_name=$DATABASE_NAME \
-      --trace_level=$TRACE_LEVEL
+      --database_address=$DATABASE_ADDRESS
 ```
 
 ### Accuracy Information
 
-To get accuracy information, run the following script.
+To get accuracy information, run the following command.
 
-```bash
-#!/bin/bash
-
-DATABASE_ADDRESS=X.X.X.X # the ip of database to publish traces to
-DATABASE_NAME=shufflenet_model_trace # the name of database to publish traces to
-MODEL_NAME=ShuffleNet_Caffe2 # model name
-MODEL_VERSION=1.0 # model version
-BATCH_SIZE=1 # batch size
-TRACE_LEVEL=MODEL_TRACE # trace level
-
-docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest info evaluation accuracy\
+```
+docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest info evaluation acurracy\
       --batch_size=$BATCH_SIZE \
       --model_name=$MODEL_NAME \
       --model_version=$MODEL_VERSION \
       --database_name=$DATABASE_NAME \
-      --trace_level=$TRACE_LEVEL
+      --database_address=$DATABASE_ADDRESS
 ```

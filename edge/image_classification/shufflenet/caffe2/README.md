@@ -77,7 +77,7 @@ docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest 
       --verbose \
       --publish=true \
       --publish_predictions=false \
-      --gpu=0 \
+      --gpu=false \
       --num_file_parts=$NUM_FILE_PARTS \
       --batch_size=$BATCH_SIZE \
       --model_name=$MODEL_NAME \

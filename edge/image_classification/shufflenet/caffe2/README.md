@@ -88,7 +88,7 @@ docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest 
       --tracer_address-$TRACER_ADDRESS
 ```
 
-If you need to run with gpu enabled then you need to use `nvidia-docker` instead of `docker`, change the docker image tag from `amd64-cpu-latest` to `amd64-gpu-latest` and then set the `gpu` option to `1`.
+If you need to run with gpu enabled then you need to use `nvidia-docker` instead of `docker`, change the docker image tag from `amd64-cpu-latest` to `amd64-gpu-latest` and then set the `gpu` option to `true`.
 
 ### Accuracy
 
@@ -171,7 +171,7 @@ docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest 
 To get accuracy information, run the following command.
 
 ```
-docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest info evaluation acurracy\
+docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-cpu-latest info evaluation accuracy\
       --batch_size=$BATCH_SIZE \
       --model_name=$MODEL_NAME \
       --model_version=$MODEL_VERSION \

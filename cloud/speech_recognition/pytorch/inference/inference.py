@@ -20,7 +20,7 @@ from model.utils import get_model, get_labels, get_audio_conf
 
 
 def main(args):
-    params.cuda = not bool(args.cpu)
+    params.cuda = args.device == "gpu"
     print("Use cuda: {}".format(params.cuda))
 
     torch.manual_seed(args.seed)
@@ -142,8 +142,8 @@ if __name__ == '__main__':
                         type=int, help='Random Seed')
     parser.add_argument('--use_set', default="libri",
                         choices=['libri', 'ov'], help='ov = OpenVoice test set, libri = Librispeech val set')
-    parser.add_argument('--cpu',
-                        action='store_true', help='Use cpu to do inference instead of the default gpu')
+    parser.add_argument('--device', default='cpu',
+                        choices=['cpu', 'gpu'], help='Use cpu to do inference instead of the default gpu')
     parser.add_argument('--batch_size_val', default=-1,
                         type=int, help='Batch size used for inference, overrides the param settings')
     parser.add_argument('--warmups', default=0,

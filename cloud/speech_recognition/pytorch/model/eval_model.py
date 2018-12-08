@@ -167,7 +167,7 @@ def eval_model_verbose(model,
                 this_pred = decoded_output[x]
                 this_true = target_strings[x]
                 if item_num <= len(item_info_array):
-                    item_latency = item_info_array[item_num - 1][0]
+                    item_latency = item_info_array[item_num - 1]['batch_latency']
                 else:
                     item_latency = "-9999"
 

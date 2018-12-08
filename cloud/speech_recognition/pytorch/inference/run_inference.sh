@@ -12,13 +12,13 @@ DATASET="libri"
 MODELS_DIR="."
 SLICE_FLAG=""
 FORCE_DURATION=-1
-DEVICE="--cpu"		# Use nothing (ie "") for gpu
+DEVICE="cpu"		# Use "gpu" for gpu
 WARMUPS=5
 if [ "${1}" = "batch_1_latency" ]
 then
 	BATCHSIZE=1
 	python inference.py \
-	    ${DEVICE} \
+	    --device ${DEVICE} \
 	    --batch_size_val ${BATCHSIZE} \
 	    --checkpoint \
 	    --continue_from ${MODELS_DIR}/trained_model_deepspeech2.pth \
@@ -31,7 +31,7 @@ fi
 if [ "${1}" = "batching_throughput" ]
 then    
 	python inference.py \
-	    ${DEVICE} \
+	    --device ${DEVICE} \
 	    --batch_size_val 1 \
 	    --checkpoint \
 	    --continue_from ${MODELS_DIR}/trained_model_deepspeech2.pth \
@@ -49,7 +49,7 @@ then
 		echo $bsi
 		echo $fdj
 		python inference.py \
-		    ${DEVICE} \
+		    --device ${DEVICE} \
 		    --batch_size_val ${bsi} \
 		    --checkpoint \
 		    --continue_from ${MODELS_DIR}/trained_model_deepspeech2.pth \
@@ -57,7 +57,7 @@ then
 		    --warmups ${WARMUPS} \
 		    --seed $RANDOM_SEED \
 		    --force_duration ${FORCE_DURATION} \
-		    --batch_1_file inference_bs1_cpu.csv \
+		    --batch_1_file inference_bs1_${DEVICE}.csv \
 		    ${SLICE_FLAG}
 	done
 fi

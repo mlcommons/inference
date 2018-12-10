@@ -1,10 +1,10 @@
-# Caffe2 ShuffleNet Evaluation with [MLModelScope](http://docs.mlmodelscope.org)
+# Caffe2/ONNX ShuffleNet v1.3 Evaluation with [MLModelScope](http://docs.mlmodelscope.org)
 
 ## Model Information and Environment
 
 A model manifest is defined in YAML format and contains all the information needed to reproduce a model’s evaluation results. It tells MLModelScope the HW/SW stack to instantiate and how to evaluate the model.
 
-The manifest for this model is at [ShuffleNet_Caffe2](https://github.com/rai-project/caffe2/blob/master/builtin_models/ShuffleNet_Caffe2.yml).
+The manifest for this model is at [ShuffleNet_v1.3_ONNX](https://github.com/rai-project/caffe2/blob/master/builtin_models/ShuffleNet_v1.3_ONNX.yml).
 
 The environment is run within the [Caffe2](https://github.com/rai-project/go-caffe2/blob/master/dockerfiles/Dockerfile.amd64_cpu) dockerfile.
 

@@ -2,7 +2,7 @@
 
 DATABASE_ADDRESS=localhost:27017 # the ip of database to publish traces to
 DATABASE_NAME=shufflenet_model_trace # the name of database to publish traces to
-MODEL_NAME=ShuffleNet_Caffe2 # model name
+MODEL_NAME=ShuffleNet_v1.3_ONNX # model name
 MODEL_VERSION=1.0 # model version
 NUM_FILE_PARTS=100 # number of batches to be processed, set to -1 to evalute the entire ImageNet
 BATCH_SIZE=1 # batch size

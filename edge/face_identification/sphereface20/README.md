@@ -80,18 +80,17 @@ $ ./inference_sphereface.sh
 ## Results
 The following table records the required time on Intel-NUC7i3BNH machine.       
 
-| Phase                                            | seconds   |    
+| Phase                                           | seconds   |    
 | ----------------------------------------------- |---------: |    
 | Pre-processing time                             | 79.06     |    
 | Inference time for all testing pairs            | 271.47    |    
 | Post-processing time                            | 0.012     |    
 
 The following table record the average inference time and accuracy of Sphererface20 model.   
-   
-|                                               |             |     
-|-----------------------------------------------|------------:|     
-|Average time for each TFLite model inference   |112.4613 ms  |     
-|Accuracy on 600 test pairs                     |98.33%       |     
+
+| Average time for each TFLite model inference | Accuracy on 600 test pairs |     
+| :------------------------------------------: | :------------------------: |     
+| 112.4613 ms                                  | 98.33%                     |     
 
 
 

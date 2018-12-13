@@ -15,29 +15,20 @@ We choose Sphereface-20, which is a 20-layer residual based convolutional neural
 
 In host machine, which is used to prepared benchmark running on target machine:   
 1. Clone MLPerf/inference repository    
-    ```
-    # for public github     
-    $ git clone https://github.com/mlperf/inference     
-
-    # for internel gitlab, (will be delete for official release)    
-    $ git clone git@172.22.80.181:chengming/mlperf-inference.git     
-    
+    ```     
+    $ git clone https://github.com/MediaTekMLPerfUpload/inference
     ```
 
 1. Using TensorFlow docker image in host machine   
-    ```
+    ```     
     $ docker pull tensorflow/tensorflow:nightly-devel-py3
     ```
 
 1. Run docker image     
     This steps will mount sphereface directory into docker:/mnt directory   
     We can run sphereface benchmark in docker image.  
-    ```
-    # clone via public github     
+    ```     
     $ docker run -it -w /mnt -v ${PWD}/inference/edge/face_identification/sphereface20:/mnt -e HOST_PERMS="$(id -u):$(id -g)" tensorflow/tensorflow:nightly-devel-py3 bash
-
-    # clone via internal gitlab     
-    $ docker run -it -w /mnt -v ${PWD}/mlperf-inference/edge/face_identification/sphereface20:/mnt -e HOST_PERMS="$(id -u):$(id -g)" tensorflow/tensorflow:nightly-devel-py3 bash
     ```
 
 In docker image:    

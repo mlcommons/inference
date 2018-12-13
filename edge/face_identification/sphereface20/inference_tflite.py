@@ -12,7 +12,7 @@ from postprocess.eval import lfw_metric
 
 
 flags = tf.app.flags
-flags.DEFINE_string("input_model", '/tmp/sphereface_float.tflite', 'Name of input tflite file')
+flags.DEFINE_string("input_model", './model/sphereface_float.tflite', 'Name of input tflite file')
 flags.DEFINE_string("lfw_dir", '/tmp/dataset/lfw_set1', 'path of lfw validation set tfrecord')
 FLAGS = flags.FLAGS
 

@@ -23,24 +23,15 @@ In host machine, which is used to prepared benchmark running on target machine:
 
 1. Run docker image     
     This steps will mount sphereface directory into docker:/mnt directory   
-    We can run sphereface benchmark in docker image, make sure you are in mlperf/inference directory.  
+    We can run sphereface benchmark in docker image, clone sphereface directory to /mnt directory in docker.  
     ```     
-    $ docker run -it -w /mnt -v ${PWD}/edge/face_identification/sphereface20:/mnt -e HOST_PERMS="$(id -u):$(id -g)" tensorflow/tensorflow:nightly-devel-py3 bash
+    $ docker run -it -w /mnt -v ${PWD}inference/edge/face_identification/sphereface20:/mnt -e HOST_PERMS="$(id -u):$(id -g)" tensorflow/tensorflow:nightly-devel-py3 bash
     ```
 
 In docker image:    
 1. prepare environment (installing package and set environment path)     
     ```
     $ ./prepare_env.sh    
-    ```
-
-1. download pre-trained TFLite model    
-    ```     
-    # for public github, not sure where to upload the model to      
-    #       
-    # for internal gitlab   
-    $ apt-get install openssh-client    
-    $ scp jimmy@172.22.83.48:/mnt/nas3/chengming/MLPerf/sphereface_float.tflite /tmp
     ```
 
 <a name="dataset"></a>

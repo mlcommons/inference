@@ -85,7 +85,7 @@ The following table is the model information, include parameters numbers and GMA
 
 | Parameters  | GMAC |     
 | :---------: | :--: |     
-| 21.61\*10^6 | 1.75 |     
+| 2.16 \* 10^7 | 1.75 |     
 
 The following table records the required time on Intel-NUC7i3BNH machine.       
 

@@ -78,6 +78,12 @@ $ ./inference_sphereface.sh
 
 <a name="results"></a>
 ## Results
+The following table is the model information, include parameters numbers and GMAC (Giga Multiply-and-Accumulate)
+
+| Parameters | GMAC |     
+| :--------: | :--: |     
+| 21.61 MB   | 1.75 |     
+
 The following table records the required time on Intel-NUC7i3BNH machine.       
 
 | Phase                                           | seconds   |    

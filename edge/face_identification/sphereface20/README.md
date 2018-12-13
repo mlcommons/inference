@@ -52,6 +52,12 @@ We choose the first 600 pairs, set1, for the benchmark.
 
 <a name="inference"></a>
 ## TFLite model inference       
+Your can run the overall inference steps using the following script.    
+```
+$ ./inference_sphereface.sh     
+```
+
+Below illustrates the detial procedure about sphereface inference.      
 The inference procedure consists of three phases:    
 1. Pre-process      
     * Pre-process stage consists of face detection, facial landmark detection and face alignment.
@@ -71,10 +77,7 @@ The inference procedure consists of three phases:
     * The output 1024-dim feature vectors in each test pair will be compared using cosine similarity to determin whether the pair belongs to the same identity or not.      
     * For post-process code, you can refer the postprocess/eval.py
 
-Your can run the overall inference steps using the following script.    
-```
-$ ./inference_sphereface.sh     
-```
+
 
 <a name="results"></a>
 ## Results

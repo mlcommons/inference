@@ -1,14 +1,30 @@
 import sys
 sys.path.append('../')
 import time
-import numpy as np
+import csv
+from collections import OrderedDict
 
 import torch
-from torch.autograd import Variable
 
 from params import cuda
 from utils import AverageMeter
 
+csv_header = ['batch_num',
+              'batch_latency',
+              'batch_duration_s',
+              'batch_seq_len',
+              'batch_size_kb',
+              'item_num',
+              'item_latency',
+              'item_duration_s',
+              'item_seq_len',
+              'item_size_kb',
+              'word_count',
+              'char_count',
+              'word_err_count',
+              'char_err_count',
+              'pred',
+              'target']
 
 
 def eval_model(model, test_loader, decoder):
@@ -21,7 +37,7 @@ def eval_model(model, test_loader, decoder):
     # For each batch in the test_loader, make a prediction and calculate the WER CER
     for data in test_loader:
         inputs, targets, input_percentages, target_sizes = data
-        inputs = torch.Tensor(inputs)
+        inputs = torch.autograd.Variable(inputs)
 
         # unflatten targets
         split_targets = []
@@ -61,25 +77,66 @@ def eval_model(model, test_loader, decoder):
     return wer, cer
 
 
-def eval_model_verbose(model, test_loader, decoder, cuda, n_trials=-1):
+def eval_model_verbose(model,
+                       test_loader,
+                       decoder,
+                       cuda,
+                       out_path,
+                       item_info_array,
+                       warmups=0,
+                       meta=False):
     """
     Model evaluation -- used during inference.
+
+    returns wer, cer, batch time array and warm up time
     """
+    # Warming up
+    end = time.time()
+    total_trials = len(test_loader)
+    for i, data in enumerate(test_loader):
+        if i >= warmups:
+            break
+        sys.stdout.write("\rWarmups ({}/{}) ".format(i+1, warmups))
+        sys.stdout.flush()
+        if meta:
+            inputs, targets, input_percentages, target_sizes, batch_meta, item_meta = data
+        else:
+            inputs, targets, input_percentages, target_sizes = data
+        inputs = torch.autograd.Variable(inputs, volatile=False)
+
+        # unflatten targets
+        split_targets = []
+        offset = 0
+        for size in target_sizes:
+            split_targets.append(targets[offset:offset + size])
+            offset += size
+
+        if cuda:
+            inputs = inputs.cuda()
+
+        out = model(inputs)
+    warmup_time = time.time() - end
+    if warmups > 0: print("Warmed up in {}s").format(warmup_time)
+
+    # the actual inference trial
     total_cer, total_wer = 0, 0
     word_count, char_count = 0, 0
     model.eval()
     batch_time = AverageMeter()
 
-    # We allow the user to specify how many batches (trials) to run
-    trials_ran = min(n_trials if n_trials != -1 else len(test_loader), len(test_loader))
+    # For each batch in the test_loader, make a prediction and calculate the WER CER
+    item_num = 1
+    with open(out_path, 'wb') as f:
+        csvwriter = csv.DictWriter(f, fieldnames=csv_header)
+        csvwriter.writeheader()
+        for i, data in enumerate(test_loader):
+            batch_num = i + 1
+            if meta:
+                inputs, targets, input_percentages, target_sizes, batch_meta, item_meta = data
+            else:
+                inputs, targets, input_percentages, target_sizes = data
 
-    for i, data in enumerate(test_loader):
-        if i >= n_trials != -1:
-            break
-        else:
-            end = time.time()
-            inputs, targets, input_percentages, target_sizes = data
-            inputs = Variable(inputs, volatile=False)
+            inputs = torch.autograd.Variable(inputs, volatile=False)
 
             # unflatten targets
             split_targets = []
@@ -90,7 +147,9 @@ def eval_model_verbose(model, test_loader, decoder, cuda, n_trials=-1):
 
             if cuda:
                 inputs = inputs.cuda()
+            end = time.time()  # Timing start (Inference only)
             out = model(inputs)
+            batch_time.update(time.time() - end)  # Timing end (Inference only)
             out = out.transpose(0, 1)  # TxNxH
             seq_length = out.size(0)
             sizes = input_percentages.mul_(int(seq_length)).int()
@@ -99,21 +158,54 @@ def eval_model_verbose(model, test_loader, decoder, cuda, n_trials=-1):
             # Get the LEV score and the word, char count
             decoded_output = decoder.decode(out.data, sizes)
             target_strings = decoder.process_strings(decoder.convert_to_strings(split_targets))
+            batch_we = batch_wc = batch_ce = batch_cc = 0
             for x in range(len(target_strings)):
-                total_wer += decoder.wer(decoded_output[x], target_strings[x])
-                total_cer += decoder.cer(decoded_output[x], target_strings[x])
-                word_count += len(target_strings[x].split())
-                char_count += len(target_strings[x])
+                this_we = decoder.wer(decoded_output[x], target_strings[x])
+                this_ce = decoder.cer(decoded_output[x], target_strings[x])
+                this_wc = len(target_strings[x].split())
+                this_cc = len(target_strings[x])
+                this_pred = decoded_output[x]
+                this_true = target_strings[x]
+                if item_num <= len(item_info_array):
+                    item_latency = item_info_array[item_num - 1]['batch_latency']
+                else:
+                    item_latency = "-9999"
 
-            # Measure elapsed batch time (time per trial)
-            batch_time.update(time.time() - end)
+                out_data = [batch_num,
+                            batch_time.array[-1],
+                            batch_meta[2],
+                            batch_meta[4],
+                            batch_meta[3],
+                            item_num,
+                            item_latency,
+                            item_meta[x][2],
+                            item_meta[x][4],
+                            item_meta[x][3],
+                            this_wc, this_cc,
+                            this_we, this_ce,
+                            this_pred, this_true]
+
+                csv_dict = {k:v for k, v in zip(csv_header, out_data)}
+                csvwriter.writerow(csv_dict)
+
+                item_num += 1
+                batch_we += this_we
+                batch_ce += this_ce
+                batch_wc += this_wc
+                batch_cc += this_cc
+
+            total_wer += batch_we
+            total_cer += batch_ce
+            word_count += batch_wc
+            char_count += batch_cc
 
             print('[{0}/{1}]\t'
-                  'Unorm batch time {batch_time.val:.4f} ({batch_time.avg:.3f})'
-                  '50%|99% {2:.4f} | {3:.4f}\t'.format(
-                (i + 1), trials_ran, np.percentile(batch_time.array, 50),
-                np.percentile(batch_time.array, 99), batch_time=batch_time))
-
+                  'Batch: latency (running average) {batch_time.val:.4f} ({batch_time.avg:.3f})\t\t'
+                  'WER {2:.1f} \t CER {3:.1f}'
+                  .format((i + 1), total_trials,
+                          batch_we / float(batch_wc),
+                          batch_ce / float(batch_cc),
+                          batch_time=batch_time))
             if cuda:
                 torch.cuda.synchronize()
             del out
@@ -124,4 +216,4 @@ def eval_model_verbose(model, test_loader, decoder, cuda, n_trials=-1):
     wer *= 100
     cer *= 100
 
-    return wer, cer, batch_time
+    return wer, cer, batch_time, warmup_time

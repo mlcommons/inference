@@ -1,6 +1,7 @@
 import os
 import errno
 import sys
+
 sys.path.append('../')
 import json
 
@@ -17,20 +18,11 @@ def make_folder(folder):
             raise
 
 
-def make_file(filename, data=None):
-    with open(filename, "w+") as f:
-        if data:
-            f.write(data)
-
-
-def write_line(filename, msg):
-    with open(filename, "w+") as f:
-        f.write(msg)
-
 def get_labels(params):
     with open(params.labels_path) as label_file:
         labels = str(''.join(json.load(label_file)))
     return labels
+
 
 def get_audio_conf(params):
     audio_conf = dict(sample_rate=params.sample_rate,
@@ -41,6 +33,7 @@ def get_audio_conf(params):
                       noise_prob=params.noise_prob,
                       noise_levels=(params.noise_min, params.noise_max))
     return audio_conf
+
 
 def get_model(params):
     if params.rnn_type == 'gru' and params.rnn_act_type != 'tanh':
@@ -75,6 +68,7 @@ def get_model(params):
                        bias=params.bias)
 
     return model
+
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""

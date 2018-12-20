@@ -1,60 +1,45 @@
 # Inference
 
-## Basic Instructions
+## Instructions
 
 Machine requirements: Ubuntu 16.04, 15 GB disk
 Choose VM instance(s):
  
-- Azure F8s_v2 or better,  NC family
+- Azure E16_v3 or better, or  NC family
 
-Clone this repository. In the inference folder, download the deepspeech.zip" via:
-
-```bash
-wget https://zenodo.org/record/1713294/files/trained_model_deepspeech2.zip
-```
-
-which is compressed weights of our trained model. Unzip it via:
-
-```bash
-unzip trained_model_deepspeech2.zip
-```
+Clone this repository.
 
 In the inference directory run (if CPU only):
 
 ```bash
-sh setup.sh
+sh setup.sh cpu
 ```
 
 If you want GPU support run instead:
 
 ```bash
-sh setup.sh cuda
+sh setup.sh gpu
 ```
 
-The above set up will
+The above setup will
 
-- Download python and necessary libraries
-- Nividia driver and cuda if user asked for GPU support
-- LibriSpeech clean test dataset 
+- Install python and necessary libraries
+- Download Nividia driver and cuda if user asked for GPU support
+- Download LibriSpeech clean test dataset 
+- Download the trained model weights
 
-and issue two commands in the final two lines of the execution for you to run next. They should be:
+Finally it will issue two commands for you to run next. They should be:
 
 ```bash
 newgrp docker
-sh ../docker/run_{cuda_}dev.sh
+sh ../docker/run_dev.sh {cpu or gpu} {path/to/project/folder}
 ```
-
-There will be the {cuda_} portion if you used GPU and nothing if you used the default CPU only setup.
  
-The run_dev script brings you inside the docker container where you can run the inference from by running:
+The `../docker/run_dev.sh` script brings you inside the docker container where you can run the batch-1 inference from by running:
 
 ```bash
-cd <path/to/this/inference/folder>
-sh run_inference.sh
+./run_inference.sh batch_1_latency
 ```
-
-Note that the `run_dev.sh` defaults to only mount the `$USER` folder to docker container. 
-If you store the dataset somewhere else, you should modify the `run_dev.sh` properly.
 	
 The default settings will run inference with
 
@@ -62,14 +47,29 @@ The default settings will run inference with
 - LibriSpeech Test Clean
 - CPU only
 
-## Advanced Instructions
+To test the inference performance under influence of batching, run:
+
+```bash
+./run_inference.sh batching_throughput
+```
+
+Each trial of the batching_throuphput experiment took roughly 6 hours. We have provided the following plotting script for your convenience:
+
+```bash
+plot_inference_results.py
+```
+
+Several performance plots will be saved, and this step marks the end of the inference benchmark.
+
+## Troubleshooting / Advanced Details
 
 For the advanced user we have provided details that underlies the steps taken by the setup.sh script.
-Machine requirements: Ubuntu 16.04, 15 GB disk, roughly:
+Machine requirements: Ubuntu 16.04, 15 GB disk, 128 GB RAM:
 
 - 1 GB for dataset
 - 5 GB for docker image
 - 9 GB overhead and model weights
+- 128 GB RAM for the batch_size 128 setting during the batching_throughput experiment
 - Graphics card is optional (choosing one with more memory is better)
 
 Software dependencies:
@@ -77,7 +77,8 @@ Software dependencies:
 - sox
 - libsox-fmt-mp3
 - Python 2.7
-- Python sox, wget
+- Python sox
+- Python wget
 - modified wrap-ctc (from https://github.com/ahsueh1996/warp-ctc.git)
 - Python h5py
 - Python hickle
@@ -92,9 +93,9 @@ GPU Software dependencies:
 - Cuda driver
 - Cuda 9 
 
-You should use docker to ensure that you are using the same environment but you can build a conda environment, but just be cautious with the dependencies. Check into the setup.sh and ../docker/Dockerfile.gpu for exact details.
+You should use docker to ensure that you are using the same environment but you can build a conda environment, but just be cautious with the dependencies. Parse into the `setup.sh` and `../docker/Dockerfile` for exact details.
 
-### Building Docker Image (Recommended)
+### Troubleshooting Docker Build
 
 Using docker is the simplist way to get all of the dependencies listed above. First we need to get docker.
 For CPU only this is done with:
@@ -129,12 +130,12 @@ We now have the correct docker support to build the images, run:
 ```bash
 cd ../docker
 # ---- CPU only ----
-sh build_docker.sh
+sh build_docker.sh cpu
 # ---- or if GPU support ----
-sh build_cuda_docker.sh
+sh build_docker.sh gpu
 ```
 
-which will build a docker image based on `Dockerfile.gpu`. To see if the image has been successfully built, you should see your new image listed by running:
+which will build a docker image based on `Dockerfile`. To see if the image has been successfully built, you should see your new image listed by running:
 
 ```bash
 docker images
@@ -145,10 +146,21 @@ To enter the contianer, simply run:
 ```bash
 cd ../docker
 # ---- CPU only ----
-sh run_dev.sh
+sh run_dev.sh cpu
 # ---- or if GPU support ----
-sh run_cuda_dev.sh
+sh run_dev.sh gpu
 ```
+
+### Model
+
+You can manully download trained model wights with the following commands:
+
+```bash
+wget https://zenodo.org/record/1713294/files/trained_model_deepspeech2.zip
+unzip trained_model_deepspeech2.zip
+```
+
+Place this model under the `inference/` folder:
 
 ### Dataset
 
@@ -164,7 +176,7 @@ We use ["OpenSLR LibriSpeech Corpus"](http://www.openslr.org/12/) dataset, which
 
 When downloading the dataset, you will need the `sox, wget` and `libsox-fmt-mp3` dependencies.
 You may choose to download the dataset after entering the docker container but it is fine to download without docker also.
-Only do the following if you are outside your docker container:
+If you are outside your docker container you will need to get the following:
 
 ```bash
 sudo apt-get install python-pip
@@ -172,21 +184,21 @@ pip install sox wget
 sudo apt-get install sox libsox-fmt-mp3
 ```
 
-If `pip locale.Error: unsupported locale setting` is reported (which is usually the case on a bare machine), run:
+If `pip locale.Error: unsupported locale setting` is reported, run:
 
 ```bash
 export LC_ALL=C
 ```
 
-And then do the above install.
+And then re run the previous commands to install the dependencies.
 
-For inference, we use clean dataset only. Specifically only the `test-clean.tar.gz` file will be used. Run:
+For the inference task, we will use the clean test dataset only. Specifically only the `test-clean.tar.gz` file will be used. Run:
 
 ```bash
 sh download_dataset.sh clean_test
 ```
 
-which takes around 1.5 mins and uses 1 GB of disk space.
+This download takes around 1.5 mins and uses 1 GB of disk space.
 The download script will do some preprocessing and audio file extractions. Here are some things to note:
 	
   - Data preprocessing:
@@ -199,25 +211,3 @@ The download script will do some preprocessing and audio file extractions. Here 
 
   - Data order:
     - Audio samples are sorted by length.
-
-### Running Inference
-
-Download the "deepspeech_20.pth.tar" model (from https://drive.google.com/drive/u/1/folders/1OioL2tqOsVWNW0j_I6J7gZxneFBd2gsB) and place it under the inference folder.
-Make sure you are inside your docker contianer. One way to check is to try `git` and seeing that it is not installed or simply exiting your session and running:
-
-```bash
-cd ../docker
-# ---- CPU only ----
-sh run_dev.sh
-# ---- or if GPU support ----
-sh run_cuda_dev.sh
-```
-	
-Then:
-
-```bash
-cd <path/to/this/inference/folder>
-sh run_inference.sh
-```
-
-You may edit `run_inference.sh` to change the batchsizes of the inference.

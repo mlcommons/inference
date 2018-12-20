@@ -20,7 +20,7 @@ from model.utils import get_model, get_labels, get_audio_conf
 
 
 def main(args):
-    params.cuda = not bool(args.cpu)
+    params.cuda = args.device == "gpu"
     print("Use cuda: {}".format(params.cuda))
 
     torch.manual_seed(args.seed)
@@ -31,7 +31,7 @@ def main(args):
     audio_conf = get_audio_conf(params)
 
     if args.use_set == 'libri':
-        testing_manifest = params.test_manifest + ("_held{}".format(args.hold_idx) if args.hold_idx >= 0 else "")
+        testing_manifest = params.test_manifest
     else:
         assert False, "Only the librispeech dataset is currently supported."
 
@@ -43,10 +43,13 @@ def main(args):
                                       manifest_filepath=testing_manifest,
                                       labels=labels,
                                       normalize=True,
-                                      augment=False)
+                                      augment=False,
+				      force_duration=args.force_duration,
+                                      slice=args.slice)
     test_loader = AudioDataLoader(test_dataset,
                                   batch_size=params.batch_size_val,
-                                  num_workers=1)
+                                  num_workers=1,
+			          with_meta=True)
 
     model = get_model(params)
 
@@ -73,44 +76,57 @@ def main(args):
 
     print(model)
     print("Number of parameters: {}".format(DeepSpeech.get_param_size(model)))
-
-    model.eval()
-    wer, cer, trials = eval_model_verbose(model, test_loader, decoder, params.cuda, args.n_trials)
+    
     root = os.getcwd()
+    
+    # First, we will extract the batch_1_info
+    if args.batch_1_file is not None and args.batch_1_file != "none":
+        with open(osp.join(root, args.batch_1_file)) as f:
+            batch1_data = [x for x in csv.DictReader(f)]
+    else:
+        batch1_data = []
 
-    prefix = "inference_bs{}_idx{}_{}_gpu".format(params.batch_size_val,
-                                                args.hold_idx,
-                                                'use' if params.cuda else 'no')
+    # Prepare the export files and write to it as we infer
+    print("=======================================================")
+    for arg in vars(args):
+        print("***%s = %s " % (arg.ljust(25), getattr(args, arg)))
+    print("=======================================================")
+        
+    prefix = "inference_bs{batch_size}_{processor}".format(batch_size=params.batch_size_val,
+                                                    processor='gpu' if params.cuda else 'cpu')
     csvfile = osp.join(root, prefix + '.csv')
     jsonfile = osp.join(root, prefix + '_metric.json')
-
+    
     print("Exporting inference to: {}".format(csvfile))
-    N = len(trials.array)
-    percentile_50 = np.percentile(trials.array, 50) / params.batch_size_val / args.hold_sec
-    percentile_99 = np.percentile(trials.array, 99) / params.batch_size_val / args.hold_sec
 
-    metric_dict = OrderedDict([
-                    ('batch_times_pre_normalized_by_hold_sec', args.hold_sec),
-                    ('wer', wer),
-                    ('cer', cer),
-                    ('avg_batch_time', trials.avg/args.hold_sec),
-                    ('50%-tile_latency', percentile_50),
-                    ('99%-tile_latency', percentile_99),
-                    ('throughput(samples/sec)', 1/percentile_50),
-                ])
+    json_dict = {k:getattr(args, k) for k in vars(args)}
 
-    write_dict = OrderedDict([
-                    ('batch_time', np.array([x / args.hold_sec for x in trials.array]))
-                ])
+    model.eval()
+    wer, cer, trials, warmup_time = eval_model_verbose(model,
+                                                      test_loader,
+                                                      decoder,
+                                                      params.cuda,
+                                                      csvfile,
+                                                      batch1_data,
+                                                      warmups=args.warmups,
+                                                      meta=True)
+
+    percentile_50 = np.percentile(trials.array, 50)
+    percentile_99 = np.percentile(trials.array, 99)
+    json_dict.update(
+        {
+            'best_wer': wer,
+            'best_cer': cer,
+            'warmup_time': warmup_time,
+            'avg_batch_latency': trials.avg,
+            '50%_batch_latency': percentile_50,
+            '99%_batch_latency': percentile_99,
+            'dataset_latency': sum(trials.array)
+        }
+    )
 
     with open(jsonfile, 'w+') as f:
-        json.dump(metric_dict, f)
-
-    with open(csvfile, 'w+') as f:
-        csvwriter = csv.DictWriter(f, fieldnames=write_dict.keys())
-        csvwriter.writeheader()
-        for i in range(N):
-            csvwriter.writerow({k:v[i] for k,v in write_dict.items()})
+        json.dump(json_dict, f)
 
 
 if __name__ == '__main__':
@@ -126,16 +142,18 @@ if __name__ == '__main__':
                         type=int, help='Random Seed')
     parser.add_argument('--use_set', default="libri",
                         choices=['libri', 'ov'], help='ov = OpenVoice test set, libri = Librispeech val set')
-    parser.add_argument('--cpu',
-                        action='store_true', help='Use cpu to do inference or not')
-    parser.add_argument('--hold_idx', default=-1,
-                        type=int, help='Input idx to hold the test dataset at')
-    parser.add_argument('--hold_sec', default=1,
-                        type=float, help='Speech clip time length')
+    parser.add_argument('--device', default='cpu',
+                        choices=['cpu', 'gpu'], help='Use cpu to do inference instead of the default gpu')
     parser.add_argument('--batch_size_val', default=-1,
-                        type=int, help='Batch size used for validaton')
-    parser.add_argument('--n_trials', default=-1,
-                        type=int, help='Limit the number of trial ran, useful when holding idx')
+                        type=int, help='Batch size used for inference, overrides the param settings')
+    parser.add_argument('--warmups', default=0,
+                        type=int, help='Number of samples to warmup on')
+    parser.add_argument('--force_duration', default=-1,
+                        type=float, help='Desired duration of inputs')
+    parser.add_argument('--slice',
+                        action='store_true', help='Enable slicing the inputs')
+    parser.add_argument('--batch_1_file', default=None,
+                        type=str, help='Path to batch 1 result csv file')
     args = parser.parse_args()
 
     main(args)

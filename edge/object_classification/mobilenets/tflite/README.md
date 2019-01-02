@@ -43,7 +43,9 @@ Run the client (if required, connect an Android device to your host machine via 
 ```
 $ ck run program:image-classification-tflite [--target_os=android23-arm64]
 ...
-    Resolved. CK environment UID = f934f3a3faaf4d73 (version 1_1.0_224_2018_02_22) 
+*** Dependency 3 = weights (TensorFlow-Python model and weights):
+
+    Resolved. CK environment UID = 4edbb2648a48d94d (version 1_1.0_224_2018_08_02)
 ...
 
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -56,10 +58,10 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 
 Summary:
 -------------------------------
-Graph loaded in 0.000379s
-All images loaded in 0.003440s
-All images classified in 0.226376s
-Average classification time: 0.226376s
+Graph loaded in 0.001723s
+All images loaded in 0.025555s
+All images classified in 0.391207s
+Average classification time: 0.391207s
 Accuracy top 1: 1.0 (1 of 1)
 Accuracy top 5: 1.0 (1 of 1)
 --------------------------------

@@ -20,9 +20,14 @@ lib-tflite-prebuilt-0.1.7-android-arm64
 $ ck install package:lib-tflite-prebuilt-0.1.7-android-arm64 [--target_os=android23-arm64]
 ```
 
-### Install MobileNets models for TFLite
+### Install the MLPerf MobileNets model for TFLite
 
-Select one of the 38 MobileNets models compatible with TFLite:
+Install the MobileNets-v1-1.0-224 model adopted for MLPerf:
+```
+$ ck install package --tags=tensorflowmodel,mobilenet,mlperf
+```
+
+**NB:** You can also install any other MobileNets models compatible with TFLite as follows:
 ```
 $ ck install package --tags=tensorflowmodel,mobilenet,tflite
 ```

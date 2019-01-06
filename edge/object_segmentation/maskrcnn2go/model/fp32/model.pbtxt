@@ -1,0 +1,3496 @@
+name: "mobile_vision.detection"
+op {
+  input: "data"
+  input: "conv0_conv_w"
+  input: "conv0_bn_b"
+  output: "conv0_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 2
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "conv0_bn"
+  output: "conv0_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "conv0_bn"
+  input: "xif0_0_pw_conv_w"
+  input: "xif0_0_pw_bn_b"
+  output: "xif0_0_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif0_0_pw_bn"
+  output: "xif0_0_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif0_0_pw_bn"
+  input: "xif0_0_dw_conv_w"
+  output: "xif0_0_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 16
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif0_0_dw_conv"
+  input: "xif0_0_pwl_conv_w"
+  input: "xif0_0_pwl_bn_b"
+  output: "xif0_0_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif0_0_pwl_bn"
+  input: "conv0_bn"
+  output: "xif0_0"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif0_0"
+  input: "xif1_0_pw_conv_w"
+  input: "xif1_0_pw_bn_b"
+  output: "xif1_0_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif1_0_pw_bn"
+  output: "xif1_0_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif1_0_pw_bn"
+  input: "xif1_0_dw_conv_w"
+  output: "xif1_0_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 96
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 2
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif1_0_dw_conv"
+  input: "xif1_0_conv_w"
+  input: "xif1_0_bn_b"
+  output: "xif1_0_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif1_0_bn"
+  input: "xif1_1_pw_conv_w"
+  input: "xif1_1_pw_bn_b"
+  output: "xif1_1_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif1_1_pw_bn"
+  output: "xif1_1_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif1_1_pw_bn"
+  input: "xif1_1_dw_conv_w"
+  output: "xif1_1_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 192
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif1_1_dw_conv"
+  input: "xif1_1_pwl_conv_w"
+  input: "xif1_1_pwl_bn_b"
+  output: "xif1_1_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif1_1_pwl_bn"
+  input: "xif1_0_bn"
+  output: "xif1_1"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif1_1"
+  input: "xif2_0_pw_conv_w"
+  input: "xif2_0_pw_bn_b"
+  output: "xif2_0_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif2_0_pw_bn"
+  output: "xif2_0_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif2_0_pw_bn"
+  input: "xif2_0_dw_conv_w"
+  output: "xif2_0_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 192
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 2
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif2_0_dw_conv"
+  input: "xif2_0_conv_w"
+  input: "xif2_0_bn_b"
+  output: "xif2_0_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif2_0_bn"
+  input: "xif2_1_pw_conv_w"
+  input: "xif2_1_pw_bn_b"
+  output: "xif2_1_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif2_1_pw_bn"
+  output: "xif2_1_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif2_1_pw_bn"
+  input: "xif2_1_dw_conv_w"
+  output: "xif2_1_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 288
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif2_1_dw_conv"
+  input: "xif2_1_pwl_conv_w"
+  input: "xif2_1_pwl_bn_b"
+  output: "xif2_1_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif2_1_pwl_bn"
+  input: "xif2_0_bn"
+  output: "xif2_1"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif2_1"
+  input: "xif2_2_pw_conv_w"
+  input: "xif2_2_pw_bn_b"
+  output: "xif2_2_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif2_2_pw_bn"
+  output: "xif2_2_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif2_2_pw_bn"
+  input: "xif2_2_dw_conv_w"
+  output: "xif2_2_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 288
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif2_2_dw_conv"
+  input: "xif2_2_pwl_conv_w"
+  input: "xif2_2_pwl_bn_b"
+  output: "xif2_2_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif2_2_pwl_bn"
+  input: "xif2_1"
+  output: "xif2_2"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif2_2"
+  input: "xif3_0_pw_conv_w"
+  input: "xif3_0_pw_bn_b"
+  output: "xif3_0_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_0_pw_bn"
+  output: "xif3_0_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_0_pw_bn"
+  input: "xif3_0_dw_conv_w"
+  output: "xif3_0_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 288
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 2
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_0_dw_conv"
+  input: "xif3_0_conv_w"
+  input: "xif3_0_bn_b"
+  output: "xif3_0_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_0_bn"
+  input: "xif3_1_pw_conv_w"
+  input: "xif3_1_pw_bn_b"
+  output: "xif3_1_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_1_pw_bn"
+  output: "xif3_1_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_1_pw_bn"
+  input: "xif3_1_dw_conv_w"
+  output: "xif3_1_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 576
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_1_dw_conv"
+  input: "xif3_1_pwl_conv_w"
+  input: "xif3_1_pwl_bn_b"
+  output: "xif3_1_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_1_pwl_bn"
+  input: "xif3_0_bn"
+  output: "xif3_1"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_1"
+  input: "xif3_2_pw_conv_w"
+  input: "xif3_2_pw_bn_b"
+  output: "xif3_2_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_2_pw_bn"
+  output: "xif3_2_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_2_pw_bn"
+  input: "xif3_2_dw_conv_w"
+  output: "xif3_2_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 576
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_2_dw_conv"
+  input: "xif3_2_pwl_conv_w"
+  input: "xif3_2_pwl_bn_b"
+  output: "xif3_2_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_2_pwl_bn"
+  input: "xif3_1"
+  output: "xif3_2"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_2"
+  input: "xif3_3_pw_conv_w"
+  input: "xif3_3_pw_bn_b"
+  output: "xif3_3_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_3_pw_bn"
+  output: "xif3_3_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_3_pw_bn"
+  input: "xif3_3_dw_conv_w"
+  output: "xif3_3_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 576
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_3_dw_conv"
+  input: "xif3_3_pwl_conv_w"
+  input: "xif3_3_pwl_bn_b"
+  output: "xif3_3_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_3_pwl_bn"
+  input: "xif3_2"
+  output: "xif3_3"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_3"
+  input: "xif3_4_pw_conv_w"
+  input: "xif3_4_pw_bn_b"
+  output: "xif3_4_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_4_pw_bn"
+  output: "xif3_4_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_4_pw_bn"
+  input: "xif3_4_dw_conv_w"
+  output: "xif3_4_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 576
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_4_dw_conv"
+  input: "xif3_4_conv_w"
+  input: "xif3_4_bn_b"
+  output: "xif3_4_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_4_bn"
+  input: "xif3_5_pw_conv_w"
+  input: "xif3_5_pw_bn_b"
+  output: "xif3_5_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_5_pw_bn"
+  output: "xif3_5_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_5_pw_bn"
+  input: "xif3_5_dw_conv_w"
+  output: "xif3_5_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 768
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_5_dw_conv"
+  input: "xif3_5_pwl_conv_w"
+  input: "xif3_5_pwl_bn_b"
+  output: "xif3_5_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_5_pwl_bn"
+  input: "xif3_4_bn"
+  output: "xif3_5"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_5"
+  input: "xif3_6_pw_conv_w"
+  input: "xif3_6_pw_bn_b"
+  output: "xif3_6_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_6_pw_bn"
+  output: "xif3_6_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_6_pw_bn"
+  input: "xif3_6_dw_conv_w"
+  output: "xif3_6_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 768
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_6_dw_conv"
+  input: "xif3_6_pwl_conv_w"
+  input: "xif3_6_pwl_bn_b"
+  output: "xif3_6_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "xif3_6_pwl_bn"
+  input: "xif3_5"
+  output: "xif3_6"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "xif3_6"
+  input: "[rpn]xif3_4_pw_conv_w"
+  input: "[rpn]xif3_4_pw_bn_b"
+  output: "[rpn]xif3_4_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "[rpn]xif3_4_pw_bn"
+  output: "[rpn]xif3_4_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "[rpn]xif3_4_pw_bn"
+  input: "[rpn]xif3_4_dw_conv_w"
+  output: "[rpn]xif3_4_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 768
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "[rpn]xif3_4_dw_conv"
+  input: "[rpn]xif3_4_pwl_conv_w"
+  input: "[rpn]xif3_4_pwl_bn_b"
+  output: "[rpn]xif3_4_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "[rpn]xif3_4_pwl_bn"
+  input: "xif3_6"
+  output: "[rpn]xif3_4"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "[rpn]xif3_4"
+  input: "[rpn]xif3_5_pw_conv_w"
+  input: "[rpn]xif3_5_pw_bn_b"
+  output: "[rpn]xif3_5_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "[rpn]xif3_5_pw_bn"
+  output: "[rpn]xif3_5_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "[rpn]xif3_5_pw_bn"
+  input: "[rpn]xif3_5_dw_conv_w"
+  output: "[rpn]xif3_5_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 768
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "[rpn]xif3_5_dw_conv"
+  input: "[rpn]xif3_5_pwl_conv_w"
+  input: "[rpn]xif3_5_pwl_bn_b"
+  output: "[rpn]xif3_5_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "[rpn]xif3_5_pwl_bn"
+  input: "[rpn]xif3_4"
+  output: "[rpn]xif3_5"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "[rpn]xif3_5"
+  input: "[rpn]xif3_6_pw_conv_w"
+  input: "[rpn]xif3_6_pw_bn_b"
+  output: "[rpn]xif3_6_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "[rpn]xif3_6_pw_bn"
+  output: "[rpn]xif3_6_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "[rpn]xif3_6_pw_bn"
+  input: "[rpn]xif3_6_dw_conv_w"
+  output: "[rpn]xif3_6_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 768
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "[rpn]xif3_6_dw_conv"
+  input: "[rpn]xif3_6_pwl_conv_w"
+  input: "[rpn]xif3_6_pwl_bn_b"
+  output: "[rpn]xif3_6_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "[rpn]xif3_6_pwl_bn"
+  input: "[rpn]xif3_5"
+  output: "conv_rpn"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "conv_rpn"
+  input: "rpn_cls_logits_w"
+  input: "rpn_cls_logits_b"
+  output: "rpn_cls_logits"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "conv_rpn"
+  input: "rpn_bbox_pred_w"
+  input: "rpn_bbox_pred_b"
+  output: "rpn_bbox_pred"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "rpn_cls_logits"
+  output: "rpn_cls_probs"
+  name: ""
+  type: "Sigmoid"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "rpn_cls_probs"
+  input: "rpn_bbox_pred"
+  input: "im_info"
+  input: "anchor"
+  output: "rois"
+  output: "rpn_roi_probs"
+  name: ""
+  type: "GenerateProposals"
+  arg {
+    name: "nms_thresh"
+    f: 0.699999988079071
+  }
+  arg {
+    name: "angle_bound_hi"
+    i: 90
+  }
+  arg {
+    name: "min_size"
+    f: 0.0
+  }
+  arg {
+    name: "clip_angle_thresh"
+    f: 1.0
+  }
+  arg {
+    name: "spatial_scale"
+    f: 0.0625
+  }
+  arg {
+    name: "angle_bound_lo"
+    i: -90
+  }
+  arg {
+    name: "correct_transform_coords"
+    i: 1
+  }
+  arg {
+    name: "angle_bound_on"
+    i: 1
+  }
+  arg {
+    name: "post_nms_topN"
+    i: 100
+  }
+  arg {
+    name: "pre_nms_topN"
+    i: 3000
+  }
+}
+op {
+  input: "xif3_6"
+  input: "rois"
+  output: "roi_features"
+  name: ""
+  type: "RoIAlign"
+  arg {
+    name: "pooled_h"
+    i: 6
+  }
+  arg {
+    name: "sampling_ratio"
+    i: 0
+  }
+  arg {
+    name: "spatial_scale"
+    f: 0.0625
+  }
+  arg {
+    name: "pooled_w"
+    i: 6
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "roi_features"
+  input: "_[bbox]_xif4_0_pw_conv_w"
+  input: "_[bbox]_xif4_0_pw_bn_b"
+  output: "_[bbox]_xif4_0_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_0_pw_bn"
+  output: "_[bbox]_xif4_0_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "_[bbox]_xif4_0_pw_bn"
+  input: "_[bbox]_xif4_0_dw_conv_w"
+  output: "_[bbox]_xif4_0_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 512
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 2
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_0_dw_conv"
+  input: "_[bbox]_xif4_0_conv_w"
+  input: "_[bbox]_xif4_0_bn_b"
+  output: "_[bbox]_xif4_0_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_0_bn"
+  input: "_[bbox]_xif4_1_pw_conv_w"
+  input: "_[bbox]_xif4_1_pw_bn_b"
+  output: "_[bbox]_xif4_1_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_1_pw_bn"
+  output: "_[bbox]_xif4_1_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "_[bbox]_xif4_1_pw_bn"
+  input: "_[bbox]_xif4_1_dw_conv_w"
+  output: "_[bbox]_xif4_1_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 768
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_1_dw_conv"
+  input: "_[bbox]_xif4_1_pwl_conv_w"
+  input: "_[bbox]_xif4_1_pwl_bn_b"
+  output: "_[bbox]_xif4_1_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_1_pwl_bn"
+  input: "_[bbox]_xif4_0_bn"
+  output: "_[bbox]_xif4_1"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "_[bbox]_xif4_1"
+  input: "_[bbox]_xif4_2_pw_conv_w"
+  input: "_[bbox]_xif4_2_pw_bn_b"
+  output: "_[bbox]_xif4_2_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_2_pw_bn"
+  output: "_[bbox]_xif4_2_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "_[bbox]_xif4_2_pw_bn"
+  input: "_[bbox]_xif4_2_dw_conv_w"
+  output: "_[bbox]_xif4_2_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 768
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_2_dw_conv"
+  input: "_[bbox]_xif4_2_pwl_conv_w"
+  input: "_[bbox]_xif4_2_pwl_bn_b"
+  output: "_[bbox]_xif4_2_pwl_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_2_pwl_bn"
+  input: "_[bbox]_xif4_1"
+  output: "_[bbox]_xif4_2"
+  name: ""
+  type: "Sum"
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "_[bbox]_xif4_2"
+  input: "_[bbox]_xif4_3_pw_conv_w"
+  input: "_[bbox]_xif4_3_pw_bn_b"
+  output: "_[bbox]_xif4_3_pw_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_3_pw_bn"
+  output: "_[bbox]_xif4_3_pw_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "_[bbox]_xif4_3_pw_bn"
+  input: "_[bbox]_xif4_3_dw_conv_w"
+  output: "_[bbox]_xif4_3_dw_conv"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "pad"
+    i: 1
+  }
+  arg {
+    name: "group"
+    i: 768
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_3_dw_conv"
+  input: "_[bbox]_xif4_3_conv_w"
+  input: "_[bbox]_xif4_3_bn_b"
+  output: "_[bbox]_xif4_3_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_3_bn"
+  input: "_[bbox]_xif4_3_bn_1x1_conv_w"
+  input: "_[bbox]_xif4_3_bn_1x1_bn_b"
+  output: "_[bbox]_xif4_3_bn_1x1_bn"
+  name: ""
+  type: "Conv"
+  arg {
+    name: "kernel"
+    i: 1
+  }
+  arg {
+    name: "exhaustive_search"
+    i: 0
+  }
+  arg {
+    name: "pad"
+    i: 0
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  device_option {
+  }
+  engine: "DEPTHWISE_3x3,NNPACK"
+}
+op {
+  input: "_[bbox]_xif4_3_bn_1x1_bn"
+  output: "_[bbox]_xif4_3_bn_1x1_bn"
+  name: ""
+  type: "Relu"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "_[bbox]_xif4_3_bn_1x1_bn"
+  output: "final_avg"
+  name: ""
+  type: "AveragePool"
+  arg {
+    name: "kernel"
+    i: 3
+  }
+  arg {
+    name: "stride"
+    i: 1
+  }
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "final_avg"
+  input: "cls_score_w"
+  input: "cls_score_b"
+  output: "cls_score"
+  name: ""
+  type: "FC"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "cls_score"
+  output: "cls_prob"
+  name: ""
+  type: "Softmax"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "final_avg"
+  input: "bbox_pred_w"
+  input: "bbox_pred_b"
+  output: "bbox_pred"
+  name: ""
+  type: "FC"
+  arg {
+    name: "order"
+    s: "NCHW"
+  }
+  device_option {
+  }
+  engine: ""
+}
+op {
+  input: "rois"
+  input: "bbox_pred"
+  input: "im_info"
+  output: "pred_bbox"
+  name: ""
+  type: "BBoxTransform"
+  arg {
+    name: "angle_bound_hi"
+    i: 90
+  }
+  arg {
+    name: "rotated"
+    i: 0
+  }
+  arg {
+    name: "clip_angle_thresh"
+    f: 1.0
+  }
+  arg {
+    name: "weights"
+    floats: 10.0
+    floats: 10.0
+    floats: 5.0
+    floats: 5.0
+  }
+  arg {
+    name: "angle_bound_lo"
+    i: -90
+  }
+  arg {
+    name: "correct_transform_coords"
+    i: 1
+  }
+  arg {
+    name: "angle_bound_on"
+    i: 1
+  }
+}
+op {
+  input: "cls_prob"
+  input: "pred_bbox"
+  output: "score_nms"
+  output: "bbox_nms"
+  output: "class_nms"
+  name: ""
+  type: "BoxWithNMSLimit"
+  arg {
+    name: "score_thresh"
+    f: 0.05000000074505806
+  }
+  arg {
+    name: "nms"
+    f: 0.30000001192092896
+  }
+  arg {
+    name: "detections_per_im"
+    i: 100
+  }
+  arg {
+    name: "soft_nms_enabled"
+    i: 1
+  }
+  arg {
+    name: "soft_nms_method"
+    s: "linear"
+  }
+  arg {
+    name: "soft_nms_sigma"
+    f: 0.5
+  }
+  arg {
+    name: "rotated"
+    i: 0
+  }
+}
+op {
+  output: "mask_fcn_probs"
+  name: ""
+  type: "ConstantFill"
+  arg {
+    name: "shape"
+    ints: 1
+  }
+}
+op {
+  input: "bbox_nms"
+  output: "is_bbox_rois_empty"
+  name: ""
+  type: "IsEmpty"
+}
+op {
+  input: "is_bbox_rois_empty"
+  name: ""
+  type: "If"
+  arg {
+    name: "then_net"
+    n {
+      name: "emptynet"
+    }
+  }
+  arg {
+    name: "else_net"
+    n {
+      name: "mask_net"
+      op {
+        input: "xif3_6"
+        input: "bbox_nms"
+        output: "_[mask]_pool5"
+        name: ""
+        type: "RoIAlign"
+        arg {
+          name: "pooled_h"
+          i: 6
+        }
+        arg {
+          name: "sampling_ratio"
+          i: 0
+        }
+        arg {
+          name: "spatial_scale"
+          f: 0.0625
+        }
+        arg {
+          name: "pooled_w"
+          i: 6
+        }
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_pool5"
+        input: "_[mask]_xif5_0_pw_conv_w"
+        input: "_[mask]_xif5_0_pw_bn_b"
+        output: "_[mask]_xif5_0_pw_bn"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_0_pw_bn"
+        output: "_[mask]_xif5_0_pw_bn"
+        name: ""
+        type: "Relu"
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_xif5_0_pw_bn"
+        input: "_[mask]_xif5_0_dw_conv_w"
+        output: "_[mask]_xif5_0_dw_conv"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 3
+        }
+        arg {
+          name: "pad"
+          i: 1
+        }
+        arg {
+          name: "group"
+          i: 512
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_0_dw_conv"
+        input: "_[mask]_xif5_0_pwl_conv_w"
+        input: "_[mask]_xif5_0_pwl_bn_b"
+        output: "_[mask]_xif5_0_pwl_bn"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_0_pwl_bn"
+        input: "_[mask]_pool5"
+        output: "_[mask]_xif5_0"
+        name: ""
+        type: "Sum"
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_xif5_0"
+        input: "_[mask]_xif5_1_pw_conv_w"
+        input: "_[mask]_xif5_1_pw_bn_b"
+        output: "_[mask]_xif5_1_pw_bn"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_1_pw_bn"
+        output: "_[mask]_xif5_1_pw_bn"
+        name: ""
+        type: "Relu"
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_xif5_1_pw_bn"
+        input: "_[mask]_xif5_1_dw_conv_w"
+        output: "_[mask]_xif5_1_dw_conv"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 3
+        }
+        arg {
+          name: "pad"
+          i: 1
+        }
+        arg {
+          name: "group"
+          i: 768
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_1_dw_conv"
+        input: "_[mask]_xif5_1_pwl_conv_w"
+        input: "_[mask]_xif5_1_pwl_bn_b"
+        output: "_[mask]_xif5_1_pwl_bn"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_1_pwl_bn"
+        input: "_[mask]_xif5_0"
+        output: "_[mask]_xif5_1"
+        name: ""
+        type: "Sum"
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_xif5_1"
+        input: "_[mask]_xif5_2_pw_conv_w"
+        input: "_[mask]_xif5_2_pw_bn_b"
+        output: "_[mask]_xif5_2_pw_bn"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_2_pw_bn"
+        output: "_[mask]_xif5_2_pw_bn"
+        name: ""
+        type: "Relu"
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_xif5_2_pw_bn"
+        input: "_[mask]_xif5_2_dw_conv_w"
+        output: "_[mask]_xif5_2_dw_conv"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 3
+        }
+        arg {
+          name: "pad"
+          i: 1
+        }
+        arg {
+          name: "group"
+          i: 768
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_2_dw_conv"
+        input: "_[mask]_xif5_2_pwl_conv_w"
+        input: "_[mask]_xif5_2_pwl_bn_b"
+        output: "_[mask]_xif5_2_pwl_bn"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_2_pwl_bn"
+        input: "_[mask]_xif5_1"
+        output: "_[mask]_xif5_2"
+        name: ""
+        type: "Sum"
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_xif5_2"
+        input: "_[mask]_xif5_3_pw_conv_w"
+        input: "_[mask]_xif5_3_pw_bn_b"
+        output: "_[mask]_xif5_3_pw_bn"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_3_pw_bn"
+        output: "_[mask]_xif5_3_pw_bn"
+        name: ""
+        type: "Relu"
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_xif5_3_pw_bn"
+        input: "_[mask]_xif5_3_dw_conv_w"
+        output: "_[mask]_xif5_3_dw_conv"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 3
+        }
+        arg {
+          name: "pad"
+          i: 1
+        }
+        arg {
+          name: "group"
+          i: 768
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_3_dw_conv"
+        input: "_[mask]_xif5_3_pwl_conv_w"
+        input: "_[mask]_xif5_3_pwl_bn_b"
+        output: "_[mask]_xif5_3_pwl_bn"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_3_pwl_bn"
+        input: "_[mask]_xif5_2"
+        output: "_[mask]_xif5_3"
+        name: ""
+        type: "Sum"
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_xif5_3"
+        input: "_[mask]_xif5_4_pw_conv_w"
+        input: "_[mask]_xif5_4_pw_bn_b"
+        output: "_[mask]_xif5_4_pw_bn"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_4_pw_bn"
+        output: "_[mask]_xif5_4_pw_bn"
+        name: ""
+        type: "Relu"
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_xif5_4_pw_bn"
+        output: "_[mask]_xif5_4_dw_upsample"
+        name: ""
+        type: "ResizeNearest"
+        arg {
+          name: "width_scale"
+          f: 2.0
+        }
+        arg {
+          name: "height_scale"
+          f: 2.0
+        }
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "_[mask]_xif5_4_dw_upsample"
+        input: "_[mask]_xif5_4_dw_conv_w"
+        output: "_[mask]_xif5_4_dw_conv"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 3
+        }
+        arg {
+          name: "pad"
+          i: 1
+        }
+        arg {
+          name: "group"
+          i: 384
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_4_dw_conv"
+        input: "_[mask]_xif5_4_conv_w"
+        input: "_[mask]_xif5_4_bn_b"
+        output: "_[mask]_xif5_4_bn"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "_[mask]_xif5_4_bn"
+        input: "mask_fcn_logits_w"
+        input: "mask_fcn_logits_b"
+        output: "mask_fcn_logits"
+        name: ""
+        type: "Conv"
+        arg {
+          name: "kernel"
+          i: 1
+        }
+        arg {
+          name: "exhaustive_search"
+          i: 0
+        }
+        arg {
+          name: "pad"
+          i: 0
+        }
+        arg {
+          name: "order"
+          s: "NCHW"
+        }
+        arg {
+          name: "stride"
+          i: 1
+        }
+        device_option {
+        }
+        engine: "DEPTHWISE_3x3,NNPACK"
+      }
+      op {
+        input: "mask_fcn_logits"
+        output: "mask_fcn_probs"
+        name: ""
+        type: "Sigmoid"
+        device_option {
+        }
+        engine: ""
+      }
+      op {
+        input: "im_info"
+        output: "im_scale"
+        name: ""
+        type: "Slice"
+        arg {
+          name: "starts"
+          ints: 0
+          ints: 2
+        }
+        arg {
+          name: "ends"
+          ints: -1
+          ints: -1
+        }
+      }
+      op {
+        input: "bbox_nms"
+        input: "im_scale"
+        output: "bbox_nms"
+        name: ""
+        type: "Div"
+      }
+      external_input: "xif3_6"
+      external_input: "bbox_nms"
+      external_input: "im_info"
+      external_input: "_[mask]_xif5_0_pw_conv_w"
+      external_input: "_[mask]_xif5_0_pw_bn_b"
+      external_input: "_[mask]_xif5_0_dw_conv_w"
+      external_input: "_[mask]_xif5_0_pwl_conv_w"
+      external_input: "_[mask]_xif5_0_pwl_bn_b"
+      external_input: "_[mask]_xif5_1_pw_conv_w"
+      external_input: "_[mask]_xif5_1_pw_bn_b"
+      external_input: "_[mask]_xif5_1_dw_conv_w"
+      external_input: "_[mask]_xif5_1_pwl_conv_w"
+      external_input: "_[mask]_xif5_1_pwl_bn_b"
+      external_input: "_[mask]_xif5_2_pw_conv_w"
+      external_input: "_[mask]_xif5_2_pw_bn_b"
+      external_input: "_[mask]_xif5_2_dw_conv_w"
+      external_input: "_[mask]_xif5_2_pwl_conv_w"
+      external_input: "_[mask]_xif5_2_pwl_bn_b"
+      external_input: "_[mask]_xif5_3_pw_conv_w"
+      external_input: "_[mask]_xif5_3_pw_bn_b"
+      external_input: "_[mask]_xif5_3_dw_conv_w"
+      external_input: "_[mask]_xif5_3_pwl_conv_w"
+      external_input: "_[mask]_xif5_3_pwl_bn_b"
+      external_input: "_[mask]_xif5_4_pw_conv_w"
+      external_input: "_[mask]_xif5_4_pw_bn_b"
+      external_input: "_[mask]_xif5_4_dw_conv_w"
+      external_input: "_[mask]_xif5_4_conv_w"
+      external_input: "_[mask]_xif5_4_bn_b"
+      external_input: "mask_fcn_logits_w"
+      external_input: "mask_fcn_logits_b"
+      external_output: "mask_fcn_probs"
+    }
+  }
+}
+external_input: "data"
+external_input: "conv0_conv_w"
+external_input: "conv0_bn_b"
+external_input: "xif0_0_pw_conv_w"
+external_input: "xif0_0_pw_bn_b"
+external_input: "xif0_0_dw_conv_w"
+external_input: "xif0_0_pwl_conv_w"
+external_input: "xif0_0_pwl_bn_b"
+external_input: "xif1_0_pw_conv_w"
+external_input: "xif1_0_pw_bn_b"
+external_input: "xif1_0_dw_conv_w"
+external_input: "xif1_0_conv_w"
+external_input: "xif1_0_bn_b"
+external_input: "xif1_1_pw_conv_w"
+external_input: "xif1_1_pw_bn_b"
+external_input: "xif1_1_dw_conv_w"
+external_input: "xif1_1_pwl_conv_w"
+external_input: "xif1_1_pwl_bn_b"
+external_input: "xif2_0_pw_conv_w"
+external_input: "xif2_0_pw_bn_b"
+external_input: "xif2_0_dw_conv_w"
+external_input: "xif2_0_conv_w"
+external_input: "xif2_0_bn_b"
+external_input: "xif2_1_pw_conv_w"
+external_input: "xif2_1_pw_bn_b"
+external_input: "xif2_1_dw_conv_w"
+external_input: "xif2_1_pwl_conv_w"
+external_input: "xif2_1_pwl_bn_b"
+external_input: "xif2_2_pw_conv_w"
+external_input: "xif2_2_pw_bn_b"
+external_input: "xif2_2_dw_conv_w"
+external_input: "xif2_2_pwl_conv_w"
+external_input: "xif2_2_pwl_bn_b"
+external_input: "xif3_0_pw_conv_w"
+external_input: "xif3_0_pw_bn_b"
+external_input: "xif3_0_dw_conv_w"
+external_input: "xif3_0_conv_w"
+external_input: "xif3_0_bn_b"
+external_input: "xif3_1_pw_conv_w"
+external_input: "xif3_1_pw_bn_b"
+external_input: "xif3_1_dw_conv_w"
+external_input: "xif3_1_pwl_conv_w"
+external_input: "xif3_1_pwl_bn_b"
+external_input: "xif3_2_pw_conv_w"
+external_input: "xif3_2_pw_bn_b"
+external_input: "xif3_2_dw_conv_w"
+external_input: "xif3_2_pwl_conv_w"
+external_input: "xif3_2_pwl_bn_b"
+external_input: "xif3_3_pw_conv_w"
+external_input: "xif3_3_pw_bn_b"
+external_input: "xif3_3_dw_conv_w"
+external_input: "xif3_3_pwl_conv_w"
+external_input: "xif3_3_pwl_bn_b"
+external_input: "xif3_4_pw_conv_w"
+external_input: "xif3_4_pw_bn_b"
+external_input: "xif3_4_dw_conv_w"
+external_input: "xif3_4_conv_w"
+external_input: "xif3_4_bn_b"
+external_input: "xif3_5_pw_conv_w"
+external_input: "xif3_5_pw_bn_b"
+external_input: "xif3_5_dw_conv_w"
+external_input: "xif3_5_pwl_conv_w"
+external_input: "xif3_5_pwl_bn_b"
+external_input: "xif3_6_pw_conv_w"
+external_input: "xif3_6_pw_bn_b"
+external_input: "xif3_6_dw_conv_w"
+external_input: "xif3_6_pwl_conv_w"
+external_input: "xif3_6_pwl_bn_b"
+external_input: "[rpn]xif3_4_pw_conv_w"
+external_input: "[rpn]xif3_4_pw_bn_b"
+external_input: "[rpn]xif3_4_dw_conv_w"
+external_input: "[rpn]xif3_4_pwl_conv_w"
+external_input: "[rpn]xif3_4_pwl_bn_b"
+external_input: "[rpn]xif3_5_pw_conv_w"
+external_input: "[rpn]xif3_5_pw_bn_b"
+external_input: "[rpn]xif3_5_dw_conv_w"
+external_input: "[rpn]xif3_5_pwl_conv_w"
+external_input: "[rpn]xif3_5_pwl_bn_b"
+external_input: "[rpn]xif3_6_pw_conv_w"
+external_input: "[rpn]xif3_6_pw_bn_b"
+external_input: "[rpn]xif3_6_dw_conv_w"
+external_input: "[rpn]xif3_6_pwl_conv_w"
+external_input: "[rpn]xif3_6_pwl_bn_b"
+external_input: "rpn_cls_logits_w"
+external_input: "rpn_cls_logits_b"
+external_input: "rpn_bbox_pred_w"
+external_input: "rpn_bbox_pred_b"
+external_input: "im_info"
+external_input: "_[bbox]_xif4_0_pw_conv_w"
+external_input: "_[bbox]_xif4_0_pw_bn_b"
+external_input: "_[bbox]_xif4_0_dw_conv_w"
+external_input: "_[bbox]_xif4_0_conv_w"
+external_input: "_[bbox]_xif4_0_bn_b"
+external_input: "_[bbox]_xif4_1_pw_conv_w"
+external_input: "_[bbox]_xif4_1_pw_bn_b"
+external_input: "_[bbox]_xif4_1_dw_conv_w"
+external_input: "_[bbox]_xif4_1_pwl_conv_w"
+external_input: "_[bbox]_xif4_1_pwl_bn_b"
+external_input: "_[bbox]_xif4_2_pw_conv_w"
+external_input: "_[bbox]_xif4_2_pw_bn_b"
+external_input: "_[bbox]_xif4_2_dw_conv_w"
+external_input: "_[bbox]_xif4_2_pwl_conv_w"
+external_input: "_[bbox]_xif4_2_pwl_bn_b"
+external_input: "_[bbox]_xif4_3_pw_conv_w"
+external_input: "_[bbox]_xif4_3_pw_bn_b"
+external_input: "_[bbox]_xif4_3_dw_conv_w"
+external_input: "_[bbox]_xif4_3_conv_w"
+external_input: "_[bbox]_xif4_3_bn_b"
+external_input: "_[bbox]_xif4_3_bn_1x1_conv_w"
+external_input: "_[bbox]_xif4_3_bn_1x1_bn_b"
+external_input: "cls_score_w"
+external_input: "cls_score_b"
+external_input: "bbox_pred_w"
+external_input: "bbox_pred_b"
+external_input: "anchor"
+external_input: "_[mask]_xif5_0_pw_conv_w"
+external_input: "_[mask]_xif5_0_pw_bn_b"
+external_input: "_[mask]_xif5_0_dw_conv_w"
+external_input: "_[mask]_xif5_0_pwl_conv_w"
+external_input: "_[mask]_xif5_0_pwl_bn_b"
+external_input: "_[mask]_xif5_1_pw_conv_w"
+external_input: "_[mask]_xif5_1_pw_bn_b"
+external_input: "_[mask]_xif5_1_dw_conv_w"
+external_input: "_[mask]_xif5_1_pwl_conv_w"
+external_input: "_[mask]_xif5_1_pwl_bn_b"
+external_input: "_[mask]_xif5_2_pw_conv_w"
+external_input: "_[mask]_xif5_2_pw_bn_b"
+external_input: "_[mask]_xif5_2_dw_conv_w"
+external_input: "_[mask]_xif5_2_pwl_conv_w"
+external_input: "_[mask]_xif5_2_pwl_bn_b"
+external_input: "_[mask]_xif5_3_pw_conv_w"
+external_input: "_[mask]_xif5_3_pw_bn_b"
+external_input: "_[mask]_xif5_3_dw_conv_w"
+external_input: "_[mask]_xif5_3_pwl_conv_w"
+external_input: "_[mask]_xif5_3_pwl_bn_b"
+external_input: "_[mask]_xif5_4_pw_conv_w"
+external_input: "_[mask]_xif5_4_pw_bn_b"
+external_input: "_[mask]_xif5_4_dw_conv_w"
+external_input: "_[mask]_xif5_4_conv_w"
+external_input: "_[mask]_xif5_4_bn_b"
+external_input: "mask_fcn_logits_w"
+external_input: "mask_fcn_logits_b"
+external_output: "score_nms"
+external_output: "bbox_nms"
+external_output: "class_nms"
+external_output: "mask_fcn_probs"

@@ -2,7 +2,7 @@
 
 Owner: Peizhao Zhang (stzpz@fb.com)
 
-Model: MaskRCNN2GO (bbox + segmentation) float32 and int8
+Model: MaskRCNN2GO (bbox + segmentation) float32
 
 Datasets used for evaluation: COCO 2014 minival
 
@@ -13,7 +13,7 @@ Input:
 Proposals (pre nms, post nms): 3000/100
 
 Accuracy(mAP[IoU=0.50:0.95]): 
-	float32: 	24.5 (bbox), 21.7 (segmentation)
+	float32: 	25.1 (bbox), 21.6 (segmentation)
 
 Evaluation:
 * Download COCO 2014 minival dataset

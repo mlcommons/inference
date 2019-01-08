@@ -1,0 +1,5 @@
+mxnet-mkl==1.2.0
+spacy==2.0.12
+tqdm==4.10
+sklearn
+h5py

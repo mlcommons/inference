@@ -5,7 +5,7 @@ import itertools
 from collections import Counter
 import numpy as np
 from sklearn.model_selection import train_test_split
-from data import create_data,pad_sequences
+#from data import create_data,pad_sequences
 import mxnet as mx
 import os
 import pickle
@@ -21,6 +21,7 @@ parser.add_argument('--num-embedding', default=1024, type=int, help='Number of w
 parser.add_argument('--hidden-size', default=1024, type=int, help='Hidden size of RNNs')
 parser.add_argument('--eval', default=False, help='Location to save epoch models')
 parser.add_argument('--token', default='spacy', help='use spacy tokenizer or not')
+parser.add_argument('--seed', type=int, default=0)
 parser.add_argument('--max-seq-len', default=1000, type=int, help='Norm cutoff to prevent explosion of gradients')
 parser.add_argument('--vocab-size', default=5200, type=int, help='Annealing applied to learning rate every epoch')
 parser.add_argument('--model', default='rnn', help='Model type cnn or rnn')
@@ -30,9 +31,10 @@ parser.add_argument('--epoch', type=int, default=0)
 
 def main():
     global args, best_prec1
-    
     args = parser.parse_args()
-    test_iter=SentimentIter(data_path='./Datasets',calc_accuracy=args.calc_accuracy)
+    mx.random.seed(args.seed)
+    np.random.seed(args.seed)
+    test_iter=SentimentIter(data_path='./Datasets',data_shapes=(args.batch_size,args.max_seq_len), label_shapes=(args.batch_size,2),calc_accuracy=args.calc_accuracy,batch_size=args.batch_size)
 
     if args.cuda:
         gpu_ids = [int(g) for g in args.gpus.split(',')]
@@ -78,24 +80,25 @@ def main():
             acc_test/=(i+1)
             end_time = time.time()
             print("Final test_acc %s ,Time %s" %(acc_test,end_time - start_time))  
-        while True:
-            start_time_iter = time.time()
-            ii+=1
-            batch=test_iter.next()
-            if ii%10==0 and ii!=0:
-                print('test: %s %% acc %s' % (100*ii*args.batch_size/len(test_iter.all_sentiments) ,acc_test/ii))
-            batch.data[0]=batch.data[0].as_in_context(xpu)
-            batch.label[0]=batch.label[0].as_in_context(xpu)
-            target=batch.label[0]
-            mod.forward(batch, is_train=False)
-            pred=mod.get_outputs()[0].asnumpy()
-            end_time_iter = time.time()
-            print('time for current iteration: %s ' %(end_time_iter-start_time_iter))
-            acc_test+=evaluate_accuracy_fit(batch.label[0].asnumpy(),pred)
-
-        acc_test/=(ii+1)
-        end_time = time.time()
-        print("Final test_acc %s ,Time %s" %(acc_test,end_time - start_time))
+        else:    
+            while True:
+                start_time_iter = time.time()
+                ii+=1
+                batch=test_iter.next()
+                if ii%10==0 and ii!=0:
+                    print('Tested %s batches with average accuracy: %s' % (ii ,acc_test/ii))
+                batch.data[0]=batch.data[0].as_in_context(xpu)
+                batch.label[0]=batch.label[0].as_in_context(xpu)
+                target=batch.label[0]
+                mod.forward(batch, is_train=False)
+                pred=mod.get_outputs()[0].asnumpy()
+                end_time_iter = time.time()
+                print('Time for current iteration: %s ' %(end_time_iter-start_time_iter))
+                acc_test+=evaluate_accuracy_fit(batch.label[0].asnumpy(),pred)
+    
+            acc_test/=(ii+1)
+            end_time = time.time()
+            print("Final test_acc %s ,Time %s" %(acc_test,end_time - start_time))
 
 if __name__ == '__main__':
     main()

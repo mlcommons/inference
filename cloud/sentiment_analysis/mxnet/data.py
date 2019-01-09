@@ -212,7 +212,7 @@ def create_test_iterators(data_path,test_processed_path,vocab_size,max_seq_len,b
 
 class SentimentIter(mx.io.DataIter):
     def __init__(self, data_names='data', data_shapes=(20,1000), data_gen=None,
-                 label_names='softmax_label', label_shapes=(20,2), label_gen=None, num_batches=1000,
+                 label_names='softmax_label', label_shapes=(20,2), label_gen=None, num_batches=10000,
                  data_path=None,train_processed_path=None,test_processed_path=None,vocab_size=5200,max_seq_len=1000,batch_size=10,token='spacy',word_dict=None,calc_accuracy=False):       
         self._provide_data = [mx.io.DataDesc(name=data_names,shape=data_shapes)]
         self._provide_label = [mx.io.DataDesc(name=label_names,shape=label_shapes)]
@@ -294,4 +294,5 @@ class SentimentIter(mx.io.DataIter):
             label = self.extract_label(idx)
             return mx.io.DataBatch(data, label)
         else:
-            raise StopIteration   
+            print('Finshed running %s batches' % (self.num_batches))
+            return StopIteration   

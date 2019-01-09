@@ -223,8 +223,8 @@ class IMDBDataset(Dataset):
         self.num_batches = num_batches
         self.cur_batch = 0
         self.data_path=data_path
-        self.test_processed_path=test_processed_path if test_processed_path is not None else data_path+'/Processed/imdb_test_data_v5200_spacy_v2.pickle'
-        self.train_processed_path=train_processed_path if train_processed_path is not None else data_path+'/Processed/imdb_train_data_v5200_spacy_v2.pickle'
+        self.test_processed_path=test_processed_path if test_processed_path is not None else data_path+'/Processed/imdb_test_data_v5200_spacy.pickle'
+        self.train_processed_path=train_processed_path if train_processed_path is not None else data_path+'/Processed/imdb_train_data_v5200_spacy.pickle'
         self.vocab_size=vocab_size
         self.max_seq_len=max_seq_len
         self.batch_size=batch_size

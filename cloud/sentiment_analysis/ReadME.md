@@ -21,30 +21,28 @@ In an environment that has pytorch and numpy run:
 ## Mxnet implemetation
 Copy the model using:
 '''
-  cd sentimnet.mxnet
-  sh downlaod_models.sh
+  sh downlaod_models_mxnet.sh
 '''
 ## Build docker
 '''
-  cd sentiment.mxnet
+  cd mxnet
   docker build -t inference/sentiment.mxnet .
 '''
 ## Run 
-docker run -it --rm -v "$(pwd)"../Datasets:/mlperf/Datasets -v "$(pwd)"../pretrained_mxnet:/mlperf/pretrained --ipc=host inference/sentiment.mxnet:latest python3 eval.py --model cnn --eval pretrained/seq2cnn_model --batch-size 1
+docker run -it --rm -v "$(pwd)"/../Datasets:/mlperf/Datasets -v "$(pwd)"/../pretrained_mxnet:/mlperf/pretrained --ipc=host inference/sentiment.mxnet:latest python eval.py --model cnn --eval pretrained/seq2cnn_model --batch-size 1 --calc_accuracy
 
 ## Pytorch implementation
 Copy the model using:
 '''
-  cd sentimnet.pytorch
-  sh downlaod_models.sh
+  sh downlaod_models_pyt.sh
 '''
 ## Build docker
 '''
-  cd sentiment.pytorch
+  cd pytorch
   docker build -t inference/sentiment.pytorch .
 '''
 ## Run 
-docker run -it --rm -v "$(pwd)"../Datasets:/Datasets -v "$(pwd)"../pretrained_pyt:/pretrained --ipc=host inference/sentiment.pytorch:latest python eval.py  --model cnn --eval pretrained/seq2cnn_imported_mxnet.pth --batch-size 1
+docker run -it --rm -v "$(pwd)"/../Datasets:/mlperf/Datasets -v "$(pwd)"/../pretrained_pyt:/mlperf/pretrained --ipc=host inference/sentiment.pytorch:latest python eval.py  --model cnn --eval pretrained/seq2cnn_imported_mxnet.pth --batch-size 1 
 
 ##Model implementation:
 ### Data and preprocessing

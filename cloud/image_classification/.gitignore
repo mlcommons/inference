@@ -1,0 +1,14 @@
+.coverage
+.vscode
+*.pyc
+.idea
+build
+dist
+obj
+.ipynb_checkpoints
+__pycache__
+*.pyc
+*.swp
+.cache
+.eggs
+*.egg-info

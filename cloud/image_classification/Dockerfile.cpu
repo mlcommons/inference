@@ -32,7 +32,7 @@ RUN cd /opt && \
     conda config --set always_yes yes --set changeps1 no
 
 #RUN conda install pytorch-cpu torchvision-cpu -c pytorch
-RUN pip install pillow tensorflow==1.12 onnxruntime==0.1.4
+RUN pip install pillow tensorflow onnxruntime
 
 ADD . /root
 

@@ -108,13 +108,12 @@ def get_args():
 def execute_parallel(model, ds, count, threads, result_list, result_dict,
                      batch_size=1, check_acc=False, post_process=None):
     """Run inference in parallel."""
-    tasks = Queue(maxsize=100)
+    tasks = Queue(maxsize=5*threads)
     workers = []
 
     def handle_tasks(tasks_queue):
         good = 0
         total = 0
-
         while True:
             item = tasks_queue.get()
             if item is None:
@@ -133,12 +132,16 @@ def execute_parallel(model, ds, count, threads, result_list, result_dict,
                         good += 1
                     total += 1
             tasks_queue.task_done()
+            # TODO: should we yield here to not starve the feeder ?
 
         if check_acc:
+            # TODO: this should be under lock
             result_dict["good"] += good
             result_dict["total"] += total
 
     # Create and start worker threads
+    # TODO: since we start as many threads as we have cores we might starve
+    # the parent if we run on cpu only so it can not feed fast enough ?
     for _ in range(threads):
         worker = threading.Thread(target=handle_tasks, args=(tasks,))
         worker.daemon = True
@@ -195,7 +198,7 @@ def find_qps(prefix, model, ds, count, threads, final_results, target_latency,
     """Scan to find latency bound qps."""
     qps_lower = 1
     qps_upper = 100000
-    target_qps = 1 / target_latency
+    target_qps = threads * 2 / target_latency
     best_match = None
     best_qps = 0
 
@@ -212,16 +215,22 @@ def find_qps(prefix, model, ds, count, threads, final_results, target_latency,
             print("^queue is full, early out")
         measured_latency = np.percentile(result_list, [99.]).tolist()[0]
         measured_qps = int(len(result_list) / result_dict["runtime"])
-        if measured_latency > target_latency:
+        if not ret_code or measured_latency > target_latency:
+            # did not meet target latency
             qps_upper = min(target_qps, qps_upper)
         else:
-            qps_lower = target_qps
-            if measured_qps > best_qps:
-                print("^taken")
-                best_match = measured_qps, result_list, result_dict, measured_latency
-                best_qps = measured_qps
+            # meet target latency
+            if measured_qps < target_qps * 0.9:
+                # not in 90% of expected latency ... something must be wrong
+                print("^latency meet but qps is off, something very wrong")
+                qps_upper = min(target_qps, qps_upper)
+            else:
+                qps_lower = target_qps
+                if measured_qps > best_qps:
+                    print("^taken")
+                    best_match = measured_qps, result_list, result_dict, measured_latency
+                    best_qps = measured_qps
         target_qps = int(round((qps_lower + qps_upper) / 2))
-
     if best_match:
         measured_qps, result_list, result_dict, measured_latency = best_match
     name = str(target_latency)
@@ -298,7 +307,7 @@ def main():
     #
     for latency in args.max_latency:
         find_qps("linear", model, ds, count, args.threads, final_results, latency,
-                 batch_size=args.batch_size, post_process=post_process,
+                 batch_size=args.batch_size, post_process=postprocessor,
                  distribution=ds.generate_linear_trace, runtime=args.time)
 
     #

@@ -51,10 +51,10 @@ class Dataset():
     def generate_linear_trace(self, min_queries, min_duration, qps, seed=123):
         timestamp = 0
         arrival = []
-        qps = int(qps)
+        timestep = 1 / qps
         while timestamp < min_duration and len(arrival) < min_queries:
-            timestamp += 1 / qps
-            arrival.append(1 / qps)
+            timestamp += timestep
+            arrival.append(timestep)
         self.arrival = arrival
 
     def generate_exp_trace(self, min_queries, min_duration, qps, seed=123):

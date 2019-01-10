@@ -26,9 +26,6 @@ Accuracy: 72.6% (TODO: check, it is suppose to be 76.47%)
 99 pcercentile @ 10ms, 50ms, 100ms, 200ms
 ```
 
-Images are stored preprocessed on disk and loaded at inference time. The image load time is included in the inference time
-(TODO: make sure this is what we want. The option ```--use_cache``` would pre-load the images).
-
 ## Prerequisites and Installation
 We support [tensorfow](https://github.com/tensorflow/tensorflow) and [onnxruntime](https://github.com/Microsoft/onnxruntime) backend's with the same benchmark tool.
 Support for other backend's can be easily added.

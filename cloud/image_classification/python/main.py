@@ -264,6 +264,10 @@ def main():
         from backend_onnxruntime import BackendOnnxruntime
         image_format = "NCHW"
         backend = BackendOnnxruntime()
+    elif args.backend == "null":
+        from backend_null import BackendNull
+        image_format = "NCHW"
+        backend = BackendNull()
     else:
         raise ValueError("unknown backend: " + args.backend)
 

@@ -18,10 +18,14 @@ fi
 if [ "x$MODEL_DIR" == "x" ]; then
     echo "MODEL_DIR not set" && exit 1
 fi
+echo $@
+shift
+echo $@
 
 target=cpu
-if [ $# -ge 2 ]; then
+if [ $# -ge 1 ]; then
     target=$2
+    shift
 fi
 if [ $target == "cpu" ]; then
     export CUDA_VISIBLE_DEVICES=""
@@ -32,4 +36,4 @@ OUTPUT_DIR=`pwd`/output/$profile.$target
 if [ ! -d $OUTPUT_DIR ]; then
     mkdir $OUTPUT_DIR
 fi
-python python/main.py --profile $profile $common_opt --model $model $dataset --output $OUTPUT_DIR/results.json
+python python/main.py --profile $profile $common_opt --model $model $dataset --output $OUTPUT_DIR/results.json $EXTRA_OPS $@

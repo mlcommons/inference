@@ -34,7 +34,7 @@ RUN cd /opt && \
 
 
 # RUN conda install pytorch torchvision -c pytorch
-RUN pip install pillow tensorflow-gpu==1.12 onnxruntime-gpu==1.4
+RUN pip install pillow tensorflow-gpu==1.12 onnxruntime-gpu==0.1.4
 
 RUN pip install --upgrade pip && \
     pip install cython && \

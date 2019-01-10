@@ -28,7 +28,7 @@ class Imagenet(dataset.Dataset):
         self.use_cache = use_cache
         self.cache_dir = os.path.join(data_path, _PREPROCESSED, image_format)
         self.data_path = data_path
-        self.pre_process = dataset.SUPPORTED_PREPROCESSORS[pre_process]
+        self.pre_process = pre_process
         self.need_transpose = True if image_format == "NCHW" else False
         not_found = 0
         if image_list is None:

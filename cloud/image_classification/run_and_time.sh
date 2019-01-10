@@ -32,6 +32,7 @@ mkdir -p $OUTPUT_DIR
 
 image=mlperf-$target
 docker build  -t $image -f Dockerfile.$target .
-$dockercmd run -e profile=$profile -v $DATA_DIR:/data -v $MODEL_DIR:/model -v `pwd`:/mlperf \
+$dockercmd run -e profile=$profile -e EXTRA_OPS=$EXTRA_OPS \
+    -v $DATA_DIR:/data -v $MODEL_DIR:/model -v `pwd`:/mlperf \
     -v $OUTPUT_DIR:/output -v /proc:/host_proc \
     -t $image:latest /mlperf/run_helper.sh 2>&1 | tee $OUTPUT_DIR/output.txt

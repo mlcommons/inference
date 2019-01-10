@@ -12,14 +12,14 @@ if [ $profile == "resnet50-tf" ] ; then
     model=/model/resnet50_v1.pb
 fi
 if [ $profile == "resnet50-onnxruntime" ] ; then
-    model=/mode/resnet50_v1.onnx
+    model=/model/resnet50_v1.onnx
 fi
 
 
 start_fmt=$(date +%Y-%m-%d\ %r)
 echo "STARTING RUN AT $start_fmt"
 
-python3 python/main.py --profile $profile $common_opt --model $model $dataset --output /output/results.json
+python3 python/main.py --profile $profile $common_opt --model $model $dataset --output /output/results.json $EXTRA_OPS
 
 end_fmt=$(date +%Y-%m-%d\ %r)
 echo "ENDING RUN AT $end_fmt"

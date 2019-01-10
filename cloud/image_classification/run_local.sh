@@ -18,13 +18,11 @@ fi
 if [ "x$MODEL_DIR" == "x" ]; then
     echo "MODEL_DIR not set" && exit 1
 fi
-echo $@
 shift
-echo $@
 
 target=cpu
 if [ $# -ge 1 ]; then
-    target=$2
+    target=$1
     shift
 fi
 if [ $target == "cpu" ]; then

@@ -30,7 +30,7 @@ fi
 OUTPUT_DIR=`pwd`/output/$profile.$target
 mkdir -p $OUTPUT_DIR
 
-image=mlperf-$target
+image=mlperf-infer-imgclassify-$target
 docker build  -t $image -f Dockerfile.$target .
 $dockercmd run -e profile=$profile -e EXTRA_OPS=$EXTRA_OPS \
     -v $DATA_DIR:/data -v $MODEL_DIR:/model -v `pwd`:/mlperf \

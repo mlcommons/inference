@@ -7,6 +7,7 @@ implementation of imagenet dataset
 import logging
 import os
 import re
+import time
 
 import numpy as np
 from PIL import Image
@@ -24,6 +25,8 @@ class Imagenet(dataset.Dataset):
 
     def __init__(self, data_path, image_list, use_cache=0, image_format="NHWC", pre_process=None, count=None):
         super(Imagenet, self).__init__()
+        self.image_list = []
+        self.label_list = []
         self.count = count
         self.use_cache = use_cache
         self.cache_dir = os.path.join(data_path, _PREPROCESSED, image_format)
@@ -36,6 +39,7 @@ class Imagenet(dataset.Dataset):
 
         os.makedirs(self.cache_dir, exist_ok=True)
 
+        start = time.time()
         with open(image_list, 'r') as f:
             for s in f:
                 image_name, label = re.split(r"\s+", s.strip())
@@ -69,13 +73,15 @@ class Imagenet(dataset.Dataset):
                 if self.count and len(self.image_list) > self.count:
                     break
 
+        time_taken = time.time() - start
         if not self.image_list:
             log.error("no images in image list found")
             raise ValueError("no images in image list found")
         if not_found > 0:
             log.info("reduced image list, %d images not found", not_found)
 
-        log.info("loaded %d image, cache=%d", len(self.image_list), use_cache)
+        log.info("loaded {} images, cache={}, took={:.1f}sec".format(
+            len(self.image_list), use_cache, time_taken))
 
         self.label_list = np.array(self.label_list)
         if use_cache:

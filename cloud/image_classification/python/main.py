@@ -268,6 +268,10 @@ def main():
         from backend_null import BackendNull
         image_format = "NCHW"
         backend = BackendNull()
+    elif args.backend == "pytorch":
+        from backend_pytorch import BackendPytorch
+        image_format = "NCHW"
+        backend = BackendPytorch()
     else:
         raise ValueError("unknown backend: " + args.backend)
 

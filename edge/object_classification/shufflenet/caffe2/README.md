@@ -1,4 +1,4 @@
-# Shufflenet MLPerf submission
+# Shufflenet MLPerf reference implementation
 
 Owner: Fei Sun (feisun@fb.com)
 
@@ -12,6 +12,7 @@ Steps:
   * Download the imagenet validation dataset from [the official imagenet competition website](http://www.image-net.org/challenges/LSVRC/2012/nnoupb/ILSVRC2012_img_val.tar). Untar the file.
     * The download is too long so it is a separate step.
   * type: `run.sh <imagenet dir> [group1|group2|group3|group4|group8]`
+    * Tested on a cleanly installed ubuntu 16.04 system.
 
 ## Model content
 Five shufflenet v1 models are provided. They are different in the number of groups: one, two, three, four, or eight.
@@ -56,9 +57,13 @@ compares the model output with the golden values.
 * Since the validation dataset is large and cannot be processed in one iteration, the images are processed in batches.
 [aggregate_classification_results.py](https://github.com/facebook/FAI-PEP/blob/master/libraries/python/aggregate_classification_results.py) aggregates all the run results and forms the final result.
 
-## Model performance on the reference platform
+## Model accuracy
 
-TBD (will update when data is available)
+group1: 66.468%
+group2: 67.376%
+group3: 67.506%
+group4: 67.455%
+group8: 67.710%
 
 ## Acknowledgement
 

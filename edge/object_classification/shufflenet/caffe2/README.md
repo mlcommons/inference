@@ -59,11 +59,11 @@ compares the model output with the golden values.
 
 ## Model accuracy
 
-group1: 66.468%
-group2: 67.376%
-group3: 67.506%
-group4: 67.455%
-group8: 67.710%
+* group1: 66.468%
+* group2: 67.376%
+* group3: 67.506%
+* group4: 67.455%
+* group8: 67.710%
 
 ## Acknowledgement
 

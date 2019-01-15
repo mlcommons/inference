@@ -61,10 +61,13 @@ class Dataset():
         timestamp = 0
         arrival = []
         qps = int(qps)
+        if qps == 0:
+            qps = 1
         np.random.seed(seed)
         dist = np.random.exponential(scale=1, size=qps)
         while timestamp < min_duration and len(arrival) < min_queries:
-            val = dist[len(arrival) % qps]
+            idx = len(arrival)
+            val = dist[idx % qps]
             timestamp += val / qps
             arrival.append(val / qps)
         self.arrival = arrival

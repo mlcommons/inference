@@ -31,33 +31,30 @@ SUPPORTED_DATASETS = {
 
 # pre-canned command line options so simplify things. They are used as defaults and can be
 # overwritten by command line
+DEFAULT_LATENCY_BUCKETS = "0.010,0.050,0.100,0.200,0.400"
+
 SUPPORTED_PROFILES = {
     "defaults": {
         "dataset": "imagenet",
-        "data-format": "NHWC",
         "backend": "tensorflow",
         "cache": 0,
         "batch_size": 1,
         "time": 30,
-        "max-latency": "0.010,0.050,0.100,0.200",
+        "max-latency": DEFAULT_LATENCY_BUCKETS,
     },
     "resnet50-tf": {
         "inputs": "input_tensor:0",
         "outputs": "ArgMax:0",
         "dataset": "imagenet",
-        "data-format": "NHWC",
         "backend": "tensorflow",
         "cache": 0,
-        "max-latency": "0.010,0.050,0.100,0.200",
+        "max-latency": DEFAULT_LATENCY_BUCKETS,
     },
     "resnet50-onnxruntime": {
-        "inputs": "input_tensor:0",
-        "outputs": "ArgMax:0",
         "dataset": "imagenet",
-        "data-format": "NHWC",
         "backend": "onnxruntime",
         "cache": 0,
-        "max-latency": "0.010,0.050,0.100,0.200",
+        "max-latency": DEFAULT_LATENCY_BUCKETS,
     }
 }
 
@@ -120,20 +117,27 @@ def execute_parallel(model, ds, count, threads, result_list, result_dict,
                 # done, exit thread
                 tasks_queue.task_done()
                 break
-            if check_acc:
-                item.start = time.time()
-            results = model.predict({model.inputs[0]: item.img})
-            result_list.append(time.time() - item.start)
-            if check_acc:
-                results = results[0]
-                for idx, result in enumerate(results):
-                    result = post_process(result)
-                    if item.label[idx] == result:
-                        good += 1
-                    total += 1
+
+            try:
+                if check_acc:
+                    item.start = time.time()
+                results = model.predict({model.inputs[0]: item.img})
+                result_list.append(time.time() - item.start)
+                if check_acc:
+                    results = results[0]
+                    for idx, result in enumerate(results):
+                        result = post_process(result)
+                        if item.label[idx] == result:
+                            good += 1
+                        total += 1
+            except Exception as ex:
+                log.error("execute_parallel thread: %s", ex)
+
             tasks_queue.task_done()
+
             # TODO: should we yield here to not starve the feeder ?
 
+        # thread is done
         if check_acc:
             # TODO: this should be under lock
             result_dict["good"] += good
@@ -221,8 +225,8 @@ def find_qps(prefix, model, ds, count, threads, final_results, target_latency,
         else:
             # meet target latency
             if measured_qps < target_qps * 0.9:
-                # not in 90% of expected latency ... something must be wrong
-                print("^latency meet but qps is off, something very wrong")
+                # not in 90% of expected latency
+                print("^latency meet but qps is off")
                 qps_upper = min(target_qps, qps_upper)
             else:
                 qps_lower = target_qps
@@ -250,42 +254,46 @@ def find_qps(prefix, model, ds, count, threads, final_results, target_latency,
     return measured_qps
 
 
+def get_backend(backend):
+    if backend == "tensorflow":
+        from backend_tf import BackendTensorflow
+        backend = BackendTensorflow()
+    elif backend == "onnxruntime":
+        from backend_onnxruntime import BackendOnnxruntime
+        backend = BackendOnnxruntime()
+    elif backend == "null":
+        from backend_null import BackendNull
+        backend = BackendNull()
+    elif backend == "pytorch":
+        from backend_pytorch import BackendPytorch
+        backend = BackendPytorch()
+    elif backend == "tflite":
+        from backend_tflite import BackendTflite
+        backend = BackendTflite()
+    else:
+        raise ValueError("unknown backend: " + args.backend)
+    return backend
+
+
 def main():
     args = get_args()
 
     print(args)
 
     # find backend
-    if args.backend == "tensorflow":
-        from backend_tf import BackendTensorflow
-        image_format = "NHWC"
-        backend = BackendTensorflow()
-    elif args.backend == "onnxruntime":
-        from backend_onnxruntime import BackendOnnxruntime
-        image_format = "NCHW"
-        backend = BackendOnnxruntime()
-    elif args.backend == "null":
-        from backend_null import BackendNull
-        image_format = "NCHW"
-        backend = BackendNull()
-    elif args.backend == "pytorch":
-        from backend_pytorch import BackendPytorch
-        image_format = "NCHW"
-        backend = BackendPytorch()
-    else:
-        raise ValueError("unknown backend: " + args.backend)
+    backend = get_backend(args.backend)
 
     # override image format if given
-    image_format = args.data_format if args.data_format else image_format
+    image_format = args.data_format if args.data_format else backend.image_format()
 
     # dataset to use
     wanted_dataset, preprocessor, postprocessor = SUPPORTED_DATASETS[args.dataset]
     ds = wanted_dataset(data_path=args.dataset_path,
-                                          image_list=args.dataset_list,
-                                          image_format=image_format,
-                                          pre_process=preprocessor,
-                                          use_cache=args.cache,
-                                          count=args.count)
+                        image_list=args.dataset_list,
+                        image_format=image_format,
+                        pre_process=preprocessor,
+                        use_cache=args.cache,
+                        count=args.count)
 
     # load model to backend
     model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)

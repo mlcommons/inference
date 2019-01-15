@@ -18,6 +18,9 @@ class BackendNull(backend.Backend):
     def name(self):
         return "null"
 
+    def image_format(self):
+        return "NHWC"
+
     def load(self, model_path, inputs=None, outputs=None):
         if outputs:
             self.outputs = outputs

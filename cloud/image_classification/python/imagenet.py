@@ -62,6 +62,10 @@ class Imagenet(dataset.Dataset):
                         img = f.read()
                         img = np.frombuffer(img, dtype=np.float32)
                         img = img.reshape(_IMAGE_SIZE)
+                        if self.need_transpose:
+                            img = img.reshape(_IMAGE_SIZE[2], _IMAGE_SIZE[0], _IMAGE_SIZE[1])
+                        else:
+                            img = img.reshape(_IMAGE_SIZE)
                         self.image_list.append(img)
                 else:
                     # else use the image path and load at inference time
@@ -94,5 +98,8 @@ class Imagenet(dataset.Dataset):
             with open(self.image_list[nr], "rb") as f:
                 img = f.read()
                 img = np.frombuffer(img, dtype=np.float32)
-                img = img.reshape(_IMAGE_SIZE)
+                if self.need_transpose:
+                    img = img.reshape(_IMAGE_SIZE[2], _IMAGE_SIZE[0], _IMAGE_SIZE[1])
+                else:
+                    img = img.reshape(_IMAGE_SIZE)
         return img, self.label_list[nr]

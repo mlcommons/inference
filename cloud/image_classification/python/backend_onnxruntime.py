@@ -19,11 +19,20 @@ class BackendOnnxruntime(backend.Backend):
     def name(self):
         return "onnxruntime"
 
+    def image_format(self):
+        return "NCHW"
+
     def load(self, model_path, inputs=None, outputs=None):
         self.sess = rt.InferenceSession(model_path)
         # get inpput and output names
-        self.inputs = [meta.name for meta in self.sess.get_inputs()]
-        self.outputs = [meta.name for meta in self.sess.get_outputs()]
+        if not inputs:
+            self.inputs = [meta.name for meta in self.sess.get_inputs()]
+        else:
+            self.inputs = inputs
+        if not outputs:
+            self.outputs = [meta.name for meta in self.sess.get_outputs()]
+        else:
+            self.outputs = outputs
         return self
 
     def predict(self, feed):

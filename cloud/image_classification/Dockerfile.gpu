@@ -31,15 +31,14 @@ RUN cd /opt && \
     echo "conda activate base" >> ~/.bashrc && \
     conda config --set always_yes yes --set changeps1 no
 
-
-# RUN conda install pytorch torchvision -c pytorch
-RUN pip install pillow tensorflow-gpu onnxruntime-gpu
-
 RUN pip install --upgrade pip && \
-    pip install cython && \
+    pip install cython future pillow onnx && \
     ln -s /usr/local/cuda/lib64 /usr/local/cuda/lib && \
     cp /usr/lib/x86_64-linux-gnu/libnccl* /usr/local/cuda/lib && \
     ldconfig
+
+RUN conda install pytorch torchvision -c pytorch
+RUN pip install tensorflow-gpu onnxruntime-gpu
 
 ADD . /root
 

@@ -37,15 +37,15 @@ We require python 3.5 or 3.6 and recommend to use anaconda (See [Dockerfile](Doc
 Install the desired backend.
 For tensorflow:
 ```
-pip install tensorflow==1.12
+pip install tensorflow
 or 
-pip install tensorflow-gpu==1.12 (needs cuda9.0)
+pip install tensorflow-gpu
 ```
 For onnxruntime:
 ```
-pip install onnxruntime==1.4
+pip install onnxruntime
 or
-pip install onnxruntime-gpu==1.4 (needs cuda9.1)
+pip install onnxruntime-gpu
 ```
 
 ## Running the benchmark
@@ -63,7 +63,7 @@ This model uses the data format NHWC. If you need NCHW, please file an issue on 
 
 For ONNX use:
 
-https://zenodo.org/record/2535875/files/resnet50_v1.onnx
+https://zenodo.org/record/2541184/files/resnet50_v1.onnx
 
 This model uses ONNX opset 8. If you need other opset's, please file an issue on github. The model is directly converted
 from the tensorflow model via https://github.com/onnx/tensorflow-onnx.

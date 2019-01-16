@@ -127,7 +127,7 @@ std::chrono::nanoseconds ReplayTrace(const Trace<QueryType> &trace,
 
     // TODO(tjablin): The completion callback should record the result of the
     // inference.
-    auto completion_callback = [&] {
+    auto completion_callback = [i, query_start_time, &latencies] {
       latencies[i] =
           std::chrono::high_resolution_clock::now() - query_start_time;
     };

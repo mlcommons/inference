@@ -61,11 +61,11 @@ RUN git clone https://github.com/ahsueh1996/warp-ctc.git && \
 # As a consequence, we need to... "fix" torchaudio later
 RUN apt-get install -y sox libsox-dev libsox-fmt-all
 RUN git clone https://github.com/pytorch/audio.git
-RUN cd audio; python setup.py install					# This option pulls the newest version
+RUN cd audio; git reset --hard 7314b36dd5f4205826ff9570068b23cd405abd50; python setup.py install   # This option uses the required commit
 # RUN cd audio; git reset --hard 67564173db19035329f21caa7d2be986c4c23797; python setup.py install # This option to solve dependency issue
 
 # Install ctcdecode
 RUN git clone --recursive https://github.com/parlance/ctcdecode.git
-RUN cd ctcdecode; pip install .
+RUN cd ctcdecode; git reset --hard 140b45860cec6671fb0bf6dbb675073241c0f9b0; pip install . # This option uses the required commit
 
 ENV SHELL /bin/bash

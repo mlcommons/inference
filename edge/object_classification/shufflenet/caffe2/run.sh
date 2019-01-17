@@ -6,7 +6,7 @@ export MAX_JOBS=1
 
 # install python
 sudo apt-get update
-sudo apt-get -y install python python-pip git-core
+sudo apt-get -y install python python-pip git-core wget
 sudo apt-get -y install wget unzip
 
 sudo pip install virtualenv
@@ -32,14 +32,21 @@ BENCHMARK_FILE=${FAI_PEP_DIR}/specifications/models/caffe2/shufflenet/shufflenet
 SCRIPT=$(realpath "$0")
 FILE_DIR=$(dirname "$SCRIPT")
 IMAGENET_DIR=$1
-MODEL_DIR=${FILE_DIR}/model/$2
+MODEL_ROOT=${FILE_DIR}
+MODEL_DIR=${MODEL_ROOT}/model/$2
 
 mkdir -p "$CONFIG_DIR"
 mkdir -p "$LOCAL_REPORTER_DIR"
 
+if [ ! -f "${MODEL_ROOT}/shufflenet.tar.gz" ]; then
+  wget -O ${MODEL_ROOT}/shufflenet.tar.gz https://s3.amazonaws.com/download.caffe2.ai/models/shufflenet/new_shufflenet/shufflenet.tar.gz
+  tar -xzvf ${MODEL_ROOT}/shufflenet.tar.gz
+fi
+
 # clone FAI-PEP
-rm -rf ${FAI_PEP_DIR}
-git clone https://github.com/facebook/FAI-PEP.git "$FAI_PEP_DIR"
+if [ ! -d "${FAI_PEP_DIR}" ]; then
+  git clone https://github.com/facebook/FAI-PEP.git "$FAI_PEP_DIR"
+fi
 pip install six requests
 
 # set up default arguments
@@ -68,9 +75,9 @@ fi
 # install ninja to speedup the build
 pip install ninja
 
-# comment out since downloading the database may need 7+ hours
-# wget http://www.image-net.org/challenges/LSVRC/2012/nnoupb/ILSVRC2012_img_val.tar
-# tar -xzvf
+# The downloaded images should be in the following directory structure
+# ${IMAGENET_DIR}/labels.txt
+# ${IMAGENET_DIR}/val/n*
 
 # install opencv for image conversion
 if [ ! -d /tmp/opencv-3.4.3 ]; then

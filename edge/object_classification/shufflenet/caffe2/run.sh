@@ -40,7 +40,7 @@ mkdir -p "$LOCAL_REPORTER_DIR"
 
 if [ ! -f "${MODEL_ROOT}/shufflenet.tar.gz" ]; then
   wget -O ${MODEL_ROOT}/shufflenet.tar.gz https://s3.amazonaws.com/download.caffe2.ai/models/shufflenet/new_shufflenet/shufflenet.tar.gz
-  tar -xzvf ${MODEL_ROOT}/shufflenet.tar.gz
+  tar -xzvf ${MODEL_ROOT}/shufflenet.tar.gz -C ${MODEL_ROOT}
 fi
 
 # clone FAI-PEP

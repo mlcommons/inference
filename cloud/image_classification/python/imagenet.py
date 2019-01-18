@@ -32,9 +32,11 @@ class Imagenet(dataset.Dataset):
         self.cache_dir = os.path.join(data_path, _PREPROCESSED, image_format)
         self.data_path = data_path
         self.pre_process = pre_process
+        # input images are in HWC
         self.need_transpose = True if image_format == "NCHW" else False
         not_found = 0
         if image_list is None:
+            # by default look for val_map.txt
             image_list = os.path.join(data_path, "val_map.txt")
 
         os.makedirs(self.cache_dir, exist_ok=True)
@@ -51,15 +53,16 @@ class Imagenet(dataset.Dataset):
                     continue
                 if not os.path.exists(dst):
                     # cache a preprocessed version of the image
+                    # TODO: make this multi threaded ?
                     with Image.open(src) as img_org:
                         img = self.pre_process(img_org, need_transpose=self.need_transpose, dims=_IMAGE_SIZE)
-                        with open(dst, "wb") as f:
-                            img.tofile(f)
+                        with open(dst, "wb") as fimg:
+                            img.tofile(fimg)
 
                 if self.use_cache:
                     # if we use cache, preload the image
-                    with open(dst, "rb") as f:
-                        img = f.read()
+                    with open(dst, "rb") as fimg:
+                        img = fimg.read()
                         img = np.frombuffer(img, dtype=np.float32)
                         img = img.reshape(_IMAGE_SIZE)
                         if self.need_transpose:
@@ -92,6 +95,7 @@ class Imagenet(dataset.Dataset):
             self.image_list = np.array(self.image_list)
 
     def get_item(self, nr):
+        """Get image by number in the list."""
         if self.use_cache:
             img = self.image_list[nr]
         else:

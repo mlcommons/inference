@@ -29,8 +29,8 @@ SUPPORTED_DATASETS = {
     "imagenet": (imagenet.Imagenet, dataset.pre_process_vgg, dataset.post_process_offset1)
 }
 
-# pre-canned command line options so simplify things. They are used as defaults and can be
-# overwritten by command line
+# pre-defined command line options so simplify things. They are used as defaults and can be
+# overwritten from command line
 DEFAULT_LATENCY_BUCKETS = "0.010,0.050,0.100,0.200,0.400"
 
 SUPPORTED_PROFILES = {
@@ -78,7 +78,6 @@ def get_args():
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--max-latency", type=str, help="max latency in 99pct tile")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
-    parser.add_argument("--result", help="result file")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
@@ -96,7 +95,6 @@ def get_args():
         args.inputs = args.inputs.split(",")
     if args.outputs:
         args.outputs = args.outputs.split(",")
-
     if args.max_latency:
         args.max_latency = [float(i) for i in args.max_latency.split(",")]
     return args
@@ -105,32 +103,41 @@ def get_args():
 def execute_parallel(model, ds, count, threads, result_list, result_dict,
                      batch_size=1, check_acc=False, post_process=None):
     """Run inference in parallel."""
-    tasks = Queue(maxsize=5*threads)
+
+    # We want the queue to be large enough to not ever block the feeder but small enough
+    # to about if we can not keep up with the processing.
+    tasks = Queue(maxsize=threads*5)
     workers = []
 
     def handle_tasks(tasks_queue):
+        """Worker thread."""
         good = 0
         total = 0
         while True:
-            item = tasks_queue.get()
-            if item is None:
-                # done, exit thread
+            qitem = tasks_queue.get()
+            if qitem is None:
+                # None in the queue indicates the parent want us to exit
                 tasks_queue.task_done()
                 break
-
             try:
                 if check_acc:
-                    item.start = time.time()
-                results = model.predict({model.inputs[0]: item.img})
-                result_list.append(time.time() - item.start)
+                    # if check_acc is set we want to not include time spend in the queue
+                    qitem.start = time.time()
+
+                # run the prediction
+                results = model.predict({model.inputs[0]: qitem.img})
+                # and keep track of how long it took
+                result_list.append(time.time() - qitem.start)
+
                 if check_acc:
+                    # check if the result was correct and count the outcome
                     results = results[0]
                     for idx, result in enumerate(results):
                         result = post_process(result)
-                        if item.label[idx] == result:
+                        if qitem.label[idx] == result:
                             good += 1
                         total += 1
-            except Exception as ex:
+            except Exception as ex:  # pylint: disable=broad-except
                 log.error("execute_parallel thread: %s", ex)
 
             tasks_queue.task_done()
@@ -143,7 +150,7 @@ def execute_parallel(model, ds, count, threads, result_list, result_dict,
             result_dict["good"] += good
             result_dict["total"] += total
 
-    # Create and start worker threads
+    # create and start worker threads
     # TODO: since we start as many threads as we have cores we might starve
     # the parent if we run on cpu only so it can not feed fast enough ?
     for _ in range(threads):
@@ -153,15 +160,16 @@ def execute_parallel(model, ds, count, threads, result_list, result_dict,
         worker.start()
 
     start = time.time()
+    # feed the queue
     try:
         for item in ds.batch(batch_size):
             if item.img.shape[0] < batch_size:
                 continue
             tasks.put(item, block=check_acc)
         ret_code = True
-    except Exception:
+    except Exception:  # pylint: disable=broad-except
         # we get here when the queue is full and we'd block. This is a hint that
-        # the system is not remotely keeping up. The caller might want to abort this run.
+        # the system is not remotely keeping up. The caller uses this hint to abort this run to.
         ret_code = False
 
     # exit all threads
@@ -174,27 +182,37 @@ def execute_parallel(model, ds, count, threads, result_list, result_dict,
     return ret_code
 
 
-def report_result(name, final_result, result_list, result_dict, check_acc=None):
-    r = {}
-    percentiles = [50, 80, 90, 95, 99, 99.9]
+def report_result(name, target_latency, final_result, result_list, result_dict, check_acc=False):
+    """Record a result in the final_result dict and write it to stdout."""
+    result = {}
+    # the percentiles we want to record
+    percentiles = [50., 80., 90., 95., 99., 99.9]
     buckets = np.percentile(result_list, percentiles).tolist()
     buckets_str = ",".join(["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)])
     mean = np.mean(result_list)
-    r1 = {str(k): v for k, v in zip(percentiles, buckets)}
-    r["mean"] = mean
-    r["runtime"] = result_dict["runtime"]
-    r["qps"] = len(result_list) / result_dict["runtime"]
-    r["count"] = len(result_list)
-    r["percentiles"] = r1
+
+    # this is what we record for each run
+    result["target_latency"] = target_latency
+    result["mean"] = mean
+    result["runtime"] = result_dict["runtime"]
+    result["qps"] = len(result_list) / result_dict["runtime"]
+    result["count"] = len(result_list)
+    result["percentiles"] = {str(k): v for k, v in zip(percentiles, buckets)}
+
+    # to stdout
     print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, tiles={}".format(
-        name, r["qps"], r["mean"], r["runtime"], buckets_str))
+        name, result["qps"], result["mean"], result["runtime"], buckets_str))
+
     if check_acc:
-        r["good_items"] = result_dict["good"]
-        r["total_items"] = result_dict["total"]
-        r["accuacy"] = 100. * result_dict["good"] / result_dict["total"]
-        print("{} accuacy={:.2f}, good_items={}, total_items={}".format(
-            name, r["accuacy"], r["good_items"], r["total_items"]))
-    final_result[name] = r
+        # record accuracy if we have it.
+        result["good_items"] = result_dict["good"]
+        result["total_items"] = result_dict["total"]
+        result["accuracy"] = 100. * result_dict["good"] / result_dict["total"]
+        print("{} accuracy={:.2f}, good_items={}, total_items={}".format(
+            name, result["accuracy"], result["good_items"], result["total_items"]))
+
+    # add the result to the result dict
+    final_result[name] = result
 
 
 def find_qps(prefix, model, ds, count, threads, final_results, target_latency,
@@ -206,6 +224,10 @@ def find_qps(prefix, model, ds, count, threads, final_results, target_latency,
     best_match = None
     best_qps = 0
 
+    result_list = []
+    result_dict = {}
+    measured_latency = -1
+    measured_qps = 0
     while qps_upper - qps_lower > 1:
         name = "{}/{}/{}".format(prefix, target_latency, int(target_qps))
         if distribution:
@@ -214,7 +236,7 @@ def find_qps(prefix, model, ds, count, threads, final_results, target_latency,
         result_dict = {}
         ret_code = execute_parallel(model, ds, count, threads, result_list, result_dict,
                                     batch_size=batch_size, post_process=post_process)
-        report_result(name, final_results["scan"][prefix], result_list, result_dict)
+        report_result(name, target_latency, final_results["scan"][prefix], result_list, result_dict)
         if not ret_code:
             print("^queue is full, early out")
         measured_latency = np.percentile(result_list, [99.]).tolist()[0]
@@ -238,7 +260,7 @@ def find_qps(prefix, model, ds, count, threads, final_results, target_latency,
     if best_match:
         measured_qps, result_list, result_dict, measured_latency = best_match
     name = str(target_latency)
-    report_result(name, final_results["results"][prefix], result_list, result_dict)
+    report_result(name, target_latency, final_results["results"][prefix], result_list, result_dict)
 
     if measured_latency > target_latency:
         # did not meet latency target
@@ -316,7 +338,7 @@ def main():
     result_dict = {"good": 0, "total": 0}
     execute_parallel(model, ds, count, args.threads, result_list, result_dict,
                      check_acc=True, post_process=postprocessor)
-    report_result("check_accuracy", final_results, result_list, result_dict, True)
+    report_result("check_accuracy", 0., final_results, result_list, result_dict, check_acc=True)
 
     #
     # find max qps with equal request distribution

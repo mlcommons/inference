@@ -2,9 +2,10 @@
 null backend
 """
 
-# pylint: disable=unused-argument,missing-docstring
+# pylint: disable=unused-argument,missing-docstring,useless-super-delegation
 
 import time
+
 import backend
 
 
@@ -22,10 +23,8 @@ class BackendNull(backend.Backend):
         return "NHWC"
 
     def load(self, model_path, inputs=None, outputs=None):
-        if outputs:
-            self.outputs = outputs
-        if inputs:
-            self.inputs = inputs
+        self.outputs = ["output"]
+        self.inputs = ["input"]
         return self
 
     def predict(self, feed):

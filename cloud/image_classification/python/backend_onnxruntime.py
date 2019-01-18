@@ -2,7 +2,7 @@
 onnxruntime backend (https://github.com/microsoft/onnxruntime)
 """
 
-# pylint: disable=unused-argument,missing-docstring
+# pylint: disable=unused-argument,missing-docstring,useless-super-delegation
 
 import onnxruntime as rt
 
@@ -17,14 +17,17 @@ class BackendOnnxruntime(backend.Backend):
         return rt.__version__
 
     def name(self):
+        """Name of the runtime."""
         return "onnxruntime"
 
     def image_format(self):
+        """image_format. For onnx it is always NCHW."""
         return "NCHW"
 
     def load(self, model_path, inputs=None, outputs=None):
+        """Load model and find input/outputs from the model file."""
         self.sess = rt.InferenceSession(model_path)
-        # get inpput and output names
+        # get input and output names
         if not inputs:
             self.inputs = [meta.name for meta in self.sess.get_inputs()]
         else:
@@ -36,4 +39,5 @@ class BackendOnnxruntime(backend.Backend):
         return self
 
     def predict(self, feed):
+        """Run the prediction."""
         return self.sess.run(self.outputs, feed)

@@ -28,7 +28,7 @@ Accuracy: 72.6% (TODO: check, it is suppose to be 76.47%)
 
 ## Prerequisites and Installation
 We support [tensorfow](https://github.com/tensorflow/tensorflow) and [onnxruntime](https://github.com/Microsoft/onnxruntime) backend's with the same benchmark tool.
-Support for other backend's can be easily added.
+Support for other backends can be easily added.
 
 The following steps are only needed if you run the benchmark ```without docker```.
 
@@ -49,11 +49,18 @@ pip install onnxruntime-gpu
 ```
 
 ## Running the benchmark
-### Common Setup
+### One time setup
 
-Download Imagenet2012 from here:
-http://www.image-net.org/challenges/LSVRC/2012/.
-We will only use the validation set.
+Download a minimal validation set for [Imagenet2012](http://www.image-net.org/challenges/LSVRC/2012) using [Collective Knowledge (CK)](https://github.com/ctuning).
+The same dataset is used for other mlperf inference benchmarks that are using imagenet.
+```
+pip install ck
+ck pull  repo:ck-env
+ck install package:imagenet-2012-val-min
+ck install package:imagenet-2012-aux
+cp $HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux/val.txt
+$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val-min/val_map.txt
+```
 
 Download our pre-trained models. For tensorflow use:
 

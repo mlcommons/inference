@@ -6,6 +6,7 @@ dataset related classes and methods
 
 import sys
 import time
+
 import numpy as np
 
 
@@ -151,7 +152,7 @@ def pre_process_vgg(img, dims=None, need_transpose=False):
         h = int(output_height * width / new_width)
     else:
         h = new_height
-        w = int(output_width *  height / new_height)
+        w = int(output_width * height / new_height)
 
     img = img.resize((w, h))
 

@@ -2,17 +2,35 @@
 pytoch/caffe2 backend via onnx
 https://pytorch.org/docs/stable/onnx.html
 
-TODO: this currently does not work for our resnet50.onnx model
-because caffe2 seems to have issues with the onnx pad operator.
-ONNX FATAL: [enforce fail at backend.cc:811] . Caffe2 only supports padding 2D Tensor,
-whereas padding is [0, 3, 3, 0, 0, 3, 3, 0, ]
+FIXME: this currently does not work for our resnet50.onnx model
+
+caffe2 complains about the following:
+
+[E ../caffe2/core/operator_schema.cc:64] Input index 3
+(resnet_model/batch_normalization/moving_mean:0) and output idx 1
+(resnet_model/batch_normalization/FusedBatchNorm:3) are not in-place but should be as required by op SpatialBN
+schema->Verify(operator_def). Operator def did not pass schema checking: input: "resnet_model/conv2d/Conv2D:0"
+input: "resnet_model/batch_normalization/gamma:0"
+input: "resnet_model/batch_normalization/beta:0"
+input: "resnet_model/batch_normalization/moving_mean:0"
+input: "resnet_model/batch_normalization/moving_variance:0"
+...
+name: "resnet_model/batch_normalization/FusedBatchNorm"
+type: "SpatialBN" args{name: "epsilon" f: 1.001e-05} device_option {device_type: 0 device_id: 0}
+
+and
+
+WARNING:caffe2.python.workspace:Original python traceback for operator `2` in network `tf2onnx_init`
+ERROR:main:execute_parallel thread: [enforce fail at ../caffe2/core/workspace.cc:229] .
+I respectfully refuse to overwrite an existing net of the same name "tf2onnx_init", unless you specify overwrite=true.
 """
 
-# pylint: disable=unused-argument,missing-docstring
+# pylint: disable=unused-argument,missing-docstring,,useless-super-delegation
 
-import onnx
-import torch # needed to get version and cuda setup
 import caffe2.python.onnx.backend as pt_backend
+import onnx
+import torch  # needed to get version and cuda setup
+
 import backend
 
 

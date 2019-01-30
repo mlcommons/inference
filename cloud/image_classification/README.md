@@ -28,7 +28,7 @@ Accuracy: 72.6% (TODO: check, it is suppose to be 76.47%)
 
 ## Prerequisites and Installation
 We support [tensorfow](https://github.com/tensorflow/tensorflow) and [onnxruntime](https://github.com/Microsoft/onnxruntime) backend's with the same benchmark tool.
-Support for other backend's can be easily added.
+Support for other backends can be easily added.
 
 The following steps are only needed if you run the benchmark ```without docker```.
 
@@ -49,11 +49,18 @@ pip install onnxruntime-gpu
 ```
 
 ## Running the benchmark
-### Common Setup
+### One time setup
 
-Download Imagenet2012 from here:
-http://www.image-net.org/challenges/LSVRC/2012/.
-We will only use the validation set.
+Download a minimal validation set for [Imagenet2012](http://www.image-net.org/challenges/LSVRC/2012) using [Collective Knowledge (CK)](https://github.com/ctuning).
+The same dataset is used for other mlperf inference benchmarks that are using imagenet.
+```
+pip install ck
+ck pull  repo:ck-env
+ck install package:imagenet-2012-val-min
+ck install package:imagenet-2012-aux
+cp $HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux/val.txt
+$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val-min/val_map.txt
+```
 
 Download our pre-trained models. For tensorflow use:
 
@@ -150,8 +157,70 @@ In the out directory we create a results.json file with the following format:
 }
 ```
 
-## How we created the model files
-```TODO```
+### Usage
+```
+usage: main.py [-h] [--dataset {imagenet}] --dataset-path DATASET_PATH
+               [--dataset-list DATASET_LIST] [--data-format {NCHW,NHWC}]
+               [--profile {defaults,resnet50-tf,resnet50-onnxruntime}] --model
+               MODEL [--inputs INPUTS] [--output OUTPUT] [--outputs OUTPUTS]
+               [--backend BACKEND] [--batch_size BATCH_SIZE]
+               [--threads THREADS] [--time TIME] [--count COUNT]
+               [--max-latency MAX_LATENCY] [--cache CACHE]
+```
+For example to run a quick test on 200ms in the 99 percentile for tensorflow you would do:
+```
+python python/main.py --profile resnet50-tf --count 500 --time 10 --model models/resnet50_v1.pb --dataset-path imagenet2012 --output results.json --max-latency 0.2
+```
 
-## Some internals on the benchmark tool
-```TODO```
+```--dataset```
+use the specified dataset. Currently we only support imagenet.
+
+```--dataset-path```
+path to the dataset.
+
+```--dataset-list DATASET_LIST```
+the list of image names to be used. By default we look for val_map.txt in the dataset-path.
+
+```--data-format {NCHW,NHWC}```
+data-format of the model
+
+```--profile {resnet50-tf,resnet50-onnxruntime}```
+this fills in default command line options for the specific benchmark. Additional command line options may override the defautls.
+
+```--model MODEL```
+the model file.
+
+```--inputs INPUTS```
+comma seperated input name list in case the model format does not provide the input names. This is needed for tensorflow since the graph does not specify the inputs.
+
+```--outputs OUTPUTS```
+comma seperated output name list in case the model format does not provide the output names. This is needed for tensorflow since the graph does not specify the outputs.
+
+```--output OUTPUT]```
+location of the json output.
+
+```--backend BACKEND```
+which backend to use. Currently supported is tensorflow, onnxruntime, pytorch and tflite.
+```--batch_size BATCH_SIZE```
+batch size to use. Defaults to 1.
+
+```--threads THREADS```
+number of worker threads to use. This defaults to the number of processors in the system.
+
+```--time TIME```
+time how long we run each epoch. Defaults to 30 seconds.
+
+```--count COUNT```
+Number of images for each epoch. If not given we use the number of images in the dataset.
+
+```--max-latency MAX_LATENCY```
+comma seperated list of Which latencies (in seconds) we try to reach in the 99 percentile.
+The deault is 0.010,0.050,0.100,0.200,0.400.
+
+```--cache CACHE```
+1 if we should pre-load images.
+
+
+## License
+
+[Apache License 2.0](LICENSE)

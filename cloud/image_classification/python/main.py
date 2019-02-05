@@ -26,7 +26,12 @@ log = logging.getLogger("main")
 
 # the datasets we support
 SUPPORTED_DATASETS = {
-    "imagenet": (imagenet.Imagenet, dataset.pre_process_vgg, dataset.post_process_offset1)
+    "imagenet":
+        (imagenet.Imagenet, dataset.pre_process_vgg, dataset.post_process_offset1,
+         {"image_size": [224, 224, 3]}),
+    "imagenet_mobilenet":
+        (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.post_process_argmax,
+         {"image_size": [224, 224, 3]}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
@@ -42,19 +47,21 @@ SUPPORTED_PROFILES = {
         "time": 30,
         "max-latency": DEFAULT_LATENCY_BUCKETS,
     },
+    "mobilenet-tf": {
+        "inputs": "input:0",
+        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
+        "dataset": "imagenet_mobilenet",
+        "backend": "tensorflow",
+    },
     "resnet50-tf": {
         "inputs": "input_tensor:0",
         "outputs": "ArgMax:0",
         "dataset": "imagenet",
         "backend": "tensorflow",
-        "cache": 0,
-        "max-latency": DEFAULT_LATENCY_BUCKETS,
     },
     "resnet50-onnxruntime": {
         "dataset": "imagenet",
         "backend": "onnxruntime",
-        "cache": 0,
-        "max-latency": DEFAULT_LATENCY_BUCKETS,
     }
 }
 
@@ -293,7 +300,7 @@ def get_backend(backend):
         from backend_tflite import BackendTflite
         backend = BackendTflite()
     else:
-        raise ValueError("unknown backend: " + args.backend)
+        raise ValueError("unknown backend: " + backend)
     return backend
 
 
@@ -309,13 +316,14 @@ def main():
     image_format = args.data_format if args.data_format else backend.image_format()
 
     # dataset to use
-    wanted_dataset, preprocessor, postprocessor = SUPPORTED_DATASETS[args.dataset]
+    wanted_dataset, preprocessor, postprocessor, kwargs = SUPPORTED_DATASETS[args.dataset]
     ds = wanted_dataset(data_path=args.dataset_path,
                         image_list=args.dataset_list,
+                        name=args.dataset,
                         image_format=image_format,
                         pre_process=preprocessor,
                         use_cache=args.cache,
-                        count=args.count)
+                        count=args.count, **kwargs)
 
     # load model to backend
     model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)

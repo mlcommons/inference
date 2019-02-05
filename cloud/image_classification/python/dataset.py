@@ -49,7 +49,18 @@ class Dataset():
     def clear_trace(self):
         self.arrival = None
 
-    def generate_linear_trace(self, min_queries, min_duration, qps, seed=123):
+    def generate_linear_trace(self, min_queries, min_duration, qps):
+        """ Generates inter-arrival times for queries with a uniform distribution.
+        It should satisfy both min_duration and min_queries
+
+        Args:
+            min_queries: Int, minimal number of queries in the trace.
+            min_duration: Int, minimal time duration in seconds for the entire trace.
+            qps: Int, expected queries per sec for the uniform distribution.
+
+        Returns:
+            None
+        """
         timestamp = 0
         arrival = []
         timestep = 1 / qps
@@ -59,18 +70,31 @@ class Dataset():
         self.arrival = arrival
 
     def generate_exp_trace(self, min_queries, min_duration, qps, seed=123):
+        """ Generates inter-arrival times for queries with a poisson distribution.
+        It should satisfy both min_duration and min_queries
+
+        Args:
+            min_queries: Int, minimal number of queries in the trace.
+            min_duration: Int, minimal time duration in seconds for the entire trace.
+            qps: Int, expected queries per sec for the possion distribution.
+
+        Returns:
+            None
+        """
         timestamp = 0
         arrival = []
-        qps = int(qps)
-        if qps == 0:
-            qps = 1
+        num_samples = int(qps)
+        if num_samples == 0:
+            num_samples = 1
         np.random.seed(seed)
-        dist = np.random.exponential(scale=1, size=qps)
+        samples = np.random.exponential(scale=1.0, size=num_samples)
         while timestamp < min_duration and len(arrival) < min_queries:
             idx = len(arrival)
-            val = dist[idx % qps]
-            timestamp += val / qps
-            arrival.append(val / qps)
+            val = samples[idx % num_samples]
+            # accumulative so we know when to stop
+            timestamp += val / num_samples
+            # for processing only store the delta
+            arrival.append(val / num_samples)
         self.arrival = arrival
 
     def batch(self, batch_size=1):
@@ -122,57 +146,63 @@ def post_process_argmax_offset(results):
 # pre-processing
 #
 
-def pre_process_mobilenet(img, dims=None, need_transpose=False):
-    if dims is None:
-        dims = [244, 244, 3]
-    img = img.resize((dims[0], dims[1]))
+def center_crop(img, out_height, out_width):
+    width, height = img.size
+    left = (width - out_width) / 2
+    right = (width + out_width) / 2
+    top = (height - out_height) / 2
+    bottom = (height + out_height) / 2
+    img = img.crop((left, top, right, bottom))
+    return img
+
+
+def resize_with_aspectratio(img, out_height, out_width, scale=87.5):
+    width, height = img.size
+    new_height = int(100. * out_height / scale)
+    new_width = int(100. * out_width / scale)
+    if height > width:
+        w = new_width
+        h = int(out_height * width / new_width)
+    else:
+        h = new_height
+        w = int(out_width * height / new_height)
+    img = img.resize((w, h))
+    return img
+
+
+def pre_process_vgg(img, dims=None, need_transpose=False):
+    output_height, output_width, _ = dims
+
+    img = resize_with_aspectratio(img, output_height, output_width)
+    img = center_crop(img, output_height, output_width)
     img = np.asarray(img, dtype='float32')
     if len(img.shape) != 3:
         img = np.stack([img] * 3, axis=2)
-    input_mean = 0.
-    input_std = 255.
-    img = (img - input_mean) / input_std
+
+    # normalize image
+    means = np.array([123.68, 116.78, 103.94], dtype=np.float32)
+    img -= means
+
+    # transpose if needed
     if need_transpose:
         img = img.transpose([2, 0, 1])
     return img
 
 
-def pre_process_vgg(img, dims=None, need_transpose=False):
-    if dims is None:
-        dims = [244, 244, 3]
-
-    width, height = img.size
+def pre_process_mobilenet(img, dims=None, need_transpose=False):
     output_height, output_width, _ = dims
 
-    # scale down to 87.5% keeping the aspect ratio
-    new_height = int(100. * output_height / 87.5)
-    new_width = int(100. * output_width / 87.5)
-    if height > width:
-        w = new_width
-        h = int(output_height * width / new_width)
-    else:
-        h = new_height
-        w = int(output_width * height / new_height)
-
-    img = img.resize((w, h))
-
-    # center crop to output_width, output_height
-    left = (w - output_width) / 2
-    right = (w + output_width) / 2
-    top = (h - output_height) / 2
-    bottom = (h + output_height) / 2
-
-    img = img.crop((left, top, right, bottom))
-
-    # normalize image
+    img = resize_with_aspectratio(img, output_height, output_width)
+    img = center_crop(img, output_height, output_width)
     img = np.asarray(img, dtype='float32')
     if len(img.shape) != 3:
         img = np.stack([img] * 3, axis=2)
 
-    assert list(img.shape) == dims
+    img = (img - img.mean()) / img.std()
 
-    means = np.array([123.68, 116.78, 103.94], dtype=np.float32)
-    img -= means
+    #img = img / 255.0
+    #img = img - 0.5
+    #img = img * 2
 
     # transpose if needed
     if need_transpose:

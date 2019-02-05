@@ -159,6 +159,10 @@ def single_worker_inference(run,
   # Read data
   infer_data = load_data(inference_input_file, hparams)
 
+  print(infer_model.iterator.initializer)
+  print(infer_model.src_placeholder)
+  print(infer_model.batch_size_placeholder)
+
   with infer_model.graph.as_default():
     sess.run(
         infer_model.iterator.initializer,
@@ -168,6 +172,7 @@ def single_worker_inference(run,
         })
     # Decode
     utils.print_out("# Start decoding")
+    import pdb; pdb.set_trace()
     if hparams.inference_indices:
       _decode_inference_indices(
           loaded_infer_model,

@@ -3,7 +3,7 @@
 This is the Mlperf cloud inference benchmark for image classification. 
 The benchmark uses the resnet50 v1.5 model from [Mlperf training](https://github.com/mlperf/training/tree/master/image_classification)
 which identical to the [official tensorflow resnet model](https://github.com/tensorflow/models/tree/master/official/resnet).
-Models are provided for tensorflow as frozen graph (in NHWC data format) and as [ONNX](onnx.ai) model.
+Models are provided for tensorflow as frozen graph (in NHWC data format) and as [ONNX](http://onnx.ai) model.
 
 More information on resnet50 v1.5 can be found [here](https://github.com/tensorflow/models/tree/master/official/resnet).
 

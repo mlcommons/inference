@@ -17,19 +17,21 @@ import dataset
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("imagenet")
 
-_IMAGE_SIZE = [224, 224, 3]
-_PREPROCESSED = "preprocessed"
-
 
 class Imagenet(dataset.Dataset):
 
-    def __init__(self, data_path, image_list, use_cache=0, image_format="NHWC", pre_process=None, count=None):
+    def __init__(self, data_path, image_list, name, use_cache=0, image_size=None,
+                 image_format="NHWC", pre_process=None, count=None):
         super(Imagenet, self).__init__()
+        if image_size is None:
+            self.image_size = [224, 224, 3]
+        else:
+            self.image_size = image_size
         self.image_list = []
         self.label_list = []
         self.count = count
         self.use_cache = use_cache
-        self.cache_dir = os.path.join(data_path, _PREPROCESSED, image_format)
+        self.cache_dir = os.path.join("/tmp", "preprocessed", name, image_format)
         self.data_path = data_path
         self.pre_process = pre_process
         # input images are in HWC
@@ -55,7 +57,7 @@ class Imagenet(dataset.Dataset):
                     # cache a preprocessed version of the image
                     # TODO: make this multi threaded ?
                     with Image.open(src) as img_org:
-                        img = self.pre_process(img_org, need_transpose=self.need_transpose, dims=_IMAGE_SIZE)
+                        img = self.pre_process(img_org, need_transpose=self.need_transpose, dims=self.image_size)
                         with open(dst, "wb") as fimg:
                             img.tofile(fimg)
 
@@ -64,11 +66,11 @@ class Imagenet(dataset.Dataset):
                     with open(dst, "rb") as fimg:
                         img = fimg.read()
                         img = np.frombuffer(img, dtype=np.float32)
-                        img = img.reshape(_IMAGE_SIZE)
+                        img = img.reshape(self.image_size)
                         if self.need_transpose:
-                            img = img.reshape(_IMAGE_SIZE[2], _IMAGE_SIZE[0], _IMAGE_SIZE[1])
+                            img = img.reshape(self.image_size[2], self.image_size[0], self.image_size[1])
                         else:
-                            img = img.reshape(_IMAGE_SIZE)
+                            img = img.reshape(self.image_size)
                         self.image_list.append(img)
                 else:
                     # else use the image path and load at inference time
@@ -103,7 +105,7 @@ class Imagenet(dataset.Dataset):
                 img = f.read()
                 img = np.frombuffer(img, dtype=np.float32)
                 if self.need_transpose:
-                    img = img.reshape(_IMAGE_SIZE[2], _IMAGE_SIZE[0], _IMAGE_SIZE[1])
+                    img = img.reshape(self.image_size[2], self.image_size[0], self.image_size[1])
                 else:
-                    img = img.reshape(_IMAGE_SIZE)
+                    img = img.reshape(self.image_size)
         return img, self.label_list[nr]

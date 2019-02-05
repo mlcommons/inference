@@ -17,8 +17,6 @@ import dataset
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("imagenet")
 
-_PREPROCESSED = "preprocessed"
-
 
 class Imagenet(dataset.Dataset):
 
@@ -33,7 +31,7 @@ class Imagenet(dataset.Dataset):
         self.label_list = []
         self.count = count
         self.use_cache = use_cache
-        self.cache_dir = os.path.join(data_path, _PREPROCESSED, name, image_format)
+        self.cache_dir = os.path.join("/tmp", "preprocessed", name, image_format)
         self.data_path = data_path
         self.pre_process = pre_process
         # input images are in HWC

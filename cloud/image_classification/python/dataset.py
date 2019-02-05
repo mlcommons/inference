@@ -198,11 +198,9 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
     if len(img.shape) != 3:
         img = np.stack([img] * 3, axis=2)
 
-    img = (img - img.mean()) / img.std()
-
-    #img = img / 255.0
-    #img = img - 0.5
-    #img = img * 2
+    img = img / 255.0
+    img = img - 0.5
+    img = img * 2
 
     # transpose if needed
     if need_transpose:

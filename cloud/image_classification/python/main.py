@@ -30,7 +30,7 @@ SUPPORTED_DATASETS = {
         (imagenet.Imagenet, dataset.pre_process_vgg, dataset.post_process_offset1,
          {"image_size": [224, 224, 3]}),
     "imagenet_mobilenet":
-        (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.post_process_argmax,
+        (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.post_process_argmax_offset,
          {"image_size": [224, 224, 3]}),
 }
 
@@ -52,6 +52,10 @@ SUPPORTED_PROFILES = {
         "outputs": "MobilenetV1/Predictions/Reshape_1:0",
         "dataset": "imagenet_mobilenet",
         "backend": "tensorflow",
+    },
+    "mobilenet-onnx": {
+        "dataset": "imagenet_mobilenet",
+        "backend": "onnxruntime",
     },
     "resnet50-tf": {
         "inputs": "input_tensor:0",

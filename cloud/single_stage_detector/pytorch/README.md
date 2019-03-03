@@ -1,6 +1,6 @@
 
 # 1. Problem
-Object detection. This task was taken from mmlperf/training  [repository](https://github.com/mlperf/training/tree/master/single_stage_detector), please check the folder for additional details on the training regime. 
+Object detection. This task was modified from mmlperf/training  [repository](https://github.com/mlperf/training/tree/master/single_stage_detector) as to run on larger images (currently 1200x1200), please check the folder for additional details.
 
 # 2. Directions
 

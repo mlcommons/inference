@@ -214,37 +214,36 @@ class DefaultBoxes(object):
                        scale_xy=0.1, scale_wh=0.2):
 
         self.feat_size = feat_size
-        self.fig_size = fig_size
+        self.fig_size_w,self.fig_size_h = fig_size
 
         self.scale_xy_ = scale_xy
         self.scale_wh_ = scale_wh
         
         # According to https://github.com/weiliu89/caffe
         # Calculation method slightly different from paper
-        self.steps = steps
+        self.steps_w = [st[0] for st in steps]
+        self.steps_h = [st[1] for st in steps]
         self.scales = scales
-
-        fk = fig_size/np.array(steps)
+        fkw = self.fig_size_w//np.array(self.steps_w)
+        fkh = self.fig_size_h//np.array(self.steps_h)
         self.aspect_ratios = aspect_ratios
 
         self.default_boxes = []
         # size of feature and number of feature
         for idx, sfeat in enumerate(self.feat_size):
-
-            sk1 = scales[idx]/fig_size
-            sk2 = scales[idx+1]/fig_size
+            sfeat_w,sfeat_h=sfeat
+            sk1 = scales[idx][0]/self.fig_size_w
+            sk2 = scales[idx+1][1]/self.fig_size_h
             sk3 = sqrt(sk1*sk2)
             all_sizes = [(sk1, sk1), (sk3, sk3)]
-
             for alpha in aspect_ratios[idx]:
                 w, h = sk1*sqrt(alpha), sk1/sqrt(alpha)
                 all_sizes.append((w, h))
                 all_sizes.append((h, w))
             for w, h in all_sizes:
-                for i, j in itertools.product(range(sfeat), repeat=2):
-                    cx, cy = (j+0.5)/fk[idx], (i+0.5)/fk[idx]
+                for i, j in itertools.product(range(sfeat_w), range(sfeat_h)):
+                    cx, cy = (j+0.5)/fkh[idx], (i+0.5)/fkw[idx]
                     self.default_boxes.append((cx, cy, w, h)) 
-
         self.dboxes = torch.tensor(self.default_boxes)
         self.dboxes.clamp_(min=0, max=1)
         # For IoU calculation

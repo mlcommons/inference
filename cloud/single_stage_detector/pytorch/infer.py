@@ -28,7 +28,7 @@ def parse_args():
                         help='stop training early at threshold')
     parser.add_argument('--checkpoint', type=str, default='./pretrained/resnet34-ssd1200.pth',
                         help='path to model checkpoint file')
-    parser.add_argument('--image-size', default=[1400,1400], type=int, nargs='+',
+    parser.add_argument('--image-size', default=[1200,1200], type=int, nargs='+',
                         help='input image sizes (e.g 1400 1400,1200 1200')  
     parser.add_argument('--strides', default=[3,3,2,2,2,2], type=int, nargs='+',
                         help='stides for ssd model must include 6 numbers')                                       

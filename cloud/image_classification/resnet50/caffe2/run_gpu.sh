@@ -5,11 +5,11 @@ DATABASE_NAME=resnet50_caffe2_full_trace # the name of database to publish trace
 MODEL_NAME=ResNet50_Caffe2 # model name
 MODEL_VERSION=1.0 # model version
 NUM_FILE_PARTS=20 # number of batches to be processed, set to -1 to evalute the entire ImageNet
-BATCH_SIZE=64 # batch size
+BATCH_SIZE=8 # batch size
 TRACE_LEVEL=FULL_TRACE # trace level
 TRACER_ADDRESS=localhost:16686 # the endpoint of tracer
 
-nvidia-docker run --network host -t -v $HOME:/root carml/caffe2-agent:amd64-gpu-latest predict dataset \
+docker run --runtime=nvidia --network host -t -v $HOME/.config/carml:/root carml/caffe2-agent:amd64-gpu-latest predict dataset \
     --verbose \
     --publish=true \
     --publish_predictions=false \

@@ -9,7 +9,7 @@ BATCH_SIZE=8 #batch size
 TRACE_LEVEL=FULL_TRACE # trace level
 TRACER_ADDRESS=localhost:16686 # the endpoint of tracer
 
-nvidia-docker run --network host -t -v $HOME:/root carml/caffe-agent:amd64-gpu-latest predict dataset \
+docker run --runtime=nvidia --network host -t -v $HOME/.config/carml:/root carml/caffe-agent:amd64-gpu-latest predict dataset \
     --verbose \
     --publish=true \
     --publish_predictions=false \

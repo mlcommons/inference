@@ -16,14 +16,18 @@ or from source:
 $ ck install package:lib-tensorflow-1.10.1-src-cpu
 ```
 
-### Install MobileNets models for TensorFlow (Python)
+### Install the MobileNets model for TensorFlow (Python)
 
-Select one of the 54 MobileNets models compatible with TensorFlow (Python):
+Install the MobileNets-v1-1.0-224 model adopted for MLPerf Inference v0.5:
+```
+$ ck install package --tags=tensorflowmodel,mobilenet,mlperf
+```
+
+**NB:** You can also install any other MobileNets model compatible with TensorFlow (Python) as follows:
 ```
 $ ck install package --tags=tensorflowmodel,mobilenet --no_tags=mobilenet-all
 ```
-
-**NB:** This excludes "uber" packages which can be used to install all models in the sets `v1-2018-02-22` (16 models), `v1[-2018-06-14]` (16 models) and `v2` (22 models) in one go:
+This excludes "uber" packages which can be used to install all models in the sets `v1-2018-02-22` (16 models), `v1[-2018-06-14]` (16 models) and `v2` (22 models) in one go:
 ```
 $ ck search package --tags=tensorflowmodel,mobilenet-all
 ck-tensorflow:package:tensorflowmodel-mobilenet-v1-2018_02_22

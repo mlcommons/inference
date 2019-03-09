@@ -3,11 +3,6 @@
 
 # 2. Directions
 
-### Get the code from the MLPerf training repo and apply the patch for inference
-```
-bash ./get_code.sh
-```
-
 ### Install Dependencies
 
 Install python 3.7.2, pytorch 1.0 and cuda 10.

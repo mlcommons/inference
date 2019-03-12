@@ -20,7 +20,7 @@ pip install --user tensorflow
 
 - go to this folder
 ```
-$ cd /path/to/gnmt/nmt/
+$ cd /path/to/gnmt/tensorflow/
 ```
 
 - Change permission and download the pre-trained model and dataset by:

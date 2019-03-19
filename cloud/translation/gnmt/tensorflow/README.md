@@ -76,7 +76,7 @@ This code is modified from github: https://github.com/tensorflow/nmt
 ```
 # 5. Quality.
 ### Quality metric
-BLEU 22.9
+BLEU 23.9
 
 ---
 Questions? Please contact Jerome or Christine at jerome.mitchell@intel.com / christine.cheng@intel.com.

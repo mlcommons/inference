@@ -30,6 +30,7 @@
   "tgt_max_len_infer": null,
   "time_major": true,
   "unit_type": "lstm",
-  "beam_width": 5,
+  "infer_mode": "beam_search",
+  "beam_width": 10,
   "length_penalty_weight": 1.0
 }

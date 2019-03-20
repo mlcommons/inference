@@ -17,7 +17,7 @@ A Load Test combines a Trace with a inference system to produce a latency
 bound. The arrival of each query in the trace is simulated at the query's
 corresponding timestamp.
 
-# Theory of Operations
+## Theory of Operations
 
 1. Generate a trace with Poisson distributed arrival times satisfying all
    specified requirements in terms of queries, QPS, and duration.
@@ -29,12 +29,12 @@ corresponding timestamp.
 3. Increase QPS until the latency constraint is violated. Use binary search to
    find the maximum QPS achieved without violating the latency constraint.
 
-# Project Status
+## Project Status
 
 This code is very rough. I am looking for a high-level review and feedback from
 the broader MLPerf inference community before polishing. Patches very welcome!
 
-# FAQ
+## FAQ
 
 1. For online cloud inference, why measure maximum sustained throughput subject
    to high-percentile latency bounds? Why not throughput-only? Why not
@@ -126,17 +126,17 @@ the broader MLPerf inference community before polishing. Patches very welcome!
    necessary. Feedback is very welcome!
 
 10. What's a high-percentile latency-bound?
-    
+
    It's a compromise between attempting to capture worst case tail latency and
    while filtering out the noise at the extreme. Real applications generally use
    a bound somewhere in the 95th to 99th percentile. Lower percentiles yield
    better reproducibility because they are more noise resistant. Since 95th
    percentile is in real world use and is more pragmatic, maybe it is a good
-   starting point? 
+   starting point?
 
 11. Is this tool only for Online Cloud inference, what about Batch Cloud, Online
     Edge and Batch Edge?
-    
+
    The desire is that this tool can cover all use cases, but Online Cloud is
    being prioritized because it seems to be the most complex and demanding
    case. Feature requests are welcome. Patches are even more welcome!

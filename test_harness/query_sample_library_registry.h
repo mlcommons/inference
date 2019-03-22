@@ -19,7 +19,7 @@ using QslVector = std::vector<QuerySampleLibrary*>;
 // QuerySampleLibraryDerived library;
 class QslRegistry {
  public:
-  static void Register(QuerySampleLibrary* model) {
+  static void Register(QuerySampleLibrary* registrant) {
     InitializeIfNeeded();
     libraries_->push_back(registrant);
   }
@@ -31,8 +31,8 @@ class QslRegistry {
 
   static QuerySampleLibrary* GetQslInstance(std::string name) {
     InitializeIfNeeded();
-    for (const auto& qsl : *libraries_) {
-      if (qsl->GetName() == name) {
+    for (auto* qsl : *libraries_) {
+      if (qsl->Name() == name) {
         return qsl;
       }
     }
@@ -44,7 +44,7 @@ class QslRegistry {
   // occurs before dynamic initialization.
   // This ensures libraries_ is null before the first call to Register().
   static std::unique_ptr<QslVector> libraries_;
-  void InitializeIfNeeded() {
+  static void InitializeIfNeeded() {
     if (libraries_)
       return;
     libraries_ = std::unique_ptr<QslVector>(new QslVector);

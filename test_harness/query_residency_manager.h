@@ -25,18 +25,17 @@ class QueryResidencyManager {
   // If a |query_allocator| is provided, queries will be copied from the
   // library (pre-loaded or not) when StageQuery() is called.
   // At least one of |library_allocator| or |query_allocator| must be provided.
-  QueryResidencyManager(ModelUnderTest* qsl,
+  QueryResidencyManager(QuerySampleLibrary* qsl,
                         QueryAllocator* library_allocator,
                         QueryAllocator* query_allocator);
-  ~QueryResidencyManager() = default;
+  ~QueryResidencyManager();
 
   size_t LibrarySize() { return pre_loaded_query_library_.size(); }
 
   // Prepares a query for issuance.
   // Exact behavior depends on the library and query allocators provided to
   // the QueryResidencyManager constructor.
-  void StageQuery(size_t query_index, intptr_t query_id, void* response_data,
-                  size_t response_size);
+  void StageQuery(size_t query_index, intptr_t query_id);
 
   // Issues the staged query to the SystemUnderTest.
   void IssueQuery(intptr_t query_id);
@@ -65,6 +64,8 @@ class QueryResidencyManager {
 
   // Queries staged, but not yet issued.
   struct QueryQueueEntry {
+    QueryQueueEntry();
+
     std::mutex mutex;
     std::condition_variable cv;
     bool ready_to_be_issued = false;
@@ -81,8 +82,8 @@ class QueryResidencyManager {
   // Make sure not to deallocate or recycle query memory until we are sure
   // the device isn't accessing it.
   // Only used if there's an active |query_allocator_|.
-  std::unordered_map<intptr_t, QueryEntry> queries_with_sut_read_lock_;
-}
+  std::unordered_map<intptr_t, QueryQueueEntry> queries_with_sut_read_lock_;
+};
 
 }  // namespace mlperf
 

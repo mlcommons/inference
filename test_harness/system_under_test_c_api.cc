@@ -1,3 +1,7 @@
+#include "system_under_test_c_api.h"
+
+#include <string>
+
 #include "system_under_test.h"
 
 namespace mlperf {
@@ -20,7 +24,7 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
         free_cb_(free_cb),
         preprocess_cb_(preprocess_cb),
         issue_cb_(issue_cb) {}
-  ~SystemUnderTestC() override = default;
+  ~SystemUnderTestTrampoline() override = default;
 
   std::string Name() override { return name_; }
   void UntimedWarmUp() override { (*warm_up_cb_)(client_data_); }
@@ -36,7 +40,7 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
   }
   void IssueQuery(intptr_t query_id, QuerySample* samples,
                   size_t sample_count) override {
-    (*issue_cb)(client_data_, query_id, samples, sample_count);
+    (*issue_cb_)(client_data_, query_id, samples, sample_count);
   }
 
  private:
@@ -65,7 +69,7 @@ void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,
 
 void DestroySUT(void* sut) {
   SystemUnderTestTrampoline* sut_cast =
-      reinterpret_cast<SystemUnderTestTrampoline>(sut);
+      reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   delete sut_cast;
 }
 
@@ -73,7 +77,7 @@ void DestroySUT(void* sut) {
 // proper cast.
 void StartTest(void* sut, const TestSettings& settings) {
   SystemUnderTestTrampoline* sut_cast =
-      reinterpret_cast<SystemUnderTestTrampoline>(sut);
+      reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   mlperf::StartTest(sut_cast, settings);
 }
 

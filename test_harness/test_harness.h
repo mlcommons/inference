@@ -1,6 +1,9 @@
 #ifndef TEST_HARNESS_H_
 #define TEST_HARNESS_H_
 
+#include <stddef.h>
+#include <stdint.h>
+
 namespace mlperf {
 
 struct QuerySampleResponse;
@@ -16,7 +19,7 @@ enum TestMode {
 struct TestSettings {
   char* query_sample_library_name;
   size_t query_sample_library_name_length;
-  Scenario scenario;
+  TestScenario scenario;
   TestMode mode;
   int samples_per_query;
   double target_qps;

@@ -24,7 +24,7 @@ class QuerySampleLibrary {
   virtual ~QuerySampleLibrary() {}
 
   // A human readable name for the model.
-  virtual std::string Name() = 0;
+  virtual const std::string& Name() const = 0;
 
   // Initializes the model under test with the specified settings.
   // Returns false if the specified settings are not supported.

@@ -1,6 +1,8 @@
 #ifndef QUERY_ALLOCATOR_H
 #define QUERY_ALLOCATOR_H
 
+#include <stddef.h>
+
 namespace mlperf {
 
 class SystemUnderTest;

@@ -1,9 +1,10 @@
-
 #include "test_harness.h"
 
 #include <iostream>
 #include <mutex>
+#include <stdint.h>
 
+#include "query_allocator.h"
 #include "query_residency_manager.h"
 #include "query_sample.h"
 #include "query_sample_library.h"
@@ -16,7 +17,7 @@ namespace mlperf {
 // response data and completion.
 struct QueryResponseMetadata {
   size_t query_index;
-  std::vector<uint8> data;
+  std::vector<uint8_t> data;
 
   void ResetCompletion() { complete = true; }
 
@@ -39,12 +40,15 @@ struct QueryResponseMetadata {
 
 void QueryComplete(intptr_t query_id, QuerySampleResponse* responses,
                    size_t response_count) {
-  QueryResponse* response = reinterpret_cast<QueryResponse>(query_id);
+  QueryResponseMetadata* metadata =
+      reinterpret_cast<QueryResponseMetadata*>(query_id);
   // TODO(brianderson): Don't copy data in performance mode.
-  response.data = std::vector<uint8>(response[0].data, response[0].size);
+  auto* src_begin = reinterpret_cast<uint8_t*>(responses[0].data);
+  auto* src_end = src_begin + responses[0].size;
+  metadata->data = std::vector<uint8_t>(src_begin, src_end);
   std::cout << "Query complete ID: " << query_id << "\n";
-  std::cout << "Query library index: " << response->query_index << "\n";
-  response->NotifyCompletion();
+  std::cout << "Query library index: " << metadata->query_index << "\n";
+  metadata->NotifyCompletion();
 }
 
 void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
@@ -55,11 +59,11 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   // TODO(brianderson): Remove this call to UntimedWarmUp.
   // Warm up isn't needed for verification, but is included here for
   // reference during initial development.
-  sut->UntimedWarmUp() = 0;
+  sut->UntimedWarmUp();
 
   // Don't specify a library allocator since we don't want to pre-allocate
   // memory for the whole library in accuracy verification mode.
-  QueryResidencyManager query_manager(qsl, nullptr, query_allocator);
+  QueryResidencyManager query_manager(qsl, nullptr, &query_allocator);
   size_t library_query_count = query_manager.LibrarySize();
 
   // Re-use the same response over and over since we only ever have
@@ -81,7 +85,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     qsl->UpdateAccuracyMetric(response.query_index, response.data.data(),
                               response.data.size());
   }
-  std::cout << "SUT accuracy metric:" << mut->GetAccuracyMetric();
+  std::cout << "SUT accuracy metric:" << qsl->GetAccuracyMetric();
 }
 
 void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
@@ -92,7 +96,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 void StartTest(SystemUnderTest* sut, const TestSettings& settings) {
   std::string qsl_name(settings.query_sample_library_name,
                        settings.query_sample_library_name);
-  QuerySampleLibrary* qsl = QslRegistry::GetQsl(qsl_name);
+  QuerySampleLibrary* qsl = QslRegistry::GetQslInstance(qsl_name);
   if (!qsl) {
     std::cerr << "Did not find the requested query sample library: " << qsl_name
               << "\n";

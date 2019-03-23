@@ -1,0 +1,5 @@
+group("gn_all") {
+  deps = [
+    "//test_harness:mlpi_test_harness",
+  ]
+}

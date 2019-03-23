@@ -6,8 +6,8 @@
 
 namespace mlperf {
 
-class QuerySample;
-class TestSettings;
+struct QuerySample;
+struct TestSettings;
 
 // SystemUnderTest provides the interface to:
 //  1) Allocate, preprocess, and issue queries.

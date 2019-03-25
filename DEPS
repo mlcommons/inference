@@ -28,7 +28,10 @@ deps = {
 
 recursedeps = [
   '{mlpth_root}/buildtools',
+  '{mlpth_root}/third_party/skia',
 ]
+
+#gclient_gn_args_from = 'src/buildtools'
 
 hooks = [
   # Pull clang-format binaries using checked-in hashes.

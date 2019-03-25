@@ -71,3 +71,30 @@ Accuracy top 1: 1.0 (1 of 1)
 Accuracy top 5: 1.0 (1 of 1)
 --------------------------------
 ```
+
+- with the quantized model:
+```
+$ ck run program:image-classification-tf-cpp [--target_os=android23-arm64]
+...
+*** Dependency 3 = weights (TensorFlow model and weights):
+...
+    Resolved. CK environment UID = b18ad885d440dc77 (version 1_1.0_224_quant_2018_08_02)
+...
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.72 - (65) n01751748 sea snake
+0.16 - (58) n01737021 water snake
+0.05 - (54) n01729322 hognose snake, puff adder, sand viper
+0.03 - (34) n01665541 leatherback turtle, leatherback, leather...
+0.01 - (50) n01698640 American alligator, Alligator mississipi...
+---------------------------------------
+
+Summary:
+-------------------------------
+Graph loaded in 0.096074s
+All images loaded in 0.004774s
+All images classified in 0.568562s
+Average classification time: 0.568562s
+Accuracy top 1: 1.0 (1 of 1)
+Accuracy top 5: 1.0 (1 of 1)
+--------------------------------
+```

@@ -2,7 +2,7 @@
 
 Please follow the common [installation instructions](../README.md#installation) first.
 
-**NB:** See the [TFLIte instructions](../tflite/README.md) how to use Collective Knowledge to learn more about the anatomy of the benchmark.
+**NB:** See the [TFLite instructions](../tflite/README.md) how to use Collective Knowledge to learn more about the anatomy of the benchmark.
 
 **NB:** See [`ck-tensorflow:program:image-classification-tf-cpp`](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tf-cpp) for more details about the client program.
 

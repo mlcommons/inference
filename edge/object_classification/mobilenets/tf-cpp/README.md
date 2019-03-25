@@ -2,23 +2,36 @@
 
 Please follow the common [installation instructions](../README.md#installation) first.
 
-**NB:** See [`ck-tensorflow:program:image-classification-tf-cpp`](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tf-cpp) for more details.
+**NB:** See the [TFLIte instructions](../tflite/README.md) how to use Collective Knowledge to learn more about the anatomy of the benchmark.
+
+**NB:** See [`ck-tensorflow:program:image-classification-tf-cpp`](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tf-cpp) for more details about the client program.
+
 
 ### Install TensorFlow (C++)
 
 Install TensorFlow (C++) from source:
 ```
-$ ck install package:lib-tensorflow-1.10.1-src-static [--target_os=android23-arm64]
+$ ck install package:lib-tensorflow-1.13.1-src-static [--target_os=android23-arm64]
 ```
 
 ### Install the MobileNets model for TensorFlow (C++)
 
-Install the MobileNets-v1-1.0-224 model adopted for MLPerf Inference v0.5:
+To select interactively from one of the non-quantized and quantized MobileNets-v1-1.0-224 models:
 ```
-$ ck install package --tags=tensorflowmodel,mobilenet,mlperf
+$ ck install package --tags=model,tf,mlperf,mobilenet
 ```
 
-NB: You can also install any other MobileNets model compatible with TensorFlow (C++) as follows:
+To install the non-quantized model directly:
+```
+$ ck install package --tags=model,tf,mlperf,mobilenet,non-quantized
+```
+
+To install the quantized model directly:
+```
+$ ck install package --tags=model,tf,mlperf,mobilenet,quantized
+```
+
+**NB:** You can also install any other MobileNets model compatible with TensorFlow (C++) as follows:
 ```
 $ ck install package --tags=tensorflowmodel,mobilenet,frozen
 ```
@@ -29,14 +42,17 @@ $ ck compile program:image-classification-tf-cpp [--target_os=android23-arm64]
 ```
 
 ### Run the TensorFlow (C++) image classification client
+
+Run the client (if required, connect an Android device to your host machine via USB):
+
+- with the non-quantized model:
 ```
 $ ck run program:image-classification-tf-cpp [--target_os=android23-arm64]
 ...
 *** Dependency 3 = weights (TensorFlow model and weights):
-    ...
+...
     Resolved. CK environment UID = f934f3a3faaf4d73 (version 1_1.0_224_2018_02_22)
 ...
----------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 0.84 - (65) n01751748 sea snake
 0.08 - (58) n01737021 water snake

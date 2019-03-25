@@ -5,6 +5,10 @@
 - [MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications](https://arxiv.org/abs/1704.04861) (Howard et al., 2017)
 - [MobileNetV2: Inverted Residuals and Linear Bottlenecks ](https://arxiv.org/abs/1801.04381) (Sandler et al., 2018)
 
+**NB:** MLPerf Inference v0.5 uses MobileNet-v1-1.0-224.
+
+# Table of contents
+
 1. [Installation](#installation)
     1. [Install prerequisites](#installation-debian) (Debian-specific)
     1. [Install CK workflows](#installation-workflows) (universal)
@@ -16,7 +20,7 @@
 # Installation
 
 <a name="installation-debian"></a>
-## Debian (last tested with Ubuntu v18.04)
+## Debian (tested with Ubuntu v18.04 and v16.04)
 
 - Common tools and libraries.
 - [Python](https://www.python.org/), [pip](https://pypi.org/project/pip/), [SciPy](https://www.scipy.org/), [Collective Knowledge](https://cknowledge.org) (CK).
@@ -54,12 +58,13 @@ Revision 1:7.0.0+r33-2
 ```
 
 <a name="installation-workflows"></a>
-## Install CK workflows
+## Install CK workflows for MLPerf
 
 ### Pull CK repositories
 ```
-$ ck pull repo:ck-tensorflow
+$ ck pull repo:ck-mlperf
 ```
+**NB:** Transitive dependencies include [repo:ck-tensorflow](https://github.com/ctuning/ck-tensorflow).
 
 ### Install a small dataset (500 images)
 ```

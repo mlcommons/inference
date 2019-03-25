@@ -21,12 +21,12 @@ To select interactively from one of the non-quantized and quantized MobileNets-v
 $ ck install package --tags=model,tf,mlperf,mobilenet
 ```
 
-To install the non-quantized model directly:
+To install the [non-quantized model](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) directly:
 ```
 $ ck install package --tags=model,tf,mlperf,mobilenet,non-quantized
 ```
 
-To install the quantized model directly:
+To install the [quantized model](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) directly:
 ```
 $ ck install package --tags=model,tf,mlperf,mobilenet,quantized
 ```

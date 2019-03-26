@@ -10,11 +10,12 @@
 # Table of contents
 
 1. [Installation](#installation)
-    1. [Install prerequisites](#installation-debian) (Debian-specific)
-    1. [Install CK workflows](#installation-workflows) (universal)
-1. [Benchmark MobileNets via TensorFlow Lite](tflite/README.md)
-1. [Benchmark MobileNets via TensorFlow (C++)](tf-cpp/README.md)
-1. [Benchmark MobileNets via TensorFlow (Python)](tf-py/README.md)
+    - [Install prerequisites](#installation-debian) (Debian-specific)
+    - [Install CK workflows](#installation-workflows) (universal)
+1. [Benchmarking](#benchmarking)
+    - [via TensorFlow Lite](tflite/README.md)
+    - [via TensorFlow (C++)](tf-cpp/README.md)
+    - [via TensorFlow (Python)](tf-py/README.md)
 
 <a name="installation"></a>
 # Installation
@@ -83,3 +84,11 @@ $ ck install package:imagenet-2012-val
 $ ck detect soft:dataset.imagenet.val \
   --full_path=$HOME/dataset-imagenet-ilsvrc2012-val/ILSVRC2012_val_00000001.JPEG
 ```
+
+<a name="benchmarking"></a>
+## Benchmarking
+
+You can benchmark MobileNet using one of the available options:
+- [via TensorFlow Lite](tflite/README.md)
+- [via TensorFlow (C++)](tf-cpp/README.md)
+- [via TensorFlow (Python)](tf-py/README.md)

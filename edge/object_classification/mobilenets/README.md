@@ -79,10 +79,9 @@ $ ck install package:imagenet-2012-val-min
 $ ck install package:imagenet-2012-val
 ```
 
-**NB:** If you already have the ImageNet validation dataset downloaded in a directory e.g. `$HOME/dataset-imagenet-ilsvrc2012-val/`, you can simply detect it as follows:
+**NB:** If you already have the ImageNet validation dataset downloaded in a directory e.g. `$HOME/ilsvrc2012-val/`, you can simply detect it as follows:
 ```bash
-$ ck detect soft:dataset.imagenet.val \
-  --full_path=$HOME/dataset-imagenet-ilsvrc2012-val/ILSVRC2012_val_00000001.JPEG
+$ ck detect soft:dataset.imagenet.val --full_path=$HOME/ilsvrc2012-val/ILSVRC2012_val_00000001.JPEG
 ```
 
 <a name="benchmarking"></a>

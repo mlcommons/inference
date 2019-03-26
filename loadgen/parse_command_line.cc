@@ -1,4 +1,4 @@
-#include "test_harness.h"
+#include "loadgen.h"
 
 #include <iostream>
 #include <string>

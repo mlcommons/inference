@@ -81,7 +81,7 @@ double CalculateQPS(const Trace<QueryType> &trace) {
 // number of queries, miniumum duration, and qps.
 template <class QueryType>
 Trace<QueryType> GenerateTrace(const QueryLibrary<QueryType> &query_library,
-                               uint64_t seed, int min_queries,
+                               uint64_t seed, size_t min_queries,
                                std::chrono::seconds min_duration, double qps) {
   // Using the std::mt19937 pseudo-random number generator ensures a modicum of
   // cross platform reproducibility for trace generation.
@@ -120,7 +120,7 @@ std::chrono::nanoseconds ReplayTrace(const Trace<QueryType> &trace,
   std::vector<std::chrono::nanoseconds> latencies(trace.size());
   auto start = std::chrono::high_resolution_clock::now();
 
-  for (int i = 0; i < trace.size(); ++i) {
+  for (size_t i = 0; i < trace.size(); ++i) {
     const auto &trace_entry = trace[i];
     auto query_start_time = start + trace_entry.first;
     std::this_thread::sleep_until(query_start_time);
@@ -150,7 +150,7 @@ std::chrono::nanoseconds ReplayTrace(const Trace<QueryType> &trace,
 template <class QueryType>
 double FindMaxQPS(const QueryLibrary<QueryType> &query_library,
                   EnqueueFn<QueryType> enqueue, uint64_t seed,
-                  std::chrono::nanoseconds latency_bound, int min_queries,
+                  std::chrono::nanoseconds latency_bound, size_t min_queries,
                   std::chrono::seconds min_duration,
                   double latency_bound_percentile) {
   double qps_lower_bound = 0;

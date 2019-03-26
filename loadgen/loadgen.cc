@@ -1,19 +1,17 @@
-#include "test_harness.h"
+#include "loadgen.h"
 
+#include <stdint.h>
 #include <iostream>
 #include <mutex>
-#include <stdint.h>
+#include <condition_variable>
 
-#include "query_allocator.h"
-#include "query_residency_manager.h"
 #include "query_sample.h"
 #include "query_sample_library.h"
-#include "query_sample_library_registry.h"
 #include "system_under_test.h"
 
 namespace mlperf {
 
-// QueryResponseMetadata is used by the TestHarness to coordinate
+// QueryResponseMetadata is used by the load tenerator to coordinate
 // response data and completion.
 struct QueryResponseMetadata {
   size_t query_index;
@@ -53,38 +51,38 @@ void QueryComplete(intptr_t query_id, QuerySampleResponse* responses,
 
 void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                          const TestSettings& settings) {
-  qsl->Initialize(QueryLibraryMode::Verification);
-  SutQueryAllocator query_allocator(sut);
+//  qsl->Initialize(QueryLibraryMode::Verification);
+//  SutQueryAllocator query_allocator(sut);
 
-  // TODO(brianderson): Remove this call to UntimedWarmUp.
-  // Warm up isn't needed for verification, but is included here for
-  // reference during initial development.
-  sut->UntimedWarmUp();
+//  // TODO(brianderson): Remove this call to UntimedWarmUp.
+//  // Warm up isn't needed for verification, but is included here for
+//  // reference during initial development.
+//  sut->UntimedWarmUp();
 
-  // Don't specify a library allocator since we don't want to pre-allocate
-  // memory for the whole library in accuracy verification mode.
-  QueryResidencyManager query_manager(qsl, nullptr, &query_allocator);
-  size_t library_query_count = query_manager.LibrarySize();
+//  // Don't specify a library allocator since we don't want to pre-allocate
+//  // memory for the whole library in accuracy verification mode.
+//  QueryResidencyManager query_manager(qsl, nullptr, &query_allocator);
+//  size_t library_query_count = query_manager.LibrarySize();
 
-  // Re-use the same response over and over since we only ever have
-  // a single response outstanding in verification mode right now.
-  QueryResponseMetadata response;
+//  // Re-use the same response over and over since we only ever have
+//  // a single response outstanding in verification mode right now.
+//  QueryResponseMetadata response;
 
-  // Issue every query in the library and calculate the accuracy metric.
-  qsl->ResetAccuracyMetric();
-  for (size_t i = 0; i < library_query_count; i++) {
-    response.ResetCompletion();
-    response.query_index = i;
-    intptr_t id = reinterpret_cast<intptr_t>(&response);
-    // TODO(brianderson): Pipeline staging, issuance, and completion to make
-    // verification faster.
-    query_manager.StageQuery(i, id);
-    query_manager.IssueQuery(id);
-    response.WaitForCompletion();
-    query_manager.RetireQuery(id);
-    qsl->UpdateAccuracyMetric(response.query_index, response.data.data(),
-                              response.data.size());
-  }
+//  // Issue every query in the library and calculate the accuracy metric.
+//  qsl->ResetAccuracyMetric();
+//  for (size_t i = 0; i < library_query_count; i++) {
+//    response.ResetCompletion();
+//    response.query_index = i;
+//    intptr_t id = reinterpret_cast<intptr_t>(&response);
+//    // TODO(brianderson): Pipeline staging, issuance, and completion to make
+//    // verification faster.
+//    query_manager.StageQuery(i, id);
+//    query_manager.IssueQuery(id);
+//    response.WaitForCompletion();
+//    query_manager.RetireQuery(id);
+//    qsl->UpdateAccuracyMetric(response.query_index, response.data.data(),
+//                              response.data.size());
+//  }
   std::cout << "SUT accuracy metric:" << qsl->GetAccuracyMetric();
 }
 
@@ -93,16 +91,9 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   std::cerr << "RunPerformanceMode not implemented.";
 }
 
-void StartTest(SystemUnderTest* sut, const TestSettings& settings) {
-  std::string qsl_name(settings.query_sample_library_name,
-                       settings.query_sample_library_name);
-  QuerySampleLibrary* qsl = QslRegistry::GetQslInstance(qsl_name);
-  if (!qsl) {
-    std::cerr << "Did not find the requested query sample library: " << qsl_name
-              << "\n";
-    return;
-  }
-
+void StartTest(SystemUnderTest* sut,
+               QuerySampleLibrary* qsl,
+               const TestSettings& settings) {
   switch (settings.mode) {
     case TestMode::SubmissionRun:
       RunVerificationMode(sut, qsl, settings);

@@ -9,10 +9,7 @@ namespace mlperf {
 
 // QuerySample represents the smallest unit of input inference can run on.
 // A query will consist of one or more samples.
-struct QuerySample {
-  void* data;
-  size_t size;  // Size in bytes.
-};
+typedef uint64_t QuerySample;
 
 // QuerySampleResponse represents a single response to QuerySample
 struct QuerySampleResponse {

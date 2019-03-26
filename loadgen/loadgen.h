@@ -9,11 +9,17 @@ namespace mlperf {
 struct QuerySampleResponse;
 
 enum TestScenario {
-  All, Cloud, Edge, Offline,
+  All,
+  Cloud,
+  Edge,
+  Offline,
 };
 
 enum TestMode {
-  SubmissionRun, AccuracyOnly, PerformanceOnly, SearchForQps,
+  SubmissionRun,
+  AccuracyOnly,
+  PerformanceOnly,
+  SearchForQps,
 };
 
 struct TestSettings {
@@ -26,7 +32,7 @@ struct TestSettings {
 };
 
 // Defined in parse_command_line.cc
-TestSettings ParseCommandLine(const char* command);  // For Python.
+TestSettings ParseCommandLine(const char* command);        // For Python.
 TestSettings ParseCommandLineArgs(int argc, char** argv);  // For C.
 
 // QueryComplete must be called by the SUT once it completes a query issued
@@ -35,9 +41,6 @@ TestSettings ParseCommandLineArgs(int argc, char** argv);  // For C.
 // TODO(brianderson): This API assumes the response will be allocated and
 // owend by the SUT. This necessarily requires the allocation to be timed,
 // which will benefit SUTs that efficiently recycle response memory.
-// The recycling logic might be able to live in the test harness logic though,
-// which would pull the response allocation out of the critical path for all
-// SUTs.
 void QueryComplete(intptr_t query_id, QuerySampleResponse* responses,
                    size_t response_count);
 

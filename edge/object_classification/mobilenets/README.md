@@ -51,11 +51,12 @@ the TensorFlow Lite benchmark (recommended) and TensorFlow (C++) benchmark (not 
 On Debian Linux, you can install the [Android SDK](https://developer.android.com/studio/) and the [Android NDK](https://developer.android.com/ndk/) as follows:
 ```
 $ sudo apt install android-sdk
-$ sudo apt install google-android-ndk-installer
 $ adb version
 Android Debug Bridge version 1.0.36
 Revision 1:7.0.0+r33-2
+$ sudo apt install google-android-ndk-installer
 ```
+**NB:** On Ubuntu 18.04, NDK r13b gets installed. On Ubuntu 16.04, download [NDK r18b](https://dl.google.com/android/repository/android-ndk-r18b-linux-x86_64.zip) and extract it into e.g. `/usr/local`. NDK r18c only supports LLVM, which currently requires a CK quirk to work properly (removing a dependency on `soft:compiler.gcc.android.ndk` from `soft:compiler.llvm.android.ndk`).
 
 <a name="installation-workflows"></a>
 ## Install CK workflows for MLPerf

@@ -15,7 +15,7 @@ Please follow the common [installation instructions](../README.md#installation) 
 
 Install TFLite from source:
 ```
-$ ck install package:lib-tflite-0.1.7-src-static [--target_os=android23-arm64]
+$ ck install package:lib-tflite-1.13.1-src-static [--target_os=android23-arm64]
 ```
 
 You can also install TFLite from a prebuilt binary package for your target e.g.:
@@ -26,10 +26,13 @@ lib-tflite-prebuilt-0.1.7-linux-x64
 lib-tflite-prebuilt-0.1.7-android-arm64
 $ ck install package:lib-tflite-prebuilt-0.1.7-android-arm64 [--target_os=android23-arm64]
 ```
+**NB:** Currently we have no TFLite 1.13.1 prebuilt packages.
+Please [let us know](info@dividiti.com) if you would like us to create some.
+
 
 ### Install the MobileNets models for TFLite
 
-To select interactively from one of the non-quantized and quantized MobileNets-v1-1.0-224 models:
+To select interactively from one of the non-quantized and quantized MobileNets-v1-1.0-224 models adopted for MLPerf Inference v0.5:
 ```
 $ ck install package --tags=model,tflite,mlperf,mobilenet
 ```
@@ -119,8 +122,8 @@ Accuracy top 5: 1.0 (1 of 1)
 ```
 $ ck benchmark program:image-classification-tflite \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
---record --record_repo=local --record_uoa=mlperf-mobilenet-v1-1.00-224-tflite-0.1.7-performance \
---tags=mlperf,image-classification,mobilenet-v1-1.0-224,tflite-0.1.7,performance \
+--record --record_repo=local --record_uoa=mlperf-mobilenet-tflite-performance \
+--tags=image-classification,mlperf,mobilenet,tflite,performance \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
 
@@ -158,8 +161,8 @@ Accuracy top 5: 1.0 (2 of 2)
 ```
 $ ck benchmark program:image-classification-tflite \
 --repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---record --record_repo=local --record_uoa=mlperf-mobilenet-v1-1.00-224-tflite-0.1.7-accuracy \
---tags=mlperf,image-classification,mobilenet-v1-1.0-224,tflite-0.1.7,accuracy \
+--record --record_repo=local --record_uoa=mlperf-mobilenet-tflite-accuracy \
+--tags=image-classification,mlperf,mobilenet,tflite,accuracy \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
 

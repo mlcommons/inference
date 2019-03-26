@@ -27,14 +27,14 @@
 - (Optional) [Android SDK](https://developer.android.com/studio/), [Android NDK](https://developer.android.com/ndk/).
 
 ### Install common tools and libraries
-```
+```bash
 $ sudo apt install autoconf autogen libtool zlib1g-dev
 $ sudo apt install gcc g++ git wget
 $ sudo apt install libblas-dev liblapack-dev
 ```
 
 ### Install Python, pip, SciPy and CK
-```
+```bash
 $ sudo apt install python3 python3-pip
 $ sudo python3 -m pip install scipy
 $ sudo python3 -m pip install ck
@@ -62,13 +62,24 @@ $ sudo apt install google-android-ndk-installer
 ## Install CK workflows for MLPerf
 
 ### Pull CK repositories
-```
+```bash
 $ ck pull repo:ck-mlperf
 ```
 **NB:** Transitive dependencies include [repo:ck-tensorflow](https://github.com/ctuning/ck-tensorflow).
 
 ### Install a small dataset (500 images)
-```
+```bash
 $ ck install package:imagenet-2012-val-min 
 ```
-**NB:** ImageNet dataset descriptions are contained in [repo:ck-env](https://github.com/ctuning/ck-env).
+**NB:** ImageNet dataset descriptions are in [repo:ck-env](https://github.com/ctuning/ck-env).
+
+### Install the full dataset (50,000 images)
+```bash
+$ ck install package:imagenet-2012-val
+```
+
+**NB:** If you already have the ImageNet validation dataset downloaded in a directory e.g. `$HOME/dataset-imagenet-ilsvrc2012-val/`, you can simply detect it as follows:
+```bash
+$ ck detect soft:dataset.imagenet.val \
+  --full_path=$HOME/dataset-imagenet-ilsvrc2012-val/ILSVRC2012_val_00000001.JPEG
+```

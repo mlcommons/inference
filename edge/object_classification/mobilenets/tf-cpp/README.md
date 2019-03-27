@@ -273,7 +273,19 @@ $ ck benchmark program:image-classification-tf-cpp \
 ```
 
 ##### MobileNet non-quantized
+```
+"accuracy_top1": 0.67698
+"accuracy_top5": 0.87814
+```
 
 ##### MobileNet quantized
+```
+"accuracy_top1": 0.66598
+"accuracy_top5": 0.87096
+```
 
 ##### ResNet
+```bash
+"accuracy_top1": 0.71360
+"accuracy_top5": 0.90266
+```

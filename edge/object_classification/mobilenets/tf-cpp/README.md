@@ -2,6 +2,7 @@
 
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)
+3. [Reference accuracy](#accuracy)
 
 **NB:** See the [TFLite instructions](../tflite/README.md) how to use Collective Knowledge to learn more about the [anatomy](../tflite/README.md#anatomy) of the benchmark.
 
@@ -227,4 +228,34 @@ By default, input images preprocessed for the program [get cropped](https://gith
 $ grep CK_CROP_PERCENT /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json
       "CK_CROP_PERCENT": 87.5,
 ```
-This can be changed by passing e.g. `--env.CK_CROP_PERCENT=100` to `ck benchmark`.
+This can be changed by passing e.g. `--env.CK_CROP_PERCENT=100` to `ck benchmark` (see below).
+
+
+<a name="accuracy"></a>
+## Reference accuracy
+
+### ImageNet validation dataset (50,000 images)
+
+#### 87.5% cropping (default)
+```bash
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--record --record_repo=local --record_uoa=mlperf-image-classification-tf-cpp-accuracy \
+--tags=mlperf,image-classification,tf-cpp,accuracy \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```
+
+##### MobileNet non-quantized
+
+##### MobileNet quantized
+
+##### ResNet
+
+#### 100.0% cropping (proposed)
+```bash
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 --env.CK_CROP_PERCENT=100 \
+--record --record_repo=local --record_uoa=mlperf-image-classification-tf-cpp-accuracy-100 \
+--tags=mlperf,image-classification,tf-cpp,accuracy \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```

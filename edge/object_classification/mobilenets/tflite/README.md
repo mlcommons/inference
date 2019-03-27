@@ -1,4 +1,4 @@
-# MobileNets via TensorFlow Lite
+# MobileNet via TensorFlow Lite
 
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)
@@ -30,7 +30,7 @@ $ ck install package:lib-tflite-prebuilt-0.1.7-android-arm64 [--target_os=androi
 Please [let us know](info@dividiti.com) if you would like us to create some.
 
 
-### Install the MobileNets models for TFLite
+### Install the MobileNet models for TFLite
 
 To select interactively from one of the non-quantized and quantized MobileNets-v1-1.0-224 models adopted for MLPerf Inference v0.5:
 ```

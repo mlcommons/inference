@@ -1,4 +1,4 @@
-# MobileNets via TensorFlow (Python)
+# MobileNet via TensorFlow (Python)
 
 Please follow the common [installation instructions](../README.md#installation) first.
 
@@ -19,7 +19,7 @@ or from source:
 $ ck install package:lib-tensorflow-1.13.1-src-cpu
 ```
 
-### Install the MobileNets model for TensorFlow (Python)
+### Install the MobileNet model for TensorFlow (Python)
 
 To select interactively from one of the non-quantized and quantized MobileNets-v1-1.0-224 models:
 ```

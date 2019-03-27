@@ -267,7 +267,13 @@ $ ck benchmark program:image-classification-tf-cpp \
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 --env.CK_CROP_PERCENT=100 \
---record --record_repo=local --record_uoa=mlperf-image-classification-tf-cpp-accuracy-100 \
---tags=mlperf,image-classification,tf-cpp,accuracy \
+--record --record_repo=local --record_uoa=mlperf-image-classification-tf-cpp-accuracy-crop100 \
+--tags=mlperf,image-classification,tf-cpp,accuracy,crop100 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
+
+##### MobileNet non-quantized
+
+##### MobileNet quantized
+
+##### ResNet

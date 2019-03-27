@@ -36,7 +36,20 @@ To install the [quantized model](http://download.tensorflow.org/models/mobilenet
 $ ck install package --tags=model,tf,mlperf,mobilenet,quantized
 ```
 
-**NB:** You can also install any other MobileNets model compatible with TensorFlow (C++) as follows:
+#### Bonus
+
+##### Install the ResNet50 model
+
+To install the MLPerf ResNet50-v1.5 model:
+```bash
+$ ck install package --tags=model,tf,mlperf,resnet
+```
+You can use this model exactly in the same way as the MobileNet one.
+Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#benchmarking) below.
+
+##### Install other MobileNets models
+
+You can also install any other MobileNets model compatible with TensorFlow (C++) as follows:
 ```bash
 $ ck install package --tags=tensorflowmodel,mobilenet,frozen
 ```

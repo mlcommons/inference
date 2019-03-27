@@ -153,7 +153,7 @@ $ ck benchmark program:image-classification-tf-cpp \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
 **NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
-to `--env.CK_BATCH_COUNT=500` (or drop completely).
+to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image with `CK_BATCH_COUNT=1`).
 
 #### Inspect the recorded results
 
@@ -166,33 +166,52 @@ $ ck list_points local:experiment:mlperf-mobilenet-tf-cpp-accuracy
 78dae6354e471199
 918c80bc5d4906b0
 ```
+You can then retrieve various run parameters from experimental points.
 
-You can quickly inspect the accuracy recorded for a particular model as follows:
+##### Accuracy
+You can quickly inspect the accuracy recorded for a particular point as follows:
 ```bash
 $ grep \"run\": -A2 /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-918c80bc5d4906b0.0001.json                                                           
       "run": {
         "accuracy_top1": 0.718, 
         "accuracy_top5": 0.9, 
-$ grep RUN_OPT_GRAPH_FILE /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-918c80bc5d4906b0.0001.json
-      "RUN_OPT_GRAPH_FILE": "/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-downloaded/mobilenet_v1_1.0_224_frozen.pb",
-
 $ grep \"run\": -A2 /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json 
       "run": {
         "accuracy_top1": 0.704, 
         "accuracy_top5": 0.898, 
+```
+
+##### Model
+You can quickly inspect the model used for a particular point as follows:
+```bash
+$ grep RUN_OPT_GRAPH_FILE /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-918c80bc5d4906b0.0001.json
+      "RUN_OPT_GRAPH_FILE": "/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-downloaded/mobilenet_v1_1.0_224_frozen.pb",
 $ grep RUN_OPT_GRAPH_FILE /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json
       "RUN_OPT_GRAPH_FILE": "/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-quantized-downloaded/mobilenet_v1_1.0_224_quant_frozen.pb",
 ```
+As expected, the lower accuracy the quantized model.
 
-**NB:** At the moment, the dataset path is recorded only to `pipeline.json`.
+
+##### Dataset
+Unfortunately, the dataset path is recorded only to `pipeline.json`.
 This file gets overwritten on each run of `ck benchmark`, so only
 the dataset used in the latest command can be retrieved:
 ```bash
 $ grep \"CK_ENV_DATASET_IMAGENET_VAL\": /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/pipeline.json
           "CK_ENV_DATASET_IMAGENET_VAL": "/home/anton/CK_TOOLS/dataset-imagenet-ilsvrc2012-val-min"
 ```
+
+##### Batch count
 You can, however, check the batch count e.g.:
 ```bash
 $ grep CK_BATCH_COUNT /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json
       "CK_BATCH_COUNT": "500", 
 ```
+
+##### Image cropping
+By default, the program [crops](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tf-cpp#ck_crop_percent) images by 87.5%:
+```bash
+$ grep CK_CROP_PERCENT /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json
+      "CK_CROP_PERCENT": 87.5,
+```
+This can be changed by passing e.g. `CK_CROP_PERCENT=100` to `ck benchmark`.

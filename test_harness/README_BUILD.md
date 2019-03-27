@@ -21,13 +21,13 @@ Download and install depot\_tools:
 Copy the depot\_tools fetch config for the MLPerf test harness to the
 depot\_tools path:
 
-    wget https://raw.githubusercontent.com/mlperf/inference/master/depot_tools/fetch_configs/mlperf_inference.py -O ${PWD}/depot_tools/fetch_configs/mlperf_inferency.py
+    wget https://raw.githubusercontent.com/mlperf/inference/master/depot_tools/fetch_configs/mlperf_inference.py -O ${PWD}/depot_tools/fetch_configs/mlperf_inference.py
 
 Create a folder for the test harness project and fetch the source code:
 
     mkdir mlpi_test_harness
     cd mlpi_test_harness
-    fetch mlpi_inference
+    fetch mlperf_inference
     gclient sync
 
 ## Building from source

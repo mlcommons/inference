@@ -1,5 +1,6 @@
 declare_args() {
-  mlpi_use_skia = false
+  mlpi_use_skia_lib = false
+  mlpi_use_skia_src = true
 }
 
 component("mlpi_test_harness") {
@@ -24,18 +25,24 @@ component("mlpi_test_harness") {
   defines = []
   include_dirs = [ "." ]
 
+  if (mlpi_use_skia_src) {
+    deps = [
+      "../third_party/skia:skia",
+    ]
+  }
+
   # The skia dependency will be used to load image files.
   # Build skia separately, then copy the files to the locations below.
   # TODO(brianderson): Figure out how to make this a souce code
   # dependency, like chromium, android, and fuchsia do.
-  if (mlpi_use_skia) {
+  if (mlpi_use_skia_lib) {
     if (is_win) {
       libs = [
-        "//third_party/skia/lib/libskia.lib",
+        "../third_party/skia/lib/libskia.lib",
       ]
     } else {
       libs = [
-        "//third_party/skia/lib/libskia.a",
+        "../third_party/skia/lib/libskia.a",
       ]
     }
   }

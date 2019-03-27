@@ -1,0 +1,5 @@
+# Chromium build variables.
+build_with_chromium = false
+ignore_elf32_limitations = true
+linux_use_bundled_binutils_override = false
+use_system_xcode = true

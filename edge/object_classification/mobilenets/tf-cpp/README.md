@@ -2,6 +2,7 @@
 
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)
+3. [Reference accuracy](#accuracy)
 
 **NB:** See the [TFLite instructions](../tflite/README.md) how to use Collective Knowledge to learn more about the [anatomy](../tflite/README.md#anatomy) of the benchmark.
 
@@ -36,7 +37,20 @@ To install the [quantized model](http://download.tensorflow.org/models/mobilenet
 $ ck install package --tags=model,tf,mlperf,mobilenet,quantized
 ```
 
-**NB:** You can also install any other MobileNets model compatible with TensorFlow (C++) as follows:
+#### Bonus
+
+##### Install the ResNet50 model
+
+To install the MLPerf ResNet50-v1.5 model:
+```bash
+$ ck install package --tags=model,tf,mlperf,resnet
+```
+You can use this model exactly in the same way as the MobileNet one.
+Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#benchmarking) below.
+
+##### Install other MobileNets models
+
+You can also install any other MobileNets model compatible with TensorFlow (C++) as follows:
 ```bash
 $ ck install package --tags=tensorflowmodel,mobilenet,frozen
 ```
@@ -153,7 +167,7 @@ $ ck benchmark program:image-classification-tf-cpp \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
 **NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
-to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image with `CK_BATCH_COUNT=1`).
+to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as if with `--env.CK_BATCH_COUNT=1`).
 
 #### Inspect the recorded results
 
@@ -166,7 +180,7 @@ $ ck list_points local:experiment:mlperf-mobilenet-tf-cpp-accuracy
 78dae6354e471199
 918c80bc5d4906b0
 ```
-You can then retrieve various run parameters from experimental points.
+You can then retrieve various run parameters from such experimental points.
 
 ##### Accuracy
 You can quickly inspect the accuracy recorded for a particular point as follows:
@@ -189,7 +203,7 @@ $ grep RUN_OPT_GRAPH_FILE /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet
 $ grep RUN_OPT_GRAPH_FILE /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json
       "RUN_OPT_GRAPH_FILE": "/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-quantized-downloaded/mobilenet_v1_1.0_224_quant_frozen.pb",
 ```
-As expected, the lower accuracy the quantized model.
+As expected, the lower accuracy comes from the quantized model.
 
 
 ##### Dataset
@@ -209,9 +223,69 @@ $ grep CK_BATCH_COUNT /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-
 ```
 
 ##### Image cropping
-By default, the program [crops](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tf-cpp#ck_crop_percent) images by 87.5%:
+By default, input images preprocessed for the program [get cropped](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tf-cpp#ck_crop_percent) by 87.5%:
 ```bash
 $ grep CK_CROP_PERCENT /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json
       "CK_CROP_PERCENT": 87.5,
 ```
-This can be changed by passing e.g. `CK_CROP_PERCENT=100` to `ck benchmark`.
+This can be changed by passing e.g. `--env.CK_CROP_PERCENT=100` to `ck benchmark` (see below).
+
+
+<a name="accuracy"></a>
+## Reference accuracy
+
+### ImageNet validation dataset (50,000 images)
+
+#### 87.5% cropping (default)
+```bash
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--record --record_repo=local --record_uoa=mlperf-image-classification-tf-cpp-accuracy \
+--tags=mlperf,image-classification,tf-cpp,accuracy \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```
+
+##### MobileNet non-quantized
+```
+"accuracy_top1": 0.69966
+"accuracy_top5": 0.89366
+```
+
+##### MobileNet quantized
+```
+"accuracy_top1": 0.68978
+"accuracy_top5": 0.88628
+```
+
+##### ResNet
+```
+"accuracy_top1": 0.73288
+"accuracy_top5": 0.91606
+```
+
+#### 100.0% cropping (proposed)
+```bash
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 --env.CK_CROP_PERCENT=100 \
+--record --record_repo=local --record_uoa=mlperf-image-classification-tf-cpp-accuracy-crop100 \
+--tags=mlperf,image-classification,tf-cpp,accuracy,crop100 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```
+
+##### MobileNet non-quantized
+```
+"accuracy_top1": 0.67698
+"accuracy_top5": 0.87814
+```
+
+##### MobileNet quantized
+```
+"accuracy_top1": 0.66598
+"accuracy_top5": 0.87096
+```
+
+##### ResNet
+```bash
+"accuracy_top1": 0.71360
+"accuracy_top5": 0.90266
+```

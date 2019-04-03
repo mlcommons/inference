@@ -47,7 +47,25 @@ To install the [quantized model](http://download.tensorflow.org/models/mobilenet
 $ ck install package --tags=model,tflite,mlperf,mobilenet,quantized
 ```
 
-**NB:** You can also install any other MobileNets model compatible with TFLite as follows:
+#### Bonus
+
+##### Install the ResNet50 model
+
+To install the MLPerf ResNet50-v1.5 model:
+```bash
+$ ck install package --tags=model,tflite,mlperf,resnet
+More than one package or version found:
+
+ 0) model-tflite-resnet50-mlperf-convert-from-tf  Version 1.5  (35e84375ac48dcb1)
+ 1) model-tflite-resnet50-mlperf  Version 1.5  (d60d4e9a84151271)
+```
+Option 0 downloads the TF model and converts it to TFLite. Option 1 uses a pre-converted TFLite model.
+
+You can benchmark ResNet exactly in the same way as MobileNet.
+Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#benchmarking) below.
+
+##### Install other MobileNets models
+You can also install any other MobileNets model compatible with TFLite as follows:
 ```
 $ ck install package --tags=tensorflowmodel,mobilenet,tflite
 ```

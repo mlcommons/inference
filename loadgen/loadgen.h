@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "query_sample.h"
+
 namespace mlperf {
 
 struct QuerySampleResponse;
@@ -41,7 +43,7 @@ TestSettings ParseCommandLineArgs(int argc, char** argv);  // For C.
 // TODO(brianderson): This API assumes the response will be allocated and
 // owend by the SUT. This necessarily requires the allocation to be timed,
 // which will benefit SUTs that efficiently recycle response memory.
-void QueryComplete(intptr_t query_id, QuerySampleResponse* responses,
+void QueryComplete(QueryId query_id, QuerySampleResponse* responses,
                    size_t response_count);
 
 // Note: StartTest() would normally be declared here, but which version of

@@ -1,0 +1,9 @@
+executable("loadgen_demo_cpp") {
+  sources = [ "demo.cc" ]
+  deps = [ "..:mlpi_loadgen" ]
+}
+
+source_set("loadgen_demo_python") {
+  sources = [ "demo.py" ]
+  deps = [ "../..:loadgen_pymodule_wheel_lib" ]
+}

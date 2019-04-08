@@ -30,7 +30,7 @@ class SystemUnderTest {
   // The SUT must reference the associated query_id when triggering
   // QueryComplete().
   // Note: The data for neighboring samples are not contiguous.
-  virtual void IssueQuery(intptr_t query_id, QuerySample* samples,
+  virtual void IssueQuery(QueryId query_id, QuerySample* samples,
                           size_t sample_count) = 0;
 };
 

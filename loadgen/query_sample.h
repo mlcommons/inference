@@ -7,6 +7,9 @@
 
 namespace mlperf {
 
+// QueryId represents a unique identifier for an issued query.
+typedef intptr_t QueryId;
+
 // QuerySample represents the smallest unit of input inference can run on.
 // A query will consist of one or more samples.
 typedef uint64_t QuerySample;

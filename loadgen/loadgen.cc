@@ -36,7 +36,7 @@ struct QueryResponseMetadata {
   bool complete;
 };
 
-void QueryComplete(intptr_t query_id, QuerySampleResponse* responses,
+void QueryComplete(QueryId query_id, QuerySampleResponse* responses,
                    size_t response_count) {
   QueryResponseMetadata* metadata =
       reinterpret_cast<QueryResponseMetadata*>(query_id);
@@ -73,7 +73,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 //  for (size_t i = 0; i < library_query_count; i++) {
 //    response.ResetCompletion();
 //    response.query_index = i;
-//    intptr_t id = reinterpret_cast<intptr_t>(&response);
+//    QueryId id = reinterpret_cast<QueryId>(&response);
 //    // TODO(brianderson): Pipeline staging, issuance, and completion to make
 //    // verification faster.
 //    query_manager.StageQuery(i, id);

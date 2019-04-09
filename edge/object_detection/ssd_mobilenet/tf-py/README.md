@@ -6,14 +6,30 @@ Please follow the [installation instructions](../README.md#installation) first.
 
 ### Install TensorFlow (Python)
 
-Install TensorFlow (Python) from an `x86_64` binary package (requires system `protobuf`):
+Install TensorFlow (Python) from an `x86_64` binary package:
 ```bash
-$ sudo python3 -m pip install -U protobuf
-$ ck install package:lib-tensorflow-1.10.1-cpu
+$ ck install package:lib-tensorflow-1.13.1-cpu
 ```
 or from source:
 ```bash
-$ ck install package:lib-tensorflow-1.10.1-src-cpu
+$ ck install package:lib-tensorflow-1.13.1-src-cpu
+```
+
+### Install the SSD-MobileNet model
+
+To select interactively from one of the non-quantized and quantized SSD-MobileNet models:
+```
+$ ck install package --tags=model,object-detection,mlperf,ssd-mobilenet
+```
+
+To install the [non-quantized model](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) directly:
+```bash
+$ ck install package --tags=model,tf,object-detection,mlperf,ssd-mobilenet,non-quantized
+```
+
+To install the quantized finetuned model (courtesy of [Habana](https://habana.ai/)) directly:
+```bash
+$ ck install package --tags=model,tf,object-detection,mlperf,ssd-mobilenet,quantized,finetuned
 ```
 
 ### Run the TensorFlow (Python) object detection client

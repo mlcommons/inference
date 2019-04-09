@@ -32,7 +32,7 @@ To install the quantized finetuned model (courtesy of [Habana](https://habana.ai
 $ ck install package --tags=model,tf,object-detection,mlperf,ssd-mobilenet,quantized,finetuned
 ```
 
-### Run the TensorFlow (Python) object detection client
+### Run the TensorFlow (Python) Object Detection client
 ```bash
 $ ck run program:object-detection-tf-py --env.CK_BATCH_COUNT=50
 ...
@@ -44,38 +44,38 @@ Convert results to coco ...
 
 Evaluate metrics as coco ...
 loading annotations into memory...
-Done (t=3.70s)
+Done (t=0.55s)
 creating index...
 index created!
 Loading and preparing results...
-DONE (t=0.01s)
+DONE (t=0.00s)
 creating index...
 index created!
 Running per image evaluation...
 Evaluate annotation type *bbox*
-DONE (t=0.10s).
+DONE (t=0.12s).
 Accumulating evaluation results...
-DONE (t=0.17s).
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.281
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.375
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.315
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.029
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.149
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.569
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.262
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.288
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.288
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.031
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.156
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.595
+DONE (t=0.22s).
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.315
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.439
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.331
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.064
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.184
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.689
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.296
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.322
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.323
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.066
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.187
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.711
 
 Summary:
 -------------------------------
-Graph loaded in 0.608890s
-All images loaded in 8.702114s
-All images detected in 2.062680s
-Average detection time: 0.042096s
-mAP: 0.28063198419129565
-Recall: 0.28815323348218086
+Graph loaded in 0.748657s
+All images loaded in 12.052568s
+All images detected in 1.251245s
+Average detection time: 0.025536s
+mAP: 0.3148934914889957
+Recall: 0.3225293342489256
 --------------------------------
 ```

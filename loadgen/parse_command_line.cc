@@ -18,10 +18,12 @@ TestSettings ParseCommandLineArgs(int argc, char** argv) {
     std::string n = argv[i];
     if (n == "--mlperf_scenario") {
       std::string v(argv[i + 1]);
-      if (v == "cloud") {
+      if (v == "stream1") {
+        settings.scenario = TestScenario::StreamOneAtATime;
+      } else if (v == "streamN") {
+        settings.scenario = TestScenario::StreamNAtFixedRate;
+      } else if (v == "cloud") {
         settings.scenario = TestScenario::Cloud;
-      } else if (v == "edge") {
-        settings.scenario = TestScenario::Edge;
       } else if (v == "offline") {
         settings.scenario = TestScenario::Offline;
       } else {

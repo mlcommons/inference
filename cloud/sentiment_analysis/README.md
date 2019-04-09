@@ -9,9 +9,10 @@ To install unzip make sure you have sudo permissions
 ## Download the models
 Both models use the same set of weights which are given in numpy version as well.
 The codes to convert the model from mxnet to pytorch can be found under converting_scripts.
+
 In an environment that has mxnet and numpy run:
 ```
-    python convert_params_to_numpy.py
+    python convert_parmas_to_np.py
 ```    
 In an environment that has pytorch and numpy run:
 ```
@@ -51,13 +52,13 @@ docker run -it --rm -v "$(pwd)"/../Datasets:/mlperf/Datasets -v "$(pwd)"/../pret
 ## Model implementation:
 ### Data and preprocessing
 The preprocessing is described in data.py folder and uses spacy tokenizer.
-The vocabulary size is 5200
-The maximum sequance length is 1000
+The vocabulary size is 5200.
+The maximum sequence length is 1000.
 ### Model implementation
 The model contain embedding layer, two 1D convolution layers followed by leaky-relu max pooling concatenation and a fully-connected layer the model is described in models/model_cnn.py
-Embedding dimension is 1024
-CNN1 size [Cin,Cout,kernel]=1024,1024,3
-CNN2 size [Cin,Cout,kernel]=1024,1024,4
+Embedding dimension is 1024<br/>
+CNN1 size [Cin,Cout,kernel]=1024,1024,3<br/>
+CNN2 size [Cin,Cout,kernel]=1024,1024,4<br/>
 Fully connected layer 2048->2
 
 Number of parameters:  12,670,978

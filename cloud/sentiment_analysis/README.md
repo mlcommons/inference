@@ -1,48 +1,50 @@
 # MLPerf Cloud Inference - Sentiment Analysis Seq2CNN - IMDB dataset
 
-## Dowload the IMDB dataste
+## Download the IMDB dataset
 To install unzip make sure you have sudo permissions 
-'''
+```
   sudo apt-get install unzip
   sh download_imdb.sh
-'''
-## Dowload the models
+```
+## Download the models
 Both models use the same set of weights which are given in numpy version as well.
-The codes to convert the model from mxnet to pytorch can be found under converting_scripts 
+The codes to convert the model from mxnet to pytorch can be found under converting_scripts.
 In an environment that has mxnet and numpy run:
-'''
+```
     python convert_params_to_numpy.py
-'''    
+```    
 In an environment that has pytorch and numpy run:
-'''
+```
     python convert_numpy_to_torch.py
-'''    
+```    
 
 ## Mxnet implemetation
 Copy the model using:
-'''
-  sh downlaod_models_mxnet.sh
-'''
+```
+  sh download_models_mxnet.sh
+```
 ## Build docker
-'''
+```
   cd mxnet
   docker build -t inference/sentiment.mxnet .
-'''
+```
 ## Run 
 docker run -it --rm -v "$(pwd)"/../Datasets:/mlperf/Datasets -v "$(pwd)"/../pretrained_mxnet:/mlperf/pretrained --ipc=host inference/sentiment.mxnet:latest python eval.py --model cnn --eval pretrained/seq2cnn_model --batch-size 1 --calc_accuracy
 
 ## Pytorch implementation
 Copy the model using:
-'''
-  sh downlaod_models_pyt.sh
-'''
+```
+  sh download_models_pyt.sh
+```
 ## Build docker
-'''
+```
   cd pytorch
   docker build -t inference/sentiment.pytorch .
-'''
-## Run 
+```
+## Run
+``` 
 docker run -it --rm -v "$(pwd)"/../Datasets:/mlperf/Datasets -v "$(pwd)"/../pretrained_pyt:/mlperf/pretrained --ipc=host inference/sentiment.pytorch:latest python eval.py  --model cnn --eval pretrained/seq2cnn_imported_mxnet.pth --batch-size 1 
+```
 
 ##Model implementation:
 ### Data and preprocessing

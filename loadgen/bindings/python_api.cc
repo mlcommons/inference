@@ -5,6 +5,8 @@
 
 #include "third_party/pybind/include/pybind11/functional.h"
 #include "third_party/pybind/include/pybind11/pybind11.h"
+#include "third_party/pybind/include/pybind11/stl.h"
+#include "third_party/pybind/include/pybind11/stl_bind.h"
 
 #include "../loadgen.h"
 #include "../query_sample.h"
@@ -16,7 +18,7 @@ namespace mlperf {
 
 namespace {
 
-using IssueQueryCallback = std::function<void(QueryId, QuerySample*, size_t)>;
+using IssueQueryCallback = std::function<void(QueryId, std::vector<QuerySample>)>;
 
 // Forwards SystemUnderTest calls to relevant callbacks.
 class SystemUnderTestTrampoline : public SystemUnderTest {
@@ -31,7 +33,8 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
   void IssueQuery(QueryId query_id, QuerySample* samples,
                   size_t sample_count) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    issue_cb_(query_id, samples, sample_count);
+    // TODO: Get rid of copies.
+    issue_cb_(query_id, std::vector<QuerySample>(samples, samples+sample_count));
   }
 
  private:
@@ -40,9 +43,9 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 };
 
 using LoadSamplesToRamCallback =
-    std::function<void(QuerySample*, size_t)>;
+    std::function<void(std::vector<QuerySample>)>;
 using UnloadSamplesFromRamCallback =
-    std::function<void(QuerySample*, size_t)>;
+    std::function<void(std::vector<QuerySample>)>;
 
 // Forwards QuerySampleLibrary calls to relevant callbacks.
 class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
@@ -65,12 +68,16 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   void LoadSamplesToRam(QuerySample* samples,
                         size_t sample_count) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    load_samples_to_ram_cb_(samples, sample_count);
+    // TODO: Get rid of copies.
+    load_samples_to_ram_cb_(
+          std::vector<QuerySample>(samples, samples+sample_count));
   }
   void UnloadSamplesFromRam(QuerySample* samples,
                             size_t sample_count) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    unload_samlpes_from_ram_cb_(samples, sample_count);
+    // TODO: Get rid of copies.
+    unload_samlpes_from_ram_cb_(
+          std::vector<QuerySample>(samples, samples+sample_count));
   }
 
   // TODO(brianderson): Accuracy Metric API.
@@ -131,16 +138,27 @@ namespace py {
     mlperf::StartTest(sut_cast, qsl_cast, default_settings);
   }
 
-  void QueryComplete(QueryId query_id, QuerySampleResponse* responses,
-                     size_t response_count) {
+  // TODO: Get rid of copies.
+  void QueryComplete(QueryId query_id,
+                     std::vector<QuerySampleResponse> responses) {
     pybind11::gil_scoped_release gil_releaser;
-    mlperf::QueryComplete(query_id, responses, response_count);
+    mlperf::QueryComplete(query_id, responses.data(), responses.size());
   }
 }  // namespace py
 }  // namespace mlperf
 
 PYBIND11_MODULE(mlpi_loadgen, m) {
   m.doc() = "MLPerf Inference load generator.";
+
+  pybind11::class_<mlperf::QuerySampleResponse>(m, "QuerySampleResponse")
+      .def(pybind11::init<>())
+      .def(pybind11::init<intptr_t, size_t>())
+      .def_readwrite("data", &mlperf::QuerySampleResponse::data)
+      .def_readwrite("size", &mlperf::QuerySampleResponse::size);
+
+  // TODO: Use PYBIND11_MAKE_OPAQUE for the following vector types.
+  pybind11::bind_vector<std::vector<mlperf::QuerySample>>(m, "VectorQuerySample");
+  pybind11::bind_vector<std::vector<mlperf::QuerySampleResponse>>(m, "VectorQuerySampleResponse");
 
   m.def("ConstructSUT", &mlperf::py::ConstructSUT,
         pybind11::return_value_policy::reference,

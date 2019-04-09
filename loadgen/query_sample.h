@@ -16,7 +16,7 @@ typedef uint64_t QuerySample;
 
 // QuerySampleResponse represents a single response to QuerySample
 struct QuerySampleResponse {
-  void* data;
+  intptr_t data;
   size_t size;  // Size in bytes.
 };
 

@@ -8,10 +8,6 @@
 
 namespace mlperf {
 
-struct TestSettings;
-
-class QuerySampleLibrary;
-
 // SystemUnderTest provides the interface to:
 //  1) Allocate, preprocess, and issue queries.
 //  2) Warm up the system.
@@ -33,12 +29,6 @@ class SystemUnderTest {
   virtual void IssueQuery(QueryId query_id, QuerySample* samples,
                           size_t sample_count) = 0;
 };
-
-// Starts the test against |sut| with the specified |settings|.
-// This is the C++ entry point. See mlperf::c::StartTest for the C entry point.
-void StartTest(SystemUnderTest* sut,
-               QuerySampleLibrary* qsl,
-               const TestSettings& settings);
 
 }  // namespace mlperf
 

@@ -9,11 +9,13 @@
 namespace mlperf {
 
 struct QuerySampleResponse;
+class QuerySampleLibrary;
+class SystemUnderTest;
 
 enum TestScenario {
-  All,
+  StreamOneAtATime,
+  StreamNAtFixedRate,
   Cloud,
-  Edge,
   Offline,
 };
 
@@ -25,12 +27,10 @@ enum TestMode {
 };
 
 struct TestSettings {
-  char* query_sample_library_name;
-  size_t query_sample_library_name_length;
-  TestScenario scenario;
-  TestMode mode;
-  int samples_per_query;
-  double target_qps;
+  TestScenario scenario = TestScenario::StreamNAtFixedRate;
+  TestMode mode = TestMode::AccuracyOnly;
+  int samples_per_query = 4;
+  double target_qps = 100;
 };
 
 // Defined in parse_command_line.cc
@@ -46,10 +46,11 @@ TestSettings ParseCommandLineArgs(int argc, char** argv);  // For C.
 void QueryComplete(QueryId query_id, QuerySampleResponse* responses,
                    size_t response_count);
 
-// Note: StartTest() would normally be declared here, but which version of
-// StartTest() to use depends on how the SystemUnderTest is created.
-// Therefore StartTest() is declared in the system_under_test.h and
-// system_under_test_c_api.h.
+// Starts the test against |sut| with the specified |settings|.
+// This is the C++ entry point. See mlperf::c::StartTest for the C entry point.
+void StartTest(SystemUnderTest* sut,
+               QuerySampleLibrary* qsl,
+               const TestSettings& settings);
 
 }  // namespace mlperf
 

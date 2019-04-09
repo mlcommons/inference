@@ -1,18 +1,24 @@
 [![compatibility](https://github.com/ctuning/ck-guide-images/blob/master/ck-compatible.svg)](https://github.com/ctuning/ck)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-# MLPerf Edge Inference - Object Detection - SSD-MobileNet-v1
+# MLPerf Inference - Object Detection - SSD-MobileNet
+
+**NB:** MLPerf Inference v0.5 uses SSD-MobileNet-v1-1.0-224 (called SSD-MobileNet in what follows).
+
+# Table of contents
 
 1. [Installation](#installation)
-    1. [Install prerequisites](#installation-debian) (Debian-specific)
-    1. [Install CK workflows](#installation-workflows) (universal)
-1. [Benchmark SSD-MobileNet-v1 via TensorFlow (Python)](tf-py/README.md)
+    - [Install prerequisites](#installation-debian) (Debian-specific)
+    - [Install CK workflows](#installation-workflows) (universal)
+1. [Benchmarking](#benchmarking)
+    - [via TensorFlow (Python)](tf-py/README.md)
+    - via TFLite (**coming soon**!)
 
 <a name="installation"></a>
 # Installation
 
 <a name="installation-debian"></a>
-## Debian (last tested with Ubuntu v18.04)
+## Debian (tested with Ubuntu v18.04 and v16.04)
 
 - Common tools and libraries.
 - [Python](https://www.python.org/), [pip](https://pypi.org/project/pip/), [SciPy](https://www.scipy.org/), [Collective Knowledge](https://cknowledge.org) (CK).
@@ -39,16 +45,25 @@ $ sudo python3 -m pip install ck
 
 ### Pull CK repositories
 ```bash
-$ ck pull repo:ck-tensorflow
+$ ck pull repo:ck-mlperf
 ```
+**NB:** Transitive dependencies include [repo:ck-tensorflow](https://github.com/ctuning/ck-tensorflow).
 
-### Install the COCO dataset
+### Install the COCO 2017 validation dataset (5,000 images)
 ```bash
-$ ck install package:dataset-coco-2014
+$ ck install package:dataset-coco-2017-val
 ```
+**NB:** COCO dataset descriptions are in [repo:ck-env](https://github.com/ctuning/ck-env).
 
-### Install the SSD-MobileNet-v1 model
+**NB:** If you have previously installed the COCO 2017 validation dataset via CK to e.g. `$HOME/coco/`, you can simply detect it as follows:
 ```bash
-$ ck install package:tensorflowmodel-object-detection-ssd-mobilenet-v1-coco
-$ ck install package:tensorflowmodel-api
+$ ck detect soft:dataset.coco.2017.val --full_path=$HOME/coco/val2017/000000000139.jpg
 ```
+(CK also places annotations under `annotations/val2017/`.)
+
+<a name="benchmarking"></a>
+## Benchmarking
+
+You can benchmark MobileNet using one of the available options:
+- [via TensorFlow (Python)](tf-py/README.md)
+- via TensorFlow Lite (**coming soon!**)

@@ -28,8 +28,10 @@ Copy the model using:
   cd mxnet
   docker build -t inference/sentiment.mxnet .
 ```
-## Run 
+## Run
+```
 docker run -it --rm -v "$(pwd)"/../Datasets:/mlperf/Datasets -v "$(pwd)"/../pretrained_mxnet:/mlperf/pretrained --ipc=host inference/sentiment.mxnet:latest python eval.py --model cnn --eval pretrained/seq2cnn_model --batch-size 1 --calc_accuracy
+```
 
 ## Pytorch implementation
 Copy the model using:
@@ -46,7 +48,7 @@ Copy the model using:
 docker run -it --rm -v "$(pwd)"/../Datasets:/mlperf/Datasets -v "$(pwd)"/../pretrained_pyt:/mlperf/pretrained --ipc=host inference/sentiment.pytorch:latest python eval.py  --model cnn --eval pretrained/seq2cnn_imported_mxnet.pth --batch-size 1 
 ```
 
-##Model implementation:
+## Model implementation:
 ### Data and preprocessing
 The preprocessing is described in data.py folder and uses spacy tokenizer.
 The vocabulary size is 5200

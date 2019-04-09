@@ -12,7 +12,7 @@
     - [Install CK workflows](#installation-workflows) (universal)
 1. [Benchmarking](#benchmarking)
     - [via TensorFlow (Python)](tf-py/README.md)
-    - via TFLite (**coming soon**!)
+    - via TensorFlow Lite (**coming soon!**)
 
 <a name="installation"></a>
 # Installation
@@ -34,8 +34,7 @@ $ sudo apt install libblas-dev liblapack-dev
 ### Install Python, pip, SciPy and CK
 ```bash
 $ sudo apt install python3 python3-pip python3-tk
-$ sudo python3 -m pip install cython
-$ sudo python3 -m pip install scipy
+$ sudo python3 -m pip install scipy matplotlib pillow
 $ sudo python3 -m pip install ck
 ```
 **NB:** CK also supports Python 2.
@@ -64,6 +63,6 @@ $ ck detect soft:dataset.coco.2017.val --full_path=$HOME/coco/val2017/0000000001
 <a name="benchmarking"></a>
 ## Benchmarking
 
-You can benchmark MobileNet using one of the available options:
+You can benchmark SSD-MobileNet using one of the available options:
 - [via TensorFlow (Python)](tf-py/README.md)
 - via TensorFlow Lite (**coming soon!**)

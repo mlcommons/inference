@@ -1,0 +1,35 @@
+buildconfig = "//build/config/BUILDCONFIG.gn"
+
+default_args = {
+  # Default to release builds for this project.
+  is_debug = false
+  is_component_build = false
+
+  # Override skia's compiler flags.
+  skia_default_configs_override_import = "//gn/skia_default_configs_override.gni"
+
+  # Skia deps to use.
+  skia_use_libjpeg_turbo = true
+  skia_use_libpng = true
+  skia_use_libwebp = true
+
+  # Skia deps to avoid.
+  skia_use_angle = false
+  skia_use_egl = false
+  skia_use_expat = false
+  skia_use_fontconfig = false
+  skia_use_fonthost_mac = false
+  skia_use_freetype = false
+  skia_use_fixed_gamma_text = false
+  skia_use_lua = false
+  skia_use_opencl = false
+  skia_use_piex = false
+  skia_use_wuffs = false
+  skia_use_zlib = false
+  skia_use_metal = false
+  skia_use_libheif = false
+  skia_use_x11 = false
+  skia_use_xps = false
+  skia_use_dng_sdk = false
+  skia_use_vulkan = false
+}

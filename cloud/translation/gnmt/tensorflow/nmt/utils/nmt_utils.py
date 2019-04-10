@@ -56,7 +56,9 @@ def decode_and_evaluate(run,
       elif infer_mode == "beam_search":
         num_translations_per_input = min(num_translations_per_input, beam_width)
 
-      print("Iterations ", str(iterations))
+      print("  infer_mode %s, beam_width %g, num translations per input %d. " \
+            % (infer_mode, beam_width, num_translations_per_input))
+      print("  total iterations count %d." % iterations)
 
       # prediction time is the time for the model prediction only
       # overall time is the time for data pre-processing and data post-processing

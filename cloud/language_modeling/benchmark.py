@@ -1,10 +1,11 @@
 
 
 class Model:
-    def __init__(self):
+    def __init__(self, arguments):
         import tensorflow as tf
         self.graph = tf.Graph()
-        self.session = tf.Session(graph=self.graph)
+        self.config = tf.ConfigProto(intra_op_parallelism_threads = int(arguments["intra"]), inter_op_parallelism_threads = int(arguments["inter"]))
+        self.session = tf.Session(graph=self.graph, config=self.config)
 
     def load(self):
         import tensorflow as tf
@@ -81,6 +82,7 @@ def runBenchmarkWithTiming(arguments, model, dataset):
 
     losses = []
     times  = []
+    print("Number samples: " + str(dataset.numSamples()))
 
     for i in range(int(arguments["iterations"])):
         inputs, labels = dataset.nextBatch()
@@ -91,7 +93,7 @@ def runBenchmarkWithTiming(arguments, model, dataset):
 
         times.append(end - start)
 
-    print("Longest latency was: " + str(sorted(times)[-1]) + " seconds.")
+    print("Longest latency was: " + str(sorted(times)[-1]) + " seconds." + " Average latency was:" + str(sum(times)/len(times)))
     print("Perplexity: " + str(getPerplexity(losses)) + ", target is 40.209 .")
 
 def getPerplexity(losses):
@@ -121,9 +123,9 @@ def downloadModel(arguments):
     print("extracting model " + filename)
     extract(filename, '.')
 
-def loadModel():
+def loadModel(arguments):
 
-    model = Model()
+    model = Model(arguments)
 
     model.load()
 
@@ -165,6 +167,9 @@ class Dataset:
         if len(self.wordBuffer) > self.wordsPerSample:
             self.samples.append(self.wordBuffer)
             self.wordBuffer = []
+
+    def numSamples(self):
+        return len(self.samples)
 
     def isFull(self):
         return len(self.samples) >= self.maximumSamples
@@ -260,7 +265,7 @@ def getModel(arguments):
     else:
         print("Checksum for model passed, loading model...")
 
-    return loadModel()
+    return loadModel(arguments)
 
 def main():
     from argparse import ArgumentParser
@@ -276,10 +281,14 @@ def main():
         help = "The number of samples to process together in a batch.")
     parser.add_argument("--words-per-sample", default = 20,
         help = "The number of words in each sample.")
-    parser.add_argument("--maximum-samples", default = 1000,
+    parser.add_argument("--maximum-samples", default = 10000,
         help = "The number of samples to read from the validation dataset.")
     parser.add_argument("--model-checksum", default = "d41d8cd98f00b204e9800998ecf8427e",
         help = "The MD5 hash of the model.")
+    parser.add_argument("--inter", default = 0,
+        help = "The number of inter threads")
+    parser.add_argument("--intra", default = 0,
+        help = "The number of intra threads")
     parser.add_argument("-d", "--validation-dataset-url",
         default = "http://statmt.org/wmt11/training-monolingual-news-commentary.tgz",
         help = "Download the validation dataset from the specified url.")

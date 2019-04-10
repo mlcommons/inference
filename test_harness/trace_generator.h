@@ -70,7 +70,7 @@ double CalculateQPS(const Trace<QueryType> &trace) {
 }
 
 // TODO(tjablin): Many of these methods have long argument lists. Maybe use
-// fluent APIs intead?
+// fluent APIs instead?
 
 // TODO(tjablin): Instead of generating the whole trace at once, maybe generate
 // trace entries dynamically?

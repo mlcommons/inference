@@ -16,8 +16,6 @@ def parse_args():
                                         " on COCO")
     parser.add_argument('--data', '-d', type=str, default='../coco',
                         help='path to test and training data files')
-    parser.add_argument('--batch-size', '-b', type=int, default=4,
-                        help='number of examples for each iteration')
     parser.add_argument('--no-cuda', action='store_true',
                         help='use available GPUs')
     parser.add_argument('--seed', '-s', type=int,
@@ -46,12 +44,8 @@ def show_memusage(device=0):
 def dboxes_R34_coco(figsize,strides):
     ssd_r34=SSD_R34(81,strides=strides)
     synt_img=torch.rand([1,3]+figsize)
-    #if use_cude:
-    #    synt_img.to('cuda')
-    #    ssd_r34.to('cuda')
     _,_,feat_size =ssd_r34(synt_img, extract_shapes = True)
     print('Features size: ', feat_size)
-    import pdb; pdb.set_trace()
     steps=[(int(figsize[0]/fs[0]),int(figsize[1]/fs[1])) for fs in feat_size]
     # use the scales here: https://github.com/amdegroot/ssd.pytorch/blob/master/data/config.py
     scales = [(int(s*figsize[0]/300),int(s*figsize[1]/300)) for s in [21, 45, 99, 153, 207, 261, 315]] 
@@ -123,11 +117,10 @@ def eval_ssd_r34_mlperf_coco(args):
     val_coco = COCODetection(val_coco_root, val_annotate, val_trans)
     inv_map = {v:k for k,v in val_coco.label_map.items()}
 
-    ssd_r34 = SSD_R34(val_coco.labelnum,args.strides)
+    ssd_r34 = SSD_R34(val_coco.labelnum,strides=args.strides)
 
     print("loading model checkpoint", args.checkpoint)
     od = torch.load(args.checkpoint, map_location=lambda storage, loc: storage)
-    import pdb; pdb.set_trace()
     ssd_r34.load_state_dict(od["model"])
 
     if use_cuda:
@@ -148,7 +141,8 @@ def main():
         print("Using seed = {}".format(args.seed))
         torch.manual_seed(args.seed)
         np.random.seed(seed=args.seed)
-    torch.cuda.set_device(args.device)
+    if not args.no_cuda:
+        torch.cuda.set_device(args.device)
     torch.backends.cudnn.benchmark = True
     eval_ssd_r34_mlperf_coco(args)
 

@@ -1,0 +1,49 @@
+declare_args() {
+  mlpi_use_skia_lib = false
+  mlpi_use_skia_src = true
+}
+
+component("mlpi_test_harness") {
+  sources = [
+    "query_allocator.h",
+    "query_residency_manager.h",
+    "query_sample.h",
+    "query_sample_library.h",
+    "query_sample_library_registry.h",
+    "system_under_test_c_api.h",
+    "system_under_test.h",
+    "test_harness.h",
+    #"trace_generator.h",
+    #"demo.cc",
+    "parse_command_line.cc",
+    "query_allocator.cc",
+    "query_residency_manager.cc",
+    "system_under_test_c_api.cc",
+    "test_harness.cc",
+  ]
+  cflags = ["-Wall"]
+  defines = []
+  include_dirs = [ "." ]
+
+  if (mlpi_use_skia_src) {
+    deps = [
+      "../third_party/skia:skia",
+    ]
+  }
+
+  # The skia dependency will be used to load image files.
+  # Build skia separately, then copy the files to the locations below.
+  # TODO(brianderson): Figure out how to make this a souce code
+  # dependency, like chromium, android, and fuchsia do.
+  if (mlpi_use_skia_lib) {
+    if (is_win) {
+      libs = [
+        "../third_party/skia/lib/libskia.lib",
+      ]
+    } else {
+      libs = [
+        "../third_party/skia/lib/libskia.a",
+      ]
+    }
+  }
+}

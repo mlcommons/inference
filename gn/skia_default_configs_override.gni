@@ -1,0 +1,11 @@
+# Route chromium's default_compiler_configs to skia's config override
+# Build file dependency injection.
+skia_default_configs_override = default_compiler_configs + [ "//:mlpi_skia_disable_warnings" ]
+skia_default_configs_override -= [ "//build/config/clang:extra_warnings" ]
+
+# Don't compile skia's third_party dependencies in debug mode.
+skia_default_configs_third_party_override = skia_default_configs_override
+if (is_debug) {
+  skia_default_configs_third_party_override -= [ "//build/config:debug" ]
+  skia_default_configs_third_party_override -= [ "//build/config:release" ]
+}

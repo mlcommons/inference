@@ -17,7 +17,12 @@ gn: ninja
 	# Copy gn to third_party/gn, where depot_tools expects it.
 	cp third_party/gn/out/gn* third_party/gn/.
 
-.PHONY: mlpi_loadgen
-mlpi_loadgen: gn
+.PHONY: mlperf_loadgen
+mlperf_loadgen: gn
 	third_party/gn/gn gen out/MakefileGnProj
-	third_party/ninja/ninja -C out/MakefileGnProj mlpi_loadgen
+	third_party/ninja/ninja -C out/MakefileGnProj mlperf_loadgen
+
+.PHONY: mlperf_loadgen_pymodule
+mlperf_loadgen_pymodule: gn
+	third_party/gn/gn gen out/MakefileGnProj
+	third_party/ninja/ninja -C out/MakefileGnProj loadgen_pymodule_wheel_src

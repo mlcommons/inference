@@ -147,7 +147,7 @@ namespace py {
 }  // namespace py
 }  // namespace mlperf
 
-PYBIND11_MODULE(mlpi_loadgen, m) {
+PYBIND11_MODULE(mlperf_loadgen, m) {
   m.doc() = "MLPerf Inference load generator.";
 
   pybind11::class_<mlperf::QuerySampleResponse>(m, "QuerySampleResponse")

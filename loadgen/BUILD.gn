@@ -23,14 +23,14 @@ c_api_sources = [
   "bindings/c_api.cc",
 ]
 
-static_library("mlpi_loadgen") {
+static_library("mlperf_loadgen") {
   sources = public_headers + lib_sources + c_api_sources
   include_dirs = [ "." ]
 }
 
 executable("loadgen_demo") {
   sources = [ "demo.cc" ]
-  deps = [ ":mlpi_loadgen" ]
+  deps = [ ":mlperf_loadgen" ]
 }
 
 copy("public_headers_src") {
@@ -57,9 +57,9 @@ copy("python_api_src") {
 # TODO(brianderson): Remove or fix this.
 # This compiles with the system toolchain, but not chromium's.
 # For now, use loadgen_pymodule_setup_src/lib.py instead.
-loadable_module("mlpi_loadgen_pymodule_lib") {
+loadable_module("mlperf_loadgen_pymodule_lib") {
   sources = [ "bindings/python_api.cc" ]
-  deps = [ ":mlpi_loadgen", "../third_party:pybind11" ]
+  deps = [ ":mlperf_loadgen", "../third_party:pybind11" ]
   configs += [ "//build/config/compiler:rtti",
                "//build/config/compiler:exceptions" ]
   cflags = [ "-Wno-macro-redefined" ]

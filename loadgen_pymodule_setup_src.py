@@ -14,14 +14,14 @@ sources = [
   "loadgen.cc",
 ]
 
-mlpi_loadgen_module = Extension('mlpi_loadgen',
+mlperf_loadgen_module = Extension('mlperf_loadgen',
                     define_macros = [('MAJOR_VERSION', '0'),
                                      ('MINOR_VERSION', '5')],
                     include_dirs = [ 'gen' ],
                     sources = [ "gen/loadgen/" + s for s in sources ])
 
-setup (name = 'mlpi_loadgen',
+setup (name = 'mlperf_loadgen',
        version = '0.5a0',
        description = 'MLPerf Inference LoadGen python bindings',
        url = 'https://mlperf.org',
-       ext_modules = [mlpi_loadgen_module])
+       ext_modules = [mlperf_loadgen_module])

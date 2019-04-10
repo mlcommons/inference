@@ -1,4 +1,4 @@
-wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=11eX22gS291ZpNzSpGdpz7nBjDtgKDesH'  -O 'resnet34-ssd1200.pth'
+wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=13kWgEItsoxbVKUlkQz4ntjl1IZGk6_5Z'  -O 'resnet34-ssd1200.pth'
 
 mkdir pretrained
 mv 'resnet34-ssd1200.pth' ./pretrained

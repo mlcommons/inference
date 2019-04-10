@@ -1,0 +1,14 @@
+group("gn_all") {
+  deps = [
+    "//test_harness:mlpi_test_harness",
+  ]
+}
+
+# Be more lax with the warnings enabled for skia.
+config("mlpi_skia_disable_warnings") {
+  cflags = []
+  if (!is_win || is_clang) {
+    cflags += [ "-Wno-implicit-fallthrough" ]
+  }
+}
+

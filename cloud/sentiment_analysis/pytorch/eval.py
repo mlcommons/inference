@@ -70,7 +70,7 @@ def main():
         cudnn.benchmark = True
         model.to('cuda',dtype=torch.float)
     else:
-        torch.manual_seed_all(args.seed)
+        torch.manual_seed(args.seed)
         args.device_ids = None  
 
     logging.basicConfig(filename='example_sentiment.log',level=logging.DEBUG)

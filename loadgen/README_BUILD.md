@@ -1,6 +1,22 @@
 # Building the MLPerf Inference Load Generator
 
-The load generator library is built using [gn metabuild](https://gn.googlesource.com/gn/+/master) and [ninja build](https://ninja-build.org/).
+## Quick Start
+
+    git clone --recurse-submodules https://github.com/mlperf/inference.git mlperf_inference
+    cd mlperf_inference
+    make mlperf_loadgen_pymodule
+    pip install out/MakefileGnProj/dist/mlperf_loadgen-0.5a0-cp27-cp27mu-linux_x86_64.whl
+    python loadgen/demos/demo.py
+
+See [demos/demo.py](demos/demo.py) for how to import and use the load generator from python.
+
+If you just need the C++ library without python bindings, see the details below.
+
+## Overview
+
+The load generator is built using the
+[gn metabuild](https://gn.googlesource.com/gn/+/master)
+and [ninja build](https://ninja-build.org/) tools.
 
 Using git submodules to manage a checkout will compile gn and ninja if needed.
 Using depot\_tools to manage a checkout will include prebuilt versions of gn and ninja.
@@ -25,10 +41,15 @@ Download the mlperf inference repository and it's submodules.
 The following is a phony Makefile target, wrapping everything needed to build
 the load generator. It'll get the job done, but will result in lots of redundant
 work if used over and over again, so isn't recommended for development.
+The resulting binary will be found in: out/MakefileGnProj/obj/loadgen/libmlperf\_loadgen.*
 
-    make mlpi_loadgen
+    make mlperf_loadgen
 
-The resulting binary will be found in: out/MakefileGnProj/obj/loadgen/libmlpi\_loadgen.*
+To build the python module:
+
+    make mlperf_loadgen_pymodule
+
+Note: These make targets assume Unix-like shell commands are available.
 
 #### Building for development purposes
 
@@ -46,14 +67,14 @@ each with their own args. Release and debug sets, for example:
     third_party/gn/gn gen out/Release --args="is_debug=false"
     third_party/gn/gn gen out/Debug --args="is_debug=true"
 
-You will find the binary in out/Release/obj/loadgen/libmlpi\_loadgen.a. (Or as a .lib on Windows).
+You will find the binary in out/Release/obj/loadgen/libmlperf\_loadgen.a. (Or as a .lib on Windows).
 
 Link that library directly into the executable you want to test.
 
 From here you can edit+build over and over using one of the following targets:
 
-    third_party/ninja/ninja -C out/Release mlpi_loadgen
-    third_party/ninja/ninja -C out/Release loadgen_pymodule_wheel_lib
+    third_party/ninja/ninja -C out/Release mlperf_loadgen
+    third_party/ninja/ninja -C out/Release loadgen_pymodule_wheel_src
 
 Optionally, create a project file for your favorite IDE.
 See [gn documentation](https://gn.googlesource.com/gn/+/master/docs/reference.md#ide-options) for details.
@@ -80,8 +101,8 @@ depot\_tools path:
 
 Create a folder for the load generator project and fetch the source code:
 
-    mkdir mlpi_loadgen
-    cd mlpi_loadgen
+    mkdir mlperf_loadgen
+    cd mlperf_loadgen
     fetch mlperf_loadgen
     gclient sync
 
@@ -105,9 +126,9 @@ should provide some useful pointers.
 
 Build the library:
 
-    ninja -C out/Default mlpi_loadgen
+    ninja -C out/Default mlperf_loadgen
 
-You will find the binary in out/Default/obj/loadgen/libmlpi\_loadgen.a. (Or as a .lib on Windows).
+You will find the binary in out/Default/obj/loadgen/libmlperf\_loadgen.a. (Or as a .lib on Windows).
 
 Link that library directly into the executable you want to test.
 

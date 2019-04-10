@@ -1,7 +1,7 @@
 group("gn_all") {
   deps = [
-    "loadgen:mlpi_loadgen",
-    "loadgen:mlpi_loadgen_pymodule_lib",
+    "loadgen:mlperf_loadgen",
+    "loadgen:mlperf_loadgen_pymodule_lib",
   ]
 }
 
@@ -21,7 +21,7 @@ action("loadgen_pymodule_wheel_src") {
     ":loadgen_pymodule_setup_src",
   ]
   outputs = [
-    get_path_info(".", "out_dir") + "/dist/mlpi_loadgen-0.5a0.tar.gz"
+    get_path_info(".", "out_dir") + "/dist/mlperf_loadgen-0.5a0.tar.gz"
   ]
   args = [ "bdist_wheel" ]
 }
@@ -39,12 +39,12 @@ action("loadgen_pymodule_wheel_lib") {
     "loadgen:c_api_src",
     "loadgen:public_headers_src",
     "loadgen:python_api_src",
-    "loadgen:mlpi_loadgen",
+    "loadgen:mlperf_loadgen",
     "third_party:pybind_src",
     ":loadgen_pymodule_setup_lib",
   ]
   outputs = [
-    get_path_info(".", "out_dir") + "/dist/mlpi_loadgen_lib-0.5a0.tar.gz"
+    get_path_info(".", "out_dir") + "/dist/mlperf_loadgen_lib-0.5a0.tar.gz"
   ]
   args = [ "bdist_wheel" ]
 }

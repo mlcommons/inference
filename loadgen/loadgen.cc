@@ -45,7 +45,7 @@ struct QueryResponseMetadata {
  private:
   std::mutex mutex;
   std::condition_variable cv;
-  bool complete = false;
+  bool complete = true;
 };
 
 void QueryComplete(QueryId query_id, QuerySampleResponse* responses,
@@ -64,8 +64,8 @@ void QueryComplete(QueryId query_id, QuerySampleResponse* responses,
 }
 
 // Generates random sets of indicies where indicies are selected from
-// the rage [0,|total_count|) without replacement.
-// The sets are limitted in size by |loadable_count|.
+// |samples_src| without replacement.
+// The sets are limitted in size by |set_size|.
 // TODO: Choosing bins randomly, rather than samples randomly, would be more
 // straightforward and faster.
 std::vector<std::vector<QuerySample>> GenerateDisjointSets(
@@ -101,7 +101,8 @@ std::vector<std::vector<QuerySample>> GenerateDisjointSets(
       continue;
     }
 
-    // Garbage collect used indicies.
+    // Garbage collect used indicies as probability of hitting one
+    // increases.
     std::vector<size_t> gc_samples;
     gc_samples.reserve(remaining_count);
     for (auto s : samples) {
@@ -133,17 +134,20 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     std::cerr << "Unsupported scenario. Only StreamNAtFixedRate supported.\n";
   }
 
+  // Generate indicies for all available samples in the QSL.
   size_t qsl_total_count = qsl->TotalSampleCount();
   std::vector<QuerySample> qsl_samples(qsl_total_count);
   for(size_t i = 0; i < qsl_total_count; i++) {
     qsl_samples[i] = static_cast<QuerySample>(i);
   }
 
+  // Generate random sets of samples that we can load into RAM.
   std::vector<std::vector<QuerySample>> loadable_sets =
       GenerateDisjointSets(qsl_samples,
                            qsl->PerformanceSampleCount(),
                            &gen);
 
+  // Iterate through each loadable set.
   auto start = std::chrono::high_resolution_clock::now();
   size_t i_query = 0;
   uint64_t tick_count = 0;
@@ -151,16 +155,17 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   for (auto &loadable_set : loadable_sets) {
     qsl->LoadSamplesToRam(loadable_set.data(), loadable_set.size());
 
+    // Split the set up into random queries.
     std::vector<std::vector<QuerySample>> queries =
         GenerateDisjointSets(loadable_set, settings.samples_per_query, &gen);
-
     for (auto &query : queries) {
+      // Limit the number of oustanding async queries by waiting for
+      // old queries here.
       size_t i_issued_query_info = i_query % kMaxAsyncQueries;
       auto& issued_query_info = issued_query_infos[i_issued_query_info];
-      if (i_query > kMaxAsyncQueries) {
-        issued_query_info.WaitForCompletion();
-      }
+      issued_query_info.WaitForCompletion();
 
+      // Sleep until the next tick, skipping ticks that have already passed.
       auto query_start_time = start;
       do {
         tick_count++;
@@ -170,16 +175,26 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       } while (query_start_time < std::chrono::high_resolution_clock::now());
       std::this_thread::sleep_until(query_start_time);
 
+      // Issue the query to the SUT.
       issued_query_info.Reset();
       issued_query_info.query = query;
       intptr_t query_id = reinterpret_cast<intptr_t>(&issued_query_info);
       sut->IssueQuery(query_id, query.data(), query.size());
       i_query++;
     }
+
     qsl->UnloadSamplesFromRam(loadable_set.data(), loadable_set.size());
   }
 
-  // TODO: WaitForCompletion on tail queries. Then process.
+  // Wait for tail queries to complete and process them.
+  // We have to keep the synchronization primitives alive until the SUT
+  // is done with them.
+  for (size_t i = 0; i < kMaxAsyncQueries; i++) {
+    size_t i_issued_query_info = i_query % kMaxAsyncQueries;
+    auto& issued_query_info = issued_query_infos[i_issued_query_info];
+    issued_query_info.WaitForCompletion();
+    i_query++;
+  }
 
   std::cout << "SUT accuracy metric:" << qsl->GetAccuracyMetric();
 }

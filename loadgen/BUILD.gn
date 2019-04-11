@@ -14,7 +14,6 @@ public_headers = [
 
 lib_sources = [
   "loadgen.cc",
-  "parse_command_line.cc",
   "trace_generator.h",
 ]
 

@@ -15,7 +15,7 @@ For the PyTorch version, please see the [corresponding README](pytorch/README.md
     - [Install CK workflows](#installation-workflows) (universal)
 1. [Benchmarking](#benchmarking)
     - [via TensorFlow (Python)](tf-py/README.md)
-    - via TensorFlow Lite (**coming soon!**)
+    - [via TensorFlow Lite](tflite/README.md)
 
 <a name="installation"></a>
 # Installation
@@ -44,19 +44,19 @@ used to evaluate object detection accuracy on the [COCO dataset](http://cocodata
 
 **NB:** Care must be taken not to mix Python 3 and Python 2 packages.
 If your system uses Python 2 by default, we recommend you prefix
-all CK commands with `CK_PYTHON=python3`, for example:
+all CK commands, for example, with `CK_PYTHON=python3` for CK to run under Python 3:
 ```
 $ python --version
 Python 2.7.13
 $ ck python_version
 2.7.13 (default, Sep 26 2018, 18:42:22)
 [GCC 6.3.0 20170516]
-anton@hikey962:~$ CK_PYTHON=python3 ck python_version
+$ CK_PYTHON=python3 ck python_version
 3.5.3 (default, Sep 27 2018, 17:25:39)
 [GCC 6.3.0 20170516]
 ```
 Similarly, if you use multiple Python 3 versions (e.g. 3.5 and 3.6), we recommend
-you stick to using one of them for consistency:
+you stick to one of them for consistency:
 ```
 $ CK_PYTHON=python3.5 ck python_version
 3.5.2 (default, Nov 12 2018, 13:43:14)
@@ -73,7 +73,7 @@ Choose one of the following installation options:
 - user-space via CK.
 
 With the first two options, packages get installed via pip and get registered
-with CK later (typically, on the first run of the program).
+with CK later (typically, on the first run of a program).
 
 With the last option, packages also get installed via pip but get registered
 with CK at the same time (so there is less chance of mixing things up).
@@ -134,4 +134,4 @@ $ ck detect soft:dataset.coco.2017.val --full_path=$HOME/coco/val2017/0000000001
 
 You can benchmark SSD-MobileNet using one of the available options:
 - [via TensorFlow (Python)](tf-py/README.md)
-- via TensorFlow Lite (**coming soon!**)
+- [via TensorFlow Lite](tflite/README.md)

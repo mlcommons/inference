@@ -51,8 +51,8 @@ $ ck compile program:object-detection-tflite [--target_os=android23-arm64]
 
 Run the client (if required, connect an Android device to your host machine via USB):
 ```
-$ CK_PYTHON=python3 ck run program:object-detection-tflite [--target_os=android23-arm64] \
---env.CK_BATCH_COUNT=50
+$ ck run program:object-detection-tflite --env.CK_BATCH_COUNT=50 \
+[--target_os=android23-arm64]
 ...
 ********************************************************************************
 * Process results

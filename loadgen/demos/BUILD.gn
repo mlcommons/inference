@@ -1,6 +1,6 @@
 executable("loadgen_demo_cpp") {
   sources = [ "demo.cc" ]
-  deps = [ "..:mlpi_loadgen" ]
+  deps = [ "..:mlperf_loadgen" ]
 }
 
 source_set("loadgen_demo_python") {

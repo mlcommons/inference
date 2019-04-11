@@ -6,19 +6,16 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-# pylint: disable=unused-argument,missing-docstring
-
 import argparse
 import json
 import logging
 import os
-import sys
 import threading
 import time
 from queue import Queue
 
-import numpy as np
 import mlperf_loadgen as lg
+import numpy as np
 
 import dataset
 import imagenet
@@ -26,6 +23,7 @@ import imagenet
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
+# pylint: disable=missing-docstring
 
 # the datasets we support
 SUPPORTED_DATASETS = {
@@ -46,7 +44,6 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet",
         "backend": "tensorflow",
         "cache": 0,
-        "batch_size": 1,
         "time": 128,
         "max-latency": DEFAULT_LATENCY_BUCKETS,
     },
@@ -88,7 +85,6 @@ def get_args():
     parser.add_argument("--output", help="test results")
     parser.add_argument("--outputs", help="model outputs")
     parser.add_argument("--backend", help="runtime to use")
-    parser.add_argument("--batch_size", type=int, help="batch_size")
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
@@ -139,16 +135,17 @@ def get_backend(backend):
 
 class Item:
     """An item that we queue for processing by the thread pool."""
-    def __init__(self, id, img, label=None):
-        self.id = id
+
+    def __init__(self, query_id, img, label=None):
+        self.id = query_id
         self.img = img
         self.label = label
         self.start = time.time()
 
 
 class Runner:
-    def __init__(self, model, ds, count, threads, post_process=None):
-        self.tasks = Queue(maxsize=threads*5)
+    def __init__(self, model, ds, threads, post_process=None):
+        self.tasks = Queue(maxsize=threads * 5)
         self.workers = []
         self.model = model
         self.post_process = post_process
@@ -185,7 +182,6 @@ class Runner:
 
             tasks_queue.task_done()
 
-
     def start_pool(self):
         for _ in range(self.threads):
             worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
@@ -209,17 +205,16 @@ class Runner:
             worker.join()
 
 
-def add_results(final_results, name, result_dict, result_list, runtime):
+def add_results(final_results, name, result_dict, result_list, took):
     percentiles = [50., 80., 90., 95., 99., 99.9]
     buckets = np.percentile(result_list, percentiles).tolist()
     buckets_str = ",".join(["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)])
-    mean = np.mean(result_list)
 
     # this is what we record for each run
     result = {
-        "mean": mean,
-        "runtime": runtime,
-        "qps": len(result_list) / runtime,
+        "mean": np.mean(result_list),
+        "took": took,
+        "qps": len(result_list) / took,
         "count": len(result_list),
         "percentiles": {str(k): v for k, v in zip(percentiles, buckets)},
         "good_items": result_dict["good"],
@@ -231,8 +226,7 @@ def add_results(final_results, name, result_dict, result_list, runtime):
 
     # to stdout
     print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, acc={:.2f}, tiles={}".format(
-        name, result["qps"], result["mean"], runtime, result["accuracy"], buckets_str))
-
+        name, result["qps"], result["mean"], took, result["accuracy"], buckets_str))
 
 
 def main():
@@ -271,7 +265,7 @@ def main():
     #
     count = args.count if args.count else ds.get_item_count()
 
-    runner = Runner(model, ds, count, args.threads, post_process=postprocessor)
+    runner = Runner(model, ds, args.threads, post_process=postprocessor)
     runner.start_pool()
 
     # warmup
@@ -279,17 +273,17 @@ def main():
     ds.load_query_samples([0])
     for _ in range(100):
         img, _ = ds.get_samples([0])
-        results = backend.predict({backend.inputs[0]: img})
+        _ = backend.predict({backend.inputs[0]: img})
 
     def issue_query(query_id, query_samples):
         data, label = ds.get_samples(query_samples)
         runner.enqueue(query_id, data, label)
 
     sut = lg.ConstructSUT("mlperf", issue_query)
-    qsl = lg.ConstructQSL("mlperf", args.count, args.time, ds.load_query_samples, ds.unload_query_samples)
+    qsl = lg.ConstructQSL("mlperf", count, args.time, ds.load_query_samples, ds.unload_query_samples)
     runs = ["edge"]
     for run in runs:
-        log.info("starting %s" % run)
+        log.info("starting {}".format(run))
         result_list = []
         result_dict = {"good": 0, "total": 0}
         runner.start_run(result_list, result_dict)

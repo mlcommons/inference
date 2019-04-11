@@ -25,6 +25,7 @@ import imagenet
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
+
 # the datasets we support
 SUPPORTED_DATASETS = {
     "imagenet":
@@ -111,6 +112,7 @@ def get_args():
         args.max_latency = [float(i) for i in args.max_latency.split(",")]
     return args
 
+
 class Item:
     def __init__(self, id, img, label=None):
         self.id = id
@@ -159,7 +161,7 @@ class Worker:
 
     def start_pool(self):
         for _ in range(self.threads):
-            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks ,))
+            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
             worker.daemon = True
             self.workers.append(worker)
             worker.start()
@@ -181,100 +183,6 @@ class Worker:
         for worker in self.workers:
             worker.join()
         end = time.time()
-
-
-def report_result(name, target_latency, final_result, result_list, result_dict, check_acc=False):
-    """Record a result in the final_result dict and write it to stdout."""
-    result = {}
-    # the percentiles we want to record
-    percentiles = [50., 80., 90., 95., 99., 99.9]
-    buckets = np.percentile(result_list, percentiles).tolist()
-    buckets_str = ",".join(["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)])
-    mean = np.mean(result_list)
-
-    # this is what we record for each run
-    result["target_latency"] = target_latency
-    result["mean"] = mean
-    result["runtime"] = result_dict["runtime"]
-    result["qps"] = len(result_list) / result_dict["runtime"]
-    result["count"] = len(result_list)
-    result["percentiles"] = {str(k): v for k, v in zip(percentiles, buckets)}
-
-    # to stdout
-    print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, tiles={}".format(
-        name, result["qps"], result["mean"], result["runtime"], buckets_str))
-
-    if check_acc:
-        # record accuracy if we have it.
-        result["good_items"] = result_dict["good"]
-        result["total_items"] = result_dict["total"]
-        result["accuracy"] = 100. * result_dict["good"] / result_dict["total"]
-        print("{} accuracy={:.2f}, good_items={}, total_items={}".format(
-            name, result["accuracy"], result["good_items"], result["total_items"]))
-
-    # add the result to the result dict
-    final_result[name] = result
-
-
-def find_qps(prefix, model, ds, count, threads, final_results, target_latency,
-             batch_size=1, post_process=None, distribution=None, runtime=10):
-    """Scan to find latency bound qps."""
-    qps_lower = 1
-    qps_upper = 100000
-    target_qps = threads * 2 / target_latency
-    best_match = None
-    best_qps = 0
-
-    result_list = []
-    result_dict = {}
-    measured_latency = -1
-    measured_qps = 0
-    while qps_upper - qps_lower > 1:
-        name = "{}/{}/{}".format(prefix, target_latency, int(target_qps))
-        if distribution:
-            distribution(ds.get_item_count(), runtime, target_qps)
-        result_list = []
-        result_dict = {}
-        ret_code = execute_parallel(model, ds, count, threads, result_list, result_dict,
-                                    batch_size=batch_size, post_process=post_process)
-        report_result(name, target_latency, final_results["scan"][prefix], result_list, result_dict)
-        if not ret_code:
-            print("^queue is full, early out")
-        measured_latency = np.percentile(result_list, [99.]).tolist()[0]
-        measured_qps = int(len(result_list) / result_dict["runtime"])
-        if not ret_code or measured_latency > target_latency:
-            # did not meet target latency
-            qps_upper = min(target_qps, qps_upper)
-        else:
-            # meet target latency
-            if measured_qps < target_qps * 0.9:
-                # not in 90% of expected latency
-                print("^latency meet but qps is off")
-                qps_upper = min(target_qps, qps_upper)
-            else:
-                qps_lower = target_qps
-                if measured_qps > best_qps:
-                    print("^taken")
-                    best_match = measured_qps, result_list, result_dict, measured_latency
-                    best_qps = measured_qps
-        target_qps = int(round((qps_lower + qps_upper) / 2))
-    if best_match:
-        measured_qps, result_list, result_dict, measured_latency = best_match
-    name = str(target_latency)
-    report_result(name, target_latency, final_results["results"][prefix], result_list, result_dict)
-
-    if measured_latency > target_latency:
-        # did not meet latency target
-        final_results["results"][prefix][name]["qps"] = -1
-        final_results["final_results"][prefix][name] = -1
-        print("===RESULT: {} target_latency={} qps={}".format(prefix, name, "FAIL"))
-    else:
-        # latency target reached
-        final_results["final_results"][prefix][name] = target_qps
-        print("===RESULT: {} target_latency={} measured_latency={} qps={}".format(
-            prefix, name, measured_latency, measured_qps))
-
-    return measured_qps
 
 
 def get_backend(backend):
@@ -352,6 +260,7 @@ def main():
     for run in runs:
         lg.StartTest(sut, qsl, run)
 
+    workers.finish()
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)
 

@@ -3,6 +3,11 @@
 Creates a module that python can import.
 All source files are compiled by python's C++ toolchain  without depending
 on a loadgen lib.
+
+This setup.py can be used stand-alone, without the use of an external
+build system. This will polute your source tree with output files
+and binaries. Use one of the gn build targets instead if you want
+to avoid poluting the source tree.
 """
 
 from setuptools import setup, Extension
@@ -15,8 +20,8 @@ sources = [
 mlperf_loadgen_module = Extension('mlperf_loadgen',
                     define_macros = [('MAJOR_VERSION', '0'),
                                      ('MINOR_VERSION', '5')],
-                    include_dirs = [ 'gen', 'gen/third_party/pybind/include' ],
-                    sources = [ "gen/loadgen/" + s for s in sources ])
+                    include_dirs = [ '.', '../third_party/pybind/include' ],
+                    sources = sources)
 
 setup (name = 'mlperf_loadgen',
        version = '0.5a0',

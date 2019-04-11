@@ -60,7 +60,8 @@ loadable_module("mlperf_loadgen_pymodule_lib") {
   sources = [ "bindings/python_api.cc" ]
   deps = [ ":mlperf_loadgen", "../third_party:pybind11" ]
   configs += [ "//build/config/compiler:rtti",
-               "//build/config/compiler:exceptions" ]
+               "//build/config/compiler:exceptions",
+               "../third_party:pybind11_include", ]
   cflags = [ "-Wno-macro-redefined" ]
   include_dirs = [ "." ] + py_include_dirs
   ldflags = py_ld_flags

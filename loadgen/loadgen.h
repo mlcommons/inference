@@ -34,14 +34,14 @@ struct TestSettings {
   uint64_t target_latency_ns = 1000000000;
 };
 
-// QueryComplete must be called by the SUT once it completes a query issued
-// by SystemUnderTest::IssueQuery().
-// |query_id| corresponds to the id provided to SystemUnderTest::IssueQuery.
+// QuerySamplesComplete must be called by the SUT once it completes samples of
+// a query issued by SystemUnderTest::IssueQuery().
+// The samples may be from any combination of queries or partial queries.
 // TODO(brianderson): This API assumes the response will be allocated and
 // owend by the SUT. This necessarily requires the allocation to be timed,
 // which will benefit SUTs that efficiently recycle response memory.
-void QueryComplete(QueryId query_id, QuerySampleResponse* responses,
-                   size_t response_count);
+void QuerySamplesComplete(QuerySampleResponse* responses,
+                          size_t response_count);
 
 // Starts the test against |sut| with the specified |settings|.
 // This is the C++ entry point. See mlperf::c::StartTest for the C entry point.

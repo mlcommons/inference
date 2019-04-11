@@ -17,6 +17,7 @@ import time
 from queue import Queue
 
 import numpy as np
+import mlperf_loadgen as lg
 
 import dataset
 import imagenet
@@ -110,17 +111,26 @@ def get_args():
         args.max_latency = [float(i) for i in args.max_latency.split(",")]
     return args
 
+class Item:
+    def __init__(self, id, img, label=None):
+        self.id = id
+        self.img = img
+        self.label = label
+        self.start = time.time()
 
-def execute_parallel(model, ds, count, threads, result_list, result_dict,
+
+class Worker:
+    def __init__(self, model, ds, count, threads, result_list, result_dict,
                      batch_size=1, check_acc=False, post_process=None):
-    """Run inference in parallel."""
+        self.tasks = Queue(maxsize=threads*5)
+        self.workers = []
+        self.model = model
+        self.post_process = post_process
+        self.result_list = result_list
+        self.result_dict = result_dict
+        self.threads = threads
 
-    # We want the queue to be large enough to not ever block the feeder but small enough
-    # to about if we can not keep up with the processing.
-    tasks = Queue(maxsize=threads*5)
-    workers = []
-
-    def handle_tasks(tasks_queue):
+    def handle_tasks(self, tasks_queue):
         """Worker thread."""
         good = 0
         total = 0
@@ -130,67 +140,47 @@ def execute_parallel(model, ds, count, threads, result_list, result_dict,
                 # None in the queue indicates the parent want us to exit
                 tasks_queue.task_done()
                 break
+
             try:
-                if check_acc:
-                    # if check_acc is set we want to not include time spend in the queue
-                    qitem.start = time.time()
-
                 # run the prediction
-                results = model.predict({model.inputs[0]: qitem.img})
+                results = self.model.predict({self.model.inputs[0]: qitem.img})
                 # and keep track of how long it took
-                result_list.append(time.time() - qitem.start)
-
-                if check_acc:
-                    # check if the result was correct and count the outcome
-                    results = results[0]
-                    for idx, result in enumerate(results):
-                        result = post_process(result)
-                        if qitem.label[idx] == result:
-                            good += 1
-                        total += 1
+                self.result_list.append(time.time() - qitem.start)
+                for idx, result in enumerate(results[0]):
+                    result = self.post_process(result)
+                    if qitem.label[idx] == result:
+                        good += 1
+                    total += 1
+                response = [lg.QuerySampleResponse(0, 0) for _ in range(len(results[0]))]
+                lg.QueryComplete(qitem.id, response)
             except Exception as ex:  # pylint: disable=broad-except
                 log.error("execute_parallel thread: %s", ex)
-
             tasks_queue.task_done()
 
-            # TODO: should we yield here to not starve the feeder ?
+    def start_pool(self):
+        for _ in range(self.threads):
+            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks ,))
+            worker.daemon = True
+            self.workers.append(worker)
+            worker.start()
 
-        # thread is done
-        if check_acc:
-            # TODO: this should be under lock
-            result_dict["good"] += good
-            result_dict["total"] += total
+    def enqueue(self, id, data, label):
+        item = Item(id, data, label)
+        try:
+            self.tasks.put(item)
+            ret_code = True
+        except Exception:  # pylint: disable=broad-except
+            # we get here when the queue is full and we'd block. This is a hint that
+            # the system is not remotely keeping up. The caller uses this hint to abort this run to.
+            ret_code = False
 
-    # create and start worker threads
-    # TODO: since we start as many threads as we have cores we might starve
-    # the parent if we run on cpu only so it can not feed fast enough ?
-    for _ in range(threads):
-        worker = threading.Thread(target=handle_tasks, args=(tasks,))
-        worker.daemon = True
-        workers.append(worker)
-        worker.start()
-
-    start = time.time()
-    # feed the queue
-    try:
-        for item in ds.batch(batch_size):
-            if item.img.shape[0] < batch_size:
-                continue
-            tasks.put(item, block=check_acc)
-        ret_code = True
-    except Exception:  # pylint: disable=broad-except
-        # we get here when the queue is full and we'd block. This is a hint that
-        # the system is not remotely keeping up. The caller uses this hint to abort this run to.
-        ret_code = False
-
-    # exit all threads
-    for _ in workers:
-        tasks.put(None)
-    for worker in workers:
-        worker.join()
-    end = time.time()
-    result_dict["runtime"] = end - start
-    return ret_code
+    def finish(self):
+        # exit all threads
+        for _ in self.workers:
+            self.tasks.put(None)
+        for worker in self.workers:
+            worker.join()
+        end = time.time()
 
 
 def report_result(name, target_latency, final_result, result_list, result_dict, check_acc=False):
@@ -341,34 +331,29 @@ def main():
         "results": {"linear": {}, "exponential": {}},
         "final_results": {"linear": {}, "exponential": {}},
     }
+    result_list = []
+    result_dict = {"good": 0, "total": 0}
 
     #
     # make one pass over the dataset to validate accuracy
     #
     count = args.count if args.count else ds.get_item_count()
-    result_list = []
-    result_dict = {"good": 0, "total": 0}
-    execute_parallel(model, ds, count, args.threads, result_list, result_dict,
-                     check_acc=True, post_process=postprocessor)
-    report_result("check_accuracy", 0., final_results, result_list, result_dict, check_acc=True)
 
-    #
-    # find max qps with equal request distribution
-    #
-    for latency in args.max_latency:
-        find_qps("linear", model, ds, count, args.threads, final_results, latency,
-                 batch_size=args.batch_size, post_process=postprocessor,
-                 distribution=ds.generate_linear_trace, runtime=args.time)
+    workers = Worker(model, ds, count, args.threads, result_list, result_dict, post_process=postprocessor)
+    workers.start_pool()
 
-    #
-    # find max qps with exponential request distribution
-    #
-    for latency in args.max_latency:
-        find_qps("exponential", model, ds, count, args.threads, final_results, latency,
-                 batch_size=args.batch_size, post_process=postprocessor,
-                 distribution=ds.generate_exp_trace, runtime=args.time)
+    def issue_query(query_id, query_samples):
+        data, label = ds.get_samples(query_samples)
+        workers.enqueue(query_id, data, label)
 
-    print("===FINAL_RESULT:", final_results["final_results"])
+    sut = lg.ConstructSUT("mlperf", issue_query)
+    qsl = lg.ConstructQSL("mlperf", args.count, 128, ds.load_query_samples, ds.unload_query_samples)
+    runs = ["--mlperf_scenario edge"]
+    for run in runs:
+        lg.StartTest(sut, qsl, run)
+
+    lg.DestroyQSL(qsl)
+    lg.DestroySUT(sut)
 
     #
     # write final results

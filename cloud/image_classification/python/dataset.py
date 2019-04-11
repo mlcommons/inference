@@ -36,6 +36,7 @@ class Dataset():
         self.arrival = None
         self.image_list = []
         self.label_list = []
+        self.image_list_inmemory = {}
 
     def preprocess(self, use_cache=True):
         raise NotImplementedError("Dataset:preprocess")
@@ -48,6 +49,18 @@ class Dataset():
 
     def clear_trace(self):
         self.arrival = None
+
+    def load_query_samples(self, sample_list):
+        self.image_list_inmemory = {}
+        for sample in sample_list:
+            self.image_list_inmemory[sample], _ = self.get_item(sample)
+
+    def unload_query_samples(self, sample_list):
+        self.image_list_inmemory = {}
+
+    def get_samples(self, id_list):
+        data = np.array([self.image_list_inmemory[id] for id in id_list])
+        return data, self.label_list[id_list]
 
     def generate_linear_trace(self, min_queries, min_duration, qps):
         """ Generates inter-arrival times for queries with a uniform distribution.

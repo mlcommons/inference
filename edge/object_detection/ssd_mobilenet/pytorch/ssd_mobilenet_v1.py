@@ -103,11 +103,11 @@ class Block(nn.Sequential):
     def __init__(self, in_channels, mid_channels, out_channels):
         super(Block, self).__init__(
             nn.Conv2d(in_channels, out_channels=mid_channels, kernel_size=1),
-            nn.ReLU(),
+            nn.ReLU6(),
             Conv2d_tf(
                 mid_channels, out_channels, kernel_size=3, stride=2, padding="SAME"
             ),
-            nn.ReLU(),
+            nn.ReLU6(),
         )
 
 
@@ -149,7 +149,7 @@ class SSD(nn.Module):
         class_logits = torch.cat(class_logits, 1)
         box_regression = torch.cat(box_regression, 1)
 
-        scores = F.softmax(class_logits, dim=2)
+        scores = torch.sigmoid(class_logits)
         box_regression = box_regression.squeeze(0)
 
         shapes = [o.shape[-2:] for o in feature_maps]

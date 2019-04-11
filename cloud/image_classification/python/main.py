@@ -12,6 +12,7 @@ import argparse
 import json
 import logging
 import os
+import sys
 import threading
 import time
 from queue import Queue
@@ -46,7 +47,7 @@ SUPPORTED_PROFILES = {
         "backend": "tensorflow",
         "cache": 0,
         "batch_size": 1,
-        "time": 30,
+        "time": 128,
         "max-latency": DEFAULT_LATENCY_BUCKETS,
     },
     "mobilenet-tf": {
@@ -57,6 +58,7 @@ SUPPORTED_PROFILES = {
     },
     "mobilenet-onnx": {
         "dataset": "imagenet_mobilenet",
+        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
         "backend": "onnxruntime",
     },
     "resnet50-tf": {
@@ -67,6 +69,7 @@ SUPPORTED_PROFILES = {
     },
     "resnet50-onnxruntime": {
         "dataset": "imagenet",
+        "outputs": "ArgMax:0",
         "backend": "onnxruntime",
     }
 }
@@ -113,78 +116,6 @@ def get_args():
     return args
 
 
-class Item:
-    def __init__(self, id, img, label=None):
-        self.id = id
-        self.img = img
-        self.label = label
-        self.start = time.time()
-
-
-class Worker:
-    def __init__(self, model, ds, count, threads, result_list, result_dict,
-                     batch_size=1, check_acc=False, post_process=None):
-        self.tasks = Queue(maxsize=threads*5)
-        self.workers = []
-        self.model = model
-        self.post_process = post_process
-        self.result_list = result_list
-        self.result_dict = result_dict
-        self.threads = threads
-
-    def handle_tasks(self, tasks_queue):
-        """Worker thread."""
-        good = 0
-        total = 0
-        while True:
-            qitem = tasks_queue.get()
-            if qitem is None:
-                # None in the queue indicates the parent want us to exit
-                tasks_queue.task_done()
-                break
-
-            try:
-                # run the prediction
-                results = self.model.predict({self.model.inputs[0]: qitem.img})
-                # and keep track of how long it took
-                self.result_list.append(time.time() - qitem.start)
-                for idx, result in enumerate(results[0]):
-                    result = self.post_process(result)
-                    if qitem.label[idx] == result:
-                        good += 1
-                    total += 1
-                response = [lg.QuerySampleResponse(0, 0) for _ in range(len(results[0]))]
-                lg.QueryComplete(qitem.id, response)
-            except Exception as ex:  # pylint: disable=broad-except
-                log.error("execute_parallel thread: %s", ex)
-            tasks_queue.task_done()
-
-    def start_pool(self):
-        for _ in range(self.threads):
-            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
-            worker.daemon = True
-            self.workers.append(worker)
-            worker.start()
-
-    def enqueue(self, id, data, label):
-        item = Item(id, data, label)
-        try:
-            self.tasks.put(item)
-            ret_code = True
-        except Exception:  # pylint: disable=broad-except
-            # we get here when the queue is full and we'd block. This is a hint that
-            # the system is not remotely keeping up. The caller uses this hint to abort this run to.
-            ret_code = False
-
-    def finish(self):
-        # exit all threads
-        for _ in self.workers:
-            self.tasks.put(None)
-        for worker in self.workers:
-            worker.join()
-        end = time.time()
-
-
 def get_backend(backend):
     if backend == "tensorflow":
         from backend_tf import BackendTensorflow
@@ -204,6 +135,104 @@ def get_backend(backend):
     else:
         raise ValueError("unknown backend: " + backend)
     return backend
+
+
+class Item:
+    """An item that we queue for processing by the thread pool."""
+    def __init__(self, id, img, label=None):
+        self.id = id
+        self.img = img
+        self.label = label
+        self.start = time.time()
+
+
+class Runner:
+    def __init__(self, model, ds, count, threads, post_process=None):
+        self.tasks = Queue(maxsize=threads*5)
+        self.workers = []
+        self.model = model
+        self.post_process = post_process
+        self.threads = threads
+        self.result_list = []
+        self.result_dict = {}
+
+    def handle_tasks(self, tasks_queue):
+        """Worker thread."""
+        while True:
+            qitem = tasks_queue.get()
+            if qitem is None:
+                # None in the queue indicates the parent want us to exit
+                tasks_queue.task_done()
+                break
+
+            try:
+                # run the prediction
+                results = self.model.predict({self.model.inputs[0]: qitem.img})
+                # and keep track of how long it took
+                self.result_list.append(time.time() - qitem.start)
+                response = []
+                for idx, result in enumerate(results[0]):
+                    result = self.post_process(result)
+                    if qitem.label[idx] == result:
+                        self.result_dict["good"] += 1
+                    self.result_dict["total"] += 1
+                    # FIXME: unclear what to return here
+                    # response.append(lg.QuerySampleResponse(result, sys.getsizeof(result)))
+                    response.append(lg.QuerySampleResponse(0, 0))
+                lg.QueryComplete(qitem.id, response)
+            except Exception as ex:  # pylint: disable=broad-except
+                log.error("execute_parallel thread: %s", ex)
+
+            tasks_queue.task_done()
+
+
+    def start_pool(self):
+        for _ in range(self.threads):
+            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
+            worker.daemon = True
+            self.workers.append(worker)
+            worker.start()
+
+    def start_run(self, result_list, result_dict):
+        self.result_list = result_list
+        self.result_dict = result_dict
+
+    def enqueue(self, id, data, label):
+        item = Item(id, data, label)
+        self.tasks.put(item)
+
+    def finish(self):
+        # exit all threads
+        for _ in self.workers:
+            self.tasks.put(None)
+        for worker in self.workers:
+            worker.join()
+
+
+def add_results(final_results, name, result_dict, result_list, runtime):
+    percentiles = [50., 80., 90., 95., 99., 99.9]
+    buckets = np.percentile(result_list, percentiles).tolist()
+    buckets_str = ",".join(["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)])
+    mean = np.mean(result_list)
+
+    # this is what we record for each run
+    result = {
+        "mean": mean,
+        "runtime": runtime,
+        "qps": len(result_list) / runtime,
+        "count": len(result_list),
+        "percentiles": {str(k): v for k, v in zip(percentiles, buckets)},
+        "good_items": result_dict["good"],
+        "total_items": result_dict["total"],
+        "accuracy": 100. * result_dict["good"] / result_dict["total"],
+    }
+    # add the result to the result dict
+    final_results[name] = result
+
+    # to stdout
+    print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, acc={:.2f}, tiles={}".format(
+        name, result["qps"], result["mean"], runtime, result["accuracy"], buckets_str))
+
 
 
 def main():
@@ -235,32 +264,40 @@ def main():
         "version": model.version(),
         "time": int(time.time()),
         "cmdline": str(args),
-        "scan": {"linear": {}, "exponential": {}},
-        "results": {"linear": {}, "exponential": {}},
-        "final_results": {"linear": {}, "exponential": {}},
     }
-    result_list = []
-    result_dict = {"good": 0, "total": 0}
 
     #
     # make one pass over the dataset to validate accuracy
     #
     count = args.count if args.count else ds.get_item_count()
 
-    workers = Worker(model, ds, count, args.threads, result_list, result_dict, post_process=postprocessor)
-    workers.start_pool()
+    runner = Runner(model, ds, count, args.threads, post_process=postprocessor)
+    runner.start_pool()
+
+    # warmup
+    log.info("warmup ...")
+    ds.load_query_samples([0])
+    for _ in range(100):
+        img, _ = ds.get_samples([0])
+        results = backend.predict({backend.inputs[0]: img})
 
     def issue_query(query_id, query_samples):
         data, label = ds.get_samples(query_samples)
-        workers.enqueue(query_id, data, label)
+        runner.enqueue(query_id, data, label)
 
     sut = lg.ConstructSUT("mlperf", issue_query)
-    qsl = lg.ConstructQSL("mlperf", args.count, 128, ds.load_query_samples, ds.unload_query_samples)
-    runs = ["--mlperf_scenario edge"]
+    qsl = lg.ConstructQSL("mlperf", args.count, args.time, ds.load_query_samples, ds.unload_query_samples)
+    runs = ["edge"]
     for run in runs:
-        lg.StartTest(sut, qsl, run)
+        log.info("starting %s" % run)
+        result_list = []
+        result_dict = {"good": 0, "total": 0}
+        runner.start_run(result_list, result_dict)
+        start = time.time()
+        lg.StartTest(sut, qsl, "--mlperf_scenario " + run)
+        add_results(final_results, run, result_dict, result_list, time.time() - start)
 
-    workers.finish()
+    runner.finish()
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)
 

@@ -21,12 +21,9 @@ class SystemUnderTest {
   // Issues a N samples to the SUT.
   // The SUT may either a) return immediately and signal completion at a later
   // time on another thread or b) it may block and signal completion on the
-  // current stack. The laod generator will handle both cases properly.
-  // |query_id| is a unique id associated with this instance of the query.
-  // The SUT must reference the associated query_id when triggering
-  // QueryComplete().
+  // current stack. The load generator will handle both cases properly.
   // Note: The data for neighboring samples are not contiguous.
-  virtual void IssueQuery(QueryId query_id, QuerySample* samples,
+  virtual void IssueQuery(QuerySample* samples,
                           size_t sample_count) = 0;
 };
 

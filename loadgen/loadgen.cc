@@ -19,48 +19,64 @@ namespace {
 constexpr uint64_t kSeed = 0xABCD1234;
 }  // namespace
 
+struct QueryMetadata;
+
 // QueryResponseMetadata is used by the load generator to coordinate
 // response data and completion.
-struct QueryResponseMetadata {
-  std::vector<QuerySample> query;
-  std::vector<std::vector<uint8_t>> data;
+struct SampleMetadata {
+  QueryMetadata* query_metadata;
+  QuerySampleIndex sample_index;
+  std::vector<uint8_t> data;
+  // TODO: Timestamp.
+};
 
-  void Reset() {
-    query.clear();
-    data.clear();
-    complete = false;
+struct QueryMetadata {
+  std::vector<SampleMetadata> samples;
+
+  void Prepare(std::vector<QuerySample>* query_to_send) {
+    assert(wait_count == 0);
+    wait_count = query_to_send->size();
+    samples.clear();
+    samples.resize(wait_count);
+    for (size_t i = 0; i < wait_count; i++) {
+      SampleMetadata* sample_metadata = &samples[i];
+      sample_metadata->query_metadata = this;
+      sample_metadata->sample_index = (*query_to_send)[i].index;
+      (*query_to_send)[i].id = reinterpret_cast<ResponseId>(sample_metadata);
+    }
   }
 
-  void NotifyCompletion() {
+  void NotifySampleCompleted() {
     std::unique_lock<std::mutex> lock(mutex);
-    complete = true;
-    cv.notify_all();
+    wait_count--;
+    if (wait_count == 0) {
+      cv.notify_all();
+    }
   }
 
   void WaitForCompletion() {
     std::unique_lock<std::mutex> lock(mutex);
-    cv.wait(lock, [&] { return complete; });
+    cv.wait(lock, [&] { return wait_count == 0; });
   }
 
  private:
   std::mutex mutex;
   std::condition_variable cv;
-  bool complete = true;
+  size_t wait_count = 0;
 };
 
-void QueryComplete(QueryId query_id, QuerySampleResponse* responses,
-                   size_t response_count) {
-  QueryResponseMetadata* metadata =
-      reinterpret_cast<QueryResponseMetadata*>(query_id);
-  // TODO(brianderson): Don't copy data in performance mode.
+void QuerySamplesComplete(QuerySampleResponse* responses,
+                          size_t response_count) {
   for (size_t i = 0; i < response_count; i++) {
-    auto* src_begin = reinterpret_cast<uint8_t*>(responses[i].data);
-    auto* src_end = src_begin + responses[i].size;
-    metadata->data.push_back(std::vector<uint8_t>(src_begin, src_end));
+    QuerySampleResponse &response = responses[i];
+    SampleMetadata* sample_metadata =
+        reinterpret_cast<SampleMetadata*>(response.id);
+    // TODO(brianderson): Don't copy data in performance mode.
+    auto* src_begin = reinterpret_cast<uint8_t*>(response.data);
+    auto* src_end = src_begin + response.size;
+    sample_metadata->data = std::vector<uint8_t>(src_begin, src_end);
+    sample_metadata->query_metadata->NotifySampleCompleted();
   }
-  std::cout << "Query complete ID: " << query_id << "\n";
-  std::cout << "Query library index: " << metadata->query[0] << "\n";
-  metadata->NotifyCompletion();
 }
 
 // Generates random sets of indicies where indicies are selected from
@@ -68,17 +84,17 @@ void QueryComplete(QueryId query_id, QuerySampleResponse* responses,
 // The sets are limitted in size by |set_size|.
 // TODO: Choosing bins randomly, rather than samples randomly, would be more
 // straightforward and faster.
-std::vector<std::vector<QuerySample>> GenerateDisjointSets(
-    const std::vector<QuerySample> &samples_src,
+std::vector<std::vector<QuerySampleIndex>> GenerateDisjointSets(
+    const std::vector<QuerySampleIndex> &samples_src,
     size_t set_size, std::mt19937 *gen) {
   constexpr float kGarbageCollectRatio = 0.5;
   constexpr size_t kUsedIndex = std::numeric_limits<size_t>::max();
 
-  std::vector<std::vector<size_t>> result;
+  std::vector<std::vector<QuerySampleIndex>> result;
 
-  std::vector<QuerySample> samples(samples_src);
+  std::vector<QuerySampleIndex> samples(samples_src);
 
-  std::vector<size_t> loadable_set;
+  std::vector<QuerySampleIndex> loadable_set;
   loadable_set.reserve(set_size);
   size_t remaining_count = samples.size();
   size_t garbage_collect_count = remaining_count * kGarbageCollectRatio;
@@ -123,9 +139,19 @@ std::vector<std::vector<QuerySample>> GenerateDisjointSets(
   return result;
 }
 
+std::vector<QuerySample> SampleIndexesToQuery(
+    std::vector<QuerySampleIndex> src_set) {
+  std::vector<QuerySample> dst_set;
+  dst_set.reserve(src_set.size());
+  for (const auto &index : src_set) {
+    dst_set.push_back({0, index});
+  }
+  return dst_set;
+}
+
 void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                          const TestSettings& settings) {
-  constexpr size_t kMaxAsyncQueries = 2;
+  constexpr size_t kMaxAsyncQueries = 4;
   constexpr int64_t kNanosecondsPerSecond = 1000000000;
 
   std::mt19937 gen(kSeed);
@@ -136,13 +162,13 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   // Generate indicies for all available samples in the QSL.
   size_t qsl_total_count = qsl->TotalSampleCount();
-  std::vector<QuerySample> qsl_samples(qsl_total_count);
+  std::vector<QuerySampleIndex> qsl_samples(qsl_total_count);
   for(size_t i = 0; i < qsl_total_count; i++) {
-    qsl_samples[i] = static_cast<QuerySample>(i);
+    qsl_samples[i] = static_cast<QuerySampleIndex>(i);
   }
 
   // Generate random sets of samples that we can load into RAM.
-  std::vector<std::vector<QuerySample>> loadable_sets =
+  std::vector<std::vector<QuerySampleIndex>> loadable_sets =
       GenerateDisjointSets(qsl_samples,
                            qsl->PerformanceSampleCount(),
                            &gen);
@@ -151,12 +177,12 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   auto start = std::chrono::high_resolution_clock::now();
   size_t i_query = 0;
   uint64_t tick_count = 0;
-  QueryResponseMetadata issued_query_infos[kMaxAsyncQueries];
+  QueryMetadata issued_query_infos[kMaxAsyncQueries];
   for (auto &loadable_set : loadable_sets) {
     qsl->LoadSamplesToRam(loadable_set.data(), loadable_set.size());
 
     // Split the set up into random queries.
-    std::vector<std::vector<QuerySample>> queries =
+    std::vector<std::vector<QuerySampleIndex>> queries =
         GenerateDisjointSets(loadable_set, settings.samples_per_query, &gen);
     for (auto &query : queries) {
       // Limit the number of oustanding async queries by waiting for
@@ -176,10 +202,9 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       std::this_thread::sleep_until(query_start_time);
 
       // Issue the query to the SUT.
-      issued_query_info.Reset();
-      issued_query_info.query = query;
-      intptr_t query_id = reinterpret_cast<intptr_t>(&issued_query_info);
-      sut->IssueQuery(query_id, query.data(), query.size());
+      std::vector<QuerySample> query_to_send = SampleIndexesToQuery(query);
+      issued_query_info.Prepare(&query_to_send);
+      sut->IssueQuery(query_to_send.data(), query_to_send.size());
       i_query++;
     }
 

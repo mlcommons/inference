@@ -18,7 +18,7 @@ namespace mlperf {
 
 namespace {
 
-using IssueQueryCallback = std::function<void(QueryId, std::vector<QuerySample>)>;
+using IssueQueryCallback = std::function<void(std::vector<QuerySample>)>;
 
 // Forwards SystemUnderTest calls to relevant callbacks.
 class SystemUnderTestTrampoline : public SystemUnderTest {
@@ -30,11 +30,10 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
   const std::string& Name() const override { return name_; }
 
-  void IssueQuery(QueryId query_id, QuerySample* samples,
-                  size_t sample_count) override {
+  void IssueQuery(QuerySample* samples, size_t sample_count) override {
     pybind11::gil_scoped_acquire gil_acquirer;
     // TODO: Get rid of copies.
-    issue_cb_(query_id, std::vector<QuerySample>(samples, samples+sample_count));
+    issue_cb_(std::vector<QuerySample>(samples, samples+sample_count));
   }
 
  private:
@@ -43,9 +42,9 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 };
 
 using LoadSamplesToRamCallback =
-    std::function<void(std::vector<QuerySample>)>;
+    std::function<void(std::vector<QuerySampleIndex>)>;
 using UnloadSamplesFromRamCallback =
-    std::function<void(std::vector<QuerySample>)>;
+    std::function<void(std::vector<QuerySampleIndex>)>;
 
 // Forwards QuerySampleLibrary calls to relevant callbacks.
 class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
@@ -54,30 +53,30 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
                                size_t total_sample_count, size_t performance_sample_count,
                                LoadSamplesToRamCallback load_samples_to_ram_cb,
                                UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
-      : name_(std::move(name)),
-        total_sample_count_(total_sample_count),
-        performance_sample_count_(performance_sample_count),
-        load_samples_to_ram_cb_(load_samples_to_ram_cb),
-        unload_samlpes_from_ram_cb_(unload_samlpes_from_ram_cb) {}
+    : name_(std::move(name)),
+      total_sample_count_(total_sample_count),
+      performance_sample_count_(performance_sample_count),
+      load_samples_to_ram_cb_(load_samples_to_ram_cb),
+      unload_samlpes_from_ram_cb_(unload_samlpes_from_ram_cb) {}
   ~QuerySampleLibraryTrampoline() override = default;
 
   const std::string& Name() const override { return name_; }
   const size_t TotalSampleCount() { return total_sample_count_; }
   const size_t PerformanceSampleCount() { return performance_sample_count_; }
 
-  void LoadSamplesToRam(QuerySample* samples,
+  void LoadSamplesToRam(QuerySampleIndex* samples,
                         size_t sample_count) override {
     pybind11::gil_scoped_acquire gil_acquirer;
     // TODO: Get rid of copies.
     load_samples_to_ram_cb_(
-          std::vector<QuerySample>(samples, samples+sample_count));
+        std::vector<QuerySampleIndex>(samples, samples+sample_count));
   }
-  void UnloadSamplesFromRam(QuerySample* samples,
+  void UnloadSamplesFromRam(QuerySampleIndex* samples,
                             size_t sample_count) override {
     pybind11::gil_scoped_acquire gil_acquirer;
     // TODO: Get rid of copies.
     unload_samlpes_from_ram_cb_(
-          std::vector<QuerySample>(samples, samples+sample_count));
+        std::vector<QuerySampleIndex>(samples, samples+sample_count));
   }
 
   // TODO(brianderson): Accuracy Metric API.
@@ -137,64 +136,71 @@ namespace py {
   }
 
   // TODO: Get rid of copies.
-  void QueryComplete(QueryId query_id,
-                     std::vector<QuerySampleResponse> responses) {
+  void QuerySamplesComplete(std::vector<QuerySampleResponse> responses) {
     pybind11::gil_scoped_release gil_releaser;
-    mlperf::QueryComplete(query_id, responses.data(), responses.size());
+    mlperf::QuerySamplesComplete(responses.data(), responses.size());
   }
 
 PYBIND11_MODULE(mlperf_loadgen, m) {
   m.doc() = "MLPerf Inference load generator.";
 
-  pybind11::enum_<mlperf::TestScenario>(m, "TestScenario").
-    value("SingleStream", mlperf::TestScenario::SingleStream).
-    value("MultiStream", mlperf::TestScenario::MultiStream).
-    value("Cloud", mlperf::TestScenario::Cloud).
-    value("Offline", mlperf::TestScenario::Offline);
+  pybind11::enum_<TestScenario>(m, "TestScenario").
+    value("SingleStream", TestScenario::SingleStream).
+    value("MultiStream", TestScenario::MultiStream).
+    value("Cloud", TestScenario::Cloud).
+    value("Offline", TestScenario::Offline);
 
-  pybind11::enum_<mlperf::TestMode>(m, "TestMode").
-    value("SubmissionRun", mlperf::TestMode::SubmissionRun).
-    value("AccuracyOnly", mlperf::TestMode::AccuracyOnly).
-    value("PerformanceOnly", mlperf::TestMode::PerformanceOnly).
-    value("SearchForQps", mlperf::TestMode::SearchForQps);
+  pybind11::enum_<TestMode>(m, "TestMode").
+    value("SubmissionRun", TestMode::SubmissionRun).
+    value("AccuracyOnly", TestMode::AccuracyOnly).
+    value("PerformanceOnly", TestMode::PerformanceOnly).
+    value("SearchForQps", TestMode::SearchForQps);
 
-  pybind11::class_<mlperf::TestSettings>(m, "TestSettings").
+  pybind11::class_<TestSettings>(m, "TestSettings").
     def(pybind11::init<>()).
     def(pybind11::init<
-        mlperf::TestScenario, mlperf::TestMode, int, double, uint64_t>()).
+        TestScenario, TestMode, int, double, uint64_t>()).
     def_readwrite("scenario", &TestSettings::scenario).
     def_readwrite("mode", &TestSettings::mode).
     def_readwrite("samples_per_query", &TestSettings::samples_per_query).
     def_readwrite("target_qps", &TestSettings::target_qps).
     def_readwrite("target_latency_ns", &TestSettings::target_latency_ns);
 
-  pybind11::class_<mlperf::QuerySampleResponse>(m, "QuerySampleResponse")
+  pybind11::class_<QuerySample>(m, "QuerySample")
       .def(pybind11::init<>())
-      .def(pybind11::init<intptr_t, size_t>())
-      .def_readwrite("data", &mlperf::QuerySampleResponse::data)
-      .def_readwrite("size", &mlperf::QuerySampleResponse::size);
+      .def(pybind11::init<ResponseId, QuerySampleIndex>())
+      .def_readwrite("id", &QuerySample::id)
+      .def_readwrite("index", &QuerySample::index);
+
+  pybind11::class_<QuerySampleResponse>(m, "QuerySampleResponse")
+      .def(pybind11::init<>())
+      .def(pybind11::init<ResponseId, intptr_t, size_t>())
+      .def_readwrite("id", &QuerySampleResponse::id)
+      .def_readwrite("data", &QuerySampleResponse::data)
+      .def_readwrite("size", &QuerySampleResponse::size);
 
   // TODO: Use PYBIND11_MAKE_OPAQUE for the following vector types.
-  pybind11::bind_vector<std::vector<mlperf::QuerySample>>(m, "VectorQuerySample");
-  pybind11::bind_vector<std::vector<mlperf::QuerySampleResponse>>(m, "VectorQuerySampleResponse");
+  pybind11::bind_vector<std::vector<QuerySample>>(m, "VectorQuerySample");
+  pybind11::bind_vector<std::vector<QuerySampleResponse>>(
+        m, "VectorQuerySampleResponse");
 
-  m.def("ConstructSUT", &mlperf::py::ConstructSUT,
+  m.def("ConstructSUT", &py::ConstructSUT,
         pybind11::return_value_policy::reference,
         "Construct the system under test.");
-  m.def("DestroySUT", &mlperf::py::DestroySUT,
+  m.def("DestroySUT", &py::DestroySUT,
         "Destroy the object created by ConstructSUT.");
 
-  m.def("ConstructQSL", &mlperf::py::ConstructQSL,
+  m.def("ConstructQSL", &py::ConstructQSL,
         pybind11::return_value_policy::reference,
         "Construct the query sample library.");
-  m.def("DestroyQSL", &mlperf::py::DestroyQSL,
+  m.def("DestroyQSL", &py::DestroyQSL,
         "Destroy the object created by ConstructQSL.");
 
-  m.def("StartTest", &mlperf::py::StartTest,
+  m.def("StartTest", &py::StartTest,
         "Run tests on a SUT created by ConstructSUT() with the provided QSL.");
-  m.def("QueryComplete", &mlperf::py::QueryComplete,
-        "Called by the SUT to indicate the query_id from the"
-        "IssueQuery callback is finished.");
+  m.def("QuerySamplesComplete", &py::QuerySamplesComplete,
+        "Called by the SUT to indicate that samples from some combination of"
+        "IssueQuery calls have finished.");
 }
 
 }  // namespace py

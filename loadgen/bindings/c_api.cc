@@ -23,9 +23,8 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
   const std::string& Name() const override { return name_; }
 
-  void IssueQuery(QueryId query_id, QuerySample* samples,
-                  size_t sample_count) override {
-    (*issue_cb_)(client_data_, query_id, samples, sample_count);
+  void IssueQuery(QuerySample* samples, size_t sample_count) override {
+    (*issue_cb_)(client_data_, samples, sample_count);
   }
 
  private:
@@ -70,11 +69,11 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   const size_t TotalSampleCount() { return total_sample_count_; }
   const size_t PerformanceSampleCount() { return performance_sample_count_; }
 
-  void LoadSamplesToRam(QuerySample* samples,
+  void LoadSamplesToRam(QuerySampleIndex* samples,
                         size_t sample_count) override {
     (*load_samples_to_ram_cb_)(client_data_, samples, sample_count);
   }
-  void UnloadSamplesFromRam(QuerySample* samples,
+  void UnloadSamplesFromRam(QuerySampleIndex* samples,
                             size_t sample_count) override {
     (*unload_samlpes_from_ram_cb_)(client_data_, samples, sample_count);
   }

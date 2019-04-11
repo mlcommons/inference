@@ -27,19 +27,20 @@ class QuerySampleLibrary {
   // Loads the requested query samples into memory.
   // Paired with calls to UnloadSamplesFromRam.
   // The load generator will never load a currently loaded sample.
-  virtual void LoadSamplesToRam(QuerySample* samples,
+  virtual void LoadSamplesToRam(QuerySampleIndex* samples,
                                 size_t sample_count) = 0;
 
   // Unloads the requested query samples from memory.
   // The load generator will never unload a currently unloaded sample.
-  virtual void UnloadSamplesFromRam(QuerySample* samples,
+  virtual void UnloadSamplesFromRam(QuerySampleIndex* samples,
                                     size_t sample_count) = 0;
 
   // Starts an accuracy verification cycle.
   virtual void ResetAccuracyMetric() = 0;
 
   // Updates the accuracy metric, one query sample at a time.
-  virtual void UpdateAccuracyMetric(uint64_t sample_index, void* response_data,
+  virtual void UpdateAccuracyMetric(QuerySampleIndex sample_index,
+                                    void* response_data,
                                     size_t response_size) = 0;
 
   // Calculates and returns the current value for the accuracy metric.

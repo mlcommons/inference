@@ -16,29 +16,34 @@ def load_samples_to_ram(query_samples):
 def unload_samples_from_ram(query_samples):
     return
 
+# Processes queries in 3 slices that complete at different times.
+def process_query_async(query_samples, i_slice):
+    time.sleep(.01 * (i_slice + 1))
+    responses = []
+    samples_to_complete = query_samples[i_slice:len(query_samples):3]
+    for s in samples_to_complete:
+        responses.append(mlperf_loadgen.QuerySampleResponse(s.id, 0, 0))
+    mlperf_loadgen.QuerySamplesComplete(responses)
 
-def process_query_async(query_id, response_count):
-    time.sleep(.01)
-    r1 = mlperf_loadgen.QuerySampleResponse(0, 0)
-    r2 = mlperf_loadgen.QuerySampleResponse(0, 0)
-    r3 = mlperf_loadgen.QuerySampleResponse(0, 0)
-    r4 = mlperf_loadgen.QuerySampleResponse(0, 0)
-    responses = [r1, r2, r3, r4]
-    mlperf_loadgen.QueryComplete(query_id, responses)
 
-
-def issue_query(query_id, query_samples):
+def issue_query(query_samples):
     print(query_samples)
     threading.Thread(
             target=process_query_async,
-            args=(query_id, len(query_samples))).start()
+            args=(query_samples, 0)).start()
+    threading.Thread(
+            target=process_query_async,
+            args=(query_samples, 1)).start()
+    threading.Thread(
+            target=process_query_async,
+            args=(query_samples, 2)).start()
 
 def main(argv):
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.MultiStream
     settings.mode = mlperf_loadgen.TestMode.SubmissionRun
     settings.samples_per_query = 4
-    settings.target_qps = 10
+    settings.target_qps = 1000
     settings.target_latency_ns = 1000000000
 
     sut = mlperf_loadgen.ConstructSUT(issue_query)

@@ -33,15 +33,18 @@ def issue_query(query_id, query_samples):
             target=process_query_async,
             args=(query_id, len(query_samples))).start()
 
-
 def main(argv):
-    sut_name = "DemoSUT"
-    sut = mlperf_loadgen.ConstructSUT(sut_name, issue_query)
-    qsl_name = "DemoQSL"
+    settings = mlperf_loadgen.TestSettings()
+    settings.scenario = mlperf_loadgen.TestScenario.MultiStream
+    settings.mode = mlperf_loadgen.TestMode.SubmissionRun
+    settings.samples_per_query = 4
+    settings.target_qps = 10
+    settings.target_latency_ns = 1000000000
+
+    sut = mlperf_loadgen.ConstructSUT(issue_query)
     qsl = mlperf_loadgen.ConstructQSL(
-        qsl_name, 1024, 128, load_samples_to_ram, unload_samples_from_ram)
-    command_line = "--mlperf_scenario edge"
-    mlperf_loadgen.StartTest(sut, qsl, command_line)
+        1024, 128, load_samples_to_ram, unload_samples_from_ram)
+    mlperf_loadgen.StartTest(sut, qsl, settings)
     mlperf_loadgen.DestroyQSL(qsl)
     mlperf_loadgen.DestroySUT(sut)
 

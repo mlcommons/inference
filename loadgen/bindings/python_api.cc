@@ -100,8 +100,8 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 }  // namespace
 
 namespace py {
-  void* ConstructSUT(std::string name, IssueQueryCallback issue_cb) {
-    SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(name, issue_cb);
+  void* ConstructSUT(IssueQueryCallback issue_cb) {
+    SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline("PySUT", issue_cb);
     return reinterpret_cast<void*>(sut);
   }
 
@@ -111,12 +111,11 @@ namespace py {
     delete sut_cast;
   }
 
-  void* ConstructQSL(std::string name,
-                     size_t total_sample_count, size_t performance_sample_count,
+  void* ConstructQSL(size_t total_sample_count, size_t performance_sample_count,
                      LoadSamplesToRamCallback load_samples_to_ram_cb,
                      UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
     QuerySampleLibraryTrampoline* qsl = new QuerySampleLibraryTrampoline(
-        name, total_sample_count, performance_sample_count,
+        "PyQSL", total_sample_count, performance_sample_count,
         load_samples_to_ram_cb, unload_samlpes_from_ram_cb);
     return reinterpret_cast<void*>(qsl);
   }
@@ -128,14 +127,13 @@ namespace py {
   }
 
   // Parses commandline.
-  void StartTest(void* sut, void* qsl, std::string command_line) {
+  void StartTest(void* sut, void* qsl, mlperf::TestSettings settings) {
     pybind11::gil_scoped_release gil_releaser;
     SystemUnderTestTrampoline* sut_cast =
         reinterpret_cast<SystemUnderTestTrampoline*>(sut);
     QuerySampleLibraryTrampoline* qsl_cast =
         reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
-    mlperf::TestSettings default_settings;
-    mlperf::StartTest(sut_cast, qsl_cast, default_settings);
+    mlperf::StartTest(sut_cast, qsl_cast, settings);
   }
 
   // TODO: Get rid of copies.
@@ -144,11 +142,31 @@ namespace py {
     pybind11::gil_scoped_release gil_releaser;
     mlperf::QueryComplete(query_id, responses.data(), responses.size());
   }
-}  // namespace py
-}  // namespace mlperf
 
 PYBIND11_MODULE(mlperf_loadgen, m) {
   m.doc() = "MLPerf Inference load generator.";
+
+  pybind11::enum_<mlperf::TestScenario>(m, "TestScenario").
+    value("SingleStream", mlperf::TestScenario::SingleStream).
+    value("MultiStream", mlperf::TestScenario::MultiStream).
+    value("Cloud", mlperf::TestScenario::Cloud).
+    value("Offline", mlperf::TestScenario::Offline);
+
+  pybind11::enum_<mlperf::TestMode>(m, "TestMode").
+    value("SubmissionRun", mlperf::TestMode::SubmissionRun).
+    value("AccuracyOnly", mlperf::TestMode::AccuracyOnly).
+    value("PerformanceOnly", mlperf::TestMode::PerformanceOnly).
+    value("SearchForQps", mlperf::TestMode::SearchForQps);
+
+  pybind11::class_<mlperf::TestSettings>(m, "TestSettings").
+    def(pybind11::init<>()).
+    def(pybind11::init<
+        mlperf::TestScenario, mlperf::TestMode, int, double, uint64_t>()).
+    def_readwrite("scenario", &TestSettings::scenario).
+    def_readwrite("mode", &TestSettings::mode).
+    def_readwrite("samples_per_query", &TestSettings::samples_per_query).
+    def_readwrite("target_qps", &TestSettings::target_qps).
+    def_readwrite("target_latency_ns", &TestSettings::target_latency_ns);
 
   pybind11::class_<mlperf::QuerySampleResponse>(m, "QuerySampleResponse")
       .def(pybind11::init<>())
@@ -178,5 +196,8 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         "Called by the SUT to indicate the query_id from the"
         "IssueQuery callback is finished.");
 }
+
+}  // namespace py
+}  // namespace mlperf
 
 #endif  // PYTHON_BINDINGS_H

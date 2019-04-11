@@ -10,7 +10,6 @@ from setuptools import setup, Extension
 sources = [
   "bindings/c_api.cc",
   "bindings/python_api.cc",
-  "parse_command_line.cc",
   "loadgen.cc",
 ]
 

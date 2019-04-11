@@ -13,8 +13,8 @@ class QuerySampleLibrary;
 class SystemUnderTest;
 
 enum TestScenario {
-  StreamOneAtATime,
-  StreamNAtFixedRate,
+  SingleStream,
+  MultiStream,
   Cloud,
   Offline,
 };
@@ -27,15 +27,12 @@ enum TestMode {
 };
 
 struct TestSettings {
-  TestScenario scenario = TestScenario::StreamNAtFixedRate;
+  TestScenario scenario = TestScenario::MultiStream;
   TestMode mode = TestMode::AccuracyOnly;
   int samples_per_query = 4;
   double target_qps = 100;
+  uint64_t target_latency_ns = 1000000000;
 };
-
-// Defined in parse_command_line.cc
-TestSettings ParseCommandLine(const char* command);        // For Python.
-TestSettings ParseCommandLineArgs(int argc, char** argv);  // For C.
 
 // QueryComplete must be called by the SUT once it completes a query issued
 // by SystemUnderTest::IssueQuery().

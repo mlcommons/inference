@@ -130,8 +130,8 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   std::mt19937 gen(kSeed);
 
-  if (settings.scenario != TestScenario::StreamNAtFixedRate) {
-    std::cerr << "Unsupported scenario. Only StreamNAtFixedRate supported.\n";
+  if (settings.scenario != TestScenario::MultiStream) {
+    std::cerr << "Unsupported scenario. Only MultiStream supported.\n";
   }
 
   // Generate indicies for all available samples in the QSL.

@@ -3,10 +3,10 @@
 
 #include <functional>
 
-#include "third_party/pybind/include/pybind11/functional.h"
-#include "third_party/pybind/include/pybind11/pybind11.h"
-#include "third_party/pybind/include/pybind11/stl.h"
-#include "third_party/pybind/include/pybind11/stl_bind.h"
+#include "pybind11/functional.h"
+#include "pybind11/pybind11.h"
+#include "pybind11/stl.h"
+#include "pybind11/stl_bind.h"
 
 #include "../loadgen.h"
 #include "../query_sample.h"

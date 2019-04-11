@@ -12,7 +12,7 @@ mlperf_loadgen_module = Extension('mlperf_loadgen_lib',
                                      ('MINOR_VERSION', '5')],
                     library_dirs = ['obj/loadgen'],
                     libraries = ['mlperf_loadgen'],
-                    include_dirs = [ 'gen' ],
+                    include_dirs = [ 'gen', 'gen/third_party/pybind/include' ],
                     sources = [ 'gen/loadgen/bindings/python_api.cc' ])
 
 setup (name = 'mlperf_loadgen_lib',

@@ -29,6 +29,10 @@ source_set("pybind11") {
   sources = pybind11_sources
 }
 
+config("pybind11_include") {
+  include_dirs = [ "pybind/include" ]
+}
+
 copy("pybind_src") {
   sources = pybind11_sources
   outputs = [ get_path_info("//", "gen_dir") + "/{{source}}" ]

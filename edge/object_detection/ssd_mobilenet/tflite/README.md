@@ -55,7 +55,7 @@ Convert results to coco ...
 
 Evaluate metrics as coco ...
 loading annotations into memory...
-Done (t=0.44s)
+Done (t=0.45s)
 creating index...
 index created!
 Loading and preparing results...
@@ -64,15 +64,15 @@ creating index...
 index created!
 Running per image evaluation...
 Evaluate annotation type *bbox*
-DONE (t=0.12s).
+DONE (t=0.11s).
 Accumulating evaluation results...
 DONE (t=0.22s).
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.288
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.398
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.297
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.061
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.194
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.626
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.293
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.408
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.300
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.062
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.196
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.639
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.278
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.302
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.302
@@ -86,12 +86,12 @@ Graph loaded in 0.000000s
 All images loaded in 0.000000s
 All images detected in 0.000000s
 Average detection time: 0.000000s
-mAP: 0.2883553845372072
+mAP: 0.2931519685807111
 Recall: 0.3022676916450782
 --------------------------------
 ```
 **NB:** We are working on resolving the difference in mAP between the TF and
-TFLite versions (31.5% vs. 28.8%), as well as resolving the timing issue (all
+TFLite versions (31.5% vs. 29.3%), as well as resolving the timing issue (all
 zeros).
 
 <a name="benchmarking"></a>
@@ -131,24 +131,24 @@ Convert results to coco ...
 
 Evaluate metrics as coco ...
 loading annotations into memory...
-Done (t=0.45s)
+Done (t=0.50s)
 creating index...
 index created!
 Loading and preparing results...
-DONE (t=0.26s)
+DONE (t=0.12s)
 creating index...
 index created!
 Running per image evaluation...
 Evaluate annotation type *bbox*
-DONE (t=13.98s).
+DONE (t=11.23s).
 Accumulating evaluation results...
-DONE (t=2.73s).
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.190
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.279
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.213
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.011
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.131
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.446
+DONE (t=1.97s).
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.212
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.320
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.235
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.014
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.152
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.490
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.196
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.243
  Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.243
@@ -162,10 +162,10 @@ Graph loaded in 0.000000s
 All images loaded in 0.000000s
 All images detected in 0.000000s
 Average detection time: 0.000000s
-mAP: 0.1899981780161538
-Recall: 0.2431880894097952
+mAP: 0.2119855643254357
+Recall: 0.24317820057128117
 --------------------------------
 ```
 **NB:** We are working on resolving the difference in mAP between the TF and
-TFLite versions (23.1% vs. 19.0%), as well as resolving the timing issue (all
+TFLite versions (23.1% vs. 21.2%), as well as resolving the timing issue (all
 zeros).

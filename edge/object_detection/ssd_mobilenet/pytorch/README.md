@@ -9,7 +9,7 @@ It uses the pre-trained weight files from [the TensorFlow Object Detection Model
 - PyTorch 1.0 or later
 - torchvision
 - cocoapi
-- TensorFlow 1.12 (for loading the weights)
+- TensorFlow 1.12 or later (for loading the weights)
 
 ### Step-by-step installation with conda
 
@@ -24,8 +24,11 @@ conda activate pytorch_ssd_mobilenet
 # this installs the right pip and dependencies for the fresh python
 conda install ipython
 
+# coco api dependencies
+pip install cython matplotlib
+
 # follow PyTorch installation in https://pytorch.org/get-started/locally/
-# we give the instructions for CUDA 9.0
+# we give the instructions for CUDA 9.0 but you can pick whichever you prefer
 conda install -c pytorch pytorch torchvision cudatoolkit=9.0
 
 # install pycocotools

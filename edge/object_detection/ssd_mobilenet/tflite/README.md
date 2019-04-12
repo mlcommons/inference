@@ -33,6 +33,7 @@ To install the non-quantized model directly:
 ```
 $ ck install package --tags=model,tflite,object-detection,mlperf,ssd-mobilenet,non-quantized
 ```
+**NB:** This TFLite model has been [converted](https://github.com/ctuning/ck-mlperf/blob/master/package/model-tflite-mlperf-ssd-mobilenet/README.md) from the [original TF model](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz), by adapting instructions in [Google's blog post](https://medium.com/tensorflow/training-and-serving-a-realtime-mobile-object-detector-in-30-minutes-with-cloud-tpus-b78971cf1193).
 
 ### Compile the TFLite Object Detection client
 ```

@@ -166,7 +166,7 @@ class Runner:
                 # run the prediction
                 results = self.model.predict({self.model.inputs[0]: qitem.img})
                 # and keep track of how long it took
-                self.result_list.append(time.time() - qitem.start)
+                took = time.time() - qitem.start
                 response = []
                 for idx, result in enumerate(results[0]):
                     result = self.post_process(result)
@@ -174,9 +174,9 @@ class Runner:
                         self.result_dict["good"] += 1
                     self.result_dict["total"] += 1
                     # FIXME: unclear what to return here
-                    # response.append(lg.QuerySampleResponse(result, sys.getsizeof(result)))
-                    response.append(lg.QuerySampleResponse(0, 0))
-                lg.QueryComplete(qitem.id, response)
+                    response.append(lg.QuerySampleResponse(qitem.id[idx], 0, 0))
+                    self.result_list.append(took)
+                lg.QuerySamplesComplete(response)
             except Exception as ex:  # pylint: disable=broad-except
                 log.error("execute_parallel thread: %s", ex)
 
@@ -275,21 +275,37 @@ def main():
         img, _ = ds.get_samples([0])
         _ = backend.predict({backend.inputs[0]: img})
 
-    def issue_query(query_id, query_samples):
-        data, label = ds.get_samples(query_samples)
+    def issue_query(query_samples):
+        idx = [q.index for q in query_samples]
+        query_id = [q.id for q in query_samples]
+        data, label = ds.get_samples(idx)
         runner.enqueue(query_id, data, label)
 
-    sut = lg.ConstructSUT("mlperf", issue_query)
-    qsl = lg.ConstructQSL("mlperf", count, args.time, ds.load_query_samples, ds.unload_query_samples)
-    runs = ["edge"]
-    for run in runs:
-        log.info("starting {}".format(run))
-        result_list = []
-        result_dict = {"good": 0, "total": 0}
-        runner.start_run(result_list, result_dict)
-        start = time.time()
-        lg.StartTest(sut, qsl, "--mlperf_scenario " + run)
-        add_results(final_results, run, result_dict, result_list, time.time() - start)
+    sut = lg.ConstructSUT(issue_query)
+    qsl = lg.ConstructQSL(count, args.time, ds.load_query_samples, ds.unload_query_samples)
+    scenarios = [
+        # lg.TestScenario.SingleStream,
+        lg.TestScenario.MultiStream,
+        # lg.TestScenario.Cloud,
+        # lg.TestScenario.Offline,
+        ]
+    for scenario in scenarios:
+        for target_latency in args.max_latency:
+            log.info("starting {}, latency={}".format(scenario, target_latency))
+            settings = lg.TestSettings()
+            settings.scenario = scenario
+            settings.mode = lg.TestMode.SubmissionRun
+            settings.samples_per_query = 4 # FIXME: we don't want to know about this
+            settings.target_qps = 1000 # FIXME: we don't want to know about this
+            settings.target_latency_ns = int(target_latency * 1000000000)
+
+            result_list = []
+            result_dict = {"good": 0, "total": 0}
+            runner.start_run(result_list, result_dict)
+            start = time.time()
+            lg.StartTest(sut, qsl, settings)
+            add_results(final_results, "{}-{}".format(scenario, target_latency),
+                        result_dict, result_list, time.time() - start)
 
     runner.finish()
     lg.DestroyQSL(qsl)

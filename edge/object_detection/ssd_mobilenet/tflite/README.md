@@ -134,4 +134,45 @@ $ ck benchmark program:object-detection-tflite \
 * Process results
 ********************************************************************************
 
+Convert results to coco ...
+
+Evaluate metrics as coco ...
+loading annotations into memory...
+Done (t=0.45s)
+creating index...
+index created!
+Loading and preparing results...
+DONE (t=0.26s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *bbox*
+DONE (t=13.98s).
+Accumulating evaluation results...
+DONE (t=2.73s).
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.190
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.279
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.213
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.011
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.131
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.446
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.196
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.243
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.243
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.017
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.172
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.570
+
+Summary:
+-------------------------------
+Graph loaded in 0.000000s
+All images loaded in 0.000000s
+All images detected in 0.000000s
+Average detection time: 0.000000s
+mAP: 0.1899981780161538
+Recall: 0.2431880894097952
+--------------------------------
 ```
+**NB:** We are working on resolving the difference in mAP between the TF and
+TFLite versions (23.1% vs. 19.0%), as well as resolving the timing issue (all
+zeros).

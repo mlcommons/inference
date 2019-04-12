@@ -5,6 +5,8 @@ https://pytorch.org/docs/stable/onnx.html
 
 # pylint: disable=unused-argument,missing-docstring,useless-super-delegation
 
+from threading import Lock
+
 import caffe2.python.onnx.backend
 import onnx
 import torch  # needed to get version and cuda setup
@@ -17,6 +19,7 @@ class BackendPytorch(backend.Backend):
         super(BackendPytorch, self).__init__()
         self.sess = None
         self.model = None
+        self.lock = Lock()
 
     def version(self):
         return torch.__version__
@@ -55,4 +58,7 @@ class BackendPytorch(backend.Backend):
         return self
 
     def predict(self, feed):
-        return self.sess.run(feed)
+        self.lock.acquire()
+        res = self.sess.run(feed)
+        self.lock.release()
+        return res

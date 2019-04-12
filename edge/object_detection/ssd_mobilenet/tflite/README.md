@@ -169,3 +169,8 @@ Recall: 0.24317820057128117
 **NB:** We are working on resolving the difference in mAP between the TF and
 TFLite versions (23.1% vs. 21.2%), as well as resolving the timing issue (all
 zeros).
+
+The TF version uses a frozen graph with `score_threshold=0.3`. However, the
+TFLite version has been converted from a checkpoint which
+[potentially](https://github.com/tensorflow/models/blob/e08b628663df7d2f2f6040fa3d4439ce4a3de33e/research/object_detection/samples/configs/ssd_mobilenet_v1_coco.config#L130)
+uses `score_threshold=1e-8`.

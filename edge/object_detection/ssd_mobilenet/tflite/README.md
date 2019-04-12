@@ -18,14 +18,6 @@ Install TFLite from source:
 $ ck install package:lib-tflite-1.13.1-src-static [--target_os=android23-arm64]
 ```
 
-You can also install TFLite from a prebuilt binary package for your target e.g.:
-```
-$ ck list package:lib-tflite-prebuilt*
-lib-tflite-prebuilt-0.1.7-linux-aarch64
-lib-tflite-prebuilt-0.1.7-linux-x64
-lib-tflite-prebuilt-0.1.7-android-arm64
-$ ck install package:lib-tflite-prebuilt-0.1.7-android-arm64 [--target_os=android23-arm64]
-```
 **NB:** Currently we have no TFLite 1.13.1 prebuilt packages.
 Please [let us know](info@dividiti.com) if you would like us to create some.
 

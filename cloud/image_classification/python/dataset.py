@@ -36,6 +36,7 @@ class Dataset():
         self.arrival = None
         self.image_list = []
         self.label_list = []
+        self.image_list_inmemory = {}
 
     def preprocess(self, use_cache=True):
         raise NotImplementedError("Dataset:preprocess")
@@ -49,78 +50,17 @@ class Dataset():
     def clear_trace(self):
         self.arrival = None
 
-    def generate_linear_trace(self, min_queries, min_duration, qps):
-        """ Generates inter-arrival times for queries with a uniform distribution.
-        It should satisfy both min_duration and min_queries
+    def load_query_samples(self, sample_list):
+        self.image_list_inmemory = {}
+        for sample in sample_list:
+            self.image_list_inmemory[sample], _ = self.get_item(sample)
 
-        Args:
-            min_queries: Int, minimal number of queries in the trace.
-            min_duration: Int, minimal time duration in seconds for the entire trace.
-            qps: Int, expected queries per sec for the uniform distribution.
+    def unload_query_samples(self, sample_list):
+        self.image_list_inmemory = {}
 
-        Returns:
-            None
-        """
-        timestamp = 0
-        arrival = []
-        timestep = 1 / qps
-        while timestamp < min_duration and len(arrival) < min_queries:
-            timestamp += timestep
-            arrival.append(timestep)
-        self.arrival = arrival
-
-    def generate_exp_trace(self, min_queries, min_duration, qps, seed=123):
-        """ Generates inter-arrival times for queries with a poisson distribution.
-        It should satisfy both min_duration and min_queries
-
-        Args:
-            min_queries: Int, minimal number of queries in the trace.
-            min_duration: Int, minimal time duration in seconds for the entire trace.
-            qps: Int, expected queries per sec for the possion distribution.
-
-        Returns:
-            None
-        """
-        timestamp = 0
-        arrival = []
-        num_samples = int(qps)
-        if num_samples == 0:
-            num_samples = 1
-        np.random.seed(seed)
-        samples = np.random.exponential(scale=1.0, size=num_samples)
-        while timestamp < min_duration and len(arrival) < min_queries:
-            idx = len(arrival)
-            val = samples[idx % num_samples]
-            # accumulative so we know when to stop
-            timestamp += val / num_samples
-            # for processing only store the delta
-            arrival.append(val / num_samples)
-        self.arrival = arrival
-
-    def batch(self, batch_size=1):
-        arrival = self.arrival
-        timestamp = time.time()
-        for idx in range(0, len(self.image_list), batch_size):
-            y = self.label_list[idx:idx + batch_size]
-            if self.use_cache:
-                x = self.image_list[idx:idx + batch_size]
-            else:
-                x = []
-                for i in range(0, y.shape[0]):
-                    img, _ = self.get_item(idx + i)
-                    x.append(img)
-                x = np.array(x)
-            if arrival:
-                # timestamp += arrival[idx % len(arrival)]
-                if idx > len(arrival) - 1:
-                    break
-                timestamp += arrival[idx]
-                now = time.time()
-                diff = timestamp - now
-                if diff > 0:
-                    usleep(diff)
-            yield Item(y, x, idx)
-
+    def get_samples(self, id_list):
+        data = np.array([self.image_list_inmemory[id] for id in id_list])
+        return data, self.label_list[id_list]
 
 #
 # Post processing

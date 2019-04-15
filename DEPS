@@ -1,10 +1,6 @@
 vars = {
-  # Pull in chromium build files and tools for multi-platform build support
-  # of the test harness and the skia library.
+  # Pull in chromium build files and tools for multi-platform build support.
   'chromium_git': 'https://chromium.googlesource.com/chromium/src',
-
-  # Pull in skia source for image decode.
-  'skia_git': 'https://skia.googlesource.com/skia',
 
   'mlpth_root': 'src',
 }
@@ -19,19 +15,14 @@ deps = {
   '{mlpth_root}/tools/clang': {
     'url': '{chromium_git}/tools/clang.git@3114fbc11f9644c54dd0a4cdbfa867bac50ff983',
   },
-  # Pull the skia source in only for the headers at the moment.
-  # We might compile as part of this project in the future.
-  '{mlpth_root}/third_party/skia': {
-    'url': '{skia_git}@7a1e00421d97a1f4f171dd2a8f817f9b07c9cdfd'
+  '{mlpth_root}/third_party/pybind': {
+    'url': 'https://github.com/pybind/pybind11.git@v2.2',
   },
 }
 
 recursedeps = [
   '{mlpth_root}/buildtools',
-  '{mlpth_root}/third_party/skia',
 ]
-
-#gclient_gn_args_from = 'src/buildtools'
 
 hooks = [
   # Pull clang-format binaries using checked-in hashes.

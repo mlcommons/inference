@@ -6,7 +6,7 @@ import config_util  # pylint: disable=import-error
 # This class doesn't need an __init__ method, so we disable the warning
 # pylint: disable=no-init
 class MLPerfInference(config_util.Config):
-  """Basic Config class for the MLPerf Inference repository."""
+  """Basic Config class for the MLPerf Inference load generator."""
 
   @staticmethod
   def fetch_spec(props):

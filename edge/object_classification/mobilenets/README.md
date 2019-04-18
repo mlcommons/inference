@@ -17,6 +17,8 @@
     - [via TensorFlow (C++)](tf-cpp/README.md)
     - [via TensorFlow (Python)](tf-py/README.md)
     - [via ONNX](onnx/README.md)
+1. [Understanding the anatomy of a benchmark](#anatomy)
+1. [Inspecting experimental results](#results)
 
 <a name="installation"></a>
 # Installation
@@ -116,7 +118,7 @@ export PYTHONPATH=/home/anton/CK_TOOLS/lib-python-scipy-compiler.python-3.5.2-li
 ### [Optional] Install Android SDK and NDK
 
 You can optionally target Android API 23 (v6.0 "Marshmallow") devices using the
-`--target_os=android23-arm64` flag 
+`--target_os=android23-arm64` flag
 (or [similar](https://source.android.com/setup/start/build-numbers)), when using
 the TensorFlow Lite benchmark (recommended) and TensorFlow (C++) benchmark (not recommended).
 
@@ -141,7 +143,7 @@ $ ck pull repo:ck-mlperf
 
 ### Install a small dataset (500 images)
 ```bash
-$ ck install package:imagenet-2012-val-min 
+$ ck install package:imagenet-2012-val-min
 ```
 **NB:** ImageNet dataset descriptions are in [repo:ck-env](https://github.com/ctuning/ck-env).
 
@@ -163,3 +165,100 @@ You can benchmark MobileNet using one of the available options:
 - [via TensorFlow (C++)](tf-cpp/README.md)
 - [via TensorFlow (Python)](tf-py/README.md)
 - [via ONNX](onnx/README.md)
+
+Please come back here if you would like to learn about [the anatomy of a benchmark](#anatomy), or
+how to inspect and visualize [experimental results](#results).
+
+<a name="anatomy"></a>
+## The anatomy of a benchmark
+
+While the componentized nature of CK workflows streamlines
+[installation](#installation) and [benchmarking](#benchmarking), it also makes
+it less obvious what the components are and where they are stored. This section
+describes the anatomy of a benchmark in terms of its components. We use the
+[TFLite MobileNet implementation](tflite/README.md) as a running example.
+
+### Model
+
+To search for the CK entry of an installed model, use `ck search env` with the same tags you used to install it e.g.:
+```
+$ ck search env --tags=model,tflite,mlperf,mobilenet,quantized
+local:env:3f0ca5c4d25b4ea3
+```
+
+To view more information about the CK entry, use `ck show env` e.g.:
+```
+$ ck show env --tags=model,tflite,mlperf,mobilenet,quantized
+Env UID:         Target OS: Bits: Name:                                                                Version:                   Tags:
+
+3f0ca5c4d25b4ea3   linux-64    64 TensorFlow model and weights (mobilenet-v1-1.0-224-quant-2018_08_02) 1_1.0_224_quant_2018_08_02 2018_08_02,64bits,downloaded,host-os-linux-64,mlperf,mobilenet,mobilenet-v1,mobilenet-v1-1.0-224,model,nhwc,python,quantised,quantized,target-os-linux-64,tensorflowmodel,tf,tflite,v1,v1.1,v1.1.0,v1.1.0.224,v1.1.0.224.0,v1.1.0.224.0.2018,v1.1.0.224.0.2018.8,v1.1.0.224.0.2018.8.2,weights
+```
+
+To view the environment variables set up by the CK entry, use `ck cat env` e.g.:
+```
+$ ck cat `ck search env --tags=model,tflite,mlperf,mobilenet,quantized`
+#! /bin/bash
+#
+# --------------------[ TensorFlow model and weights (mobilenet-v1-1.0-224-quant-2018_08_02) ver. 1_1.0_224_quant_2018_08_02, /home/anton/CK_REPOS/local/env/3f0ca5c4d25b4ea3/env.sh ]--------------------
+# Tags: 2018_08_02,64bits,downloaded,host-os-linux-64,mlperf,mobilenet,mobilenet-v1,mobilenet-v1-1.0-224,model,nhwc,python,quantised,quantized,target-os-linux-64,tensorflowmodel,tf,tflite,v1,v1.1,v1.1.0,v1.1.0.224,v1.1.0.224.0,v1.1.0.224.0.2018,v1.1.0.224.0.2018.8,v1.1.0.224.0.2018.8.2,weights
+#
+# CK generated script
+
+if [ "$1" != "1" ]; then if [ "$CK_ENV_TENSORFLOW_MODEL_SET" == "1" ]; then return; fi; fi
+
+# Soft UOA           = model.tensorflow.py (439b9f1757f27091)  (tensorflowmodel,model,weights,python,tf,tflite,nhwc,mobilenet,mobilenet-v1,mobilenet-v1-1.0-224,2018_08_02,quantized,quantised,mlperf,downloaded,host-os-linux-64,target-os-linux-64,64bits,v1,v1.1,v1.1.0,v1.1.0.224,v1.1.0.224.0,v1.1.0.224.0.2018,v1.1.0.224.0.2018.8,v1.1.0.224.0.2018.8.2)
+# Host OS UOA        = linux-64 (4258b5fe54828a50)
+# Target OS UOA      = linux-64 (4258b5fe54828a50)
+# Target OS bits     = 64
+# Tool version       = 1_1.0_224_quant_2018_08_02
+# Tool split version = [1, 1, 0, 224, 0, 2018, 8, 2]
+
+export CK_ENV_TENSORFLOW_MODEL_IMAGE_HEIGHT=224
+export CK_ENV_TENSORFLOW_MODEL_IMAGE_WIDTH=224
+export CK_ENV_TENSORFLOW_MODEL_INPUT_LAYER_NAME=input
+export CK_ENV_TENSORFLOW_MODEL_MOBILENET_MULTIPLIER=1.0
+export CK_ENV_TENSORFLOW_MODEL_MOBILENET_RESOLUTION=224
+export CK_ENV_TENSORFLOW_MODEL_MOBILENET_VERSION=1
+export CK_ENV_TENSORFLOW_MODEL_MODULE=/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-quantized-downloaded/mobilenet-model.py
+export CK_ENV_TENSORFLOW_MODEL_NORMALIZE_DATA=YES
+export CK_ENV_TENSORFLOW_MODEL_OUTPUT_LAYER_NAME=MobilenetV1/Predictions/Reshape_1
+export CK_ENV_TENSORFLOW_MODEL_ROOT=/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-quantized-downloaded
+export CK_ENV_TENSORFLOW_MODEL_TFLITE_FILENAME=mobilenet_v1_1.0_224_quant.tflite
+export CK_ENV_TENSORFLOW_MODEL_TFLITE_FILEPATH=/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-quantized-downloaded/mobilenet_v1_1.0_224_quant.tflite
+export CK_ENV_TENSORFLOW_MODEL_TF_FROZEN_FILENAME=mobilenet_v1_1.0_224_quant_frozen.pb
+export CK_ENV_TENSORFLOW_MODEL_TF_FROZEN_FILEPATH=/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-quantized-downloaded/mobilenet_v1_1.0_224_quant_frozen.pb
+export CK_ENV_TENSORFLOW_MODEL_WEIGHTS=/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-quantized-downloaded/mobilenet_v1_1.0_224_quant.ckpt
+export CK_ENV_TENSORFLOW_MODEL_WEIGHTS_ARE_CHECKPOINTS=YES
+export CK_MODEL_DATA_LAYOUT=NHWC
+
+export CK_ENV_TENSORFLOW_MODEL_SET=1
+```
+
+To inspect the model's files on disk, use `ck locate env` e.g.:
+```
+$ ck locate env --tags=model,tflite,mlperf,mobilenet,quantized
+/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-quantized-downloaded
+$ ls -la `ck locate env --tags=model,tflite,mlperf,mobilenet,quantized`
+total 43524
+drwxr-xr-x  2 anton dvdt     4096 Mar 25 12:31 .
+drwxrwxr-x 18 anton dvdt     4096 Mar 25 12:32 ..
+-rw-rw-r--  1 anton dvdt     2240 Mar 25 12:31 ck-install.json
+-rw-rw-r--  1 anton dvdt     3477 Mar 25 12:31 mobilenet-model.py
+-rw-rw-r--  1 anton dvdt    20309 Mar 25 12:31 mobilenet_v1.py
+-rw-r--r--  1 anton dvdt 17020468 Aug  3  2018 mobilenet_v1_1.0_224_quant.ckpt.data-00000-of-00001
+-rw-r--r--  1 anton dvdt    14644 Aug  3  2018 mobilenet_v1_1.0_224_quant.ckpt.index
+-rw-r--r--  1 anton dvdt  5143394 Aug  3  2018 mobilenet_v1_1.0_224_quant.ckpt.meta
+-rw-r--r--  1 anton dvdt  4276352 Aug  3  2018 mobilenet_v1_1.0_224_quant.tflite
+-rw-r--r--  1 anton dvdt   885850 Aug  3  2018 mobilenet_v1_1.0_224_quant_eval.pbtxt
+-rw-r--r--  1 anton dvdt 17173742 Aug  3  2018 mobilenet_v1_1.0_224_quant_frozen.pb
+-rw-r--r--  1 anton dvdt       89 Aug  3  2018 mobilenet_v1_1.0_224_quant_info.txt
+```
+
+**NB:** The TFLite weights are in the `mobilenet_v1_1.0_224*.tflite` file. Only
+the TFLite weights are different between the `2018_02_22` and `2018_08_02`
+MobileNets-v1 packages. We have adopted the latter for MLPerf Inference v0.5.
+
+
+<a name="results"></a>
+## Inspecting experimental results
+**TODO**

@@ -1,0 +1,176 @@
+# MobileNet via ONNX
+
+Please follow the common [installation instructions](../README.md#installation) first.
+
+**NB:** See the [TFLite instructions](../tflite/README.md) how to use Collective Knowledge to learn more about the anatomy of the benchmark.
+
+**NB:** See [`ck-mlperf:program:image-classification-onnx-py`](https://github.com/ctuning/ck-mlperf/tree/master/program/image-classification-onnx-py) for more details about the client program.
+
+
+### Install ONNX
+
+Install the ONNX library and runtime:
+```
+$ ck install package --tags=lib,python-package,onnx
+$ ck install package --tags=lib,python-package,onnxruntime
+```
+
+### Install the MobileNet model for ONNX
+
+To select interactively from one of the non-quantized and quantized MobileNets-v1-1.0-224 models:
+```
+$ ck install package --tags=model,onnx,mlperf,mobilenet
+
+More than one package or version found:
+
+ 0) model-onnx-mlperf-mobilenet  Version 1_1.0_224_2018_08_02  (b47f4980eefabffa)
+ 1) model-onnx-convert-from-tf (22b1d864174bf743), Variations: mobilenet
+
+Please select the package to install [ hit return for "0" ]: 
+```
+Option 1 downloads the TF model and converts it to ONNX. Option 0 uses a pre-converted ONNX model.
+
+We recommend [converting models on-the-fly](https://github.com/ctuning/ck-mlperf/blob/master/package/model-onnx-convert-from-tf/README.md), as you can additionally control the data layout as follows:
+- NHWC:
+```
+$ ck install package --tags=onnx,model,mobilenet,converted,nhwc
+```
+- NCHW
+```
+$ ck install package --tags=onnx,model,mobilenet,converted,nchw
+```
+Note that without the layout tags (`nhwc` or `nchw`), the layout is selected nondeterministically.
+
+#### Bonus
+
+##### Install the ResNet model
+
+You can similarly convert ResNet as follows:
+- NHWC
+```
+$ ck install package --tags=onnx,model,resnet,converted,nhwc
+```
+- NCHW
+```
+$ ck install package --tags=onnx,model,resnet,converted,nchw
+```
+
+You can benchmark ResNet exactly in the same way as MobileNet.
+Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#benchmarking) below.
+
+
+### Preprocess the ImageNet dataset
+**NB:** This step will be moved to the [common instructions](../README.md), once all the clients are updated. For more details about preprocessing see [here](https://github.com/ctuning/ck-env/tree/master/package/dataset-imagenet-preprocessed).
+
+```
+$ ck install package --tags=dataset,imagenet,preprocessed
+```
+
+### Run the ONNX image classification client
+
+#### MobileNet
+##### NHWC
+```
+$ ck run program:image-classification-onnx-py
+...
+*** Dependency 3 = weights (ONNX model):
+
+More than one environment found for "ONNX model" with tags="model,image-classification,onnx" and setup={"host_os_uoa": "linux-64", "target_os_uoa": "linux-64", "target_os_bits": "64"}:
+
+ 0) ONNX-from-TF model (MLPerf MobileNet) - v1_1.0_224_2018_08_02 (64bits,converted,converted-from-tf,host-os-linux-64,image-classification,mlperf,mobilenet,model,nhwc,onnx,target-os-linux-64,v1,v1.1,v1.1
+.0,v1.1.0.224,v1.1.0.224.2018,v1.1.0.224.2018.8,v1.1.0.224.2018.8.2 (f18d48538fbfbd46))
+                                       - Depends on "python" (env UOA=7c8bbf2343208d88, tags="compiler,python", version=3.6.7)
+                                       - Depends on "lib-python-numpy" (env UOA=fe9d0436cbfd34c8, tags="lib,python-package,numpy", version=1.16.2)
+                                       - Depends on "lib-tensorflow" (env UOA=9c34f3f9b9b8dfd4, tags="lib,tensorflow,vprebuilt", version=1.13.1)
+                                       - Depends on "lib-python-onnx" (env UOA=c9a3c5ad5de9adcb, tags="lib,python-package,onnx", version=1.4.1)
+                                       - Depends on "lib-python-tf2onnx" (env UOA=44dd6b520ae81482, tags="lib,python-package,tf2onnx", version=1.4.1)
+                                       - Depends on "model-source" (env UOA=e5cf6f254447a629, tags="model,image-classification,tf", version=1_1.0_224_2018_08_02)
+
+ 1) ONNX-from-TF model (MLPerf MobileNet) - v1_1.0_224_2018_08_02 (64bits,converted,converted-from-tf,host-os-linux-64,image-classification,mlperf,mobilenet,model,nchw,onnx,target-os-linux-64,v1,v1.1,v1.1
+.0,v1.1.0.224,v1.1.0.224.2018,v1.1.0.224.2018.8,v1.1.0.224.2018.8.2 (2e1b5534351b7e33))
+                                       - Depends on "python" (env UOA=7c8bbf2343208d88, tags="compiler,python", version=3.6.7)
+                                       - Depends on "lib-python-numpy" (env UOA=fe9d0436cbfd34c8, tags="lib,python-package,numpy", version=1.16.2)
+                                       - Depends on "lib-tensorflow" (env UOA=9c34f3f9b9b8dfd4, tags="lib,tensorflow,vprebuilt", version=1.13.1)
+                                       - Depends on "lib-python-onnx" (env UOA=c9a3c5ad5de9adcb, tags="lib,python-package,onnx", version=1.4.1)
+                                       - Depends on "lib-python-tf2onnx" (env UOA=44dd6b520ae81482, tags="lib,python-package,tf2onnx", version=1.4.1)
+                                       - Depends on "model-source" (env UOA=e5cf6f254447a629, tags="model,image-classification,tf", version=1_1.0_224_2018_08_02)
+
+
+Select one of the options for "ONNX model" with tags="model,image-classification,onnx" and setup={"host_os_uoa": "linux-64", "target_os_uoa": "linux-64", "target_os_bits": "64"} [ hit return for "0" ]: 0
+
+    Resolved. CK environment UID = f18d48538fbfbd46 (version 1_1.0_224_2018_08_02)
+...
+--------------------------------
+Process results in predictions
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.84 - (65) n01751748 sea snake
+0.08 - (58) n01737021 water snake
+0.04 - (34) n01665541 leatherback turtle, leatherback, leather...
+0.01 - (54) n01729322 hognose snake, puff adder, sand viper
+0.01 - (57) n01735189 garter snake, grass snake
+---------------------------------------
+
+Summary:
+-------------------------------
+Graph loaded in 0.018571s
+All images loaded in 0.001246s
+All images classified in 0.188061s
+Average classification time: 0.188061s
+Accuracy top 1: 1.0 (1 of 1)
+Accuracy top 5: 1.0 (1 of 1)
+--------------------------------
+```
+
+##### NCHW
+```
+$ ck run program:image-classification-onnx-py
+...
+*** Dependency 3 = weights (ONNX model):
+
+More than one environment found for "ONNX model" with tags="model,image-classification,onnx" and setup={"host_os_uoa": "linux-64", "target_os_uoa": "linux-64", "target_os_bits": "64"}:
+
+ 0) ONNX-from-TF model (MLPerf MobileNet) - v1_1.0_224_2018_08_02 (64bits,converted,converted-from-tf,host-os-linux-64,image-classification,mlperf,mobilenet,model,nhwc,onnx,target-os-linux-64,v1,v1.1,v1.1
+.0,v1.1.0.224,v1.1.0.224.2018,v1.1.0.224.2018.8,v1.1.0.224.2018.8.2 (f18d48538fbfbd46))
+                                       - Depends on "python" (env UOA=7c8bbf2343208d88, tags="compiler,python", version=3.6.7)
+                                       - Depends on "lib-python-numpy" (env UOA=fe9d0436cbfd34c8, tags="lib,python-package,numpy", version=1.16.2)
+                                       - Depends on "lib-tensorflow" (env UOA=9c34f3f9b9b8dfd4, tags="lib,tensorflow,vprebuilt", version=1.13.1)
+                                       - Depends on "lib-python-onnx" (env UOA=c9a3c5ad5de9adcb, tags="lib,python-package,onnx", version=1.4.1)
+                                       - Depends on "lib-python-tf2onnx" (env UOA=44dd6b520ae81482, tags="lib,python-package,tf2onnx", version=1.4.1)
+                                       - Depends on "model-source" (env UOA=e5cf6f254447a629, tags="model,image-classification,tf", version=1_1.0_224_2018_08_02)
+
+ 1) ONNX-from-TF model (MLPerf MobileNet) - v1_1.0_224_2018_08_02 (64bits,converted,converted-from-tf,host-os-linux-64,image-classification,mlperf,mobilenet,model,nchw,onnx,target-os-linux-64,v1,v1.1,v1.1
+.0,v1.1.0.224,v1.1.0.224.2018,v1.1.0.224.2018.8,v1.1.0.224.2018.8.2 (2e1b5534351b7e33))
+                                       - Depends on "python" (env UOA=7c8bbf2343208d88, tags="compiler,python", version=3.6.7)
+                                       - Depends on "lib-python-numpy" (env UOA=fe9d0436cbfd34c8, tags="lib,python-package,numpy", version=1.16.2)
+                                       - Depends on "lib-tensorflow" (env UOA=9c34f3f9b9b8dfd4, tags="lib,tensorflow,vprebuilt", version=1.13.1)
+                                       - Depends on "lib-python-onnx" (env UOA=c9a3c5ad5de9adcb, tags="lib,python-package,onnx", version=1.4.1)
+                                       - Depends on "lib-python-tf2onnx" (env UOA=44dd6b520ae81482, tags="lib,python-package,tf2onnx", version=1.4.1)
+                                       - Depends on "model-source" (env UOA=e5cf6f254447a629, tags="model,image-classification,tf", version=1_1.0_224_2018_08_02)
+
+
+Select one of the options for "ONNX model" with tags="model,image-classification,onnx" and setup={"host_os_uoa": "linux-64", "target_os_uoa": "linux-64", "target_os_bits": "64"} [ hit return for "0" ]: 1
+
+    Resolved. CK environment UID = 2e1b5534351b7e33 (version 1_1.0_224_2018_08_02)
+...
+--------------------------------
+Process results in predictions
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.84 - (65) n01751748 sea snake
+0.08 - (58) n01737021 water snake
+0.04 - (34) n01665541 leatherback turtle, leatherback, leather...
+0.01 - (54) n01729322 hognose snake, puff adder, sand viper
+0.01 - (57) n01735189 garter snake, grass snake
+---------------------------------------
+
+Summary:
+-------------------------------
+Graph loaded in 0.018411s
+All images loaded in 0.001247s
+All images classified in 0.189969s
+Average classification time: 0.189969s
+Accuracy top 1: 1.0 (1 of 1)
+Accuracy top 5: 1.0 (1 of 1)
+--------------------------------
+```

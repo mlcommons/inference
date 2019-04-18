@@ -16,6 +16,7 @@
     - [via TensorFlow Lite](tflite/README.md)
     - [via TensorFlow (C++)](tf-cpp/README.md)
     - [via TensorFlow (Python)](tf-py/README.md)
+    - [via ONNX](onnx/README.md)
 
 <a name="installation"></a>
 # Installation
@@ -91,3 +92,4 @@ You can benchmark MobileNet using one of the available options:
 - [via TensorFlow Lite](tflite/README.md)
 - [via TensorFlow (C++)](tf-cpp/README.md)
 - [via TensorFlow (Python)](tf-py/README.md)
+- [via ONNX](onnx/README.md)

@@ -35,13 +35,93 @@ $ sudo apt install gcc g++ git wget
 $ sudo apt install libblas-dev liblapack-dev
 ```
 
-### Install Python, pip, SciPy and CK
+### Install Python 3 and the latest pip
 ```bash
 $ sudo apt install python3 python3-pip
-$ sudo python3 -m pip install scipy
-$ sudo python3 -m pip install ck
+$ sudo python3 -m pip install --upgrade pip
 ```
-**NB:** CK also supports Python 2.
+
+**NB:** Care must be taken not to mix Python 3 and Python 2 packages.
+If your system uses Python 2 by default, we recommend you prefix
+all CK commands, for example, with `CK_PYTHON=python3` for CK to run under Python 3:
+```
+$ python --version
+Python 2.7.13
+$ ck python_version
+2.7.13 (default, Sep 26 2018, 18:42:22)
+[GCC 6.3.0 20170516]
+$ CK_PYTHON=python3 ck python_version
+3.5.3 (default, Sep 27 2018, 17:25:39)
+[GCC 6.3.0 20170516]
+```
+Similarly, if you use multiple Python 3 versions (e.g. 3.5 and 3.6), we recommend
+you stick to one of them for consistency:
+```
+$ CK_PYTHON=python3.5 ck python_version
+3.5.2 (default, Nov 12 2018, 13:43:14)
+[GCC 5.4.0 20160609]
+$ CK_PYTHON=python3.6 ck python_version
+3.6.7 (default, Oct 25 2018, 09:16:13)
+[GCC 5.4.0 20160609]
+```
+
+### Install required Python 3 packages
+Choose one of the following installation options:
+- system-wide via pip;
+- user-space via pip;
+- user-space via CK.
+
+With the first two options, packages get installed via pip and get registered
+with CK later (typically, on the first run of a program).
+
+With the last option, packages also get installed via pip but get registered
+with CK at the same time (so there is less chance of mixing things up).
+
+#### System-wide installation via pip (under `/usr`)
+```bash
+$ sudo python3 -m pip install cython scipy matplotlib pillow ck
+```
+#### User-space installation via pip (under `$HOME`)
+```bash
+$ python3 -m pip install cython scipy matplotlib pillow ck --user
+```
+#### User-space installation via CK (under `$HOME` and `$CK_TOOLS`)
+```bash
+$ python3 -m pip install ck --user
+$ ck version
+V1.9.7
+```
+**NB:** CK can also be installed [via Git](https://github.com/ctuning/ck#ubuntu).
+
+```bash
+$ ck detect soft:compiler.python --full_path=`which python3`
+$ ck install package --tags=lib,python-package,numpy
+$ ck install package --tags=lib,python-package,scipy
+$ ck install package --tags=lib,python-package,matplotlib
+$ ck install package --tags=lib,python-package,pillow
+$ python3 -m pip install cython --user
+```
+**NB:** Cython cannot be currently installed via CK (but we are working on it).
+
+If the above dependencies have been installed on a clean system, you should be
+able to inspect the registered CK environments e.g. as follows:
+```
+$ ck show env --tags=python-package
+Env UID:         Target OS: Bits: Name:                     Version: Tags:
+
+4e82bab01c8ee3b7   linux-64    64 Python NumPy library      1.16.2   64bits,host-os-linux-64,lib,needs-python,needs-python-3.5.2,numpy,python-package,target-os-linux-64,v1,v1.16,v1.16.2,vmaster
+66642698751a2fcf   linux-64    64 Python SciPy library      1.2.1    64bits,host-os-linux-64,lib,needs-python,needs-python-3.5.2,python-package,scipy,target-os-linux-64,v1,v1.2,v1.2.1,vmaster
+78e8a1bfb4eb052c   linux-64    64 Python Matplotlib library 3.0.3    64bits,host-os-linux-64,lib,matplotlib,needs-python,needs-python-3.5.2,python-package,target-os-linux-64,v3,v3.0,v3.0.3,vmaster
+a6f9c25377710f6f   linux-64    64 Python Pillow library     6.0.0    64bits,PIL,host-os-linux-64,lib,needs-python,needs-python-3.5.2,pillow,python-package,target-os-linux-64,v6,v6.0,v6.0.0,vmaster
+b71ce3355bd049bc   linux-64    64 Python Cython library     0.29.6   64bits,cython,host-os-linux-64,lib,python-package,target-os-linux-64,v0,v0.29,v0.29.6
+
+$ ck cat env --tags=python-package | grep PYTHONPATH
+export PYTHONPATH=/home/anton/CK_TOOLS/lib-python-numpy-compiler.python-3.5.2-linux-64/build:${PYTHONPATH}
+export PYTHONPATH=/home/anton/CK_TOOLS/lib-python-scipy-compiler.python-3.5.2-linux-64/build:${PYTHONPATH}
+export PYTHONPATH=/home/anton/CK_TOOLS/lib-python-matplotlib-compiler.python-3.5.2-linux-64/build:${PYTHONPATH}
+export PYTHONPATH=/home/anton/CK_TOOLS/lib-python-pillow-compiler.python-3.5.2-linux-64/build:${PYTHONPATH}
+export PYTHONPATH=/usr/local/lib/python3.5/dist-packages:${PYTHONPATH}
+```
 
 ### [Optional] Install Android SDK and NDK
 

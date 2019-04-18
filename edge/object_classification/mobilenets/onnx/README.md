@@ -1,11 +1,14 @@
 # MobileNet via ONNX
 
-Please follow the common [installation instructions](../README.md#installation) first.
+1. [Installation instructions](#installation)
+2. [Benchmarking instructions](#benchmarking)
+3. [Reference accuracy](#accuracy)
+4. [Further information](#further-info)
 
-**NB:** See the [TFLite instructions](../tflite/README.md) how to use Collective Knowledge to learn more about the anatomy of the benchmark.
+<a name="installation"></a>
+## Installation instructions
 
-**NB:** See [`ck-mlperf:program:image-classification-onnx-py`](https://github.com/ctuning/ck-mlperf/tree/master/program/image-classification-onnx-py) for more details about the client program.
-
+Please follow the [common installation instructions](../README.md#installation) first.
 
 ### Install ONNX
 
@@ -174,3 +177,23 @@ Accuracy top 1: 1.0 (1 of 1)
 Accuracy top 5: 1.0 (1 of 1)
 --------------------------------
 ```
+
+<a name="benchmarking"></a>
+## Benchmarking instructions
+**TODO**
+
+<a name="accuracy"></a>
+## Reference accuracy
+**TODO**
+
+<a name="further-info"></a>
+## Further information
+
+### Using Collective Knowledge
+See the [common instructions](../README.md) for information on how to use Collective Knowledge
+to learn about [the anatomy of a benchmark](../README.md#anatomy), or
+to inspect and visualize [experimental results](../README.md#results).
+
+### Using the client program
+
+See [`ck-mlperf:program:image-classification-onnx-py`](https://github.com/ctuning/ck-mlperf/tree/master/program/image-classification-onnx-py) for more details about the client program.

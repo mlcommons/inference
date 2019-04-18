@@ -166,67 +166,6 @@ $ ck benchmark program:image-classification-tf-cpp \
 **NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
 to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as if with `--env.CK_BATCH_COUNT=1`).
 
-#### Inspect the recorded results
-
-If you run the same command several times selecting different models (quantized or non-quantized)
-or datasets (500 images or 50,000 images), CK will create several _experimental points_ in the same repository e.g.:
-```bash
-$ ck find local:experiment:mlperf-mobilenet-tf-cpp-accuracy
-/home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy
-$ ck list_points local:experiment:mlperf-mobilenet-tf-cpp-accuracy
-78dae6354e471199
-918c80bc5d4906b0
-```
-You can then retrieve various run parameters from such experimental points.
-
-##### Accuracy
-You can quickly inspect the accuracy recorded for a particular point as follows:
-```bash
-$ grep \"run\": -A2 /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-918c80bc5d4906b0.0001.json                                                           
-      "run": {
-        "accuracy_top1": 0.718, 
-        "accuracy_top5": 0.9, 
-$ grep \"run\": -A2 /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json 
-      "run": {
-        "accuracy_top1": 0.704, 
-        "accuracy_top5": 0.898, 
-```
-
-##### Model
-You can quickly inspect the model used for a particular point as follows:
-```bash
-$ grep RUN_OPT_GRAPH_FILE /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-918c80bc5d4906b0.0001.json
-      "RUN_OPT_GRAPH_FILE": "/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-downloaded/mobilenet_v1_1.0_224_frozen.pb",
-$ grep RUN_OPT_GRAPH_FILE /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json
-      "RUN_OPT_GRAPH_FILE": "/home/anton/CK_TOOLS/model-tf-mlperf-mobilenet-quantized-downloaded/mobilenet_v1_1.0_224_quant_frozen.pb",
-```
-As expected, the lower accuracy comes from the quantized model.
-
-
-##### Dataset
-Unfortunately, the dataset path is recorded only to `pipeline.json`.
-This file gets overwritten on each run of `ck benchmark`, so only
-the dataset used in the latest command can be retrieved:
-```bash
-$ grep \"CK_ENV_DATASET_IMAGENET_VAL\": /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/pipeline.json
-          "CK_ENV_DATASET_IMAGENET_VAL": "/home/anton/CK_TOOLS/dataset-imagenet-ilsvrc2012-val-min"
-```
-
-##### Batch count
-You can, however, check the batch count e.g.:
-```bash
-$ grep CK_BATCH_COUNT /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json
-      "CK_BATCH_COUNT": "500", 
-```
-
-##### Image cropping
-By default, input images preprocessed for the program [get cropped](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tf-cpp#ck_crop_percent) by 87.5%:
-```bash
-$ grep CK_CROP_PERCENT /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf-cpp-accuracy/ckp-78dae6354e471199.0001.json
-      "CK_CROP_PERCENT": 87.5,
-```
-This can be changed by passing e.g. `--env.CK_CROP_PERCENT=100` to `ck benchmark` (see below).
-
 
 <a name="accuracy"></a>
 ## Reference accuracy
@@ -260,7 +199,7 @@ $ ck benchmark program:image-classification-tf-cpp \
 "accuracy_top5": 0.91606
 ```
 
-#### 100.0% cropping (proposed)
+#### 100.0% cropping (makes the accuracy worse!)
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 --env.CK_CROP_PERCENT=100 \

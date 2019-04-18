@@ -49,9 +49,9 @@ $ ck install package --tags=model,tflite,mlperf,mobilenet,quantized
 
 #### Bonus
 
-##### Install the ResNet50 model
+##### Install the ResNet model
 
-To install the MLPerf ResNet50-v1.5 model:
+To install the ResNet50-v1.5 model:
 ```bash
 $ ck install package --tags=model,tflite,mlperf,resnet
 More than one package or version found:

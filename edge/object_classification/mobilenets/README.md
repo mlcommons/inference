@@ -327,4 +327,10 @@ benchmark` (but see [here](tf-cpp/README.md#accuracy) how this can make results 
 
 
 ### Visualizing experimental results
-**TODO**
+
+If you have collected some experimental results on your machine (or transferred to it results collected from elsewhere), you can visualize them as follows:
+```
+$ ck display dashboard --scenario=mlperf.mobilenets
+```
+
+You can also see a demo CK [MobileNets](http://cknowledge.org/dashboard/mlperf.mobilenets) dashboard online.

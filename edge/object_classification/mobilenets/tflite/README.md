@@ -72,12 +72,12 @@ You can also install any other MobileNets model compatible with TFLite as follow
 $ ck install package --tags=tensorflowmodel,mobilenet,tflite
 ```
 
-### Compile the TFLite image classification client
+### Compile the TFLite Image Classification client
 ```
 $ ck compile program:image-classification-tflite [--target_os=android23-arm64]
 ```
 
-### Run the TFLite image classification client once
+### Run the TFLite Image Classification client
 
 Run the client (if required, connect an Android device to your host machine via USB):
 

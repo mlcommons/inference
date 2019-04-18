@@ -50,15 +50,15 @@ Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#bench
 
 You can also install any other MobileNets model compatible with TensorFlow (C++) as follows:
 ```bash
-$ ck install package --tags=tensorflowmodel,mobilenet,frozen
+$ ck install package --tags=tensorflowmodel,mobilenet,frozen --no_tags=mobilenet-all
 ```
 
-### Compile the TensorFlow (C++) image classification client
+### Compile the TensorFlow (C++) Image Classification client
 ```bash
 $ ck compile program:image-classification-tf-cpp [--target_os=android23-arm64]
 ```
 
-### Run the TensorFlow (C++) image classification client
+### Run the TensorFlow (C++) Image Classification client
 
 Run the client (if required, connect an Android device to your host machine via USB):
 

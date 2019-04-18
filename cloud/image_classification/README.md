@@ -70,7 +70,7 @@ This model uses the data format NHWC. If you need NCHW, please file an issue on 
 
 For ONNX use:
 
-https://zenodo.org/record/2541184/files/resnet50_v1.onnx
+https://zenodo.org/record/2592612/files/resnet50_v1.onnx
 
 This model uses ONNX opset 8. If you need other opset's, please file an issue on github. The model is directly converted
 from the tensorflow model via https://github.com/onnx/tensorflow-onnx.

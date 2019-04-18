@@ -4,6 +4,8 @@ tflite backend (https://github.com/tensorflow/tensorflow/lite)
 
 # pylint: disable=unused-argument,missing-docstring,useless-super-delegation
 
+from threading import Lock
+
 import tensorflow as tf
 from tensorflow.contrib.lite.python import interpreter as interpreter_wrapper
 
@@ -14,6 +16,7 @@ class BackendTflite(backend.Backend):
     def __init__(self):
         super(BackendTflite, self).__init__()
         self.sess = None
+        self.lock = Lock()
 
     def version(self):
         return tf.__version__ + "/" + tf.__git_version__
@@ -37,11 +40,12 @@ class BackendTflite(backend.Backend):
         return self
 
     def predict(self, feed):
-        # TODO: the tflite api is not thread.
-
+        self.lock.aquire()
         # set inputs
         for k, v in self.input2index.items():
             self.sess.set_tensor(v, feed[k])
         self.sess.invoke()
         # get results
-        return [self.sess.get_tensor(v) for _, v in self.output2index.items()]
+        res = [self.sess.get_tensor(v) for _, v in self.output2index.items()]
+        self.lock.release()
+        return res

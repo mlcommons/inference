@@ -1,16 +1,23 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime [cpu|gpu]"
+    echo "usage: $0 tf|onnxruntime|pytorch [cpu|gpu]"
     exit 1
 fi
 if [ $1 == "tf" ] ; then
     model="$MODEL_DIR/resnet50_v1.pb"
     profile=resnet50-tf
+    name=resnet50.tf
 fi
 if [ $1 == "onnxruntime" ] ; then
     model="$MODEL_DIR/resnet50_v1.onnx"
     profile=resnet50-onnxruntime
+    name=resnet50.onnxruntime
+fi
+if [ $1 == "pytorch" ] ; then
+    model="$MODEL_DIR/resnet50_v1.onnx"
+    profile="resnet50-onnxruntime --backend pytorch"
+    name="resnet50.pytorch"
 fi
 if [ "x$DATA_DIR" == "x" ]; then
     echo "DATA_DIR not set" && exit 1
@@ -30,7 +37,7 @@ if [ $target == "cpu" ]; then
 fi
 common_opt="--count 500 --time 10"
 dataset="--dataset-path $DATA_DIR"
-OUTPUT_DIR=`pwd`/output/$profile.$target
+OUTPUT_DIR=`pwd`/output/$name.$target
 if [ ! -d $OUTPUT_DIR ]; then
     mkdir $OUTPUT_DIR
 fi

@@ -6,8 +6,6 @@ from __future__ import division
 from __future__ import print_function
 from __future__ import unicode_literals
 
-# pylint: disable=unused-argument,missing-docstring
-
 import argparse
 import json
 import logging
@@ -16,6 +14,7 @@ import threading
 import time
 from queue import Queue
 
+import mlperf_loadgen as lg
 import numpy as np
 
 import dataset
@@ -23,6 +22,8 @@ import imagenet
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
+
+# pylint: disable=missing-docstring
 
 # the datasets we support
 SUPPORTED_DATASETS = {
@@ -43,8 +44,7 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet",
         "backend": "tensorflow",
         "cache": 0,
-        "batch_size": 1,
-        "time": 30,
+        "time": 128,
         "max-latency": DEFAULT_LATENCY_BUCKETS,
     },
     "mobilenet-tf": {
@@ -55,6 +55,7 @@ SUPPORTED_PROFILES = {
     },
     "mobilenet-onnx": {
         "dataset": "imagenet_mobilenet",
+        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
         "backend": "onnxruntime",
     },
     "resnet50-tf": {
@@ -65,6 +66,7 @@ SUPPORTED_PROFILES = {
     },
     "resnet50-onnxruntime": {
         "dataset": "imagenet",
+        "outputs": "ArgMax:0",
         "backend": "onnxruntime",
     }
 }
@@ -83,7 +85,6 @@ def get_args():
     parser.add_argument("--output", help="test results")
     parser.add_argument("--outputs", help="model outputs")
     parser.add_argument("--backend", help="runtime to use")
-    parser.add_argument("--batch_size", type=int, help="batch_size")
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
@@ -111,182 +112,6 @@ def get_args():
     return args
 
 
-def execute_parallel(model, ds, count, threads, result_list, result_dict,
-                     batch_size=1, check_acc=False, post_process=None):
-    """Run inference in parallel."""
-
-    # We want the queue to be large enough to not ever block the feeder but small enough
-    # to about if we can not keep up with the processing.
-    tasks = Queue(maxsize=threads*5)
-    workers = []
-
-    def handle_tasks(tasks_queue):
-        """Worker thread."""
-        good = 0
-        total = 0
-        while True:
-            qitem = tasks_queue.get()
-            if qitem is None:
-                # None in the queue indicates the parent want us to exit
-                tasks_queue.task_done()
-                break
-            try:
-                if check_acc:
-                    # if check_acc is set we want to not include time spend in the queue
-                    qitem.start = time.time()
-
-                # run the prediction
-                results = model.predict({model.inputs[0]: qitem.img})
-                # and keep track of how long it took
-                result_list.append(time.time() - qitem.start)
-
-                if check_acc:
-                    # check if the result was correct and count the outcome
-                    results = results[0]
-                    for idx, result in enumerate(results):
-                        result = post_process(result)
-                        if qitem.label[idx] == result:
-                            good += 1
-                        total += 1
-            except Exception as ex:  # pylint: disable=broad-except
-                log.error("execute_parallel thread: %s", ex)
-
-            tasks_queue.task_done()
-
-            # TODO: should we yield here to not starve the feeder ?
-
-        # thread is done
-        if check_acc:
-            # TODO: this should be under lock
-            result_dict["good"] += good
-            result_dict["total"] += total
-
-    # create and start worker threads
-    # TODO: since we start as many threads as we have cores we might starve
-    # the parent if we run on cpu only so it can not feed fast enough ?
-    for _ in range(threads):
-        worker = threading.Thread(target=handle_tasks, args=(tasks,))
-        worker.daemon = True
-        workers.append(worker)
-        worker.start()
-
-    start = time.time()
-    # feed the queue
-    try:
-        for item in ds.batch(batch_size):
-            if item.img.shape[0] < batch_size:
-                continue
-            tasks.put(item, block=check_acc)
-        ret_code = True
-    except Exception:  # pylint: disable=broad-except
-        # we get here when the queue is full and we'd block. This is a hint that
-        # the system is not remotely keeping up. The caller uses this hint to abort this run to.
-        ret_code = False
-
-    # exit all threads
-    for _ in workers:
-        tasks.put(None)
-    for worker in workers:
-        worker.join()
-    end = time.time()
-    result_dict["runtime"] = end - start
-    return ret_code
-
-
-def report_result(name, target_latency, final_result, result_list, result_dict, check_acc=False):
-    """Record a result in the final_result dict and write it to stdout."""
-    result = {}
-    # the percentiles we want to record
-    percentiles = [50., 80., 90., 95., 99., 99.9]
-    buckets = np.percentile(result_list, percentiles).tolist()
-    buckets_str = ",".join(["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)])
-    mean = np.mean(result_list)
-
-    # this is what we record for each run
-    result["target_latency"] = target_latency
-    result["mean"] = mean
-    result["runtime"] = result_dict["runtime"]
-    result["qps"] = len(result_list) / result_dict["runtime"]
-    result["count"] = len(result_list)
-    result["percentiles"] = {str(k): v for k, v in zip(percentiles, buckets)}
-
-    # to stdout
-    print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, tiles={}".format(
-        name, result["qps"], result["mean"], result["runtime"], buckets_str))
-
-    if check_acc:
-        # record accuracy if we have it.
-        result["good_items"] = result_dict["good"]
-        result["total_items"] = result_dict["total"]
-        result["accuracy"] = 100. * result_dict["good"] / result_dict["total"]
-        print("{} accuracy={:.2f}, good_items={}, total_items={}".format(
-            name, result["accuracy"], result["good_items"], result["total_items"]))
-
-    # add the result to the result dict
-    final_result[name] = result
-
-
-def find_qps(prefix, model, ds, count, threads, final_results, target_latency,
-             batch_size=1, post_process=None, distribution=None, runtime=10):
-    """Scan to find latency bound qps."""
-    qps_lower = 1
-    qps_upper = 100000
-    target_qps = threads * 2 / target_latency
-    best_match = None
-    best_qps = 0
-
-    result_list = []
-    result_dict = {}
-    measured_latency = -1
-    measured_qps = 0
-    while qps_upper - qps_lower > 1:
-        name = "{}/{}/{}".format(prefix, target_latency, int(target_qps))
-        if distribution:
-            distribution(ds.get_item_count(), runtime, target_qps)
-        result_list = []
-        result_dict = {}
-        ret_code = execute_parallel(model, ds, count, threads, result_list, result_dict,
-                                    batch_size=batch_size, post_process=post_process)
-        report_result(name, target_latency, final_results["scan"][prefix], result_list, result_dict)
-        if not ret_code:
-            print("^queue is full, early out")
-        measured_latency = np.percentile(result_list, [99.]).tolist()[0]
-        measured_qps = int(len(result_list) / result_dict["runtime"])
-        if not ret_code or measured_latency > target_latency:
-            # did not meet target latency
-            qps_upper = min(target_qps, qps_upper)
-        else:
-            # meet target latency
-            if measured_qps < target_qps * 0.9:
-                # not in 90% of expected latency
-                print("^latency meet but qps is off")
-                qps_upper = min(target_qps, qps_upper)
-            else:
-                qps_lower = target_qps
-                if measured_qps > best_qps:
-                    print("^taken")
-                    best_match = measured_qps, result_list, result_dict, measured_latency
-                    best_qps = measured_qps
-        target_qps = int(round((qps_lower + qps_upper) / 2))
-    if best_match:
-        measured_qps, result_list, result_dict, measured_latency = best_match
-    name = str(target_latency)
-    report_result(name, target_latency, final_results["results"][prefix], result_list, result_dict)
-
-    if measured_latency > target_latency:
-        # did not meet latency target
-        final_results["results"][prefix][name]["qps"] = -1
-        final_results["final_results"][prefix][name] = -1
-        print("===RESULT: {} target_latency={} qps={}".format(prefix, name, "FAIL"))
-    else:
-        # latency target reached
-        final_results["final_results"][prefix][name] = target_qps
-        print("===RESULT: {} target_latency={} measured_latency={} qps={}".format(
-            prefix, name, measured_latency, measured_qps))
-
-    return measured_qps
-
-
 def get_backend(backend):
     if backend == "tensorflow":
         from backend_tf import BackendTensorflow
@@ -306,6 +131,102 @@ def get_backend(backend):
     else:
         raise ValueError("unknown backend: " + backend)
     return backend
+
+
+class Item:
+    """An item that we queue for processing by the thread pool."""
+
+    def __init__(self, query_id, img, label=None):
+        self.id = query_id
+        self.img = img
+        self.label = label
+        self.start = time.time()
+
+
+class Runner:
+    def __init__(self, model, ds, threads, post_process=None):
+        self.tasks = Queue(maxsize=threads * 5)
+        self.workers = []
+        self.model = model
+        self.post_process = post_process
+        self.threads = threads
+        self.result_list = []
+        self.result_dict = {}
+
+    def handle_tasks(self, tasks_queue):
+        """Worker thread."""
+        while True:
+            qitem = tasks_queue.get()
+            if qitem is None:
+                # None in the queue indicates the parent want us to exit
+                tasks_queue.task_done()
+                break
+
+            try:
+                # run the prediction
+                results = self.model.predict({self.model.inputs[0]: qitem.img})
+                # and keep track of how long it took
+                took = time.time() - qitem.start
+                response = []
+                for idx, result in enumerate(results[0]):
+                    result = self.post_process(result)
+                    if qitem.label[idx] == result:
+                        self.result_dict["good"] += 1
+                    self.result_dict["total"] += 1
+                    # FIXME: unclear what to return here
+                    response.append(lg.QuerySampleResponse(qitem.id[idx], 0, 0))
+                    self.result_list.append(took)
+                lg.QuerySamplesComplete(response)
+            except Exception as ex:  # pylint: disable=broad-except
+                log.error("execute_parallel thread: %s", ex)
+
+            tasks_queue.task_done()
+
+    def start_pool(self):
+        for _ in range(self.threads):
+            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
+            worker.daemon = True
+            self.workers.append(worker)
+            worker.start()
+
+    def start_run(self, result_list, result_dict):
+        self.result_list = result_list
+        self.result_dict = result_dict
+
+    def enqueue(self, id, data, label):
+        item = Item(id, data, label)
+        self.tasks.put(item)
+
+    def finish(self):
+        # exit all threads
+        for _ in self.workers:
+            self.tasks.put(None)
+        for worker in self.workers:
+            worker.join()
+
+
+def add_results(final_results, name, result_dict, result_list, took):
+    percentiles = [50., 80., 90., 95., 99., 99.9]
+    buckets = np.percentile(result_list, percentiles).tolist()
+    buckets_str = ",".join(["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)])
+
+    # this is what we record for each run
+    result = {
+        "mean": np.mean(result_list),
+        "took": took,
+        "qps": len(result_list) / took,
+        "count": len(result_list),
+        "percentiles": {str(k): v for k, v in zip(percentiles, buckets)},
+        "good_items": result_dict["good"],
+        "total_items": result_dict["total"],
+        "accuracy": 100. * result_dict["good"] / result_dict["total"],
+    }
+    # add the result to the result dict
+    final_results[name] = result
+
+    # to stdout
+    print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, acc={:.2f}, tiles={}".format(
+        name, result["qps"], result["mean"], took, result["accuracy"], buckets_str))
 
 
 def main():
@@ -337,38 +258,58 @@ def main():
         "version": model.version(),
         "time": int(time.time()),
         "cmdline": str(args),
-        "scan": {"linear": {}, "exponential": {}},
-        "results": {"linear": {}, "exponential": {}},
-        "final_results": {"linear": {}, "exponential": {}},
     }
 
     #
     # make one pass over the dataset to validate accuracy
     #
     count = args.count if args.count else ds.get_item_count()
-    result_list = []
-    result_dict = {"good": 0, "total": 0}
-    execute_parallel(model, ds, count, args.threads, result_list, result_dict,
-                     check_acc=True, post_process=postprocessor)
-    report_result("check_accuracy", 0., final_results, result_list, result_dict, check_acc=True)
 
-    #
-    # find max qps with equal request distribution
-    #
-    for latency in args.max_latency:
-        find_qps("linear", model, ds, count, args.threads, final_results, latency,
-                 batch_size=args.batch_size, post_process=postprocessor,
-                 distribution=ds.generate_linear_trace, runtime=args.time)
+    runner = Runner(model, ds, args.threads, post_process=postprocessor)
+    runner.start_pool()
 
-    #
-    # find max qps with exponential request distribution
-    #
-    for latency in args.max_latency:
-        find_qps("exponential", model, ds, count, args.threads, final_results, latency,
-                 batch_size=args.batch_size, post_process=postprocessor,
-                 distribution=ds.generate_exp_trace, runtime=args.time)
+    # warmup
+    log.info("warmup ...")
+    ds.load_query_samples([0])
+    for _ in range(100):
+        img, _ = ds.get_samples([0])
+        _ = backend.predict({backend.inputs[0]: img})
 
-    print("===FINAL_RESULT:", final_results["final_results"])
+    def issue_query(query_samples):
+        idx = [q.index for q in query_samples]
+        query_id = [q.id for q in query_samples]
+        data, label = ds.get_samples(idx)
+        runner.enqueue(query_id, data, label)
+
+    sut = lg.ConstructSUT(issue_query)
+    qsl = lg.ConstructQSL(count, args.time, ds.load_query_samples, ds.unload_query_samples)
+    scenarios = [
+        # lg.TestScenario.SingleStream,
+        lg.TestScenario.MultiStream,
+        # lg.TestScenario.Cloud,
+        # lg.TestScenario.Offline,
+        ]
+    for scenario in scenarios:
+        for target_latency in args.max_latency:
+            log.info("starting {}, latency={}".format(scenario, target_latency))
+            settings = lg.TestSettings()
+            settings.scenario = scenario
+            settings.mode = lg.TestMode.SubmissionRun
+            settings.samples_per_query = 4 # FIXME: we don't want to know about this
+            settings.target_qps = 1000 # FIXME: we don't want to know about this
+            settings.target_latency_ns = int(target_latency * 1000000000)
+
+            result_list = []
+            result_dict = {"good": 0, "total": 0}
+            runner.start_run(result_list, result_dict)
+            start = time.time()
+            lg.StartTest(sut, qsl, settings)
+            add_results(final_results, "{}-{}".format(scenario, target_latency),
+                        result_dict, result_list, time.time() - start)
+
+    runner.finish()
+    lg.DestroyQSL(qsl)
+    lg.DestroySUT(sut)
 
     #
     # write final results

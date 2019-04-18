@@ -26,7 +26,7 @@ $ ck install package:lib-tensorflow-1.13.1-src-cpu
 
 To select interactively from one of the non-quantized and quantized SSD-MobileNet models:
 ```
-$ ck install package --tags=model,object-detection,mlperf,ssd-mobilenet
+$ ck install package --tags=model,tf,object-detection,mlperf,ssd-mobilenet
 ```
 
 To install the [non-quantized model](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) directly:
@@ -39,7 +39,7 @@ To install the quantized finetuned model (courtesy of [Habana](https://habana.ai
 $ ck install package --tags=model,tf,object-detection,mlperf,ssd-mobilenet,quantized,finetuned
 ```
 
-### Run the TensorFlow (Python) Object Detection client
+### Run the TensorFlow (Python) Object Detection client on 50 images
 ```bash
 $ ck run program:object-detection-tf-py --env.CK_BATCH_COUNT=50
 ...
@@ -93,7 +93,7 @@ Recall: 0.3225293342489256
 ### Benchmark the performance
 ```bash
 $ ck benchmark program:object-detection-tf-py \
---repetitions=10  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 --env.CK_METRIC_TYPE=COCO \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 --env.CK_METRIC_TYPE=COCO \
 --record --record_repo=local --record_uoa=mlperf-object-detection-ssd-mobilenet-tf-py-performance \
 --tags=mlperf,object-detection,ssd-mobilenet,tf-py,performance \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
@@ -128,7 +128,7 @@ Recall: 0.15363636363636363
 ### Benchmark the accuracy
 ```bash
 $ ck benchmark program:object-detection-tf-py \
---repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=5000 --env.CK_METRIC_TYPE=COCO \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=5000 --env.CK_METRIC_TYPE=COCO \
 --record --record_repo=local --record_uoa=mlperf-object-detection-ssd-mobilenet-tf-py-accuracy \
 --tags=mlperf,object-detection,ssd-mobilenet,tf-py,accuracy \
 --skip_print_timers --skip_stat_analysis --process_multi_keys

@@ -5,6 +5,7 @@
 3. [Reference accuracy](#accuracy)
 4. [Further information](#further-info)
 
+
 <a name="installation"></a>
 ## Installation instructions
 
@@ -115,6 +116,7 @@ Accuracy top 5: 1.0 (1 of 1)
 --------------------------------
 ```
 
+
 <a name="benchmarking"></a>
 ## Benchmarking instructions
 
@@ -122,8 +124,8 @@ Accuracy top 5: 1.0 (1 of 1)
 ```
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
---record --record_repo=local --record_uoa=mlperf-mobilenet-tf-cpp-performance \
---tags=image-classification,mlperf,mobilenet,tf,tf-cpp,performance \
+--record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tf-cpp-performance \
+--tags=mlperf,image-classification,mobilenet,tf-cpp,performance \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
 
@@ -159,12 +161,13 @@ Accuracy top 5: 1.0 (2 of 2)
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---record --record_repo=local --record_uoa=mlperf-mobilenet-tf-cpp-accuracy \
---tags=image-classification,mlperf,mobilenet,tf,tf-cpp,accuracy \
+--record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tf-cpp-accuracy \
+--tags=mlperf,image-classification,mobilenet,tf-cpp,accuracy \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
 **NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
-to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as if with `--env.CK_BATCH_COUNT=1`).
+to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as if
+with `--env.CK_BATCH_COUNT=1`).
 
 
 <a name="accuracy"></a>
@@ -225,6 +228,7 @@ $ ck benchmark program:image-classification-tf-cpp \
 "accuracy_top1": 0.71360
 "accuracy_top5": 0.90266
 ```
+
 
 <a name="further-info"></a>
 ## Further information

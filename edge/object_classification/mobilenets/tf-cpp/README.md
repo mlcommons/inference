@@ -39,9 +39,9 @@ $ ck install package --tags=model,tf,mlperf,mobilenet,quantized
 
 #### Bonus
 
-##### Install the ResNet50 model
+##### Install the ResNet model
 
-To install the MLPerf ResNet50-v1.5 model:
+To install the ResNet50-v1.5 model:
 ```bash
 $ ck install package --tags=model,tf,mlperf,resnet
 ```

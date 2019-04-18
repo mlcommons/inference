@@ -31,7 +31,7 @@ class Imagenet(dataset.Dataset):
         self.label_list = []
         self.count = count
         self.use_cache = use_cache
-        self.cache_dir = os.path.join("/tmp", "preprocessed", name, image_format)
+        self.cache_dir = os.path.join(os.getcwd(), "preprocessed", name, image_format)
         self.data_path = data_path
         self.pre_process = pre_process
         # input images are in HWC
@@ -61,21 +61,7 @@ class Imagenet(dataset.Dataset):
                         with open(dst, "wb") as fimg:
                             img.tofile(fimg)
 
-                if self.use_cache:
-                    # if we use cache, preload the image
-                    with open(dst, "rb") as fimg:
-                        img = fimg.read()
-                        img = np.frombuffer(img, dtype=np.float32)
-                        img = img.reshape(self.image_size)
-                        if self.need_transpose:
-                            img = img.reshape(self.image_size[2], self.image_size[0], self.image_size[1])
-                        else:
-                            img = img.reshape(self.image_size)
-                        self.image_list.append(img)
-                else:
-                    # else use the image path and load at inference time
-                    self.image_list.append(dst)
-
+                self.image_list.append(dst)
                 self.label_list.append(int(label))
 
                 # limit the dataset if requested
@@ -93,19 +79,14 @@ class Imagenet(dataset.Dataset):
             len(self.image_list), use_cache, time_taken))
 
         self.label_list = np.array(self.label_list)
-        if use_cache:
-            self.image_list = np.array(self.image_list)
 
     def get_item(self, nr):
         """Get image by number in the list."""
-        if self.use_cache:
-            img = self.image_list[nr]
-        else:
-            with open(self.image_list[nr], "rb") as f:
-                img = f.read()
-                img = np.frombuffer(img, dtype=np.float32)
-                if self.need_transpose:
-                    img = img.reshape(self.image_size[2], self.image_size[0], self.image_size[1])
-                else:
-                    img = img.reshape(self.image_size)
+        with open(self.image_list[nr], "rb") as f:
+            img = f.read()
+            img = np.frombuffer(img, dtype=np.float32)
+            if self.need_transpose:
+                img = img.reshape(self.image_size[2], self.image_size[0], self.image_size[1])
+            else:
+                img = img.reshape(self.image_size)
         return img, self.label_list[nr]

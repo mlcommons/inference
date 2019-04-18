@@ -1,14 +1,57 @@
 group("gn_all") {
   deps = [
-    "//test_harness:mlpi_test_harness",
+    "loadgen:mlperf_loadgen",
+    "loadgen:mlperf_loadgen_pymodule_lib",
+    "loadgen/demos:loadgen_demo_cpp",
+    "loadgen/demos:loadgen_demo_python",
   ]
 }
 
-# Be more lax with the warnings enabled for skia.
-config("mlpi_skia_disable_warnings") {
-  cflags = []
-  if (!is_win || is_clang) {
-    cflags += [ "-Wno-implicit-fallthrough" ]
-  }
+# This is the only approach to creating the python module that works currently.
+# It compiles the entire library using whatever python's toolchain is.
+# To change which python binary compiles the module, change gn's
+# python_path built-in variable via "gn args <outdir>" for existing out
+# directories or via 'gn gen --agrs="python_path=..."' for new out directories.
+action("loadgen_pymodule_wheel_src") {
+  script = get_path_info(".", "gen_dir") + "/loadgen_pymodule_setup_src.py"
+  deps = [
+    "loadgen:c_api_src",
+    "loadgen:lib_src",
+    "loadgen:public_headers_src",
+    "loadgen:python_api_src",
+    "third_party:pybind_src",
+    ":loadgen_pymodule_setup_src",
+  ]
+  outputs = [
+    get_path_info(".", "out_dir") + "/dist/mlperf_loadgen-0.5a0.tar.gz"
+  ]
+  args = [ "bdist_wheel" ]
 }
 
+copy("loadgen_pymodule_setup_src") {
+  sources = [ "loadgen_pymodule_setup_src.py" ]
+  outputs = [ get_path_info(".", "gen_dir") + "/{{source_file_part}}" ]
+}
+
+# Include the loadgen as a static lib in the python module.
+# Python only compiles the lib bindings from source.
+action("loadgen_pymodule_wheel_lib") {
+  script = get_path_info(".", "gen_dir") + "/loadgen_pymodule_setup_lib.py"
+  deps = [
+    "loadgen:c_api_src",
+    "loadgen:public_headers_src",
+    "loadgen:python_api_src",
+    "loadgen:mlperf_loadgen",
+    "third_party:pybind_src",
+    ":loadgen_pymodule_setup_lib",
+  ]
+  outputs = [
+    get_path_info(".", "out_dir") + "/dist/mlperf_loadgen_lib-0.5a0.tar.gz"
+  ]
+  args = [ "bdist_wheel" ]
+}
+
+copy("loadgen_pymodule_setup_lib") {
+  sources = [ "loadgen_pymodule_setup_lib.py" ]
+  outputs = [ get_path_info(".", "gen_dir") + "/{{source_file_part}}" ]
+}

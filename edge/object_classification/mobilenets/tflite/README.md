@@ -5,6 +5,7 @@
 3. [Reference accuracy](#accuracy)
 4. [Further information](#further-info)
 
+
 <a name="installation"></a>
 ## Installation instructions
 
@@ -12,9 +13,9 @@ Please follow the [common installation instructions](../README.md#installation) 
 
 ### Install TFLite
 
-Install TFLite from source:
+Install TFLite v1.13.1 from source:
 ```
-$ ck install package:lib-tflite-1.13.1-src-static [--target_os=android23-arm64]
+$ ck install package --tags=lib,tflite,v1.13.1,vsrc [--target_os=android23-arm64]
 ```
 
 You can also install TFLite v0.1.7 from a prebuilt binary package for your target e.g.:
@@ -141,8 +142,8 @@ Accuracy top 5: 1.0 (1 of 1)
 ```
 $ ck benchmark program:image-classification-tflite \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
---record --record_repo=local --record_uoa=mlperf-mobilenet-tflite-performance \
---tags=image-classification,mlperf,mobilenet,tflite,performance \
+--record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tflite-performance \
+--tags=mlperf,image-classification,mobilenet,tflite,performance \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
 
@@ -180,10 +181,11 @@ Accuracy top 5: 1.0 (2 of 2)
 ```
 $ ck benchmark program:image-classification-tflite \
 --repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---record --record_repo=local --record_uoa=mlperf-mobilenet-tflite-accuracy \
---tags=image-classification,mlperf,mobilenet,tflite,accuracy \
+--record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tflite-accuracy \
+--tags=mlperf,image-classification,mobilenet,tflite,accuracy \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
+
 
 <a name="accuracy"></a>
 ## Reference accuracy
@@ -192,12 +194,10 @@ $ ck benchmark program:image-classification-tflite \
 
 <a name="further-info"></a>
 ## Further information
-
 ### Using Collective Knowledge
 See the [common instructions](../README.md) for information on how to use Collective Knowledge
 to learn about [the anatomy of a benchmark](../README.md#anatomy), or
 to inspect and visualize [experimental results](../README.md#results).
-
 
 ### Using the client program
 See [`ck-tensorflow:program:image-classification-tflite`](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tflite) for more details about the client program.

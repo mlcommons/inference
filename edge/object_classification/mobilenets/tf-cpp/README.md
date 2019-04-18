@@ -3,15 +3,12 @@
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)
 3. [Reference accuracy](#accuracy)
-
-**NB:** See the [TFLite instructions](../tflite/README.md) how to use Collective Knowledge to learn more about the [anatomy](../tflite/README.md#anatomy) of the benchmark.
+4. [Further information](#further-info)
 
 <a name="installation"></a>
 ## Installation instructions
 
-Please follow the common [installation instructions](../README.md#installation) first.
-
-**NB:** See [`ck-tensorflow:program:image-classification-tf-cpp`](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tf-cpp) for more details about the client program.
+Please follow the [common installation instructions](../README.md#installation) first.
 
 ### Install TensorFlow (C++)
 
@@ -289,3 +286,14 @@ $ ck benchmark program:image-classification-tf-cpp \
 "accuracy_top1": 0.71360
 "accuracy_top5": 0.90266
 ```
+
+<a name="further-info"></a>
+## Further information
+
+### Using Collective Knowledge
+See the [common instructions](../README.md) for information on how to use Collective Knowledge
+to learn about [the anatomy of a benchmark](../README.md#anatomy), or
+to inspect and visualize [experimental results](../README.md#results).
+
+### Using the client program
+See [`ck-tensorflow:program:image-classification-tf-cpp`](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tf-cpp) for more details about the client program.

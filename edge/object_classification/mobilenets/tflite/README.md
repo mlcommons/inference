@@ -2,13 +2,13 @@
 
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)
+3. [Reference accuracy](#accuracy)
+4. [Further information](#further-info)
 
 <a name="installation"></a>
 ## Installation instructions
 
-Please follow the common [installation instructions](../README.md#installation) first.
-
-**NB:** See [`ck-tensorflow:program:image-classification-tflite`](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tflite) for more details about the client program.
+Please follow the [common installation instructions](../README.md#installation) first.
 
 ### Install TFLite
 
@@ -185,3 +185,19 @@ $ ck benchmark program:image-classification-tflite \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
 
+<a name="accuracy"></a>
+## Reference accuracy
+**TODO**
+
+
+<a name="further-info"></a>
+## Further information
+
+### Using Collective Knowledge
+See the [common instructions](../README.md) for information on how to use Collective Knowledge
+to learn about [the anatomy of a benchmark](../README.md#anatomy), or
+to inspect and visualize [experimental results](../README.md#results).
+
+
+### Using the client program
+See [`ck-tensorflow:program:image-classification-tflite`](https://github.com/ctuning/ck-tensorflow/tree/master/program/image-classification-tflite) for more details about the client program.

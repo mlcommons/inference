@@ -5,6 +5,7 @@
 3. [Reference accuracy](#accuracy)
 4. [Further information](#further-info)
 
+
 <a name="installation"></a>
 ## Installation instructions
 
@@ -69,10 +70,9 @@ Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#bench
 $ ck install package --tags=dataset,imagenet,preprocessed
 ```
 
-### Run the ONNX image classification client
+### Run the ONNX Image Classification client
 
-#### MobileNet
-##### NHWC
+#### MobileNet, NHWC
 ```
 $ ck run program:image-classification-onnx-py
 ...
@@ -125,7 +125,7 @@ Accuracy top 5: 1.0 (1 of 1)
 --------------------------------
 ```
 
-##### NCHW
+#### MobileNet, NCHW
 ```
 $ ck run program:image-classification-onnx-py
 ...
@@ -180,7 +180,54 @@ Accuracy top 5: 1.0 (1 of 1)
 
 <a name="benchmarking"></a>
 ## Benchmarking instructions
-**TODO**
+
+### Benchmark the performance
+```
+$ ck benchmark program:image-classification-onnx-py --cmd_key=preprocessed \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-onnx-py-performance \
+--tags=mlperf,image-classification,mobilenet,onnx-py,performance \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```
+
+**NB:** When using the batch count of **N**, the program classifies **N** images, but
+the slow first run is not taken into account when computing the average
+classification time e.g.:
+```bash
+$ ck benchmark program:image-classification-onnx-py --cmd_key=preprocessed \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2
+...
+Batch 1 of 2
+Batch loaded in 0.001307s
+Batch classified in 0.186297s
+
+Batch 2 of 2
+Batch loaded in 0.000721s
+Batch classified in 0.029533s
+...
+Summary:
+-------------------------------
+Graph loaded in 0.018409s
+All images loaded in 0.002028s
+All images classified in 0.029533s
+Average classification time: 0.029533s
+Accuracy top 1: 0.5 (1 of 2)
+Accuracy top 5: 1.0 (2 of 2)
+--------------------------------
+```
+
+### Benchmark the accuracy
+```bash
+$ ck benchmark program:image-classification-onnx-py --cmd_key=preprocessed \
+--repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-onnx-py-accuracy \
+--tags=mlperf,image-classification,mobilenet,onnx-py,accuracy \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```
+**NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
+to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as if
+with `--env.CK_BATCH_COUNT=1`).
+
 
 <a name="accuracy"></a>
 ## Reference accuracy

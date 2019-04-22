@@ -1,0 +1,96 @@
+
+============:::MLPv0.5.0 Predict Latency==============
+	 batchsize 1
+  fps 	median: 29.5, 	mean: 29.3  latency 	median: 0.03389, 	mean: 0.03430
+
+============:::MLPv0.5.0 Overall Latency==============
+	 batchsize 1
+  fps 	median: 0.4, 	mean: 0.4  latency 	median: 2.63172, 	mean: 2.64530
+
+==========:::MLPv0.5.0 SSD-Mobilenetv1 Accuracy=========
+loading annotations into memory...
+Done (t=0.46s)
+creating index...
+index created!
+tf_result.json
+Loading and preparing results...
+DONE (t=5.73s)
+creating index...
+index created!
+Running per image evaluation...
+Evaluate annotation type *bbox*
+DONE (t=40.87s).
+Accumulating evaluation results...
+DONE (t=7.73s).
+
+==========:::MLPv0.5.0 COCO Eval Summary=========
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.204
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.329
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.213
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.021
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.166
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.452
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.205
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.287
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.302
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.046
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.279
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.618
+
+============:::MLPv0.5.0 Predict Latency==============
+	 batchsize 2
+  fps 	median: 58.7, 	mean: 58.3  latency 	median: 0.03405, 	mean: 0.03443
+
+============:::MLPv0.5.0 Overall Latency==============
+	 batchsize 2
+  fps 	median: 0.7, 	mean: 0.7  latency 	median: 2.77025, 	mean: 2.77357
+
+============:::MLPv0.5.0 Predict Latency==============
+	 batchsize 4
+  fps 	median: 117.0, 	mean: 116.1  latency 	median: 0.03418, 	mean: 0.03460
+
+============:::MLPv0.5.0 Overall Latency==============
+	 batchsize 4
+  fps 	median: 1.3, 	mean: 1.3  latency 	median: 3.11927, 	mean: 3.11325
+
+============:::MLPv0.5.0 Predict Latency==============
+	 batchsize 8
+  fps 	median: 234.8, 	mean: 233.3  latency 	median: 0.03408, 	mean: 0.03439
+
+============:::MLPv0.5.0 Overall Latency==============
+	 batchsize 8
+  fps 	median: 2.1, 	mean: 2.1  latency 	median: 3.79488, 	mean: 3.79754
+
+============:::MLPv0.5.0 Predict Latency==============
+	 batchsize 16
+  fps 	median: 469.2, 	mean: 465.0  latency 	median: 0.03410, 	mean: 0.03454
+
+============:::MLPv0.5.0 Overall Latency==============
+	 batchsize 16
+  fps 	median: 3.1, 	mean: 3.1  latency 	median: 5.15152, 	mean: 5.15499
+
+============:::MLPv0.5.0 Predict Latency==============
+	 batchsize 32
+  fps 	median: 937.5, 	mean: 932.5  latency 	median: 0.03413, 	mean: 0.03444
+
+============:::MLPv0.5.0 Overall Latency==============
+	 batchsize 32
+  fps 	median: 4.0, 	mean: 4.1  latency 	median: 7.90503, 	mean: 7.90422
+
+============:::MLPv0.5.0 Predict Latency==============
+	 batchsize 64
+  fps 	median: 1867.7, 	mean: 1859.0  latency 	median: 0.03427, 	mean: 0.03453
+
+============:::MLPv0.5.0 Overall Latency==============
+	 batchsize 64
+  fps 	median: 4.8, 	mean: 4.8  latency 	median: 13.33513, 	mean: 13.37430
+
+============:::MLPv0.5.0 Predict Latency==============
+	 batchsize 128
+  fps 	median: 3735.4, 	mean: 3718.2  latency 	median: 0.03427, 	mean: 0.03451
+
+============:::MLPv0.5.0 Overall Latency==============
+	 batchsize 128
+  fps 	median: 5.2, 	mean: 5.2  latency 	median: 24.40614, 	mean: 24.46676
+
+

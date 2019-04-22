@@ -1,5 +1,5 @@
 ## 1. Problem
-This is a tensorflow implementation of SSD-Mobilenetv1 for Object Detection on COCO 2017 test dataset.
+This is a tensorflow implementation of SSD-Mobilenetv1 for Object Detection on COCO 2017 test dataset. This code can be executed without any harness.
 
 ## 2. Direction
 ##### Steps to configure the machine

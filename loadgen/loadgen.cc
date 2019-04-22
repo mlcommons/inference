@@ -2,10 +2,10 @@
 
 #include <stdint.h>
 
+#include <atomic>
 #include <cassert>
-#include <condition_variable>
+#include <future>
 #include <iostream>
-#include <mutex>
 #include <random>
 #include <thread>
 
@@ -34,35 +34,42 @@ struct QueryMetadata {
   std::vector<SampleMetadata> samples;
 
   void Prepare(std::vector<QuerySample>* query_to_send) {
-    assert(wait_count == 0);
-    wait_count = query_to_send->size();
+    assert(wait_count.load() == 0);
+    size_t query_count = query_to_send->size();
     samples.clear();
-    samples.resize(wait_count);
-    for (size_t i = 0; i < wait_count; i++) {
+    samples.resize(query_count);
+    for (size_t i = 0; i < query_count; i++) {
       SampleMetadata* sample_metadata = &samples[i];
       sample_metadata->query_metadata = this;
       sample_metadata->sample_index = (*query_to_send)[i].index;
       (*query_to_send)[i].id = reinterpret_cast<ResponseId>(sample_metadata);
     }
+    wait_count.store(query_count);
+    all_samples_done = std::promise<void>();
   }
 
   void NotifySampleCompleted() {
-    std::unique_lock<std::mutex> lock(mutex);
-    wait_count--;
-    if (wait_count == 0) {
-      cv.notify_all();
+    size_t old_count = wait_count.fetch_sub(1);
+    if (old_count == 1) {
+      all_samples_done.set_value();
     }
   }
 
   void WaitForCompletion() {
-    std::unique_lock<std::mutex> lock(mutex);
-    cv.wait(lock, [&] { return wait_count == 0; });
+    all_samples_done.get_future().wait();
   }
 
  private:
-  std::mutex mutex;
-  std::condition_variable cv;
-  size_t wait_count = 0;
+  // Initializing as fulfilled prevents code from having to special
+  // case initial use vs reuse.
+  std::promise<void> init_promise_as_fulfilled() {
+    std::promise<void> init;
+    init.set_value();
+    return init;
+  }
+
+  std::atomic<size_t> wait_count { 0 };
+  std::promise<void> all_samples_done { init_promise_as_fulfilled() };
 };
 
 void QuerySamplesComplete(QuerySampleResponse* responses,

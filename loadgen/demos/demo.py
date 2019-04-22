@@ -27,7 +27,6 @@ def process_query_async(query_samples, i_slice):
 
 
 def issue_query(query_samples):
-    print(query_samples)
     threading.Thread(
             target=process_query_async,
             args=(query_samples, 0)).start()

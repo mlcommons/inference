@@ -26,6 +26,8 @@ struct QuerySampleResponse {
   size_t size;  // Size in bytes.
 };
 
+typedef uint64_t QuerySampleLatency;  // In nanoseconds.
+
 }  // namespace mlperf
 
 #endif  // QUERY_SAMPLE_H_

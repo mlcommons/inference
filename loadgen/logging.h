@@ -75,23 +75,32 @@ class AsyncLog {
     out_stream_.flush();
 
     // The trace duration currently corresponds to response latency.
-    latencies_.push_back(std::chrono::nanoseconds(dur));
-    assert(latencies_remaining_ != 0);
-    latencies_remaining_--;
-    if (latencies_remaining_ == 0) {
-      all_latencies_recorded_.set_value();
+    // Trace id corresponds to the sample sequence id.
+    std::unique_lock<std::mutex> lock(latencies_mutex_);
+    if (latencies_.size() < id + 1) {
+      latencies_.resize(id + 1, std::chrono::nanoseconds(0));
+    }
+    latencies_[id] = std::chrono::nanoseconds(dur);
+    latencies_recorded_++;
+    if (AllLatenciesRecorded()) {
+      all_latencies_recorded_.notify_all();
     }
   }
 
-  void SetExpectedLatencies(size_t count) {
-    assert(latencies_remaining_ == 0);
-    latencies_remaining_ = count;
-    all_latencies_recorded_ = std::promise<void>();
+  void RestartLatencyRecording() {
+    std::unique_lock<std::mutex> lock(latencies_mutex_);
+    assert(latencies_.empty());
+    assert(latencies_recorded_ == latencies_expected_);
+    latencies_recorded_ = 0;
+    latencies_expected_ = 0;
   }
 
-  std::vector<std::chrono::nanoseconds> GetLatenciesBlocking() {
+  std::vector<std::chrono::nanoseconds> GetLatenciesBlocking(
+          size_t expected_count) {
     std::vector<std::chrono::nanoseconds> latencies;
-    all_latencies_recorded_.get_future().wait();
+    std::unique_lock<std::mutex> lock(latencies_mutex_);
+    latencies_expected_ = expected_count;
+    all_latencies_recorded_.wait(lock, [&]{ return AllLatenciesRecorded(); });
     latencies.swap(latencies_);
     return latencies;
   }
@@ -111,10 +120,16 @@ class AsyncLog {
     LogArgs(args...);
   }
 
-  std::ostream &out_stream_;
+  std::ostream &out_stream_;  
+
+  std::mutex latencies_mutex_;
+  std::condition_variable all_latencies_recorded_;
   std::vector<std::chrono::nanoseconds> latencies_;
-  size_t latencies_remaining_ = 0;
-  std::promise<void> all_latencies_recorded_;
+  size_t latencies_recorded_ = 0;
+  size_t latencies_expected_ = 0;
+  bool AllLatenciesRecorded() {
+    return latencies_recorded_ == latencies_expected_;
+  }
 };
 
 // Logs all threads belonging to a run.
@@ -134,8 +149,9 @@ class Logger {
   void RegisterTlsLogger(TlsLogger* tls_logger);
   void UnRegisterTlsLogger(TlsLogger* tls_logger);
 
-  void SetExpectedLatencies(size_t count);
-  std::vector<std::chrono::nanoseconds> GetLatenciesBlocking();
+  void RestartLatencyRecording();
+  std::vector<std::chrono::nanoseconds> GetLatenciesBlocking(
+      size_t expected_count);
 
  private:
   TlsLogger* GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id);

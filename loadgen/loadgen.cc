@@ -255,13 +255,12 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   constexpr size_t kMaxAsyncQueries = 4;
   constexpr int64_t kNanosecondsPerSecond = 1000000000;
 
-  logger->SetExpectedLatencies(qsl->TotalSampleCount());
-
   SampleCompleteDetailed sample_complete_logger(logger);
   std::mt19937 gen(kSeed);
 
   if (settings.scenario != TestScenario::MultiStream) {
     std::cerr << "Unsupported scenario. Only MultiStream supported.\n";
+    return;
   }
 
   // Generate indicies for all available samples in the QSL.
@@ -278,7 +277,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                            &gen);
 
   // Iterate through each loadable set.
-  auto start = PerfClock::now();
+  PerfClock::time_point start = PerfClock::now();
   size_t i_query = 0;
   uint64_t sample_sequence_id = 0;
   uint64_t tick_count = 0;
@@ -286,6 +285,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   QueryMetadata* issued_query_infos[kMaxAsyncQueries] = {}; // zeroes.
   for (auto &loadable_set : loadable_sets) {
     qsl->LoadSamplesToRam(loadable_set.data(), loadable_set.size());
+    logger->RestartLatencyRecording();
 
     // Split the set up into random queries.
     std::vector<std::vector<QuerySampleIndex>> queries =
@@ -304,48 +304,135 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       // Limit the number of oustanding async queries by waiting for
       // old queries here.
       size_t i_query_pool = i_query % kQueryPoolSize;
-      QueryMetadata& issued_query_info = query_info_pool[i_query_pool];
+      QueryMetadata& query_info = query_info_pool[i_query_pool];
 
-      auto wait_for_slot_time = PerfClock::now();
+      PerfClock::time_point wait_for_slot_time = PerfClock::now();
       size_t i_limitting_query = i_query % kMaxAsyncQueries;
       QueryMetadata*& limitting_query = issued_query_infos[i_limitting_query];
       if (limitting_query != nullptr) {
         limitting_query->WaitForAllSamplesCompleted();
       }
-      limitting_query = &issued_query_info;
+      limitting_query = &query_info;
 
-      assert(issued_query_info.ReadyForNewQuery());
+      assert(query_info.ReadyForNewQuery());
 
       // Issue the query to the SUT.
       std::vector<QuerySample> query_to_send = SampleIndexesToQuery(query);
-      issued_query_info.Prepare(&query_to_send, &sample_sequence_id);
-      issued_query_info.sample_complete_logger = &sample_complete_logger;
-      issued_query_info.sequence_id = i_query;
-      issued_query_info.scheduled_time = query_start_time;
-      issued_query_info.wait_for_slot_time = wait_for_slot_time;
-      issued_query_info.issued_start_time = PerfClock::now();
+      query_info.Prepare(&query_to_send, &sample_sequence_id);
+      query_info.sample_complete_logger = &sample_complete_logger;
+      query_info.sequence_id = i_query;
+      query_info.scheduled_time = query_start_time;
+      query_info.wait_for_slot_time = wait_for_slot_time;
+      query_info.issued_start_time = PerfClock::now();
       sut->IssueQuery(query_to_send.data(), query_to_send.size());
       i_query++;
     }
 
+    // Wait for tail queries to complete and collect all the latencies.
+    // We have to keep the synchronization primitives and loaded samples
+    // alive until the SUT is done with them.
+    logger->GetLatenciesBlocking(loadable_set.size());
     qsl->UnloadSamplesFromRam(loadable_set.data(), loadable_set.size());
+  }
+}
+
+// TODO: Share logic duplicated in RunVerificationMode.
+void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
+                        const TestSettings& settings, Logger* logger) {
+  // kQueryPoolSize should be big enough that we don't need to worry about
+  // logging falling too far behind.
+  constexpr size_t kQueryPoolSize = 1024;
+  constexpr size_t kMaxAsyncQueries = 1;
+  constexpr size_t kMinQueryCount = 10000;  // TODO: Actual value.
+  constexpr std::chrono::minutes kMinDuration(1);
+
+  logger->RestartLatencyRecording();
+
+  SampleCompleteDetailed sample_complete_logger(logger);
+  std::mt19937 gen(kSeed);
+
+  if (settings.scenario != TestScenario::SingleStream) {
+    std::cerr << "Unsupported scenario. Only SingleStream supported.\n";
+    return;
+  }
+
+  // Generate indicies for all available samples in the QSL.
+  size_t qsl_total_count = qsl->TotalSampleCount();
+  std::vector<QuerySampleIndex> qsl_samples(qsl_total_count);
+  for(size_t i = 0; i < qsl_total_count; i++) {
+    qsl_samples[i] = static_cast<QuerySampleIndex>(i);
+  }
+
+  // Generate random sets of samples that we can load into RAM.
+  std::vector<std::vector<QuerySampleIndex>> loadable_sets =
+      GenerateDisjointSets(qsl_samples,
+                           qsl->PerformanceSampleCount(),
+                           &gen);
+
+  // Use first loadable set as the performance set.
+  std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
+
+  size_t i_query = 0;
+  uint64_t sample_sequence_id = 0;
+  QueryMetadata query_info_pool[kQueryPoolSize];
+  QueryMetadata* issued_query_infos[kMaxAsyncQueries] = {}; // zeroes.
+
+  qsl->LoadSamplesToRam(performance_set.data(), performance_set.size());
+
+  // Split the set up into random queries.
+  std::vector<std::vector<QuerySampleIndex>> queries =
+      GenerateDisjointSets(performance_set, settings.samples_per_query, &gen);
+
+  std::uniform_int_distribution<> uniform_distribution(
+        0, performance_set.size()-1);
+
+  PerfClock::time_point start = PerfClock::now();
+  PerfClock::time_point last_now = start;
+  PerfClock::time_point run_to_time_point_min = start + kMinDuration;
+  while (i_query < kMinQueryCount || last_now < run_to_time_point_min) {
+    std::vector<QuerySampleIndex> query(1, uniform_distribution(gen));
+
+    // Limit the number of oustanding async queries by waiting for
+    // old queries here.
+    size_t i_query_pool = i_query % kQueryPoolSize;
+    QueryMetadata& query_info = query_info_pool[i_query_pool];
+
+    PerfClock::time_point wait_for_slot_time = last_now;
+    size_t i_limitting_query = i_query % kMaxAsyncQueries;
+    QueryMetadata*& limitting_query = issued_query_infos[i_limitting_query];
+    if (limitting_query != nullptr) {
+      limitting_query->WaitForAllSamplesCompleted();
+    }
+    limitting_query = &query_info;
+
+    assert(query_info.ReadyForNewQuery());
+
+    // Issue the query to the SUT.
+    std::vector<QuerySample> query_to_send = SampleIndexesToQuery(query);
+    query_info.Prepare(&query_to_send, &sample_sequence_id);
+    query_info.sample_complete_logger = &sample_complete_logger;
+    query_info.sequence_id = i_query;
+    query_info.wait_for_slot_time = wait_for_slot_time;
+    last_now = PerfClock::now();
+    query_info.scheduled_time = last_now;
+    query_info.issued_start_time = last_now;
+    sut->IssueQuery(query_to_send.data(), query_to_send.size());
+    i_query++;
   }
 
   // Wait for tail queries to complete and collect all the latencies.
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
+  const size_t expected_latencies = i_query - 1;
   std::vector<std::chrono::nanoseconds> latencies =
-      logger->GetLatenciesBlocking();
+      logger->GetLatenciesBlocking(expected_latencies);
 
-  // Compute percentile.  
+  // Compute percentile.
   std::sort(latencies.begin(), latencies.end());
   size_t i90 = latencies.size() * .9;
   std::cout << "90th percentile latency: " << latencies[i90].count() << "ns\n";
-}
 
-void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-                        const TestSettings& settings) {
-  std::cerr << "RunPerformanceMode not implemented.\n";
+  qsl->UnloadSamplesFromRam(performance_set.data(), performance_set.size());
 }
 
 void StartTest(SystemUnderTest* sut,
@@ -358,13 +445,13 @@ void StartTest(SystemUnderTest* sut,
   switch (settings.mode) {
     case TestMode::SubmissionRun:
       RunVerificationMode(sut, qsl, settings, &logger);
-      RunPerformanceMode(sut, qsl, settings);
+      RunPerformanceMode(sut, qsl, settings, &logger);
       break;
     case TestMode::AccuracyOnly:
       RunVerificationMode(sut, qsl, settings, &logger);
       break;
     case TestMode::PerformanceOnly:
-      RunPerformanceMode(sut, qsl, settings);
+      RunPerformanceMode(sut, qsl, settings, &logger);
       break;
     case TestMode::SearchForQps:
       std::cerr << "TestMode::SearchForQps not implemented.\n";

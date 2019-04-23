@@ -3,9 +3,11 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <chrono>
 #include <functional>
+#include <future>
 #include <list>
 #include <ostream>
 #include <mutex>
@@ -45,14 +47,10 @@ class AsyncLog {
     out_stream_.flush();
   }
 
-
   template <typename ...Args>
   void AsyncEvent(const std::string& trace_name, uint64_t id,
                   uint64_t ts, uint64_t dur,
                   const Args... args) {
-    // The trace duration currently corresponds to response latency.
-    latencies_.push_back(std::chrono::nanoseconds(dur));
-
     out_stream_ << "{\"name\": \"" << trace_name << "\", ";
     out_stream_ << "\"cat\": \"default\", ";
     out_stream_ << "\"ph\": \"b\", ";
@@ -75,10 +73,25 @@ class AsyncLog {
     out_stream_ << "\"ts\": " << ts + dur << " },\n";
 
     out_stream_.flush();
+
+    // The trace duration currently corresponds to response latency.
+    latencies_.push_back(std::chrono::nanoseconds(dur));
+    assert(latencies_remaining_ != 0);
+    latencies_remaining_--;
+    if (latencies_remaining_ == 0) {
+      all_latencies_recorded_.set_value();
+    }
   }
 
-  std::vector<std::chrono::nanoseconds> GetLatencies() {
+  void SetExpectedLatencies(size_t count) {
+    assert(latencies_remaining_ == 0);
+    latencies_remaining_ = count;
+    all_latencies_recorded_ = std::promise<void>();
+  }
+
+  std::vector<std::chrono::nanoseconds> GetLatenciesBlocking() {
     std::vector<std::chrono::nanoseconds> latencies;
+    all_latencies_recorded_.get_future().wait();
     latencies.swap(latencies_);
     return latencies;
   }
@@ -100,6 +113,8 @@ class AsyncLog {
 
   std::ostream &out_stream_;
   std::vector<std::chrono::nanoseconds> latencies_;
+  size_t latencies_remaining_ = 0;
+  std::promise<void> all_latencies_recorded_;
 };
 
 // Logs all threads belonging to a run.
@@ -119,7 +134,8 @@ class Logger {
   void RegisterTlsLogger(TlsLogger* tls_logger);
   void UnRegisterTlsLogger(TlsLogger* tls_logger);
 
-  std::vector<std::chrono::nanoseconds> GetLatencies();
+  void SetExpectedLatencies(size_t count);
+  std::vector<std::chrono::nanoseconds> GetLatenciesBlocking();
 
  private:
   TlsLogger* GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id);

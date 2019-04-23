@@ -190,8 +190,12 @@ void Logger::UnRegisterTlsLogger(TlsLogger* tls_logger) {
   tls_loggers_registerd_.erase(tls_logger);
 }
 
-std::vector<std::chrono::nanoseconds> Logger::GetLatencies() {
-  return async_logger_.GetLatencies();
+void Logger::SetExpectedLatencies(size_t count) {
+  async_logger_.SetExpectedLatencies(count);
+}
+
+std::vector<std::chrono::nanoseconds> Logger::GetLatenciesBlocking() {
+  return async_logger_.GetLatenciesBlocking();
 }
 
 TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {

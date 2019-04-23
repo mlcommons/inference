@@ -270,13 +270,13 @@ void Logger::IOThread() {
     GatherNewSwapRequests(&threads_to_swap);
     for (TlsLogger* thread : threads_to_swap) {
       if (thread->ReadBufferHasBeenConsumed()) {
-        // Don't swap buffers again until wev'e finish reading the
+        thread->SwapBuffers();
+        // After swapping a thread, it's ready to be read.
+        threads_to_read_.push_back(thread);
+      } else {
+        // Don't swap buffers again until we've finish reading the
         // previous swap.
         threads_to_swap_deferred_.push_back(thread);
-      } else {
-        // After swapping a thread, it's ready to be read.
-        thread->SwapBuffers();
-        threads_to_read_.push_back(thread);
       }
     }
 
@@ -291,6 +291,7 @@ void Logger::IOThread() {
           entry(async_logger_);
         }
         (*thread)->FinishReadingEntries();
+        // Mark for removal by the call to RemoveNulls below.
         *thread = nullptr;
 
         // Clean up tasks
@@ -319,18 +320,16 @@ TlsLogger::~TlsLogger() {
 // "lock" on at least one of the buffers for writting.
 // Notificiation is also lock free.
 void TlsLogger::Log(AsyncLogEntry &&entry) {
-  size_t i_write = i_write_.load();
+  size_t cas_fail_count = 0;
   auto unlocked = EntryState::Unlocked;
-  if (!entry_states_[i_write].compare_exchange_strong(
-        unlocked, EntryState::WriteLock)) {
+  size_t i_write = i_write_.load();
+  while (!entry_states_[i_write].compare_exchange_strong(
+           unlocked, EntryState::WriteLock)) {
+    unlocked = EntryState::Unlocked;
     i_write ^= 1;
-    // Obtaining a write lock on the second buffer will always succeed since
-    // the Logger will not attempt a read lock on it (if it has a write lock on
-    // the first buffer) until after the call to RequestSwapBuffers below.
-    bool success = entry_states_[i_write].compare_exchange_strong(
-             unlocked, EntryState::WriteLock);
-    // TODO: This assert has triggered. Why?
-    assert(success);
+    // We may need to try 2 times, since there could be a race with a
+    // previous SwapBuffers request.
+    assert(++cas_fail_count <= 1);
   }
   entries_[i_write].emplace_back(std::forward<AsyncLogEntry>(entry));
 
@@ -352,7 +351,7 @@ void TlsLogger::SwapBuffers() {
            read_lock, EntryState::Unlocked);
   assert(success);
 
-  i_write_.fetch_xor(1);
+  i_write_.store(i_read_);
   i_read_ ^= 1;
   unread_swaps_++;
 }
@@ -373,7 +372,7 @@ void TlsLogger::FinishReadingEntries() {
 }
 
 bool TlsLogger::ReadBufferHasBeenConsumed() {
-  return unread_swaps_ != 0;
+  return unread_swaps_ == 0;
 }
 
 void Log(Logger *logger, AsyncLogEntry &&entry) {

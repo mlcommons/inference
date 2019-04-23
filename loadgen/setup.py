@@ -15,6 +15,7 @@ from setuptools import setup, Extension
 sources = [
   "bindings/python_api.cc",
   "loadgen.cc",
+  "logging.cc",
 ]
 
 mlperf_loadgen_module = Extension('mlperf_loadgen',

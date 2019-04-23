@@ -190,12 +190,13 @@ void Logger::UnRegisterTlsLogger(TlsLogger* tls_logger) {
   tls_loggers_registerd_.erase(tls_logger);
 }
 
-void Logger::SetExpectedLatencies(size_t count) {
-  async_logger_.SetExpectedLatencies(count);
+void Logger::RestartLatencyRecording() {
+  async_logger_.RestartLatencyRecording();
 }
 
-std::vector<std::chrono::nanoseconds> Logger::GetLatenciesBlocking() {
-  return async_logger_.GetLatenciesBlocking();
+std::vector<std::chrono::nanoseconds> Logger::GetLatenciesBlocking(
+    size_t expected_count) {
+  return async_logger_.GetLatenciesBlocking(expected_count);
 }
 
 TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {
@@ -328,6 +329,7 @@ void TlsLogger::Log(AsyncLogEntry &&entry) {
     // the first buffer) until after the call to RequestSwapBuffers below.
     bool success = entry_states_[i_write].compare_exchange_strong(
              unlocked, EntryState::WriteLock);
+    // TODO: This assert has triggered. Why?
     assert(success);
   }
   entries_[i_write].emplace_back(std::forward<AsyncLogEntry>(entry));

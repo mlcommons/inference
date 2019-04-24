@@ -439,7 +439,14 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   sut->ReportLatencyResults(latencies);
 
   // Compute percentile.
+  // TODO: Output these to a summary log.
+  std::cout << "Loadgen results summary:\n";
   std::sort(latencies.begin(), latencies.end());
+  int64_t accumulator = 0;
+  for (auto l : latencies) {
+    accumulator += l;
+  }
+  std::cout << "Mean latency: " << accumulator / latencies.size() << "ns\n";
   size_t i90 = latencies.size() * .9;
   std::cout << "90th percentile latency: " << latencies[i90] << "ns\n";
 

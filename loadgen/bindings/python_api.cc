@@ -19,13 +19,18 @@ namespace mlperf {
 namespace {
 
 using IssueQueryCallback = std::function<void(std::vector<QuerySample>)>;
+using ReportLatencyResultsCallback = std::function<void(std::vector<int64_t>)>;
 
 // Forwards SystemUnderTest calls to relevant callbacks.
 class SystemUnderTestTrampoline : public SystemUnderTest {
  public:
-  SystemUnderTestTrampoline(std::string name, IssueQueryCallback issue_cb)
+  SystemUnderTestTrampoline(
+      std::string name,
+      IssueQueryCallback issue_cb,
+      ReportLatencyResultsCallback report_latency_results_cb)
       : name_(std::move(name)),
-        issue_cb_(issue_cb) {}
+        issue_cb_(issue_cb),
+        report_latency_results_cb_(report_latency_results_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
   const std::string& Name() const override { return name_; }
@@ -35,9 +40,16 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
     issue_cb_(samples);
   }
 
+  void ReportLatencyResults(
+        const std::vector<QuerySampleLatency>& latencies_ns) override {
+    pybind11::gil_scoped_acquire gil_acquirer;
+    report_latency_results_cb_(latencies_ns);
+  }
+
  private:
   std::string name_;
   IssueQueryCallback issue_cb_;
+  ReportLatencyResultsCallback report_latency_results_cb_;
 };
 
 using LoadSamplesToRamCallback =
@@ -95,8 +107,10 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 }  // namespace
 
 namespace py {
-  void* ConstructSUT(IssueQueryCallback issue_cb) {
-    SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline("PySUT", issue_cb);
+  void* ConstructSUT(IssueQueryCallback issue_cb,
+                     ReportLatencyResultsCallback report_latency_results_cb) {
+    SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
+          "PySUT", issue_cb, report_latency_results_cb);
     return reinterpret_cast<void*>(sut);
   }
 

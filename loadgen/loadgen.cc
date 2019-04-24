@@ -345,11 +345,13 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 // TODO: Share logic duplicated in RunVerificationMode.
 void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                         const TestSettings& settings, Logger* logger) {
-  // kQueryPoolSize should be big enough that we don't need to worry about
-  // logging falling too far behind.
-  constexpr size_t kQueryPoolSize = 1024;
+  // kQueryInfoPoolSize should be big enough that we don't need to worry
+  // about logging falling too far behind. And queries being processed
+  // too far out of order.
+  // TODO: Make this a TestSetting.
+  constexpr size_t kQueryInfoPoolSize = 32 * 1024;
   constexpr size_t kMaxAsyncQueries = 1;
-  constexpr size_t kMinQueryCount = 10000;  // TODO: Actual value.
+  constexpr size_t kMinQueryCount = 1024;
   constexpr std::chrono::minutes kMinDuration(1);
 
   logger->RestartLatencyRecording();
@@ -380,7 +382,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   size_t i_query = 0;
   uint64_t sample_sequence_id = 0;
-  QueryMetadata query_info_pool[kQueryPoolSize];
+  QueryMetadata query_info_pool[kQueryInfoPoolSize];
   QueryMetadata* issued_query_infos[kMaxAsyncQueries] = {}; // zeroes.
 
   qsl->LoadSamplesToRam(performance_set.data(), performance_set.size());
@@ -400,7 +402,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
     // Limit the number of oustanding async queries by waiting for
     // old queries here.
-    size_t i_query_pool = i_query % kQueryPoolSize;
+    size_t i_query_pool = i_query % kQueryInfoPoolSize;
     QueryMetadata& query_info = query_info_pool[i_query_pool];
 
     PerfClock::time_point wait_for_slot_time = last_now;
@@ -430,8 +432,8 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
   const size_t expected_latencies = i_query - 1;
-  std::vector<std::chrono::nanoseconds> latencies =
-      logger->GetLatenciesBlocking(expected_latencies);
+  std::vector<std::chrono::nanoseconds> latencies(
+      logger->GetLatenciesBlocking(expected_latencies));
 
   // Compute percentile.
   std::sort(latencies.begin(), latencies.end());

@@ -174,7 +174,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
 
   pybind11::class_<QuerySampleResponse>(m, "QuerySampleResponse")
       .def(pybind11::init<>())
-      .def(pybind11::init<ResponseId, intptr_t, size_t>())
+      .def(pybind11::init<ResponseId, uintptr_t, size_t>())
       .def_readwrite("id", &QuerySampleResponse::id)
       .def_readwrite("data", &QuerySampleResponse::data)
       .def_readwrite("size", &QuerySampleResponse::size);

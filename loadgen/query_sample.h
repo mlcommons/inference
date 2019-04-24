@@ -8,7 +8,7 @@
 namespace mlperf {
 
 // ResponseId represents a unique identifier for a sample of an issued query.
-typedef intptr_t ResponseId;
+typedef uintptr_t ResponseId;
 
 typedef size_t QuerySampleIndex;
 
@@ -22,7 +22,7 @@ struct QuerySample {
 // QuerySampleResponse represents a single response to QuerySample
 struct QuerySampleResponse {
   ResponseId id;
-  intptr_t data;
+  uintptr_t data;
   size_t size;  // Size in bytes.
 };
 

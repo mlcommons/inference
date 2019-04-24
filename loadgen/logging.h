@@ -142,10 +142,6 @@ class Logger {
 
   void RequestSwapBuffers(TlsLogger* tls_logger);
 
-  PerfClock::time_point origin_time() {
-    return origin_time_;
-  }
-
   void RegisterTlsLogger(TlsLogger* tls_logger);
   void UnRegisterTlsLogger(TlsLogger* tls_logger);
 
@@ -165,7 +161,6 @@ class Logger {
   std::ostream &out_stream_;
   const size_t max_threads_to_log_;
   std::thread io_thread_;
-  const PerfClock::time_point origin_time_;
 
   // Accessed by IOThead only.
   const std::chrono::duration<double> poll_period_;

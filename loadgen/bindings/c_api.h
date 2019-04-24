@@ -20,7 +20,7 @@ namespace c {
 
 // Optional opaque client data creators of SUTs and QSLs can pass to their
 // callback invocations. Helps avoids global variables.
-typedef intptr_t ClientData;
+typedef uintptr_t ClientData;
 
 // Create and destroy an opaque SUT pointer based on C callbacks.
 typedef void (*IssueQueryCallback)(ClientData, QuerySample*, size_t);

@@ -30,10 +30,9 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
   const std::string& Name() const override { return name_; }
 
-  void IssueQuery(QuerySample* samples, size_t sample_count) override {
+  void IssueQuery(const std::vector<QuerySample>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    // TODO: Get rid of copies.
-    issue_cb_(std::vector<QuerySample>(samples, samples+sample_count));
+    issue_cb_(samples);
   }
 
  private:
@@ -49,10 +48,12 @@ using UnloadSamplesFromRamCallback =
 // Forwards QuerySampleLibrary calls to relevant callbacks.
 class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
  public:
-  QuerySampleLibraryTrampoline(std::string name,
-                               size_t total_sample_count, size_t performance_sample_count,
-                               LoadSamplesToRamCallback load_samples_to_ram_cb,
-                               UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
+  QuerySampleLibraryTrampoline(
+    std::string name,
+    size_t total_sample_count,
+    size_t performance_sample_count,
+    LoadSamplesToRamCallback load_samples_to_ram_cb,
+    UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
     : name_(std::move(name)),
       total_sample_count_(total_sample_count),
       performance_sample_count_(performance_sample_count),
@@ -64,19 +65,14 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   const size_t TotalSampleCount() { return total_sample_count_; }
   const size_t PerformanceSampleCount() { return performance_sample_count_; }
 
-  void LoadSamplesToRam(QuerySampleIndex* samples,
-                        size_t sample_count) override {
+  void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    // TODO: Get rid of copies.
-    load_samples_to_ram_cb_(
-        std::vector<QuerySampleIndex>(samples, samples+sample_count));
+    load_samples_to_ram_cb_(samples);
   }
-  void UnloadSamplesFromRam(QuerySampleIndex* samples,
-                            size_t sample_count) override {
+  void UnloadSamplesFromRam(
+      const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    // TODO: Get rid of copies.
-    unload_samlpes_from_ram_cb_(
-        std::vector<QuerySampleIndex>(samples, samples+sample_count));
+    unload_samlpes_from_ram_cb_(samples);
   }
 
   // TODO(brianderson): Accuracy Metric API.

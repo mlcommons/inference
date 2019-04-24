@@ -27,13 +27,13 @@ class QuerySampleLibrary {
   // Loads the requested query samples into memory.
   // Paired with calls to UnloadSamplesFromRam.
   // The load generator will never load a currently loaded sample.
-  virtual void LoadSamplesToRam(QuerySampleIndex* samples,
-                                size_t sample_count) = 0;
+  virtual void LoadSamplesToRam(
+      const std::vector<QuerySampleIndex>& samples) = 0;
 
   // Unloads the requested query samples from memory.
   // The load generator will never unload a currently unloaded sample.
-  virtual void UnloadSamplesFromRam(QuerySampleIndex* samples,
-                                    size_t sample_count) = 0;
+  virtual void UnloadSamplesFromRam(
+      const std::vector<QuerySampleIndex>& samples) = 0;
 
   // Starts an accuracy verification cycle.
   virtual void ResetAccuracyMetric() = 0;

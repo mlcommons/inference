@@ -23,8 +23,8 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
   const std::string& Name() const override { return name_; }
 
-  void IssueQuery(QuerySample* samples, size_t sample_count) override {
-    (*issue_cb_)(client_data_, samples, sample_count);
+  void IssueQuery(const std::vector<QuerySample>& samples) override {
+    (*issue_cb_)(client_data_, samples.data(), samples.size());
   }
 
  private:
@@ -53,10 +53,13 @@ namespace {
 // Forwards QuerySampleLibrary calls to relevant callbacks.
 class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
  public:
-  QuerySampleLibraryTrampoline(ClientData client_data, std::string name,
-                               size_t total_sample_count, size_t performance_sample_count,
-                               LoadSamplesToRamCallback load_samples_to_ram_cb,
-                               UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
+  QuerySampleLibraryTrampoline(
+      ClientData client_data,
+      std::string name,
+      size_t total_sample_count,
+      size_t performance_sample_count,
+      LoadSamplesToRamCallback load_samples_to_ram_cb,
+      UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
       : client_data_(client_data),
         name_(std::move(name)),
         total_sample_count_(total_sample_count),
@@ -69,13 +72,13 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   const size_t TotalSampleCount() { return total_sample_count_; }
   const size_t PerformanceSampleCount() { return performance_sample_count_; }
 
-  void LoadSamplesToRam(QuerySampleIndex* samples,
-                        size_t sample_count) override {
-    (*load_samples_to_ram_cb_)(client_data_, samples, sample_count);
+  void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
+    (*load_samples_to_ram_cb_)(client_data_, samples.data(), samples.size());
   }
-  void UnloadSamplesFromRam(QuerySampleIndex* samples,
-                            size_t sample_count) override {
-    (*unload_samlpes_from_ram_cb_)(client_data_, samples, sample_count);
+  void UnloadSamplesFromRam(
+      const std::vector<QuerySampleIndex>& samples) override {
+    (*unload_samlpes_from_ram_cb_)(
+          client_data_, samples.data(), samples.size());
   }
 
   // TODO(brianderson): Accuracy Metric API.

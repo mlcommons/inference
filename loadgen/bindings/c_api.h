@@ -23,16 +23,16 @@ namespace c {
 typedef uintptr_t ClientData;
 
 // Create and destroy an opaque SUT pointer based on C callbacks.
-typedef void (*IssueQueryCallback)(ClientData, QuerySample*, size_t);
+typedef void (*IssueQueryCallback)(ClientData, const QuerySample*, size_t);
 void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,
                    IssueQueryCallback issue_cb);
 void DestroySUT(void* sut);
 
 // Create and destroy an opaque QSL pointer based on C callbacks.
 typedef void (*LoadSamplesToRamCallback)(
-    ClientData, QuerySampleIndex*, size_t);
+    ClientData, const QuerySampleIndex*, size_t);
 typedef void (*UnloadSamplesFromRamCallback)(
-    ClientData, QuerySampleIndex*, size_t);
+    ClientData, const QuerySampleIndex*, size_t);
 void* ConstructQSL(ClientData client_data, const char* name, size_t name_length,
                    size_t total_sample_count, size_t performance_sample_count,
                    LoadSamplesToRamCallback load_samples_to_ram_cb,

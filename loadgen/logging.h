@@ -16,6 +16,8 @@
 #include <vector>
 #include <unordered_set>
 
+#include "query_sample.h"
+
 namespace mlperf {
 
 class AsyncLog;
@@ -76,11 +78,13 @@ class AsyncLog {
 
     // The trace duration currently corresponds to response latency.
     // Trace id corresponds to the sample sequence id.
+    // TODO: Allow duration to be negative in case of clock irregularities
+    // for latency reporting purposes.
     std::unique_lock<std::mutex> lock(latencies_mutex_);
     if (latencies_.size() < id + 1) {
-      latencies_.resize(id + 1, std::chrono::nanoseconds(0));
+      latencies_.resize(id + 1, std::numeric_limits<QuerySampleLatency>::min());
     }
-    latencies_[id] = std::chrono::nanoseconds(dur);
+    latencies_[id] = dur;
     latencies_recorded_++;
     if (AllLatenciesRecorded()) {
       all_latencies_recorded_.notify_all();
@@ -95,9 +99,9 @@ class AsyncLog {
     latencies_expected_ = 0;
   }
 
-  std::vector<std::chrono::nanoseconds> GetLatenciesBlocking(
+  std::vector<QuerySampleLatency> GetLatenciesBlocking(
           size_t expected_count) {
-    std::vector<std::chrono::nanoseconds> latencies;
+    std::vector<QuerySampleLatency> latencies;
     std::unique_lock<std::mutex> lock(latencies_mutex_);
     latencies_expected_ = expected_count;
     all_latencies_recorded_.wait(lock, [&]{ return AllLatenciesRecorded(); });
@@ -124,7 +128,7 @@ class AsyncLog {
 
   std::mutex latencies_mutex_;
   std::condition_variable all_latencies_recorded_;
-  std::vector<std::chrono::nanoseconds> latencies_;
+  std::vector<QuerySampleLatency> latencies_;
   size_t latencies_recorded_ = 0;
   size_t latencies_expected_ = 0;
   bool AllLatenciesRecorded() {
@@ -146,8 +150,7 @@ class Logger {
   void UnRegisterTlsLogger(TlsLogger* tls_logger);
 
   void RestartLatencyRecording();
-  std::vector<std::chrono::nanoseconds> GetLatenciesBlocking(
-      size_t expected_count);
+  std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
 
  private:
   TlsLogger* GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id);

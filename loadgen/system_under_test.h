@@ -23,8 +23,13 @@ class SystemUnderTest {
   // time on another thread or b) it may block and signal completion on the
   // current stack. The load generator will handle both cases properly.
   // Note: The data for neighboring samples are not contiguous.
-  virtual void IssueQuery(QuerySample* samples,
-                          size_t sample_count) = 0;
+  virtual void IssueQuery(const std::vector<QuerySample>& samples) = 0;
+
+  // Reports the raw latency results to the SUT of each sample issued as
+  // recorded by the load generator.
+  // Units are nanoseconds.
+  virtual void ReportLatencyResults(
+      const std::vector<QuerySampleLatency>& latencies_ns) {}
 };
 
 }  // namespace mlperf

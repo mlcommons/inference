@@ -290,7 +290,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   QueryMetadata query_info_pool[kQueryPoolSize];
   QueryMetadata* issued_query_infos[kMaxAsyncQueries] = {}; // zeroes.
   for (auto &loadable_set : loadable_sets) {
-    qsl->LoadSamplesToRam(loadable_set.data(), loadable_set.size());
+    qsl->LoadSamplesToRam(loadable_set);
     logger->RestartLatencyRecording();
 
     // Split the set up into random queries.
@@ -330,7 +330,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       query_info.scheduled_time = query_start_time;
       query_info.wait_for_slot_time = wait_for_slot_time;
       query_info.issued_start_time = PerfClock::now();
-      sut->IssueQuery(query_to_send.data(), query_to_send.size());
+      sut->IssueQuery(query_to_send);
       i_query++;
     }
 
@@ -338,11 +338,12 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     // We have to keep the synchronization primitives and loaded samples
     // alive until the SUT is done with them.
     logger->GetLatenciesBlocking(loadable_set.size());
-    qsl->UnloadSamplesFromRam(loadable_set.data(), loadable_set.size());
+    qsl->UnloadSamplesFromRam(loadable_set);
   }
 }
 
 // TODO: Share logic duplicated in RunVerificationMode.
+// TODO: Simplify logic that will not be shared with RunVerificationMode.
 void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                         const TestSettings& settings, Logger* logger) {
   // kQueryInfoPoolSize should be big enough that we don't need to worry
@@ -385,7 +386,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   QueryMetadata query_info_pool[kQueryInfoPoolSize];
   QueryMetadata* issued_query_infos[kMaxAsyncQueries] = {}; // zeroes.
 
-  qsl->LoadSamplesToRam(performance_set.data(), performance_set.size());
+  qsl->LoadSamplesToRam(performance_set);
 
   // Split the set up into random queries.
   std::vector<std::vector<QuerySampleIndex>> queries =
@@ -424,7 +425,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     last_now = PerfClock::now();
     query_info.scheduled_time = last_now;
     query_info.issued_start_time = last_now;
-    sut->IssueQuery(query_to_send.data(), query_to_send.size());
+    sut->IssueQuery(query_to_send);
     i_query++;
   }
 
@@ -432,15 +433,17 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
   const size_t expected_latencies = i_query - 1;
-  std::vector<std::chrono::nanoseconds> latencies(
+  std::vector<QuerySampleLatency> latencies(
       logger->GetLatenciesBlocking(expected_latencies));
+
+  sut->ReportLatencyResults(latencies);
 
   // Compute percentile.
   std::sort(latencies.begin(), latencies.end());
   size_t i90 = latencies.size() * .9;
-  std::cout << "90th percentile latency: " << latencies[i90].count() << "ns\n";
+  std::cout << "90th percentile latency: " << latencies[i90] << "ns\n";
 
-  qsl->UnloadSamplesFromRam(performance_set.data(), performance_set.size());
+  qsl->UnloadSamplesFromRam(performance_set);
 }
 
 void StartTest(SystemUnderTest* sut,

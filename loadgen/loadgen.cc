@@ -26,14 +26,9 @@ struct SampleMetadata;
 struct QueryMetadata;
 
 struct SampleCompleteDelagate {
-  explicit SampleCompleteDelagate(PerfClock::time_point origin_time)
-    : origin_time(origin_time) {}
-
   virtual void Notify(SampleMetadata*,
                       QuerySampleResponse*,
                       PerfClock::time_point) = 0;
-
-  const PerfClock::time_point origin_time;
 };
 
 // SampleMetadata is used by the load generator to coordinate
@@ -142,8 +137,7 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 // TODO: Versions that have less detailed logs.
 // TODO: Versions that do a delayed notification.
 struct SampleCompleteDetailed : public SampleCompleteDelagate {
-  SampleCompleteDetailed(PerfClock::time_point origin_time, Logger* logger)
-    : SampleCompleteDelagate(origin_time), logger(logger) {}
+  SampleCompleteDetailed(Logger* logger) : logger(logger) {}
 
   void Notify(SampleMetadata* sample,
               QuerySampleResponse* response,
@@ -158,20 +152,17 @@ struct SampleCompleteDetailed : public SampleCompleteDelagate {
     Log(logger,
         [sample, sample_data_copy, complete_begin_time](AsyncLog& log) {
           QueryMetadata* query = sample->query_metadata;
-          DurationGeneratorNs origin {
-            query->sample_complete_logger->origin_time };
           DurationGeneratorNs sched { query->scheduled_time };
           QuerySampleLatency latency = sched.delta(complete_begin_time);
           log.RecordLatency(sample->sequence_id, latency);
           log.TraceSample(
               "Sample",
               sample->sequence_id,
-              origin.delta(query->scheduled_time),
-              latency,
+              query->scheduled_time,
+              complete_begin_time,
               "sample_seq", sample->sequence_id,
               "query_seq", query->sequence_id,
               "idx", sample->sample_index,
-              "sched_ns", origin.delta(query->scheduled_time),
               "wait_for_slot_ns", sched.delta(query->wait_for_slot_time),
               "issue_start_ns", sched.delta(query->issued_start_time),
               "complete_ns", sched.delta(complete_begin_time));
@@ -262,7 +253,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   constexpr size_t kMaxAsyncQueries = 4;
   constexpr int64_t kNanosecondsPerSecond = 1000000000;
 
-  SampleCompleteDetailed sample_complete_logger(PerfClock::now(), logger);
+  SampleCompleteDetailed sample_complete_logger(logger);
   std::mt19937 gen(kSeed);
 
   if (settings.scenario != TestScenario::MultiStream) {
@@ -330,6 +321,8 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       query_info.sequence_id = i_query;
       query_info.scheduled_time = query_start_time;
       query_info.wait_for_slot_time = wait_for_slot_time;
+      auto trace = MakeScopedTracer(
+            logger, [](AsyncLog &log){ log.ScopedTrace("IssueQuery"); });
       query_info.issued_start_time = PerfClock::now();
       sut->IssueQuery(query_to_send);
       i_query++;
@@ -347,6 +340,8 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 // TODO: Simplify logic that will not be shared with RunVerificationMode.
 void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                         const TestSettings& settings, Logger* logger) {
+  logger->RestartLatencyRecording();
+
   // kQueryInfoPoolSize should be big enough that we don't need to worry
   // about logging falling too far behind. And queries being processed
   // too far out of order.
@@ -354,11 +349,9 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   constexpr size_t kQueryInfoPoolSize = 32 * 1024;
   constexpr size_t kMaxAsyncQueries = 1;
   constexpr size_t kMinQueryCount = 1024;
-  constexpr std::chrono::minutes kMinDuration(1);
+  constexpr std::chrono::seconds kMinDuration(60);
 
-  logger->RestartLatencyRecording();
-
-  SampleCompleteDetailed sample_complete_logger(PerfClock::now(), logger);
+  SampleCompleteDetailed sample_complete_logger(logger);
   std::mt19937 gen(kSeed);
 
   if (settings.scenario != TestScenario::SingleStream) {
@@ -426,6 +419,8 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     last_now = PerfClock::now();
     query_info.scheduled_time = last_now;
     query_info.issued_start_time = last_now;
+    auto trace = MakeScopedTracer(
+          logger, [](AsyncLog &log){ log.ScopedTrace("IssueQuery"); });
     sut->IssueQuery(query_to_send);
     i_query++;
   }
@@ -458,9 +453,10 @@ void StartTest(SystemUnderTest* sut,
                QuerySampleLibrary* qsl,
                const TestSettings& settings) {
   constexpr size_t kMaxLoggingThreads = 512;
-  std::string log_filename = "mlperf_log.json";
-  std::ofstream out_file(log_filename);
-  Logger logger(&out_file, std::chrono::nanoseconds(1), kMaxLoggingThreads);
+  std::string trace_filename = "mlperf_trace.json";
+  std::ofstream trace_out(trace_filename);
+  Logger logger(std::chrono::milliseconds(100), kMaxLoggingThreads);
+  logger.StartNewTrace(&trace_out, PerfClock::now());
   switch (settings.mode) {
     case TestMode::SubmissionRun:
       RunVerificationMode(sut, qsl, settings, &logger);

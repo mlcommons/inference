@@ -86,7 +86,6 @@ Logger::Logger(std::ostream *out_stream,
                size_t max_threads_to_log)
     : out_stream_(*out_stream),
       max_threads_to_log_(max_threads_to_log),
-      origin_time_(PerfClock::now()),
       poll_period_(poll_period),
       async_logger_(out_stream),
       thread_swap_request_slots_(max_threads_to_log * 2) {
@@ -194,7 +193,7 @@ void Logger::RestartLatencyRecording() {
   async_logger_.RestartLatencyRecording();
 }
 
-std::vector<std::chrono::nanoseconds> Logger::GetLatenciesBlocking(
+std::vector<QuerySampleLatency> Logger::GetLatenciesBlocking(
     size_t expected_count) {
   return async_logger_.GetLatenciesBlocking(expected_count);
 }

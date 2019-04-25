@@ -33,14 +33,16 @@ using PerfClock = std::chrono::high_resolution_clock;
 class AsyncLog {
  public:
   AsyncLog(std::ostream *out_stream) : out_stream_(*out_stream) {}
+  void SetCurrentPidTidString(const std::string *pid_tid) {
+    current_pid_tid_ = pid_tid;
+  }
 
   template <typename ...Args>
   void Trace(const std::string& trace_name, uint64_t ts, uint64_t dur,
              const Args... args) {
     out_stream_ << "{ \"name\": \"" << trace_name << "\", ";
     out_stream_ << "\"ph\": \"X\", ";
-    out_stream_ << "\"pid\": 0, ";  // TODO
-    out_stream_ << "\"tid\": 0, ";  // TODO
+    out_stream_ << *current_pid_tid_;
     out_stream_ << "\"ts\": " << ts << ", ";
     out_stream_ << "\"dur\": " << dur << ", ";
     out_stream_ << "\"args\": { ";
@@ -56,9 +58,7 @@ class AsyncLog {
     out_stream_ << "\"cat\": \"default\", ";
     out_stream_ << "\"ph\": \"b\", ";
     out_stream_ << "\"id\": " << id << ", ";
-    out_stream_ << "\"pid\": 0, ";  // TODO
-    out_stream_ << "\"tid\": 0, ";  // TODO
-
+    out_stream_ << *current_pid_tid_;
     //out_stream_ << "\"ts\": " << ts << " },\n";
     out_stream_ << "\"ts\": " << ts << ", ";
     out_stream_ << "\"args\": { ";
@@ -69,8 +69,7 @@ class AsyncLog {
     out_stream_ << "\"cat\": \"default\", ";
     out_stream_ << "\"ph\": \"e\", ";
     out_stream_ << "\"id\": " << id << ", ";
-    out_stream_ << "\"pid\": 0, ";  // TODO
-    out_stream_ << "\"tid\": 0, ";  // TODO
+    out_stream_ << *current_pid_tid_;
     out_stream_ << "\"ts\": " << ts + dur << " },\n";
 
     out_stream_.flush();
@@ -123,6 +122,7 @@ class AsyncLog {
   }
 
   std::ostream &out_stream_;
+  const std::string *current_pid_tid_ = nullptr;
 
   std::mutex latencies_mutex_;
   std::condition_variable all_latencies_recorded_;

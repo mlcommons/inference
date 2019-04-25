@@ -62,7 +62,6 @@ class AsyncLog {
              PerfClock::time_point end,
              const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
-    assert(TraceOutIsValid());
     *trace_out_ << "{ \"name\": \"" << trace_name << "\", "
                 << "\"ph\": \"X\", "
                 << *current_pid_tid_
@@ -83,7 +82,6 @@ class AsyncLog {
   template <typename ...Args>
   void ScopedTrace(const std::string& trace_name, const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
-    assert(TraceOutIsValid());
     *trace_out_ << "{ \"name\": \"" << trace_name << "\", "
                 << "\"ph\": \"X\", "
                 << *current_pid_tid_
@@ -102,7 +100,6 @@ class AsyncLog {
                    PerfClock::time_point end,
                    const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
-    assert(TraceOutIsValid());
     *trace_out_ << "{\"name\": \"" << trace_name << "\", "
                 << "\"cat\": \"default\", "
                 << "\"ph\": \"b\", "
@@ -210,17 +207,14 @@ class AsyncLog {
 template <typename LambdaT>
 class ScopedTracer {
 public:
-  ScopedTracer(Logger *logger, LambdaT &&lambda)
+  ScopedTracer(LambdaT &&lambda)
     : start_(PerfClock::now()),
-      logger_(logger),
       lambda_(std::forward<LambdaT>(lambda)) {}
 
   ~ScopedTracer() {
-    Log(logger_,
-        [start = start_,
+    Log([start = start_,
          lambda = std::move(lambda_),
-         end = PerfClock::now()](
-            AsyncLog &log) {
+         end = PerfClock::now()](AsyncLog& log) {
           log.SetScopedTraceTimes(start, end);
           lambda(log);
         });
@@ -228,13 +222,12 @@ public:
 
 private:
   PerfClock::time_point start_;
-  Logger *logger_;
   LambdaT lambda_;
 };
 
 template <typename LambdaT>
-auto MakeScopedTracer(Logger *logger, LambdaT &&lambda) -> ScopedTracer<LambdaT> {
-  return ScopedTracer<LambdaT>(logger, std::forward<LambdaT>(lambda));
+auto MakeScopedTracer(LambdaT &&lambda) -> ScopedTracer<LambdaT> {
+  return ScopedTracer<LambdaT>(std::forward<LambdaT>(lambda));
 }
 
 // Logs all threads belonging to a run.
@@ -291,7 +284,9 @@ class Logger {
   std::vector<std::function<void()>> thread_cleanup_tasks_;
 };
 
-void Log(Logger *logger, AsyncLogEntry &&entry);
+
+Logger& GlobalLogger();
+void Log(AsyncLogEntry &&entry);
 
 }  // namespace mlperf
 

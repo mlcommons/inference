@@ -15,6 +15,15 @@
 #include <cassert>
 #include <iostream>
 #include <future>
+#include <sstream>
+
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+#include <process.h>
+#define MLPERF_GET_PID() _getpid()
+#else
+#include <unistd.h>
+#define MLPERF_GET_PID() getpid()
+#endif
 
 namespace mlperf {
 
@@ -62,6 +71,10 @@ class TlsLogger {
   void FinishReadingEntries();
   bool ReadBufferHasBeenConsumed();
 
+  const std::string* PidTidString() const {
+    return &trace_pid_tid_;
+  }
+
  private:
   using EntryVector = std::vector<AsyncLogEntry>;
   enum class EntryState { Unlocked, ReadLock, WriteLock };
@@ -79,6 +92,7 @@ class TlsLogger {
   // Accessed by consumer only.
   size_t unread_swaps_ = 0;
   size_t i_write_prev_ = 0;
+  std::string trace_pid_tid_;  // Cached as string.
 };
 
 Logger::Logger(std::ostream *out_stream,
@@ -285,6 +299,7 @@ void Logger::IOThread() {
          thread++) {
       std::vector<AsyncLogEntry>* entries = (*thread)->StartReadingEntries();
       if (entries) {
+        async_logger_.SetCurrentPidTidString((*thread)->PidTidString());
         for (auto& entry : *entries) {
           // Execute the entry to perform the serialization and I/O.
           entry(async_logger_);
@@ -308,6 +323,10 @@ void Logger::IOThread() {
 }
 
 TlsLogger::TlsLogger(Logger *logger) : logger_(logger) {
+  std::stringstream ss;
+  ss << "\"pid\": " << MLPERF_GET_PID() << ", "
+     << "\"tid\": " << std::this_thread::get_id() << ", ";
+  trace_pid_tid_ = ss.str();
   logger_->RegisterTlsLogger(this);
 }
 

@@ -14,31 +14,45 @@ namespace {
 // Forwards SystemUnderTest calls to relevant callbacks.
 class SystemUnderTestTrampoline : public SystemUnderTest {
  public:
-  SystemUnderTestTrampoline(ClientData client_data, std::string name,
-                            IssueQueryCallback issue_cb)
+  SystemUnderTestTrampoline(
+      ClientData client_data,
+      std::string name,
+      IssueQueryCallback issue_cb,
+      ReportLatencyResultsCallback report_latency_results_cb)
       : client_data_(client_data),
         name_(std::move(name)),
-        issue_cb_(issue_cb) {}
+        issue_cb_(issue_cb),
+        report_latency_results_cb_(report_latency_results_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
   const std::string& Name() const override { return name_; }
 
-  void IssueQuery(QuerySample* samples, size_t sample_count) override {
-    (*issue_cb_)(client_data_, samples, sample_count);
+  void IssueQuery(const std::vector<QuerySample>& samples) override {
+    (*issue_cb_)(client_data_, samples.data(), samples.size());
+  }
+
+  void ReportLatencyResults(
+        const std::vector<QuerySampleLatency>& latencies_ns) override {
+    (*report_latency_results_cb_)(
+          client_data_, latencies_ns.data(), latencies_ns.size());
   }
 
  private:
   ClientData client_data_;
   std::string name_;
   IssueQueryCallback issue_cb_;
+  ReportLatencyResultsCallback report_latency_results_cb_;
 };
 
 }  // namespace
 
-void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,
-                   IssueQueryCallback issue_cb) {
+void* ConstructSUT(ClientData client_data,
+                   const char* name,
+                   size_t name_length,
+                   IssueQueryCallback issue_cb,
+                   ReportLatencyResultsCallback report_latency_results_cb) {
   SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
-      client_data, std::string(name, name_length), issue_cb);
+      client_data, std::string(name, name_length), issue_cb, report_latency_results_cb);
   return reinterpret_cast<void*>(sut);
 }
 
@@ -53,10 +67,13 @@ namespace {
 // Forwards QuerySampleLibrary calls to relevant callbacks.
 class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
  public:
-  QuerySampleLibraryTrampoline(ClientData client_data, std::string name,
-                               size_t total_sample_count, size_t performance_sample_count,
-                               LoadSamplesToRamCallback load_samples_to_ram_cb,
-                               UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
+  QuerySampleLibraryTrampoline(
+      ClientData client_data,
+      std::string name,
+      size_t total_sample_count,
+      size_t performance_sample_count,
+      LoadSamplesToRamCallback load_samples_to_ram_cb,
+      UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
       : client_data_(client_data),
         name_(std::move(name)),
         total_sample_count_(total_sample_count),
@@ -69,13 +86,13 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   const size_t TotalSampleCount() { return total_sample_count_; }
   const size_t PerformanceSampleCount() { return performance_sample_count_; }
 
-  void LoadSamplesToRam(QuerySampleIndex* samples,
-                        size_t sample_count) override {
-    (*load_samples_to_ram_cb_)(client_data_, samples, sample_count);
+  void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
+    (*load_samples_to_ram_cb_)(client_data_, samples.data(), samples.size());
   }
-  void UnloadSamplesFromRam(QuerySampleIndex* samples,
-                            size_t sample_count) override {
-    (*unload_samlpes_from_ram_cb_)(client_data_, samples, sample_count);
+  void UnloadSamplesFromRam(
+      const std::vector<QuerySampleIndex>& samples) override {
+    (*unload_samlpes_from_ram_cb_)(
+          client_data_, samples.data(), samples.size());
   }
 
   // TODO(brianderson): Accuracy Metric API.

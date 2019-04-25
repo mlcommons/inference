@@ -4,6 +4,7 @@
 
 #include <atomic>
 #include <cassert>
+#include <cstring>
 #include <future>
 #include <iostream>
 #include <random>
@@ -25,8 +26,14 @@ struct SampleMetadata;
 struct QueryMetadata;
 
 struct SampleCompleteDelagate {
-  virtual void Notify(QueryMetadata*, SampleMetadata*,
-                      QuerySampleResponse*, PerfClock::time_point) = 0;
+  explicit SampleCompleteDelagate(PerfClock::time_point origin_time)
+    : origin_time(origin_time) {}
+
+  virtual void Notify(SampleMetadata*,
+                      QuerySampleResponse*,
+                      PerfClock::time_point) = 0;
+
+  const PerfClock::time_point origin_time;
 };
 
 // SampleMetadata is used by the load generator to coordinate
@@ -125,11 +132,9 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
   for (QuerySampleResponse* response = responses; response < end; response++) {
     SampleMetadata* sample = reinterpret_cast<SampleMetadata*>(response->id);
     QueryMetadata* query = sample->query_metadata;
-    query->sample_complete_logger->Notify(query, sample, response, timestamp);
-    query->RemoveOneSampleRef();
+    query->sample_complete_logger->Notify(sample, response, timestamp);
   }
 }
-
 
 // Right now, this is the only implementation of SampleCompleteDelagate,
 // but more will be coming soon.
@@ -137,45 +142,46 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 // TODO: Versions that have less detailed logs.
 // TODO: Versions that do a delayed notification.
 struct SampleCompleteDetailed : public SampleCompleteDelagate {
-  SampleCompleteDetailed(Logger* logger) : logger(logger) {}
+  SampleCompleteDetailed(PerfClock::time_point origin_time, Logger* logger)
+    : SampleCompleteDelagate(origin_time), logger(logger) {}
 
-  Logger* logger;
-
-  void Notify(QueryMetadata* query,
-              SampleMetadata* sample,
+  void Notify(SampleMetadata* sample,
               QuerySampleResponse* response,
               PerfClock::time_point complete_begin_time) override {
+    // Using a raw pointer here should help us hit the std::function
+    // small buffer optimization code path when we aren't copying data.
+    // For some reason, using std::unique_ptr<std::vector> wasn't moving
+    // into the lambda; even with C++14.
+    auto sample_data_copy = new uint8_t[response->size];
     auto* src_begin = reinterpret_cast<uint8_t*>(response->data);
-    auto* src_end = src_begin + response->size;
-    std::vector<uint8_t>sample_data_copy(src_begin, src_end);
+    std::memcpy(sample_data_copy, src_begin, response->size);
     Log(logger,
-        // Copy lots of data to the lambda since it may be overwritten soon.
-        // TODO: Avoid the extra copies here.
-        [sample_sequence_id = sample->sequence_id,
-         query_sequence_id = query->sequence_id,
-         sample_index = sample->sample_index,
-         origin_time = logger->origin_time(),
-         scheduled_time = query->scheduled_time,
-         issued_start_time = query->issued_start_time,
-         wait_for_slot_time = query->wait_for_slot_time,
-         complete_begin_time = complete_begin_time,
-         sample_data = std::move(sample_data_copy)](AsyncLog& trace) {
-          DurationGeneratorNs origin { origin_time };
-          DurationGeneratorNs sched { scheduled_time };
+        [sample = sample,
+         sample_data_copy = sample_data_copy,
+         complete_begin_time = complete_begin_time](AsyncLog& trace) {
+          QueryMetadata* query = sample->query_metadata;
+          DurationGeneratorNs origin {
+            query->sample_complete_logger->origin_time };
+          DurationGeneratorNs sched { query->scheduled_time };
           trace.AsyncEvent("Sample",
-                sample_sequence_id,
-                origin.delta(scheduled_time),
+                sample->sequence_id,
+                origin.delta(query->scheduled_time),
                 sched.delta(complete_begin_time), // This is the latency.
-                "sample_seq", sample_sequence_id,
-                "query_seq", query_sequence_id,
-                "idx", sample_index,
-                "sched_ns", origin.delta(scheduled_time),
-                "wait_for_slot_ns", sched.delta(wait_for_slot_time),
-                "issue_start_ns", sched.delta(issued_start_time),
+                "sample_seq", sample->sequence_id,
+                "query_seq", query->sequence_id,
+                "idx", sample->sample_index,
+                "sched_ns", origin.delta(query->scheduled_time),
+                "wait_for_slot_ns", sched.delta(query->wait_for_slot_time),
+                "issue_start_ns", sched.delta(query->issued_start_time),
                 "complete_ns", sched.delta(complete_begin_time));
+          query->RemoveOneSampleRef();
+          if (sample_data_copy != nullptr) {
+            delete [] sample_data_copy;
+          }
         });
-
   }
+
+  Logger* logger;
 };
 
 // Generates random sets of indicies where indicies are selected from
@@ -255,7 +261,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   constexpr size_t kMaxAsyncQueries = 4;
   constexpr int64_t kNanosecondsPerSecond = 1000000000;
 
-  SampleCompleteDetailed sample_complete_logger(logger);
+  SampleCompleteDetailed sample_complete_logger(PerfClock::now(), logger);
   std::mt19937 gen(kSeed);
 
   if (settings.scenario != TestScenario::MultiStream) {
@@ -284,7 +290,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   QueryMetadata query_info_pool[kQueryPoolSize];
   QueryMetadata* issued_query_infos[kMaxAsyncQueries] = {}; // zeroes.
   for (auto &loadable_set : loadable_sets) {
-    qsl->LoadSamplesToRam(loadable_set.data(), loadable_set.size());
+    qsl->LoadSamplesToRam(loadable_set);
     logger->RestartLatencyRecording();
 
     // Split the set up into random queries.
@@ -324,7 +330,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       query_info.scheduled_time = query_start_time;
       query_info.wait_for_slot_time = wait_for_slot_time;
       query_info.issued_start_time = PerfClock::now();
-      sut->IssueQuery(query_to_send.data(), query_to_send.size());
+      sut->IssueQuery(query_to_send);
       i_query++;
     }
 
@@ -332,23 +338,26 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     // We have to keep the synchronization primitives and loaded samples
     // alive until the SUT is done with them.
     logger->GetLatenciesBlocking(loadable_set.size());
-    qsl->UnloadSamplesFromRam(loadable_set.data(), loadable_set.size());
+    qsl->UnloadSamplesFromRam(loadable_set);
   }
 }
 
 // TODO: Share logic duplicated in RunVerificationMode.
+// TODO: Simplify logic that will not be shared with RunVerificationMode.
 void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                         const TestSettings& settings, Logger* logger) {
-  // kQueryPoolSize should be big enough that we don't need to worry about
-  // logging falling too far behind.
-  constexpr size_t kQueryPoolSize = 1024;
+  // kQueryInfoPoolSize should be big enough that we don't need to worry
+  // about logging falling too far behind. And queries being processed
+  // too far out of order.
+  // TODO: Make this a TestSetting.
+  constexpr size_t kQueryInfoPoolSize = 32 * 1024;
   constexpr size_t kMaxAsyncQueries = 1;
-  constexpr size_t kMinQueryCount = 10000;  // TODO: Actual value.
+  constexpr size_t kMinQueryCount = 1024;
   constexpr std::chrono::minutes kMinDuration(1);
 
   logger->RestartLatencyRecording();
 
-  SampleCompleteDetailed sample_complete_logger(logger);
+  SampleCompleteDetailed sample_complete_logger(PerfClock::now(), logger);
   std::mt19937 gen(kSeed);
 
   if (settings.scenario != TestScenario::SingleStream) {
@@ -374,10 +383,10 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   size_t i_query = 0;
   uint64_t sample_sequence_id = 0;
-  QueryMetadata query_info_pool[kQueryPoolSize];
+  QueryMetadata query_info_pool[kQueryInfoPoolSize];
   QueryMetadata* issued_query_infos[kMaxAsyncQueries] = {}; // zeroes.
 
-  qsl->LoadSamplesToRam(performance_set.data(), performance_set.size());
+  qsl->LoadSamplesToRam(performance_set);
 
   // Split the set up into random queries.
   std::vector<std::vector<QuerySampleIndex>> queries =
@@ -394,7 +403,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
     // Limit the number of oustanding async queries by waiting for
     // old queries here.
-    size_t i_query_pool = i_query % kQueryPoolSize;
+    size_t i_query_pool = i_query % kQueryInfoPoolSize;
     QueryMetadata& query_info = query_info_pool[i_query_pool];
 
     PerfClock::time_point wait_for_slot_time = last_now;
@@ -416,7 +425,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     last_now = PerfClock::now();
     query_info.scheduled_time = last_now;
     query_info.issued_start_time = last_now;
-    sut->IssueQuery(query_to_send.data(), query_to_send.size());
+    sut->IssueQuery(query_to_send);
     i_query++;
   }
 
@@ -424,15 +433,24 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
   const size_t expected_latencies = i_query - 1;
-  std::vector<std::chrono::nanoseconds> latencies =
-      logger->GetLatenciesBlocking(expected_latencies);
+  std::vector<QuerySampleLatency> latencies(
+      logger->GetLatenciesBlocking(expected_latencies));
+
+  sut->ReportLatencyResults(latencies);
 
   // Compute percentile.
+  // TODO: Output these to a summary log.
+  std::cout << "Loadgen results summary:\n";
   std::sort(latencies.begin(), latencies.end());
+  int64_t accumulator = 0;
+  for (auto l : latencies) {
+    accumulator += l;
+  }
+  std::cout << "Mean latency: " << accumulator / latencies.size() << "ns\n";
   size_t i90 = latencies.size() * .9;
-  std::cout << "90th percentile latency: " << latencies[i90].count() << "ns\n";
+  std::cout << "90th percentile latency: " << latencies[i90] << "ns\n";
 
-  qsl->UnloadSamplesFromRam(performance_set.data(), performance_set.size());
+  qsl->UnloadSamplesFromRam(performance_set);
 }
 
 void StartTest(SystemUnderTest* sut,

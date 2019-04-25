@@ -27,7 +27,7 @@ class TlsLogger;
 using AsyncLogEntry = std::function<void(AsyncLog&)>;
 using PerfClock = std::chrono::high_resolution_clock;
 
-// AsyncTrace is passed as an argument to the custom log lambda on the
+// AsyncLog is passed as an argument to the log lambda on the
 // recording thread to serialize the data captured by the lambda and
 // forward it to the output stream.
 class AsyncLog {
@@ -35,8 +35,8 @@ class AsyncLog {
   AsyncLog(std::ostream *out_stream) : out_stream_(*out_stream) {}
 
   template <typename ...Args>
-  void FullEvent(const std::string& trace_name, uint64_t ts, uint64_t dur,
-                 const Args... args) {
+  void Trace(const std::string& trace_name, uint64_t ts, uint64_t dur,
+             const Args... args) {
     out_stream_ << "{ \"name\": \"" << trace_name << "\", ";
     out_stream_ << "\"ph\": \"X\", ";
     out_stream_ << "\"pid\": 0, ";  // TODO
@@ -50,9 +50,8 @@ class AsyncLog {
   }
 
   template <typename ...Args>
-  void AsyncEvent(const std::string& trace_name, uint64_t id,
-                  uint64_t ts, uint64_t dur,
-                  const Args... args) {
+  void TraceSample(const std::string& trace_name, uint64_t id,
+                   uint64_t ts, uint64_t dur, const Args... args) {
     out_stream_ << "{\"name\": \"" << trace_name << "\", ";
     out_stream_ << "\"cat\": \"default\", ";
     out_stream_ << "\"ph\": \"b\", ";
@@ -75,16 +74,15 @@ class AsyncLog {
     out_stream_ << "\"ts\": " << ts + dur << " },\n";
 
     out_stream_.flush();
+  }
 
-    // The trace duration currently corresponds to response latency.
-    // Trace id corresponds to the sample sequence id.
-    // TODO: Allow duration to be negative in case of clock irregularities
-    // for latency reporting purposes.
+  void RecordLatency(uint64_t sample_sequence_id, QuerySampleLatency latency) {
     std::unique_lock<std::mutex> lock(latencies_mutex_);
-    if (latencies_.size() < id + 1) {
-      latencies_.resize(id + 1, std::numeric_limits<QuerySampleLatency>::min());
+    if (latencies_.size() < sample_sequence_id + 1) {
+      latencies_.resize(sample_sequence_id + 1,
+                        std::numeric_limits<QuerySampleLatency>::min());
     }
-    latencies_[id] = dur;
+    latencies_[sample_sequence_id] = latency;
     latencies_recorded_++;
     if (AllLatenciesRecorded()) {
       all_latencies_recorded_.notify_all();
@@ -124,13 +122,14 @@ class AsyncLog {
     LogArgs(args...);
   }
 
-  std::ostream &out_stream_;  
+  std::ostream &out_stream_;
 
   std::mutex latencies_mutex_;
   std::condition_variable all_latencies_recorded_;
   std::vector<QuerySampleLatency> latencies_;
   size_t latencies_recorded_ = 0;
   size_t latencies_expected_ = 0;
+  // Must be called with latencies_mutex_ held.
   bool AllLatenciesRecorded() {
     return latencies_recorded_ == latencies_expected_;
   }

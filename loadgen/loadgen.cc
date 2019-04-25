@@ -156,24 +156,25 @@ struct SampleCompleteDetailed : public SampleCompleteDelagate {
     auto* src_begin = reinterpret_cast<uint8_t*>(response->data);
     std::memcpy(sample_data_copy, src_begin, response->size);
     Log(logger,
-        [sample = sample,
-         sample_data_copy = sample_data_copy,
-         complete_begin_time = complete_begin_time](AsyncLog& trace) {
+        [sample, sample_data_copy, complete_begin_time](AsyncLog& log) {
           QueryMetadata* query = sample->query_metadata;
           DurationGeneratorNs origin {
             query->sample_complete_logger->origin_time };
           DurationGeneratorNs sched { query->scheduled_time };
-          trace.AsyncEvent("Sample",
-                sample->sequence_id,
-                origin.delta(query->scheduled_time),
-                sched.delta(complete_begin_time), // This is the latency.
-                "sample_seq", sample->sequence_id,
-                "query_seq", query->sequence_id,
-                "idx", sample->sample_index,
-                "sched_ns", origin.delta(query->scheduled_time),
-                "wait_for_slot_ns", sched.delta(query->wait_for_slot_time),
-                "issue_start_ns", sched.delta(query->issued_start_time),
-                "complete_ns", sched.delta(complete_begin_time));
+          QuerySampleLatency latency = sched.delta(complete_begin_time);
+          log.RecordLatency(sample->sequence_id, latency);
+          log.TraceSample(
+              "Sample",
+              sample->sequence_id,
+              origin.delta(query->scheduled_time),
+              latency,
+              "sample_seq", sample->sequence_id,
+              "query_seq", query->sequence_id,
+              "idx", sample->sample_index,
+              "sched_ns", origin.delta(query->scheduled_time),
+              "wait_for_slot_ns", sched.delta(query->wait_for_slot_time),
+              "issue_start_ns", sched.delta(query->issued_start_time),
+              "complete_ns", sched.delta(complete_begin_time));
           query->RemoveOneSampleRef();
           if (sample_data_copy != nullptr) {
             delete [] sample_data_copy;

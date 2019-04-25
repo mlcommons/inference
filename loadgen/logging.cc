@@ -95,13 +95,10 @@ class TlsLogger {
   std::string trace_pid_tid_;  // Cached as string.
 };
 
-Logger::Logger(std::ostream *out_stream,
-               std::chrono::duration<double> poll_period,
+Logger::Logger(std::chrono::duration<double> poll_period,
                size_t max_threads_to_log)
-    : out_stream_(*out_stream),
-      max_threads_to_log_(max_threads_to_log),
+    : max_threads_to_log_(max_threads_to_log),
       poll_period_(poll_period),
-      async_logger_(out_stream),
       thread_swap_request_slots_(max_threads_to_log * 2) {
   const size_t kSlotCount = max_threads_to_log * 2;
   for (size_t i = 0; i < kSlotCount; i++) {
@@ -109,7 +106,6 @@ Logger::Logger(std::ostream *out_stream,
                      SwapRequestSlotIsWritableValue(i));
   }
   io_thread_ = std::thread(&Logger::IOThread, this);
-  out_stream_ << "{ \"traceEvents\": [\n";
 }
 
 Logger::~Logger() {
@@ -119,14 +115,6 @@ Logger::~Logger() {
     io_thread_cv_.notify_all();
   }
   io_thread_.join();
-
-  out_stream_ << "{ \"name\": \"LastTrace\" }\n";
-  out_stream_ << "],\n";
-  out_stream_ << "\"displayTimeUnit\": \"ns\",\n";
-  out_stream_ << "\"otherData\": {\n";
-  out_stream_ << "\"version\": \"MLPerf LoadGen v0.5a0\"\n";
-  out_stream_ << "}\n";
-  out_stream_ << "}\n";
 
   // TODO: Fix lifetime management of TlsLoggers and Loggers.
   {
@@ -201,6 +189,11 @@ void Logger::UnRegisterTlsLogger(TlsLogger* tls_logger) {
   io_thread_done_with_tls_logger.get_future().wait();
   std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
   tls_loggers_registerd_.erase(tls_logger);
+}
+
+void Logger::StartNewTrace(std::ostream *trace_out,
+                           PerfClock::time_point origin) {
+  async_logger_.StartNewTrace(trace_out, origin);
 }
 
 void Logger::RestartLatencyRecording() {

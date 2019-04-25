@@ -52,6 +52,9 @@ void RemoveNulls(T& container) {
       container.end());
 }
 
+constexpr size_t kMaxThreadsToLog = 1024;
+Logger g_logger(std::chrono::milliseconds(10), kMaxThreadsToLog);
+
 }  // namespace
 
 // TlsLogger logs a single thread using thread-local storage.
@@ -61,7 +64,7 @@ void RemoveNulls(T& container) {
 //   * Without expensive syscalls or I/O operations.
 class TlsLogger {
  public:
-  TlsLogger(Logger *logger);
+  TlsLogger();
   ~TlsLogger();
 
   void Log(AsyncLogEntry &&entry);
@@ -80,7 +83,6 @@ class TlsLogger {
   enum class EntryState { Unlocked, ReadLock, WriteLock };
 
   // Accessed by producer only.
-  Logger* logger_;
   size_t i_read_ = 0;
 
   // Accessed by producer and consumer atomically.
@@ -264,67 +266,81 @@ void Logger::GatherNewSwapRequests(std::vector<TlsLogger*>* threads_to_swap) {
 
 void Logger::IOThread() {
   while(keep_io_thread_alive_) {
+    auto trace1 = MakeScopedTracer(
+        [](AsyncLog &log){ log.ScopedTrace("IOThreadLoop"); });
     {
       std::unique_lock<std::mutex> lock(io_thread_mutex_);
+      auto trace2 = MakeScopedTracer(
+          [](AsyncLog &log){ log.ScopedTrace("Wait"); });
       io_thread_cv_.wait_for(
             lock, poll_period_, [&] { return !keep_io_thread_alive_; });
     }
 
-    std::vector<TlsLogger*> threads_to_swap;
-    threads_to_swap.swap(threads_to_swap_deferred_);
-    GatherRetrySwapRequests(&threads_to_swap);
-    GatherNewSwapRequests(&threads_to_swap);
-    for (TlsLogger* thread : threads_to_swap) {
-      if (thread->ReadBufferHasBeenConsumed()) {
-        thread->SwapBuffers();
-        // After swapping a thread, it's ready to be read.
-        threads_to_read_.push_back(thread);
-      } else {
-        // Don't swap buffers again until we've finish reading the
-        // previous swap.
-        threads_to_swap_deferred_.push_back(thread);
+    {
+      auto trace3 = MakeScopedTracer(
+          [](AsyncLog &log){ log.ScopedTrace("Gather"); });
+      std::vector<TlsLogger*> threads_to_swap;
+      threads_to_swap.swap(threads_to_swap_deferred_);
+      GatherRetrySwapRequests(&threads_to_swap);
+      GatherNewSwapRequests(&threads_to_swap);
+      for (TlsLogger* thread : threads_to_swap) {
+        if (thread->ReadBufferHasBeenConsumed()) {
+          thread->SwapBuffers();
+          // After swapping a thread, it's ready to be read.
+          threads_to_read_.push_back(thread);
+        } else {
+          // Don't swap buffers again until we've finish reading the
+          // previous swap.
+          threads_to_swap_deferred_.push_back(thread);
+        }
       }
     }
 
-    // Read from the threads we are confident have activity.
-    for (std::vector<TlsLogger*>::iterator thread = threads_to_read_.begin();
-         thread != threads_to_read_.end();
-         thread++) {
-      std::vector<AsyncLogEntry>* entries = (*thread)->StartReadingEntries();
-      if (entries) {
-        async_logger_.SetCurrentPidTidString((*thread)->PidTidString());
-        for (auto& entry : *entries) {
-          // Execute the entry to perform the serialization and I/O.
-          entry(async_logger_);
-        }
-        (*thread)->FinishReadingEntries();
-        // Mark for removal by the call to RemoveNulls below.
-        *thread = nullptr;
+    {
+      auto trace4 = MakeScopedTracer(
+          [](AsyncLog &log){ log.ScopedTrace("Process"); });
+      // Read from the threads we are confident have activity.
+      for (std::vector<TlsLogger*>::iterator thread = threads_to_read_.begin();
+           thread != threads_to_read_.end();
+           thread++) {
+        auto trace5 = MakeScopedTracer(
+            [](AsyncLog &log){ log.ScopedTrace("Thread"); });
+        std::vector<AsyncLogEntry>* entries = (*thread)->StartReadingEntries();
+        if (entries) {
+          async_logger_.SetCurrentPidTidString((*thread)->PidTidString());
+          for (auto& entry : *entries) {
+            // Execute the entry to perform the serialization and I/O.
+            entry(async_logger_);
+          }
+          (*thread)->FinishReadingEntries();
+          // Mark for removal by the call to RemoveNulls below.
+          *thread = nullptr;
 
-        // Clean up tasks
-        for (auto& task : thread_cleanup_tasks_) {
-          task();
+          // Clean up tasks
+          for (auto& task : thread_cleanup_tasks_) {
+            task();
+          }
+          thread_cleanup_tasks_.clear();
         }
-        thread_cleanup_tasks_.clear();
       }
-    }
 
-    // Only remove threads where reading succeeded so we retry the failed
-    // threads the next time around.
-    RemoveNulls(threads_to_read_);
+      // Only remove threads where reading succeeded so we retry the failed
+      // threads the next time around.
+      RemoveNulls(threads_to_read_);
+    }
   }
 }
 
-TlsLogger::TlsLogger(Logger *logger) : logger_(logger) {
+TlsLogger::TlsLogger() {
   std::stringstream ss;
   ss << "\"pid\": " << MLPERF_GET_PID() << ", "
      << "\"tid\": " << std::this_thread::get_id() << ", ";
   trace_pid_tid_ = ss.str();
-  logger_->RegisterTlsLogger(this);
+  GlobalLogger().RegisterTlsLogger(this);
 }
 
 TlsLogger::~TlsLogger() {
-  logger_->UnRegisterTlsLogger(this);
+  GlobalLogger().UnRegisterTlsLogger(this);
 }
 
 // Log always makes forward progress since it can unconditionally obtain a
@@ -351,7 +367,7 @@ void TlsLogger::Log(AsyncLogEntry &&entry) {
 
   bool write_buffer_swapped = i_write_prev_ != i_write;
   if (write_buffer_swapped) {
-    logger_->RequestSwapBuffers(this);
+    GlobalLogger().RequestSwapBuffers(this);
     i_write_prev_ = i_write;
   }
 }
@@ -386,8 +402,12 @@ bool TlsLogger::ReadBufferHasBeenConsumed() {
   return unread_swaps_ == 0;
 }
 
-void Log(Logger *logger, AsyncLogEntry &&entry) {
-  thread_local TlsLogger tls_logger(logger);
+Logger& GlobalLogger() {
+  return g_logger;
+}
+
+void Log(AsyncLogEntry &&entry) {
+  thread_local TlsLogger tls_logger;
   tls_logger.Log(std::forward<AsyncLogEntry>(entry));
 }
 

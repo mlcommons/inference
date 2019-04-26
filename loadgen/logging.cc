@@ -99,8 +99,8 @@ class TlsLogger {
 
 Logger::Logger(std::chrono::duration<double> poll_period,
                size_t max_threads_to_log)
-    : max_threads_to_log_(max_threads_to_log),
-      poll_period_(poll_period),
+    : poll_period_(poll_period),
+      max_threads_to_log_(max_threads_to_log),
       thread_swap_request_slots_(max_threads_to_log * 2) {
   const size_t kSlotCount = max_threads_to_log * 2;
   for (size_t i = 0; i < kSlotCount; i++) {
@@ -173,7 +173,13 @@ void Logger::RegisterTlsLogger(TlsLogger* tls_logger) {
   tls_loggers_registerd_.insert(tls_logger);
 }
 
+// Must be called from the thread that owns the TlsLogger.
 void Logger::UnRegisterTlsLogger(TlsLogger* tls_logger) {
+  // Avoid circular dependency deadlock.
+  // TODO: Flush traces here or in ~Logger.
+  if (std::this_thread::get_id() == io_thread_.get_id())
+    return;
+
   // TODO(brianderson): Move the TlsLogger data to a struct that we can move
   // ownership of to Logger for later consumption. Then exit this thread
   // immediately, rather than synchronizing with the Logger's consumption here.
@@ -198,6 +204,11 @@ void Logger::StartNewTrace(std::ostream *trace_out,
   async_logger_.StartNewTrace(trace_out, origin);
 }
 
+void Logger::StopTracing() {
+  async_logger_.StartNewTrace(nullptr, PerfClock::now());
+}
+
+
 void Logger::RestartLatencyRecording() {
   async_logger_.RestartLatencyRecording();
 }
@@ -212,7 +223,10 @@ TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {
   if (SwapRequestSlotIsReadable(slot_value)) {
     bool success = thread_swap_request_slots_[slot].compare_exchange_strong(
         slot_value, SwapRequestSlotIsWritableValue(next_id));
-    assert(success);
+    if (!success) {
+      std::cerr << "CAS failed: " << __LINE__ << "\n";
+      assert(success);
+    }
     return reinterpret_cast<TlsLogger*>(slot_value);
   }
   return nullptr;
@@ -356,14 +370,22 @@ void TlsLogger::Log(AsyncLogEntry &&entry) {
     i_write ^= 1;
     // We may need to try 2 times, since there could be a race with a
     // previous SwapBuffers request.
-    assert(++cas_fail_count <= 1);
+    cas_fail_count++;
+    if (cas_fail_count >= 2) {
+      std::cerr << "CAS failed x" << cas_fail_count
+                << " : " << __LINE__ << "\n";
+      assert(cas_fail_count < 2);
+    }
   }
   entries_[i_write].emplace_back(std::forward<AsyncLogEntry>(entry));
 
   auto write_lock = EntryState::WriteLock;
   bool success = entry_states_[i_write].compare_exchange_strong(
            write_lock, EntryState::Unlocked);
-  assert(success);
+  if (!success) {
+    std::cerr << "CAS failed: " << __LINE__ << "\n";
+    assert(success);
+  }
 
   bool write_buffer_swapped = i_write_prev_ != i_write;
   if (write_buffer_swapped) {
@@ -376,7 +398,10 @@ void TlsLogger::SwapBuffers() {
   auto read_lock = EntryState::ReadLock;
   bool success = entry_states_[i_read_].compare_exchange_strong(
            read_lock, EntryState::Unlocked);
-  assert(success);
+  if (!success) {
+    std::cerr << "CAS failed: " << __LINE__ << "\n";
+    assert(success);
+  }
 
   i_write_.store(i_read_);
   i_read_ ^= 1;

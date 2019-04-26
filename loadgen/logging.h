@@ -34,7 +34,7 @@ using PerfClock = std::chrono::high_resolution_clock;
 class AsyncLog {
  public:
   ~AsyncLog() {
-    StartNewTrace(&std::cerr, PerfClock::now());
+    StartNewTrace(nullptr, PerfClock::now());
   }
 
   void StartNewTrace(std::ostream *trace_out, PerfClock::time_point origin) {
@@ -62,6 +62,9 @@ class AsyncLog {
              PerfClock::time_point end,
              const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
+    if (!trace_out_) {
+      return;
+    }
     *trace_out_ << "{ \"name\": \"" << trace_name << "\", "
                 << "\"ph\": \"X\", "
                 << *current_pid_tid_
@@ -82,6 +85,9 @@ class AsyncLog {
   template <typename ...Args>
   void ScopedTrace(const std::string& trace_name, const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
+    if (!trace_out_) {
+      return;
+    }
     *trace_out_ << "{ \"name\": \"" << trace_name << "\", "
                 << "\"ph\": \"X\", "
                 << *current_pid_tid_
@@ -100,6 +106,9 @@ class AsyncLog {
                    PerfClock::time_point end,
                    const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
+    if (!trace_out_) {
+      return;
+    }
     *trace_out_ << "{\"name\": \"" << trace_name << "\", "
                 << "\"cat\": \"default\", "
                 << "\"ph\": \"b\", "
@@ -186,7 +195,7 @@ class AsyncLog {
   }
 
   std::mutex trace_mutex_;
-  std::ostream *trace_out_ = &std::cerr;
+  std::ostream *trace_out_ = nullptr;
   PerfClock::time_point trace_origin_;
 
   const std::string *current_pid_tid_ = nullptr;
@@ -243,6 +252,7 @@ class Logger {
   void UnRegisterTlsLogger(TlsLogger* tls_logger);
 
   void StartNewTrace(std::ostream *trace_out, PerfClock::time_point origin);
+  void StopTracing();
   void RestartLatencyRecording();
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
 
@@ -255,12 +265,12 @@ class Logger {
   // and I/O to the stream or file.
   void IOThread();
 
-  const size_t max_threads_to_log_;
-  std::thread io_thread_;
-
   // Accessed by IOThead only.
   const std::chrono::duration<double> poll_period_;
   AsyncLog async_logger_;
+
+  const size_t max_threads_to_log_;
+  std::thread io_thread_;
 
   // Accessed by producers and IOThead during thread registration and
   // destruction. Protected by io_thread_mutex_.

@@ -6,7 +6,6 @@
 #include <cassert>
 #include <cstring>
 #include <future>
-#include <iostream>
 #include <random>
 #include <thread>
 #include <fstream>
@@ -242,6 +241,9 @@ std::vector<QuerySample> SampleIndexesToQuery(
 
 void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                          const TestSettings& settings) {
+  LogDetail([](AsyncLog &log) {
+    log.LogDetail("Starting verification mode:"); });
+
   // kQueryPoolSize should be big enough that we don't need to worry about
   // logging falling too far behind.
   constexpr size_t kQueryPoolSize = 1024;
@@ -252,7 +254,8 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   std::mt19937 gen(kSeed);
 
   if (settings.scenario != TestScenario::MultiStream) {
-    std::cerr << "Unsupported scenario. Only MultiStream supported.\n";
+    LogError([](AsyncLog &log) {
+      log.LogDetail("Unsupported scenario. Only MultiStream supported."); });
     return;
   }
 
@@ -335,6 +338,9 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 // TODO: Simplify logic that will not be shared with RunVerificationMode.
 void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                         const TestSettings& settings) {
+  LogDetail([](AsyncLog &log) {
+    log.LogDetail("Starting performance mode:"); });
+
   GlobalLogger().RestartLatencyRecording();
 
   // kQueryInfoPoolSize should be big enough that we don't need to worry
@@ -350,7 +356,8 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   std::mt19937 gen(kSeed);
 
   if (settings.scenario != TestScenario::SingleStream) {
-    std::cerr << "Unsupported scenario. Only SingleStream supported.\n";
+    LogError([](AsyncLog &log) {
+      log.LogDetail("Unsupported scenario. Only SingleStream supported."); });
     return;
   }
 
@@ -445,14 +452,17 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   size_t i90 = latencies.size() * .9;
   std::cout << "90th percentile latency: " << latencies[i90] << "ns\n";
 
+
   qsl->UnloadSamplesFromRam(performance_set);
 }
 
 void StartTest(SystemUnderTest* sut,
                QuerySampleLibrary* qsl,
                const TestSettings& settings) {
-  std::string trace_filename = "mlperf_trace.json";
-  std::ofstream trace_out(trace_filename);
+  std::ofstream summary_out("mlperf_log_summary.txt");
+  std::ofstream detail_out("mlperf_log_detail.txt");
+  GlobalLogger().StartLogging(&summary_out, &detail_out);
+  std::ofstream trace_out("mlperf_trace.json");
   GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
   switch (settings.mode) {
     case TestMode::SubmissionRun:
@@ -466,11 +476,13 @@ void StartTest(SystemUnderTest* sut,
       RunPerformanceMode(sut, qsl, settings);
       break;
     case TestMode::SearchForQps:
-      std::cerr << "TestMode::SearchForQps not implemented.\n";
+      LogError([](AsyncLog &log) {
+        log.LogDetail("TestMode::SearchForQps not implemented."); });
       break;
   }
   // Redirect traces to an overflow target.
   GlobalLogger().StopTracing();
+  GlobalLogger().StopLogging();
 }
 
 }  // namespace mlperf

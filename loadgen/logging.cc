@@ -117,31 +117,6 @@ Logger::~Logger() {
     io_thread_cv_.notify_all();
   }
   io_thread_.join();
-
-  // TODO: Fix lifetime management of TlsLoggers and Loggers.
-  {
-    std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
-    if (!tls_loggers_registerd_.empty()) {
-      std::cerr << "Warning: Destroying Logger with TlsLoggers alive: (x" <<
-                   tls_loggers_registerd_.size() << ").\n";
-    }
-  }
-
-  if (swap_request_id_read_ != swap_request_id_.load() ||
-      !swap_request_slots_to_retry_.empty() ||
-      !threads_to_swap_deferred_.empty() ||
-      !threads_to_read_.empty()) {
-    std::cerr << "Warning: Logger destroyed before all logs were processed.\n";
-    std::cerr << "swap_request_id_read_: " << swap_request_id_read_ << "\n";
-    std::cerr << "swap_request_id_.load(): " <<
-                 swap_request_id_.load() << "\n";
-    std::cerr << "swap_request_slots_to_retry_.empty(): " <<
-                 swap_request_slots_to_retry_.empty() << "\n";
-    std::cerr << "threads_to_swap_deferred_.empty(): " <<
-                 threads_to_swap_deferred_.empty() << "\n";
-    std::cerr << "threads_to_read_.empty(): " <<
-                 threads_to_read_.empty() << "\n";
-  }
 }
 
 void Logger::RequestSwapBuffers(TlsLogger* tls_logger) {
@@ -167,8 +142,8 @@ void Logger::RequestSwapBuffers(TlsLogger* tls_logger) {
 void Logger::RegisterTlsLogger(TlsLogger* tls_logger) {
   std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
   if (tls_loggers_registerd_.size() >= max_threads_to_log_) {
-    std::cerr << "Warning: More TLS loggers registerd than can"
-                 "be active simultaneously.\n";
+    LogErrorSync("Warning: More TLS loggers registerd than can "
+                 "be active simultaneously.\n");
   }
   tls_loggers_registerd_.insert(tls_logger);
 }
@@ -177,8 +152,9 @@ void Logger::RegisterTlsLogger(TlsLogger* tls_logger) {
 void Logger::UnRegisterTlsLogger(TlsLogger* tls_logger) {
   // Avoid circular dependency deadlock.
   // TODO: Flush traces here or in ~Logger.
-  if (std::this_thread::get_id() == io_thread_.get_id())
+  if (std::this_thread::get_id() == io_thread_.get_id()) {
     return;
+  }
 
   // TODO(brianderson): Move the TlsLogger data to a struct that we can move
   // ownership of to Logger for later consumption. Then exit this thread
@@ -197,6 +173,24 @@ void Logger::UnRegisterTlsLogger(TlsLogger* tls_logger) {
   io_thread_done_with_tls_logger.get_future().wait();
   std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
   tls_loggers_registerd_.erase(tls_logger);
+}
+
+void Logger::StartLogging(std::ostream *summary, std::ostream *detail) {
+  async_logger_.SetLogFiles(summary, detail, PerfClock::now());
+}
+
+void Logger::StopLogging() {
+  if (std::this_thread::get_id() == io_thread_.get_id()) {
+    LogErrorSync("StopLogging() not supported from IO thread.");
+    return;
+  }
+  // Flush logs from this thread.
+  std::promise<void> io_thread_flushed_this_thread;
+  Log([&](AsyncLog&) {
+        io_thread_flushed_this_thread.set_value();
+      });
+  io_thread_flushed_this_thread.get_future().wait();
+  async_logger_.SetLogFiles(&std::cerr, &std::cerr, PerfClock::now());
 }
 
 void Logger::StartNewTrace(std::ostream *trace_out,
@@ -226,7 +220,7 @@ TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {
     bool success = thread_swap_request_slots_[slot].compare_exchange_strong(
         slot_value, SwapRequestSlotIsWritableValue(next_id));
     if (!success) {
-      std::cerr << "CAS failed: " << __LINE__ << "\n";
+      GlobalLogger().LogErrorSync("CAS failed.", "line", __LINE__);
       assert(success);
     }
     return reinterpret_cast<TlsLogger*>(slot_value);
@@ -374,8 +368,8 @@ void TlsLogger::Log(AsyncLogEntry &&entry) {
     // previous SwapBuffers request.
     cas_fail_count++;
     if (cas_fail_count >= 2) {
-      std::cerr << "CAS failed x" << cas_fail_count
-                << " : " << __LINE__ << "\n";
+      GlobalLogger().LogErrorSync(
+            "CAS failed.", "times", cas_fail_count, "line", __LINE__);
       assert(cas_fail_count < 2);
     }
   }
@@ -387,7 +381,7 @@ void TlsLogger::Log(AsyncLogEntry &&entry) {
   bool success = entry_states_[i_write].compare_exchange_strong(
            write_lock, EntryState::Unlocked);
   if (!success) {
-    std::cerr << "CAS failed: " << __LINE__ << "\n";
+    GlobalLogger().LogErrorSync("CAS failed.", "line", __LINE__);
     assert(success);
   }
 
@@ -405,7 +399,7 @@ void TlsLogger::SwapBuffers() {
   bool success = entry_states_[i_read_].compare_exchange_strong(
            read_lock, EntryState::Unlocked);
   if (!success) {
-    std::cerr << "CAS failed: " << __LINE__ << "\n";
+    GlobalLogger().LogErrorSync("CAS failed.", "line", __LINE__);
     assert(success);
   }
 

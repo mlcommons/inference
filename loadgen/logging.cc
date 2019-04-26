@@ -221,6 +221,8 @@ std::vector<QuerySampleLatency> Logger::GetLatenciesBlocking(
 TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {
   uintptr_t slot_value = thread_swap_request_slots_[slot].load();
   if (SwapRequestSlotIsReadable(slot_value)) {
+    // TODO: Convert this block to a simple write once we are confidient
+    // that we don't need to check for success.
     bool success = thread_swap_request_slots_[slot].compare_exchange_strong(
         slot_value, SwapRequestSlotIsWritableValue(next_id));
     if (!success) {
@@ -283,9 +285,9 @@ void Logger::IOThread() {
     auto trace1 = MakeScopedTracer(
         [](AsyncLog &log){ log.ScopedTrace("IOThreadLoop"); });
     {
-      std::unique_lock<std::mutex> lock(io_thread_mutex_);
       auto trace2 = MakeScopedTracer(
           [](AsyncLog &log){ log.ScopedTrace("Wait"); });
+      std::unique_lock<std::mutex> lock(io_thread_mutex_);
       io_thread_cv_.wait_for(
             lock, poll_period_, [&] { return !keep_io_thread_alive_; });
     }
@@ -379,6 +381,8 @@ void TlsLogger::Log(AsyncLogEntry &&entry) {
   }
   entries_[i_write].emplace_back(std::forward<AsyncLogEntry>(entry));
 
+  // TODO: Convert this block to a simple write once we are confidient
+  // that we don't need to check for success.
   auto write_lock = EntryState::WriteLock;
   bool success = entry_states_[i_write].compare_exchange_strong(
            write_lock, EntryState::Unlocked);
@@ -395,6 +399,8 @@ void TlsLogger::Log(AsyncLogEntry &&entry) {
 }
 
 void TlsLogger::SwapBuffers() {
+  // TODO: Convert this block to a simple write once we are confidient
+  // that we don't need to check for success.
   auto read_lock = EntryState::ReadLock;
   bool success = entry_states_[i_read_].compare_exchange_strong(
            read_lock, EntryState::Unlocked);

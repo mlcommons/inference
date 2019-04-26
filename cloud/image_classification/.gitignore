@@ -1,9 +1,9 @@
-.coverage
-.vscode
+.coverage*
 *.pyc
 .idea
 build
 dist
+bin
 obj
 .ipynb_checkpoints
 __pycache__
@@ -12,3 +12,5 @@ __pycache__
 .cache
 .eggs
 *.egg-info
+run.sh
+preprocessed

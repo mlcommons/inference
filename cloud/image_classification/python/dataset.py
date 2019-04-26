@@ -56,30 +56,61 @@ class Dataset():
             self.image_list_inmemory[sample], _ = self.get_item(sample)
 
     def unload_query_samples(self, sample_list):
-        self.image_list_inmemory = {}
+        if sample_list:
+            for sample in sample_list:
+                del self.image_list_inmemory[sample]
+        else:
+            self.image_list_inmemory = {}
 
     def get_samples(self, id_list):
-        data = np.array([self.image_list_inmemory[id] for id in id_list])
+        data = [self.image_list_inmemory[id] for id in id_list]
+        data = np.array(data)
         return data, self.label_list[id_list]
 
 #
 # Post processing
 #
+class PostProcessCommon:
+    def __init__(self, offset=0):
+        self.offset = offset
 
-def post_process_none(results):
-    return results
+    def __call__(self, results, ids, expected=None, result_dict=None):
+        good = 0
+        n = len(results[0])
+        for idx in range(0, n):
+            if results[0][idx] + self.offset == expected[idx]:
+                good += 1
+        result_dict["good"] += good
+        result_dict["total"] += n
+        return results
 
+    def start(self):
+        pass
 
-def post_process_argmax(results):
-    return np.argmax(results)
+    def finalize(self, results, ds=False):
+        pass
 
+class PostProcessArgMax:
+    def __init__(self, offset=0):
+        self.offset = offset
 
-def post_process_offset1(results):
-    return results - 1
+    def __call__(self, results, ids, expected=None, result_dict=None):
+        results = np.argmax(results)
+        good = 0
+        n = len(results[0])
+        for idx in range(0, n):
+            if results[0][idx] + self.offset == expected[idx]:
+                good += 1
+        result_dict["good"] += good
+        result_dict["total"] += n
+        return results
 
+    def start(self):
+        pass
 
-def post_process_argmax_offset(results):
-    return np.argmax(results) - 1
+    def finalize(self, results, ds=False):
+        pass
+
 
 
 #
@@ -142,6 +173,23 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
     img = img - 0.5
     img = img * 2
 
+    # transpose if needed
+    if need_transpose:
+        img = img.transpose([2, 0, 1])
+    return img
+
+def pre_process_coco_mobilenet(img, dims=None, need_transpose=False):
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+
+    output_height, output_width, _ = dims
+    img = resize_with_aspectratio(img, output_height, output_width)
+    img = center_crop(img, output_height, output_width)
+
+    img_data = np.array(img.getdata())
+    img_data = img_data.astype(np.uint8)
+    (im_width, im_height) = img.size
+    img = img_data.reshape(im_height, im_width, 3)
     # transpose if needed
     if need_transpose:
         img = img.transpose([2, 0, 1])

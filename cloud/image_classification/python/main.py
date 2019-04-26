@@ -19,6 +19,7 @@ import numpy as np
 
 import dataset
 import imagenet
+import coco
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -28,11 +29,17 @@ log = logging.getLogger("main")
 # the datasets we support
 SUPPORTED_DATASETS = {
     "imagenet":
-        (imagenet.Imagenet, dataset.pre_process_vgg, dataset.post_process_offset1,
+        (imagenet.Imagenet, dataset.pre_process_vgg, dataset.PostProcessCommon(offset=-1),
          {"image_size": [224, 224, 3]}),
     "imagenet_mobilenet":
-        (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.post_process_argmax_offset,
+        (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.PostProcessArgMax(offset=-1),
          {"image_size": [224, 224, 3]}),
+    "coco-300x300":
+        (coco.Coco, dataset.pre_process_coco_mobilenet, coco.PostProcessCoco(),
+         {"image_size": [300, 300, 3]}),
+    "coco-1200x1200":
+        (coco.Coco, dataset.pre_process_coco_mobilenet, coco.PostProcessCoco(),
+         {"image_size": [1200, 1200, 3]}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
@@ -68,7 +75,18 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet",
         "outputs": "ArgMax:0",
         "backend": "onnxruntime",
-    }
+    },
+    "ssd-mobilenet-tf": {
+        "inputs": "image_tensor:0",
+        "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
+        "dataset": "coco-300x300",
+        "backend": "tensorflow",
+    },
+    "ssd-mobilenet-onnx": {
+        "dataset": "imagenet_mobilenet",
+        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
+        "backend": "coco",
+    },
 }
 
 
@@ -136,22 +154,24 @@ def get_backend(backend):
 class Item:
     """An item that we queue for processing by the thread pool."""
 
-    def __init__(self, query_id, img, label=None):
-        self.id = query_id
+    def __init__(self, query_id, content_id, img, label=None):
+        self.query_id = query_id
+        self.content_id = content_id
         self.img = img
         self.label = label
         self.start = time.time()
 
 
 class Runner:
-    def __init__(self, model, ds, threads, post_process=None):
+    def __init__(self, model, ds, threads, post_proc=None):
         self.tasks = Queue(maxsize=threads * 5)
         self.workers = []
         self.model = model
-        self.post_process = post_process
+        self.post_process = post_proc
         self.threads = threads
         self.result_list = []
         self.result_dict = {}
+        self.take_accuracy = False
 
     def handle_tasks(self, tasks_queue):
         """Worker thread."""
@@ -167,15 +187,13 @@ class Runner:
                 results = self.model.predict({self.model.inputs[0]: qitem.img})
                 # and keep track of how long it took
                 took = time.time() - qitem.start
+                if self.take_accuracy:
+                    response = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
                 response = []
-                for idx, result in enumerate(results[0]):
-                    result = self.post_process(result)
-                    if qitem.label[idx] == result:
-                        self.result_dict["good"] += 1
-                    self.result_dict["total"] += 1
-                    # FIXME: unclear what to return here
-                    response.append(lg.QuerySampleResponse(qitem.id[idx], 0, 0))
+                for query_id in qitem.query_id:
                     self.result_list.append(took)
+                    # FIXME: unclear what to return here
+                    response.append(lg.QuerySampleResponse(query_id, 0, 0))
                 lg.QuerySamplesComplete(response)
             except Exception as ex:  # pylint: disable=broad-except
                 log.error("execute_parallel thread: %s", ex)
@@ -189,12 +207,14 @@ class Runner:
             self.workers.append(worker)
             worker.start()
 
-    def start_run(self, result_list, result_dict):
+    def start_run(self, result_list, result_dict, take_accuracy):
         self.result_list = result_list
         self.result_dict = result_dict
+        self.take_accuracy = take_accuracy
+        self.post_process.start()
 
-    def enqueue(self, id, data, label):
-        item = Item(id, data, label)
+    def enqueue(self, id, ids, data, label):
+        item = Item(id, ids, data, label)
         self.tasks.put(item)
 
     def finish(self):
@@ -241,12 +261,12 @@ def main():
     image_format = args.data_format if args.data_format else backend.image_format()
 
     # dataset to use
-    wanted_dataset, preprocessor, postprocessor, kwargs = SUPPORTED_DATASETS[args.dataset]
+    wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
     ds = wanted_dataset(data_path=args.dataset_path,
                         image_list=args.dataset_list,
                         name=args.dataset,
                         image_format=image_format,
-                        pre_process=preprocessor,
+                        pre_process=pre_proc,
                         use_cache=args.cache,
                         count=args.count, **kwargs)
 
@@ -265,7 +285,7 @@ def main():
     #
     count = args.count if args.count else ds.get_item_count()
 
-    runner = Runner(model, ds, args.threads, post_process=postprocessor)
+    runner = Runner(model, ds, args.threads, post_proc=post_proc)
     runner.start_pool()
 
     # warmup
@@ -274,12 +294,13 @@ def main():
     for _ in range(100):
         img, _ = ds.get_samples([0])
         _ = backend.predict({backend.inputs[0]: img})
+    ds.unload_query_samples(None)
 
     def issue_query(query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
         data, label = ds.get_samples(idx)
-        runner.enqueue(query_id, data, label)
+        runner.enqueue(query_id, idx, data, label)
 
     sut = lg.ConstructSUT(issue_query)
     qsl = lg.ConstructQSL(count, args.time, ds.load_query_samples, ds.unload_query_samples)
@@ -295,18 +316,21 @@ def main():
             settings = lg.TestSettings()
             settings.scenario = scenario
             settings.mode = lg.TestMode.SubmissionRun
-            settings.samples_per_query = 4 # FIXME: we don't want to know about this
+            settings.samples_per_query = 2 # FIXME: we don't want to know about this
             settings.target_qps = 1000 # FIXME: we don't want to know about this
             settings.target_latency_ns = int(target_latency * 1000000000)
 
+            # reset result capture
             result_list = []
             result_dict = {"good": 0, "total": 0}
-            runner.start_run(result_list, result_dict)
+            runner.start_run(result_list, result_dict, True)
             start = time.time()
             lg.StartTest(sut, qsl, settings)
+            # aggregate results, ie calculate the find
+            post_proc.finalize(result_dict, ds)
+
             add_results(final_results, "{}-{}".format(scenario, target_latency),
                         result_dict, result_list, time.time() - start)
-
     runner.finish()
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)

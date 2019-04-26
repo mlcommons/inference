@@ -425,7 +425,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   // Wait for tail queries to complete and collect all the latencies.
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
-  const size_t expected_latencies = i_query - 1;
+  const size_t expected_latencies = i_query;
   std::vector<QuerySampleLatency> latencies(
       GlobalLogger().GetLatenciesBlocking(expected_latencies));
 

@@ -401,6 +401,8 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     size_t i_limitting_query = i_query % kMaxAsyncQueries;
     QueryMetadata*& limitting_query = issued_query_infos[i_limitting_query];
     if (limitting_query != nullptr) {
+      auto trace2 = MakeScopedTracer(
+          [](AsyncLog &log){ log.ScopedTrace("WaitOnPrev"); });
       limitting_query->WaitForAllSamplesCompleted();
     }
     limitting_query = &query_info;
@@ -416,7 +418,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     last_now = PerfClock::now();
     query_info.scheduled_time = last_now;
     query_info.issued_start_time = last_now;
-    auto trace2 = MakeScopedTracer(
+    auto trace3 = MakeScopedTracer(
         [](AsyncLog &log){ log.ScopedTrace("IssueQuery"); });
     sut->IssueQuery(query_to_send);
     i_query++;
@@ -467,8 +469,8 @@ void StartTest(SystemUnderTest* sut,
       std::cerr << "TestMode::SearchForQps not implemented.\n";
       break;
   }
-  // Redirect traces to stderr.
-  GlobalLogger().StartNewTrace(&std::cerr, PerfClock::now());
+  // Redirect traces to an overflow target.
+  GlobalLogger().StopTracing();
 }
 
 }  // namespace mlperf

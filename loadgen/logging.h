@@ -44,6 +44,12 @@ class AsyncLog {
     if (summary_out_ != &std::cerr) {
       *summary_out_ << "Errors logged: " << log_error_count_ << "\n";
     }
+    if (summary_out_) {
+      summary_out_->flush();
+    }
+    if (detail_out_) {
+      detail_out_->flush();
+    }
     summary_out_ = summary;
     detail_out_ = detail;
     log_origin_ = log_origin;
@@ -55,6 +61,7 @@ class AsyncLog {
     // Cleanup previous trace.
     if (trace_out_) {
       WriteTraceEventFooterLocked();
+      trace_out_->flush();
     }
 
     // Setup new trace.
@@ -70,8 +77,8 @@ class AsyncLog {
   }
 
   template <typename ...Args>
-  void Log(const std::string& message,
-           const Args... args) {
+  void LogSummary(const std::string& message,
+                  const Args... args) {
     std::unique_lock<std::mutex> lock(log_mutex_);
     *summary_out_ << message;
     LogArgs(summary_out_, args...);
@@ -121,7 +128,6 @@ class AsyncLog {
                 << "\"args\": { ";
     LogArgs(trace_out_, args...);
     *trace_out_ << " }},\n";
-    trace_out_->flush();
   }
 
   void SetScopedTraceTimes(PerfClock::time_point start,
@@ -144,7 +150,6 @@ class AsyncLog {
                 << "\"args\": { ";
     LogArgs(trace_out_, args...);
     *trace_out_ << " }},\n";
-    trace_out_->flush();
   }
 
   template <typename ...Args>
@@ -173,7 +178,6 @@ class AsyncLog {
                 << "\"id\": " << id << ", "
                 << *current_pid_tid_
                 << "\"ts\": " << (end - trace_origin_).count() << " },\n";
-    trace_out_->flush();
   }
 
   void RecordLatency(uint64_t sample_sequence_id, QuerySampleLatency latency) {
@@ -210,7 +214,6 @@ class AsyncLog {
  private:
   void WriteTraceEventHeaderLocked() {
     *trace_out_ << "{ \"traceEvents\": [\n";
-    trace_out_->flush();
   }
 
   void WriteTraceEventFooterLocked(){
@@ -221,7 +224,6 @@ class AsyncLog {
                 << "\"version\": \"MLPerf LoadGen v0.5a0\"\n"
                 << "}\n"
                 << "}\n";
-    trace_out_->flush();
   }
 
   void LogArgs(std::ostream *) {}

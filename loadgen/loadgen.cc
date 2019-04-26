@@ -441,17 +441,19 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   sut->ReportLatencyResults(latencies);
 
   // Compute percentile.
-  // TODO: Output these to a summary log.
-  std::cout << "Loadgen results summary:\n";
   std::sort(latencies.begin(), latencies.end());
   int64_t accumulator = 0;
   for (auto l : latencies) {
     accumulator += l;
   }
-  std::cout << "Mean latency: " << accumulator / latencies.size() << "ns\n";
+  int64_t mean_latency = accumulator / latencies.size();
   size_t i90 = latencies.size() * .9;
-  std::cout << "90th percentile latency: " << latencies[i90] << "ns\n";
-
+  Log([mean_latency, l90 = latencies[i90]](AsyncLog &log) {
+    log.LogSummary(
+          "Loadgen results summary:"
+          "\n  Mean latency (ns) : " + std::to_string(mean_latency) +
+          "\n  90th percentile latency (ns) : " + std::to_string(l90));
+  });
 
   qsl->UnloadSamplesFromRam(performance_set);
 }
@@ -464,6 +466,7 @@ void StartTest(SystemUnderTest* sut,
   GlobalLogger().StartLogging(&summary_out, &detail_out);
   std::ofstream trace_out("mlperf_trace.json");
   GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
+
   switch (settings.mode) {
     case TestMode::SubmissionRun:
       RunVerificationMode(sut, qsl, settings);
@@ -480,7 +483,7 @@ void StartTest(SystemUnderTest* sut,
         log.LogDetail("TestMode::SearchForQps not implemented."); });
       break;
   }
-  // Redirect traces to an overflow target.
+
   GlobalLogger().StopTracing();
   GlobalLogger().StopLogging();
 }

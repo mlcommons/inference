@@ -6,7 +6,6 @@
 #include <cassert>
 #include <cstring>
 #include <future>
-#include <iostream>
 #include <random>
 #include <thread>
 #include <fstream>
@@ -26,14 +25,9 @@ struct SampleMetadata;
 struct QueryMetadata;
 
 struct SampleCompleteDelagate {
-  explicit SampleCompleteDelagate(PerfClock::time_point origin_time)
-    : origin_time(origin_time) {}
-
   virtual void Notify(SampleMetadata*,
                       QuerySampleResponse*,
                       PerfClock::time_point) = 0;
-
-  const PerfClock::time_point origin_time;
 };
 
 // SampleMetadata is used by the load generator to coordinate
@@ -142,9 +136,6 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 // TODO: Versions that have less detailed logs.
 // TODO: Versions that do a delayed notification.
 struct SampleCompleteDetailed : public SampleCompleteDelagate {
-  SampleCompleteDetailed(PerfClock::time_point origin_time, Logger* logger)
-    : SampleCompleteDelagate(origin_time), logger(logger) {}
-
   void Notify(SampleMetadata* sample,
               QuerySampleResponse* response,
               PerfClock::time_point complete_begin_time) override {
@@ -155,33 +146,28 @@ struct SampleCompleteDetailed : public SampleCompleteDelagate {
     auto sample_data_copy = new uint8_t[response->size];
     auto* src_begin = reinterpret_cast<uint8_t*>(response->data);
     std::memcpy(sample_data_copy, src_begin, response->size);
-    Log(logger,
-        [sample = sample,
-         sample_data_copy = sample_data_copy,
-         complete_begin_time = complete_begin_time](AsyncLog& trace) {
+    Log([sample, sample_data_copy, complete_begin_time](AsyncLog& log) {
           QueryMetadata* query = sample->query_metadata;
-          DurationGeneratorNs origin {
-            query->sample_complete_logger->origin_time };
           DurationGeneratorNs sched { query->scheduled_time };
-          trace.AsyncEvent("Sample",
-                sample->sequence_id,
-                origin.delta(query->scheduled_time),
-                sched.delta(complete_begin_time), // This is the latency.
-                "sample_seq", sample->sequence_id,
-                "query_seq", query->sequence_id,
-                "idx", sample->sample_index,
-                "sched_ns", origin.delta(query->scheduled_time),
-                "wait_for_slot_ns", sched.delta(query->wait_for_slot_time),
-                "issue_start_ns", sched.delta(query->issued_start_time),
-                "complete_ns", sched.delta(complete_begin_time));
+          QuerySampleLatency latency = sched.delta(complete_begin_time);
+          log.RecordLatency(sample->sequence_id, latency);
+          log.TraceSample(
+              "Sample",
+              sample->sequence_id,
+              query->scheduled_time,
+              complete_begin_time,
+              "sample_seq", sample->sequence_id,
+              "query_seq", query->sequence_id,
+              "idx", sample->sample_index,
+              "wait_for_slot_ns", sched.delta(query->wait_for_slot_time),
+              "issue_start_ns", sched.delta(query->issued_start_time),
+              "complete_ns", sched.delta(complete_begin_time));
           query->RemoveOneSampleRef();
           if (sample_data_copy != nullptr) {
             delete [] sample_data_copy;
           }
         });
   }
-
-  Logger* logger;
 };
 
 // Generates random sets of indicies where indicies are selected from
@@ -254,18 +240,22 @@ std::vector<QuerySample> SampleIndexesToQuery(
 }
 
 void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-                         const TestSettings& settings, Logger* logger) {
+                         const TestSettings& settings) {
+  LogDetail([](AsyncLog &log) {
+    log.LogDetail("Starting verification mode:"); });
+
   // kQueryPoolSize should be big enough that we don't need to worry about
   // logging falling too far behind.
   constexpr size_t kQueryPoolSize = 1024;
   constexpr size_t kMaxAsyncQueries = 4;
   constexpr int64_t kNanosecondsPerSecond = 1000000000;
 
-  SampleCompleteDetailed sample_complete_logger(PerfClock::now(), logger);
+  SampleCompleteDetailed sample_complete_logger;
   std::mt19937 gen(kSeed);
 
   if (settings.scenario != TestScenario::MultiStream) {
-    std::cerr << "Unsupported scenario. Only MultiStream supported.\n";
+    LogError([](AsyncLog &log) {
+      log.LogDetail("Unsupported scenario. Only MultiStream supported."); });
     return;
   }
 
@@ -291,7 +281,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   QueryMetadata* issued_query_infos[kMaxAsyncQueries] = {}; // zeroes.
   for (auto &loadable_set : loadable_sets) {
     qsl->LoadSamplesToRam(loadable_set);
-    logger->RestartLatencyRecording();
+    GlobalLogger().RestartLatencyRecording();
 
     // Split the set up into random queries.
     std::vector<std::vector<QuerySampleIndex>> queries =
@@ -329,6 +319,8 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       query_info.sequence_id = i_query;
       query_info.scheduled_time = query_start_time;
       query_info.wait_for_slot_time = wait_for_slot_time;
+      auto trace = MakeScopedTracer(
+            [](AsyncLog &log){ log.ScopedTrace("IssueQuery"); });
       query_info.issued_start_time = PerfClock::now();
       sut->IssueQuery(query_to_send);
       i_query++;
@@ -337,7 +329,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     // Wait for tail queries to complete and collect all the latencies.
     // We have to keep the synchronization primitives and loaded samples
     // alive until the SUT is done with them.
-    logger->GetLatenciesBlocking(loadable_set.size());
+    GlobalLogger().GetLatenciesBlocking(loadable_set.size());
     qsl->UnloadSamplesFromRam(loadable_set);
   }
 }
@@ -345,7 +337,12 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 // TODO: Share logic duplicated in RunVerificationMode.
 // TODO: Simplify logic that will not be shared with RunVerificationMode.
 void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-                        const TestSettings& settings, Logger* logger) {
+                        const TestSettings& settings) {
+  LogDetail([](AsyncLog &log) {
+    log.LogDetail("Starting performance mode:"); });
+
+  GlobalLogger().RestartLatencyRecording();
+
   // kQueryInfoPoolSize should be big enough that we don't need to worry
   // about logging falling too far behind. And queries being processed
   // too far out of order.
@@ -353,15 +350,14 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   constexpr size_t kQueryInfoPoolSize = 32 * 1024;
   constexpr size_t kMaxAsyncQueries = 1;
   constexpr size_t kMinQueryCount = 1024;
-  constexpr std::chrono::minutes kMinDuration(1);
+  constexpr std::chrono::seconds kMinDuration(60);
 
-  logger->RestartLatencyRecording();
-
-  SampleCompleteDetailed sample_complete_logger(PerfClock::now(), logger);
+  SampleCompleteDetailed sample_complete_logger;
   std::mt19937 gen(kSeed);
 
   if (settings.scenario != TestScenario::SingleStream) {
-    std::cerr << "Unsupported scenario. Only SingleStream supported.\n";
+    LogError([](AsyncLog &log) {
+      log.LogDetail("Unsupported scenario. Only SingleStream supported."); });
     return;
   }
 
@@ -399,6 +395,8 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   PerfClock::time_point last_now = start;
   PerfClock::time_point run_to_time_point_min = start + kMinDuration;
   while (i_query < kMinQueryCount || last_now < run_to_time_point_min) {
+    auto trace1 = MakeScopedTracer(
+        [](AsyncLog &log){ log.ScopedTrace("SampleLoop"); });
     std::vector<QuerySampleIndex> query(1, uniform_distribution(gen));
 
     // Limit the number of oustanding async queries by waiting for
@@ -410,6 +408,8 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     size_t i_limitting_query = i_query % kMaxAsyncQueries;
     QueryMetadata*& limitting_query = issued_query_infos[i_limitting_query];
     if (limitting_query != nullptr) {
+      auto trace2 = MakeScopedTracer(
+          [](AsyncLog &log){ log.ScopedTrace("WaitOnPrev"); });
       limitting_query->WaitForAllSamplesCompleted();
     }
     limitting_query = &query_info;
@@ -425,6 +425,8 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     last_now = PerfClock::now();
     query_info.scheduled_time = last_now;
     query_info.issued_start_time = last_now;
+    auto trace3 = MakeScopedTracer(
+        [](AsyncLog &log){ log.ScopedTrace("IssueQuery"); });
     sut->IssueQuery(query_to_send);
     i_query++;
   }
@@ -432,23 +434,26 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   // Wait for tail queries to complete and collect all the latencies.
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
-  const size_t expected_latencies = i_query - 1;
+  const size_t expected_latencies = i_query;
   std::vector<QuerySampleLatency> latencies(
-      logger->GetLatenciesBlocking(expected_latencies));
+      GlobalLogger().GetLatenciesBlocking(expected_latencies));
 
   sut->ReportLatencyResults(latencies);
 
   // Compute percentile.
-  // TODO: Output these to a summary log.
-  std::cout << "Loadgen results summary:\n";
   std::sort(latencies.begin(), latencies.end());
   int64_t accumulator = 0;
   for (auto l : latencies) {
     accumulator += l;
   }
-  std::cout << "Mean latency: " << accumulator / latencies.size() << "ns\n";
+  int64_t mean_latency = accumulator / latencies.size();
   size_t i90 = latencies.size() * .9;
-  std::cout << "90th percentile latency: " << latencies[i90] << "ns\n";
+  Log([mean_latency, l90 = latencies[i90]](AsyncLog &log) {
+    log.LogSummary(
+          "Loadgen results summary:"
+          "\n  Mean latency (ns) : " + std::to_string(mean_latency) +
+          "\n  90th percentile latency (ns) : " + std::to_string(l90));
+  });
 
   qsl->UnloadSamplesFromRam(performance_set);
 }
@@ -456,25 +461,31 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 void StartTest(SystemUnderTest* sut,
                QuerySampleLibrary* qsl,
                const TestSettings& settings) {
-  constexpr size_t kMaxLoggingThreads = 512;
-  std::string log_filename = "mlperf_log.json";
-  std::ofstream out_file(log_filename);
-  Logger logger(&out_file, std::chrono::nanoseconds(1), kMaxLoggingThreads);
+  std::ofstream summary_out("mlperf_log_summary.txt");
+  std::ofstream detail_out("mlperf_log_detail.txt");
+  GlobalLogger().StartLogging(&summary_out, &detail_out);
+  std::ofstream trace_out("mlperf_trace.json");
+  GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
+
   switch (settings.mode) {
     case TestMode::SubmissionRun:
-      RunVerificationMode(sut, qsl, settings, &logger);
-      RunPerformanceMode(sut, qsl, settings, &logger);
+      RunVerificationMode(sut, qsl, settings);
+      RunPerformanceMode(sut, qsl, settings);
       break;
     case TestMode::AccuracyOnly:
-      RunVerificationMode(sut, qsl, settings, &logger);
+      RunVerificationMode(sut, qsl, settings);
       break;
     case TestMode::PerformanceOnly:
-      RunPerformanceMode(sut, qsl, settings, &logger);
+      RunPerformanceMode(sut, qsl, settings);
       break;
     case TestMode::SearchForQps:
-      std::cerr << "TestMode::SearchForQps not implemented.\n";
+      LogError([](AsyncLog &log) {
+        log.LogDetail("TestMode::SearchForQps not implemented."); });
       break;
   }
+
+  GlobalLogger().StopTracing();
+  GlobalLogger().StopLogging();
 }
 
 }  // namespace mlperf

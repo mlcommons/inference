@@ -5,10 +5,11 @@
 #include <atomic>
 #include <cassert>
 #include <cstring>
+#include <fstream>
 #include <future>
+#include <queue>
 #include <random>
 #include <thread>
-#include <fstream>
 
 #include "logging.h"
 #include "query_sample.h"
@@ -18,7 +19,9 @@
 namespace mlperf {
 
 namespace {
-constexpr uint64_t kSeed = 0xABCD1234;
+constexpr uint64_t kDefaultQslSeed = 0xABCD1234;
+constexpr uint64_t kDefaultSampleSeed = 0xABCD1234;
+constexpr uint64_t kDefaultScheduleSeed = 0x1234ABCD;
 }  // namespace
 
 struct SampleMetadata;
@@ -40,22 +43,38 @@ struct SampleMetadata {
 
 class QueryMetadata {
  public:
-  void Prepare(std::vector<QuerySample>* query_to_send,
-               uint64_t* sample_sequence_id) {
-    assert(wait_count_.load() == 0);
-    size_t query_count = query_to_send->size();
-    samples_.clear();
-    samples_.resize(query_count);
-    for (size_t i = 0; i < query_count; i++) {
-      SampleMetadata* sample_metadata = &samples_[i];
-      sample_metadata->query_metadata = this;
-      sample_metadata->sequence_id = (*sample_sequence_id)++;
-      sample_metadata->sample_index = (*query_to_send)[i].index;
-      (*query_to_send)[i].id = reinterpret_cast<ResponseId>(sample_metadata);
+  QueryMetadata(const std::vector<QuerySampleIndex>& query_sample_indicies,
+                std::chrono::nanoseconds scheduled_delta,
+                SampleCompleteDelagate* sample_complete_delegate,
+                uint64_t query_sequence_id,
+                uint64_t* sample_sequence_id)
+    : scheduled_delta(scheduled_delta),
+      sample_complete_delegate(sample_complete_delegate),
+      sequence_id(query_sequence_id),
+      wait_count_(query_sample_indicies.size()) {
+    for (QuerySampleIndex i : query_sample_indicies) {
+      samples_.push_back({ this, (*sample_sequence_id)++, i });
+      query_to_send.push_back(
+          { reinterpret_cast<ResponseId>(&samples_.back()), i });
     }
-    slot_free_count_.store(query_count, std::memory_order_relaxed);
-    wait_count_.store(query_count, std::memory_order_relaxed);
-    all_samples_done_ = std::promise<void>();
+  }
+
+  QueryMetadata(QueryMetadata&& src)
+    : query_to_send(std::move(src.query_to_send)),
+      scheduled_delta(src.scheduled_delta),
+      sample_complete_delegate(src.sample_complete_delegate),
+      sequence_id(src.sequence_id),
+      wait_count_(src.samples_.size()),
+      samples_(std::move(src.samples_)) {
+    // The move constructor should only be called while generating a
+    // vector of QueryMetadata, before it's been used.
+    // Assert that wait_count_ is in its initial state.
+    assert(wait_count_.load() == samples_.size());
+    // Update the "parent" of each sample to be this query; the old query
+    // address will no longer be valid.
+    for (auto& s : samples_) {
+      s.query_metadata = this;
+    }
   }
 
   void NotifyOneSampleCompleted() {
@@ -69,36 +88,20 @@ class QueryMetadata {
     all_samples_done_.get_future().wait();
   }
 
-  void RemoveOneSampleRef() {
-    slot_free_count_.fetch_sub(1);
-  }
-
-  bool ReadyForNewQuery() {
-    return 0 == slot_free_count_.load();
-  }
-
  public:
-  SampleCompleteDelagate* sample_complete_logger;
-  uint64_t sequence_id;
+  std::vector<QuerySample> query_to_send;
+  const std::chrono::nanoseconds scheduled_delta;
+  SampleCompleteDelagate* const sample_complete_delegate;
+  const uint64_t sequence_id;
+
+  // Tracing timestamps.
   PerfClock::time_point scheduled_time;
   PerfClock::time_point wait_for_slot_time;
   PerfClock::time_point issued_start_time;
 
  private:
-  // Initializing as fulfilled prevents code from having to special
-  // case initial use vs reuse.
-  std::promise<void> init_promise_as_fulfilled() {
-    std::promise<void> init;
-    init.set_value();
-    return init;
-  }
-
-  // |slot_free_count_| is used to verify that the logging logic is done
-  //   reading the data from this class.
-  // |wait_count_| is used to notify of completion asap.
-  std::atomic<size_t> slot_free_count_ { 0 };
-  std::atomic<size_t> wait_count_ { 0 };
-  std::promise<void> all_samples_done_ { init_promise_as_fulfilled() };
+  std::atomic<size_t> wait_count_;
+  std::promise<void> all_samples_done_;
   std::vector<SampleMetadata> samples_;
 };
 
@@ -126,7 +129,7 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
   for (QuerySampleResponse* response = responses; response < end; response++) {
     SampleMetadata* sample = reinterpret_cast<SampleMetadata*>(response->id);
     QueryMetadata* query = sample->query_metadata;
-    query->sample_complete_logger->Notify(sample, response, timestamp);
+    query->sample_complete_delegate->Notify(sample, response, timestamp);
   }
 }
 
@@ -162,7 +165,6 @@ struct SampleCompleteDetailed : public SampleCompleteDelagate {
               "wait_for_slot_ns", sched.delta(query->wait_for_slot_time),
               "issue_start_ns", sched.delta(query->issued_start_time),
               "complete_ns", sched.delta(complete_begin_time));
-          query->RemoveOneSampleRef();
           if (sample_data_copy != nullptr) {
             delete [] sample_data_copy;
           }
@@ -229,14 +231,94 @@ std::vector<std::vector<QuerySampleIndex>> GenerateDisjointSets(
   return result;
 }
 
-std::vector<QuerySample> SampleIndexesToQuery(
-    std::vector<QuerySampleIndex> src_set) {
-  std::vector<QuerySample> dst_set;
-  dst_set.reserve(src_set.size());
-  for (const auto &index : src_set) {
-    dst_set.push_back({0, index});
+// ScheduleDistribution templates by test scenario.
+template <TestScenario scenario>
+auto ScheduleDistribution(double qps) {
+  return [period = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::duration<double>(1.0 / qps))] (auto& gen) {
+    return period;
+  };
+}
+
+template <>
+auto ScheduleDistribution<TestScenario::Cloud>(double qps) {
+  // Poisson arrival process corresponds to exponentially distributed
+  // interarrival times.
+  return [dist = std::exponential_distribution<>(qps)](auto& gen) {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::duration<double>(dist(gen)));
+  };
+}
+
+// SampleDistribution templates by test mode.
+template <TestMode mode>
+auto SampleDistribution(size_t sample_count) {
+  return [sample_count, i = size_t(0)]
+      (auto& gen) mutable {
+        return (i++) % sample_count;
+      };
+}
+
+template <>
+auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count) {
+  return [dist = std::uniform_int_distribution<>(0, sample_count - 1)]
+      (auto& gen) mutable {
+        return dist(gen);
+      };
+}
+
+template <TestScenario scenario, TestMode mode>
+std::vector<QueryMetadata> GenerateQueries(
+    const TestSettings& settings,
+    const std::vector<QuerySampleIndex>& loaded_samples,
+    SampleCompleteDelagate* sample_complete_delegate) {
+
+  constexpr std::chrono::seconds kMinDuration(
+        mode == TestMode::AccuracyOnly ? 0 : 60);
+  // TODO: Pull MLPerf spec constants into a common area.
+  constexpr size_t kMinQueriesPerformance =
+      scenario == TestScenario::SingleStream ? 1024 : 24576;
+  const size_t samples_per_query =
+      scenario == TestScenario::SingleStream ?
+        1 : settings.samples_per_query;
+  const size_t min_queries_accuracy =
+      (loaded_samples.size() + samples_per_query - 1) / samples_per_query;
+  const size_t min_queries = (mode == TestMode::AccuracyOnly) ?
+        min_queries_accuracy : kMinQueriesPerformance;
+  std::vector<QueryMetadata> queries;
+
+  assert(scenario == settings.scenario);
+
+  // TODO: Allow overriding of seeds for experimentation.
+  const uint64_t sample_seed = kDefaultSampleSeed;
+  const uint64_t schedule_seed = kDefaultScheduleSeed;
+
+  // Using the std::mt19937 pseudo-random number generator ensures a modicum of
+  // cross platform reproducibility for trace generation.
+  std::mt19937 sample_rng(sample_seed);
+  std::mt19937 schedule_rng(schedule_seed);
+
+  auto sample_distribution = SampleDistribution<mode>(loaded_samples.size());
+  auto schedule_distribution =
+      ScheduleDistribution<scenario>(settings.target_qps);
+
+  std::chrono::nanoseconds timestamp(0);
+  std::vector<QuerySampleIndex> samples(samples_per_query);
+  uint64_t query_sequence_id = 0;
+  uint64_t sample_sequence_id = 0;
+  while (timestamp < kMinDuration || queries.size() < min_queries) {
+    for (auto& s: samples) {
+      s = loaded_samples[sample_distribution(sample_rng)];
+    }
+    timestamp += schedule_distribution(schedule_rng);
+    queries.emplace_back(samples,
+                         timestamp,
+                         sample_complete_delegate,
+                         query_sequence_id,
+                         &sample_sequence_id);
+    query_sequence_id++;
   }
-  return dst_set;
+  return queries;
 }
 
 void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
@@ -246,12 +328,11 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   // kQueryPoolSize should be big enough that we don't need to worry about
   // logging falling too far behind.
-  constexpr size_t kQueryPoolSize = 1024;
   constexpr size_t kMaxAsyncQueries = 4;
   constexpr int64_t kNanosecondsPerSecond = 1000000000;
 
   SampleCompleteDetailed sample_complete_logger;
-  std::mt19937 gen(kSeed);
+  std::mt19937 qsl_rng(kDefaultQslSeed);
 
   if (settings.scenario != TestScenario::MultiStream) {
     LogError([](AsyncLog &log) {
@@ -270,22 +351,21 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   std::vector<std::vector<QuerySampleIndex>> loadable_sets =
       GenerateDisjointSets(qsl_samples,
                            qsl->PerformanceSampleCount(),
-                           &gen);
+                           &qsl_rng);
 
   // Iterate through each loadable set.
   PerfClock::time_point start = PerfClock::now();
-  size_t i_query = 0;
-  uint64_t sample_sequence_id = 0;
   uint64_t tick_count = 0;
-  QueryMetadata query_info_pool[kQueryPoolSize];
-  QueryMetadata* issued_query_infos[kMaxAsyncQueries] = {}; // zeroes.
   for (auto &loadable_set : loadable_sets) {
     qsl->LoadSamplesToRam(loadable_set);
     GlobalLogger().RestartLatencyRecording();
 
-    // Split the set up into random queries.
-    std::vector<std::vector<QuerySampleIndex>> queries =
-        GenerateDisjointSets(loadable_set, settings.samples_per_query, &gen);
+    // Split the set up into queries.
+    std::vector<QueryMetadata> queries =
+        GenerateQueries<TestScenario::MultiStream, TestMode::AccuracyOnly>(
+          settings, loadable_set, &sample_complete_logger);
+
+    std::queue<QueryMetadata*> prev_queries;
     for (auto &query : queries) {
       // Sleep until the next tick, skipping ticks that have already passed.
       auto query_start_time = start;
@@ -299,31 +379,21 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
       // Limit the number of oustanding async queries by waiting for
       // old queries here.
-      size_t i_query_pool = i_query % kQueryPoolSize;
-      QueryMetadata& query_info = query_info_pool[i_query_pool];
-
       PerfClock::time_point wait_for_slot_time = PerfClock::now();
-      size_t i_limitting_query = i_query % kMaxAsyncQueries;
-      QueryMetadata*& limitting_query = issued_query_infos[i_limitting_query];
-      if (limitting_query != nullptr) {
+      if (prev_queries.size() > kMaxAsyncQueries) {
+        QueryMetadata* limitting_query = prev_queries.front();
         limitting_query->WaitForAllSamplesCompleted();
+        prev_queries.pop();
       }
-      limitting_query = &query_info;
-
-      assert(query_info.ReadyForNewQuery());
+      prev_queries.push(&query);
 
       // Issue the query to the SUT.
-      std::vector<QuerySample> query_to_send = SampleIndexesToQuery(query);
-      query_info.Prepare(&query_to_send, &sample_sequence_id);
-      query_info.sample_complete_logger = &sample_complete_logger;
-      query_info.sequence_id = i_query;
-      query_info.scheduled_time = query_start_time;
-      query_info.wait_for_slot_time = wait_for_slot_time;
+      query.scheduled_time = query_start_time;
+      query.wait_for_slot_time = wait_for_slot_time;
       auto trace = MakeScopedTracer(
             [](AsyncLog &log){ log.ScopedTrace("IssueQuery"); });
-      query_info.issued_start_time = PerfClock::now();
-      sut->IssueQuery(query_to_send);
-      i_query++;
+      query.issued_start_time = PerfClock::now();
+      sut->IssueQuery(query.query_to_send);
     }
 
     // Wait for tail queries to complete and collect all the latencies.
@@ -343,17 +413,8 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   GlobalLogger().RestartLatencyRecording();
 
-  // kQueryInfoPoolSize should be big enough that we don't need to worry
-  // about logging falling too far behind. And queries being processed
-  // too far out of order.
-  // TODO: Make this a TestSetting.
-  constexpr size_t kQueryInfoPoolSize = 32 * 1024;
-  constexpr size_t kMaxAsyncQueries = 1;
-  constexpr size_t kMinQueryCount = 1024;
-  constexpr std::chrono::seconds kMinDuration(60);
-
   SampleCompleteDetailed sample_complete_logger;
-  std::mt19937 gen(kSeed);
+  std::mt19937 qsl_rng(kDefaultQslSeed);
 
   if (settings.scenario != TestScenario::SingleStream) {
     LogError([](AsyncLog &log) {
@@ -372,69 +433,45 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   std::vector<std::vector<QuerySampleIndex>> loadable_sets =
       GenerateDisjointSets(qsl_samples,
                            qsl->PerformanceSampleCount(),
-                           &gen);
+                           &qsl_rng);
 
   // Use first loadable set as the performance set.
   std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
 
-  size_t i_query = 0;
-  uint64_t sample_sequence_id = 0;
-  QueryMetadata query_info_pool[kQueryInfoPoolSize];
-  QueryMetadata* issued_query_infos[kMaxAsyncQueries] = {}; // zeroes.
-
   qsl->LoadSamplesToRam(performance_set);
-
-  // Split the set up into random queries.
-  std::vector<std::vector<QuerySampleIndex>> queries =
-      GenerateDisjointSets(performance_set, settings.samples_per_query, &gen);
-
-  std::uniform_int_distribution<> uniform_distribution(
-        0, performance_set.size()-1);
+  std::vector<QueryMetadata> queries =
+      GenerateQueries<TestScenario::SingleStream, TestMode::PerformanceOnly>(
+        settings, performance_set, &sample_complete_logger);
 
   PerfClock::time_point start = PerfClock::now();
   PerfClock::time_point last_now = start;
-  PerfClock::time_point run_to_time_point_min = start + kMinDuration;
-  while (i_query < kMinQueryCount || last_now < run_to_time_point_min) {
+  QueryMetadata* prev_query = nullptr;
+  for(auto& query : queries) {
     auto trace1 = MakeScopedTracer(
         [](AsyncLog &log){ log.ScopedTrace("SampleLoop"); });
-    std::vector<QuerySampleIndex> query(1, uniform_distribution(gen));
-
-    // Limit the number of oustanding async queries by waiting for
-    // old queries here.
-    size_t i_query_pool = i_query % kQueryInfoPoolSize;
-    QueryMetadata& query_info = query_info_pool[i_query_pool];
 
     PerfClock::time_point wait_for_slot_time = last_now;
-    size_t i_limitting_query = i_query % kMaxAsyncQueries;
-    QueryMetadata*& limitting_query = issued_query_infos[i_limitting_query];
-    if (limitting_query != nullptr) {
+    if (prev_query != nullptr) {
       auto trace2 = MakeScopedTracer(
           [](AsyncLog &log){ log.ScopedTrace("WaitOnPrev"); });
-      limitting_query->WaitForAllSamplesCompleted();
+      prev_query->WaitForAllSamplesCompleted();
     }
-    limitting_query = &query_info;
-
-    assert(query_info.ReadyForNewQuery());
+    prev_query = &query;
 
     // Issue the query to the SUT.
-    std::vector<QuerySample> query_to_send = SampleIndexesToQuery(query);
-    query_info.Prepare(&query_to_send, &sample_sequence_id);
-    query_info.sample_complete_logger = &sample_complete_logger;
-    query_info.sequence_id = i_query;
-    query_info.wait_for_slot_time = wait_for_slot_time;
+    query.wait_for_slot_time = wait_for_slot_time;
     last_now = PerfClock::now();
-    query_info.scheduled_time = last_now;
-    query_info.issued_start_time = last_now;
+    query.scheduled_time = last_now;
+    query.issued_start_time = last_now;
     auto trace3 = MakeScopedTracer(
         [](AsyncLog &log){ log.ScopedTrace("IssueQuery"); });
-    sut->IssueQuery(query_to_send);
-    i_query++;
+    sut->IssueQuery(query.query_to_send);
   }
 
   // Wait for tail queries to complete and collect all the latencies.
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
-  const size_t expected_latencies = i_query;
+  const size_t expected_latencies = queries.size();
   std::vector<QuerySampleLatency> latencies(
       GlobalLogger().GetLatenciesBlocking(expected_latencies));
 

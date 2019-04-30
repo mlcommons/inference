@@ -15,6 +15,7 @@
 #include "query_sample.h"
 #include "query_sample_library.h"
 #include "system_under_test.h"
+#include "utils.h"
 
 namespace mlperf {
 
@@ -172,65 +173,6 @@ struct SampleCompleteDetailed : public SampleCompleteDelagate {
   }
 };
 
-// Generates random sets of indicies where indicies are selected from
-// |samples_src| without replacement.
-// The sets are limitted in size by |set_size|.
-// TODO: Choosing bins randomly, rather than samples randomly, would be more
-// straightforward and faster.
-std::vector<std::vector<QuerySampleIndex>> GenerateDisjointSets(
-    const std::vector<QuerySampleIndex> &samples_src,
-    size_t set_size, std::mt19937 *gen) {
-  constexpr float kGarbageCollectRatio = 0.5;
-  constexpr size_t kUsedIndex = std::numeric_limits<size_t>::max();
-
-  std::vector<std::vector<QuerySampleIndex>> result;
-
-  std::vector<QuerySampleIndex> samples(samples_src);
-
-  std::vector<QuerySampleIndex> loadable_set;
-  loadable_set.reserve(set_size);
-  size_t remaining_count = samples.size();
-  size_t garbage_collect_count = remaining_count * kGarbageCollectRatio;
-  std::uniform_int_distribution<> uniform_distribution(0, remaining_count-1);
-  while (remaining_count > 0) {
-    size_t candidate_index = uniform_distribution(*gen);
-    if (samples[candidate_index] == kUsedIndex) {
-      continue;
-    }
-    loadable_set.push_back(samples[candidate_index]);
-    if (loadable_set.size() == set_size) {
-      result.push_back(std::move(loadable_set));
-      loadable_set.clear();
-      loadable_set.reserve(set_size);
-    }
-    samples[candidate_index] = kUsedIndex;
-    remaining_count--;
-    if (garbage_collect_count != 0) {
-      garbage_collect_count--;
-      continue;
-    }
-
-    // Garbage collect used indicies as probability of hitting one increases.
-    std::vector<size_t> gc_samples;
-    gc_samples.reserve(remaining_count);
-    for (auto s : samples) {
-      if (s != kUsedIndex) {
-        gc_samples.push_back(s);
-      }
-    }
-    assert(remaining_count == gc_samples.size());
-    samples = std::move(gc_samples);
-    uniform_distribution.param(
-          std::uniform_int_distribution<>::param_type(0, remaining_count-1));
-    garbage_collect_count = remaining_count * kGarbageCollectRatio;
-  }
-
-  if (!loadable_set.empty()) {
-    result.push_back(std::move(loadable_set));
-  }
-  return result;
-}
-
 // ScheduleDistribution templates by test scenario.
 template <TestScenario scenario>
 auto ScheduleDistribution(double qps) {
@@ -321,8 +263,12 @@ std::vector<QueryMetadata> GenerateQueries(
   return queries;
 }
 
-void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-                         const TestSettings& settings) {
+void RunVerificationMode(
+    SystemUnderTest* sut,
+    QuerySampleLibrary* qsl,
+    const TestSettings& settings,
+    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+
   LogDetail([](AsyncLog &log) {
     log.LogDetail("Starting verification mode:"); });
 
@@ -332,26 +278,12 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   constexpr int64_t kNanosecondsPerSecond = 1000000000;
 
   SampleCompleteDetailed sample_complete_logger;
-  std::mt19937 qsl_rng(kDefaultQslSeed);
 
   if (settings.scenario != TestScenario::MultiStream) {
     LogError([](AsyncLog &log) {
       log.LogDetail("Unsupported scenario. Only MultiStream supported."); });
     return;
   }
-
-  // Generate indicies for all available samples in the QSL.
-  size_t qsl_total_count = qsl->TotalSampleCount();
-  std::vector<QuerySampleIndex> qsl_samples(qsl_total_count);
-  for(size_t i = 0; i < qsl_total_count; i++) {
-    qsl_samples[i] = static_cast<QuerySampleIndex>(i);
-  }
-
-  // Generate random sets of samples that we can load into RAM.
-  std::vector<std::vector<QuerySampleIndex>> loadable_sets =
-      GenerateDisjointSets(qsl_samples,
-                           qsl->PerformanceSampleCount(),
-                           &qsl_rng);
 
   // Iterate through each loadable set.
   PerfClock::time_point start = PerfClock::now();
@@ -366,7 +298,7 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
           settings, loadable_set, &sample_complete_logger);
 
     std::queue<QueryMetadata*> prev_queries;
-    for (auto &query : queries) {
+    for (auto& query : queries) {
       // Sleep until the next tick, skipping ticks that have already passed.
       auto query_start_time = start;
       do {
@@ -406,15 +338,18 @@ void RunVerificationMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
 // TODO: Share logic duplicated in RunVerificationMode.
 // TODO: Simplify logic that will not be shared with RunVerificationMode.
-void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-                        const TestSettings& settings) {
+void RunPerformanceMode(
+    SystemUnderTest* sut,
+    QuerySampleLibrary* qsl,
+    const TestSettings& settings,
+    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+
   LogDetail([](AsyncLog &log) {
     log.LogDetail("Starting performance mode:"); });
 
   GlobalLogger().RestartLatencyRecording();
 
   SampleCompleteDetailed sample_complete_logger;
-  std::mt19937 qsl_rng(kDefaultQslSeed);
 
   if (settings.scenario != TestScenario::SingleStream) {
     LogError([](AsyncLog &log) {
@@ -422,21 +357,8 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     return;
   }
 
-  // Generate indicies for all available samples in the QSL.
-  size_t qsl_total_count = qsl->TotalSampleCount();
-  std::vector<QuerySampleIndex> qsl_samples(qsl_total_count);
-  for(size_t i = 0; i < qsl_total_count; i++) {
-    qsl_samples[i] = static_cast<QuerySampleIndex>(i);
-  }
-
-  // Generate random sets of samples that we can load into RAM.
-  std::vector<std::vector<QuerySampleIndex>> loadable_sets =
-      GenerateDisjointSets(qsl_samples,
-                           qsl->PerformanceSampleCount(),
-                           &qsl_rng);
-
   // Use first loadable set as the performance set.
-  std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
+  const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
 
   qsl->LoadSamplesToRam(performance_set);
   std::vector<QueryMetadata> queries =
@@ -495,6 +417,74 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   qsl->UnloadSamplesFromRam(performance_set);
 }
 
+// Generates random sets of samples in the QSL that we can load into RAM
+// at the same time.
+// Choosing samples randomly to go into a set naturally avoids biasing some
+// samples to a particular set.
+// TODO: Choosing bins randomly, rather than samples randomly, would avoid the
+//       garbage collection logic, but we'd need to avoid later samples being
+//       less likely to be in the smallest set. This may not be an important
+//       requirement though.
+std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
+    QuerySampleLibrary* qsl) {
+  constexpr float kGarbageCollectRatio = 0.5;
+  constexpr size_t kUsedIndex = std::numeric_limits<size_t>::max();
+
+  auto trace = MakeScopedTracer(
+      [](AsyncLog &log){ log.ScopedTrace("GenerateLoadableSets"); });
+
+  std::vector<std::vector<QuerySampleIndex>> result;
+  std::mt19937 qsl_rng(kDefaultQslSeed);
+
+  // Generate indicies for all available samples in the QSL.
+  const size_t qsl_total_count = qsl->TotalSampleCount();
+  std::vector<QuerySampleIndex> samples(qsl_total_count);
+  for(size_t i = 0; i < qsl_total_count; i++) {
+    samples[i] = static_cast<QuerySampleIndex>(i);
+  }
+
+  const size_t set_size = qsl->PerformanceSampleCount();
+  std::vector<QuerySampleIndex> loadable_set;
+  loadable_set.reserve(set_size);
+  size_t remaining_count = samples.size();
+  size_t garbage_collect_count = remaining_count * kGarbageCollectRatio;
+  std::uniform_int_distribution<> dist(0, remaining_count-1);
+
+  while (remaining_count > 0) {
+    size_t candidate_index = dist(qsl_rng);
+    // Skip indicies we've already used.
+    if (samples[candidate_index] == kUsedIndex) {
+      continue;
+    }
+
+    // Update loadable sets and mark index as used.
+    loadable_set.push_back(samples[candidate_index]);
+    if (loadable_set.size() == set_size) {
+      result.push_back(std::move(loadable_set));
+      loadable_set.clear();
+      loadable_set.reserve(set_size);
+    }
+    samples[candidate_index] = kUsedIndex;
+    remaining_count--;
+
+    // Garbage collect used indicies as probability of hitting one increases.
+    if (garbage_collect_count != 0) {
+      garbage_collect_count--;
+    } else {
+      RemoveValue(&samples, kUsedIndex);
+      assert(remaining_count == samples.size());
+      dist.param(std::uniform_int_distribution<>::param_type(
+          0, remaining_count-1));
+      garbage_collect_count = remaining_count * kGarbageCollectRatio;
+    }
+  }
+
+  if (!loadable_set.empty()) {
+    result.push_back(std::move(loadable_set));
+  }
+  return result;
+}
+
 void StartTest(SystemUnderTest* sut,
                QuerySampleLibrary* qsl,
                const TestSettings& settings) {
@@ -504,16 +494,19 @@ void StartTest(SystemUnderTest* sut,
   std::ofstream trace_out("mlperf_trace.json");
   GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
 
+  std::vector<std::vector<QuerySampleIndex>> loadable_sets(
+      GenerateLoadableSets(qsl));
+
   switch (settings.mode) {
     case TestMode::SubmissionRun:
-      RunVerificationMode(sut, qsl, settings);
-      RunPerformanceMode(sut, qsl, settings);
+      RunVerificationMode(sut, qsl, settings, loadable_sets);
+      RunPerformanceMode(sut, qsl, settings, loadable_sets);
       break;
     case TestMode::AccuracyOnly:
-      RunVerificationMode(sut, qsl, settings);
+      RunVerificationMode(sut, qsl, settings, loadable_sets);
       break;
     case TestMode::PerformanceOnly:
-      RunPerformanceMode(sut, qsl, settings);
+      RunPerformanceMode(sut, qsl, settings, loadable_sets);
       break;
     case TestMode::SearchForQps:
       LogError([](AsyncLog &log) {

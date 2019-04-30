@@ -1,9 +1,10 @@
 group("gn_all") {
   deps = [
+    "loadgen:docs",
     "loadgen:mlperf_loadgen",
     "loadgen:mlperf_loadgen_pymodule_lib",
     "loadgen/demos:loadgen_demo_cpp",
-    "loadgen/demos:loadgen_demo_python",
+    "loadgen/demos:loadgen_demos_python",
   ]
 }
 

@@ -19,26 +19,37 @@ namespace mlperf {
 namespace {
 
 using IssueQueryCallback = std::function<void(std::vector<QuerySample>)>;
+using ReportLatencyResultsCallback = std::function<void(std::vector<int64_t>)>;
 
 // Forwards SystemUnderTest calls to relevant callbacks.
 class SystemUnderTestTrampoline : public SystemUnderTest {
  public:
-  SystemUnderTestTrampoline(std::string name, IssueQueryCallback issue_cb)
+  SystemUnderTestTrampoline(
+      std::string name,
+      IssueQueryCallback issue_cb,
+      ReportLatencyResultsCallback report_latency_results_cb)
       : name_(std::move(name)),
-        issue_cb_(issue_cb) {}
+        issue_cb_(issue_cb),
+        report_latency_results_cb_(report_latency_results_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
   const std::string& Name() const override { return name_; }
 
-  void IssueQuery(QuerySample* samples, size_t sample_count) override {
+  void IssueQuery(const std::vector<QuerySample>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    // TODO: Get rid of copies.
-    issue_cb_(std::vector<QuerySample>(samples, samples+sample_count));
+    issue_cb_(samples);
+  }
+
+  void ReportLatencyResults(
+        const std::vector<QuerySampleLatency>& latencies_ns) override {
+    pybind11::gil_scoped_acquire gil_acquirer;
+    report_latency_results_cb_(latencies_ns);
   }
 
  private:
   std::string name_;
   IssueQueryCallback issue_cb_;
+  ReportLatencyResultsCallback report_latency_results_cb_;
 };
 
 using LoadSamplesToRamCallback =
@@ -49,10 +60,12 @@ using UnloadSamplesFromRamCallback =
 // Forwards QuerySampleLibrary calls to relevant callbacks.
 class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
  public:
-  QuerySampleLibraryTrampoline(std::string name,
-                               size_t total_sample_count, size_t performance_sample_count,
-                               LoadSamplesToRamCallback load_samples_to_ram_cb,
-                               UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
+  QuerySampleLibraryTrampoline(
+    std::string name,
+    size_t total_sample_count,
+    size_t performance_sample_count,
+    LoadSamplesToRamCallback load_samples_to_ram_cb,
+    UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
     : name_(std::move(name)),
       total_sample_count_(total_sample_count),
       performance_sample_count_(performance_sample_count),
@@ -64,19 +77,14 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   const size_t TotalSampleCount() { return total_sample_count_; }
   const size_t PerformanceSampleCount() { return performance_sample_count_; }
 
-  void LoadSamplesToRam(QuerySampleIndex* samples,
-                        size_t sample_count) override {
+  void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    // TODO: Get rid of copies.
-    load_samples_to_ram_cb_(
-        std::vector<QuerySampleIndex>(samples, samples+sample_count));
+    load_samples_to_ram_cb_(samples);
   }
-  void UnloadSamplesFromRam(QuerySampleIndex* samples,
-                            size_t sample_count) override {
+  void UnloadSamplesFromRam(
+      const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    // TODO: Get rid of copies.
-    unload_samlpes_from_ram_cb_(
-        std::vector<QuerySampleIndex>(samples, samples+sample_count));
+    unload_samlpes_from_ram_cb_(samples);
   }
 
   // TODO(brianderson): Accuracy Metric API.
@@ -99,34 +107,38 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 }  // namespace
 
 namespace py {
-  void* ConstructSUT(IssueQueryCallback issue_cb) {
-    SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline("PySUT", issue_cb);
-    return reinterpret_cast<void*>(sut);
+  uintptr_t ConstructSUT(IssueQueryCallback issue_cb,
+                     ReportLatencyResultsCallback report_latency_results_cb) {
+    SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
+          "PySUT", issue_cb, report_latency_results_cb);
+    return reinterpret_cast<uintptr_t>(sut);
   }
 
-  void DestroySUT(void* sut) {
+  void DestroySUT(uintptr_t sut) {
     SystemUnderTestTrampoline* sut_cast =
         reinterpret_cast<SystemUnderTestTrampoline*>(sut);
     delete sut_cast;
   }
 
-  void* ConstructQSL(size_t total_sample_count, size_t performance_sample_count,
-                     LoadSamplesToRamCallback load_samples_to_ram_cb,
-                     UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
+  uintptr_t ConstructQSL(
+      size_t total_sample_count,
+      size_t performance_sample_count,
+      LoadSamplesToRamCallback load_samples_to_ram_cb,
+      UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
     QuerySampleLibraryTrampoline* qsl = new QuerySampleLibraryTrampoline(
         "PyQSL", total_sample_count, performance_sample_count,
         load_samples_to_ram_cb, unload_samlpes_from_ram_cb);
-    return reinterpret_cast<void*>(qsl);
+    return reinterpret_cast<uintptr_t>(qsl);
   }
 
-  void DestroyQSL(void* qsl) {
+  void DestroyQSL(uintptr_t qsl) {
     QuerySampleLibraryTrampoline* qsl_cast =
         reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
     delete qsl_cast;
   }
 
   // Parses commandline.
-  void StartTest(void* sut, void* qsl, mlperf::TestSettings settings) {
+  void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings settings) {
     pybind11::gil_scoped_release gil_releaser;
     SystemUnderTestTrampoline* sut_cast =
         reinterpret_cast<SystemUnderTestTrampoline*>(sut);
@@ -174,7 +186,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
 
   pybind11::class_<QuerySampleResponse>(m, "QuerySampleResponse")
       .def(pybind11::init<>())
-      .def(pybind11::init<ResponseId, intptr_t, size_t>())
+      .def(pybind11::init<ResponseId, uintptr_t, size_t>())
       .def_readwrite("id", &QuerySampleResponse::id)
       .def_readwrite("data", &QuerySampleResponse::data)
       .def_readwrite("size", &QuerySampleResponse::size);
@@ -185,13 +197,11 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         m, "VectorQuerySampleResponse");
 
   m.def("ConstructSUT", &py::ConstructSUT,
-        pybind11::return_value_policy::reference,
         "Construct the system under test.");
   m.def("DestroySUT", &py::DestroySUT,
         "Destroy the object created by ConstructSUT.");
 
   m.def("ConstructQSL", &py::ConstructQSL,
-        pybind11::return_value_policy::reference,
         "Construct the query sample library.");
   m.def("DestroyQSL", &py::DestroyQSL,
         "Destroy the object created by ConstructQSL.");

@@ -89,6 +89,8 @@ SUPPORTED_PROFILES = {
     },
 }
 
+last_timeing = None
+
 
 def get_args():
     """Parse commandline."""
@@ -169,7 +171,6 @@ class Runner:
         self.model = model
         self.post_process = post_proc
         self.threads = threads
-        self.result_list = []
         self.result_dict = {}
         self.take_accuracy = False
 
@@ -185,13 +186,10 @@ class Runner:
             try:
                 # run the prediction
                 results = self.model.predict({self.model.inputs[0]: qitem.img})
-                # and keep track of how long it took
-                took = time.time() - qitem.start
                 if self.take_accuracy:
                     response = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
                 response = []
                 for query_id in qitem.query_id:
-                    self.result_list.append(took)
                     # FIXME: unclear what to return here
                     response.append(lg.QuerySampleResponse(query_id, 0, 0))
                 lg.QuerySamplesComplete(response)
@@ -207,8 +205,7 @@ class Runner:
             self.workers.append(worker)
             worker.start()
 
-    def start_run(self, result_list, result_dict, take_accuracy):
-        self.result_list = result_list
+    def start_run(self, result_dict, take_accuracy):
         self.result_dict = result_dict
         self.take_accuracy = take_accuracy
         self.post_process.start()
@@ -302,11 +299,15 @@ def main():
         data, label = ds.get_samples(idx)
         runner.enqueue(query_id, idx, data, label)
 
-    sut = lg.ConstructSUT(issue_query)
+    def process_latencies(latencies_ns):
+        global last_timeing
+        last_timeing = [t / 10000000. for t in latencies_ns]
+
+    sut = lg.ConstructSUT(issue_query, process_latencies)
     qsl = lg.ConstructQSL(count, args.time, ds.load_query_samples, ds.unload_query_samples)
     scenarios = [
-        # lg.TestScenario.SingleStream,
-        lg.TestScenario.MultiStream,
+        lg.TestScenario.SingleStream,
+        # lg.TestScenario.MultiStream,
         # lg.TestScenario.Cloud,
         # lg.TestScenario.Offline,
         ]
@@ -321,16 +322,16 @@ def main():
             settings.target_latency_ns = int(target_latency * 1000000000)
 
             # reset result capture
-            result_list = []
             result_dict = {"good": 0, "total": 0}
-            runner.start_run(result_list, result_dict, True)
+            runner.start_run(result_dict, True)
             start = time.time()
             lg.StartTest(sut, qsl, settings)
             # aggregate results, ie calculate the find
             post_proc.finalize(result_dict, ds)
 
             add_results(final_results, "{}-{}".format(scenario, target_latency),
-                        result_dict, result_list, time.time() - start)
+                        result_dict, last_timeing, time.time() - start)
+
     runner.finish()
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)

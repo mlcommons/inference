@@ -21,7 +21,6 @@ log = logging.getLogger("coco")
 
 
 class Coco(dataset.Dataset):
-
     def __init__(self, data_path, image_list, name, use_cache=0, image_size=None,
                  image_format="NHWC", pre_process=None, count=None):
         super(Coco, self).__init__()
@@ -106,11 +105,13 @@ class PostProcessCoco:
         self.total = 0
 
     def __call__(self, results, ids, expected=None, result_dict=None):
-        # results are in: num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0
-        good = 0
-        total = 0
-        n = len(results[0])
-        for idx in range(0, n):
+        # results come as:
+        #   num_detections,detection_boxes,detection_scores,detection_classes
+
+        # batch size
+        bs = len(results[0])
+        for idx in range(0, bs):
+            # the number of detections per result
             detection_num = int(results[0][idx])
             detection_boxes = results[1][idx]
             detection_classes = results[3][idx]
@@ -120,6 +121,8 @@ class PostProcessCoco:
                 if detection_class in expected_classes:
                     self.good += 1
                 box = detection_boxes[detection]
+                # 0   1      2      3      4      5      6
+                # id. boxy1, boxx1, boxy2, boxx2, score, class
                 self.results.append(np.array([ids[idx],
                                               box[0], box[1], box[2], box[3],
                                               results[2][idx][detection],
@@ -136,8 +139,17 @@ class PostProcessCoco:
         result_dict["good"] += self.good
         result_dict["total"] += self.total
         detections = np.array(self.results)
-        image_ids =  list(set([float(ds.image_ids[int(i[0])]) for i in self.results]))
-        cat_ids =  list(set([int(i[6]) for i in self.results]))
+        #y1, x1, y2, x2 = output_dict['detection_boxes']
+        # .format(x1*im_width, y1*im_height, x2*im_width, y2*im_height, score, class_id, class_name))
+        w, h, _ = ds.image_size
+        for idx in range(0, detections.shape[0]):
+            detections[idx][1] *= h
+            detections[idx][2] *= w
+            detections[idx][3] *= h
+            detections[idx][4] *= w
+
+        image_ids = list(set([float(ds.image_ids[int(i[0])]) for i in self.results]))
+        cat_ids = list(set([int(i[6]) for i in self.results]))
         self.results = []
         cocoGt = pycoco.COCO(ds.annotation_file)
         gts = cocoGt.loadAnns(cocoGt.getAnnIds(imgIds=image_ids, catIds=cat_ids))

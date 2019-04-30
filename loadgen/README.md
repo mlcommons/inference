@@ -1,142 +1,157 @@
-# MLPerf Inference Synthetic Load Test (SyLT) Harness
+# Building the MLPerf Inference Load Generator
 
-This is a repository of a Trace Generation and Replay Harness. The harness
-allows system implementors to determine the maximum sustainable QPS subject to
-latency constraints for various MLPerf models on their inference systems.
+## Quick Start
 
-A Trace is a list of timestamp-query pairs. Real traces can be captured from
-production systems. Trace generators produce synthetic traces. This trace
-generator selects queries from a query library uniformly at random with
-replacement and selects timestamps based on a Poisson process. The trace
-generator can produce synthetic traces according to various configurable
-parameters including: average QPS, length, and wall clock duration. The QPS of a
-trace is the average rate of query arrival, which may not reflect the achieved
-throughput (also measured in QPS) for any real implementation.
+    git clone --recurse-submodules https://github.com/mlperf/inference.git mlperf_inference
+    cd mlperf_inference
 
-A Load Test combines a Trace with a inference system to produce a latency
-bound. The arrival of each query in the trace is simulated at the query's
-corresponding timestamp.
+To build as a python module:
 
-## Theory of Operations
+    cd loadgen
+    CFLAGS="-std=c++14" python setup.py bdist_wheel
+    pip install dist/mlperf_loadgen-0.5a0-cp27-cp27mu-linux_x86_64.whl
+    python demos/py_demo.py
 
-1. Generate a trace with Poisson distributed arrival times satisfying all
-   specified requirements in terms of queries, QPS, and duration.
+Note: The *.whl filename may differ on your system. There should only be one resulting whl file for you to use.
 
-2. Conduct a load test experiment using the trace. Measure query latency. Query
-   latency is the difference between query arrival and completion of a query's
-   inference.
+See [demos/py_demo.py](demos/py_demo.py) for how to import and use the load generator from python.
 
-3. Increase QPS until the latency constraint is violated. Use binary search to
-   find the maximum QPS achieved without violating the latency constraint.
+To build as a C++ library:
 
-## Project Status
+    make mlperf_loadgen
+    cp out/MakefileGnProj/obj/loadgen/libmlperf_loadgen.a <dst>
 
-This code is very rough. I am looking for a high-level review and feedback from
-the broader MLPerf inference community before polishing. Patches very welcome!
+### C++ library
 
-## FAQ
+## Overview
 
-1. For online cloud inference, why measure maximum sustained throughput subject
-   to high-percentile latency bounds? Why not throughput-only? Why not
-   latency-only?
+The load generator is built using the
+[gn metabuild](https://gn.googlesource.com/gn/+/master)
+and [ninja build](https://ninja-build.org/) tools.
 
-   When launching an online cloud inference service, engineers ultimately care
-   about TCO/QPS subject to a latency bound. Since TCO/machine is known,
-   QPS/machine must be measured. The maximum QPS sustainable by a machine is
-   determined by setting up a test server and increasing load until the machine
-   exceeds an application specific high-percentile latency bound. At low QPS,
-   latency is relatively flat and at too high QPS, the machine is rapidly
-   overloaded and grows until the machine is forced to drop requests. In between
-   these two extremes, latency can vary chaotically. Long running tests are
-   necessary to ensure that a machine can serve its maximum rated QPS
-   indefinitely.
-   
-   Throughput-only measurements ignore the latency constraints placed on real
-   systems. Online cloud systems may run at sub-optimal batch sizes or run
-   mostly empty batch inferences in order to meet latency
-   requirements. Throughput-only measurements are probably the right metrics for
-   Cloud and Edge Batch inference workloads, because they don't have latency
-   constraints.
+Using git submodules to manage a checkout will compile gn and ninja if needed.
+Using depot\_tools to manage a checkout will include prebuilt versions of gn and ninja.
+By default, both ways will use the system C++ compiler, however depot\_tools also
+has the option to use versioned compiler binaries.
 
-   Latency-only measurements don't answer questions about the cost of scaling
-   QPS. From an online cloud inference perspective, reducing latency rapidly
-   reaches a point of diminishing returns. Online cloud users can't tell the
-   difference between 1 ms inferences and 1 us inferences. Latency-only
-   measurements are probably the right metrics for some Online Edge inference
-   workloads.
+If the tools above don't cover your particular configuration, please reach out.
+Patches to support other build environments welcome.
 
-2. Why Poisson? Why not constant arrival rate?
+## Git Submodules Approach
 
-   Poisson models discrete random processes where every event is independent.
-   Radioactive decay is Poisson distributed.  Poisson distributions are
-   relatively easy to generate. Most people believe that query arrivals are
-   Poisson distributed in real life. Most results of queueing theory apply to
-   Poisson distributions. Alternatives to Poisson are more complicated to
-   calculate, have fewer nice mathematical properties, and don’t differ much
-   from Poisson anyway. Empirically, testing inference systems with constant
-   rate traces yields overly optimistic maximum QPS measurements.
+### Downloading the source
 
-3. What is start up time?
+Download the mlperf inference repository and it's submodules.
 
-   Start up time is the time between the start of a run and the first query
-   arrival. The Cloud Online Inference benchmark is meant to measure sustained
-   performance. Some inference systems need time to start up. Start up time is
-   meant to cover compilation times, booting up accelerators, and other
-   once-per-process costs.
+    git clone --recurse-submodules https://github.com/mlperf/inference.git
 
-4. What is warm up time?
+### Build from source
 
-   Warm up time is the time between the first query arrival and the start of
-   performance measurement. The Cloud Online Inference benchmark is meant to
-   measure sustained performance. Some inference systems need time to warm
-   up. Warm up time is meant cover the time necessary to warm up caches, and
-   reach steady-state thermal throttling behavior.
+#### Just building once
 
-5. Why is the QPS of a trace not exactly as requested?
+The following is a phony Makefile target, wrapping everything needed to build
+the load generator. It'll get the job done, but will result in lots of redundant
+work if used over and over again, so isn't recommended for development.
+The resulting binary will be found in: out/MakefileGnProj/obj/loadgen/libmlperf\_loadgen.*
 
-   Trace generation models a Poisson process with a selected QPS generating one
-   trace entry at a time until both the minimum trace length and minimum trace
-   duration goals at met. When both minimums are met, the effective QPS (number
-   of trace entries / timestamp of last trace entry) maybe different from the
-   desired average QPS. For sufficiently long traces, the difference should be
-   very small.
+    make mlperf_loadgen
 
-6. Where do latency bounds come from?
+To build the python module:
 
-   Model owners set latency bounds to reflect real-world use cases.
+    make mlperf_loadgen_pymodule
 
-7. How can I generate a trace with more or fewer queries than the number of
-   unique queries in the trace library?
+Note: These make targets assume Unix-like shell commands are available.
 
-   Queries are selected from the query library for inclusion in the trace by
-   uniform random sampling with replacement.
+#### Building for development purposes
 
-8. How is an accuracy run different from a performance run?
+The bootstrap\_gn\_ninja make target will build ninja and gn into the current
+tree and should only need to be called once per checkout.
+Note: This isn't necessary if you already have gn and ninja installed on your
+system.
 
-   In an accuracy run, all queries in the query library are inferred exactly
-   once and each inference result is checked for accuracy.
+    make bootstrap_gn_ninja
 
-9. How long does a test need to run in order to demonstrate sustained
-   performance?
+Then generate the ninja build files from the gn build files.
+You can have multiple sets of ninja build files in different out directories,
+each with their own args. Release and debug sets, for example:
 
-   The MLPerf inference committee is still trying to answer this
-   question. Tentatively, we plan to try to determine the minimum duration
-   necessary to demonstrate sustained performance empirically. Some proposals
-   have suggested that a final verification run of one hour may be
-   necessary. Feedback is very welcome!
+    third_party/gn/gn gen out/Release --args="is_debug=false"
+    third_party/gn/gn gen out/Debug --args="is_debug=true"
 
-10. What's a high-percentile latency-bound?
+You will find the binary in out/Release/obj/loadgen/libmlperf\_loadgen.a. (Or as a .lib on Windows).
 
-   It's a compromise between attempting to capture worst case tail latency and
-   while filtering out the noise at the extreme. Real applications generally use
-   a bound somewhere in the 95th to 99th percentile. Lower percentiles yield
-   better reproducibility because they are more noise resistant. Since 95th
-   percentile is in real world use and is more pragmatic, maybe it is a good
-   starting point?
+Link that library directly into the executable you want to test.
 
-11. Is this tool only for Online Cloud inference, what about Batch Cloud, Online
-    Edge and Batch Edge?
+From here you can edit+build over and over using one of the following targets:
 
-   The desire is that this tool can cover all use cases, but Online Cloud is
-   being prioritized because it seems to be the most complex and demanding
-   case. Feature requests are welcome. Patches are even more welcome!
+    third_party/ninja/ninja -C out/Release mlperf_loadgen
+    third_party/ninja/ninja -C out/Release loadgen_pymodule_wheel_src
+
+Optionally, create a project file for your favorite IDE.
+See [gn documentation](https://gn.googlesource.com/gn/+/master/docs/reference.md#ide-options) for details.
+
+    gn gen --root=src --ide=eclipse out/Release
+    gn gen --root=src --ide=vs out/Release
+    gn gen --root=src --ide=xcode out/Release
+    gn gen --root=src --ide=qtcreator out/Release
+
+## Depot Tools approach
+
+### Downloading the source
+
+Download and install depot\_tools:
+
+    git clone 'https://chromium.googlesource.com/chromium/tools/depot_tools.git'
+    export PATH="${PWD}/depot_tools:${PATH}"
+
+Copy the depot\_tools fetch config for the MLPerf load generator to the
+depot\_tools path:
+
+    wget https://raw.githubusercontent.com/mlperf/inference/master/loadgen/depot_tools/fetch_configs/mlperf_loadgen.py \
+    -O ${PWD}/depot_tools/fetch_configs/mlperf_loadgen.py
+
+Create a folder for the load generator project and fetch the source code:
+
+    mkdir mlperf_loadgen
+    cd mlperf_loadgen
+    fetch mlperf_loadgen
+    gclient sync
+
+### Building from source
+
+The depot\_tools approach enables building with versioned toolchains.
+
+<i>Note: This has only been tested to work in a Debian-based linux environment so
+far, but it should support many others.</i>
+
+Run the gn metabuild. The output directory will contain ninja build files for a
+specific target platform and set of build options.
+
+    gn gen --root=src out/Default
+
+TODO: Provide gn commands for cross-compiling to Android and to iOS. In the mean
+time, looking at how to build chromium
+[for android](https://chromium.googlesource.com/chromium/src/+/master/docs/android_build_instructions.md)
+or [for ios](https://chromium.googlesource.com/chromium/src/+/HEAD/docs/ios/build_instructions.md)
+should provide some useful pointers.
+
+Build the library:
+
+    ninja -C out/Default mlperf_loadgen
+
+You will find the binary in out/Default/obj/loadgen/libmlperf\_loadgen.a. (Or as a .lib on Windows).
+
+Link that library directly into the executable you want to test.
+
+## Notes about important dependency and build files
+
+**DEPS**: Describes source repositories to pull in as dependencies depot\_tools'
+"gclient sync" command. Also runs system commands to download the relevant toolchains
+for the "gclient runhooks" command, which is run as part of the initial "fetch".
+
+**.gitmodules**: Git submodules alternative to DEPS.
+
+**.gn**: The root gn build file.
+
+**BUILD.gn**: Located in multiple directories. Each one describes how to build
+that particular directory.

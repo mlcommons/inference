@@ -7,6 +7,7 @@ from absl import app
 import mlperf_loadgen
 import threading
 import time
+import numpy
 
 
 def load_samples_to_ram(query_samples):
@@ -15,6 +16,7 @@ def load_samples_to_ram(query_samples):
 
 def unload_samples_from_ram(query_samples):
     return
+
 
 # Processes queries in 3 slices that complete at different times.
 def process_query_async(query_samples, i_slice):
@@ -27,7 +29,6 @@ def process_query_async(query_samples, i_slice):
 
 
 def issue_query(query_samples):
-    print(query_samples)
     threading.Thread(
             target=process_query_async,
             args=(query_samples, 0)).start()
@@ -38,6 +39,16 @@ def issue_query(query_samples):
             target=process_query_async,
             args=(query_samples, 2)).start()
 
+
+def process_latencies(latencies_ns):
+    print("Average latency: ")
+    print(numpy.mean(latencies_ns))
+    print("Median latency: ")
+    print(numpy.percentile(latencies_ns, 50))
+    print("90 percentile latency: ")
+    print(numpy.percentile(latencies_ns, 90))
+
+
 def main(argv):
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.MultiStream
@@ -46,7 +57,7 @@ def main(argv):
     settings.target_qps = 1000
     settings.target_latency_ns = 1000000000
 
-    sut = mlperf_loadgen.ConstructSUT(issue_query)
+    sut = mlperf_loadgen.ConstructSUT(issue_query, process_latencies)
     qsl = mlperf_loadgen.ConstructQSL(
         1024, 128, load_samples_to_ram, unload_samples_from_ram)
     mlperf_loadgen.StartTest(sut, qsl, settings)

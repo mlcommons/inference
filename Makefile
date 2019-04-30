@@ -25,4 +25,4 @@ mlperf_loadgen: gn
 .PHONY: mlperf_loadgen_pymodule
 mlperf_loadgen_pymodule: gn
 	third_party/gn/gn gen out/MakefileGnProj
-	third_party/ninja/ninja -C out/MakefileGnProj loadgen_pymodule_wheel_src
+	CFLAGS="-std=c++14" third_party/ninja/ninja -C out/MakefileGnProj loadgen_pymodule_wheel_src

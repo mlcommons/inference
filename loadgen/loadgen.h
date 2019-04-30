@@ -1,5 +1,5 @@
-#ifndef TEST_HARNESS_H_
-#define TEST_HARNESS_H_
+#ifndef MLPERF_LOADGEN_H_
+#define MLPERF_LOADGEN_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -26,6 +26,7 @@ enum TestMode {
   SearchForQps,
 };
 
+// TODO: Logging settings. e.g.: sync vs. async; log frequency;
 struct TestSettings {
   TestScenario scenario = TestScenario::MultiStream;
   TestMode mode = TestMode::AccuracyOnly;
@@ -51,4 +52,4 @@ void StartTest(SystemUnderTest* sut,
 
 }  // namespace mlperf
 
-#endif  // TEST_HARNESS_H_
+#endif  // MLPERF_LOADGEN_H_

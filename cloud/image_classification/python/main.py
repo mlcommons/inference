@@ -71,6 +71,8 @@ SUPPORTED_PROFILES = {
     }
 }
 
+last_timeing = None
+
 
 def get_args():
     """Parse commandline."""
@@ -150,7 +152,6 @@ class Runner:
         self.model = model
         self.post_process = post_process
         self.threads = threads
-        self.result_list = []
         self.result_dict = {}
 
     def handle_tasks(self, tasks_queue):
@@ -165,8 +166,6 @@ class Runner:
             try:
                 # run the prediction
                 results = self.model.predict({self.model.inputs[0]: qitem.img})
-                # and keep track of how long it took
-                took = time.time() - qitem.start
                 response = []
                 for idx, result in enumerate(results[0]):
                     result = self.post_process(result)
@@ -175,7 +174,6 @@ class Runner:
                     self.result_dict["total"] += 1
                     # FIXME: unclear what to return here
                     response.append(lg.QuerySampleResponse(qitem.id[idx], 0, 0))
-                    self.result_list.append(took)
                 lg.QuerySamplesComplete(response)
             except Exception as ex:  # pylint: disable=broad-except
                 log.error("execute_parallel thread: %s", ex)
@@ -189,8 +187,7 @@ class Runner:
             self.workers.append(worker)
             worker.start()
 
-    def start_run(self, result_list, result_dict):
-        self.result_list = result_list
+    def start_run(self, result_dict):
         self.result_dict = result_dict
 
     def enqueue(self, id, data, label):
@@ -281,11 +278,15 @@ def main():
         data, label = ds.get_samples(idx)
         runner.enqueue(query_id, data, label)
 
-    sut = lg.ConstructSUT(issue_query)
+    def process_latencies(latencies_ns):
+        global last_timeing
+        last_timeing = [t / 10000000. for t in latencies_ns]
+
+    sut = lg.ConstructSUT(issue_query, process_latencies)
     qsl = lg.ConstructQSL(count, args.time, ds.load_query_samples, ds.unload_query_samples)
     scenarios = [
-        # lg.TestScenario.SingleStream,
-        lg.TestScenario.MultiStream,
+        lg.TestScenario.SingleStream,
+        # lg.TestScenario.MultiStream,
         # lg.TestScenario.Cloud,
         # lg.TestScenario.Offline,
         ]
@@ -299,13 +300,12 @@ def main():
             settings.target_qps = 1000 # FIXME: we don't want to know about this
             settings.target_latency_ns = int(target_latency * 1000000000)
 
-            result_list = []
             result_dict = {"good": 0, "total": 0}
-            runner.start_run(result_list, result_dict)
+            runner.start_run(result_dict)
             start = time.time()
             lg.StartTest(sut, qsl, settings)
             add_results(final_results, "{}-{}".format(scenario, target_latency),
-                        result_dict, result_list, time.time() - start)
+                        result_dict, last_timeing, time.time() - start)
 
     runner.finish()
     lg.DestroyQSL(qsl)

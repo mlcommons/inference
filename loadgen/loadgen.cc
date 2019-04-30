@@ -336,8 +336,72 @@ void RunVerificationMode(
   }
 }
 
+template <TestScenario scenario>
+struct QueryScheduler {
+  QueryScheduler(const PerfClock::time_point) {}
+  void Wait(QueryMetadata* next_query) {}
+};
+
+template <>
+struct QueryScheduler<TestScenario::SingleStream> {
+  QueryScheduler(const PerfClock::time_point) {}
+  void Wait(QueryMetadata* next_query) {
+    auto trace = MakeScopedTracer(
+        [](AsyncLog &log){ log.ScopedTrace("Waiting"); });
+    if (prev_query != nullptr) {
+      prev_query->WaitForAllSamplesCompleted();
+    }
+    prev_query = next_query;
+  }
+  QueryMetadata* prev_query = nullptr;
+};
+
+template <>
+struct QueryScheduler<TestScenario::MultiStream> {
+  QueryScheduler(const PerfClock::time_point start) : tick_time(start) {}
+  void Wait(QueryMetadata* next_query) {
+    auto trace = MakeScopedTracer(
+        [](AsyncLog &log){ log.ScopedTrace("Waiting"); });
+    if (prev_queries.size() >= kMaxAsyncQueries) {
+      prev_queries.front()->WaitForAllSamplesCompleted();
+    }
+    prev_queries.push(next_query);
+
+    PerfClock::time_point now = PerfClock::now();
+    do {
+      tick_time += kPeriods[i_period++ % 3];
+    } while (tick_time < now);
+    std::this_thread::sleep_until(tick_time);
+  }
+  static constexpr size_t kMaxAsyncQueries = 2;
+  static constexpr std::chrono::nanoseconds kPeriods[] = {
+    std::chrono::nanoseconds(16666667),
+    std::chrono::nanoseconds(16666666),
+    std::chrono::nanoseconds(16666667),
+  };
+  size_t i_period = 0;
+  PerfClock::time_point tick_time;
+  std::queue<QueryMetadata*> prev_queries;
+};
+
+constexpr std::chrono::nanoseconds
+QueryScheduler<TestScenario::MultiStream>::kPeriods[];
+
+template <>
+struct QueryScheduler<TestScenario::Cloud> {
+  QueryScheduler(const PerfClock::time_point start) : start(start) {}
+  void Wait(QueryMetadata* next_query) {
+    auto trace = MakeScopedTracer(
+        [](AsyncLog &log){ log.ScopedTrace("Scheduling"); });
+    auto scheduled_time = start + next_query->scheduled_delta;
+    std::this_thread::sleep_until(scheduled_time);
+  }
+  const PerfClock::time_point start;
+};
+
 // TODO: Share logic duplicated in RunVerificationMode.
 // TODO: Simplify logic that will not be shared with RunVerificationMode.
+template <TestScenario scenario>
 void RunPerformanceMode(
     SystemUnderTest* sut,
     QuerySampleLibrary* qsl,
@@ -351,12 +415,6 @@ void RunPerformanceMode(
 
   SampleCompleteDetailed sample_complete_logger;
 
-  if (settings.scenario != TestScenario::SingleStream) {
-    LogError([](AsyncLog &log) {
-      log.LogDetail("Unsupported scenario. Only SingleStream supported."); });
-    return;
-  }
-
   // Use first loadable set as the performance set.
   const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
 
@@ -365,20 +423,15 @@ void RunPerformanceMode(
       GenerateQueries<TestScenario::SingleStream, TestMode::PerformanceOnly>(
         settings, performance_set, &sample_complete_logger);
 
-  PerfClock::time_point start = PerfClock::now();
+  const PerfClock::time_point start = PerfClock::now();
   PerfClock::time_point last_now = start;
-  QueryMetadata* prev_query = nullptr;
+  QueryScheduler<scenario> query_scheduler(start);
   for(auto& query : queries) {
     auto trace1 = MakeScopedTracer(
         [](AsyncLog &log){ log.ScopedTrace("SampleLoop"); });
 
     PerfClock::time_point wait_for_slot_time = last_now;
-    if (prev_query != nullptr) {
-      auto trace2 = MakeScopedTracer(
-          [](AsyncLog &log){ log.ScopedTrace("WaitOnPrev"); });
-      prev_query->WaitForAllSamplesCompleted();
-    }
-    prev_query = &query;
+    query_scheduler.Wait(&query);
 
     // Issue the query to the SUT.
     query.wait_for_slot_time = wait_for_slot_time;
@@ -415,6 +468,28 @@ void RunPerformanceMode(
   });
 
   qsl->UnloadSamplesFromRam(performance_set);
+}
+
+using RunPerformanceModeSignature =
+    void(SystemUnderTest* sut,
+         QuerySampleLibrary* qsl,
+         const TestSettings& settings,
+         const std::vector<std::vector<QuerySampleIndex>>& loadable_sets);
+
+RunPerformanceModeSignature* RunPerformanceModeFn(TestScenario scenario) {
+  switch (scenario) {
+    case TestScenario::SingleStream:
+      return RunPerformanceMode<TestScenario::SingleStream>;
+    case TestScenario::MultiStream:
+      return RunPerformanceMode<TestScenario::MultiStream>;
+    case TestScenario::Cloud:
+      return RunPerformanceMode<TestScenario::Cloud>;
+    case TestScenario::Offline:
+      return RunPerformanceMode<TestScenario::Offline>;
+  }
+  // We should not reach this point.
+  assert(false);
+  return nullptr;
 }
 
 // Generates random sets of samples in the QSL that we can load into RAM
@@ -497,16 +572,19 @@ void StartTest(SystemUnderTest* sut,
   std::vector<std::vector<QuerySampleIndex>> loadable_sets(
       GenerateLoadableSets(qsl));
 
+  RunPerformanceModeSignature* run_performance =
+      RunPerformanceModeFn(settings.scenario);
+
   switch (settings.mode) {
     case TestMode::SubmissionRun:
       RunVerificationMode(sut, qsl, settings, loadable_sets);
-      RunPerformanceMode(sut, qsl, settings, loadable_sets);
+      (*run_performance)(sut, qsl, settings, loadable_sets);
       break;
     case TestMode::AccuracyOnly:
       RunVerificationMode(sut, qsl, settings, loadable_sets);
       break;
     case TestMode::PerformanceOnly:
-      RunPerformanceMode(sut, qsl, settings, loadable_sets);
+      (*run_performance)(sut, qsl, settings, loadable_sets);
       break;
     case TestMode::SearchForQps:
       LogError([](AsyncLog &log) {

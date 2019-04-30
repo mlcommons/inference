@@ -107,36 +107,38 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 }  // namespace
 
 namespace py {
-  void* ConstructSUT(IssueQueryCallback issue_cb,
+  uintptr_t ConstructSUT(IssueQueryCallback issue_cb,
                      ReportLatencyResultsCallback report_latency_results_cb) {
     SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
           "PySUT", issue_cb, report_latency_results_cb);
-    return reinterpret_cast<void*>(sut);
+    return reinterpret_cast<uintptr_t>(sut);
   }
 
-  void DestroySUT(void* sut) {
+  void DestroySUT(uintptr_t sut) {
     SystemUnderTestTrampoline* sut_cast =
         reinterpret_cast<SystemUnderTestTrampoline*>(sut);
     delete sut_cast;
   }
 
-  void* ConstructQSL(size_t total_sample_count, size_t performance_sample_count,
-                     LoadSamplesToRamCallback load_samples_to_ram_cb,
-                     UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
+  uintptr_t ConstructQSL(
+      size_t total_sample_count,
+      size_t performance_sample_count,
+      LoadSamplesToRamCallback load_samples_to_ram_cb,
+      UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
     QuerySampleLibraryTrampoline* qsl = new QuerySampleLibraryTrampoline(
         "PyQSL", total_sample_count, performance_sample_count,
         load_samples_to_ram_cb, unload_samlpes_from_ram_cb);
-    return reinterpret_cast<void*>(qsl);
+    return reinterpret_cast<uintptr_t>(qsl);
   }
 
-  void DestroyQSL(void* qsl) {
+  void DestroyQSL(uintptr_t qsl) {
     QuerySampleLibraryTrampoline* qsl_cast =
         reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
     delete qsl_cast;
   }
 
   // Parses commandline.
-  void StartTest(void* sut, void* qsl, mlperf::TestSettings settings) {
+  void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings settings) {
     pybind11::gil_scoped_release gil_releaser;
     SystemUnderTestTrampoline* sut_cast =
         reinterpret_cast<SystemUnderTestTrampoline*>(sut);
@@ -195,13 +197,11 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         m, "VectorQuerySampleResponse");
 
   m.def("ConstructSUT", &py::ConstructSUT,
-        pybind11::return_value_policy::reference,
         "Construct the system under test.");
   m.def("DestroySUT", &py::DestroySUT,
         "Destroy the object created by ConstructSUT.");
 
   m.def("ConstructQSL", &py::ConstructQSL,
-        pybind11::return_value_policy::reference,
         "Construct the query sample library.");
   m.def("DestroyQSL", &py::DestroyQSL,
         "Destroy the object created by ConstructQSL.");

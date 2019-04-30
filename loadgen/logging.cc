@@ -53,7 +53,7 @@ void RemoveNulls(T& container) {
 }
 
 constexpr size_t kMaxThreadsToLog = 1024;
-Logger g_logger(std::chrono::milliseconds(10), kMaxThreadsToLog);
+constexpr std::chrono::milliseconds kLogPollPeriod(10);
 
 }  // namespace
 
@@ -428,6 +428,7 @@ bool TlsLogger::ReadBufferHasBeenConsumed() {
 }
 
 Logger& GlobalLogger() {
+  static Logger g_logger(kLogPollPeriod, kMaxThreadsToLog);
   return g_logger;
 }
 

@@ -25,6 +25,8 @@
 #define MLPERF_GET_PID() getpid()
 #endif
 
+#include "utils.h"
+
 namespace mlperf {
 
 namespace {
@@ -40,16 +42,6 @@ uintptr_t SwapRequestSlotIsWritableValue(size_t id) {
 bool SwapRequestSlotIsReadable(uintptr_t value) {
   // Valid pointers will not have their lsb set.
   return (value & 0x1) != 0x1;
-}
-
-template <typename T>
-void RemoveNulls(T& container) {
-  container.erase(
-      std::remove_if(container.begin(), container.end(),
-                     [](typename T::value_type v) {
-                       return v == nullptr;
-                     }),
-      container.end());
 }
 
 constexpr size_t kMaxThreadsToLog = 1024;
@@ -323,7 +315,7 @@ void Logger::IOThread() {
             entry(async_logger_);
           }
           (*thread)->FinishReadingEntries();
-          // Mark for removal by the call to RemoveNulls below.
+          // Mark for removal by the call to RemoveValue below.
           *thread = nullptr;
 
           // Clean up tasks
@@ -336,7 +328,7 @@ void Logger::IOThread() {
 
       // Only remove threads where reading succeeded so we retry the failed
       // threads the next time around.
-      RemoveNulls(threads_to_read_);
+      RemoveValue(&threads_to_read_, nullptr);
     }
   }
 }

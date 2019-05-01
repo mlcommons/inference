@@ -25,6 +25,15 @@ parser.add_argument('--batch_size', type=str, default='32',
                         help="Specify inference batch size"
 )
 
+parser.add_argument('--num_inter_threads', type=str, default='0',
+                        help="Specify inference num_inter_threads"
+)
+
+parser.add_argument('--num_intra_threads', type=str, default='0',
+                        help="Specify inference num_intra_threads"
+)
+
+
 
 args = parser.parse_args()
 
@@ -60,6 +69,8 @@ cmd = "python -m nmt.nmt \
     --inference_output_file="+inference_output_file+" \
     --inference_ref_file="+inference_ref_file+" \
     --infer_batch_size="+args.batch_size+" \
+    --num_inter_threads="+args.num_inter_threads+" \
+    --num_intra_threads="+args.num_intra_threads+" \
     --iterations="+str(iterations)+" \
     --run="+args.run
 

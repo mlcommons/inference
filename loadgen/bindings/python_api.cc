@@ -3,6 +3,7 @@
 
 #include <functional>
 
+#include "pybind11/cast.h"
 #include "pybind11/functional.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
@@ -107,51 +108,52 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 }  // namespace
 
 namespace py {
-  uintptr_t ConstructSUT(IssueQueryCallback issue_cb,
-                     ReportLatencyResultsCallback report_latency_results_cb) {
-    SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
-          "PySUT", issue_cb, report_latency_results_cb);
-    return reinterpret_cast<uintptr_t>(sut);
-  }
 
-  void DestroySUT(uintptr_t sut) {
-    SystemUnderTestTrampoline* sut_cast =
-        reinterpret_cast<SystemUnderTestTrampoline*>(sut);
-    delete sut_cast;
-  }
+uintptr_t ConstructSUT(IssueQueryCallback issue_cb,
+                       ReportLatencyResultsCallback report_latency_results_cb) {
+  SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
+        "PySUT", issue_cb, report_latency_results_cb);
+  return reinterpret_cast<uintptr_t>(sut);
+}
 
-  uintptr_t ConstructQSL(
-      size_t total_sample_count,
-      size_t performance_sample_count,
-      LoadSamplesToRamCallback load_samples_to_ram_cb,
-      UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
-    QuerySampleLibraryTrampoline* qsl = new QuerySampleLibraryTrampoline(
-        "PyQSL", total_sample_count, performance_sample_count,
-        load_samples_to_ram_cb, unload_samlpes_from_ram_cb);
-    return reinterpret_cast<uintptr_t>(qsl);
-  }
+void DestroySUT(uintptr_t sut) {
+  SystemUnderTestTrampoline* sut_cast =
+      reinterpret_cast<SystemUnderTestTrampoline*>(sut);
+  delete sut_cast;
+}
 
-  void DestroyQSL(uintptr_t qsl) {
-    QuerySampleLibraryTrampoline* qsl_cast =
-        reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
-    delete qsl_cast;
-  }
+uintptr_t ConstructQSL(
+    size_t total_sample_count,
+    size_t performance_sample_count,
+    LoadSamplesToRamCallback load_samples_to_ram_cb,
+    UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
+  QuerySampleLibraryTrampoline* qsl = new QuerySampleLibraryTrampoline(
+      "PyQSL", total_sample_count, performance_sample_count,
+      load_samples_to_ram_cb, unload_samlpes_from_ram_cb);
+  return reinterpret_cast<uintptr_t>(qsl);
+}
 
-  // Parses commandline.
-  void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings settings) {
-    pybind11::gil_scoped_release gil_releaser;
-    SystemUnderTestTrampoline* sut_cast =
-        reinterpret_cast<SystemUnderTestTrampoline*>(sut);
-    QuerySampleLibraryTrampoline* qsl_cast =
-        reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
-    mlperf::StartTest(sut_cast, qsl_cast, settings);
-  }
+void DestroyQSL(uintptr_t qsl) {
+  QuerySampleLibraryTrampoline* qsl_cast =
+      reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
+  delete qsl_cast;
+}
 
-  // TODO: Get rid of copies.
-  void QuerySamplesComplete(std::vector<QuerySampleResponse> responses) {
-    pybind11::gil_scoped_release gil_releaser;
-    mlperf::QuerySamplesComplete(responses.data(), responses.size());
-  }
+// Parses commandline.
+void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings settings) {
+  pybind11::gil_scoped_release gil_releaser;
+  SystemUnderTestTrampoline* sut_cast =
+      reinterpret_cast<SystemUnderTestTrampoline*>(sut);
+  QuerySampleLibraryTrampoline* qsl_cast =
+      reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
+  mlperf::StartTest(sut_cast, qsl_cast, settings);
+}
+
+// TODO: Get rid of copies.
+void QuerySamplesComplete(std::vector<QuerySampleResponse> responses) {
+  pybind11::gil_scoped_release gil_releaser;
+  mlperf::QuerySamplesComplete(responses.data(), responses.size());
+}
 
 PYBIND11_MODULE(mlperf_loadgen, m) {
   m.doc() = "MLPerf Inference load generator.";

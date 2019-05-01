@@ -52,7 +52,7 @@ def process_latencies(latencies_ns):
 def main(argv):
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.MultiStream
-    settings.mode = mlperf_loadgen.TestMode.SubmissionRun
+    settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
     settings.samples_per_query = 4
     settings.target_qps = 1000
     settings.target_latency_ns = 1000000000

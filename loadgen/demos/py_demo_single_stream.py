@@ -21,7 +21,7 @@ def unload_samples_from_ram(query_samples):
 def process_query_async(query_samples):
     time.sleep(.001)
     responses = []
-    for s in [query_samples]:
+    for s in query_samples:
         responses.append(mlperf_loadgen.QuerySampleResponse(s.id, 0, 0))
     mlperf_loadgen.QuerySamplesComplete(responses)
 
@@ -29,7 +29,7 @@ def process_query_async(query_samples):
 def issue_query(query_samples):
     threading.Thread(
             target=process_query_async,
-            args=(query_samples)).start()
+            args=[query_samples]).start()
 
 
 def process_latencies(latencies_ns):
@@ -44,7 +44,7 @@ def process_latencies(latencies_ns):
 def main(argv):
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.SingleStream
-    settings.mode = mlperf_loadgen.TestMode.SubmissionRun
+    settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
     settings.samples_per_query = 4
     settings.target_qps = 1000
     settings.target_latency_ns = 1000000000

@@ -72,6 +72,18 @@ class AsyncLog {
     }
   }
 
+  void Flush() {
+    if (summary_out_) {
+      summary_out_->flush();
+    }
+    if (detail_out_) {
+      detail_out_->flush();
+    }
+    if (trace_out_) {
+      trace_out_->flush();
+    }
+  }
+
   void SetCurrentPidTidString(const std::string *pid_tid) {
     current_pid_tid_ = pid_tid;
   }

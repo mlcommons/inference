@@ -124,11 +124,13 @@ void Logger::RequestSwapBuffers(TlsLogger* tls_logger) {
   // happen to be descheduled between the fetch_add and CAS below, which is
   // very unlikely.
   do {
-    id = swap_request_id_.fetch_add(1);
+    id = swap_request_id_.fetch_add(1, std::memory_order_relaxed);
     slot = id % thread_swap_request_slots_.size();
     slot_is_writeable_value = SwapRequestSlotIsWritableValue(id);
   } while (!thread_swap_request_slots_[slot].compare_exchange_strong(
-               slot_is_writeable_value, tls_logger_as_uint));
+               slot_is_writeable_value,
+               tls_logger_as_uint,
+               std::memory_order_release));
 }
 
 void Logger::RegisterTlsLogger(TlsLogger* tls_logger) {
@@ -240,7 +242,7 @@ void Logger::GatherRetrySwapRequests(std::vector<TlsLogger*>* threads_to_swap) {
 }
 
 void Logger::GatherNewSwapRequests(std::vector<TlsLogger*>* threads_to_swap) {
-  auto swap_request_end = swap_request_id_.load();
+  auto swap_request_end = swap_request_id_.load(std::memory_order_acquire);
   while (swap_request_id_read_ < swap_request_end) {
     size_t slot = swap_request_id_read_ % thread_swap_request_slots_.size();
     size_t next_id = swap_request_id_read_ + thread_swap_request_slots_.size();
@@ -357,18 +359,22 @@ TlsLogger::~TlsLogger() {
 void TlsLogger::Log(AsyncLogEntry &&entry) {
   size_t cas_fail_count = 0;
   auto unlocked = EntryState::Unlocked;
-  size_t i_write = i_write_.load();
+  size_t i_write = i_write_.load(std::memory_order_relaxed);
   while (!entry_states_[i_write].compare_exchange_strong(
-           unlocked, EntryState::WriteLock)) {
+           unlocked,
+           EntryState::WriteLock,
+           std::memory_order_acquire,
+           std::memory_order_relaxed)) {
     unlocked = EntryState::Unlocked;
     i_write ^= 1;
-    // We may need to try 2 times, since there could be a race with a
-    // previous SwapBuffers request.
+    // We may need to try 3 times, since there could be a race with a
+    // previous SwapBuffers request and we use memory_order_relaxed when
+    // loading i_write_ above.
     cas_fail_count++;
-    if (cas_fail_count >= 2) {
+    if (cas_fail_count >= 3) {
       GlobalLogger().LogErrorSync(
             "CAS failed.", "times", cas_fail_count, "line", __LINE__);
-      assert(cas_fail_count < 2);
+      assert(cas_fail_count < 3);
     }
   }
   entries_[i_write].emplace_back(std::forward<AsyncLogEntry>(entry));
@@ -377,7 +383,7 @@ void TlsLogger::Log(AsyncLogEntry &&entry) {
   // that we don't need to check for success.
   auto write_lock = EntryState::WriteLock;
   bool success = entry_states_[i_write].compare_exchange_strong(
-           write_lock, EntryState::Unlocked);
+           write_lock, EntryState::Unlocked, std::memory_order_release);
   if (!success) {
     GlobalLogger().LogErrorSync("CAS failed.", "line", __LINE__);
     assert(success);
@@ -395,13 +401,13 @@ void TlsLogger::SwapBuffers() {
   // that we don't need to check for success.
   auto read_lock = EntryState::ReadLock;
   bool success = entry_states_[i_read_].compare_exchange_strong(
-           read_lock, EntryState::Unlocked);
+           read_lock, EntryState::Unlocked, std::memory_order_release);
   if (!success) {
     GlobalLogger().LogErrorSync("CAS failed.", "line", __LINE__);
     assert(success);
   }
 
-  i_write_.store(i_read_);
+  i_write_.store(i_read_, std::memory_order_relaxed);
   i_read_ ^= 1;
   unread_swaps_++;
 }
@@ -410,7 +416,10 @@ void TlsLogger::SwapBuffers() {
 std::vector<AsyncLogEntry>* TlsLogger::StartReadingEntries() {
   auto unlocked = EntryState::Unlocked;
   if (!entry_states_[i_read_].compare_exchange_strong(
-        unlocked, EntryState::ReadLock)) {
+        unlocked,
+        EntryState::ReadLock,
+        std::memory_order_acquire,
+        std::memory_order_relaxed)) {
     return nullptr;
   }
   return &entries_[i_read_];

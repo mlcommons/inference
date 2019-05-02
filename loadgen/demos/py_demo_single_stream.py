@@ -46,7 +46,7 @@ def main(argv):
     settings.scenario = mlperf_loadgen.TestScenario.SingleStream
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
     settings.samples_per_query = 4
-    settings.target_qps = 1000
+    settings.target_qps = 100
     settings.target_latency_ns = 1000000000
 
     sut = mlperf_loadgen.ConstructSUT(issue_query, process_latencies)

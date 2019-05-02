@@ -69,9 +69,9 @@ $ CK_PYTHON=python3.6 ck python_version
 
 ### Install required Python 3 packages
 Choose one of the following installation options:
-- system-wide via pip;
-- user-space via pip;
-- user-space via CK.
+1. system-wide via pip;
+1. user-space via pip;
+1. user-space via CK.
 
 With the first two options, packages get installed via pip and get registered
 with CK later (typically, on the first run of a program).
@@ -79,15 +79,15 @@ with CK later (typically, on the first run of a program).
 With the last option, packages also get installed via pip but get registered
 with CK at the same time (so there is less chance of mixing things up).
 
-#### System-wide installation via pip (under `/usr`)
+#### Option 1: system-wide installation via pip (under `/usr`)
 ```bash
 $ sudo python3 -m pip install scipy ck
 ```
-#### User-space installation via pip (under `$HOME`)
+#### Option 2: user-space installation via pip (under `$HOME`)
 ```bash
 $ python3 -m pip install scipy ck --user
 ```
-#### User-space installation via CK (under `$HOME` and `$CK_TOOLS`)
+#### Option 3: User-space installation via CK (under `$HOME` and `$CK_TOOLS`)
 ```bash
 $ python3 -m pip install ck --user
 $ ck version

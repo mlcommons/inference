@@ -140,7 +140,7 @@ $ ck pull repo --all
 
 ### Install the COCO 2017 validation dataset (5,000 images)
 ```bash
-$ ck install package:dataset-coco-2017-val
+$ ck install package --tags=dataset,coco,2017
 ```
 **NB:** COCO dataset descriptions are in [repo:ck-env](https://github.com/ctuning/ck-env).
 

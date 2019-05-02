@@ -330,7 +330,12 @@ void Logger::IOThread() {
       // threads the next time around.
       RemoveValue(&threads_to_read_, nullptr);
     }
-    async_logger_.Flush();
+
+    {
+      auto trace6 = MakeScopedTracer(
+          [](AsyncLog &log){ log.ScopedTrace("FlushAll"); });
+      async_logger_.Flush();
+    }
   }
 }
 

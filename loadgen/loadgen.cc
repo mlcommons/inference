@@ -189,7 +189,7 @@ auto ScheduleDistribution(double qps) {
 }
 
 template <>
-auto ScheduleDistribution<TestScenario::Cloud>(double qps) {
+auto ScheduleDistribution<TestScenario::Server>(double qps) {
   // Poisson arrival process corresponds to exponentially distributed
   // interarrival times.
   return [dist = std::exponential_distribution<>(qps)](auto& gen) mutable {
@@ -395,7 +395,7 @@ constexpr std::chrono::nanoseconds
 QueryScheduler<TestScenario::MultiStream>::kPeriods[];
 
 template <>
-struct QueryScheduler<TestScenario::Cloud> {
+struct QueryScheduler<TestScenario::Server> {
   QueryScheduler(const PerfClock::time_point start) : start(start) {}
   void Wait(QueryMetadata* next_query) {
     auto trace = MakeScopedTracer(
@@ -489,8 +489,8 @@ RunPerformanceModeSignature* RunPerformanceModeFn(TestScenario scenario) {
       return RunPerformanceMode<TestScenario::SingleStream>;
     case TestScenario::MultiStream:
       return RunPerformanceMode<TestScenario::MultiStream>;
-    case TestScenario::Cloud:
-      return RunPerformanceMode<TestScenario::Cloud>;
+    case TestScenario::Server:
+      return RunPerformanceMode<TestScenario::Server>;
     case TestScenario::Offline:
       return RunPerformanceMode<TestScenario::Offline>;
   }

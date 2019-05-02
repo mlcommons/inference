@@ -273,6 +273,18 @@ std::vector<QueryMetadata> GenerateQueries(
                          &sample_sequence_id);
     query_sequence_id++;
   }
+
+  LogDetail(
+      [count = queries.size(),
+       spq=settings.samples_per_query,
+       duration = timestamp.count()](AsyncLog &log) {
+        log.LogDetail("GeneratedQueries: ",
+                      "queries", count,
+                      "samples per query", spq,
+                      "duration", duration);
+      }
+  );
+
   return queries;
 }
 

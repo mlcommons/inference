@@ -123,6 +123,10 @@ struct DurationGeneratorNs {
 void QuerySamplesComplete(QuerySampleResponse* responses,
                           size_t response_count) {
   PerfClock::time_point timestamp = PerfClock::now();
+
+  auto trace = MakeScopedTracer(
+      [](AsyncLog &log){ log.ScopedTrace("QuerySamplesComplete"); });
+
   const QuerySampleResponse* end = responses + response_count;
 
   // Notify first to unblock loadgen production ASAP.
@@ -220,6 +224,9 @@ std::vector<QueryMetadata> GenerateQueries(
     const TestSettings& settings,
     const std::vector<QuerySampleIndex>& loaded_samples,
     SampleCompleteDelagate* sample_complete_delegate) {
+
+  auto trace = MakeScopedTracer(
+      [](AsyncLog &log){ log.ScopedTrace("GenerateQueries"); });
 
   constexpr std::chrono::seconds kMinDuration(
         mode == TestMode::AccuracyOnly ? 0 : 60);

@@ -23,6 +23,7 @@ namespace mlperf {
 class AsyncLog;
 class Logger;
 class TlsLogger;
+class TlsLoggerWrapper;
 
 using AsyncLogEntry = std::function<void(AsyncLog&)>;
 using PerfClock = std::chrono::high_resolution_clock;
@@ -339,18 +340,24 @@ class Logger {
          size_t max_threads_to_log);
   ~Logger();
 
+  void StartIOThread();
+  void StopIOThread();
+
   void StartLogging(std::ostream *summary, std::ostream *detail);
   void StopLogging();
+
   void StartNewTrace(std::ostream *trace_out, PerfClock::time_point origin);
   void StopTracing();
+
   void RestartLatencyRecording();
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
 
  private:
   friend TlsLogger;
+  friend TlsLoggerWrapper;
 
   void RegisterTlsLogger(TlsLogger* tls_logger);
-  void UnRegisterTlsLogger(TlsLogger* tls_logger);
+  void UnRegisterTlsLogger(std::unique_ptr<TlsLogger> tls_logger);
   void RequestSwapBuffers(TlsLogger* tls_logger);
   void CollectTlsLoggerStats(TlsLogger* tls_logger);
 
@@ -381,10 +388,13 @@ class Logger {
   // destruction. Protected by io_thread_mutex_.
   std::mutex io_thread_mutex_;
   std::condition_variable io_thread_cv_;
-  bool keep_io_thread_alive_ = true;
+  bool keep_io_thread_alive_ = false;
 
   std::mutex tls_loggers_registerd_mutex_;
   std::unordered_set<TlsLogger*> tls_loggers_registerd_;
+
+  // Temporarily stores TlsLogger data for threads that have exited.
+  std::vector<std::unique_ptr<TlsLogger>> tls_logger_orphans_;
 
   // Accessed by producers and IOThead atomically.
   std::atomic<size_t> swap_request_id_ { 0 };

@@ -601,6 +601,8 @@ TestSettings SanitizeRequestedSettings(const TestSettings& r) {
 void StartTest(SystemUnderTest* sut,
                QuerySampleLibrary* qsl,
                const TestSettings& requested_settings) {
+  GlobalLogger().StartIOThread();
+
   std::ofstream summary_out("mlperf_log_summary.txt");
   std::ofstream detail_out("mlperf_log_detail.txt");
   GlobalLogger().StartLogging(&summary_out, &detail_out);
@@ -634,8 +636,10 @@ void StartTest(SystemUnderTest* sut,
       break;
   }
 
+  // Stop tracing after logging so all logs are captured in the trace.
   GlobalLogger().StopLogging();
   GlobalLogger().StopTracing();
+  GlobalLogger().StopIOThread();
 }
 
 }  // namespace mlperf

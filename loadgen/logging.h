@@ -73,14 +73,21 @@ class AsyncLog {
   }
 
   void Flush() {
-    if (summary_out_) {
-      summary_out_->flush();
+    {
+      std::unique_lock<std::mutex> lock(log_mutex_);
+      if (summary_out_) {
+        summary_out_->flush();
+      }
+      if (detail_out_) {
+        detail_out_->flush();
+      }
     }
-    if (detail_out_) {
-      detail_out_->flush();
-    }
-    if (trace_out_) {
-      trace_out_->flush();
+
+    {
+      std::unique_lock<std::mutex> lock(trace_mutex_);
+      if (trace_out_) {
+        trace_out_->flush();
+      }
     }
   }
 
@@ -91,6 +98,14 @@ class AsyncLog {
   template <typename ...Args>
   void LogSummary(const std::string& message,
                   const Args... args) {
+    auto trace = MakeScopedTracer([message](AsyncLog& log) {
+      std::string sanitized_message = message;
+      std::replace(
+          sanitized_message.begin(), sanitized_message.end(), '"', '\'');
+      std::replace(
+          sanitized_message.begin(), sanitized_message.end(), '\n', ';');
+      log.ScopedTrace("LogSummary", "message", "\"" + sanitized_message + "\"");
+    });
     std::unique_lock<std::mutex> lock(log_mutex_);
     *summary_out_ << message;
     LogArgs(summary_out_, args...);
@@ -111,6 +126,14 @@ class AsyncLog {
   template <typename ...Args>
   void LogDetail(const std::string& message,
                  const Args... args) {
+    auto trace = MakeScopedTracer([message](AsyncLog& log) {
+      std::string sanitized_message = message;
+      std::replace(
+          sanitized_message.begin(), sanitized_message.end(), '"', '\'');
+      std::replace(
+          sanitized_message.begin(), sanitized_message.end(), '\n', ';');
+      log.ScopedTrace("LogDetail", "message", "\"" + sanitized_message + "\"");
+    });
     std::unique_lock<std::mutex> lock(log_mutex_);
     *detail_out_ << *current_pid_tid_ << "\"ts\": "
                  << (log_detail_time_ - log_origin_).count() << "ns : ";
@@ -375,8 +398,13 @@ class Logger {
   std::vector<TlsLogger*> threads_to_read_;
   std::vector<std::function<void()>> thread_cleanup_tasks_;
 
-  // Atomic counts for retrys.
-  std::atomic<size_t> request_swap_buffers_retry_count_ { 0 };
+  // Atomic counts for retries. Indicators of contention.
+  size_t swap_request_slots_retry_count_ = 0;
+  size_t swap_request_slots_retry_retry_count_ = 0;
+  size_t swap_request_slots_retry_reencounter_count_ = 0;
+  size_t start_reading_entries_retry_count_ = 0;
+  size_t tls_total_log_cas_fail_count_ = 0;
+  size_t tls_total_swap_buffers_slot_retry_count_ = 0;
 };
 
 

@@ -53,13 +53,12 @@ class Imagenet(dataset.Dataset):
                     # if the image does not exists ignore it
                     not_found += 1
                     continue
-                if not os.path.exists(dst):
+                if not os.path.exists(dst + ".npy"):
                     # cache a preprocessed version of the image
                     # TODO: make this multi threaded ?
                     with Image.open(src) as img_org:
-                        img = self.pre_process(img_org, need_transpose=self.need_transpose, dims=self.image_size)
-                        with open(dst, "wb") as fimg:
-                            img.tofile(fimg)
+                        processed = self.pre_process(img_org, need_transpose=self.need_transpose, dims=self.image_size)
+                        np.save(dst, processed)
 
                 self.image_list.append(dst)
                 self.label_list.append(int(label))
@@ -82,11 +81,5 @@ class Imagenet(dataset.Dataset):
 
     def get_item(self, nr):
         """Get image by number in the list."""
-        with open(self.image_list[nr], "rb") as f:
-            img = f.read()
-            img = np.frombuffer(img, dtype=np.float32)
-            if self.need_transpose:
-                img = img.reshape(self.image_size[2], self.image_size[0], self.image_size[1])
-            else:
-                img = img.reshape(self.image_size)
+        img = np.load(self.image_list[nr] + ".npy")
         return img, self.label_list[nr]

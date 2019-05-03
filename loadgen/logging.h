@@ -91,7 +91,7 @@ class AsyncLog {
     }
   }
 
-  void SetCurrentPidTidString(const std::string *pid_tid) {
+  void SetCurrentTracePidTidString(const std::string *pid_tid) {
     current_pid_tid_ = pid_tid;
   }
 

@@ -30,7 +30,7 @@ Accuracy: 72.6% (TODO: check, it is suppose to be 76.47%)
 We support [tensorfow](https://github.com/tensorflow/tensorflow) and [onnxruntime](https://github.com/Microsoft/onnxruntime) backend's with the same benchmark tool.
 Support for other backends can be easily added.
 
-The following steps are only needed if you run the benchmark ```without docker```.
+The following steps are ```only``` needed if you run the benchmark ```without docker```.
 
 We require python 3.5 or 3.6 and recommend to use anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal anaconda install).
 
@@ -48,6 +48,12 @@ or
 pip install onnxruntime-gpu
 ```
 
+Install loadgen
+```
+pip install pybind11
+cd ../../loadgen; CFLAGS="-std=c++14" python setup.py install
+```
+
 ## Running the benchmark
 ### One time setup
 
@@ -56,10 +62,10 @@ The same dataset is used for other mlperf inference benchmarks that are using im
 ```
 pip install ck
 ck pull  repo:ck-env
-ck install package:imagenet-2012-val-min
+ck install package:imagenet-2012-val
 ck install package:imagenet-2012-aux
 cp $HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux/val.txt
-$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val-min/val_map.txt
+$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val/val_map.txt
 ```
 
 Download our pre-trained models. For tensorflow use:
@@ -206,9 +212,6 @@ batch size to use. Defaults to 1.
 
 ```--threads THREADS```
 number of worker threads to use. This defaults to the number of processors in the system.
-
-```--time TIME```
-time how long we run each epoch. Defaults to 30 seconds.
 
 ```--count COUNT```
 Number of images for each epoch. If not given we use the number of images in the dataset.

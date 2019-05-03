@@ -33,7 +33,12 @@ RUN cd /opt && \
 
 RUN conda install pytorch-cpu torchvision-cpu -c pytorch
 RUN pip install future pillow onnx tensorflow onnxruntime
-
-ADD . /root
+RUN pip install Cython && pip install pycocotools
+RUN cd /tmp && \
+    git clone https://github.com/mlperf/inference && \
+    cd inference/loadgen && \
+    pip install pybind11 && \
+    CFLAGS="-std=c++14" python setup.py install && \
+    rm -rf mlperf
 
 ENTRYPOINT ["/bin/bash"]

@@ -15,7 +15,7 @@ class SystemUnderTest;
 enum TestScenario {
   SingleStream,
   MultiStream,
-  Cloud,
+  Server,
   Offline,
 };
 

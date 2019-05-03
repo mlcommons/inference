@@ -71,12 +71,19 @@ class TlsLogger {
   }
 
  private:
+  friend Logger;
+
+  void RequestSwapBuffersSlotRetried() {
+    swap_buffers_slot_retry_count_++;
+  }
+
   using EntryVector = std::vector<AsyncLogEntry>;
   enum class EntryState { Unlocked, ReadLock, WriteLock };
 
   // Accessed by producer only.
   size_t i_read_ = 0;
   size_t log_cas_fail_count_ = 0;
+  size_t swap_buffers_slot_retry_count_ = 0;
 
   // Accessed by producer and consumer atomically.
   EntryVector entries_[2];
@@ -134,7 +141,7 @@ void Logger::RequestSwapBuffers(TlsLogger* tls_logger) {
     id = swap_request_id_.fetch_add(1, std::memory_order_relaxed);
     slot = id % thread_swap_request_slots_.size();
     slot_is_writeable_value = SwapRequestSlotIsWritableValue(id);
-    request_swap_buffers_retry_count_.fetch_add(1);
+    tls_logger->RequestSwapBuffersSlotRetried();
   }
 
 }
@@ -162,13 +169,15 @@ void Logger::UnRegisterTlsLogger(TlsLogger* tls_logger) {
   std::promise<void> io_thread_done_with_tls_logger;
   // The AsyncLog lambda runs after the last log submitted by the tls_logger.
   tls_logger->Log([&](AsyncLog&) {
-          // Use thread_cleanup_tasks_ to signal completion only after
-          // IOThread calls FinishReadingEntries to avoid use-after-free.
-          thread_cleanup_tasks_.push_back([&]{
-              io_thread_done_with_tls_logger.set_value();
-          });
-      }
-  );
+    tls_total_log_cas_fail_count_ += tls_logger->log_cas_fail_count_;
+    tls_total_swap_buffers_slot_retry_count_ +=
+        tls_logger->swap_buffers_slot_retry_count_;
+    // Use thread_cleanup_tasks_ to signal completion only after
+    // IOThread calls FinishReadingEntries to avoid use-after-free.
+    thread_cleanup_tasks_.push_back([&]{
+        io_thread_done_with_tls_logger.set_value();
+    });
+  });
 
   io_thread_done_with_tls_logger.get_future().wait();
   std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
@@ -184,11 +193,26 @@ void Logger::StopLogging() {
     LogErrorSync("StopLogging() not supported from IO thread.");
     return;
   }
+  LogDetail([&](AsyncLog& log) {
+    log.LogDetail("Log Contention Counters:");
+    log.LogDetail(std::to_string(swap_request_slots_retry_count_) +
+                  " : swap_request_slots_retry_count");
+    log.LogDetail(std::to_string(swap_request_slots_retry_retry_count_) +
+                  " : swap_request_slots_retry_retry_count");
+    log.LogDetail(std::to_string(swap_request_slots_retry_reencounter_count_) +
+                  " : swap_request_slots_retry_reencounter_count");
+    log.LogDetail(std::to_string(start_reading_entries_retry_count_) +
+                  " : start_reading_entries_retry_count");
+    log.LogDetail(std::to_string(tls_total_log_cas_fail_count_) +
+                  " : tls_total_log_cas_fail_count");
+    log.LogDetail(std::to_string(tls_total_swap_buffers_slot_retry_count_) +
+                  " : tls_total_swap_buffers_slot_retry_count");
+  });
   // Flush logs from this thread.
   std::promise<void> io_thread_flushed_this_thread;
   Log([&](AsyncLog&) {
-        io_thread_flushed_this_thread.set_value();
-      });
+    io_thread_flushed_this_thread.set_value();
+  });
   io_thread_flushed_this_thread.get_future().wait();
   async_logger_.SetLogFiles(&std::cerr, &std::cerr, PerfClock::now());
 }
@@ -199,6 +223,12 @@ void Logger::StartNewTrace(std::ostream *trace_out,
 }
 
 void Logger::StopTracing() {
+  // Flush traces from this thread.
+  std::promise<void> io_thread_flushed_this_thread;
+  Log([&](AsyncLog&) {
+    io_thread_flushed_this_thread.set_value();
+  });
+  io_thread_flushed_this_thread.get_future().wait();
   async_logger_.StartNewTrace(nullptr, PerfClock::now());
 }
 
@@ -243,19 +273,21 @@ void Logger::GatherRetrySwapRequests(std::vector<TlsLogger*>* threads_to_swap) {
       threads_to_swap->push_back(tls_logger);
     } else {
       swap_request_slots_to_retry_.push_back(slot_retry);
+      swap_request_slots_retry_retry_count_++;
     }
   }
 }
 
 void Logger::GatherNewSwapRequests(std::vector<TlsLogger*>* threads_to_swap) {
   auto swap_request_end = swap_request_id_.load(std::memory_order_acquire);
-  while (swap_request_id_read_ < swap_request_end) {
+  for (; swap_request_id_read_ < swap_request_end; swap_request_id_read_++) {
     size_t slot = swap_request_id_read_ % thread_swap_request_slots_.size();
     size_t next_id = swap_request_id_read_ + thread_swap_request_slots_.size();
     TlsLogger* tls_logger = GetTlsLoggerThatRequestedSwap(slot, next_id);
     if (tls_logger) {
       threads_to_swap->push_back(tls_logger);
     } else {
+      swap_request_slots_retry_count_++;
       // A thread is in the middle of its call to RequestSwapBuffers.
       // Retry later once it's done.
       auto it = std::find_if(swap_request_slots_to_retry_.begin(),
@@ -268,9 +300,9 @@ void Logger::GatherNewSwapRequests(std::vector<TlsLogger*>* threads_to_swap) {
         // Whoa. We've been retrying this slot since the last time it was
         // encountered. Just update the next_id.
         it->next_id = next_id;
+        swap_request_slots_retry_reencounter_count_++;
       }
-    }
-    swap_request_id_read_++;
+    };
   }
 }
 
@@ -316,24 +348,26 @@ void Logger::IOThread() {
         auto trace5 = MakeScopedTracer(
             [](AsyncLog &log){ log.ScopedTrace("Thread"); });
         std::vector<AsyncLogEntry>* entries = (*thread)->StartReadingEntries();
-        if (entries) {
-          async_logger_.SetCurrentPidTidString((*thread)->PidTidString());
-          for (auto& entry : *entries) {
-            // Execute the entry to perform the serialization and I/O.
-            entry(async_logger_);
-          }
-          (*thread)->FinishReadingEntries();
-          // Mark for removal by the call to RemoveValue below.
-          *thread = nullptr;
-
-          // Clean up tasks
-          for (auto& task : thread_cleanup_tasks_) {
-            task();
-          }
-          thread_cleanup_tasks_.clear();
-        } else {
+        if (!entries) {
           start_reading_entries_retry_count_++;
+          continue;
         }
+
+        async_logger_.SetCurrentPidTidString((*thread)->PidTidString());
+        for (auto& entry : *entries) {
+          // Execute the entry to perform the serialization and I/O.
+          entry(async_logger_);
+        }
+        (*thread)->FinishReadingEntries();
+        // Mark for removal by the call to RemoveValue below.
+        *thread = nullptr;
+
+        // Clean up tasks
+        for (auto& task : thread_cleanup_tasks_) {
+          task();
+        }
+        thread_cleanup_tasks_.clear();
+
       }
 
       // Only remove threads where reading succeeded so we retry the failed
@@ -358,6 +392,15 @@ TlsLogger::TlsLogger() {
 }
 
 TlsLogger::~TlsLogger() {
+  {
+    auto trace = MakeScopedTracer(
+        [lcfc = log_cas_fail_count_,
+         sbsrc = swap_buffers_slot_retry_count_](AsyncLog& log) {
+      log.ScopedTrace("TlsLogger:ContentionCounters",
+                      "log_cas_fail_count", lcfc,
+                      "swap_buffers_slot_retry_count", sbsrc);
+    });
+  }
   GlobalLogger().UnRegisterTlsLogger(this);
 }
 
@@ -424,14 +467,14 @@ void TlsLogger::SwapBuffers() {
 // Returns nullptr if read lock fails.
 std::vector<AsyncLogEntry>* TlsLogger::StartReadingEntries() {
   auto unlocked = EntryState::Unlocked;
-  if (!entry_states_[i_read_].compare_exchange_strong(
+  if (entry_states_[i_read_].compare_exchange_strong(
         unlocked,
         EntryState::ReadLock,
         std::memory_order_acquire,
         std::memory_order_relaxed)) {
-    return nullptr;
+    return &entries_[i_read_];
   }
-  return &entries_[i_read_];
+  return nullptr;
 }
 
 void TlsLogger::FinishReadingEntries() {

@@ -634,8 +634,8 @@ void StartTest(SystemUnderTest* sut,
       break;
   }
 
-  GlobalLogger().StopTracing();
   GlobalLogger().StopLogging();
+  GlobalLogger().StopTracing();
 }
 
 }  // namespace mlperf

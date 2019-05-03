@@ -339,11 +339,6 @@ class Logger {
          size_t max_threads_to_log);
   ~Logger();
 
-  void RequestSwapBuffers(TlsLogger* tls_logger);
-
-  void RegisterTlsLogger(TlsLogger* tls_logger);
-  void UnRegisterTlsLogger(TlsLogger* tls_logger);
-
   void StartLogging(std::ostream *summary, std::ostream *detail);
   void StopLogging();
   void StartNewTrace(std::ostream *trace_out, PerfClock::time_point origin);
@@ -353,6 +348,11 @@ class Logger {
 
  private:
   friend TlsLogger;
+
+  void RegisterTlsLogger(TlsLogger* tls_logger);
+  void UnRegisterTlsLogger(TlsLogger* tls_logger);
+  void RequestSwapBuffers(TlsLogger* tls_logger);
+  void CollectTlsLoggerStats(TlsLogger* tls_logger);
 
   // Slow synchronous error logging for internals that may prevent
   // async logging from working.
@@ -398,7 +398,9 @@ class Logger {
   std::vector<TlsLogger*> threads_to_read_;
   std::vector<std::function<void()>> thread_cleanup_tasks_;
 
-  // Atomic counts for retries. Indicators of contention.
+  // Counts for retries related to the lock-free scheme.
+  // Abnormally high counts could be an indicator of contention.
+  // Access on IOThread only.
   size_t swap_request_slots_retry_count_ = 0;
   size_t swap_request_slots_retry_retry_count_ = 0;
   size_t swap_request_slots_retry_reencounter_count_ = 0;

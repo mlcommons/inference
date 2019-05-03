@@ -74,26 +74,37 @@ class TlsLogger {
     return &tid_as_string_;
   }
 
- private:
-  friend Logger;
-
   void RequestSwapBuffersSlotRetried() {
-    swap_buffers_slot_retry_count_++;
+    swap_buffers_slot_retry_count_.fetch_add(1, std::memory_order_relaxed);
   }
 
+  size_t ReportLogCasFailCount() {
+    size_t c = log_cas_fail_count_.load(std::memory_order_relaxed);
+    log_cas_fail_count_.fetch_sub(c, std::memory_order_relaxed);
+    return c;
+  }
+
+  size_t ReportSwapBuffersSlotRetryCount() {
+    size_t c = swap_buffers_slot_retry_count_.load(std::memory_order_relaxed);
+    swap_buffers_slot_retry_count_.fetch_sub(c, std::memory_order_relaxed);
+    return c;
+  }
+
+ private:
   using EntryVector = std::vector<AsyncLogEntry>;
   enum class EntryState { Unlocked, ReadLock, WriteLock };
 
   // Accessed by producer only.
   size_t i_read_ = 0;
-  size_t log_cas_fail_count_ = 0;
-  size_t swap_buffers_slot_retry_count_ = 0;
 
   // Accessed by producer and consumer atomically.
   EntryVector entries_[2];
   std::atomic<EntryState> entry_states_[2] {
       {EntryState::ReadLock}, {EntryState::Unlocked} };
   std::atomic<size_t> i_write_ { 1 };
+
+  std::atomic<size_t> log_cas_fail_count_ { 0 };
+  std::atomic<size_t> swap_buffers_slot_retry_count_ { 0 };
 
   // Accessed by consumer only.
   size_t unread_swaps_ = 0;
@@ -148,7 +159,6 @@ void Logger::RequestSwapBuffers(TlsLogger* tls_logger) {
     slot_is_writeable_value = SwapRequestSlotIsWritableValue(id);
     tls_logger->RequestSwapBuffersSlotRetried();
   }
-
 }
 
 void Logger::RegisterTlsLogger(TlsLogger* tls_logger) {
@@ -174,9 +184,7 @@ void Logger::UnRegisterTlsLogger(TlsLogger* tls_logger) {
   std::promise<void> io_thread_done_with_tls_logger;
   // The AsyncLog lambda runs after the last log submitted by the tls_logger.
   tls_logger->Log([&](AsyncLog&) {
-    tls_total_log_cas_fail_count_ += tls_logger->log_cas_fail_count_;
-    tls_total_swap_buffers_slot_retry_count_ +=
-        tls_logger->swap_buffers_slot_retry_count_;
+    CollectTlsLoggerStats(tls_logger);
     // Use thread_cleanup_tasks_ to signal completion only after
     // IOThread calls FinishReadingEntries to avoid use-after-free.
     thread_cleanup_tasks_.push_back([&]{
@@ -189,6 +197,13 @@ void Logger::UnRegisterTlsLogger(TlsLogger* tls_logger) {
   tls_loggers_registerd_.erase(tls_logger);
 }
 
+
+void Logger::CollectTlsLoggerStats(TlsLogger* tls_logger) {
+  tls_total_log_cas_fail_count_ += tls_logger->ReportLogCasFailCount();
+  tls_total_swap_buffers_slot_retry_count_ +=
+      tls_logger->ReportSwapBuffersSlotRetryCount();
+}
+
 void Logger::StartLogging(std::ostream *summary, std::ostream *detail) {
   async_logger_.SetLogFiles(summary, detail, PerfClock::now());
 }
@@ -198,7 +213,14 @@ void Logger::StopLogging() {
     LogErrorSync("StopLogging() not supported from IO thread.");
     return;
   }
+
   LogDetail([&](AsyncLog& log) {
+    {
+      std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
+      for (auto tls_logger : tls_loggers_registerd_) {
+        CollectTlsLoggerStats(tls_logger);
+      }
+    }
     log.LogDetail("Log Contention Counters:");
     log.LogDetail(std::to_string(swap_request_slots_retry_count_) +
                   " : swap_request_slots_retry_count");
@@ -403,8 +425,9 @@ TlsLogger::TlsLogger() {
 TlsLogger::~TlsLogger() {
   {
     auto trace = MakeScopedTracer(
-        [lcfc = log_cas_fail_count_,
-         sbsrc = swap_buffers_slot_retry_count_](AsyncLog& log) {
+        [lcfc = log_cas_fail_count_.load(std::memory_order_relaxed),
+         sbsrc = swap_buffers_slot_retry_count_.load(std::memory_order_relaxed)]
+          (AsyncLog& log) {
       log.ScopedTrace("TlsLogger:ContentionCounters",
                       "log_cas_fail_count", lcfc,
                       "swap_buffers_slot_retry_count", sbsrc);
@@ -436,7 +459,7 @@ void TlsLogger::Log(AsyncLogEntry &&entry) {
             "CAS failed.", "times", cas_fail_count, "line", __LINE__);
       assert(cas_fail_count < 3);
     }
-    log_cas_fail_count_++;
+    log_cas_fail_count_.fetch_add(1, std::memory_order_relaxed);
   }
   entries_[i_write].emplace_back(std::forward<AsyncLogEntry>(entry));
 

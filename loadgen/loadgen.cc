@@ -85,7 +85,7 @@ class QueryMetadata {
   }
 
   void NotifyOneSampleCompleted() {
-    size_t old_count = wait_count_.fetch_sub(1);
+    size_t old_count = wait_count_.fetch_sub(1, std::memory_order_relaxed);
     if (old_count == 1) {
       all_samples_done_.set_value();
     }

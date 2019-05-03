@@ -7,7 +7,6 @@ implementation of imagenet dataset
 import json
 import logging
 import os
-import re
 import time
 
 import numpy as np
@@ -24,13 +23,11 @@ class Coco(dataset.Dataset):
     def __init__(self, data_path, image_list, name, use_cache=0, image_size=None,
                  image_format="NHWC", pre_process=None, count=None):
         super(Coco, self).__init__()
-        if image_size is None:
-            self.image_size = [224, 224, 3]
-        else:
-            self.image_size = image_size
+        self.image_size = image_size
         self.image_list = []
         self.label_list = []
         self.image_ids = []
+        self.image_sizes = []
         self.count = count
         self.use_cache = use_cache
         self.cache_dir = os.path.join(os.getcwd(), "preprocessed", name, image_format)
@@ -50,7 +47,11 @@ class Coco(dataset.Dataset):
         with open(image_list, "r") as f:
             coco = json.load(f)
         for i in coco["images"]:
-            images[i["id"]] = {"file_name": i["file_name"], "bbox": [], "category": []}
+            images[i["id"]] = {"file_name": i["file_name"],
+                               "height": i["height"],
+                               "width": i["width"],
+                               "bbox": [],
+                               "category": []}
         for a in coco["annotations"]:
             i = images.get(a["image_id"])
             if i is None:
@@ -74,6 +75,7 @@ class Coco(dataset.Dataset):
 
             self.image_ids.append(img_id)
             self.image_list.append(dst)
+            self.image_sizes.append((img["height"], img["height"]))
             self.label_list.append((img["category"], img["bbox"]))
 
             # limit the dataset if requested
@@ -121,8 +123,6 @@ class PostProcessCoco:
                 if detection_class in expected_classes:
                     self.good += 1
                 box = detection_boxes[detection]
-                # 0   1      2      3      4      5      6
-                # id. boxy1, boxx1, boxy2, boxx2, score, class
                 self.results.append(np.array([ids[idx],
                                               box[0], box[1], box[2], box[3],
                                               results[2][idx][detection],
@@ -139,24 +139,42 @@ class PostProcessCoco:
         result_dict["good"] += self.good
         result_dict["total"] += self.total
         detections = np.array(self.results)
-        #y1, x1, y2, x2 = output_dict['detection_boxes']
-        # .format(x1*im_width, y1*im_height, x2*im_width, y2*im_height, score, class_id, class_name))
-        w, h, _ = ds.image_size
         for idx in range(0, detections.shape[0]):
-            detections[idx][1] *= h
-            detections[idx][2] *= w
-            detections[idx][3] *= h
-            detections[idx][4] *= w
+            image_idx = int(detections[idx][0])
+            image_id = ds.image_ids[image_idx]
+            detections[idx][0] = image_id
+            height, width = ds.image_sizes[image_idx]
+            # box comes from model as: ymin, xmin, ymax, xmax
+            ymin = detections[idx][1] * height
+            xmin = detections[idx][2] * width
+            ymax = detections[idx][3] * height
+            xmax = detections[idx][4] * width
+            # from pycoco wants {imageID,x1,y1,w,h,score,class}
+            detections[idx][1] = xmin
+            detections[idx][2] = ymin
+            detections[idx][3] = xmax - xmin
+            detections[idx][4] = ymax - ymin
 
-        image_ids = list(set([float(ds.image_ids[int(i[0])]) for i in self.results]))
-        cat_ids = list(set([int(i[6]) for i in self.results]))
+        if False:
+            # TODO: remove after debug
+            pp = []
+            for idx in range(0, detections.shape[0]):
+                pp.append({"image_id": int(detections[idx][0]),
+                           "category_id": int(detections[idx][6]),
+                           "bbox": [float(detections[idx][1]), float(detections[idx][2]),
+                                    float(detections[idx][3]), float(detections[idx][4])],
+                           "score": float(detections[idx][5])})
+            import json
+            with open("/tmp/t.json", "w") as fp:
+                json.dump(pp, fp, sort_keys=True, indent=4)
+
+        image_ids = list(set([i[0] for i in detections]))
         self.results = []
         cocoGt = pycoco.COCO(ds.annotation_file)
-        gts = cocoGt.loadAnns(cocoGt.getAnnIds(imgIds=image_ids, catIds=cat_ids))
         cocoDt = cocoGt.loadRes(detections)
         cocoEval = COCOeval(cocoGt, cocoDt, iouType='bbox')
         cocoEval.params.imgIds = image_ids
         cocoEval.evaluate()
         cocoEval.accumulate()
         cocoEval.summarize()
-        pass
+        result_dict["mAP"] = cocoEval.stats[0]

@@ -90,6 +90,8 @@ class TlsLogger {
     return c;
   }
 
+  void TraceCounters();
+
  private:
   using EntryVector = std::vector<AsyncLogEntry>;
   enum class EntryState { Unlocked, ReadLock, WriteLock };
@@ -123,16 +125,9 @@ Logger::Logger(std::chrono::duration<double> poll_period,
     std::atomic_init(&thread_swap_request_slots_[i],
                      SwapRequestSlotIsWritableValue(i));
   }
-  io_thread_ = std::thread(&Logger::IOThread, this);
 }
 
 Logger::~Logger() {
-  {
-    std::unique_lock<std::mutex> lock(io_thread_mutex_);
-    keep_io_thread_alive_ = false;
-    io_thread_cv_.notify_all();
-  }
-  io_thread_.join();
 }
 
 void Logger::RequestSwapBuffers(TlsLogger* tls_logger) {
@@ -171,30 +166,10 @@ void Logger::RegisterTlsLogger(TlsLogger* tls_logger) {
 }
 
 // Must be called from the thread that owns the TlsLogger.
-void Logger::UnRegisterTlsLogger(TlsLogger* tls_logger) {
-  // Avoid circular dependency deadlock.
-  // TODO: Flush traces here or in ~Logger.
-  if (std::this_thread::get_id() == io_thread_.get_id()) {
-    return;
-  }
-
-  // TODO(brianderson): Move the TlsLogger data to a struct that we can move
-  // ownership of to Logger for later consumption. Then exit this thread
-  // immediately, rather than synchronizing with the Logger's consumption here.
-  std::promise<void> io_thread_done_with_tls_logger;
-  // The AsyncLog lambda runs after the last log submitted by the tls_logger.
-  tls_logger->Log([&](AsyncLog&) {
-    CollectTlsLoggerStats(tls_logger);
-    // Use thread_cleanup_tasks_ to signal completion only after
-    // IOThread calls FinishReadingEntries to avoid use-after-free.
-    thread_cleanup_tasks_.push_back([&]{
-        io_thread_done_with_tls_logger.set_value();
-    });
-  });
-
-  io_thread_done_with_tls_logger.get_future().wait();
+void Logger::UnRegisterTlsLogger(std::unique_ptr<TlsLogger> tls_logger) {
   std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
-  tls_loggers_registerd_.erase(tls_logger);
+  tls_loggers_registerd_.erase(tls_logger.get());
+  tls_logger_orphans_.push_back(std::move(tls_logger));
 }
 
 
@@ -202,6 +177,23 @@ void Logger::CollectTlsLoggerStats(TlsLogger* tls_logger) {
   tls_total_log_cas_fail_count_ += tls_logger->ReportLogCasFailCount();
   tls_total_swap_buffers_slot_retry_count_ +=
       tls_logger->ReportSwapBuffersSlotRetryCount();
+}
+
+void Logger::StartIOThread() {
+  {
+    std::unique_lock<std::mutex> lock(io_thread_mutex_);
+    keep_io_thread_alive_ = true;
+  }
+  io_thread_ = std::thread(&Logger::IOThread, this);
+}
+
+void Logger::StopIOThread() {
+  {
+    std::unique_lock<std::mutex> lock(io_thread_mutex_);
+    keep_io_thread_alive_ = false;
+    io_thread_cv_.notify_all();
+  }
+  io_thread_.join();
 }
 
 void Logger::StartLogging(std::ostream *summary, std::ostream *detail) {
@@ -410,6 +402,8 @@ void Logger::IOThread() {
           [](AsyncLog &log){ log.ScopedTrace("FlushAll"); });
       async_logger_.Flush();
     }
+
+    // TODO: Garbage collect orphans when we've quiesced.
   }
 }
 
@@ -419,21 +413,9 @@ TlsLogger::TlsLogger() {
   tid_as_string_ = ss.str();
   trace_pid_tid_ = "\"pid\": " + std::to_string(MLPERF_GET_PID()) + ", " +
                    "\"tid\": " + tid_as_string_ + ", ";
-  GlobalLogger().RegisterTlsLogger(this);
 }
 
 TlsLogger::~TlsLogger() {
-  {
-    auto trace = MakeScopedTracer(
-        [lcfc = log_cas_fail_count_.load(std::memory_order_relaxed),
-         sbsrc = swap_buffers_slot_retry_count_.load(std::memory_order_relaxed)]
-          (AsyncLog& log) {
-      log.ScopedTrace("TlsLogger:ContentionCounters",
-                      "log_cas_fail_count", lcfc,
-                      "swap_buffers_slot_retry_count", sbsrc);
-    });
-  }
-  GlobalLogger().UnRegisterTlsLogger(this);
 }
 
 // Log always makes forward progress since it can unconditionally obtain a
@@ -518,14 +500,39 @@ bool TlsLogger::ReadBufferHasBeenConsumed() {
   return unread_swaps_ == 0;
 }
 
+void TlsLogger::TraceCounters() {
+  auto trace = MakeScopedTracer(
+      [lcfc = log_cas_fail_count_.load(std::memory_order_relaxed),
+       sbsrc = swap_buffers_slot_retry_count_.load(std::memory_order_relaxed)]
+        (AsyncLog& log) {
+    log.ScopedTrace("TlsLogger:ContentionCounters",
+                    "log_cas_fail_count", lcfc,
+                    "swap_buffers_slot_retry_count", sbsrc);
+  });
+}
+
 Logger& GlobalLogger() {
   static Logger g_logger(kLogPollPeriod, kMaxThreadsToLog);
   return g_logger;
 }
 
+// TlsLoggerWrapper moves ownership of the TlsLogger to Logger on thread exit
+// so no round-trip synchronization with the IO thread is required.
+struct TlsLoggerWrapper {
+  TlsLoggerWrapper() {
+    GlobalLogger().RegisterTlsLogger(tls_logger.get());
+  }
+  ~TlsLoggerWrapper() {
+    tls_logger->TraceCounters();
+    GlobalLogger().UnRegisterTlsLogger(std::move(tls_logger));
+  }
+  std::unique_ptr<TlsLogger> tls_logger = std::make_unique<TlsLogger>();
+};
+
 void Log(AsyncLogEntry &&entry) {
-  thread_local TlsLogger tls_logger;
-  tls_logger.Log(std::forward<AsyncLogEntry>(entry));
+  thread_local TlsLoggerWrapper wrapper;
+  thread_local TlsLogger* const tls_logger = wrapper.tls_logger.get();
+  tls_logger->Log(std::forward<AsyncLogEntry>(entry));
 }
 
 }  // namespace mlperf

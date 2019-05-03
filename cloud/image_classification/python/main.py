@@ -51,17 +51,8 @@ SUPPORTED_PROFILES = {
         "time": 128,
         "max-latency": DEFAULT_LATENCY_BUCKETS,
     },
-    "mobilenet-tf": {
-        "inputs": "input:0",
-        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
-        "dataset": "imagenet_mobilenet",
-        "backend": "tensorflow",
-    },
-    "mobilenet-onnx": {
-        "dataset": "imagenet_mobilenet",
-        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
-        "backend": "onnxruntime",
-    },
+
+    # resnet
     "resnet50-tf": {
         "inputs": "input_tensor:0",
         "outputs": "ArgMax:0",
@@ -73,16 +64,31 @@ SUPPORTED_PROFILES = {
         "outputs": "ArgMax:0",
         "backend": "onnxruntime",
     },
+
+    # mobilenet
+    "mobilenet-tf": {
+        "inputs": "input:0",
+        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
+        "dataset": "imagenet_mobilenet",
+        "backend": "tensorflow",
+    },
+    "mobilenet-onnx": {
+        "dataset": "imagenet_mobilenet",
+        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
+        "backend": "onnxruntime",
+    },
+
+    # ssd-mobilenet
     "ssd-mobilenet-tf": {
         "inputs": "image_tensor:0",
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
         "dataset": "coco",
         "backend": "tensorflow",
     },
-    "ssd-mobilenet-onnx": {
-        "dataset": "imagenet_mobilenet",
-        "outputs": "MobilenetV1/Predictions/Reshape_1:0",
-        "backend": "coco",
+    "ssd-mobilenet-onnxruntime": {
+        "dataset": "coco",
+        "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
+        "backend": "onnxruntime",
     },
 }
 
@@ -235,6 +241,9 @@ def add_results(final_results, name, result_dict, result_list, took):
         "total_items": result_dict["total"],
         "accuracy": 100. * result_dict["good"] / result_dict["total"],
     }
+    if "mAP" in result_dict:
+        result["mAP"] = result_dict["mAP"]
+
     # add the result to the result dict
     final_results[name] = result
 
@@ -246,7 +255,7 @@ def add_results(final_results, name, result_dict, result_list, took):
 def main():
     args = get_args()
 
-    print(args)
+    log.info(args)
 
     # find backend
     backend = get_backend(args.backend)
@@ -304,8 +313,8 @@ def main():
     qsl = lg.ConstructQSL(count, count, ds.load_query_samples, ds.unload_query_samples)
     scenarios = [
         lg.TestScenario.SingleStream,
-        # lg.TestScenario.MultiStream,
-        # lg.TestScenario.Cloud,
+        lg.TestScenario.MultiStream,
+        lg.TestScenario.Server,
         # lg.TestScenario.Offline,
         ]
     for scenario in scenarios:
@@ -329,16 +338,16 @@ def main():
             add_results(final_results, "{}-{}".format(scenario, target_latency),
                         result_dict, last_timeing, time.time() - start)
 
-    runner.finish()
-    lg.DestroyQSL(qsl)
-    lg.DestroySUT(sut)
-
     #
     # write final results
     #
     if args.output:
         with open(args.output, "w") as f:
             json.dump(final_results, f, sort_keys=True, indent=4)
+
+    runner.finish()
+    lg.DestroyQSL(qsl)
+    lg.DestroySUT(sut)
 
 
 if __name__ == "__main__":

@@ -40,6 +40,12 @@ RUN pip install --upgrade pip && \
 RUN conda install pytorch torchvision -c pytorch
 RUN pip install tensorflow-gpu onnxruntime-gpu
 
-ADD . /root
+RUN cd /tmp && \
+    git clone https://github.com/mlperf/inference && \
+    cd inference/loadgen && \
+    pip install pybind11 && \
+    CFLAGS="-std=c++14" python setup.py install && \
+    rm -rf mlperf
+
 
 ENTRYPOINT ["/bin/bash"]

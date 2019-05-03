@@ -374,6 +374,9 @@ class Logger {
   std::vector<TlsLogger*> threads_to_swap_deferred_;
   std::vector<TlsLogger*> threads_to_read_;
   std::vector<std::function<void()>> thread_cleanup_tasks_;
+
+  // Atomic counts for retrys.
+  std::atomic<size_t> request_swap_buffers_retry_count_ { 0 };
 };
 
 

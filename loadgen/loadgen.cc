@@ -21,8 +21,8 @@ namespace mlperf {
 
 namespace {
 constexpr uint64_t kDefaultQslSeed = 0xABCD1234;
-constexpr uint64_t kDefaultSampleSeed = 0xABCD1234;
-constexpr uint64_t kDefaultScheduleSeed = 0x1234ABCD;
+constexpr uint64_t kDefaultSampleSeed = 0x1234ABCD;
+constexpr uint64_t kDefaultScheduleSeed = 0xA1B2C3D4;
 }  // namespace
 
 struct SampleMetadata;
@@ -53,10 +53,14 @@ class QueryMetadata {
       sample_complete_delegate(sample_complete_delegate),
       sequence_id(query_sequence_id),
       wait_count_(query_sample_indicies.size()) {
-    for (QuerySampleIndex i : query_sample_indicies) {
-      samples_.push_back({ this, (*sample_sequence_id)++, i });
-      query_to_send.push_back(
-          { reinterpret_cast<ResponseId>(&samples_.back()), i });
+    samples_.reserve(query_sample_indicies.size());
+    for (QuerySampleIndex qsi : query_sample_indicies) {
+      samples_.push_back({ this, (*sample_sequence_id)++, qsi });
+    }
+    query_to_send.reserve(query_sample_indicies.size());
+    for (auto& s : samples_) {
+      query_to_send.push_back({
+          reinterpret_cast<ResponseId>(&s), s.sample_index});
     }
   }
 
@@ -70,11 +74,13 @@ class QueryMetadata {
     // The move constructor should only be called while generating a
     // vector of QueryMetadata, before it's been used.
     // Assert that wait_count_ is in its initial state.
-    assert(wait_count_.load() == samples_.size());
+    assert(src.wait_count_.load() == samples_.size());
     // Update the "parent" of each sample to be this query; the old query
     // address will no longer be valid.
-    for (auto& s : samples_) {
-      s.query_metadata = this;
+    for (size_t i = 0; i < samples_.size(); i++) {
+      SampleMetadata* s = &samples_[i];
+      s->query_metadata = this;
+      query_to_send[i].id = reinterpret_cast<ResponseId>(s);
     }
   }
 
@@ -117,6 +123,10 @@ struct DurationGeneratorNs {
 void QuerySamplesComplete(QuerySampleResponse* responses,
                           size_t response_count) {
   PerfClock::time_point timestamp = PerfClock::now();
+
+  auto trace = MakeScopedTracer(
+      [](AsyncLog &log){ log.ScopedTrace("QuerySamplesComplete"); });
+
   const QuerySampleResponse* end = responses + response_count;
 
   // Notify first to unblock loadgen production ASAP.
@@ -183,10 +193,10 @@ auto ScheduleDistribution(double qps) {
 }
 
 template <>
-auto ScheduleDistribution<TestScenario::Cloud>(double qps) {
+auto ScheduleDistribution<TestScenario::Server>(double qps) {
   // Poisson arrival process corresponds to exponentially distributed
   // interarrival times.
-  return [dist = std::exponential_distribution<>(qps)](auto& gen) {
+  return [dist = std::exponential_distribution<>(qps)](auto& gen) mutable {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::duration<double>(dist(gen)));
   };
@@ -215,11 +225,14 @@ std::vector<QueryMetadata> GenerateQueries(
     const std::vector<QuerySampleIndex>& loaded_samples,
     SampleCompleteDelagate* sample_complete_delegate) {
 
+  auto trace = MakeScopedTracer(
+      [](AsyncLog &log){ log.ScopedTrace("GenerateQueries"); });
+
   constexpr std::chrono::seconds kMinDuration(
         mode == TestMode::AccuracyOnly ? 0 : 60);
   // TODO: Pull MLPerf spec constants into a common area.
   constexpr size_t kMinQueriesPerformance =
-      scenario == TestScenario::SingleStream ? 1024 : 24576;
+      (scenario == TestScenario::SingleStream ? 1024 : 24576);
   const size_t samples_per_query =
       scenario == TestScenario::SingleStream ?
         1 : settings.samples_per_query;
@@ -364,6 +377,7 @@ struct QueryScheduler<TestScenario::MultiStream> {
         [](AsyncLog &log){ log.ScopedTrace("Waiting"); });
     if (prev_queries.size() >= kMaxAsyncQueries) {
       prev_queries.front()->WaitForAllSamplesCompleted();
+      prev_queries.pop();
     }
     prev_queries.push(next_query);
 
@@ -388,7 +402,7 @@ constexpr std::chrono::nanoseconds
 QueryScheduler<TestScenario::MultiStream>::kPeriods[];
 
 template <>
-struct QueryScheduler<TestScenario::Cloud> {
+struct QueryScheduler<TestScenario::Server> {
   QueryScheduler(const PerfClock::time_point start) : start(start) {}
   void Wait(QueryMetadata* next_query) {
     auto trace = MakeScopedTracer(
@@ -420,7 +434,7 @@ void RunPerformanceMode(
 
   qsl->LoadSamplesToRam(performance_set);
   std::vector<QueryMetadata> queries =
-      GenerateQueries<TestScenario::SingleStream, TestMode::PerformanceOnly>(
+      GenerateQueries<scenario, TestMode::PerformanceOnly>(
         settings, performance_set, &sample_complete_logger);
 
   const PerfClock::time_point start = PerfClock::now();
@@ -446,7 +460,7 @@ void RunPerformanceMode(
   // Wait for tail queries to complete and collect all the latencies.
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
-  const size_t expected_latencies = queries.size();
+  const size_t expected_latencies = queries.size() * settings.samples_per_query;
   std::vector<QuerySampleLatency> latencies(
       GlobalLogger().GetLatenciesBlocking(expected_latencies));
 
@@ -482,8 +496,8 @@ RunPerformanceModeSignature* RunPerformanceModeFn(TestScenario scenario) {
       return RunPerformanceMode<TestScenario::SingleStream>;
     case TestScenario::MultiStream:
       return RunPerformanceMode<TestScenario::MultiStream>;
-    case TestScenario::Cloud:
-      return RunPerformanceMode<TestScenario::Cloud>;
+    case TestScenario::Server:
+      return RunPerformanceMode<TestScenario::Server>;
     case TestScenario::Offline:
       return RunPerformanceMode<TestScenario::Offline>;
   }

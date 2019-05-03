@@ -34,12 +34,9 @@ SUPPORTED_DATASETS = {
     "imagenet_mobilenet":
         (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.PostProcessArgMax(offset=-1),
          {"image_size": [224, 224, 3]}),
-    "coco-300x300":
+    "coco":
         (coco.Coco, dataset.pre_process_coco_mobilenet, coco.PostProcessCoco(),
-         {"image_size": [300, 300, 3]}),
-    "coco-1200x1200":
-        (coco.Coco, dataset.pre_process_coco_mobilenet, coco.PostProcessCoco(),
-         {"image_size": [1200, 1200, 3]}),
+         {"image_size": [-1, -1, 3]}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
@@ -79,7 +76,7 @@ SUPPORTED_PROFILES = {
     "ssd-mobilenet-tf": {
         "inputs": "image_tensor:0",
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
-        "dataset": "coco-300x300",
+        "dataset": "coco",
         "backend": "tensorflow",
     },
     "ssd-mobilenet-onnx": {
@@ -304,7 +301,7 @@ def main():
         last_timeing = [t / 10000000. for t in latencies_ns]
 
     sut = lg.ConstructSUT(issue_query, process_latencies)
-    qsl = lg.ConstructQSL(count, args.time, ds.load_query_samples, ds.unload_query_samples)
+    qsl = lg.ConstructQSL(count, count, ds.load_query_samples, ds.unload_query_samples)
     scenarios = [
         lg.TestScenario.SingleStream,
         # lg.TestScenario.MultiStream,
@@ -326,7 +323,7 @@ def main():
             runner.start_run(result_dict, True)
             start = time.time()
             lg.StartTest(sut, qsl, settings)
-            # aggregate results, ie calculate the find
+            # aggregate results
             post_proc.finalize(result_dict, ds)
 
             add_results(final_results, "{}-{}".format(scenario, target_latency),

@@ -178,13 +178,12 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
         img = img.transpose([2, 0, 1])
     return img
 
+
 def pre_process_coco_mobilenet(img, dims=None, need_transpose=False):
     if img.mode != 'RGB':
         img = img.convert('RGB')
 
     output_height, output_width, _ = dims
-    img = resize_with_aspectratio(img, output_height, output_width)
-    img = center_crop(img, output_height, output_width)
 
     img_data = np.array(img.getdata())
     img_data = img_data.astype(np.uint8)

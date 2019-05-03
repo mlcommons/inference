@@ -76,6 +76,7 @@ class TlsLogger {
 
   // Accessed by producer only.
   size_t i_read_ = 0;
+  size_t log_cas_fail_count_ = 0;
 
   // Accessed by producer and consumer atomically.
   EntryVector entries_[2];
@@ -123,14 +124,19 @@ void Logger::RequestSwapBuffers(TlsLogger* tls_logger) {
   // the CAS should only fail at most 50% of the time when all logging threads
   // happen to be descheduled between the fetch_add and CAS below, which is
   // very unlikely.
-  do {
+  id = swap_request_id_.fetch_add(1, std::memory_order_relaxed);
+  slot = id % thread_swap_request_slots_.size();
+  slot_is_writeable_value = SwapRequestSlotIsWritableValue(id);
+  while (!thread_swap_request_slots_[slot].compare_exchange_strong(
+               slot_is_writeable_value,
+               tls_logger_as_uint,
+               std::memory_order_release)) {
     id = swap_request_id_.fetch_add(1, std::memory_order_relaxed);
     slot = id % thread_swap_request_slots_.size();
     slot_is_writeable_value = SwapRequestSlotIsWritableValue(id);
-  } while (!thread_swap_request_slots_[slot].compare_exchange_strong(
-               slot_is_writeable_value,
-               tls_logger_as_uint,
-               std::memory_order_release));
+    request_swap_buffers_retry_count_.fetch_add(1);
+  }
+
 }
 
 void Logger::RegisterTlsLogger(TlsLogger* tls_logger) {
@@ -325,6 +331,8 @@ void Logger::IOThread() {
             task();
           }
           thread_cleanup_tasks_.clear();
+        } else {
+          start_reading_entries_retry_count_++;
         }
       }
 
@@ -376,6 +384,7 @@ void TlsLogger::Log(AsyncLogEntry &&entry) {
             "CAS failed.", "times", cas_fail_count, "line", __LINE__);
       assert(cas_fail_count < 3);
     }
+    log_cas_fail_count_++;
   }
   entries_[i_write].emplace_back(std::forward<AsyncLogEntry>(entry));
 

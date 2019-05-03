@@ -17,6 +17,7 @@ lib_sources = [
   "logging.cc",
   "logging.h",
   "trace_generator.h",
+  "utils.h",
 ]
 
 c_api_sources = [

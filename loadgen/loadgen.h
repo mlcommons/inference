@@ -48,7 +48,7 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 // This is the C++ entry point. See mlperf::c::StartTest for the C entry point.
 void StartTest(SystemUnderTest* sut,
                QuerySampleLibrary* qsl,
-               const TestSettings& settings);
+               const TestSettings& requested_settings);
 
 }  // namespace mlperf
 

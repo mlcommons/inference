@@ -85,7 +85,7 @@ class QueryMetadata {
   }
 
   void NotifyOneSampleCompleted() {
-    size_t old_count = wait_count_.fetch_sub(1);
+    size_t old_count = wait_count_.fetch_sub(1, std::memory_order_relaxed);
     if (old_count == 1) {
       all_samples_done_.set_value();
     }
@@ -233,11 +233,9 @@ std::vector<QueryMetadata> GenerateQueries(
   // TODO: Pull MLPerf spec constants into a common area.
   constexpr size_t kMinQueriesPerformance =
       (scenario == TestScenario::SingleStream ? 1024 : 24576);
-  const size_t samples_per_query =
-      scenario == TestScenario::SingleStream ?
-        1 : settings.samples_per_query;
   const size_t min_queries_accuracy =
-      (loaded_samples.size() + samples_per_query - 1) / samples_per_query;
+      (loaded_samples.size() + settings.samples_per_query - 1) /
+      settings.samples_per_query;
   const size_t min_queries = (mode == TestMode::AccuracyOnly) ?
         min_queries_accuracy : kMinQueriesPerformance;
   std::vector<QueryMetadata> queries;
@@ -258,7 +256,7 @@ std::vector<QueryMetadata> GenerateQueries(
       ScheduleDistribution<scenario>(settings.target_qps);
 
   std::chrono::nanoseconds timestamp(0);
-  std::vector<QuerySampleIndex> samples(samples_per_query);
+  std::vector<QuerySampleIndex> samples(settings.samples_per_query);
   uint64_t query_sequence_id = 0;
   uint64_t sample_sequence_id = 0;
   while (timestamp < kMinDuration || queries.size() < min_queries) {
@@ -273,6 +271,18 @@ std::vector<QueryMetadata> GenerateQueries(
                          &sample_sequence_id);
     query_sequence_id++;
   }
+
+  LogDetail(
+      [count = queries.size(),
+       spq = settings.samples_per_query,
+       duration = timestamp.count()](AsyncLog &log) {
+        log.LogDetail("GeneratedQueries: ",
+                      "queries", count,
+                      "samples per query", spq,
+                      "duration", duration);
+      }
+  );
+
   return queries;
 }
 
@@ -574,40 +584,62 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   return result;
 }
 
+// TODO: Override user-requested settings in submission mode.
+// TODO: More user-visible settings.
+TestSettings SanitizeRequestedSettings(const TestSettings& r) {
+  TestSettings s(r);
+  if (r.scenario == TestScenario::SingleStream &&
+      r.samples_per_query != 1) {
+    s.samples_per_query = 1;
+    LogError([](AsyncLog &log) {
+      log.LogDetail("SingleStream only supports a samples_per_query of 1.");
+    });
+  }
+  return s;
+}
+
 void StartTest(SystemUnderTest* sut,
                QuerySampleLibrary* qsl,
-               const TestSettings& settings) {
+               const TestSettings& requested_settings) {
+  GlobalLogger().StartIOThread();
+
   std::ofstream summary_out("mlperf_log_summary.txt");
   std::ofstream detail_out("mlperf_log_detail.txt");
   GlobalLogger().StartLogging(&summary_out, &detail_out);
   std::ofstream trace_out("mlperf_trace.json");
   GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
 
+  TestSettings sanitized_settings =
+      SanitizeRequestedSettings(requested_settings);
+
   std::vector<std::vector<QuerySampleIndex>> loadable_sets(
       GenerateLoadableSets(qsl));
 
   RunPerformanceModeSignature* run_performance =
-      RunPerformanceModeFn(settings.scenario);
+      RunPerformanceModeFn(sanitized_settings.scenario);
 
-  switch (settings.mode) {
+  switch (sanitized_settings.mode) {
     case TestMode::SubmissionRun:
-      RunVerificationMode(sut, qsl, settings, loadable_sets);
-      (*run_performance)(sut, qsl, settings, loadable_sets);
+      RunVerificationMode(sut, qsl, sanitized_settings, loadable_sets);
+      (*run_performance)(sut, qsl, sanitized_settings, loadable_sets);
       break;
     case TestMode::AccuracyOnly:
-      RunVerificationMode(sut, qsl, settings, loadable_sets);
+      RunVerificationMode(sut, qsl, sanitized_settings, loadable_sets);
       break;
     case TestMode::PerformanceOnly:
-      (*run_performance)(sut, qsl, settings, loadable_sets);
+      (*run_performance)(sut, qsl, sanitized_settings, loadable_sets);
       break;
     case TestMode::SearchForQps:
       LogError([](AsyncLog &log) {
-        log.LogDetail("TestMode::SearchForQps not implemented."); });
+        log.LogDetail("TestMode::SearchForQps not implemented.");
+      });
       break;
   }
 
-  GlobalLogger().StopTracing();
+  // Stop tracing after logging so all logs are captured in the trace.
   GlobalLogger().StopLogging();
+  GlobalLogger().StopTracing();
+  GlobalLogger().StopIOThread();
 }
 
 }  // namespace mlperf

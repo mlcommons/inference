@@ -23,6 +23,7 @@ namespace mlperf {
 class AsyncLog;
 class Logger;
 class TlsLogger;
+class TlsLoggerWrapper;
 
 using AsyncLogEntry = std::function<void(AsyncLog&)>;
 using PerfClock = std::chrono::high_resolution_clock;
@@ -72,13 +73,40 @@ class AsyncLog {
     }
   }
 
-  void SetCurrentPidTidString(const std::string *pid_tid) {
+  void Flush() {
+    {
+      std::unique_lock<std::mutex> lock(log_mutex_);
+      if (summary_out_) {
+        summary_out_->flush();
+      }
+      if (detail_out_) {
+        detail_out_->flush();
+      }
+    }
+
+    {
+      std::unique_lock<std::mutex> lock(trace_mutex_);
+      if (trace_out_) {
+        trace_out_->flush();
+      }
+    }
+  }
+
+  void SetCurrentTracePidTidString(const std::string *pid_tid) {
     current_pid_tid_ = pid_tid;
   }
 
   template <typename ...Args>
   void LogSummary(const std::string& message,
                   const Args... args) {
+    auto trace = MakeScopedTracer([message](AsyncLog& log) {
+      std::string sanitized_message = message;
+      std::replace(
+          sanitized_message.begin(), sanitized_message.end(), '"', '\'');
+      std::replace(
+          sanitized_message.begin(), sanitized_message.end(), '\n', ';');
+      log.ScopedTrace("LogSummary", "message", "\"" + sanitized_message + "\"");
+    });
     std::unique_lock<std::mutex> lock(log_mutex_);
     *summary_out_ << message;
     LogArgs(summary_out_, args...);
@@ -99,6 +127,14 @@ class AsyncLog {
   template <typename ...Args>
   void LogDetail(const std::string& message,
                  const Args... args) {
+    auto trace = MakeScopedTracer([message](AsyncLog& log) {
+      std::string sanitized_message = message;
+      std::replace(
+          sanitized_message.begin(), sanitized_message.end(), '"', '\'');
+      std::replace(
+          sanitized_message.begin(), sanitized_message.end(), '\n', ';');
+      log.ScopedTrace("LogDetail", "message", "\"" + sanitized_message + "\"");
+    });
     std::unique_lock<std::mutex> lock(log_mutex_);
     *detail_out_ << *current_pid_tid_ << "\"ts\": "
                  << (log_detail_time_ - log_origin_).count() << "ns : ";
@@ -304,20 +340,26 @@ class Logger {
          size_t max_threads_to_log);
   ~Logger();
 
-  void RequestSwapBuffers(TlsLogger* tls_logger);
-
-  void RegisterTlsLogger(TlsLogger* tls_logger);
-  void UnRegisterTlsLogger(TlsLogger* tls_logger);
+  void StartIOThread();
+  void StopIOThread();
 
   void StartLogging(std::ostream *summary, std::ostream *detail);
   void StopLogging();
+
   void StartNewTrace(std::ostream *trace_out, PerfClock::time_point origin);
   void StopTracing();
+
   void RestartLatencyRecording();
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
 
  private:
   friend TlsLogger;
+  friend TlsLoggerWrapper;
+
+  void RegisterTlsLogger(TlsLogger* tls_logger);
+  void UnRegisterTlsLogger(std::unique_ptr<TlsLogger> tls_logger);
+  void RequestSwapBuffers(TlsLogger* tls_logger);
+  void CollectTlsLoggerStats(TlsLogger* tls_logger);
 
   // Slow synchronous error logging for internals that may prevent
   // async logging from working.
@@ -346,10 +388,13 @@ class Logger {
   // destruction. Protected by io_thread_mutex_.
   std::mutex io_thread_mutex_;
   std::condition_variable io_thread_cv_;
-  bool keep_io_thread_alive_ = true;
+  bool keep_io_thread_alive_ = false;
 
   std::mutex tls_loggers_registerd_mutex_;
   std::unordered_set<TlsLogger*> tls_loggers_registerd_;
+
+  // Temporarily stores TlsLogger data for threads that have exited.
+  std::vector<std::unique_ptr<TlsLogger>> tls_logger_orphans_;
 
   // Accessed by producers and IOThead atomically.
   std::atomic<size_t> swap_request_id_ { 0 };
@@ -362,6 +407,16 @@ class Logger {
   std::vector<TlsLogger*> threads_to_swap_deferred_;
   std::vector<TlsLogger*> threads_to_read_;
   std::vector<std::function<void()>> thread_cleanup_tasks_;
+
+  // Counts for retries related to the lock-free scheme.
+  // Abnormally high counts could be an indicator of contention.
+  // Access on IOThread only.
+  size_t swap_request_slots_retry_count_ = 0;
+  size_t swap_request_slots_retry_retry_count_ = 0;
+  size_t swap_request_slots_retry_reencounter_count_ = 0;
+  size_t start_reading_entries_retry_count_ = 0;
+  size_t tls_total_log_cas_fail_count_ = 0;
+  size_t tls_total_swap_buffers_slot_retry_count_ = 0;
 };
 
 

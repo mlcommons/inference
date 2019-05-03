@@ -66,8 +66,12 @@ class TlsLogger {
   void FinishReadingEntries();
   bool ReadBufferHasBeenConsumed();
 
-  const std::string* PidTidString() const {
+  const std::string* TracePidTidString() const {
     return &trace_pid_tid_;
+  }
+
+  const std::string* TidAsString() const {
+    return &tid_as_string_;
   }
 
  private:
@@ -95,6 +99,7 @@ class TlsLogger {
   size_t unread_swaps_ = 0;
   size_t i_write_prev_ = 0;
   std::string trace_pid_tid_;  // Cached as string.
+  std::string tid_as_string_;  // Cached as string.
 };
 
 Logger::Logger(std::chrono::duration<double> poll_period,
@@ -346,14 +351,17 @@ void Logger::IOThread() {
            thread != threads_to_read_.end();
            thread++) {
         auto trace5 = MakeScopedTracer(
-            [](AsyncLog &log){ log.ScopedTrace("Thread"); });
+            [tid = *(*thread)->TidAsString()](AsyncLog &log) {
+          log.ScopedTrace("Thread", "tid", tid);
+        });
         std::vector<AsyncLogEntry>* entries = (*thread)->StartReadingEntries();
         if (!entries) {
           start_reading_entries_retry_count_++;
           continue;
         }
 
-        async_logger_.SetCurrentPidTidString((*thread)->PidTidString());
+        async_logger_.SetCurrentTracePidTidString(
+              (*thread)->TracePidTidString());
         for (auto& entry : *entries) {
           // Execute the entry to perform the serialization and I/O.
           entry(async_logger_);
@@ -385,9 +393,10 @@ void Logger::IOThread() {
 
 TlsLogger::TlsLogger() {
   std::stringstream ss;
-  ss << "\"pid\": " << MLPERF_GET_PID() << ", "
-     << "\"tid\": " << std::this_thread::get_id() << ", ";
-  trace_pid_tid_ = ss.str();
+  ss << std::this_thread::get_id();
+  tid_as_string_ = ss.str();
+  trace_pid_tid_ = "\"pid\": " + std::to_string(MLPERF_GET_PID()) + ", " +
+                   "\"tid\": " + tid_as_string_ + ", ";
   GlobalLogger().RegisterTlsLogger(this);
 }
 

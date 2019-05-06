@@ -9,6 +9,7 @@
 #include <future>
 #include <queue>
 #include <random>
+#include <string>
 #include <thread>
 
 #include "logging.h"

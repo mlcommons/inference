@@ -111,6 +111,7 @@ def get_args():
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
+    parser.add_argument("--qps", type=int, default=10, help="target qps") # TODO: remove once we have qps scan
     parser.add_argument("--max-latency", type=str, help="max latency in 99pct tile")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
     args = parser.parse_args()
@@ -248,8 +249,8 @@ def add_results(final_results, name, result_dict, result_list, took):
     final_results[name] = result
 
     # to stdout
-    print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, acc={:.2f}, tiles={}".format(
-        name, result["qps"], result["mean"], took, result["accuracy"], buckets_str))
+    print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, acc={:.2f}, queries={}, tiles={}".format(
+        name, result["qps"], result["mean"], took, result["accuracy"], len(result_list), buckets_str))
 
 
 def main():
@@ -322,9 +323,9 @@ def main():
             log.info("starting {}, latency={}".format(scenario, target_latency))
             settings = lg.TestSettings()
             settings.scenario = scenario
-            settings.mode = lg.TestMode.SubmissionRun
+            settings.mode = lg.TestMode.PerformanceOnly # FIXME: we want SubmissionRun
             settings.samples_per_query = 2 # FIXME: we don't want to know about this
-            settings.target_qps = 1000 # FIXME: we don't want to know about this
+            settings.target_qps = args.qps # FIXME: we don't want to know about this
             settings.target_latency_ns = int(target_latency * 1000000000)
 
             # reset result capture

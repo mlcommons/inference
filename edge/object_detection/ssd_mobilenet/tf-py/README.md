@@ -3,13 +3,13 @@
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)
 3. [Reference accuracy](#accuracy)
+4. [Further information](#further-info)
+
 
 <a name="installation"></a>
 ## Installation instructions
 
 Please follow the common [installation instructions](../README.md#installation) first.
-
-**NB:** See [`ck-tensorflow:program:object-detection-tf-py`](https://github.com/ctuning/ck-tensorflow/tree/master/program/object-detection-tf-py) for more details about the client program.
 
 ### Install TensorFlow (Python)
 
@@ -228,3 +228,15 @@ mAP: 0.23594222525632427
 Recall: 0.26864982712779556
 --------------------------------
 ```
+
+
+<a name="further-info"></a>
+## Further information
+
+### Using Collective Knowledge
+See the [common MobileNet instructions](../../../object_classification/mobilenets/README.md) for information on how to use Collective Knowledge
+to learn about [the anatomy of a benchmark](../../../object_clasification/mobilenets/README.md#the-anatomy-of-a-benchmark), or
+to inspect and visualize [experimental results](../../../object_clasification/mobilenets/README.md#inspecting-recorded-experimental-results).
+
+### Using the client program
+See [`ck-tensorflow:program:object-detection-tf-py`](https://github.com/ctuning/ck-tensorflow/tree/master/program/object-detection-tf-py) for more details about the client program.

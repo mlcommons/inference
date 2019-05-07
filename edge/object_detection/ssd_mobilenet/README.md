@@ -87,7 +87,7 @@ $ sudo python3 -m pip install cython scipy matplotlib pillow ck
 $ python3 -m pip install cython scipy matplotlib pillow ck --user
 ```
 #### Option 3: user-space installation via CK (under `$HOME` and `$CK_TOOLS`)
-Install CK via pip (or [via Git](https://github.com/ctuning/ck#ubuntu)):
+Install CK via pip (or [from GitHub](https://github.com/ctuning/ck#installation)):
 ```bash
 $ python3 -m pip install ck --user
 $ ck version
@@ -101,7 +101,7 @@ $ ck install package --tags=lib,python-package,numpy
 $ ck install package --tags=lib,python-package,scipy
 $ ck install package --tags=lib,python-package,matplotlib
 $ ck install package --tags=lib,python-package,pillow
-$ python3 -m pip install cython --user && ck detect soft:lib.python.cython
+$ python3 -m pip install cython --user && ck detect soft --tags=lib,python-package,cython
 ```
 **NB:** Cython cannot be currently installed via CK (but we are working on it).
 

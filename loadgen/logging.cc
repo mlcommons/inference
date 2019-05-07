@@ -165,11 +165,31 @@ void Logger::RegisterTlsLogger(TlsLogger* tls_logger) {
   tls_loggers_registerd_.insert(tls_logger);
 }
 
-// Must be called from the thread that owns the TlsLogger.
+// This moves ownership of the tls_logger data to Logger so the
+// exiting thread can exit immediately, even if all the logs of the
+// exiting thread haven't been processed.
 void Logger::UnRegisterTlsLogger(std::unique_ptr<TlsLogger> tls_logger) {
-  std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
-  tls_loggers_registerd_.erase(tls_logger.get());
-  tls_logger_orphans_.push_back(std::move(tls_logger));
+  OrphanContainer::iterator orphan;
+  {
+    std::unique_lock<std::mutex> lock(tls_logger_orphans_mutex_);
+    tls_logger_orphans_.emplace_front(std::move(tls_logger));
+    orphan = tls_logger_orphans_.begin();
+  }
+
+  // Only remove the TlsLogger from the registry after adding to orphans so
+  // CollectTlsLoggerStats doesn't have any gaps in coverage.
+  {
+    std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
+    tls_loggers_registerd_.erase(orphan->get());
+  }
+
+  // This will flush the logs of |tls_logger| and mark it for destruction.
+  // Deferring destruction via orphans_to_destroy helps avoid use-after-frees
+  // when the IOThread calls FinishReadingEntries.
+  (*orphan)->Log([this, orphan](AsyncLog&) {
+    CollectTlsLoggerStats(orphan->get());
+    orphans_to_destroy_.push_back(orphan);
+  });
 }
 
 
@@ -213,6 +233,14 @@ void Logger::StopLogging() {
         CollectTlsLoggerStats(tls_logger);
       }
     }
+
+    {
+      std::unique_lock<std::mutex> lock(tls_logger_orphans_mutex_);
+      for (auto& orphan : tls_logger_orphans_) {
+        CollectTlsLoggerStats(orphan.get());
+      }
+    }
+
     log.LogDetail("Log Contention Counters:");
     log.LogDetail(std::to_string(swap_request_slots_retry_count_) +
                   " : swap_request_slots_retry_count");
@@ -383,13 +411,6 @@ void Logger::IOThread() {
         (*thread)->FinishReadingEntries();
         // Mark for removal by the call to RemoveValue below.
         *thread = nullptr;
-
-        // Clean up tasks
-        for (auto& task : thread_cleanup_tasks_) {
-          task();
-        }
-        thread_cleanup_tasks_.clear();
-
       }
 
       // Only remove threads where reading succeeded so we retry the failed
@@ -403,7 +424,15 @@ void Logger::IOThread() {
       async_logger_.Flush();
     }
 
-    // TODO: Garbage collect orphans when we've quiesced.
+    if (!orphans_to_destroy_.empty()) {
+      auto trace7 = MakeScopedTracer(
+          [](AsyncLog &log){ log.ScopedTrace("Abandoning Orphans"); });
+      std::unique_lock<std::mutex> lock(tls_logger_orphans_mutex_);
+      for (auto orphan : orphans_to_destroy_) {
+        tls_logger_orphans_.erase(orphan);
+      }
+      orphans_to_destroy_.clear();
+    }
   }
 }
 

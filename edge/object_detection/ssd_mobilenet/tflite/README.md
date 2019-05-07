@@ -140,21 +140,21 @@ creating index...
 index created!
 Running per image evaluation...
 Evaluate annotation type *bbox*
-DONE (t=11.23s).
+DONE (t=12.81s).
 Accumulating evaluation results...
-DONE (t=1.97s).
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.212
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.320
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.235
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.014
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.152
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.490
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.196
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.243
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.243
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.017
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.172
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.570
+DONE (t=2.10s).
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.223
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.341
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.247
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.015
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.160
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.515
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.203
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.255
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.255
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.019
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.182
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.593
 
 Summary:
 -------------------------------
@@ -162,18 +162,13 @@ Graph loaded in 0.000000s
 All images loaded in 0.000000s
 All images detected in 0.000000s
 Average detection time: 0.000000s
-mAP: 0.2119855643254357
-Recall: 0.24317820057128117
+mAP: 0.22349680978666922
+Recall: 0.2550505369422975
 --------------------------------
 ```
 **NB:** We are working on resolving the difference in mAP between the TF and
-TFLite versions (23.1% vs. 21.2%), as well as resolving the timing issue (all
-zeros).
-
-The TF version uses a frozen graph with `score_threshold=0.3`. However, the
-TFLite version has been converted from a checkpoint which
-[potentially](https://github.com/tensorflow/models/blob/e08b628663df7d2f2f6040fa3d4439ce4a3de33e/research/object_detection/samples/configs/ssd_mobilenet_v1_coco.config#L130)
-uses `score_threshold=1e-8`.
+TFLite versions (23.11% vs. 22.35%), as well as resolving the timing issue (all
+zeros). Both versions [use the same parameters](https://github.com/ctuning/ck-mlperf/blob/master/package/model-tflite-mlperf-ssd-mobilenet/README.md): `score_threshold=0.3`, etc.
 
 
 <a name="further-info"></a>

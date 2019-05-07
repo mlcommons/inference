@@ -3,13 +3,13 @@
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)
 3. [Reference accuracy](#accuracy)
+4. [Further information](#further-info)
+
 
 <a name="installation"></a>
 ## Installation instructions
 
 Please follow the common [installation instructions](../README.md#installation) first.
-
-**NB:** See [`ck-tensorflow:program:object-detection-tflite`](https://github.com/ctuning/ck-tensorflow/tree/master/program/object-detection-tflite) for more details about the client program.
 
 ### Install TensorFlow Lite (TFLite)
 
@@ -174,3 +174,15 @@ The TF version uses a frozen graph with `score_threshold=0.3`. However, the
 TFLite version has been converted from a checkpoint which
 [potentially](https://github.com/tensorflow/models/blob/e08b628663df7d2f2f6040fa3d4439ce4a3de33e/research/object_detection/samples/configs/ssd_mobilenet_v1_coco.config#L130)
 uses `score_threshold=1e-8`.
+
+
+<a name="further-info"></a>
+## Further information
+
+### Using Collective Knowledge
+See the [common MobileNet instructions](../../../object_classification/mobilenets/README.md) for information on how to use Collective Knowledge
+to learn about [the anatomy of a benchmark](../../../object_clasification/mobilenets/README.md#anatomy), or
+to inspect and visualize [experimental results](../../../object_clasification/mobilenets/README.md#results).
+
+### Using the client program
+See [`ck-tensorflow:program:object-detection-tflite`](https://github.com/ctuning/ck-tensorflow/tree/master/program/object-detection-tflite) for more details about the client program.

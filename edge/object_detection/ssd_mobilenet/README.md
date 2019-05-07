@@ -68,9 +68,9 @@ $ CK_PYTHON=python3.6 ck python_version
 
 ### Install required Python 3 packages
 Choose one of the following installation options:
-- system-wide via pip;
-- user-space via pip;
-- user-space via CK.
+1. system-wide via pip;
+1. user-space via pip;
+1. user-space via CK.
 
 With the first two options, packages get installed via pip and get registered
 with CK later (typically, on the first run of a program).
@@ -78,29 +78,30 @@ with CK later (typically, on the first run of a program).
 With the last option, packages also get installed via pip but get registered
 with CK at the same time (so there is less chance of mixing things up).
 
-#### System-wide installation via pip (under `/usr`)
+#### Option 1: system-wide installation via pip (under `/usr`)
 ```bash
 $ sudo python3 -m pip install cython scipy matplotlib pillow ck
 ```
-#### User-space installation via pip (under `$HOME`)
+#### Option 2: user-space installation via pip (under `$HOME`)
 ```bash
 $ python3 -m pip install cython scipy matplotlib pillow ck --user
 ```
-#### User-space installation via CK (under `$HOME` and `$CK_TOOLS`)
+#### Option 3: user-space installation via CK (under `$HOME` and `$CK_TOOLS`)
+Install CK via pip (or [from GitHub](https://github.com/ctuning/ck#installation)):
 ```bash
 $ python3 -m pip install ck --user
 $ ck version
 V1.9.7
 ```
-**NB:** CK can also be installed [via Git](https://github.com/ctuning/ck#ubuntu).
-
+Install and register Python packages with CK:
 ```bash
+$ ck pull repo:ck-env
 $ ck detect soft:compiler.python --full_path=`which python3`
 $ ck install package --tags=lib,python-package,numpy
 $ ck install package --tags=lib,python-package,scipy
 $ ck install package --tags=lib,python-package,matplotlib
 $ ck install package --tags=lib,python-package,pillow
-$ python3 -m pip install cython --user
+$ python3 -m pip install cython --user && ck detect soft --tags=lib,python-package,cython
 ```
 **NB:** Cython cannot be currently installed via CK (but we are working on it).
 
@@ -140,7 +141,7 @@ $ ck pull repo --all
 
 ### Install the COCO 2017 validation dataset (5,000 images)
 ```bash
-$ ck install package:dataset-coco-2017-val
+$ ck install package --tags=dataset,coco,2017
 ```
 **NB:** COCO dataset descriptions are in [repo:ck-env](https://github.com/ctuning/ck-env).
 

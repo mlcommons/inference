@@ -393,8 +393,12 @@ class Logger {
   std::mutex tls_loggers_registerd_mutex_;
   std::unordered_set<TlsLogger*> tls_loggers_registerd_;
 
-  // Temporarily stores TlsLogger data for threads that have exited.
-  std::vector<std::unique_ptr<TlsLogger>> tls_logger_orphans_;
+  // Temporarily stores TlsLogger data for threads that have exited until
+  // all their log entries have been processed.
+  // Accessed by IOThread and producers as their threads exit.
+  std::mutex tls_logger_orphans_mutex_;
+  using OrphanContainer = std::list<std::unique_ptr<TlsLogger>>;
+  OrphanContainer tls_logger_orphans_;
 
   // Accessed by producers and IOThead atomically.
   std::atomic<size_t> swap_request_id_ { 0 };
@@ -406,7 +410,7 @@ class Logger {
   std::vector<SlotRetry> swap_request_slots_to_retry_;
   std::vector<TlsLogger*> threads_to_swap_deferred_;
   std::vector<TlsLogger*> threads_to_read_;
-  std::vector<std::function<void()>> thread_cleanup_tasks_;
+  std::vector<OrphanContainer::iterator> orphans_to_destroy_;
 
   // Counts for retries related to the lock-free scheme.
   // Abnormally high counts could be an indicator of contention.

@@ -181,8 +181,8 @@ uses `score_threshold=1e-8`.
 
 ### Using Collective Knowledge
 See the [common MobileNet instructions](../../../object_classification/mobilenets/README.md) for information on how to use Collective Knowledge
-to learn about [the anatomy of a benchmark](../../../object_clasification/mobilenets/README.md#anatomy), or
-to inspect and visualize [experimental results](../../../object_clasification/mobilenets/README.md#results).
+to learn about [the anatomy of a benchmark](../../../object_clasification/mobilenets/README.md#the-anatomy-of-a-benchmark), or
+to inspect and visualize [experimental results](../../../object_clasification/mobilenets/README.md#inspecting-recorded-experimental-results).
 
 ### Using the client program
 See [`ck-tensorflow:program:object-detection-tflite`](https://github.com/ctuning/ck-tensorflow/tree/master/program/object-detection-tflite) for more details about the client program.

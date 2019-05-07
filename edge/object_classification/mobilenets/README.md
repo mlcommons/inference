@@ -88,14 +88,16 @@ $ sudo python3 -m pip install scipy ck
 $ python3 -m pip install scipy ck --user
 ```
 #### Option 3: User-space installation via CK (under `$HOME` and `$CK_TOOLS`)
+Install CK via pip (or [from GitHub](https://github.com/ctuning/ck#installation)):
 ```bash
 $ python3 -m pip install ck --user
 $ ck version
 V1.9.7
 ```
-**NB:** CK can also be installed [via Git](https://github.com/ctuning/ck#ubuntu).
 
+Install and register Python packages with CK:
 ```bash
+$ ck pull repo:ck-env
 $ ck detect soft:compiler.python --full_path=`which python3`
 $ ck install package --tags=lib,python-package,numpy
 $ ck install package --tags=lib,python-package,scipy

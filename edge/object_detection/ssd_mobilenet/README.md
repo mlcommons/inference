@@ -93,7 +93,7 @@ $ python3 -m pip install ck --user
 $ ck version
 V1.9.7
 ```
-
+Install and register Python packages with CK:
 ```bash
 $ ck pull repo:ck-env
 $ ck detect soft:compiler.python --full_path=`which python3`
@@ -101,7 +101,7 @@ $ ck install package --tags=lib,python-package,numpy
 $ ck install package --tags=lib,python-package,scipy
 $ ck install package --tags=lib,python-package,matplotlib
 $ ck install package --tags=lib,python-package,pillow
-$ python3 -m pip install cython --user
+$ python3 -m pip install cython --user && ck detect soft:lib.python.cython
 ```
 **NB:** Cython cannot be currently installed via CK (but we are working on it).
 

@@ -15,13 +15,8 @@ Please follow the [common installation instructions](../README.md#installation) 
 
 Install TensorFlow (C++) v1.13.1 from source:
 ```bash
-$ ck install package:lib-tensorflow-1.13.1-src-static
+$ ck install package:lib-tensorflow-1.13.1-src-static [--target_os=android23-arm64]
 ```
-**NB:** We suggest you use v1.10.1 for Android:
-```
-$ ck install package:lib-tensorflow-1.10.1-src-static --target_os=android23-arm64
-```
-until a [linking issue](https://github.com/ctuning/ck-tensorflow/issues/113) is resolved.
 
 ### Install the MobileNet model for TensorFlow (C++)
 

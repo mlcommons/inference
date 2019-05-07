@@ -11,6 +11,7 @@
 #include <random>
 #include <thread>
 
+#include "loadgen/generated/version.h"
 #include "logging.h"
 #include "query_sample.h"
 #include "query_sample_library.h"

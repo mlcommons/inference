@@ -11,6 +11,9 @@ to avoid poluting the source tree.
 """
 
 from setuptools import setup, Extension
+from version import generate_loadgen_version_header
+
+generate_loadgen_version_header("./python_setup_gen/loadgen/generated/version.h")
 
 sources = [
   "bindings/python_api.cc",
@@ -21,7 +24,7 @@ sources = [
 mlperf_loadgen_module = Extension('mlperf_loadgen',
                     define_macros = [('MAJOR_VERSION', '0'),
                                      ('MINOR_VERSION', '5')],
-                    include_dirs = [ '.', '../third_party/pybind/include' ],
+                    include_dirs = [ '.', 'python_setup_gen', '../third_party/pybind/include' ],
                     sources = sources)
 
 setup (name = 'mlperf_loadgen',

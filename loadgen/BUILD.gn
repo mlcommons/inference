@@ -25,13 +25,16 @@ c_api_sources = [
   "bindings/c_api.cc",
 ]
 
+mlperf_loadgen_sources = public_headers + lib_sources + c_api_sources
+
 source_set("docs") {
   sources = [ "README.md" ]
 }
 
 static_library("mlperf_loadgen") {
-  sources = public_headers + lib_sources + c_api_sources
+  sources = mlperf_loadgen_sources
   include_dirs = [ "." ]
+  deps = [ ":generate_loadgen_version_header" ]
 }
 
 executable("loadgen_demo") {
@@ -73,3 +76,17 @@ loadable_module("mlperf_loadgen_pymodule_lib") {
   include_dirs = [ "." ] + py_include_dirs
   ldflags = py_ld_flags
 }
+
+source_set("generate_loadgen_version_header_script") {
+  sources = [ "version.py" ]
+}
+
+action("generate_loadgen_version_header") {
+  target_filename = get_path_info(".", "gen_dir") + "/generated/version.h"
+  script = "version.py"
+  deps = [ ":generate_loadgen_version_header_script" ]
+  inputs = mlperf_loadgen_sources
+  outputs = [ target_filename ]
+  args = [ rebase_path(target_filename, root_build_dir) ]
+}
+

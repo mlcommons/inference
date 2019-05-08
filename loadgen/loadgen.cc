@@ -11,12 +11,12 @@
 #include <random>
 #include <thread>
 
-#include "loadgen/generated/version.h"
 #include "logging.h"
 #include "query_sample.h"
 #include "query_sample_library.h"
 #include "system_under_test.h"
 #include "utils.h"
+#include "version.h"
 
 namespace mlperf {
 
@@ -599,6 +599,26 @@ TestSettings SanitizeRequestedSettings(const TestSettings& r) {
   return s;
 }
 
+void LogLoadgenVersion() {
+  LogDetail([](AsyncLog& log) {
+    log.LogDetail("LoadgenVersionInfo:");
+    log.LogDetail("version : "+ LoadgenVersion() +
+                  " @ " + LoadgenGitRevision());
+    log.LogDetail("build_date_local : "+ LoadgenBuildDateLocal());
+    log.LogDetail("build_date_utc   : "+ LoadgenBuildDateUtc());
+    log.LogDetail("git_commit_date  : "+ LoadgenGitCommitDate());
+    log.LogDetail("git_status :\n" + LoadgenGitStatus() + "\n");
+    log.LogDetail("git_log :\n" + LoadgenGitLog() + "\n");
+  });
+
+  if (LoadgenGitStatus() != "") {
+    LogError([](AsyncLog &log) {
+      log.LogDetail("Loadgen built with uncommitted changes:");
+      log.LogDetail("git_status :\n" + LoadgenGitStatus() + "\n");
+    });
+  }
+}
+
 void StartTest(SystemUnderTest* sut,
                QuerySampleLibrary* qsl,
                const TestSettings& requested_settings) {
@@ -609,6 +629,8 @@ void StartTest(SystemUnderTest* sut,
   GlobalLogger().StartLogging(&summary_out, &detail_out);
   std::ofstream trace_out("mlperf_trace.json");
   GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
+
+  LogLoadgenVersion();
 
   TestSettings sanitized_settings =
       SanitizeRequestedSettings(requested_settings);

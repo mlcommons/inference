@@ -395,6 +395,9 @@ struct QueryScheduler<TestScenario::MultiStream> {
     PerfClock::time_point now = PerfClock::now();
     do {
       tick_time += kPeriods[i_period++ % 3];
+      Log([tick_time = tick_time](AsyncLog& log) {
+        log.TraceAsyncInstant("Frame", 0, tick_time);
+      });
     } while (tick_time < now);
     std::this_thread::sleep_until(tick_time);
   }

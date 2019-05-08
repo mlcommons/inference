@@ -5,6 +5,9 @@ declare_args() {
   py_ld_flags = [ "-lpython2.7" ]
 }
 
+generated_version_source_filename =
+    get_path_info(".", "gen_dir") + "/version.cc"
+
 public_headers = [
   "loadgen.h",
   "query_sample.h",
@@ -18,6 +21,7 @@ lib_sources = [
   "logging.h",
   "trace_generator.h",
   "utils.h",
+  "version.h",
 ]
 
 c_api_sources = [
@@ -25,7 +29,9 @@ c_api_sources = [
   "bindings/c_api.cc",
 ]
 
-mlperf_loadgen_sources = public_headers + lib_sources + c_api_sources
+mlperf_loadgen_sources_no_gen = public_headers + lib_sources + c_api_sources
+mlperf_loadgen_sources = mlperf_loadgen_sources_no_gen +
+                         [ generated_version_source_filename ]
 
 source_set("docs") {
   sources = [ "README.md" ]
@@ -65,7 +71,7 @@ copy("python_api_src") {
 # An attempt to create python module without using setuptools.
 # TODO(brianderson): Remove or fix this.
 # This compiles with the system toolchain, but not chromium's.
-# For now, use loadgen_pymodule_setup_src/lib.py instead.
+# For now, use loadgen_pymodule_setup_src_lib.py instead.
 loadable_module("mlperf_loadgen_pymodule_lib") {
   sources = [ "bindings/python_api.cc" ]
   deps = [ ":mlperf_loadgen", "../third_party:pybind11" ]
@@ -77,16 +83,19 @@ loadable_module("mlperf_loadgen_pymodule_lib") {
   ldflags = py_ld_flags
 }
 
-source_set("generate_loadgen_version_header_script") {
-  sources = [ "version.py" ]
+source_set("setup_py_script") {
+  sources = [ "setup.py" ]
+}
+
+source_set("version_generator_script") {
+  sources = [ "version_generator.py" ]
 }
 
 action("generate_loadgen_version_header") {
-  target_filename = get_path_info(".", "gen_dir") + "/generated/version.h"
-  script = "version.py"
-  deps = [ ":generate_loadgen_version_header_script" ]
-  inputs = mlperf_loadgen_sources
-  outputs = [ target_filename ]
-  args = [ rebase_path(target_filename, root_build_dir) ]
+  script = "version_generator.py"
+  deps = [ ":version_generator_script" ]
+  inputs = mlperf_loadgen_sources_no_gen
+  outputs = [ generated_version_source_filename ]
+  args = [ rebase_path(generated_version_source_filename, root_build_dir) ]
 }
 

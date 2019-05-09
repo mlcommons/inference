@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-ENV PYTHON_VERSION=3.6
+ENV PYTHON_VERSION=3.7
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV PATH /opt/anaconda3/bin:$PATH
@@ -22,7 +22,7 @@ RUN apt-get install -y --no-install-recommends \
       unzip
 
 RUN cd /opt && \
-    wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-4.5.4-Linux-x86_64.sh -O miniconda.sh && \
+    wget --quiet https://repo.anaconda.com/miniconda/Miniconda3-4.6.14-Linux-x86_64.sh -O miniconda.sh && \
     /bin/bash ./miniconda.sh -b -p /opt/anaconda3 && \
     rm miniconda.sh && \
     /opt/anaconda3/bin/conda clean -tipsy && \

@@ -10,11 +10,11 @@ To build as a python module:
     cd loadgen
     CFLAGS="-std=c++14" python setup.py bdist_wheel
     pip install dist/mlperf_loadgen-0.5a0-cp27-cp27mu-linux_x86_64.whl
-    python demos/py_demo.py
+    python demos/py_demo_single_stream.py
 
 Note: The *.whl filename may differ on your system. There should only be one resulting whl file for you to use.
 
-See [demos/py_demo.py](demos/py_demo.py) for how to import and use the load generator from python.
+See [demos/py_demo_single_stream.py](demos/py_demo_single_stream.py) for how to import and use the load generator from python.
 
 To build as a C++ library:
 

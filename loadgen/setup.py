@@ -26,6 +26,7 @@ public_headers = [
 
 lib_headers = [
   "logging.h",
+  "test_settings_internal.h",
   "trace_generator.h",
   "utils.h",
   "version.h",

@@ -21,6 +21,7 @@ public_headers = [
   "query_sample.h",
   "query_sample_library.h",
   "system_under_test.h",
+  "test_settings.h",
 ]
 
 lib_headers = [

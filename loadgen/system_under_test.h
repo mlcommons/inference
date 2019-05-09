@@ -1,5 +1,5 @@
-#ifndef SYSTEM_UNDER_TEST_H
-#define SYSTEM_UNDER_TEST_H
+#ifndef MLPERF_LOADGEN_SYSTEM_UNDER_TEST_H
+#define MLPERF_LOADGEN_SYSTEM_UNDER_TEST_H
 
 #include <stdint.h>
 #include <memory>
@@ -34,4 +34,4 @@ class SystemUnderTest {
 
 }  // namespace mlperf
 
-#endif  // SYSTEM_UNDER_TEST_H
+#endif  // MLPERF_LOADGEN_SYSTEM_UNDER_TEST_H

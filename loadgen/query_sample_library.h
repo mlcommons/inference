@@ -1,8 +1,10 @@
-#ifndef QUERY_SAMPLE_LIBRARY_H
-#define QUERY_SAMPLE_LIBRARY_H
+#ifndef MLPERF_LOADGEN_QUERY_SAMPLE_LIBRARY_H
+#define MLPERF_LOADGEN_QUERY_SAMPLE_LIBRARY_H
 
 #include <memory>
 #include <vector>
+
+#include "query_sample.h"
 
 namespace mlperf {
 
@@ -53,4 +55,4 @@ class QuerySampleLibrary {
 
 }  // namespace mlperf
 
-#endif  // QUERY_SAMPLE_LIBRARY_H
+#endif  // MLPERF_LOADGEN_QUERY_SAMPLE_LIBRARY_H

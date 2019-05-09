@@ -169,17 +169,27 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
     value("SubmissionRun", TestMode::SubmissionRun).
     value("AccuracyOnly", TestMode::AccuracyOnly).
     value("PerformanceOnly", TestMode::PerformanceOnly).
-    value("SearchForQps", TestMode::SearchForQps);
+    value("FindPeakPerformance", TestMode::FindPeakPerformance);
 
   pybind11::class_<TestSettings>(m, "TestSettings").
     def(pybind11::init<>()).
-    def(pybind11::init<
-        TestScenario, TestMode, int, double, uint64_t>()).
     def_readwrite("scenario", &TestSettings::scenario).
     def_readwrite("mode", &TestSettings::mode).
-    def_readwrite("samples_per_query", &TestSettings::samples_per_query).
-    def_readwrite("target_qps", &TestSettings::target_qps).
-    def_readwrite("target_latency_ns", &TestSettings::target_latency_ns);
+    def_readwrite("single_stream_expected_latency_ns", &TestSettings::single_stream_expected_latency_ns).
+    def_readwrite("multi_stream_samples_per_query", &TestSettings::multi_stream_samples_per_query).
+    def_readwrite("server_target_qps", &TestSettings::server_target_qps).
+    def_readwrite("server_coallesce_queries", &TestSettings::server_coallesce_queries).
+    def_readwrite("offline_expected_qps", &TestSettings::offline_expected_qps).
+    def_readwrite("enable_spec_overrides", &TestSettings::enable_spec_overrides).
+    def_readwrite("override_target_latency_ns", &TestSettings::override_target_latency_ns).
+    def_readwrite("override_multi_stream_max_async_queries", &TestSettings::override_multi_stream_max_async_queries).
+    def_readwrite("override_min_duration_ms", &TestSettings::override_min_duration_ms).
+    def_readwrite("override_max_duration_ms", &TestSettings::override_max_duration_ms).
+    def_readwrite("override_min_query_count", &TestSettings::override_min_query_count).
+    def_readwrite("override_max_query_count", &TestSettings::override_max_query_count).
+    def_readwrite("override_qsl_rng_seed", &TestSettings::override_qsl_rng_seed).
+    def_readwrite("override_sample_index_rng_seed", &TestSettings::override_sample_index_rng_seed).
+    def_readwrite("override_schedule_rng_seed", &TestSettings::override_schedule_rng_seed);
 
   pybind11::class_<QuerySample>(m, "QuerySample")
       .def(pybind11::init<>())

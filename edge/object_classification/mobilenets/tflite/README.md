@@ -227,8 +227,24 @@ $ ck benchmark program:image-classification-tflite \
 
 <a name="accuracy"></a>
 ## Reference accuracy
+
+### ImageNet validation dataset (50,000 images)
+
+#### 87.5% cropping (default)
+##### MobileNet non-quantized
+```
+"accuracy_top1": 0.69966 # == 0.69966 for tf-cpp (=000 images)
+"accuracy_top5": 0.87628 # << 0.89366 for tf-cpp (-869 images)
+```
+
+##### MobileNet quantized
 **TODO**
 
+##### ResNet
+```
+"accuracy_top1": 0.73302 # >= 0.73288 for tf-cpp (+007 images)
+"accuracy_top5": 0.90148 # << 0.91606 for tf-cpp (-729 images)
+```
 
 <a name="further-info"></a>
 ## Further information

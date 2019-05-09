@@ -13,6 +13,7 @@
 #include "../query_sample.h"
 #include "../query_sample_library.h"
 #include "../system_under_test.h"
+#include "../test_settings.h"
 
 
 namespace mlperf {

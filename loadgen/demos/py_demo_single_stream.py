@@ -45,7 +45,7 @@ def main(argv):
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.SingleStream
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
-    settings.single_stream_expected_qps = 100
+    settings.single_stream_expected_latency_ns = 1000000;
     settings.enable_spec_overrides = True
     settings.override_target_latency_ns = 100000000
     settings.override_min_query_count = 100

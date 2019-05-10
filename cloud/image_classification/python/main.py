@@ -313,6 +313,7 @@ def main():
 
     sut = lg.ConstructSUT(issue_query, process_latencies)
     qsl = lg.ConstructQSL(count, count, ds.load_query_samples, ds.unload_query_samples)
+
     scenarios = [
         lg.TestScenario.SingleStream,
         lg.TestScenario.MultiStream,

@@ -4,17 +4,17 @@
 #include <algorithm>
 #include <atomic>
 #include <cassert>
-#include <condition_variable>
 #include <chrono>
+#include <condition_variable>
 #include <functional>
 #include <future>
 #include <iostream>
 #include <list>
 #include <mutex>
-#include <thread>
 #include <set>
-#include <vector>
+#include <thread>
 #include <unordered_set>
+#include <vector>
 
 #include "query_sample.h"
 
@@ -34,12 +34,9 @@ using PerfClock = std::chrono::high_resolution_clock;
 // TODO: Move non-templated methods to the cc file.
 class AsyncLog {
  public:
-  ~AsyncLog() {
-    StartNewTrace(nullptr, PerfClock::now());
-  }
+  ~AsyncLog() { StartNewTrace(nullptr, PerfClock::now()); }
 
-  void SetLogFiles(std::ostream *summary,
-                   std::ostream *detail,
+  void SetLogFiles(std::ostream* summary, std::ostream* detail,
                    PerfClock::time_point log_origin) {
     std::unique_lock<std::mutex> lock(log_mutex_);
     if (summary_out_ != &std::cerr) {
@@ -57,7 +54,7 @@ class AsyncLog {
     log_error_count_ = 0;
   }
 
-  void StartNewTrace(std::ostream *trace_out, PerfClock::time_point origin) {
+  void StartNewTrace(std::ostream* trace_out, PerfClock::time_point origin) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
     // Cleanup previous trace.
     if (trace_out_) {
@@ -92,19 +89,18 @@ class AsyncLog {
     }
   }
 
-  void SetCurrentTracePidTidString(const std::string *pid_tid) {
+  void SetCurrentTracePidTidString(const std::string* pid_tid) {
     current_pid_tid_ = pid_tid;
   }
 
-  template <typename ...Args>
-  void LogSummary(const std::string& message,
-                  const Args... args) {
+  template <typename... Args>
+  void LogSummary(const std::string& message, const Args... args) {
     auto trace = MakeScopedTracer([message](AsyncLog& log) {
       std::string sanitized_message = message;
-      std::replace(
-          sanitized_message.begin(), sanitized_message.end(), '"', '\'');
-      std::replace(
-          sanitized_message.begin(), sanitized_message.end(), '\n', ';');
+      std::replace(sanitized_message.begin(), sanitized_message.end(), '"',
+                   '\'');
+      std::replace(sanitized_message.begin(), sanitized_message.end(), '\n',
+                   ';');
       log.ScopedTrace("LogSummary", "message", "\"" + sanitized_message + "\"");
     });
     std::unique_lock<std::mutex> lock(log_mutex_);
@@ -113,9 +109,7 @@ class AsyncLog {
     *summary_out_ << "\n";
   }
 
-  void SetLogDetailTime(PerfClock::time_point time) {
-    log_detail_time_ = time;
-  }
+  void SetLogDetailTime(PerfClock::time_point time) { log_detail_time_ = time; }
 
   // TODO: Warnings.
   void FlagError() {
@@ -124,22 +118,22 @@ class AsyncLog {
     error_flagged_ = true;
   }
 
-  template <typename ...Args>
-  void LogDetail(const std::string& message,
-                 const Args... args) {
+  template <typename... Args>
+  void LogDetail(const std::string& message, const Args... args) {
     auto trace = MakeScopedTracer([message](AsyncLog& log) {
       std::string sanitized_message = message;
-      std::replace(
-          sanitized_message.begin(), sanitized_message.end(), '"', '\'');
-      std::replace(
-          sanitized_message.begin(), sanitized_message.end(), '\n', ';');
+      std::replace(sanitized_message.begin(), sanitized_message.end(), '"',
+                   '\'');
+      std::replace(sanitized_message.begin(), sanitized_message.end(), '\n',
+                   ';');
       log.ScopedTrace("LogDetail", "message", "\"" + sanitized_message + "\"");
     });
     std::unique_lock<std::mutex> lock(log_mutex_);
-    *detail_out_ << *current_pid_tid_ << "\"ts\": "
-                 << (log_detail_time_ - log_origin_).count() << "ns : ";
+    *detail_out_ << *current_pid_tid_
+                 << "\"ts\": " << (log_detail_time_ - log_origin_).count()
+                 << "ns : ";
     if (error_flagged_) {
-      *detail_out_  << "ERROR : ";
+      *detail_out_ << "ERROR : ";
       error_flagged_ = false;
     }
     *detail_out_ << message;
@@ -147,18 +141,15 @@ class AsyncLog {
     *detail_out_ << "\n";
   }
 
-  template <typename ...Args>
-  void Trace(const std::string& trace_name,
-             PerfClock::time_point start,
-             PerfClock::time_point end,
-             const Args... args) {
+  template <typename... Args>
+  void Trace(const std::string& trace_name, PerfClock::time_point start,
+             PerfClock::time_point end, const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
     if (!trace_out_) {
       return;
     }
     *trace_out_ << "{ \"name\": \"" << trace_name << "\", "
-                << "\"ph\": \"X\", "
-                << *current_pid_tid_
+                << "\"ph\": \"X\", " << *current_pid_tid_
                 << "\"ts\": " << (start - trace_origin_).count() << ", "
                 << "\"dur\": " << (end - start).count() << ", "
                 << "\"args\": { ";
@@ -166,11 +157,10 @@ class AsyncLog {
     *trace_out_ << " }},\n";
   }
 
-  template <typename ...Args>
-  void TraceAsyncInstant(const std::string& trace_name,
-             uint64_t id,
-             PerfClock::time_point instant_time,
-             const Args... args) {
+  template <typename... Args>
+  void TraceAsyncInstant(const std::string& trace_name, uint64_t id,
+                         PerfClock::time_point instant_time,
+                         const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
     if (!trace_out_) {
       return;
@@ -178,8 +168,7 @@ class AsyncLog {
     *trace_out_ << "{\"name\": \"" << trace_name << "\", "
                 << "\"cat\": \"default\", "
                 << "\"ph\": \"n\", "
-                << "\"id\": " << id << ", "
-                << *current_pid_tid_
+                << "\"id\": " << id << ", " << *current_pid_tid_
                 << "\"ts\": " << (instant_time - trace_origin_).count() << ", "
                 << "\"args\": { ";
     LogArgs(trace_out_, args...);
@@ -189,18 +178,18 @@ class AsyncLog {
   void SetScopedTraceTimes(PerfClock::time_point start,
                            PerfClock::time_point end) {
     scoped_start_ = start;
-    scoped_end_ = end;;
+    scoped_end_ = end;
+    ;
   }
 
-  template <typename ...Args>
+  template <typename... Args>
   void ScopedTrace(const std::string& trace_name, const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
     if (!trace_out_) {
       return;
     }
     *trace_out_ << "{ \"name\": \"" << trace_name << "\", "
-                << "\"ph\": \"X\", "
-                << *current_pid_tid_
+                << "\"ph\": \"X\", " << *current_pid_tid_
                 << "\"ts\": " << (scoped_start_ - trace_origin_).count() << ", "
                 << "\"dur\": " << (scoped_end_ - scoped_start_).count() << ", "
                 << "\"args\": { ";
@@ -208,11 +197,9 @@ class AsyncLog {
     *trace_out_ << " }},\n";
   }
 
-  template <typename ...Args>
-  void TraceSample(const std::string& trace_name,
-                   uint64_t id,
-                   PerfClock::time_point start,
-                   PerfClock::time_point end,
+  template <typename... Args>
+  void TraceSample(const std::string& trace_name, uint64_t id,
+                   PerfClock::time_point start, PerfClock::time_point end,
                    const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
     if (!trace_out_) {
@@ -221,8 +208,7 @@ class AsyncLog {
     *trace_out_ << "{\"name\": \"" << trace_name << "\", "
                 << "\"cat\": \"default\", "
                 << "\"ph\": \"b\", "
-                << "\"id\": " << id << ", "
-                << *current_pid_tid_
+                << "\"id\": " << id << ", " << *current_pid_tid_
                 << "\"ts\": " << (start - trace_origin_).count() << ", "
                 << "\"args\": { ";
     LogArgs(trace_out_, args...);
@@ -231,8 +217,7 @@ class AsyncLog {
     *trace_out_ << "{ \"name\": \"" << trace_name << "\", "
                 << "\"cat\": \"default\", "
                 << "\"ph\": \"e\", "
-                << "\"id\": " << id << ", "
-                << *current_pid_tid_
+                << "\"id\": " << id << ", " << *current_pid_tid_
                 << "\"ts\": " << (end - trace_origin_).count() << " },\n";
   }
 
@@ -257,12 +242,11 @@ class AsyncLog {
     latencies_expected_ = 0;
   }
 
-  std::vector<QuerySampleLatency> GetLatenciesBlocking(
-          size_t expected_count) {
+  std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count) {
     std::vector<QuerySampleLatency> latencies;
     std::unique_lock<std::mutex> lock(latencies_mutex_);
     latencies_expected_ = expected_count;
-    all_latencies_recorded_.wait(lock, [&]{ return AllLatenciesRecorded(); });
+    all_latencies_recorded_.wait(lock, [&] { return AllLatenciesRecorded(); });
     latencies.swap(latencies_);
     return latencies;
   }
@@ -272,7 +256,7 @@ class AsyncLog {
     *trace_out_ << "{ \"traceEvents\": [\n";
   }
 
-  void WriteTraceEventFooterLocked(){
+  void WriteTraceEventFooterLocked() {
     *trace_out_ << "{ \"name\": \"LastTrace\" }\n"
                 << "],\n"
                 << "\"displayTimeUnit\": \"ns\",\n"
@@ -282,36 +266,33 @@ class AsyncLog {
                 << "}\n";
   }
 
-  void LogArgs(std::ostream *) {}
+  void LogArgs(std::ostream*) {}
 
   template <typename T>
-  void LogArgs(std::ostream *out,
-               const std::string& arg_name,
-               const T &arg_value) {
+  void LogArgs(std::ostream* out, const std::string& arg_name,
+               const T& arg_value) {
     *out << "\"" << arg_name << "\" : " << arg_value;
   }
 
-  template <typename T, typename ...Args>
-  void LogArgs(std::ostream *out,
-               const std::string& arg_name,
-               const T& arg_value,
-               const Args... args) {
+  template <typename T, typename... Args>
+  void LogArgs(std::ostream* out, const std::string& arg_name,
+               const T& arg_value, const Args... args) {
     *out << "\"" << arg_name << "\" : " << arg_value << ", ";
     LogArgs(out, args...);
   }
 
   std::mutex log_mutex_;
-  std::ostream *summary_out_ = &std::cerr;
-  std::ostream *detail_out_ = &std::cerr;
+  std::ostream* summary_out_ = &std::cerr;
+  std::ostream* detail_out_ = &std::cerr;
   PerfClock::time_point log_origin_;
   uint32_t log_error_count_ = 0;
   bool error_flagged_ = false;
 
   std::mutex trace_mutex_;
-  std::ostream *trace_out_ = nullptr;
+  std::ostream* trace_out_ = nullptr;
   PerfClock::time_point trace_origin_;
 
-  const std::string *current_pid_tid_ = nullptr;
+  const std::string* current_pid_tid_ = nullptr;
   PerfClock::time_point log_detail_time_;
   PerfClock::time_point scoped_start_;
   PerfClock::time_point scoped_end_;
@@ -329,44 +310,41 @@ class AsyncLog {
 
 template <typename LambdaT>
 class ScopedTracer {
-public:
-  ScopedTracer(LambdaT &&lambda)
-    : start_(PerfClock::now()),
-      lambda_(std::forward<LambdaT>(lambda)) {}
+ public:
+  ScopedTracer(LambdaT&& lambda)
+      : start_(PerfClock::now()), lambda_(std::forward<LambdaT>(lambda)) {}
 
   ~ScopedTracer() {
-    Log([start = start_,
-         lambda = std::move(lambda_),
+    Log([start = start_, lambda = std::move(lambda_),
          end = PerfClock::now()](AsyncLog& log) {
-          log.SetScopedTraceTimes(start, end);
-          lambda(log);
-        });
+      log.SetScopedTraceTimes(start, end);
+      lambda(log);
+    });
   }
 
-private:
+ private:
   PerfClock::time_point start_;
   LambdaT lambda_;
 };
 
 template <typename LambdaT>
-auto MakeScopedTracer(LambdaT &&lambda) -> ScopedTracer<LambdaT> {
+auto MakeScopedTracer(LambdaT&& lambda) -> ScopedTracer<LambdaT> {
   return ScopedTracer<LambdaT>(std::forward<LambdaT>(lambda));
 }
 
 // Logs all threads belonging to a run.
 class Logger {
  public:
-  Logger(std::chrono::duration<double> poll_period,
-         size_t max_threads_to_log);
+  Logger(std::chrono::duration<double> poll_period, size_t max_threads_to_log);
   ~Logger();
 
   void StartIOThread();
   void StopIOThread();
 
-  void StartLogging(std::ostream *summary, std::ostream *detail);
+  void StartLogging(std::ostream* summary, std::ostream* detail);
   void StopLogging();
 
-  void StartNewTrace(std::ostream *trace_out, PerfClock::time_point origin);
+  void StartNewTrace(std::ostream* trace_out, PerfClock::time_point origin);
   void StopTracing();
 
   void RestartLatencyRecording();
@@ -383,7 +361,7 @@ class Logger {
 
   // Slow synchronous error logging for internals that may prevent
   // async logging from working.
-  template <typename ...Args>
+  template <typename... Args>
   void LogErrorSync(const std::string& message, const Args... args) {
     async_logger_.FlagError();
     async_logger_.LogDetail(message, args...);
@@ -421,12 +399,15 @@ class Logger {
   OrphanContainer tls_logger_orphans_;
 
   // Accessed by producers and IOThead atomically.
-  std::atomic<size_t> swap_request_id_ { 0 };
+  std::atomic<size_t> swap_request_id_{0};
   std::vector<std::atomic<uintptr_t>> thread_swap_request_slots_;
 
   // Accessed by IOThead only.
-  size_t swap_request_id_read_ { 0 };
-  struct SlotRetry { size_t slot; uintptr_t next_id; };
+  size_t swap_request_id_read_{0};
+  struct SlotRetry {
+    size_t slot;
+    uintptr_t next_id;
+  };
   std::vector<SlotRetry> swap_request_slots_to_retry_;
   std::vector<TlsLogger*> threads_to_swap_deferred_;
   std::vector<TlsLogger*> threads_to_read_;
@@ -443,27 +424,26 @@ class Logger {
   size_t tls_total_swap_buffers_slot_retry_count_ = 0;
 };
 
-
 Logger& GlobalLogger();
-void Log(AsyncLogEntry &&entry);
+void Log(AsyncLogEntry&& entry);
 
 template <typename LambdaT>
-void LogError(LambdaT &&lambda) {
+void LogError(LambdaT&& lambda) {
   Log([lambda = std::forward<LambdaT>(lambda),
        now = PerfClock::now()](AsyncLog& log) {
-      log.FlagError();
-      log.SetLogDetailTime(now);
-      lambda(log);
-    });
+    log.FlagError();
+    log.SetLogDetailTime(now);
+    lambda(log);
+  });
 }
 
 template <typename LambdaT>
-void LogDetail(LambdaT &&lambda) {
+void LogDetail(LambdaT&& lambda) {
   Log([lambda = std::forward<LambdaT>(lambda),
        now = PerfClock::now()](AsyncLog& log) {
-      log.SetLogDetailTime(now);
-      lambda(log);
-    });
+    log.SetLogDetailTime(now);
+    lambda(log);
+  });
 }
 
 }  // namespace mlperf

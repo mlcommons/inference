@@ -17,15 +17,15 @@ struct TestSettingsInternal {
   const TestSettings requested;
 
   const TestScenario scenario;  // Copied here for convenience.
-  const TestMode mode;  // Copied here for convenience.
+  const TestMode mode;          // Copied here for convenience.
 
   int samples_per_query = 1;
   double target_qps = 60.0;
-  std::chrono::nanoseconds target_latency { 1000000000 };  // TODO: Spec.
+  std::chrono::nanoseconds target_latency{1000000000};  // TODO: Spec.
   int max_async_queries = 1;
 
-  std::chrono::milliseconds min_duration { 60000 };
-  std::chrono::milliseconds max_duration { 0 };
+  std::chrono::milliseconds min_duration{60000};
+  std::chrono::milliseconds max_duration{0};
   uint64_t min_query_count;
   uint64_t max_query_count = 0;
 
@@ -33,20 +33,19 @@ struct TestSettingsInternal {
   uint64_t sample_index_rng_seed = kDefaultSampleSeed;
   uint64_t schedule_rng_seed = kDefaultScheduleSeed;
 
-  explicit TestSettingsInternal(const TestSettings& requested_settings)
+  explicit TestSettingsInternal(const TestSettings &requested_settings)
       : requested(requested_settings),
         scenario(requested.scenario),
         mode(requested.mode),
         min_query_count(
             requested.scenario == TestScenario::SingleStream ? 1024 : 24576) {
-
     // Samples per query
     if (requested.scenario == TestScenario::MultiStream) {
       samples_per_query = requested.multi_stream_samples_per_query;
     }
 
     // Target QPS.
-    switch(requested.scenario) {
+    switch (requested.scenario) {
       case TestScenario::SingleStream:
         target_qps = 1000000000.0 / requested.single_stream_expected_latency_ns;
         break;
@@ -60,8 +59,7 @@ struct TestSettingsInternal {
           LogError([server_target_qps = requested.server_target_qps,
                     target_qps = target_qps](AsyncLog &log) {
             log.LogDetail("Invalid value for server_target_qps requested.",
-                          "requested", server_target_qps,
-                          "using", target_qps);
+                          "requested", server_target_qps, "using", target_qps);
           });
         }
         break;
@@ -72,8 +70,8 @@ struct TestSettingsInternal {
           LogError([offline_expected_qps = requested.offline_expected_qps,
                     target_qps = target_qps](AsyncLog &log) {
             log.LogDetail("Invalid value for offline_expected_qps requested.",
-                          "requested", offline_expected_qps,
-                          "using", target_qps);
+                          "requested", offline_expected_qps, "using",
+                          target_qps);
           });
         }
         break;
@@ -87,7 +85,8 @@ struct TestSettingsInternal {
     // Do not allow overrides for a submission run.
     if (requested.mode == TestMode::SubmissionRun) {
       LogError([](AsyncLog &log) {
-        log.LogDetail("Overriding defaults for a SubmissionRun not allowed. \
+        log.LogDetail(
+            "Overriding defaults for a SubmissionRun not allowed. \
                        All overrides ignored.");
       });
       return;
@@ -103,7 +102,8 @@ struct TestSettingsInternal {
         max_async_queries = requested.override_multi_stream_max_async_queries;
       } else {
         LogError([](AsyncLog &log) {
-          log.LogDetail("Overriding max async queries outside of the \
+          log.LogDetail(
+              "Overriding max async queries outside of the \
                          MultiStream scenario has no effect.");
         });
       }
@@ -138,6 +138,6 @@ struct TestSettingsInternal {
   }
 };
 
-}  // namespace
+}  // namespace mlperf
 
-#endif // MLPERF_LOADGEN_TEST_SETTINGS_INTERNAL_H
+#endif  // MLPERF_LOADGEN_TEST_SETTINGS_INTERNAL_H

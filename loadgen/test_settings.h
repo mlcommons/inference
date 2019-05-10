@@ -122,4 +122,4 @@ struct TestSettings {
 
 }  // namespace mlperf
 
-#endif // MLPERF_LOADGEN_TEST_SETTINGS_H
+#endif  // MLPERF_LOADGEN_TEST_SETTINGS_H

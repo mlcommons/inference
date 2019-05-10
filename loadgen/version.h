@@ -18,4 +18,4 @@ const std::string& LoadgenGitLog();
 
 }  // namespace mlperf
 
-#endif // MLPERF_LOADGEN_VERSION_H
+#endif  // MLPERF_LOADGEN_VERSION_H

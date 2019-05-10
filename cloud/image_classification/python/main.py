@@ -24,6 +24,9 @@ import coco
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
+NANO_SEC = 1000000000
+MILLI_SEC = 1000
+
 # pylint: disable=missing-docstring
 
 # the datasets we support
@@ -296,7 +299,7 @@ def main():
     # warmup
     log.info("warmup ...")
     ds.load_query_samples([0])
-    for _ in range(100):
+    for _ in range(50):
         img, _ = ds.get_samples([0])
         _ = backend.predict({backend.inputs[0]: img})
     ds.unload_query_samples(None)
@@ -325,16 +328,34 @@ def main():
             log.info("starting {}, latency={}".format(scenario, target_latency))
             settings = lg.TestSettings()
             settings.scenario = scenario
-            settings.mode = lg.TestMode.PerformanceOnly # FIXME: we want SubmissionRun
-            settings.samples_per_query = 2 # FIXME: we don't want to know about this
-            settings.target_qps = args.qps # FIXME: we don't want to know about this
-            settings.target_latency_ns = int(target_latency * 1000000000)
+
+            if args.qps:
+                settings.enable_spec_overrides = True
+                qps = float(args.qps)
+                settings.server_target_qps = qps
+                settings.offline_expected_qps = qps
+            if args.time:
+                settings.enable_spec_overrides = True
+                settings.override_min_duration_ms = args.time * MILLI_SEC
+                settings.override_max_duration_ms = args.time * MILLI_SEC
+                qps = args.qps or 100
+                settings.override_min_query_count = qps * args.time
+                settings.override_max_query_count = qps * args.time
+
+            if args.time or args.qps:
+                settings.mode = lg.TestMode.PerformanceOnly
+            # FIXME: add SubmissionRun once available
+
+            settings.enable_spec_overrides = True # FIXME: needed because of override_target_latency_ns
+            settings.single_stream_expected_latency_ns = int(target_latency * NANO_SEC)
+            settings.override_target_latency_ns = int(target_latency * NANO_SEC)
 
             # reset result capture
             result_dict = {"good": 0, "total": 0}
             runner.start_run(result_dict, True)
             start = time.time()
             lg.StartTest(sut, qsl, settings)
+
             # aggregate results
             post_proc.finalize(result_dict, ds)
 

@@ -40,7 +40,7 @@ lib_sources = [
 mlperf_loadgen_headers = public_headers + lib_headers
 mlperf_loadgen_sources_no_gen = lib_sources
 mlperf_loadgen_sources = \
-    mlperf_loadgen_sources_no_gen + [generated_version_source_filename ]
+    mlperf_loadgen_sources_no_gen + [generated_version_source_filename]
 
 sources = [
     "bindings/python_api.cc",
@@ -53,7 +53,7 @@ mlperf_loadgen_module = Extension('mlperf_loadgen',
                     define_macros = [('MAJOR_VERSION', '0'),
                                      ('MINOR_VERSION', '5')],
                     include_dirs = [ '.', '../third_party/pybind/include' ],
-                    sources = mlperf_loadgen_sources,
+                    sources = mlperf_loadgen_sources + sources,
                     depends = mlperf_loadgen_headers)
 
 setup (name = 'mlperf_loadgen',

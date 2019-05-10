@@ -89,6 +89,7 @@ SUPPORTED_PROFILES = {
         "dataset": "coco",
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
         "backend": "onnxruntime",
+        "data-format": "NHWC",
     },
 }
 
@@ -192,14 +193,14 @@ class Runner:
                 results = self.model.predict({self.model.inputs[0]: qitem.img})
                 if self.take_accuracy:
                     response = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
+            except Exception as ex:  # pylint: disable=broad-except
+                log.error("execute_parallel thread: %s", ex)
+            finally:
                 response = []
                 for query_id in qitem.query_id:
                     # FIXME: unclear what to return here
                     response.append(lg.QuerySampleResponse(query_id, 0, 0))
                 lg.QuerySamplesComplete(response)
-            except Exception as ex:  # pylint: disable=broad-except
-                log.error("execute_parallel thread: %s", ex)
-
             tasks_queue.task_done()
 
     def start_pool(self):

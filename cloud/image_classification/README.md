@@ -48,11 +48,16 @@ or
 pip install onnxruntime-gpu
 ```
 
+Install additional modules
+```
+pip install pybind11  Cython pycocotools
+```
+
 Install loadgen
 ```
-pip install pybind11
 cd ../../loadgen; CFLAGS="-std=c++14" python setup.py install
 ```
+
 
 ## Running the benchmark
 ### One time setup

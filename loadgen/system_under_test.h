@@ -2,6 +2,7 @@
 #define MLPERF_LOADGEN_SYSTEM_UNDER_TEST_H
 
 #include <stdint.h>
+
 #include <memory>
 
 #include "query_sample.h"

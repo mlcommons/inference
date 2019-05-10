@@ -15,9 +15,7 @@ namespace {
 class SystemUnderTestTrampoline : public SystemUnderTest {
  public:
   SystemUnderTestTrampoline(
-      ClientData client_data,
-      std::string name,
-      IssueQueryCallback issue_cb,
+      ClientData client_data, std::string name, IssueQueryCallback issue_cb,
       ReportLatencyResultsCallback report_latency_results_cb)
       : client_data_(client_data),
         name_(std::move(name)),
@@ -32,9 +30,9 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
   }
 
   void ReportLatencyResults(
-        const std::vector<QuerySampleLatency>& latencies_ns) override {
-    (*report_latency_results_cb_)(
-          client_data_, latencies_ns.data(), latencies_ns.size());
+      const std::vector<QuerySampleLatency>& latencies_ns) override {
+    (*report_latency_results_cb_)(client_data_, latencies_ns.data(),
+                                  latencies_ns.size());
   }
 
  private:
@@ -46,13 +44,12 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
 }  // namespace
 
-void* ConstructSUT(ClientData client_data,
-                   const char* name,
-                   size_t name_length,
+void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,
                    IssueQueryCallback issue_cb,
                    ReportLatencyResultsCallback report_latency_results_cb) {
-  SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
-      client_data, std::string(name, name_length), issue_cb, report_latency_results_cb);
+  SystemUnderTestTrampoline* sut =
+      new SystemUnderTestTrampoline(client_data, std::string(name, name_length),
+                                    issue_cb, report_latency_results_cb);
   return reinterpret_cast<void*>(sut);
 }
 
@@ -68,9 +65,7 @@ namespace {
 class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
  public:
   QuerySampleLibraryTrampoline(
-      ClientData client_data,
-      std::string name,
-      size_t total_sample_count,
+      ClientData client_data, std::string name, size_t total_sample_count,
       size_t performance_sample_count,
       LoadSamplesToRamCallback load_samples_to_ram_cb,
       UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
@@ -91,15 +86,15 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   }
   void UnloadSamplesFromRam(
       const std::vector<QuerySampleIndex>& samples) override {
-    (*unload_samlpes_from_ram_cb_)(
-          client_data_, samples.data(), samples.size());
+    (*unload_samlpes_from_ram_cb_)(client_data_, samples.data(),
+                                   samples.size());
   }
 
   // TODO(brianderson): Accuracy Metric API.
   void ResetAccuracyMetric() override {}
   void UpdateAccuracyMetric(uint64_t sample_index, void* response_data,
                             size_t response_size) override {}
-  double GetAccuracyMetric() override {return 0;}
+  double GetAccuracyMetric() override { return 0; }
   std::string HumanReadableAccuracyMetric(double metric_value) override {
     return "TODO: AccuracyMetric";
   }
@@ -120,9 +115,9 @@ void* ConstructQSL(ClientData client_data, const char* name, size_t name_length,
                    LoadSamplesToRamCallback load_samples_to_ram_cb,
                    UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
   QuerySampleLibraryTrampoline* qsl = new QuerySampleLibraryTrampoline(
-      client_data, std::string(name, name_length),
-      total_sample_count, performance_sample_count,
-      load_samples_to_ram_cb, unload_samlpes_from_ram_cb);
+      client_data, std::string(name, name_length), total_sample_count,
+      performance_sample_count, load_samples_to_ram_cb,
+      unload_samlpes_from_ram_cb);
   return reinterpret_cast<void*>(qsl);
 }
 

@@ -24,20 +24,18 @@ typedef uintptr_t ClientData;
 
 // Create and destroy an opaque SUT pointer based on C callbacks.
 typedef void (*IssueQueryCallback)(ClientData, const QuerySample*, size_t);
-typedef void (*ReportLatencyResultsCallback)(
-    ClientData, const int64_t*, size_t);
-void* ConstructSUT(ClientData client_data,
-                   const char* name,
-                   size_t name_length,
+typedef void (*ReportLatencyResultsCallback)(ClientData, const int64_t*,
+                                             size_t);
+void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,
                    IssueQueryCallback issue_cb,
                    ReportLatencyResultsCallback report_latency_results_cb);
 void DestroySUT(void* sut);
 
 // Create and destroy an opaque QSL pointer based on C callbacks.
-typedef void (*LoadSamplesToRamCallback)(
-    ClientData, const QuerySampleIndex*, size_t);
-typedef void (*UnloadSamplesFromRamCallback)(
-    ClientData, const QuerySampleIndex*, size_t);
+typedef void (*LoadSamplesToRamCallback)(ClientData, const QuerySampleIndex*,
+                                         size_t);
+typedef void (*UnloadSamplesFromRamCallback)(ClientData,
+                                             const QuerySampleIndex*, size_t);
 void* ConstructQSL(ClientData client_data, const char* name, size_t name_length,
                    size_t total_sample_count, size_t performance_sample_count,
                    LoadSamplesToRamCallback load_samples_to_ram_cb,

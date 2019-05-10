@@ -11,6 +11,16 @@
 
 Please follow the common [installation instructions](../README.md#installation) first.
 
+### Install additional Python packages in user-space
+```
+$ python -m pip install gast --user
+$ python -m pip install astor --user
+$ python -m pip install termcolor --user
+$ python -m pip install tensorflow-estimator==1.13.0 --user
+$ python -m pip install keras_applications==1.0.4 --no-deps --user
+$ python -m pip install keras_preprocessing==1.0.2 --no-deps --user
+```
+
 ### Install TensorFlow (Python)
 
 Install TensorFlow (Python) from an `x86_64` binary package:
@@ -29,12 +39,12 @@ To select interactively from one of the non-quantized and quantized SSD-MobileNe
 $ ck install package --tags=model,tf,object-detection,mlperf,ssd-mobilenet
 ```
 
-To install the [non-quantized model](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) directly:
+#### Install the [non-quantized model](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) directly
 ```bash
 $ ck install package --tags=model,tf,object-detection,mlperf,ssd-mobilenet,non-quantized
 ```
 
-To install the quantized finetuned model (courtesy of [Habana](https://habana.ai/)) directly:
+#### Install the quantized finetuned model (courtesy of [Habana](https://habana.ai/)) directly
 ```bash
 $ ck install package --tags=model,tf,object-detection,mlperf,ssd-mobilenet,quantized,finetuned
 ```

@@ -37,14 +37,30 @@ To select interactively from one of the non-quantized and quantized
 MobileNets-v1-1.0-224 models adopted for MLPerf Inference v0.5:
 ```
 $ ck install package --tags=model,tflite,mlperf,mobilenet
-```
 
-To install the [non-quantized model](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) directly:
+More than one package or version found:
+
+ 0) model-tf-mlperf-mobilenet  Version 1_1.0_224_2018_08_02  (05c4dcbbbf872ecf)
+ 1) model-tf-mlperf-mobilenet-quantized  Version 1_1.0_224_quant_2018_08_02  (3013bdc96184bf3b)
+ 2) model-tflite-convert-from-tf (35e84375ac48dcb1), Variations: mobilenet
+
+Please select the package to install [ hit return for "0" ]:
+```
+Options 0 and 1 will download the official non-quantized and quantized models.
+Option 2 will download the official TF model and convert it to TFLite.
+
+**NB:** Option 2 is only viable on x86 platforms, as it depends on using a
+prebuilt version of TF.  While this constraint could be relaxed to use a
+version of TF built from source, building TF from source takes a long time on
+Arm platforms (as well as [not being officially
+supported](https://github.com/tensorflow/tensorflow/issues/25607#issuecomment-466583730)).
+
+#### Install the [non-quantized model](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) directly
 ```
 $ ck install package --tags=model,tflite,mlperf,mobilenet,non-quantized
 ```
 
-To install the [quantized model](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) directly:
+#### Install the [quantized model](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) directly
 ```
 $ ck install package --tags=model,tflite,mlperf,mobilenet,quantized
 ```
@@ -56,12 +72,27 @@ $ ck install package --tags=model,tflite,mlperf,mobilenet,quantized
 To install the ResNet50-v1.5 model:
 ```bash
 $ ck install package --tags=model,tflite,mlperf,resnet
+
 More than one package or version found:
 
- 0) model-tflite-resnet50-mlperf-convert-from-tf  Version 1.5  (35e84375ac48dcb1)
- 1) model-tflite-resnet50-mlperf  Version 1.5  (d60d4e9a84151271)
+ 0) model-tflite-mlperf-resnet-no-argmax  Version 1.5  (afb43014ef38f646)
+ 1) model-tflite-mlperf-resnet  Version 1.5  (d60d4e9a84151271)
+ 2) model-tflite-convert-from-tf (35e84375ac48dcb1), Variations: resnet
+
+Please select the package to install [ hit return for "0" ]:
 ```
-Option 0 downloads the TF model and converts it to TFLite. Option 1 uses a pre-converted TFLite model.
+
+Option 0 will download a TFLite model preconverted from the TF model.  During
+the conversion, the `ArgMax` operator causing an
+[issue](https://github.com/ARM-software/armnn/issues/150) with ArmNN v19.02 was
+excluded.
+
+Option 1 will download a TFLite model preconverted from the TF model, but
+including the `ArgMax` operator. This variant can be used with ArmNN once
+the above issue is resolved.
+
+Option 2 will download the TF model and convert it to TFLite, while excluding
+the `ArgMax` operator.
 
 You can benchmark ResNet exactly in the same way as MobileNet.
 Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#benchmarking) below.
@@ -70,6 +101,13 @@ Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#bench
 You can also install any other MobileNets model compatible with TFLite as follows:
 ```
 $ ck install package --tags=tensorflowmodel,mobilenet,tflite
+```
+
+### Preprocess the ImageNet dataset
+**NB:** This step will be moved to the [common instructions](../README.md), once all the clients are updated. For more details about preprocessing see [here](https://github.com/ctuning/ck-env/tree/master/package/dataset-imagenet-preprocessed).
+
+```
+$ ck install package --tags=dataset,imagenet,preprocessed
 ```
 
 ### Compile the TFLite Image Classification client
@@ -189,8 +227,24 @@ $ ck benchmark program:image-classification-tflite \
 
 <a name="accuracy"></a>
 ## Reference accuracy
+
+### ImageNet validation dataset (50,000 images)
+
+#### 87.5% cropping (default)
+##### MobileNet non-quantized
+```
+"accuracy_top1": 0.69966 # == 0.69966 for tf-cpp (=000 images)
+"accuracy_top5": 0.87628 # << 0.89366 for tf-cpp (-869 images)
+```
+
+##### MobileNet quantized
 **TODO**
 
+##### ResNet
+```
+"accuracy_top1": 0.73302 # >= 0.73288 for tf-cpp (+007 images)
+"accuracy_top5": 0.90148 # << 0.91606 for tf-cpp (-729 images)
+```
 
 <a name="further-info"></a>
 ## Further information

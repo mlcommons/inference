@@ -12,20 +12,16 @@
 #include <string>
 #include <thread>
 
-#include "loadgen/generated/version.h"
 #include "logging.h"
 #include "query_sample.h"
 #include "query_sample_library.h"
 #include "system_under_test.h"
+#include "test_settings.h"
+#include "test_settings_internal.h"
 #include "utils.h"
+#include "version.h"
 
 namespace mlperf {
-
-namespace {
-constexpr uint64_t kDefaultQslSeed = 0xABCD1234;
-constexpr uint64_t kDefaultSampleSeed = 0x1234ABCD;
-constexpr uint64_t kDefaultScheduleSeed = 0xA1B2C3D4;
-}  // namespace
 
 struct SampleMetadata;
 struct QueryMetadata;
@@ -221,37 +217,40 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count) {
       };
 }
 
+
+// TODO: Pull MLPerf spec constants into a common area.
 template <TestScenario scenario, TestMode mode>
 std::vector<QueryMetadata> GenerateQueries(
-    const TestSettings& settings,
+    const TestSettingsInternal& settings,
     const std::vector<QuerySampleIndex>& loaded_samples,
     SampleCompleteDelagate* sample_complete_delegate) {
 
   auto trace = MakeScopedTracer(
       [](AsyncLog &log){ log.ScopedTrace("GenerateQueries"); });
 
-  constexpr std::chrono::seconds kMinDuration(
-        mode == TestMode::AccuracyOnly ? 0 : 60);
-  // TODO: Pull MLPerf spec constants into a common area.
-  constexpr size_t kMinQueriesPerformance =
-      (scenario == TestScenario::SingleStream ? 1024 : 24576);
-  const size_t min_queries_accuracy =
-      (loaded_samples.size() + settings.samples_per_query - 1) /
-      settings.samples_per_query;
-  const size_t min_queries = (mode == TestMode::AccuracyOnly) ?
-        min_queries_accuracy : kMinQueriesPerformance;
+  // Generate 2x more samples than we think we'll need given the expected
+  // QPS. We should exit before issuing all queries.
+  std::chrono::microseconds k2xMinDuration =  2 * settings.min_duration;
+  size_t min_queries = settings.min_query_count;
+
+  // We should not exit early in accuracy mode.
+  if (mode == TestMode::AccuracyOnly) {
+    k2xMinDuration = std::chrono::microseconds(0);
+    // TODO: Figure out how to pad accuracy mode queries if samples_per_query
+    // does not divide loaded_samples.size() evenly.
+    min_queries = (loaded_samples.size() + settings.samples_per_query - 1) /
+        settings.samples_per_query;
+  }
+
   std::vector<QueryMetadata> queries;
 
   assert(scenario == settings.scenario);
-
-  // TODO: Allow overriding of seeds for experimentation.
-  const uint64_t sample_seed = kDefaultSampleSeed;
-  const uint64_t schedule_seed = kDefaultScheduleSeed;
+  assert(mode == settings.mode);
 
   // Using the std::mt19937 pseudo-random number generator ensures a modicum of
   // cross platform reproducibility for trace generation.
-  std::mt19937 sample_rng(sample_seed);
-  std::mt19937 schedule_rng(schedule_seed);
+  std::mt19937 sample_rng(settings.sample_index_rng_seed);
+  std::mt19937 schedule_rng(settings.schedule_rng_seed);
 
   auto sample_distribution = SampleDistribution<mode>(loaded_samples.size());
   auto schedule_distribution =
@@ -261,7 +260,7 @@ std::vector<QueryMetadata> GenerateQueries(
   std::vector<QuerySampleIndex> samples(settings.samples_per_query);
   uint64_t query_sequence_id = 0;
   uint64_t sample_sequence_id = 0;
-  while (timestamp < kMinDuration || queries.size() < min_queries) {
+  while (timestamp < k2xMinDuration || queries.size() < min_queries) {
     for (auto& s: samples) {
       s = loaded_samples[sample_distribution(sample_rng)];
     }
@@ -291,7 +290,7 @@ std::vector<QueryMetadata> GenerateQueries(
 void RunVerificationMode(
     SystemUnderTest* sut,
     QuerySampleLibrary* qsl,
-    const TestSettings& settings,
+    const TestSettingsInternal& settings,
     const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
 
   LogDetail([](AsyncLog &log) {
@@ -396,6 +395,9 @@ struct QueryScheduler<TestScenario::MultiStream> {
     PerfClock::time_point now = PerfClock::now();
     do {
       tick_time += kPeriods[i_period++ % 3];
+      Log([tick_time = tick_time](AsyncLog& log) {
+        log.TraceAsyncInstant("Frame", 0, tick_time);
+      });
     } while (tick_time < now);
     std::this_thread::sleep_until(tick_time);
   }
@@ -431,7 +433,7 @@ template <TestScenario scenario>
 void RunPerformanceMode(
     SystemUnderTest* sut,
     QuerySampleLibrary* qsl,
-    const TestSettings& settings,
+    const TestSettingsInternal& settings,
     const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
 
   LogDetail([](AsyncLog &log) {
@@ -499,7 +501,7 @@ void RunPerformanceMode(
 using RunPerformanceModeSignature =
     void(SystemUnderTest* sut,
          QuerySampleLibrary* qsl,
-         const TestSettings& settings,
+         const TestSettingsInternal& settings,
          const std::vector<std::vector<QuerySampleIndex>>& loadable_sets);
 
 RunPerformanceModeSignature* RunPerformanceModeFn(TestScenario scenario) {
@@ -527,7 +529,8 @@ RunPerformanceModeSignature* RunPerformanceModeFn(TestScenario scenario) {
 //       less likely to be in the smallest set. This may not be an important
 //       requirement though.
 std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
-    QuerySampleLibrary* qsl) {
+    QuerySampleLibrary* qsl,
+    const TestSettingsInternal& settings) {
   constexpr float kGarbageCollectRatio = 0.5;
   constexpr size_t kUsedIndex = std::numeric_limits<size_t>::max();
 
@@ -535,7 +538,7 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
       [](AsyncLog &log){ log.ScopedTrace("GenerateLoadableSets"); });
 
   std::vector<std::vector<QuerySampleIndex>> result;
-  std::mt19937 qsl_rng(kDefaultQslSeed);
+  std::mt19937 qsl_rng(settings.qsl_rng_seed);
 
   // Generate indicies for all available samples in the QSL.
   const size_t qsl_total_count = qsl->TotalSampleCount();
@@ -586,18 +589,24 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   return result;
 }
 
-// TODO: Override user-requested settings in submission mode.
-// TODO: More user-visible settings.
-TestSettings SanitizeRequestedSettings(const TestSettings& r) {
-  TestSettings s(r);
-  if (r.scenario == TestScenario::SingleStream &&
-      r.samples_per_query != 1) {
-    s.samples_per_query = 1;
+void LogLoadgenVersion() {
+  LogDetail([](AsyncLog& log) {
+    log.LogDetail("LoadgenVersionInfo:");
+    log.LogDetail("version : "+ LoadgenVersion() +
+                  " @ " + LoadgenGitRevision());
+    log.LogDetail("build_date_local : "+ LoadgenBuildDateLocal());
+    log.LogDetail("build_date_utc   : "+ LoadgenBuildDateUtc());
+    log.LogDetail("git_commit_date  : "+ LoadgenGitCommitDate());
+    log.LogDetail("git_status :\n" + LoadgenGitStatus() + "\n");
+    log.LogDetail("git_log :\n" + LoadgenGitLog() + "\n");
+  });
+
+  if (LoadgenGitStatus() != "") {
     LogError([](AsyncLog &log) {
-      log.LogDetail("SingleStream only supports a samples_per_query of 1.");
+      log.LogDetail("Loadgen built with uncommitted changes:");
+      log.LogDetail("git_status :\n" + LoadgenGitStatus() + "\n");
     });
   }
-  return s;
 }
 
 void StartTest(SystemUnderTest* sut,
@@ -611,11 +620,12 @@ void StartTest(SystemUnderTest* sut,
   std::ofstream trace_out("mlperf_trace.json");
   GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
 
-  TestSettings sanitized_settings =
-      SanitizeRequestedSettings(requested_settings);
+  LogLoadgenVersion();
+
+  TestSettingsInternal sanitized_settings(requested_settings);
 
   std::vector<std::vector<QuerySampleIndex>> loadable_sets(
-      GenerateLoadableSets(qsl));
+      GenerateLoadableSets(qsl, sanitized_settings));
 
   RunPerformanceModeSignature* run_performance =
       RunPerformanceModeFn(sanitized_settings.scenario);
@@ -631,7 +641,7 @@ void StartTest(SystemUnderTest* sut,
     case TestMode::PerformanceOnly:
       (*run_performance)(sut, qsl, sanitized_settings, loadable_sets);
       break;
-    case TestMode::SearchForQps:
+    case TestMode::FindPeakPerformance:
       LogError([](AsyncLog &log) {
         log.LogDetail("TestMode::SearchForQps not implemented.");
       });

@@ -1,39 +1,14 @@
-#ifndef MLPERF_LOADGEN_H_
-#define MLPERF_LOADGEN_H_
+#ifndef MLPERF_LOADGEN_LOADGEN_H_
+#define MLPERF_LOADGEN_LOADGEN_H_
 
-#include <stddef.h>
-#include <stdint.h>
-
-#include "query_sample.h"
+#include <cstddef>
 
 namespace mlperf {
 
 struct QuerySampleResponse;
 class QuerySampleLibrary;
 class SystemUnderTest;
-
-enum TestScenario {
-  SingleStream,
-  MultiStream,
-  Server,
-  Offline,
-};
-
-enum TestMode {
-  SubmissionRun,
-  AccuracyOnly,
-  PerformanceOnly,
-  SearchForQps,
-};
-
-// TODO: Logging settings. e.g.: sync vs. async; log frequency;
-struct TestSettings {
-  TestScenario scenario = TestScenario::MultiStream;
-  TestMode mode = TestMode::AccuracyOnly;
-  int samples_per_query = 4;
-  double target_qps = 100;
-  uint64_t target_latency_ns = 1000000000;
-};
+struct TestSettings;
 
 // QuerySamplesComplete must be called by the SUT once it completes samples of
 // a query issued by SystemUnderTest::IssueQuery().
@@ -52,4 +27,4 @@ void StartTest(SystemUnderTest* sut,
 
 }  // namespace mlperf
 
-#endif  // MLPERF_LOADGEN_H_
+#endif  // MLPERF_LOADGEN_LOADGEN_H_

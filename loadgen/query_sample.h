@@ -1,5 +1,5 @@
-#ifndef QUERY_SAMPLE_H_
-#define QUERY_SAMPLE_H_
+#ifndef MLPERF_LOADGEN_QUERY_SAMPLE_H_
+#define MLPERF_LOADGEN_QUERY_SAMPLE_H_
 
 // Defines the structs involved in issuing a query and responding to a query.
 // These are broken out into their own files since they are exposed as part
@@ -30,4 +30,4 @@ typedef int64_t QuerySampleLatency;  // In nanoseconds.
 
 }  // namespace mlperf
 
-#endif  // QUERY_SAMPLE_H_
+#endif  // MLPERF_LOADGEN_QUERY_SAMPLE_H_

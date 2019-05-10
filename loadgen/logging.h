@@ -166,6 +166,26 @@ class AsyncLog {
     *trace_out_ << " }},\n";
   }
 
+  template <typename ...Args>
+  void TraceAsyncInstant(const std::string& trace_name,
+             uint64_t id,
+             PerfClock::time_point instant_time,
+             const Args... args) {
+    std::unique_lock<std::mutex> lock(trace_mutex_);
+    if (!trace_out_) {
+      return;
+    }
+    *trace_out_ << "{\"name\": \"" << trace_name << "\", "
+                << "\"cat\": \"default\", "
+                << "\"ph\": \"n\", "
+                << "\"id\": " << id << ", "
+                << *current_pid_tid_
+                << "\"ts\": " << (instant_time - trace_origin_).count() << ", "
+                << "\"args\": { ";
+    LogArgs(trace_out_, args...);
+    *trace_out_ << " }},\n";
+  }
+
   void SetScopedTraceTimes(PerfClock::time_point start,
                            PerfClock::time_point end) {
     scoped_start_ = start;

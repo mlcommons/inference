@@ -73,44 +73,48 @@ class Dataset():
 class PostProcessCommon:
     def __init__(self, offset=0):
         self.offset = offset
+        self.good = 0
+        self.total = 0
 
     def __call__(self, results, ids, expected=None, result_dict=None):
-        good = 0
         n = len(results[0])
         for idx in range(0, n):
             if results[0][idx] + self.offset == expected[idx]:
-                good += 1
-        result_dict["good"] += good
-        result_dict["total"] += n
+                self.good += 1
+        self.total += n
         return results
 
     def start(self):
-        pass
+        self.good = 0
+        self.total = 0
 
     def finalize(self, results, ds=False):
-        pass
+        results["good"] = self.good
+        results["total"] = self.total
+
 
 class PostProcessArgMax:
     def __init__(self, offset=0):
         self.offset = offset
+        self.good = 0
+        self.total = 0
 
     def __call__(self, results, ids, expected=None, result_dict=None):
-        results = np.argmax(results)
-        good = 0
-        n = len(results[0])
+        result = np.argmax(results[0], axis=1)
+        n = result.shape[0]
         for idx in range(0, n):
-            if results[0][idx] + self.offset == expected[idx]:
-                good += 1
-        result_dict["good"] += good
-        result_dict["total"] += n
+            if result[idx] + self.offset == expected[idx]:
+                self.good += 1
+        self.total += n
         return results
 
     def start(self):
-        pass
+        self.good = 0
+        self.total = 0
 
     def finalize(self, results, ds=False):
-        pass
-
+        results["good"] = self.good
+        results["total"] = self.total
 
 
 #

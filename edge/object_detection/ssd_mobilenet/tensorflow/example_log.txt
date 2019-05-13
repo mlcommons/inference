@@ -7,35 +7,42 @@
 	 batchsize 1
   fps 	median: 0.4, 	mean: 0.4  latency 	median: 2.63172, 	mean: 2.64530
 
+==========:::MLPv0.5.0 SSD-Mobilenetv1 Inference Performance=========
+
+:::MLPv0.5.0 Batch size 1:
+:::MLPv0.5.0 Image size: 300
+:::MLPv0.5.0 Box score threshold: 0.01
 ==========:::MLPv0.5.0 SSD-Mobilenetv1 Accuracy=========
+Running demo for *bbox* results.
+annotations/instances_val2017.json
 loading annotations into memory...
-Done (t=0.46s)
+Done (t=0.84s)
 creating index...
 index created!
 tf_result.json
 Loading and preparing results...
-DONE (t=5.73s)
+DONE (t=0.32s)
 creating index...
 index created!
 Running per image evaluation...
 Evaluate annotation type *bbox*
-DONE (t=40.87s).
+DONE (t=9.70s).
 Accumulating evaluation results...
-DONE (t=7.73s).
+DONE (t=1.36s).
 
 ==========:::MLPv0.5.0 COCO Eval Summary=========
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.204
- Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.329
- Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.213
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.021
- Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.166
- Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.452
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.205
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.287
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.302
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.046
- Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.279
- Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.618
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.223
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.339
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.244
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.016
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.158
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.514
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.202
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.255
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.256
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.021
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.181
+ Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.590
 
 ============:::MLPv0.5.0 Predict Latency==============
 	 batchsize 2

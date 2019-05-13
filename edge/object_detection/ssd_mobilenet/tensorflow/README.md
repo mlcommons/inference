@@ -71,7 +71,7 @@ Backbone is Mobilenetv1 pretrained model on COCO 2017 dataset.
 ##### Quality metric
 Metric is COCO box mAP (averaged over IoU of 0.5:0.95), computed over 2017 COCO val data.
 ##### Quality target
-mAP of 0.204
+mAP of 0.23
 ##### Evaluation thoroughness
 All the images in COCO 2017 val data set.
 

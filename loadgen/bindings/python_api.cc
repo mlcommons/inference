@@ -8,7 +8,6 @@
 #include "../query_sample_library.h"
 #include "../system_under_test.h"
 #include "../test_settings.h"
-#include "pybind11/cast.h"
 #include "pybind11/functional.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"

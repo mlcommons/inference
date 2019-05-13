@@ -27,7 +27,7 @@ struct TestSettingsInternal {
   std::chrono::milliseconds min_duration{60000};
   std::chrono::milliseconds max_duration{0};
   uint64_t min_query_count;
-  uint64_t max_query_count = 0;
+  uint64_t max_query_count = std::numeric_limits<uint64_t>::max();
 
   uint64_t qsl_rng_seed = kDefaultQslSeed;
   uint64_t sample_index_rng_seed = kDefaultSampleSeed;

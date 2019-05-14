@@ -39,11 +39,6 @@ struct TestSettingsInternal {
         mode(requested.mode),
         min_query_count(
             requested.scenario == TestScenario::SingleStream ? 1024 : 24576) {
-    // Samples per query
-    if (requested.scenario == TestScenario::MultiStream) {
-      samples_per_query = requested.multi_stream_samples_per_query;
-    }
-
     // Target QPS.
     switch (requested.scenario) {
       case TestScenario::SingleStream:
@@ -75,6 +70,24 @@ struct TestSettingsInternal {
           });
         }
         break;
+    }
+
+    // Samples per query.
+    if (requested.scenario == TestScenario::MultiStream) {
+      samples_per_query = requested.multi_stream_samples_per_query;
+    }
+
+    // In the offline scenario, coalesce all queries into a single query.
+    if (requested.scenario == TestScenario::Offline) {
+      // TODO: Should the spec require a max duration for large query counts?
+      // kSlack is used to make sure we generate enough samples for the SUT
+      // to take longer than than the minimum test duration required by the
+      // MLPerf spec.
+      constexpr double kSlack = 1.1;
+      samples_per_query =
+          std::max<int>(min_query_count, (60.0 / target_qps) * kSlack);
+      min_query_count = 1;
+      min_duration = std::chrono::milliseconds(0);
     }
 
     // Exit here if we are using defaults.

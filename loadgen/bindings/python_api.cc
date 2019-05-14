@@ -174,8 +174,8 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("multi_stream_samples_per_query",
                      &TestSettings::multi_stream_samples_per_query)
       .def_readwrite("server_target_qps", &TestSettings::server_target_qps)
-      .def_readwrite("server_coallesce_queries",
-                     &TestSettings::server_coallesce_queries)
+      .def_readwrite("server_coalesce_queries",
+                     &TestSettings::server_coalesce_queries)
       .def_readwrite("offline_expected_qps",
                      &TestSettings::offline_expected_qps)
       .def_readwrite("enable_spec_overrides",

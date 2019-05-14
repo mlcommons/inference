@@ -78,9 +78,13 @@ struct TestSettings {
   // |server_target_qps| is only used as a hint in SearchForPeakPerformance
   // mode.
   double server_target_qps = 10;
-  bool server_coallesce_queries = false;  // TODO: Use this.
+  bool server_coalesce_queries = false;  // TODO: Use this.
 
   // Offline-specific settings.
+  // Used to specify the qps the SUT expects to hit for the offline load.
+  // In the offline scenario, all queries will be coalesced into a single
+  // query; in this sense, "samples per second" is equivalent to "queries per
+  // second." We go with QPS for consistency.
   double offline_expected_qps = 10;
 
   // |enable_spec_overrides| is useful for experimentation and

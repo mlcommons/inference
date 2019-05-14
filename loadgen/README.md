@@ -41,7 +41,7 @@ Patches to support other build environments welcome.
 
 ### Downloading the source
 
-Download the mlperf inference repository and it's submodules.
+Download the mlperf inference repository and its submodules.
 
     git clone --recurse-submodules https://github.com/mlperf/inference.git
 

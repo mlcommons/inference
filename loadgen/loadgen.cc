@@ -568,8 +568,8 @@ struct RunFunctions {
 
   template <TestScenario compile_time_scenario>
   static RunFunctions GetCompileTime() {
-    return { (*RunAccuracyMode<compile_time_scenario>),
-             (*RunPerformanceMode<compile_time_scenario>) };
+    return {(*RunAccuracyMode<compile_time_scenario>),
+            (*RunPerformanceMode<compile_time_scenario>)};
   }
 
   static RunFunctions Get(TestScenario run_time_scenario) {
@@ -660,26 +660,6 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   return result;
 }
 
-void LogLoadgenVersion() {
-  LogDetail([](AsyncLog& log) {
-    log.LogDetail("LoadgenVersionInfo:");
-    log.LogDetail("version : " + LoadgenVersion() + " @ " +
-                  LoadgenGitRevision());
-    log.LogDetail("build_date_local : " + LoadgenBuildDateLocal());
-    log.LogDetail("build_date_utc   : " + LoadgenBuildDateUtc());
-    log.LogDetail("git_commit_date  : " + LoadgenGitCommitDate());
-    log.LogDetail("git_status :\n" + LoadgenGitStatus() + "\n");
-    log.LogDetail("git_log :\n" + LoadgenGitLog() + "\n");
-  });
-
-  if (LoadgenGitStatus() != "") {
-    LogError([](AsyncLog& log) {
-      log.LogDetail("Loadgen built with uncommitted changes:");
-      log.LogDetail("git_status :\n" + LoadgenGitStatus() + "\n");
-    });
-  }
-}
-
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings) {
   GlobalLogger().StartIOThread();
@@ -694,6 +674,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   // TODO: Log settings.
   TestSettingsInternal sanitized_settings(requested_settings);
+  sanitized_settings.LogSettings();
 
   std::vector<std::vector<QuerySampleIndex>> loadable_sets(
       GenerateLoadableSets(qsl, sanitized_settings));

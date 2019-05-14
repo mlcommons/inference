@@ -13,7 +13,7 @@ TestSettingsInternal::TestSettingsInternal(
       samples_per_query(1),
       target_qps(60.0),
       target_latency(std::nano::den),
-      max_async_queries(1),
+      max_async_queries(2),
       min_duration(std::milli::den),
       max_duration(0),
       min_query_count(requested.scenario == TestScenario::SingleStream

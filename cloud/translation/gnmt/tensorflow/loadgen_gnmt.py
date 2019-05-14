@@ -1,4 +1,10 @@
 from generic_loadgen import *
+import sys
+#sys.path.append("tensorflow/nmt")
+from nmt.nmt import create_hparams, add_arguments
+import argparse
+
+#from inference 
 
 class TranslationTask:
     def __init__(self, query_id, input_file, output_file):
@@ -8,10 +14,23 @@ class TranslationTask:
         self.start = time.time()
 
 class GNMTRunner (Runner):
-    
     def __init__(self):
+        flags, h_params = self.setup_params_and_flags()
+        
+        #inference_fn = inference.inference
+        #run_main(FLAGS, default_hparams, train_fn, inference_fn)
+
         Runner.__init__(self)
         self.count = 0
+
+    def setup_params_and_flags(self):
+
+        FLAGS = None
+        nmt_parser = argparse.ArgumentParser()
+        add_arguments(nmt_parser)
+        FLAGS, unparsed = nmt_parser.parse_known_args()
+        default_hparams = create_hparams(FLAGS)
+        return FLAGS, default_hparams
 
     ##
     # @brief Invoke GNMT to translate the input file

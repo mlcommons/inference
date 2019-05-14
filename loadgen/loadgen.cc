@@ -97,23 +97,18 @@ class QueryMetadata {
   ResponseDelegate* const response_delegate;
   const uint64_t sequence_id;
 
-  // Tracing timestamps.
+  // Performance information.
+
+  int scheduled_intervals = 0;  // Number of intervals between queries, as
+                                // actually scheduled during the run.
+                                // For the multi-stream scenario only.
   PerfClock::time_point scheduled_time;
-  PerfClock::time_point wait_for_slot_time;
   PerfClock::time_point issued_start_time;
 
  private:
   std::atomic<size_t> wait_count_;
   std::promise<void> all_samples_done_;
   std::vector<SampleMetadata> samples_;
-};
-
-struct DurationGeneratorNs {
-  PerfClock::time_point start;
-  int64_t delta(PerfClock::time_point end) const {
-    return std::chrono::duration_cast<std::chrono::microseconds>(end - start)
-        .count();
-  }
 };
 
 void QuerySamplesComplete(QuerySampleResponse* responses,
@@ -139,6 +134,14 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
     query->response_delegate->SampleComplete(sample, response, timestamp);
   }
 }
+
+struct DurationGeneratorNs {
+  const PerfClock::time_point start;
+  int64_t delta(PerfClock::time_point end) const {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(end - start)
+        .count();
+  }
+};
 
 // Right now, this is the only implementation of ResponseDelegate,
 // but more will be coming soon.
@@ -179,9 +182,8 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
       }
       log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
                       complete_begin_time, "sample_seq", sample->sequence_id,
-                      "query_seq", query->sequence_id, "idx",
-                      sample->sample_index, "wait_for_slot_ns",
-                      sched.delta(query->wait_for_slot_time), "issue_start_ns",
+                      "query_seq", query->sequence_id, "sample_idx",
+                      sample->sample_index, "issue_start_ns",
                       sched.delta(query->issued_start_time), "complete_ns",
                       sched.delta(complete_begin_time));
     });
@@ -190,10 +192,9 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
   void QueryComplete() override {
     // We only need to track oustanding queries in the server scenario to
     // detect when the SUT has fallen too far behind.
-    if (scenario != TestScenario::Server) {
-      return;
+    if (scenario == TestScenario::Server) {
+      queries_completed.fetch_add(1, std::memory_order_relaxed);
     }
-    queries_completed.fetch_add(1, std::memory_order_relaxed);
   }
 };
 
@@ -297,8 +298,6 @@ void RunAccuracyMode(
   LogDetail(
       [](AsyncLog& log) { log.LogDetail("Starting verification mode:"); });
 
-  // kQueryPoolSize should be big enough that we don't need to worry about
-  // logging falling too far behind.
   constexpr size_t kMaxAsyncQueries = 4;
   constexpr int64_t kNanosecondsPerSecond = 1000000000;
 
@@ -337,7 +336,6 @@ void RunAccuracyMode(
 
       // Limit the number of oustanding async queries by waiting for
       // old queries here.
-      PerfClock::time_point wait_for_slot_time = PerfClock::now();
       if (prev_queries.size() > kMaxAsyncQueries) {
         QueryMetadata* limitting_query = prev_queries.front();
         limitting_query->WaitForAllSamplesCompleted();
@@ -347,7 +345,6 @@ void RunAccuracyMode(
 
       // Issue the query to the SUT.
       query.scheduled_time = query_start_time;
-      query.wait_for_slot_time = wait_for_slot_time;
       auto trace = MakeScopedTracer(
           [](AsyncLog& log) { log.ScopedTrace("IssueQuery"); });
       query.issued_start_time = PerfClock::now();
@@ -362,70 +359,135 @@ void RunAccuracyMode(
   }
 }
 
+// Template for the QueryScheduler. This base template should never be used
+// since each scenario has its own specialization.
 template <TestScenario scenario>
 struct QueryScheduler {
-  QueryScheduler(const PerfClock::time_point) {}
-  void Wait(QueryMetadata* next_query) {}
+  QueryScheduler(const TestSettingsInternal& settings,
+                 const PerfClock::time_point) {
+    assert(false);
+  }
+  PerfClock::time_point Wait(QueryMetadata* next_query) {
+    assert(false);
+    return PerfClock::now();
+  }
 };
 
+// SingleStream QueryScheduler
 template <>
 struct QueryScheduler<TestScenario::SingleStream> {
-  QueryScheduler(const PerfClock::time_point) {}
-  void Wait(QueryMetadata* next_query) {
+  QueryScheduler(const TestSettingsInternal& settings,
+                 const PerfClock::time_point) {}
+
+  PerfClock::time_point Wait(QueryMetadata* next_query) {
     auto trace =
         MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Waiting"); });
     if (prev_query != nullptr) {
       prev_query->WaitForAllSamplesCompleted();
     }
     prev_query = next_query;
+
+    auto now = PerfClock::now();
+    next_query->scheduled_time = now;
+    next_query->issued_start_time = now;
+    return now;
   }
+
   QueryMetadata* prev_query = nullptr;
 };
 
+// MultiStream QueryScheduler
 template <>
 struct QueryScheduler<TestScenario::MultiStream> {
-  QueryScheduler(const PerfClock::time_point start) : tick_time(start) {}
-  void Wait(QueryMetadata* next_query) {
-    auto trace =
-        MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Waiting"); });
-    if (prev_queries.size() >= kMaxAsyncQueries) {
-      prev_queries.front()->WaitForAllSamplesCompleted();
-      prev_queries.pop();
-    }
-    prev_queries.push(next_query);
+  QueryScheduler(const TestSettingsInternal& settings,
+                 const PerfClock::time_point start)
+      : max_async_queries(settings.max_async_queries), tick_time(start) {}
 
-    PerfClock::time_point now = PerfClock::now();
-    do {
-      tick_time += kPeriods[i_period++ % 3];
-      Log([tick_time = tick_time](AsyncLog& log) {
-        log.TraceAsyncInstant("Frame", 0, tick_time);
-      });
-    } while (tick_time < now);
-    std::this_thread::sleep_until(tick_time);
+  PerfClock::time_point Wait(QueryMetadata* next_query) {
+    {
+      auto trace =
+          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Waiting"); });
+      if (prev_queries.size() >= max_async_queries) {
+        prev_queries.front()->WaitForAllSamplesCompleted();
+        prev_queries.pop();
+      }
+      prev_queries.push(next_query);
+    }
+
+    {
+      auto trace = MakeScopedTracer(
+          [](AsyncLog& log) { log.ScopedTrace("Scheduling"); });
+      PerfClock::time_point now = PerfClock::now();
+      auto i_period_old = i_period;
+      do {
+        tick_time += kPeriods[i_period++ % 3];
+        Log([tick_time = tick_time](AsyncLog& log) {
+          log.TraceAsyncInstant("QueryInterval", 0, tick_time);
+        });
+      } while (tick_time < now);
+      next_query->scheduled_intervals = i_period - i_period_old;
+      next_query->scheduled_time = tick_time;
+      std::this_thread::sleep_until(tick_time);
+    }
+
+    auto now = PerfClock::now();
+    next_query->issued_start_time = now;
+    return now;
   }
-  static constexpr size_t kMaxAsyncQueries = 2;
+
+  // TODO: Support frequencies other than 60Hz.
   static constexpr std::chrono::nanoseconds kPeriods[] = {
       std::chrono::nanoseconds(16666667),
       std::chrono::nanoseconds(16666666),
       std::chrono::nanoseconds(16666667),
   };
-  size_t i_period = 0;
+  const size_t max_async_queries;
   PerfClock::time_point tick_time;
+  size_t i_period = 0;
   std::queue<QueryMetadata*> prev_queries;
 };
 
 constexpr std::chrono::nanoseconds
     QueryScheduler<TestScenario::MultiStream>::kPeriods[];
 
+// Server QueryScheduler
 template <>
 struct QueryScheduler<TestScenario::Server> {
-  QueryScheduler(const PerfClock::time_point start) : start(start) {}
-  void Wait(QueryMetadata* next_query) {
+  QueryScheduler(const TestSettingsInternal& settings,
+                 const PerfClock::time_point start)
+      : start(start) {}
+
+  // TODO: Coalesce all queries whose scheduled timestamps have passed.
+  PerfClock::time_point Wait(QueryMetadata* next_query) {
     auto trace =
         MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Scheduling"); });
+
     auto scheduled_time = start + next_query->scheduled_delta;
+    next_query->scheduled_time = scheduled_time;
     std::this_thread::sleep_until(scheduled_time);
+
+    auto now = PerfClock::now();
+    next_query->issued_start_time = now;
+    return now;
   }
+
+  const PerfClock::time_point start;
+};
+
+// Offline QueryScheduler
+template <>
+struct QueryScheduler<TestScenario::Offline> {
+  QueryScheduler(const TestSettingsInternal& settings,
+                 const PerfClock::time_point start)
+      : start(start) {}
+
+  PerfClock::time_point Wait(QueryMetadata* next_query) {
+    next_query->scheduled_time = start;
+    auto now = PerfClock::now();
+    next_query->issued_start_time = now;
+    return now;
+  }
+
   const PerfClock::time_point start;
 };
 
@@ -452,7 +514,7 @@ void RunPerformanceMode(
 
   const PerfClock::time_point start = PerfClock::now();
   PerfClock::time_point last_now = start;
-  QueryScheduler<scenario> query_scheduler(start);
+  QueryScheduler<scenario> query_scheduler(settings, start);
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.
   const double query_seconds_outstanding_threshold =
@@ -465,15 +527,9 @@ void RunPerformanceMode(
   for (auto& query : queries) {
     auto trace1 =
         MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("SampleLoop"); });
-
-    PerfClock::time_point wait_for_slot_time = last_now;
-    query_scheduler.Wait(&query);
+    last_now = query_scheduler.Wait(&query);
 
     // Issue the query to the SUT.
-    query.wait_for_slot_time = wait_for_slot_time;
-    last_now = PerfClock::now();
-    query.scheduled_time = last_now;
-    query.issued_start_time = last_now;
     {
       auto trace3 = MakeScopedTracer(
           [](AsyncLog& log) { log.ScopedTrace("IssueQuery"); });
@@ -525,7 +581,7 @@ void RunPerformanceMode(
           "Ending early: Ran out of generated queries to issue before the "
           "minimum query count and test duration were reached.");
       log.LogDetail(
-          "Please update the relevant expected latency or target in the "
+          "Please update the relevant expected latency or target qps in the "
           "TestSettings so they are more accurate.");
     });
   }

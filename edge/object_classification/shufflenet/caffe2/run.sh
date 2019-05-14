@@ -61,6 +61,7 @@ echo "
   \"--remote_repository\": \"origin\",
   \"--repo\": \"git\",
   \"--repo_dir\": \"${REPO_DIR}\",
+  \"--root_model_dir\": \"${CONFIG_DIR}/root_model_dir\",
   \"--screen_reporter\": null
 }
 " > ${CONFIG_DIR}/config.txt

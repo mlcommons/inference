@@ -17,13 +17,13 @@ def load_samples_to_ram(query_samples):
 def unload_samples_from_ram(query_samples):
     return
 
-def process_latencies(latencies_ns):
+def process_latencies(latencies_us):
     print("Average latency: ")
-    print(numpy.mean(latencies_ns))
+    print(numpy.mean(latencies_us))
     print("Median latency: ")
-    print(numpy.percentile(latencies_ns, 50))
+    print(numpy.percentile(latencies_us, 50))
     print("90 percentile latency: ")
-    print(numpy.percentile(latencies_ns, 90))
+    print(numpy.percentile(latencies_us, 90))
 
 class Task:
     def __init__(self, query_id, sample_id):

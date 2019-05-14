@@ -145,6 +145,7 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 // TODO: Versions that don't copy data.
 // TODO: Versions that have less detailed logs.
 // TODO: Versions that do a delayed notification.
+template <TestScenario scenario, TestMode mode>
 struct ResponseDelegateDetailed : public ResponseDelegate {
   std::atomic<size_t> queries_completed{0};
 
@@ -154,14 +155,28 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     // small buffer optimization code path when we aren't copying data.
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
     // into the lambda; even with C++14.
-    auto sample_data_copy = new uint8_t[response->size];
-    auto* src_begin = reinterpret_cast<uint8_t*>(response->data);
-    std::memcpy(sample_data_copy, src_begin, response->size);
+    uint8_t* sample_data_copy = nullptr;
+    if (mode == TestMode::AccuracyOnly) {
+      // TODO: Verify accuracy with the data copied here.
+      auto* src_begin = reinterpret_cast<uint8_t*>(response->data);
+      sample_data_copy = new uint8_t[response->size];
+      std::memcpy(sample_data_copy, src_begin, response->size);
+    }
     Log([sample, sample_data_copy, complete_begin_time](AsyncLog& log) {
       QueryMetadata* query = sample->query_metadata;
       DurationGeneratorNs sched{query->scheduled_time};
       QuerySampleLatency latency = sched.delta(complete_begin_time);
       log.RecordLatency(sample->sequence_id, latency);
+      if (sample_data_copy != nullptr) {
+        delete[] sample_data_copy;
+      }
+      // Disable tracing each sample in offline mode. Since thousands of
+      // samples could be overlapping when visualized, it's not very useful.
+      // TODO: Should we disable for cloud mode as well? Sufficiently
+      // out-of-order processing could have lots of overlap too.
+      if (scenario == TestScenario::Offline) {
+        return;
+      }
       log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
                       complete_begin_time, "sample_seq", sample->sequence_id,
                       "query_seq", query->sequence_id, "idx",
@@ -169,13 +184,15 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
                       sched.delta(query->wait_for_slot_time), "issue_start_ns",
                       sched.delta(query->issued_start_time), "complete_ns",
                       sched.delta(complete_begin_time));
-      if (sample_data_copy != nullptr) {
-        delete[] sample_data_copy;
-      }
     });
   }
 
   void QueryComplete() override {
+    // We only need to track oustanding queries in the server scenario to
+    // detect when the SUT has fallen too far behind.
+    if (scenario != TestScenario::Server) {
+      return;
+    }
     queries_completed.fetch_add(1, std::memory_order_relaxed);
   }
 };
@@ -213,7 +230,6 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count) {
              auto& gen) mutable { return dist(gen); };
 }
 
-// TODO: Pull MLPerf spec constants into a common area.
 template <TestScenario scenario, TestMode mode>
 std::vector<QueryMetadata> GenerateQueries(
     const TestSettingsInternal& settings,
@@ -250,17 +266,17 @@ std::vector<QueryMetadata> GenerateQueries(
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
-  std::chrono::nanoseconds timestamp(0);
   std::vector<QuerySampleIndex> samples(settings.samples_per_query);
+  std::chrono::nanoseconds timestamp(0);
   uint64_t query_sequence_id = 0;
   uint64_t sample_sequence_id = 0;
-  while (timestamp < k2xMinDuration || queries.size() < min_queries) {
+  while (timestamp <= k2xMinDuration || queries.size() < min_queries) {
     for (auto& s : samples) {
       s = loaded_samples[sample_distribution(sample_rng)];
     }
-    timestamp += schedule_distribution(schedule_rng);
     queries.emplace_back(samples, timestamp, response_delegate,
                          query_sequence_id, &sample_sequence_id);
+    timestamp += schedule_distribution(schedule_rng);
     query_sequence_id++;
   }
 
@@ -273,7 +289,8 @@ std::vector<QueryMetadata> GenerateQueries(
   return queries;
 }
 
-void RunVerificationMode(
+template <TestScenario scenario>
+void RunAccuracyMode(
     SystemUnderTest* sut, QuerySampleLibrary* qsl,
     const TestSettingsInternal& settings,
     const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
@@ -285,7 +302,7 @@ void RunVerificationMode(
   constexpr size_t kMaxAsyncQueries = 4;
   constexpr int64_t kNanosecondsPerSecond = 1000000000;
 
-  ResponseDelegateDetailed response_logger;
+  ResponseDelegateDetailed<scenario, TestMode::AccuracyOnly> response_logger;
 
   if (settings.scenario != TestScenario::MultiStream) {
     LogError([](AsyncLog& log) {
@@ -423,7 +440,7 @@ void RunPerformanceMode(
 
   GlobalLogger().RestartLatencyRecording();
 
-  ResponseDelegateDetailed response_logger;
+  ResponseDelegateDetailed<scenario, TestMode::PerformanceOnly> response_logger;
 
   // Use first loadable set as the performance set.
   const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
@@ -437,7 +454,7 @@ void RunPerformanceMode(
   PerfClock::time_point last_now = start;
   QueryScheduler<scenario> query_scheduler(start);
   size_t queries_issued = 0;
-  // TODO: Replace the constatnt 5 below with a TestSetting.
+  // TODO: Replace the constant 5 below with a TestSetting.
   const double query_seconds_outstanding_threshold =
       5 * std::chrono::duration_cast<std::chrono::duration<double>>(
               settings.target_latency)
@@ -465,9 +482,6 @@ void RunPerformanceMode(
 
     queries_issued++;
     auto duration = (last_now - start);
-    size_t queries_outstanding =
-        queries_issued -
-        response_logger.queries_completed.load(std::memory_order_relaxed);
     if (queries_issued > settings.min_query_count &&
         duration > settings.min_duration) {
       LogDetail([](AsyncLog& log) {
@@ -491,12 +505,17 @@ void RunPerformanceMode(
       });
       break;
     }
-    if (queries_outstanding > max_queries_outstanding) {
-      LogError([queries_issued, queries_outstanding](AsyncLog& log) {
-        log.LogDetail("Ending early: Too many oustanding queries.", "issued",
-                      queries_issued, "outstanding", queries_outstanding);
-      });
-      break;
+    if (scenario == TestScenario::Server) {
+      size_t queries_outstanding =
+          queries_issued -
+          response_logger.queries_completed.load(std::memory_order_relaxed);
+      if (queries_outstanding > max_queries_outstanding) {
+        LogError([queries_issued, queries_outstanding](AsyncLog& log) {
+          log.LogDetail("Ending early: Too many oustanding queries.", "issued",
+                        queries_issued, "outstanding", queries_outstanding);
+        });
+        break;
+      }
     }
   }
 
@@ -539,26 +558,39 @@ void RunPerformanceMode(
   qsl->UnloadSamplesFromRam(performance_set);
 }
 
-using RunPerformanceModeSignature =
-    void(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-         const TestSettingsInternal& settings,
-         const std::vector<std::vector<QuerySampleIndex>>& loadable_sets);
+// Routes runtime scenario requests to the corresponding
+// instances of its accuracy and performance functions.
+struct RunFunctions {
+  using Signature =
+      void(SystemUnderTest* sut, QuerySampleLibrary* qsl,
+           const TestSettingsInternal& settings,
+           const std::vector<std::vector<QuerySampleIndex>>& loadable_sets);
 
-RunPerformanceModeSignature* RunPerformanceModeFn(TestScenario scenario) {
-  switch (scenario) {
-    case TestScenario::SingleStream:
-      return RunPerformanceMode<TestScenario::SingleStream>;
-    case TestScenario::MultiStream:
-      return RunPerformanceMode<TestScenario::MultiStream>;
-    case TestScenario::Server:
-      return RunPerformanceMode<TestScenario::Server>;
-    case TestScenario::Offline:
-      return RunPerformanceMode<TestScenario::Offline>;
+  template <TestScenario compile_time_scenario>
+  static RunFunctions GetCompileTime() {
+    return { (*RunAccuracyMode<compile_time_scenario>),
+             (*RunPerformanceMode<compile_time_scenario>) };
   }
-  // We should not reach this point.
-  assert(false);
-  return nullptr;
-}
+
+  static RunFunctions Get(TestScenario run_time_scenario) {
+    switch (run_time_scenario) {
+      case TestScenario::SingleStream:
+        return GetCompileTime<TestScenario::SingleStream>();
+      case TestScenario::MultiStream:
+        return GetCompileTime<TestScenario::MultiStream>();
+      case TestScenario::Server:
+        return GetCompileTime<TestScenario::Server>();
+      case TestScenario::Offline:
+        return GetCompileTime<TestScenario::Offline>();
+    }
+    // We should not reach this point.
+    assert(false);
+    return GetCompileTime<TestScenario::SingleStream>();
+  }
+
+  const Signature& accuracy;
+  const Signature& performance;
+};
 
 // Generates random sets of samples in the QSL that we can load into RAM
 // at the same time.
@@ -666,19 +698,18 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   std::vector<std::vector<QuerySampleIndex>> loadable_sets(
       GenerateLoadableSets(qsl, sanitized_settings));
 
-  RunPerformanceModeSignature* run_performance =
-      RunPerformanceModeFn(sanitized_settings.scenario);
+  RunFunctions run_funcs = RunFunctions::Get(sanitized_settings.scenario);
 
   switch (sanitized_settings.mode) {
     case TestMode::SubmissionRun:
-      RunVerificationMode(sut, qsl, sanitized_settings, loadable_sets);
-      (*run_performance)(sut, qsl, sanitized_settings, loadable_sets);
+      run_funcs.accuracy(sut, qsl, sanitized_settings, loadable_sets);
+      run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets);
       break;
     case TestMode::AccuracyOnly:
-      RunVerificationMode(sut, qsl, sanitized_settings, loadable_sets);
+      run_funcs.accuracy(sut, qsl, sanitized_settings, loadable_sets);
       break;
     case TestMode::PerformanceOnly:
-      (*run_performance)(sut, qsl, sanitized_settings, loadable_sets);
+      run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets);
       break;
     case TestMode::FindPeakPerformance:
       LogError([](AsyncLog& log) {

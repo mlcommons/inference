@@ -15,6 +15,7 @@ struct TestSettingsInternal {
   void LogSettings();
 
   const TestSettings requested;
+  const TestModel model;        // Copied here for convenience.
   const TestScenario scenario;  // Copied here for convenience.
   const TestMode mode;          // Copied here for convenience.
 
@@ -31,6 +32,10 @@ struct TestSettingsInternal {
   uint64_t qsl_rng_seed;
   uint64_t sample_index_rng_seed;
   uint64_t schedule_rng_seed;
+
+ private:
+  void UpdateMultiStreamTargetLatency();
+  void UpdateServerTargetLatency();
 };
 
 }  // namespace mlperf

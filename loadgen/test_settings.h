@@ -102,9 +102,9 @@ struct TestSettings {
   // will exit before that point if either max duration or query count have
   // been reached.
   uint64_t override_min_duration_ms = 0;  // 0: Use spec defaults.
-  uint64_t override_max_duration_ms = 0;  // 0: Infinity. TODO: Use this.
+  uint64_t override_max_duration_ms = 0;  // 0: Infinity.
   uint64_t override_min_query_count = 0;  // 0: Use spec defaults.
-  uint64_t override_max_query_count = 0;  // 0: Infinity. TODO: Use this.
+  uint64_t override_max_query_count = 0;  // 0: Infinity.
 
   // Random number generation seeds. Values of 0 disable overrides.
   // There are 3 separate seeds, so each dimension can be changed independently.

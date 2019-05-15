@@ -63,15 +63,7 @@ class GNMTRunner (Runner):
         default_hparams = create_hparams(FLAGS)
         return FLAGS, default_hparams
 
-    # TBD: clean this up!
     def setup(self, flags, default_hparams):
-        # Random
-        random_seed = flags.random_seed
-        if random_seed is not None and random_seed > 0:
-          utils.print_out("# Set random seed to %d" % random_seed)
-          random.seed(random_seed + jobid)
-          np.random.seed(random_seed + job)
-
         # Model output directory
         out_dir = flags.out_dir
         if out_dir and not tf.gfile.Exists(out_dir):
@@ -89,7 +81,7 @@ class GNMTRunner (Runner):
         if not loaded_hparams:  # Try to load from out_dir
           assert out_dir
           hparams = create_or_load_hparams(out_dir, default_hparams, flags.hparams_path,
-              save_hparams=(jobid == 0))
+              save_hparams = True)
 
         # GPU device
         config_proto = utils.get_config_proto(
@@ -100,20 +92,13 @@ class GNMTRunner (Runner):
             "# Devices visible to TensorFlow: %s" 
             % repr(tf.Session(config=config_proto).list_devices()))
 
-   
-
         # Inference indices
         hparams.inference_indices = None
         if flags.inference_list:
             (hparams.inference_indices) = ([int(token)  for token in flags.inference_list.split(",")])
 
-        # Inference
-        ckpt = flags.ckpt
-        if not ckpt:
-            ckpt = tf.train.latest_checkpoint(out_dir)
-
         self.hparams = default_hparams
-        self.ckpt = ckpt
+        self.ckpt = flags.ckpt
         self.runmode = flags.run
 
 
@@ -158,7 +143,7 @@ if __name__ == "__main__":
 
     
     total_queries = 256 # Maximum sample ID + 1
-    perf_queries = 8   # TBD: Doesn't seem to have an effect
+    perf_queries = 64   # Select the same subset of $perf_queries samples
 
     sut = mlperf_loadgen.ConstructSUT(runner.enqueue, process_latencies)
     qsl = mlperf_loadgen.ConstructQSL(

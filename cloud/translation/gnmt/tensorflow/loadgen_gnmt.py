@@ -2,10 +2,13 @@ from generic_loadgen import *
 import sys
 from nmt.nmt import create_hparams, add_arguments, create_or_load_hparams
 import argparse
-from nmt.inference import inference as inference_fn
+from nmt.inference import _decode_inference_indices, get_model_creator, start_sess_and_load_model, load_data
 import tensorflow as tf
 import os
 from nmt.utils import misc_utils as utils
+from nmt.utils import nmt_utils
+from nmt import model_helper
+import codecs
 
 class TranslationTask:
     def __init__(self, query_id, input_file, output_file):
@@ -97,25 +100,75 @@ class GNMTRunner (Runner):
         if flags.inference_list:
             (hparams.inference_indices) = ([int(token)  for token in flags.inference_list.split(",")])
 
-        self.hparams = default_hparams
+        
+
+        model_creator = get_model_creator(hparams)
+        infer_model = model_helper.create_infer_model(model_creator, hparams, scope=None)
+        sess, loaded_infer_model = start_sess_and_load_model(infer_model, flags.ckpt,
+                                                       hparams)
+
+        #tbd: clean up
+        self.hparams = hparams
         self.ckpt = flags.ckpt
         self.runmode = flags.run
 
+        self.infer_model = infer_model
+        self.sess = sess
+        self.loaded_infer_model = loaded_infer_model
 
     ##
     # @brief Invoke GNMT to translate the input file
     def process(self, qitem):
         print("translate {} (QID {}): {} --> {}".format(self.count, qitem.query_id, qitem.input_file, qitem.output_file))
         input_file = qitem.input_file 
-        output_file = qitem.output_file
-        # TBD: replace this by single_worker inference fn
-        inference_fn(self.runmode, 1, self.ckpt, input_file,
-                    output_file, self.hparams, num_workers=1, jobid=-1)
-        
+        trans_file = qitem.output_file
+
+        # FIXME: loaod only needed data here.
+        input_file =  os.path.join(os.getcwd(), 'nmt', 'data', 'newstest2014.tok.bpe.32000.en')
+        infer_data = load_data(input_file, self.hparams)
+        query_index = 3
+
+        infer_mode = self.hparams.infer_mode
+        num_translations_per_input = self.hparams.num_translations_per_input
+
+        # Set input data and batch size
+        with self.infer_model.graph.as_default():
+            self.sess.run(
+                self.infer_model.iterator.initializer,
+                feed_dict={
+                    self.infer_model.src_placeholder: [infer_data[query_index]],
+                    self.infer_model.batch_size_placeholder: self.hparams.infer_batch_size
+                })
+
+
+        # Start the translation
+        nmt_outputs, _ = self.loaded_infer_model.decode(self.sess)
+        if infer_mode != "beam_search":
+          nmt_outputs = np.expand_dims(nmt_outputs, 0)
+
+        # SingleStream means we are only processing one batch, make sure this is the case
+        assert self.hparams.infer_batch_size == nmt_outputs.shape[1] == 1
+
+        # Whether beam search is being used or not, we only want 1 final translation
+        assert self.hparams.num_translations_per_input == 1
+        sent_id = 0 # Sinds there is only one sample in the batch
+
+        translation = nmt_utils.get_translation(
+                    nmt_outputs[0],
+                   sent_id,
+                   tgt_eos=self.hparams.eos,
+                   subword_option=self.hparams.subword_option)
+            #TBD: some code tto write out translation. Move this somewhere.
+        """
+          with codecs.getwriter("utf-8")(
+              tf.gfile.GFile(trans_file, mode="wb")) as trans_f:
+            trans_f.write((translation + b"\n").decode("utf-8"))
+        """
+            
         self.count += 1
         
-        return self.count
-
+        return translation    
+    
     ##
     # @brief Create a task and add it to the queue
     def enqueue(self, query_samples):
@@ -132,8 +185,6 @@ if __name__ == "__main__":
 
     runner.start_worker()
 
-    print ("Starting pool")
-
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.SingleStream
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
@@ -142,8 +193,8 @@ if __name__ == "__main__":
     settings.target_latency_ns = 1000000000
 
     
-    total_queries = 256 # Maximum sample ID + 1
-    perf_queries = 64   # Select the same subset of $perf_queries samples
+    total_queries = 3003 # Maximum sample ID + 1
+    perf_queries = 3003   # Select the same subset of $perf_queries samples
 
     sut = mlperf_loadgen.ConstructSUT(runner.enqueue, process_latencies)
     qsl = mlperf_loadgen.ConstructQSL(

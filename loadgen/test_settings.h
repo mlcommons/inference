@@ -10,17 +10,6 @@
 
 namespace mlperf {
 
-// TestModel is used for logging purposes and to select which spec defaults
-// to use.
-enum TestModel {
-  Other,
-  MobileNet,
-  ResNet,
-  SsdSmall,
-  SsdLarge,
-  NMT,
-};
-
 enum TestScenario {
   // SingleStream issues queries containing a single sample. The next query is
   // only issued once the previous one has completed. Internal LoadGen latency
@@ -74,7 +63,6 @@ enum TestMode {
 
 // TODO: Logging settings. e.g.: sync vs. async; log frequency;
 struct TestSettings {
-  TestModel model = TestModel::ResNet;
   TestScenario scenario = TestScenario::SingleStream;
   TestMode mode = TestMode::PerformanceOnly;
 
@@ -105,12 +93,8 @@ struct TestSettings {
   bool enable_spec_overrides = false;
 
   // Settings after this point only have an effect if
-  // |enable_spec_overrides| above is true.
-
-  double override_multi_stream_qps = 0;                  // 0: Use spec default.
-  uint64_t override_multi_stream_target_latency_ns = 0;  // 0: Use spec default.
-  uint64_t override_server_target_latency_ns = 0;        // 0: Use spec default.
-
+  // |enable_spec_overrides| is true.
+  uint64_t override_target_latency_ns = 0;  // 0: Use spec default.
   // TODO: Should this be an official setting?
   int override_multi_stream_max_async_queries = 0;  // 0: Use spec default.
 

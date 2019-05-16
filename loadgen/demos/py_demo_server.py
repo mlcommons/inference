@@ -47,7 +47,7 @@ def main(argv):
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
     settings.server_target_qps = 100
     settings.enable_spec_overrides = True
-    settings.override_server_target_latency_ns = 100000000
+    settings.override_target_latency_ns = 100000000
     settings.override_min_query_count = 100
     settings.override_min_duration_ms = 10000
 

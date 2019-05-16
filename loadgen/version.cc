@@ -1,5 +1,6 @@
-#include "logging.h"
 #include "version.h"
+
+#include "logging.h"
 
 namespace mlperf {
 

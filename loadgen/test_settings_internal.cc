@@ -5,70 +5,14 @@
 
 namespace mlperf {
 
-namespace {
-// Automatically convert seconds as a double to chrono::duration type.
-template <typename T>
-void sec2dur(T *d, double s) {
-  std::chrono::duration_cast<T>(std::chrono::duration<double>(s));
-}
-
-}  // namespace
-
-void TestSettingsInternal::UpdateMultiStreamTargetLatency() {
-  switch (model) {
-    case TestModel::MobileNet:
-      sec2dur(&target_latency, kMultiStreamTargetLatencyMobileNet);
-      break;
-    case TestModel::ResNet:
-      sec2dur(&target_latency, kMultiStreamTargetLatencyResNet);
-      break;
-    case TestModel::SsdSmall:
-      sec2dur(&target_latency, kMultiStreamTargetLatencySsdSmall);
-      break;
-    case TestModel::SsdLarge:
-      sec2dur(&target_latency, kMultiStreamTargetLatencySsdLarge);
-      break;
-    case TestModel::NMT:
-      sec2dur(&target_latency, kMultiStreamTargetLatencyNMT);
-      break;
-    case TestModel::Other:
-      sec2dur(&target_latency, kMultiStreamTargetLatencyResNet);
-      break;
-  }
-}
-
-void TestSettingsInternal::UpdateServerTargetLatency() {
-  switch (model) {
-    case TestModel::MobileNet:
-      sec2dur(&target_latency, kServerTargetLatencyMobileNet);
-      break;
-    case TestModel::ResNet:
-      sec2dur(&target_latency, kServerTargetLatencyResNet);
-      break;
-    case TestModel::SsdSmall:
-      sec2dur(&target_latency, kServerTargetLatencySsdSmall);
-      break;
-    case TestModel::SsdLarge:
-      sec2dur(&target_latency, kServerTargetLatencySsdLarge);
-      break;
-    case TestModel::NMT:
-      sec2dur(&target_latency, kServerTargetLatencyNMT);
-      break;
-    case TestModel::Other:
-      sec2dur(&target_latency, kServerTargetLatencyResNet);
-      break;
-  }
-}
-
 TestSettingsInternal::TestSettingsInternal(
     const TestSettings &requested_settings)
     : requested(requested_settings),
-      model(requested.model),
       scenario(requested.scenario),
       mode(requested.mode),
       samples_per_query(1),
       target_qps(60.0),
-      target_latency(0),
+      target_latency(std::nano::den),
       max_async_queries(2),
       min_duration(std::milli::den),
       max_duration(0),
@@ -79,15 +23,14 @@ TestSettingsInternal::TestSettingsInternal(
       qsl_rng_seed(kDefaultQslSeed),
       sample_index_rng_seed(kDefaultSampleSeed),
       schedule_rng_seed(kDefaultScheduleSeed) {
-  // Target QPS and latency.
-  switch (scenario) {
+  // Target QPS.
+  switch (requested.scenario) {
     case TestScenario::SingleStream:
       target_qps = static_cast<double>(std::nano::den) /
                    requested.single_stream_expected_latency_ns;
       break;
     case TestScenario::MultiStream:
       target_qps = kMultiStreamTargetQPS;
-      UpdateMultiStreamTargetLatency();
       break;
     case TestScenario::Server:
       if (requested.server_target_qps >= 0.0) {
@@ -99,7 +42,6 @@ TestSettingsInternal::TestSettingsInternal(
                         "requested", server_target_qps, "using", target_qps);
         });
       }
-      UpdateServerTargetLatency();
       break;
     case TestScenario::Offline:
       if (requested.offline_expected_qps >= 0.0) {
@@ -115,12 +57,12 @@ TestSettingsInternal::TestSettingsInternal(
   }
 
   // Samples per query.
-  if (scenario == TestScenario::MultiStream) {
+  if (requested.scenario == TestScenario::MultiStream) {
     samples_per_query = requested.multi_stream_samples_per_query;
   }
 
   // In the offline scenario, coalesce all queries into a single query.
-  if (scenario == TestScenario::Offline) {
+  if (requested.scenario == TestScenario::Offline) {
     // TODO: Should the spec require a max duration for large query counts?
     // kSlack is used to make sure we generate enough samples for the SUT
     // to take longer than than the minimum test duration required by the
@@ -139,7 +81,7 @@ TestSettingsInternal::TestSettingsInternal(
   }
 
   // Do not allow overrides for a submission run.
-  if (mode == TestMode::SubmissionRun) {
+  if (requested.mode == TestMode::SubmissionRun) {
     LogError([](AsyncLog &log) {
       log.LogDetail(
           "Overriding defaults for a SubmissionRun not allowed. \
@@ -148,27 +90,21 @@ TestSettingsInternal::TestSettingsInternal(
     return;
   }
 
-  // Scenario-specific overrides.
-  switch (scenario) {
-    case TestScenario::SingleStream:
-      break;
-    case TestScenario::MultiStream:
-      if (requested.override_multi_stream_target_latency_ns != 0) {
-        target_latency = std::chrono::nanoseconds(
-            requested.override_multi_stream_target_latency_ns);
-      }
-      if (requested.override_multi_stream_max_async_queries != 0) {
-        max_async_queries = requested.override_multi_stream_max_async_queries;
-      }
-      break;
-    case TestScenario::Server:
-      if (requested.override_server_target_latency_ns != 0) {
-        target_latency = std::chrono::nanoseconds(
-            requested.override_server_target_latency_ns);
-      }
-      break;
-    case TestScenario::Offline:
-      break;
+  if (requested.override_target_latency_ns != 0) {
+    target_latency =
+        std::chrono::nanoseconds(requested.override_target_latency_ns);
+  }
+
+  if (requested.override_multi_stream_max_async_queries != 0) {
+    if (requested.scenario == TestScenario::MultiStream) {
+      max_async_queries = requested.override_multi_stream_max_async_queries;
+    } else {
+      LogError([](AsyncLog &log) {
+        log.LogDetail(
+            "Overriding max async queries outside of the \
+                       MultiStream scenario has no effect.");
+      });
+    }
   }
 
   // Test duration.
@@ -197,25 +133,6 @@ TestSettingsInternal::TestSettingsInternal(
   if (requested.override_schedule_rng_seed != 0) {
     schedule_rng_seed = requested.override_schedule_rng_seed;
   }
-}
-
-std::string ToString(TestModel model) {
-  switch (model) {
-    case TestModel::MobileNet:
-      return "MobileNet";
-    case TestModel::ResNet:
-      return "ResNet";
-    case TestModel::SsdSmall:
-      return "SsdSmall";
-    case TestModel::SsdLarge:
-      return "SsdLarge";
-    case TestModel::NMT:
-      return "NMT";
-    case TestModel::Other:
-      return "Other";
-  }
-  assert(false);
-  return "InvalidModel";
 }
 
 std::string ToString(TestScenario scenario) {
@@ -252,7 +169,6 @@ void LogRequestedTestSettings(const TestSettings &s) {
   LogDetail([s](AsyncLog &log) {
     log.LogDetail("");
     log.LogDetail("Requested Settings:");
-    log.LogDetail("Model : " + ToString(s.model));
     log.LogDetail("Scenario : " + ToString(s.scenario));
     log.LogDetail("Test mode : " + ToString(s.mode));
 
@@ -276,11 +192,8 @@ void LogRequestedTestSettings(const TestSettings &s) {
 
     // Overrides
     log.LogDetail("enable_spec_overrides : ", s.enable_spec_overrides);
-    log.LogDetail("override_multi_stream_qps : ", s.override_multi_stream_qps);
-    log.LogDetail("override_multi_stream_target_latency_ns : ",
-                  s.override_multi_stream_target_latency_ns);
-    log.LogDetail("override_server_target_latency_ns : ",
-                  s.override_server_target_latency_ns);
+    log.LogDetail("override_target_latency_ns : ",
+                  s.override_target_latency_ns);
     log.LogDetail("override_multi_stream_max_async_queries : ",
                   s.override_multi_stream_max_async_queries);
     log.LogDetail("override_min_duration_ms : ", s.override_min_duration_ms);
@@ -301,7 +214,6 @@ void TestSettingsInternal::LogSettings() {
     log.LogDetail("");
     log.LogDetail("Effective Settings:");
 
-    log.LogDetail("Model : " + ToString(s.model));
     log.LogDetail("Scenario : " + ToString(s.scenario));
     log.LogDetail("Test mode : " + ToString(s.mode));
 

@@ -283,6 +283,10 @@ std::vector<QuerySampleLatency> Logger::GetLatenciesBlocking(
   return async_logger_.GetLatenciesBlocking(expected_count);
 }
 
+QuerySampleLatency Logger::GetMaxLatencySoFar() {
+  return async_logger_.GetMaxLatencySoFar();
+}
+
 TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {
   uintptr_t slot_value = thread_swap_request_slots_[slot].load();
   if (SwapRequestSlotIsReadable(slot_value)) {

@@ -49,6 +49,12 @@ constexpr std::chrono::milliseconds kLogPollPeriod(10);
 
 }  // namespace
 
+const std::string& ArgValueTransform(const bool& value) {
+  static const std::string v_true("true");
+  static const std::string v_false("false");
+  return value ? v_true : v_false;
+}
+
 // TlsLogger logs a single thread using thread-local storage.
 // Submits logs to the central Logger:
 //   * With forward-progress guarantees. (i.e.: no locking or blocking

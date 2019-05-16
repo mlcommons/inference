@@ -28,6 +28,13 @@ class TlsLoggerWrapper;
 using AsyncLogEntry = std::function<void(AsyncLog&)>;
 using PerfClock = std::chrono::high_resolution_clock;
 
+const std::string& ArgValueTransform(const bool& value);
+
+template <typename T>
+const T& ArgValueTransform(const T& value) {
+  return value;
+}
+
 // AsyncLog is passed as an argument to the log lambda on the
 // recording thread to serialize the data captured by the lambda and
 // forward it to the output stream.
@@ -269,15 +276,20 @@ class AsyncLog {
   void LogArgs(std::ostream*) {}
 
   template <typename T>
+  void LogArgs(std::ostream* out, const T& value_only) {
+    *out << ArgValueTransform(value_only);
+  }
+
+  template <typename T>
   void LogArgs(std::ostream* out, const std::string& arg_name,
                const T& arg_value) {
-    *out << "\"" << arg_name << "\" : " << arg_value;
+    *out << "\"" << arg_name << "\" : " << ArgValueTransform(arg_value);
   }
 
   template <typename T, typename... Args>
   void LogArgs(std::ostream* out, const std::string& arg_name,
                const T& arg_value, const Args... args) {
-    *out << "\"" << arg_name << "\" : " << arg_value << ", ";
+    *out << "\"" << arg_name << "\" : " << ArgValueTransform(arg_value) << ", ";
     LogArgs(out, args...);
   }
 

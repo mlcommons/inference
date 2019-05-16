@@ -153,6 +153,14 @@ void QuerySamplesComplete(std::vector<QuerySampleResponse> responses) {
 PYBIND11_MODULE(mlperf_loadgen, m) {
   m.doc() = "MLPerf Inference load generator.";
 
+  pybind11::enum_<TestModel>(m, "TestModel")
+      .value("Other", TestModel::Other)
+      .value("MobileNet", TestModel::MobileNet)
+      .value("ResNet", TestModel::ResNet)
+      .value("SsdSmall", TestModel::SsdSmall)
+      .value("SsdLarge", TestModel::SsdLarge)
+      .value("NMT", TestModel::NMT);
+
   pybind11::enum_<TestScenario>(m, "TestScenario")
       .value("SingleStream", TestScenario::SingleStream)
       .value("MultiStream", TestScenario::MultiStream)
@@ -167,6 +175,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
 
   pybind11::class_<TestSettings>(m, "TestSettings")
       .def(pybind11::init<>())
+      .def_readwrite("model", &TestSettings::model)
       .def_readwrite("scenario", &TestSettings::scenario)
       .def_readwrite("mode", &TestSettings::mode)
       .def_readwrite("single_stream_expected_latency_ns",
@@ -180,8 +189,12 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::offline_expected_qps)
       .def_readwrite("enable_spec_overrides",
                      &TestSettings::enable_spec_overrides)
-      .def_readwrite("override_target_latency_ns",
-                     &TestSettings::override_target_latency_ns)
+      .def_readwrite("override_multi_stream_qps",
+                     &TestSettings::override_multi_stream_qps)
+      .def_readwrite("override_multi_stream_target_latency_ns",
+                     &TestSettings::override_multi_stream_target_latency_ns)
+      .def_readwrite("override_server_target_latency_ns",
+                     &TestSettings::override_server_target_latency_ns)
       .def_readwrite("override_multi_stream_max_async_queries",
                      &TestSettings::override_multi_stream_max_async_queries)
       .def_readwrite("override_min_duration_ms",

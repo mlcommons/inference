@@ -8,6 +8,10 @@
 
 namespace mlperf {
 
+// Non-generated.
+void LogLoadgenVersion();
+
+// Definitions generated at compile time.
 const std::string& LoadgenVersion();
 const std::string& LoadgenGitRevision();
 const std::string& LoadgenBuildDateLocal();

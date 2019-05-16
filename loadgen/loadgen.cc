@@ -314,7 +314,11 @@ void RunAccuracyMode(
   PerfClock::time_point start = PerfClock::now();
   uint64_t tick_count = 0;
   for (auto& loadable_set : loadable_sets) {
-    qsl->LoadSamplesToRam(loadable_set);
+    {
+      auto trace = MakeScopedTracer(
+          [count=loadable_set.size()](AsyncLog& log) { log.ScopedTrace("LoadSamples", "count", count); });
+      qsl->LoadSamplesToRam(loadable_set);
+    }
     GlobalLogger().RestartLatencyRecording();
 
     // Split the set up into queries.
@@ -355,6 +359,9 @@ void RunAccuracyMode(
     // We have to keep the synchronization primitives and loaded samples
     // alive until the SUT is done with them.
     GlobalLogger().GetLatenciesBlocking(loadable_set.size());
+
+    auto trace = MakeScopedTracer(
+        [count = loadable_set.size()](AsyncLog& log) { log.ScopedTrace("UnloadSampes", "count", count); });
     qsl->UnloadSamplesFromRam(loadable_set);
   }
 }
@@ -491,30 +498,19 @@ struct QueryScheduler<TestScenario::Offline> {
   const PerfClock::time_point start;
 };
 
-// TODO: Share logic duplicated in RunVerificationMode.
-// TODO: Simplify logic that will not be shared with RunVerificationMode.
 template <TestScenario scenario>
-void RunPerformanceMode(
-    SystemUnderTest* sut, QuerySampleLibrary* qsl,
+std::vector<QuerySampleLatency> IssuePerformanceQueries(
+    SystemUnderTest* sut,
     const TestSettingsInternal& settings,
-    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
-  LogDetail([](AsyncLog& log) { log.LogDetail("Starting performance mode:"); });
+    const std::vector<QuerySampleIndex>& performance_set) {
 
   GlobalLogger().RestartLatencyRecording();
-
   ResponseDelegateDetailed<scenario, TestMode::PerformanceOnly> response_logger;
 
-  // Use first loadable set as the performance set.
-  const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
-
-  qsl->LoadSamplesToRam(performance_set);
   std::vector<QueryMetadata> queries =
       GenerateQueries<scenario, TestMode::PerformanceOnly>(
           settings, performance_set, &response_logger);
 
-  const PerfClock::time_point start = PerfClock::now();
-  PerfClock::time_point last_now = start;
-  QueryScheduler<scenario> query_scheduler(settings, start);
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.
   const double query_seconds_outstanding_threshold =
@@ -523,6 +519,10 @@ void RunPerformanceMode(
               .count();
   const size_t max_queries_outstanding =
       settings.target_qps * query_seconds_outstanding_threshold;
+
+  const PerfClock::time_point start = PerfClock::now();
+  PerfClock::time_point last_now = start;
+  QueryScheduler<scenario> query_scheduler(settings, start);
 
   for (auto& query : queries) {
     auto trace1 =
@@ -590,8 +590,23 @@ void RunPerformanceMode(
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
   const size_t expected_latencies = queries_issued * settings.samples_per_query;
+  return GlobalLogger().GetLatenciesBlocking(expected_latencies);
+}
+
+template <TestScenario scenario>
+void RunPerformanceMode(
+    SystemUnderTest* sut, QuerySampleLibrary* qsl,
+    const TestSettingsInternal& settings,
+    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+  LogDetail([](AsyncLog& log) { log.LogDetail("Starting performance mode:"); });
+
+  // Use first loadable set as the performance set.
+  const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
+
+  qsl->LoadSamplesToRam(performance_set);
+
   std::vector<QuerySampleLatency> latencies(
-      GlobalLogger().GetLatenciesBlocking(expected_latencies));
+      IssuePerformanceQueries<scenario>(sut, settings, performance_set));
 
   sut->ReportLatencyResults(latencies);
 

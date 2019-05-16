@@ -783,8 +783,12 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
 
   LogLoadgenVersion();
-
-  // TODO: Log settings.
+  LogDetail([sut, qsl](AsyncLog& log) {
+    log.LogDetail("System Under Test (SUT) name: ", sut->Name());
+    log.LogDetail("Query Sample Library (QSL) name: ", qsl->Name());
+    log.LogDetail("QSL total size: ", qsl->TotalSampleCount());
+    log.LogDetail("QSL performance size: ", qsl->PerformanceSampleCount());
+  });
   TestSettingsInternal sanitized_settings(requested_settings);
   sanitized_settings.LogSettings();
 

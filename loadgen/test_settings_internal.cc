@@ -228,6 +228,8 @@ void TestSettingsInternal::LogSettings() {
     log.LogDetail("qsl_rng_seed : ", s.qsl_rng_seed);
     log.LogDetail("sample_index_rng_seed : ", s.sample_index_rng_seed);
     log.LogDetail("schedule_rng_seed : ", s.schedule_rng_seed);
+
+    log.LogDetail("");
   });
 }
 

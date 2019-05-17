@@ -205,11 +205,12 @@ void LogRequestedTestSettings(const TestSettings &s) {
                   s.override_sample_index_rng_seed);
     log.LogDetail("override_schedule_rng_seed : ",
                   s.override_schedule_rng_seed);
+
+    log.LogDetail("");
   });
 }
 
-void TestSettingsInternal::LogSettings() {
-  LogRequestedTestSettings(requested);
+void TestSettingsInternal::LogEffectiveSettings() const {
   LogDetail([s = *this](AsyncLog &log) {
     log.LogDetail("");
     log.LogDetail("Effective Settings:");
@@ -228,9 +229,26 @@ void TestSettingsInternal::LogSettings() {
     log.LogDetail("qsl_rng_seed : ", s.qsl_rng_seed);
     log.LogDetail("sample_index_rng_seed : ", s.sample_index_rng_seed);
     log.LogDetail("schedule_rng_seed : ", s.schedule_rng_seed);
-
-    log.LogDetail("");
   });
+}
+
+void TestSettingsInternal::LogAllSettings() const {
+  LogEffectiveSettings();
+  LogRequestedTestSettings(requested);
+}
+
+void TestSettingsInternal::LogSummary(AsyncLog &log) const {
+  log.LogSummary("samples_per_query : ", samples_per_query);
+  log.LogSummary("target_qps : ", target_qps);
+  log.LogSummary("target_latency (ns): ", target_latency.count());
+  log.LogSummary("max_async_queries : ", max_async_queries);
+  log.LogSummary("min_duration (ms): ", min_duration.count());
+  log.LogSummary("max_duration (ms): ", max_duration.count());
+  log.LogSummary("min_query_count : ", min_query_count);
+  log.LogSummary("max_query_count : ", max_query_count);
+  log.LogSummary("qsl_rng_seed : ", qsl_rng_seed);
+  log.LogSummary("sample_index_rng_seed : ", sample_index_rng_seed);
+  log.LogSummary("schedule_rng_seed : ", schedule_rng_seed);
 }
 
 }  // namespace mlperf

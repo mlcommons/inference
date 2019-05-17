@@ -613,26 +613,161 @@ PerformanceResult IssuePerformanceQueries(
           final_query_issued_time};
 }
 
-// TODO: Actually do a binary search rather than copying the performance
-// behavior.
-template <TestScenario scenario>
-void FindPeakPerformanceMode(
-    SystemUnderTest* sut, QuerySampleLibrary* qsl,
-    const TestSettingsInternal& settings,
-    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
-  LogDetail([](AsyncLog& log) {
-    log.LogDetail("Starting FindPeakPerformance mode:");
-  });
+struct PerformanceSummary {
+  std::string sut_name;
+  TestSettingsInternal settings;
+  PerformanceResult pr;
+  bool latencies_are_sorted = false;
 
-  // Use first loadable set as the performance set.
-  const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
+  void SortLatenciesIfNeeded();
+  bool MinDurationMet();
+  bool MinQueriesMet();
+  bool HasPerfConstraints();
+  bool PerfConstraintsMet();
+  void Log(AsyncLog& log);
+};
 
-  qsl->LoadSamplesToRam(performance_set);
+void PerformanceSummary::SortLatenciesIfNeeded() {
+  if (latencies_are_sorted) {
+    return;
+  }
+  std::sort(pr.latencies.begin(), pr.latencies.end());
+  latencies_are_sorted = true;
+}
 
-  PerformanceResult pr(
-      IssuePerformanceQueries<scenario>(sut, settings, performance_set));
+bool PerformanceSummary::MinDurationMet() {
+  return pr.final_query_issued_time >= DurationToSeconds(settings.min_duration);
+}
 
-  qsl->UnloadSamplesFromRam(performance_set);
+bool PerformanceSummary::MinQueriesMet() {
+  return pr.latencies.size() >= settings.min_query_count;
+}
+
+bool PerformanceSummary::HasPerfConstraints() {
+  return settings.scenario == TestScenario::MultiStream ||
+         settings.scenario == TestScenario::Server;
+}
+
+bool PerformanceSummary::PerfConstraintsMet() {
+  switch (settings.scenario) {
+    case TestScenario::SingleStream:
+      return true;
+    case TestScenario::MultiStream: {
+      // TODO: Finalize multi-stream performance targets with working group.
+      SortLatenciesIfNeeded();
+      size_t sample_count = pr.latencies.size();
+      auto l90 = pr.latencies[sample_count * .90];
+      return l90 <= settings.target_latency.count();
+    }
+    case TestScenario::Server: {
+      SortLatenciesIfNeeded();
+      size_t sample_count = pr.latencies.size();
+      auto l90 = pr.latencies[sample_count * .90];
+      return l90 <= settings.target_latency.count();
+      break;
+    }
+    case TestScenario::Offline:
+      return true;
+  }
+  assert(false);
+  return false;
+}
+
+void PerformanceSummary::Log(AsyncLog& log) {
+  SortLatenciesIfNeeded();
+  size_t sample_count = pr.latencies.size();
+  int64_t accumulated_latency = 0;
+  for (auto l : pr.latencies) {
+    accumulated_latency += l;
+  }
+  int64_t mean_latency = accumulated_latency / sample_count;
+
+  // TODO: Make .90 a spec constant and have that affect relevant strings.
+  auto l50 = pr.latencies[sample_count * .50];
+  auto l90 = pr.latencies[sample_count * .90];
+  auto l95 = pr.latencies[sample_count * .95];
+  auto l99 = pr.latencies[sample_count * .99];
+  auto l999 = pr.latencies[sample_count * .999];
+
+  log.LogSummary(
+      "================================================\n"
+      "MLPerf Results Summary\n"
+      "================================================");
+  log.LogSummary("SUT name : ", sut_name);
+  log.LogSummary("Scenario : ", ToString(settings.scenario));
+  log.LogSummary("Mode     : ", ToString(settings.mode));
+
+  switch (settings.scenario) {
+    case TestScenario::SingleStream: {
+      log.LogSummary("90th percentile latency (ns) : ", l90);
+      break;
+    }
+    case TestScenario::MultiStream: {
+      log.LogSummary("Samples per query : ", settings.samples_per_query);
+      break;
+    }
+    case TestScenario::Server: {
+      // Subtract 1 from sample count since the start of the final sample
+      // represents the open end of the time range: i.e. [begin, end).
+      // This makes sense since:
+      // a) QPS doesn't apply if there's only one sample; it's pure latency.
+      // b) If you have precisely 1k QPS, there will be a sample exactly on
+      //    the 1 second time point; but that would be the 1001th sample in
+      //    the stream. Given the first 1001 queries, the QPS is
+      //    1000 queries / 1 second.
+      double qps_as_scheduled =
+          (sample_count - 1) / pr.final_query_scheduled_time;
+      log.LogSummary("Scheduled QPS : ", qps_as_scheduled);
+      break;
+    }
+    case TestScenario::Offline: {
+      double qps = sample_count / pr.max_latency;
+      log.LogSummary("QPS: ", qps);
+      break;
+    }
+  }
+
+  bool min_duration_met = MinDurationMet();
+  bool min_queries_met = MinQueriesMet();
+  bool perf_constraints_met = PerfConstraintsMet();
+  bool all_constraints_met =
+      min_duration_met && min_queries_met && perf_constraints_met;
+  log.LogSummary("Result is : ", all_constraints_met ? "VALID" : "INVALID");
+  if (HasPerfConstraints()) {
+    log.LogSummary("  Performance constraints satisfied : ",
+                   perf_constraints_met ? "Yes" : "NO");
+  }
+  log.LogSummary("  Min duration satisfied : ",
+                 min_duration_met ? "Yes" : "NO");
+  log.LogSummary("  Min queries satisfied : ", min_queries_met ? "Yes" : "NO");
+
+  log.LogSummary(
+      "\n"
+      "================================================\n"
+      "Additional Stats\n"
+      "================================================");
+  log.LogSummary("Min latency (ns)             : ", pr.latencies.front());
+  log.LogSummary("Mean latency (ns)            : ", mean_latency);
+  log.LogSummary("50 percentile latency (ns)   : ", l50);
+  log.LogSummary("90 percentile latency (ns)   : ", l90);
+  log.LogSummary("95 percentile latency (ns)   : ", l95);
+  log.LogSummary("99 percentile latency (ns)   : ", l99);
+  log.LogSummary("99.9 percentile latency (ns) : ", l999);
+  log.LogSummary("Max latency (ns)             : ", pr.latencies.back());
+  if (settings.scenario == TestScenario::SingleStream) {
+    double qps_w_lg = (sample_count - 1) / pr.final_query_issued_time;
+    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(mean_latency);
+    log.LogSummary("");
+    log.LogSummary("QPS w/ loadgen overhead  : " + std::to_string(qps_w_lg));
+    log.LogSummary("QPS w/o loadgen overhead : " + std::to_string(qps_wo_lg));
+  }
+
+  log.LogSummary(
+      "\n"
+      "================================================\n"
+      "Test Parameters Used\n"
+      "================================================");
+  settings.LogSummary(log);
 }
 
 template <TestScenario scenario>
@@ -651,56 +786,35 @@ void RunPerformanceMode(
 
   sut->ReportLatencyResults(pr.latencies);
 
-  // TODO: Make this re-usable by FindPeakPerformanceMode.
-  Log([pr = std::move(pr), settings](AsyncLog& log) mutable {
-    size_t sample_count = pr.latencies.size();
-    std::sort(pr.latencies.begin(), pr.latencies.end());
-    int64_t accumulated_latency = 0;
-    for (auto l : pr.latencies) {
-      accumulated_latency += l;
-    }
-    int64_t mean_latency = accumulated_latency / sample_count;
-    int64_t max_latency = pr.latencies.back();
-    size_t i90 = sample_count * .9;
-    auto l90 = pr.latencies[i90];
+  Log([perf_summary = PerformanceSummary{sut->Name(), settings, std::move(pr)}](
+          AsyncLog& log) mutable { perf_summary.Log(log); });
 
-    log.LogSummary("Loadgen results summary:");
-    switch (scenario) {
-      case TestScenario::SingleStream: {
-        double qps = sample_count / pr.final_query_issued_time;
-        log.LogSummary("Single Stream 90th percentile latency (ns) : ", l90);
-        log.LogSummary("Single Stream QPS : ", qps);
-        break;
-      }
-      case TestScenario::MultiStream: {
-        log.LogSummary("Multi Stream N : ", settings.samples_per_query);
-        // TODO: Finalize multi-stream performance targets with working group.
-        bool perf_target_satisfied = l90 <= settings.target_latency.count();
-        log.LogSummary("Multi Stream Performance Target Satisfied : ",
-                       perf_target_satisfied ? "Yes" : "NO");
-        break;
-      }
-      case TestScenario::Server: {
-        double qps = sample_count / pr.final_query_scheduled_time;
-        log.LogSummary("Server Actual QPS : ", qps);
-        bool target_latency_satisfied = l90 <= settings.target_latency.count();
-        log.LogSummary("Target Latency Satisfied : ",
-                       target_latency_satisfied ? "Yes" : "NO");
-        log.LogSummary("Server Target QPS : ", settings.target_qps);
-        log.LogSummary("Server Target Latency (ns) : ",
-                       settings.target_latency.count());
-        break;
-      }
-      case TestScenario::Offline: {
-        double qps = sample_count / pr.max_latency;
-        log.LogSummary("\n  Offline QPS: ", qps);
-        break;
-      }
-    }
-    log.LogSummary("90th percentile latency (ns) : ", l90);
-    log.LogSummary("Mean latency (ns) : ", mean_latency);
-    log.LogSummary("Max latency (ns) : ", max_latency);
+  qsl->UnloadSamplesFromRam(performance_set);
+}
+
+template <TestScenario scenario>
+void FindPeakPerformanceMode(
+    SystemUnderTest* sut, QuerySampleLibrary* qsl,
+    const TestSettingsInternal& settings,
+    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+  LogDetail([](AsyncLog& log) {
+    log.LogDetail("Starting FindPeakPerformance mode:");
   });
+
+  // Use first loadable set as the performance set.
+  const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
+
+  qsl->LoadSamplesToRam(performance_set);
+
+  TestSettingsInternal search_settings = settings;
+
+  bool still_searching = true;
+  while (still_searching) {
+    PerformanceResult pr(IssuePerformanceQueries<scenario>(sut, search_settings,
+                                                           performance_set));
+    PerformanceSummary perf_summary{sut->Name(), search_settings,
+                                    std::move(pr)};
+  }
 
   qsl->UnloadSamplesFromRam(performance_set);
 }
@@ -827,7 +941,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     log.LogDetail("QSL performance size: ", qsl->PerformanceSampleCount());
   });
   TestSettingsInternal sanitized_settings(requested_settings);
-  sanitized_settings.LogSettings();
+  sanitized_settings.LogAllSettings();
 
   std::vector<std::vector<QuerySampleIndex>> loadable_sets(
       GenerateLoadableSets(qsl, sanitized_settings));

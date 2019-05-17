@@ -314,7 +314,13 @@ void RunAccuracyMode(
   PerfClock::time_point start = PerfClock::now();
   uint64_t tick_count = 0;
   for (auto& loadable_set : loadable_sets) {
-    qsl->LoadSamplesToRam(loadable_set);
+    {
+      auto trace =
+          MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
+            log.ScopedTrace("LoadSamples", "count", count);
+          });
+      qsl->LoadSamplesToRam(loadable_set);
+    }
     GlobalLogger().RestartLatencyRecording();
 
     // Split the set up into queries.
@@ -355,6 +361,10 @@ void RunAccuracyMode(
     // We have to keep the synchronization primitives and loaded samples
     // alive until the SUT is done with them.
     GlobalLogger().GetLatenciesBlocking(loadable_set.size());
+
+    auto trace = MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
+      log.ScopedTrace("UnloadSampes", "count", count);
+    });
     qsl->UnloadSamplesFromRam(loadable_set);
   }
 }
@@ -491,30 +501,24 @@ struct QueryScheduler<TestScenario::Offline> {
   const PerfClock::time_point start;
 };
 
-// TODO: Share logic duplicated in RunVerificationMode.
-// TODO: Simplify logic that will not be shared with RunVerificationMode.
+struct PerformanceResult {
+  std::vector<QuerySampleLatency> latencies;
+  double max_latency;
+  double final_query_scheduled_time;  // seconds from start.
+  double final_query_issued_time;     // seconds from start.
+};
+
 template <TestScenario scenario>
-void RunPerformanceMode(
-    SystemUnderTest* sut, QuerySampleLibrary* qsl,
-    const TestSettingsInternal& settings,
-    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
-  LogDetail([](AsyncLog& log) { log.LogDetail("Starting performance mode:"); });
-
+PerformanceResult IssuePerformanceQueries(
+    SystemUnderTest* sut, const TestSettingsInternal& settings,
+    const std::vector<QuerySampleIndex>& performance_set) {
   GlobalLogger().RestartLatencyRecording();
-
   ResponseDelegateDetailed<scenario, TestMode::PerformanceOnly> response_logger;
 
-  // Use first loadable set as the performance set.
-  const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
-
-  qsl->LoadSamplesToRam(performance_set);
   std::vector<QueryMetadata> queries =
       GenerateQueries<scenario, TestMode::PerformanceOnly>(
           settings, performance_set, &response_logger);
 
-  const PerfClock::time_point start = PerfClock::now();
-  PerfClock::time_point last_now = start;
-  QueryScheduler<scenario> query_scheduler(settings, start);
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.
   const double query_seconds_outstanding_threshold =
@@ -523,6 +527,10 @@ void RunPerformanceMode(
               .count();
   const size_t max_queries_outstanding =
       settings.target_qps * query_seconds_outstanding_threshold;
+
+  const PerfClock::time_point start = PerfClock::now();
+  PerfClock::time_point last_now = start;
+  QueryScheduler<scenario> query_scheduler(settings, start);
 
   for (auto& query : queries) {
     auto trace1 =
@@ -573,6 +581,8 @@ void RunPerformanceMode(
         break;
       }
     }
+    // TODO: Use GetMaxLatencySoFar here if we decide to have a hard latency
+    //       limit.
   }
 
   if (queries_issued >= queries.size()) {
@@ -589,33 +599,114 @@ void RunPerformanceMode(
   // Wait for tail queries to complete and collect all the latencies.
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
+  auto& final_query = queries[queries_issued - 1];
   const size_t expected_latencies = queries_issued * settings.samples_per_query;
   std::vector<QuerySampleLatency> latencies(
       GlobalLogger().GetLatenciesBlocking(expected_latencies));
+  double max_latency =
+      QuerySampleLatencyToSeconds(GlobalLogger().GetMaxLatencySoFar());
+  double final_query_scheduled_time =
+      DurationToSeconds(final_query.scheduled_delta);
+  double final_query_issued_time =
+      DurationToSeconds(final_query.issued_start_time - start);
+  return {std::move(latencies), max_latency, final_query_scheduled_time,
+          final_query_issued_time};
+}
 
-  sut->ReportLatencyResults(latencies);
+// TODO: Actually do a binary search rather than copying the performance
+// behavior.
+template <TestScenario scenario>
+void FindPeakPerformanceMode(
+    SystemUnderTest* sut, QuerySampleLibrary* qsl,
+    const TestSettingsInternal& settings,
+    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+  LogDetail([](AsyncLog& log) {
+    log.LogDetail("Starting FindPeakPerformance mode:");
+  });
 
-  // Compute percentile.
-  std::sort(latencies.begin(), latencies.end());
-  int64_t accumulator = 0;
-  for (auto l : latencies) {
-    accumulator += l;
-  }
-  int64_t mean_latency = accumulator / latencies.size();
-  size_t i90 = latencies.size() * .9;
-  Log([mean_latency, l90 = latencies[i90]](AsyncLog& log) {
-    log.LogSummary(
-        "Loadgen results summary:"
-        "\n  Mean latency (ns) : " +
-        std::to_string(mean_latency) +
-        "\n  90th percentile latency (ns) : " + std::to_string(l90));
+  // Use first loadable set as the performance set.
+  const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
+
+  qsl->LoadSamplesToRam(performance_set);
+
+  PerformanceResult pr(
+      IssuePerformanceQueries<scenario>(sut, settings, performance_set));
+
+  qsl->UnloadSamplesFromRam(performance_set);
+}
+
+template <TestScenario scenario>
+void RunPerformanceMode(
+    SystemUnderTest* sut, QuerySampleLibrary* qsl,
+    const TestSettingsInternal& settings,
+    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+  LogDetail([](AsyncLog& log) { log.LogDetail("Starting performance mode:"); });
+
+  // Use first loadable set as the performance set.
+  const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
+  qsl->LoadSamplesToRam(performance_set);
+
+  PerformanceResult pr(
+      IssuePerformanceQueries<scenario>(sut, settings, performance_set));
+
+  sut->ReportLatencyResults(pr.latencies);
+
+  // TODO: Make this re-usable by FindPeakPerformanceMode.
+  Log([pr = std::move(pr), settings](AsyncLog& log) mutable {
+    size_t sample_count = pr.latencies.size();
+    std::sort(pr.latencies.begin(), pr.latencies.end());
+    int64_t accumulated_latency = 0;
+    for (auto l : pr.latencies) {
+      accumulated_latency += l;
+    }
+    int64_t mean_latency = accumulated_latency / sample_count;
+    int64_t max_latency = pr.latencies.back();
+    size_t i90 = sample_count * .9;
+    auto l90 = pr.latencies[i90];
+
+    log.LogSummary("Loadgen results summary:");
+    switch (scenario) {
+      case TestScenario::SingleStream: {
+        double qps = sample_count / pr.final_query_issued_time;
+        log.LogSummary("Single Stream 90th percentile latency (ns) : ", l90);
+        log.LogSummary("Single Stream QPS : ", qps);
+        break;
+      }
+      case TestScenario::MultiStream: {
+        log.LogSummary("Multi Stream N : ", settings.samples_per_query);
+        // TODO: Finalize multi-stream performance targets with working group.
+        bool perf_target_satisfied = l90 <= settings.target_latency.count();
+        log.LogSummary("Multi Stream Performance Target Satisfied : ",
+                       perf_target_satisfied ? "Yes" : "NO");
+        break;
+      }
+      case TestScenario::Server: {
+        double qps = sample_count / pr.final_query_scheduled_time;
+        log.LogSummary("Server Actual QPS : ", qps);
+        bool target_latency_satisfied = l90 <= settings.target_latency.count();
+        log.LogSummary("Target Latency Satisfied : ",
+                       target_latency_satisfied ? "Yes" : "NO");
+        log.LogSummary("Server Target QPS : ", settings.target_qps);
+        log.LogSummary("Server Target Latency (ns) : ",
+                       settings.target_latency.count());
+        break;
+      }
+      case TestScenario::Offline: {
+        double qps = sample_count / pr.max_latency;
+        log.LogSummary("\n  Offline QPS: ", qps);
+        break;
+      }
+    }
+    log.LogSummary("90th percentile latency (ns) : ", l90);
+    log.LogSummary("Mean latency (ns) : ", mean_latency);
+    log.LogSummary("Max latency (ns) : ", max_latency);
   });
 
   qsl->UnloadSamplesFromRam(performance_set);
 }
 
-// Routes runtime scenario requests to the corresponding
-// instances of its accuracy and performance functions.
+// Routes runtime scenario requests to the corresponding instances of its
+// mode functions.
 struct RunFunctions {
   using Signature =
       void(SystemUnderTest* sut, QuerySampleLibrary* qsl,
@@ -625,7 +716,8 @@ struct RunFunctions {
   template <TestScenario compile_time_scenario>
   static RunFunctions GetCompileTime() {
     return {(*RunAccuracyMode<compile_time_scenario>),
-            (*RunPerformanceMode<compile_time_scenario>)};
+            (*RunPerformanceMode<compile_time_scenario>),
+            (*FindPeakPerformanceMode<compile_time_scenario>)};
   }
 
   static RunFunctions Get(TestScenario run_time_scenario) {
@@ -646,6 +738,7 @@ struct RunFunctions {
 
   const Signature& accuracy;
   const Signature& performance;
+  const Signature& find_peak_performance;
 };
 
 // Generates random sets of samples in the QSL that we can load into RAM
@@ -727,8 +820,12 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
 
   LogLoadgenVersion();
-
-  // TODO: Log settings.
+  LogDetail([sut, qsl](AsyncLog& log) {
+    log.LogDetail("System Under Test (SUT) name: ", sut->Name());
+    log.LogDetail("Query Sample Library (QSL) name: ", qsl->Name());
+    log.LogDetail("QSL total size: ", qsl->TotalSampleCount());
+    log.LogDetail("QSL performance size: ", qsl->PerformanceSampleCount());
+  });
   TestSettingsInternal sanitized_settings(requested_settings);
   sanitized_settings.LogSettings();
 
@@ -749,9 +846,8 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets);
       break;
     case TestMode::FindPeakPerformance:
-      LogError([](AsyncLog& log) {
-        log.LogDetail("TestMode::SearchForQps not implemented.");
-      });
+      run_funcs.find_peak_performance(sut, qsl, sanitized_settings,
+                                      loadable_sets);
       break;
   }
 

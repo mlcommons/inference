@@ -2,17 +2,25 @@
 #define MLPERF_LOADGEN_TEST_SETTINGS_INTERNAL_H
 
 #include <chrono>
+#include <string>
 
 #include "test_settings.h"
 
 namespace mlperf {
 
+class AsyncLog;
+
+std::string ToString(TestScenario scenario);
+std::string ToString(TestMode mode);
+
 // TestSettingsInternal takes the mode and scenario requested by the
 // user-provided TestSettings and chooses the proper test parameters based
 // on the spec-defined defaults and any user-requesed overrides.
 struct TestSettingsInternal {
-  explicit TestSettingsInternal(const TestSettings &requested_settings);
-  void LogSettings();
+  explicit TestSettingsInternal(const TestSettings& requested_settings);
+  void LogEffectiveSettings() const;
+  void LogAllSettings() const;
+  void LogSummary(AsyncLog& log) const;
 
   const TestSettings requested;
   const TestScenario scenario;  // Copied here for convenience.

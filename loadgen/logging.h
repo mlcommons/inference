@@ -47,7 +47,15 @@ class AsyncLog {
                    PerfClock::time_point log_origin) {
     std::unique_lock<std::mutex> lock(log_mutex_);
     if (summary_out_ != &std::cerr) {
-      *summary_out_ << "Errors logged: " << log_error_count_ << "\n";
+      if (log_error_count_ == 0) {
+        *summary_out_ << "\nNo errors encountered during test.\n";
+      } else if (log_error_count_ == 1) {
+        *summary_out_ << "\n1 ERROR encountered. See detailed log.\n";
+      } else if (log_error_count_ != 0) {
+        *summary_out_ << "\n"
+                      << log_error_count_
+                      << " ERRORS encountered. See detailed log.\n";
+      }
     }
     if (summary_out_) {
       summary_out_->flush();

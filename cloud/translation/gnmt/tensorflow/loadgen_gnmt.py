@@ -210,7 +210,7 @@ if __name__ == "__main__":
     settings.scenario = mlperf_loadgen.TestScenario.SingleStream
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
     settings.samples_per_query = 1
-    settings.target_qps = 10        # Doesn't seem to have an effect
+    settings.target_qps = 51   # Number of generated queries equals max(1024, target_qps*60)
     settings.target_latency_ns = 1000000000
 
     

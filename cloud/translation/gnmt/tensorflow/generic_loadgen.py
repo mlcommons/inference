@@ -11,12 +11,6 @@ class ImplementationException (Exception):
     def __repr__(self):
         return "ImplementationException: {}".format(self.msg)
 
-def load_samples_to_ram(query_samples):
-    return
-
-def unload_samples_from_ram(query_samples):
-    return
-
 def process_latencies(latencies_us):
     print("Average latency: ")
     print(numpy.mean(latencies_us))
@@ -34,6 +28,12 @@ class Runner:
     
     def __init__(self, qSize=5):
         self.tasks = Queue(maxsize=qSize)
+
+    def load_samples_to_ram(self, query_samples):
+        return
+
+    def unload_samples_from_ram(self, query_samples):
+        return
 
     ##
     # @brief Invoke process a task
@@ -121,7 +121,7 @@ if __name__ == "__main__":
 
     sut = mlperf_loadgen.ConstructSUT(runner.enqueue, process_latencies)
     qsl = mlperf_loadgen.ConstructQSL(
-        total_queries, perf_queries, load_samples_to_ram, unload_samples_from_ram)
+        total_queries, perf_queries, runner.load_samples_to_ram, runner.unload_samples_from_ram)
     mlperf_loadgen.StartTest(sut, qsl, settings)
     mlperf_loadgen.DestroyQSL(qsl)
     mlperf_loadgen.DestroySUT(sut)

@@ -37,6 +37,7 @@ lib_sources = [
   "loadgen.cc",
   "logging.cc",
   "test_settings_internal.cc"
+  "utils.cc",
   "version.cc",
 ]
 

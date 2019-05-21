@@ -6,7 +6,7 @@ declare_args() {
 }
 
 generated_version_source_filename =
-    get_path_info(".", "gen_dir") + "/version.cc"
+    get_path_info(".", "gen_dir") + "/version_generated.cc"
 
 public_headers = [
   "loadgen.h",
@@ -20,9 +20,12 @@ lib_sources = [
   "loadgen.cc",
   "logging.cc",
   "logging.h",
+  "mlperf_spec_constants.h",
+  "test_settings_internal.cc",
   "test_settings_internal.h",
   "trace_generator.h",
   "utils.h",
+  "version.cc",
   "version.h",
 ]
 

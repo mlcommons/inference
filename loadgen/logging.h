@@ -28,6 +28,13 @@ class TlsLoggerWrapper;
 using AsyncLogEntry = std::function<void(AsyncLog&)>;
 using PerfClock = std::chrono::high_resolution_clock;
 
+const std::string& ArgValueTransform(const bool& value);
+
+template <typename T>
+const T& ArgValueTransform(const T& value) {
+  return value;
+}
+
 // AsyncLog is passed as an argument to the log lambda on the
 // recording thread to serialize the data captured by the lambda and
 // forward it to the output stream.
@@ -40,7 +47,15 @@ class AsyncLog {
                    PerfClock::time_point log_origin) {
     std::unique_lock<std::mutex> lock(log_mutex_);
     if (summary_out_ != &std::cerr) {
-      *summary_out_ << "Errors logged: " << log_error_count_ << "\n";
+      if (log_error_count_ == 0) {
+        *summary_out_ << "\nNo errors encountered during test.\n";
+      } else if (log_error_count_ == 1) {
+        *summary_out_ << "\n1 ERROR encountered. See detailed log.\n";
+      } else if (log_error_count_ != 0) {
+        *summary_out_ << "\n"
+                      << log_error_count_
+                      << " ERRORS encountered. See detailed log.\n";
+      }
     }
     if (summary_out_) {
       summary_out_->flush();
@@ -224,6 +239,7 @@ class AsyncLog {
   void RecordLatency(uint64_t sample_sequence_id, QuerySampleLatency latency) {
     std::unique_lock<std::mutex> lock(latencies_mutex_);
     if (latencies_.size() < sample_sequence_id + 1) {
+      // TODO: Reserve in advance.
       latencies_.resize(sample_sequence_id + 1,
                         std::numeric_limits<QuerySampleLatency>::min());
     }
@@ -232,6 +248,11 @@ class AsyncLog {
     if (AllLatenciesRecorded()) {
       all_latencies_recorded_.notify_all();
     }
+    // Relaxed memory order since the early-out checks can be racy.
+    // The final check will be ordered by locks on the latencies_mutex.
+    max_latency_.store(
+        std::max(max_latency_.load(std::memory_order_relaxed), latency),
+        std::memory_order_relaxed);
   }
 
   void RestartLatencyRecording() {
@@ -240,6 +261,7 @@ class AsyncLog {
     assert(latencies_recorded_ == latencies_expected_);
     latencies_recorded_ = 0;
     latencies_expected_ = 0;
+    max_latency_ = 0;
   }
 
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count) {
@@ -249,6 +271,10 @@ class AsyncLog {
     all_latencies_recorded_.wait(lock, [&] { return AllLatenciesRecorded(); });
     latencies.swap(latencies_);
     return latencies;
+  }
+
+  QuerySampleLatency GetMaxLatencySoFar() {
+    return max_latency_.load(std::memory_order_release);
   }
 
  private:
@@ -269,15 +295,20 @@ class AsyncLog {
   void LogArgs(std::ostream*) {}
 
   template <typename T>
+  void LogArgs(std::ostream* out, const T& value_only) {
+    *out << ArgValueTransform(value_only);
+  }
+
+  template <typename T>
   void LogArgs(std::ostream* out, const std::string& arg_name,
                const T& arg_value) {
-    *out << "\"" << arg_name << "\" : " << arg_value;
+    *out << "\"" << arg_name << "\" : " << ArgValueTransform(arg_value);
   }
 
   template <typename T, typename... Args>
   void LogArgs(std::ostream* out, const std::string& arg_name,
                const T& arg_value, const Args... args) {
-    *out << "\"" << arg_name << "\" : " << arg_value << ", ";
+    *out << "\"" << arg_name << "\" : " << ArgValueTransform(arg_value) << ", ";
     LogArgs(out, args...);
   }
 
@@ -300,6 +331,7 @@ class AsyncLog {
   std::mutex latencies_mutex_;
   std::condition_variable all_latencies_recorded_;
   std::vector<QuerySampleLatency> latencies_;
+  std::atomic<QuerySampleLatency> max_latency_{0};
   size_t latencies_recorded_ = 0;
   size_t latencies_expected_ = 0;
   // Must be called with latencies_mutex_ held.
@@ -349,6 +381,7 @@ class Logger {
 
   void RestartLatencyRecording();
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
+  QuerySampleLatency GetMaxLatencySoFar();
 
  private:
   friend TlsLogger;

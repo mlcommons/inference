@@ -49,6 +49,12 @@ constexpr std::chrono::milliseconds kLogPollPeriod(10);
 
 }  // namespace
 
+const std::string& ArgValueTransform(const bool& value) {
+  static const std::string v_true("true");
+  static const std::string v_false("false");
+  return value ? v_true : v_false;
+}
+
 // TlsLogger logs a single thread using thread-local storage.
 // Submits logs to the central Logger:
 //   * With forward-progress guarantees. (i.e.: no locking or blocking
@@ -275,6 +281,10 @@ void Logger::RestartLatencyRecording() {
 std::vector<QuerySampleLatency> Logger::GetLatenciesBlocking(
     size_t expected_count) {
   return async_logger_.GetLatenciesBlocking(expected_count);
+}
+
+QuerySampleLatency Logger::GetMaxLatencySoFar() {
+  return async_logger_.GetMaxLatencySoFar();
 }
 
 TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {

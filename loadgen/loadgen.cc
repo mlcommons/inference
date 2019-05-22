@@ -81,15 +81,21 @@ class QueryMetadata {
     }
   }
 
-  void NotifyOneSampleCompleted() {
+  void NotifyOneSampleCompleted(PerfClock::time_point timestamp) {
     size_t old_count = wait_count_.fetch_sub(1, std::memory_order_relaxed);
     if (old_count == 1) {
-      all_samples_done_.set_value();
+      all_samples_done_.set_value(timestamp);
       response_delegate->QueryComplete();
     }
   }
 
-  void WaitForAllSamplesCompleted() { all_samples_done_.get_future().wait(); }
+  void WaitForAllSamplesCompleted() {
+    return all_samples_done_.get_future().wait();
+  }
+
+  PerfClock::time_point WaitForAllSamplesCompletedWithTimestamp() {
+    return all_samples_done_.get_future().get();
+  }
 
  public:
   std::vector<QuerySample> query_to_send;
@@ -107,7 +113,7 @@ class QueryMetadata {
 
  private:
   std::atomic<size_t> wait_count_;
-  std::promise<void> all_samples_done_;
+  std::promise<PerfClock::time_point> all_samples_done_;
   std::vector<SampleMetadata> samples_;
 };
 
@@ -124,7 +130,7 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
   for (QuerySampleResponse* response = responses; response < end; response++) {
     SampleMetadata* sample = reinterpret_cast<SampleMetadata*>(response->id);
     QueryMetadata* query = sample->query_metadata;
-    query->NotifyOneSampleCompleted();
+    query->NotifyOneSampleCompleted(timestamp);
   }
 
   // Log samples.
@@ -406,25 +412,40 @@ struct QueryScheduler<TestScenario::SingleStream> {
   QueryMetadata* prev_query = nullptr;
 };
 
+enum class MultiStreamFrequency { Fixed, Free };
+
 // MultiStream QueryScheduler
 template <>
 struct QueryScheduler<TestScenario::MultiStream> {
   QueryScheduler(const TestSettingsInternal& settings,
-                 const PerfClock::time_point start)
-      : max_async_queries(settings.max_async_queries), tick_time(start) {}
+                 const PerfClock::time_point start,
+                 MultiStreamFrequency frequency = MultiStreamFrequency::Fixed)
+      : frequency(frequency),
+        max_async_queries(settings.max_async_queries),
+        tick_time(start) {}
 
   PerfClock::time_point Wait(QueryMetadata* next_query) {
+    bool schedule_time_needed = true;
     {
+      prev_queries.push(next_query);
       auto trace =
           MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Waiting"); });
-      if (prev_queries.size() >= max_async_queries) {
-        prev_queries.front()->WaitForAllSamplesCompleted();
+      if (prev_queries.size() > max_async_queries) {
+        switch (frequency) {
+          case MultiStreamFrequency::Fixed:
+            prev_queries.front()->WaitForAllSamplesCompleted();
+            break;
+          case MultiStreamFrequency::Free:
+            next_query->scheduled_time =
+                prev_queries.front()->WaitForAllSamplesCompletedWithTimestamp();
+            schedule_time_needed = false;
+            break;
+        }
         prev_queries.pop();
       }
-      prev_queries.push(next_query);
     }
 
-    {
+    if (frequency == MultiStreamFrequency::Fixed) {
       auto trace = MakeScopedTracer(
           [](AsyncLog& log) { log.ScopedTrace("Scheduling"); });
       PerfClock::time_point now = PerfClock::now();
@@ -441,16 +462,20 @@ struct QueryScheduler<TestScenario::MultiStream> {
     }
 
     auto now = PerfClock::now();
+    if (schedule_time_needed) {
+      next_query->scheduled_time = now;
+    }
     next_query->issued_start_time = now;
     return now;
   }
 
-  // TODO: Support frequencies other than 60Hz.
+  // TODO: Support frequencies other than 30Hz.
   static constexpr std::chrono::nanoseconds kPeriods[] = {
-      std::chrono::nanoseconds(16666667),
-      std::chrono::nanoseconds(16666666),
-      std::chrono::nanoseconds(16666667),
+      std::chrono::nanoseconds(33333333),
+      std::chrono::nanoseconds(33333334),
+      std::chrono::nanoseconds(33333333),
   };
+  const MultiStreamFrequency frequency;
   const size_t max_async_queries;
   PerfClock::time_point tick_time;
   size_t i_period = 0;

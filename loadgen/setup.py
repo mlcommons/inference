@@ -36,7 +36,8 @@ lib_headers = [
 lib_sources = [
   "loadgen.cc",
   "logging.cc",
-  "test_settings_internal.cc"
+  "test_settings_internal.cc",
+  "utils.cc",
   "version.cc",
 ]
 

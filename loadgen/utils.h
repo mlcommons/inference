@@ -1,7 +1,11 @@
 #ifndef MLPERF_LOADGEN_UTILS_H
 #define MLPERF_LOADGEN_UTILS_H
 
+#include <algorithm>
 #include <chrono>
+#include <string>
+
+#include "query_sample.h"
 
 namespace mlperf {
 
@@ -25,6 +29,8 @@ double DurationToSeconds(
 inline double QuerySampleLatencyToSeconds(QuerySampleLatency qsl) {
   return static_cast<double>(qsl) / std::nano::den;
 }
+
+std::string DoubleToString(double value, int precision = 2);
 
 }  // namespace mlperf
 

@@ -501,8 +501,11 @@ struct QueryScheduler<TestScenario::Offline> {
   const PerfClock::time_point start;
 };
 
+// Provides performance results that are independent of scenario
+// and other context.
 struct PerformanceResult {
   std::vector<QuerySampleLatency> latencies;
+  size_t queries_issued;
   double max_latency;
   double final_query_scheduled_time;  // seconds from start.
   double final_query_issued_time;     // seconds from start.
@@ -609,17 +612,32 @@ PerformanceResult IssuePerformanceQueries(
       DurationToSeconds(final_query.scheduled_delta);
   double final_query_issued_time =
       DurationToSeconds(final_query.issued_start_time - start);
-  return {std::move(latencies), max_latency, final_query_scheduled_time,
-          final_query_issued_time};
+  return PerformanceResult{std::move(latencies), queries_issued, max_latency,
+                           final_query_scheduled_time, final_query_issued_time};
 }
 
+// Takes the raw PerformanceResult and uses relevant context to determine
+// how to interpret and report it.
 struct PerformanceSummary {
   std::string sut_name;
   TestSettingsInternal settings;
   PerformanceResult pr;
-  bool latencies_are_sorted = false;
 
-  void SortLatenciesIfNeeded();
+  // Set by ProcessLatencies.
+  size_t sample_count;
+  QuerySampleLatency latency_min;
+  QuerySampleLatency latency_max;
+  QuerySampleLatency latency_mean;
+  struct PercentileEntry {
+    const double percentile;
+    QuerySampleLatency value = 0;
+  };
+  // TODO: Make .90 a spec constant and have that affect relevant strings.
+  PercentileEntry latency_target{.90};
+  PercentileEntry latency_percentiles[5] = {{.50}, {.90}, {.95}, {.99}, {.999}};
+
+  void ProcessLatencies();
+
   bool MinDurationMet();
   bool MinQueriesMet();
   bool HasPerfConstraints();
@@ -627,12 +645,32 @@ struct PerformanceSummary {
   void Log(AsyncLog& log);
 };
 
-void PerformanceSummary::SortLatenciesIfNeeded() {
-  if (latencies_are_sorted) {
+void PerformanceSummary::ProcessLatencies() {
+  if (pr.latencies.empty()) {
     return;
   }
+
+  sample_count = pr.latencies.size();
+
+  QuerySampleLatency accumulated_latency = 0;
+  for (auto latency : pr.latencies) {
+    accumulated_latency += latency;
+  }
+  latency_mean = accumulated_latency / sample_count;
+
   std::sort(pr.latencies.begin(), pr.latencies.end());
-  latencies_are_sorted = true;
+
+  latency_target.value = pr.latencies[sample_count * latency_target.percentile];
+  latency_min = pr.latencies.front();
+  latency_max = pr.latencies.back();
+  for (auto& lp : latency_percentiles) {
+    assert(lp.percentile >= 0.0);
+    assert(lp.percentile < 1.0);
+    lp.value = pr.latencies[sample_count * lp.percentile];
+  }
+
+  // Clear latencies since we are done processing them.
+  pr.latencies = std::vector<QuerySampleLatency>();
 }
 
 bool PerformanceSummary::MinDurationMet() {
@@ -640,7 +678,7 @@ bool PerformanceSummary::MinDurationMet() {
 }
 
 bool PerformanceSummary::MinQueriesMet() {
-  return pr.latencies.size() >= settings.min_query_count;
+  return pr.queries_issued >= settings.min_query_count;
 }
 
 bool PerformanceSummary::HasPerfConstraints() {
@@ -654,16 +692,12 @@ bool PerformanceSummary::PerfConstraintsMet() {
       return true;
     case TestScenario::MultiStream: {
       // TODO: Finalize multi-stream performance targets with working group.
-      SortLatenciesIfNeeded();
-      size_t sample_count = pr.latencies.size();
-      auto l90 = pr.latencies[sample_count * .90];
-      return l90 <= settings.target_latency.count();
+      ProcessLatencies();
+      return latency_target.value <= settings.target_latency.count();
     }
     case TestScenario::Server: {
-      SortLatenciesIfNeeded();
-      size_t sample_count = pr.latencies.size();
-      auto l90 = pr.latencies[sample_count * .90];
-      return l90 <= settings.target_latency.count();
+      ProcessLatencies();
+      return latency_target.value <= settings.target_latency.count();
       break;
     }
     case TestScenario::Offline:
@@ -674,20 +708,7 @@ bool PerformanceSummary::PerfConstraintsMet() {
 }
 
 void PerformanceSummary::Log(AsyncLog& log) {
-  SortLatenciesIfNeeded();
-  size_t sample_count = pr.latencies.size();
-  int64_t accumulated_latency = 0;
-  for (auto l : pr.latencies) {
-    accumulated_latency += l;
-  }
-  int64_t mean_latency = accumulated_latency / sample_count;
-
-  // TODO: Make .90 a spec constant and have that affect relevant strings.
-  auto l50 = pr.latencies[sample_count * .50];
-  auto l90 = pr.latencies[sample_count * .90];
-  auto l95 = pr.latencies[sample_count * .95];
-  auto l99 = pr.latencies[sample_count * .99];
-  auto l999 = pr.latencies[sample_count * .999];
+  ProcessLatencies();
 
   log.LogSummary(
       "================================================\n"
@@ -699,7 +720,7 @@ void PerformanceSummary::Log(AsyncLog& log) {
 
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
-      log.LogSummary("90th percentile latency (ns) : ", l90);
+      log.LogSummary("90th percentile latency (ns) : ", latency_target.value);
       break;
     }
     case TestScenario::MultiStream: {
@@ -746,20 +767,20 @@ void PerformanceSummary::Log(AsyncLog& log) {
       "================================================\n"
       "Additional Stats\n"
       "================================================");
-  log.LogSummary("Min latency (ns)             : ", pr.latencies.front());
-  log.LogSummary("Mean latency (ns)            : ", mean_latency);
-  log.LogSummary("50 percentile latency (ns)   : ", l50);
-  log.LogSummary("90 percentile latency (ns)   : ", l90);
-  log.LogSummary("95 percentile latency (ns)   : ", l95);
-  log.LogSummary("99 percentile latency (ns)   : ", l99);
-  log.LogSummary("99.9 percentile latency (ns) : ", l999);
-  log.LogSummary("Max latency (ns)             : ", pr.latencies.back());
+  log.LogSummary("Min latency (ns)                : ", latency_min);
+  log.LogSummary("Max latency (ns)                : ", latency_max);
+  log.LogSummary("Mean latency (ns)               : ", latency_mean);
+  for (auto& lp : latency_percentiles) {
+    log.LogSummary(
+        DoubleToString(lp.percentile * 100) + " percentile latency (ns)   : ",
+        lp.value);
+  }
   if (settings.scenario == TestScenario::SingleStream) {
     double qps_w_lg = (sample_count - 1) / pr.final_query_issued_time;
-    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(mean_latency);
+    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(latency_min);
     log.LogSummary("");
-    log.LogSummary("QPS w/ loadgen overhead  : " + std::to_string(qps_w_lg));
-    log.LogSummary("QPS w/o loadgen overhead : " + std::to_string(qps_wo_lg));
+    log.LogSummary("QPS w/ loadgen overhead  : " + DoubleToString(qps_w_lg));
+    log.LogSummary("QPS w/o loadgen overhead : " + DoubleToString(qps_wo_lg));
   }
 
   log.LogSummary(

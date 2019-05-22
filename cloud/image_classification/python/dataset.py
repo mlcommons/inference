@@ -47,9 +47,6 @@ class Dataset():
     def get_list(self):
         raise NotImplementedError("Dataset:get_list")
 
-    def clear_trace(self):
-        self.arrival = None
-
     def load_query_samples(self, sample_list):
         self.image_list_inmemory = {}
         for sample in sample_list:
@@ -66,6 +63,10 @@ class Dataset():
         data = [self.image_list_inmemory[id] for id in id_list]
         data = np.array(data)
         return data, self.label_list[id_list]
+
+    def get_item_loc(self, id):
+        raise NotImplementedError("Dataset:get_item_loc")
+
 
 #
 # Post processing
@@ -88,7 +89,7 @@ class PostProcessCommon:
         self.good = 0
         self.total = 0
 
-    def finalize(self, results, ds=False):
+    def finalize(self, results, ds=False,  output_dir=None):
         results["good"] = self.good
         results["total"] = self.total
 
@@ -112,7 +113,7 @@ class PostProcessArgMax:
         self.good = 0
         self.total = 0
 
-    def finalize(self, results, ds=False):
+    def finalize(self, results, ds=False, output_dir=None):
         results["good"] = self.good
         results["total"] = self.total
 
@@ -146,13 +147,14 @@ def resize_with_aspectratio(img, out_height, out_width, scale=87.5):
 
 
 def pre_process_vgg(img, dims=None, need_transpose=False):
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+
     output_height, output_width, _ = dims
 
     img = resize_with_aspectratio(img, output_height, output_width)
     img = center_crop(img, output_height, output_width)
     img = np.asarray(img, dtype='float32')
-    if len(img.shape) != 3:
-        img = np.stack([img] * 3, axis=2)
 
     # normalize image
     means = np.array([123.68, 116.78, 103.94], dtype=np.float32)
@@ -165,13 +167,14 @@ def pre_process_vgg(img, dims=None, need_transpose=False):
 
 
 def pre_process_mobilenet(img, dims=None, need_transpose=False):
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+
     output_height, output_width, _ = dims
 
     img = resize_with_aspectratio(img, output_height, output_width)
     img = center_crop(img, output_height, output_width)
     img = np.asarray(img, dtype='float32')
-    if len(img.shape) != 3:
-        img = np.stack([img] * 3, axis=2)
 
     img = img / 255.0
     img = img - 0.5
@@ -187,8 +190,6 @@ def pre_process_coco_mobilenet(img, dims=None, need_transpose=False):
     if img.mode != 'RGB':
         img = img.convert('RGB')
 
-    output_height, output_width, _ = dims
-
     img_data = np.array(img.getdata())
     img_data = img_data.astype(np.uint8)
     (im_width, im_height) = img.size
@@ -196,4 +197,21 @@ def pre_process_coco_mobilenet(img, dims=None, need_transpose=False):
     # transpose if needed
     if need_transpose:
         img = img.transpose([2, 0, 1])
+    return img
+
+
+def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+
+    mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+    std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+    img_data = np.array(img.getdata(), dtype=np.float32)
+    (im_width, im_height) = img.size
+    img = img_data.reshape(im_height, im_width, 3)
+    img = img / 255. - mean
+    img = img / std
+    if need_transpose:
+        img = img.transpose([2, 0, 1])
+
     return img

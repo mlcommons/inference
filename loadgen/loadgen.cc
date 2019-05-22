@@ -549,7 +549,7 @@ PerformanceResult IssuePerformanceQueries(
 
     queries_issued++;
     auto duration = (last_now - start);
-    if (queries_issued > settings.min_query_count &&
+    if (queries_issued >= settings.min_query_count &&
         duration > settings.min_duration) {
       LogDetail([](AsyncLog& log) {
         log.LogDetail(
@@ -557,7 +557,7 @@ PerformanceResult IssuePerformanceQueries(
       });
       break;
     }
-    if (queries_issued > settings.max_query_count) {
+    if (queries_issued >= settings.max_query_count) {
       LogError([queries_issued](AsyncLog& log) {
         log.LogDetail("Ending early: Max query count reached.", "query_count",
                       queries_issued);

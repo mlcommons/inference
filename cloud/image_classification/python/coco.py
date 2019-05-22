@@ -186,8 +186,8 @@ class PostProcessCoco:
             detections[idx][3] = xmax - xmin
             detections[idx][4] = ymax - ymin
 
+        # for debugging
         if True:
-            # for debugging
             pp = []
             for idx in range(0, detections.shape[0]):
                 pp.append({"image_id": int(detections[idx][0]),

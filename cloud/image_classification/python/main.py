@@ -370,7 +370,7 @@ def main():
             runner.enqueue([idx], [idx], data, label)
         runner.finish()
         # aggregate results
-        post_proc.finalize(result_dict, ds)
+        post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
         last_timeing = result_dict["timing"]
         del result_dict["timing"]
         add_results(final_results, "Accuracy", result_dict, last_timeing, time.time() - start)
@@ -411,6 +411,7 @@ def main():
                 qps = float(args.qps)
                 settings.server_target_qps = qps
                 settings.offline_expected_qps = qps
+
             if args.time:
                 settings.enable_spec_overrides = True
                 settings.override_min_duration_ms = args.time * MILLI_SEC
@@ -423,7 +424,7 @@ def main():
                 settings.mode = lg.TestMode.PerformanceOnly
             # FIXME: add SubmissionRun once available
 
-            settings.enable_spec_overrides = True # FIXME: needed because of override_target_latency_ns
+            settings.enable_spec_overrides = True
             settings.single_stream_expected_latency_ns = int(target_latency * NANO_SEC)
             settings.override_target_latency_ns = int(target_latency * NANO_SEC)
 
@@ -432,8 +433,8 @@ def main():
             start = time.time()
             lg.StartTest(sut, qsl, settings)
 
-            # aggregate results
-            post_proc.finalize(result_dict, ds=ds, output_dir=os.path.dirname(args.output))
+            # we only do this for accuracy
+            # post_proc.finalize(result_dict, ds=ds, output_dir=os.path.dirname(args.output))
 
             add_results(final_results, "{}-{}".format(scenario, target_latency),
                         result_dict, last_timeing, time.time() - start)

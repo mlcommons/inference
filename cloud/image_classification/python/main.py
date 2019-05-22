@@ -40,6 +40,12 @@ SUPPORTED_DATASETS = {
     "coco":
         (coco.Coco, dataset.pre_process_coco_mobilenet, coco.PostProcessCoco(),
          {"image_size": [-1, -1, 3]}),
+    "coco-300":
+        (coco.Coco, dataset.pre_process_coco_mobilenet, coco.PostProcessCoco(),
+         {"image_size": [300, 300, 3]}),
+    "coco-1200":
+        (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCoco(),
+         {"image_size": [1200, 1200, 3]}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
@@ -75,7 +81,7 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet_mobilenet",
         "backend": "tensorflow",
     },
-    "mobilenet-onnx": {
+    "mobilenet-onnxruntime": {
         "dataset": "imagenet_mobilenet",
         "outputs": "MobilenetV1/Predictions/Reshape_1:0",
         "backend": "onnxruntime",
@@ -89,14 +95,23 @@ SUPPORTED_PROFILES = {
         "backend": "tensorflow",
     },
     "ssd-mobilenet-onnxruntime": {
-        "dataset": "coco",
+        "dataset": "coco-300",
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
         "backend": "onnxruntime",
         "data-format": "NHWC",
     },
+
+    # ssd-resnet34
+    "ssd-resnet34-onnxruntime": {
+        "dataset": "coco-1200",
+        "inputs": "image",
+        "outputs": "bboxes,labels,scores",
+        "backend": "onnxruntime",
+        "data-format": "NCHW",
+    },
 }
 
-last_timeing = None
+last_timeing = []
 
 
 def get_args():
@@ -181,6 +196,7 @@ class Runner:
         self.threads = threads
         self.result_dict = {}
         self.take_accuracy = False
+        self.ds = ds
 
     def handle_tasks(self, tasks_queue):
         """Worker thread."""
@@ -197,7 +213,8 @@ class Runner:
                 if self.take_accuracy:
                     response = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
             except Exception as ex:  # pylint: disable=broad-except
-                log.error("execute_parallel thread: %s", ex)
+                src = [self.ds.get_item_loc(i) for i in qitem.content_id]
+                log.error("thread: failed on contentid=%s, %s", src, ex)
             finally:
                 response = []
                 for query_id in qitem.query_id:
@@ -206,9 +223,35 @@ class Runner:
                 lg.QuerySamplesComplete(response)
             tasks_queue.task_done()
 
-    def start_pool(self):
+    def handle_tasks_nolg(self, tasks_queue):
+        """Worker thread."""
+        while True:
+            qitem = tasks_queue.get()
+            if qitem is None:
+                # None in the queue indicates the parent want us to exit
+                tasks_queue.task_done()
+                break
+
+            try:
+                # run the prediction
+                start = time.time()
+                results = self.model.predict({self.model.inputs[0]: qitem.img})
+                self.result_dict["timing"].append(time.time() - start)
+                if self.take_accuracy:
+                    response = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
+            except Exception as ex:  # pylint: disable=broad-except
+                src = [self.ds.get_item_loc(i) for i in qitem.content_id]
+                log.error("thread: failed on contentid=%s, %s", src, ex)
+            finally:
+                tasks_queue.task_done()
+
+    def start_pool(self, nolg=False):
+        if nolg:
+            handler =self.handle_tasks_nolg
+        else:
+            handler =self.handle_tasks
         for _ in range(self.threads):
-            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
+            worker = threading.Thread(target=handler, args=(self.tasks,))
             worker.daemon = True
             self.workers.append(worker)
             worker.start()
@@ -235,6 +278,9 @@ def add_results(final_results, name, result_dict, result_list, took):
     buckets = np.percentile(result_list, percentiles).tolist()
     buckets_str = ",".join(["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)])
 
+    if result_dict["total"] == 0:
+        result_dict["total"] = len(result_list)
+
     # this is what we record for each run
     result = {
         "mean": np.mean(result_list),
@@ -246,18 +292,22 @@ def add_results(final_results, name, result_dict, result_list, took):
         "total_items": result_dict["total"],
         "accuracy": 100. * result_dict["good"] / result_dict["total"],
     }
+    mAP = ""
     if "mAP" in result_dict:
         result["mAP"] = result_dict["mAP"]
+        mAP = ", mAP={:.2f}".format(result_dict["mAP"])
 
     # add the result to the result dict
     final_results[name] = result
 
     # to stdout
-    print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, acc={:.2f}, queries={}, tiles={}".format(
-        name, result["qps"], result["mean"], took, result["accuracy"], len(result_list), buckets_str))
+    print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, acc={:.2f}{}, queries={}, tiles={}".format(
+        name, result["qps"], result["mean"], took, result["accuracy"], mAP,
+        len(result_list), buckets_str))
 
 
 def main():
+    global last_timeing
     args = get_args()
 
     log.info(args)
@@ -294,15 +344,41 @@ def main():
     count = args.count if args.count else ds.get_item_count()
 
     runner = Runner(model, ds, args.threads, post_proc=post_proc)
-    runner.start_pool()
 
+    #
     # warmup
+    #
     log.info("warmup ...")
     ds.load_query_samples([0])
     for _ in range(50):
         img, _ = ds.get_samples([0])
         _ = backend.predict({backend.inputs[0]: img})
     ds.unload_query_samples(None)
+
+    #
+    # accuracy pass
+    #
+    if True:
+        log.info("starting accuracy pass on {} items".format(count))
+        runner.start_pool(nolg=True)
+        result_dict = {"good": 0, "total": 0, "scenario": "Accuracy", "timing": []}
+        runner.start_run(result_dict, True)
+        start = time.time()
+        for idx in range(0, count):
+            ds.load_query_samples([idx])
+            data, label = ds.get_samples([idx])
+            runner.enqueue([idx], [idx], data, label)
+        runner.finish()
+        # aggregate results
+        post_proc.finalize(result_dict, ds)
+        last_timeing = result_dict["timing"]
+        del result_dict["timing"]
+        add_results(final_results, "Accuracy", result_dict, last_timeing, time.time() - start)
+
+    #
+    # run the benchmark with timeing
+    #
+    runner.start_pool()
 
     def issue_query(query_samples):
         idx = [q.index for q in query_samples]
@@ -315,7 +391,7 @@ def main():
         last_timeing = [t / 10000000. for t in latencies_ns]
 
     sut = lg.ConstructSUT(issue_query, process_latencies)
-    qsl = lg.ConstructQSL(count, count, ds.load_query_samples, ds.unload_query_samples)
+    qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
 
     scenarios = [
         lg.TestScenario.SingleStream,
@@ -323,6 +399,7 @@ def main():
         lg.TestScenario.Server,
         # lg.TestScenario.Offline,
         ]
+
     for scenario in scenarios:
         for target_latency in args.max_latency:
             log.info("starting {}, latency={}".format(scenario, target_latency))
@@ -350,14 +427,13 @@ def main():
             settings.single_stream_expected_latency_ns = int(target_latency * NANO_SEC)
             settings.override_target_latency_ns = int(target_latency * NANO_SEC)
 
-            # reset result capture
-            result_dict = {"good": 0, "total": 0}
-            runner.start_run(result_dict, True)
+            result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
+            runner.start_run(result_dict, False)
             start = time.time()
             lg.StartTest(sut, qsl, settings)
 
             # aggregate results
-            post_proc.finalize(result_dict, ds)
+            post_proc.finalize(result_dict, ds=ds, output_dir=os.path.dirname(args.output))
 
             add_results(final_results, "{}-{}".format(scenario, target_latency),
                         result_dict, last_timeing, time.time() - start)

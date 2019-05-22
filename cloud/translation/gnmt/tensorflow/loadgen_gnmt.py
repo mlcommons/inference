@@ -17,6 +17,12 @@ class TranslationTask:
         self.output_file = output_file
         self.start = time.time()
 
+class BatchTranslationTask:
+    def __init__(self, sentence_id_list, query_id_list):
+        self.sentence_id_list = sentence_id_list
+        self.query_id_list = query_id_list
+        self.query_id = self.query_id_list[0]   #FIXME generic_loadgen needs this
+
 ##
 # @brief Wrapper around TF GNMT Inference that can interface with loadgen
 class GNMTRunner (Runner):
@@ -27,7 +33,7 @@ class GNMTRunner (Runner):
     # @param hparams_path: path to the parameters used to configure GNMT graph
     # @param vocab_prefix: Path to vocabulary file (note: don't add .en or .de suffixes)
     # @param outdir: Output directory to optionally write translations to
-    def __init__(self, input_file=None, ckpt_path=None, hparams_path=None, vocab_prefix=None, outdir=None, store_translation=False):
+    def __init__(self, input_file=None, ckpt_path=None, hparams_path=None, vocab_prefix=None, outdir=None, batch_size=32):
         Runner.__init__(self)
 
         # If no value is provided for the construtor arguments, set defaults here
@@ -48,17 +54,16 @@ class GNMTRunner (Runner):
         if outdir is None:
             outdir = os.path.join(os.getcwd(), 'lg_output')
 
-        flags = self.parse_options(ckpt_path, hparams_path, vocab_prefix, outdir)
+        flags = self.parse_options(ckpt_path, hparams_path, vocab_prefix, outdir, batch_size)
 
         self.setup(flags)
 
         # Wrapper parameters
-        self.input_file =  input_file
+        self.input_file = input_file
         self.infer_data = []  # This will be filled by load_samples_to_ram
-        self.store_translation = store_translation
         self.count = 0
 
-    def parse_options(self, ckpt_path, hparams_path, vocab_prefix, outdir):
+    def parse_options(self, ckpt_path, hparams_path, vocab_prefix, outdir, batch_size):
         FLAGS = None
         # TBD remove argument parsing, and just have it return all default values.
         nmt_parser = argparse.ArgumentParser()
@@ -68,7 +73,7 @@ class GNMTRunner (Runner):
         # Some of these flags are never used and are just set for consistency
         FLAGS.num_workers = 1
         FLAGS.iterations = 1
-        FLAGS.infer_batch_size = 1    # SingleStream scenario
+        FLAGS.infer_batch_size = batch_size
         FLAGS.num_inter_threads = 1
         FLAGS.num_intra_threads = 1
         FLAGS.run = "accuracy" # Needs to be set to accuracy to generate output
@@ -136,12 +141,78 @@ class GNMTRunner (Runner):
     def load_samples_to_ram(self, query_samples):
         self.infer_data = load_data(self.input_file, self.hparams)
 
+
+    def translate(self, sentence_id_list):
+        infer_mode = self.hparams.infer_mode
+
+        # Set input data and batch size
+        with self.infer_model.graph.as_default():
+            self.sess.run(
+                self.infer_model.iterator.initializer,
+                feed_dict={
+                    self.infer_model.src_placeholder: [self.infer_data[i] for i in sentence_id_list],
+                    self.infer_model.batch_size_placeholder: self.hparams.infer_batch_size
+                })
+
+        # Start the translation
+        nmt_outputs, _ = self.loaded_infer_model.decode(self.sess)
+        if infer_mode != "beam_search":
+          nmt_outputs = np.expand_dims(nmt_outputs, 0)
+
+        batch_size = nmt_outputs.shape[1]
+        assert batch_size <= self.hparams.infer_batch_size
+
+        # Whether beam search is being used or not, we only want 1 final translation
+        assert self.hparams.num_translations_per_input == 1
+
+        translation = []
+        for decoded_id in range(batch_size):
+            translation += [nmt_utils.get_translation(
+                        nmt_outputs[0],
+                       decoded_id,
+                       tgt_eos=self.hparams.eos,
+                       subword_option=self.hparams.subword_option)]
+
+        return translation
+
     ##
-    # @brief Write translation to file
-    def write_output(self, translation, trans_file):
-          with codecs.getwriter("utf-8")(
-              tf.gfile.GFile(trans_file, mode="wb")) as trans_f:
-            trans_f.write((translation + b"\n").decode("utf-8"))
+    # @brief Invoke GNMT to translate the input file
+    # @pre Ensure load_samples_to_ram was called to fill self.infer_data
+    def process(self, qitem):
+        translation = self.translate(qitem.sentence_id_list)
+
+        # Keeping track of how many translations happened
+        self.count += len(translation)
+
+        print("Performed {} translations".format(self.count))
+        
+        return translation
+
+    ##
+    # @brief Create a task and add it to the queue
+    def enqueue(self, query_samples):
+        bs = self.hparams.infer_batch_size
+        num_samples = len(query_samples)
+        for i in range(0, num_samples, bs):
+            query_id_list = [sample.id for sample in query_samples[i:min(i+bs, num_samples)]]
+            sentence_id_list = [sample.index for sample in query_samples[i:min(i+bs, num_samples)]] 
+            task = BatchTranslationTask(sentence_id_list, query_id_list)
+            self.tasks.put(task)
+
+class SingleStreamGNMTRunner (GNMTRunner):
+    ##
+    # @brief Constructor will build the graph and set some wrapper variables
+    # @param input_file: path to the input text
+    # @param ckpt_path: path to the GNMT checkpoint
+    # @param hparams_path: path to the parameters used to configure GNMT graph
+    # @param vocab_prefix: Path to vocabulary file (note: don't add .en or .de suffixes)
+    # @param outdir: Output directory to optionally write translations to
+    # @param store_translation: whether output should be stored
+    def __init__(self, input_file=None, ckpt_path=None, hparams_path=None, vocab_prefix=None, outdir=None, store_translation=False):
+        GNMTRunner.__init__(self, input_file, ckpt_path, hparams_path, vocab_prefix, outdir, batch_size=1)
+
+        self.store_translation = store_translation
+
 
     ##
     # @brief Invoke GNMT to translate the input file
@@ -152,45 +223,24 @@ class GNMTRunner (Runner):
        
         sentence_id = qitem.sentence_id 
 
-        infer_mode = self.hparams.infer_mode
-
-        # Set input data and batch size
-        with self.infer_model.graph.as_default():
-            self.sess.run(
-                self.infer_model.iterator.initializer,
-                feed_dict={
-                    self.infer_model.src_placeholder: [self.infer_data[sentence_id]],
-                    self.infer_model.batch_size_placeholder: self.hparams.infer_batch_size
-                })
-
-
-        # Start the translation
-        nmt_outputs, _ = self.loaded_infer_model.decode(self.sess)
-        if infer_mode != "beam_search":
-          nmt_outputs = np.expand_dims(nmt_outputs, 0)
-
-        # SingleStream means we are only processing one batch, make sure this is the case
-        assert self.hparams.infer_batch_size == nmt_outputs.shape[1] == 1
-
-        # Whether beam search is being used or not, we only want 1 final translation
-        assert self.hparams.num_translations_per_input == 1
-        decoded_id = 0 # Sinds there is only one sample in the batch
-
-        translation = nmt_utils.get_translation(
-                    nmt_outputs[0],
-                   decoded_id,
-                   tgt_eos=self.hparams.eos,
-                   subword_option=self.hparams.subword_option)
-
+        translation = self.translate([sentence_id])
 
         if self.store_translation:
-            self.write_output(translation, qitem.output_file)
+            assert len(translation) == 1
+            self.write_output(translation[0], qitem.output_file)
 
         # Keeping track of how many translations happened
         self.count += 1
         
-        return translation    
-    
+        return translation
+
+    ##
+    # @brief Write translation to file
+    def write_output(self, translation, trans_file):
+          with codecs.getwriter("utf-8")(
+              tf.gfile.GFile(trans_file, mode="wb")) as trans_f:
+            trans_f.write((translation + b"\n").decode("utf-8"))
+
     ##
     # @brief Create a task and add it to the queue
     def enqueue(self, query_samples):
@@ -201,19 +251,21 @@ class GNMTRunner (Runner):
             task = TranslationTask(sample.id, sentence_id, output_file)
             self.tasks.put(task)
 
+
 if __name__ == "__main__":
-    runner = GNMTRunner(store_translation=True)
+    #runner = SingleStreamGNMTRunner(store_translation=True)
+    runner = GNMTRunner()
 
     runner.start_worker()
 
     settings = mlperf_loadgen.TestSettings()
-    settings.scenario = mlperf_loadgen.TestScenario.SingleStream
+    settings.scenario = mlperf_loadgen.TestScenario.Offline
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
 
     # Specify exactly how many queries need to be made
     settings.enable_spec_overrides = True
-    settings.override_min_query_count = 3003
-    settings.override_max_query_count = 3003
+    settings.override_min_query_count = 1
+    settings.override_max_query_count = 1
 
     
     total_queries = 3003 # Maximum sample ID + 1

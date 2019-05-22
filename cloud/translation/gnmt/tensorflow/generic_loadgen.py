@@ -111,10 +111,11 @@ if __name__ == "__main__":
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.SingleStream
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
-    settings.samples_per_query = 1
-    settings.target_qps = 10        # Doesn't seem to have an effect
-    settings.target_latency_ns = 1000000000
 
+    # Specify exactly how many queries need to be made
+    settings.enable_spec_overrides = True
+    settings.override_min_query_count = 3003
+    settings.override_max_query_count = 3003
     
     total_queries = 256 # Maximum sample ID + 1
     perf_queries = 8   # TBD: Doesn't seem to have an effect

@@ -13,7 +13,7 @@ to avoid poluting the source tree.
 from setuptools import setup, Extension
 from version_generator import generate_loadgen_version_definitions
 
-generated_version_source_filename = "generated/version.cc"
+generated_version_source_filename = "generated/version_generated.cc"
 generate_loadgen_version_definitions(generated_version_source_filename)
 
 public_headers = [
@@ -26,6 +26,7 @@ public_headers = [
 
 lib_headers = [
   "logging.h",
+  "mlperf_spec_constants.h",
   "test_settings_internal.h",
   "trace_generator.h",
   "utils.h",
@@ -35,6 +36,9 @@ lib_headers = [
 lib_sources = [
   "loadgen.cc",
   "logging.cc",
+  "test_settings_internal.cc",
+  "utils.cc",
+  "version.cc",
 ]
 
 lib_bindings = [

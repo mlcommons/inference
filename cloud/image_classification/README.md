@@ -3,24 +3,24 @@
 This is the reference implementation for Mlperf cloud inference benchmarks.
 It supports the following models:
 
-|model|framework|accuracy|dataset|model link|model source|notes|
-|----|----|----|----|----|----|----|----|
-|resnet50-v1.5|tensorflow|72.6% (should be 76.47%)|imagenet2012 validation|[from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb)|[mlperf](https://github.com/mlperf/training/tree/master/image_classification), [tensorflow](https://github.com/tensorflow/models/tree/master/official/resnet)|NHWC. More information on resnet50 v1.5 can be found [here](https://github.com/tensorflow/models/tree/master/official/resnet).
-|resnet50-v1.5|onnx, pytorch|72.6%, should be 76.47%|imagenet2012 validation|[from zenodo](https://zenodo.org/record/2592612/files/resnet50_v1.onnx)|[from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/resnet50-to-onnx.sh)|NCHW, tested on pytorch and onnxruntime|
-|mobilenet-v1|tensorflow|68.29, should be 70.9%|imagenet2012 validation|[from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz)|[from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz)|NHWC|
-|mobilenet-v1|onnx, pytorch|68.29, should be 70.9%|imagenet2012 validation|[from zenodo](https://zenodo.org/record/2635594/files/mobilenet_v1_1.0_224.onnx)|[from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/mobilenet-to-onnx.sh)|NCHW, tested on pytorch and onnxruntime|
-|ssd-mobilenet 300x300|tensorflow|mAP=0.20|coco|[from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz)|[from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz)|NHWC|
-|ssd-mobilenet 300x300|onnx|mAP=0.20|coco|[from zenodo](https://zenodo.org/record/3163026/files/ssd_mobilenet_v1_coco_2018_01_28.onnx)|[from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/ssd-mobilenet-to-onnx.sh)|NHWC, tested on onnxruntime, some runtime warnings|
-|ssd-resnet34 1200x1200|tensorflow|mAP=0.20|coco|[from zenodo](https://zenodo.org/record/3060467/files/ssd_resnet-34_from_onnx.zip)|[from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector)|Needs testing|
-|ssd-resnet34 1200x1200|pytorch|mAP=0.224|coco|TODO|[from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector)|Waiting for integration|
-|ssd-resnet34 1200x1200|onnx|mAP=0.20|coco|[from zenodo](https://zenodo.org/record/3163026/files/ssd_mobilenet_v1_coco_2018_01_28.onnx)|[from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) converted using the these [instructions](https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch#6-onnx)|Needs more testing|
+| model | framework | accuracy | dataset | model link | model source | notes | 
+| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | 
+| resnet50-v1.5 | tensorflow | 72.6% (should be 76.47%) | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb) | [mlperf](https://github.com/mlperf/training/tree/master/image_classification), [tensorflow](https://github.com/tensorflow/models/tree/master/official/resnet) | NHWC. More information on resnet50 v1.5 can be found [here](https://github.com/tensorflow/models/tree/master/official/resnet).
+| resnet50-v1.5 | onnx, pytorch | 72.6%, should be 76.47% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2592612/files/resnet50_v1.onnx) | [from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/resnet50-to-onnx.sh) | NCHW, tested on pytorch and onnxruntime | 
+| mobilenet-v1 | tensorflow | 68.29, should be 70.9% | imagenet2012 validation | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | NHWC | 
+| mobilenet-v1 | onnx, pytorch | 68.29, should be 70.9% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2635594/files/mobilenet_v1_1.0_224.onnx) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/mobilenet-to-onnx.sh) | NCHW, tested on pytorch and onnxruntime | 
+| ssd-mobilenet 300x300 | tensorflow | mAP=0.20 | coco | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | NHWC | 
+| ssd-mobilenet 300x300 | onnx | mAP=0.20 | coco | [from zenodo](https://zenodo.org/record/3163026/files/ssd_mobilenet_v1_coco_2018_01_28.onnx) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/ssd-mobilenet-to-onnx.sh) | NHWC, tested on onnxruntime, some runtime warnings | 
+| ssd-resnet34 1200x1200 | tensorflow | mAP=0.20 | coco | [from zenodo](https://zenodo.org/record/3060467/files/ssd_resnet-34_from_onnx.zip) | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) | Needs testing | 
+| ssd-resnet34 1200x1200 | pytorch | mAP=0.224 | coco | TODO | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) | Waiting for integration | 
+| ssd-resnet34 1200x1200 | onnx | mAP=0.20 | coco | [from zenodo](https://zenodo.org/record/3163026/files/ssd_mobilenet_v1_coco_2018_01_28.onnx) | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) converted using the these [instructions](https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch#6-onnx) | Needs more testing | 
 
 
 ## Datasets
-|dataset|download link|
-|----|----|
-|imagenet2012 (validation)|http://image-net.org/challenges/LSVRC/2012/|
-|coco (validation)|http://images.cocodataset.org/zips/val2014.zip|
+| dataset | download link | 
+| ---- | ---- | 
+| imagenet2012 (validation) | http://image-net.org/challenges/LSVRC/2012/ | 
+| coco (validation) | http://images.cocodataset.org/zips/val2014.zip | 
 
 Alternative download of datasets using [Collective Knowledge (CK)](https://github.com/ctuning):
 ```
@@ -112,10 +112,11 @@ This will build and run the benchmark.
 ### Usage
 ```
 usage: main.py [-h]
+    [--scenario {SingleStream,MultiStream,Server,Offline}]
+    [--profile {defaults,resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-onnxruntime}]
     [--dataset {imagenet,imagenet_mobilenet,coco,coco-300,coco-1200}]
     --dataset-path DATASET_PATH [--dataset-list DATASET_LIST]
     [--data-format {NCHW,NHWC}]
-    [--profile {defaults,resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-onnxruntime}]
     --model MODEL [--output OUTPUT] [--inputs INPUTS]
     [--outputs OUTPUTS] [--backend BACKEND] [--threads THREADS]
     [--time TIME] [--count COUNT] [--qps QPS]
@@ -137,6 +138,9 @@ the list of image names to be used. By default we look for val_map.txt in the da
 
 ```--data-format {NCHW,NHWC}```
 data-format of the model
+
+```--scenario {SingleStream,MultiStream,Server,Offline```
+comma seperated list of benchmark modes
 
 ```--profile {resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-onnxruntime}```
 this fills in default command line options for the specific profile. Additional command line options may override the defautls.

@@ -91,7 +91,7 @@ SUPPORTED_PROFILES = {
     "ssd-mobilenet-tf": {
         "inputs": "image_tensor:0",
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
-        "dataset": "coco",
+        "dataset": "coco-300",
         "backend": "tensorflow",
     },
     "ssd-mobilenet-onnxruntime": {
@@ -102,6 +102,12 @@ SUPPORTED_PROFILES = {
     },
 
     # ssd-resnet34
+    "ssd-resnet34-tf": {
+        "inputs": "0:0",
+        "outputs": "--work in progress--",
+        "dataset": "coco-1200",
+        "backend": "tensorflow",
+    },
     "ssd-resnet34-onnxruntime": {
         "dataset": "coco-1200",
         "inputs": "image",
@@ -123,16 +129,17 @@ def get_args():
     parser.add_argument("--data-format", choices=["NCHW", "NHWC"], help="data format")
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
     parser.add_argument("--model", required=True, help="model file")
-    parser.add_argument("--inputs", help="model inputs")
     parser.add_argument("--output", help="test results")
+    parser.add_argument("--inputs", help="model inputs")
     parser.add_argument("--outputs", help="model outputs")
     parser.add_argument("--backend", help="runtime to use")
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
-    parser.add_argument("--qps", type=int, default=10, help="target qps") # TODO: remove once we have qps scan
+    parser.add_argument("--qps", type=int, default=10, help="target qps estimate")
     parser.add_argument("--max-latency", type=str, help="max latency in 99pct tile")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
+    parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
@@ -358,7 +365,7 @@ def main():
     #
     # accuracy pass
     #
-    if True:
+    if args.accuracy:
         log.info("starting accuracy pass on {} items".format(count))
         runner.start_pool(nolg=True)
         result_dict = {"good": 0, "total": 0, "scenario": "Accuracy", "timing": []}
@@ -430,14 +437,10 @@ def main():
 
             result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
             runner.start_run(result_dict, False)
-            start = time.time()
             lg.StartTest(sut, qsl, settings)
 
-            # we only do this for accuracy
-            # post_proc.finalize(result_dict, ds=ds, output_dir=os.path.dirname(args.output))
-
             add_results(final_results, "{}-{}".format(scenario, target_latency),
-                        result_dict, last_timeing, time.time() - start)
+                        result_dict, last_timeing, time.time() - ds.last_loaded)
 
     #
     # write final results

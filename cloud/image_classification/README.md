@@ -1,16 +1,38 @@
-# Mlperf cloud inference benchmark for image classification
+# Mlperf cloud inference benchmark for image classification and object detection
 
-This is the Mlperf cloud inference benchmark for image classification. 
-The benchmark uses the resnet50 v1.5 model from [Mlperf training](https://github.com/mlperf/training/tree/master/image_classification)
-which identical to the [official tensorflow resnet model](https://github.com/tensorflow/models/tree/master/official/resnet).
-Models are provided for tensorflow as frozen graph (in NHWC data format) and as [ONNX](http://onnx.ai) model.
+This is the reference implementation for Mlperf cloud inference benchmarks.
+It supports the following models:
 
-More information on resnet50 v1.5 can be found [here](https://github.com/tensorflow/models/tree/master/official/resnet).
+|model|framework|accuracy|dataset|model link|model source|notes|
+|----|----|----|----|----|----|----|----|
+|resnet50-v1.5|tensorflow|72.6% (should be 76.47%)|imagenet2012 validation|[from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb)|[mlperf](https://github.com/mlperf/training/tree/master/image_classification), [tensorflow](https://github.com/tensorflow/models/tree/master/official/resnet)|NHWC. More information on resnet50 v1.5 can be found [here](https://github.com/tensorflow/models/tree/master/official/resnet).
+|resnet50-v1.5|onnx, pytorch|72.6%, should be 76.47%|imagenet2012 validation|[from zenodo](https://zenodo.org/record/2592612/files/resnet50_v1.onnx)|[from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/resnet50-to-onnx.sh)|NCHW, tested on pytorch and onnxruntime|
+|mobilenet-v1|tensorflow|68.29, should be 70.9%|imagenet2012 validation|[from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz)|[from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz)|NHWC|
+|mobilenet-v1|onnx, pytorch|68.29, should be 70.9%|imagenet2012 validation|[from zenodo](https://zenodo.org/record/2635594/files/mobilenet_v1_1.0_224.onnx)|[from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/mobilenet-to-onnx.sh)|NCHW, tested on pytorch and onnxruntime|
+|ssd-mobilenet 300x300|tensorflow|mAP=0.20|coco|[from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz)|[from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz)|NHWC|
+|ssd-mobilenet 300x300|onnx|mAP=0.20|coco|[from zenodo](https://zenodo.org/record/3163026/files/ssd_mobilenet_v1_coco_2018_01_28.onnx)|[from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/ssd-mobilenet-to-onnx.sh)|NHWC, tested on onnxruntime, some runtime warnings|
+|ssd-resnet34 1200x1200|tensorflow|mAP=0.20|coco|[from zenodo](https://zenodo.org/record/3060467/files/ssd_resnet-34_from_onnx.zip)|[from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector)|Needs testing|
+|ssd-resnet34 1200x1200|pytorch|mAP=0.224|coco|TODO|[from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector)|Waiting for integration|
+|ssd-resnet34 1200x1200|onnx|mAP=0.20|coco|[from zenodo](https://zenodo.org/record/3163026/files/ssd_mobilenet_v1_coco_2018_01_28.onnx)|[from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) converted using the these [instructions](https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch#6-onnx)|Needs more testing|
 
-We use the validation set from [Imagenet2012](http://www.image-net.org/challenges/LSVRC/2012/) do validate model accuracy.
 
-Cloud inference benchmarks are looking for latency bound throughput: we are looking for the maximum qps the system can do while still
-meeting a target latency in the 99 percentile.
+## Datasets
+|dataset|download link|
+|----|----|
+|imagenet2012 (validation)|http://image-net.org/challenges/LSVRC/2012/|
+|coco (validation)|http://images.cocodataset.org/zips/val2014.zip|
+
+Alternative download of datasets using [Collective Knowledge (CK)](https://github.com/ctuning):
+```
+pip install ck
+ck pull  repo:ck-env
+ck install package:imagenet-2012-val
+ck install package:imagenet-2012-aux
+ck install package:coco-2017
+cp $HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux/val.txt
+$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val/val_map.txt
+```
+That makes the imagenet validation set available at ```$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val``` and the coco dataset available here  ```$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val```.
 
 ## Disclaimer
 This is an early version of the benchmark to get feedback from others.
@@ -20,71 +42,37 @@ The benchmark is a reference implementation that is not meant to be the fastest 
 It is written in python which might make it less suitable for lite models like mobilenet or large number of cpu's.
 We are thinking to provide a c++ implementation with identical functionality in the near future.
 
-## Benchmark target numbers
-```
-Accuracy: 72.6% (TODO: check, it is suppose to be 76.47%)
-99 pcercentile @ 10ms, 50ms, 100ms, 200ms
-```
 
 ## Prerequisites and Installation
-We support [tensorfow](https://github.com/tensorflow/tensorflow) and [onnxruntime](https://github.com/Microsoft/onnxruntime) backend's with the same benchmark tool.
+We support [tensorfow+tflite](https://github.com/tensorflow/tensorflow), [onnxruntime](https://github.com/Microsoft/onnxruntime)  and [pytoch](http://pytorch.org) backend's with the same benchmark tool.
 Support for other backends can be easily added.
 
 The following steps are ```only``` needed if you run the benchmark ```without docker```.
 
-We require python 3.5 or 3.6 and recommend to use anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal anaconda install).
+We require python 3.5, 3.6 or 3.7 and recommend to use anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal anaconda install).
 
 Install the desired backend.
 For tensorflow:
 ```
-pip install tensorflow
-or 
-pip install tensorflow-gpu
+pip install tensorflow or pip install tensorflow-gpu
 ```
 For onnxruntime:
 ```
 pip install onnxruntime
-or
-pip install onnxruntime-gpu
 ```
 
-Install additional modules
+Build and install the benchmark:
 ```
-pip install pybind11  Cython pycocotools
-```
+pushd; cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop; popd
 
-Install loadgen
-```
-cd ../../loadgen; CFLAGS="-std=c++14" python setup.py install
+python setup.py develop
 ```
 
 
 ## Running the benchmark
 ### One time setup
 
-Download a minimal validation set for [Imagenet2012](http://www.image-net.org/challenges/LSVRC/2012) using [Collective Knowledge (CK)](https://github.com/ctuning).
-The same dataset is used for other mlperf inference benchmarks that are using imagenet.
-```
-pip install ck
-ck pull  repo:ck-env
-ck install package:imagenet-2012-val
-ck install package:imagenet-2012-aux
-cp $HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux/val.txt
-$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val/val_map.txt
-```
-
-Download our pre-trained models. For tensorflow use:
-
-https://zenodo.org/record/2535873/files/resnet50_v1.pb
-
-This model uses the data format NHWC. If you need NCHW, please file an issue on github.
-
-For ONNX use:
-
-https://zenodo.org/record/2592612/files/resnet50_v1.onnx
-
-This model uses ONNX opset 8. If you need other opset's, please file an issue on github. The model is directly converted
-from the tensorflow model via https://github.com/onnx/tensorflow-onnx.
+Download the model and dataset for the model you want to benchmark.
 
 Both local and docker environment need to 2 environment variables set:
 ```
@@ -92,95 +80,50 @@ export MODEL_DIR=YourModelFileLocation
 export DATA_DIR=YourImageNetLocation
 ```
 
+
 ### Run local
 ```
-./run_local.sh backend cpu|gpu  # backend can be tf or onnxruntime
+./run_local.sh backend model device
+
+backend is one of [tf|onnxruntime|pytorch|tflite]
+model is one of [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34]
+device is one of [cpu|gpu]
+
 
 For example:
 
-./run_local.sh tf gpu
+./run_local.sh tf resnet50 gpu
 ```
 
 ### Run as Docker container
 ```
-./run_and_time.sh backend cpu|gpu  # backend can be tf or onnxruntime
+./run_and_time.sh backend model device
+
+backend is one of [tf|onnxruntime|pytorch|tflite]
+model is one of [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34]
+device is one of [cpu|gpu]
 
 For example:
 
-./run_and_time.sh tf gpu
+./run_and_time.sh tf resnet50 gpu
 ```
 This will build and run the benchmark.
 
-
-### Results
-The benchmark scans for the maximum qps and will take a couple of minutes to finish. 
-
-There are 3 different stages the tool runs through:
-
-1. Run the first 500 images to validate the target accuracy.
-2. Find the maximum qps for the given latency in the 99 percentile using equal spacing between requests.
-3. Find the maximum qps for the given latency in the 99 percentile using a exponential distribution that simulates realistic traffic patterns for a cloud environment.
-
-Logs are written to stdout, while the benchmark is running. The have the form:
-```
-check_accuracy qps=39.07, mean=0.202488, time=12.82, tiles=50:0.0593,80:0.0613,90:0.0635,95:0.0677,99:8.9926,99.9:9.1235
-check_accuracy accuacy=72.46, good_items=363, total_items=501
-linear/0.01/100 qps=99.81, mean=0.008619, time=5.02, tiles=50:0.0085,80:0.0093,90:0.0095,95:0.0096,99:0.0098,99.9:0.0105
-^taken
-...
-linear/0.01/129 qps=128.72, mean=0.008433, time=3.89, tiles=50:0.0083,80:0.0088,90:0.0092,95:0.0097,99:0.0105,99.9:0.0109
-0.01 qps=127.73, mean=0.008219, time=3.92, tiles=50:0.0082,80:0.0084,90:0.0086,95:0.0089,99:0.0095,99.9:0.0097
-===RESULT: linear target_latency=0.01 measured_latency=0.009488344192504883 qps=127
-...
-===FINAL_RESULT: {'linear': {'0.01': 128, '0.05': 142, '0.1': 142, '0.2': 142}, 'exponential': {'0.01': -1, '0.05': 104, '0.1': 126, '0.2': 132}}
-```
-Entries that start with ```check_accuracy``` report the accuracy.
-
-Entries that start with ```linear``` report qps scans with equal spacing of requsts. ```linear/0.01/129 qps=128.72``` for example means tried we tried 129 requests/sec
-in the 99 percentile and reached 128.72 requests/sec.
-
-Entries that start with ```exponential``` report qps scans with exponential distribution that simulate a realistic traffic pattern.
-
-```===RESULT``` will report the final result for each target latency.
-
-```===FINAL_RESULT``` will summarize the results.
-
-In the out directory we create a results.json file with the following format:
-```
-{
-    "check_accuracy": {
-        "accuacy": 72.45508982035928,
-        ...
-    },
-    "results": {
-        "exponential": {
-            "0.05": {
-                ...
-                "qps": 115.00442176867026,
-            },
-            ...
-        },
-        ...
-    },
-    "scan": {
-        ... more details about each scan we tried
-    }
-}
-```
-
 ### Usage
 ```
-usage: main.py [-h] [--dataset {imagenet}] --dataset-path DATASET_PATH
-               [--dataset-list DATASET_LIST] [--data-format {NCHW,NHWC}]
-               [--profile {defaults,resnet50-tf,resnet50-onnxruntime}] --model
-               MODEL [--inputs INPUTS] [--output OUTPUT] [--outputs OUTPUTS]
-               [--backend BACKEND] [--batch_size BATCH_SIZE]
-               [--threads THREADS] [--time TIME] [--count COUNT]
-               [--max-latency MAX_LATENCY] [--cache CACHE]
+usage: main.py [-h]
+    [--dataset {imagenet,imagenet_mobilenet,coco,coco-300,coco-1200}]
+    --dataset-path DATASET_PATH [--dataset-list DATASET_LIST]
+    [--data-format {NCHW,NHWC}]
+    [--profile {defaults,resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-onnxruntime}]
+    --model MODEL [--output OUTPUT] [--inputs INPUTS]
+    [--outputs OUTPUTS] [--backend BACKEND] [--threads THREADS]
+    [--time TIME] [--count COUNT] [--qps QPS]
+    [--max-latency MAX_LATENCY] [--cache CACHE] [--accuracy]
 ```
 For example to run a quick test on 200ms in the 99 percentile for tensorflow you would do:
 ```
-python python/main.py --profile resnet50-tf --count 500 --time 10 --model models/resnet50_v1.pb --dataset-path imagenet2012 --output results.json --max-latency 0.2
+python python/main.py --profile resnet50-tf --count 500 --time 60 --model models/resnet50_v1.pb --dataset-path imagenet2012 --output results.json --max-latency 0.2 --accuracy
 ```
 
 ```--dataset```
@@ -195,8 +138,8 @@ the list of image names to be used. By default we look for val_map.txt in the da
 ```--data-format {NCHW,NHWC}```
 data-format of the model
 
-```--profile {resnet50-tf,resnet50-onnxruntime}```
-this fills in default command line options for the specific benchmark. Additional command line options may override the defautls.
+```--profile {resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-onnxruntime}```
+this fills in default command line options for the specific profile. Additional command line options may override the defautls.
 
 ```--model MODEL```
 the model file.
@@ -212,21 +155,19 @@ location of the json output.
 
 ```--backend BACKEND```
 which backend to use. Currently supported is tensorflow, onnxruntime, pytorch and tflite.
-```--batch_size BATCH_SIZE```
-batch size to use. Defaults to 1.
 
 ```--threads THREADS```
 number of worker threads to use. This defaults to the number of processors in the system.
 
 ```--count COUNT```
-Number of images for each epoch. If not given we use the number of images in the dataset.
+Number of images the dataset we use. By default we use all images in the dataset.
+
+```--qps QPS```
+Expceted qps.
 
 ```--max-latency MAX_LATENCY```
 comma seperated list of Which latencies (in seconds) we try to reach in the 99 percentile.
 The deault is 0.010,0.050,0.100,0.200,0.400.
-
-```--cache CACHE```
-1 if we should pre-load images.
 
 
 ## License

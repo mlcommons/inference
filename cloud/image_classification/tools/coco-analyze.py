@@ -123,7 +123,7 @@ def main():
 
     annotation_file = os.path.join(args.coco, "annotations/instances_val2017.json")
     cocoGt = COCO(annotation_file)
-    #annotate_image(results, cocoGt, args.output)
+    annotate_image(results, cocoGt, args.output)
     calculate_map(args.input, cocoGt, args.output)
 
 

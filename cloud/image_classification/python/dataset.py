@@ -37,6 +37,7 @@ class Dataset():
         self.image_list = []
         self.label_list = []
         self.image_list_inmemory = {}
+        self.last_loaded = -1
 
     def preprocess(self, use_cache=True):
         raise NotImplementedError("Dataset:preprocess")
@@ -51,6 +52,7 @@ class Dataset():
         self.image_list_inmemory = {}
         for sample in sample_list:
             self.image_list_inmemory[sample], _ = self.get_item(sample)
+        self.last_loaded = time.time()
 
     def unload_query_samples(self, sample_list):
         if sample_list:

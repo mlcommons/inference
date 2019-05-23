@@ -1,6 +1,12 @@
 #ifndef MLPERF_LOADGEN_UTILS_H
 #define MLPERF_LOADGEN_UTILS_H
 
+#include <algorithm>
+#include <chrono>
+#include <string>
+
+#include "query_sample.h"
+
 namespace mlperf {
 
 template <typename T>
@@ -11,6 +17,20 @@ void RemoveValue(T* container, const typename T::value_type& value_to_remove) {
                                   }),
                    container->end());
 }
+
+template <typename CountT, typename RatioT>
+double DurationToSeconds(
+    const std::chrono::duration<CountT, RatioT>& chrono_duration) {
+  return std::chrono::duration_cast<std::chrono::duration<double>>(
+             chrono_duration)
+      .count();
+}
+
+inline double QuerySampleLatencyToSeconds(QuerySampleLatency qsl) {
+  return static_cast<double>(qsl) / std::nano::den;
+}
+
+std::string DoubleToString(double value, int precision = 2);
 
 }  // namespace mlperf
 

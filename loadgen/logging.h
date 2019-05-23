@@ -28,7 +28,12 @@ class TlsLoggerWrapper;
 using AsyncLogEntry = std::function<void(AsyncLog&)>;
 using PerfClock = std::chrono::high_resolution_clock;
 
+struct LogBinaryAsHexString {
+  std::vector<uint8_t>* data;
+};
+
 const std::string& ArgValueTransform(const bool& value);
+const std::string ArgValueTransform(const LogBinaryAsHexString& value);
 
 template <typename T>
 const T& ArgValueTransform(const T& value) {

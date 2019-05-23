@@ -33,6 +33,7 @@ class GNMTRunner (Runner):
     # @param hparams_path: path to the parameters used to configure GNMT graph
     # @param vocab_prefix: Path to vocabulary file (note: don't add .en or .de suffixes)
     # @param outdir: Output directory to optionally write translations to
+    # @param batch_size: batch size to use when processing BatchTranslationTasks
     def __init__(self, input_file=None, ckpt_path=None, hparams_path=None, vocab_prefix=None, outdir=None, batch_size=32):
         Runner.__init__(self)
 
@@ -63,6 +64,8 @@ class GNMTRunner (Runner):
         self.infer_data = []  # This will be filled by load_samples_to_ram
         self.count = 0
 
+    ##
+    # @brief Parse GNMT-specific options before setting up
     def parse_options(self, ckpt_path, hparams_path, vocab_prefix, outdir, batch_size):
         FLAGS = None
         # TBD remove argument parsing, and just have it return all default values.
@@ -90,6 +93,7 @@ class GNMTRunner (Runner):
 
     ##
     # @brief Configure hparams and setup GNMT graph 
+    # @pre Requires output from parse_options
     def setup(self, flags):
         # Model output directory
         out_dir = flags.out_dir
@@ -142,6 +146,10 @@ class GNMTRunner (Runner):
         self.infer_data = load_data(self.input_file, self.hparams)
 
 
+    ##
+    # @brief Run translation on a number of sentence id's
+    # @param sentence_id_list: List of sentence numbers to translate
+    # @return Translated sentences
     def translate(self, sentence_id_list):
         infer_mode = self.hparams.infer_mode
 
@@ -189,7 +197,7 @@ class GNMTRunner (Runner):
         return translation
 
     ##
-    # @brief Create a task and add it to the queue
+    # @brief Create a batched task and add it to the queue
     def enqueue(self, query_samples):
         bs = self.hparams.infer_batch_size
         num_samples = len(query_samples)
@@ -199,6 +207,8 @@ class GNMTRunner (Runner):
             task = BatchTranslationTask(sentence_id_list, query_id_list)
             self.tasks.put(task)
 
+##
+# @brief Subclass of GNMTRunner, specialized for batch size 1
 class SingleStreamGNMTRunner (GNMTRunner):
     ##
     # @brief Constructor will build the graph and set some wrapper variables
@@ -253,27 +263,55 @@ class SingleStreamGNMTRunner (GNMTRunner):
 
 
 if __name__ == "__main__":
-    #runner = SingleStreamGNMTRunner(store_translation=True)
-    runner = GNMTRunner()
 
-    runner.start_worker()
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('--scenario', type=str, default='SingleStream',
+                            help="Scenario to be run: can be one of {SingleStream, Offline}")
+
+
+    parser.add_argument('--store_translation', default=False, action='store_true',
+                            help="Store the output of translation? Note: Only valid with SingleStream scenario.")
+
+    args = parser.parse_args()
 
     settings = mlperf_loadgen.TestSettings()
-    settings.scenario = mlperf_loadgen.TestScenario.Offline
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
 
-    # Specify exactly how many queries need to be made
-    settings.enable_spec_overrides = True
-    settings.override_min_query_count = 1
-    settings.override_max_query_count = 1
+    if args.scenario == "SingleStream":
+        runner = SingleStreamGNMTRunner(store_translation=args.store_translation)
 
-    
+        settings.scenario = mlperf_loadgen.TestScenario.SingleStream
+        
+        # Specify exactly how many queries need to be made
+        settings.enable_spec_overrides = True
+        settings.override_min_query_count = 3003
+        settings.override_max_query_count = 3003
+
+    elif args.scenario == "Offline":
+        runner = GNMTRunner(batch_size=32)
+
+        settings.scenario = mlperf_loadgen.TestScenario.Offline
+        
+        # Specify exactly how many queries need to be made
+        settings.enable_spec_overrides = True
+        settings.override_min_query_count = 1
+        settings.override_max_query_count = 1
+
+    else:
+        print("Invalid scenario selected")
+        assert False
+
+    # Create a thread in the GNMTRunner to start accepting work
+    runner.start_worker()
+
     total_queries = 3003 # Maximum sample ID + 1
     perf_queries = 3003   # Select the same subset of $perf_queries samples
 
     sut = mlperf_loadgen.ConstructSUT(runner.enqueue, process_latencies)
     qsl = mlperf_loadgen.ConstructQSL(
         total_queries, perf_queries, runner.load_samples_to_ram, runner.unload_samples_from_ram)
+
     mlperf_loadgen.StartTest(sut, qsl, settings)
     mlperf_loadgen.DestroyQSL(qsl)
     mlperf_loadgen.DestroySUT(sut)

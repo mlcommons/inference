@@ -143,8 +143,6 @@ class PostProcessCoco:
             for idx in range(0, bs):
                 detection_boxes = results[0][idx]
                 detection_classes = results[1][idx]
-                scores = softmax(results[2][idx])
-
                 expected_classes = expected[idx][0]
                 for detection in range(0, len(expected_classes)):
                     detection_class = int(detection_classes[detection])

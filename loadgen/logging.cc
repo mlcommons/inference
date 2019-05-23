@@ -55,6 +55,27 @@ const std::string& ArgValueTransform(const bool& value) {
   return value ? v_true : v_false;
 }
 
+char Bin2Hex(uint8_t four_bits) {
+  char number = '0' + four_bits;
+  char letter = ('A' - 10) + four_bits;
+  return four_bits < 10 ? number : letter;
+}
+
+const std::string ArgValueTransform(const LogBinaryAsHexString& value) {
+  if (value.data == nullptr) {
+    return "";
+  }
+  std::string hex;
+  hex.reserve(value.data->size() + 2);
+  hex.push_back('"');
+  for (auto b : *value.data) {
+    hex.push_back(Bin2Hex(b >> 4));
+    hex.push_back(Bin2Hex(b & 0x0F));
+  }
+  hex.push_back('"');
+  return hex;
+}
+
 // TlsLogger logs a single thread using thread-local storage.
 // Submits logs to the central Logger:
 //   * With forward-progress guarantees. (i.e.: no locking or blocking

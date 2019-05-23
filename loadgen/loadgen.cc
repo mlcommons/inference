@@ -164,34 +164,34 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     // small buffer optimization code path when we aren't copying data.
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
     // into the lambda; even with C++14.
-    uint8_t* sample_data_copy = nullptr;
+    std::vector<uint8_t>* sample_data_copy = nullptr;
     if (mode == TestMode::AccuracyOnly) {
       // TODO: Verify accuracy with the data copied here.
-      auto* src_begin = reinterpret_cast<uint8_t*>(response->data);
-      sample_data_copy = new uint8_t[response->size];
-      std::memcpy(sample_data_copy, src_begin, response->size);
+      uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
+      uint8_t* src_end = src_begin + response->size;
+      sample_data_copy = new std::vector<uint8_t>(src_begin, src_end);
     }
-    Log([sample, sample_data_copy, complete_begin_time](AsyncLog& log) {
+    Log([sample, complete_begin_time, sample_data_copy](AsyncLog& log) {
       QueryMetadata* query = sample->query_metadata;
       DurationGeneratorNs sched{query->scheduled_time};
       QuerySampleLatency latency = sched.delta(complete_begin_time);
       log.RecordLatency(sample->sequence_id, latency);
-      if (sample_data_copy != nullptr) {
-        delete[] sample_data_copy;
-      }
       // Disable tracing each sample in offline mode. Since thousands of
       // samples could be overlapping when visualized, it's not very useful.
       // TODO: Should we disable for cloud mode as well? Sufficiently
       // out-of-order processing could have lots of overlap too.
-      if (scenario == TestScenario::Offline) {
-        return;
+      if (scenario != TestScenario::Offline) {
+        log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
+                        complete_begin_time, "sample_seq", sample->sequence_id,
+                        "query_seq", query->sequence_id, "sample_idx",
+                        sample->sample_index, "issue_start_ns",
+                        sched.delta(query->issued_start_time), "complete_ns",
+                        sched.delta(complete_begin_time),
+                        "data", LogBinaryAsHexString{sample_data_copy});
       }
-      log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
-                      complete_begin_time, "sample_seq", sample->sequence_id,
-                      "query_seq", query->sequence_id, "sample_idx",
-                      sample->sample_index, "issue_start_ns",
-                      sched.delta(query->issued_start_time), "complete_ns",
-                      sched.delta(complete_begin_time));
+      if (sample_data_copy) {
+        delete sample_data_copy;
+      }
     });
   }
 

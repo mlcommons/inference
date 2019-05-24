@@ -371,10 +371,10 @@ def main():
         _ = backend.predict({backend.inputs[0]: img})
     ds.unload_query_samples(None)
 
-    #
-    # accuracy pass
-    #
     if args.accuracy:
+        #
+        # accuracy pass
+        #
         log.info("starting accuracy pass on {} items".format(count))
         runner.start_pool(nolg=True)
         result_dict = {"good": 0, "total": 0, "scenario": "Accuracy", "timing": []}
@@ -404,7 +404,7 @@ def main():
 
     def process_latencies(latencies_ns):
         global last_timeing
-        last_timeing = [t / NANO_SEC for t in latencies_ns]
+        last_timeing = [t / 1e9 for t in latencies_ns]
 
     sut = lg.ConstructSUT(issue_query, process_latencies)
     qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)

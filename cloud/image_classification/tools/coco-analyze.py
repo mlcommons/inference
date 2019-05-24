@@ -47,7 +47,10 @@ def annotate_image(results, cocoGt, output):
             box = v['bbox']
             score = v['score']
             predicted_class = v["category_id"]
-            predicted_class = cocoGt.loadCats(predicted_class)[0]["name"]
+            try:
+                predicted_class = cocoGt.loadCats(predicted_class)[0]["name"]
+            except Exception as ex:
+                print("category {} not found, image {}".format(predicted_class, v["image_loc"]))
             # predicted_class = self.class_names[c]
             # "image_loc": "/home/gs/data/coco300/val2017/000000397133.jpg",
             if not draw:

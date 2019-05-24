@@ -24,7 +24,7 @@ import coco
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
-NANO_SEC = 1000000000
+NANO_SEC = 1e9
 MILLI_SEC = 1000
 
 # pylint: disable=missing-docstring
@@ -104,7 +104,7 @@ SUPPORTED_PROFILES = {
     # ssd-resnet34
     "ssd-resnet34-tf": {
         "inputs": "0:0",
-        "outputs": "--work in progress--",
+        "outputs": "concat_63:0,concat_64:0",
         "dataset": "coco-1200",
         "backend": "tensorflow",
     },
@@ -115,6 +115,13 @@ SUPPORTED_PROFILES = {
         "backend": "onnxruntime",
         "data-format": "NCHW",
     },
+}
+
+SCENARIO_MAP = {
+    "SingleStream": lg.TestScenario.SingleStream,
+    "MultiStream": lg.TestScenario.MultiStream,
+    "Server": lg.TestScenario.Server,
+    "Offline": lg.TestScenario.Offline,
 }
 
 last_timeing = []
@@ -128,6 +135,7 @@ def get_args():
     parser.add_argument("--dataset-list", help="path to the dataset list")
     parser.add_argument("--data-format", choices=["NCHW", "NHWC"], help="data format")
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
+    parser.add_argument("--scenario", choices=SCENARIO_MAP.keys(), default="SingleStream", help="benchmark scenario")
     parser.add_argument("--model", required=True, help="model file")
     parser.add_argument("--output", help="test results")
     parser.add_argument("--inputs", help="model inputs")
@@ -159,6 +167,7 @@ def get_args():
         args.outputs = args.outputs.split(",")
     if args.max_latency:
         args.max_latency = [float(i) for i in args.max_latency.split(",")]
+    args.scenario = [SCENARIO_MAP[scenario] for scenario in args.scenario.split(",")]
     return args
 
 
@@ -357,7 +366,7 @@ def main():
     #
     log.info("warmup ...")
     ds.load_query_samples([0])
-    for _ in range(50):
+    for _ in range(5):
         img, _ = ds.get_samples([0])
         _ = backend.predict({backend.inputs[0]: img})
     ds.unload_query_samples(None)
@@ -383,7 +392,7 @@ def main():
         add_results(final_results, "Accuracy", result_dict, last_timeing, time.time() - start)
 
     #
-    # run the benchmark with timeing
+    # run the benchmark with timing
     #
     runner.start_pool()
 
@@ -395,19 +404,12 @@ def main():
 
     def process_latencies(latencies_ns):
         global last_timeing
-        last_timeing = [t / 10000000. for t in latencies_ns]
+        last_timeing = [t / NANO_SEC for t in latencies_ns]
 
     sut = lg.ConstructSUT(issue_query, process_latencies)
     qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
 
-    scenarios = [
-        lg.TestScenario.SingleStream,
-        lg.TestScenario.MultiStream,
-        lg.TestScenario.Server,
-        # lg.TestScenario.Offline,
-        ]
-
-    for scenario in scenarios:
+    for scenario in args.scenario:
         for target_latency in args.max_latency:
             log.info("starting {}, latency={}".format(scenario, target_latency))
             settings = lg.TestSettings()

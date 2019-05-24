@@ -135,7 +135,8 @@ def get_args():
     parser.add_argument("--dataset-list", help="path to the dataset list")
     parser.add_argument("--data-format", choices=["NCHW", "NHWC"], help="data format")
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
-    parser.add_argument("--scenario", choices=SCENARIO_MAP.keys(), default="SingleStream", help="benchmark scenario")
+    parser.add_argument("--scenario", default="SingleStream",
+                        help="benchmark scenario, list of " + str(list(SCENARIO_MAP.keys())))
     parser.add_argument("--model", required=True, help="model file")
     parser.add_argument("--output", help="test results")
     parser.add_argument("--inputs", help="model inputs")
@@ -167,7 +168,10 @@ def get_args():
         args.outputs = args.outputs.split(",")
     if args.max_latency:
         args.max_latency = [float(i) for i in args.max_latency.split(",")]
-    args.scenario = [SCENARIO_MAP[scenario] for scenario in args.scenario.split(",")]
+    try:
+        args.scenario = [SCENARIO_MAP[scenario] for scenario in args.scenario.split(",")]
+    except:
+        parser.error("valid scanarios:" + str(list(SCENARIO_MAP.keys())))
     return args
 
 

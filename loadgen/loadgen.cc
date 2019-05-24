@@ -186,8 +186,8 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
                         "query_seq", query->sequence_id, "sample_idx",
                         sample->sample_index, "issue_start_ns",
                         sched.delta(query->issued_start_time), "complete_ns",
-                        sched.delta(complete_begin_time),
-                        "data", LogBinaryAsHexString{sample_data_copy});
+                        sched.delta(complete_begin_time), "data",
+                        LogBinaryAsHexString{sample_data_copy});
       }
       if (sample_data_copy) {
         delete sample_data_copy;
@@ -940,7 +940,9 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   }
 
   const size_t set_size = qsl->PerformanceSampleCount();
-  const size_t set_padding = settings.scenario == TestScenario::MultiStream ? settings.samples_per_query - 1 : 0;
+  const size_t set_padding = settings.scenario == TestScenario::MultiStream
+                                 ? settings.samples_per_query - 1
+                                 : 0;
   std::vector<QuerySampleIndex> loadable_set;
   loadable_set.reserve(set_size + set_padding);
   size_t remaining_count = samples.size();

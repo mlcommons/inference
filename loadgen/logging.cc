@@ -63,7 +63,7 @@ char Bin2Hex(uint8_t four_bits) {
 
 const std::string ArgValueTransform(const LogBinaryAsHexString& value) {
   if (value.data == nullptr) {
-    return "";
+    return "\"\"";
   }
   std::string hex;
   hex.reserve(value.data->size() + 2);

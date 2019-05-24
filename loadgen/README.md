@@ -9,7 +9,7 @@ To build as a python module:
 
     cd loadgen
     CFLAGS="-std=c++14" python setup.py bdist_wheel
-    pip install dist/mlperf_loadgen-0.5a0-cp27-cp27mu-linux_x86_64.whl
+    pip install --force-reinstall dist/mlperf_loadgen-0.5a0-cp27-cp27mu-linux_x86_64.whl
     python demos/py_demo_single_stream.py
 
 Note: The *.whl filename may differ on your system. There should only be one resulting whl file for you to use.

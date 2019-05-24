@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet] [cpu|gpu]"
+    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34] [cpu|gpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -21,7 +21,7 @@ for i in $* ; do
        tf|onnxruntime|tflite|pytorch) backend=$i; shift;;
        cpu|gpu) device=$i; shift;;
        gpu) device=gpu; shift;;
-       resnet50|mobilenet|ssd-mobilenet) model=$i; shift;;
+       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34) model=$i; shift;;
     esac
 done
 
@@ -32,7 +32,9 @@ fi
 name="$model-$backend"
 extra_args=""
 
-# tf
+#
+# tensorflow
+#
 if [ $name == "resnet50-tf" ] ; then
     model_path="$MODEL_DIR/resnet50_v1.pb"
     profile=resnet50-tf
@@ -46,7 +48,9 @@ if [ $name == "ssd-mobilenet-tf" ] ; then
     profile=ssd-mobilenet-tf
 fi
 
+#
 # onnxruntime
+#
 if [ $name == "resnet50-onnxruntime" ] ; then
     model_path="$MODEL_DIR/resnet50_v1.onnx"
     profile=resnet50-onnxruntime
@@ -59,8 +63,14 @@ if [ $name == "ssd-mobilenet-onnxruntime" ] ; then
     model_path="$MODEL_DIR/ssd_mobilenet_v1_coco_2018_01_28.onnx"
     profile=ssd-mobilenet-onnxruntime
 fi
+if [ $name == "ssd-resnet34-onnxruntime" ] ; then
+    model_path="$MODEL_DIR/resnet34-ssd1200.onnx"
+    profile=ssd-resnet34-onnxruntime
+fi
 
+#
 # pytorch
+#
 if [ $name == "resnet50-pytorch-onnx" ] ; then
     model_path="$MODEL_DIR/resnet50_v1.onnx"
     profile=resnet50-onnxruntime
@@ -72,7 +82,10 @@ if [ $name == "mobilenet-pytorch-onnx" ] ; then
     extra_args="$extra_args --backend pytorch"
 fi
 
+
+#
 # tflite
+#
 if [ $name == "resnet50-tflite" ] ; then
     model_path="$MODEL_DIR/resnet50_v1.tflite"
     profile=resnet50-tf

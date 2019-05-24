@@ -139,19 +139,23 @@ class PostProcessCoco:
                                                   detection_class], dtype=np.float32))
                     self.total += 1
         else:
-            # pytorch, ssd-resnet34
+            # onnx, ssd-resnet34
             for idx in range(0, bs):
                 detection_boxes = results[0][idx]
                 detection_classes = results[1][idx]
                 expected_classes = expected[idx][0]
+                scores = results[2][idx]
                 for detection in range(0, len(expected_classes)):
+                    if scores[detection] < 0.5:
+                        break
                     detection_class = int(detection_classes[detection])
                     if detection_class in expected_classes:
                         self.good += 1
                     box = detection_boxes[detection]
+                    # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
                     self.results.append(np.array([ids[idx],
-                                                  box[0], box[1], box[2], box[3],
-                                                  results[2][idx][detection],
+                                                  box[1], box[0], box[3], box[2],
+                                                  scores[detection],
                                                   detection_class], dtype=np.float32))
                     self.total += 1
         return results

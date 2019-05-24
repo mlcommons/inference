@@ -278,8 +278,20 @@ std::vector<QueryMetadata> GenerateQueries(
   uint64_t query_sequence_id = 0;
   uint64_t sample_sequence_id = 0;
   while (timestamp <= k2xMinDuration || queries.size() < min_queries) {
-    for (auto& s : samples) {
-      s = loaded_samples[sample_distribution(sample_rng)];
+    if (scenario == TestScenario::MultiStream) {
+      QuerySampleIndex sample_i = sample_distribution(sample_rng);
+      for (auto& s : samples) {
+        // Select contiguous samples in the MultiStream scenario.
+        // This will not overflow, since GenerateLoadableSets adds padding at
+        // the end of the loadable sets in the MultiStream scenario.
+        // The padding allows the starting samples to be the same for each
+        // query as the value of samples_per_query increases.
+        s = loaded_samples[sample_i++];
+      }
+    } else {
+      for (auto& s : samples) {
+        s = loaded_samples[sample_distribution(sample_rng)];
+      }
     }
     queries.emplace_back(samples, timestamp, response_delegate,
                          query_sequence_id, &sample_sequence_id);
@@ -928,8 +940,9 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   }
 
   const size_t set_size = qsl->PerformanceSampleCount();
+  const size_t set_padding = settings.scenario == TestScenario::MultiStream ? settings.samples_per_query - 1 : 0;
   std::vector<QuerySampleIndex> loadable_set;
-  loadable_set.reserve(set_size);
+  loadable_set.reserve(set_size + set_padding);
   size_t remaining_count = samples.size();
   size_t garbage_collect_count = remaining_count * kGarbageCollectRatio;
   std::uniform_int_distribution<> dist(0, remaining_count - 1);
@@ -966,6 +979,22 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   if (!loadable_set.empty()) {
     result.push_back(std::move(loadable_set));
   }
+
+  // Add padding for the multi stream scenario. Padding allows the
+  // startings sample to be the same for all SUTs, independent of the value
+  // of samples_per_query, while enabling samples in a query to be contiguous.
+  for (auto& set : result) {
+    for (size_t i = 0; i < set_padding; i++) {
+      // It's not clear in the spec if the STL deallocates the old container
+      // before assigning, which would invalidate the source before the
+      // assignment happens. Even though we should have reserved enough
+      // elements above, copy the source first anyway since we are just moving
+      // integers around.
+      auto p = set[i];
+      set.push_back(p);
+    }
+  }
+
   return result;
 }
 

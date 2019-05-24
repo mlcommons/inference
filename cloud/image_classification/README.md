@@ -109,6 +109,31 @@ For example:
 ```
 This will build and run the benchmark.
 
+### Examples for testing
+During development running the full benchmark is unpractical. Some options to help:
+
+```--count``` limits the number of items in the dataset used
+
+```--time``` limits the time the benchmark runs
+
+```--accuracy``` makes a pass on accuracy. 
+
+```--max-latency``` the latency used for Server mode
+
+So if you want to tune for example Server mode, try:
+```
+./run_local.sh tf resnet50 gpu --count 100 --time 60 --senario Server --qps 200 --max-latency 0.2
+or
+./run_local.sh tf ssd-mobilenet gpu --count 100 --time 60 --senario Server --qps 100 --max-latency 0.2
+
+```
+
+If you want to debug accuracy issues, try:
+```
+./run_local.sh tf ssd-mobilenet gpu --accuracy --count 100 --time 60 --senario Server --qps 100 --max-latency 0.2
+```
+
+
 ### Usage
 ```
 usage: main.py [-h]
@@ -170,7 +195,7 @@ Number of images the dataset we use. By default we use all images in the dataset
 Expceted qps.
 
 ```--max-latency MAX_LATENCY```
-comma seperated list of Which latencies (in seconds) we try to reach in the 99 percentile.
+comma seperated list of which latencies (in seconds) we try to reach in the 99 percentile.
 The deault is 0.010,0.050,0.100,0.200,0.400.
 
 

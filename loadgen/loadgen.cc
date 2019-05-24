@@ -225,14 +225,17 @@ auto ScheduleDistribution<TestScenario::Server>(double qps) {
 
 // SampleDistribution templates by test mode.
 template <TestMode mode>
-auto SampleDistribution(size_t sample_count) {
-  return [sample_count, i = size_t(0)](auto& gen) mutable {
-    return (i++) % sample_count;
+auto SampleDistribution(size_t sample_count, size_t samples_per_query) {
+  return [sample_count, samples_per_query, i = size_t(0)](auto& gen) mutable {
+    size_t result = i;
+    i += samples_per_query;
+    return result % sample_count;
   };
 }
 
 template <>
-auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count) {
+auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
+                                                   size_t samples_per_query) {
   return [dist = std::uniform_int_distribution<>(0, sample_count - 1)](
              auto& gen) mutable { return dist(gen); };
 }
@@ -253,10 +256,9 @@ std::vector<QueryMetadata> GenerateQueries(
   // We should not exit early in accuracy mode.
   if (mode == TestMode::AccuracyOnly) {
     k2xMinDuration = std::chrono::microseconds(0);
-    // TODO: Figure out how to pad accuracy mode queries if samples_per_query
-    // does not divide loaded_samples.size() evenly.
-    min_queries = (loaded_samples.size() + settings.samples_per_query - 1) /
-                  settings.samples_per_query;
+    // Integer truncation here is intentional.
+    // Loaded samples is properly padded in the MultiStream scenario.
+    min_queries = loaded_samples.size() / settings.samples_per_query;
   }
 
   std::vector<QueryMetadata> queries;
@@ -269,7 +271,8 @@ std::vector<QueryMetadata> GenerateQueries(
   std::mt19937 sample_rng(settings.sample_index_rng_seed);
   std::mt19937 schedule_rng(settings.schedule_rng_seed);
 
-  auto sample_distribution = SampleDistribution<mode>(loaded_samples.size());
+  auto sample_distribution = SampleDistribution<mode>(
+      loaded_samples.size(), settings.samples_per_query);
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
@@ -306,85 +309,6 @@ std::vector<QueryMetadata> GenerateQueries(
   });
 
   return queries;
-}
-
-template <TestScenario scenario>
-void RunAccuracyMode(
-    SystemUnderTest* sut, QuerySampleLibrary* qsl,
-    const TestSettingsInternal& settings,
-    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
-  LogDetail(
-      [](AsyncLog& log) { log.LogDetail("Starting verification mode:"); });
-
-  constexpr size_t kMaxAsyncQueries = 4;
-  constexpr int64_t kNanosecondsPerSecond = 1000000000;
-
-  ResponseDelegateDetailed<scenario, TestMode::AccuracyOnly> response_logger;
-
-  if (settings.scenario != TestScenario::MultiStream) {
-    LogError([](AsyncLog& log) {
-      log.LogDetail("Unsupported scenario. Only MultiStream supported.");
-    });
-    return;
-  }
-
-  // Iterate through each loadable set.
-  PerfClock::time_point start = PerfClock::now();
-  uint64_t tick_count = 0;
-  for (auto& loadable_set : loadable_sets) {
-    {
-      auto trace =
-          MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
-            log.ScopedTrace("LoadSamples", "count", count);
-          });
-      qsl->LoadSamplesToRam(loadable_set);
-    }
-    GlobalLogger().RestartLatencyRecording();
-
-    // Split the set up into queries.
-    std::vector<QueryMetadata> queries =
-        GenerateQueries<TestScenario::MultiStream, TestMode::AccuracyOnly>(
-            settings, loadable_set, &response_logger);
-
-    std::queue<QueryMetadata*> prev_queries;
-    for (auto& query : queries) {
-      // Sleep until the next tick, skipping ticks that have already passed.
-      auto query_start_time = start;
-      do {
-        tick_count++;
-        std::chrono::nanoseconds delta(static_cast<int64_t>(
-            (tick_count * kNanosecondsPerSecond) / settings.target_qps));
-        query_start_time = start + delta;
-      } while (query_start_time < PerfClock::now());
-      std::this_thread::sleep_until(query_start_time);
-
-      // Limit the number of oustanding async queries by waiting for
-      // old queries here.
-      if (prev_queries.size() > kMaxAsyncQueries) {
-        QueryMetadata* limitting_query = prev_queries.front();
-        limitting_query->WaitForAllSamplesCompleted();
-        prev_queries.pop();
-      }
-      prev_queries.push(&query);
-
-      // Issue the query to the SUT.
-      query.scheduled_time = query_start_time;
-      auto trace = MakeScopedTracer(
-          [](AsyncLog& log) { log.ScopedTrace("IssueQuery"); });
-      query.issued_start_time = PerfClock::now();
-      sut->IssueQuery(query.query_to_send);
-    }
-
-    // Wait for tail queries to complete and collect all the latencies.
-    // We have to keep the synchronization primitives and loaded samples
-    // alive until the SUT is done with them.
-    GlobalLogger().GetLatenciesBlocking(loadable_set.size());
-
-    auto trace = MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
-      log.ScopedTrace("UnloadSampes", "count", count);
-    });
-    qsl->UnloadSamplesFromRam(loadable_set);
-  }
 }
 
 // Template for the QueryScheduler. This base template should never be used
@@ -548,16 +472,18 @@ struct PerformanceResult {
   double final_query_issued_time;     // seconds from start.
 };
 
-template <TestScenario scenario>
-PerformanceResult IssuePerformanceQueries(
+// TODO: Templates for scenario and mode are overused, given the loadgen
+//       no longer generates queries on the fly. Should we reduce the
+//       use of templates?
+template <TestScenario scenario, TestMode mode>
+PerformanceResult IssueQueries(
     SystemUnderTest* sut, const TestSettingsInternal& settings,
-    const std::vector<QuerySampleIndex>& performance_set) {
+    const std::vector<QuerySampleIndex>& sample_set) {
   GlobalLogger().RestartLatencyRecording();
-  ResponseDelegateDetailed<scenario, TestMode::PerformanceOnly> response_logger;
+  ResponseDelegateDetailed<scenario, mode> response_logger;
 
   std::vector<QueryMetadata> queries =
-      GenerateQueries<scenario, TestMode::PerformanceOnly>(
-          settings, performance_set, &response_logger);
+      GenerateQueries<scenario, mode>(settings, sample_set, &response_logger);
 
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.
@@ -585,6 +511,11 @@ PerformanceResult IssuePerformanceQueries(
     }
 
     queries_issued++;
+    if (mode == TestMode::AccuracyOnly) {
+      // TODO: Rate limit in accuracy mode.
+      continue;
+    }
+
     auto duration = (last_now - start);
     if (queries_issued >= settings.min_query_count &&
         duration > settings.min_duration) {
@@ -625,7 +556,7 @@ PerformanceResult IssuePerformanceQueries(
     //       limit.
   }
 
-  if (queries_issued >= queries.size()) {
+  if (mode == TestMode::PerformanceOnly && queries_issued >= queries.size()) {
     LogError([](AsyncLog& log) {
       log.LogDetail(
           "Ending early: Ran out of generated queries to issue before the "
@@ -840,7 +771,8 @@ void RunPerformanceMode(
   qsl->LoadSamplesToRam(performance_set);
 
   PerformanceResult pr(
-      IssuePerformanceQueries<scenario>(sut, settings, performance_set));
+      IssueQueries<scenario, TestMode::PerformanceOnly>(
+          sut, settings, performance_set));
 
   sut->ReportLatencyResults(pr.latencies);
 
@@ -868,13 +800,45 @@ void FindPeakPerformanceMode(
 
   bool still_searching = true;
   while (still_searching) {
-    PerformanceResult pr(IssuePerformanceQueries<scenario>(sut, search_settings,
-                                                           performance_set));
+    PerformanceResult pr(
+        IssueQueries<scenario, TestMode::PerformanceOnly>(
+            sut, search_settings, performance_set));
     PerformanceSummary perf_summary{sut->Name(), search_settings,
                                     std::move(pr)};
   }
 
   qsl->UnloadSamplesFromRam(performance_set);
+}
+
+template <TestScenario scenario>
+void RunAccuracyMode(
+    SystemUnderTest* sut, QuerySampleLibrary* qsl,
+    const TestSettingsInternal& settings,
+    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+  LogDetail(
+      [](AsyncLog& log) { log.LogDetail("Starting verification mode:"); });
+
+  for (auto& loadable_set : loadable_sets) {
+    {
+      auto trace =
+          MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
+            log.ScopedTrace("LoadSamples", "count", count);
+          });
+      qsl->LoadSamplesToRam(loadable_set);
+    }
+
+    PerformanceResult pr(
+        IssueQueries<scenario, TestMode::AccuracyOnly>(
+            sut, settings, loadable_set));
+
+    {
+      auto trace =
+          MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
+            log.ScopedTrace("UnloadSampes", "count", count);
+          });
+      qsl->UnloadSamplesFromRam(loadable_set);
+    }
+  }
 }
 
 // Routes runtime scenario requests to the corresponding instances of its

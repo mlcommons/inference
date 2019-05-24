@@ -30,7 +30,7 @@ We are thinking to provide a c++ implementation with identical functionality in 
 | dataset | download link | 
 | ---- | ---- | 
 | imagenet2012 (validation) | http://image-net.org/challenges/LSVRC/2012/ | 
-| coco (validation) | http://images.cocodataset.org/zips/val2014.zip | 
+| coco (validation) | http://images.cocodataset.org/zips/val2017.zip | 
 
 Alternative you can download the datasets using [Collective Knowledge (CK)](https://github.com/ctuning):
 ```

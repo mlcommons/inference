@@ -81,15 +81,21 @@ class QueryMetadata {
     }
   }
 
-  void NotifyOneSampleCompleted() {
+  void NotifyOneSampleCompleted(PerfClock::time_point timestamp) {
     size_t old_count = wait_count_.fetch_sub(1, std::memory_order_relaxed);
     if (old_count == 1) {
-      all_samples_done_.set_value();
+      all_samples_done_.set_value(timestamp);
       response_delegate->QueryComplete();
     }
   }
 
-  void WaitForAllSamplesCompleted() { all_samples_done_.get_future().wait(); }
+  void WaitForAllSamplesCompleted() {
+    return all_samples_done_.get_future().wait();
+  }
+
+  PerfClock::time_point WaitForAllSamplesCompletedWithTimestamp() {
+    return all_samples_done_.get_future().get();
+  }
 
  public:
   std::vector<QuerySample> query_to_send;
@@ -107,7 +113,7 @@ class QueryMetadata {
 
  private:
   std::atomic<size_t> wait_count_;
-  std::promise<void> all_samples_done_;
+  std::promise<PerfClock::time_point> all_samples_done_;
   std::vector<SampleMetadata> samples_;
 };
 
@@ -124,7 +130,7 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
   for (QuerySampleResponse* response = responses; response < end; response++) {
     SampleMetadata* sample = reinterpret_cast<SampleMetadata*>(response->id);
     QueryMetadata* query = sample->query_metadata;
-    query->NotifyOneSampleCompleted();
+    query->NotifyOneSampleCompleted(timestamp);
   }
 
   // Log samples.
@@ -158,34 +164,34 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     // small buffer optimization code path when we aren't copying data.
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
     // into the lambda; even with C++14.
-    uint8_t* sample_data_copy = nullptr;
+    std::vector<uint8_t>* sample_data_copy = nullptr;
     if (mode == TestMode::AccuracyOnly) {
       // TODO: Verify accuracy with the data copied here.
-      auto* src_begin = reinterpret_cast<uint8_t*>(response->data);
-      sample_data_copy = new uint8_t[response->size];
-      std::memcpy(sample_data_copy, src_begin, response->size);
+      uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
+      uint8_t* src_end = src_begin + response->size;
+      sample_data_copy = new std::vector<uint8_t>(src_begin, src_end);
     }
-    Log([sample, sample_data_copy, complete_begin_time](AsyncLog& log) {
+    Log([sample, complete_begin_time, sample_data_copy](AsyncLog& log) {
       QueryMetadata* query = sample->query_metadata;
       DurationGeneratorNs sched{query->scheduled_time};
       QuerySampleLatency latency = sched.delta(complete_begin_time);
       log.RecordLatency(sample->sequence_id, latency);
-      if (sample_data_copy != nullptr) {
-        delete[] sample_data_copy;
-      }
       // Disable tracing each sample in offline mode. Since thousands of
       // samples could be overlapping when visualized, it's not very useful.
       // TODO: Should we disable for cloud mode as well? Sufficiently
       // out-of-order processing could have lots of overlap too.
-      if (scenario == TestScenario::Offline) {
-        return;
+      if (scenario != TestScenario::Offline) {
+        log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
+                        complete_begin_time, "sample_seq", sample->sequence_id,
+                        "query_seq", query->sequence_id, "sample_idx",
+                        sample->sample_index, "issue_start_ns",
+                        sched.delta(query->issued_start_time), "complete_ns",
+                        sched.delta(complete_begin_time), "data",
+                        LogBinaryAsHexString{sample_data_copy});
       }
-      log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
-                      complete_begin_time, "sample_seq", sample->sequence_id,
-                      "query_seq", query->sequence_id, "sample_idx",
-                      sample->sample_index, "issue_start_ns",
-                      sched.delta(query->issued_start_time), "complete_ns",
-                      sched.delta(complete_begin_time));
+      if (sample_data_copy) {
+        delete sample_data_copy;
+      }
     });
   }
 
@@ -219,14 +225,17 @@ auto ScheduleDistribution<TestScenario::Server>(double qps) {
 
 // SampleDistribution templates by test mode.
 template <TestMode mode>
-auto SampleDistribution(size_t sample_count) {
-  return [sample_count, i = size_t(0)](auto& gen) mutable {
-    return (i++) % sample_count;
+auto SampleDistribution(size_t sample_count, size_t samples_per_query) {
+  return [sample_count, samples_per_query, i = size_t(0)](auto& gen) mutable {
+    size_t result = i;
+    i += samples_per_query;
+    return result % sample_count;
   };
 }
 
 template <>
-auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count) {
+auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
+                                                   size_t samples_per_query) {
   return [dist = std::uniform_int_distribution<>(0, sample_count - 1)](
              auto& gen) mutable { return dist(gen); };
 }
@@ -247,10 +256,9 @@ std::vector<QueryMetadata> GenerateQueries(
   // We should not exit early in accuracy mode.
   if (mode == TestMode::AccuracyOnly) {
     k2xMinDuration = std::chrono::microseconds(0);
-    // TODO: Figure out how to pad accuracy mode queries if samples_per_query
-    // does not divide loaded_samples.size() evenly.
-    min_queries = (loaded_samples.size() + settings.samples_per_query - 1) /
-                  settings.samples_per_query;
+    // Integer truncation here is intentional.
+    // Loaded samples is properly padded in the MultiStream scenario.
+    min_queries = loaded_samples.size() / settings.samples_per_query;
   }
 
   std::vector<QueryMetadata> queries;
@@ -263,7 +271,8 @@ std::vector<QueryMetadata> GenerateQueries(
   std::mt19937 sample_rng(settings.sample_index_rng_seed);
   std::mt19937 schedule_rng(settings.schedule_rng_seed);
 
-  auto sample_distribution = SampleDistribution<mode>(loaded_samples.size());
+  auto sample_distribution = SampleDistribution<mode>(
+      loaded_samples.size(), settings.samples_per_query);
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
@@ -272,8 +281,20 @@ std::vector<QueryMetadata> GenerateQueries(
   uint64_t query_sequence_id = 0;
   uint64_t sample_sequence_id = 0;
   while (timestamp <= k2xMinDuration || queries.size() < min_queries) {
-    for (auto& s : samples) {
-      s = loaded_samples[sample_distribution(sample_rng)];
+    if (scenario == TestScenario::MultiStream) {
+      QuerySampleIndex sample_i = sample_distribution(sample_rng);
+      for (auto& s : samples) {
+        // Select contiguous samples in the MultiStream scenario.
+        // This will not overflow, since GenerateLoadableSets adds padding at
+        // the end of the loadable sets in the MultiStream scenario.
+        // The padding allows the starting samples to be the same for each
+        // query as the value of samples_per_query increases.
+        s = loaded_samples[sample_i++];
+      }
+    } else {
+      for (auto& s : samples) {
+        s = loaded_samples[sample_distribution(sample_rng)];
+      }
     }
     queries.emplace_back(samples, timestamp, response_delegate,
                          query_sequence_id, &sample_sequence_id);
@@ -288,85 +309,6 @@ std::vector<QueryMetadata> GenerateQueries(
   });
 
   return queries;
-}
-
-template <TestScenario scenario>
-void RunAccuracyMode(
-    SystemUnderTest* sut, QuerySampleLibrary* qsl,
-    const TestSettingsInternal& settings,
-    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
-  LogDetail(
-      [](AsyncLog& log) { log.LogDetail("Starting verification mode:"); });
-
-  constexpr size_t kMaxAsyncQueries = 4;
-  constexpr int64_t kNanosecondsPerSecond = 1000000000;
-
-  ResponseDelegateDetailed<scenario, TestMode::AccuracyOnly> response_logger;
-
-  if (settings.scenario != TestScenario::MultiStream) {
-    LogError([](AsyncLog& log) {
-      log.LogDetail("Unsupported scenario. Only MultiStream supported.");
-    });
-    return;
-  }
-
-  // Iterate through each loadable set.
-  PerfClock::time_point start = PerfClock::now();
-  uint64_t tick_count = 0;
-  for (auto& loadable_set : loadable_sets) {
-    {
-      auto trace =
-          MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
-            log.ScopedTrace("LoadSamples", "count", count);
-          });
-      qsl->LoadSamplesToRam(loadable_set);
-    }
-    GlobalLogger().RestartLatencyRecording();
-
-    // Split the set up into queries.
-    std::vector<QueryMetadata> queries =
-        GenerateQueries<TestScenario::MultiStream, TestMode::AccuracyOnly>(
-            settings, loadable_set, &response_logger);
-
-    std::queue<QueryMetadata*> prev_queries;
-    for (auto& query : queries) {
-      // Sleep until the next tick, skipping ticks that have already passed.
-      auto query_start_time = start;
-      do {
-        tick_count++;
-        std::chrono::nanoseconds delta(static_cast<int64_t>(
-            (tick_count * kNanosecondsPerSecond) / settings.target_qps));
-        query_start_time = start + delta;
-      } while (query_start_time < PerfClock::now());
-      std::this_thread::sleep_until(query_start_time);
-
-      // Limit the number of oustanding async queries by waiting for
-      // old queries here.
-      if (prev_queries.size() > kMaxAsyncQueries) {
-        QueryMetadata* limitting_query = prev_queries.front();
-        limitting_query->WaitForAllSamplesCompleted();
-        prev_queries.pop();
-      }
-      prev_queries.push(&query);
-
-      // Issue the query to the SUT.
-      query.scheduled_time = query_start_time;
-      auto trace = MakeScopedTracer(
-          [](AsyncLog& log) { log.ScopedTrace("IssueQuery"); });
-      query.issued_start_time = PerfClock::now();
-      sut->IssueQuery(query.query_to_send);
-    }
-
-    // Wait for tail queries to complete and collect all the latencies.
-    // We have to keep the synchronization primitives and loaded samples
-    // alive until the SUT is done with them.
-    GlobalLogger().GetLatenciesBlocking(loadable_set.size());
-
-    auto trace = MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
-      log.ScopedTrace("UnloadSampes", "count", count);
-    });
-    qsl->UnloadSamplesFromRam(loadable_set);
-  }
 }
 
 // Template for the QueryScheduler. This base template should never be used
@@ -406,25 +348,40 @@ struct QueryScheduler<TestScenario::SingleStream> {
   QueryMetadata* prev_query = nullptr;
 };
 
+enum class MultiStreamFrequency { Fixed, Free };
+
 // MultiStream QueryScheduler
 template <>
 struct QueryScheduler<TestScenario::MultiStream> {
   QueryScheduler(const TestSettingsInternal& settings,
-                 const PerfClock::time_point start)
-      : max_async_queries(settings.max_async_queries), tick_time(start) {}
+                 const PerfClock::time_point start,
+                 MultiStreamFrequency frequency = MultiStreamFrequency::Fixed)
+      : frequency(frequency),
+        max_async_queries(settings.max_async_queries),
+        tick_time(start) {}
 
   PerfClock::time_point Wait(QueryMetadata* next_query) {
+    bool schedule_time_needed = true;
     {
+      prev_queries.push(next_query);
       auto trace =
           MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Waiting"); });
-      if (prev_queries.size() >= max_async_queries) {
-        prev_queries.front()->WaitForAllSamplesCompleted();
+      if (prev_queries.size() > max_async_queries) {
+        switch (frequency) {
+          case MultiStreamFrequency::Fixed:
+            prev_queries.front()->WaitForAllSamplesCompleted();
+            break;
+          case MultiStreamFrequency::Free:
+            next_query->scheduled_time =
+                prev_queries.front()->WaitForAllSamplesCompletedWithTimestamp();
+            schedule_time_needed = false;
+            break;
+        }
         prev_queries.pop();
       }
-      prev_queries.push(next_query);
     }
 
-    {
+    if (frequency == MultiStreamFrequency::Fixed) {
       auto trace = MakeScopedTracer(
           [](AsyncLog& log) { log.ScopedTrace("Scheduling"); });
       PerfClock::time_point now = PerfClock::now();
@@ -441,16 +398,20 @@ struct QueryScheduler<TestScenario::MultiStream> {
     }
 
     auto now = PerfClock::now();
+    if (schedule_time_needed) {
+      next_query->scheduled_time = now;
+    }
     next_query->issued_start_time = now;
     return now;
   }
 
-  // TODO: Support frequencies other than 60Hz.
+  // TODO: Support frequencies other than 30Hz.
   static constexpr std::chrono::nanoseconds kPeriods[] = {
-      std::chrono::nanoseconds(16666667),
-      std::chrono::nanoseconds(16666666),
-      std::chrono::nanoseconds(16666667),
+      std::chrono::nanoseconds(33333333),
+      std::chrono::nanoseconds(33333334),
+      std::chrono::nanoseconds(33333333),
   };
+  const MultiStreamFrequency frequency;
   const size_t max_async_queries;
   PerfClock::time_point tick_time;
   size_t i_period = 0;
@@ -511,16 +472,18 @@ struct PerformanceResult {
   double final_query_issued_time;     // seconds from start.
 };
 
-template <TestScenario scenario>
-PerformanceResult IssuePerformanceQueries(
+// TODO: Templates for scenario and mode are overused, given the loadgen
+//       no longer generates queries on the fly. Should we reduce the
+//       use of templates?
+template <TestScenario scenario, TestMode mode>
+PerformanceResult IssueQueries(
     SystemUnderTest* sut, const TestSettingsInternal& settings,
-    const std::vector<QuerySampleIndex>& performance_set) {
+    const std::vector<QuerySampleIndex>& sample_set) {
   GlobalLogger().RestartLatencyRecording();
-  ResponseDelegateDetailed<scenario, TestMode::PerformanceOnly> response_logger;
+  ResponseDelegateDetailed<scenario, mode> response_logger;
 
   std::vector<QueryMetadata> queries =
-      GenerateQueries<scenario, TestMode::PerformanceOnly>(
-          settings, performance_set, &response_logger);
+      GenerateQueries<scenario, mode>(settings, sample_set, &response_logger);
 
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.
@@ -548,8 +511,13 @@ PerformanceResult IssuePerformanceQueries(
     }
 
     queries_issued++;
+    if (mode == TestMode::AccuracyOnly) {
+      // TODO: Rate limit in accuracy mode.
+      continue;
+    }
+
     auto duration = (last_now - start);
-    if (queries_issued > settings.min_query_count &&
+    if (queries_issued >= settings.min_query_count &&
         duration > settings.min_duration) {
       LogDetail([](AsyncLog& log) {
         log.LogDetail(
@@ -557,7 +525,7 @@ PerformanceResult IssuePerformanceQueries(
       });
       break;
     }
-    if (queries_issued > settings.max_query_count) {
+    if (queries_issued >= settings.max_query_count) {
       LogError([queries_issued](AsyncLog& log) {
         log.LogDetail("Ending early: Max query count reached.", "query_count",
                       queries_issued);
@@ -588,7 +556,7 @@ PerformanceResult IssuePerformanceQueries(
     //       limit.
   }
 
-  if (queries_issued >= queries.size()) {
+  if (mode == TestMode::PerformanceOnly && queries_issued >= queries.size()) {
     LogError([](AsyncLog& log) {
       log.LogDetail(
           "Ending early: Ran out of generated queries to issue before the "
@@ -803,7 +771,8 @@ void RunPerformanceMode(
   qsl->LoadSamplesToRam(performance_set);
 
   PerformanceResult pr(
-      IssuePerformanceQueries<scenario>(sut, settings, performance_set));
+      IssueQueries<scenario, TestMode::PerformanceOnly>(
+          sut, settings, performance_set));
 
   sut->ReportLatencyResults(pr.latencies);
 
@@ -831,13 +800,45 @@ void FindPeakPerformanceMode(
 
   bool still_searching = true;
   while (still_searching) {
-    PerformanceResult pr(IssuePerformanceQueries<scenario>(sut, search_settings,
-                                                           performance_set));
+    PerformanceResult pr(
+        IssueQueries<scenario, TestMode::PerformanceOnly>(
+            sut, search_settings, performance_set));
     PerformanceSummary perf_summary{sut->Name(), search_settings,
                                     std::move(pr)};
   }
 
   qsl->UnloadSamplesFromRam(performance_set);
+}
+
+template <TestScenario scenario>
+void RunAccuracyMode(
+    SystemUnderTest* sut, QuerySampleLibrary* qsl,
+    const TestSettingsInternal& settings,
+    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+  LogDetail(
+      [](AsyncLog& log) { log.LogDetail("Starting verification mode:"); });
+
+  for (auto& loadable_set : loadable_sets) {
+    {
+      auto trace =
+          MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
+            log.ScopedTrace("LoadSamples", "count", count);
+          });
+      qsl->LoadSamplesToRam(loadable_set);
+    }
+
+    PerformanceResult pr(
+        IssueQueries<scenario, TestMode::AccuracyOnly>(
+            sut, settings, loadable_set));
+
+    {
+      auto trace =
+          MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
+            log.ScopedTrace("UnloadSampes", "count", count);
+          });
+      qsl->UnloadSamplesFromRam(loadable_set);
+    }
+  }
 }
 
 // Routes runtime scenario requests to the corresponding instances of its
@@ -903,8 +904,11 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   }
 
   const size_t set_size = qsl->PerformanceSampleCount();
+  const size_t set_padding = settings.scenario == TestScenario::MultiStream
+                                 ? settings.samples_per_query - 1
+                                 : 0;
   std::vector<QuerySampleIndex> loadable_set;
-  loadable_set.reserve(set_size);
+  loadable_set.reserve(set_size + set_padding);
   size_t remaining_count = samples.size();
   size_t garbage_collect_count = remaining_count * kGarbageCollectRatio;
   std::uniform_int_distribution<> dist(0, remaining_count - 1);
@@ -941,6 +945,22 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   if (!loadable_set.empty()) {
     result.push_back(std::move(loadable_set));
   }
+
+  // Add padding for the multi stream scenario. Padding allows the
+  // startings sample to be the same for all SUTs, independent of the value
+  // of samples_per_query, while enabling samples in a query to be contiguous.
+  for (auto& set : result) {
+    for (size_t i = 0; i < set_padding; i++) {
+      // It's not clear in the spec if the STL deallocates the old container
+      // before assigning, which would invalidate the source before the
+      // assignment happens. Even though we should have reserved enough
+      // elements above, copy the source first anyway since we are just moving
+      // integers around.
+      auto p = set[i];
+      set.push_back(p);
+    }
+  }
+
   return result;
 }
 

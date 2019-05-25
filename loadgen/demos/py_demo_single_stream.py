@@ -4,6 +4,7 @@ Python demo showing how to use the MLPerf Inference load generator bindings.
 
 from __future__ import print_function
 from absl import app
+import array
 import mlperf_loadgen
 import threading
 import time
@@ -21,8 +22,12 @@ def unload_samples_from_ram(query_samples):
 def process_query_async(query_samples):
     time.sleep(.001)
     responses = []
+    response_data = array.array(
+        'B', [0,1,7,8,15,16,31,32,63,64,127,128,254,255])
+    rdbi = response_data.buffer_info()
     for s in query_samples:
-        responses.append(mlperf_loadgen.QuerySampleResponse(s.id, 0, 0))
+        responses.append(
+            mlperf_loadgen.QuerySampleResponse(s.id, rdbi[0], rdbi[1]))
     mlperf_loadgen.QuerySamplesComplete(responses)
 
 

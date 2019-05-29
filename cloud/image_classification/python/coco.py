@@ -14,7 +14,7 @@ from PIL import Image
 from pycocotools.cocoeval import COCOeval
 import pycoco
 import dataset
-
+import torch
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("coco")
 
@@ -117,7 +117,7 @@ class PostProcessCoco:
     def __call__(self, results, ids, expected=None, result_dict=None):
         # results come as:
         #   len=4, tensorflow, ssd-mobilenet: num_detections,detection_boxes,detection_scores,detection_classes
-        #   len=2, pytorch, ssd-resnet34: detection_boxes,detection_classes,detection_scores,
+        #   len=3, pytorch, ssd-resnet34: detection_boxes,detection_classes,detection_scores,
 
         # batch size
         bs = len(results[0])
@@ -139,14 +139,15 @@ class PostProcessCoco:
                                                   detection_class], dtype=np.float32))
                     self.total += 1
         else:
-            # onnx, ssd-resnet34
+            # onnx,pytorch ssd-resnet34
             for idx in range(0, bs):
                 detection_boxes = results[0][idx]
                 detection_classes = results[1][idx]
                 expected_classes = expected[idx][0]
                 scores = results[2][idx]
-                for detection in range(0, len(expected_classes)):
-                    if scores[detection] < 0.5:
+                #for detection in range(0, len(expected_classes)):
+                for detection in range(0, len(scores)):
+                    if scores[detection] < 0.05:
                         break
                     detection_class = int(detection_classes[detection])
                     if detection_class in expected_classes:
@@ -164,12 +165,20 @@ class PostProcessCoco:
         self.results = []
         self.good = 0
         self.total = 0
-
+        
     def finalize(self, result_dict, ds=None, output_dir=None):
         result_dict["good"] += self.good
         result_dict["total"] += self.total
         detections = np.array(self.results)
         image_ids = []
+
+        label_map = {}
+        import json
+        with open(ds.annotation_file) as fin:
+            self.data = json.load(fin)
+        for cnt,cat in enumerate(self.data["categories"]):
+            label_map[cat["id"]] = cnt+1
+        inv_map = {v:k for k,v in label_map.items()}
         for idx in range(0, detections.shape[0]):
             # this is the index into the image list
             image_id = int(detections[idx][0])
@@ -187,9 +196,9 @@ class PostProcessCoco:
             detections[idx][2] = ymin
             detections[idx][3] = xmax - xmin
             detections[idx][4] = ymax - ymin
-
+            detections[idx][6] =  inv_map[detections[idx][6]]
         # for debugging
-        if True:
+        if False:
             pp = []
             for idx in range(0, detections.shape[0]):
                 pp.append({"image_id": int(detections[idx][0]),

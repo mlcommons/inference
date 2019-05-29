@@ -50,7 +50,7 @@ SUPPORTED_DATASETS = {
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
 # overwritten from command line
-DEFAULT_LATENCY_BUCKETS = "0.010,0.050,0.100,0.200,0.400"
+DEFAULT_LATENCY_BUCKETS = "0.010,0.050,0.100"
 
 SUPPORTED_PROFILES = {
     "defaults": {
@@ -207,16 +207,62 @@ class Item:
         self.start = time.time()
 
 
-class Runner:
+class RunnerBase:
     def __init__(self, model, ds, threads, post_proc=None):
-        self.tasks = Queue(maxsize=threads * 5)
-        self.workers = []
+        self.take_accuracy = False
+        self.ds = ds
         self.model = model
         self.post_process = post_proc
         self.threads = threads
-        self.result_dict = {}
         self.take_accuracy = False
-        self.ds = ds
+
+    def handle_tasks(self, tasks_queue):
+        pass
+
+    def start_run(self, result_dict, take_accuracy):
+        self.result_dict = result_dict
+        self.take_accuracy = take_accuracy
+        self.post_process.start()
+
+    def run_one_item(self, qitem):
+        # run the prediction
+        try:
+            results = self.model.predict({self.model.inputs[0]: qitem.img})
+            processed_results = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
+            if self.take_accuracy:
+                self.post_process.add_results(processed_results)
+        except Exception as ex:  # pylint: disable=broad-except
+            src = [self.ds.get_item_loc(i) for i in qitem.content_id]
+            log.error("thread: failed on contentid=%s, %s", src, ex)
+        finally:
+            if not self.take_accuracy:
+                response = []
+                for idx, query_id in enumerate(qitem.query_id):
+                    item = processed_results[idx]
+                    # FIXME: unclear what to return here
+                    response.append(lg.QuerySampleResponse(query_id, 0, 0))
+                lg.QuerySamplesComplete(response)
+
+    def enqueue(self, id, ids, data, label):
+        qitem = Item(id, ids, data, label)
+        self.run_one_item(qitem)
+
+    def finish(self):
+        pass
+
+
+class QueueRunner(RunnerBase):
+    def __init__(self, model, ds, threads, post_proc=None):
+        super().__init__(model, ds, threads, post_proc)
+        self.tasks = Queue(maxsize=threads * 5)
+        self.workers = []
+        self.result_dict = {}
+
+        for _ in range(self.threads):
+            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
+            worker.daemon = True
+            self.workers.append(worker)
+            worker.start()
 
     def handle_tasks(self, tasks_queue):
         """Worker thread."""
@@ -226,64 +272,11 @@ class Runner:
                 # None in the queue indicates the parent want us to exit
                 tasks_queue.task_done()
                 break
-
-            try:
-                # run the prediction
-                results = self.model.predict({self.model.inputs[0]: qitem.img})
-                if self.take_accuracy:
-                    response = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
-            except Exception as ex:  # pylint: disable=broad-except
-                src = [self.ds.get_item_loc(i) for i in qitem.content_id]
-                log.error("thread: failed on contentid=%s, %s", src, ex)
-            finally:
-                response = []
-                for query_id in qitem.query_id:
-                    # FIXME: unclear what to return here
-                    response.append(lg.QuerySampleResponse(query_id, 0, 0))
-                lg.QuerySamplesComplete(response)
+            self.run_one_item(qitem)
             tasks_queue.task_done()
 
-    def handle_tasks_nolg(self, tasks_queue):
-        """Worker thread."""
-        while True:
-            qitem = tasks_queue.get()
-            if qitem is None:
-                # None in the queue indicates the parent want us to exit
-                tasks_queue.task_done()
-                break
-
-            try:
-                # run the prediction
-                start = time.time()
-                results = self.model.predict({self.model.inputs[0]: qitem.img})
-                self.result_dict["timing"].append(time.time() - start)
-                if self.take_accuracy:
-                    response = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
-            except Exception as ex:  # pylint: disable=broad-except
-                src = [self.ds.get_item_loc(i) for i in qitem.content_id]
-                log.error("thread: failed on contentid=%s, %s", src, ex)
-            finally:
-                tasks_queue.task_done()
-
-    def start_pool(self, nolg=False):
-        if nolg:
-            handler =self.handle_tasks_nolg
-        else:
-            handler =self.handle_tasks
-        for _ in range(self.threads):
-            worker = threading.Thread(target=handler, args=(self.tasks,))
-            worker.daemon = True
-            self.workers.append(worker)
-            worker.start()
-
-    def start_run(self, result_dict, take_accuracy):
-        self.result_dict = result_dict
-        self.take_accuracy = take_accuracy
-        self.post_process.start()
-
     def enqueue(self, id, ids, data, label):
-        item = Item(id, ids, data, label)
-        self.tasks.put(item)
+        self.tasks.put(Item(id, ids, data, label))
 
     def finish(self):
         # exit all threads
@@ -363,57 +356,57 @@ def main():
     #
     count = args.count if args.count else ds.get_item_count()
 
-    runner = Runner(model, ds, args.threads, post_proc=post_proc)
-
-    #
-    # warmup
-    #
-    log.info("warmup ...")
-    ds.load_query_samples([0])
-    for _ in range(5):
-        img, _ = ds.get_samples([0])
-        _ = backend.predict({backend.inputs[0]: img})
-    ds.unload_query_samples(None)
-
     if args.accuracy:
         #
         # accuracy pass
         #
         log.info("starting accuracy pass on {} items".format(count))
-        runner.start_pool(nolg=True)
-        result_dict = {"good": 0, "total": 0, "scenario": "Accuracy", "timing": []}
+        last_timeing = []
+        runner = RunnerBase(model, ds, args.threads, post_proc=post_proc)
+        result_dict = {"good": 0, "total": 0, "scenario": "Accuracy"}
         runner.start_run(result_dict, True)
         start = time.time()
         for idx in range(0, count):
             ds.load_query_samples([idx])
             data, label = ds.get_samples([idx])
+            start_one = time.time()
             runner.enqueue([idx], [idx], data, label)
+            last_timeing.append(time.time() - start_one)
         runner.finish()
         # aggregate results
         post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
-        last_timeing = result_dict["timing"]
-        del result_dict["timing"]
         add_results(final_results, "Accuracy", result_dict, last_timeing, time.time() - start)
 
-    #
-    # run the benchmark with timing
-    #
-    runner.start_pool()
-
-    def issue_query(query_samples):
-        idx = [q.index for q in query_samples]
-        query_id = [q.id for q in query_samples]
-        data, label = ds.get_samples(idx)
-        runner.enqueue(query_id, idx, data, label)
-
-    def process_latencies(latencies_ns):
-        global last_timeing
-        last_timeing = [t / 1e9 for t in latencies_ns]
-
-    sut = lg.ConstructSUT(issue_query, process_latencies)
-    qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
 
     for scenario in args.scenario:
+        runner_map = {
+            lg.TestScenario.SingleStream: RunnerBase,
+            lg.TestScenario.MultiStream: QueueRunner,
+            lg.TestScenario.Server: QueueRunner,
+            lg.TestScenario.Offline: QueueRunner
+        }
+        runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc)
+
+        # warmup
+        ds.load_query_samples([0])
+        for _ in range(5):
+            img, _ = ds.get_samples([0])
+            _ = backend.predict({backend.inputs[0]: img})
+        ds.unload_query_samples(None)
+
+        def issue_query(query_samples):
+            idx = [q.index for q in query_samples]
+            query_id = [q.id for q in query_samples]
+            data, label = ds.get_samples(idx)
+            runner.enqueue(query_id, idx, data, label)
+
+        def process_latencies(latencies_ns):
+            global last_timeing
+            last_timeing = [t / 1e9 for t in latencies_ns]
+
+        sut = lg.ConstructSUT(issue_query, process_latencies)
+        qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
+
         for target_latency in args.max_latency:
             log.info("starting {}, latency={}".format(scenario, target_latency))
             settings = lg.TestSettings()

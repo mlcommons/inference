@@ -114,16 +114,18 @@ class PostProcessCoco:
         self.good = 0
         self.total = 0
 
-    def __call__(self, results, ids, expected=None, result_dict=None):
+    def __call__(self, results, ids, expected=None, result_dict=None, ):
         # results come as:
         #   len=4, tensorflow, ssd-mobilenet: num_detections,detection_boxes,detection_scores,detection_classes
         #   len=2, pytorch, ssd-resnet34: detection_boxes,detection_classes,detection_scores,
 
+        processed_results = []
         # batch size
         bs = len(results[0])
         if len(results) == 4:
             # tensorflow, ssd-mobilenet
             for idx in range(0, bs):
+                processed_results.append([])
                 detection_num = int(results[0][idx])
                 detection_boxes = results[1][idx]
                 detection_classes = results[3][idx]
@@ -133,14 +135,15 @@ class PostProcessCoco:
                     if detection_class in expected_classes:
                         self.good += 1
                     box = detection_boxes[detection]
-                    self.results.append(np.array([ids[idx],
-                                                  box[0], box[1], box[2], box[3],
-                                                  results[2][idx][detection],
-                                                  detection_class], dtype=np.float32))
+                    processed_results[idx].append([float(ids[idx]),
+                                         box[0], box[1], box[2], box[3],
+                                         results[2][idx][detection],
+                                         float(detection_class)])
                     self.total += 1
         else:
             # onnx, ssd-resnet34
             for idx in range(0, bs):
+                processed_results.append([])
                 detection_boxes = results[0][idx]
                 detection_classes = results[1][idx]
                 expected_classes = expected[idx][0]
@@ -153,12 +156,15 @@ class PostProcessCoco:
                         self.good += 1
                     box = detection_boxes[detection]
                     # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
-                    self.results.append(np.array([ids[idx],
-                                                  box[1], box[0], box[3], box[2],
-                                                  scores[detection],
-                                                  detection_class], dtype=np.float32))
+                    processed_results[idx].append([float(ids[idx]),
+                                         box[1], box[0], box[3], box[2],
+                                         scores[detection],
+                                         float(detection_class)])
                     self.total += 1
-        return results
+        return processed_results
+
+    def add_results(self, results):
+        self.results.extend(results)
 
     def start(self):
         self.results = []

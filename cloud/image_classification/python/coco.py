@@ -14,7 +14,7 @@ from PIL import Image
 from pycocotools.cocoeval import COCOeval
 import pycoco
 import dataset
-import torch
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("coco")
 

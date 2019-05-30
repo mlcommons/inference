@@ -13,6 +13,7 @@
 # limitations under the License.
 # =============================================================================
 
+import queue
 from queue import Queue
 import threading
 import time

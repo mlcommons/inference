@@ -69,8 +69,7 @@ TestSettingsInternal::TestSettingsInternal(
     // MLPerf spec.
     constexpr double kSlack = 1.1;
     samples_per_query = std::max<int>(
-        min_query_count,
-        (kMinPerformanceRunDurationSeconds / target_qps) * kSlack);
+        min_query_count, DurationToSeconds(min_duration) * target_qps * kSlack);
     min_query_count = 1;
     min_duration = std::chrono::milliseconds(0);
   }

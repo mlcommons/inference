@@ -16,7 +16,7 @@ CPU
 pip install --user tensorflow
 ```
 
-### Run
+### Run GNMT over full Dataset
 
 - go to this folder
 ```
@@ -47,6 +47,20 @@ $ python run_task.py --run=performance --batch_size=32
 - Evaluate accuracy to ensure the target BLEU.
 ```
 $ python run_task.py --run=accuracy
+```
+
+### Run GNMT through LoadGen:
+1.  Follow the instructions from https://github.com/mlperf/inference/blob/master/loadgen/README.md
+2.  Run:
+```
+python loadgen_gnmt.py --store_translation
+```
+
+This will invoke the SingleStream scenario (default --scenario option) and in addition, will store the output of every sentence in a separate file.
+
+Other scenarios can be ran by changing the "--scenario" mode. Please run the following command for complete overview of options:
+```
+python loadgen_gnmt.py -h
 ```
 
 # 3. Dataset

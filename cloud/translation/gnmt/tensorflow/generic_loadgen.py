@@ -26,13 +26,18 @@ class ImplementationException (Exception):
     def __repr__(self):
         return "ImplementationException: {}".format(self.msg)
 
-def process_latencies(latencies_us):
-    print("Average latency: ")
-    print(numpy.mean(latencies_us))
-    print("Median latency: ")
-    print(numpy.percentile(latencies_us, 50))
-    print("90 percentile latency: ")
-    print(numpy.percentile(latencies_us, 90))
+##
+# @brief Simple way to process and display latencies
+# @param latencies_ns is an array of durations (in ns) it took per sample to finish
+# @note that the duration is measured from query submission time to query finish time,
+# hence the samples themselves could actually have been finished earlier
+def process_latencies(latencies_ns):
+    print("Average latency (ms) per query:")
+    print(numpy.mean(latencies_ns)/1000000.0)
+    print("Median latency (ms): ")
+    print(numpy.percentile(latencies_ns, 50)/1000000.0)
+    print("90 percentile latency (ms): ")
+    print(numpy.percentile(latencies_ns, 90)/1000000.0)
 
 class Task:
     def __init__(self, query_id, sample_id):
@@ -76,8 +81,13 @@ class Runner:
             # We need to properly store the result. Perhaps through QuerySampleResponse, otherwise internally
             # in this instance of Runner.
             # QuerySampleResponse contains an ID, a size field and a data pointer field
-            response.append(mlperf_loadgen.QuerySampleResponse(qitem.query_id, 0, 0))
+            for query_id in qitem.query_id:
+                response.append(mlperf_loadgen.QuerySampleResponse(query_id, 0, 0))
+
+            # Tell loadgen that we're ready with this query
             mlperf_loadgen.QuerySamplesComplete(response)
+
+            self.tasks.task_done()
     
     ##
     # @brief Stop worker thread
@@ -109,11 +119,11 @@ class DummyRunner (Runner):
     def enqueue(self, query_samples):
         for sample in query_samples:
             print("Adding Dummy task to the queue.")
-            task = Task(sample.id, sample.index)
+            task = Task([sample.id], [sample.index])
             self.tasks.put(task)
 
     def process(self, qitem):
-        print("Default dummy process, processing the {}'th query for sample ID {}.".format(self.count, qitem.sample_id))
+        print("Default dummy process, processing the {}'th query for sample ID {}.".format(self.count, qitem.sample_id[0]))
         self.count += 1
         
         return self.count

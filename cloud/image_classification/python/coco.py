@@ -22,7 +22,7 @@ log = logging.getLogger("coco")
 class Coco(dataset.Dataset):
     def __init__(self, data_path, image_list, name, use_cache=0, image_size=None,
                  image_format="NHWC", pre_process=None, count=None, cache_dir=None):
-        super(Coco, self).__init__()
+        super().__init__()
         self.image_size = image_size
         self.image_list = []
         self.label_list = []
@@ -113,59 +113,36 @@ class PostProcessCoco:
         self.results = []
         self.good = 0
         self.total = 0
+        self.use_inv_map = False
 
     def __call__(self, results, ids, expected=None, result_dict=None):
         # results come as:
-        #   len=4, tensorflow, ssd-mobilenet: num_detections,detection_boxes,detection_scores,detection_classes
-        #   len=3, pytorch, ssd-resnet34: detection_boxes,detection_classes,detection_scores,
+        #   tensorflow, ssd-mobilenet: num_detections,detection_boxes,detection_scores,detection_classes
 
         # batch size
         bs = len(results[0])
-        if len(results) == 4:
-            # tensorflow, ssd-mobilenet
-            for idx in range(0, bs):
-                detection_num = int(results[0][idx])
-                detection_boxes = results[1][idx]
-                detection_classes = results[3][idx]
-                expected_classes = expected[idx][0]
-                for detection in range(0, detection_num):
-                    detection_class = int(detection_classes[detection])
-                    if detection_class in expected_classes:
-                        self.good += 1
-                    box = detection_boxes[detection]
-                    self.results.append(np.array([ids[idx],
-                                                  box[0], box[1], box[2], box[3],
-                                                  results[2][idx][detection],
-                                                  detection_class], dtype=np.float32))
-                    self.total += 1
-        else:
-            # onnx,pytorch ssd-resnet34
-            for idx in range(0, bs):
-                detection_boxes = results[0][idx]
-                detection_classes = results[1][idx]
-                expected_classes = expected[idx][0]
-                scores = results[2][idx]
-                #for detection in range(0, len(expected_classes)):
-                for detection in range(0, len(scores)):
-                    if scores[detection] < 0.05:
-                        break
-                    detection_class = int(detection_classes[detection])
-                    if detection_class in expected_classes:
-                        self.good += 1
-                    box = detection_boxes[detection]
-                    # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
-                    self.results.append(np.array([ids[idx],
-                                                  box[1], box[0], box[3], box[2],
-                                                  scores[detection],
-                                                  detection_class], dtype=np.float32))
-                    self.total += 1
+        for idx in range(0, bs):
+            detection_num = int(results[0][idx])
+            detection_boxes = results[1][idx]
+            detection_classes = results[3][idx]
+            expected_classes = expected[idx][0]
+            for detection in range(0, detection_num):
+                detection_class = int(detection_classes[detection])
+                if detection_class in expected_classes:
+                    self.good += 1
+                box = detection_boxes[detection]
+                self.results.append(np.array([ids[idx],
+                                              box[0], box[1], box[2], box[3],
+                                              results[2][idx][detection],
+                                              detection_class], dtype=np.float32))
+                self.total += 1
         return results
 
     def start(self):
         self.results = []
         self.good = 0
         self.total = 0
-        
+
     def finalize(self, result_dict, ds=None, output_dir=None):
         result_dict["good"] += self.good
         result_dict["total"] += self.total
@@ -173,11 +150,10 @@ class PostProcessCoco:
         image_ids = []
 
         label_map = {}
-        import json
         with open(ds.annotation_file) as fin:
-            self.data = json.load(fin)
-        for cnt,cat in enumerate(self.data["categories"]):
-            label_map[cat["id"]] = cnt+1
+            annotations = json.load(fin)
+        for cnt, cat in enumerate(annotations["categories"]):
+            label_map[cat["id"]] = cnt + 1
         inv_map = {v:k for k,v in label_map.items()}
         for idx in range(0, detections.shape[0]):
             # this is the index into the image list
@@ -191,14 +167,21 @@ class PostProcessCoco:
             xmin = detections[idx][2] * width
             ymax = detections[idx][3] * height
             xmax = detections[idx][4] * width
-            # from pycoco wants {imageID,x1,y1,w,h,score,class}
+            # pycoco wants {imageID,x1,y1,w,h,score,class}
             detections[idx][1] = xmin
             detections[idx][2] = ymin
             detections[idx][3] = xmax - xmin
             detections[idx][4] = ymax - ymin
-            detections[idx][6] =  inv_map[detections[idx][6]]
+            if self.use_inv_map:
+                cat_id = inv_map.get(int(detections[idx][6]), -1)
+                if cat_id == -1:
+                    # FIXME:
+                    log.info("finalize can't map category {}".format(int(detections[idx][6])))
+                detections[idx][6] =  cat_id
+
         # for debugging
-        if False:
+        if output_dir:
+            # for debugging
             pp = []
             for idx in range(0, detections.shape[0]):
                 pp.append({"image_id": int(detections[idx][0]),
@@ -213,6 +196,7 @@ class PostProcessCoco:
             with open(fname, "w") as fp:
                 json.dump(pp, fp, sort_keys=True, indent=4)
 
+
         image_ids = list(set([i[0] for i in detections]))
         self.results = []
         cocoGt = pycoco.COCO(ds.annotation_file)
@@ -223,3 +207,70 @@ class PostProcessCoco:
         cocoEval.accumulate()
         cocoEval.summarize()
         result_dict["mAP"] = cocoEval.stats[0]
+
+
+class PostProcessCocoPt(PostProcessCoco):
+    def __init__(self):
+        super().__init__()
+        self.use_inv_map = True
+
+    def __call__(self, results, ids, expected=None, result_dict=None):
+        # results come as:
+        #   detection_boxes,detection_classes,detection_scores,
+
+        # batch size
+        bs = len(results[0])
+        for idx in range(0, bs):
+            detection_boxes = results[0][idx]
+            detection_classes = results[1][idx]
+            expected_classes = expected[idx][0]
+            scores = results[2][idx]
+            #for detection in range(0, len(expected_classes)):
+            for detection in range(0, len(scores)):
+                if scores[detection] < 0.05:
+                    break
+                detection_class = int(detection_classes[detection])
+                if detection_class in expected_classes:
+                    self.good += 1
+                box = detection_boxes[detection]
+                # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
+                self.results.append(np.array([ids[idx],
+                                              box[1], box[0], box[3], box[2],
+                                              scores[detection],
+                                              detection_class], dtype=np.float32))
+                self.total += 1
+        return results
+
+
+
+class PostProcessCocoOnnx(PostProcessCoco):
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, results, ids, expected=None, result_dict=None):
+        # results come as:
+        #   onnx (from pytorch ssd-resnet34): detection_boxes,detection_classes,detection_scores,
+
+        # batch size
+        bs = len(results[0])
+        for idx in range(0, bs):
+            detection_boxes = results[0][idx]
+            detection_classes = results[1][idx]
+            expected_classes = expected[idx][0]
+            scores = results[2][idx]
+            #for detection in range(0, len(expected_classes)):
+            for detection in range(0, len(scores)):
+                if scores[detection] < 0.5:
+                    break
+                detection_class = int(detection_classes[detection])
+                if detection_class in expected_classes:
+                    self.good += 1
+                box = detection_boxes[detection]
+                # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
+                self.results.append(np.array([ids[idx],
+                                              box[1], box[0], box[3], box[2],
+                                              scores[detection],
+                                              detection_class], dtype=np.float32))
+                self.total += 1
+        return results
+

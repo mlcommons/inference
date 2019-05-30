@@ -46,6 +46,12 @@ SUPPORTED_DATASETS = {
     "coco-1200":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCoco(),
          {"image_size": [1200, 1200, 3]}),
+    "coco-1200-onnx":
+        (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoOnnx(),
+         {"image_size": [1200, 1200, 3]}),
+    "coco-1200-pt":
+        (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoPt(),
+         {"image_size": [1200, 1200, 3]}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
@@ -111,11 +117,11 @@ SUPPORTED_PROFILES = {
     "ssd-resnet34-pytorch": {
         "inputs": "image",
         "outputs": "bboxes,labels,scores",
-        "dataset": "coco-1200",
+        "dataset": "coco-1200-pt",
         "backend": "pytorch-native",
     },
     "ssd-resnet34-onnxruntime": {
-        "dataset": "coco-1200",
+        "dataset": "coco-1200-onnx",
         "inputs": "image",
         "outputs": "bboxes,labels,scores",
         "backend": "onnxruntime",

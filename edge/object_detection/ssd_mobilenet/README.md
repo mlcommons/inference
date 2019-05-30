@@ -140,7 +140,7 @@ $ ck pull repo --all
 
 ### Install the COCO 2017 validation dataset (5,000 images)
 ```bash
-$ ck install package --tags=dataset,coco,2017
+$ ck install package --tags=object-detection,dataset,coco.2017,val,original,full
 ```
 **NB:** COCO dataset descriptions are in [repo:ck-env](https://github.com/ctuning/ck-env).
 
@@ -149,6 +149,16 @@ $ ck install package --tags=dataset,coco,2017
 $ ck detect soft:dataset.coco.2017.val --full_path=$HOME/coco/val2017/000000000139.jpg
 ```
 (CK also places annotations under `annotations/val2017/`.)
+
+### Preprocess the COCO 2017 validation dataset (first 50 images)
+```bash
+$ ck install package --tags=object-detection,dataset,coco.2017,preprocessed,first.50
+```
+
+### Preprocess the COCO 2017 validation dataset (all 5,000 images)
+```bash
+$ ck install package --tags=object-detection,dataset,coco.2017,preprocessed,full
+```
 
 <a name="benchmarking"></a>
 ## Benchmarking

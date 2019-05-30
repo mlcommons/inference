@@ -81,11 +81,11 @@ with CK at the same time (so there is less chance of mixing things up).
 
 #### Option 1: system-wide installation via pip (under `/usr`)
 ```bash
-$ sudo python3 -m pip install scipy ck
+$ sudo python3 -m pip install scipy==1.2.1 ck
 ```
 #### Option 2: user-space installation via pip (under `$HOME`)
 ```bash
-$ python3 -m pip install scipy ck --user
+$ python3 -m pip install scipy==1.2.1 ck --user
 ```
 #### Option 3: User-space installation via CK (under `$HOME` and `$CK_TOOLS`)
 Install CK via pip (or [from GitHub](https://github.com/ctuning/ck#installation)):
@@ -100,7 +100,7 @@ Install and register Python packages with CK:
 $ ck pull repo:ck-env
 $ ck detect soft:compiler.python --full_path=`which python3`
 $ ck install package --tags=lib,python-package,numpy
-$ ck install package --tags=lib,python-package,scipy
+$ ck install package --tags=lib,python-package,scipy --force_version=1.2.1
 ```
 
 If the above dependencies have been installed on a clean system, you should be

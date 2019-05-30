@@ -80,11 +80,11 @@ with CK at the same time (so there is less chance of mixing things up).
 
 #### Option 1: system-wide installation via pip (under `/usr`)
 ```bash
-$ sudo python3 -m pip install cython scipy matplotlib pillow ck
+$ sudo python3 -m pip install cython scipy==1.2.1 matplotlib pillow ck
 ```
 #### Option 2: user-space installation via pip (under `$HOME`)
 ```bash
-$ python3 -m pip install cython scipy matplotlib pillow ck --user
+$ python3 -m pip install cython scipy==1.2.1 matplotlib pillow ck --user
 ```
 #### Option 3: user-space installation via CK (under `$HOME` and `$CK_TOOLS`)
 Install CK via pip (or [from GitHub](https://github.com/ctuning/ck#installation)):
@@ -98,7 +98,7 @@ Install and register Python packages with CK:
 $ ck pull repo:ck-env
 $ ck detect soft:compiler.python --full_path=`which python3`
 $ ck install package --tags=lib,python-package,numpy
-$ ck install package --tags=lib,python-package,scipy
+$ ck install package --tags=lib,python-package,scipy --force_version=1.2.1
 $ ck install package --tags=lib,python-package,matplotlib
 $ ck install package --tags=lib,python-package,pillow
 $ python3 -m pip install cython --user && ck detect soft --tags=lib,python-package,cython

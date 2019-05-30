@@ -30,6 +30,12 @@ inline double QuerySampleLatencyToSeconds(QuerySampleLatency qsl) {
   return static_cast<double>(qsl) / std::nano::den;
 }
 
+template <typename DurationT>
+inline DurationT SecondsToDuration(double seconds) {
+  return std::chrono::duration_cast<DurationT>(
+      std::chrono::duration<double>(seconds));
+}
+
 std::string DoubleToString(double value, int precision = 2);
 
 }  // namespace mlperf

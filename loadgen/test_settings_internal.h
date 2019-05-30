@@ -31,14 +31,24 @@ struct TestSettingsInternal {
   std::chrono::nanoseconds target_latency;
   int max_async_queries;
 
+  // Taget duration is used to generate queries of a minimum duration before
+  // the test run.
+  std::chrono::milliseconds target_duration;
+
+  // Min duration/query_count/sample_count are used to validate the test
+  // duration at the end of the run.
   std::chrono::milliseconds min_duration;
   std::chrono::milliseconds max_duration;
   uint64_t min_query_count;
   uint64_t max_query_count;
+  uint64_t min_sample_count;  // Offline only.
 
   uint64_t qsl_rng_seed;
   uint64_t sample_index_rng_seed;
   uint64_t schedule_rng_seed;
+
+ private:
+  void ApplyOverrides();
 };
 
 }  // namespace mlperf

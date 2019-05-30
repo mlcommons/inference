@@ -250,12 +250,12 @@ std::vector<QueryMetadata> GenerateQueries(
 
   // Generate 2x more samples than we think we'll need given the expected
   // QPS. We should exit before issuing all queries.
-  std::chrono::microseconds k2xMinDuration = 2 * settings.min_duration;
+  std::chrono::microseconds k2xTargetDuration = 2 * settings.target_duration;
   size_t min_queries = settings.min_query_count;
 
   // We should not exit early in accuracy mode.
   if (mode == TestMode::AccuracyOnly) {
-    k2xMinDuration = std::chrono::microseconds(0);
+    k2xTargetDuration = std::chrono::microseconds(0);
     // Integer truncation here is intentional.
     // Loaded samples is properly padded in the MultiStream scenario.
     min_queries = loaded_samples.size() / settings.samples_per_query;
@@ -280,7 +280,7 @@ std::vector<QueryMetadata> GenerateQueries(
   std::chrono::nanoseconds timestamp(0);
   uint64_t query_sequence_id = 0;
   uint64_t sample_sequence_id = 0;
-  while (timestamp <= k2xMinDuration || queries.size() < min_queries) {
+  while (timestamp <= k2xTargetDuration || queries.size() < min_queries) {
     if (scenario == TestScenario::MultiStream) {
       QuerySampleIndex sample_i = sample_distribution(sample_rng);
       for (auto& s : samples) {
@@ -614,6 +614,7 @@ struct PerformanceSummary {
 
   bool MinDurationMet();
   bool MinQueriesMet();
+  bool MinSamplesMet();
   bool HasPerfConstraints();
   bool PerfConstraintsMet();
   void Log(AsyncLog& log);
@@ -648,11 +649,18 @@ void PerformanceSummary::ProcessLatencies() {
 }
 
 bool PerformanceSummary::MinDurationMet() {
+  if (settings.scenario == TestScenario::Offline) {
+    return pr.max_latency > DurationToSeconds(settings.min_duration);
+  }
   return pr.final_query_issued_time >= DurationToSeconds(settings.min_duration);
 }
 
 bool PerformanceSummary::MinQueriesMet() {
   return pr.queries_issued >= settings.min_query_count;
+}
+
+bool PerformanceSummary::MinSamplesMet() {
+  return sample_count >= settings.min_sample_count;
 }
 
 bool PerformanceSummary::HasPerfConstraints() {
@@ -723,7 +731,7 @@ void PerformanceSummary::Log(AsyncLog& log) {
   }
 
   bool min_duration_met = MinDurationMet();
-  bool min_queries_met = MinQueriesMet();
+  bool min_queries_met = MinQueriesMet() && MinSamplesMet();
   bool perf_constraints_met = PerfConstraintsMet();
   bool all_constraints_met =
       min_duration_met && min_queries_met && perf_constraints_met;

@@ -2,6 +2,7 @@
 
 #include "logging.h"
 #include "mlperf_spec_constants.h"
+#include "utils.h"
 
 namespace mlperf {
 
@@ -12,17 +13,22 @@ TestSettingsInternal::TestSettingsInternal(
       mode(requested.mode),
       samples_per_query(1),
       target_qps(60.0),
-      target_latency(std::nano::den),
+      target_latency(SecondsToDuration<decltype(target_latency)>(
+          kMinPerformanceRunTargetLatencySeconds)),
       max_async_queries(2),
-      min_duration(std::milli::den),
+      target_duration(SecondsToDuration<decltype(target_duration)>(
+          kMinPerformanceRunDurationSeconds)),
+      min_duration(target_duration),
       max_duration(0),
       min_query_count(requested.scenario == TestScenario::SingleStream
                           ? kMinQueryCountSingleStream
                           : kMinQueryCountNotSingleStream),
       max_query_count(std::numeric_limits<uint64_t>::max()),
+      min_sample_count(0),
       qsl_rng_seed(kDefaultQslSeed),
       sample_index_rng_seed(kDefaultSampleSeed),
       schedule_rng_seed(kDefaultScheduleSeed) {
+  ApplyOverrides();
   // Target QPS.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -68,12 +74,17 @@ TestSettingsInternal::TestSettingsInternal(
     // to take longer than than the minimum test duration required by the
     // MLPerf spec.
     constexpr double kSlack = 1.1;
-    samples_per_query = std::max<int>(
-        min_query_count, DurationToSeconds(min_duration) * target_qps * kSlack);
+    int target_sample_count =
+        kSlack * DurationToSeconds(target_duration) * target_qps;
+    samples_per_query = std::max<int>(min_query_count, target_sample_count);
     min_query_count = 1;
-    min_duration = std::chrono::milliseconds(0);
+    target_duration = std::chrono::milliseconds(0);
   }
 
+  min_sample_count = min_query_count * samples_per_query;
+}
+
+void TestSettingsInternal::ApplyOverrides() {
   // Exit here if we are using defaults.
   if (!requested.enable_spec_overrides) {
     return;
@@ -110,6 +121,7 @@ TestSettingsInternal::TestSettingsInternal(
   if (requested.override_min_duration_ms != 0) {
     min_duration =
         std::chrono::milliseconds(requested.override_min_duration_ms);
+    target_duration = min_duration;
   }
   if (requested.override_max_duration_ms != 0) {
     max_duration =

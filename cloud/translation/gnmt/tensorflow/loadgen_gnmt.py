@@ -164,6 +164,8 @@ class GNMTRunner (Runner):
         # Warmup
         warmup_ids = list(range(self.hparams.infer_batch_size))
         self.translate(warmup_ids)
+        # Reset translation count
+        self.count = 0
 
 
     ##
@@ -286,6 +288,63 @@ class SingleStreamGNMTRunner (GNMTRunner):
         task = TranslationTask(sample.id, sentence_id, output_file)
         self.tasks.put(task)
 
+class ServerGNMTRunner(GNMTRunner):
+    def __init__(self, input_file=None, ckpt_path=None, hparams_path=None, vocab_prefix=None, outdir=None, batch_size=32, verbose=False):
+            GNMTRunner.__init__(self, input_file, ckpt_path, hparams_path, vocab_prefix, outdir, batch_size, verbose)
+
+    ##
+    # @brief Override the default handle_tasks loop for smart batching
+    # @detail Instead of processing one qitem at a time (which represent a single query), we can aggregate them here.
+    def handle_tasks(self):
+        while True:
+            # Block until an item becomes available
+            qitem = self.tasks.get(block=True)
+
+            # Stop processing if parent signaled that we're done
+            if qitem is None:
+                break
+
+            sentence_id_list = qitem.sentence_id_list
+            query_id_list = qitem.query_id
+
+            # Aggregate querries until there are more samples than the batch size,
+            # or until we aggregated all current qurries
+            try:
+                # @note that by definition, Server queries should have no more than 1 element
+                # Therefore we don't need to worry that batched_querries would be come larger than 
+                # the batch size
+                while len(sentence_id_list) < self.hparams.infer_batch_size:
+                    qitem = self.tasks.get(block=False)
+                    # Stop processing if parent signaled that we're done
+                    if qitem is None:
+                        return
+
+                    assert len(qitem.sentence_id_list) == 1
+                    sentence_id_list += qitem.sentence_id_list
+                    query_id_list += qitem.query_id
+            except queue.Empty as e:
+                pass
+
+            batched_qitem = BatchTranslationTask(sentence_id_list, query_id_list)
+
+            if self.VERBOSE:
+                print("Aggregated {} single-sample querries.".format(len(batched_qitem.sentence_id_list)))
+
+            result = self.process(batched_qitem)
+            response = []
+
+            # TBD: do something when we are running accuracy mode
+            # We need to properly store the result. Perhaps through QuerySampleResponse, otherwise internally
+            # in this instance of Runner.
+            # QuerySampleResponse contains an ID, a size field and a data pointer field
+            for query_id in batched_qitem.query_id:
+                response.append(mlperf_loadgen.QuerySampleResponse(query_id, 0, 0))
+
+            # Tell loadgen that we're ready with this query
+            mlperf_loadgen.QuerySamplesComplete(response)
+
+            self.tasks.task_done()
+
 
 if __name__ == "__main__":
     SCENARIO_MAP = {
@@ -339,6 +398,14 @@ if __name__ == "__main__":
         settings.override_min_query_count = 100
         settings.override_max_query_count = 100
         settings.multi_stream_samples_per_query = 8
+
+    elif args.scenario == "Server":
+        runner = ServerGNMTRunner(batch_size=args.batch_size, verbose=args.verbose)
+        
+        # Specify exactly how many queries need to be made
+        settings.enable_spec_overrides = True
+        settings.override_min_query_count = 20
+        settings.override_max_query_count = 100
 
     else:
         print("Invalid scenario selected")

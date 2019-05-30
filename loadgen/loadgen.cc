@@ -384,6 +384,9 @@ struct QueryScheduler<TestScenario::MultiStream> {
     if (frequency == MultiStreamFrequency::Fixed) {
       auto trace = MakeScopedTracer(
           [](AsyncLog& log) { log.ScopedTrace("Scheduling"); });
+      // TODO(brianderson): Skip ticks based on the query complete time,
+      //     before the query snchronization + notification thread hop,
+      //     rather than after.
       PerfClock::time_point now = PerfClock::now();
       auto i_period_old = i_period;
       do {
@@ -556,7 +559,10 @@ PerformanceResult IssueQueries(
     //       limit.
   }
 
-  if (mode == TestMode::PerformanceOnly && queries_issued >= queries.size()) {
+  // The offline scenario always only has a single query, so this check
+  // doesn't apply.
+  if (scenario != TestScenario::Offline && mode == TestMode::PerformanceOnly &&
+      queries_issued >= queries.size()) {
     LogError([](AsyncLog& log) {
       log.LogDetail(
           "Ending early: Ran out of generated queries to issue before the "
@@ -770,9 +776,8 @@ void RunPerformanceMode(
   const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
   qsl->LoadSamplesToRam(performance_set);
 
-  PerformanceResult pr(
-      IssueQueries<scenario, TestMode::PerformanceOnly>(
-          sut, settings, performance_set));
+  PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
+      sut, settings, performance_set));
 
   sut->ReportLatencyResults(pr.latencies);
 
@@ -800,9 +805,8 @@ void FindPeakPerformanceMode(
 
   bool still_searching = true;
   while (still_searching) {
-    PerformanceResult pr(
-        IssueQueries<scenario, TestMode::PerformanceOnly>(
-            sut, search_settings, performance_set));
+    PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
+        sut, search_settings, performance_set));
     PerformanceSummary perf_summary{sut->Name(), search_settings,
                                     std::move(pr)};
   }
@@ -827,9 +831,8 @@ void RunAccuracyMode(
       qsl->LoadSamplesToRam(loadable_set);
     }
 
-    PerformanceResult pr(
-        IssueQueries<scenario, TestMode::AccuracyOnly>(
-            sut, settings, loadable_set));
+    PerformanceResult pr(IssueQueries<scenario, TestMode::AccuracyOnly>(
+        sut, settings, loadable_set));
 
     {
       auto trace =

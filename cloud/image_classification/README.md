@@ -124,15 +124,15 @@ During development running the full benchmark is unpractical. Some options to he
 
 So if you want to tune for example Server mode, try:
 ```
-./run_local.sh tf resnet50 gpu --count 100 --time 60 --senario Server --qps 200 --max-latency 0.2
+./run_local.sh tf resnet50 gpu --count 100 --time 60 --scenario Server --qps 200 --max-latency 0.2
 or
-./run_local.sh tf ssd-mobilenet gpu --count 100 --time 60 --senario Server --qps 100 --max-latency 0.2
+./run_local.sh tf ssd-mobilenet gpu --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.2
 
 ```
 
 If you want to debug accuracy issues, try:
 ```
-./run_local.sh tf ssd-mobilenet gpu --accuracy --count 100 --time 60 --senario Server --qps 100 --max-latency 0.2
+./run_local.sh tf ssd-mobilenet gpu --accuracy --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.2
 ```
 
 

@@ -4,11 +4,14 @@ dataset related classes and methods
 
 # pylint: disable=unused-argument,missing-docstring
 
+import logging
 import sys
 import time
 
 import numpy as np
 
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("dataset")
 
 class Item():
     def __init__(self, label, img, idx):
@@ -62,8 +65,7 @@ class Dataset():
             self.image_list_inmemory = {}
 
     def get_samples(self, id_list):
-        data = [self.image_list_inmemory[id] for id in id_list]
-        data = np.array(data)
+        data = np.array([self.image_list_inmemory[id] for id in id_list])
         return data, self.label_list[id_list]
 
     def get_item_loc(self, id):
@@ -80,12 +82,18 @@ class PostProcessCommon:
         self.total = 0
 
     def __call__(self, results, ids, expected=None, result_dict=None):
+        processed_results = []
         n = len(results[0])
         for idx in range(0, n):
-            if results[0][idx] + self.offset == expected[idx]:
+            result = results[0][idx] + self.offset
+            processed_results.append([result])
+            if result == expected[idx]:
                 self.good += 1
         self.total += n
-        return results
+        return processed_results
+
+    def add_results(self, results):
+        pass
 
     def start(self):
         self.good = 0
@@ -103,13 +111,19 @@ class PostProcessArgMax:
         self.total = 0
 
     def __call__(self, results, ids, expected=None, result_dict=None):
-        result = np.argmax(results[0], axis=1)
-        n = result.shape[0]
+        processed_results = []
+        results = np.argmax(results[0], axis=1)
+        n = results.shape[0]
         for idx in range(0, n):
-            if result[idx] + self.offset == expected[idx]:
+            result = results[idx] + self.offset
+            processed_results.append([result])
+            if result == expected[idx]:
                 self.good += 1
         self.total += n
-        return results
+        return processed_results
+
+    def add_results(self, results):
+        pass
 
     def start(self):
         self.good = 0

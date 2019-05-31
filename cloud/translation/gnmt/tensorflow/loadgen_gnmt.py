@@ -25,6 +25,8 @@ from nmt.utils import nmt_utils
 from nmt import model_helper
 import codecs
 
+##
+# @brief Translation task that contains 1 sentence ID.
 class TranslationTask:
     def __init__(self, query_id, sentence_id, output_file):
         self.query_id = [query_id]
@@ -32,30 +34,27 @@ class TranslationTask:
         self.output_file = output_file
         self.start = time.time()
 
+##
+# @brief Translation task that contains an array of sentence IDs
 class BatchTranslationTask:
     def __init__(self, sentence_id_list, query_id_list):
         self.sentence_id_list = sentence_id_list
         self.query_id_list = query_id_list
         self.query_id = query_id_list   #FIXME generic_loadgen needs this
 
+
 ##
-# @brief Wrapper around TF GNMT Inference that can interface with loadgen
-class GNMTRunner (Runner):
+# @brief Wrapper class around the TensorFlow GNMT reference implementation
+class GNMTWrapper:
     ##
     # @brief Constructor will build the graph and set some wrapper variables
-    # @param input_file: path to the input text
     # @param ckpt_path: path to the GNMT checkpoint
     # @param hparams_path: path to the parameters used to configure GNMT graph
     # @param vocab_prefix: Path to vocabulary file (note: don't add .en or .de suffixes)
     # @param outdir: Output directory to optionally write translations to
     # @param batch_size: batch size to use when processing BatchTranslationTasks
-    def __init__(self, input_file=None, ckpt_path=None, hparams_path=None, vocab_prefix=None, outdir=None, batch_size=32, verbose=False):
-        Runner.__init__(self)
-
+    def __init__(self, ckpt_path=None, hparams_path=None, vocab_prefix=None, outdir=None, batch_size=32):
         # If no value is provided for the construtor arguments, set defaults here
-        if input_file is None:
-            input_file = os.path.join(os.getcwd(), 'nmt', 'data', 'newstest2014.tok.bpe.32000.en')
-
         if ckpt_path is None:
             ckpt_path = os.path.join(os.getcwd(), 'ende_gnmt_model_4_layer',
                         'translate.ckpt')
@@ -67,18 +66,14 @@ class GNMTRunner (Runner):
         if vocab_prefix is None:
             vocab_prefix = os.path.join(os.getcwd(), 'nmt', 'data', 'vocab.bpe.32000')
 
-        if outdir is None:
-            outdir = os.path.join(os.getcwd(), 'lg_output')
 
         flags = self.parse_options(ckpt_path, hparams_path, vocab_prefix, outdir, batch_size)
 
         self.setup(flags)
 
-        # Wrapper parameters
-        self.input_file = input_file
-        self.infer_data = []  # This will be filled by load_samples_to_ram
         self.count = 0
-        self.VERBOSE = verbose
+        self.infer_data = []  # This will be filled by load_sentences
+
 
     ##
     # @brief Parse GNMT-specific options before setting up
@@ -150,21 +145,10 @@ class GNMTRunner (Runner):
 
         # Parameters needed by TF GNMT
         self.hparams = hparams
-        self.out_dir = out_dir
 
         self.infer_model = infer_model
         self.sess = sess
         self.loaded_infer_model = loaded_infer_model
-
-    ##
-    # @brief Load sentences into the infer_data array and warmup the network
-    def load_samples_to_ram(self, query_samples):
-        self.infer_data = load_data(self.input_file, self.hparams)
-
-        # Warmup
-        warmup_ids = list(range(self.hparams.infer_batch_size))
-        self.translate(warmup_ids)
-
 
     ##
     # @brief Run translation on a number of sentence id's
@@ -206,20 +190,64 @@ class GNMTRunner (Runner):
 
         return translation
 
+    def resetCount(self):
+        self.count = 0
+
+    def getCount(self):
+        return self.count
+
+    def getBatchSize(self):
+        return self.hparams.infer_batch_size
+
+    def load_sentences(self, input_file):
+        self.infer_data = load_data(input_file, self.hparams)
+
+##
+# @brief Basic class in which LoadGen can store queries that will be processed by GNMT
+class GNMTRunner (Runner):
     ##
-    # @brief Invoke GNMT to translate the input file
+    # @brief Constructor 
+    # @param model: GNMTWrapper object
+    # @param input_file: path to the input text
+    # @param verbose: provide some information on the progress
+    def __init__(self, model, input_file=None, verbose=False):
+        Runner.__init__(self)
+
+        # If no value is provided for the construtor arguments, set defaults here
+        if input_file is None:
+            input_file = os.path.join(os.getcwd(), 'nmt', 'data', 'newstest2014.tok.bpe.32000.en')
+
+        self.gnmt = model
+        self.input_file = input_file
+        
+        self.VERBOSE = verbose
+
+    ##
+    # @brief Load sentences into the infer_data array and warmup the network
+    def load_samples_to_ram(self, query_samples):
+        self.gnmt.load_sentences(self.input_file)
+
+        # Warmup
+        warmup_ids = list(range(self.gnmt.getBatchSize()))
+        self.gnmt.translate(warmup_ids)
+
+        # Reset translation count
+        self.gnmt.resetCount()
+
+    ##
+    # @brief Invoke GNMT to translate the query qitem
     # @pre Ensure load_samples_to_ram was called to fill self.infer_data
     def process(self, qitem):
-        bs = self.hparams.infer_batch_size
+        bs = self.gnmt.getBatchSize()
         num_samples = len(qitem.sentence_id_list)
 
         # Split the samples over batches
         for i in range(0, num_samples, bs):
             cur_sentid_list = [index for index in qitem.sentence_id_list[i:min(i+bs, num_samples)]] 
-            translation = self.translate(cur_sentid_list)
+            translation = self.gnmt.translate(cur_sentid_list)
 
         if self.VERBOSE:
-            print("Performed {} translations".format(self.count))
+            print("Performed {} translations".format(self.gnmt.getCount()))
         
         return translation
 
@@ -237,18 +265,19 @@ class GNMTRunner (Runner):
 # @brief Subclass of GNMTRunner, specialized for batch size 1
 class SingleStreamGNMTRunner (GNMTRunner):
     ##
-    # @brief Constructor will build the graph and set some wrapper variables
+    # @brief Constructor 
+    # @param model: GNMTWrapper object
     # @param input_file: path to the input text
-    # @param ckpt_path: path to the GNMT checkpoint
-    # @param hparams_path: path to the parameters used to configure GNMT graph
-    # @param vocab_prefix: Path to vocabulary file (note: don't add .en or .de suffixes)
-    # @param outdir: Output directory to optionally write translations to
     # @param store_translation: whether output should be stored
-    def __init__(self, input_file=None, ckpt_path=None, hparams_path=None, vocab_prefix=None, outdir=None, store_translation=False, verbose=False):
-        GNMTRunner.__init__(self, input_file, ckpt_path, hparams_path, vocab_prefix, outdir, batch_size=1, verbose=verbose)
+    # @param verbose: provide some information on the progress
+    # @param outdir: Output directory to optionally write translations to
+    def __init__(self, model, input_file=None, store_translation=False, verbose=False, outdir=None):
+        GNMTRunner.__init__(self, model, input_file, verbose=verbose)
 
+        # SingleStreamGNMTRunner only handles batch sizes of 1
+        assert self.gnmt.getBatchSize() == 1
         self.store_translation = store_translation
-
+        self.out_dir = outdir
 
     ##
     # @brief Invoke GNMT to translate the input file
@@ -256,11 +285,14 @@ class SingleStreamGNMTRunner (GNMTRunner):
     def process(self, qitem):
         if self.store_translation or self.VERBOSE:
             assert len(qitem.query_id) == 1
-            print("translate {} (QID {}): Sentence ID {} --> {}".format(self.count, qitem.query_id[0], qitem.sentence_id, qitem.output_file))
+            msg = "translate {} (QID {}): Sentence ID {}".format(self.gnmt.getCount(), qitem.query_id[0], qitem.sentence_id)
+            if self.store_translation:
+                msg += " --> " + qitem.output_file
+            print (msg)
        
         sentence_id = qitem.sentence_id 
 
-        translation = self.translate([sentence_id])
+        translation = self.gnmt.translate([sentence_id])
 
         if self.store_translation:
             assert len(translation) == 1
@@ -285,6 +317,70 @@ class SingleStreamGNMTRunner (GNMTRunner):
 
         task = TranslationTask(sample.id, sentence_id, output_file)
         self.tasks.put(task)
+
+##
+# @brief subclass of GNMTRunner, specialized for grouping multiple querries together
+class ServerGNMTRunner(GNMTRunner):
+    ##
+    # @brief Constructor 
+    # @param model: GNMTWrapper object
+    # @param input_file: path to the input text
+    # @param verbose: provide some information on the progress
+    def __init__(self, model, input_file=None, verbose=False):
+            GNMTRunner.__init__(self, model, input_file, verbose)
+
+    ##
+    # @brief Override the default handle_tasks loop for smart batching
+    # @detail Instead of processing one qitem at a time (which represents a single query), we can aggregate them here.
+    def handle_tasks(self):
+        while True:
+            # Block until an item becomes available
+            qitem = self.tasks.get(block=True)
+
+            # Stop processing if parent signaled that we're done
+            if qitem is None:
+                break
+
+            sentence_id_list = qitem.sentence_id_list
+            query_id_list = qitem.query_id
+
+            # Aggregate querries until there are more samples than the batch size,
+            # or until we aggregated all current qurries
+            try:
+                # @note that by definition, Server queries should have no more than 1 element
+                # Therefore we don't need to worry that batched_querries would be come larger than 
+                # the batch size
+                while len(sentence_id_list) < self.gnmt.getBatchSize():
+                    qitem = self.tasks.get(block=False)
+                    # Stop processing if parent signaled that we're done
+                    if qitem is None:
+                        return
+
+                    assert len(qitem.sentence_id_list) == 1
+                    sentence_id_list += qitem.sentence_id_list
+                    query_id_list += qitem.query_id
+            except queue.Empty as e:
+                pass
+
+            batched_qitem = BatchTranslationTask(sentence_id_list, query_id_list)
+
+            if self.VERBOSE:
+                print("Aggregated {} single-sample querries.".format(len(batched_qitem.sentence_id_list)))
+
+            result = self.process(batched_qitem)
+            response = []
+
+            # TBD: do something when we are running accuracy mode
+            # We need to properly store the result. Perhaps through QuerySampleResponse, otherwise internally
+            # in this instance of Runner.
+            # QuerySampleResponse contains an ID, a size field and a data pointer field
+            for query_id in batched_qitem.query_id:
+                response.append(mlperf_loadgen.QuerySampleResponse(query_id, 0, 0))
+
+            # Tell loadgen that we're ready with this query
+            mlperf_loadgen.QuerySamplesComplete(response)
+
+            self.tasks.task_done()
 
 
 if __name__ == "__main__":
@@ -311,20 +407,31 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+
+    outdir = os.path.join(os.getcwd(), 'lg_output')
+
     settings = mlperf_loadgen.TestSettings()
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
     settings.scenario = SCENARIO_MAP[args.scenario]
 
     if args.scenario == "SingleStream":
-        runner = SingleStreamGNMTRunner(store_translation=args.store_translation, verbose=args.verbose)
+        batch_size = 1
+    else:
+        batch_size = args.batch_size
+
+    gnmt_model = GNMTWrapper(batch_size = batch_size, outdir=outdir)
+
+
+    if args.scenario == "SingleStream":
+        runner = SingleStreamGNMTRunner(gnmt_model, store_translation=args.store_translation, verbose=args.verbose, outdir=outdir)
         
         # Specify exactly how many queries need to be made
         settings.enable_spec_overrides = True
-        settings.override_min_query_count = 3003
-        settings.override_max_query_count = 3003
+        settings.override_min_query_count = 100
+        settings.override_max_query_count = 100
 
     elif args.scenario == "Offline":
-        runner = GNMTRunner(batch_size=args.batch_size, verbose=args.verbose)
+        runner = GNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
         settings.enable_spec_overrides = True
@@ -332,13 +439,21 @@ if __name__ == "__main__":
         settings.override_max_query_count = 1
 
     elif args.scenario == "MultiStream":
-        runner = GNMTRunner(batch_size=args.batch_size, verbose=args.verbose)
+        runner = GNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
         settings.enable_spec_overrides = True
         settings.override_min_query_count = 100
         settings.override_max_query_count = 100
         settings.multi_stream_samples_per_query = 8
+
+    elif args.scenario == "Server":
+        runner = ServerGNMTRunner(gnmt_model, verbose=args.verbose)
+        
+        # Specify exactly how many queries need to be made
+        settings.enable_spec_overrides = True
+        settings.override_min_query_count = 20
+        settings.override_max_query_count = 100
 
     else:
         print("Invalid scenario selected")

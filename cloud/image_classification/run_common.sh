@@ -71,15 +71,19 @@ fi
 #
 # pytorch
 #
-if [ $name == "resnet50-pytorch-onnx" ] ; then
+if [ $name == "resnet50-pytorch" ] ; then
     model_path="$MODEL_DIR/resnet50_v1.onnx"
     profile=resnet50-onnxruntime
     extra_args="$extra_args --backend pytorch"
 fi
-if [ $name == "mobilenet-pytorch-onnx" ] ; then
+if [ $name == "mobilenet-pytorch" ] ; then
     model_path="$MODEL_DIR/mobilenet_v1_1.0_224.onnx"
     profile=mobilenet-onnxruntime
     extra_args="$extra_args --backend pytorch"
+fi
+if [ $name == "ssd-resnet34-pytorch" ] ; then
+    model_path="$MODEL_DIR/resnet34-ssd1200.pytorch"
+    profile=ssd-resnet34-pytorch
 fi
 
 

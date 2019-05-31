@@ -46,6 +46,12 @@ SUPPORTED_DATASETS = {
     "coco-1200":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCoco(),
          {"image_size": [1200, 1200, 3]}),
+    "coco-1200-onnx":
+        (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoOnnx(),
+         {"image_size": [1200, 1200, 3]}),
+    "coco-1200-pt":
+        (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoPt(),
+         {"image_size": [1200, 1200, 3]}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
@@ -108,8 +114,14 @@ SUPPORTED_PROFILES = {
         "dataset": "coco-1200",
         "backend": "tensorflow",
     },
+    "ssd-resnet34-pytorch": {
+        "inputs": "image",
+        "outputs": "bboxes,labels,scores",
+        "dataset": "coco-1200-pt",
+        "backend": "pytorch-native",
+    },
     "ssd-resnet34-onnxruntime": {
-        "dataset": "coco-1200",
+        "dataset": "coco-1200-onnx",
         "inputs": "image",
         "outputs": "bboxes,labels,scores",
         "backend": "onnxruntime",
@@ -122,6 +134,7 @@ SCENARIO_MAP = {
     "MultiStream": lg.TestScenario.MultiStream,
     "Server": lg.TestScenario.Server,
     "Offline": lg.TestScenario.Offline,
+    "Accuracy": lg.TestMode.AccuracyOnly,
 }
 
 last_timeing = []
@@ -188,6 +201,9 @@ def get_backend(backend):
     elif backend == "pytorch":
         from backend_pytorch import BackendPytorch
         backend = BackendPytorch()
+    elif backend == "pytorch-native":
+        from backend_pytorch_native import BackendPytorchNative
+        backend = BackendPytorchNative()      
     elif backend == "tflite":
         from backend_tflite import BackendTflite
         backend = BackendTflite()
@@ -226,6 +242,7 @@ class RunnerBase:
 
     def run_one_item(self, qitem):
         # run the prediction
+        processed_results = []
         try:
             results = self.model.predict({self.model.inputs[0]: qitem.img})
             processed_results = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
@@ -234,6 +251,8 @@ class RunnerBase:
         except Exception as ex:  # pylint: disable=broad-except
             src = [self.ds.get_item_loc(i) for i in qitem.content_id]
             log.error("thread: failed on contentid=%s, %s", src, ex)
+            # since post_process will not run, fake empty responses
+            processed_results = [[]] * len(qitem.query_id)
         finally:
             if not self.take_accuracy:
                 response = []
@@ -244,8 +263,7 @@ class RunnerBase:
                 lg.QuerySamplesComplete(response)
 
     def enqueue(self, id, ids, data, label):
-        qitem = Item(id, ids, data, label)
-        self.run_one_item(qitem)
+        self.run_one_item(Item(id, ids, data, label))
 
     def finish(self):
         pass
@@ -340,10 +358,8 @@ def main():
                         pre_process=pre_proc,
                         use_cache=args.cache,
                         count=args.count, **kwargs)
-
     # load model to backend
     model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
-
     final_results = {
         "runtime": model.name(),
         "version": model.version(),
@@ -410,7 +426,11 @@ def main():
         for target_latency in args.max_latency:
             log.info("starting {}, latency={}".format(scenario, target_latency))
             settings = lg.TestSettings()
-            settings.scenario = scenario
+            log.info(scenario)
+            if str(scenario) == 'TestMode.AccuracyOnly':
+                settings.mode =  scenario
+            else:
+                settings.scenario = scenario
 
             if args.qps:
                 settings.enable_spec_overrides = True
@@ -426,7 +446,7 @@ def main():
                 settings.override_min_query_count = qps * args.time
                 settings.override_max_query_count = qps * args.time
 
-            if args.time or args.qps:
+            if args.time or args.qps and str(scenario) != 'TestMode.AccuracyOnly':
                 settings.mode = lg.TestMode.PerformanceOnly
             # FIXME: add SubmissionRun once available
 

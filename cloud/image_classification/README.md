@@ -13,7 +13,7 @@ It supports the following models:
 | ssd-mobilenet 300x300 | tensorflow | mAP 0.20 | coco resized to 300x300 | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | NHWC |
 | ssd-mobilenet 300x300 | onnx | mAP 0.20 | coco resized to 300x300 | [from zenodo](https://zenodo.org/record/3163026/files/ssd_mobilenet_v1_coco_2018_01_28.onnx) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/ssd-mobilenet-to-onnx.sh) | NHWC, tested on onnxruntime, some runtime warnings |
 | ssd-resnet34 1200x1200 | tensorflow | mAP 0.20 | coco resized to 1200x1200| [from zenodo](https://zenodo.org/record/3060467/files/ssd_resnet-34_from_onnx.zip) | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) | Needs testing |
-| ssd-resnet34 1200x1200 | pytorch | mAP 0.224 | coco resized to 1200x1200 | TODO | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) | Waiting for integration |
+| ssd-resnet34 1200x1200 | pytorch | mAP 0.224 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3235023/files/resnet34-ssd1200.pytorch) | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) | NCHW |
 | ssd-resnet34 1200x1200 | onnx | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3228411/files/resnet34-ssd1200.onnx) | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) converted using the these [instructions](https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch#6-onnx) | Works but needs more testing |
 
 TODO: add instructions to resize coco dataset
@@ -124,15 +124,15 @@ During development running the full benchmark is unpractical. Some options to he
 
 So if you want to tune for example Server mode, try:
 ```
-./run_local.sh tf resnet50 gpu --count 100 --time 60 --senario Server --qps 200 --max-latency 0.2
+./run_local.sh tf resnet50 gpu --count 100 --time 60 --scenario Server --qps 200 --max-latency 0.2
 or
-./run_local.sh tf ssd-mobilenet gpu --count 100 --time 60 --senario Server --qps 100 --max-latency 0.2
+./run_local.sh tf ssd-mobilenet gpu --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.2
 
 ```
 
 If you want to debug accuracy issues, try:
 ```
-./run_local.sh tf ssd-mobilenet gpu --accuracy --count 100 --time 60 --senario Server --qps 100 --max-latency 0.2
+./run_local.sh tf ssd-mobilenet gpu --accuracy --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.2
 ```
 
 

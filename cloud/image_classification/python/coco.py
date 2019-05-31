@@ -22,7 +22,7 @@ log = logging.getLogger("coco")
 class Coco(dataset.Dataset):
     def __init__(self, data_path, image_list, name, use_cache=0, image_size=None,
                  image_format="NHWC", pre_process=None, count=None, cache_dir=None):
-        super(Coco, self).__init__()
+        super().__init__()
         self.image_size = image_size
         self.image_list = []
         self.label_list = []
@@ -109,62 +109,42 @@ class Coco(dataset.Dataset):
 
 
 class PostProcessCoco:
+    """
+    Post processing for tensorflow ssd-mobilenet style models
+    """
     def __init__(self):
         self.results = []
         self.good = 0
         self.total = 0
+        self.use_inv_map = False
+
+    def add_results(self, results):
+        self.results.extend(results)
 
     def __call__(self, results, ids, expected=None, result_dict=None, ):
         # results come as:
-        #   len=4, tensorflow, ssd-mobilenet: num_detections,detection_boxes,detection_scores,detection_classes
-        #   len=2, pytorch, ssd-resnet34: detection_boxes,detection_classes,detection_scores,
+        #   tensorflow, ssd-mobilenet: num_detections,detection_boxes,detection_scores,detection_classes
 
         processed_results = []
         # batch size
         bs = len(results[0])
-        if len(results) == 4:
-            # tensorflow, ssd-mobilenet
-            for idx in range(0, bs):
-                processed_results.append([])
-                detection_num = int(results[0][idx])
-                detection_boxes = results[1][idx]
-                detection_classes = results[3][idx]
-                expected_classes = expected[idx][0]
-                for detection in range(0, detection_num):
-                    detection_class = int(detection_classes[detection])
-                    if detection_class in expected_classes:
-                        self.good += 1
-                    box = detection_boxes[detection]
-                    processed_results[idx].append([float(ids[idx]),
-                                         box[0], box[1], box[2], box[3],
-                                         results[2][idx][detection],
-                                         float(detection_class)])
-                    self.total += 1
-        else:
-            # onnx, ssd-resnet34
-            for idx in range(0, bs):
-                processed_results.append([])
-                detection_boxes = results[0][idx]
-                detection_classes = results[1][idx]
-                expected_classes = expected[idx][0]
-                scores = results[2][idx]
-                for detection in range(0, len(expected_classes)):
-                    if scores[detection] < 0.5:
-                        break
-                    detection_class = int(detection_classes[detection])
-                    if detection_class in expected_classes:
-                        self.good += 1
-                    box = detection_boxes[detection]
-                    # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
-                    processed_results[idx].append([float(ids[idx]),
-                                         box[1], box[0], box[3], box[2],
-                                         scores[detection],
-                                         float(detection_class)])
-                    self.total += 1
+        for idx in range(0, bs):
+            processed_results.append([])
+            detection_num = int(results[0][idx])
+            detection_boxes = results[1][idx]
+            detection_classes = results[3][idx]
+            expected_classes = expected[idx][0]
+            for detection in range(0, detection_num):
+                detection_class = int(detection_classes[detection])
+                if detection_class in expected_classes:
+                    self.good += 1
+                box = detection_boxes[detection]
+                processed_results[idx].append([float(ids[idx]),
+                                              box[0], box[1], box[2], box[3],
+                                              results[2][idx][detection],
+                                              float(detection_class)])
+                self.total += 1
         return processed_results
-
-    def add_results(self, results):
-        self.results.extend(results)
 
     def start(self):
         self.results = []
@@ -174,49 +154,146 @@ class PostProcessCoco:
     def finalize(self, result_dict, ds=None, output_dir=None):
         result_dict["good"] += self.good
         result_dict["total"] += self.total
-        detections = np.array(self.results)
         image_ids = []
-        for idx in range(0, detections.shape[0]):
-            # this is the index into the image list
-            image_id = int(detections[idx][0])
-            image_ids.append(image_id)
-            # map it to the coco image it
-            detections[idx][0] = ds.image_ids[image_id]
-            height, width = ds.image_sizes[image_id]
-            # box comes from model as: ymin, xmin, ymax, xmax
-            ymin = detections[idx][1] * height
-            xmin = detections[idx][2] * width
-            ymax = detections[idx][3] * height
-            xmax = detections[idx][4] * width
-            # from pycoco wants {imageID,x1,y1,w,h,score,class}
-            detections[idx][1] = xmin
-            detections[idx][2] = ymin
-            detections[idx][3] = xmax - xmin
-            detections[idx][4] = ymax - ymin
+
+        if self.use_inv_map:
+            # for pytorch
+            label_map = {}
+            with open(ds.annotation_file) as fin:
+                annotations = json.load(fin)
+            for cnt, cat in enumerate(annotations["categories"]):
+                label_map[cat["id"]] = cnt + 1
+            inv_map = {v:k for k,v in label_map.items()}
+
+        detections = []
+        for batch in range(0, len(self.results)):
+            for idx in range(0, len(self.results[batch])):
+                detection = self.results[batch][idx]
+                # this is the index into the image list
+                #image_id = int(detections[idx][0])
+                image_id = int(detection[0])
+                image_ids.append(image_id)
+                # map it to the coco image it
+                detection[0] = ds.image_ids[image_id]
+                height, width = ds.image_sizes[image_id]
+                # box comes from model as: ymin, xmin, ymax, xmax
+                ymin = detection[1] * height
+                xmin = detection[2] * width
+                ymax = detection[3] * height
+                xmax = detection[4] * width
+                # pycoco wants {imageID,x1,y1,w,h,score,class}
+                detection[1] = xmin
+                detection[2] = ymin
+                detection[3] = xmax - xmin
+                detection[4] = ymax - ymin
+                if self.use_inv_map:
+                    cat_id = inv_map.get(int(detection[6]), -1)
+                    if cat_id == -1:
+                        # FIXME:
+                        log.info("finalize can't map category {}".format(int(detection[6])))
+                    detection[6] =  cat_id
+                detections.append(np.array(detection))
 
         # for debugging
-        if True:
+        if output_dir:
+            # for debugging
             pp = []
-            for idx in range(0, detections.shape[0]):
-                pp.append({"image_id": int(detections[idx][0]),
+            for detection in detections:
+                pp.append({"image_id": int(detection[0]),
                            "image_loc": ds.get_item_loc(image_ids[idx]),
-                           "category_id": int(detections[idx][6]),
-                           "bbox": [float(detections[idx][1]), float(detections[idx][2]),
-                                    float(detections[idx][3]), float(detections[idx][4])],
-                           "score": float(detections[idx][5])})
+                           "category_id": int(detection[6]),
+                           "bbox": [float(detection[1]), float(detection[2]),
+                                    float(detection[3]), float(detection[4])],
+                           "score": float(detection[5])})
             if not output_dir:
                 output_dir = "/tmp"
             fname = "{}/{}.json".format(output_dir, result_dict["scenario"])
             with open(fname, "w") as fp:
                 json.dump(pp, fp, sort_keys=True, indent=4)
 
+
         image_ids = list(set([i[0] for i in detections]))
         self.results = []
         cocoGt = pycoco.COCO(ds.annotation_file)
-        cocoDt = cocoGt.loadRes(detections)
+        cocoDt = cocoGt.loadRes(np.array(detections))
         cocoEval = COCOeval(cocoGt, cocoDt, iouType='bbox')
         cocoEval.params.imgIds = image_ids
         cocoEval.evaluate()
         cocoEval.accumulate()
         cocoEval.summarize()
         result_dict["mAP"] = cocoEval.stats[0]
+
+
+class PostProcessCocoPt(PostProcessCoco):
+    """
+    Post processing required by ssd-resnet34 / pytorch
+    """
+    def __init__(self):
+        super().__init__()
+        self.use_inv_map = True
+
+    def __call__(self, results, ids, expected=None, result_dict=None):
+        # results come as:
+        #   detection_boxes,detection_classes,detection_scores
+
+        processed_results = []
+        # batch size
+        bs = len(results[0])
+        for idx in range(0, bs):
+            processed_results.append()
+            detection_boxes = results[0][idx]
+            detection_classes = results[1][idx]
+            expected_classes = expected[idx][0]
+            scores = results[2][idx]
+            #for detection in range(0, len(expected_classes)):
+            for detection in range(0, len(scores)):
+                if scores[detection] < 0.05:
+                    break
+                detection_class = int(detection_classes[detection])
+                if detection_class in expected_classes:
+                    self.good += 1
+                box = detection_boxes[detection]
+                # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
+                processed_results.append([float(ids[idx]),
+                                              box[1], box[0], box[3], box[2],
+                                              scores[detection],
+                                              float(detection_class)])
+                self.total += 1
+        return processed_results
+
+
+class PostProcessCocoOnnx(PostProcessCoco):
+    """
+    Post processing required by ssd-resnet34 / onnx
+    """
+    def __init__(self):
+        super().__init__()
+
+    def __call__(self, results, ids, expected=None, result_dict=None):
+        # results come as:
+        #   onnx (from pytorch ssd-resnet34): detection_boxes,detection_classes,detection_scores
+
+        processed_results = []
+
+        # batch size
+        bs = len(results[0])
+        for idx in range(0, bs):
+            processed_results.append([])
+            detection_boxes = results[0][idx]
+            detection_classes = results[1][idx]
+            expected_classes = expected[idx][0]
+            scores = results[2][idx]
+            for detection in range(0, len(scores)):
+                if scores[detection] < 0.5:
+                    break
+                detection_class = int(detection_classes[detection])
+                if detection_class in expected_classes:
+                    self.good += 1
+                box = detection_boxes[detection]
+                # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
+                processed_results.append([float(ids[idx]),
+                                              box[1], box[0], box[3], box[2],
+                                              scores[detection],
+                                              float(detection_class)])
+                self.total += 1
+        return results

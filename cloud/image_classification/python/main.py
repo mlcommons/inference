@@ -7,6 +7,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import array
 import json
 import logging
 import os
@@ -63,7 +64,9 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet",
         "backend": "tensorflow",
         "cache": 0,
-        "time": 128,
+        "time": 60,
+        "queries-single": 1024,
+        "queries-multi": 24576,
         "max-latency": DEFAULT_LATENCY_BUCKETS,
     },
 
@@ -158,6 +161,9 @@ def get_args():
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
+    parser.add_argument("--queries_single", type=int, default=1024, help="number of queries for SingleStream")
+    parser.add_argument("--queries_multi", type=int, default=24576,
+                        help="number of queries for MultiStream,Server,Offline")
     parser.add_argument("--qps", type=int, default=10, help="target qps estimate")
     parser.add_argument("--max-latency", type=str, help="max latency in 99pct tile")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
@@ -257,9 +263,8 @@ class RunnerBase:
             if not self.take_accuracy:
                 response = []
                 for idx, query_id in enumerate(qitem.query_id):
-                    item = processed_results[idx]
-                    # FIXME: unclear what to return here
-                    response.append(lg.QuerySampleResponse(query_id, 0, 0))
+                    bi = array.array("B", np.array(processed_results[idx], np.float32).tobytes()).buffer_info()
+                    response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
                 lg.QuerySamplesComplete(response)
 
     def enqueue(self, id, ids, data, label):
@@ -410,49 +415,50 @@ def main():
         runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc)
 
         def issue_query(query_samples):
+            # called by loadgen to issue queries
             idx = [q.index for q in query_samples]
             query_id = [q.id for q in query_samples]
             data, label = ds.get_samples(idx)
             runner.enqueue(query_id, idx, data, label)
 
         def process_latencies(latencies_ns):
+            # called by loadgen to show us the recorded latencies
             global last_timeing
             last_timeing = [t / 1e9 for t in latencies_ns]
+
+        settings = lg.TestSettings()
+        settings.enable_spec_overrides = True
+        settings.scenario = scenario
+        settings.mode = lg.TestMode.PerformanceOnly
+        settings.multi_stream_samples_per_query = 8
+
+        if args.time:
+            # override the time we want to run
+            settings.enable_spec_overrides = True
+            settings.override_min_duration_ms = args.time * MILLI_SEC
+            settings.override_max_duration_ms = args.time * MILLI_SEC
+
+        if args.qps:
+            qps = float(args.qps)
+            settings.server_target_qps = qps
+            settings.offline_expected_qps = qps
+
+        # mlperf rules - min queries
+        if scenario == lg.TestScenario.SingleStream:
+            settings.override_min_query_count = args.queries_single
+            settings.override_max_query_count = args.queries_single
+        else:
+            settings.override_min_query_count = args.queries_multi
+            settings.override_max_query_count = args.queries_multi
 
         sut = lg.ConstructSUT(issue_query, process_latencies)
         qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
 
         for target_latency in args.max_latency:
             log.info("starting {}, latency={}".format(scenario, target_latency))
-            settings = lg.TestSettings()
-            log.info(scenario)
-            if str(scenario) == 'TestMode.AccuracyOnly':
-                settings.mode =  scenario
-            else:
-                settings.scenario = scenario
 
-            if args.qps:
-                settings.enable_spec_overrides = True
-                qps = float(args.qps)
-                settings.server_target_qps = qps
-                settings.offline_expected_qps = qps
-
-            if args.time:
-                settings.enable_spec_overrides = True
-                settings.override_min_duration_ms = args.time * MILLI_SEC
-                settings.override_max_duration_ms = args.time * MILLI_SEC
-                qps = args.qps or 100
-                settings.override_min_query_count = qps * args.time
-                settings.override_max_query_count = qps * args.time
-
-            if args.time or args.qps and str(scenario) != 'TestMode.AccuracyOnly':
-                settings.mode = lg.TestMode.PerformanceOnly
-            # FIXME: add SubmissionRun once available
-
-            settings.enable_spec_overrides = True
             settings.single_stream_expected_latency_ns = int(target_latency * NANO_SEC)
             settings.override_target_latency_ns = int(target_latency * NANO_SEC)
-            settings.multi_stream_samples_per_query = 8
 
             result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
             runner.start_run(result_dict, False)

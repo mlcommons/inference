@@ -109,6 +109,9 @@ class Coco(dataset.Dataset):
 
 
 class PostProcessCoco:
+    """
+    Post processing for tensorflow ssd-mobilenet style models
+    """
     def __init__(self):
         self.results = []
         self.good = 0
@@ -210,13 +213,16 @@ class PostProcessCoco:
 
 
 class PostProcessCocoPt(PostProcessCoco):
+    """
+    Post processing required by ssd-resnet34 / pytorch
+    """
     def __init__(self):
         super().__init__()
         self.use_inv_map = True
 
     def __call__(self, results, ids, expected=None, result_dict=None):
         # results come as:
-        #   detection_boxes,detection_classes,detection_scores,
+        #   detection_boxes,detection_classes,detection_scores
 
         # batch size
         bs = len(results[0])
@@ -242,14 +248,16 @@ class PostProcessCocoPt(PostProcessCoco):
         return results
 
 
-
 class PostProcessCocoOnnx(PostProcessCoco):
+    """
+    Post processing required by ssd-resnet34 / onnx
+    """
     def __init__(self):
         super().__init__()
 
     def __call__(self, results, ids, expected=None, result_dict=None):
         # results come as:
-        #   onnx (from pytorch ssd-resnet34): detection_boxes,detection_classes,detection_scores,
+        #   onnx (from pytorch ssd-resnet34): detection_boxes,detection_classes,detection_scores
 
         # batch size
         bs = len(results[0])
@@ -258,7 +266,6 @@ class PostProcessCocoOnnx(PostProcessCoco):
             detection_classes = results[1][idx]
             expected_classes = expected[idx][0]
             scores = results[2][idx]
-            #for detection in range(0, len(expected_classes)):
             for detection in range(0, len(scores)):
                 if scores[detection] < 0.5:
                     break
@@ -273,4 +280,3 @@ class PostProcessCocoOnnx(PostProcessCoco):
                                               detection_class], dtype=np.float32))
                 self.total += 1
         return results
-

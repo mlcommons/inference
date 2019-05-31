@@ -108,6 +108,12 @@ SUPPORTED_PROFILES = {
         "dataset": "coco-1200",
         "backend": "tensorflow",
     },
+    "ssd-resnet34-pytorch": {
+        "inputs": "image",
+        "outputs": "bboxes,labels,scores",
+        "dataset": "coco-1200",
+        "backend": "pytorch-native",
+    },
     "ssd-resnet34-onnxruntime": {
         "dataset": "coco-1200",
         "inputs": "image",
@@ -122,6 +128,7 @@ SCENARIO_MAP = {
     "MultiStream": lg.TestScenario.MultiStream,
     "Server": lg.TestScenario.Server,
     "Offline": lg.TestScenario.Offline,
+    "Accuracy": lg.TestMode.AccuracyOnly,
 }
 
 last_timeing = []
@@ -188,6 +195,9 @@ def get_backend(backend):
     elif backend == "pytorch":
         from backend_pytorch import BackendPytorch
         backend = BackendPytorch()
+    elif backend == "pytorch-native":
+        from backend_pytorch_native import BackendPytorchNative
+        backend = BackendPytorchNative()      
     elif backend == "tflite":
         from backend_tflite import BackendTflite
         backend = BackendTflite()
@@ -347,10 +357,8 @@ def main():
                         pre_process=pre_proc,
                         use_cache=args.cache,
                         count=args.count, **kwargs)
-
     # load model to backend
     model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
-
     final_results = {
         "runtime": model.name(),
         "version": model.version(),
@@ -417,7 +425,11 @@ def main():
         for target_latency in args.max_latency:
             log.info("starting {}, latency={}".format(scenario, target_latency))
             settings = lg.TestSettings()
-            settings.scenario = scenario
+            log.info(scenario)
+            if str(scenario) == 'TestMode.AccuracyOnly':
+                settings.mode =  scenario
+            else:
+                settings.scenario = scenario
 
             if args.qps:
                 settings.enable_spec_overrides = True
@@ -433,7 +445,7 @@ def main():
                 settings.override_min_query_count = qps * args.time
                 settings.override_max_query_count = qps * args.time
 
-            if args.time or args.qps:
+            if args.time or args.qps and str(scenario) != 'TestMode.AccuracyOnly':
                 settings.mode = lg.TestMode.PerformanceOnly
             # FIXME: add SubmissionRun once available
 

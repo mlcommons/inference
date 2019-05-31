@@ -218,7 +218,7 @@ Accuracy top 5: 1.0 (2 of 2)
 ### Benchmark the accuracy
 ```
 $ ck benchmark program:image-classification-tflite \
---repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
 --record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tflite-accuracy \
 --tags=mlperf,image-classification,mobilenet,tflite,accuracy \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
@@ -229,6 +229,13 @@ $ ck benchmark program:image-classification-tflite \
 ## Reference accuracy
 
 ### ImageNet validation dataset (50,000 images)
+```
+$ ck benchmark program:image-classification-tflite \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--record --record_repo=local --record_uoa=mlperf-image-classification-tflite-accuracy \
+--tags=mlperf,image-classification,tflite,accuracy \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```
 
 #### 87.5% cropping (default)
 ##### MobileNet non-quantized

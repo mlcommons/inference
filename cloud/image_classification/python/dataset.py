@@ -4,11 +4,14 @@ dataset related classes and methods
 
 # pylint: disable=unused-argument,missing-docstring
 
+import logging
 import sys
 import time
 
 import numpy as np
 
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("dataset")
 
 class Item():
     def __init__(self, label, img, idx):
@@ -62,8 +65,7 @@ class Dataset():
             self.image_list_inmemory = {}
 
     def get_samples(self, id_list):
-        data = [self.image_list_inmemory[id] for id in id_list]
-        data = np.array(data)
+        data = np.array([self.image_list_inmemory[id] for id in id_list])
         return data, self.label_list[id_list]
 
     def get_item_loc(self, id):

@@ -393,6 +393,12 @@ def main():
         post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
         add_results(final_results, "Accuracy", result_dict, last_timeing, time.time() - start)
 
+    # warmup
+    ds.load_query_samples([0])
+    for _ in range(5):
+        img, _ = ds.get_samples([0])
+        _ = backend.predict({backend.inputs[0]: img})
+    ds.unload_query_samples(None)
 
     for scenario in args.scenario:
         runner_map = {
@@ -402,13 +408,6 @@ def main():
             lg.TestScenario.Offline: QueueRunner
         }
         runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc)
-
-        # warmup
-        ds.load_query_samples([0])
-        for _ in range(5):
-            img, _ = ds.get_samples([0])
-            _ = backend.predict({backend.inputs[0]: img})
-        ds.unload_query_samples(None)
 
         def issue_query(query_samples):
             idx = [q.index for q in query_samples]
@@ -453,6 +452,7 @@ def main():
             settings.enable_spec_overrides = True
             settings.single_stream_expected_latency_ns = int(target_latency * NANO_SEC)
             settings.override_target_latency_ns = int(target_latency * NANO_SEC)
+            settings.multi_stream_samples_per_query = 8
 
             result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
             runner.start_run(result_dict, False)
@@ -461,6 +461,10 @@ def main():
             add_results(final_results, "{}-{}".format(scenario, target_latency),
                         result_dict, last_timeing, time.time() - ds.last_loaded)
 
+        runner.finish()
+        lg.DestroyQSL(qsl)
+        lg.DestroySUT(sut)
+
     #
     # write final results
     #
@@ -468,9 +472,6 @@ def main():
         with open(args.output, "w") as f:
             json.dump(final_results, f, sort_keys=True, indent=4)
 
-    runner.finish()
-    lg.DestroyQSL(qsl)
-    lg.DestroySUT(sut)
 
 
 if __name__ == "__main__":

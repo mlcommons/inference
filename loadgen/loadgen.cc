@@ -773,6 +773,19 @@ void PerformanceSummary::Log(AsyncLog& log) {
   settings.LogSummary(log);
 }
 
+void LoadSamplesToRam(QuerySampleLibrary* qsl, const std::vector<QuerySampleIndex>& samples) {
+  LogDetail([samples](AsyncLog& log) {
+    std::string set("\"[");
+    for (auto i : samples) {
+      set += std::to_string(i) + ",";
+    }
+    set.resize(set.size() - 1);
+    set += "]\"";
+    log.LogDetail("Loading QSL : ", "set", set);
+  });
+  qsl->LoadSamplesToRam(samples);
+}
+
 template <TestScenario scenario>
 void RunPerformanceMode(
     SystemUnderTest* sut, QuerySampleLibrary* qsl,
@@ -782,7 +795,7 @@ void RunPerformanceMode(
 
   // Use first loadable set as the performance set.
   const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
-  qsl->LoadSamplesToRam(performance_set);
+  LoadSamplesToRam(qsl, performance_set);
 
   PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
       sut, settings, performance_set));
@@ -807,7 +820,7 @@ void FindPeakPerformanceMode(
   // Use first loadable set as the performance set.
   const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
 
-  qsl->LoadSamplesToRam(performance_set);
+  LoadSamplesToRam(qsl, performance_set);
 
   TestSettingsInternal search_settings = settings;
 
@@ -836,7 +849,7 @@ void RunAccuracyMode(
           MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
             log.ScopedTrace("LoadSamples", "count", count);
           });
-      qsl->LoadSamplesToRam(loadable_set);
+      LoadSamplesToRam(qsl, loadable_set);
     }
 
     PerformanceResult pr(IssueQueries<scenario, TestMode::AccuracyOnly>(
@@ -936,7 +949,7 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
     if (loadable_set.size() == set_size) {
       result.push_back(std::move(loadable_set));
       loadable_set.clear();
-      loadable_set.reserve(set_size);
+      loadable_set.reserve(set_size + set_padding);
     }
     samples[candidate_index] = kUsedIndex;
     remaining_count--;
@@ -967,7 +980,7 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
       // assignment happens. Even though we should have reserved enough
       // elements above, copy the source first anyway since we are just moving
       // integers around.
-      auto p = set[i];
+      QuerySampleIndex p = set[i];
       set.push_back(p);
     }
   }

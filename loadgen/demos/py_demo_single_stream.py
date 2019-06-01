@@ -22,12 +22,15 @@ def unload_samples_from_ram(query_samples):
 def process_query_async(query_samples):
     time.sleep(.001)
     responses = []
-    response_data = array.array(
-        'B', [0,1,7,8,15,16,31,32,63,64,127,128,254,255])
-    rdbi = response_data.buffer_info()
+    response_array = array.array(
+        'f', [0,1,7,8,15,16,31,32,63,64,127,128,254,255])
+    response_info = response_array.buffer_info()
+    response_data = response_info[0]
+    response_size = response_info[1] * response_array.itemsize
     for s in query_samples:
         responses.append(
-            mlperf_loadgen.QuerySampleResponse(s.id, rdbi[0], rdbi[1]))
+            mlperf_loadgen.QuerySampleResponse(
+                s.id, response_data, response_size))
     mlperf_loadgen.QuerySamplesComplete(responses)
 
 

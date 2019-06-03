@@ -281,7 +281,8 @@ std::vector<QueryMetadata> GenerateQueries(
   uint64_t query_sequence_id = 0;
   uint64_t sample_sequence_id = 0;
   while (timestamp <= k2xTargetDuration || queries.size() < min_queries) {
-    if (scenario == TestScenario::MultiStream) {
+    if (scenario == TestScenario::MultiStream ||
+        scenario == TestScenario::MultiStreamFree) {
       QuerySampleIndex sample_i = sample_distribution(sample_rng);
       for (auto& s : samples) {
         // Select contiguous samples in the MultiStream scenario.
@@ -315,12 +316,10 @@ std::vector<QueryMetadata> GenerateQueries(
 // since each scenario has its own specialization.
 template <TestScenario scenario>
 struct QueryScheduler {
+  static_assert(scenario != scenario, "Unhandled TestScenario");
   QueryScheduler(const TestSettingsInternal& settings,
-                 const PerfClock::time_point) {
-    assert(false);
-  }
+                 const PerfClock::time_point) {}
   PerfClock::time_point Wait(QueryMetadata* next_query) {
-    assert(false);
     return PerfClock::now();
   }
 };
@@ -354,11 +353,62 @@ enum class MultiStreamFrequency { Fixed, Free };
 template <>
 struct QueryScheduler<TestScenario::MultiStream> {
   QueryScheduler(const TestSettingsInternal& settings,
-                 const PerfClock::time_point start,
-                 MultiStreamFrequency frequency = MultiStreamFrequency::Fixed)
-      : frequency(frequency),
+                 const PerfClock::time_point start)
+      : qps(settings.target_qps),
         max_async_queries(settings.max_async_queries),
-        tick_time(start) {}
+        start_time(start) {}
+
+  PerfClock::time_point Wait(QueryMetadata* next_query) {
+    {
+      prev_queries.push(next_query);
+      auto trace =
+          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Waiting"); });
+      if (prev_queries.size() > max_async_queries) {
+        prev_queries.front()->WaitForAllSamplesCompleted();
+        prev_queries.pop();
+      }
+    }
+
+    {
+      auto trace = MakeScopedTracer(
+          [](AsyncLog& log) { log.ScopedTrace("Scheduling"); });
+      // TODO(brianderson): Skip ticks based on the query complete time,
+      //     before the query snchronization + notification thread hop,
+      //     rather than after.
+      PerfClock::time_point now = PerfClock::now();
+      auto i_period_old = i_period;
+      PerfClock::time_point tick_time;
+      do {
+        i_period++;
+        tick_time =
+            start_time + SecondsToDuration<PerfClock::duration>(i_period / qps);
+        Log([tick_time](AsyncLog& log) {
+          log.TraceAsyncInstant("QueryInterval", 0, tick_time);
+        });
+      } while (tick_time < now);
+      next_query->scheduled_intervals = i_period - i_period_old;
+      next_query->scheduled_time = tick_time;
+      std::this_thread::sleep_until(tick_time);
+    }
+
+    auto now = PerfClock::now();
+    next_query->issued_start_time = now;
+    return now;
+  }
+
+  size_t i_period = 0;
+  double qps;
+  const size_t max_async_queries;
+  PerfClock::time_point start_time;
+  std::queue<QueryMetadata*> prev_queries;
+};
+
+// MultiStreamFree QueryScheduler
+template <>
+struct QueryScheduler<TestScenario::MultiStreamFree> {
+  QueryScheduler(const TestSettingsInternal& settings,
+                 const PerfClock::time_point start)
+      : max_async_queries(settings.max_async_queries) {}
 
   PerfClock::time_point Wait(QueryMetadata* next_query) {
     bool schedule_time_needed = true;
@@ -367,37 +417,11 @@ struct QueryScheduler<TestScenario::MultiStream> {
       auto trace =
           MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Waiting"); });
       if (prev_queries.size() > max_async_queries) {
-        switch (frequency) {
-          case MultiStreamFrequency::Fixed:
-            prev_queries.front()->WaitForAllSamplesCompleted();
-            break;
-          case MultiStreamFrequency::Free:
-            next_query->scheduled_time =
-                prev_queries.front()->WaitForAllSamplesCompletedWithTimestamp();
-            schedule_time_needed = false;
-            break;
-        }
+        next_query->scheduled_time =
+            prev_queries.front()->WaitForAllSamplesCompletedWithTimestamp();
+        schedule_time_needed = false;
         prev_queries.pop();
       }
-    }
-
-    if (frequency == MultiStreamFrequency::Fixed) {
-      auto trace = MakeScopedTracer(
-          [](AsyncLog& log) { log.ScopedTrace("Scheduling"); });
-      // TODO(brianderson): Skip ticks based on the query complete time,
-      //     before the query snchronization + notification thread hop,
-      //     rather than after.
-      PerfClock::time_point now = PerfClock::now();
-      auto i_period_old = i_period;
-      do {
-        tick_time += kPeriods[i_period++ % 3];
-        Log([tick_time = tick_time](AsyncLog& log) {
-          log.TraceAsyncInstant("QueryInterval", 0, tick_time);
-        });
-      } while (tick_time < now);
-      next_query->scheduled_intervals = i_period - i_period_old;
-      next_query->scheduled_time = tick_time;
-      std::this_thread::sleep_until(tick_time);
     }
 
     auto now = PerfClock::now();
@@ -408,21 +432,9 @@ struct QueryScheduler<TestScenario::MultiStream> {
     return now;
   }
 
-  // TODO: Support frequencies other than 30Hz.
-  static constexpr std::chrono::nanoseconds kPeriods[] = {
-      std::chrono::nanoseconds(33333333),
-      std::chrono::nanoseconds(33333334),
-      std::chrono::nanoseconds(33333333),
-  };
-  const MultiStreamFrequency frequency;
   const size_t max_async_queries;
-  PerfClock::time_point tick_time;
-  size_t i_period = 0;
   std::queue<QueryMetadata*> prev_queries;
 };
-
-constexpr std::chrono::nanoseconds
-    QueryScheduler<TestScenario::MultiStream>::kPeriods[];
 
 // Server QueryScheduler
 template <>
@@ -665,6 +677,7 @@ bool PerformanceSummary::MinSamplesMet() {
 
 bool PerformanceSummary::HasPerfConstraints() {
   return settings.scenario == TestScenario::MultiStream ||
+         settings.scenario == TestScenario::MultiStreamFree ||
          settings.scenario == TestScenario::Server;
 }
 
@@ -672,7 +685,8 @@ bool PerformanceSummary::PerfConstraintsMet() {
   switch (settings.scenario) {
     case TestScenario::SingleStream:
       return true;
-    case TestScenario::MultiStream: {
+    case TestScenario::MultiStream:
+    case TestScenario::MultiStreamFree: {
       // TODO: Finalize multi-stream performance targets with working group.
       ProcessLatencies();
       return latency_target.value <= settings.target_latency.count();
@@ -705,7 +719,8 @@ void PerformanceSummary::Log(AsyncLog& log) {
       log.LogSummary("90th percentile latency (ns) : ", latency_target.value);
       break;
     }
-    case TestScenario::MultiStream: {
+    case TestScenario::MultiStream:
+    case TestScenario::MultiStreamFree: {
       log.LogSummary("Samples per query : ", settings.samples_per_query);
       break;
     }
@@ -773,7 +788,8 @@ void PerformanceSummary::Log(AsyncLog& log) {
   settings.LogSummary(log);
 }
 
-void LoadSamplesToRam(QuerySampleLibrary* qsl, const std::vector<QuerySampleIndex>& samples) {
+void LoadSamplesToRam(QuerySampleLibrary* qsl,
+                      const std::vector<QuerySampleIndex>& samples) {
   LogDetail([samples](AsyncLog& log) {
     std::string set("\"[");
     for (auto i : samples) {
@@ -886,6 +902,8 @@ struct RunFunctions {
         return GetCompileTime<TestScenario::SingleStream>();
       case TestScenario::MultiStream:
         return GetCompileTime<TestScenario::MultiStream>();
+      case TestScenario::MultiStreamFree:
+        return GetCompileTime<TestScenario::MultiStreamFree>();
       case TestScenario::Server:
         return GetCompileTime<TestScenario::Server>();
       case TestScenario::Offline:
@@ -928,9 +946,11 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   }
 
   const size_t set_size = qsl->PerformanceSampleCount();
-  const size_t set_padding = settings.scenario == TestScenario::MultiStream
-                                 ? settings.samples_per_query - 1
-                                 : 0;
+  const size_t set_padding =
+      (settings.scenario == TestScenario::MultiStream ||
+       settings.scenario == TestScenario::MultiStreamFree)
+          ? settings.samples_per_query - 1
+          : 0;
   std::vector<QuerySampleIndex> loadable_set;
   loadable_set.reserve(set_size + set_padding);
   size_t remaining_count = samples.size();

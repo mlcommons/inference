@@ -18,7 +18,7 @@ enum TestScenario {
   SingleStream,
 
   // MultiStream ideally issues queries containing N samples each at a uniform
-  // rate of 60 Hz. However, the loadgen will skip sending for one interval if
+  // rate of 20 Hz. However, the loadgen will skip sending for one interval if
   // the SUT falls behind too much. By default and spec, the loadgen will only
   // allow 1 outstanding query at a time.
   // TODO: Some SUTs may benefit from pipelining multiple queries while still
@@ -29,6 +29,16 @@ enum TestScenario {
   // Final performance result is PASS if the 90 percentile latency is under
   // a given threshold (model-specific) for a given N.
   MultiStream,
+
+  // MultiStreamFree is not an official MLPerf scenario, but is implemented
+  // for evaluation purposes.
+  // It is the same as MultiStream, but allows for up to P async queries where
+  // N is limited only by the latency target. Instead of attempting to issue
+  // queries at a fixed rate, this scenario issues a query as soon as the P'th
+  // oldest query completes.
+  // Final performance result is PASS if the 90th percentile latency is under
+  // a given threashold (model-specific) for a given value of N and P.
+  MultiStreamFree,
 
   // Server sends queries with a single sample. Queries have a random poisson
   // (non-uniform) arrival rate that, when averaged, hits the target QPS.

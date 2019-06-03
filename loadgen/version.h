@@ -19,6 +19,7 @@ const std::string& LoadgenBuildDateUtc();
 const std::string& LoadgenGitCommitDate();
 const std::string& LoadgenGitStatus();
 const std::string& LoadgenGitLog();
+const std::string& LoadgenSha1OfFiles();
 
 }  // namespace mlperf
 

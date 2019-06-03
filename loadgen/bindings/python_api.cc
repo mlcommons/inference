@@ -156,6 +156,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
   pybind11::enum_<TestScenario>(m, "TestScenario")
       .value("SingleStream", TestScenario::SingleStream)
       .value("MultiStream", TestScenario::MultiStream)
+      .value("MultiStreamFree", TestScenario::MultiStreamFree)
       .value("Server", TestScenario::Server)
       .value("Offline", TestScenario::Offline);
 

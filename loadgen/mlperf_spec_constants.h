@@ -10,6 +10,8 @@ constexpr uint64_t kDefaultScheduleSeed = 0xA1B2C3D4;
 constexpr size_t kMinQueryCountSingleStream = 1024;
 constexpr size_t kMinQueryCountNotSingleStream = 24576;
 
+constexpr double kMinPerformanceRunTargetLatencySeconds = 0.05;
+
 constexpr double kMinPerformanceRunDurationSeconds = 60.0;
 
 constexpr double kMultiStreamTargetQPS = 60.0;

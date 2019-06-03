@@ -2,6 +2,7 @@
 
 #include "logging.h"
 #include "mlperf_spec_constants.h"
+#include "utils.h"
 
 namespace mlperf {
 
@@ -12,17 +13,22 @@ TestSettingsInternal::TestSettingsInternal(
       mode(requested.mode),
       samples_per_query(1),
       target_qps(60.0),
-      target_latency(std::nano::den),
+      target_latency(SecondsToDuration<decltype(target_latency)>(
+          kMinPerformanceRunTargetLatencySeconds)),
       max_async_queries(2),
-      min_duration(std::milli::den),
+      target_duration(SecondsToDuration<decltype(target_duration)>(
+          kMinPerformanceRunDurationSeconds)),
+      min_duration(target_duration),
       max_duration(0),
       min_query_count(requested.scenario == TestScenario::SingleStream
                           ? kMinQueryCountSingleStream
                           : kMinQueryCountNotSingleStream),
       max_query_count(std::numeric_limits<uint64_t>::max()),
+      min_sample_count(0),
       qsl_rng_seed(kDefaultQslSeed),
       sample_index_rng_seed(kDefaultSampleSeed),
       schedule_rng_seed(kDefaultScheduleSeed) {
+  ApplyOverrides();
   // Target QPS.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -30,6 +36,7 @@ TestSettingsInternal::TestSettingsInternal(
                    requested.single_stream_expected_latency_ns;
       break;
     case TestScenario::MultiStream:
+    case TestScenario::MultiStreamFree:
       target_qps = kMultiStreamTargetQPS;
       break;
     case TestScenario::Server:
@@ -57,7 +64,8 @@ TestSettingsInternal::TestSettingsInternal(
   }
 
   // Samples per query.
-  if (requested.scenario == TestScenario::MultiStream) {
+  if (requested.scenario == TestScenario::MultiStream ||
+      requested.scenario == TestScenario::MultiStreamFree) {
     samples_per_query = requested.multi_stream_samples_per_query;
   }
 
@@ -68,13 +76,17 @@ TestSettingsInternal::TestSettingsInternal(
     // to take longer than than the minimum test duration required by the
     // MLPerf spec.
     constexpr double kSlack = 1.1;
-    samples_per_query = std::max<int>(
-        min_query_count,
-        (kMinPerformanceRunDurationSeconds / target_qps) * kSlack);
+    int target_sample_count =
+        kSlack * DurationToSeconds(target_duration) * target_qps;
+    samples_per_query = std::max<int>(min_query_count, target_sample_count);
     min_query_count = 1;
-    min_duration = std::chrono::milliseconds(0);
+    target_duration = std::chrono::milliseconds(0);
   }
 
+  min_sample_count = min_query_count * samples_per_query;
+}
+
+void TestSettingsInternal::ApplyOverrides() {
   // Exit here if we are using defaults.
   if (!requested.enable_spec_overrides) {
     return;
@@ -96,7 +108,8 @@ TestSettingsInternal::TestSettingsInternal(
   }
 
   if (requested.override_multi_stream_max_async_queries != 0) {
-    if (requested.scenario == TestScenario::MultiStream) {
+    if (requested.scenario == TestScenario::MultiStream ||
+        requested.scenario == TestScenario::MultiStreamFree) {
       max_async_queries = requested.override_multi_stream_max_async_queries;
     } else {
       LogError([](AsyncLog &log) {
@@ -111,6 +124,7 @@ TestSettingsInternal::TestSettingsInternal(
   if (requested.override_min_duration_ms != 0) {
     min_duration =
         std::chrono::milliseconds(requested.override_min_duration_ms);
+    target_duration = min_duration;
   }
   if (requested.override_max_duration_ms != 0) {
     max_duration =
@@ -141,6 +155,8 @@ std::string ToString(TestScenario scenario) {
       return "Single Stream";
     case TestScenario::MultiStream:
       return "Multi Stream";
+    case TestScenario::MultiStreamFree:
+      return "Multi Stream Free";
     case TestScenario::Server:
       return "Server";
     case TestScenario::Offline:
@@ -179,6 +195,7 @@ void LogRequestedTestSettings(const TestSettings &s) {
                       s.single_stream_expected_latency_ns);
         break;
       case TestScenario::MultiStream:
+      case TestScenario::MultiStreamFree:
         log.LogDetail("multi_stream_samples_per_query : ",
                       s.multi_stream_samples_per_query);
         break;

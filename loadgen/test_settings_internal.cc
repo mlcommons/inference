@@ -36,6 +36,7 @@ TestSettingsInternal::TestSettingsInternal(
                    requested.single_stream_expected_latency_ns;
       break;
     case TestScenario::MultiStream:
+    case TestScenario::MultiStreamFree:
       target_qps = kMultiStreamTargetQPS;
       break;
     case TestScenario::Server:
@@ -63,7 +64,8 @@ TestSettingsInternal::TestSettingsInternal(
   }
 
   // Samples per query.
-  if (requested.scenario == TestScenario::MultiStream) {
+  if (requested.scenario == TestScenario::MultiStream ||
+      requested.scenario == TestScenario::MultiStreamFree) {
     samples_per_query = requested.multi_stream_samples_per_query;
   }
 
@@ -106,7 +108,8 @@ void TestSettingsInternal::ApplyOverrides() {
   }
 
   if (requested.override_multi_stream_max_async_queries != 0) {
-    if (requested.scenario == TestScenario::MultiStream) {
+    if (requested.scenario == TestScenario::MultiStream ||
+        requested.scenario == TestScenario::MultiStreamFree) {
       max_async_queries = requested.override_multi_stream_max_async_queries;
     } else {
       LogError([](AsyncLog &log) {
@@ -152,6 +155,8 @@ std::string ToString(TestScenario scenario) {
       return "Single Stream";
     case TestScenario::MultiStream:
       return "Multi Stream";
+    case TestScenario::MultiStreamFree:
+      return "Multi Stream Free";
     case TestScenario::Server:
       return "Server";
     case TestScenario::Offline:
@@ -190,6 +195,7 @@ void LogRequestedTestSettings(const TestSettings &s) {
                       s.single_stream_expected_latency_ns);
         break;
       case TestScenario::MultiStream:
+      case TestScenario::MultiStreamFree:
         log.LogDetail("multi_stream_samples_per_query : ",
                       s.multi_stream_samples_per_query);
         break;

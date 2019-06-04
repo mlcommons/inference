@@ -52,7 +52,7 @@ def process_latencies(latencies_ns):
 def main(argv):
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.SingleStream
-    settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
+    settings.mode = mlperf_loadgen.TestMode.AccuracyOnly
     settings.single_stream_expected_latency_ns = 1000000;
     settings.enable_spec_overrides = True
     settings.override_target_latency_ns = 100000000

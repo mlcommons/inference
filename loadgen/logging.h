@@ -49,7 +49,7 @@ class AsyncLog {
   ~AsyncLog() { StartNewTrace(nullptr, PerfClock::now()); }
 
   void SetLogFiles(std::ostream* summary, std::ostream* detail,
-                   PerfClock::time_point log_origin) {
+                   std::ostream* accuracy, PerfClock::time_point log_origin) {
     std::unique_lock<std::mutex> lock(log_mutex_);
     if (summary_out_ != &std::cerr) {
       if (log_error_count_ == 0) {
@@ -68,8 +68,16 @@ class AsyncLog {
     if (detail_out_) {
       detail_out_->flush();
     }
+    if (accuracy_out_) {
+      WriteAccuracyFooterLocked();
+      accuracy_out_->flush();
+    }
     summary_out_ = summary;
     detail_out_ = detail;
+    accuracy_out_ = accuracy;
+    if (accuracy_out_) {
+      WriteAccuracyHeaderLocked();
+    }
     log_origin_ = log_origin;
     log_error_count_ = 0;
   }
@@ -98,6 +106,9 @@ class AsyncLog {
       }
       if (detail_out_) {
         detail_out_->flush();
+      }
+      if (accuracy_out_) {
+        accuracy_out_->flush();
       }
     }
 
@@ -159,6 +170,19 @@ class AsyncLog {
     *detail_out_ << message;
     LogArgs(detail_out_, args...);
     *detail_out_ << "\n";
+  }
+
+  void LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
+                   const LogBinaryAsHexString& response) {
+    std::unique_lock<std::mutex> lock(log_mutex_);
+    if (!accuracy_out_) {
+      return;
+    }
+    *accuracy_out_ << (accuracy_needs_comma_ ? ",\n{ " : "\n{ ");
+    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
+            response);
+    *accuracy_out_ << " }";
+    accuracy_needs_comma_ = true;
   }
 
   template <typename... Args>
@@ -283,6 +307,13 @@ class AsyncLog {
   }
 
  private:
+  void WriteAccuracyHeaderLocked() {
+    *accuracy_out_ << "[";
+    accuracy_needs_comma_ = false;
+  }
+
+  void WriteAccuracyFooterLocked() { *accuracy_out_ << "\n]\n"; }
+
   void WriteTraceEventHeaderLocked() {
     *trace_out_ << "{ \"traceEvents\": [\n";
   }
@@ -320,6 +351,8 @@ class AsyncLog {
   std::mutex log_mutex_;
   std::ostream* summary_out_ = &std::cerr;
   std::ostream* detail_out_ = &std::cerr;
+  std::ostream* accuracy_out_ = &std::cerr;
+  bool accuracy_needs_comma_ = false;
   PerfClock::time_point log_origin_;
   uint32_t log_error_count_ = 0;
   bool error_flagged_ = false;
@@ -378,7 +411,8 @@ class Logger {
   void StartIOThread();
   void StopIOThread();
 
-  void StartLogging(std::ostream* summary, std::ostream* detail);
+  void StartLogging(std::ostream* summary, std::ostream* detail,
+                    std::ostream* accuracy);
   void StopLogging();
 
   void StartNewTrace(std::ostream* trace_out, PerfClock::time_point origin);

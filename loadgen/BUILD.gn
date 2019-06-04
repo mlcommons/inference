@@ -102,6 +102,7 @@ action("generate_loadgen_version_header") {
   deps = [ ":version_generator_script" ]
   inputs = mlperf_loadgen_sources_no_gen
   outputs = [ generated_version_source_filename ]
-  args = [ rebase_path(generated_version_source_filename, root_build_dir) ]
+  args = [ rebase_path(generated_version_source_filename, root_build_dir),
+           rebase_path(".") ]
 }
 

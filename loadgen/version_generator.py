@@ -52,8 +52,9 @@ def generate_loadgen_version_definitions_sha1(file, loadgen_root):
         full_fn = loadgen_root + fn
         if not os.path.isfile(full_fn):
             continue
-        file_data = open(full_fn,"r").read()
-        sha1s += hashlib.sha1(file_data).hexdigest() + " " + fn + "\n"
+        file_data = open(full_fn,"rb").read()
+        sha1s += hashlib.sha1(file_data).hexdigest() + \
+                 " " + fn + "\n"
 
     file.write(func_def("Sha1OfFiles", "R\"(" + sha1s[0:-1] + ")\""))
 
@@ -79,7 +80,7 @@ def generate_loadgen_version_definitions(cc_filename, loadgen_root):
     git_work_tree = "--work-tree=\"" + loadgen_root + "/..\" "
     git_command = "git " + git_dir + git_work_tree
     gitStatus = os.popen(git_command + "status")
-    print gitStatus.read()
+    gitStatus.read()
     is_git_repo = gitStatus.close() == None
     if is_git_repo:
         generate_loadgen_version_definitions_git(file, git_command)

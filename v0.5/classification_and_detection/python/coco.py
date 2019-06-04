@@ -527,3 +527,46 @@ class PostProcessCocoTf(PostProcessCoco):
                                               float(detection_class)])
                 self.total += 1
         return processed_results
+
+class PostProcessCocoTfScratch(PostProcessCoco):
+    """
+    Post processing required by ssd-resnet34 / pytorch
+    """
+    def __init__(self):
+        super().__init__()
+        self.use_inv_map = True
+
+    def __call__(self, results, ids, expected=None, result_dict=None):
+        # results come as:
+        #   detection_boxes,detection_classes,detection_scores
+
+        processed_results = []
+        # batch size
+        #bs = len(results[0])
+        bs = 1
+        for idx in range(0, bs):
+            processed_results.append([])
+            detection_boxes = results[0]
+            detection_classes = results[1]
+            expected_classes = expected[idx][0]
+            scores = results[2]
+
+            score_idx_sorted = np.argsort(-scores)
+            scores = scores[score_idx_sorted]
+            detection_classes = detection_classes[score_idx_sorted]
+            detection_boxes = detection_boxes[score_idx_sorted]
+
+            for detection in range(0, len(scores)):
+                if scores[detection] < 0.05:
+                    break
+                detection_class = int(detection_classes[detection])
+                if detection_class in expected_classes:
+                    self.good += 1
+                box = detection_boxes[detection]
+                # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
+                processed_results[idx].append([float(ids[idx]),
+                                              box[0], box[1], box[2], box[3],
+                                              scores[detection],
+                                              float(detection_class)])
+                self.total += 1
+        return processed_results

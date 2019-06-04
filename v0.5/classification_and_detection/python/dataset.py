@@ -248,3 +248,20 @@ def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
         img = img.transpose([2, 0, 1])
 
     return img
+
+def pre_process_coco_resnet34_fromscratch(img, dims=None, need_transpose=False):
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+
+    if dims != None:
+        im_height, im_width, _ = dims
+        img = img.resize((im_width, im_height), 2) # PIL.Image.BILINEAR
+    mean = np.array([123.68, 116.78, 103.94], dtype=np.float32)
+    img_data = np.array(img.getdata(), dtype=np.float32)
+    (im_width, im_height) = img.size
+    img = img_data.reshape(im_height, im_width, 3)
+    img = img - mean
+    if need_transpose:
+        img = img.transpose([2, 0, 1])
+
+    return img

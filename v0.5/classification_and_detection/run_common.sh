@@ -47,8 +47,12 @@ if [ $name == "ssd-mobilenet-tf" ] ; then
     model_path="$MODEL_DIR/ssd_mobilenet_v1_coco_2018_01_28.pb"
     profile=ssd-mobilenet-tf
 fi
+#if [ $name == "ssd-resnet34-tf" ] ; then
+#    model_path="$MODEL_DIR/ssd_resnet-34_frozen.pb"
+#    profile=ssd-resnet34-tf
+#fi
 if [ $name == "ssd-resnet34-tf" ] ; then
-    model_path="$MODEL_DIR/ssd_resnet-34_from_onnx.pb"
+    model_path="$MODEL_DIR/ssd_resnet34_large_ssd.pb"
     profile=ssd-resnet34-tf
 fi
 

@@ -75,7 +75,9 @@ def generate_loadgen_version_definitions(cc_filename, loadgen_root):
     file.write(func_def("BuildDateLocal", "\"" + dateTimeNowLocal + "\""))
     file.write(func_def("BuildDateUtc", "\"" + dateTimeNowUtc + "\""))
 
-    git_command = "git -C \"" + loadgen_root + "/../\" ";
+    git_dir = "--git-dir=\"" + loadgen_root + "/../.git\" "
+    git_work_tree = "--work-tree=\"" + loadgen_root + "/..\" "
+    git_command = "git " + git_dir + git_work_tree
     gitStatus = os.popen(git_command + "status")
     print gitStatus.read()
     is_git_repo = gitStatus.close() == None

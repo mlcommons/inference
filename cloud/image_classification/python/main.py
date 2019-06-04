@@ -67,7 +67,6 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet",
         "backend": "tensorflow",
         "cache": 0,
-        "time": 60,
         "queries-single": 1024,
         "queries-multi": 24576,
         "max-latency": DEFAULT_LATENCY_BUCKETS,
@@ -165,9 +164,10 @@ def get_args():
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
-    parser.add_argument("--queries_single", type=int, default=1024, help="number of queries for SingleStream")
-    parser.add_argument("--queries_multi", type=int, default=24576,
-                        help="number of queries for MultiStream,Server,Offline")
+    parser.add_argument("--queries-single", type=int, default=1024, help="number of queries for SingleStream")
+    parser.add_argument("--queries-offline", type=int, default=24576, help="number of queries for Offline")
+    parser.add_argument("--queries-multi", type=int, default=24576, help="number of queries for MultiStream,Server")
+    parser.add_argument("--max-batchsize", type=int, default=128, help="max batch size in a single inference")
     parser.add_argument("--qps", type=int, default=10, help="target qps estimate")
     parser.add_argument("--max-latency", type=str, help="max latency in 99pct tile")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
@@ -234,13 +234,14 @@ class Item:
 
 
 class RunnerBase:
-    def __init__(self, model, ds, threads, post_proc=None):
+    def __init__(self, model, ds, threads, post_proc=None, max_batchsize=128):
         self.take_accuracy = False
         self.ds = ds
         self.model = model
         self.post_process = post_proc
         self.threads = threads
         self.take_accuracy = False
+        self.max_batchsize = max_batchsize
 
     def handle_tasks(self, tasks_queue):
         pass
@@ -271,17 +272,26 @@ class RunnerBase:
                     response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
                 lg.QuerySamplesComplete(response)
 
-    def enqueue(self, id, ids, data, label):
-        self.run_one_item(Item(id, ids, data, label))
+    def enqueue(self, query_samples):
+        idx = [q.index for q in query_samples]
+        query_id = [q.id for q in query_samples]
+        if len(query_samples) < self.max_batchsize:
+            data, label = self.ds.get_samples(idx)
+            self.run_one_item(Item(query_id, idx, data, label))
+        else:
+            bs = self.max_batchsize
+            for i in range(0, len(idx), bs):
+                data, label = self.ds.get_samples(idx[i:i+bs])
+                self.run_one_item(Item(query_id[i:i+bs], idx[i:i+bs], data, label))
 
     def finish(self):
         pass
 
 
 class QueueRunner(RunnerBase):
-    def __init__(self, model, ds, threads, post_proc=None):
-        super().__init__(model, ds, threads, post_proc)
-        self.tasks = Queue(maxsize=threads * 5)
+    def __init__(self, model, ds, threads, post_proc=None, max_batchsize=128):
+        super().__init__(model, ds, threads, post_proc, max_batchsize)
+        self.tasks = Queue(maxsize=threads * 4)
         self.workers = []
         self.result_dict = {}
 
@@ -302,8 +312,18 @@ class QueueRunner(RunnerBase):
             self.run_one_item(qitem)
             tasks_queue.task_done()
 
-    def enqueue(self, id, ids, data, label):
-        self.tasks.put(Item(id, ids, data, label))
+    def enqueue(self, query_samples):
+        idx = [q.index for q in query_samples]
+        query_id = [q.id for q in query_samples]
+        if len(query_samples) < self.max_batchsize:
+            data, label = self.ds.get_samples(idx)
+            self.tasks.put(Item(query_id, idx, data, label))
+        else:
+            bs = self.max_batchsize
+            for i in range(0, len(idx), bs):
+                ie = i + bs
+                data, label = self.ds.get_samples(idx[i:ie])
+                self.tasks.put(Item(query_id[i:ie], idx[i:ie], data, label))
 
     def finish(self):
         # exit all threads
@@ -416,14 +436,10 @@ def main():
             lg.TestScenario.Server: QueueRunner,
             lg.TestScenario.Offline: QueueRunner
         }
-        runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc)
+        runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)
 
-        def issue_query(query_samples):
-            # called by loadgen to issue queries
-            idx = [q.index for q in query_samples]
-            query_id = [q.id for q in query_samples]
-            data, label = ds.get_samples(idx)
-            runner.enqueue(query_id, idx, data, label)
+        def issue_queries(query_samples):
+            runner.enqueue(query_samples)
 
         def process_latencies(latencies_ns):
             # called by loadgen to show us the recorded latencies
@@ -447,18 +463,23 @@ def main():
             settings.server_target_qps = qps
             settings.offline_expected_qps = qps
 
-        # mlperf rules - min queries
+        max_latency = [1.]
         if scenario == lg.TestScenario.SingleStream:
             settings.override_min_query_count = args.queries_single
             settings.override_max_query_count = args.queries_single
-        else:
+        elif scenario == lg.TestScenario.MultiStream:
             settings.override_min_query_count = args.queries_multi
             settings.override_max_query_count = args.queries_multi
+        elif scenario == lg.TestScenario.Server:
+            max_latency = args.max_latency
+        elif scenario == lg.TestScenario.Offline:
+            settings.override_min_query_count = args.queries_offline
+            settings.override_max_query_count = args.queries_offline
 
-        sut = lg.ConstructSUT(issue_query, process_latencies)
+        sut = lg.ConstructSUT(issue_queries, process_latencies)
         qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
 
-        for target_latency in args.max_latency:
+        for target_latency in max_latency:
             log.info("starting {}, latency={}".format(scenario, target_latency))
 
             settings.single_stream_expected_latency_ns = int(target_latency * NANO_SEC)

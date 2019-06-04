@@ -239,7 +239,7 @@ class PostProcessCocoPt(PostProcessCoco):
         # batch size
         bs = len(results[0])
         for idx in range(0, bs):
-            processed_results.append()
+            processed_results.append([])
             detection_boxes = results[0][idx]
             detection_classes = results[1][idx]
             expected_classes = expected[idx][0]

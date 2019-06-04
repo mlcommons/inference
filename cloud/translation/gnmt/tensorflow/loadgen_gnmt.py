@@ -24,6 +24,7 @@ from nmt.utils import misc_utils as utils
 from nmt.utils import nmt_utils
 from nmt import model_helper
 import codecs
+import array
 
 ##
 # @brief Translation task that contains 1 sentence ID.
@@ -241,10 +242,12 @@ class GNMTRunner (Runner):
         bs = self.gnmt.getBatchSize()
         num_samples = len(qitem.sentence_id_list)
 
+        translation = []
+
         # Split the samples over batches
         for i in range(0, num_samples, bs):
             cur_sentid_list = [index for index in qitem.sentence_id_list[i:min(i+bs, num_samples)]] 
-            translation = self.gnmt.translate(cur_sentid_list)
+            translation += self.gnmt.translate(cur_sentid_list)
 
         if self.VERBOSE:
             print("Performed {} translations".format(self.gnmt.getCount()))
@@ -260,6 +263,15 @@ class GNMTRunner (Runner):
         sentence_id_list = [sample.index for sample in query_samples] 
         task = BatchTranslationTask(sentence_id_list, query_id_list)
         self.tasks.put(task)
+
+    ##
+    # @brief Serialize the result and give it to mlperf_loadgen
+    # @param query_id query_id that generated the sample
+    # @param result is a UTF-8 encoded string
+    def post_process(self, query_id, result):
+        result_arr = array.array('B', result)
+        r_info = result_arr.buffer_info()
+        return mlperf_loadgen.QuerySampleResponse(query_id, r_info[0], r_info[1])
 
 ##
 # @brief Subclass of GNMTRunner, specialized for batch size 1
@@ -370,12 +382,9 @@ class ServerGNMTRunner(GNMTRunner):
             result = self.process(batched_qitem)
             response = []
 
-            # TBD: do something when we are running accuracy mode
-            # We need to properly store the result. Perhaps through QuerySampleResponse, otherwise internally
-            # in this instance of Runner.
-            # QuerySampleResponse contains an ID, a size field and a data pointer field
-            for query_id in batched_qitem.query_id:
-                response.append(mlperf_loadgen.QuerySampleResponse(query_id, 0, 0))
+            # Call post_process on every sample
+            for idx, query_id in enumerate(batched_qitem.query_id):
+                response.append(self.post_process(query_id, result[idx]))
 
             # Tell loadgen that we're ready with this query
             mlperf_loadgen.QuerySamplesComplete(response)
@@ -391,10 +400,15 @@ if __name__ == "__main__":
     "Offline": mlperf_loadgen.TestScenario.Offline,
     }
 
+    MODE_MAP = {
+        "Performance": mlperf_loadgen.TestMode.PerformanceOnly,
+        "Accuracy": mlperf_loadgen.TestMode.AccuracyOnly
+    }
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--scenario', type=str, default='SingleStream',
-                            help="Scenario to be run: can be one of {SingleStream, Offline, MultiStream}")
+                            help="Scenario to be run: can be one of {SingleStream, Offline, MultiStream, Server}")
 
     parser.add_argument('--batch_size', type=int, default=32,
                             help="Max batch size to use in Offline and MultiStream scenarios.")
@@ -405,22 +419,28 @@ if __name__ == "__main__":
     parser.add_argument('--verbose', default=False, action='store_true',
                             help="Verbose output.")
 
-    args = parser.parse_args()
+    parser.add_argument("--mode", default="Performance", help="Can be one of {Performance, Accuracy}")
 
+    args = parser.parse_args()
 
     outdir = os.path.join(os.getcwd(), 'lg_output')
 
+    # Create loadGen settings
     settings = mlperf_loadgen.TestSettings()
-    settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
-    settings.scenario = SCENARIO_MAP[args.scenario]
+    try:
+        settings.mode = MODE_MAP[args.mode]
+        settings.scenario = SCENARIO_MAP[args.scenario]
+    except KeyError as e:
+        print("Unknown mode or scenario: {}".format(e.args[0]))
+        raise e
 
+    # Build the GNMT model
     if args.scenario == "SingleStream":
         batch_size = 1
     else:
         batch_size = args.batch_size
 
     gnmt_model = GNMTWrapper(batch_size = batch_size, outdir=outdir)
-
 
     if args.scenario == "SingleStream":
         runner = SingleStreamGNMTRunner(gnmt_model, store_translation=args.store_translation, verbose=args.verbose, outdir=outdir)

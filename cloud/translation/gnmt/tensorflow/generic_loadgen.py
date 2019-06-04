@@ -78,18 +78,22 @@ class Runner:
             result = self.process(qitem)
             response = []
 
-            # TBD: do something when we are running accuracy mode
-            # We need to properly store the result. Perhaps through QuerySampleResponse, otherwise internally
-            # in this instance of Runner.
-            # QuerySampleResponse contains an ID, a size field and a data pointer field
-            for query_id in qitem.query_id:
-                response.append(mlperf_loadgen.QuerySampleResponse(query_id, 0, 0))
+            # Call post_process on every sample
+            for idx, query_id in enumerate(qitem.query_id):
+                response.append(self.post_process(query_id, result[idx]))
 
             # Tell loadgen that we're ready with this query
             mlperf_loadgen.QuerySamplesComplete(response)
 
             self.tasks.task_done()
     
+    ##
+    # @brief post process a single sample
+    # @note This should serialize the result and hand it over to loadgen
+    # @note Here it is a dummy implementation that doesn't return anything useful
+    def post_process(self, query_id, result):
+        mlperf_loadgen.QuerySampleResponse(query_id, 0, 0)
+
     ##
     # @brief Stop worker thread
     def finish(self):

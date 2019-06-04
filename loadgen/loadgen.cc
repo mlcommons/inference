@@ -187,10 +187,12 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
                         "query_seq", query->sequence_id, "sample_idx",
                         sample->sample_index, "issue_start_ns",
                         sched.delta(query->issued_start_time), "complete_ns",
-                        sched.delta(complete_begin_time), "data",
-                        LogBinaryAsHexString{sample_data_copy});
+                        sched.delta(complete_begin_time));
       }
+
       if (sample_data_copy) {
+        log.LogAccuracy(sample->sequence_id, sample->sample_index,
+                        LogBinaryAsHexString{sample_data_copy});
         delete sample_data_copy;
       }
     });
@@ -1027,7 +1029,8 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   std::ofstream summary_out("mlperf_log_summary.txt");
   std::ofstream detail_out("mlperf_log_detail.txt");
-  GlobalLogger().StartLogging(&summary_out, &detail_out);
+  std::ofstream accuracy_out("mlperf_log_accuracy.json");
+  GlobalLogger().StartLogging(&summary_out, &detail_out, &accuracy_out);
   std::ofstream trace_out("mlperf_trace.json");
   GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
 

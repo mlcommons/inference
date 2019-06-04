@@ -52,7 +52,7 @@ fi
 #    profile=ssd-resnet34-tf
 #fi
 if [ $name == "ssd-resnet34-tf" ] ; then
-    model_path="$MODEL_DIR/ssd_resnet34_large_ssd.pb"
+    model_path="$MODEL_DIR/ssd_resnet34_large_ssd_sort.pb"
     profile=ssd-resnet34-tf
 fi
 

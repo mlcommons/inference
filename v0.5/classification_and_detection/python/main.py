@@ -58,7 +58,7 @@ SUPPORTED_DATASETS = {
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoPt(True,0.05),
          {"image_size": [1200, 1200, 3]}),
     "coco-1200-tf":
-        (coco.Coco, dataset.pre_process_coco_resnet34_fromscratch, coco.PostProcessCocoTfScratch(),
+        (coco.Coco, dataset.pre_process_coco_resnet34_native, coco.PostProcessCocoTfNative(),
          {"image_size": [1200, 1200, 3]}),
 }
 

@@ -528,7 +528,7 @@ class PostProcessCocoTf(PostProcessCoco):
                 self.total += 1
         return processed_results
 
-class PostProcessCocoTfScratch(PostProcessCoco):
+class PostProcessCocoTfNative(PostProcessCoco):
     """
     Post processing required by ssd-resnet34 / pytorch
     """
@@ -550,11 +550,6 @@ class PostProcessCocoTfScratch(PostProcessCoco):
             detection_classes = results[1]
             expected_classes = expected[idx][0]
             scores = results[2]
-
-            score_idx_sorted = np.argsort(-scores)
-            scores = scores[score_idx_sorted]
-            detection_classes = detection_classes[score_idx_sorted]
-            detection_boxes = detection_boxes[score_idx_sorted]
 
             for detection in range(0, len(scores)):
                 if scores[detection] < 0.05:

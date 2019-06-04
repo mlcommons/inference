@@ -1,6 +1,9 @@
 #ifndef MLPERF_LOADGEN_MLPERF_SPEC_CONSTANTS_H
 #define MLPERF_LOADGEN_MLPERF_SPEC_CONSTANTS_H
 
+#include <stddef.h>
+#include <stdint.h>
+
 namespace mlperf {
 
 constexpr uint64_t kDefaultQslSeed = 0xABCD1234;

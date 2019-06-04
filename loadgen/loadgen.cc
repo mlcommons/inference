@@ -904,9 +904,9 @@ struct RunFunctions {
 
   template <TestScenario compile_time_scenario>
   static RunFunctions GetCompileTime() {
-    return {(*RunAccuracyMode<compile_time_scenario>),
-            (*RunPerformanceMode<compile_time_scenario>),
-            (*FindPeakPerformanceMode<compile_time_scenario>)};
+    return {(RunAccuracyMode<compile_time_scenario>),
+            (RunPerformanceMode<compile_time_scenario>),
+            (FindPeakPerformanceMode<compile_time_scenario>)};
   }
 
   static RunFunctions Get(TestScenario run_time_scenario) {

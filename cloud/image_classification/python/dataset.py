@@ -220,6 +220,9 @@ def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
     if img.mode != 'RGB':
         img = img.convert('RGB')
 
+    if dims != None:
+        im_height, im_width, _ = dims
+        img = img.resize((im_width, im_height), 2) # PIL.Image.BILINEAR
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
     img_data = np.array(img.getdata(), dtype=np.float32)

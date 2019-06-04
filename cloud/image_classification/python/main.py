@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 
 import argparse
 import array
+import collections
 import json
 import logging
 import os
@@ -413,9 +414,11 @@ def main():
         start = time.time()
         for idx in range(0, count):
             ds.load_query_samples([idx])
-            data, label = ds.get_samples([idx])
+            query_sample = collections.namedtuple('query_sample', ['index', 'id'])
+            query_sample.index = idx
+            query_sample.id = idx
             start_one = time.time()
-            runner.enqueue([idx], [idx], data, label)
+            runner.enqueue([query_sample])
             last_timeing.append(time.time() - start_one)
         runner.finish()
         # aggregate results

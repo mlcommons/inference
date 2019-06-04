@@ -192,9 +192,9 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
     img = center_crop(img, output_height, output_width)
     img = np.asarray(img, dtype='float32')
 
-    img = img / 255.0
-    img = img - 0.5
-    img = img * 2
+    img /= 255.0
+    img -= 0.5
+    img *= 2
 
     # transpose if needed
     if need_transpose:

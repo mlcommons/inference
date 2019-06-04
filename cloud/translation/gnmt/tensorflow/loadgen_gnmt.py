@@ -242,10 +242,12 @@ class GNMTRunner (Runner):
         bs = self.gnmt.getBatchSize()
         num_samples = len(qitem.sentence_id_list)
 
+        translation = []
+
         # Split the samples over batches
         for i in range(0, num_samples, bs):
             cur_sentid_list = [index for index in qitem.sentence_id_list[i:min(i+bs, num_samples)]] 
-            translation = self.gnmt.translate(cur_sentid_list)
+            translation += self.gnmt.translate(cur_sentid_list)
 
         if self.VERBOSE:
             print("Performed {} translations".format(self.gnmt.getCount()))

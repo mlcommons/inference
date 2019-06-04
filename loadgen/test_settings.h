@@ -6,7 +6,7 @@
 // *should* work.
 // The comments in this file are indicative of the loadgen implementation.
 
-#include <cstdint>
+#include <stdint.h>
 
 namespace mlperf {
 

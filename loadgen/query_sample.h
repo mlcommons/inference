@@ -5,6 +5,9 @@
 // These are broken out into their own files since they are exposed as part
 // of the C API and we want to avoid C clients including C++ code.
 
+#include <stddef.h>
+#include <stdint.h>
+
 namespace mlperf {
 
 // ResponseId represents a unique identifier for a sample of an issued query.

@@ -19,6 +19,7 @@ import threading
 import time
 import mlperf_loadgen
 import numpy
+import array
 
 class ImplementationException (Exception):
     def __init__(self, msg):
@@ -75,24 +76,24 @@ class Runner:
             if qitem is None:
                 break
 
-            result = self.process(qitem)
-            response = []
+            results = self.process(qitem)
 
-            # Call post_process on every sample
-            for idx, query_id in enumerate(qitem.query_id):
-                response.append(self.post_process(query_id, result[idx]))
-
-            # Tell loadgen that we're ready with this query
-            mlperf_loadgen.QuerySamplesComplete(response)
+            # Call post_process on all samples
+            self.post_process(qitem.query_id, results)
 
             self.tasks.task_done()
     
     ##
-    # @brief post process a single sample
-    # @note This should serialize the result and hand it over to loadgen
+    # @brief Post process results
+    # @note This should serialize the results for query_ids and hand it over to loadgen
     # @note Here it is a dummy implementation that doesn't return anything useful
-    def post_process(self, query_id, result):
-        mlperf_loadgen.QuerySampleResponse(query_id, 0, 0)
+    def post_process(self, query_ids, results):
+        response = []
+        for res, q_id in zip(results, query_ids):
+            response.append(mlperf_loadgen.QuerySampleResponse(q_id, 0, 0))
+
+        # Tell loadgen that we're ready with this query
+        mlperf_loadgen.QuerySamplesComplete(response)
 
     ##
     # @brief Stop worker thread

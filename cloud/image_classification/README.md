@@ -70,6 +70,7 @@ pushd; cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop; popd
 python setup.py develop
 ```
 
+Install the loadgen module under dist/ with pip install. Add -I to override the older one.
 
 ## Running the benchmark
 ### One time setup
@@ -200,6 +201,7 @@ Expceted qps.
 comma seperated list of which latencies (in seconds) we try to reach in the 99 percentile.
 The deault is 0.010,0.050,0.100,0.200,0.400.
 
+Please see mlperf_log_summary.txt for the run results.
 
 ## License
 

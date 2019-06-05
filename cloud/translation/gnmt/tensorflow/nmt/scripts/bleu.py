@@ -44,6 +44,48 @@ def _get_ngrams(segment, max_order):
       ngram_counts[ngram] += 1
   return ngram_counts
 
+def _get_ngram_match_values(ref_ngram_counts, translation_ngram_counts, translation_length, max_order):
+  new_matches_by_order = [0] * max_order
+  new_possible_matches_by_order = [0] * max_order
+
+  overlap = translation_ngram_counts & ref_ngram_counts
+  for ngram in overlap:
+    new_matches_by_order[len(ngram)-1] += overlap[ngram]
+  for order in range(1, max_order+1):
+    possible_matches = translation_length - order + 1
+    new_possible_matches_by_order[order-1] = max(0, possible_matches)
+
+  return (new_matches_by_order, new_possible_matches_by_order)
+
+def _calc_blue_score_data(matches_by_order, possible_matches_by_order, translation_length, reference_length, max_order, smooth=False):
+  precisions = [0] * max_order
+  for i in range(0, max_order):
+    if smooth:
+      precisions[i] = ((matches_by_order[i] + 1.) /
+                       (possible_matches_by_order[i] + 1.))
+    else:
+      if possible_matches_by_order[i] > 0:
+        precisions[i] = (float(matches_by_order[i]) /
+                         possible_matches_by_order[i])
+      else:
+        precisions[i] = 0.0
+
+  if min(precisions) > 0:
+    p_log_sum = sum((1. / max_order) * math.log(p) for p in precisions)
+    geo_mean = math.exp(p_log_sum)
+  else:
+    geo_mean = 0
+
+  ratio = float(translation_length) / reference_length
+
+  if ratio > 1.0:
+    bp = 1.
+  else:
+    bp = math.exp(1 - 1. / ratio)
+
+  bleu = geo_mean * bp
+
+  return (bleu, precisions, bp, ratio, translation_length, reference_length)
 
 def compute_bleu(reference_corpus, translation_corpus, max_order=4,
                  smooth=False):
@@ -74,39 +116,11 @@ def compute_bleu(reference_corpus, translation_corpus, max_order=4,
     for reference in references:
       merged_ref_ngram_counts |= _get_ngrams(reference, max_order)
     translation_ngram_counts = _get_ngrams(translation, max_order)
-    overlap = translation_ngram_counts & merged_ref_ngram_counts
-    for ngram in overlap:
-      matches_by_order[len(ngram)-1] += overlap[ngram]
-    for order in range(1, max_order+1):
-      possible_matches = len(translation) - order + 1
-      if possible_matches > 0:
-        possible_matches_by_order[order-1] += possible_matches
+    
+    new_matches_by_order, new_possible_matches_by_order = _get_ngram_match_values(merged_ref_ngram_counts, translation_ngram_counts, len(translation), max_order)
 
-  precisions = [0] * max_order
-  for i in range(0, max_order):
-    if smooth:
-      precisions[i] = ((matches_by_order[i] + 1.) /
-                       (possible_matches_by_order[i] + 1.))
-    else:
-      if possible_matches_by_order[i] > 0:
-        precisions[i] = (float(matches_by_order[i]) /
-                         possible_matches_by_order[i])
-      else:
-        precisions[i] = 0.0
+    for i in range(max_order):
+      matches_by_order[i] += new_matches_by_order[i]
+      possible_matches_by_order[i] += new_possible_matches_by_order[i]
 
-  if min(precisions) > 0:
-    p_log_sum = sum((1. / max_order) * math.log(p) for p in precisions)
-    geo_mean = math.exp(p_log_sum)
-  else:
-    geo_mean = 0
-
-  ratio = float(translation_length) / reference_length
-
-  if ratio > 1.0:
-    bp = 1.
-  else:
-    bp = math.exp(1 - 1. / ratio)
-
-  bleu = geo_mean * bp
-
-  return (bleu, precisions, bp, ratio, translation_length, reference_length)
+  return _calc_blue_score_data(matches_by_order, possible_matches_by_order, translation_length, reference_length, max_order, smooth)

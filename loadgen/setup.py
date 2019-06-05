@@ -14,7 +14,8 @@ from setuptools import setup, Extension
 from version_generator import generate_loadgen_version_definitions
 
 generated_version_source_filename = "generated/version_generated.cc"
-generate_loadgen_version_definitions(generated_version_source_filename)
+generate_loadgen_version_definitions(generated_version_source_filename,
+                                     ".")
 
 public_headers = [
   "loadgen.h",

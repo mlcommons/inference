@@ -84,17 +84,17 @@ class QueryMetadata {
   void NotifyOneSampleCompleted(PerfClock::time_point timestamp) {
     size_t old_count = wait_count_.fetch_sub(1, std::memory_order_relaxed);
     if (old_count == 1) {
-      all_samples_done_.set_value(timestamp);
+      all_samples_done_time = timestamp;
+      all_samples_done_.set_value();
       response_delegate->QueryComplete();
     }
   }
 
-  void WaitForAllSamplesCompleted() {
-    return all_samples_done_.get_future().wait();
-  }
+  void WaitForAllSamplesCompleted() { all_samples_done_.get_future().wait(); }
 
   PerfClock::time_point WaitForAllSamplesCompletedWithTimestamp() {
-    return all_samples_done_.get_future().get();
+    all_samples_done_.get_future().wait();
+    return all_samples_done_time;
   }
 
  public:
@@ -110,10 +110,11 @@ class QueryMetadata {
                                 // For the multi-stream scenario only.
   PerfClock::time_point scheduled_time;
   PerfClock::time_point issued_start_time;
+  PerfClock::time_point all_samples_done_time;
 
  private:
   std::atomic<size_t> wait_count_;
-  std::promise<PerfClock::time_point> all_samples_done_;
+  std::promise<void> all_samples_done_;
   std::vector<SampleMetadata> samples_;
 };
 
@@ -483,8 +484,9 @@ struct PerformanceResult {
   std::vector<QuerySampleLatency> latencies;
   size_t queries_issued;
   double max_latency;
-  double final_query_scheduled_time;  // seconds from start.
-  double final_query_issued_time;     // seconds from start.
+  double final_query_scheduled_time;         // seconds from start.
+  double final_query_issued_time;            // seconds from start.
+  double final_query_all_samples_done_time;  // seconds from start.
 };
 
 // TODO: Templates for scenario and mode are overused, given the loadgen
@@ -598,8 +600,14 @@ PerformanceResult IssueQueries(
       DurationToSeconds(final_query.scheduled_delta);
   double final_query_issued_time =
       DurationToSeconds(final_query.issued_start_time - start);
-  return PerformanceResult{std::move(latencies), queries_issued, max_latency,
-                           final_query_scheduled_time, final_query_issued_time};
+  double final_query_all_samples_done_time =
+      DurationToSeconds(final_query.all_samples_done_time - start);
+  return PerformanceResult{std::move(latencies),
+                           queries_issued,
+                           max_latency,
+                           final_query_scheduled_time,
+                           final_query_issued_time,
+                           final_query_all_samples_done_time};
 }
 
 // Takes the raw PerformanceResult and uses relevant context to determine
@@ -719,9 +727,14 @@ void PerformanceSummary::Log(AsyncLog& log) {
       log.LogSummary("90th percentile latency (ns) : ", latency_target.value);
       break;
     }
-    case TestScenario::MultiStream:
-    case TestScenario::MultiStreamFree: {
+    case TestScenario::MultiStream: {
       log.LogSummary("Samples per query : ", settings.samples_per_query);
+      break;
+    }
+    case TestScenario::MultiStreamFree: {
+      double ips = pr.queries_issued * settings.samples_per_query /
+                   pr.final_query_all_samples_done_time;
+      log.LogSummary("Inferences per second : ", ips);
       break;
     }
     case TestScenario::Server: {
@@ -891,9 +904,9 @@ struct RunFunctions {
 
   template <TestScenario compile_time_scenario>
   static RunFunctions GetCompileTime() {
-    return {(*RunAccuracyMode<compile_time_scenario>),
-            (*RunPerformanceMode<compile_time_scenario>),
-            (*FindPeakPerformanceMode<compile_time_scenario>)};
+    return {(RunAccuracyMode<compile_time_scenario>),
+            (RunPerformanceMode<compile_time_scenario>),
+            (FindPeakPerformanceMode<compile_time_scenario>)};
   }
 
   static RunFunctions Get(TestScenario run_time_scenario) {

@@ -3,25 +3,25 @@
 ## Quick Start
 
     git clone --recurse-submodules https://github.com/mlperf/inference.git mlperf_inference
-    cd mlperf_inference
-
-To build as a python module:
-
-    cd loadgen
+    cd mlperf_inference/loadgen
     CFLAGS="-std=c++14" python setup.py bdist_wheel
     pip install --force-reinstall dist/mlperf_loadgen-0.5a0-cp27-cp27mu-linux_x86_64.whl
     python demos/py_demo_single_stream.py
 
-Note: The *.whl filename may differ on your system. There should only be one resulting whl file for you to use.
+This will fetch the loadgen source, build and install the loadgen as a python module, and run a simple end-to-end demo. The exact *.whl filename may differ on your system, but there should only be one resulting whl file for you to use.
 
-See [demos/py_demo_single_stream.py](demos/py_demo_single_stream.py) for how to import and use the load generator from python.
+A summary of the test results can be found in the *"mlperf_log_summary.txt"* logfile.
 
-To build as a C++ library:
+For a timeline visualization of what happened during the test, open the *"mlperf_trace.json"* file in Chrome:
+* Type “chrome://tracing” in the address bar, then drag-n-drop the json.
+* This may be useful for SUT performance tuning and understanding + debugging the loadgen.
 
+To build the loadgen as a C++ library, rather than a python module:
+
+    git clone --recurse-submodules https://github.com/mlperf/inference.git mlperf_inference
+    cd mlperf_inference
     make mlperf_loadgen
-    cp out/MakefileGnProj/obj/loadgen/libmlperf_loadgen.a <dst>
-
-### C++ library
+    cp out/MakefileGnProj/obj/loadgen/libmlperf_loadgen.a .
 
 ## Overview
 
@@ -66,7 +66,7 @@ Note: These make targets assume Unix-like shell commands are available.
 
 The bootstrap\_gn\_ninja make target will build ninja and gn into the current
 tree and should only need to be called once per checkout.
-Note: This isn't necessary if you already have gn and ninja installed on your
+This is not necessary if you already have gn and ninja installed on your
 system.
 
     make bootstrap_gn_ninja
@@ -78,14 +78,14 @@ each with their own args. Release and debug sets, for example:
     third_party/gn/gn gen out/Release --args="is_debug=false"
     third_party/gn/gn gen out/Debug --args="is_debug=true"
 
-You will find the binary in out/Release/obj/loadgen/libmlperf\_loadgen.a. (Or as a .lib on Windows).
-
-Link that library directly into the executable you want to test.
-
 From here you can edit+build over and over using one of the following targets:
 
     third_party/ninja/ninja -C out/Release mlperf_loadgen
     third_party/ninja/ninja -C out/Release loadgen_pymodule_wheel_src
+
+You will find the binary in *"out/Release/obj/loadgen/libmlperf\_loadgen.a"*. (Or as a .lib on Windows).
+
+Link that library directly into the executable you want to test.
 
 Optionally, create a project file for your favorite IDE.
 See [gn documentation](https://gn.googlesource.com/gn/+/master/docs/reference.md#ide-options) for details.
@@ -139,7 +139,7 @@ Build the library:
 
     ninja -C out/Default mlperf_loadgen
 
-You will find the binary in out/Default/obj/loadgen/libmlperf\_loadgen.a. (Or as a .lib on Windows).
+You will find the binary in *"out/Release/obj/loadgen/libmlperf\_loadgen.a"*. (Or as a .lib on Windows).
 
 Link that library directly into the executable you want to test.
 

@@ -16,7 +16,7 @@ CPU
 pip install --user tensorflow
 ```
 
-### Run GNMT over full Dataset
+### Run GNMT over full Dataset (outdated)
 
 - go to this folder
 ```
@@ -62,6 +62,9 @@ Other scenarios can be ran by changing the "--scenario" option. Accuracy trackin
 ```
 python loadgen_gnmt.py -h
 ```
+
+Please see mlperf_log_summary.txt for the run results.
+
 
 # 3. Dataset
 

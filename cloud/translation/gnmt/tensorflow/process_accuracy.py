@@ -4,6 +4,7 @@ import argparse
 import codecs
 import tensorflow as tf
 from nmt.utils import evaluation_utils as e_utils
+from nmt.scripts import bleu
 
 if __name__ == "__main__":
 
@@ -25,15 +26,14 @@ if __name__ == "__main__":
         print("Could not find accuracy log file {}. Please specify its location".format(args.accuracy_log))
         sys.exit(0)
 
-
-
+    
     ref = []
-
     with codecs.getreader("utf-8")(
         tf.gfile.GFile(args.reference, "rb")) as ifh:
         ref_sentences = ifh.readlines()
         ref = [e_utils._clean(s, "bpe").split(" ") for s in ref_sentences]
 
+    runningBLUE = bleu.RunningBLEUScorer(4)
     with open(args.accuracy_log) as ifh:
         for line in ifh:
             # Simplistic way to extract records
@@ -46,5 +46,9 @@ if __name__ == "__main__":
             sentence = (bytes.fromhex(record["data"])).decode("utf-8")
             trans = sentence.split(" ")
             sent_id = record["qsl_idx"]
-            print("Reference: {}\nTranslation: {}".format(ref[sent_id], trans))
-            print("--")
+
+            runningBLUE.add_sentence(ref[sent_id], trans)
+
+    (bleu, _, _, _, _, _) = runningBLUE.calc_BLEU_score()
+
+    print("BLEU: %.1f" % (bleu * 100))

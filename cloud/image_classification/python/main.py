@@ -144,6 +144,12 @@ SCENARIO_MAP = {
     "Accuracy": lg.TestMode.AccuracyOnly,
 }
 
+MODE_MAP = {
+    "Performance": lg.TestMode.PerformanceOnly,
+    "Accuracy": lg.TestMode.AccuracyOnly,
+    "Submission": lg.TestMode.SubmissionRun,
+}
+
 last_timeing = []
 
 
@@ -156,7 +162,17 @@ def get_args():
     parser.add_argument("--data-format", choices=["NCHW", "NHWC"], help="data format")
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
     parser.add_argument("--scenario", default="SingleStream",
-                        help="benchmark scenario, list of " + str(list(SCENARIO_MAP.keys())))
+                        help="mlperf benchmark scenario, list of " + str(list(SCENARIO_MAP.keys())))
+    parser.add_argument("--mode", default="Performance", choices=MODE_MAP.keys(),
+                        help="mlperf benchmark mode")
+    parser.add_argument("--queries-single", type=int, default=1024,
+                        help="mlperf number of queries for SingleStream")
+    parser.add_argument("--queries-offline", type=int, default=24576,
+                        help="mlperf number of queries for Offline")
+    parser.add_argument("--queries-multi", type=int, default=24576,
+                        help="mlperf number of queries for MultiStream,Server")
+    parser.add_argument("--max-batchsize", type=int, default=128,
+                        help="max batch size in a single inference")
     parser.add_argument("--model", required=True, help="model file")
     parser.add_argument("--output", help="test results")
     parser.add_argument("--inputs", help="model inputs")
@@ -165,12 +181,8 @@ def get_args():
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
-    parser.add_argument("--queries-single", type=int, default=1024, help="number of queries for SingleStream")
-    parser.add_argument("--queries-offline", type=int, default=24576, help="number of queries for Offline")
-    parser.add_argument("--queries-multi", type=int, default=24576, help="number of queries for MultiStream,Server")
-    parser.add_argument("--max-batchsize", type=int, default=128, help="max batch size in a single inference")
     parser.add_argument("--qps", type=int, default=10, help="target qps estimate")
-    parser.add_argument("--max-latency", type=str, help="max latency in 99pct tile")
+    parser.add_argument("--max-latency", type=str, help="mlperf max latency in 99pct tile")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     args = parser.parse_args()
@@ -451,13 +463,12 @@ def main():
 
         settings = lg.TestSettings()
         settings.enable_spec_overrides = True
-        settings.scenario = scenario
-        settings.mode = lg.TestMode.PerformanceOnly
         settings.multi_stream_samples_per_query = 8
-
+        settings.scenario = scenario
+        settings.mode = MODE_MAP[args.mode]
+        
         if args.time:
             # override the time we want to run
-            settings.enable_spec_overrides = True
             settings.override_min_duration_ms = args.time * MILLI_SEC
             settings.override_max_duration_ms = args.time * MILLI_SEC
 

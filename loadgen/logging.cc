@@ -236,8 +236,9 @@ void Logger::StopIOThread() {
   io_thread_.join();
 }
 
-void Logger::StartLogging(std::ostream* summary, std::ostream* detail) {
-  async_logger_.SetLogFiles(summary, detail, PerfClock::now());
+void Logger::StartLogging(std::ostream* summary, std::ostream* detail,
+                          std::ostream* accuracy) {
+  async_logger_.SetLogFiles(summary, detail, accuracy, PerfClock::now());
 }
 
 void Logger::StopLogging() {
@@ -279,7 +280,8 @@ void Logger::StopLogging() {
   std::promise<void> io_thread_flushed_this_thread;
   Log([&](AsyncLog&) { io_thread_flushed_this_thread.set_value(); });
   io_thread_flushed_this_thread.get_future().wait();
-  async_logger_.SetLogFiles(&std::cerr, &std::cerr, PerfClock::now());
+  async_logger_.SetLogFiles(&std::cerr, &std::cerr, &std::cerr,
+                            PerfClock::now());
 }
 
 void Logger::StartNewTrace(std::ostream* trace_out,

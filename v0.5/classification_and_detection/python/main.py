@@ -57,8 +57,11 @@ SUPPORTED_DATASETS = {
     "coco-1200-pt":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoPt(True,0.05),
          {"image_size": [1200, 1200, 3]}),
-    "coco-1200-tf":
+    "coco-1200-native-tf":
         (coco.Coco, dataset.pre_process_coco_resnet34_native, coco.PostProcessCocoTfNative(),
+         {"image_size": [1200, 1200, 3]}),
+    "coco-1200-tf":
+        (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoTf(),
          {"image_size": [1200, 1200, 3]}),
 }
 
@@ -123,18 +126,18 @@ SUPPORTED_PROFILES = {
     },
 
     # ssd-resnet34
-    #"ssd-resnet34-tf": {
-    #    "inputs": "0:0",
-    #    "outputs": "concat_63:0,concat_64:0",
-    #    "dataset": "coco-1200-tf",
-    #    "backend": "tensorflow",
-    #    "data-format": "NCHW",
-    #},
-    # ssd-resnet34
     "ssd-resnet34-tf": {
+        "inputs": "0:0",
+        "outputs": "concat_63:0,concat_64:0",
+        "dataset": "coco-1200-tf",
+        "backend": "tensorflow",
+        "data-format": "NCHW",
+    },
+    # ssd-resnet34
+    "ssd-resnet34-native-tf": {
         "inputs": "image:0",
         "outputs": "detection_bboxes:0,detection_classes:0,detection_scores:0",
-        "dataset": "coco-1200-tf",
+        "dataset": "coco-1200-native-tf",
         "backend": "tensorflow",
         "data-format": "NHWC",
     },

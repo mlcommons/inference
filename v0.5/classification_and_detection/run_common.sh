@@ -21,7 +21,7 @@ for i in $* ; do
        tf|onnxruntime|tflite|pytorch) backend=$i; shift;;
        cpu|gpu) device=$i; shift;;
        gpu) device=gpu; shift;;
-       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34) model=$i; shift;;
+       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-native) model=$i; shift;;
     esac
 done
 
@@ -47,13 +47,13 @@ if [ $name == "ssd-mobilenet-tf" ] ; then
     model_path="$MODEL_DIR/ssd_mobilenet_v1_coco_2018_01_28.pb"
     profile=ssd-mobilenet-tf
 fi
-#if [ $name == "ssd-resnet34-tf" ] ; then
-#    model_path="$MODEL_DIR/ssd_resnet-34_frozen.pb"
-#    profile=ssd-resnet34-tf
-#fi
 if [ $name == "ssd-resnet34-tf" ] ; then
-    model_path="$MODEL_DIR/ssd_resnet34_large_ssd_sort.pb"
+    model_path="$MODEL_DIR/ssd_resnet-34_frozen.pb"
     profile=ssd-resnet34-tf
+fi
+if [ $name == "ssd-resnet34-native-tf" ] ; then
+    model_path="$MODEL_DIR/ssd_resnet34_cloud_native_tf.pb"
+    profile=ssd-resnet34-native-tf
 fi
 
 #

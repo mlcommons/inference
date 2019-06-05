@@ -266,12 +266,18 @@ class GNMTRunner (Runner):
 
     ##
     # @brief Serialize the result and give it to mlperf_loadgen
-    # @param query_id query_id that generated the sample
-    # @param result is a UTF-8 encoded string
-    def post_process(self, query_id, result):
-        result_arr = array.array('B', result)
-        r_info = result_arr.buffer_info()
-        return mlperf_loadgen.QuerySampleResponse(query_id, r_info[0], r_info[1])
+    # @param query_ids is a list of query ids that generated the samples
+    # @param results is a list of UTF-8 encoded strings 
+    # @note Because of Python's Garbage Collection, we need to call QuerySamplesComplete before returning
+    def post_process(self, query_ids, results):
+        response = []
+        for res, q_id in zip(results, query_ids):
+            result_arr = array.array('B', res)
+            r_info = result_arr.buffer_info()
+            response.append(mlperf_loadgen.QuerySampleResponse(q_id, r_info[0], r_info[1]))
+
+        # Tell loadgen that we're ready with this query
+        mlperf_loadgen.QuerySamplesComplete(response)
 
 ##
 # @brief Subclass of GNMTRunner, specialized for batch size 1
@@ -379,15 +385,11 @@ class ServerGNMTRunner(GNMTRunner):
             if self.VERBOSE:
                 print("Aggregated {} single-sample querries.".format(len(batched_qitem.sentence_id_list)))
 
-            result = self.process(batched_qitem)
+            results = self.process(batched_qitem)
             response = []
 
-            # Call post_process on every sample
-            for idx, query_id in enumerate(batched_qitem.query_id):
-                response.append(self.post_process(query_id, result[idx]))
-
-            # Tell loadgen that we're ready with this query
-            mlperf_loadgen.QuerySamplesComplete(response)
+            # Call post_process on all samples
+            self.post_process(batched_qitem.query_id, results)
 
             self.tasks.task_done()
 

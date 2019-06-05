@@ -71,7 +71,7 @@ cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop; cd ../cloud/image
 
 python setup.py develop
 ```
-
+Install the loadgen module under dist/ with pip install. Add -I to override any existing loadgen module..
 
 ## Running the benchmark
 ### One time setup
@@ -216,6 +216,9 @@ queries to use for MultiStream scenario (default: 24576).
 
 ```--max-batchsize MAX_BATCHSIZE```
 maximum batchsize we generate to backend (default: 128).
+
+
+Please see mlperf_log_summary.txt for the run results.
 
 
 ## License

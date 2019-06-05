@@ -2,7 +2,9 @@
 
 This is the reference implementation for Mlperf cloud inference benchmarks.
 
-It supports the following models:
+You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/cloud/image_classification/GettingStarted.ipynb).
+
+## Supported Models
 
 | model | framework | accuracy | dataset | model link | model source | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
@@ -65,7 +67,7 @@ pip install onnxruntime
 
 Build and install the benchmark:
 ```
-pushd; cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop; popd
+cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop; cd ../cloud/image_classification
 
 python setup.py develop
 ```
@@ -139,11 +141,15 @@ If you want to debug accuracy issues, try:
 ### Usage
 ```
 usage: main.py [-h]
-    [--scenario {SingleStream,MultiStream,Server,Offline}]
-    [--profile {defaults,resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-onnxruntime}]
-    [--dataset {imagenet,imagenet_mobilenet,coco,coco-300,coco-1200}]
+    [--dataset {imagenet,imagenet_mobilenet,coco,coco-300,coco-1200,coco-1200-onnx,coco-1200-pt,coco-1200-tf}]
     --dataset-path DATASET_PATH [--dataset-list DATASET_LIST]
     [--data-format {NCHW,NHWC}]
+    [--profile {defaults,resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-pytorch,ssd-resnet34-onnxruntime}]
+    [--scenario list of SingleStream,MultiStream,Server,Offline]
+    [--mode {Performance,Accuracy,Submission}]
+    [--queries-single QUERIES_SINGLE]
+    [--queries-offline QUERIES_OFFLINE]
+    [--queries-multi QUERIES_MULTI] [--max-batchsize MAX_BATCHSIZE]
     --model MODEL [--output OUTPUT] [--inputs INPUTS]
     [--outputs OUTPUTS] [--backend BACKEND] [--threads THREADS]
     [--time TIME] [--count COUNT] [--qps QPS]
@@ -160,17 +166,14 @@ use the specified dataset. Currently we only support imagenet.
 ```--dataset-path```
 path to the dataset.
 
-```--dataset-list DATASET_LIST```
-the list of image names to be used. By default we look for val_map.txt in the dataset-path.
-
 ```--data-format {NCHW,NHWC}```
-data-format of the model
+data-format of the model (default: the backends prefered format).
 
-```--scenario {SingleStream,MultiStream,Server,Offline```
-comma seperated list of benchmark modes
+```--scenario {SingleStream,MultiStream,Server,Offline}```
+comma seperated list of benchmark modes.
 
 ```--profile {resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-onnxruntime}```
-this fills in default command line options for the specific profile. Additional command line options may override the defautls.
+this fills in default command line options with the once specified in the profile. Command line options that follow may override the those.
 
 ```--model MODEL```
 the model file.
@@ -188,17 +191,31 @@ location of the json output.
 which backend to use. Currently supported is tensorflow, onnxruntime, pytorch and tflite.
 
 ```--threads THREADS```
-number of worker threads to use. This defaults to the number of processors in the system.
+number of worker threads to use (default: the number of processors in the system).
 
 ```--count COUNT```
-Number of images the dataset we use. By default we use all images in the dataset.
+Number of images the dataset we use (default: use all images in the dataset).
 
 ```--qps QPS```
 Expceted qps.
 
 ```--max-latency MAX_LATENCY```
-comma seperated list of which latencies (in seconds) we try to reach in the 99 percentile.
-The deault is 0.010,0.050,0.100,0.200,0.400.
+comma seperated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
+
+```--mode {Performance,Accuracy,Submission}```
+The loadgen mode we want to run with (default: Performance).
+
+```--queries-single QUERIES_SINGLE```
+queries to use for SingleStream scenario (default: 1024).
+
+```--queries-offline QUERIES_OFFLINE```
+queries to use for Offline scenario (default: 24576).
+
+```--queries-multi QUERIES_MULTI```
+queries to use for MultiStream scenario (default: 24576).
+
+```--max-batchsize MAX_BATCHSIZE```
+maximum batchsize we generate to backend (default: 128).
 
 
 ## License

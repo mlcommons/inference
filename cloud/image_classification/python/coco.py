@@ -227,10 +227,11 @@ class PostProcessCocoPt(PostProcessCoco):
     """
     Post processing required by ssd-resnet34 / pytorch
     """
-    def __init__(self):
+    def __init__(self,use_inv_map,score_threshold):
         super().__init__()
-        self.use_inv_map = True
-
+        self.use_inv_map = use_inv_map
+        self.score_threshold = score_threshold
+        
     def __call__(self, results, ids, expected=None, result_dict=None):
         # results come as:
         #   detection_boxes,detection_classes,detection_scores
@@ -239,24 +240,24 @@ class PostProcessCocoPt(PostProcessCoco):
         # batch size
         bs = len(results[0])
         for idx in range(0, bs):
-            processed_results.append([])
+            #processed_results.append([])
             detection_boxes = results[0][idx]
             detection_classes = results[1][idx]
             expected_classes = expected[idx][0]
             scores = results[2][idx]
             #for detection in range(0, len(expected_classes)):
             for detection in range(0, len(scores)):
-                if scores[detection] < 0.05:
+                if scores[detection] < self.score_threshold:
                     break
                 detection_class = int(detection_classes[detection])
                 if detection_class in expected_classes:
                     self.good += 1
                 box = detection_boxes[detection]
                 # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
-                processed_results.append([float(ids[idx]),
+                processed_results.append([[float(ids[idx]),
                                               box[1], box[0], box[3], box[2],
                                               scores[detection],
-                                              float(detection_class)])
+                                              float(detection_class)]])
                 self.total += 1
         return processed_results
 

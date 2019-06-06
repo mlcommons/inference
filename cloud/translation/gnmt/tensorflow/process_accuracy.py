@@ -24,15 +24,14 @@ from nmt.scripts import bleu
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-
     parser.add_argument('--reference', type=str, default=os.path.join(os.getcwd(), 'nmt', 'data', 'newstest2014.tok.bpe.32000.de'),
                             help="Reference text to compare accuracy against.")
-
     parser.add_argument('--accuracy_log', type=str, default = 'mlperf_log_accuracy.json',
                             help="Accuracy log file")
-
     args = parser.parse_args()
 
+
+    # Check whether reference and log files exist
     if not os.path.exists(args.reference):
         print("Could not find reference file {}. Please specify its location".format(args.reference))
         sys.exit(0)
@@ -42,26 +41,37 @@ if __name__ == "__main__":
         sys.exit(0)
 
     
+    ##
+    # @note: List of lists of words from the reference
+    # @note: ref[i][j] refers to the j'th word of sentence i
     ref = []
     with codecs.getreader("utf-8")(
         tf.gfile.GFile(args.reference, "rb")) as ifh:
         ref_sentences = ifh.readlines()
+        # Sanitize each sentence and convert to array of words
         ref = [e_utils._clean(s, "bpe").split(" ") for s in ref_sentences]
 
     runningBLUE = bleu.RunningBLEUScorer(4)
+
+
     with open(args.accuracy_log) as ifh:
         for line in ifh:
-            # Simplistic way to extract records
+            ##
+            # @note: Simplistic way to extract records
+            # @note: This could be loaded in through json module,
+            # but it is an easy way to test incomplete log files
+            # without proper closure braces.
             if not "{" in line:
                 continue
             s_line = line.strip("\n").strip(",")
             record = eval(s_line)
 
-            # Extract sentence and sentence ID
+            # Decode data to sentence
             sentence = (bytes.fromhex(record["data"])).decode("utf-8")
             trans = sentence.split(" ")
             sent_id = record["qsl_idx"]
 
+            # Update the Running BLEU Scorer for this sentence
             runningBLUE.add_sentence(ref[sent_id], trans)
 
     (bleu, _, _, _, _, _) = runningBLUE.calc_BLEU_score()

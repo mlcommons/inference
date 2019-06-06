@@ -1,6 +1,6 @@
-# Mlperf cloud inference benchmark for image classification and object detection
+# MLPerf Inference benchmark for image classification and object detection
 
-This is the reference implementation for Mlperf cloud inference benchmarks.
+This is the reference implementation for MLPerf Inference benchmarks.
 
 You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/cloud/image_classification/GettingStarted.ipynb).
 
@@ -13,9 +13,10 @@ You can find a short tutorial how to use this benchmark [here](https://github.co
 | mobilenet-v1 | tensorflow | 68.29, should be 70.9% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2271498/files/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | NHWC |
 | mobilenet-v1 | onnx, pytorch | 68.29, should be 70.9% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/3157894/files/mobilenet_v1_1.0_224.onnx) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/mobilenet-to-onnx.sh) | NCHW, tested on pytorch and onnxruntime |
 | ssd-mobilenet 300x300 | tensorflow | mAP 0.20 | coco resized to 300x300 | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | NHWC |
+| ssd-mobilenet 300x300 | pytorch | mAP 0.20 | coco resized to 300x300 | [from zenado](https://zenodo.org/record/3239977/files/ssd_mobilenet_v1.pytorch) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | NHWC |
 | ssd-mobilenet 300x300 | onnx | mAP 0.20 | coco resized to 300x300 | [from zenodo](https://zenodo.org/record/3163026/files/ssd_mobilenet_v1_coco_2018_01_28.onnx) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/ssd-mobilenet-to-onnx.sh) | NHWC, tested on onnxruntime, some runtime warnings |
 | ssd-resnet34 1200x1200 | tensorflow | mAP 0.20 | coco resized to 1200x1200| [from zenodo](https://zenodo.org/record/3060467/files/ssd_resnet-34_from_onnx.zip) | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) | Needs testing |
-| ssd-resnet34 1200x1200 | pytorch | mAP 0.224 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3235023/files/resnet34-ssd1200.pytorch) | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) | NCHW |
+| ssd-resnet34 1200x1200 | pytorch | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3236545/files/resnet34-ssd1200.pytorch) | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) | NCHW |
 | ssd-resnet34 1200x1200 | onnx | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3228411/files/resnet34-ssd1200.onnx) | [from mlperf](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) converted using the these [instructions](https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch#6-onnx) | Works but needs more testing |
 
 TODO: add instructions to resize coco dataset
@@ -34,18 +35,40 @@ We are thinking to provide a c++ implementation with identical functionality in 
 | imagenet2012 (validation) | http://image-net.org/challenges/LSVRC/2012/ | 
 | coco (validation) | http://images.cocodataset.org/zips/val2017.zip | 
 
-Alternative you can download the datasets using [Collective Knowledge (CK)](https://github.com/ctuning):
-```
-pip install ck
-ck pull  repo:ck-env
-ck install package:imagenet-2012-val
-ck install package:imagenet-2012-aux
-ck install package:coco-2017
-cp $HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux/val.txt
-$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val/val_map.txt
-```
-That makes the imagenet validation set available under ```$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val``` and the coco dataset available under ```$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val```.
+### Using Collective Knowledge (CK)
 
+Alternatively, you can download the datasets using the [Collective Knowledge](http://cknowledge.org)
+framework (CK) for collaborative and reproducible research.
+
+First, install CK and pull its repositories containing dataset packages:
+```bash
+$ python -m pip install ck --user
+$ ck version
+V1.9.8.1
+$ ck pull repo:ck-env
+```
+
+#### ImageNet 2012 validation dataset
+Download the original dataset and auxiliaries:
+```bash
+$ ck install package --tags=image-classification,dataset,imagenet,val,original,full
+$ ck install package --tags=image-classification,dataset,imagenet,aux
+```
+Copy the labels next to the images:
+```bash
+$ ck locate env --tags=image-classification,dataset,imagenet,val,original,full
+/home/dvdt/CK-TOOLS/dataset-imagenet-ilsvrc2012-val
+$ ck locate env --tags=image-classification,dataset,imagenet,aux
+/home/dvdt/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux
+$ cp `ck locate env --tags=aux`/val.txt `ck locate env --tags=val`/val_map.txt
+```
+
+#### COCO 2017 validation dataset
+```bash
+$ ck install package --tags=object-detection,dataset,coco,2017,val,original
+$ ck locate env --tags=object-detection,dataset,coco,2017,val,original
+/home/dvdt/CK-TOOLS/dataset-coco-2017-val
+```
 
 ## Prerequisites and Installation
 We support [tensorfow+tflite](https://github.com/tensorflow/tensorflow), [onnxruntime](https://github.com/Microsoft/onnxruntime)  and [pytoch](http://pytorch.org) backend's with the same benchmark tool.

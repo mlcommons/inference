@@ -45,6 +45,9 @@ SUPPORTED_DATASETS = {
     "coco-300":
         (coco.Coco, dataset.pre_process_coco_mobilenet, coco.PostProcessCoco(),
          {"image_size": [300, 300, 3]}),
+    "coco-300-pt":
+        (coco.Coco, dataset.pre_process_coco_pt_mobilenet, coco.PostProcessCocoPt(False,0.3),
+         {"image_size": [300, 300, 3]}),         
     "coco-1200":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCoco(),
          {"image_size": [1200, 1200, 3]}),
@@ -52,7 +55,7 @@ SUPPORTED_DATASETS = {
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoOnnx(),
          {"image_size": [1200, 1200, 3]}),
     "coco-1200-pt":
-        (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoPt(),
+        (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoPt(True,0.05),
          {"image_size": [1200, 1200, 3]}),
     "coco-1200-tf":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoTf(),
@@ -105,6 +108,12 @@ SUPPORTED_PROFILES = {
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
         "dataset": "coco-300",
         "backend": "tensorflow",
+    },
+    "ssd-mobilenet-pytorch": {
+        "inputs": "image",
+        "outputs": "bboxes,labels,scores",
+        "dataset": "coco-300-pt",
+        "backend": "pytorch-native",
     },
     "ssd-mobilenet-onnxruntime": {
         "dataset": "coco-300",

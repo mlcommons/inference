@@ -22,7 +22,7 @@ def parse_args():
                         help='manually set random seed for torch')
     parser.add_argument('--device', '-did', type=int,
                         help='device id')                    
-    parser.add_argument('--threshold', '-t', type=float, default=0.212,
+    parser.add_argument('--threshold', '-t', type=float, default=0.20,
                         help='stop training early at threshold')
     parser.add_argument('--checkpoint', type=str, default='./pretrained/resnet34-ssd1200.pth',
                         help='path to model checkpoint file')

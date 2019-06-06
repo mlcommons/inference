@@ -542,15 +542,13 @@ class PostProcessCocoTfNative(PostProcessCoco):
 
         processed_results = []
         # batch size
-        #bs = len(results[0])
-        bs = 1
+        bs = len(results[0])
         for idx in range(0, bs):
             processed_results.append([])
-            detection_boxes = results[0]
-            detection_classes = results[1]
+            detection_boxes = results[0][idx]
+            detection_classes = results[1][idx]
             expected_classes = expected[idx][0]
-            scores = results[2]
-
+            scores = results[2][idx]
             for detection in range(0, len(scores)):
                 if scores[detection] < 0.05:
                     break

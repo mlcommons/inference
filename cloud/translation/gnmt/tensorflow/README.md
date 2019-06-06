@@ -50,7 +50,7 @@ $ python run_task.py --run=accuracy
 ```
 
 ### Run GNMT through LoadGen:
-1.  Follow the instructions from https://github.com/mlperf/inference/blob/master/loadgen/README.md
+1.  Follow the instructions to install LoadGen from https://github.com/mlperf/inference/blob/master/loadgen/README.md
 2.  Run:
 ```
 python loadgen_gnmt.py --store_translation
@@ -61,6 +61,12 @@ This will invoke the SingleStream scenario (default --scenario option) in Perfor
 Other scenarios can be ran by changing the "--scenario" option. Accuracy tracking can be enabled with the "--mode Accuracy" option. Please run the following command for complete overview of options:
 ```
 python loadgen_gnmt.py -h
+```
+
+To check accuracy, please run the following commands:
+```
+python loadgen_gnmt.py --mode Accuracy
+python process_accuracy.py
 ```
 
 # 3. Dataset

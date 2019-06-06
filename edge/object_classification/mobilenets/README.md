@@ -23,6 +23,18 @@
 <a name="installation"></a>
 # Installation
 
+**NB:** If you would like to get a feel of CK workflows, you can skip
+installation instructions and try [benchmarking](#benchmarking)
+instructions on available Docker images:
+- TensorFlow Lite:
+    - [Debian 9](https://github.com/ctuning/ck-mlperf/tree/master/docker/image-classification-tflite.debian-9)
+    - [CentOS 7](https://github.com/ctuning/ck-mlperf/tree/master/docker/image-classification-tflite.centos-7)
+    - [Ubuntu 16.04](https://github.com/ctuning/ck-mlperf/tree/master/docker/image-classification-tflite.ubuntu-16.04)
+    - [Ubuntu 18.04](https://github.com/ctuning/ck-mlperf/tree/master/docker/image-classification-tflite.ubuntu-18.04)
+    - [Ubuntu 18.04 - Dashboard](https://github.com/ctuning/ck-mlperf/tree/master/docker/image-classification-tflite.dashboard.ubuntu-18.04)
+- TensorFlow (C++):
+    - [Debian 9](https://github.com/ctuning/ck-mlperf/tree/master/docker/image-classification-tf-cpp.debian-9)
+
 <a name="installation-debian"></a>
 ## Debian (tested with Ubuntu v18.04 and v16.04)
 

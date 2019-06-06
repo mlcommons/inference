@@ -215,6 +215,20 @@ def pre_process_coco_mobilenet(img, dims=None, need_transpose=False):
         img = img.transpose([2, 0, 1])
     return img
 
+def pre_process_coco_pt_mobilenet(img, dims=None, need_transpose=False):
+    if img.mode != 'RGB':
+        img = img.convert('RGB')
+
+    img_data = np.array(img.getdata())
+    img_data = img_data.astype(np.float32)
+    (im_width, im_height) = img.size
+    img = img_data.reshape(im_height, im_width, 3)
+    img -= 127.5
+    img /= 127.5
+    # transpose if needed
+    if need_transpose:
+        img = img.transpose([2, 0, 1])
+    return img
 
 def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
     if img.mode != 'RGB':

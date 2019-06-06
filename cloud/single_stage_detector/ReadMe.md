@@ -1,4 +1,4 @@
-# Important: This is an old version without mlperf loadgen 
+## Important: This is an old version without mlperf loadgen - currently detection models are in image_classification folder
 # 1. Problem
 Object detection. This task was modified from mmlperf/training  [repository](https://github.com/mlperf/training/tree/master/single_stage_detector) as to run on larger images (currently 1200x1200), please check the folder for additional details.
 

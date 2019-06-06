@@ -271,8 +271,12 @@ class GNMTRunner (Runner):
     # @note Because of Python's Garbage Collection, we need to call QuerySamplesComplete before returning
     def post_process(self, query_ids, results):
         response = []
+        # To prevent the garbage collector from removing serialized data before the call to QuerySamplesComplete
+        # we need to keep track of serialized data here.
+        gc_hack = []    
         for res, q_id in zip(results, query_ids):
             result_arr = array.array('B', res)
+            gc_hack.append(result_arr)
             r_info = result_arr.buffer_info()
             response.append(mlperf_loadgen.QuerySampleResponse(q_id, r_info[0], r_info[1]))
 

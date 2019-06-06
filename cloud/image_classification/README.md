@@ -1,6 +1,6 @@
-# Mlperf cloud inference benchmark for image classification and object detection
+# MLPerf Inference benchmark for image classification and object detection
 
-This is the reference implementation for Mlperf cloud inference benchmarks.
+This is the reference implementation for MLPerf Inference benchmarks.
 
 You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/cloud/image_classification/GettingStarted.ipynb).
 
@@ -34,18 +34,40 @@ We are thinking to provide a c++ implementation with identical functionality in 
 | imagenet2012 (validation) | http://image-net.org/challenges/LSVRC/2012/ | 
 | coco (validation) | http://images.cocodataset.org/zips/val2017.zip | 
 
-Alternative you can download the datasets using [Collective Knowledge (CK)](https://github.com/ctuning):
-```
-pip install ck
-ck pull  repo:ck-env
-ck install package:imagenet-2012-val
-ck install package:imagenet-2012-aux
-ck install package:coco-2017
-cp $HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux/val.txt
-$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val/val_map.txt
-```
-That makes the imagenet validation set available under ```$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val``` and the coco dataset available under ```$HOME/CK-TOOLS/dataset-imagenet-ilsvrc2012-val```.
+### Using Collective Knowledge (CK)
 
+Alternatively, you can download the datasets using the [Collective Knowledge](http://cknowledge.org)
+framework (CK) for collaborative and reproducible research.
+
+First, install CK and pull its repositories containing dataset packages:
+```bash
+$ python -m pip install ck --user
+$ ck version
+V1.9.8.1
+$ ck pull repo:ck-env
+```
+
+#### ImageNet 2012 validation dataset
+Download the original dataset and auxiliaries:
+```bash
+$ ck install package --tags=image-classification,dataset,imagenet,val,original,full
+$ ck install package --tags=image-classification,dataset,imagenet,aux
+```
+Copy the labels next to the images:
+```bash
+$ ck locate env --tags=image-classification,dataset,imagenet,val,original,full
+/home/dvdt/CK-TOOLS/dataset-imagenet-ilsvrc2012-val
+$ ck locate env --tags=image-classification,dataset,imagenet,aux
+/home/dvdt/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux
+$ cp `ck locate env --tags=aux`/val.txt `ck locate env --tags=val`/val_map.txt
+```
+
+#### COCO 2017 validation dataset
+```bash
+$ ck install package --tags=object-detection,dataset,coco,2017,val,original
+$ ck locate env --tags=object-detection,dataset,coco,2017,val,original
+/home/dvdt/CK-TOOLS/dataset-coco-2017-val
+```
 
 ## Prerequisites and Installation
 We support [tensorfow+tflite](https://github.com/tensorflow/tensorflow), [onnxruntime](https://github.com/Microsoft/onnxruntime)  and [pytoch](http://pytorch.org) backend's with the same benchmark tool.

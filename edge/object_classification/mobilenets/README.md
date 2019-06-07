@@ -37,8 +37,10 @@ instructions on available Docker images:
 - Arm NN:
     - [Debian 9](https://github.com/ARM-software/armnn-mlperf/tree/master/docker/image-classification-armnn-tflite.debian-9)
 
-Even if you prefer to run CK workflows natively (e.g. on an Arm-based development board), you
-may wish to have a quick look to check for latest updates e.g. system-specific dependencies.
+Even if you would like to run CK workflows natively (e.g. on an Arm-based
+development board or Android phone), you may wish to have a quick look into the
+latest Dockerfile's to check for latest updates e.g. system-specific
+dependencies.
 
 <a name="installation-debian"></a>
 ## Debian

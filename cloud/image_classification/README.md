@@ -74,9 +74,9 @@ $ ck locate env --tags=object-detection,dataset,coco,2017,val,original
 We support [tensorfow+tflite](https://github.com/tensorflow/tensorflow), [onnxruntime](https://github.com/Microsoft/onnxruntime)  and [pytoch](http://pytorch.org) backend's with the same benchmark tool.
 Support for other backends can be easily added.
 
-The following steps are ```only``` needed if you run the benchmark ```without docker```.
+The following steps are **only** needed if you run the benchmark **without Docker**.
 
-We require python 3.5, 3.6 or 3.7 and recommend to use anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal anaconda install).
+We require Python 3.5, 3.6 or 3.7 and recommend to use Anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal Anaconda install).
 
 Install the desired backend.
 For tensorflow:
@@ -101,7 +101,7 @@ python setup.py develop
 
 Download the model and dataset for the model you want to benchmark.
 
-Both local and docker environment need to 2 environment variables set:
+Both local and docker environment need to set 2 environment variables:
 ```
 export MODEL_DIR=YourModelFileLocation
 export DATA_DIR=YourImageNetLocation
@@ -178,13 +178,13 @@ usage: main.py [-h]
     [--time TIME] [--count COUNT] [--qps QPS]
     [--max-latency MAX_LATENCY] [--cache CACHE] [--accuracy]
 ```
-For example to run a quick test on 200ms in the 99 percentile for tensorflow you would do:
+For example, to run a quick test on 200ms in the 99 percentile for tensorflow you would do:
 ```
 python python/main.py --profile resnet50-tf --count 500 --time 60 --model models/resnet50_v1.pb --dataset-path imagenet2012 --output results.json --max-latency 0.2 --accuracy
 ```
 
 ```--dataset```
-use the specified dataset. Currently we only support imagenet.
+use the specified dataset. Currently we only support ImageNet.
 
 ```--dataset-path```
 path to the dataset.
@@ -193,7 +193,7 @@ path to the dataset.
 data-format of the model (default: the backends prefered format).
 
 ```--scenario {SingleStream,MultiStream,Server,Offline}```
-comma seperated list of benchmark modes.
+comma separated list of benchmark modes.
 
 ```--profile {resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-onnxruntime}```
 this fills in default command line options with the once specified in the profile. Command line options that follow may override the those.
@@ -202,13 +202,13 @@ this fills in default command line options with the once specified in the profil
 the model file.
 
 ```--inputs INPUTS```
-comma seperated input name list in case the model format does not provide the input names. This is needed for tensorflow since the graph does not specify the inputs.
+comma separated input name list in case the model format does not provide the input names. This is needed for tensorflow since the graph does not specify the inputs.
 
 ```--outputs OUTPUTS```
-comma seperated output name list in case the model format does not provide the output names. This is needed for tensorflow since the graph does not specify the outputs.
+comma separated output name list in case the model format does not provide the output names. This is needed for tensorflow since the graph does not specify the outputs.
 
 ```--output OUTPUT]```
-location of the json output.
+location of the JSON output.
 
 ```--backend BACKEND```
 which backend to use. Currently supported is tensorflow, onnxruntime, pytorch and tflite.
@@ -220,10 +220,10 @@ number of worker threads to use (default: the number of processors in the system
 Number of images the dataset we use (default: use all images in the dataset).
 
 ```--qps QPS```
-Expceted qps.
+Expected QPS.
 
 ```--max-latency MAX_LATENCY```
-comma seperated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
+comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
 
 ```--mode {Performance,Accuracy,Submission}```
 The loadgen mode we want to run with (default: Performance).

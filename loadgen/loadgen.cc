@@ -262,7 +262,8 @@ std::vector<QueryMetadata> GenerateQueries(
   if (mode == TestMode::AccuracyOnly) {
     k2xTargetDuration = std::chrono::microseconds(0);
     // Integer truncation here is intentional.
-    // Loaded samples is properly padded in the MultiStream scenario.
+    // For MultiStream, loaded samples is properly padded.
+    // For Offline, we create a 'remainder' query at the end of this function.
     min_queries = loaded_samples.size() / settings.samples_per_query;
   }
 
@@ -306,6 +307,22 @@ std::vector<QueryMetadata> GenerateQueries(
                          query_sequence_id, &sample_sequence_id);
     timestamp += schedule_distribution(schedule_rng);
     query_sequence_id++;
+  }
+
+  // See if we need to create a "remainder" query for offline+accuracy to
+  // ensure we issue all samples in loaded_samples. Offline doesn't pad
+  // loaded_samples like MultiStream does.
+  if (scenario == TestScenario::Offline && mode == TestMode::AccuracyOnly) {
+    size_t remaining_samples =
+        loaded_samples.size() % settings.samples_per_query;
+    if (remaining_samples != 0) {
+      samples.resize(remaining_samples);
+      for (auto& s : samples) {
+        s = loaded_samples[sample_distribution(sample_rng)];
+      }
+      queries.emplace_back(samples, timestamp, response_delegate,
+                           query_sequence_id, &sample_sequence_id);
+    }
   }
 
   LogDetail([count = queries.size(), spq = settings.samples_per_query,
@@ -873,8 +890,7 @@ void RunAccuracyMode(
     SystemUnderTest* sut, QuerySampleLibrary* qsl,
     const TestSettingsInternal& settings,
     const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
-  LogDetail(
-      [](AsyncLog& log) { log.LogDetail("Starting verification mode:"); });
+  LogDetail([](AsyncLog& log) { log.LogDetail("Starting accuracy mode:"); });
 
   for (auto& loadable_set : loadable_sets) {
     {

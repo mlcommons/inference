@@ -74,6 +74,8 @@ class QueryMetadata {
     assert(src.wait_count_.load() == samples_.size());
     // Update the "parent" of each sample to be this query; the old query
     // address will no longer be valid.
+    // TODO: Only set up the sample parenting once after all the queries have
+    //       been created, rather than re-parenting on move here.
     for (size_t i = 0; i < samples_.size(); i++) {
       SampleMetadata* s = &samples_[i];
       s->query_metadata = this;
@@ -897,7 +899,7 @@ void RunAccuracyMode(
 }
 
 // Routes runtime scenario requests to the corresponding instances of its
-// mode functions.
+// templated mode functions.
 struct RunFunctions {
   using Signature =
       void(SystemUnderTest* sut, QuerySampleLibrary* qsl,

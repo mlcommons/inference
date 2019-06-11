@@ -6,11 +6,11 @@
 // *should* work.
 // The comments in this file are indicative of the loadgen implementation.
 
-#include <stdint.h>
+#include <cstdint>
 
 namespace mlperf {
 
-enum TestScenario {
+enum class TestScenario {
   // SingleStream issues queries containing a single sample. The next query is
   // only issued once the previous one has completed. Internal LoadGen latency
   // between queries is not included in the latency calculations.
@@ -50,7 +50,7 @@ enum TestScenario {
   Offline,
 };
 
-enum TestMode {
+enum class TestMode {
   // Runs accuracy mode followed by performance mode.
   // Overriding settings in ways that are not compatible with the MLPerf
   // rules is not allowed in this mode.
@@ -71,7 +71,6 @@ enum TestMode {
   FindPeakPerformance,
 };
 
-// TODO: Logging settings. e.g.: sync vs. async; log frequency;
 struct TestSettings {
   TestScenario scenario = TestScenario::SingleStream;
   TestMode mode = TestMode::PerformanceOnly;
@@ -132,6 +131,34 @@ struct TestSettings {
   // the Server scenario. Different seeds will appear to "jitter" the queries
   // differently in time, but should not affect the average issued QPS.
   uint64_t override_schedule_rng_seed = 0;  // 0: Use spec default.
+};
+
+enum class LoggingMode {
+  AsyncPoll,      // Logs are serialized and ouptut on an IOThread that polls
+                  // for new logs at a fixed interval.
+  EndOfTestOnly,  // TODO: Logs are serialzied and output only at the end of
+                  // the test.
+  Synchronous,    // TODO: Logs are serialized and output inline.
+};
+
+struct LogOutputSettings {
+  // By default, the loadgen outputs its log files to outdir and
+  // modifies the filenames of its logs with a prefix and suffix.
+  // Filenames will take the form:
+  // "<outdir>/<prefix><datetime>mlperf_log_summary<suffix>.txt"
+  std::string outdir = ".";
+  std::string prefix = "";
+  std::string suffix = "";
+  bool prefix_with_datetime = false;  // |prefix| comes before the datetime.
+  bool copy_detail_to_stdout = false;
+  bool copy_summary_to_stdout = false;
+};
+
+struct LogSettings {
+  LogOutputSettings log_output;
+  LoggingMode log_mode = LoggingMode::AsyncPoll;
+  uint64_t log_mode_async_poll_interval_ms = 1000;  // TODO.
+  bool enable_trace = true;  // TODO: Allow trace to be disabled.
 };
 
 }  // namespace mlperf

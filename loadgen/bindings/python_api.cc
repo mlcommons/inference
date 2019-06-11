@@ -134,14 +134,24 @@ void DestroyQSL(uintptr_t qsl) {
   delete qsl_cast;
 }
 
-// Parses commandline.
-void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings settings) {
+void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings) {
   pybind11::gil_scoped_release gil_releaser;
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   QuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
-  mlperf::StartTest(sut_cast, qsl_cast, settings);
+  LogSettings default_log_settings;
+  mlperf::StartTest(sut_cast, qsl_cast, test_settings, default_log_settings);
+}
+
+void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings,
+               mlperf::LogSettings log_settings) {
+  pybind11::gil_scoped_release gil_releaser;
+  SystemUnderTestTrampoline* sut_cast =
+      reinterpret_cast<SystemUnderTestTrampoline*>(sut);
+  QuerySampleLibraryTrampoline* qsl_cast =
+      reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
+  mlperf::StartTest(sut_cast, qsl_cast, test_settings, log_settings);
 }
 
 // TODO: Get rid of copies.
@@ -200,6 +210,31 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("override_schedule_rng_seed",
                      &TestSettings::override_schedule_rng_seed);
 
+  pybind11::enum_<LoggingMode>(m, "LoggingMode")
+      .value("AsyncPoll", LoggingMode::AsyncPoll)
+      .value("EndOfTestOnly", LoggingMode::EndOfTestOnly)
+      .value("Synchronous", LoggingMode::Synchronous);
+
+  pybind11::class_<LogOutputSettings>(m, "LogOutputSettings")
+      .def(pybind11::init<>())
+      .def_readwrite("outdir", &LogOutputSettings::outdir)
+      .def_readwrite("prefix", &LogOutputSettings::prefix)
+      .def_readwrite("suffix", &LogOutputSettings::suffix)
+      .def_readwrite("prefix_with_datetime",
+                     &LogOutputSettings::prefix_with_datetime)
+      .def_readwrite("copy_detail_to_stdout",
+                     &LogOutputSettings::copy_detail_to_stdout)
+      .def_readwrite("copy_summary_to_stdout",
+                     &LogOutputSettings::copy_summary_to_stdout);
+
+  pybind11::class_<LogSettings>(m, "LogSettings")
+      .def(pybind11::init<>())
+      .def_readwrite("log_output", &LogSettings::log_output)
+      .def_readwrite("log_mode", &LogSettings::log_mode)
+      .def_readwrite("log_mode_async_poll_interval_ms",
+                     &LogSettings::log_mode_async_poll_interval_ms)
+      .def_readwrite("enable_trace", &LogSettings::enable_trace);
+
   pybind11::class_<QuerySample>(m, "QuerySample")
       .def(pybind11::init<>())
       .def(pybind11::init<ResponseId, QuerySampleIndex>())
@@ -228,7 +263,11 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         "Destroy the object created by ConstructQSL.");
 
   m.def("StartTest", &py::StartTest,
-        "Run tests on a SUT created by ConstructSUT() with the provided QSL.");
+        "Run tests on a SUT created by ConstructSUT() with the provided QSL. "
+        "Uses default log settings.");
+  m.def("StartTestWithLogSettings", &py::StartTestWithLogSettings,
+        "Run tests on a SUT created by ConstructSUT() with the provided QSL. "
+        "Accepts custom log settings.");
   m.def("QuerySamplesComplete", &py::QuerySamplesComplete,
         "Called by the SUT to indicate that samples from some combination of"
         "IssueQuery calls have finished.");

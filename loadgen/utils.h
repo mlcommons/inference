@@ -36,6 +36,8 @@ inline DurationT SecondsToDuration(double seconds) {
       std::chrono::duration<double>(seconds));
 }
 
+std::string CurrentDateTimeISO8601();
+
 std::string DoubleToString(double value, int precision = 2);
 
 }  // namespace mlperf

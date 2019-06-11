@@ -612,6 +612,10 @@ PerformanceResult IssueQueries(
   const size_t expected_latencies = queries_issued * settings.samples_per_query;
   std::vector<QuerySampleLatency> latencies(
       GlobalLogger().GetLatenciesBlocking(expected_latencies));
+
+  // Log contention counters after every test as a sanity check.
+  GlobalLogger().LogContentionCounters();
+
   double max_latency =
       QuerySampleLatencyToSeconds(GlobalLogger().GetMaxLatencySoFar());
   double final_query_scheduled_time =
@@ -1016,19 +1020,70 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   return result;
 }
 
+struct LogOutputs {
+  LogOutputs(const LogOutputSettings& output_settings,
+             const std::string& test_date_time) {
+    std::string prefix = output_settings.outdir;
+    prefix += "/" + output_settings.prefix;
+    if (output_settings.prefix_with_datetime) {
+      prefix += test_date_time + "_";
+    }
+    const std::string& suffix = output_settings.suffix;
+
+    summary_out.open(prefix + "mlperf_log_summary" + suffix + ".txt");
+    detail_out.open(prefix + "mlperf_log_detail" + suffix + ".txt");
+    accuracy_out.open(prefix + "mlperf_log_accuracy" + suffix + ".json");
+    trace_out.open(prefix + "mlperf_trace" + suffix + ".json");
+  }
+
+  bool CheckOutputs() {
+    bool all_ofstreams_good = true;
+    if (!summary_out.good()) {
+      all_ofstreams_good = false;
+      std::cerr << "LoadGen: Failed to open summary file.";
+    }
+    if (!detail_out.good()) {
+      all_ofstreams_good = false;
+      std::cerr << "LoadGen: Failed to open detailed log file.";
+    }
+    if (!accuracy_out.good()) {
+      all_ofstreams_good = false;
+      std::cerr << "LoadGen: Failed to open accuracy log file.";
+    }
+    if (!trace_out.good()) {
+      all_ofstreams_good = false;
+      std::cerr << "LoadGen: Failed to open trace file.";
+    }
+    return all_ofstreams_good;
+  }
+
+  std::ofstream summary_out;
+  std::ofstream detail_out;
+  std::ofstream accuracy_out;
+  std::ofstream trace_out;
+};
+
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-               const TestSettings& requested_settings) {
+               const TestSettings& requested_settings,
+               const LogSettings& log_settings) {
   GlobalLogger().StartIOThread();
 
-  std::ofstream summary_out("mlperf_log_summary.txt");
-  std::ofstream detail_out("mlperf_log_detail.txt");
-  std::ofstream accuracy_out("mlperf_log_accuracy.json");
-  GlobalLogger().StartLogging(&summary_out, &detail_out, &accuracy_out);
-  std::ofstream trace_out("mlperf_trace.json");
-  GlobalLogger().StartNewTrace(&trace_out, PerfClock::now());
+  const std::string test_date_time = CurrentDateTimeISO8601();
+
+  LogOutputs log_outputs(log_settings.log_output, test_date_time);
+  if (!log_outputs.CheckOutputs()) {
+    return;
+  }
+
+  GlobalLogger().StartLogging(&log_outputs.summary_out, &log_outputs.detail_out,
+                              &log_outputs.accuracy_out,
+                              log_settings.log_output.copy_detail_to_stdout,
+                              log_settings.log_output.copy_summary_to_stdout);
+  GlobalLogger().StartNewTrace(&log_outputs.trace_out, PerfClock::now());
 
   LogLoadgenVersion();
-  LogDetail([sut, qsl](AsyncLog& log) {
+  LogDetail([sut, qsl, test_date_time](AsyncLog& log) {
+    log.LogDetail("Date + time of test:", test_date_time);
     log.LogDetail("System Under Test (SUT) name: ", sut->Name());
     log.LogDetail("Query Sample Library (QSL) name: ", qsl->Name());
     log.LogDetail("QSL total size: ", qsl->TotalSampleCount());

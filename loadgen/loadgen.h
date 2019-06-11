@@ -9,6 +9,7 @@ struct QuerySampleResponse;
 class QuerySampleLibrary;
 class SystemUnderTest;
 struct TestSettings;
+struct LogSettings;
 
 // QuerySamplesComplete must be called by the SUT once it completes samples of
 // a query issued by SystemUnderTest::IssueQuery().
@@ -22,7 +23,8 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 // Starts the test against |sut| with the specified |settings|.
 // This is the C++ entry point. See mlperf::c::StartTest for the C entry point.
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-               const TestSettings& requested_settings);
+               const TestSettings& requested_settings,
+               const LogSettings& log_settings);
 
 }  // namespace mlperf
 

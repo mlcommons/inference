@@ -6,6 +6,7 @@
 #include "../query_sample.h"
 #include "../query_sample_library.h"
 #include "../system_under_test.h"
+#include "../test_settings.h"
 
 namespace mlperf {
 namespace c {
@@ -134,7 +135,8 @@ void StartTest(void* sut, void* qsl, const TestSettings& settings) {
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   QuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
-  mlperf::StartTest(sut_cast, qsl_cast, settings);
+  LogSettings default_log_settings;
+  mlperf::StartTest(sut_cast, qsl_cast, settings, default_log_settings);
 }
 
 }  // namespace c

@@ -34,9 +34,16 @@ instructions on available Docker images:
     - [Ubuntu 18.04 - Dashboard](https://github.com/ctuning/ck-mlperf/tree/master/docker/image-classification-tflite.dashboard.ubuntu-18.04)
 - TensorFlow (C++):
     - [Debian 9](https://github.com/ctuning/ck-mlperf/tree/master/docker/image-classification-tf-cpp.debian-9)
+- Arm NN:
+    - [Debian 9](https://github.com/ARM-software/armnn-mlperf/tree/master/docker/image-classification-armnn-tflite.debian-9)
+
+Even if you would like to run CK workflows natively (e.g. on an Arm-based
+development board or Android phone), you may wish to have a quick look into the
+latest Dockerfile's to check for latest updates e.g. system-specific
+dependencies.
 
 <a name="installation-debian"></a>
-## Debian (tested with Ubuntu v18.04 and v16.04)
+## Debian
 
 - Common tools and libraries.
 - [Python](https://www.python.org/), [pip](https://pypi.org/project/pip/), [SciPy](https://www.scipy.org/), [Collective Knowledge](https://cknowledge.org) (CK).
@@ -44,9 +51,8 @@ instructions on available Docker images:
 
 ### Install common tools and libraries
 ```bash
-$ sudo apt install autoconf autogen libtool zlib1g-dev
-$ sudo apt install gcc g++ git wget
-$ sudo apt install libblas-dev liblapack-dev
+$ sudo apt install git wget libz-dev curl
+$ sudo apt install gcc g++ autoconf autogen libtool
 ```
 
 ### Install Python 3 and the latest pip

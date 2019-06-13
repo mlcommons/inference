@@ -20,8 +20,21 @@ For the PyTorch version, please see the [corresponding README](pytorch/README.md
 <a name="installation"></a>
 # Installation
 
+**NB:** If you would like to get a feel of CK workflows, you can skip
+installation instructions and try [benchmarking](#benchmarking)
+instructions on available Docker images:
+- TensorFlow Lite:
+    - [Debian 9](https://github.com/ctuning/ck-mlperf/tree/master/docker/object-detection-tflite.debian-9)
+- Arm NN:
+    - [Debian 9](https://github.com/ARM-software/armnn-mlperf/tree/master/docker/object-detection-armnn-tflite.debian-9)
+
+Even if you would like to run CK workflows natively (e.g. on an Arm-based
+development board or Android phone), you may wish to have a quick look into the
+latest Dockerfile's to check for latest updates e.g. system-specific
+dependencies.
+
 <a name="installation-debian"></a>
-## Debian (tested with Ubuntu v18.04 and v16.04)
+## Debian
 
 - Common tools and libraries.
 - [Python](https://www.python.org/), [pip](https://pypi.org/project/pip/), [SciPy](https://www.scipy.org/), [Collective Knowledge](https://cknowledge.org) (CK).
@@ -29,9 +42,8 @@ For the PyTorch version, please see the [corresponding README](pytorch/README.md
 
 ### Install common tools and libraries
 ```bash
-$ sudo apt install autoconf autogen libtool zlib1g-dev
-$ sudo apt install gcc g++ git wget
-$ sudo apt install libblas-dev liblapack-dev
+$ sudo apt install git wget libz-dev curl cmake
+$ sudo apt install gcc g++ autoconf autogen libtool
 ```
 
 ### Install Python 3 and the latest pip

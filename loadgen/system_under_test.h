@@ -1,6 +1,7 @@
 #ifndef MLPERF_LOADGEN_SYSTEM_UNDER_TEST_H
 #define MLPERF_LOADGEN_SYSTEM_UNDER_TEST_H
 
+#include <string>
 #include <vector>
 
 #include "query_sample.h"

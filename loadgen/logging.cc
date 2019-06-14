@@ -156,8 +156,6 @@ Logger::Logger(std::chrono::duration<double> poll_period,
 Logger::~Logger() {
   // TlsLoggers might outlive this Logger when loaded as a python module.
   // Forcefully make all currently registered TlsLoggers orphans.
-  // We don't acquire any mutexes from the destructor since threads should
-  // not be attempting to log by this point.
   std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
   TlsLogger* tls_logger_prev = nullptr;
   while (!tls_loggers_registerd_.empty()) {
@@ -475,7 +473,7 @@ void Logger::IOThread() {
 }
 
 TlsLogger::TlsLogger(std::function<void()> forced_detatch)
-  : forced_detatch_(std::move(forced_detatch)) {
+    : forced_detatch_(std::move(forced_detatch)) {
   std::stringstream ss;
   ss << std::this_thread::get_id();
   tid_as_string_ = ss.str();
@@ -580,7 +578,7 @@ Logger& GlobalLogger() {
 // so no round-trip synchronization with the IO thread is required.
 struct TlsLoggerWrapper {
   TlsLoggerWrapper(std::function<void()> forced_detatch)
-    : tls_logger(std::make_unique<TlsLogger>(std::move(forced_detatch))) {
+      : tls_logger(std::make_unique<TlsLogger>(std::move(forced_detatch))) {
     GlobalLogger().RegisterTlsLogger(tls_logger.get());
   }
   ~TlsLoggerWrapper() {
@@ -592,12 +590,12 @@ struct TlsLoggerWrapper {
 
 TlsLoggerWrapper* InitializeMyTlsLoggerWrapper() {
   thread_local std::unique_ptr<TlsLoggerWrapper> tls_logger_wrapper;
-  // orphan_maker lets the global Logger forcefully detatch TlsLoggers
-  // from the thread from the Logger's destructor, which may run before
+  // forced_detatch lets the global Logger forcefully detatch TlsLoggers
+  // from the thread in the Logger's destructor, which may run before
   // thread-local variables are destroyed when the loadgen is used as a python
   // module and dynamically unloaded.
-  auto orphan_maker = [&]() { tls_logger_wrapper.reset(); };
-  tls_logger_wrapper = std::make_unique<TlsLoggerWrapper>(orphan_maker);
+  auto forced_detatch = [&]() { tls_logger_wrapper.reset(); };
+  tls_logger_wrapper = std::make_unique<TlsLoggerWrapper>(forced_detatch);
   return tls_logger_wrapper.get();
 }
 

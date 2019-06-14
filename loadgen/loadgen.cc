@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include <algorithm>
 #include <atomic>
 #include <cassert>
 #include <cstring>
@@ -962,9 +963,6 @@ struct RunFunctions {
 //       requirement though.
 std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
     QuerySampleLibrary* qsl, const TestSettingsInternal& settings) {
-  constexpr float kGarbageCollectRatio = 0.5;
-  constexpr size_t kUsedIndex = std::numeric_limits<size_t>::max();
-
   auto trace = MakeScopedTracer(
       [](AsyncLog& log) { log.ScopedTrace("GenerateLoadableSets"); });
 
@@ -978,6 +976,10 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
     samples[i] = static_cast<QuerySampleIndex>(i);
   }
 
+  // Randomize the order of the samples.
+  std::shuffle(samples.begin(), samples.end(), qsl_rng);
+
+  // Partition the samples into loadable sets.
   const size_t set_size = qsl->PerformanceSampleCount();
   const size_t set_padding =
       (settings.scenario == TestScenario::MultiStream ||
@@ -986,36 +988,13 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
           : 0;
   std::vector<QuerySampleIndex> loadable_set;
   loadable_set.reserve(set_size + set_padding);
-  size_t remaining_count = samples.size();
-  size_t garbage_collect_count = remaining_count * kGarbageCollectRatio;
-  std::uniform_int_distribution<> dist(0, remaining_count - 1);
 
-  while (remaining_count > 0) {
-    size_t candidate_index = dist(qsl_rng);
-    // Skip indicies we've already used.
-    if (samples[candidate_index] == kUsedIndex) {
-      continue;
-    }
-
-    // Update loadable sets and mark index as used.
-    loadable_set.push_back(samples[candidate_index]);
+  for (auto s : samples) {
+    loadable_set.push_back(s);
     if (loadable_set.size() == set_size) {
       result.push_back(std::move(loadable_set));
       loadable_set.clear();
       loadable_set.reserve(set_size + set_padding);
-    }
-    samples[candidate_index] = kUsedIndex;
-    remaining_count--;
-
-    // Garbage collect used indicies as probability of hitting one increases.
-    if (garbage_collect_count != 0) {
-      garbage_collect_count--;
-    } else {
-      RemoveValue(&samples, kUsedIndex);
-      assert(remaining_count == samples.size());
-      dist.param(
-          std::uniform_int_distribution<>::param_type(0, remaining_count - 1));
-      garbage_collect_count = remaining_count * kGarbageCollectRatio;
     }
   }
 

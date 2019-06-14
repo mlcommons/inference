@@ -1,6 +1,6 @@
 
 # 1. Problem
-This tensorflow model is converted from pytorch model from inference/cloud/single_stage_detector/ [repository](https://github.com/mlperf/inference/tree/master/cloud/single_stage_detector) with onnx. 
+This tensorflow model is trained with tensorflow with resnet-34 backbone.
 
 # 2. Directions
 
@@ -44,7 +44,7 @@ Backbone is ResNet34 pretrained on ILSVRC 2012 (from torchvision). Modifications
 Metric is COCO box mAP (averaged over IoU of 0.5:0.95), computed over 2017 COCO val data.
 
 ### Quality target
-mAP of 0.199
+mAP of 0.202
 
 ### Evaluation frequency
 

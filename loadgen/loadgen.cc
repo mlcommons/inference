@@ -27,6 +27,7 @@ struct SampleMetadata;
 struct QueryMetadata;
 
 struct ResponseDelegate {
+  virtual ~ResponseDelegate() = default;
   virtual void SampleComplete(SampleMetadata*, QuerySampleResponse*,
                               PerfClock::time_point) = 0;
   virtual void QueryComplete() = 0;
@@ -339,11 +340,6 @@ std::vector<QueryMetadata> GenerateQueries(
 template <TestScenario scenario>
 struct QueryScheduler {
   static_assert(scenario != scenario, "Unhandled TestScenario");
-  QueryScheduler(const TestSettingsInternal& settings,
-                 const PerfClock::time_point) {}
-  PerfClock::time_point Wait(QueryMetadata* next_query) {
-    return PerfClock::now();
-  }
 };
 
 // SingleStream QueryScheduler

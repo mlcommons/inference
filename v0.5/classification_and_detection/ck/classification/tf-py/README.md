@@ -1,4 +1,4 @@
-# MobileNet via TensorFlow (Python)
+# Image Classification via TensorFlow (Python)
 
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)

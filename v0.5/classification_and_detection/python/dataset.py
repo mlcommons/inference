@@ -249,7 +249,7 @@ def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
 
     return img
 
-def pre_process_coco_resnet34_native(img, dims=None, need_transpose=False):
+def pre_process_coco_resnet34_tf(img, dims=None, need_transpose=False):
     if img.mode != 'RGB':
         img = img.convert('RGB')
 

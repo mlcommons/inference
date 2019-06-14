@@ -48,7 +48,7 @@ if [ $name == "ssd-mobilenet-tf" ] ; then
     profile=ssd-mobilenet-tf
 fi
 if [ $name == "ssd-resnet34-tf" ] ; then
-    model_path="$MODEL_DIR/ssd_resnet-34_frozen.pb"
+    model_path="$MODEL_DIR/ssd_resnet34_cloud_native_tf.pb"
     profile=ssd-resnet34-tf
 fi
 if [ $name == "ssd-resnet34-native-tf" ] ; then

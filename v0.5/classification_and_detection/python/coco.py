@@ -298,6 +298,7 @@ class PostProcessCocoOnnx(PostProcessCoco):
                 self.total += 1
         return results
 
+
 class PostProcessCocoTf(PostProcessCoco):
     """
     Post processing required by ssd-resnet34-tf
@@ -305,80 +306,91 @@ class PostProcessCocoTf(PostProcessCoco):
     def __init__(self):
         super().__init__()
         self.use_inv_map = True
-        figsize = [1200, 1200]
-        strides = [3, 3, 2, 2, 2, 2]
-        feat_size = [[50, 50], [25, 25], [13, 13], [7, 7], [3, 3], [3, 3]]
-        steps=[(int(figsize[0]/fs[0]),int(figsize[1]/fs[1])) for fs in feat_size]
-        # use the scales here: https://github.com/amdegroot/ssd.pytorch/blob/master/data/config.py
-        scales = [(int(s*figsize[0] / 300),int(s * figsize[1] / 300)) for s in [21, 45, 99, 153, 207, 261, 315]]
-        aspect_ratios =  [[2], [2, 3], [2, 3], [2, 3], [2], [2]]
-        dboxes = self.DefaultBoxes(figsize, feat_size, steps, scales, aspect_ratios)
+        out_shape = [1200,1200]
+        anchor_creator = self.AnchorCreator(out_shape,
+                layers_shapes = [(50,50),(25,25),(13,13),(7,7),(3,3),(1,1)],
+                anchor_scales = [(0.1,),(0.2,),(0.375,),(0.55,), (0.725,),(0.9,)],
+                extra_anchor_scales = [(0.1414,),(0.2739,),(0.4541,),(0.6315,),(0.8078,),(0.9836,)],
+                anchor_ratios = [(1.,2.,.5),(1.,2.,3.,.5,0.3333),(1.,2.,3.,.5,0.3333), (1.,2.,3.,.5,0.3333), (1.,2.,.5),(1.,2.,.5)],
+                layer_steps=[24,48,92,171,400,1200])
+
+        dboxes = anchor_creator.get_all_anchors()
         self.encoder = self.Encoder(dboxes)
 
-    class DefaultBoxes(object):
-        def __init__(self, fig_size, feat_size, steps, scales, aspect_ratios, \
-                           scale_xy=0.1, scale_wh=0.2):
-            from math import sqrt
+    class AnchorCreator(object):
+        def __init__(self, img_shape, layers_shapes, anchor_scales, extra_anchor_scales, anchor_ratios, layer_steps):
+            super(PostProcessCocoTf.AnchorCreator, self).__init__()
+            # img_shape -> (height, width)
+            self._img_shape = img_shape
+            self._layers_shapes = layers_shapes
+            self._anchor_scales = anchor_scales
+            self._extra_anchor_scales = extra_anchor_scales
+            self._anchor_ratios = anchor_ratios
+            self._layer_steps = layer_steps
+            self._anchor_offset = [0.5] * len(self._layers_shapes)
+
+        def get_layer_anchors(self, layer_shape, anchor_scale, extra_anchor_scale, anchor_ratio, layer_step, offset = 0.5):
             from itertools import product
-            self.feat_size = feat_size
-            self.fig_size_w,self.fig_size_h = fig_size
+            import math
+            xy_on_layer = np.array(list(product(range(layer_shape[1]), range(layer_shape[0]))), dtype='float32')
+            x_on_image = (xy_on_layer[:,:1] + offset) * layer_step / self._img_shape[0]
+            y_on_image = (xy_on_layer[:,1:] + offset) * layer_step / self._img_shape[1]
 
-            self.scale_xy_ = scale_xy
-            self.scale_wh_ = scale_wh
+            list_h_on_image = []
+            list_w_on_image = []
 
-            # According to https://github.com/weiliu89/caffe
-            # Calculation method slightly different from paper
-            self.steps_w = [st[0] for st in steps]
-            self.steps_h = [st[1] for st in steps]
-            self.scales = scales
-            fkw = self.fig_size_w//np.array(self.steps_w)
-            fkh = self.fig_size_h//np.array(self.steps_h)
-            self.aspect_ratios = aspect_ratios
+            global_index = 0
+            # for square anchors
+            for _, scale in enumerate(extra_anchor_scale):
+                list_h_on_image.append(scale)
+                list_w_on_image.append(scale)
+                global_index += 1
+            # for other aspect ratio anchors
+            for scale_index, scale in enumerate(anchor_scale):
+                for ratio_index, ratio in enumerate(anchor_ratio):
+                    list_h_on_image.append(scale / math.sqrt(ratio))
+                    list_w_on_image.append(scale * math.sqrt(ratio))
+                    global_index += 1
+            h_on_image = np.array(list_h_on_image, dtype='float32')
+            w_on_image = np.array(list_w_on_image, dtype='float32')
+            ymin, xmin, ymax, xmax = self.center2point(y_on_image, x_on_image, h_on_image, w_on_image)
+            ymin = ymin.reshape(ymin.size, -1)
+            xmin = xmin.reshape(xmin.size, -1)
+            ymax = ymax.reshape(ymax.size, -1)
+            xmax = xmax.reshape(xmax.size, -1)
+            xc, yc, h, w = self.point2center(ymin, xmin, ymax, xmax)
 
-            self.default_boxes = []
-            # size of feature and number of feature
-            for idx, sfeat in enumerate(self.feat_size):
-                sfeat_w,sfeat_h=sfeat
-                sk1 = scales[idx][0]/self.fig_size_w
-                sk2 = scales[idx+1][1]/self.fig_size_h
-                sk3 = sqrt(sk1*sk2)
-                all_sizes = [(sk1, sk1), (sk3, sk3)]
-                for alpha in aspect_ratios[idx]:
-                    w, h = sk1*sqrt(alpha), sk1/sqrt(alpha)
-                    all_sizes.append((w, h))
-                    all_sizes.append((h, w))
-                for w, h in all_sizes:
-                    for i, j in product(range(sfeat_w), range(sfeat_h)):
-                        cx, cy = (j+0.5)/fkh[idx], (i+0.5)/fkw[idx]
-                        self.default_boxes.append((cx, cy, w, h))
-            self.dboxes = np.array(self.default_boxes)
-            self.dboxes.clip(min=0, max=1, out=self.dboxes)
-            # For IoU calculation
-            self.dboxes_ltrb = self.dboxes.copy()
-            self.dboxes_ltrb[:, 0] = self.dboxes[:, 0] - 0.5*self.dboxes[:, 2]
-            self.dboxes_ltrb[:, 1] = self.dboxes[:, 1] - 0.5*self.dboxes[:, 3]
-            self.dboxes_ltrb[:, 2] = self.dboxes[:, 0] + 0.5*self.dboxes[:, 2]
-            self.dboxes_ltrb[:, 3] = self.dboxes[:, 1] + 0.5*self.dboxes[:, 3]
+            return np.concatenate([xc,yc, w, h], axis=1)
 
-        @property
-        def scale_xy(self):
-            return self.scale_xy_
+        def center2point(self, center_y, center_x, height, width):
+            return center_y - height / 2., center_x - width / 2., center_y + height / 2., center_x + width / 2.,
 
-        @property
-        def scale_wh(self):
-            return self.scale_wh_
+        def point2center(self, ymin, xmin, ymax, xmax):
+            height, width = (ymax - ymin), (xmax - xmin)
+            return ymin + height / 2., xmin + width / 2., height, width
 
-        def __call__(self, order="ltrb"):
-            if order == "ltrb": return self.dboxes_ltrb
-            if order == "xywh": return self.dboxes
+        def get_all_anchors(self):
+            all_anchors = []
+            all_num_anchors_depth = []
+            all_num_anchors_spatial = []
+            for layer_index, layer_shape in enumerate(self._layers_shapes):
+                anchors_this_layer = self.get_layer_anchors(layer_shape,
+                    self._anchor_scales[layer_index],
+                    self._extra_anchor_scales[layer_index],
+                    self._anchor_ratios[layer_index],
+                    self._layer_steps[layer_index],
+                    self._anchor_offset[layer_index])
+                all_anchors.append(anchors_this_layer)
+
+            return np.vstack(all_anchors)
+
 
     class Encoder(object):
-        def __init__(self, dboxes):
-            self.dboxes = dboxes(order="ltrb")
-            self.dboxes_xywh = np.expand_dims(dboxes(order="xywh"),0)
+        def __init__(self, dboxes, scale_xy = 0.1, scale_wh = 0.2):
+            self.dboxes = np.expand_dims(dboxes,0)
             self.nboxes = self.dboxes.shape[0]
-            self.scale_xy = dboxes.scale_xy
-            self.scale_wh = dboxes.scale_wh
+            self.scale_xy = scale_xy
+            self.scale_wh = scale_wh
 
         @staticmethod
         def softmax_cpu(x, dim=-1):
@@ -422,21 +434,23 @@ class PostProcessCocoTf(PostProcessCoco):
                 Do scale and transform from xywh to ltrb
                 suppose input Nx4xnum_bbox Nxlabel_numxnum_bbox
             """
-
-            bboxes_in = bboxes_in.transpose([0,2,1])
-            scores_in = scores_in.transpose([0,2,1])
-
+            bboxes_in[:, :, [0,1,2,3]] = bboxes_in[:, :, [1,0,3,2]]
             bboxes_in[:, :, :2] = self.scale_xy*bboxes_in[:, :, :2]
             bboxes_in[:, :, 2:] = self.scale_wh*bboxes_in[:, :, 2:]
 
-            bboxes_in[:, :, :2] = bboxes_in[:, :, :2]*self.dboxes_xywh[:, :, 2:] + self.dboxes_xywh[:, :, :2]
-            bboxes_in[:, :, 2:] = np.exp(bboxes_in[:, :, 2:])*self.dboxes_xywh[:, :, 2:]
+            bboxes_in[:, :, :2] = bboxes_in[:, :, :2]*self.dboxes[:, :, 2:] + self.dboxes[:, :, :2]
+            bboxes_in[:, :, 2:] = np.exp(bboxes_in[:, :, 2:])*self.dboxes[:, :, 2:]
 
             # Transform format to ltrb
             l, t, r, b = bboxes_in[:, :, 0] - 0.5*bboxes_in[:, :, 2],\
                          bboxes_in[:, :, 1] - 0.5*bboxes_in[:, :, 3],\
                          bboxes_in[:, :, 0] + 0.5*bboxes_in[:, :, 2],\
                          bboxes_in[:, :, 1] + 0.5*bboxes_in[:, :, 3]
+
+            l = np.maximum(l, 0)
+            t = np.maximum(t, 0)
+            r = np.minimum(r, 1)
+            b = np.minimum(b, 1)
 
             bboxes_in[:, :, 0] = l
             bboxes_in[:, :, 1] = t
@@ -448,12 +462,8 @@ class PostProcessCocoTf(PostProcessCoco):
         def decode_batch(self, bboxes_in, scores_in,  criteria = 0.45, max_output=200):
             bboxes, probs = self.scale_back_batch(bboxes_in, scores_in)
             output = []
-            #for bbox, prob in zip(bboxes.split(1, 0), probs.split(1, 0)):
-            #    bbox = bbox.squeeze(0)
-            #    prob = prob.squeeze(0)
             for bbox, prob in zip(bboxes, probs):
                 output.append(self.decode_single(bbox, prob, criteria, max_output))
-                #print(output[-1])
             return output
 
         # perform non-maximum suppression
@@ -474,7 +484,6 @@ class PostProcessCocoTf(PostProcessCoco):
                 score_idx_sorted = np.argsort(-score, axis=0)
 
                 # select max_output indices
-                #score_idx_sorted = score_idx_sorted[-max_num:]
                 score_idx_sorted = score_idx_sorted[:max_num]
                 candidates = []
                 while score_idx_sorted.size > 0:
@@ -499,13 +508,8 @@ class PostProcessCocoTf(PostProcessCoco):
 
 
     def __call__(self, results, ids, expected=None, result_dict=None):
-        # results come as:
-        #   onnx (from pytorch ssd-resnet34): detection_boxes,detection_classes,detection_scores
-
         processed_results = []
-        #loc, label, prob = self.encoder.decode_batch(results[0], results[1], 0.5, 200)
-        results = self.encoder.decode_batch(results[0], results[1], 0.5, 200)
-        # batch size
+        results = self.encoder.decode_batch(results[0], results[1], 0.45, 200)
         bs = len(results)
         for idx in range(0, bs):
             processed_results.append([])
@@ -520,7 +524,6 @@ class PostProcessCocoTf(PostProcessCoco):
                 if detection_class in expected_classes:
                     self.good += 1
                 box = detection_boxes[detection]
-                # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
                 processed_results[idx].append([float(ids[idx]),
                                               box[1], box[0], box[3], box[2],
                                               scores[detection],
@@ -563,3 +566,5 @@ class PostProcessCocoTfNative(PostProcessCoco):
                                               float(detection_class)])
                 self.total += 1
         return processed_results
+
+

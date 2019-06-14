@@ -1,14 +1,11 @@
 [![compatibility](https://github.com/ctuning/ck-guide-images/blob/master/ck-compatible.svg)](https://github.com/ctuning/ck)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
-# MLPerf Inference - Object Detection - SSD-MobileNet
+# MLPerf Inference - Object Detection
 
-**NB:** MLPerf Inference v0.5 uses SSD-MobileNet-v1-1.0-224 (called SSD-MobileNet in what follows).
+MLPerf Inference v0.5 uses SSD-MobileNet-v1-1.0-224 (called SSD-MobileNet in what follows) and SSD-ResNet34 (called SSD-ResNet in what follows).
 
 # Table of contents
-
-**NB:** This README file provides installation and benchmarking instructions for the TensorFlow versions.
-For the PyTorch version, please see the [corresponding README](pytorch/README.md) file.
 
 1. [Installation](#installation)
     - [Install prerequisites](#installation-debian) (Debian-specific)

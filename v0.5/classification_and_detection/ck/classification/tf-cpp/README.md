@@ -1,4 +1,4 @@
-# MobileNet via TensorFlow (C++)
+# Image Classification via TensorFlow (C++)
 
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)

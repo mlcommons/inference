@@ -150,7 +150,24 @@ Logger::Logger(std::chrono::duration<double> poll_period,
   }
 }
 
-Logger::~Logger() {}
+Logger::~Logger() {
+  // TlsLoggers might outlive this Logger when loaded as a python module.
+  // Forcefully make all currently registered TlsLoggers orphans.
+  while (true) {
+    decltype(tls_loggers_registerd_)::iterator i;
+    {
+      std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
+      if (tls_loggers_registerd_.empty()) {
+        break;
+      }
+      i = tls_loggers_registerd_.begin();
+    }
+    // Release the lock on tls_loggers_registerd_mutex_ since orphan_maker()
+    // needs to acquire it.
+    auto& orphan_maker = i->second;
+    orphan_maker();
+  }
+}
 
 void Logger::RequestSwapBuffers(TlsLogger* tls_logger) {
   auto tls_logger_as_uint = reinterpret_cast<uintptr_t>(tls_logger);
@@ -176,14 +193,16 @@ void Logger::RequestSwapBuffers(TlsLogger* tls_logger) {
   }
 }
 
-void Logger::RegisterTlsLogger(TlsLogger* tls_logger) {
+void Logger::RegisterTlsLogger(TlsLogger* tls_logger,
+                               std::function<void()> orphan_maker) {
   std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
   if (tls_loggers_registerd_.size() >= max_threads_to_log_) {
     LogErrorSync(
         "Warning: More TLS loggers registerd than can "
         "be active simultaneously.\n");
   }
-  tls_loggers_registerd_.insert(tls_logger);
+  tls_loggers_registerd_.insert(
+      std::make_pair(tls_logger, std::move(orphan_maker)));
 }
 
 // This moves ownership of the tls_logger data to Logger so the
@@ -251,7 +270,7 @@ void Logger::StopLogging() {
     {
       std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
       for (auto tls_logger : tls_loggers_registerd_) {
-        CollectTlsLoggerStats(tls_logger);
+        CollectTlsLoggerStats(tls_logger.first);
       }
     }
 
@@ -559,7 +578,9 @@ Logger& GlobalLogger() {
 // TlsLoggerWrapper moves ownership of the TlsLogger to Logger on thread exit
 // so no round-trip synchronization with the IO thread is required.
 struct TlsLoggerWrapper {
-  TlsLoggerWrapper() { GlobalLogger().RegisterTlsLogger(tls_logger.get()); }
+  TlsLoggerWrapper(std::function<void()> orphan_maker) {
+    GlobalLogger().RegisterTlsLogger(tls_logger.get(), std::move(orphan_maker));
+  }
   ~TlsLoggerWrapper() {
     tls_logger->TraceCounters();
     GlobalLogger().UnRegisterTlsLogger(std::move(tls_logger));
@@ -567,9 +588,64 @@ struct TlsLoggerWrapper {
   std::unique_ptr<TlsLogger> tls_logger = std::make_unique<TlsLogger>();
 };
 
+// TlsWar allows non-trival thread_local destructors of the loadgen to be
+// unregistered when the loadgen is unloaded as a python module, which helps
+// avoid segfaults at program exit.
+namespace TlsWar {
+// Using std::exception_ptr as the thread_local variable type when we need
+// a complex destructor is a work around to avoid crashes when the destructors
+// of thread_local variables attempt to access the global Logger at exit.
+// If the loadgen library was loaded as a python module, the global
+// Logger might be destroyed and all function definitions unloaded before the
+// last thread_local variable that references it.
+// The work around involves Logger replacing the contents of the
+// std::exception_ptr with references to data and code in C++'s standard
+// library ABI that should still be valid at exit.
+using Container = std::exception_ptr;
+using ElementBase = std::exception;
+
+// TlsLoggerWrapperElement is owned by the thread_local variable in normal
+// circumstances, but can be forcefully replaced by the Logger if needed,
+// resulting in the destruciton of the TlsLoggerWrapper.
+struct TlsLoggerWrapperElement : public ElementBase {
+  TlsLoggerWrapperElement() = default;
+  explicit TlsLoggerWrapperElement(std::shared_ptr<TlsLoggerWrapper> tlw)
+      : tls_logger_wrapper(tlw) {}
+  ~TlsLoggerWrapperElement() override = default;
+  std::shared_ptr<TlsLoggerWrapper> tls_logger_wrapper;
+};
+
+// Useful function aliases.
+const auto ContainStub = std::make_exception_ptr<ElementBase>;
+const auto ContainLogger = std::make_exception_ptr<TlsLoggerWrapperElement>;
+}  // namespace TlsWar
+
+// TODO: Is there a work around easier than this that still keeps things
+// simple for the logging client?
+TlsLoggerWrapper* InitializeMyTlsLoggerWrapper() {
+  thread_local TlsWar::Container maybe_wrapper;
+  auto orphan_maker = [&]() {
+    maybe_wrapper = TlsWar::ContainStub(TlsWar::ElementBase());
+  };
+  auto tls_logger_wrapper = std::make_shared<TlsLoggerWrapper>(orphan_maker);
+  maybe_wrapper = TlsWar::ContainLogger(
+      TlsWar::TlsLoggerWrapperElement(tls_logger_wrapper));
+
+  // If exceptions aren't enabled at compile time, the work around doesn't
+  // work since make_exception_ptr won't copy the exception data and keep a
+  // reference to the TlsLoggerWrapper.
+  assert(!tls_logger_wrapper.unique());
+
+  return tls_logger_wrapper.get();
+}
+
+TlsLogger* InitializeMyTlsLogger() {
+  thread_local TlsLoggerWrapper* wrapper = InitializeMyTlsLoggerWrapper();
+  return wrapper->tls_logger.get();
+}
+
 void Log(AsyncLogEntry&& entry) {
-  thread_local TlsLoggerWrapper wrapper;
-  thread_local TlsLogger* const tls_logger = wrapper.tls_logger.get();
+  thread_local TlsLogger* const tls_logger = InitializeMyTlsLogger();
   tls_logger->Log(std::forward<AsyncLogEntry>(entry));
 }
 

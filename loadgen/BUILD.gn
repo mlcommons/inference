@@ -47,6 +47,7 @@ static_library("mlperf_loadgen") {
   sources = mlperf_loadgen_sources
   include_dirs = [ "." ]
   deps = [ ":generate_loadgen_version_header" ]
+  configs += [ "//build/config/compiler:exceptions" ]
 }
 
 executable("loadgen_demo") {

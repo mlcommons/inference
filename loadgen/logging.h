@@ -13,7 +13,7 @@
 #include <mutex>
 #include <set>
 #include <thread>
-#include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "query_sample.h"
@@ -426,8 +426,7 @@ class Logger {
   friend TlsLogger;
   friend TlsLoggerWrapper;
 
-  void RegisterTlsLogger(TlsLogger* tls_logger,
-                         std::function<void()> destroyer);
+  void RegisterTlsLogger(TlsLogger* tls_logger);
   void UnRegisterTlsLogger(std::unique_ptr<TlsLogger> tls_logger);
   void RequestSwapBuffers(TlsLogger* tls_logger);
   void CollectTlsLoggerStats(TlsLogger* tls_logger);
@@ -462,10 +461,7 @@ class Logger {
   bool keep_io_thread_alive_ = false;
 
   std::mutex tls_loggers_registerd_mutex_;
-  // |destroyer| is only used in cases where the global Logger is destroyed
-  // before the thread-local TlsLoggers. i.e.: With python modules or
-  // with detached threads.
-  std::unordered_map<TlsLogger*, std::function<void()>> tls_loggers_registerd_;
+  std::unordered_set<TlsLogger*> tls_loggers_registerd_;
 
   // Temporarily stores TlsLogger data for threads that have exited until
   // all their log entries have been processed.

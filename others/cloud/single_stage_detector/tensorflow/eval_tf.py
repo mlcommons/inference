@@ -37,7 +37,7 @@ from utils_tf import dboxes_R34_coco, Encoder, cocoval, MyEncoder
 def parse_args():
     parser = ArgumentParser(description="SSD Resnet-34 evaluation on COCO")
     parser.add_argument('--model', '-m', type=str, 
-            default='./pretrained/ssd_resnet-34_from_onnx.pb',
+            default='./pretrained/ssd_resnet34_cloud_native_tf.pb',
             help='path to frozen graph')
     parser.add_argument('--data-root', '-d', type=str,
             default='coco/val2017/',

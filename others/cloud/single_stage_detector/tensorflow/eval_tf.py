@@ -41,7 +41,7 @@ from pycocotools.cocoeval import COCOeval
 
 def parse_args():
     arg_parser = argparse.ArgumentParser(description="This is a evaluation script for ssd-resnet34 on coco2017.")
-    arg_parser.add_argument('-pb', '--model_pb', type=str, default="./ssd_resnet34_large_bacth_20.2.pb", help='tensroflow pb model path.')
+    arg_parser.add_argument('-pb', '--model_pb', type=str, default='./pretrained/ssd_resnet34_cloud_native_tf.pb', help='tensroflow pb model path.')
     arg_parser.add_argument('-cl', '--coco_labelmap_path', type=str, default='./dataset_config/coco_labelmap.txt', help='coco labelmap file path.')
     arg_parser.add_argument('-bs', '--batch_size', type=int, default=4)
     arg_parser.add_argument('-st', '--score_threshold', type=float, default=0.05, help='socre threshold for detection results.')

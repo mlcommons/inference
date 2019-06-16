@@ -1,8 +1,5 @@
-wget --no-check-certificate https://zenodo.org/record/3060467/files/ssd_resnet-34_from_onnx.zip?download=1  -O ssd_resnet34_from_onnx.zip
+name=ssd_resnet34_cloud_native_tf.pb
+wget --no-check-certificate https://zenodo.org/record/3246481/files/ssd_resnet34_mAP_20.2.pb?download=1 -O $name
 
 mkdir pretrained
-mv ssd_resnet34_from_onnx.zip ./pretrained
-cd pretrained
-unzip ssd_resnet34_from_onnx.zip
-cd ..
-
+mv $name ./pretrained/$name

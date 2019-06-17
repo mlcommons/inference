@@ -7,7 +7,7 @@ tflite backend (https://github.com/tensorflow/tensorflow/lite)
 from threading import Lock
 
 import tensorflow as tf
-from tensorflow.contrib.lite.python import interpreter as interpreter_wrapper
+from tensorflow.lite.python import interpreter as interpreter_wrapper
 
 import backend
 

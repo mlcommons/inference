@@ -31,7 +31,7 @@ struct TestSettingsInternal {
   std::chrono::nanoseconds target_latency;
   int max_async_queries;
 
-  // Taget duration is used to generate queries of a minimum duration before
+  // Target duration is used to generate queries of a minimum duration before
   // the test run.
   std::chrono::milliseconds target_duration;
 

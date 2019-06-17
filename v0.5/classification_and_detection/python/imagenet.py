@@ -68,7 +68,7 @@ class Imagenet(dataset.Dataset):
                 self.label_list.append(int(label))
 
                 # limit the dataset if requested
-                if self.count and len(self.image_list) > self.count:
+                if self.count and len(self.image_list) >= self.count:
                     break
 
         time_taken = time.time() - start

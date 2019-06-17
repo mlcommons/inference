@@ -150,13 +150,6 @@ SCENARIO_MAP = {
     "MultiStream": lg.TestScenario.MultiStream,
     "Server": lg.TestScenario.Server,
     "Offline": lg.TestScenario.Offline,
-    "Accuracy": lg.TestMode.AccuracyOnly,
-}
-
-MODE_MAP = {
-    "Performance": lg.TestMode.PerformanceOnly,
-    "Accuracy": lg.TestMode.AccuracyOnly,
-    "Submission": lg.TestMode.SubmissionRun,
 }
 
 last_timeing = []
@@ -172,8 +165,6 @@ def get_args():
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
     parser.add_argument("--scenario", default="SingleStream",
                         help="mlperf benchmark scenario, list of " + str(list(SCENARIO_MAP.keys())))
-    parser.add_argument("--mode", default="Performance", choices=MODE_MAP.keys(),
-                        help="mlperf benchmark mode")
     parser.add_argument("--queries-single", type=int, default=1024,
                         help="mlperf number of queries for SingleStream")
     parser.add_argument("--queries-offline", type=int, default=24576,
@@ -264,12 +255,14 @@ class RunnerBase:
         self.threads = threads
         self.take_accuracy = False
         self.max_batchsize = max_batchsize
+        self.result_timing = []
 
     def handle_tasks(self, tasks_queue):
         pass
 
     def start_run(self, result_dict, take_accuracy):
         self.result_dict = result_dict
+        self.result_timing = []
         self.take_accuracy = take_accuracy
         self.post_process.start()
 
@@ -281,18 +274,18 @@ class RunnerBase:
             processed_results = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
+                self.result_timing.append(time.time() - qitem.start)
         except Exception as ex:  # pylint: disable=broad-except
             src = [self.ds.get_item_loc(i) for i in qitem.content_id]
             log.error("thread: failed on contentid=%s, %s", src, ex)
             # since post_process will not run, fake empty responses
             processed_results = [[]] * len(qitem.query_id)
         finally:
-            if not self.take_accuracy:
-                response = []
-                for idx, query_id in enumerate(qitem.query_id):
-                    bi = array.array("B", np.array(processed_results[idx], np.float32).tobytes()).buffer_info()
-                    response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
-                lg.QuerySamplesComplete(response)
+            response = []
+            for idx, query_id in enumerate(qitem.query_id):
+                bi = array.array("B", np.array(processed_results[idx], np.float32).tobytes()).buffer_info()
+                response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
+            lg.QuerySamplesComplete(response)
 
     def enqueue(self, query_samples):
         idx = [q.index for q in query_samples]
@@ -365,15 +358,16 @@ def add_results(final_results, name, result_dict, result_list, took):
 
     # this is what we record for each run
     result = {
-        "mean": np.mean(result_list),
         "took": took,
+        "mean": np.mean(result_list),
+        "percentiles": {str(k): v for k, v in zip(percentiles, buckets)},
         "qps": len(result_list) / took,
         "count": len(result_list),
-        "percentiles": {str(k): v for k, v in zip(percentiles, buckets)},
         "good_items": result_dict["good"],
         "total_items": result_dict["total"],
         "accuracy": 100. * result_dict["good"] / result_dict["total"],
     }
+
     mAP = ""
     if "mAP" in result_dict:
         result["mAP"] = result_dict["mAP"]
@@ -400,6 +394,13 @@ def main():
     # override image format if given
     image_format = args.data_format if args.data_format else backend.image_format()
 
+    # --count applies to accuracy mode only and can be used to limit the number of images
+    # for testing. For perf model we always limit count to 200.
+    count = args.count
+    if not count:
+        if not args.accuracy:
+            count = 200
+
     # dataset to use
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
     ds = wanted_dataset(data_path=args.dataset_path,
@@ -408,7 +409,7 @@ def main():
                         image_format=image_format,
                         pre_process=pre_proc,
                         use_cache=args.cache,
-                        count=args.count, **kwargs)
+                        count=count, **kwargs)
     # load model to backend
     model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
     final_results = {
@@ -421,30 +422,7 @@ def main():
     #
     # make one pass over the dataset to validate accuracy
     #
-    count = args.count if args.count else ds.get_item_count()
-
-    if args.accuracy:
-        #
-        # accuracy pass
-        #
-        log.info("starting accuracy pass on {} items".format(count))
-        last_timeing = []
-        runner = RunnerBase(model, ds, args.threads, post_proc=post_proc)
-        result_dict = {"good": 0, "total": 0, "scenario": "Accuracy"}
-        runner.start_run(result_dict, True)
-        start = time.time()
-        for idx in range(0, count):
-            ds.load_query_samples([idx])
-            query_sample = collections.namedtuple('query_sample', ['index', 'id'])
-            query_sample.index = idx
-            query_sample.id = idx
-            start_one = time.time()
-            runner.enqueue([query_sample])
-            last_timeing.append(time.time() - start_one)
-        runner.finish()
-        # aggregate results
-        post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
-        add_results(final_results, "Accuracy", result_dict, last_timeing, time.time() - start)
+    count = ds.get_item_count()
 
     # warmup
     ds.load_query_samples([0])
@@ -468,14 +446,15 @@ def main():
         def process_latencies(latencies_ns):
             # called by loadgen to show us the recorded latencies
             global last_timeing
-            last_timeing = [t / 1e9 for t in latencies_ns]
+            last_timeing = [t / NANO_SEC for t in latencies_ns]
 
         settings = lg.TestSettings()
         settings.enable_spec_overrides = True
-        settings.multi_stream_samples_per_query = 8
         settings.scenario = scenario
-        settings.mode = MODE_MAP[args.mode]
-        
+        settings.mode = lg.TestMode.PerformanceOnly
+        if args.accuracy:
+            settings.mode = lg.TestMode.AccuracyOnly
+
         if args.time:
             # override the time we want to run
             settings.override_min_duration_ms = args.time * MILLI_SEC
@@ -486,13 +465,13 @@ def main():
             settings.server_target_qps = qps
             settings.offline_expected_qps = qps
 
-        max_latency = [1.]
         if scenario == lg.TestScenario.SingleStream:
             settings.override_min_query_count = args.queries_single
             settings.override_max_query_count = args.queries_single
         elif scenario == lg.TestScenario.MultiStream:
             settings.override_min_query_count = args.queries_multi
             settings.override_max_query_count = args.queries_multi
+            settings.multi_stream_samples_per_query = 4
         elif scenario == lg.TestScenario.Server:
             max_latency = args.max_latency
         elif scenario == lg.TestScenario.Offline:
@@ -502,17 +481,32 @@ def main():
         sut = lg.ConstructSUT(issue_queries, process_latencies)
         qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
 
-        for target_latency in max_latency:
-            log.info("starting {}, latency={}".format(scenario, target_latency))
+        if scenario == lg.TestScenario.Server:
+            for target_latency in max_latency:
+                log.info("starting {}, latency={}".format(scenario, target_latency))
+                settings.override_target_latency_ns = int(target_latency * NANO_SEC)
 
-            settings.single_stream_expected_latency_ns = int(target_latency * NANO_SEC)
-            settings.override_target_latency_ns = int(target_latency * NANO_SEC)
+                result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
+                runner.start_run(result_dict, args.accuracy)
+                lg.StartTest(sut, qsl, settings)
 
+                if not last_timeing:
+                    last_timeing = runner.result_timing
+                if args.accuracy:
+                    post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
+                add_results(final_results, "{}-{}".format(scenario, target_latency),
+                            result_dict, last_timeing, time.time() - ds.last_loaded)
+        else:
+            log.info("starting {}".format(scenario))
             result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
-            runner.start_run(result_dict, False)
+            runner.start_run(result_dict, args.accuracy)
             lg.StartTest(sut, qsl, settings)
 
-            add_results(final_results, "{}-{}".format(scenario, target_latency),
+            if not last_timeing:
+                last_timeing = runner.result_timing
+            if args.accuracy:
+                post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
+            add_results(final_results, "{}".format(scenario),
                         result_dict, last_timeing, time.time() - ds.last_loaded)
 
         runner.finish()

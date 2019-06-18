@@ -76,7 +76,7 @@ Support for other backends can be easily added.
 
 The following steps are **only** needed if you run the benchmark **without Docker**.
 
-We require Python 3.5, 3.6 or 3.7 and recommend to use Anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal Anaconda install).
+Python 3.5, 3.6 or 3.7 is supported and we recommend to use Anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal Anaconda install).
 
 Install the desired backend.
 For tensorflow:
@@ -85,12 +85,12 @@ pip install tensorflow or pip install tensorflow-gpu
 ```
 For onnxruntime:
 ```
-pip install onnxruntime
+pip install onnxruntime or pip install onnxruntime-gpu
 ```
 
 Build and install the benchmark:
 ```
-cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop; cd ../cloud/image_classification
+cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop; cd ../v0.5/classification_and_detection
 
 python setup.py develop
 ```
@@ -139,11 +139,11 @@ This will build and run the benchmark.
 ### Examples for testing
 During development running the full benchmark is unpractical. Some options to help:
 
-```--count``` limits the number of items in the dataset used
+```--count``` limits the number of items in the dataset used for accuracy pass
 
 ```--time``` limits the time the benchmark runs
 
-```--accuracy``` makes a pass on accuracy. 
+```--accuracy``` enables accuracy pass
 
 ```--max-latency``` the latency used for Server mode
 
@@ -155,7 +155,7 @@ or
 
 ```
 
-If you want to debug accuracy issues, try:
+If you want run with accuracy pass, try:
 ```
 ./run_local.sh tf ssd-mobilenet gpu --accuracy --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.2
 ```
@@ -169,7 +169,6 @@ usage: main.py [-h]
     [--data-format {NCHW,NHWC}]
     [--profile {defaults,resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-pytorch,ssd-resnet34-onnxruntime}]
     [--scenario list of SingleStream,MultiStream,Server,Offline]
-    [--mode {Performance,Accuracy,Submission}]
     [--queries-single QUERIES_SINGLE]
     [--queries-offline QUERIES_OFFLINE]
     [--queries-multi QUERIES_MULTI] [--max-batchsize MAX_BATCHSIZE]
@@ -177,10 +176,6 @@ usage: main.py [-h]
     [--outputs OUTPUTS] [--backend BACKEND] [--threads THREADS]
     [--time TIME] [--count COUNT] [--qps QPS]
     [--max-latency MAX_LATENCY] [--cache CACHE] [--accuracy]
-```
-For example, to run a quick test on 200ms in the 99 percentile for tensorflow you would do:
-```
-python python/main.py --profile resnet50-tf --count 500 --time 60 --model models/resnet50_v1.pb --dataset-path imagenet2012 --output results.json --max-latency 0.2 --accuracy
 ```
 
 ```--dataset```
@@ -224,9 +219,6 @@ Expected QPS.
 
 ```--max-latency MAX_LATENCY```
 comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
-
-```--mode {Performance,Accuracy,Submission}```
-The loadgen mode we want to run with (default: Performance).
 
 ```--queries-single QUERIES_SINGLE```
 queries to use for SingleStream scenario (default: 1024).

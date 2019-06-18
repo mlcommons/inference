@@ -1,4 +1,4 @@
-# SSD-MobileNet via TensorFlow (Python)
+# Object Detection via TensorFlow (Python)
 
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)

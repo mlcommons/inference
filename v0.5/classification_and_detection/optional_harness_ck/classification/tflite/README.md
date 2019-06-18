@@ -1,4 +1,4 @@
-# MobileNet via TensorFlow Lite (TFLite)
+# Image Classification via TensorFlow Lite (TFLite)
 
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)

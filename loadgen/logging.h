@@ -49,17 +49,23 @@ class AsyncLog {
   ~AsyncLog() { StartNewTrace(nullptr, PerfClock::now()); }
 
   void SetLogFiles(std::ostream* summary, std::ostream* detail,
-                   std::ostream* accuracy, PerfClock::time_point log_origin) {
+                   std::ostream* accuracy, bool copy_detail_to_stdout,
+                   bool copy_summary_to_stdout,
+                   PerfClock::time_point log_origin) {
     std::unique_lock<std::mutex> lock(log_mutex_);
     if (summary_out_ != &std::cerr) {
+      std::string error_summary;
       if (log_error_count_ == 0) {
-        *summary_out_ << "\nNo errors encountered during test.\n";
+        error_summary = "\nNo errors encountered during test.\n";
       } else if (log_error_count_ == 1) {
-        *summary_out_ << "\n1 ERROR encountered. See detailed log.\n";
+        error_summary = "\n1 ERROR encountered. See detailed log.\n";
       } else if (log_error_count_ != 0) {
-        *summary_out_ << "\n"
-                      << log_error_count_
-                      << " ERRORS encountered. See detailed log.\n";
+        error_summary = "\n" + std::to_string(log_error_count_) +
+                        " ERRORS encountered. See detailed log.\n";
+      }
+      *summary_out_ << error_summary;
+      if (copy_summary_to_stdout_) {
+        std::cout << error_summary;
       }
     }
     if (summary_out_) {
@@ -68,16 +74,18 @@ class AsyncLog {
     if (detail_out_) {
       detail_out_->flush();
     }
-    if (accuracy_out_) {
+    if (accuracy_out_ != &std::cerr) {
       WriteAccuracyFooterLocked();
       accuracy_out_->flush();
     }
     summary_out_ = summary;
     detail_out_ = detail;
     accuracy_out_ = accuracy;
-    if (accuracy_out_) {
+    if (accuracy_out_ != &std::cerr) {
       WriteAccuracyHeaderLocked();
     }
+    copy_detail_to_stdout_ = copy_detail_to_stdout;
+    copy_summary_to_stdout_ = copy_summary_to_stdout;
     log_origin_ = log_origin;
     log_error_count_ = 0;
   }
@@ -138,6 +146,12 @@ class AsyncLog {
     *summary_out_ << message;
     LogArgs(summary_out_, args...);
     *summary_out_ << "\n";
+
+    if (copy_summary_to_stdout_) {
+      std::cout << message;
+      LogArgs(&std::cout, args...);
+      std::cout << "\n";
+    }
   }
 
   void SetLogDetailTime(PerfClock::time_point time) { log_detail_time_ = time; }
@@ -160,16 +174,21 @@ class AsyncLog {
       log.ScopedTrace("LogDetail", "message", "\"" + sanitized_message + "\"");
     });
     std::unique_lock<std::mutex> lock(log_mutex_);
-    *detail_out_ << *current_pid_tid_
-                 << "\"ts\": " << (log_detail_time_ - log_origin_).count()
-                 << "ns : ";
-    if (error_flagged_) {
-      *detail_out_ << "ERROR : ";
-      error_flagged_ = false;
+    std::vector<std::ostream*> detail_streams{detail_out_, &std::cout};
+    if (!copy_detail_to_stdout_) {
+      detail_streams.pop_back();
     }
-    *detail_out_ << message;
-    LogArgs(detail_out_, args...);
-    *detail_out_ << "\n";
+    for (auto os : detail_streams) {
+      *os << *current_pid_tid_
+          << "\"ts\": " << (log_detail_time_ - log_origin_).count() << "ns : ";
+      if (error_flagged_) {
+        *os << "ERROR : ";
+      }
+      *os << message;
+      LogArgs(os, args...);
+      *os << "\n";
+    }
+    error_flagged_ = false;
   }
 
   void LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
@@ -352,6 +371,9 @@ class AsyncLog {
   std::ostream* summary_out_ = &std::cerr;
   std::ostream* detail_out_ = &std::cerr;
   std::ostream* accuracy_out_ = &std::cerr;
+  // TODO: Instead of these bools, use a class that forwards to two streams.
+  bool copy_detail_to_stdout_ = false;
+  bool copy_summary_to_stdout_ = false;
   bool accuracy_needs_comma_ = false;
   PerfClock::time_point log_origin_;
   uint32_t log_error_count_ = 0;
@@ -412,11 +434,14 @@ class Logger {
   void StopIOThread();
 
   void StartLogging(std::ostream* summary, std::ostream* detail,
-                    std::ostream* accuracy);
+                    std::ostream* accuracy, bool copy_detail_to_stdout,
+                    bool copy_summary_to_stdout);
   void StopLogging();
 
   void StartNewTrace(std::ostream* trace_out, PerfClock::time_point origin);
   void StopTracing();
+
+  void LogContentionCounters();
 
   void RestartLatencyRecording();
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);

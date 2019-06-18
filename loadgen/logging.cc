@@ -254,8 +254,10 @@ void Logger::StopIOThread() {
 }
 
 void Logger::StartLogging(std::ostream* summary, std::ostream* detail,
-                          std::ostream* accuracy) {
-  async_logger_.SetLogFiles(summary, detail, accuracy, PerfClock::now());
+                          std::ostream* accuracy, bool copy_detail_to_stdout,
+                          bool copy_summary_to_stdout) {
+  async_logger_.SetLogFiles(summary, detail, accuracy, copy_detail_to_stdout,
+                            copy_summary_to_stdout, PerfClock::now());
 }
 
 void Logger::StopLogging() {
@@ -264,6 +266,28 @@ void Logger::StopLogging() {
     return;
   }
 
+  // Flush logs from this thread.
+  std::promise<void> io_thread_flushed_this_thread;
+  Log([&](AsyncLog&) { io_thread_flushed_this_thread.set_value(); });
+  io_thread_flushed_this_thread.get_future().wait();
+  async_logger_.SetLogFiles(&std::cerr, &std::cerr, &std::cerr, false, false,
+                            PerfClock::now());
+}
+
+void Logger::StartNewTrace(std::ostream* trace_out,
+                           PerfClock::time_point origin) {
+  async_logger_.StartNewTrace(trace_out, origin);
+}
+
+void Logger::StopTracing() {
+  // Flush traces from this thread.
+  std::promise<void> io_thread_flushed_this_thread;
+  Log([&](AsyncLog&) { io_thread_flushed_this_thread.set_value(); });
+  io_thread_flushed_this_thread.get_future().wait();
+  async_logger_.StartNewTrace(nullptr, PerfClock::now());
+}
+
+void Logger::LogContentionCounters() {
   LogDetail([&](AsyncLog& log) {
     {
       std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
@@ -292,26 +316,14 @@ void Logger::StopLogging() {
                   " : tls_total_log_cas_fail_count");
     log.LogDetail(std::to_string(tls_total_swap_buffers_slot_retry_count_) +
                   " : tls_total_swap_buffers_slot_retry_count");
+
+    swap_request_slots_retry_count_ = 0;
+    swap_request_slots_retry_retry_count_ = 0;
+    swap_request_slots_retry_reencounter_count_ = 0;
+    start_reading_entries_retry_count_ = 0;
+    tls_total_log_cas_fail_count_ = 0;
+    tls_total_swap_buffers_slot_retry_count_ = 0;
   });
-  // Flush logs from this thread.
-  std::promise<void> io_thread_flushed_this_thread;
-  Log([&](AsyncLog&) { io_thread_flushed_this_thread.set_value(); });
-  io_thread_flushed_this_thread.get_future().wait();
-  async_logger_.SetLogFiles(&std::cerr, &std::cerr, &std::cerr,
-                            PerfClock::now());
-}
-
-void Logger::StartNewTrace(std::ostream* trace_out,
-                           PerfClock::time_point origin) {
-  async_logger_.StartNewTrace(trace_out, origin);
-}
-
-void Logger::StopTracing() {
-  // Flush traces from this thread.
-  std::promise<void> io_thread_flushed_this_thread;
-  Log([&](AsyncLog&) { io_thread_flushed_this_thread.set_value(); });
-  io_thread_flushed_this_thread.get_future().wait();
-  async_logger_.StartNewTrace(nullptr, PerfClock::now());
 }
 
 void Logger::RestartLatencyRecording() {

@@ -1,4 +1,4 @@
-# SSD-MobileNet via TensorFlow Lite
+# Object Detection via TensorFlow Lite
 
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)

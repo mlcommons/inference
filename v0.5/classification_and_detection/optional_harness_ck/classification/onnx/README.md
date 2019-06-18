@@ -1,4 +1,4 @@
-# MobileNet via ONNX
+# Image Classification via ONNX
 
 1. [Installation instructions](#installation)
 2. [Benchmarking instructions](#benchmarking)

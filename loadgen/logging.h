@@ -12,6 +12,7 @@
 #include <list>
 #include <mutex>
 #include <set>
+#include <string>
 #include <thread>
 #include <unordered_set>
 #include <vector>

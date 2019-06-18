@@ -1030,10 +1030,10 @@ struct LogOutputs {
     }
     const std::string& suffix = output_settings.suffix;
 
-    summary_out.open(prefix + "mlperf_log_summary" + suffix + ".txt");
-    detail_out.open(prefix + "mlperf_log_detail" + suffix + ".txt");
-    accuracy_out.open(prefix + "mlperf_log_accuracy" + suffix + ".json");
-    trace_out.open(prefix + "mlperf_trace" + suffix + ".json");
+    summary_out.open(prefix + "summary" + suffix + ".txt");
+    detail_out.open(prefix + "detail" + suffix + ".txt");
+    accuracy_out.open(prefix + "accuracy" + suffix + ".json");
+    trace_out.open(prefix + "trace" + suffix + ".json");
   }
 
   bool CheckOutputs() {

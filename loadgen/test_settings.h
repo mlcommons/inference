@@ -7,6 +7,7 @@
 // The comments in this file are indicative of the loadgen implementation.
 
 #include <cstdint>
+#include <string>
 
 namespace mlperf {
 
@@ -145,11 +146,11 @@ struct LogOutputSettings {
   // By default, the loadgen outputs its log files to outdir and
   // modifies the filenames of its logs with a prefix and suffix.
   // Filenames will take the form:
-  // "<outdir>/<prefix><datetime>mlperf_log_summary<suffix>.txt"
+  // "<outdir>/<datetime><prefix>summary<suffix>.txt"
   std::string outdir = ".";
-  std::string prefix = "";
+  std::string prefix = "mlperf_log_";
   std::string suffix = "";
-  bool prefix_with_datetime = false;  // |prefix| comes before the datetime.
+  bool prefix_with_datetime = false;
   bool copy_detail_to_stdout = false;
   bool copy_summary_to_stdout = false;
 };

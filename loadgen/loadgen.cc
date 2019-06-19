@@ -27,6 +27,22 @@ namespace mlperf {
 struct SampleMetadata;
 struct QueryMetadata;
 
+// Every query and sample within a call to StartTest gets a unique sequence id
+// for easy cross reference.
+struct SequenceGen {
+  uint64_t NextQueryId() { return query_id++; }
+  uint64_t NextSampleId() { return sample_id++; }
+
+ private:
+  uint64_t query_id = 0;
+  uint64_t sample_id = 0;
+};
+
+struct LoadableSampleSet {
+  std::vector<QuerySampleIndex> set;
+  const size_t sample_distribution_end;  // Excludes padding in multi-stream.
+};
+
 struct ResponseDelegate {
   virtual ~ResponseDelegate() = default;
   virtual void SampleComplete(SampleMetadata*, QuerySampleResponse*,
@@ -46,15 +62,14 @@ class QueryMetadata {
  public:
   QueryMetadata(const std::vector<QuerySampleIndex>& query_sample_indicies,
                 std::chrono::nanoseconds scheduled_delta,
-                ResponseDelegate* response_delegate, uint64_t query_sequence_id,
-                uint64_t* sample_sequence_id)
+                ResponseDelegate* response_delegate, SequenceGen* sequence_gen)
       : scheduled_delta(scheduled_delta),
         response_delegate(response_delegate),
-        sequence_id(query_sequence_id),
+        sequence_id(sequence_gen->NextQueryId()),
         wait_count_(query_sample_indicies.size()) {
     samples_.reserve(query_sample_indicies.size());
     for (QuerySampleIndex qsi : query_sample_indicies) {
-      samples_.push_back({this, (*sample_sequence_id)++, qsi});
+      samples_.push_back({this, sequence_gen->NextSampleId(), qsi});
     }
     query_to_send.reserve(query_sample_indicies.size());
     for (auto& s : samples_) {
@@ -250,10 +265,12 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
 template <TestScenario scenario, TestMode mode>
 std::vector<QueryMetadata> GenerateQueries(
     const TestSettingsInternal& settings,
-    const std::vector<QuerySampleIndex>& loaded_samples,
-    ResponseDelegate* response_delegate) {
+    const LoadableSampleSet& loaded_sample_set,
+    SequenceGen* sequence_gen, ResponseDelegate* response_delegate) {
   auto trace = MakeScopedTracer(
       [](AsyncLog& log) { log.ScopedTrace("GenerateQueries"); });
+
+  auto& loaded_samples = loaded_sample_set.set;
 
   // Generate 2x more samples than we think we'll need given the expected
   // QPS. We should exit before issuing all queries.
@@ -280,14 +297,12 @@ std::vector<QueryMetadata> GenerateQueries(
   std::mt19937 schedule_rng(settings.schedule_rng_seed);
 
   auto sample_distribution = SampleDistribution<mode>(
-      loaded_samples.size(), settings.samples_per_query);
+      loaded_sample_set.sample_distribution_end, settings.samples_per_query);
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
   std::vector<QuerySampleIndex> samples(settings.samples_per_query);
   std::chrono::nanoseconds timestamp(0);
-  uint64_t query_sequence_id = 0;
-  uint64_t sample_sequence_id = 0;
   while (timestamp <= k2xTargetDuration || queries.size() < min_queries) {
     if (scenario == TestScenario::MultiStream ||
         scenario == TestScenario::MultiStreamFree) {
@@ -305,10 +320,8 @@ std::vector<QueryMetadata> GenerateQueries(
         s = loaded_samples[sample_distribution(sample_rng)];
       }
     }
-    queries.emplace_back(samples, timestamp, response_delegate,
-                         query_sequence_id, &sample_sequence_id);
+    queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
     timestamp += schedule_distribution(schedule_rng);
-    query_sequence_id++;
   }
 
   // See if we need to create a "remainder" query for offline+accuracy to
@@ -322,8 +335,7 @@ std::vector<QueryMetadata> GenerateQueries(
       for (auto& s : samples) {
         s = loaded_samples[sample_distribution(sample_rng)];
       }
-      queries.emplace_back(samples, timestamp, response_delegate,
-                           query_sequence_id, &sample_sequence_id);
+      queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
     }
   }
 
@@ -511,14 +523,15 @@ struct PerformanceResult {
 //       no longer generates queries on the fly. Should we reduce the
 //       use of templates?
 template <TestScenario scenario, TestMode mode>
-PerformanceResult IssueQueries(
-    SystemUnderTest* sut, const TestSettingsInternal& settings,
-    const std::vector<QuerySampleIndex>& sample_set) {
+PerformanceResult IssueQueries(SystemUnderTest* sut,
+                               const TestSettingsInternal& settings,
+                               const LoadableSampleSet& loaded_sample_set,
+                               SequenceGen* sequence_gen) {
   GlobalLogger().RestartLatencyRecording();
   ResponseDelegateDetailed<scenario, mode> response_logger;
 
-  std::vector<QueryMetadata> queries =
-      GenerateQueries<scenario, mode>(settings, sample_set, &response_logger);
+  std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(
+      settings, loaded_sample_set, sequence_gen, &response_logger);
 
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.
@@ -825,7 +838,7 @@ void PerformanceSummary::Log(AsyncLog& log) {
 
 void LoadSamplesToRam(QuerySampleLibrary* qsl,
                       const std::vector<QuerySampleIndex>& samples) {
-  LogDetail([samples](AsyncLog& log) {
+  LogDetail([&samples](AsyncLog& log) {
     std::string set("\"[");
     for (auto i : samples) {
       set += std::to_string(i) + ",";
@@ -841,76 +854,79 @@ template <TestScenario scenario>
 void RunPerformanceMode(
     SystemUnderTest* sut, QuerySampleLibrary* qsl,
     const TestSettingsInternal& settings,
-    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+    const std::vector<LoadableSampleSet>& loadable_sets,
+    SequenceGen* sequence_gen) {
   LogDetail([](AsyncLog& log) { log.LogDetail("Starting performance mode:"); });
 
   // Use first loadable set as the performance set.
-  const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
-  LoadSamplesToRam(qsl, performance_set);
+  const LoadableSampleSet& performance_set = loadable_sets.front();
+  LoadSamplesToRam(qsl, performance_set.set);
 
   PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
-      sut, settings, performance_set));
+      sut, settings, performance_set, sequence_gen));
 
   sut->ReportLatencyResults(pr.latencies);
 
   Log([perf_summary = PerformanceSummary{sut->Name(), settings, std::move(pr)}](
           AsyncLog& log) mutable { perf_summary.Log(log); });
 
-  qsl->UnloadSamplesFromRam(performance_set);
+  qsl->UnloadSamplesFromRam(performance_set.set);
 }
 
 template <TestScenario scenario>
 void FindPeakPerformanceMode(
     SystemUnderTest* sut, QuerySampleLibrary* qsl,
     const TestSettingsInternal& settings,
-    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+    const std::vector<LoadableSampleSet>& loadable_sets,
+    SequenceGen* sequence_gen) {
   LogDetail([](AsyncLog& log) {
     log.LogDetail("Starting FindPeakPerformance mode:");
   });
 
   // Use first loadable set as the performance set.
-  const std::vector<QuerySampleIndex>& performance_set = loadable_sets.front();
+  const LoadableSampleSet& performance_set = loadable_sets.front();
 
-  LoadSamplesToRam(qsl, performance_set);
+  LoadSamplesToRam(qsl, performance_set.set);
 
   TestSettingsInternal search_settings = settings;
 
   bool still_searching = true;
   while (still_searching) {
     PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
-        sut, search_settings, performance_set));
+        sut, search_settings, performance_set, sequence_gen));
     PerformanceSummary perf_summary{sut->Name(), search_settings,
                                     std::move(pr)};
   }
 
-  qsl->UnloadSamplesFromRam(performance_set);
+  qsl->UnloadSamplesFromRam(performance_set.set);
 }
 
 template <TestScenario scenario>
 void RunAccuracyMode(
     SystemUnderTest* sut, QuerySampleLibrary* qsl,
     const TestSettingsInternal& settings,
-    const std::vector<std::vector<QuerySampleIndex>>& loadable_sets) {
+    const std::vector<LoadableSampleSet>& loadable_sets,
+    SequenceGen* sequence_gen) {
   LogDetail([](AsyncLog& log) { log.LogDetail("Starting accuracy mode:"); });
 
   for (auto& loadable_set : loadable_sets) {
     {
       auto trace =
-          MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
+          MakeScopedTracer([count = loadable_set.set.size()](AsyncLog& log) {
             log.ScopedTrace("LoadSamples", "count", count);
           });
-      LoadSamplesToRam(qsl, loadable_set);
+      LoadSamplesToRam(qsl, loadable_set.set);
     }
 
     PerformanceResult pr(IssueQueries<scenario, TestMode::AccuracyOnly>(
-        sut, settings, loadable_set));
+        sut, settings, loadable_set, sequence_gen));
 
     {
       auto trace =
-          MakeScopedTracer([count = loadable_set.size()](AsyncLog& log) {
+          MakeScopedTracer([count = loadable_set.set.size()](AsyncLog& log) {
             log.ScopedTrace("UnloadSampes", "count", count);
           });
-      qsl->UnloadSamplesFromRam(loadable_set);
+      qsl->UnloadSamplesFromRam(loadable_set.set);
     }
   }
 }
@@ -921,7 +937,8 @@ struct RunFunctions {
   using Signature =
       void(SystemUnderTest* sut, QuerySampleLibrary* qsl,
            const TestSettingsInternal& settings,
-           const std::vector<std::vector<QuerySampleIndex>>& loadable_sets);
+           const std::vector<LoadableSampleSet>& loadable_sets,
+           SequenceGen* sequence_gen);
 
   template <TestScenario compile_time_scenario>
   static RunFunctions GetCompileTime() {
@@ -961,12 +978,12 @@ struct RunFunctions {
 //       garbage collection logic, but we'd need to avoid later samples being
 //       less likely to be in the smallest set. This may not be an important
 //       requirement though.
-std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
+std::vector<LoadableSampleSet> GenerateLoadableSets(
     QuerySampleLibrary* qsl, const TestSettingsInternal& settings) {
   auto trace = MakeScopedTracer(
       [](AsyncLog& log) { log.ScopedTrace("GenerateLoadableSets"); });
 
-  std::vector<std::vector<QuerySampleIndex>> result;
+  std::vector<LoadableSampleSet> result;
   std::mt19937 qsl_rng(settings.qsl_rng_seed);
 
   // Generate indicies for all available samples in the QSL.
@@ -992,20 +1009,23 @@ std::vector<std::vector<QuerySampleIndex>> GenerateLoadableSets(
   for (auto s : samples) {
     loadable_set.push_back(s);
     if (loadable_set.size() == set_size) {
-      result.push_back(std::move(loadable_set));
+      result.push_back({std::move(loadable_set), set_size});
       loadable_set.clear();
       loadable_set.reserve(set_size + set_padding);
     }
   }
 
   if (!loadable_set.empty()) {
-    result.push_back(std::move(loadable_set));
+    // Copy the size since it will become invalid after the move.
+    size_t loadable_set_size = loadable_set.size();
+    result.push_back({std::move(loadable_set), loadable_set_size});
   }
 
   // Add padding for the multi stream scenario. Padding allows the
   // startings sample to be the same for all SUTs, independent of the value
   // of samples_per_query, while enabling samples in a query to be contiguous.
-  for (auto& set : result) {
+  for (auto& loadable_set : result) {
+    auto& set = loadable_set.set;
     for (size_t i = 0; i < set_padding; i++) {
       // It's not clear in the spec if the STL deallocates the old container
       // before assigning, which would invalidate the source before the
@@ -1030,10 +1050,10 @@ struct LogOutputs {
     }
     const std::string& suffix = output_settings.suffix;
 
-    summary_out.open(prefix + "mlperf_log_summary" + suffix + ".txt");
-    detail_out.open(prefix + "mlperf_log_detail" + suffix + ".txt");
-    accuracy_out.open(prefix + "mlperf_log_accuracy" + suffix + ".json");
-    trace_out.open(prefix + "mlperf_trace" + suffix + ".json");
+    summary_out.open(prefix + "summary" + suffix + ".txt");
+    detail_out.open(prefix + "detail" + suffix + ".txt");
+    accuracy_out.open(prefix + "accuracy" + suffix + ".json");
+    trace_out.open(prefix + "trace" + suffix + ".json");
   }
 
   bool CheckOutputs() {
@@ -1083,7 +1103,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   LogLoadgenVersion();
   LogDetail([sut, qsl, test_date_time](AsyncLog& log) {
-    log.LogDetail("Date + time of test:", test_date_time);
+    log.LogDetail("Date + time of test: ", test_date_time);
     log.LogDetail("System Under Test (SUT) name: ", sut->Name());
     log.LogDetail("Query Sample Library (QSL) name: ", qsl->Name());
     log.LogDetail("QSL total size: ", qsl->TotalSampleCount());
@@ -1092,25 +1112,30 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   TestSettingsInternal sanitized_settings(requested_settings);
   sanitized_settings.LogAllSettings();
 
-  std::vector<std::vector<QuerySampleIndex>> loadable_sets(
+  std::vector<LoadableSampleSet> loadable_sets(
       GenerateLoadableSets(qsl, sanitized_settings));
 
   RunFunctions run_funcs = RunFunctions::Get(sanitized_settings.scenario);
 
+  SequenceGen sequence_gen;
   switch (sanitized_settings.mode) {
     case TestMode::SubmissionRun:
-      run_funcs.accuracy(sut, qsl, sanitized_settings, loadable_sets);
-      run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets);
+      run_funcs.accuracy(sut, qsl, sanitized_settings, loadable_sets,
+                         &sequence_gen);
+      run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets,
+                            &sequence_gen);
       break;
     case TestMode::AccuracyOnly:
-      run_funcs.accuracy(sut, qsl, sanitized_settings, loadable_sets);
+      run_funcs.accuracy(sut, qsl, sanitized_settings, loadable_sets,
+                         &sequence_gen);
       break;
     case TestMode::PerformanceOnly:
-      run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets);
+      run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets,
+                            &sequence_gen);
       break;
     case TestMode::FindPeakPerformance:
       run_funcs.find_peak_performance(sut, qsl, sanitized_settings,
-                                      loadable_sets);
+                                      loadable_sets, &sequence_gen);
       break;
   }
 

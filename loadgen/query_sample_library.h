@@ -28,12 +28,26 @@ class QuerySampleLibrary {
 
   // Loads the requested query samples into memory.
   // Paired with calls to UnloadSamplesFromRam.
-  // The load generator will never load a currently loaded sample.
+  // In the MultiStream scenarios:
+  //   * Samples will appear more than once.
+  //   * SystemUnderTest::IssueQuery will only be called with a set of samples
+  //     that are neighbors in the vector of samples here, which helps
+  //     SUTs that need the queries to be contiguous.
+  // In all other scenarios:
+  //   * A previously loaded sample will not be loaded again.
   virtual void LoadSamplesToRam(
       const std::vector<QuerySampleIndex>& samples) = 0;
 
   // Unloads the requested query samples from memory.
-  // The load generator will never unload a currently unloaded sample.
+  // In the MultiStream scenarios:
+  //   * Samples may be unloaded the same number of times they were loaded;
+  //     however, if the implementation de-dups loaded samples rather than
+  //     loading samples into contiguous memory, it may unload a sample the
+  //     first time they see it unloaded without a refcounting scheme, ignoring
+  //     subsequent unloads. A refcounting scheme would also work, but is not
+  //     a requirement.
+  // In all other scenarios:
+  //   * A previously unloaded sample will not be unloaded again.
   virtual void UnloadSamplesFromRam(
       const std::vector<QuerySampleIndex>& samples) = 0;
 

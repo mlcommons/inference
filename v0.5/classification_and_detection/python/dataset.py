@@ -60,7 +60,8 @@ class Dataset():
     def unload_query_samples(self, sample_list):
         if sample_list:
             for sample in sample_list:
-                del self.image_list_inmemory[sample]
+                if sample in self.image_list_inmemory :
+                    del self.image_list_inmemory[sample]
         else:
             self.image_list_inmemory = {}
 

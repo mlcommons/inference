@@ -1,8 +1,3 @@
-executable("loadgen_demo_cpp") {
-  sources = [ "demo.cc" ]
-  deps = [ "..:mlperf_loadgen" ]
-}
-
 source_set("loadgen_demos_python") {
   sources = [ "py_demo_multi_stream.py",
               "py_demo_multi_stream_free.py",

@@ -2,17 +2,18 @@
 
 ## Quick Start
 
+    pip install absl-py numpy
     git clone --recurse-submodules https://github.com/mlperf/inference.git mlperf_inference
     cd mlperf_inference/loadgen
     CFLAGS="-std=c++14" python setup.py bdist_wheel
-    pip install --force-reinstall dist/mlperf_loadgen-0.5a0-cp27-cp27mu-linux_x86_64.whl
+    pip install --force-reinstall dist/mlperf_loadgen-0.5a0-cp36-cp36m-linux_x86_64.whl
     python demos/py_demo_single_stream.py
 
 This will fetch the loadgen source, build and install the loadgen as a python module, and run a simple end-to-end demo. The exact *.whl filename may differ on your system, but there should only be one resulting whl file for you to use.
 
 A summary of the test results can be found in the *"mlperf_log_summary.txt"* logfile.
 
-For a timeline visualization of what happened during the test, open the *"mlperf_trace.json"* file in Chrome:
+For a timeline visualization of what happened during the test, open the *"mlperf_log_trace.json"* file in Chrome:
 * Type “chrome://tracing” in the address bar, then drag-n-drop the json.
 * This may be useful for SUT performance tuning and understanding + debugging the loadgen.
 

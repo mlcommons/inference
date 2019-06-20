@@ -23,7 +23,6 @@ lib_sources = [
   "mlperf_spec_constants.h",
   "test_settings_internal.cc",
   "test_settings_internal.h",
-  "trace_generator.h",
   "utils.cc",
   "utils.h",
   "version.cc",

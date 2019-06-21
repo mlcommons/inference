@@ -10,6 +10,8 @@ import time
 
 import numpy as np
 
+from PIL import Image
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("dataset")
 
@@ -159,7 +161,7 @@ def resize_with_aspectratio(img, out_height, out_width, scale=87.5):
     else:
         h = new_height
         w = int(out_width * height / new_height)
-    img = img.resize((w, h))
+    img = img.resize((w, h), Image.BILINEAR)
     return img
 
 
@@ -176,7 +178,6 @@ def pre_process_vgg(img, dims=None, need_transpose=False):
     # normalize image
     means = np.array([123.68, 116.78, 103.94], dtype=np.float32)
     img -= means
-
     # transpose if needed
     if need_transpose:
         img = img.transpose([2, 0, 1])
@@ -237,7 +238,7 @@ def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
 
     if dims != None:
         im_height, im_width, _ = dims
-        img = img.resize((im_width, im_height), 2) # PIL.Image.BILINEAR
+        img = img.resize((im_width, im_height), Image.BILINEAR)
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
     img_data = np.array(img.getdata(), dtype=np.float32)

@@ -348,7 +348,7 @@ class QueueRunner(RunnerBase):
             worker.join()
 
 
-def add_results(final_results, name, result_dict, result_list, took):
+def add_results(final_results, name, result_dict, result_list, took, show_accuracy=False):
     percentiles = [50., 80., 90., 95., 99., 99.9]
     buckets = np.percentile(result_list, percentiles).tolist()
     buckets_str = ",".join(["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)])
@@ -365,20 +365,21 @@ def add_results(final_results, name, result_dict, result_list, took):
         "count": len(result_list),
         "good_items": result_dict["good"],
         "total_items": result_dict["total"],
-        "accuracy": 100. * result_dict["good"] / result_dict["total"],
     }
-
-    mAP = ""
-    if "mAP" in result_dict:
-        result["mAP"] = result_dict["mAP"]
-        mAP = ", mAP={:.2f}".format(result_dict["mAP"])
+    acc_str = ""
+    if show_accuracy:
+        result["accuracy"] = 100. * result_dict["good"] / result_dict["total"]
+        acc_str = ", acc={:.2f}".format(result["accuracy"])
+        if "mAP" in result_dict:
+            result["mAP"] = result_dict["mAP"]
+            acc_str += ", mAP={:.2f}".format(result_dict["mAP"])
 
     # add the result to the result dict
     final_results[name] = result
 
     # to stdout
-    print("{} qps={:.2f}, mean={:.6f}, time={:.2f}, acc={:.2f}{}, queries={}, tiles={}".format(
-        name, result["qps"], result["mean"], took, result["accuracy"], mAP,
+    print("{} qps={:.2f}, mean={:.4f}, time={:.2f}{}, queries={}, tiles={}".format(
+        name, result["qps"], result["mean"], took, acc_str,
         len(result_list), buckets_str))
 
 
@@ -495,7 +496,7 @@ def main():
                 if args.accuracy:
                     post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
                 add_results(final_results, "{}-{}".format(scenario, target_latency),
-                            result_dict, last_timeing, time.time() - ds.last_loaded)
+                            result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
         else:
             log.info("starting {}".format(scenario))
             result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
@@ -507,7 +508,7 @@ def main():
             if args.accuracy:
                 post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
             add_results(final_results, "{}".format(scenario),
-                        result_dict, last_timeing, time.time() - ds.last_loaded)
+                        result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
 
         runner.finish()
         lg.DestroyQSL(qsl)

@@ -91,15 +91,6 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
                                    samples.size());
   }
 
-  // TODO(brianderson): Accuracy Metric API.
-  void ResetAccuracyMetric() override {}
-  void UpdateAccuracyMetric(QuerySampleIndex sample_index, void* response_data,
-                            size_t response_size) override {}
-  double GetAccuracyMetric() override { return 0; }
-  std::string HumanReadableAccuracyMetric(double metric_value) override {
-    return "TODO: AccuracyMetric";
-  }
-
  private:
   ClientData client_data_;
   std::string name_;

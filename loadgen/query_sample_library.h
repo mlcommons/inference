@@ -50,21 +50,6 @@ class QuerySampleLibrary {
   //   * A previously unloaded sample will not be unloaded again.
   virtual void UnloadSamplesFromRam(
       const std::vector<QuerySampleIndex>& samples) = 0;
-
-  // Starts an accuracy verification cycle.
-  virtual void ResetAccuracyMetric() = 0;
-
-  // Updates the accuracy metric, one query sample at a time.
-  virtual void UpdateAccuracyMetric(QuerySampleIndex sample_index,
-                                    void* response_data,
-                                    size_t response_size) = 0;
-
-  // Calculates and returns the current value for the accuracy metric.
-  virtual double GetAccuracyMetric() = 0;
-
-  // Returns a string that contains the metric suffixed by the proper units
-  // and formatted with any relevant rounding.
-  virtual std::string HumanReadableAccuracyMetric(double metric_value) = 0;
 };
 
 }  // namespace mlperf

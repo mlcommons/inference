@@ -158,6 +158,7 @@ Logger::~Logger() {
   // Forcefully make all currently registered TlsLoggers orphans.
   std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
   TlsLogger* tls_logger_prev = nullptr;
+  (void)tls_logger_prev;  // Avoid unused error in release builds.
   while (!tls_loggers_registerd_.empty()) {
     TlsLogger* tls_logger = *tls_loggers_registerd_.begin();
     // Otherwise, this is an infinite loop.

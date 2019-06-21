@@ -48,11 +48,6 @@ static_library("mlperf_loadgen") {
   deps = [ ":generate_loadgen_version_header" ]
 }
 
-executable("loadgen_demo") {
-  sources = [ "demo.cc" ]
-  deps = [ ":mlperf_loadgen" ]
-}
-
 copy("public_headers_src") {
   sources = public_headers
   outputs = [ get_path_info(".", "gen_dir") + "/{{source_file_part}}" ]

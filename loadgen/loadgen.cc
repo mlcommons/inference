@@ -265,8 +265,8 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
 template <TestScenario scenario, TestMode mode>
 std::vector<QueryMetadata> GenerateQueries(
     const TestSettingsInternal& settings,
-    const LoadableSampleSet& loaded_sample_set,
-    SequenceGen* sequence_gen, ResponseDelegate* response_delegate) {
+    const LoadableSampleSet& loaded_sample_set, SequenceGen* sequence_gen,
+    ResponseDelegate* response_delegate) {
   auto trace = MakeScopedTracer(
       [](AsyncLog& log) { log.ScopedTrace("GenerateQueries"); });
 
@@ -851,11 +851,10 @@ void LoadSamplesToRam(QuerySampleLibrary* qsl,
 }
 
 template <TestScenario scenario>
-void RunPerformanceMode(
-    SystemUnderTest* sut, QuerySampleLibrary* qsl,
-    const TestSettingsInternal& settings,
-    const std::vector<LoadableSampleSet>& loadable_sets,
-    SequenceGen* sequence_gen) {
+void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
+                        const TestSettingsInternal& settings,
+                        const std::vector<LoadableSampleSet>& loadable_sets,
+                        SequenceGen* sequence_gen) {
   LogDetail([](AsyncLog& log) { log.LogDetail("Starting performance mode:"); });
 
   // Use first loadable set as the performance set.
@@ -902,11 +901,10 @@ void FindPeakPerformanceMode(
 }
 
 template <TestScenario scenario>
-void RunAccuracyMode(
-    SystemUnderTest* sut, QuerySampleLibrary* qsl,
-    const TestSettingsInternal& settings,
-    const std::vector<LoadableSampleSet>& loadable_sets,
-    SequenceGen* sequence_gen) {
+void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
+                     const TestSettingsInternal& settings,
+                     const std::vector<LoadableSampleSet>& loadable_sets,
+                     SequenceGen* sequence_gen) {
   LogDetail([](AsyncLog& log) { log.LogDetail("Starting accuracy mode:"); });
 
   for (auto& loadable_set : loadable_sets) {
@@ -934,11 +932,10 @@ void RunAccuracyMode(
 // Routes runtime scenario requests to the corresponding instances of its
 // templated mode functions.
 struct RunFunctions {
-  using Signature =
-      void(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-           const TestSettingsInternal& settings,
-           const std::vector<LoadableSampleSet>& loadable_sets,
-           SequenceGen* sequence_gen);
+  using Signature = void(SystemUnderTest* sut, QuerySampleLibrary* qsl,
+                         const TestSettingsInternal& settings,
+                         const std::vector<LoadableSampleSet>& loadable_sets,
+                         SequenceGen* sequence_gen);
 
   template <TestScenario compile_time_scenario>
   static RunFunctions GetCompileTime() {

@@ -1,0 +1,4 @@
+executable("mlperf_loadgen_perftests") {
+  sources = [ "perftests_null_sut.cc" ]
+  deps = [ "..:mlperf_loadgen" ]
+}

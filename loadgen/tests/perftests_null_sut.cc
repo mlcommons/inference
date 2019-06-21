@@ -19,8 +19,8 @@ class SystemUnderTestNull : public mlperf::SystemUnderTest {
   void ReportLatencyResults(
       const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override {}
 
-private:
- std::string name_{"NullSUT"};
+ private:
+  std::string name_{"NullSUT"};
 };
 
 class QuerySampleLibraryNull : public mlperf::QuerySampleLibrary {
@@ -29,13 +29,9 @@ class QuerySampleLibraryNull : public mlperf::QuerySampleLibrary {
   ~QuerySampleLibraryNull() = default;
   const std::string& Name() const override { return name_; }
 
-  const size_t TotalSampleCount() override {
-    return 1024 * 1024;
-  }
+  const size_t TotalSampleCount() override { return 1024 * 1024; }
 
-  const size_t PerformanceSampleCount() override {
-    return 1024;
-  }
+  const size_t PerformanceSampleCount() override { return 1024; }
 
   void LoadSamplesToRam(
       const std::vector<mlperf::QuerySampleIndex>& samples) override {

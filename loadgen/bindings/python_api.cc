@@ -125,7 +125,8 @@ void DestroyQSL(uintptr_t qsl) {
   delete qsl_cast;
 }
 
-void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings) {
+void StartTest(uintptr_t sut, uintptr_t qsl,
+               mlperf::TestSettings test_settings) {
   pybind11::gil_scoped_release gil_releaser;
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
@@ -135,8 +136,9 @@ void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings)
   mlperf::StartTest(sut_cast, qsl_cast, test_settings, default_log_settings);
 }
 
-void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings,
-               mlperf::LogSettings log_settings) {
+void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
+                              mlperf::TestSettings test_settings,
+                              mlperf::LogSettings log_settings) {
   pybind11::gil_scoped_release gil_releaser;
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);

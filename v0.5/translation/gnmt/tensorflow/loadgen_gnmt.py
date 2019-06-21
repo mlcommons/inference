@@ -491,7 +491,7 @@ if __name__ == "__main__":
     total_queries = 3003 # Maximum sample ID + 1
     perf_queries = 3003   # Select the same subset of $perf_queries samples
 
-    sut = mlperf_loadgen.ConstructSUT(runner.enqueue, process_latencies)
+    sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries, process_latencies)
     qsl = mlperf_loadgen.ConstructQSL(
         total_queries, perf_queries, runner.load_samples_to_ram, runner.unload_samples_from_ram)
 

@@ -28,6 +28,8 @@ class ImplementationException (Exception):
     def __repr__(self):
         return "ImplementationException: {}".format(self.msg)
 
+def flush_queries(): pass
+
 ##
 # @brief Simple way to process and display latencies
 # @param latencies_ns is an array of durations (in ns) it took per sample to finish
@@ -151,7 +153,7 @@ if __name__ == "__main__":
     total_queries = 256 # Maximum sample ID + 1
     perf_queries = 8   # TBD: Doesn't seem to have an effect
 
-    sut = mlperf_loadgen.ConstructSUT(runner.enqueue, process_latencies)
+    sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries, process_latencies)
     qsl = mlperf_loadgen.ConstructQSL(
         total_queries, perf_queries, runner.load_samples_to_ram, runner.unload_samples_from_ram)
     mlperf_loadgen.StartTest(sut, qsl, settings)

@@ -616,6 +616,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
     //       limit.
   }
 
+  // Let the SUT know it should not expect any more queries.
+  sut->FlushQueries();
+
   // The offline scenario always only has a single query, so this check
   // doesn't apply.
   if (scenario != TestScenario::Offline && mode == TestMode::PerformanceOnly &&

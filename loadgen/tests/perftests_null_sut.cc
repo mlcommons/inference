@@ -28,6 +28,7 @@ class SystemUnderTestNull : public mlperf::SystemUnderTest {
     }
     mlperf::QuerySamplesComplete(responses.data(), responses.size());
   }
+  void FlushQueries() override {}
   void ReportLatencyResults(
       const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override {}
 

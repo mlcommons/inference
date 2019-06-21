@@ -444,6 +444,8 @@ def main():
         def issue_queries(query_samples):
             runner.enqueue(query_samples)
 
+        def flush_queries(): pass
+
         def process_latencies(latencies_ns):
             # called by loadgen to show us the recorded latencies
             global last_timeing
@@ -479,7 +481,7 @@ def main():
             settings.override_min_query_count = args.queries_offline
             settings.override_max_query_count = args.queries_offline
 
-        sut = lg.ConstructSUT(issue_queries, process_latencies)
+        sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
         qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
 
         if scenario == lg.TestScenario.Server:

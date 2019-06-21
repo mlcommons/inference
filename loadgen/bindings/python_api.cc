@@ -84,15 +84,6 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
     unload_samlpes_from_ram_cb_(samples);
   }
 
-  // TODO(brianderson): Accuracy Metric API.
-  void ResetAccuracyMetric() override {}
-  void UpdateAccuracyMetric(QuerySampleIndex sample_index, void* response_data,
-                            size_t response_size) override {}
-  double GetAccuracyMetric() override { return 0; }
-  std::string HumanReadableAccuracyMetric(double metric_value) override {
-    return "TODO: AccuracyMetric";
-  }
-
  private:
   std::string name_;
   size_t total_sample_count_;
@@ -134,8 +125,7 @@ void DestroyQSL(uintptr_t qsl) {
   delete qsl_cast;
 }
 
-void StartTest(uintptr_t sut, uintptr_t qsl,
-               mlperf::TestSettings test_settings) {
+void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings) {
   pybind11::gil_scoped_release gil_releaser;
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
@@ -145,9 +135,8 @@ void StartTest(uintptr_t sut, uintptr_t qsl,
   mlperf::StartTest(sut_cast, qsl_cast, test_settings, default_log_settings);
 }
 
-void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
-                              mlperf::TestSettings test_settings,
-                              mlperf::LogSettings log_settings) {
+void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings,
+               mlperf::LogSettings log_settings) {
   pybind11::gil_scoped_release gil_releaser;
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);

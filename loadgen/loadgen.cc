@@ -585,7 +585,8 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       });
       break;
     }
-    if (queries_issued >= settings.max_query_count) {
+    if (settings.max_query_count != 0 &&
+        queries_issued >= settings.max_query_count) {
       LogError([queries_issued](AsyncLog& log) {
         log.LogDetail("Ending early: Max query count reached.", "query_count",
                       queries_issued);

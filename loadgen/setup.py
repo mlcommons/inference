@@ -42,7 +42,6 @@ public_headers = [
 
 lib_headers = [
   "logging.h",
-  "mlperf_spec_constants.h",
   "test_settings_internal.h",
   "trace_generator.h",
   "utils.h",

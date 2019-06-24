@@ -1,0 +1,10 @@
+executable("mlperf_loadgen_perftests") {
+  sources = [ "perftests_null_sut.cc" ]
+  deps = [ "..:mlperf_loadgen" ]
+}
+
+source_set("mlperf_loadgen_perftests_py") {
+  sources = [ "perftests_null_sut.py" ]
+  deps = [ "../..:loadgen_pymodule_wheel_lib" ]
+}
+

@@ -1,3 +1,15 @@
+/* Copyright 2019 The MLPerf Authors. All Rights Reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+    http://www.apache.org/licenses/LICENSE-2.0
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+==============================================================================*/
+
 #ifndef PYTHON_BINDINGS_H
 #define PYTHON_BINDINGS_H
 
@@ -82,15 +94,6 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
       const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
     unload_samlpes_from_ram_cb_(samples);
-  }
-
-  // TODO(brianderson): Accuracy Metric API.
-  void ResetAccuracyMetric() override {}
-  void UpdateAccuracyMetric(QuerySampleIndex sample_index, void* response_data,
-                            size_t response_size) override {}
-  double GetAccuracyMetric() override { return 0; }
-  std::string HumanReadableAccuracyMetric(double metric_value) override {
-    return "TODO: AccuracyMetric";
   }
 
  private:

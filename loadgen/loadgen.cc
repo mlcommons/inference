@@ -795,7 +795,8 @@ void PerformanceSummary::Log(AsyncLog& log) {
       //    1000 queries / 1 second.
       double qps_as_scheduled =
           (sample_count - 1) / pr.final_query_scheduled_time;
-      log.LogSummary("Scheduled QPS : ", qps_as_scheduled);
+      log.LogSummary("Scheduled samples per second : ",
+                     DoubleToString(qps_as_scheduled));
       break;
     }
     case TestScenario::Offline: {
@@ -824,6 +825,23 @@ void PerformanceSummary::Log(AsyncLog& log) {
       "================================================\n"
       "Additional Stats\n"
       "================================================");
+
+  if (settings.scenario == TestScenario::SingleStream) {
+    double qps_w_lg = (sample_count - 1) / pr.final_query_issued_time;
+    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(latency_min);
+    log.LogSummary("QPS w/ loadgen overhead         : " +
+                   DoubleToString(qps_w_lg));
+    log.LogSummary("QPS w/o loadgen overhead        : " +
+                   DoubleToString(qps_wo_lg));
+    log.LogSummary("");
+  } else if (settings.scenario == TestScenario::Server) {
+    double qps_as_completed =
+        (sample_count - 1) / pr.final_query_all_samples_done_time;
+    log.LogSummary("Completed samples per second    : ",
+                   DoubleToString(qps_as_completed));
+    log.LogSummary("");
+  }
+
   log.LogSummary("Min latency (ns)                : ", latency_min);
   log.LogSummary("Max latency (ns)                : ", latency_max);
   log.LogSummary("Mean latency (ns)               : ", latency_mean);
@@ -831,13 +849,6 @@ void PerformanceSummary::Log(AsyncLog& log) {
     log.LogSummary(
         DoubleToString(lp.percentile * 100) + " percentile latency (ns)   : ",
         lp.value);
-  }
-  if (settings.scenario == TestScenario::SingleStream) {
-    double qps_w_lg = (sample_count - 1) / pr.final_query_issued_time;
-    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(latency_min);
-    log.LogSummary("");
-    log.LogSummary("QPS w/ loadgen overhead  : " + DoubleToString(qps_w_lg));
-    log.LogSummary("QPS w/o loadgen overhead : " + DoubleToString(qps_wo_lg));
   }
 
   log.LogSummary(

@@ -1,6 +1,6 @@
 # MLPerf Inference Reference Implementations
 
-This is a repository of reference implementations for the MLPerf inference benchmark. 
+This is a repository of reference implementations for the MLPerf inference benchmark suite. 
 
 Reference implementations are valid as only starting points for benchmark implementations. They are not fully optimized, and they are not intended to be used for "real" performance measurements of software frameworks or hardware platforms. The objective is for hardware and software vendors to take these reference implementations, optimize then, and submit them as optimized solutions to the MLPerf Inference call for submissions.
 

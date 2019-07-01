@@ -58,7 +58,7 @@ SUPPORTED_DATASETS = {
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoPt(True,0.05),
          {"image_size": [1200, 1200, 3]}),
     "coco-1200-tf":
-        (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoTf(),
+        (coco.Coco, dataset.pre_process_coco_resnet34_tf, coco.PostProcessCocoTf(),
          {"image_size": [1200, 1200, 3]}),
 }
 
@@ -124,11 +124,11 @@ SUPPORTED_PROFILES = {
 
     # ssd-resnet34
     "ssd-resnet34-tf": {
-        "inputs": "0:0",
-        "outputs": "concat_63:0,concat_64:0",
+        "inputs": "image:0",
+        "outputs": "detection_bboxes:0,detection_classes:0,detection_scores:0",
         "dataset": "coco-1200-tf",
         "backend": "tensorflow",
-        "data-format": "NCHW",
+        "data-format": "NHWC",
     },
     "ssd-resnet34-pytorch": {
         "inputs": "image",

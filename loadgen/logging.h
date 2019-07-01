@@ -200,6 +200,9 @@ class AsyncLog {
       *os << message;
       LogArgs(os, args...);
       *os << "\n";
+      if (error_flagged_) {
+        os->flush();
+      }
     }
     error_flagged_ = false;
   }
@@ -297,46 +300,10 @@ class AsyncLog {
                 << "\"ts\": " << (end - trace_origin_).count() << " },\n";
   }
 
-  void RecordLatency(uint64_t sample_sequence_id, QuerySampleLatency latency) {
-    std::unique_lock<std::mutex> lock(latencies_mutex_);
-    if (latencies_.size() < sample_sequence_id + 1) {
-      // TODO: Reserve in advance.
-      latencies_.resize(sample_sequence_id + 1,
-                        std::numeric_limits<QuerySampleLatency>::min());
-    }
-    latencies_[sample_sequence_id] = latency;
-    latencies_recorded_++;
-    if (AllLatenciesRecorded()) {
-      all_latencies_recorded_.notify_all();
-    }
-    // Relaxed memory order since the early-out checks can be racy.
-    // The final check will be ordered by locks on the latencies_mutex.
-    max_latency_.store(
-        std::max(max_latency_.load(std::memory_order_relaxed), latency),
-        std::memory_order_relaxed);
-  }
-
-  void RestartLatencyRecording() {
-    std::unique_lock<std::mutex> lock(latencies_mutex_);
-    assert(latencies_.empty());
-    assert(latencies_recorded_ == latencies_expected_);
-    latencies_recorded_ = 0;
-    latencies_expected_ = 0;
-    max_latency_ = 0;
-  }
-
-  std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count) {
-    std::vector<QuerySampleLatency> latencies;
-    std::unique_lock<std::mutex> lock(latencies_mutex_);
-    latencies_expected_ = expected_count;
-    all_latencies_recorded_.wait(lock, [&] { return AllLatenciesRecorded(); });
-    latencies.swap(latencies_);
-    return latencies;
-  }
-
-  QuerySampleLatency GetMaxLatencySoFar() {
-    return max_latency_.load(std::memory_order_release);
-  }
+  void RecordLatency(uint64_t sample_sequence_id, QuerySampleLatency latency);
+  void RestartLatencyRecording(uint64_t first_sample_sequence_id);
+  std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
+  QuerySampleLatency GetMaxLatencySoFar();
 
  private:
   void WriteAccuracyHeaderLocked() {
@@ -403,6 +370,7 @@ class AsyncLog {
 
   std::mutex latencies_mutex_;
   std::condition_variable all_latencies_recorded_;
+  uint64_t latencies_first_sample_sequence_id_ = 0;
   std::vector<QuerySampleLatency> latencies_;
   std::atomic<QuerySampleLatency> max_latency_{0};
   size_t latencies_recorded_ = 0;
@@ -456,11 +424,12 @@ class Logger {
 
   void LogContentionCounters();
 
-  void RestartLatencyRecording();
+  void RestartLatencyRecording(uint64_t first_sample_sequence_id);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
   QuerySampleLatency GetMaxLatencySoFar();
 
  private:
+  friend AsyncLog;
   friend TlsLogger;
   friend TlsLoggerWrapper;
 
@@ -473,6 +442,9 @@ class Logger {
   // async logging from working.
   template <typename... Args>
   void LogErrorSync(const std::string& message, const Args... args) {
+    // TODO: Acquire mutex once for FlagError + LogDetail to avoid
+    //       races. Better yet, switch to a non-stateful error API.
+    //       This is better than nothing though.
     async_logger_.FlagError();
     async_logger_.LogDetail(message, args...);
   }

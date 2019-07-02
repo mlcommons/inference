@@ -44,6 +44,7 @@ struct QueryMetadata;
 struct SequenceGen {
   uint64_t NextQueryId() { return query_id++; }
   uint64_t NextSampleId() { return sample_id++; }
+  uint64_t CurrentSampleId() { return sample_id; }
 
  private:
   uint64_t query_id = 0;
@@ -539,7 +540,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                const TestSettingsInternal& settings,
                                const LoadableSampleSet& loaded_sample_set,
                                SequenceGen* sequence_gen) {
-  GlobalLogger().RestartLatencyRecording();
+  GlobalLogger().RestartLatencyRecording(sequence_gen->CurrentSampleId());
   ResponseDelegateDetailed<scenario, mode> response_logger;
 
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(

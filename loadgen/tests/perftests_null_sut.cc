@@ -75,9 +75,7 @@ void TestSingleStream() {
 
 class SystemUnderTestNullStdAsync : public mlperf::SystemUnderTest {
  public:
-  SystemUnderTestNullStdAsync() {
-    futures_.reserve(1000000);
-  }
+  SystemUnderTestNullStdAsync() { futures_.reserve(1000000); }
   ~SystemUnderTestNullStdAsync() override = default;
   const std::string& Name() const override { return name_; }
   void IssueQuery(const std::vector<mlperf::QuerySample>& samples) override {
@@ -153,7 +151,8 @@ class SystemUnderTestNullPool : public mlperf::SystemUnderTest {
     while (keep_workers_alive_) {
       next_poll_time_ += poll_period_;
       auto my_wakeup_time = next_poll_time_;
-      cv_.wait_until(lock, my_wakeup_time, [&](){ return !keep_workers_alive_; });
+      cv_.wait_until(lock, my_wakeup_time,
+                     [&]() { return !keep_workers_alive_; });
       my_samples.swap(samples_);
       lock.unlock();
 

@@ -144,9 +144,8 @@ if __name__ == "__main__":
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
 
     # Specify exactly how many queries need to be made
-    settings.enable_spec_overrides = True
-    settings.override_min_query_count = 3003
-    settings.override_max_query_count = 3003
+    settings.min_query_count = 3003
+    settings.max_query_count = 3003
     
     total_queries = 256 # Maximum sample ID + 1
     perf_queries = 8   # TBD: Doesn't seem to have an effect

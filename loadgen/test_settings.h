@@ -10,13 +10,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#ifndef MLPERF_LOADGEN_TEST_SETTINGS_H
-#define MLPERF_LOADGEN_TEST_SETTINGS_H
-
+// This file provides ways for the client to change the behavior and
+// constraints of the load generator.
+//
 // Note: The MLPerf specification takes precedent over any of the comments in
 // this file if there are inconsistencies in regards to how the loadgen
 // *should* work.
 // The comments in this file are indicative of the loadgen implementation.
+
+#ifndef MLPERF_LOADGEN_TEST_SETTINGS_H
+#define MLPERF_LOADGEN_TEST_SETTINGS_H
 
 #include <cstdint>
 #include <string>
@@ -32,12 +35,12 @@ enum class TestScenario {
 
   // MultiStream ideally issues queries containing N samples each at a uniform
   // rate of 20 Hz. However, the loadgen will skip sending for one interval if
-  // the SUT falls behind too much. By default and spec, the loadgen will only
-  // allow 1 outstanding query at a time.
+  // the SUT falls behind too much. By default, the loadgen will only allow a
+  // single outstanding query at a time.
   // TODO: Some SUTs may benefit from pipelining multiple queries while still
   //       hitting the specified latency thresholds. In those cases, the user
   //       may request to have up to Q outstanding queries instead via
-  //       |override_multi_stream_max_async_queries|. Should this be officially
+  //       |multi_stream_max_async_queries|. Should this be officially
   //       allowed?
   // Final performance result is PASS if the 90 percentile latency is under
   // a given threshold (model-specific) for a given N.
@@ -89,17 +92,25 @@ struct TestSettings {
   TestMode mode = TestMode::PerformanceOnly;
 
   // SingleStream-specific settings.
-  uint64_t single_stream_expected_latency_ns = 100000;
+  uint64_t single_stream_expected_latency_ns = 1000000;
 
   // MultiStream-specific settings.
+  // |multi_stream_target_qps| is the rate at which "frames" are produced.
+  // |multi_stream_target_latency_ns| is the latency constraint.
   // |multi_stream_samples_per_query| is only used as a hint in
   // SearchForPeakPerformance mode.
+  // multi_stream_max_async_queries
+  double multi_stream_target_qps = 10.0;
+  uint64_t multi_stream_target_latency_ns = 100000000;
   int multi_stream_samples_per_query = 4;
+  int multi_stream_max_async_queries = 1;
 
   // Server-specific settings.
   // |server_target_qps| is only used as a hint in SearchForPeakPerformance
   // mode.
-  double server_target_qps = 10;
+  // |server_target_latency_ns| is the latency constraint.
+  double server_target_qps = 1;
+  uint64_t server_target_latency_ns = 100000000;
   bool server_coalesce_queries = false;  // TODO: Use this.
 
   // Offline-specific settings.
@@ -107,43 +118,32 @@ struct TestSettings {
   // In the offline scenario, all queries will be coalesced into a single
   // query; in this sense, "samples per second" is equivalent to "queries per
   // second." We go with QPS for consistency.
-  double offline_expected_qps = 10;
+  double offline_expected_qps = 1;
 
-  // |enable_spec_overrides| is useful for experimentation and
-  // for shortening testing feedback loops.
-  // Must be false if mode is SubmissionRun.
-  bool enable_spec_overrides = false;
+  // The test runs until both min duration and min query count have been met.
+  // However, it will exit before that point if either max duration or
+  // max query count have been reached.
+  uint64_t min_duration_ms = 10000;
+  uint64_t max_duration_ms = 0;  // 0: Infinity.
+  uint64_t min_query_count = 100;
+  uint64_t max_query_count = 0;  // 0: Infinity.
 
-  // Settings after this point only have an effect if
-  // |enable_spec_overrides| is true.
-  uint64_t override_target_latency_ns = 0;  // 0: Use spec default.
-  // TODO: Should this be an official setting?
-  int override_multi_stream_max_async_queries = 0;  // 0: Use spec default.
-
-  // Test runs until both min duration and query count have been met, but
-  // will exit before that point if either max duration or query count have
-  // been reached.
-  uint64_t override_min_duration_ms = 0;  // 0: Use spec defaults.
-  uint64_t override_max_duration_ms = 0;  // 0: Infinity.
-  uint64_t override_min_query_count = 0;  // 0: Use spec defaults.
-  uint64_t override_max_query_count = 0;  // 0: Infinity.
-
-  // Random number generation seeds. Values of 0 disable overrides.
+  // Random number generation seeds.
   // There are 3 separate seeds, so each dimension can be changed independently.
 
-  // |override_qsl_rng_seed| affects which subset of samples in the QSL
+  // |qsl_rng_seed| affects which subset of samples in the QSL
   // are chosen for the performance set, as well as the order in which samples
   // are processed in AccuracyOnly mode.
-  uint64_t override_qsl_rng_seed = 0;
+  uint64_t qsl_rng_seed = 0;
 
-  // |override_sample_index_rng_seed| affects the order in which samples
+  // |sample_index_rng_seed| affects the order in which samples
   // from the performance set will be included in queries.
-  uint64_t override_sample_index_rng_seed = 0;
+  uint64_t sample_index_rng_seed = 0;
 
-  // |override_schedule_rng_seed| affects the poisson arrival process of
+  // |schedule_rng_seed| affects the poisson arrival process of
   // the Server scenario. Different seeds will appear to "jitter" the queries
   // differently in time, but should not affect the average issued QPS.
-  uint64_t override_schedule_rng_seed = 0;  // 0: Use spec default.
+  uint64_t schedule_rng_seed = 0;
 };
 
 enum class LoggingMode {

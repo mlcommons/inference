@@ -20,7 +20,6 @@ lib_sources = [
   "loadgen.cc",
   "logging.cc",
   "logging.h",
-  "mlperf_spec_constants.h",
   "test_settings_internal.cc",
   "test_settings_internal.h",
   "utils.cc",

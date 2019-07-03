@@ -450,7 +450,6 @@ def main():
             last_timeing = [t / NANO_SEC for t in latencies_ns]
 
         settings = lg.TestSettings()
-        settings.enable_spec_overrides = True
         settings.scenario = scenario
         settings.mode = lg.TestMode.PerformanceOnly
         if args.accuracy:
@@ -458,8 +457,8 @@ def main():
 
         if args.time:
             # override the time we want to run
-            settings.override_min_duration_ms = args.time * MILLI_SEC
-            settings.override_max_duration_ms = args.time * MILLI_SEC
+            settings.min_duration_ms = args.time * MILLI_SEC
+            settings.max_duration_ms = args.time * MILLI_SEC
 
         if args.qps:
             qps = float(args.qps)
@@ -467,17 +466,17 @@ def main():
             settings.offline_expected_qps = qps
 
         if scenario == lg.TestScenario.SingleStream:
-            settings.override_min_query_count = args.queries_single
-            settings.override_max_query_count = args.queries_single
+            settings.min_query_count = args.queries_single
+            settings.max_query_count = args.queries_single
         elif scenario == lg.TestScenario.MultiStream:
-            settings.override_min_query_count = args.queries_multi
-            settings.override_max_query_count = args.queries_multi
+            settings.min_query_count = args.queries_multi
+            settings.max_query_count = args.queries_multi
             settings.multi_stream_samples_per_query = 4
         elif scenario == lg.TestScenario.Server:
             max_latency = args.max_latency
         elif scenario == lg.TestScenario.Offline:
-            settings.override_min_query_count = args.queries_offline
-            settings.override_max_query_count = args.queries_offline
+            settings.min_query_count = args.queries_offline
+            settings.max_query_count = args.queries_offline
 
         sut = lg.ConstructSUT(issue_queries, process_latencies)
         qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
@@ -485,7 +484,7 @@ def main():
         if scenario == lg.TestScenario.Server:
             for target_latency in max_latency:
                 log.info("starting {}, latency={}".format(scenario, target_latency))
-                settings.override_target_latency_ns = int(target_latency * NANO_SEC)
+                settings.server_target_latency_ns = int(target_latency * NANO_SEC)
 
                 result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
                 runner.start_run(result_dict, args.accuracy)

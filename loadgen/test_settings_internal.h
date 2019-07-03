@@ -25,9 +25,10 @@ class AsyncLog;
 std::string ToString(TestScenario scenario);
 std::string ToString(TestMode mode);
 
-// TestSettingsInternal takes the mode and scenario requested by the
-// user-provided TestSettings and chooses the proper test parameters based
-// on the spec-defined defaults and any user-requesed overrides.
+// TestSettingsInternal takes the user-friendly TestSettings and normalizes it
+// for consumption by the load generator code.
+// It does things like remove scenario-specific naming and introduce the
+// concept of target_duration used to pre-generate queries.
 struct TestSettingsInternal {
   explicit TestSettingsInternal(const TestSettings& requested_settings);
   void LogEffectiveSettings() const;
@@ -58,9 +59,6 @@ struct TestSettingsInternal {
   uint64_t qsl_rng_seed;
   uint64_t sample_index_rng_seed;
   uint64_t schedule_rng_seed;
-
- private:
-  void ApplyOverrides();
 };
 
 }  // namespace mlperf

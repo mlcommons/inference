@@ -452,34 +452,30 @@ if __name__ == "__main__":
         runner = SingleStreamGNMTRunner(gnmt_model, store_translation=args.store_translation, verbose=args.verbose, outdir=outdir)
         
         # Specify exactly how many queries need to be made
-        settings.enable_spec_overrides = True
-        settings.override_min_query_count = 100
-        settings.override_max_query_count = 100
+        settings.min_query_count = 100
+        settings.max_query_count = 100
 
     elif args.scenario == "Offline":
         runner = GNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
-        settings.enable_spec_overrides = True
-        settings.override_min_query_count = 1
-        settings.override_max_query_count = 1
+        settings.min_query_count = 1
+        settings.max_query_count = 1
 
     elif args.scenario == "MultiStream":
         runner = GNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
-        settings.enable_spec_overrides = True
-        settings.override_min_query_count = 100
-        settings.override_max_query_count = 100
+        settings.min_query_count = 100
+        settings.max_query_count = 100
         settings.multi_stream_samples_per_query = 8
 
     elif args.scenario == "Server":
         runner = ServerGNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
-        settings.enable_spec_overrides = True
-        settings.override_min_query_count = 20
-        settings.override_max_query_count = 100
+        settings.min_query_count = 20
+        settings.max_query_count = 100
 
     else:
         print("Invalid scenario selected")

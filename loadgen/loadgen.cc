@@ -681,11 +681,11 @@ struct PerformanceSummary {
 
   void ProcessLatencies();
 
-  bool MinDurationMet();
+  bool MinDurationMet(std::string* recommendation);
   bool MinQueriesMet();
   bool MinSamplesMet();
   bool HasPerfConstraints();
-  bool PerfConstraintsMet();
+  bool PerfConstraintsMet(std::string* recommendation);
   void Log(AsyncLog& log);
 };
 
@@ -717,11 +717,41 @@ void PerformanceSummary::ProcessLatencies() {
   pr.latencies = std::vector<QuerySampleLatency>();
 }
 
-bool PerformanceSummary::MinDurationMet() {
-  if (settings.scenario == TestScenario::Offline) {
-    return pr.max_latency > DurationToSeconds(settings.min_duration);
+bool PerformanceSummary::MinDurationMet(std::string* recommendation) {
+  recommendation->clear();
+  const double min_duration = DurationToSeconds(settings.min_duration);
+  bool min_duration_met = (settings.scenario == TestScenario::Offline)
+                              ? pr.max_latency > min_duration
+                              : pr.final_query_issued_time >= min_duration;
+  if (min_duration_met) {
+    return true;
   }
-  return pr.final_query_issued_time >= DurationToSeconds(settings.min_duration);
+
+  switch (settings.scenario) {
+    case TestScenario::SingleStream:
+      *recommendation =
+          "Decrease the expected latency so the loadgen pre-generates more "
+          "queries.";
+      break;
+    case TestScenario::MultiStream:
+      *recommendation =
+          "MultiStream should always meet the minimum duration. "
+          "Please file a bug.";
+      break;
+    case TestScenario::MultiStreamFree:
+      *recommendation =
+          "Increase the target QPS so the loadgen pre-generates more queries.";
+      break;
+    case TestScenario::Server:
+      *recommendation =
+          "Increase the target QPS so the loadgen pre-generates more queries.";
+      break;
+    case TestScenario::Offline:
+      *recommendation =
+          "Increase expected QPS so the loadgen pre-generates more queries.";
+      break;
+  }
+  return false;
 }
 
 bool PerformanceSummary::MinQueriesMet() {
@@ -738,26 +768,32 @@ bool PerformanceSummary::HasPerfConstraints() {
          settings.scenario == TestScenario::Server;
 }
 
-bool PerformanceSummary::PerfConstraintsMet() {
+bool PerformanceSummary::PerfConstraintsMet(std::string* recommendation) {
+  recommendation->clear();
+  bool perf_constraints_met = true;
   switch (settings.scenario) {
     case TestScenario::SingleStream:
-      return true;
+      break;
     case TestScenario::MultiStream:
-    case TestScenario::MultiStreamFree: {
+    case TestScenario::MultiStreamFree:
       // TODO: Finalize multi-stream performance targets with working group.
       ProcessLatencies();
-      return latency_target.value <= settings.target_latency.count();
-    }
-    case TestScenario::Server: {
-      ProcessLatencies();
-      return latency_target.value <= settings.target_latency.count();
+      if (latency_target.value > settings.target_latency.count()) {
+        *recommendation = "Reduce samples per query to improve latency.";
+        perf_constraints_met = false;
+      }
       break;
-    }
+    case TestScenario::Server:
+      ProcessLatencies();
+      if (latency_target.value > settings.target_latency.count()) {
+        *recommendation = "Reduce target QPS to improve latency.";
+        perf_constraints_met = false;
+      }
+      break;
     case TestScenario::Offline:
-      return true;
+      break;
   }
-  assert(false);
-  return false;
+  return perf_constraints_met;
 }
 
 void PerformanceSummary::Log(AsyncLog& log) {
@@ -781,9 +817,8 @@ void PerformanceSummary::Log(AsyncLog& log) {
       break;
     }
     case TestScenario::MultiStreamFree: {
-      double ips = pr.queries_issued * settings.samples_per_query /
-                   pr.final_query_all_samples_done_time;
-      log.LogSummary("Inferences per second : ", ips);
+      double samples_per_second = pr.queries_issued * settings.samples_per_query / pr.final_query_all_samples_done_time;
+      log.LogSummary("Samples per second : ", samples_per_second);
       break;
     }
     case TestScenario::Server: {
@@ -802,15 +837,19 @@ void PerformanceSummary::Log(AsyncLog& log) {
       break;
     }
     case TestScenario::Offline: {
-      double qps = sample_count / pr.max_latency;
-      log.LogSummary("QPS: ", qps);
+      double samples_per_second = sample_count / pr.max_latency;
+      log.LogSummary("Samples per second: ", samples_per_second);
       break;
     }
   }
 
-  bool min_duration_met = MinDurationMet();
+  std::string min_duration_recommendation;
+  std::string perf_constraints_recommendation;
+
+  bool min_duration_met = MinDurationMet(&min_duration_recommendation);
   bool min_queries_met = MinQueriesMet() && MinSamplesMet();
-  bool perf_constraints_met = PerfConstraintsMet();
+  bool perf_constraints_met =
+      PerfConstraintsMet(&perf_constraints_recommendation);
   bool all_constraints_met =
       min_duration_met && min_queries_met && perf_constraints_met;
   log.LogSummary("Result is : ", all_constraints_met ? "VALID" : "INVALID");
@@ -821,6 +860,21 @@ void PerformanceSummary::Log(AsyncLog& log) {
   log.LogSummary("  Min duration satisfied : ",
                  min_duration_met ? "Yes" : "NO");
   log.LogSummary("  Min queries satisfied : ", min_queries_met ? "Yes" : "NO");
+
+  if (!all_constraints_met) {
+    log.LogSummary("Recommendations:");
+    if (!perf_constraints_met) {
+      log.LogSummary(" * " + perf_constraints_recommendation);
+    }
+    if (!min_duration_met) {
+      log.LogSummary(" * " + min_duration_recommendation);
+    }
+    if (!min_queries_met) {
+      log.LogSummary(
+          " * The test exited early, before enough queries were issued.\n"
+          "   See the detailed log for why this may have occured.");
+    }
+  }
 
   log.LogSummary(
       "\n"

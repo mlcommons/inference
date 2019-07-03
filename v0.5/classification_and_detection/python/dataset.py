@@ -157,10 +157,10 @@ def resize_with_aspectratio(img, out_height, out_width, scale=87.5):
     new_width = int(100. * out_width / scale)
     if height > width:
         w = new_width
-        h = int(out_height * width / new_width)
+        h = int(new_height * height / width)
     else:
         h = new_height
-        w = int(out_width * height / new_height)
+        w = int(new_width * width / height)
     img = img.resize((w, h), Image.BILINEAR)
     return img
 

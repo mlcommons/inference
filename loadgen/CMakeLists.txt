@@ -15,7 +15,7 @@ message(STATUS "Using shared linker flags: ${CMAKE_SHARED_LINKER_FLAGS}")
 
 # Output directory for libraries.
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
-message(STATUS "Using library path: ${LIBRARY_OUTPUT_PATH}")
+message(STATUS "Using output path: ${LIBRARY_OUTPUT_PATH}")
 
 # Add source files.
 set(SOURCE
@@ -32,8 +32,7 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/version.h
 )
 
-#execute_process(COMMAND python setup.py build
-#                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+execute_process(COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/version_generator.py ${CMAKE_BINARY_DIR}/version_generated.cc ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(mlperf_loadgen STATIC ${SOURCE})
 target_link_libraries(mlperf_loadgen)

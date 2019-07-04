@@ -32,5 +32,8 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/version.h
 )
 
+#execute_process(COMMAND python setup.py build
+#                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+
 add_library(mlperf_loadgen STATIC ${SOURCE})
 target_link_libraries(mlperf_loadgen)

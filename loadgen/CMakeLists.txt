@@ -24,7 +24,6 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/loadgen.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/logging.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/logging.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/mlperf_spec_constants.h
   ${CMAKE_CURRENT_SOURCE_DIR}/test_settings_internal.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/test_settings_internal.h
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.cc

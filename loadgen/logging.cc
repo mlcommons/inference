@@ -59,6 +59,8 @@ bool SwapRequestSlotIsReadable(uintptr_t value) {
 constexpr size_t kMaxThreadsToLog = 1024;
 constexpr std::chrono::milliseconds kLogPollPeriod(10);
 
+constexpr auto kInvalidLatency = std::numeric_limits<QuerySampleLatency>::min();
+
 }  // namespace
 
 const std::string& ArgValueTransform(const bool& value) {
@@ -86,6 +88,99 @@ const std::string ArgValueTransform(const LogBinaryAsHexString& value) {
   }
   hex.push_back('"');
   return hex;
+}
+
+void AsyncLog::RecordLatency(uint64_t sample_sequence_id,
+                             QuerySampleLatency latency) {
+  // Relaxed memory order since the early-out checks are inherently racy.
+  // The final check will be ordered by locks on the latencies_mutex.
+  max_latency_.store(
+      std::max(max_latency_.load(std::memory_order_relaxed), latency),
+      std::memory_order_relaxed);
+
+  std::unique_lock<std::mutex> lock(latencies_mutex_);
+
+  if (sample_sequence_id < latencies_first_sample_sequence_id_) {
+    // Call LogErrorSync here since this kind of error could result in a
+    // segfault in the near future.
+    GlobalLogger().LogErrorSync(
+        "Received completion for an old sample.", "Min expected id",
+        latencies_first_sample_sequence_id_, "Actual id", sample_sequence_id);
+    return;
+  }
+
+  const size_t i = sample_sequence_id - latencies_first_sample_sequence_id_;
+
+  if (latencies_.size() <= i) {
+    // TODO: Reserve in advance.
+    latencies_.resize(i + 1, kInvalidLatency);
+  } else if (latencies_[i] != kInvalidLatency) {
+    // Call LogErrorSync here since this kind of error could result in a
+    // segfault in the near future.
+    GlobalLogger().LogErrorSync("Attempted to complete a sample twice.");
+
+    // Return without recording the latency again to avoid potentially
+    // ending the test before the SUT is actually done, which could result
+    // in a segfault.
+    // If the SUT recorded the wrong sample, the test will hang and see
+    // the error above.
+    return;
+  }
+
+  latencies_[i] = latency;
+  latencies_recorded_++;
+  if (AllLatenciesRecorded()) {
+    all_latencies_recorded_.notify_all();
+  }
+}
+
+void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id) {
+  std::unique_lock<std::mutex> lock(latencies_mutex_);
+  assert(latencies_.empty());
+  assert(latencies_recorded_ == latencies_expected_);
+  latencies_recorded_ = 0;
+  latencies_expected_ = 0;
+  max_latency_ = 0;
+  latencies_first_sample_sequence_id_ = first_sample_sequence_id;
+}
+
+std::vector<QuerySampleLatency> AsyncLog::GetLatenciesBlocking(
+    size_t expected_count) {
+  std::vector<QuerySampleLatency> latencies;
+  {
+    std::unique_lock<std::mutex> lock(latencies_mutex_);
+    latencies_expected_ = expected_count;
+    all_latencies_recorded_.wait(lock, [&] { return AllLatenciesRecorded(); });
+    latencies.swap(latencies_);
+  }
+
+  if (latencies.size() != expected_count) {
+    // Call LogErrorSync here since this kind of error could result in a
+    // segfault in the near future.
+    GlobalLogger().LogErrorSync("Received SequenceId that was too large.",
+                                "expectted_size", expected_count, "actual_size",
+                                latencies.size());
+  }
+
+  size_t invalid_latency_count = 0;
+  for (auto l : latencies) {
+    if (l == kInvalidLatency) {
+      invalid_latency_count++;
+    }
+  }
+  if (invalid_latency_count != 0) {
+    // Call LogErrorSync here since this kind of error could result in a
+    // segfault in the near future.
+    GlobalLogger().LogErrorSync(
+        "Encountered incomplete samples at the end of a series of queries.",
+        "count", invalid_latency_count);
+  }
+
+  return latencies;
+}
+
+QuerySampleLatency AsyncLog::GetMaxLatencySoFar() {
+  return max_latency_.load(std::memory_order_release);
 }
 
 // TlsLogger logs a single thread using thread-local storage.
@@ -339,8 +434,8 @@ void Logger::LogContentionCounters() {
   });
 }
 
-void Logger::RestartLatencyRecording() {
-  async_logger_.RestartLatencyRecording();
+void Logger::RestartLatencyRecording(uint64_t first_sample_sequence_id) {
+  async_logger_.RestartLatencyRecording(first_sample_sequence_id);
 }
 
 std::vector<QuerySampleLatency> Logger::GetLatenciesBlocking(

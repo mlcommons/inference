@@ -281,9 +281,12 @@ class RunnerBase:
             # since post_process will not run, fake empty responses
             processed_results = [[]] * len(qitem.query_id)
         finally:
+            response_array_refs = []
             response = []
             for idx, query_id in enumerate(qitem.query_id):
-                bi = array.array("B", np.array(processed_results[idx], np.float32).tobytes()).buffer_info()
+                response_array = array.array("B", np.array(processed_results[idx], np.float32).tobytes())
+                response_array_refs.append(response_array)
+                bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
             lg.QuerySamplesComplete(response)
 

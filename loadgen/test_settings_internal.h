@@ -41,17 +41,17 @@ struct TestSettingsInternal {
 
   int samples_per_query;
   double target_qps;
-  std::chrono::nanoseconds target_latency;
+  std::chrono::nanoseconds target_latency{0};
   int max_async_queries;
 
   // Target duration is used to generate queries of a minimum duration before
   // the test run.
-  std::chrono::milliseconds target_duration;
+  std::chrono::milliseconds target_duration{0};
 
   // Min duration/query_count/sample_count are used to validate the test
   // duration at the end of the run.
-  std::chrono::milliseconds min_duration;
-  std::chrono::milliseconds max_duration;
+  std::chrono::milliseconds min_duration{0};
+  std::chrono::milliseconds max_duration{0};
   uint64_t min_query_count;
   uint64_t max_query_count;
   uint64_t min_sample_count;  // Offline only.

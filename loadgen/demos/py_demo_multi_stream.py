@@ -71,7 +71,7 @@ def main(argv):
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.MultiStream
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
-    settings.target_latency_ns = 100000000
+    settings.multi_stream_target_latency_ns = 100000000
     settings.multi_stream_samples_per_query = 4
     settings.multi_stream_max_async_queries = 2
     settings.min_query_count = 100

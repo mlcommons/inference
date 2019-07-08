@@ -37,6 +37,14 @@ class SystemUnderTest {
   // Note: The data for neighboring samples are not contiguous.
   virtual void IssueQuery(const std::vector<QuerySample>& samples) = 0;
 
+  // FlushQueries is called immediately after the last call to IssueQuery
+  // in a series is made. This doesn't necessarily signify the end of the
+  // test since there may be multiple series involved during a test.
+  // Clients can use this to flush any staged queries immediately, rather
+  // than waiting for some timeout.
+  // This is especially useful in the server scenario.
+  virtual void FlushQueries() = 0;
+
   // Reports the raw latency results to the SUT of each sample issued as
   // recorded by the load generator.
   // Units are nanoseconds.

@@ -207,8 +207,6 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     Log([sample, complete_begin_time, sample_data_copy](AsyncLog& log) {
       QueryMetadata* query = sample->query_metadata;
       DurationGeneratorNs sched{query->scheduled_time};
-      QuerySampleLatency latency = sched.delta(complete_begin_time);
-      log.RecordLatency(sample->sequence_id, latency);
       // Disable tracing each sample in offline mode. Since thousands of
       // samples could be overlapping when visualized, it's not very useful.
       // TODO: Should we disable for cloud mode as well? Sufficiently
@@ -227,6 +225,11 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
                         LogBinaryAsHexString{sample_data_copy});
         delete sample_data_copy;
       }
+
+      // Record the latency at the end, since it will unblock the issuing
+      // thread and potentially destroy the metadata being used above.
+      QuerySampleLatency latency = sched.delta(complete_begin_time);
+      log.RecordLatency(sample->sequence_id, latency);
     });
   }
 

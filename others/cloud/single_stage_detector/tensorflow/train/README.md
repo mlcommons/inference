@@ -61,7 +61,7 @@ Backbone is ResNet34 pretrained on ILSVRC. Modifications to the backbone network
 Metric is COCO box mAP (averaged over IoU of 0.5:0.95), computed over 2017 COCO val data.
 
 ### Quality target
-mAP of 0.202
+mAP of 0.211
 
 ### Evaluation frequency
 

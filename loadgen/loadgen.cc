@@ -823,7 +823,9 @@ void PerformanceSummary::Log(AsyncLog& log) {
       break;
     }
     case TestScenario::MultiStreamFree: {
-      double samples_per_second = pr.queries_issued * settings.samples_per_query / pr.final_query_all_samples_done_time;
+      double samples_per_second = pr.queries_issued *
+                                  settings.samples_per_query /
+                                  pr.final_query_all_samples_done_time;
       log.LogSummary("Samples per second : ", samples_per_second);
       break;
     }

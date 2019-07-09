@@ -307,9 +307,6 @@ std::vector<QueryMetadata> GenerateQueries(
 
   std::vector<QueryMetadata> queries;
 
-  assert(scenario == settings.scenario);
-  assert(mode == settings.mode);
-
   // Using the std::mt19937 pseudo-random number generator ensures a modicum of
   // cross platform reproducibility for trace generation.
   std::mt19937 sample_rng(settings.sample_index_rng_seed);

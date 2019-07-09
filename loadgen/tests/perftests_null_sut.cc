@@ -30,6 +30,7 @@ class SystemUnderTestNull : public mlperf::SystemUnderTest {
     }
     mlperf::QuerySamplesComplete(responses.data(), responses.size());
   }
+
   void FlushQueries() override {}
   void ReportLatencyResults(
       const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override {}
@@ -89,6 +90,8 @@ class SystemUnderTestNullStdAsync : public mlperf::SystemUnderTest {
       mlperf::QuerySamplesComplete(responses.data(), responses.size());
     }));
   }
+
+  void FlushQueries() override {}
   void ReportLatencyResults(
       const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override {}
 
@@ -141,6 +144,7 @@ class SystemUnderTestNullPool : public mlperf::SystemUnderTest {
     samples_.insert(samples_.end(), samples.begin(), samples.end());
   }
 
+  void FlushQueries() override {}
   void ReportLatencyResults(
       const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override {}
 

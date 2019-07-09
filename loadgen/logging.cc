@@ -90,6 +90,8 @@ const std::string ArgValueTransform(const LogBinaryAsHexString& value) {
   return hex;
 }
 
+AsyncLog::AsyncLog() = default;
+
 AsyncLog::~AsyncLog() { StartNewTrace(nullptr, PerfClock::now()); }
 
 void AsyncLog::SetLogFiles(std::ostream* summary, std::ostream* detail,
@@ -513,7 +515,7 @@ void Logger::StopTracing() {
 }
 
 void Logger::LogContentionCounters() {
-  LogDetail([&](AsyncLog& log) {
+  LogDetail([&](AsyncDetail& detail) {
     {
       std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
       for (auto tls_logger : tls_loggers_registerd_) {
@@ -528,19 +530,19 @@ void Logger::LogContentionCounters() {
       }
     }
 
-    log.LogDetail("Log Contention Counters:");
-    log.LogDetail(std::to_string(swap_request_slots_retry_count_) +
-                  " : swap_request_slots_retry_count");
-    log.LogDetail(std::to_string(swap_request_slots_retry_retry_count_) +
-                  " : swap_request_slots_retry_retry_count");
-    log.LogDetail(std::to_string(swap_request_slots_retry_reencounter_count_) +
-                  " : swap_request_slots_retry_reencounter_count");
-    log.LogDetail(std::to_string(start_reading_entries_retry_count_) +
-                  " : start_reading_entries_retry_count");
-    log.LogDetail(std::to_string(tls_total_log_cas_fail_count_) +
-                  " : tls_total_log_cas_fail_count");
-    log.LogDetail(std::to_string(tls_total_swap_buffers_slot_retry_count_) +
-                  " : tls_total_swap_buffers_slot_retry_count");
+    detail("Log Contention Counters:");
+    detail(std::to_string(swap_request_slots_retry_count_) +
+           " : swap_request_slots_retry_count");
+    detail(std::to_string(swap_request_slots_retry_retry_count_) +
+           " : swap_request_slots_retry_retry_count");
+    detail(std::to_string(swap_request_slots_retry_reencounter_count_) +
+           " : swap_request_slots_retry_reencounter_count");
+    detail(std::to_string(start_reading_entries_retry_count_) +
+           " : start_reading_entries_retry_count");
+    detail(std::to_string(tls_total_log_cas_fail_count_) +
+           " : tls_total_log_cas_fail_count");
+    detail(std::to_string(tls_total_swap_buffers_slot_retry_count_) +
+           " : tls_total_swap_buffers_slot_retry_count");
 
     swap_request_slots_retry_count_ = 0;
     swap_request_slots_retry_retry_count_ = 0;
@@ -572,7 +574,7 @@ TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {
     bool success = thread_swap_request_slots_[slot].compare_exchange_strong(
         slot_value, SwapRequestSlotIsWritableValue(next_id));
     if (!success) {
-      GlobalLogger().LogErrorSync("CAS failed.", "line", __LINE__);
+      LogErrorSync("CAS failed.", "line", __LINE__);
       assert(success);
     }
     return reinterpret_cast<TlsLogger*>(slot_value);

@@ -59,6 +59,7 @@ const T& ArgValueTransform(const T& value) {
 // TODO: Move non-templated methods to the cc file.
 class AsyncLog {
  public:
+  AsyncLog();
   ~AsyncLog();
 
   void SetLogFiles(std::ostream* summary, std::ostream* detail,
@@ -329,17 +330,6 @@ class Logger {
   void RequestSwapBuffers(TlsLogger* tls_logger);
   void CollectTlsLoggerStats(TlsLogger* tls_logger);
 
-  // Slow synchronous error logging for internals that may prevent
-  // async logging from working.
-  template <typename... Args>
-  void LogErrorSync(const std::string& message, const Args... args) {
-    // TODO: Acquire mutex once for FlagError + LogDetail to avoid
-    //       races. Better yet, switch to a non-stateful error API.
-    //       This is better than nothing though.
-    async_logger_.FlagError();
-    async_logger_.LogDetail(message, args...);
-  }
-
   TlsLogger* GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id);
   void GatherRetrySwapRequests(std::vector<TlsLogger*>* threads_to_swap);
   void GatherNewSwapRequests(std::vector<TlsLogger*>* threads_to_swap);
@@ -347,6 +337,17 @@ class Logger {
   // The main logging thread function that handles the serialization
   // and I/O to the stream or file.
   void IOThread();
+
+  // Slow synchronous error logging for internals that may prevent
+  // async logging from working.
+  template <typename... Args>
+  void LogErrorSync(const std::string& message, Args&&... args) {
+    // TODO: Acquire mutex once for FlagError + LogDetail to avoid
+    //       races. Better yet, switch to a non-stateful error API.
+    //       This is better than nothing though.
+    async_logger_.FlagError();
+    async_logger_.LogDetail(message, std::forward<Args>(args)...);
+  }
 
   // Accessed by IOThead only.
   const std::chrono::duration<double> poll_period_;
@@ -400,22 +401,58 @@ class Logger {
 Logger& GlobalLogger();
 void Log(AsyncLogEntry&& entry);
 
+class AsyncSummary {
+ public:
+  explicit AsyncSummary(AsyncLog& async_log) : async_log_(async_log) {}
+  AsyncLog& async_log() { return async_log_; }
+
+  template <typename... Args>
+  AsyncLog& operator()(Args&&... args) {
+    async_log_.LogSummary(std::forward<Args>(args)...);
+    return async_log_;
+  }
+
+ private:
+  AsyncLog& async_log_;
+};
+
 template <typename LambdaT>
-void LogError(LambdaT&& lambda) {
-  Log([lambda = std::forward<LambdaT>(lambda),
-       now = PerfClock::now()](AsyncLog& log) {
-    log.FlagError();
-    log.SetLogDetailTime(now);
-    lambda(log);
+void LogSummary(LambdaT&& lambda) {
+  Log([lambda = std::forward<LambdaT>(lambda)](AsyncLog& log) mutable {
+    AsyncSummary async_summary(log);
+    lambda(async_summary);
   });
 }
+
+class AsyncDetail {
+ public:
+  explicit AsyncDetail(AsyncLog& async_log) : async_log_(async_log) {}
+  AsyncLog& async_log() { return async_log_; }
+
+  template <typename... Args>
+  AsyncLog& operator()(Args&&... args) {
+    async_log_.LogDetail(std::forward<Args>(args)...);
+    return async_log_;
+  }
+
+  template <typename... Args>
+  AsyncLog& Error(Args&&... args) {
+    async_log_.FlagError();
+    async_log_.LogDetail(std::forward<Args>(args)...);
+    return async_log_;
+  }
+
+ private:
+  AsyncLog& async_log_;
+};
 
 template <typename LambdaT>
 void LogDetail(LambdaT&& lambda) {
   Log([lambda = std::forward<LambdaT>(lambda),
-       now = PerfClock::now()](AsyncLog& log) {
-    log.SetLogDetailTime(now);
-    lambda(log);
+       timestamp = PerfClock::now()](AsyncLog& log) mutable {
+    log.SetLogDetailTime(timestamp);
+    AsyncDetail async_detail(log);
+    lambda(async_detail);
   });
 }
 
@@ -439,6 +476,10 @@ class ScopedTracer {
   LambdaT lambda_;
 };
 
+// MakeScopedTracer helps with automatic template type deduction, which
+// has been supported for functions for a long time.
+// C++17 will support deduction for classes, which will neutralize the utility
+// of a helper function like this.
 template <typename LambdaT>
 auto MakeScopedTracer(LambdaT&& lambda) -> ScopedTracer<LambdaT> {
   return ScopedTracer<LambdaT>(std::forward<LambdaT>(lambda));

@@ -90,6 +90,133 @@ const std::string ArgValueTransform(const LogBinaryAsHexString& value) {
   return hex;
 }
 
+AsyncLog::~AsyncLog() { StartNewTrace(nullptr, PerfClock::now()); }
+
+void AsyncLog::SetLogFiles(std::ostream* summary, std::ostream* detail,
+                           std::ostream* accuracy, bool copy_detail_to_stdout,
+                           bool copy_summary_to_stdout,
+                           PerfClock::time_point log_origin) {
+  std::unique_lock<std::mutex> lock(log_mutex_);
+  if (summary_out_ != &std::cerr) {
+    std::string error_summary;
+    if (log_error_count_ == 0) {
+      error_summary = "\nNo errors encountered during test.\n";
+    } else if (log_error_count_ == 1) {
+      error_summary = "\n1 ERROR encountered. See detailed log.\n";
+    } else if (log_error_count_ != 0) {
+      error_summary = "\n" + std::to_string(log_error_count_) +
+                      " ERRORS encountered. See detailed log.\n";
+    }
+    *summary_out_ << error_summary;
+    if (copy_summary_to_stdout_) {
+      std::cout << error_summary;
+    }
+  }
+  if (summary_out_) {
+    summary_out_->flush();
+  }
+  if (detail_out_) {
+    detail_out_->flush();
+  }
+  if (accuracy_out_ != &std::cerr) {
+    WriteAccuracyFooterLocked();
+    accuracy_out_->flush();
+  }
+  summary_out_ = summary;
+  detail_out_ = detail;
+  accuracy_out_ = accuracy;
+  if (accuracy_out_ != &std::cerr) {
+    WriteAccuracyHeaderLocked();
+  }
+  copy_detail_to_stdout_ = copy_detail_to_stdout;
+  copy_summary_to_stdout_ = copy_summary_to_stdout;
+  log_origin_ = log_origin;
+  log_error_count_ = 0;
+}
+
+void AsyncLog::StartNewTrace(std::ostream* trace_out,
+                             PerfClock::time_point origin) {
+  std::unique_lock<std::mutex> lock(trace_mutex_);
+  // Cleanup previous trace.
+  if (trace_out_) {
+    WriteTraceEventFooterLocked();
+    trace_out_->flush();
+  }
+
+  // Setup new trace.
+  trace_out_ = trace_out;
+  trace_origin_ = origin;
+  if (trace_out_) {
+    WriteTraceEventHeaderLocked();
+  }
+}
+
+void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
+                           const LogBinaryAsHexString& response) {
+  std::unique_lock<std::mutex> lock(log_mutex_);
+  if (!accuracy_out_) {
+    return;
+  }
+  *accuracy_out_ << (accuracy_needs_comma_ ? ",\n{ " : "\n{ ");
+  LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
+          response);
+  *accuracy_out_ << " }";
+  accuracy_needs_comma_ = true;
+}
+
+void AsyncLog::Flush() {
+  {
+    std::unique_lock<std::mutex> lock(log_mutex_);
+    if (summary_out_) {
+      summary_out_->flush();
+    }
+    if (detail_out_) {
+      detail_out_->flush();
+    }
+    if (accuracy_out_) {
+      accuracy_out_->flush();
+    }
+  }
+
+  {
+    std::unique_lock<std::mutex> lock(trace_mutex_);
+    if (trace_out_) {
+      trace_out_->flush();
+    }
+  }
+}
+
+void AsyncLog::WriteAccuracyHeaderLocked() {
+  *accuracy_out_ << "[";
+  accuracy_needs_comma_ = false;
+}
+
+void AsyncLog::WriteAccuracyFooterLocked() { *accuracy_out_ << "\n]\n"; }
+
+void AsyncLog::WriteTraceEventHeaderLocked() {
+  *trace_out_ << "{ \"traceEvents\": [\n";
+}
+
+void AsyncLog::WriteTraceEventFooterLocked() {
+  *trace_out_ << "{ \"name\": \"LastTrace\" }\n"
+              << "],\n"
+              << "\"displayTimeUnit\": \"ns\",\n"
+              << "\"otherData\": {\n"
+              << "\"version\": \"MLPerf LoadGen v0.5a0\"\n"
+              << "}\n"
+              << "}\n";
+}
+
+void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id) {
+  std::unique_lock<std::mutex> lock(latencies_mutex_);
+  assert(latencies_.empty());
+  assert(latencies_recorded_ == latencies_expected_);
+  latencies_recorded_ = 0;
+  latencies_expected_ = 0;
+  max_latency_ = 0;
+  latencies_first_sample_sequence_id_ = first_sample_sequence_id;
+}
+
 void AsyncLog::RecordLatency(uint64_t sample_sequence_id,
                              QuerySampleLatency latency) {
   // Relaxed memory order since the early-out checks are inherently racy.
@@ -132,16 +259,6 @@ void AsyncLog::RecordLatency(uint64_t sample_sequence_id,
   if (AllLatenciesRecorded()) {
     all_latencies_recorded_.notify_all();
   }
-}
-
-void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id) {
-  std::unique_lock<std::mutex> lock(latencies_mutex_);
-  assert(latencies_.empty());
-  assert(latencies_recorded_ == latencies_expected_);
-  latencies_recorded_ = 0;
-  latencies_expected_ = 0;
-  max_latency_ = 0;
-  latencies_first_sample_sequence_id_ = first_sample_sequence_id;
 }
 
 std::vector<QuerySampleLatency> AsyncLog::GetLatenciesBlocking(

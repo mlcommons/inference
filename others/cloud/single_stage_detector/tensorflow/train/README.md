@@ -4,15 +4,12 @@ High pixel Object detection. this repo is modified from https://github.com/HiKap
 # 2. Directions
 
 ### Steps to configure machine
-
-
-1. install python3.6
 ```
+1. install python3.6
 2. Install pycocotools
    pip install git+https://github.com/philferriere/cocoapi.git#subdirectory=PythonAP
-```
-2. Install tensorflow1.9+
-```
+3. Install IPython
+4. Install tensorflow1.9+
 ```
 
 ### Steps to download data
@@ -26,10 +23,11 @@ bash download_dataset.sh
 ## Steps to training
 
 ### prepare dataset
+```
 1. cd dataset
 2. more details and steps can be found in README.md
 3. generate tfrecords format data.
-
+```
 ### train
 python train_ssd_large.py 
  
@@ -37,9 +35,10 @@ python train_ssd_large.py
 python eval_ssd_large.py
 
 ### frozen pb
+```
 1. python export_graph.py 
 2. bash run_freeze_graph.sh
- 
+ ```
 ### Hyperparameter settings
 
 Hyperparameters are recorded in the `train_*.py` and `eval_*.py` files for each configuration.

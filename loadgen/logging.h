@@ -77,26 +77,7 @@ class AsyncLog {
                    const LogBinaryAsHexString& response);
 
   template <typename... Args>
-  void LogSummary(const std::string& message, const Args... args) {
-    auto trace = MakeScopedTracer([message](AsyncLog& log) {
-      std::string sanitized_message = message;
-      std::replace(sanitized_message.begin(), sanitized_message.end(), '"',
-                   '\'');
-      std::replace(sanitized_message.begin(), sanitized_message.end(), '\n',
-                   ';');
-      log.ScopedTrace("LogSummary", "message", "\"" + sanitized_message + "\"");
-    });
-    std::unique_lock<std::mutex> lock(log_mutex_);
-    *summary_out_ << message;
-    LogArgs(summary_out_, args...);
-    *summary_out_ << "\n";
-
-    if (copy_summary_to_stdout_) {
-      std::cout << message;
-      LogArgs(&std::cout, args...);
-      std::cout << "\n";
-    }
-  }
+  void LogSummary(const std::string& message, const Args... args);
 
   void SetLogDetailTime(PerfClock::time_point time) { log_detail_time_ = time; }
 
@@ -108,35 +89,7 @@ class AsyncLog {
   }
 
   template <typename... Args>
-  void LogDetail(const std::string& message, const Args... args) {
-    auto trace = MakeScopedTracer([message](AsyncLog& log) {
-      std::string sanitized_message = message;
-      std::replace(sanitized_message.begin(), sanitized_message.end(), '"',
-                   '\'');
-      std::replace(sanitized_message.begin(), sanitized_message.end(), '\n',
-                   ';');
-      log.ScopedTrace("LogDetail", "message", "\"" + sanitized_message + "\"");
-    });
-    std::unique_lock<std::mutex> lock(log_mutex_);
-    std::vector<std::ostream*> detail_streams{detail_out_, &std::cout};
-    if (!copy_detail_to_stdout_) {
-      detail_streams.pop_back();
-    }
-    for (auto os : detail_streams) {
-      *os << *current_pid_tid_
-          << "\"ts\": " << (log_detail_time_ - log_origin_).count() << "ns : ";
-      if (error_flagged_) {
-        *os << "ERROR : ";
-      }
-      *os << message;
-      LogArgs(os, args...);
-      *os << "\n";
-      if (error_flagged_) {
-        os->flush();
-      }
-    }
-    error_flagged_ = false;
-  }
+  void LogDetail(const std::string& message, const Args... args);
 
   template <typename... Args>
   void Trace(const std::string& trace_name, PerfClock::time_point start,
@@ -456,6 +409,21 @@ void LogDetail(LambdaT&& lambda) {
   });
 }
 
+class AsyncTrace {
+ public:
+  explicit AsyncTrace(AsyncLog& async_log) : async_log_(async_log) {}
+  AsyncLog& async_log() { return async_log_; }
+
+  template <typename... Args>
+  AsyncLog& operator()(Args&&... args) {
+    async_log_.ScopedTrace(std::forward<Args>(args)...);
+    return async_log_;
+  }
+
+ private:
+  AsyncLog& async_log_;
+};
+
 // ScopedTracer is an RAII object that traces the start and end of its lifetime.
 template <typename LambdaT>
 class ScopedTracer {
@@ -467,7 +435,8 @@ class ScopedTracer {
     Log([start = start_, lambda = std::move(lambda_),
          end = PerfClock::now()](AsyncLog& log) {
       log.SetScopedTraceTimes(start, end);
-      lambda(log);
+      AsyncTrace async_trace(log);
+      lambda(async_trace);
     });
   }
 
@@ -483,6 +452,55 @@ class ScopedTracer {
 template <typename LambdaT>
 auto MakeScopedTracer(LambdaT&& lambda) -> ScopedTracer<LambdaT> {
   return ScopedTracer<LambdaT>(std::forward<LambdaT>(lambda));
+}
+
+template <typename... Args>
+void AsyncLog::LogSummary(const std::string& message, const Args... args) {
+  auto tracer = MakeScopedTracer([message](AsyncTrace& trace) {
+    std::string sanitized_message = message;
+    std::replace(sanitized_message.begin(), sanitized_message.end(), '"', '\'');
+    std::replace(sanitized_message.begin(), sanitized_message.end(), '\n', ';');
+    trace("LogSummary", "message", "\"" + sanitized_message + "\"");
+  });
+  std::unique_lock<std::mutex> lock(log_mutex_);
+  *summary_out_ << message;
+  LogArgs(summary_out_, args...);
+  *summary_out_ << "\n";
+
+  if (copy_summary_to_stdout_) {
+    std::cout << message;
+    LogArgs(&std::cout, args...);
+    std::cout << "\n";
+  }
+}
+
+template <typename... Args>
+void AsyncLog::LogDetail(const std::string& message, const Args... args) {
+  auto tracer = MakeScopedTracer([message](AsyncTrace& trace) {
+    std::string sanitized_message = message;
+    std::replace(sanitized_message.begin(), sanitized_message.end(), '"', '\'');
+    std::replace(sanitized_message.begin(), sanitized_message.end(), '\n', ';');
+    trace("LogDetail", "message", "\"" + sanitized_message + "\"");
+  });
+  std::unique_lock<std::mutex> lock(log_mutex_);
+  std::vector<std::ostream*> detail_streams{detail_out_, &std::cout};
+  if (!copy_detail_to_stdout_) {
+    detail_streams.pop_back();
+  }
+  for (auto os : detail_streams) {
+    *os << *current_pid_tid_
+        << "\"ts\": " << (log_detail_time_ - log_origin_).count() << "ns : ";
+    if (error_flagged_) {
+      *os << "ERROR : ";
+    }
+    *os << message;
+    LogArgs(os, args...);
+    *os << "\n";
+    if (error_flagged_) {
+      os->flush();
+    }
+  }
+  error_flagged_ = false;
 }
 
 }  // namespace mlperf

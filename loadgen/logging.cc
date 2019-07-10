@@ -631,19 +631,18 @@ void Logger::GatherNewSwapRequests(std::vector<TlsLogger*>* threads_to_swap) {
 
 void Logger::IOThread() {
   while (keep_io_thread_alive_) {
-    auto trace1 = MakeScopedTracer(
-        [](AsyncLog& log) { log.ScopedTrace("IOThreadLoop"); });
+    auto tracer1 =
+        MakeScopedTracer([](AsyncTrace& trace) { trace("IOThreadLoop"); });
     {
-      auto trace2 =
-          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Wait"); });
+      auto tracer2 = MakeScopedTracer([](AsyncTrace& trace) { trace("Wait"); });
       std::unique_lock<std::mutex> lock(io_thread_mutex_);
       io_thread_cv_.wait_for(lock, poll_period_,
                              [&] { return !keep_io_thread_alive_; });
     }
 
     {
-      auto trace3 =
-          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Gather"); });
+      auto tracer3 =
+          MakeScopedTracer([](AsyncTrace& trace) { trace("Gather"); });
       std::vector<TlsLogger*> threads_to_swap;
       threads_to_swap.swap(threads_to_swap_deferred_);
       GatherRetrySwapRequests(&threads_to_swap);
@@ -662,14 +661,14 @@ void Logger::IOThread() {
     }
 
     {
-      auto trace4 =
-          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Process"); });
+      auto tracer4 =
+          MakeScopedTracer([](AsyncTrace& trace) { trace("Process"); });
       // Read from the threads we are confident have activity.
       for (std::vector<TlsLogger*>::iterator thread = threads_to_read_.begin();
            thread != threads_to_read_.end(); thread++) {
-        auto trace5 =
-            MakeScopedTracer([tid = *(*thread)->TidAsString()](AsyncLog& log) {
-              log.ScopedTrace("Thread", "tid", tid);
+        auto tracer5 = MakeScopedTracer(
+            [tid = *(*thread)->TidAsString()](AsyncTrace& trace) {
+              trace("Thread", "tid", tid);
             });
         std::vector<AsyncLogEntry>* entries = (*thread)->StartReadingEntries();
         if (!entries) {
@@ -694,14 +693,14 @@ void Logger::IOThread() {
     }
 
     {
-      auto trace6 =
-          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("FlushAll"); });
+      auto tracer6 =
+          MakeScopedTracer([](AsyncTrace& trace) { trace("FlushAll"); });
       async_logger_.Flush();
     }
 
     if (!orphans_to_destroy_.empty()) {
-      auto trace7 = MakeScopedTracer(
-          [](AsyncLog& log) { log.ScopedTrace("Abandoning Orphans"); });
+      auto tracer7 = MakeScopedTracer(
+          [](AsyncTrace& trace) { trace("Abandoning Orphans"); });
       std::unique_lock<std::mutex> lock(tls_logger_orphans_mutex_);
       for (auto orphan : orphans_to_destroy_) {
         tls_logger_orphans_.erase(orphan);
@@ -799,12 +798,12 @@ void TlsLogger::FinishReadingEntries() {
 bool TlsLogger::ReadBufferHasBeenConsumed() { return unread_swaps_ == 0; }
 
 void TlsLogger::TraceCounters() {
-  auto trace = MakeScopedTracer(
+  auto tracer = MakeScopedTracer(
       [lcfc = log_cas_fail_count_.load(std::memory_order_relaxed),
        sbsrc = swap_buffers_slot_retry_count_.load(std::memory_order_relaxed)](
-          AsyncLog& log) {
-        log.ScopedTrace("TlsLogger:ContentionCounters", "log_cas_fail_count",
-                        lcfc, "swap_buffers_slot_retry_count", sbsrc);
+          AsyncTrace& trace) {
+        trace("TlsLogger:ContentionCounters", "log_cas_fail_count", lcfc,
+              "swap_buffers_slot_retry_count", sbsrc);
       });
 }
 

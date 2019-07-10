@@ -154,8 +154,8 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
                           size_t response_count) {
   PerfClock::time_point timestamp = PerfClock::now();
 
-  auto trace = MakeScopedTracer(
-      [](AsyncLog& log) { log.ScopedTrace("QuerySamplesComplete"); });
+  auto tracer = MakeScopedTracer(
+      [](AsyncTrace& trace) { trace("QuerySamplesComplete"); });
 
   const QuerySampleResponse* end = responses + response_count;
 
@@ -286,8 +286,8 @@ std::vector<QueryMetadata> GenerateQueries(
     const TestSettingsInternal& settings,
     const LoadableSampleSet& loaded_sample_set, SequenceGen* sequence_gen,
     ResponseDelegate* response_delegate) {
-  auto trace = MakeScopedTracer(
-      [](AsyncLog& log) { log.ScopedTrace("GenerateQueries"); });
+  auto tracer =
+      MakeScopedTracer([](AsyncTrace& trace) { trace("GenerateQueries"); });
 
   auto& loaded_samples = loaded_sample_set.set;
 
@@ -378,8 +378,7 @@ struct QueryScheduler<TestScenario::SingleStream> {
                  const PerfClock::time_point) {}
 
   PerfClock::time_point Wait(QueryMetadata* next_query) {
-    auto trace =
-        MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Waiting"); });
+    auto tracer = MakeScopedTracer([](AsyncTrace& trace) { trace("Waiting"); });
     if (prev_query != nullptr) {
       prev_query->WaitForAllSamplesCompleted();
     }
@@ -408,8 +407,8 @@ struct QueryScheduler<TestScenario::MultiStream> {
   PerfClock::time_point Wait(QueryMetadata* next_query) {
     {
       prev_queries.push(next_query);
-      auto trace =
-          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Waiting"); });
+      auto tracer =
+          MakeScopedTracer([](AsyncTrace& trace) { trace("Waiting"); });
       if (prev_queries.size() > max_async_queries) {
         prev_queries.front()->WaitForAllSamplesCompleted();
         prev_queries.pop();
@@ -417,8 +416,8 @@ struct QueryScheduler<TestScenario::MultiStream> {
     }
 
     {
-      auto trace = MakeScopedTracer(
-          [](AsyncLog& log) { log.ScopedTrace("Scheduling"); });
+      auto tracer =
+          MakeScopedTracer([](AsyncTrace& trace) { trace("Scheduling"); });
       // TODO(brianderson): Skip ticks based on the query complete time,
       //     before the query snchronization + notification thread hop,
       //     rather than after.
@@ -461,8 +460,8 @@ struct QueryScheduler<TestScenario::MultiStreamFree> {
     bool schedule_time_needed = true;
     {
       prev_queries.push(next_query);
-      auto trace =
-          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Waiting"); });
+      auto tracer =
+          MakeScopedTracer([](AsyncTrace& trace) { trace("Waiting"); });
       if (prev_queries.size() > max_async_queries) {
         next_query->scheduled_time =
             prev_queries.front()->WaitForAllSamplesCompletedWithTimestamp();
@@ -492,8 +491,8 @@ struct QueryScheduler<TestScenario::Server> {
 
   // TODO: Coalesce all queries whose scheduled timestamps have passed.
   PerfClock::time_point Wait(QueryMetadata* next_query) {
-    auto trace =
-        MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Scheduling"); });
+    auto tracer =
+        MakeScopedTracer([](AsyncTrace& trace) { trace("Scheduling"); });
 
     auto scheduled_time = start + next_query->scheduled_delta;
     next_query->scheduled_time = scheduled_time;
@@ -563,14 +562,14 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   QueryScheduler<scenario> query_scheduler(settings, start);
 
   for (auto& query : queries) {
-    auto trace1 =
-        MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("SampleLoop"); });
+    auto tracer1 =
+        MakeScopedTracer([](AsyncTrace& trace) { trace("SampleLoop"); });
     last_now = query_scheduler.Wait(&query);
 
     // Issue the query to the SUT.
     {
-      auto trace3 = MakeScopedTracer(
-          [](AsyncLog& log) { log.ScopedTrace("IssueQuery"); });
+      auto tracer3 =
+          MakeScopedTracer([](AsyncTrace& trace) { trace("IssueQuery"); });
       sut->IssueQuery(query.query_to_send);
     }
 
@@ -993,9 +992,9 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   for (auto& loadable_set : loadable_sets) {
     {
-      auto trace =
-          MakeScopedTracer([count = loadable_set.set.size()](AsyncLog& log) {
-            log.ScopedTrace("LoadSamples", "count", count);
+      auto tracer = MakeScopedTracer(
+          [count = loadable_set.set.size()](AsyncTrace& trace) {
+            trace("LoadSamples", "count", count);
           });
       LoadSamplesToRam(qsl, loadable_set.set);
     }
@@ -1004,9 +1003,9 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
         sut, settings, loadable_set, sequence_gen));
 
     {
-      auto trace =
-          MakeScopedTracer([count = loadable_set.set.size()](AsyncLog& log) {
-            log.ScopedTrace("UnloadSampes", "count", count);
+      auto tracer = MakeScopedTracer(
+          [count = loadable_set.set.size()](AsyncTrace& trace) {
+            trace("UnloadSampes", "count", count);
           });
       qsl->UnloadSamplesFromRam(loadable_set.set);
     }
@@ -1061,8 +1060,8 @@ struct RunFunctions {
 //       requirement though.
 std::vector<LoadableSampleSet> GenerateLoadableSets(
     QuerySampleLibrary* qsl, const TestSettingsInternal& settings) {
-  auto trace = MakeScopedTracer(
-      [](AsyncLog& log) { log.ScopedTrace("GenerateLoadableSets"); });
+  auto tracer = MakeScopedTracer(
+      [](AsyncTrace& trace) { trace("GenerateLoadableSets"); });
 
   std::vector<LoadableSampleSet> result;
   std::mt19937 qsl_rng(settings.qsl_rng_seed);

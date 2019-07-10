@@ -541,6 +541,7 @@ if __name__ == "__main__":
         total_queries, perf_queries, runner.load_samples_to_ram, runner.unload_samples_from_ram)
 
     mlperf_loadgen.StartTest(sut, qsl, settings)
+    runner.finish()
     mlperf_loadgen.DestroyQSL(qsl)
     mlperf_loadgen.DestroySUT(sut)
 

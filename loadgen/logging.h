@@ -300,6 +300,21 @@ class AsyncLog {
                 << "\"ts\": " << (end - trace_origin_).count() << " },\n";
   }
 
+  template <typename... Args>
+  void TraceCounterEvent(const std::string& trace_name,
+                         PerfClock::time_point time, const Args... args) {
+    std::unique_lock<std::mutex> lock(trace_mutex_);
+    if (!trace_out_) {
+      return;
+    }
+    *trace_out_ << "{\"name\": \"" << trace_name << "\", "
+                << "\"ph\": \"C\", " << *current_pid_tid_
+                << "\"ts\": " << (time - trace_origin_).count() << ", "
+                << "\"args\": { ";
+    LogArgs(trace_out_, args...);
+    *trace_out_ << " }},\n";
+  }
+
   void RecordLatency(uint64_t sample_sequence_id, QuerySampleLatency latency);
   void RestartLatencyRecording(uint64_t first_sample_sequence_id);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);

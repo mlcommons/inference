@@ -184,9 +184,6 @@ struct DurationGeneratorNs {
 
 // Right now, this is the only implementation of ResponseDelegate,
 // but more will be coming soon.
-// TODO: Versions that don't copy data.
-// TODO: Versions that have less detailed logs.
-// TODO: Versions that do a delayed notification.
 template <TestScenario scenario, TestMode mode>
 struct ResponseDelegateDetailed : public ResponseDelegate {
   std::atomic<size_t> queries_completed{0};
@@ -207,13 +204,17 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     Log([sample, complete_begin_time, sample_data_copy](AsyncLog& log) {
       QueryMetadata* query = sample->query_metadata;
       DurationGeneratorNs sched{query->scheduled_time};
-      QuerySampleLatency latency = sched.delta(complete_begin_time);
-      log.RecordLatency(sample->sequence_id, latency);
-      // Disable tracing each sample in offline mode. Since thousands of
-      // samples could be overlapping when visualized, it's not very useful.
-      // TODO: Should we disable for cloud mode as well? Sufficiently
-      // out-of-order processing could have lots of overlap too.
-      if (scenario != TestScenario::Offline) {
+
+      if (scenario == TestScenario::Server) {
+        // Trace the server scenario as a stacked graph via counter events.
+        DurationGeneratorNs issued{query->issued_start_time};
+        log.TraceCounterEvent("Latency", query->scheduled_time, "issue_delay",
+                              sched.delta(query->issued_start_time),
+                              "issue_to_done",
+                              issued.delta(complete_begin_time));
+      } else if (scenario != TestScenario::Offline) {
+        // Disable tracing of each sample in offline mode, where visualizing
+        // all samples overlapping isn't practical.
         log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
                         complete_begin_time, "sample_seq", sample->sequence_id,
                         "query_seq", query->sequence_id, "sample_idx",
@@ -227,6 +228,11 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
                         LogBinaryAsHexString{sample_data_copy});
         delete sample_data_copy;
       }
+
+      // Record the latency at the end, since it will unblock the issuing
+      // thread and potentially destroy the metadata being used above.
+      QuerySampleLatency latency = sched.delta(complete_begin_time);
+      log.RecordLatency(sample->sequence_id, latency);
     });
   }
 
@@ -617,6 +623,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
     // TODO: Use GetMaxLatencySoFar here if we decide to have a hard latency
     //       limit.
   }
+
+  // Let the SUT know it should not expect any more queries.
+  sut->FlushQueries();
 
   // The offline scenario always only has a single query, so this check
   // doesn't apply.

@@ -36,7 +36,8 @@ You will need to install the _LoadGen_ and download and install the datasets and
 
 ## Load Generator
 
-Please refer to README at under `/loadgen` directory to install LoadGen.
+Please refer to README at under `/loadgen` directory to install LoadGen. Also see useful presentation material [here](https://docs.google.com/presentation/d/1QZmAYGbwZbNcrWUrxUNA4bNxuzCI27N8iV1AdJu4QIE/edit#slide=id.g5ae6850c4c_0_0).
+
 
 ## Models
 

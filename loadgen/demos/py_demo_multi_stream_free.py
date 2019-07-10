@@ -55,6 +55,9 @@ def issue_query(query_samples):
             args=(query_samples, 2)).start()
 
 
+def flush_queries(): pass
+
+
 def process_latencies(latencies_ns):
     print("Average latency: ")
     print(numpy.mean(latencies_ns))
@@ -68,13 +71,14 @@ def main(argv):
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.MultiStreamFree
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
+    settings.multi_stream_target_latency_ns = 100000000
     settings.multi_stream_samples_per_query = 4
-    settings.target_latency_ns = 100000000
     settings.multi_stream_max_async_queries = 2
     settings.min_query_count = 100
     settings.min_duration_ms = 10000
 
-    sut = mlperf_loadgen.ConstructSUT(issue_query, process_latencies)
+    sut = mlperf_loadgen.ConstructSUT(
+        issue_query, flush_queries, process_latencies)
     qsl = mlperf_loadgen.ConstructQSL(
         1024, 128, load_samples_to_ram, unload_samples_from_ram)
     mlperf_loadgen.StartTest(sut, qsl, settings)

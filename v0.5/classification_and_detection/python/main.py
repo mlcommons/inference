@@ -281,9 +281,12 @@ class RunnerBase:
             # since post_process will not run, fake empty responses
             processed_results = [[]] * len(qitem.query_id)
         finally:
+            response_array_refs = []
             response = []
             for idx, query_id in enumerate(qitem.query_id):
-                bi = array.array("B", np.array(processed_results[idx], np.float32).tobytes()).buffer_info()
+                response_array = array.array("B", np.array(processed_results[idx], np.float32).tobytes())
+                response_array_refs.append(response_array)
+                bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
             lg.QuerySamplesComplete(response)
 
@@ -444,6 +447,8 @@ def main():
         def issue_queries(query_samples):
             runner.enqueue(query_samples)
 
+        def flush_queries(): pass
+
         def process_latencies(latencies_ns):
             # called by loadgen to show us the recorded latencies
             global last_timeing
@@ -478,7 +483,7 @@ def main():
             settings.min_query_count = args.queries_offline
             settings.max_query_count = args.queries_offline
 
-        sut = lg.ConstructSUT(issue_queries, process_latencies)
+        sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
         qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
 
         if scenario == lg.TestScenario.Server:

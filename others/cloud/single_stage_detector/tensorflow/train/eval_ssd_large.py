@@ -1,4 +1,28 @@
+# Copyright 2018 Changan Wang
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Modification made by Xilinx, Inc.
 # Copyright (c) 2019, Xilinx, Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#     http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#Origin code:https://github.com/HiKapok/SSD.TensorFlow/blob/master/eval_ssd.py 
+
 # All rights reserved.
 # 
 # Redistribution and use in source and binary forms, with or without modification,
@@ -25,17 +49,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# Copyright 2018 Changan Wang
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-# =============================================================================
+'''
+  This script is used to eval tensorflow ssd ckpt model on coco 2017 validation set. 
+'''
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -298,8 +315,8 @@ def ssd_model_fn(features, labels, mode, params):
                               tf.reshape(location_pred, [tf.shape(features)[0], -1, 4]),
                               dtype=[tf.float32] * len(num_anchors_per_layer), back_prop=False)
         bboxes_pred = tf.concat(bboxes_pred, axis=1)
-        print("bboxes_pred:", bboxes_pred)
-        print("cls_pred:", cls_pred)
+        #print("bboxes_pred:", bboxes_pred)
+        #print("cls_pred:", cls_pred)
         parse_bboxes_fn = lambda x: parse_by_class_fixed_bboxes(x[0], x[1], params)
         pred_results = tf.map_fn(parse_bboxes_fn, (cls_pred, bboxes_pred), dtype=(tf.float32, tf.float32, tf.float32), back_prop=False)     
  

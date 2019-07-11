@@ -21,7 +21,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#Origin code:https://github.com/HiKapok/SSD.TensorFlow/blob/master/eval_ssd.py 
+# Origin code:https://github.com/HiKapok/SSD.TensorFlow/blob/master/eval_ssd.py 
 
 # All rights reserved.
 # 

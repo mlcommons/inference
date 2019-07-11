@@ -10,7 +10,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#Origin code:https://github.com/zengarden/light_head_rcnn/blob/master/lib/datasets_odgt/cocoval.py
+# Origin code:https://github.com/zengarden/light_head_rcnn/blob/master/lib/datasets_odgt/cocoval.py
 
 # All rights reserved.
 # 

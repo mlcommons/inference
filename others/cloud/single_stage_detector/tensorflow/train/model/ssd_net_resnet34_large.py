@@ -21,7 +21,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#Origin code:https://github.com/HiKapok/SSD.TensorFlow/blob/master/net/ssd_net.py 
+# Origin code:https://github.com/HiKapok/SSD.TensorFlow/blob/master/net/ssd_net.py 
 
 # All rights reserved.
 # 

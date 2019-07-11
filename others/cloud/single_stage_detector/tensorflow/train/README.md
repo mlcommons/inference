@@ -41,7 +41,7 @@ python eval_ssd_large.py
  ```
 ### Hyperparameter settings
 
-Hyperparameters are recorded in the `train_*.py` and `eval_*.py` files for each configuration.
+Hyperparameters are recorded in the `train_*.py` and `eval_*.py` files for each configure.
 
 # 3. Dataset/Environment
 ### Publiction/Attribution.

@@ -25,6 +25,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+'''
+  This script is used to eval tensorflow ssd-resnet34 pb model on coco2017 validation set, where pb model includes post process.
+'''
+
 import numpy as np
 import os
 import sys
@@ -45,7 +49,7 @@ def parse_args():
     arg_parser.add_argument('-cl', '--coco_labelmap_path', type=str, default='./dataset_config/coco_labelmap.txt', help='coco labelmap file path.')
     arg_parser.add_argument('-bs', '--batch_size', type=int, default=4)
     arg_parser.add_argument('-st', '--score_threshold', type=float, default=0.05, help='socre threshold for detection results.')
-    arg_parser.add_argument('-g', '--gpu', type=str, choices= ['0', '1', '2', '3', '4', '5'], default='4')
+    arg_parser.add_argument('-g', '--gpu', type=str, choices= ['0', '1', '2', '3'], default='0')
     arg_parser.add_argument('-ir', '--image_root', type=str, default='coco/val2017/', help='image root')
     arg_parser.add_argument('-il', '--image_list_file', type=str, default='./dataset_config/val2017_image_list.txt', help='image list for evalution.')
     arg_parser.add_argument('-gt', '--gt_file', type=str, default='coco/annotations/instances_val2017.json', help='groundtruth of coco dataset file.')

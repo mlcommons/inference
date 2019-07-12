@@ -147,7 +147,7 @@ struct TestSettings {
 };
 
 enum class LoggingMode {
-  AsyncPoll,      // Logs are serialized and ouptut on an IOThread that polls
+  AsyncPoll,      // Logs are serialized and output on an IOThread that polls
                   // for new logs at a fixed interval.
   EndOfTestOnly,  // TODO: Logs are serialzied and output only at the end of
                   // the test.

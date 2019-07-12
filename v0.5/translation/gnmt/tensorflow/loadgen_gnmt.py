@@ -211,8 +211,7 @@ class GNMTRunner (Runner):
     # @param model: GNMTWrapper object
     # @param input_file: path to the input text
     # @param verbose: provide some information on the progress
-    # @param drop_duplicates: Drop duplicate sentence IDs? (e.g., in Accuracy mode)
-    def __init__(self, model, input_file=None, verbose=False, drop_duplicates=False):
+    def __init__(self, model, input_file=None, verbose=False):
         Runner.__init__(self)
 
         # If no value is provided for the construtor arguments, set defaults here
@@ -223,10 +222,6 @@ class GNMTRunner (Runner):
         self.input_file = input_file
         
         self.VERBOSE = verbose
-
-        # Variables to control handling of duplicate queries
-        self.drop_duplicates = drop_duplicates
-        self.processed_sentence_ids = []
 
     ##
     # @brief Load sentences into the infer_data array and warmup the network
@@ -260,48 +255,12 @@ class GNMTRunner (Runner):
         return translation
 
     ##
-    # @brief Filter duplicate samples
-    # @param samples: original list of samples
-    # @detail: If we're supposed to drop duplicates, drop all samples that have a sentence ID we've seen before
-    # @return list of samples that haven't been seen before; or list of original samples if we're not supposed to filter
-    # @note: If "samples" contains duplicates, these too will be filtered out
-    def filterQuerySamples(self, samples):
-        # Don't filter
-        if not self.drop_duplicates:
-            return samples
-
-        # Filter out all samples that were seen before
-        filtered_query_samples = []
-        for sample in samples:
-            sentence_id = sample.index
-            if sentence_id in self.processed_sentence_ids:
-                if self.VERBOSE:
-                    print ("Holding back the following sentence ID, as it has been processed before: {}".format(sentence_id))
-
-                # Return a fake response to loadgen (loadgen expects a response for every query sent)
-                mlperf_loadgen.QuerySamplesComplete([mlperf_loadgen.QuerySampleResponse(sample.id, 0, 0)])
-            else:
-                filtered_query_samples.append(sample)
-
-                # Although not technically processed, it is important to keep track of 
-                # the "seen" sentence IDs here, in case "samples" contains duplicates
-                self.processed_sentence_ids.append(sentence_id)
-
-        return filtered_query_samples
-
-    ##
     # @brief Create a batched task and add it to the queue
     def enqueue(self, query_samples):
         if self.VERBOSE:
             print("Received query")
-        
-        filtered_query_samples = self.filterQuerySamples(query_samples)
-        
-        if len(filtered_query_samples) == 0:
-            return
-
-        query_id_list, sentence_id_list = zip(* [(sample.id, sample.index) for sample in filtered_query_samples])
-        
+        query_id_list = [sample.id for sample in query_samples]
+        sentence_id_list = [sample.index for sample in query_samples] 
         task = BatchTranslationTask(sentence_id_list, query_id_list)
         self.tasks.put(task)
 
@@ -334,9 +293,8 @@ class SingleStreamGNMTRunner (GNMTRunner):
     # @param store_translation: whether output should be stored
     # @param verbose: provide some information on the progress
     # @param outdir: Output directory to optionally write translations to
-    # @param drop_duplicates: Drop duplicate sentence IDs? (e.g., in Accuracy mode)
-    def __init__(self, model, input_file=None, store_translation=False, verbose=False, outdir=None, drop_duplicates=False):
-        GNMTRunner.__init__(self, model, input_file, verbose=verbose, drop_duplicates=drop_duplicates)
+    def __init__(self, model, input_file=None, store_translation=False, verbose=False, outdir=None):
+        GNMTRunner.__init__(self, model, input_file, verbose=verbose)
 
         # SingleStreamGNMTRunner only handles batch sizes of 1
         assert self.gnmt.getBatchSize() == 1
@@ -375,12 +333,7 @@ class SingleStreamGNMTRunner (GNMTRunner):
     # @brief Create a task and add it to the queue
     def enqueue(self, query_samples):
         assert len(query_samples) == 1
-
-        filtered_query_samples = self.filterQuerySamples(query_samples)
-        if len(filtered_query_samples) == 0:
-            return
-
-        sample = filtered_query_samples[0]
+        sample = query_samples[0]
         sentence_id = sample.index
         output_file = os.path.join(self.out_dir, "sentence_{}_de".format(sample.index))
 
@@ -493,26 +446,24 @@ if __name__ == "__main__":
     else:
         batch_size = args.batch_size
 
-    drop_duplicates = (args.mode == "Accuracy")
-
     gnmt_model = GNMTWrapper(batch_size = batch_size, outdir=outdir)
 
     if args.scenario == "SingleStream":
-        runner = SingleStreamGNMTRunner(gnmt_model, store_translation=args.store_translation, verbose=args.verbose, outdir=outdir, drop_duplicates=drop_duplicates)
+        runner = SingleStreamGNMTRunner(gnmt_model, store_translation=args.store_translation, verbose=args.verbose, outdir=outdir)
         
         # Specify exactly how many queries need to be made
         settings.min_query_count = 100
         settings.max_query_count = 100
 
     elif args.scenario == "Offline":
-        runner = GNMTRunner(gnmt_model, verbose=args.verbose, drop_duplicates=drop_duplicates)
+        runner = GNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
         settings.min_query_count = 1
         settings.max_query_count = 1
 
     elif args.scenario == "MultiStream":
-        runner = GNMTRunner(gnmt_model, verbose=args.verbose, drop_duplicates=drop_duplicates)
+        runner = GNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
         settings.min_query_count = 100
@@ -520,7 +471,7 @@ if __name__ == "__main__":
         settings.multi_stream_samples_per_query = 8
 
     elif args.scenario == "Server":
-        runner = ServerGNMTRunner(gnmt_model, verbose=args.verbose, drop_duplicates=drop_duplicates)
+        runner = ServerGNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
         settings.min_query_count = 20
@@ -544,6 +495,4 @@ if __name__ == "__main__":
     runner.finish()
     mlperf_loadgen.DestroyQSL(qsl)
     mlperf_loadgen.DestroySUT(sut)
-
-    runner.finish()
 

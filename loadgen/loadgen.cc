@@ -249,7 +249,7 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
 template <TestScenario scenario>
 auto ScheduleDistribution(double qps) {
   return [period = std::chrono::duration_cast<std::chrono::nanoseconds>(
-              std::chrono::duration<double>(1.0 / qps))](auto& gen) {
+              std::chrono::duration<double>(1.0 / qps))](auto& /*gen*/) {
     return period;
   };
 }
@@ -267,16 +267,17 @@ auto ScheduleDistribution<TestScenario::Server>(double qps) {
 // SampleDistribution templates by test mode.
 template <TestMode mode>
 auto SampleDistribution(size_t sample_count, size_t samples_per_query) {
-  return [sample_count, samples_per_query, i = size_t(0)](auto& gen) mutable {
-    size_t result = i;
-    i += samples_per_query;
-    return result % sample_count;
-  };
+  return
+      [sample_count, samples_per_query, i = size_t(0)](auto& /*gen*/) mutable {
+        size_t result = i;
+        i += samples_per_query;
+        return result % sample_count;
+      };
 }
 
 template <>
-auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
-                                                   size_t samples_per_query) {
+auto SampleDistribution<TestMode::PerformanceOnly>(
+    size_t sample_count, size_t /*samples_per_query*/) {
   return [dist = std::uniform_int_distribution<>(0, sample_count - 1)](
              auto& gen) mutable { return dist(gen); };
 }
@@ -374,7 +375,7 @@ struct QueryScheduler {
 // SingleStream QueryScheduler
 template <>
 struct QueryScheduler<TestScenario::SingleStream> {
-  QueryScheduler(const TestSettingsInternal& settings,
+  QueryScheduler(const TestSettingsInternal& /*settings*/,
                  const PerfClock::time_point) {}
 
   PerfClock::time_point Wait(QueryMetadata* next_query) {
@@ -453,7 +454,7 @@ struct QueryScheduler<TestScenario::MultiStream> {
 template <>
 struct QueryScheduler<TestScenario::MultiStreamFree> {
   QueryScheduler(const TestSettingsInternal& settings,
-                 const PerfClock::time_point start)
+                 const PerfClock::time_point /*start*/)
       : max_async_queries(settings.max_async_queries) {}
 
   PerfClock::time_point Wait(QueryMetadata* next_query) {
@@ -485,7 +486,7 @@ struct QueryScheduler<TestScenario::MultiStreamFree> {
 // Server QueryScheduler
 template <>
 struct QueryScheduler<TestScenario::Server> {
-  QueryScheduler(const TestSettingsInternal& settings,
+  QueryScheduler(const TestSettingsInternal& /*settings*/,
                  const PerfClock::time_point start)
       : start(start) {}
 
@@ -509,7 +510,7 @@ struct QueryScheduler<TestScenario::Server> {
 // Offline QueryScheduler
 template <>
 struct QueryScheduler<TestScenario::Offline> {
-  QueryScheduler(const TestSettingsInternal& settings,
+  QueryScheduler(const TestSettingsInternal& /*settings*/,
                  const PerfClock::time_point start)
       : start(start) {}
 
@@ -671,10 +672,10 @@ struct PerformanceSummary {
   PerformanceResult pr;
 
   // Set by ProcessLatencies.
-  size_t sample_count;
-  QuerySampleLatency latency_min;
-  QuerySampleLatency latency_max;
-  QuerySampleLatency latency_mean;
+  size_t sample_count = 0;
+  QuerySampleLatency latency_min = 0;
+  QuerySampleLatency latency_max = 0;
+  QuerySampleLatency latency_mean = 0;
   struct PercentileEntry {
     const double percentile;
     QuerySampleLatency value = 0;

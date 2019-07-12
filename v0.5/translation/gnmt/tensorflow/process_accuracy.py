@@ -53,7 +53,7 @@ if __name__ == "__main__":
 
     runningBLUE = bleu.RunningBLEUScorer(4)
 
-    seen_sentence_ids = []
+    seen_sentence_ids = set()
     with open(args.accuracy_log) as ifh:
         for line in ifh:
             ##
@@ -76,7 +76,7 @@ if __name__ == "__main__":
                 continue
 
             # Keep track of the sentence IDs seen before
-            seen_sentence_ids.append(sent_id)
+            seen_sentence_ids.add(sent_id)
 
             # Update the Running BLEU Scorer for this sentence
             runningBLUE.add_sentence(ref[sent_id], trans)

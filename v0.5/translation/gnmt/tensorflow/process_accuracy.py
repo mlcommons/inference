@@ -63,19 +63,13 @@ if __name__ == "__main__":
             # without proper closure braces.
             if not "{" in line:
                 continue
-            
             s_line = line.strip("\n").strip(",")
             record = eval(s_line)
-            data = record["data"]
-            sent_id = record["qsl_idx"]
-
-            # If there is no data, skip this sentence
-            if data == "":
-                continue
 
             # Decode data to sentence
-            sentence = (bytes.fromhex(data)).decode("utf-8")
+            sentence = (bytes.fromhex(record["data"])).decode("utf-8")
             trans = sentence.split(" ")
+            sent_id = record["qsl_idx"]
 
             # Update the Running BLEU Scorer for this sentence
             runningBLUE.add_sentence(ref[sent_id], trans)

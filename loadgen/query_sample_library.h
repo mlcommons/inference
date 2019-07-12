@@ -33,10 +33,10 @@ class QuerySampleLibrary {
   virtual const std::string& Name() const = 0;
 
   // Total number of samples in library.
-  virtual const size_t TotalSampleCount() = 0;
+  virtual size_t TotalSampleCount() = 0;
 
   // The number of samples that are guaranteed to fit in RAM.
-  virtual const size_t PerformanceSampleCount() = 0;
+  virtual size_t PerformanceSampleCount() = 0;
 
   // Loads the requested query samples into memory.
   // Paired with calls to UnloadSamplesFromRam.

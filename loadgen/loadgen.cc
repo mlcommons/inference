@@ -237,7 +237,7 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
   }
 
   void QueryComplete() override {
-    // We only need to track oustanding queries in the server scenario to
+    // We only need to track outstanding queries in the server scenario to
     // detect when the SUT has fallen too far behind.
     if (scenario == TestScenario::Server) {
       queries_completed.fetch_add(1, std::memory_order_relaxed);
@@ -610,7 +610,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
           response_logger.queries_completed.load(std::memory_order_relaxed);
       if (queries_outstanding > max_queries_outstanding) {
         LogDetail([queries_issued, queries_outstanding](AsyncDetail& detail) {
-          detail.Error("Ending early: Too many oustanding queries.", "issued",
+          detail.Error("Ending early: Too many outstanding queries.", "issued",
                        queries_issued, "outstanding", queries_outstanding);
         });
         break;
@@ -878,7 +878,7 @@ void PerformanceSummary::Log(AsyncSummary& summary) {
     if (!min_queries_met) {
       summary(
           " * The test exited early, before enough queries were issued.\n"
-          "   See the detailed log for why this may have occured.");
+          "   See the detailed log for why this may have occurred.");
     }
   }
 

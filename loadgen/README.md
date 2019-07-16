@@ -24,6 +24,14 @@ To build the loadgen as a C++ library, rather than a python module:
     make mlperf_loadgen
     cp out/MakefileGnProj/obj/loadgen/libmlperf_loadgen.a .
 
+Alternatively:
+
+    git clone --recurse-submodules https://github.com/mlperf/inference.git mlperf_inference
+    cd mlperf_inference
+    mkdir loadgen/build/ && cd loadgen/build/
+    cmake .. && cmake --build .
+    cp libmlperf_loadgen.a ..
+
 ## Overview
 
 The load generator is built using the

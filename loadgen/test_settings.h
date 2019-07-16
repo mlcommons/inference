@@ -170,7 +170,7 @@ struct LogOutputSettings {
 struct LogSettings {
   LogOutputSettings log_output;
   LoggingMode log_mode = LoggingMode::AsyncPoll;
-  uint64_t log_mode_async_poll_interval_ms = 1000;  // TODO.
+  uint64_t log_mode_async_poll_interval_ms = 1000;  // TODO: Use this.
   bool enable_trace = true;  // TODO: Allow trace to be disabled.
 };
 

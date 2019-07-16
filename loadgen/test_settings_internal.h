@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace mlperf {
 
-class AsyncLog;
+class AsyncSummary;
 
 std::string ToString(TestScenario scenario);
 std::string ToString(TestMode mode);
@@ -33,7 +33,7 @@ struct TestSettingsInternal {
   explicit TestSettingsInternal(const TestSettings& requested_settings);
   void LogEffectiveSettings() const;
   void LogAllSettings() const;
-  void LogSummary(AsyncLog& log) const;
+  void LogSummary(AsyncSummary& summary) const;
 
   const TestSettings requested;
   const TestScenario scenario;  // Copied here for convenience.

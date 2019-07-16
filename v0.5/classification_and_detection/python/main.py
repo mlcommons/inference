@@ -143,6 +143,13 @@ SUPPORTED_PROFILES = {
         "backend": "onnxruntime",
         "data-format": "NCHW",
     },
+    "ssd-resnet34-onnxruntime-tf": {
+        "dataset": "coco-1200-tf",
+        "inputs": "image:0",
+        "outputs": "detection_bboxes:0,detection_classes:0,detection_scores:0",
+        "backend": "onnxruntime",
+        "data-format": "NHWC",
+    },
 }
 
 SCENARIO_MAP = {

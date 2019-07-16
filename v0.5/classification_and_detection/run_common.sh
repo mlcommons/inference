@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34] [cpu|gpu]"
+    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34] [cpu|gpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -21,7 +21,7 @@ for i in $* ; do
        tf|onnxruntime|tflite|pytorch) backend=$i; shift;;
        cpu|gpu) device=$i; shift;;
        gpu) device=gpu; shift;;
-       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34) model=$i; shift;;
+       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf) model=$i; shift;;
     esac
 done
 
@@ -68,8 +68,14 @@ if [ $name == "ssd-mobilenet-onnxruntime" ] ; then
     profile=ssd-mobilenet-onnxruntime
 fi
 if [ $name == "ssd-resnet34-onnxruntime" ] ; then
+    # use onnx model converted from pytorch
     model_path="$MODEL_DIR/resnet34-ssd1200.onnx"
     profile=ssd-resnet34-onnxruntime
+fi
+if [ $name == "ssd-resnet34-tf-onnxruntime" ] ; then
+    # use onnx model converted from tensorflow
+    model_path="$MODEL_DIR/ssd_resnet34_mAP_20.2.onnx"
+    profile=ssd-resnet34-onnxruntime-tf
 fi
 
 #

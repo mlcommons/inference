@@ -625,7 +625,7 @@ void Logger::GatherNewSwapRequests(std::vector<TlsLogger*>* threads_to_swap) {
         it->next_id = next_id;
         swap_request_slots_retry_reencounter_count_++;
       }
-    };
+    }
   }
 }
 
@@ -722,7 +722,7 @@ TlsLogger::TlsLogger(std::function<void()> forced_detatch)
 TlsLogger::~TlsLogger() {}
 
 // Log always makes forward progress since it can unconditionally obtain a
-// "lock" on at least one of the buffers for writting.
+// "lock" on at least one of the buffers for writing.
 // Notificiation is also lock free.
 void TlsLogger::Log(AsyncLogEntry&& entry) {
   size_t cas_fail_count = 0;

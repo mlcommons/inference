@@ -24,6 +24,7 @@ limitations under the License.
 #include <random>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "logging.h"
 #include "query_sample.h"
@@ -73,18 +74,18 @@ struct SampleMetadata {
 
 class QueryMetadata {
  public:
-  QueryMetadata(const std::vector<QuerySampleIndex>& query_sample_indicies,
+  QueryMetadata(const std::vector<QuerySampleIndex>& query_sample_indices,
                 std::chrono::nanoseconds scheduled_delta,
                 ResponseDelegate* response_delegate, SequenceGen* sequence_gen)
       : scheduled_delta(scheduled_delta),
         response_delegate(response_delegate),
         sequence_id(sequence_gen->NextQueryId()),
-        wait_count_(query_sample_indicies.size()) {
-    samples_.reserve(query_sample_indicies.size());
-    for (QuerySampleIndex qsi : query_sample_indicies) {
+        wait_count_(query_sample_indices.size()) {
+    samples_.reserve(query_sample_indices.size());
+    for (QuerySampleIndex qsi : query_sample_indices) {
       samples_.push_back({this, sequence_gen->NextSampleId(), qsi});
     }
-    query_to_send.reserve(query_sample_indicies.size());
+    query_to_send.reserve(query_sample_indices.size());
     for (auto& s : samples_) {
       query_to_send.push_back(
           {reinterpret_cast<ResponseId>(&s), s.sample_index});
@@ -1067,7 +1068,7 @@ std::vector<LoadableSampleSet> GenerateLoadableSets(
   std::vector<LoadableSampleSet> result;
   std::mt19937 qsl_rng(settings.qsl_rng_seed);
 
-  // Generate indicies for all available samples in the QSL.
+  // Generate indices for all available samples in the QSL.
   const size_t qsl_total_count = qsl->TotalSampleCount();
   std::vector<QuerySampleIndex> samples(qsl_total_count);
   for (size_t i = 0; i < qsl_total_count; i++) {

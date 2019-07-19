@@ -13,32 +13,36 @@
 # limitations under the License.
 # =============================================================================
 
-"""
-Python demo showing how to use the MLPerf Inference load generator bindings.
+"""Python demo showing how to use the MLPerf Inference load generator bindings.
 """
 
 from __future__ import print_function
-from absl import app
+
 import array
-import mlperf_loadgen
 import threading
 import time
+
+from absl import app
+import mlperf_loadgen
 import numpy
 
 
 def load_samples_to_ram(query_samples):
+    del query_samples
     return
 
 
 def unload_samples_from_ram(query_samples):
+    del query_samples
     return
 
 
 def process_query_async(query_samples):
+    """Processes the list of queries."""
     time.sleep(.001)
     responses = []
     response_array = array.array(
-        'f', [0,1,7,8,15,16,31,32,63,64,127,128,254,255])
+        "f", [0, 1, 7, 8, 15, 16, 31, 32, 63, 64, 127, 128, 254, 255])
     response_info = response_array.buffer_info()
     response_data = response_info[0]
     response_size = response_info[1] * response_array.itemsize
@@ -50,12 +54,12 @@ def process_query_async(query_samples):
 
 
 def issue_query(query_samples):
-    threading.Thread(
-            target=process_query_async,
-            args=[query_samples]).start()
+    threading.Thread(target=process_query_async,
+                     args=[query_samples]).start()
 
 
-def flush_queries(): pass
+def flush_queries():
+    pass
 
 
 def process_latencies(latencies_ns):
@@ -68,10 +72,11 @@ def process_latencies(latencies_ns):
 
 
 def main(argv):
+    del argv
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.SingleStream
     settings.mode = mlperf_loadgen.TestMode.AccuracyOnly
-    settings.single_stream_expected_latency_ns = 1000000;
+    settings.single_stream_expected_latency_ns = 1000000
     settings.min_query_count = 100
     settings.min_duration_ms = 10000
 
@@ -84,5 +89,5 @@ def main(argv):
     mlperf_loadgen.DestroySUT(sut)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(main)

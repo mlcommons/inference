@@ -13,8 +13,7 @@
 # limitations under the License.
 # =============================================================================
 
-"""
-Python version of perftests_null_sut.cc.
+"""Python version of perftests_null_sut.cc.
 """
 
 from __future__ import print_function
@@ -24,10 +23,12 @@ import numpy
 
 
 def load_samples_to_ram(query_samples):
+    del query_samples
     return
 
 
 def unload_samples_from_ram(query_samples):
+    del query_samples
     return
 
 
@@ -38,7 +39,8 @@ def issue_query(query_samples):
     mlperf_loadgen.QuerySamplesComplete(responses)
 
 
-def flush_queries(): pass
+def flush_queries():
+    pass
 
 
 def process_latencies(latencies_ns):
@@ -51,6 +53,7 @@ def process_latencies(latencies_ns):
 
 
 def main(argv):
+    del argv
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.SingleStream
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
@@ -64,5 +67,5 @@ def main(argv):
     mlperf_loadgen.DestroySUT(sut)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(main)

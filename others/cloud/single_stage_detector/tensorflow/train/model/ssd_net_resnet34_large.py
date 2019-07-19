@@ -1,54 +1,17 @@
 # Copyright 2018 Changan Wang
+# modified by Ji Liu
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
+
 #     http://www.apache.org/licenses/LICENSE-2.0
+
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Modification made by Xilinx, Inc.
-# Copyright (c) 2019, Xilinx, Inc.
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# Origin code:https://github.com/HiKapok/SSD.TensorFlow/blob/master/net/ssd_net.py 
-
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-# 
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-# 
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-# 
-# 3. Neither the name of the copyright holder nor the names of its contributors
-# may be used to endorse or promote products derived from this software
-# without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-# EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+# =============================================================================
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -103,7 +66,7 @@ class Resnet34Backbone(object):
         self._stage2_residul_block_2 = self.residual_block(128, 3, 'stage2_residul_block2')     
         self._stage2_residul_block_3 = self.residual_block(128, 3, 'stage2_residul_block3')     
         self._stage2_residul_block_4 = self.residual_block(128, 3, 'stage2_residul_block4')
-        self._stage2_downsample = self.conv_bn_block(1, 128, 1, (2, 2), 'stage2_downsample', use_relu=False)
+        self._stage2_downsample = self.conv_bn_block(1, 128, 1, (2, 2), 'stage2_downsample', padding='valid', use_relu=False)
         self._stage2 = [self._stage2_residul_block_1]
         self._stage2.append(self._stage2_residul_block_2)
         self._stage2.append(self._stage2_residul_block_3)
@@ -115,7 +78,7 @@ class Resnet34Backbone(object):
         self._stage3_residul_block_4 = self.residual_block(256, 3, 'stage3_residul_block4')
         self._stage3_residul_block_5 = self.residual_block(256, 3, 'stage3_residul_block5')     
         self._stage3_residul_block_6 = self.residual_block(256, 3, 'stage3_residul_block6')
-        self._stage3_downsample = self.conv_bn_block(1, 256, 1, (1, 1), 'stage3_downsample', use_relu=False)
+        self._stage3_downsample = self.conv_bn_block(1, 256, 1, (1, 1), 'stage3_downsample', padding='valid', use_relu=False)
         self._stage3 = [self._stage3_residul_block_1] 
         self._stage3.append(self._stage3_residul_block_2)
         self._stage3.append(self._stage3_residul_block_3)
@@ -141,8 +104,8 @@ class Resnet34Backbone(object):
             self._conv7_block = self.ssd_conv_block(self._add_chans[0:2], 2, 'conv7', use_bias=True)
             self._conv8_block = self.ssd_conv_block(self._add_chans[2:4], 2, 'conv8', use_bias=True)
             self._conv9_block = self.ssd_conv_block(self._add_chans[4:6], 2, 'conv9', use_bias=True)
-            self._conv10_block = self.ssd_conv_block(self._add_chans[6:8], 3, 'conv10', use_bias=True)#padding='valid', use_bias=True)
-            self._conv11_block = self.ssd_conv_block(self._add_chans[8:10], 1, 'conv11', use_bias=True)
+            self._conv10_block = self.ssd_conv_block(self._add_chans[6:8], 2, 'conv10', use_bias=True, paddings=['valid', 'valid'])#padding='valid', use_bias=True)
+            self._conv11_block = self.ssd_conv_block(self._add_chans[8:10], 1, 'conv11', use_bias=True, paddings=['valid', 'valid'])
 
     def l2_normalize(self, inputs, name):
         with tf.name_scope(name, "l2_normalize", [inputs]) as name:
@@ -229,30 +192,30 @@ class Resnet34Backbone(object):
                     conv_bn_blocks.append(ReLuLayer('{}_relu{}'.format(name, ind), _scope='{}_relu{}'.format(name, ind), _reuse=None))
             return conv_bn_blocks
 
-    def ssd_conv_block(self, filters, strides, name, padding='same', reuse=None, use_bias=False):
+    def ssd_conv_block(self, filters, strides, name, paddings=['valid', 'same'], reuse=None, use_bias=False):
         with tf.variable_scope(name):
             conv_blocks = []
-            conv_blocks.append(tf.layers.Conv2D(filters=filters[0], kernel_size=1, strides=1, padding=padding,
+            conv_blocks.append(tf.layers.Conv2D(filters=filters[0], kernel_size=1, strides=1, padding=paddings[0],
                                                 data_format=self._data_format, activation=tf.nn.relu, use_bias=use_bias,
                                                 kernel_initializer=self._conv_initializer(),
                                                 name='{}_1'.format(name), _scope='{}_1'.format(name), _reuse=None))
-            conv_blocks.append(tf.layers.Conv2D(filters=filters[1], kernel_size=3, strides=strides, padding=padding,
+            conv_blocks.append(tf.layers.Conv2D(filters=filters[1], kernel_size=3, strides=strides, padding=paddings[1],
                                                 data_format=self._data_format, activation=tf.nn.relu, use_bias=use_bias,
                                                 kernel_initializer=self._conv_initializer(),
                                                 name='{}_2'.format(name), _scope='{}_2'.format(name), _reuse=None))
             return conv_blocks
 
-    def ssd_conv_bn_block(self, filters, strides, name, padding='same', reuse=None, use_bias=False):
+    def ssd_conv_bn_block(self, filters, strides, name, paddings=['valid', 'same'], reuse=None, use_bias=False):
         with tf.variable_scope(name):
             conv_bn_blocks = []
-            conv_bn_blocks.append(tf.layers.Conv2D(filters=filters[0], kernel_size=1, strides=1, padding=padding,
+            conv_bn_blocks.append(tf.layers.Conv2D(filters=filters[0], kernel_size=1, strides=1, padding=paddings[0],
                                                    data_format=self._data_format, activation=None, use_bias=use_bias,
                                                    kernel_initializer=self._conv_bn_initializer(),
                                                    name='{}_1'.format(name), _scope='{}_1'.format(name), _reuse=None))
             conv_bn_blocks.append(tf.layers.BatchNormalization(axis=self._bn_axis, momentum=BN_MOMENTUM, epsilon=BN_EPSILON, 
                                                                fused=USE_FUSED_BN, name='{}_bn1'.format(name), _scope='{}_bn1'.format(name), _reuse=None))
             conv_bn_blocks.append(ReLuLayer('{}_relu1'.format(name), _scope='{}_relu1'.format(name), _reuse=None))
-            conv_bn_blocks.append(tf.layers.Conv2D(filters=filters[1], kernel_size=3, strides=strides, padding=padding,
+            conv_bn_blocks.append(tf.layers.Conv2D(filters=filters[1], kernel_size=3, strides=strides, padding=paddings[1],
                                                    data_format=self._data_format, activation=None, use_bias=use_bias,
                                                    kernel_initializer=self._conv_bn_initializer(),
                                                    name='{}_2'.format(name), _scope='{}_2'.format(name), _reuse=None))

@@ -116,7 +116,10 @@ class AnchorEncoder(object):
             tiled_allowed_borders = []
             for ind, anchor in enumerate(all_anchors):
                 anchors_ymin_, anchors_xmin_, anchors_ymax_, anchors_xmax_ = self.center2point(anchor[0], anchor[1], anchor[2], anchor[3])
-
+                #anchors_ymin_ = tf.transpose(anchors_ymin_, perm=[2, 0, 1])
+                #anchors_xmin_ = tf.transpose(anchors_xmin_, perm=[2, 0, 1])
+                #anchors_ymax_ = tf.transpose(anchors_ymax_, perm=[2, 0, 1])
+                #anchors_xmax_ = tf.transpose(anchors_xmax_, perm=[2, 0, 1])
                 list_anchors_ymin.append(tf.reshape(anchors_ymin_, [-1]))
                 list_anchors_xmin.append(tf.reshape(anchors_xmin_, [-1]))
                 list_anchors_ymax.append(tf.reshape(anchors_ymax_, [-1]))
@@ -174,6 +177,8 @@ class AnchorEncoder(object):
 
             # transform to center / size.
             gt_cy, gt_cx, gt_h, gt_w = self.point2center(gt_ymin, gt_xmin, gt_ymax, gt_xmax)
+            print('gt_cy:', gt_cy)
+            print('anchors_ymin:', anchors_ymin)
             anchor_cy, anchor_cx, anchor_h, anchor_w = self.point2center(anchors_ymin, anchors_xmin, anchors_ymax, anchors_xmax)
             # encode features.
             # the prior_scaling (in fact is 5 and 10) is use for balance the regression loss of center and with(or height)
@@ -198,7 +203,6 @@ class AnchorEncoder(object):
         assert self._all_anchors is not None, 'no anchors to decode.'
         with tf.name_scope('decode_all_anchors', [pred_location]):
             anchor_cy, anchor_cx, anchor_h, anchor_w = self._all_anchors
-
             pred_h = tf.exp(pred_location[:, -2] * self._prior_scaling[2]) * anchor_h
             pred_w = tf.exp(pred_location[:, -1] * self._prior_scaling[3]) * anchor_w
             pred_cy = pred_location[:, 0] * self._prior_scaling[0] * anchor_h + anchor_cy
@@ -221,7 +225,10 @@ class AnchorEncoder(object):
             tiled_allowed_borders = []
             for ind, anchor in enumerate(all_anchors):
                 anchors_ymin_, anchors_xmin_, anchors_ymax_, anchors_xmax_ = self.center2point(anchor[0], anchor[1], anchor[2], anchor[3])
-
+                #anchors_ymin_ = tf.transpose(anchors_ymin_, perm=[2, 0, 1])
+                #anchors_xmin_ = tf.transpose(anchors_xmin_, perm=[2, 0, 1])
+                #anchors_ymax_ = tf.transpose(anchors_ymax_, perm=[2, 0, 1])
+                #anchors_xmax_ = tf.transpose(anchors_xmax_, perm=[2, 0, 1])
                 list_anchors_ymin.append(tf.reshape(anchors_ymin_, [-1]))
                 list_anchors_xmin.append(tf.reshape(anchors_xmin_, [-1]))
                 list_anchors_ymax.append(tf.reshape(anchors_ymax_, [-1]))
@@ -274,24 +281,26 @@ class AnchorCreator(object):
             y_on_image = (tf.cast(y_on_layer, tf.float32) + offset) * layer_step / self._img_shape[0]
             x_on_image = (tf.cast(x_on_layer, tf.float32) + offset) * layer_step / self._img_shape[1]
 
-            num_anchors_along_depth = len(anchor_scale) * len(anchor_ratio) + len(extra_anchor_scale)
+            num_anchors_along_depth = 2 * len(anchor_scale) * len(anchor_ratio) + len(extra_anchor_scale) + len(anchor_scale)
             num_anchors_along_spatial = layer_shape[1] * layer_shape[0]
 
             list_h_on_image = []
             list_w_on_image = []
 
-            global_index = 0
             # for square anchors
-            for _, scale in enumerate(extra_anchor_scale):
-                list_h_on_image.append(scale)
-                list_w_on_image.append(scale)
-                global_index += 1
+            for _, scales in enumerate(zip(anchor_scale, extra_anchor_scale)):
+                list_h_on_image.append(scales[0])
+                list_w_on_image.append(scales[0])
+                list_h_on_image.append(math.sqrt(scales[0] * scales[1]))
+                list_w_on_image.append(math.sqrt(scales[0] * scales[1]))
             # for other aspect ratio anchors
             for scale_index, scale in enumerate(anchor_scale):
                 for ratio_index, ratio in enumerate(anchor_ratio):
-                    list_h_on_image.append(scale / math.sqrt(ratio))
-                    list_w_on_image.append(scale * math.sqrt(ratio))
-                    global_index += 1
+                    h, w = scale / math.sqrt(ratio), scale * math.sqrt(ratio)
+                    list_h_on_image.append(h)
+                    list_w_on_image.append(w)
+                    list_h_on_image.append(w)
+                    list_w_on_image.append(h)
             # shape info:
             # y_on_image, x_on_image: layers_shapes[0] * layers_shapes[1]
             # h_on_image, w_on_image: num_anchors_along_depth
@@ -315,3 +324,62 @@ class AnchorCreator(object):
             all_num_anchors_spatial.append(anchors_this_layer[-1])
         return all_anchors, all_num_anchors_depth, all_num_anchors_spatial
 
+
+    def encode_all_anchors(self, all_anchors, all_num_anchors_depth, all_num_anchors_spatial):
+        # y, x, h, w are all in range [0, 1] relative to the original image size
+        # shape info:
+        # y_on_image, x_on_image: layers_shapes[0] * layers_shapes[1]
+        # h_on_image, w_on_image: num_anchors
+        assert (len(all_num_anchors_depth)==len(all_num_anchors_spatial)) and (len(all_num_anchors_depth)==len(all_anchors)), 'inconsist num layers for anchors.'
+        with tf.name_scope('encode_all_anchors'):
+            num_layers = len(all_num_anchors_depth)
+            list_anchors_ymin = []
+            list_anchors_xmin = []
+            list_anchors_ymax = []
+            list_anchors_xmax = []
+            tiled_allowed_borders = []
+            print(all_anchors)
+            for ind, anchor in enumerate(all_anchors):
+                anchors_ymin_, anchors_xmin_, anchors_ymax_, anchors_xmax_ = self.center2point(anchor[0], anchor[1], anchor[2], anchor[3])
+                #print(anchors_ymin_)
+                #anchors_ymin_ = tf.transpose(anchors_ymin_, perm=[2, 0, 1])
+                #anchors_xmin_ = tf.transpose(anchors_xmin_, perm=[2, 0, 1])
+                #anchors_ymax_ = tf.transpose(anchors_ymax_, perm=[2, 0, 1])
+                #anchors_xmax_ = tf.transpose(anchors_xmax_, perm=[2, 0, 1])
+                list_anchors_ymin.append(tf.reshape(anchors_ymin_, [-1]))
+                list_anchors_xmin.append(tf.reshape(anchors_xmin_, [-1]))
+                list_anchors_ymax.append(tf.reshape(anchors_ymax_, [-1]))
+                list_anchors_xmax.append(tf.reshape(anchors_xmax_, [-1]))
+            anchors_ymin = tf.concat(list_anchors_ymin, 0, name='concat_ymin')
+            anchors_xmin = tf.concat(list_anchors_xmin, 0, name='concat_xmin')
+            anchors_ymax = tf.concat(list_anchors_ymax, 0, name='concat_ymax')
+            anchors_xmax = tf.concat(list_anchors_xmax, 0, name='concat_xmax')
+            #anchors_ymin = tf.clip_by_value(anchors_ymin, 0., 1.)
+            #anchors_xmin = tf.clip_by_value(anchors_xmin, 0., 1.)
+            #anchors_ymax = tf.clip_by_value(anchors_ymax, 0., 1.)
+            #anchors_xmax = tf.clip_by_value(anchors_xmax, 0., 1.)
+       
+        return tf.stack([anchors_xmin, anchors_ymin, anchors_xmax, anchors_ymax], axis=-1)  
+
+    def center2point(self, center_y, center_x, height, width):
+        return center_y - height / 2., center_x - width / 2., center_y + height / 2., center_x + width / 2.,
+
+    def point2center(self, ymin, xmin, ymax, xmax):
+        height, width = (ymax - ymin), (xmax - xmin)
+        return ymin + height / 2., xmin + width / 2., height, width
+
+        
+
+if __name__ == "__main__":
+    import os
+    out_shape = [1200] * 2
+    anchor_creator = AnchorCreator(out_shape,
+                                   layers_shapes = [(50, 50), (25, 25), (13, 13), (7, 7), (3, 3), (3, 3)],
+                                   anchor_scales = [(0.07,), (0.15,), (0.33,), (0.51,), (0.69,), (0.87,)],
+                                   extra_anchor_scales = [(0.15,), (0.33,), (0.51,), (0.69,), (0.87,), (1.05,)],
+                                   anchor_ratios = [(2, ), (2., 3.), (2., 3), (2., 3.), (2.,), (2.,)],
+                                   layer_steps = [24, 48, 92, 171, 400, 400])
+    all_anchors, all_num_anchors_depth, all_num_anchors_spatial = anchor_creator.get_all_anchors()
+    anchor_bboxes = anchor_creator.encode_all_anchors(all_anchors, all_num_anchors_depth, all_num_anchors_spatial)
+    sess = tf.Session()
+    anchor_bboxes = sess.run(anchor_bboxes)

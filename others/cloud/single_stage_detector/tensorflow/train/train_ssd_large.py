@@ -41,7 +41,7 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_integer(
     'num_classes', 81, 'Number of classes to use in the dataset.')
 tf.app.flags.DEFINE_string(
-    'model_dir', './logs_mine_sec.ssd_resnet34_pretrain.no-bn_in_ssd_block_3*3_map/',
+    'model_dir', './logs_mine_sec.pytorch/',
     'The directory where the model will be stored.')
 tf.app.flags.DEFINE_integer(
     'log_every_n_steps', 10,
@@ -50,7 +50,7 @@ tf.app.flags.DEFINE_integer(
     'save_summary_steps', 500,
     'The frequency with which summaries are saved, in seconds.')
 tf.app.flags.DEFINE_integer(
-    'save_checkpoints_secs', 3600,
+    'save_checkpoints_secs', 1200,
     'The frequency with which the model is saved, in seconds.')
 tf.app.flags.DEFINE_integer(
     'train_image_size', 1200,
@@ -88,13 +88,13 @@ tf.app.flags.DEFINE_float(
     'end_learning_rate', 0.000001,
     'The minimal end learning rate used by a polynomial decay learning rate.')
 tf.app.flags.DEFINE_string(
-    'decay_boundaries', '6000, 26000, 40000, 60000, 79000, 795000, 815000',
+    'decay_boundaries', '600, 4000, 46000, 86000, 279000, 279500, 281500',
     'Learning rate decay boundaries by global_step (comma-separated list).')
 tf.app.flags.DEFINE_string(
-    'lr_decay_factors', '0.001, 0.01, 0.04, 0.001, 0.001, 0.001, 0.01, 0.001',
+    'lr_decay_factors', '0.01, 0.1, 1, 0.4, 0.1, 0.01, 0.01, 0.001',
     'The values of learning_rate decay factor for each segment between boundaries (comma-separated list).')
 tf.app.flags.DEFINE_string(
-    'checkpoint_path', './logs_mine_sec.ssd_resnet34_pretrain.no-bn_in_ssd_block.21.1/model.ckpt-99590',
+    'checkpoint_path', './shuffle_ckpt/model.ckpt-shuffleweights',
     'The path to a checkpoint from which to fine-tune.')
 tf.app.flags.DEFINE_string(
     'checkpoint_model_scope', 'ssd1200',
@@ -149,9 +149,9 @@ def input_pipeline(dataset_pattern='pascalvoc_0712_train_*', is_training=True, b
         out_shape = [FLAGS.train_image_size] * 2
         anchor_creator = anchor_manipulator.AnchorCreator(out_shape,
                                                     layers_shapes = [(50, 50), (25, 25), (13, 13), (7, 7), (3, 3), (3, 3)],
-                                                    anchor_scales = [(0.1,), (0.2,), (0.375,), (0.55,), (0.725,), (0.9,)],
-                                                    extra_anchor_scales = [(0.1414,), (0.2739,), (0.4541,), (0.6315,), (0.8078,), (0.9836,)],
-                                                    anchor_ratios = [(1., 2., .5), (1., 2., 3., .5, 0.3333), (1., 2., 3., .5, 0.3333), (1., 2., 3., .5, 0.3333), (1., 2., .5), (1., 2., .5)],
+                                                    anchor_scales = [(0.07,), (0.15,), (0.33,), (0.51,), (0.69,), (0.87,)],
+                                                    extra_anchor_scales = [(0.15,), (0.33,), (0.51,), (0.69,), (0.87,), (1.05,)],
+                                                    anchor_ratios = [(2.,), ( 2., 3.,), (2., 3.,), (2., 3.,), (2.,), (2.,)],
                                                     layer_steps = [24, 48, 92, 171, 400, 400])
         all_anchors, all_num_anchors_depth, all_num_anchors_spatial = anchor_creator.get_all_anchors()
         num_anchors_per_layer = []
@@ -162,7 +162,7 @@ def input_pipeline(dataset_pattern='pascalvoc_0712_train_*', is_training=True, b
                                                                   ignore_threshold = FLAGS.neg_threshold,
                                                                   prior_scaling=[0.1, 0.1, 0.2, 0.2])
 
-        image_preprocessing_fn = lambda image_, labels_, bboxes_ : ssd_preprocessing.preprocess_image(image_, labels_, bboxes_, out_shape, is_training=is_training, data_format=FLAGS.data_format, output_rgb=False)
+        image_preprocessing_fn = lambda image_, labels_, bboxes_ : ssd_preprocessing.preprocess_image(image_, labels_, bboxes_, out_shape, is_training=is_training, data_format=FLAGS.data_format, output_rgb=True)
         anchor_encoder_fn = lambda glabels_, gbboxes_: anchor_encoder_decoder.encode_all_anchors(glabels_, gbboxes_, all_anchors, all_num_anchors_depth, all_num_anchors_spatial)
         image, _, shape, loc_targets, cls_targets, match_scores = dataset_common.slim_get_batch(FLAGS.num_classes,
                                                                                 batch_size,
@@ -210,10 +210,11 @@ def ssd_model_fn(features, labels, mode, params):
         feature_layers = backbone.forward(features, training=(mode == tf.estimator.ModeKeys.TRAIN))
         location_pred, cls_pred = ssd_net_resnet34_large.multibox_head(feature_layers, params['num_classes'], all_num_anchors_depth, data_format=params['data_format'], strides=(3, 3))
         print(location_pred, cls_pred)
+        
         if params['data_format'] == 'channels_first':
             cls_pred = [tf.transpose(pred, [0, 2, 3, 1]) for pred in cls_pred]
             location_pred = [tf.transpose(pred, [0, 2, 3, 1]) for pred in location_pred]
-
+       
         cls_pred = [tf.reshape(pred, [tf.shape(features)[0], -1, params['num_classes']]) for pred in cls_pred]
         location_pred = [tf.reshape(pred, [tf.shape(features)[0], -1, 4]) for pred in location_pred]
         cls_pred = tf.concat(cls_pred, axis=1)

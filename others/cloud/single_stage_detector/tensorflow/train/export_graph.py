@@ -8,47 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Modification made by Xilinx, Inc.
-# Copyright (c) 2019, Xilinx, Inc.
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# Origin code:https://github.com/HiKapok/SSD.TensorFlow/blob/master/eval_ssd.py 
-
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-# 
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-# 
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-# 
-# 3. Neither the name of the copyright holder nor the names of its contributors
-# may be used to endorse or promote products derived from this software
-# without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-# EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
+# =============================================================================
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -73,8 +33,10 @@ def ssd_model_fn(features, labels, mode, params):
     cls_targets = features['cls_targets']
     match_scores = features['match_scores']
     features = features['image']
+    
     features = tf.unstack(features, axis=-1, name='split_rgb')
     features = tf.stack([features[2], features[1], features[0]], axis=-1, name='merge_bgr')
+    
     global global_anchor_info
     decode_fn = global_anchor_info['decode_fn']
     num_anchors_per_layer = global_anchor_info['num_anchors_per_layer']
@@ -96,8 +58,6 @@ def ssd_model_fn(features, labels, mode, params):
                               tf.reshape(location_pred, [tf.shape(features)[0], -1, 4]),
                               dtype=[tf.float32] * len(num_anchors_per_layer), back_prop=False)
         bboxes_pred = tf.concat(bboxes_pred, axis=1)
-        print("bboxes_pred:", bboxes_pred)
-        print("cls_pred:", cls_pred)
         parse_bboxes_fn = lambda x: parse_by_class_fixed_bboxes(x[0], x[1], params)
         pred_results = tf.map_fn(parse_bboxes_fn, (cls_pred, bboxes_pred), dtype=(tf.float32, tf.float32, tf.float32), back_prop=False)     
  
@@ -122,9 +82,9 @@ def export_graph(args):
         out_shape = [args.train_image_size, args.train_image_size]
         anchor_creator = anchor_manipulator.AnchorCreator(out_shape,
                                                           layers_shapes = [(50, 50), (25, 25), (13, 13), (7, 7), (3, 3), (3, 3)],
-                                                          anchor_scales = [(0.1,), (0.2,), (0.375,), (0.55,), (0.725,), (0.9,)],
-                                                          extra_anchor_scales = [(0.1414,), (0.2739,), (0.4541,), (0.6315,), (0.8078,), (0.9836,)],
-                                                          anchor_ratios = [(1., 2., .5), (1., 2., 3., .5, 0.3333), (1., 2., 3., .5, 0.3333), (1., 2., 3., .5, 0.3333), (1., 2., .5), (1., 2., .5)],
+                                                          anchor_scales = [(0.07,), (0.15,), (0.33,), (0.51,), (0.69,), (0.87,)],
+                                                          extra_anchor_scales = [(0.15,), (0.33,), (0.51,), (0.69,), (0.87,), (1.05,)],
+                                                          anchor_ratios = [(2,), ( 2., 3.,), (2., 3.,), (2., 3.,), (2.,), (2.,)],
                                                           layer_steps = [24, 48, 92, 171, 400, 400])
         all_anchors, all_num_anchors_depth, all_num_anchors_spatial = anchor_creator.get_all_anchors()
         num_anchors_per_layer = []
@@ -170,7 +130,7 @@ def export_graph(args):
         print("Finish export inference graph")
 
 def main(_):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '7'
     args = tf.app.flags.FLAGS  
     export_graph(args)
 

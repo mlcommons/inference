@@ -8,51 +8,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-# Modification made by Xilinx, Inc.
-# Copyright (c) 2019, Xilinx, Inc.
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#     http://www.apache.org/licenses/LICENSE-2.0
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-# Origin code:https://github.com/HiKapok/SSD.TensorFlow/blob/master/eval_ssd.py 
-
-# All rights reserved.
-# 
-# Redistribution and use in source and binary forms, with or without modification,
-# are permitted provided that the following conditions are met:
-# 
-# 1. Redistributions of source code must retain the above copyright notice,
-# this list of conditions and the following disclaimer.
-# 
-# 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
-# 
-# 3. Neither the name of the copyright holder nor the names of its contributors
-# may be used to endorse or promote products derived from this software
-# without specific prior written permission.
-# 
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-# THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-# IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-# INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-# HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-# EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-'''
-  This script is used to eval tensorflow ssd ckpt model on coco 2017 validation set. 
-'''
-
+# =============================================================================
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -90,7 +46,7 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_integer(
     'num_classes', 81, 'Number of classes to use in the dataset.')
 tf.app.flags.DEFINE_string(
-    'model_dir', './logs_mine_sec.ssd_resnet34_pretrain.no-bn_in_ssd_block_3*3_map/',
+    'model_dir', './shuffle_ckpt/',
     'The directory where the model will be stored.')
 tf.app.flags.DEFINE_integer(
     'log_every_n_steps', 10,
@@ -120,17 +76,17 @@ tf.app.flags.DEFINE_float(
 tf.app.flags.DEFINE_float(
     'neg_threshold', 0.5, 'Matching threshold for the negtive examples in the loss function.')
 tf.app.flags.DEFINE_float(
-    'select_threshold', 0.01, 'Class-specific confidence score threshold for selecting a box.')
+    'select_threshold', 0.05, 'Class-specific confidence score threshold for selecting a box.')
 tf.app.flags.DEFINE_float(
-    'min_size', 0.03, 'The min size of bboxes to keep.')
+    'min_size', 0.003, 'The min size of bboxes to keep.')
 tf.app.flags.DEFINE_float(
-    'nms_threshold', 0.45, 'Matching threshold in NMS algorithm.')
+    'nms_threshold', 0.5, 'Matching threshold in NMS algorithm.')
 tf.app.flags.DEFINE_integer(
     'nms_topk', 200, 'Number of total object to keep after NMS.')
 tf.app.flags.DEFINE_integer(
-    'keep_topk', 400, 'Number of total object to keep for each image before nms.')
+    'keep_topk', 200, 'Number of total object to keep for each image before nms.')
 tf.app.flags.DEFINE_integer(
-    'keep_max_boxes', 400, 'Max number of total prediect bboxes to keep for each image after nms.')
+    'keep_max_boxes', 200, 'Max number of total prediect bboxes to keep for each image after nms.')
 tf.app.flags.DEFINE_float(
     'weight_decay', 5e-4, 'The weight decay on the model weights.')
 tf.app.flags.DEFINE_string(
@@ -157,9 +113,9 @@ def input_pipeline(args, dataset_pattern='train-*', is_training=True):
         out_shape = [args.train_image_size] * 2
         anchor_creator = anchor_manipulator.AnchorCreator(out_shape,
                                                           layers_shapes = [(50, 50), (25, 25), (13, 13), (7, 7), (3, 3), (3, 3)],
-                                                          anchor_scales = [(0.1,), (0.2,), (0.375,), (0.55,), (0.725,), (0.9,)],
-                                                          extra_anchor_scales = [(0.1414,), (0.2739,), (0.4541,), (0.6315,), (0.8078,), (0.9836,)],
-                                                          anchor_ratios = [(1., 2., .5), (1., 2., 3., .5, 0.3333), (1., 2., 3., .5, 0.3333), (1., 2., 3., .5, 0.3333), (1., 2., .5), (1., 2., .5)],
+                                                          anchor_scales = [(0.07,), (0.15,), (0.33,), (0.51,), (0.69,), (0.87,)],
+                                                          extra_anchor_scales = [(0.15,), (0.33,), (0.51,), (0.69,), (0.87,), (1.05,)],
+                                                          anchor_ratios = [(2,), ( 2., 3.,), (2., 3.,), (2., 3.,), (2.,), (2.,)],
                                                           layer_steps = [24, 48, 92, 171, 400, 400])
         all_anchors, all_num_anchors_depth, all_num_anchors_spatial = anchor_creator.get_all_anchors()
         num_anchors_per_layer = []
@@ -276,9 +232,9 @@ def parse_by_class(cls_pred, bboxes_pred, num_classes, select_threshold, min_siz
         selected_bboxes, selected_scores = select_bboxes(scores_pred, bboxes_pred, num_classes, select_threshold)
         for class_ind in range(1, num_classes):
             ymin, xmin, ymax, xmax = tf.unstack(selected_bboxes[class_ind], 4, axis=-1)
-            ymin, xmin, ymax, xmax = clip_bboxes(ymin, xmin, ymax, xmax, 'clip_bboxes_{}'.format(class_ind))
-            ymin, xmin, ymax, xmax, selected_scores[class_ind] = filter_bboxes(selected_scores[class_ind],
-                                                ymin, xmin, ymax, xmax, min_size, 'filter_bboxes_{}'.format(class_ind))
+            #ymin, xmin, ymax, xmax = clip_bboxes(ymin, xmin, ymax, xmax, 'clip_bboxes_{}'.format(class_ind))
+            #ymin, xmin, ymax, xmax, selected_scores[class_ind] = filter_bboxes(selected_scores[class_ind],
+            #                                    ymin, xmin, ymax, xmax, min_size, 'filter_bboxes_{}'.format(class_ind))
             ymin, xmin, ymax, xmax, selected_scores[class_ind] = sort_bboxes(selected_scores[class_ind],
                                                 ymin, xmin, ymax, xmax, keep_topk, 'sort_bboxes_{}'.format(class_ind))
             selected_bboxes[class_ind] = tf.stack([ymin, xmin, ymax, xmax], axis=-1)
@@ -292,8 +248,10 @@ def ssd_model_fn(features, labels, mode, params):
     cls_targets = features['cls_targets']
     match_scores = features['match_scores']
     features = features['image']
+    
     features = tf.unstack(features, axis=-1, name='split_rgb')
     features = tf.stack([features[2], features[1], features[0]], axis=-1, name='merge_bgr')
+    
     global global_anchor_info
     decode_fn = global_anchor_info['decode_fn']
     num_anchors_per_layer = global_anchor_info['num_anchors_per_layer']
@@ -305,6 +263,23 @@ def ssd_model_fn(features, labels, mode, params):
         if params['data_format'] == 'channels_first':
             cls_pred = [tf.transpose(pred, [0, 2, 3, 1]) for pred in cls_pred]
             location_pred = [tf.transpose(pred, [0, 2, 3, 1]) for pred in location_pred]
+        '''
+        align cls, loc output of mlperf ssd-resnet34 of pytroch version (https://github.com/mlperf/inference/blob/master/others/cloud/single_stage_detector/pytorch/ssd_r34.py:line 131)    
+        py_cls_pred = cls_pred
+        py_location_pred = location_pred
+        py_cls_pred = [tf.reshape(pred, [tf.shape(pred)[0], -1, params['num_classes'], tf.shape(pred)[2], tf.shape(pred)[3]]) for pred in py_cls_pred]
+        py_location_pred = [tf.reshape(pred, [tf.shape(pred)[0], -1, 4, tf.shape(pred)[2], tf.shape(pred)[3]]) for pred in py_location_pred]
+        py_cls_pred = [tf.transpose(pred, [0, 2, 1, 3, 4]) for pred in py_cls_pred]
+        py_location_pred = [tf.transpose(pred, [0, 2, 1, 3, 4]) for pred in py_location_pred]
+        py_cls_pred = [tf.reshape(pred, [tf.shape(pred)[0], params['num_classes'], -1]]) for pred in py_cls_pred]
+        py_location_pred = [tf.reshape(pred, [tf.shape(pred)[0], 4, -1]) for pred in py_location_pred]
+        py_cls_pred = tf.concat(py_cls_pred, axis=2)
+        py_location_pred = tf.concat(py_location_pred, axis=2)
+        py_location_pred = tf.unstack(py_location_pred, axis=1, name='split_loc_pred')
+        py_location_pred = tf.stack([py_location_pred[1], py_location_pred[0], py_location_pred[3], py_location_pred[2]], axis=1, name='merge_loc_pred')     
+        tf.identity(py_cls_pred, name='py_cls_pred')
+        tf.identity(py_location_pred, name='py_location_pred')
+        '''
         cls_pred = [tf.reshape(pred, [tf.shape(features)[0], -1, params['num_classes']]) for pred in cls_pred]
         location_pred = [tf.reshape(pred, [tf.shape(features)[0], -1, 4]) for pred in location_pred]
         cls_pred = tf.concat(cls_pred, axis=1)
@@ -315,8 +290,6 @@ def ssd_model_fn(features, labels, mode, params):
                               tf.reshape(location_pred, [tf.shape(features)[0], -1, 4]),
                               dtype=[tf.float32] * len(num_anchors_per_layer), back_prop=False)
         bboxes_pred = tf.concat(bboxes_pred, axis=1)
-        #print("bboxes_pred:", bboxes_pred)
-        #print("cls_pred:", cls_pred)
         parse_bboxes_fn = lambda x: parse_by_class_fixed_bboxes(x[0], x[1], params)
         pred_results = tf.map_fn(parse_bboxes_fn, (cls_pred, bboxes_pred), dtype=(tf.float32, tf.float32, tf.float32), back_prop=False)     
  

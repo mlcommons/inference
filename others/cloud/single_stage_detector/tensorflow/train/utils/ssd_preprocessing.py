@@ -40,6 +40,8 @@ _R_MEAN = 123.68
 _G_MEAN = 116.78
 _B_MEAN = 103.94
 
+rgb_means = [0.485, 0.456, 0.406]
+rgb_std = [0.229, 0.224, 0.225]
 
 def _ImageDimensions(image, rank=3):
     """Returns the dimensions of an image tensor.
@@ -333,6 +335,33 @@ def _mean_image_subtraction(image, means):
         channels[i] -= means[i]
     return tf.concat(axis=2, values=channels)
 
+def _image_transform(image, means, std):
+    """Subtracts the given means from each image channel.
+    For example:
+      means = [123.68, 116.779, 103.939]
+      image = _mean_image_subtraction(image, means)
+    Note that the rank of `image` must be known.
+    Args:
+      image: a tensor of size [height, width, C].
+      means: a C-vector of values to subtract from each channel.
+    Returns:
+      the centered image.
+    Raises:
+      ValueError: If the rank of `image` is unknown, if `image` has a rank other
+        than three or if the number of channels in `image` doesn't match the
+        number of values in `means`.
+    """
+    if image.get_shape().ndims != 3:
+        raise ValueError('Input must be of size [height, width, C>0]')
+    num_channels = image.get_shape().as_list()[-1]
+    if len(means) != num_channels:
+        raise ValueError('len(means) must match the number of channels')
+    channels = tf.split(axis=2, num_or_size_splits=num_channels, value=image)
+    for i in range(num_channels):
+        channels[i] -= means[i]
+        channels[i] /= std[i]
+    return tf.concat(axis=2, values=channels)
+
 def unwhiten_image(image):
     means = [_R_MEAN, _G_MEAN, _B_MEAN]
     num_channels = image.get_shape().as_list()[-1]
@@ -376,7 +405,9 @@ def preprocess_for_train(image, labels, bboxes, out_shape, data_format='channels
         random_sample_flip_resized_image = tf.image.resize_images(random_sample_flip_image, out_shape, method=tf.image.ResizeMethod.BILINEAR, align_corners=False)
         random_sample_flip_resized_image.set_shape([None, None, 3])
         final_image = tf.to_float(tf.image.convert_image_dtype(random_sample_flip_resized_image, orig_dtype, saturate=True))
-        final_image = _mean_image_subtraction(final_image, [_R_MEAN, _G_MEAN, _B_MEAN])
+        #final_image = _mean_image_subtraction(final_image, [_R_MEAN, _G_MEAN, _B_MEAN])
+        final_image = final_image / 255
+        final_image = _image_transform(final_image, rgb_means, rgb_std)
         final_image.set_shape(out_shape + [3])
         if not output_rgb:
             image_channels = tf.unstack(final_image, axis=-1, name='split_rgb')
@@ -398,7 +429,8 @@ def preprocess_for_eval(image, out_shape, data_format='channels_first', scope='s
         image = tf.to_float(image)
         image = tf.image.resize_images(image, out_shape, method=tf.image.ResizeMethod.BILINEAR, align_corners=False)
         image.set_shape(out_shape + [3])
-        image = _mean_image_subtraction(image, [_R_MEAN, _G_MEAN, _B_MEAN])
+        image = image / 255
+        image = _image_transform(image, rgb_means, rgb_std)#_mean_image_subtraction(image, [_R_MEAN, _G_MEAN, _B_MEAN])
         if not output_rgb:
             image_channels = tf.unstack(image, axis=-1, name='split_rgb')
             image = tf.stack([image_channels[2], image_channels[1], image_channels[0]], axis=-1, name='merge_bgr')

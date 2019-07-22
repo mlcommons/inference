@@ -33,10 +33,6 @@ def ssd_model_fn(features, labels, mode, params):
     cls_targets = features['cls_targets']
     match_scores = features['match_scores']
     features = features['image']
-    
-    features = tf.unstack(features, axis=-1, name='split_rgb')
-    features = tf.stack([features[2], features[1], features[0]], axis=-1, name='merge_bgr')
-    
     global global_anchor_info
     decode_fn = global_anchor_info['decode_fn']
     num_anchors_per_layer = global_anchor_info['num_anchors_per_layer']
@@ -45,18 +41,22 @@ def ssd_model_fn(features, labels, mode, params):
         backbone = ssd_net_resnet34_large.Resnet34Backbone(params['data_format'])
         feature_layers = backbone.forward(features, training=(mode == tf.estimator.ModeKeys.TRAIN))
         location_pred, cls_pred = ssd_net_resnet34_large.multibox_head(feature_layers, params['num_classes'], all_num_anchors_depth, data_format=params['data_format'], strides=(3, 3))
-        if params['data_format'] == 'channels_first':
-            cls_pred = [tf.transpose(pred, [0, 2, 3, 1]) for pred in cls_pred]
-            location_pred = [tf.transpose(pred, [0, 2, 3, 1]) for pred in location_pred]
-        cls_pred = [tf.reshape(pred, [tf.shape(features)[0], -1, params['num_classes']]) for pred in cls_pred]
-        location_pred = [tf.reshape(pred, [tf.shape(features)[0], -1, 4]) for pred in location_pred]
-        cls_pred = tf.concat(cls_pred, axis=1)
-        location_pred = tf.concat(location_pred, axis=1)
+        if params['data_format'] == 'channels_last':
+            cls_pred = [tf.transpose(pred, [0, 3, 1, 2]) for pred in cls_pred]
+            location_pred = [tf.transpose(pred, [0, 3, 1, 2]) for pred in location_pred]
+        cls_pred = [tf.reshape(pred, [tf.shape(features)[0], params['num_classes'], -1]) for pred in cls_pred]
+        location_pred = [tf.reshape(pred, [tf.shape(features)[0], 4, -1]) for pred in location_pred]
+        cls_pred = tf.concat(cls_pred, axis=2)
+        location_pred = tf.concat(location_pred, axis=2)
+        tf.identity(cls_pred, name='py_cls_pred')
+        tf.identity(location_pred, name='py_location_pred')
+        cls_pred = tf.transpose(cls_pred, [0, 2, 1])
+        location_pred = tf.transpose(location_pred, [0, 2, 1])
 
     with tf.device('/cpu:0'):
         bboxes_pred = tf.map_fn(lambda _preds : decode_fn(_preds),
-                              tf.reshape(location_pred, [tf.shape(features)[0], -1, 4]),
-                              dtype=[tf.float32] * len(num_anchors_per_layer), back_prop=False)
+                                location_pred,
+                                dtype=[tf.float32] * len(num_anchors_per_layer), back_prop=False)
         bboxes_pred = tf.concat(bboxes_pred, axis=1)
         parse_bboxes_fn = lambda x: parse_by_class_fixed_bboxes(x[0], x[1], params)
         pred_results = tf.map_fn(parse_bboxes_fn, (cls_pred, bboxes_pred), dtype=(tf.float32, tf.float32, tf.float32), back_prop=False)     
@@ -76,6 +76,16 @@ def ssd_model_fn(features, labels, mode, params):
     summary_hook = tf.train.SummarySaverHook(save_steps=params['save_summary_steps'],
                                              output_dir=params['summary_dir'],
                                              summary_op=tf.summary.merge_all())
+    if mode == tf.estimator.ModeKeys.PREDICT:
+        est = tf.estimator.EstimatorSpec(
+        mode=mode,
+        predictions=predictions,
+        prediction_hooks=None,
+        loss=None, train_op=None)
+        return est
+    else:
+        raise ValueError('This script only support "PREDICT" mode!')
+
 
 def export_graph(args):
     with tf.Graph().as_default() as graph:
@@ -103,7 +113,7 @@ def export_graph(args):
         glabels = tf.cast(glabels, tf.int64)
         gbboxes = [[10., 10., 200., 200.]] 
         gt_targets, gt_labels, gt_scores = anchor_encoder_fn(glabels, gbboxes)
-        image = tf.placeholder(name='image', dtype=tf.float32, shape=[None, args.train_image_size, args.train_image_size, 3])
+        image = tf.placeholder(name='image', dtype=tf.float32, shape=[None, 3, args.train_image_size, args.train_image_size])
         filename = tf.placeholder(name='filename', dtype=tf.string, shape=[None,])
         shape = tf.placeholder(name='shape', dtype=tf.int32, shape=[None, 3])
         input_ = {'image': image, 'filename': filename, 'shape': shape, 'loc_targets': [gt_targets], 'cls_targets': [gt_labels], 'match_scores': [gt_scores]}
@@ -130,7 +140,7 @@ def export_graph(args):
         print("Finish export inference graph")
 
 def main(_):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '7'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     args = tf.app.flags.FLAGS  
     export_graph(args)
 

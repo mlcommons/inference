@@ -46,7 +46,7 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_integer(
     'num_classes', 81, 'Number of classes to use in the dataset.')
 tf.app.flags.DEFINE_string(
-    'model_dir', './shuffle_ckpt/',
+    'model_dir', './logs_mine_sec.pytorch/',
     'The directory where the model will be stored.')
 tf.app.flags.DEFINE_integer(
     'log_every_n_steps', 10,
@@ -64,7 +64,7 @@ tf.app.flags.DEFINE_integer(
     'batch_size_mine', 4,
     'Batch size for training and evaluation.')
 tf.app.flags.DEFINE_string(
-    'data_format', 'channels_last',
+    'data_format', 'channels_first',
     'A flag to override the data format used in the model. channels_first '
     'provides a performance boost on GPU but is not always compatible '
     'with CPU. If left unspecified, the data format will be chosen '
@@ -248,10 +248,6 @@ def ssd_model_fn(features, labels, mode, params):
     cls_targets = features['cls_targets']
     match_scores = features['match_scores']
     features = features['image']
-    
-    features = tf.unstack(features, axis=-1, name='split_rgb')
-    features = tf.stack([features[2], features[1], features[0]], axis=-1, name='merge_bgr')
-    
     global global_anchor_info
     decode_fn = global_anchor_info['decode_fn']
     num_anchors_per_layer = global_anchor_info['num_anchors_per_layer']
@@ -260,35 +256,23 @@ def ssd_model_fn(features, labels, mode, params):
         backbone = ssd_net_resnet34_large.Resnet34Backbone(params['data_format'])
         feature_layers = backbone.forward(features, training=(mode == tf.estimator.ModeKeys.TRAIN))
         location_pred, cls_pred = ssd_net_resnet34_large.multibox_head(feature_layers, params['num_classes'], all_num_anchors_depth, data_format=params['data_format'], strides=(3, 3))
-        if params['data_format'] == 'channels_first':
-            cls_pred = [tf.transpose(pred, [0, 2, 3, 1]) for pred in cls_pred]
-            location_pred = [tf.transpose(pred, [0, 2, 3, 1]) for pred in location_pred]
-        '''
-        align cls, loc output of mlperf ssd-resnet34 of pytroch version (https://github.com/mlperf/inference/blob/master/others/cloud/single_stage_detector/pytorch/ssd_r34.py:line 131)    
-        py_cls_pred = cls_pred
-        py_location_pred = location_pred
-        py_cls_pred = [tf.reshape(pred, [tf.shape(pred)[0], -1, params['num_classes'], tf.shape(pred)[2], tf.shape(pred)[3]]) for pred in py_cls_pred]
-        py_location_pred = [tf.reshape(pred, [tf.shape(pred)[0], -1, 4, tf.shape(pred)[2], tf.shape(pred)[3]]) for pred in py_location_pred]
-        py_cls_pred = [tf.transpose(pred, [0, 2, 1, 3, 4]) for pred in py_cls_pred]
-        py_location_pred = [tf.transpose(pred, [0, 2, 1, 3, 4]) for pred in py_location_pred]
-        py_cls_pred = [tf.reshape(pred, [tf.shape(pred)[0], params['num_classes'], -1]]) for pred in py_cls_pred]
-        py_location_pred = [tf.reshape(pred, [tf.shape(pred)[0], 4, -1]) for pred in py_location_pred]
-        py_cls_pred = tf.concat(py_cls_pred, axis=2)
-        py_location_pred = tf.concat(py_location_pred, axis=2)
-        py_location_pred = tf.unstack(py_location_pred, axis=1, name='split_loc_pred')
-        py_location_pred = tf.stack([py_location_pred[1], py_location_pred[0], py_location_pred[3], py_location_pred[2]], axis=1, name='merge_loc_pred')     
-        tf.identity(py_cls_pred, name='py_cls_pred')
-        tf.identity(py_location_pred, name='py_location_pred')
-        '''
-        cls_pred = [tf.reshape(pred, [tf.shape(features)[0], -1, params['num_classes']]) for pred in cls_pred]
-        location_pred = [tf.reshape(pred, [tf.shape(features)[0], -1, 4]) for pred in location_pred]
-        cls_pred = tf.concat(cls_pred, axis=1)
-        location_pred = tf.concat(location_pred, axis=1)
+        if params['data_format'] == 'channels_last':
+            cls_pred = [tf.transpose(pred, [0, 3, 1, 2]) for pred in cls_pred]
+            location_pred = [tf.transpose(pred, [0, 3, 1, 2]) for pred in location_pred]
+
+        cls_pred = [tf.reshape(pred, [tf.shape(features)[0], params['num_classes'], -1]) for pred in cls_pred]
+        location_pred = [tf.reshape(pred, [tf.shape(features)[0], 4, -1]) for pred in location_pred]
+        cls_pred = tf.concat(cls_pred, axis=2)
+        location_pred = tf.concat(location_pred, axis=2)
+        tf.identity(cls_pred, name='py_cls_pred')
+        tf.identity(location_pred, name='py_location_pred')
+        cls_pred = tf.transpose(cls_pred, [0, 2, 1])
+        location_pred = tf.transpose(location_pred, [0, 2, 1])
 
     with tf.device('/cpu:0'):
         bboxes_pred = tf.map_fn(lambda _preds : decode_fn(_preds),
-                              tf.reshape(location_pred, [tf.shape(features)[0], -1, 4]),
-                              dtype=[tf.float32] * len(num_anchors_per_layer), back_prop=False)
+                                location_pred,
+                                dtype=[tf.float32] * len(num_anchors_per_layer), back_prop=False)
         bboxes_pred = tf.concat(bboxes_pred, axis=1)
         parse_bboxes_fn = lambda x: parse_by_class_fixed_bboxes(x[0], x[1], params)
         pred_results = tf.map_fn(parse_bboxes_fn, (cls_pred, bboxes_pred), dtype=(tf.float32, tf.float32, tf.float32), back_prop=False)     

@@ -1,5 +1,6 @@
 # 1. Problem
 High pixel Object detection. this repo is modified from https://github.com/HiKapok/SSD.TensorFlow.
+and use 'py_cls_pred' and 'py_location_pred' nodes to align loc and cls conv output of pytroch version. 
 
 # 2. Directions
 
@@ -60,7 +61,7 @@ Backbone is ResNet34 pretrained on ILSVRC. Modifications to the backbone network
 Metric is COCO box mAP (averaged over IoU of 0.5:0.95), computed over 2017 COCO val data.
 
 ### Quality target
-mAP of 0.211
+mAP of 0.221
 
 ### Evaluation frequency
 

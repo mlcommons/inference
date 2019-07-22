@@ -88,13 +88,13 @@ tf.app.flags.DEFINE_float(
     'end_learning_rate', 0.000001,
     'The minimal end learning rate used by a polynomial decay learning rate.')
 tf.app.flags.DEFINE_string(
-    'decay_boundaries', '600, 4000, 46000, 86000, 279000, 279500, 281500',
+    'decay_boundaries', '600, 4000, 21000, 28000, 90000, 279500, 281500',
     'Learning rate decay boundaries by global_step (comma-separated list).')
 tf.app.flags.DEFINE_string(
-    'lr_decay_factors', '0.01, 0.1, 1, 0.4, 0.1, 0.01, 0.01, 0.001',
+    'lr_decay_factors', '0.0, 0.1, 1, 0.4, 0.1, 0.01, 0.001, 0.001',
     'The values of learning_rate decay factor for each segment between boundaries (comma-separated list).')
 tf.app.flags.DEFINE_string(
-    'checkpoint_path', './shuffle_ckpt/model.ckpt-shuffleweights',
+    'checkpoint_path', './logs_mine_sec.pytorch.22.1/model.ckpt-shuffle',
     'The path to a checkpoint from which to fine-tune.')
 tf.app.flags.DEFINE_string(
     'checkpoint_model_scope', 'ssd1200',
@@ -141,7 +141,7 @@ def get_init_fn():
     return scaffolds.get_init_fn_for_scaffold(FLAGS.model_dir, FLAGS.checkpoint_path,
                                               FLAGS.model_scope, FLAGS.checkpoint_model_scope,
                                               FLAGS.checkpoint_exclude_scopes, FLAGS.ignore_missing_vars,
-                                              name_remap=None)#{'/kernel': '/weights', '/bias': '/biases'})
+                                              name_remap=None)
 global_anchor_info = dict()
 
 def input_pipeline(dataset_pattern='pascalvoc_0712_train_*', is_training=True, batch_size=FLAGS.batch_size):
@@ -198,27 +198,24 @@ def ssd_model_fn(features, labels, mode, params):
     loc_targets = labels['loc_targets']
     cls_targets = labels['cls_targets']
     match_scores = labels['match_scores']
-    print('loc_targets:', loc_targets)
-    print('cls_targets:', cls_targets)
     global global_anchor_info
     decode_fn = global_anchor_info['decode_fn']
     num_anchors_per_layer = global_anchor_info['num_anchors_per_layer']
     all_num_anchors_depth = global_anchor_info['all_num_anchors_depth']
-
     with tf.variable_scope(params['model_scope'], default_name=None, values=[features], reuse=tf.AUTO_REUSE):
         backbone = ssd_net_resnet34_large.Resnet34Backbone(params['data_format'])
         feature_layers = backbone.forward(features, training=(mode == tf.estimator.ModeKeys.TRAIN))
         location_pred, cls_pred = ssd_net_resnet34_large.multibox_head(feature_layers, params['num_classes'], all_num_anchors_depth, data_format=params['data_format'], strides=(3, 3))
-        print(location_pred, cls_pred)
         
-        if params['data_format'] == 'channels_first':
-            cls_pred = [tf.transpose(pred, [0, 2, 3, 1]) for pred in cls_pred]
-            location_pred = [tf.transpose(pred, [0, 2, 3, 1]) for pred in location_pred]
-       
-        cls_pred = [tf.reshape(pred, [tf.shape(features)[0], -1, params['num_classes']]) for pred in cls_pred]
-        location_pred = [tf.reshape(pred, [tf.shape(features)[0], -1, 4]) for pred in location_pred]
-        cls_pred = tf.concat(cls_pred, axis=1)
-        location_pred = tf.concat(location_pred, axis=1)
+        if params['data_format'] == 'channels_last':
+            cls_pred = [tf.transpose(pred, [0, 3, 1, 2]) for pred in cls_pred]
+            location_pred = [tf.transpose(pred, [0, 3, 1, 2]) for pred in location_pred]
+        cls_pred = [tf.reshape(pred, [tf.shape(features)[0], params['num_classes'], -1]) for pred in cls_pred]
+        location_pred = [tf.reshape(pred, [tf.shape(features)[0], 4, -1]) for pred in location_pred]
+        cls_pred = tf.concat(cls_pred, axis=2)
+        location_pred = tf.concat(location_pred, axis=2)
+        cls_pred = tf.transpose(cls_pred, [0, 2, 1])
+        location_pred = tf.transpose(location_pred, [0, 2, 1])
         cls_pred = tf.reshape(cls_pred, [-1, params['num_classes']])
         location_pred = tf.reshape(location_pred, [-1, 4])
 

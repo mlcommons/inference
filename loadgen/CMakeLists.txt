@@ -38,3 +38,9 @@ set(SOURCE
 
 add_library(mlperf_loadgen STATIC ${SOURCE})
 target_link_libraries(mlperf_loadgen)
+
+# Install library and headers.
+install(TARGETS mlperf_loadgen
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+	DESTINATION ${CMAKE_INSTALL_PREFIX}/include FILES_MATCHING PATTERN "*.h")

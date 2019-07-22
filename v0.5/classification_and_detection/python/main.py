@@ -74,6 +74,7 @@ SUPPORTED_PROFILES = {
         "queries-single": 1024,
         "queries-multi": 24576,
         "max-latency": DEFAULT_LATENCY_BUCKETS,
+        "max-batchsize": 32,
     },
 
     # resnet
@@ -118,7 +119,7 @@ SUPPORTED_PROFILES = {
     "ssd-mobilenet-onnxruntime": {
         "dataset": "coco-300",
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
-        "backend": "onnxruntime",
+        "backend": "onnxruntime",        
         "data-format": "NHWC",
     },
 
@@ -142,6 +143,7 @@ SUPPORTED_PROFILES = {
         "outputs": "bboxes,labels,scores",
         "backend": "onnxruntime",
         "data-format": "NCHW",
+        "max-batchsize": 1,
     },
     "ssd-resnet34-onnxruntime-tf": {
         "dataset": "coco-1200-tf",
@@ -178,7 +180,7 @@ def get_args():
                         help="mlperf number of queries for Offline")
     parser.add_argument("--queries-multi", type=int, default=24576,
                         help="mlperf number of queries for MultiStream,Server")
-    parser.add_argument("--max-batchsize", type=int, default=128,
+    parser.add_argument("--max-batchsize", type=int,
                         help="max batch size in a single inference")
     parser.add_argument("--model", required=True, help="model file")
     parser.add_argument("--output", help="test results")

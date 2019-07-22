@@ -11,7 +11,6 @@ import re
 import time
 
 import numpy as np
-from PIL import Image
 
 import dataset
 

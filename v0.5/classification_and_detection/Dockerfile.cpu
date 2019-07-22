@@ -32,7 +32,7 @@ RUN cd /opt && \
     conda config --set always_yes yes --set changeps1 no
 
 RUN conda install pytorch-cpu torchvision-cpu -c pytorch
-RUN pip install future pillow onnx tensorflow onnxruntime
+RUN pip install future pillow onnx opencv-python-headless tensorflow onnxruntime
 RUN pip install Cython && pip install pycocotools
 RUN cd /tmp && \
     git clone https://github.com/mlperf/inference && \

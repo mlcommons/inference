@@ -4,12 +4,12 @@ implementation of imagenet dataset
 
 # pylint: disable=unused-argument,missing-docstring
 
-import cv2
 import logging
 import os
 import re
 import time
 
+import cv2
 import numpy as np
 
 import dataset

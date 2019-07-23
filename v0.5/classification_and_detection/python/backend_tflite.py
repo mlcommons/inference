@@ -40,7 +40,7 @@ class BackendTflite(backend.Backend):
         return self
 
     def predict(self, feed):
-        self.lock.aquire()
+        self.lock.acquire()
         # set inputs
         for k, v in self.input2index.items():
             self.sess.set_tensor(v, feed[k])

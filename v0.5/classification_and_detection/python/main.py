@@ -39,9 +39,6 @@ SUPPORTED_DATASETS = {
     "imagenet_mobilenet":
         (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.PostProcessArgMax(offset=-1),
          {"image_size": [224, 224, 3]}),
-    "coco":
-        (coco.Coco, dataset.pre_process_coco_mobilenet, coco.PostProcessCoco(),
-         {"image_size": [-1, -1, 3]}),
     "coco-300":
         (coco.Coco, dataset.pre_process_coco_mobilenet, coco.PostProcessCoco(),
          {"image_size": [300, 300, 3]}),
@@ -64,7 +61,12 @@ SUPPORTED_DATASETS = {
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
 # overwritten from command line
-DEFAULT_LATENCY_BUCKETS = "0.010,0.050,0.100"
+DEFAULT_LATENCY = "0.100"
+LATENCY_RESNET50 = "0.015"
+LATENCY_MOBILENET = "0.010"
+LATENCY_SSD_MOBILENET = "0.010"
+ # FIXME: change once final value is known
+LATENCY_SSD_RESNET34 = "0.100"
 
 SUPPORTED_PROFILES = {
     "defaults": {
@@ -73,7 +75,8 @@ SUPPORTED_PROFILES = {
         "cache": 0,
         "queries-single": 1024,
         "queries-multi": 24576,
-        "max-latency": DEFAULT_LATENCY_BUCKETS,
+        "max-latency": DEFAULT_LATENCY,
+        "max-batchsize": 32,
     },
 
     # resnet
@@ -82,11 +85,13 @@ SUPPORTED_PROFILES = {
         "outputs": "ArgMax:0",
         "dataset": "imagenet",
         "backend": "tensorflow",
+        "max-latency": LATENCY_RESNET50,
     },
     "resnet50-onnxruntime": {
         "dataset": "imagenet",
         "outputs": "ArgMax:0",
         "backend": "onnxruntime",
+        "max-latency": LATENCY_RESNET50,
     },
 
     # mobilenet
@@ -95,11 +100,13 @@ SUPPORTED_PROFILES = {
         "outputs": "MobilenetV1/Predictions/Reshape_1:0",
         "dataset": "imagenet_mobilenet",
         "backend": "tensorflow",
+        "max-latency": LATENCY_MOBILENET,
     },
     "mobilenet-onnxruntime": {
         "dataset": "imagenet_mobilenet",
         "outputs": "MobilenetV1/Predictions/Reshape_1:0",
         "backend": "onnxruntime",
+        "max-latency": LATENCY_MOBILENET,
     },
 
     # ssd-mobilenet
@@ -108,18 +115,21 @@ SUPPORTED_PROFILES = {
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
         "dataset": "coco-300",
         "backend": "tensorflow",
+        "max-latency": LATENCY_SSD_MOBILENET,
     },
     "ssd-mobilenet-pytorch": {
         "inputs": "image",
         "outputs": "bboxes,labels,scores",
         "dataset": "coco-300-pt",
         "backend": "pytorch-native",
+        "max-latency": LATENCY_SSD_MOBILENET,
     },
     "ssd-mobilenet-onnxruntime": {
         "dataset": "coco-300",
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
-        "backend": "onnxruntime",
+        "backend": "onnxruntime",        
         "data-format": "NHWC",
+        "max-latency": LATENCY_SSD_MOBILENET,
     },
 
     # ssd-resnet34
@@ -129,12 +139,14 @@ SUPPORTED_PROFILES = {
         "dataset": "coco-1200-tf",
         "backend": "tensorflow",
         "data-format": "NHWC",
+        "max-latency": LATENCY_SSD_RESNET34,
     },
     "ssd-resnet34-pytorch": {
         "inputs": "image",
         "outputs": "bboxes,labels,scores",
         "dataset": "coco-1200-pt",
         "backend": "pytorch-native",
+        "max-latency": LATENCY_SSD_RESNET34,
     },
     "ssd-resnet34-onnxruntime": {
         "dataset": "coco-1200-onnx",
@@ -142,6 +154,16 @@ SUPPORTED_PROFILES = {
         "outputs": "bboxes,labels,scores",
         "backend": "onnxruntime",
         "data-format": "NCHW",
+        "max-batchsize": 1,
+        "max-latency": LATENCY_SSD_RESNET34,
+    },
+    "ssd-resnet34-onnxruntime-tf": {
+        "dataset": "coco-1200-tf",
+        "inputs": "image:0",
+        "outputs": "detection_bboxes:0,detection_classes:0,detection_scores:0",
+        "backend": "onnxruntime",
+        "data-format": "NHWC",
+        "max-latency": LATENCY_SSD_RESNET34,
     },
 }
 
@@ -171,7 +193,7 @@ def get_args():
                         help="mlperf number of queries for Offline")
     parser.add_argument("--queries-multi", type=int, default=24576,
                         help="mlperf number of queries for MultiStream,Server")
-    parser.add_argument("--max-batchsize", type=int, default=128,
+    parser.add_argument("--max-batchsize", type=int,
                         help="max batch size in a single inference")
     parser.add_argument("--model", required=True, help="model file")
     parser.add_argument("--output", help="test results")

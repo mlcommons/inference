@@ -26,7 +26,11 @@ class BackendOnnxruntime(backend.Backend):
 
     def load(self, model_path, inputs=None, outputs=None):
         """Load model and find input/outputs from the model file."""
-        self.sess = rt.InferenceSession(model_path)
+        opt = rt.SessionOptions()
+        # enable level 3 optimizations
+        # FIXME: enable below once onnxruntime 0.5 is released
+        # opt.set_graph_optimization_level(3)
+        self.sess = rt.InferenceSession(model_path, opt)
         # get input and output names
         if not inputs:
             self.inputs = [meta.name for meta in self.sess.get_inputs()]

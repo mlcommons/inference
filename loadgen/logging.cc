@@ -90,6 +90,135 @@ const std::string ArgValueTransform(const LogBinaryAsHexString& value) {
   return hex;
 }
 
+AsyncLog::AsyncLog() = default;
+
+AsyncLog::~AsyncLog() { StartNewTrace(nullptr, PerfClock::now()); }
+
+void AsyncLog::SetLogFiles(std::ostream* summary, std::ostream* detail,
+                           std::ostream* accuracy, bool copy_detail_to_stdout,
+                           bool copy_summary_to_stdout,
+                           PerfClock::time_point log_origin) {
+  std::unique_lock<std::mutex> lock(log_mutex_);
+  if (summary_out_ != &std::cerr) {
+    std::string error_summary;
+    if (log_error_count_ == 0) {
+      error_summary = "\nNo errors encountered during test.\n";
+    } else if (log_error_count_ == 1) {
+      error_summary = "\n1 ERROR encountered. See detailed log.\n";
+    } else if (log_error_count_ != 0) {
+      error_summary = "\n" + std::to_string(log_error_count_) +
+                      " ERRORS encountered. See detailed log.\n";
+    }
+    *summary_out_ << error_summary;
+    if (copy_summary_to_stdout_) {
+      std::cout << error_summary;
+    }
+  }
+  if (summary_out_) {
+    summary_out_->flush();
+  }
+  if (detail_out_) {
+    detail_out_->flush();
+  }
+  if (accuracy_out_ != &std::cerr) {
+    WriteAccuracyFooterLocked();
+    accuracy_out_->flush();
+  }
+  summary_out_ = summary;
+  detail_out_ = detail;
+  accuracy_out_ = accuracy;
+  if (accuracy_out_ != &std::cerr) {
+    WriteAccuracyHeaderLocked();
+  }
+  copy_detail_to_stdout_ = copy_detail_to_stdout;
+  copy_summary_to_stdout_ = copy_summary_to_stdout;
+  log_origin_ = log_origin;
+  log_error_count_ = 0;
+}
+
+void AsyncLog::StartNewTrace(std::ostream* trace_out,
+                             PerfClock::time_point origin) {
+  std::unique_lock<std::mutex> lock(trace_mutex_);
+  // Cleanup previous trace.
+  if (trace_out_) {
+    WriteTraceEventFooterLocked();
+    trace_out_->flush();
+  }
+
+  // Setup new trace.
+  trace_out_ = trace_out;
+  trace_origin_ = origin;
+  if (trace_out_) {
+    WriteTraceEventHeaderLocked();
+  }
+}
+
+void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
+                           const LogBinaryAsHexString& response) {
+  std::unique_lock<std::mutex> lock(log_mutex_);
+  if (!accuracy_out_) {
+    return;
+  }
+  *accuracy_out_ << (accuracy_needs_comma_ ? ",\n{ " : "\n{ ");
+  LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
+          response);
+  *accuracy_out_ << " }";
+  accuracy_needs_comma_ = true;
+}
+
+void AsyncLog::Flush() {
+  {
+    std::unique_lock<std::mutex> lock(log_mutex_);
+    if (summary_out_) {
+      summary_out_->flush();
+    }
+    if (detail_out_) {
+      detail_out_->flush();
+    }
+    if (accuracy_out_) {
+      accuracy_out_->flush();
+    }
+  }
+
+  {
+    std::unique_lock<std::mutex> lock(trace_mutex_);
+    if (trace_out_) {
+      trace_out_->flush();
+    }
+  }
+}
+
+void AsyncLog::WriteAccuracyHeaderLocked() {
+  *accuracy_out_ << "[";
+  accuracy_needs_comma_ = false;
+}
+
+void AsyncLog::WriteAccuracyFooterLocked() { *accuracy_out_ << "\n]\n"; }
+
+void AsyncLog::WriteTraceEventHeaderLocked() {
+  *trace_out_ << "{ \"traceEvents\": [\n";
+}
+
+void AsyncLog::WriteTraceEventFooterLocked() {
+  *trace_out_ << "{ \"name\": \"LastTrace\" }\n"
+              << "],\n"
+              << "\"displayTimeUnit\": \"ns\",\n"
+              << "\"otherData\": {\n"
+              << "\"version\": \"MLPerf LoadGen v0.5a0\"\n"
+              << "}\n"
+              << "}\n";
+}
+
+void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id) {
+  std::unique_lock<std::mutex> lock(latencies_mutex_);
+  assert(latencies_.empty());
+  assert(latencies_recorded_ == latencies_expected_);
+  latencies_recorded_ = 0;
+  latencies_expected_ = 0;
+  max_latency_ = 0;
+  latencies_first_sample_sequence_id_ = first_sample_sequence_id;
+}
+
 void AsyncLog::RecordLatency(uint64_t sample_sequence_id,
                              QuerySampleLatency latency) {
   // Relaxed memory order since the early-out checks are inherently racy.
@@ -132,16 +261,6 @@ void AsyncLog::RecordLatency(uint64_t sample_sequence_id,
   if (AllLatenciesRecorded()) {
     all_latencies_recorded_.notify_all();
   }
-}
-
-void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id) {
-  std::unique_lock<std::mutex> lock(latencies_mutex_);
-  assert(latencies_.empty());
-  assert(latencies_recorded_ == latencies_expected_);
-  latencies_recorded_ = 0;
-  latencies_expected_ = 0;
-  max_latency_ = 0;
-  latencies_first_sample_sequence_id_ = first_sample_sequence_id;
 }
 
 std::vector<QuerySampleLatency> AsyncLog::GetLatenciesBlocking(
@@ -396,7 +515,7 @@ void Logger::StopTracing() {
 }
 
 void Logger::LogContentionCounters() {
-  LogDetail([&](AsyncLog& log) {
+  LogDetail([&](AsyncDetail& detail) {
     {
       std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
       for (auto tls_logger : tls_loggers_registerd_) {
@@ -411,19 +530,19 @@ void Logger::LogContentionCounters() {
       }
     }
 
-    log.LogDetail("Log Contention Counters:");
-    log.LogDetail(std::to_string(swap_request_slots_retry_count_) +
-                  " : swap_request_slots_retry_count");
-    log.LogDetail(std::to_string(swap_request_slots_retry_retry_count_) +
-                  " : swap_request_slots_retry_retry_count");
-    log.LogDetail(std::to_string(swap_request_slots_retry_reencounter_count_) +
-                  " : swap_request_slots_retry_reencounter_count");
-    log.LogDetail(std::to_string(start_reading_entries_retry_count_) +
-                  " : start_reading_entries_retry_count");
-    log.LogDetail(std::to_string(tls_total_log_cas_fail_count_) +
-                  " : tls_total_log_cas_fail_count");
-    log.LogDetail(std::to_string(tls_total_swap_buffers_slot_retry_count_) +
-                  " : tls_total_swap_buffers_slot_retry_count");
+    detail("Log Contention Counters:");
+    detail(std::to_string(swap_request_slots_retry_count_) +
+           " : swap_request_slots_retry_count");
+    detail(std::to_string(swap_request_slots_retry_retry_count_) +
+           " : swap_request_slots_retry_retry_count");
+    detail(std::to_string(swap_request_slots_retry_reencounter_count_) +
+           " : swap_request_slots_retry_reencounter_count");
+    detail(std::to_string(start_reading_entries_retry_count_) +
+           " : start_reading_entries_retry_count");
+    detail(std::to_string(tls_total_log_cas_fail_count_) +
+           " : tls_total_log_cas_fail_count");
+    detail(std::to_string(tls_total_swap_buffers_slot_retry_count_) +
+           " : tls_total_swap_buffers_slot_retry_count");
 
     swap_request_slots_retry_count_ = 0;
     swap_request_slots_retry_retry_count_ = 0;
@@ -455,7 +574,7 @@ TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {
     bool success = thread_swap_request_slots_[slot].compare_exchange_strong(
         slot_value, SwapRequestSlotIsWritableValue(next_id));
     if (!success) {
-      GlobalLogger().LogErrorSync("CAS failed.", "line", __LINE__);
+      LogErrorSync("CAS failed.", "line", __LINE__);
       assert(success);
     }
     return reinterpret_cast<TlsLogger*>(slot_value);
@@ -506,25 +625,24 @@ void Logger::GatherNewSwapRequests(std::vector<TlsLogger*>* threads_to_swap) {
         it->next_id = next_id;
         swap_request_slots_retry_reencounter_count_++;
       }
-    };
+    }
   }
 }
 
 void Logger::IOThread() {
   while (keep_io_thread_alive_) {
-    auto trace1 = MakeScopedTracer(
-        [](AsyncLog& log) { log.ScopedTrace("IOThreadLoop"); });
+    auto tracer1 =
+        MakeScopedTracer([](AsyncTrace& trace) { trace("IOThreadLoop"); });
     {
-      auto trace2 =
-          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Wait"); });
+      auto tracer2 = MakeScopedTracer([](AsyncTrace& trace) { trace("Wait"); });
       std::unique_lock<std::mutex> lock(io_thread_mutex_);
       io_thread_cv_.wait_for(lock, poll_period_,
                              [&] { return !keep_io_thread_alive_; });
     }
 
     {
-      auto trace3 =
-          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Gather"); });
+      auto tracer3 =
+          MakeScopedTracer([](AsyncTrace& trace) { trace("Gather"); });
       std::vector<TlsLogger*> threads_to_swap;
       threads_to_swap.swap(threads_to_swap_deferred_);
       GatherRetrySwapRequests(&threads_to_swap);
@@ -543,14 +661,14 @@ void Logger::IOThread() {
     }
 
     {
-      auto trace4 =
-          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("Process"); });
+      auto tracer4 =
+          MakeScopedTracer([](AsyncTrace& trace) { trace("Process"); });
       // Read from the threads we are confident have activity.
       for (std::vector<TlsLogger*>::iterator thread = threads_to_read_.begin();
            thread != threads_to_read_.end(); thread++) {
-        auto trace5 =
-            MakeScopedTracer([tid = *(*thread)->TidAsString()](AsyncLog& log) {
-              log.ScopedTrace("Thread", "tid", tid);
+        auto tracer5 = MakeScopedTracer(
+            [tid = *(*thread)->TidAsString()](AsyncTrace& trace) {
+              trace("Thread", "tid", tid);
             });
         std::vector<AsyncLogEntry>* entries = (*thread)->StartReadingEntries();
         if (!entries) {
@@ -575,14 +693,14 @@ void Logger::IOThread() {
     }
 
     {
-      auto trace6 =
-          MakeScopedTracer([](AsyncLog& log) { log.ScopedTrace("FlushAll"); });
+      auto tracer6 =
+          MakeScopedTracer([](AsyncTrace& trace) { trace("FlushAll"); });
       async_logger_.Flush();
     }
 
     if (!orphans_to_destroy_.empty()) {
-      auto trace7 = MakeScopedTracer(
-          [](AsyncLog& log) { log.ScopedTrace("Abandoning Orphans"); });
+      auto tracer7 = MakeScopedTracer(
+          [](AsyncTrace& trace) { trace("Abandoning Orphans"); });
       std::unique_lock<std::mutex> lock(tls_logger_orphans_mutex_);
       for (auto orphan : orphans_to_destroy_) {
         tls_logger_orphans_.erase(orphan);
@@ -604,7 +722,7 @@ TlsLogger::TlsLogger(std::function<void()> forced_detatch)
 TlsLogger::~TlsLogger() {}
 
 // Log always makes forward progress since it can unconditionally obtain a
-// "lock" on at least one of the buffers for writting.
+// "lock" on at least one of the buffers for writing.
 // Notificiation is also lock free.
 void TlsLogger::Log(AsyncLogEntry&& entry) {
   size_t cas_fail_count = 0;
@@ -680,12 +798,12 @@ void TlsLogger::FinishReadingEntries() {
 bool TlsLogger::ReadBufferHasBeenConsumed() { return unread_swaps_ == 0; }
 
 void TlsLogger::TraceCounters() {
-  auto trace = MakeScopedTracer(
+  auto tracer = MakeScopedTracer(
       [lcfc = log_cas_fail_count_.load(std::memory_order_relaxed),
        sbsrc = swap_buffers_slot_retry_count_.load(std::memory_order_relaxed)](
-          AsyncLog& log) {
-        log.ScopedTrace("TlsLogger:ContentionCounters", "log_cas_fail_count",
-                        lcfc, "swap_buffers_slot_retry_count", sbsrc);
+          AsyncTrace& trace) {
+        trace("TlsLogger:ContentionCounters", "log_cas_fail_count", lcfc,
+              "swap_buffers_slot_retry_count", sbsrc);
       });
 }
 

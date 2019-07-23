@@ -147,7 +147,7 @@ struct TestSettings {
 };
 
 enum class LoggingMode {
-  AsyncPoll,      // Logs are serialized and ouptut on an IOThread that polls
+  AsyncPoll,      // Logs are serialized and output on an IOThread that polls
                   // for new logs at a fixed interval.
   EndOfTestOnly,  // TODO: Logs are serialzied and output only at the end of
                   // the test.
@@ -170,7 +170,7 @@ struct LogOutputSettings {
 struct LogSettings {
   LogOutputSettings log_output;
   LoggingMode log_mode = LoggingMode::AsyncPoll;
-  uint64_t log_mode_async_poll_interval_ms = 1000;  // TODO.
+  uint64_t log_mode_async_poll_interval_ms = 1000;  // TODO: Use this.
   bool enable_trace = true;  // TODO: Allow trace to be disabled.
 };
 

@@ -52,10 +52,10 @@ TestSettingsInternal::TestSettingsInternal(
       if (requested.server_target_qps >= 0.0) {
         target_qps = requested.server_target_qps;
       } else {
-        LogError([server_target_qps = requested.server_target_qps,
-                  target_qps = target_qps](AsyncLog &log) {
-          log.LogDetail("Invalid value for server_target_qps requested.",
-                        "requested", server_target_qps, "using", target_qps);
+        LogDetail([server_target_qps = requested.server_target_qps,
+                   target_qps = target_qps](AsyncDetail &detail) {
+          detail.Error("Invalid value for server_target_qps requested.",
+                       "requested", server_target_qps, "using", target_qps);
         });
       }
       target_latency =
@@ -67,10 +67,10 @@ TestSettingsInternal::TestSettingsInternal(
       if (requested.offline_expected_qps >= 0.0) {
         target_qps = requested.offline_expected_qps;
       } else {
-        LogError([offline_expected_qps = requested.offline_expected_qps,
-                  target_qps = target_qps](AsyncLog &log) {
-          log.LogDetail("Invalid value for offline_expected_qps requested.",
-                        "requested", offline_expected_qps, "using", target_qps);
+        LogDetail([offline_expected_qps = requested.offline_expected_qps,
+                   target_qps = target_qps](AsyncDetail &detail) {
+          detail.Error("Invalid value for offline_expected_qps requested.",
+                       "requested", offline_expected_qps, "using", target_qps);
         });
       }
       max_async_queries =
@@ -134,73 +134,72 @@ std::string ToString(TestMode mode) {
 }
 
 void LogRequestedTestSettings(const TestSettings &s) {
-  LogDetail([s](AsyncLog &log) {
-    log.LogDetail("");
-    log.LogDetail("Requested Settings:");
-    log.LogDetail("Scenario : " + ToString(s.scenario));
-    log.LogDetail("Test mode : " + ToString(s.mode));
+  LogDetail([s](AsyncDetail &detail) {
+    detail("");
+    detail("Requested Settings:");
+    detail("Scenario : " + ToString(s.scenario));
+    detail("Test mode : " + ToString(s.mode));
 
     // Scenario-specific
     switch (s.scenario) {
       case TestScenario::SingleStream:
-        log.LogDetail("single_stream_expected_latency_ns : ",
-                      s.single_stream_expected_latency_ns);
+        detail("single_stream_expected_latency_ns : ",
+               s.single_stream_expected_latency_ns);
         break;
       case TestScenario::MultiStream:
       case TestScenario::MultiStreamFree:
-        log.LogDetail("multi_stream_target_qps : ", s.multi_stream_target_qps);
-        log.LogDetail("multi_stream_target_latency_ns : ",
-                      s.multi_stream_target_latency_ns);
-        log.LogDetail("multi_stream_samples_per_query : ",
-                      s.multi_stream_samples_per_query);
-        log.LogDetail("multi_stream_max_async_queries : ",
-                      s.multi_stream_max_async_queries);
+        detail("multi_stream_target_qps : ", s.multi_stream_target_qps);
+        detail("multi_stream_target_latency_ns : ",
+               s.multi_stream_target_latency_ns);
+        detail("multi_stream_samples_per_query : ",
+               s.multi_stream_samples_per_query);
+        detail("multi_stream_max_async_queries : ",
+               s.multi_stream_max_async_queries);
         break;
       case TestScenario::Server:
-        log.LogDetail("server_target_qps : ", s.server_target_qps);
-        log.LogDetail("server_target_latency_ns : ",
-                      s.server_target_latency_ns);
-        log.LogDetail("server_coalesce_queries : ", s.server_coalesce_queries);
+        detail("server_target_qps : ", s.server_target_qps);
+        detail("server_target_latency_ns : ", s.server_target_latency_ns);
+        detail("server_coalesce_queries : ", s.server_coalesce_queries);
         break;
       case TestScenario::Offline:
-        log.LogDetail("offline_expected_qps : ", s.offline_expected_qps);
+        detail("offline_expected_qps : ", s.offline_expected_qps);
         break;
     }
 
     // Overrides
-    log.LogDetail("min_duration_ms : ", s.min_duration_ms);
-    log.LogDetail("max_duration_ms : ", s.max_duration_ms);
-    log.LogDetail("min_query_count : ", s.min_query_count);
-    log.LogDetail("max_query_count : ", s.max_query_count);
-    log.LogDetail("qsl_rng_seed : ", s.qsl_rng_seed);
-    log.LogDetail("sample_index_rng_seed : ", s.sample_index_rng_seed);
-    log.LogDetail("schedule_rng_seed : ", s.schedule_rng_seed);
+    detail("min_duration_ms : ", s.min_duration_ms);
+    detail("max_duration_ms : ", s.max_duration_ms);
+    detail("min_query_count : ", s.min_query_count);
+    detail("max_query_count : ", s.max_query_count);
+    detail("qsl_rng_seed : ", s.qsl_rng_seed);
+    detail("sample_index_rng_seed : ", s.sample_index_rng_seed);
+    detail("schedule_rng_seed : ", s.schedule_rng_seed);
 
-    log.LogDetail("");
+    detail("");
   });
 }
 
 void TestSettingsInternal::LogEffectiveSettings() const {
-  LogDetail([s = *this](AsyncLog &log) {
-    log.LogDetail("");
-    log.LogDetail("Effective Settings:");
+  LogDetail([s = *this](AsyncDetail &detail) {
+    detail("");
+    detail("Effective Settings:");
 
-    log.LogDetail("Scenario : " + ToString(s.scenario));
-    log.LogDetail("Test mode : " + ToString(s.mode));
+    detail("Scenario : " + ToString(s.scenario));
+    detail("Test mode : " + ToString(s.mode));
 
-    log.LogDetail("samples_per_query : ", s.samples_per_query);
-    log.LogDetail("target_qps : ", s.target_qps);
-    log.LogDetail("target_latency (ns): ", s.target_latency.count());
-    log.LogDetail("max_async_queries : ", s.max_async_queries);
-    log.LogDetail("target_duration (ms): ", s.target_duration.count());
-    log.LogDetail("min_duration (ms): ", s.min_duration.count());
-    log.LogDetail("max_duration (ms): ", s.max_duration.count());
-    log.LogDetail("min_query_count : ", s.min_query_count);
-    log.LogDetail("max_query_count : ", s.max_query_count);
-    log.LogDetail("min_sample_count : ", s.min_sample_count);
-    log.LogDetail("qsl_rng_seed : ", s.qsl_rng_seed);
-    log.LogDetail("sample_index_rng_seed : ", s.sample_index_rng_seed);
-    log.LogDetail("schedule_rng_seed : ", s.schedule_rng_seed);
+    detail("samples_per_query : ", s.samples_per_query);
+    detail("target_qps : ", s.target_qps);
+    detail("target_latency (ns): ", s.target_latency.count());
+    detail("max_async_queries : ", s.max_async_queries);
+    detail("target_duration (ms): ", s.target_duration.count());
+    detail("min_duration (ms): ", s.min_duration.count());
+    detail("max_duration (ms): ", s.max_duration.count());
+    detail("min_query_count : ", s.min_query_count);
+    detail("max_query_count : ", s.max_query_count);
+    detail("min_sample_count : ", s.min_sample_count);
+    detail("qsl_rng_seed : ", s.qsl_rng_seed);
+    detail("sample_index_rng_seed : ", s.sample_index_rng_seed);
+    detail("schedule_rng_seed : ", s.schedule_rng_seed);
   });
 }
 
@@ -209,18 +208,18 @@ void TestSettingsInternal::LogAllSettings() const {
   LogRequestedTestSettings(requested);
 }
 
-void TestSettingsInternal::LogSummary(AsyncLog &log) const {
-  log.LogSummary("samples_per_query : ", samples_per_query);
-  log.LogSummary("target_qps : ", target_qps);
-  log.LogSummary("target_latency (ns): ", target_latency.count());
-  log.LogSummary("max_async_queries : ", max_async_queries);
-  log.LogSummary("min_duration (ms): ", min_duration.count());
-  log.LogSummary("max_duration (ms): ", max_duration.count());
-  log.LogSummary("min_query_count : ", min_query_count);
-  log.LogSummary("max_query_count : ", max_query_count);
-  log.LogSummary("qsl_rng_seed : ", qsl_rng_seed);
-  log.LogSummary("sample_index_rng_seed : ", sample_index_rng_seed);
-  log.LogSummary("schedule_rng_seed : ", schedule_rng_seed);
+void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
+  summary("samples_per_query : ", samples_per_query);
+  summary("target_qps : ", target_qps);
+  summary("target_latency (ns): ", target_latency.count());
+  summary("max_async_queries : ", max_async_queries);
+  summary("min_duration (ms): ", min_duration.count());
+  summary("max_duration (ms): ", max_duration.count());
+  summary("min_query_count : ", min_query_count);
+  summary("max_query_count : ", max_query_count);
+  summary("qsl_rng_seed : ", qsl_rng_seed);
+  summary("sample_index_rng_seed : ", sample_index_rng_seed);
+  summary("schedule_rng_seed : ", schedule_rng_seed);
 }
 
 }  // namespace mlperf

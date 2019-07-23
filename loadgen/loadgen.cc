@@ -267,18 +267,21 @@ auto ScheduleDistribution<TestScenario::Server>(double qps) {
 
 // SampleDistribution templates by test mode.
 template <TestMode mode>
-auto SampleDistribution(size_t sample_count, size_t samples_per_query) {
-  return
-      [sample_count, samples_per_query, i = size_t(0)](auto& /*gen*/) mutable {
-        size_t result = i;
-        i += samples_per_query;
-        return result % sample_count;
-      };
+auto SampleDistribution(size_t sample_count, size_t stride, std::mt19937* rng) {
+  std::vector<size_t> indices;
+  for (size_t i = 0; i < sample_count; i += stride) {
+    indices.push_back(i);
+  }
+  std::shuffle(indices.begin(), indices.end(), *rng);
+  return [indices = std::move(indices), i = size_t(0)](auto& /*gen*/) mutable {
+    return indices.at(i++);
+  };
 }
 
 template <>
-auto SampleDistribution<TestMode::PerformanceOnly>(
-    size_t sample_count, size_t /*samples_per_query*/) {
+auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
+                                                   size_t /*stride*/,
+                                                   std::mt19937* /*rng*/) {
   return [dist = std::uniform_int_distribution<>(0, sample_count - 1)](
              auto& gen) mutable { return dist(gen); };
 }
@@ -314,16 +317,24 @@ std::vector<QueryMetadata> GenerateQueries(
   std::mt19937 sample_rng(settings.sample_index_rng_seed);
   std::mt19937 schedule_rng(settings.schedule_rng_seed);
 
+  constexpr bool kIsMultiStream = scenario == TestScenario::MultiStream ||
+                                  scenario == TestScenario::MultiStreamFree;
+  const size_t sample_stride = kIsMultiStream ? settings.samples_per_query : 1;
+
   auto sample_distribution = SampleDistribution<mode>(
-      loaded_sample_set.sample_distribution_end, settings.samples_per_query);
+      loaded_sample_set.sample_distribution_end, sample_stride, &sample_rng);
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
-  std::vector<QuerySampleIndex> samples(settings.samples_per_query);
+  size_t samples_per_query = settings.samples_per_query;
+  if (mode == TestMode::AccuracyOnly && scenario == TestScenario::Offline) {
+    samples_per_query = loaded_sample_set.sample_distribution_end;
+  }
+
+  std::vector<QuerySampleIndex> samples(samples_per_query);
   std::chrono::nanoseconds timestamp(0);
   while (timestamp <= k2xTargetDuration || queries.size() < min_queries) {
-    if (scenario == TestScenario::MultiStream ||
-        scenario == TestScenario::MultiStreamFree) {
+    if (kIsMultiStream) {
       QuerySampleIndex sample_i = sample_distribution(sample_rng);
       for (auto& s : samples) {
         // Select contiguous samples in the MultiStream scenario.
@@ -346,8 +357,7 @@ std::vector<QueryMetadata> GenerateQueries(
   // ensure we issue all samples in loaded_samples. Offline doesn't pad
   // loaded_samples like MultiStream does.
   if (scenario == TestScenario::Offline && mode == TestMode::AccuracyOnly) {
-    size_t remaining_samples =
-        loaded_samples.size() % settings.samples_per_query;
+    size_t remaining_samples = loaded_samples.size() % samples_per_query;
     if (remaining_samples != 0) {
       samples.resize(remaining_samples);
       for (auto& s : samples) {
@@ -563,6 +573,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   PerfClock::time_point last_now = start;
   QueryScheduler<scenario> query_scheduler(settings, start);
 
+  size_t expected_latencies = 0;
   for (auto& query : queries) {
     auto tracer1 =
         MakeScopedTracer([](AsyncTrace& trace) { trace("SampleLoop"); });
@@ -575,7 +586,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       sut->IssueQuery(query.query_to_send);
     }
 
+    expected_latencies += query.query_to_send.size();
     queries_issued++;
+
     if (mode == TestMode::AccuracyOnly) {
       // TODO: Rate limit in accuracy mode.
       continue;
@@ -642,7 +655,6 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   // We have to keep the synchronization primitives alive until the SUT
   // is done with them.
   auto& final_query = queries[queries_issued - 1];
-  const size_t expected_latencies = queries_issued * settings.samples_per_query;
   std::vector<QuerySampleLatency> latencies(
       GlobalLogger().GetLatenciesBlocking(expected_latencies));
 

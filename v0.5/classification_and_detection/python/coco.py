@@ -9,8 +9,8 @@ import logging
 import os
 import time
 
+import cv2
 import numpy as np
-from PIL import Image
 from pycocotools.cocoeval import COCOeval
 import pycoco
 import dataset
@@ -72,9 +72,9 @@ class Coco(dataset.Dataset):
             dst = os.path.join(self.cache_dir, image_name)
             if not os.path.exists(dst + ".npy"):
                 # cache a preprocessed version of the image
-                with Image.open(src) as img_org:
-                    processed = self.pre_process(img_org, need_transpose=self.need_transpose, dims=self.image_size)
-                    np.save(dst, processed)
+                img_org = cv2.imread(src)
+                processed = self.pre_process(img_org, need_transpose=self.need_transpose, dims=self.image_size)
+                np.save(dst, processed)
 
             self.image_ids.append(image_id)
             self.image_list.append(image_name)
@@ -168,8 +168,6 @@ class PostProcessCoco:
         for batch in range(0, len(self.results)):
             for idx in range(0, len(self.results[batch])):
                 detection = self.results[batch][idx]
-                # this is the index into the image list
-                #image_id = int(detections[idx][0])
                 image_id = int(detection[0])
                 image_ids.append(image_id)
                 # map it to the coco image it
@@ -240,7 +238,7 @@ class PostProcessCocoPt(PostProcessCoco):
         # batch size
         bs = len(results[0])
         for idx in range(0, bs):
-            #processed_results.append([])
+            processed_results.append([])
             detection_boxes = results[0][idx]
             detection_classes = results[1][idx]
             expected_classes = expected[idx][0]
@@ -254,7 +252,7 @@ class PostProcessCocoPt(PostProcessCoco):
                     self.good += 1
                 box = detection_boxes[detection]
                 # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
-                processed_results.append([[float(ids[idx]),
+                processed_results[idx].append([[float(ids[idx]),
                                               box[1], box[0], box[3], box[2],
                                               scores[detection],
                                               float(detection_class)]])
@@ -291,12 +289,12 @@ class PostProcessCocoOnnx(PostProcessCoco):
                     self.good += 1
                 box = detection_boxes[detection]
                 # comes from model as:  0=xmax 1=ymax 2=xmin 3=ymin
-                processed_results.append([float(ids[idx]),
+                processed_results[idx].append([float(ids[idx]),
                                               box[1], box[0], box[3], box[2],
                                               scores[detection],
                                               float(detection_class)])
                 self.total += 1
-        return results
+        return processed_results
 
 class PostProcessCocoTf(PostProcessCoco):
     """

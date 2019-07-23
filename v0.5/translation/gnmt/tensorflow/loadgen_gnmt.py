@@ -427,6 +427,9 @@ if __name__ == "__main__":
 
     parser.add_argument("--mode", default="Performance", help="Can be one of {Performance, Accuracy}")
 
+    parser.add_argument("--debug_settings", default=False, action='store_true', 
+        help="For debugging purposes, modify settings to small number of querries.")
+
     args = parser.parse_args()
 
     outdir = os.path.join(os.getcwd(), 'lg_output')
@@ -452,30 +455,34 @@ if __name__ == "__main__":
         runner = SingleStreamGNMTRunner(gnmt_model, store_translation=args.store_translation, verbose=args.verbose, outdir=outdir)
         
         # Specify exactly how many queries need to be made
-        settings.min_query_count = 100
-        settings.max_query_count = 100
+        if args.debug_settings:
+            settings.min_query_count = 100
+            settings.max_query_count = 100
 
     elif args.scenario == "Offline":
         runner = GNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
-        settings.min_query_count = 1
-        settings.max_query_count = 1
+        if args.debug_settings:
+            settings.min_query_count = 1
+            settings.max_query_count = 1
 
     elif args.scenario == "MultiStream":
         runner = GNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
-        settings.min_query_count = 100
-        settings.max_query_count = 100
-        settings.multi_stream_samples_per_query = 8
+        if args.debug_settings:
+            settings.min_query_count = 100
+            settings.max_query_count = 100
+            settings.multi_stream_samples_per_query = 8
 
     elif args.scenario == "Server":
         runner = ServerGNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
-        settings.min_query_count = 20
-        settings.max_query_count = 100
+        if args.debug_settings:
+            settings.min_query_count = 20
+            settings.max_query_count = 100
 
     else:
         print("Invalid scenario selected")

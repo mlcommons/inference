@@ -80,5 +80,6 @@ setup(
     author='guschmue@microsoft.com',
     author_email='guschmue@microsoft.com',
     url='https://github.com/mlperf/inference',
-    install_requires=['numpy>=1.14.1', 'onnx>=1.5', 'pybind11', 'Cython', 'pycocotools', 'mlperf_loadgen']
+    install_requires=['numpy>=1.14.1', 'onnx>=1.5', 'pybind11', 'Cython',
+                        'pycocotools', 'mlperf_loadgen', 'opencv-python-headless']
 )

@@ -89,8 +89,8 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   ~QuerySampleLibraryTrampoline() override = default;
 
   const std::string& Name() const override { return name_; }
-  const size_t TotalSampleCount() { return total_sample_count_; }
-  const size_t PerformanceSampleCount() { return performance_sample_count_; }
+  size_t TotalSampleCount() { return total_sample_count_; }
+  size_t PerformanceSampleCount() { return performance_sample_count_; }
 
   void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;

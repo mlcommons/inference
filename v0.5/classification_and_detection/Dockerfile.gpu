@@ -32,13 +32,13 @@ RUN cd /opt && \
     conda config --set always_yes yes --set changeps1 no
 
 RUN pip install --upgrade pip && \
-    pip install cython future pillow onnx && \
+    pip install cython future pillow onnx opencv-python-headless && \
     ln -s /usr/local/cuda/lib64 /usr/local/cuda/lib && \
     cp /usr/lib/x86_64-linux-gnu/libnccl* /usr/local/cuda/lib && \
     ldconfig
 
 RUN conda install pytorch torchvision -c pytorch
-RUN pip install tensorflow-gpu==1.13.1 onnxruntime-gpu
+RUN pip install tensorflow-gpu==1.14.0 onnxruntime-gpu
 RUN pip install Cython && pip install pycocotools
 
 

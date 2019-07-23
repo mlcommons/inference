@@ -8,9 +8,9 @@ import logging
 import sys
 import time
 
+import cv2
 import numpy as np
 
-from PIL import Image
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("dataset")
@@ -142,17 +142,17 @@ class PostProcessArgMax:
 #
 
 def center_crop(img, out_height, out_width):
-    width, height = img.size
-    left = (width - out_width) / 2
-    right = (width + out_width) / 2
-    top = (height - out_height) / 2
-    bottom = (height + out_height) / 2
-    img = img.crop((left, top, right, bottom))
+    height, width, _ = img.shape
+    left = int((width - out_width) / 2)
+    right = int((width + out_width) / 2)
+    top = int((height - out_height) / 2)
+    bottom = int((height + out_height) / 2)
+    img = img[top:bottom, left:right]
     return img
 
 
-def resize_with_aspectratio(img, out_height, out_width, scale=87.5):
-    width, height = img.size
+def resize_with_aspectratio(img, out_height, out_width, scale=87.5, inter_pol=cv2.INTER_LINEAR):
+    height, width, _ = img.shape
     new_height = int(100. * out_height / scale)
     new_width = int(100. * out_width / scale)
     if height > width:
@@ -161,23 +161,23 @@ def resize_with_aspectratio(img, out_height, out_width, scale=87.5):
     else:
         h = new_height
         w = int(new_width * width / height)
-    img = img.resize((w, h), Image.BILINEAR)
+    img = cv2.resize(img, (w, h), interpolation=inter_pol)
     return img
 
 
 def pre_process_vgg(img, dims=None, need_transpose=False):
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     output_height, output_width, _ = dims
-
-    img = resize_with_aspectratio(img, output_height, output_width)
+    cv2_interpol = cv2.INTER_AREA
+    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2_interpol)
     img = center_crop(img, output_height, output_width)
     img = np.asarray(img, dtype='float32')
 
     # normalize image
     means = np.array([123.68, 116.78, 103.94], dtype=np.float32)
     img -= means
+
     # transpose if needed
     if need_transpose:
         img = img.transpose([2, 0, 1])
@@ -185,12 +185,10 @@ def pre_process_vgg(img, dims=None, need_transpose=False):
 
 
 def pre_process_mobilenet(img, dims=None, need_transpose=False):
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     output_height, output_width, _ = dims
-
-    img = resize_with_aspectratio(img, output_height, output_width)
+    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2.INTER_LINEAR)
     img = center_crop(img, output_height, output_width)
     img = np.asarray(img, dtype='float32')
 
@@ -204,27 +202,29 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
     return img
 
 
-def pre_process_coco_mobilenet(img, dims=None, need_transpose=False):
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
+def maybe_resize(img, dims):
+    img = np.array(img, dtype=np.float32)
+    if len(img.shape) < 3 or img.shape[2] != 3:
+        # some images might be grayscale
+        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    if dims != None:
+        im_height, im_width, _ = dims
+        img = cv2.resize(img, (im_width, im_height), interpolation=cv2.INTER_LINEAR)
+    return img
 
-    img_data = np.array(img.getdata())
-    img_data = img_data.astype(np.uint8)
-    (im_width, im_height) = img.size
-    img = img_data.reshape(im_height, im_width, 3)
+
+def pre_process_coco_mobilenet(img, dims=None, need_transpose=False):
+    img = maybe_resize(img, dims)
+    img = np.asarray(img, dtype=np.uint8)
     # transpose if needed
     if need_transpose:
         img = img.transpose([2, 0, 1])
     return img
 
-def pre_process_coco_pt_mobilenet(img, dims=None, need_transpose=False):
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
 
-    img_data = np.array(img.getdata())
-    img_data = img_data.astype(np.float32)
-    (im_width, im_height) = img.size
-    img = img_data.reshape(im_height, im_width, 3)
+def pre_process_coco_pt_mobilenet(img, dims=None, need_transpose=False):
+    img = maybe_resize(img, dims)
     img -= 127.5
     img /= 127.5
     # transpose if needed
@@ -232,36 +232,24 @@ def pre_process_coco_pt_mobilenet(img, dims=None, need_transpose=False):
         img = img.transpose([2, 0, 1])
     return img
 
-def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
 
-    if dims != None:
-        im_height, im_width, _ = dims
-        img = img.resize((im_width, im_height), Image.BILINEAR)
+def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
+    img = maybe_resize(img, dims)
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
-    img_data = np.array(img.getdata(), dtype=np.float32)
-    (im_width, im_height) = img.size
-    img = img_data.reshape(im_height, im_width, 3)
+
     img = img / 255. - mean
     img = img / std
+
     if need_transpose:
         img = img.transpose([2, 0, 1])
 
     return img
 
-def pre_process_coco_resnet34_tf(img, dims=None, need_transpose=False):
-    if img.mode != 'RGB':
-        img = img.convert('RGB')
 
-    if dims != None:
-        im_height, im_width, _ = dims
-        img = img.resize((im_width, im_height), Image.BILINEAR) # PIL.Image.BILINEAR 2
+def pre_process_coco_resnet34_tf(img, dims=None, need_transpose=False):
+    img = maybe_resize(img, dims)
     mean = np.array([123.68, 116.78, 103.94], dtype=np.float32)
-    img_data = np.array(img.getdata(), dtype=np.float32)
-    (im_width, im_height) = img.size
-    img = img_data.reshape(im_height, im_width, 3)
     img = img - mean
     if need_transpose:
         img = img.transpose([2, 0, 1])

@@ -26,6 +26,11 @@ from nmt import model_helper
 import codecs
 import array
 
+NANO_SEC = 1e9
+
+def process_latencies_gnmt(latencies_ns):
+    print("Please consult loadgen log (./mlperf_log_summary.txt) for performance results.")
+
 ##
 # @brief Translation task that contains 1 sentence ID.
 class TranslationTask:
@@ -427,6 +432,13 @@ if __name__ == "__main__":
 
     parser.add_argument("--mode", default="Performance", help="Can be one of {Performance, Accuracy}")
 
+    parser.add_argument("--debug_settings", default=False, action='store_true', 
+        help="For debugging purposes, modify settings to small number of querries.")
+
+    parser.add_argument("--qps", type=int, default=10, help="target qps estimate")
+
+    parser.add_argument("--max-latency", type=str, default="0.100", help="mlperf max latency in 99pct tile")
+
     args = parser.parse_args()
 
     outdir = os.path.join(os.getcwd(), 'lg_output')
@@ -440,6 +452,13 @@ if __name__ == "__main__":
         print("Unknown mode or scenario: {}".format(e.args[0]))
         raise e
 
+    if args.qps:
+        qps = float(args.qps)
+        settings.server_target_qps = qps
+        settings.offline_expected_qps = qps
+
+    max_latency = [float(i) for i in args.max_latency.split(",")]
+
     # Build the GNMT model
     if args.scenario == "SingleStream":
         batch_size = 1
@@ -452,31 +471,34 @@ if __name__ == "__main__":
         runner = SingleStreamGNMTRunner(gnmt_model, store_translation=args.store_translation, verbose=args.verbose, outdir=outdir)
         
         # Specify exactly how many queries need to be made
-        settings.min_query_count = 100
-        settings.max_query_count = 100
+        if args.debug_settings:
+            settings.min_query_count = 100
+            settings.max_query_count = 100
 
     elif args.scenario == "Offline":
         runner = GNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
-        settings.min_query_count = 1
-        settings.max_query_count = 1
+        if args.debug_settings:
+            settings.min_query_count = 1
+            settings.max_query_count = 1
 
     elif args.scenario == "MultiStream":
         runner = GNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
-        settings.min_query_count = 100
-        settings.max_query_count = 100
-        settings.multi_stream_samples_per_query = 8
+        if args.debug_settings:
+            settings.min_query_count = 100
+            settings.max_query_count = 100
+            settings.multi_stream_samples_per_query = 8
 
     elif args.scenario == "Server":
         runner = ServerGNMTRunner(gnmt_model, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
-        settings.min_query_count = 20
-        settings.max_query_count = 100
-
+        if args.debug_settings:
+            settings.min_query_count = 20
+            settings.max_query_count = 100
     else:
         print("Invalid scenario selected")
         assert False
@@ -487,11 +509,25 @@ if __name__ == "__main__":
     total_queries = 3003 # Maximum sample ID + 1
     perf_queries = 3003   # Select the same subset of $perf_queries samples
 
-    sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries, process_latencies)
+    sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries, process_latencies_gnmt)
     qsl = mlperf_loadgen.ConstructQSL(
         total_queries, perf_queries, runner.load_samples_to_ram, runner.unload_samples_from_ram)
 
-    mlperf_loadgen.StartTest(sut, qsl, settings)
+
+    # Start generating queries by starting the test
+    # A single test for all non-server scenarios
+    if not args.scenario == "Server":
+        print("starting {} scenario".format(args.scenario))
+        mlperf_loadgen.StartTest(sut, qsl, settings)
+
+    # Multiple tests (depending on target latency array) for server scenario
+    else:
+        for target_latency in max_latency:
+            print("starting {} scenario, latency={}".format(args.scenario, target_latency))
+            settings.server_target_latency_ns = int(target_latency * NANO_SEC)
+
+            mlperf_loadgen.StartTest(sut, qsl, settings)
+
     runner.finish()
     mlperf_loadgen.DestroyQSL(qsl)
     mlperf_loadgen.DestroySUT(sut)

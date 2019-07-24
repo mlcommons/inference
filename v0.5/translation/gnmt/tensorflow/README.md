@@ -58,7 +58,7 @@ python loadgen_gnmt.py --store_translation
 
 This will invoke the SingleStream scenario (default --scenario option) in Performance mode (default --mode option), and in addition, will store the output of every sentence in a separate file.
 
-Other scenarios can be ran by changing the "--scenario" option. Accuracy tracking can be enabled with the "--mode Accuracy" option. Please run the following command for complete overview of options:
+Other scenarios can be ran by changing the "--scenario" option. Accuracy tracking can be enabled with the "--mode Accuracy" option. Debugging settings can be enabled with "--debug_settings". Please run the following command for complete overview of options:
 ```
 python loadgen_gnmt.py -h
 ```

@@ -405,8 +405,6 @@ struct QueryScheduler<TestScenario::SingleStream> {
   QueryMetadata* prev_query = nullptr;
 };
 
-enum class MultiStreamFrequency { Fixed, Free };
-
 // MultiStream QueryScheduler
 template <>
 struct QueryScheduler<TestScenario::MultiStream> {
@@ -590,7 +588,8 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
     queries_issued++;
 
     if (mode == TestMode::AccuracyOnly) {
-      // TODO: Rate limit in accuracy mode.
+      // TODO: Rate limit in accuracy mode so accuracy mode works even
+      //       if the expected/target performance is way off.
       continue;
     }
 
@@ -630,8 +629,6 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
         break;
       }
     }
-    // TODO: Use GetMaxLatencySoFar here if we decide to have a hard latency
-    //       limit.
   }
 
   // Let the SUT know it should not expect any more queries.
@@ -1066,12 +1063,6 @@ struct RunFunctions {
 
 // Generates random sets of samples in the QSL that we can load into RAM
 // at the same time.
-// Choosing samples randomly to go into a set naturally avoids biasing some
-// samples to a particular set.
-// TODO: Choosing bins randomly, rather than samples randomly, would avoid the
-//       garbage collection logic, but we'd need to avoid later samples being
-//       less likely to be in the smallest set. This may not be an important
-//       requirement though.
 std::vector<LoadableSampleSet> GenerateLoadableSets(
     QuerySampleLibrary* qsl, const TestSettingsInternal& settings) {
   auto tracer = MakeScopedTracer(

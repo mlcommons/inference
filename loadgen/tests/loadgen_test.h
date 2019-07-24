@@ -13,10 +13,75 @@ limitations under the License.
 // A minimal test framework.
 
 #include <algorithm>
+#include <exception>
 #include <functional>
 #include <iostream>
 #include <map>
 #include <vector>
+
+#define REGISTER_TEST(name, ...) \
+  static Test::StaticRegistrant test##name(#name, __VA_ARGS__);
+
+#define REGISTER_TEST_SCENARIO(name, scenario, test, ...) \
+  static Test::StaticRegistrant t##name##scenario(        \
+      #name "_" #scenario, test, __VA_ARGS__, mlperf::TestScenario::scenario)
+
+#define REGISTER_TEST_ALL_SCENARIOS(name, test, ...)                \
+  REGISTER_TEST_SCENARIO(name, SingleStream, test, __VA_ARGS__);    \
+  REGISTER_TEST_SCENARIO(name, MultiStream, test, __VA_ARGS__);     \
+  REGISTER_TEST_SCENARIO(name, MultiStreamFree, test, __VA_ARGS__); \
+  REGISTER_TEST_SCENARIO(name, Server, test, __VA_ARGS__);          \
+  REGISTER_TEST_SCENARIO(name, Offline, test, __VA_ARGS__);
+
+#define FAIL_IF(exp)                                              \
+  [&]() {                                                         \
+    const bool v = exp;                                           \
+    if (v) {                                                      \
+      std::cerr << "\n   ERROR: (" << __FILE__ << "@" << __LINE__ \
+                << ") : " #exp;                                   \
+      Test::AddFailure();                                         \
+    }                                                             \
+    return v;                                                     \
+  }()
+
+#define FAIL_MSG(...)                                                      \
+  [&]() {                                                                  \
+    std::cerr << "\n    Info: (" << __FILE__ << "@" << __LINE__ << ") : "; \
+    Test::Log(__VA_ARGS__);                                                \
+    return true;                                                           \
+  }()
+
+#define FAIL_EXP(exp)                                                      \
+  [&]() {                                                                  \
+    std::cerr << "\n    Info: (" << __FILE__ << "@" << __LINE__ << ") : "; \
+    std::cerr << #exp << " is " << (exp);                                  \
+    return true;                                                           \
+  }()
+
+#define BAD_TEST_MSG(...)                                        \
+  [&]() {                                                        \
+    FAIL_MSG("The test isn't testing what it claims to test. "); \
+    Test::Log(__VA_ARGS__);                                      \
+    return true;                                                 \
+  }()
+
+#define ABORT_TEST                                     \
+  [&]() {                                              \
+    FAIL_MSG("ABORTING");                              \
+    throw std::logic_error("ABORT_TEST encountered."); \
+    return false;                                      \
+  }();
+
+template <typename TestT>
+struct TestProxy {
+  template <typename... Args>
+  void operator()(Args&&... args) {
+    TestT test;
+    test.SetUpTest(std::forward<Args>(args)...);
+    test.RunTest();
+    test.EndTest();
+  }
+};
 
 class Test {
   using TestMap = std::multimap<const char*, std::function<void()>>;
@@ -53,18 +118,22 @@ class Test {
         enabled_tests.push_back(&test);
       }
     }
-    const size_t enabled_count = enabled_tests.size();
-    std::cout << enabled_count << " of " << tests().size()
-              << " tests match regex filters.\n";
+    const size_t enabled = enabled_tests.size();
+    std::cout << enabled << " of " << tests().size() << " tests enabled.\n";
 
     // Run the tests.
     std::vector<const char*> failures;
-    for (size_t i = 0; i < enabled_count; i++) {
+    for (size_t i = 0; i < enabled; i++) {
       const char* name = enabled_tests[i]->first;
-      std::cout << "[" << i << "/" << enabled_count << "] : " << name << " : ";
+      std::cout << "[" << (i + 1) << "/" << enabled << "] : " << name << " : ";
       std::cout.flush();
       test_fails() = 0;
-      enabled_tests[i]->second();  // Run the test.
+      try {
+        enabled_tests[i]->second();  // Run the test.
+      } catch (std::exception& e) {
+        constexpr bool TestThrewException = true;
+        FAIL_IF(TestThrewException) && FAIL_EXP(e.what());
+      }
       if (test_fails() > 0) {
         failures.push_back(name);
         std::cerr << "\n FAILED: " << name << "\n";
@@ -75,12 +144,11 @@ class Test {
 
     // Summarize.
     if (enabled_tests.empty()) {
-      std::cerr << "Check your regexes.\n";
+      std::cerr << "Check your test filter.\n";
     } else if (failures.empty()) {
-      std::cout << "All " << enabled_count << " tests passed! \\o/\n";
+      std::cout << "All " << enabled << " tests passed! \\o/\n";
     } else {
-      std::cout << failures.size() << " of " << enabled_count
-                << " tests failed:\n";
+      std::cout << failures.size() << " of " << enabled << " tests failed:\n";
       for (auto failed_test_name : failures) {
         std::cout << "  " << failed_test_name << "\n";
       }
@@ -97,42 +165,3 @@ class Test {
     Log(std::forward<Args>(args)...);
   }
 };
-
-#define REGISTER_TEST(name, ...) \
-  static Test::StaticRegistrant test##name(#name, __VA_ARGS__);
-
-#define REGISTER_TEST_SCENARIO(name, scenario, test, ...) \
-  static Test::StaticRegistrant t##name##scenario(        \
-      #name "_" #scenario, test, mlperf::TestScenario::scenario)
-
-#define REGISTER_TEST_ALL_SCENARIOS(name, test)        \
-  REGISTER_TEST_SCENARIO(name, SingleStream, test);    \
-  REGISTER_TEST_SCENARIO(name, MultiStream, test);     \
-  REGISTER_TEST_SCENARIO(name, MultiStreamFree, test); \
-  REGISTER_TEST_SCENARIO(name, Server, test);          \
-  REGISTER_TEST_SCENARIO(name, Offline, test);
-
-#define FAIL_IF(exp)                                              \
-  [&]() {                                                         \
-    const bool v = exp;                                           \
-    if (v) {                                                      \
-      std::cerr << "\n   ERROR: (" << __FILE__ << "@" << __LINE__ \
-                << ") : " #exp;                                   \
-      Test::AddFailure();                                         \
-    }                                                             \
-    return v;                                                     \
-  }()
-
-#define FAIL_MSG(...)                                                      \
-  [&]() {                                                                  \
-    std::cerr << "\n    Info: (" << __FILE__ << "@" << __LINE__ << ") : "; \
-    Test::Log(__VA_ARGS__);                                                \
-    return true;                                                           \
-  }()
-
-#define FAIL_EXP(exp)                                                          \
-  [&]() {                                                                      \
-    std::cerr << "\n    Info: (" << __FILE__ << "@" << __LINE__ << ") : " #exp \
-              << " is " << (exp);                                              \
-    return true;                                                               \
-  }()

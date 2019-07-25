@@ -37,7 +37,7 @@ from PIL import Image
 from argparse import ArgumentParser
 from utils import DefaultBoxes, Encoder
 
-from pycocotools.coco import COCO
+from coco import COCO
 from pycocotools.cocoeval import COCOeval
 
 

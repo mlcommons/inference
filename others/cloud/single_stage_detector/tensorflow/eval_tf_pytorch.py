@@ -1,20 +1,20 @@
 # Copyright (c) 2019, Xilinx, Inc.
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without modification,
 # are permitted provided that the following conditions are met:
-# 
+#
 # 1. Redistributions of source code must retain the above copyright notice,
 # this list of conditions and the following disclaimer.
-# 
+#
 # 2. Redistributions in binary form must reproduce the above copyright notice,
 # this list of conditions and the following disclaimer in the documentation
 # and/or other materials provided with the distribution.
-# 
+#
 # 3. Neither the name of the copyright holder nor the names of its contributors
 # may be used to endorse or promote products derived from this software
 # without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
 # THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
@@ -31,25 +31,27 @@ import os
 import json
 
 import torch
+from tqdm import tqdm
 
 from PIL import Image
 from argparse import ArgumentParser
 from utils import DefaultBoxes, Encoder
 
+from pycocotools.coco import COCO
+from pycocotools.cocoeval import COCOeval
+
+
 def parse_args():
     parser = ArgumentParser(description="SSD Resnet-34 evaluation on COCO")
-    parser.add_argument('--model', '-m', type=str, 
+    parser.add_argument('--model', '-m', type=str,
             default='./pretrained/resnet34_tf.22.1.pb',
             help='path to frozen graph')
     parser.add_argument('--data-root', '-d', type=str,
-            default='coco/val2017/',
+            default='coco/val2017',
             help='path to validation images')
     parser.add_argument('--image-list', '-i', type=str,
             default='./dataset_config/val2017_image_list.txt',
             help='path to image list file')
-    parser.add_argument('--output', '-o', type=str,
-            default='ssd_r34_coco.json',
-            help='detection output JSON file path')
     parser.add_argument('--gt-json','-g', type=str,
             default='coco/annotations/instances_val2017.json',
             help='path to ground truth json annotations')
@@ -66,7 +68,7 @@ def get_labelmap(labelmap_path):
     lines.insert(0,0)
     return lines
 
-def preprocess(image): 
+def preprocess(image):
     image = image.astype('float32') / 255.
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
@@ -84,91 +86,68 @@ def dboxes_R34_coco():
     return dboxes
 
 def run_inference_for_eval(graph, args):
-  image_root = args.data_root
-  image_list_file = args.image_list
+    image_root = args.data_root
+    image_list_file = args.image_list
 
-  dboxes = dboxes_R34_coco()
-  encoder = Encoder(dboxes)
-  labelmap = get_labelmap(args.labelmap)
+    dboxes = dboxes_R34_coco()
+    encoder = Encoder(dboxes)
+    labelmap = get_labelmap(args.labelmap)
 
-  tf_config = tf.ConfigProto()
-  tf_config.gpu_options.allow_growth = True
+    tf_config = tf.ConfigProto()
+    tf_config.gpu_options.allow_growth = True
 
-  with graph.as_default():
-    with tf.Session(config=tf_config) as sess:
-      ops = tf.get_default_graph().get_operations()
-      all_tensor_names = {output.name for op in ops for output in op.outputs}
-      tensor_dict = {}
-      output_keys = ['ssd1200/py_location_pred','ssd1200/py_cls_pred']
-      for key in output_keys:
-        tensor_name = key + ':0'
-        if tensor_name in all_tensor_names:
-          tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(
-              tensor_name)
-      image_tensor = tf.get_default_graph().get_tensor_by_name('image:0')
+    with graph.as_default():
+        with tf.Session(config=tf_config) as sess:
+            ops = tf.get_default_graph().get_operations()
+            all_tensor_names = {output.name for op in ops for output in op.outputs}
+            tensor_dict = {}
+            output_keys = ['ssd1200/py_location_pred','ssd1200/py_cls_pred']
+            for key in output_keys:
+                tensor_name = key + ':0'
+                if tensor_name in all_tensor_names:
+                    tensor_dict[key] = tf.get_default_graph().get_tensor_by_name(tensor_name)
+            image_tensor = tf.get_default_graph().get_tensor_by_name('image:0')
 
-      with open(image_list_file, 'r') as f_image:
-        image_lines = f_image.readlines()
-      coco_records = []
-      count = 0
-      for image_line in image_lines:
-        count += 1
-        print("process: %d images"%count)
-        image_name = image_line.strip()
-        image_path = os.path.join(image_root, image_name + ".jpg")
+            with open(image_list_file, 'r') as f_image:
+                image_lines = f_image.readlines()
+            ret = []
+            count = 0
+            for image_line in tqdm(image_lines):
+                count += 1
+                image_name = image_line.strip()
+                image_path = os.path.join(image_root, image_name + ".jpg")
 
-        image = Image.open(image_path).convert("RGB")
-        w_ori, h_ori = image.size
-        image=np.array(image.resize((1200,1200), Image.BILINEAR))
-        image = preprocess(image)
+                image = Image.open(image_path).convert("RGB")
+                w_ori, h_ori = image.size
+                image_id = int(image_name.split('_')[-1])
+                image=np.array(image.resize((1200,1200), Image.BILINEAR))
+                image = preprocess(image)
 
-        output_dict = sess.run(tensor_dict,
-                               feed_dict={image_tensor: np.expand_dims(image, 0)})
-        ploc = output_dict[output_keys[0]]
-        plabel = output_dict[output_keys[1]]
+                output_dict = sess.run(tensor_dict,
+                                       feed_dict={image_tensor: np.expand_dims(image, 0)})
+                ploc = output_dict[output_keys[0]]
+                plabel = output_dict[output_keys[1]]
 
-        # loc, label, prob = encoder.decode_batch(ploc, plabel, 0.50, 200,device=0)[0]
-        with torch.no_grad():
-            result = encoder.decode_batch(
-                torch.from_numpy(ploc).to(0),
-                torch.from_numpy(plabel).to(0),
-                0.50, 200, device=0,
-            )[0]
-            loc, label, prob = [r.cpu().numpy() for r in result]
+                with torch.no_grad():
+                    result = encoder.decode_batch(
+                        torch.from_numpy(ploc).to(0),
+                        torch.from_numpy(plabel).to(0),
+                        0.50, 200, device=0)[0]
+                    loc, label, prob = [r.cpu().numpy() for r in result]
 
-        for i in range(prob.shape[0]-1, -1,-1):
-          record = {}
-          xmin = loc[i][0] * w_ori
-          ymin = loc[i][1] * h_ori
-          xmax = loc[i][2] * w_ori
-          ymax = loc[i][3] * h_ori
-          score = prob[i]
-          class_id = label[i]
-          record['image_id'] = int(image_name.split('_')[-1])
-          record['category_id'] = labelmap[class_id]
-          record['score'] = score
-          record['bbox'] = [xmin, ymin, xmax - xmin + 1, ymax - ymin + 1]
-          if score < args.score_threshold:
-            break 
-          coco_records.append(record)
-  return coco_records
+                    for loc_, label_, prob_ in zip(loc, label, prob):
+                        ret.append([image_id, loc_[0]*w_ori,
+                                              loc_[1]*h_ori,
+                                              (loc_[2] - loc_[0])*w_ori,
+                                              (loc_[3] - loc_[1])*h_ori,
+                                              prob_,
+                                              labelmap[label_]])
+    return ret
 
-
-class MyEncoder(json.JSONEncoder):
-   def default(self, obj):
-     if isinstance(obj, (np.int_, np.intc, np.intp, np.int8,
-       np.int16, np.int32, np.int64, np.uint8,
-       np.uint16,np.uint32, np.uint64)):
-       return int(obj)
-     elif isinstance(obj, (np.float_, np.float16, np.float32,
-       np.float64)):
-       return float(obj)
-     elif isinstance(obj, (np.ndarray,)): # add this line
-       return obj.tolist() # add this line
-     return json.JSONEncoder.default(self, obj)
 
 
 if __name__=='__main__':
+
     args = parse_args()
     detection_graph = tf.Graph()
     with detection_graph.as_default():
@@ -180,16 +159,8 @@ if __name__=='__main__':
 
     coco_records = run_inference_for_eval(detection_graph, args)
 
-    with open(args.output, 'w') as f_det:
-        f_det.write(json.dumps(coco_records, cls=MyEncoder, indent = 4))
-
-    from pycocotools.coco import COCO
-    from pycocotools.cocoeval import COCOeval
-
     cocoGt = COCO(args.gt_json)
-
-    cocoDt = cocoGt.loadRes(args.output)
-
+    cocoDt = cocoGt.loadRes(np.array(coco_records))
     E = COCOeval(cocoGt, cocoDt, iouType='bbox')
     E.evaluate()
     E.accumulate()

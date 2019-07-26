@@ -10,6 +10,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+/// \file
+/// \brief The internal representation of user-provided settings.
+
 #ifndef MLPERF_LOADGEN_TEST_SETTINGS_INTERNAL_H
 #define MLPERF_LOADGEN_TEST_SETTINGS_INTERNAL_H
 
@@ -20,15 +23,21 @@ limitations under the License.
 
 namespace mlperf {
 
+namespace logging {
 class AsyncSummary;
+}
+
+namespace loadgen {
+
+using AsyncSummary = logging::AsyncSummary;
 
 std::string ToString(TestScenario scenario);
 std::string ToString(TestMode mode);
 
-// TestSettingsInternal takes the user-friendly TestSettings and normalizes it
-// for consumption by the load generator code.
-// It does things like remove scenario-specific naming and introduce the
-// concept of target_duration used to pre-generate queries.
+/// \brief takes the user-friendly TestSettings and normalizes it
+/// for consumption by the loadgen.
+/// \details It does things like remove scenario-specific naming and introduce
+/// the concept of target_duration used to pre-generate queries.
 struct TestSettingsInternal {
   explicit TestSettingsInternal(const TestSettings& requested_settings);
   void LogEffectiveSettings() const;
@@ -61,6 +70,7 @@ struct TestSettingsInternal {
   uint64_t schedule_rng_seed;
 };
 
+}  // namespace loadgen
 }  // namespace mlperf
 
 #endif  // MLPERF_LOADGEN_TEST_SETTINGS_INTERNAL_H

@@ -10,6 +10,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+/// \file
+/// \brief Defines the SystemUnderTest interface.
+
 #ifndef MLPERF_LOADGEN_SYSTEM_UNDER_TEST_H
 #define MLPERF_LOADGEN_SYSTEM_UNDER_TEST_H
 
@@ -20,37 +23,49 @@ limitations under the License.
 
 namespace mlperf {
 
-// SystemUnderTest provides the interface to:
-//  1) Allocate, preprocess, and issue queries.
-//  2) Warm up the system.
+/// \addtogroup LoadgenAPI
+/// @{
+
+/// \brief The interface a client implements for the loadgen to test.
+/// \todo Add hook for an untimed warm up period for the SUT.
+/// \todo Add hook for an untimed warm up period for the loadgen logic.
+/// \todo Support power hooks for cool-down period before runing performance
+/// traffic.
+/// \todo Support power hooks for correlating test timeline with power
+/// measurment timeline.
 class SystemUnderTest {
  public:
   virtual ~SystemUnderTest() {}
 
-  // A human-readable string for loggin purposes.
+  /// \brief A human-readable string for logging purposes.
   virtual const std::string& Name() const = 0;
 
-  // Issues a N samples to the SUT.
-  // The SUT may either a) return immediately and signal completion at a later
-  // time on another thread or b) it may block and signal completion on the
-  // current stack. The load generator will handle both cases properly.
-  // Note: The data for neighboring samples are not contiguous.
+  /// \brief Lets the loadgen issue N samples to the SUT.
+  /// \details The SUT may either a) return immediately and signal completion
+  /// at a later time on another thread or b) it may block and signal
+  /// completion on the current stack. The load generator will handle both
+  /// cases properly.
+  /// Note: The data for neighboring samples may or may not be contiguous
+  /// depending on the scenario.
   virtual void IssueQuery(const std::vector<QuerySample>& samples) = 0;
 
-  // FlushQueries is called immediately after the last call to IssueQuery
-  // in a series is made. This doesn't necessarily signify the end of the
-  // test since there may be multiple series involved during a test.
-  // Clients can use this to flush any staged queries immediately, rather
-  // than waiting for some timeout.
-  // This is especially useful in the server scenario.
+  /// \brief Called immediately after the last call to IssueQuery
+  /// in a series is made.
+  /// \details This doesn't necessarily signify the end of the
+  /// test since there may be multiple series involved during a test; for
+  /// example in accuracy mode.
+  /// Clients can use this to flush any deferred queries immediately, rather
+  /// than waiting for some timeout.
+  /// This is especially useful in the server scenario.
   virtual void FlushQueries() = 0;
 
-  // Reports the raw latency results to the SUT of each sample issued as
-  // recorded by the load generator.
-  // Units are nanoseconds.
+  /// \brief Reports the raw latency results to the SUT of each sample issued as
+  /// recorded by the load generator. Units are nanoseconds.
   virtual void ReportLatencyResults(
       const std::vector<QuerySampleLatency>& latencies_ns) = 0;
 };
+
+/// @}
 
 }  // namespace mlperf
 

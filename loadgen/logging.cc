@@ -10,17 +10,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-// Implements a logging system with a central IO thread that handles
-// all stringification and IO.
-// Log-producing threads only submit lambdas to be executed on the IO thread.
-// All producers and consumers use lock-free operations that guarantee
-// forward progress independent of a) other stalled threads and b) where
-// those threads are stalled.
-// Each thread uses a double-buffering scheme to queue its logs. One buffer
-// is always reserved for writes and the other is reserved for reads.
-// A producing thread sends requests to the IOThread to swap the buffers
-// and the IOThread does the actual read/write swap after it has finished
-// reading the buffer it was working on.
+/// \file
+/// \brief Implements a logging system with a central IO thread that handles
+/// all stringification and IO.
+/// \details Log-producing threads only submit lambdas to be executed on the
+/// IO thread.
+/// All producers and consumers use lock-free operations that guarantee
+/// forward progress independent of a) other stalled threads and b) where
+/// those threads are stalled.
+/// Each thread uses a double-buffering scheme to queue its logs. One buffer
+/// is always reserved for writes and the other is reserved for reads.
+/// A producing thread sends requests to the IOThread to swap the buffers
+/// and the IOThread does the actual read/write swap after it has finished
+/// reading the buffer it was working on.
 
 #include "logging.h"
 
@@ -40,6 +42,7 @@ limitations under the License.
 #include "utils.h"
 
 namespace mlperf {
+namespace logging {
 
 namespace {
 
@@ -302,11 +305,18 @@ QuerySampleLatency AsyncLog::GetMaxLatencySoFar() {
   return max_latency_.load(std::memory_order_release);
 }
 
-// TlsLogger logs a single thread using thread-local storage.
-// Submits logs to the central Logger:
-//   * With forward-progress guarantees. (i.e.: no locking or blocking
-//       operations even if other threads have stalled.
-//   * Without expensive syscalls or I/O operations.
+/// \brief Records a single thread using thread-local storage and submits
+/// entries to the central Logger.
+///
+/// \details This setup allows for each log entry to be added:
+///   * With forward-progress guarantees. (i.e.: no locking or blocking
+///       operations even if other threads have stalled.)
+///   * Without expensive syscalls or I/O operations, which are deferred to
+///       the central Logger.
+///
+/// \todo Pre-allocate entries_ with enough space so that allocation
+/// for logging doesn't need to occur at runtime. Maybe override allocator
+/// to print a warning if allocation is performed.
 class TlsLogger {
  public:
   TlsLogger(std::function<void()> forced_detatch);
@@ -812,8 +822,8 @@ Logger& GlobalLogger() {
   return g_logger;
 }
 
-// TlsLoggerWrapper moves ownership of the TlsLogger to Logger on thread exit
-// so no round-trip synchronization with the IO thread is required.
+/// \brief Moves ownership of the TlsLogger to Logger on thread exit
+/// so no round-trip synchronization with the IO thread is required.
 struct TlsLoggerWrapper {
   TlsLoggerWrapper(std::function<void()> forced_detatch)
       : tls_logger(std::make_unique<TlsLogger>(std::move(forced_detatch))) {
@@ -847,4 +857,5 @@ void Log(AsyncLogEntry&& entry) {
   tls_logger->Log(std::forward<AsyncLogEntry>(entry));
 }
 
+}  // namespace logging
 }  // namespace mlperf

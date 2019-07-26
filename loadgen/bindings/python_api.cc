@@ -10,6 +10,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+/// \file
+/// \brief Python bindings for the loadgen using pybind11.
+
 #ifndef PYTHON_BINDINGS_H
 #define PYTHON_BINDINGS_H
 

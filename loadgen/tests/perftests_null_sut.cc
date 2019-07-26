@@ -10,6 +10,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+/// \file
+/// \brief Performance tests using a null backend.
+
 #include <future>
 
 #include "../loadgen.h"
@@ -17,6 +20,11 @@ limitations under the License.
 #include "../system_under_test.h"
 #include "../test_settings.h"
 
+/// \brief Performance unit tests.
+namespace perf_tests {
+
+/// \brief A simple SUT implemenatation that immediately completes
+/// issued queries sychronously ASAP.
 class SystemUnderTestNull : public mlperf::SystemUnderTest {
  public:
   SystemUnderTestNull() = default;
@@ -39,6 +47,7 @@ class SystemUnderTestNull : public mlperf::SystemUnderTest {
   std::string name_{"NullSUT"};
 };
 
+/// \brief A stub implementation of QuerySampleLibrary.
 class QuerySampleLibraryNull : public mlperf::QuerySampleLibrary {
  public:
   QuerySampleLibraryNull() = default;
@@ -63,6 +72,7 @@ class QuerySampleLibraryNull : public mlperf::QuerySampleLibrary {
   std::string name_{"NullQSL"};
 };
 
+/// \brief Runs single stream traffic.
 void TestSingleStream() {
   SystemUnderTestNull null_sut;
   QuerySampleLibraryNull null_qsl;
@@ -75,6 +85,8 @@ void TestSingleStream() {
   mlperf::StartTest(&null_sut, &null_qsl, ts, log_settings);
 }
 
+/// \brief A SUT implementation that completes queries asynchronously using
+/// std::async.
 class SystemUnderTestNullStdAsync : public mlperf::SystemUnderTest {
  public:
   SystemUnderTestNullStdAsync() { futures_.reserve(1000000); }
@@ -100,6 +112,7 @@ class SystemUnderTestNullStdAsync : public mlperf::SystemUnderTest {
   std::vector<std::future<void>> futures_;
 };
 
+/// \brief Tests server traffic using SystemUnderTestNullStdAsync.
 void TestServerStdAsync() {
   SystemUnderTestNullStdAsync null_std_async_sut;
   QuerySampleLibraryNull null_qsl;
@@ -116,6 +129,8 @@ void TestServerStdAsync() {
   mlperf::StartTest(&null_std_async_sut, &null_qsl, ts, log_settings);
 }
 
+/// \brief A SUT implementation that completes queries asynchronously using
+/// an explicitly managed thread pool.
 class SystemUnderTestNullPool : public mlperf::SystemUnderTest {
  public:
   SystemUnderTestNullPool() {
@@ -187,6 +202,7 @@ class SystemUnderTestNullPool : public mlperf::SystemUnderTest {
   std::vector<mlperf::QuerySample> samples_;
 };
 
+/// \brief Tests server traffic using SystemUnderTestNullPool.
 void TestServerPool() {
   SystemUnderTestNullPool null_pool;
   QuerySampleLibraryNull null_qsl;
@@ -203,9 +219,11 @@ void TestServerPool() {
   mlperf::StartTest(&null_pool, &null_qsl, ts, log_settings);
 }
 
+}  // namespace perf_tests
+
 int main(int argc, char* argv[]) {
-  TestSingleStream();
-  TestServerStdAsync();
-  TestServerPool();
+  perf_tests::TestSingleStream();
+  perf_tests::TestServerStdAsync();
+  perf_tests::TestServerPool();
   return 0;
 }

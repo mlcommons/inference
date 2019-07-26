@@ -13,7 +13,9 @@
 # limitations under the License.
 # =============================================================================
 
-"""Creates version definitions used by the loadgen at compile time."""
+## \file
+#  \brief A script run by the build to generate the version definitions
+#  expected at link time.
 
 import datetime
 import errno

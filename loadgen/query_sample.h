@@ -10,38 +10,50 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+/// \file
+/// \brief Defines the structs involved in issuing a query and responding to
+/// a query.
+/// \details These are broken out into their own files since they are exposed
+/// as part of the C API and we want to avoid C clients including C++ code.
+
 #ifndef MLPERF_LOADGEN_QUERY_SAMPLE_H_
 #define MLPERF_LOADGEN_QUERY_SAMPLE_H_
-
-// Defines the structs involved in issuing a query and responding to a query.
-// These are broken out into their own files since they are exposed as part
-// of the C API and we want to avoid C clients including C++ code.
 
 #include <stddef.h>
 #include <stdint.h>
 
 namespace mlperf {
 
-// ResponseId represents a unique identifier for a sample of an issued query.
+/// \addtogroup LoadgenAPI
+/// @{
+
+/// \brief Represents a unique identifier for a sample of an issued query.
+/// \details As currently implemented, the id is a pointer to an internal
+/// loadgen struct.
 typedef uintptr_t ResponseId;
 
+/// \brief An index into the QuerySampleLibrary corresponding to a
+/// single sample.
 typedef size_t QuerySampleIndex;
 
-// QuerySample represents the smallest unit of input inference can run on.
-// A query will consist of one or more samples.
+/// \brief Represents the smallest unit of input inference can run on.
+/// A query consists of one or more samples.
 struct QuerySample {
   ResponseId id;
   QuerySampleIndex index;
 };
 
-// QuerySampleResponse represents a single response to QuerySample
+/// \brief Represents a single response to QuerySample
 struct QuerySampleResponse {
   ResponseId id;
   uintptr_t data;
   size_t size;  // Size in bytes.
 };
 
-typedef int64_t QuerySampleLatency;  // In nanoseconds.
+/// \brief A latency in nanoseconds, as recorded by the loadgen.
+typedef int64_t QuerySampleLatency;
+
+/// @}
 
 }  // namespace mlperf
 

@@ -10,6 +10,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+/// \file
+/// \brief Internal logging implementation details.
+
 #ifndef MLPERF_LOADGEN_LOGGING_H_
 #define MLPERF_LOADGEN_LOGGING_H_
 
@@ -33,14 +36,20 @@ limitations under the License.
 
 namespace mlperf {
 
+/// \brief Wait-free logging utilities that defer stringification
+/// and syscalls to a worker thread.
+namespace logging {
+
 class AsyncLog;
 class Logger;
 class TlsLogger;
 struct TlsLoggerWrapper;
 
+/// \todo Verify lambas are not allocating when bounded to a std::function.
 using AsyncLogEntry = std::function<void(AsyncLog&)>;
 using PerfClock = std::chrono::high_resolution_clock;
 
+/// \brief Logs the raw bytes as a hexadecimal ascii string.
 struct LogBinaryAsHexString {
   std::vector<uint8_t>* data;
 };
@@ -53,10 +62,14 @@ const T& ArgValueTransform(const T& value) {
   return value;
 }
 
-// AsyncLog is passed as an argument to the log lambda on the
-// recording thread to serialize the data captured by the lambda and
-// forward it to the output stream.
-// TODO: Move non-templated methods to the cc file.
+/// \brief The proxy all logging lambdas ultimately use to write any log type.
+/// \details Passed as an argument to the log lambda on the
+/// recording thread to serialize the data captured by the lambda and
+/// forward it to the output stream.
+/// \todo Pre-allocate the latency results vector (latencies_) so the
+/// IOThread doesn't need to grow it during the performance run.
+/// \todo Make summary_out_, detail_out_, accuracy_out_, and trace_out_
+/// instances of a new LogOutput interface that the client may override.
 class AsyncLog {
  public:
   AsyncLog();
@@ -250,7 +263,7 @@ class AsyncLog {
   }
 };
 
-// Logs all threads belonging to a run.
+/// \brief The central logger that logs all threads belonging to a run.
 class Logger {
  public:
   Logger(std::chrono::duration<double> poll_period, size_t max_threads_to_log);
@@ -287,16 +300,18 @@ class Logger {
   void GatherRetrySwapRequests(std::vector<TlsLogger*>* threads_to_swap);
   void GatherNewSwapRequests(std::vector<TlsLogger*>* threads_to_swap);
 
-  // The main logging thread function that handles the serialization
-  // and I/O to the stream or file.
+  /// \brief The main logging thread function that handles the serialization
+  /// and I/O to the stream or file.
+  ///
+  /// \todo Provide client hook to set logging thead affinity and priority.
   void IOThread();
 
   // Slow synchronous error logging for internals that may prevent
   // async logging from working.
   template <typename... Args>
   void LogErrorSync(const std::string& message, Args&&... args) {
-    // TODO: Acquire mutex once for FlagError + LogDetail to avoid
-    //       races. Better yet, switch to a non-stateful error API.
+    /// \todo Acquire mutex once for FlagError + LogDetail to avoid
+    ///       races. Better yet, switch to a non-stateful error API.
     //       This is better than nothing though.
     async_logger_.FlagError();
     async_logger_.LogDetail(message, std::forward<Args>(args)...);
@@ -352,8 +367,15 @@ class Logger {
 };
 
 Logger& GlobalLogger();
+
+/// \brief The generic way to add a log entry.
+/// \details Supports all types of logs, which is useful for complex
+/// lambdas that may wish to log in multiple places or log something other
+/// than a simple summary, detail, or trace entry.
 void Log(AsyncLogEntry&& entry);
 
+/// \brief The convenience proxy a LogSummary lambda uses to write to the
+/// summary log.
 class AsyncSummary {
  public:
   explicit AsyncSummary(AsyncLog& async_log) : async_log_(async_log) {}
@@ -369,6 +391,7 @@ class AsyncSummary {
   AsyncLog& async_log_;
 };
 
+/// \brief A helper to simplify adding a summary log entry.
 template <typename LambdaT>
 void LogSummary(LambdaT&& lambda) {
   Log([lambda = std::forward<LambdaT>(lambda)](AsyncLog& log) mutable {
@@ -377,6 +400,8 @@ void LogSummary(LambdaT&& lambda) {
   });
 }
 
+/// \brief The convenience proxy a LogDetail lambda uses to write to the detail
+/// log.
 class AsyncDetail {
  public:
   explicit AsyncDetail(AsyncLog& async_log) : async_log_(async_log) {}
@@ -399,6 +424,7 @@ class AsyncDetail {
   AsyncLog& async_log_;
 };
 
+/// \brief A helper to simplify adding a detail log entry.
 template <typename LambdaT>
 void LogDetail(LambdaT&& lambda) {
   Log([lambda = std::forward<LambdaT>(lambda),
@@ -409,6 +435,8 @@ void LogDetail(LambdaT&& lambda) {
   });
 }
 
+/// \brief The convenience proxy a ScopedTracer lambda uses to write to the
+/// detail log.
 class AsyncTrace {
  public:
   explicit AsyncTrace(AsyncLog& async_log) : async_log_(async_log) {}
@@ -424,7 +452,8 @@ class AsyncTrace {
   AsyncLog& async_log_;
 };
 
-// ScopedTracer is an RAII object that traces the start and end of its lifetime.
+/// \brief ScopedTracer is an RAII object that traces the start and end
+/// of its lifetime.
 template <typename LambdaT>
 class ScopedTracer {
  public:
@@ -445,10 +474,12 @@ class ScopedTracer {
   LambdaT lambda_;
 };
 
-// MakeScopedTracer helps with automatic template type deduction, which
-// has been supported for functions for a long time.
-// C++17 will support deduction for classes, which will neutralize the utility
-// of a helper function like this.
+/// \brief Helper that creates a ScopeTracer with automatic type deduction.
+/// \details Helps with automatic template type deduction, which has been
+/// supported for functions for a long time.
+/// C++17 will support deduction for classes, which will neutralize the utility
+/// of a helper function like this.
+/// \todo Determine which traces to keep for submission purposes.
 template <typename LambdaT>
 auto MakeScopedTracer(LambdaT&& lambda) -> ScopedTracer<LambdaT> {
   return ScopedTracer<LambdaT>(std::forward<LambdaT>(lambda));
@@ -501,6 +532,41 @@ void AsyncLog::LogDetail(const std::string& message, const Args... args) {
     }
   }
   error_flagged_ = false;
+}
+
+}  // namespace logging
+
+// Export some things out of the logging namespace to simplify call sites.
+
+const auto GlobalLogger = logging::GlobalLogger;
+const auto Log = logging::Log;
+
+using PerfClock = logging::PerfClock;
+
+using LogBinaryAsHexString = logging::LogBinaryAsHexString;
+
+using AsyncLog = logging::AsyncLog;
+
+using AsyncSummary = logging::AsyncSummary;
+template <typename LambdaT>
+void LogSummary(LambdaT&& lambda) {
+  logging::LogSummary(std::forward<LambdaT>(lambda));
+}
+
+using AsyncDetail = logging::AsyncDetail;
+template <typename LambdaT>
+void LogDetail(LambdaT&& lambda) {
+  logging::LogDetail(std::forward<LambdaT>(lambda));
+}
+
+using AsyncTrace = logging::AsyncTrace;
+
+template <typename LambdaT>
+using ScopedTracer = logging::ScopedTracer<LambdaT>;
+
+template <typename LambdaT>
+auto MakeScopedTracer(LambdaT&& lambda) -> ScopedTracer<LambdaT> {
+  return ScopedTracer<LambdaT>(std::forward<LambdaT>(lambda));
 }
 
 }  // namespace mlperf

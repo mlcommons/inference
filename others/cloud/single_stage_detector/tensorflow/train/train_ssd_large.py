@@ -147,37 +147,37 @@ global_anchor_info = dict()
 def input_pipeline(dataset_pattern='pascalvoc_0712_train_*', is_training=True, batch_size=FLAGS.batch_size):
     def input_fn():
         out_shape = [FLAGS.train_image_size] * 2
-        anchor_creator = anchor_manipulator.AnchorCreator(out_shape,
-                                                    layers_shapes = [(50, 50), (25, 25), (13, 13), (7, 7), (3, 3), (3, 3)],
-                                                    anchor_scales = [(0.07,), (0.15,), (0.33,), (0.51,), (0.69,), (0.87,)],
-                                                    extra_anchor_scales = [(0.15,), (0.33,), (0.51,), (0.69,), (0.87,), (1.05,)],
-                                                    anchor_ratios = [(2.,), ( 2., 3.,), (2., 3.,), (2., 3.,), (2.,), (2.,)],
-                                                    layer_steps = [24, 48, 92, 171, 400, 400])
-        all_anchors, all_num_anchors_depth, all_num_anchors_spatial = anchor_creator.get_all_anchors()
+        defaultbox_creator = anchor_manipulator.DefaultBoxes(out_shape,
+                                                             layers_shapes = [(50, 50), (25, 25), (13, 13), (7, 7), (3, 3), (3, 3)],
+                                                             anchor_scales = [(0.07,), (0.15,), (0.33,), (0.51,), (0.69,), (0.87,)],
+                                                             extra_anchor_scales = [(0.15,), (0.33,), (0.51,), (0.69,), (0.87,), (1.05,)],
+                                                             anchor_ratios = [(2.,), ( 2., 3.,), (2., 3.,), (2., 3.,), (2.,), (2.,)],
+                                                             layer_steps = [24, 48, 92, 171, 400, 400])
+        defaultboxes, defaultboxes_ltrb, all_num_anchors_depth, all_num_anchors_spatial = defaultbox_creator.get_all_anchors()
         num_anchors_per_layer = []
-        for ind in range(len(all_anchors)):
+        for ind in range(len(all_num_anchors_spatial)):
             num_anchors_per_layer.append(all_num_anchors_depth[ind] * all_num_anchors_spatial[ind])
-        anchor_encoder_decoder = anchor_manipulator.AnchorEncoder(allowed_borders = [1.0] * 6,
-                                                                  positive_threshold = FLAGS.match_threshold,
-                                                                  ignore_threshold = FLAGS.neg_threshold,
-                                                                  prior_scaling=[0.1, 0.1, 0.2, 0.2])
+        en_decoder = anchor_manipulator.En_Decoder(allowed_borders = [1.0] * 6,
+                                                   positive_threshold = FLAGS.match_threshold,
+                                                   ignore_threshold = FLAGS.neg_threshold,
+                                                   prior_scaling=[0.1, 0.1, 0.2, 0.2])
 
         image_preprocessing_fn = lambda image_, labels_, bboxes_ : ssd_preprocessing.preprocess_image(image_, labels_, bboxes_, out_shape, is_training=is_training, data_format=FLAGS.data_format, output_rgb=True)
-        anchor_encoder_fn = lambda glabels_, gbboxes_: anchor_encoder_decoder.encode_all_anchors(glabels_, gbboxes_, all_anchors, all_num_anchors_depth, all_num_anchors_spatial)
+        encoder_fn = lambda glabels_, gbboxes_: en_decoder.encode_all_anchors(glabels_, gbboxes_, defaultboxes_ltrb, all_num_anchors_depth, all_num_anchors_spatial)
         image, _, shape, loc_targets, cls_targets, match_scores = dataset_common.slim_get_batch(FLAGS.num_classes,
-                                                                                batch_size,
-                                                                                ('train' if is_training else 'val'),
-                                                                                os.path.join(FLAGS.data_dir, dataset_pattern),
-                                                                                FLAGS.num_readers,
-                                                                                FLAGS.num_preprocessing_threads,
-                                                                                image_preprocessing_fn,
-                                                                                anchor_encoder_fn,
-                                                                                num_epochs=FLAGS.train_epochs,
-                                                                                is_training=is_training)
+                                                                                                batch_size,
+                                                                                                ('train' if is_training else 'val'),
+                                                                                                os.path.join(FLAGS.data_dir, dataset_pattern),
+                                                                                                FLAGS.num_readers,
+                                                                                                FLAGS.num_preprocessing_threads,
+                                                                                                image_preprocessing_fn,
+                                                                                                encoder_fn,
+                                                                                                num_epochs=FLAGS.train_epochs,
+                                                                                                is_training=is_training)
         global global_anchor_info
-        global_anchor_info = {'decode_fn': lambda pred : anchor_encoder_decoder.decode_all_anchors(pred, num_anchors_per_layer),
-                            'num_anchors_per_layer': num_anchors_per_layer,
-                            'all_num_anchors_depth': all_num_anchors_depth }
+        global_anchor_info = {'decode_fn': lambda pred : en_decoder.decode_all_anchors(pred, defaultboxes, num_anchors_per_layer),
+                              'num_anchors_per_layer': num_anchors_per_layer,
+                              'all_num_anchors_depth': all_num_anchors_depth }
         return image, {'shape': shape, 'loc_targets': loc_targets, 'cls_targets': cls_targets, 'match_scores': match_scores}
     return input_fn
 
@@ -222,25 +222,20 @@ def ssd_model_fn(features, labels, mode, params):
     with tf.device('/cpu:0'):
         with tf.control_dependencies([cls_pred, location_pred]):
             with tf.name_scope('post_forward'):
-                #bboxes_pred = decode_fn(location_pred)
                 bboxes_pred = tf.map_fn(lambda _preds : decode_fn(_preds),
                                         tf.reshape(location_pred, [tf.shape(features)[0], -1, 4]),
-                                        dtype=[tf.float32] * len(num_anchors_per_layer), back_prop=False)
-                #cls_targets = tf.Print(cls_targets, [tf.shape(bboxes_pred[0]),tf.shape(bboxes_pred[1]),tf.shape(bboxes_pred[2]),tf.shape(bboxes_pred[3])])
-                bboxes_pred = [tf.reshape(preds, [-1, 4]) for preds in bboxes_pred]
-                bboxes_pred = tf.concat(bboxes_pred, axis=0)
-
+                                        dtype=tf.float32, back_prop=False)
+                #bboxes_pred = tf.concat(bboxes_pred, axis=1)
+                bboxes_pred = tf.reshape(bboxes_pred, [-1, 4])
                 flaten_cls_targets = tf.reshape(cls_targets, [-1])
                 flaten_match_scores = tf.reshape(match_scores, [-1])
                 flaten_loc_targets = tf.reshape(loc_targets, [-1, 4])
-
                 # each positive examples has one label
                 positive_mask = flaten_cls_targets > 0
                 n_positives = tf.count_nonzero(positive_mask)
 
                 batch_n_positives = tf.count_nonzero(cls_targets, -1)
-
-                batch_negtive_mask = tf.equal(cls_targets, 0)#tf.logical_and(tf.equal(cls_targets, 0), match_scores > 0.)
+                batch_negtive_mask = tf.equal(cls_targets, 0)
                 batch_n_negtives = tf.count_nonzero(batch_negtive_mask, -1)
 
                 batch_n_neg_select = tf.cast(params['negative_ratio'] * tf.cast(batch_n_positives, tf.float32), tf.int32)
@@ -249,9 +244,9 @@ def ssd_model_fn(features, labels, mode, params):
                 # hard negative mining for classification
                 predictions_for_bg = tf.nn.softmax(tf.reshape(cls_pred, [tf.shape(features)[0], -1, params['num_classes']]))[:, :, 0]
                 prob_for_negtives = tf.where(batch_negtive_mask,
-                                       0. - predictions_for_bg,
-                                       # ignore all the positives
-                                       0. - tf.ones_like(predictions_for_bg))
+                                             0. - predictions_for_bg,
+                                             # ignore all the positives
+                                             0. - tf.ones_like(predictions_for_bg))
                 topk_prob_for_bg, _ = tf.nn.top_k(prob_for_negtives, k=tf.shape(prob_for_negtives)[1])
                 score_at_k = tf.gather_nd(topk_prob_for_bg, tf.stack([tf.range(tf.shape(features)[0]), batch_n_neg_select - 1], axis=-1))
 
@@ -266,20 +261,15 @@ def ssd_model_fn(features, labels, mode, params):
                 flaten_cls_targets = tf.boolean_mask(tf.clip_by_value(flaten_cls_targets, 0, params['num_classes']), final_mask)
                 flaten_loc_targets = tf.stop_gradient(tf.boolean_mask(flaten_loc_targets, positive_mask))
 
-                predictions = {
-                            'classes': tf.argmax(cls_pred, axis=-1),
-                            'probabilities': tf.reduce_max(tf.nn.softmax(cls_pred, name='softmax_tensor'), axis=-1),
-                            'loc_predict': bboxes_pred }
+                predictions = {'classes': tf.argmax(cls_pred, axis=-1),
+                               'probabilities': tf.reduce_max(tf.nn.softmax(cls_pred, name='softmax_tensor'), axis=-1),
+                               'loc_predict': bboxes_pred }
 
                 cls_accuracy = tf.metrics.accuracy(flaten_cls_targets, predictions['classes'])
                 metrics = {'cls_accuracy': cls_accuracy}
-
                 # Create a tensor named train_accuracy for logging purposes.
                 tf.identity(cls_accuracy[1], name='cls_accuracy')
                 tf.summary.scalar('cls_accuracy', cls_accuracy[1])
-
-    if mode == tf.estimator.ModeKeys.PREDICT:
-        return tf.estimator.EstimatorSpec(mode=mode, predictions=predictions)
 
     #flaten_cls_targets=tf.Print(flaten_cls_targets, [flaten_loc_targets],summarize=50000)
     cross_entropy = tf.losses.sparse_softmax_cross_entropy(labels=flaten_cls_targets, logits=cls_pred) * (params['negative_ratio'] + 1.)
@@ -300,7 +290,7 @@ def ssd_model_fn(features, labels, mode, params):
             if 'conv4_3_scale' not in trainable_var.name:
                 l2_loss_vars.append(tf.nn.l2_loss(trainable_var) * 0.1)
             else:
-                l2_loss_vars.append(tf.nn.l2_loss(trainable_var) * 0.1)
+                l2_loss_vars.append(tf.nn.l2_loss(trainable_var) * 1)
     # Add weight decay to the loss. We exclude the batch norm variables because
     # doing so leads to a small improvement in accuracy.
     total_loss = tf.add(cross_entropy + loc_loss, tf.multiply(params['weight_decay'], tf.add_n(l2_loss_vars), name='l2_loss'), name='total_loss')
@@ -330,15 +320,13 @@ def ssd_model_fn(features, labels, mode, params):
                               loss=total_loss,
                               train_op=train_op,
                               eval_metric_ops=metrics,
-                              #scaffold=None)
                               scaffold=tf.train.Scaffold(init_fn=get_init_fn()))
 
 def parse_comma_list(args):
     return [float(s.strip()) for s in args.split(',')]
 
 def main(_):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '4,5,6,7'
-    #tf.set_pruning_mode()
+    os.environ['CUDA_VISIBLE_DEVICES'] = '0,5,6,7'
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=FLAGS.gpu_memory_fraction)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False, intra_op_parallelism_threads=FLAGS.num_cpu_threads, inter_op_parallelism_threads=FLAGS.num_cpu_threads, gpu_options=gpu_options)
     num_gpus = validate_batch_size_for_multi_gpu(FLAGS.batch_size)
@@ -380,10 +368,10 @@ def main(_):
         'acc': 'post_forward/cls_accuracy',
     }
     logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=FLAGS.log_every_n_steps,
-                                            formatter=lambda dicts: (', '.join(['%s=%.6f' % (k, v) for k, v in dicts.items()])))
+                                              formatter=lambda dicts: (', '.join(['%s=%.6f' % (k, v) for k, v in dicts.items()])))
     print('Starting a training cycle.')
     ssd_detector.train(input_fn=input_pipeline(dataset_pattern='coco_2017_train-*', is_training=True, batch_size=FLAGS.batch_size),
-                    hooks=[logging_hook], max_steps=FLAGS.max_number_of_steps)
+                       hooks=[logging_hook], max_steps=FLAGS.max_number_of_steps)
 if __name__ == '__main__':
   tf.logging.set_verbosity(tf.logging.INFO)
   tf.app.run()

@@ -111,34 +111,34 @@ def input_pipeline(args, dataset_pattern='train-*', is_training=True):
     batch_size = args.batch_size_mine
     def input_fn():
         out_shape = [args.train_image_size] * 2
-        anchor_creator = anchor_manipulator.AnchorCreator(out_shape,
-                                                          layers_shapes = [(50, 50), (25, 25), (13, 13), (7, 7), (3, 3), (3, 3)],
-                                                          anchor_scales = [(0.07,), (0.15,), (0.33,), (0.51,), (0.69,), (0.87,)],
-                                                          extra_anchor_scales = [(0.15,), (0.33,), (0.51,), (0.69,), (0.87,), (1.05,)],
-                                                          anchor_ratios = [(2,), ( 2., 3.,), (2., 3.,), (2., 3.,), (2.,), (2.,)],
-                                                          layer_steps = [24, 48, 92, 171, 400, 400])
-        all_anchors, all_num_anchors_depth, all_num_anchors_spatial = anchor_creator.get_all_anchors()
+        defaultboxes_creator = anchor_manipulator.DefaultBoxes(out_shape,
+                                                               layers_shapes = [(50, 50), (25, 25), (13, 13), (7, 7), (3, 3), (3, 3)],
+                                                               anchor_scales = [(0.07,), (0.15,), (0.33,), (0.51,), (0.69,), (0.87,)],
+                                                               extra_anchor_scales = [(0.15,), (0.33,), (0.51,), (0.69,), (0.87,), (1.05,)],
+                                                               anchor_ratios = [(2,), ( 2., 3.,), (2., 3.,), (2., 3.,), (2.,), (2.,)],
+                                                               layer_steps = [24, 48, 92, 171, 400, 400])
+        defaultboxes, defaultboxes_ltrb, all_num_anchors_depth, all_num_anchors_spatial = defaultboxes_creator.get_all_anchors()
         num_anchors_per_layer = []
-        for ind in range(len(all_anchors)):
+        for ind in range(len(all_num_anchors_depth)):
             num_anchors_per_layer.append(all_num_anchors_depth[ind] * all_num_anchors_spatial[ind])
-        anchor_encoder_decoder = anchor_manipulator.AnchorEncoder(allowed_borders = [1.0] * 6,
-                                                                  positive_threshold = args.match_threshold,
-                                                                  ignore_threshold = args.neg_threshold,
-                                                                  prior_scaling=[0.1, 0.1, 0.2, 0.2])
+        en_decoder = anchor_manipulator.En_Decoder(allowed_borders = [1.0] * 6,
+                                                   positive_threshold = args.match_threshold,
+                                                   ignore_threshold = args.neg_threshold,
+                                                   prior_scaling=[0.1, 0.1, 0.2, 0.2])
         image_preprocessing_fn = lambda image_, labels_, bboxes_ : ssd_preprocessing.preprocess_image(image_, labels_, bboxes_, out_shape, is_training=is_training, data_format=args.data_format, output_rgb=True)
-        anchor_encoder_fn = lambda glabels_, gbboxes_: anchor_encoder_decoder.encode_all_anchors(glabels_, gbboxes_, all_anchors, all_num_anchors_depth, all_num_anchors_spatial)
+        encoder_fn = lambda glabels_, gbboxes_: en_decoder.encode_all_anchors(glabels_, gbboxes_, defaultboxes_ltrb, all_num_anchors_depth, all_num_anchors_spatial)
         image, filename, shape, loc_targets, cls_targets, match_scores = dataset_common.slim_get_batch(args.num_classes,
-                                                                                batch_size,
-                                                                                ('train' if is_training else 'val'),
-                                                                                os.path.join(args.data_dir, dataset_pattern),
-                                                                                args.num_readers,
-                                                                                args.num_preprocessing_threads_mine,
-                                                                                image_preprocessing_fn,
-                                                                                anchor_encoder_fn,
-                                                                                num_epochs=args.train_epochs,
-                                                                                is_training=is_training)
+                                                                                                       batch_size,
+                                                                                                       ('train' if is_training else 'val'),
+                                                                                                       os.path.join(args.data_dir, dataset_pattern),
+                                                                                                       args.num_readers,
+                                                                                                       args.num_preprocessing_threads_mine,
+                                                                                                       image_preprocessing_fn,
+                                                                                                       encoder_fn,
+                                                                                                       num_epochs=args.train_epochs,
+                                                                                                       is_training=is_training)
         global global_anchor_info
-        global_anchor_info = {'decode_fn': lambda pred : anchor_encoder_decoder.decode_all_anchors(pred, num_anchors_per_layer),
+        global_anchor_info = {'decode_fn': lambda pred : en_decoder.decode_all_anchors(pred, defaultboxes, num_anchors_per_layer),
                               'num_anchors_per_layer': num_anchors_per_layer,
                               'all_num_anchors_depth': all_num_anchors_depth }
         return {'image': image, 'filename': filename, 'shape': shape, 'loc_targets': loc_targets, 'cls_targets': cls_targets, 'match_scores': match_scores}, None
@@ -168,38 +168,42 @@ def select_bboxes(scores_pred, bboxes_pred, num_classes, select_threshold):
             selected_scores[class_ind] = tf.multiply(class_scores, select_mask)
     return selected_bboxes, selected_scores
 
-def clip_bboxes(ymin, xmin, ymax, xmax, name):
-    with tf.name_scope(name, 'clip_bboxes', [ymin, xmin, ymax, xmax]):
-        ymin = tf.maximum(ymin, 0.)
+def clip_bboxes(xmin, ymin, xmax, ymax, name):
+    with tf.name_scope(name, 'clip_bboxes', [xmin, ymin, xmax, ymax]):
         xmin = tf.maximum(xmin, 0.)
-        ymax = tf.minimum(ymax, 1.)
+        ymin = tf.maximum(ymin, 0.)
         xmax = tf.minimum(xmax, 1.)
-        ymin = tf.minimum(ymin, ymax)
+        ymax = tf.minimum(ymax, 1.)
         xmin = tf.minimum(xmin, xmax)
-        return ymin, xmin, ymax, xmax
+        ymin = tf.minimum(ymin, ymax)
+        return xmin, ymin, xmax, ymax
 
-def filter_bboxes(scores_pred, ymin, xmin, ymax, xmax, min_size, name):
-    with tf.name_scope(name, 'filter_bboxes', [scores_pred, ymin, xmin, ymax, xmax]):
+def filter_bboxes(scores_pred, xmin, ymin, xmax, ymax, min_size, name):
+    with tf.name_scope(name, 'filter_bboxes', [scores_pred, xmin, ymin, xmax, ymax]):
         width = xmax - xmin
         height = ymax - ymin
         filter_mask = tf.logical_and(width > min_size, height > min_size)
         filter_mask = tf.cast(filter_mask, tf.float32)
-        return tf.multiply(ymin, filter_mask), tf.multiply(xmin, filter_mask), \
-                tf.multiply(ymax, filter_mask), tf.multiply(xmax, filter_mask), tf.multiply(scores_pred, filter_mask)
+        return tf.multiply(xmin, filter_mask), tf.multiply(ymin, filter_mask),\
+               tf.multiply(xmax, filter_mask), tf.multiply(ymax, filter_mask), tf.multiply(scores_pred, filter_mask)
 
-def sort_bboxes(scores_pred, ymin, xmin, ymax, xmax, keep_topk, name):
-    with tf.name_scope(name, 'sort_bboxes', [scores_pred, ymin, xmin, ymax, xmax]):
+def sort_bboxes(scores_pred, xmin, ymin, xmax, ymax, keep_topk, name):
+    with tf.name_scope(name, 'sort_bboxes', [scores_pred, xmin, ymin, xmax, ymax]):
         cur_bboxes = tf.shape(scores_pred)[0]
         scores, idxes = tf.nn.top_k(scores_pred, k=tf.minimum(keep_topk, cur_bboxes), sorted=True)
-        ymin, xmin, ymax, xmax = tf.gather(ymin, idxes), tf.gather(xmin, idxes), tf.gather(ymax, idxes), tf.gather(xmax, idxes)
+        xmin, ymin, xmax, ymax = tf.gather(xmin, idxes), tf.gather(ymin, idxes), tf.gather(xmax, idxes), tf.gather(ymax, idxes)
         paddings_scores = tf.expand_dims(tf.stack([0, tf.maximum(keep_topk-cur_bboxes, 0)], axis=0), axis=0)
-        return tf.pad(ymin, paddings_scores, "CONSTANT"), tf.pad(xmin, paddings_scores, "CONSTANT"),\
-                tf.pad(ymax, paddings_scores, "CONSTANT"), tf.pad(xmax, paddings_scores, "CONSTANT"),\
-                tf.pad(scores, paddings_scores, "CONSTANT")
+        return tf.pad(xmin, paddings_scores, "CONSTANT"), tf.pad(ymin, paddings_scores, "CONSTANT"),\
+               tf.pad(xmax, paddings_scores, "CONSTANT"), tf.pad(ymax, paddings_scores, "CONSTANT"),\
+               tf.pad(scores, paddings_scores, "CONSTANT")
 
 def nms_bboxes(scores_pred, bboxes_pred, nms_topk, nms_threshold, name):
     with tf.name_scope(name, 'nms_bboxes', [scores_pred, bboxes_pred]):
+        xmin, ymin, xmax, ymax = tf.unstack(bboxes_pred, 4, axis=-1)
+        bboxes_pred = tf.stack([ymin, xmin, ymax, xmax], axis=-1)
         idxes = tf.image.non_max_suppression(bboxes_pred, scores_pred, nms_topk, nms_threshold)
+        ymin, xmin, ymax, xmax = tf.unstack(bboxes_pred, 4, axis=-1)
+        bboxes_pred = tf.stack([xmin, ymin, xmax, ymax], axis=-1)
         return tf.gather(scores_pred, idxes), tf.gather(bboxes_pred, idxes)
 
 def parse_by_class_fixed_bboxes(cls_pred, bboxes_pred, params):
@@ -231,13 +235,13 @@ def parse_by_class(cls_pred, bboxes_pred, num_classes, select_threshold, min_siz
         scores_pred = tf.nn.softmax(cls_pred)
         selected_bboxes, selected_scores = select_bboxes(scores_pred, bboxes_pred, num_classes, select_threshold)
         for class_ind in range(1, num_classes):
-            ymin, xmin, ymax, xmax = tf.unstack(selected_bboxes[class_ind], 4, axis=-1)
+            xmin, ymin, xmax, ymax = tf.unstack(selected_bboxes[class_ind], 4, axis=-1)
             #ymin, xmin, ymax, xmax = clip_bboxes(ymin, xmin, ymax, xmax, 'clip_bboxes_{}'.format(class_ind))
             #ymin, xmin, ymax, xmax, selected_scores[class_ind] = filter_bboxes(selected_scores[class_ind],
             #                                    ymin, xmin, ymax, xmax, min_size, 'filter_bboxes_{}'.format(class_ind))
-            ymin, xmin, ymax, xmax, selected_scores[class_ind] = sort_bboxes(selected_scores[class_ind],
-                                                ymin, xmin, ymax, xmax, keep_topk, 'sort_bboxes_{}'.format(class_ind))
-            selected_bboxes[class_ind] = tf.stack([ymin, xmin, ymax, xmax], axis=-1)
+            xmin, ymin, xmax, ymax, selected_scores[class_ind] = sort_bboxes(selected_scores[class_ind],
+                                                                             xmin, ymin, xmax, ymax, keep_topk, 'sort_bboxes_{}'.format(class_ind))
+            selected_bboxes[class_ind] = tf.stack([xmin, ymin, xmax, ymax], axis=-1)
             selected_scores[class_ind], selected_bboxes[class_ind] = nms_bboxes(selected_scores[class_ind], selected_bboxes[class_ind], nms_topk, nms_threshold, 'nms_bboxes_{}'.format(class_ind))
         return selected_bboxes, selected_scores
 
@@ -272,8 +276,8 @@ def ssd_model_fn(features, labels, mode, params):
     with tf.device('/cpu:0'):
         bboxes_pred = tf.map_fn(lambda _preds : decode_fn(_preds),
                                 location_pred,
-                                dtype=[tf.float32] * len(num_anchors_per_layer), back_prop=False)
-        bboxes_pred = tf.concat(bboxes_pred, axis=1)
+                                dtype=tf.float32, back_prop=False)
+        #bboxes_pred = tf.concat(bboxes_pred, axis=1)
         parse_bboxes_fn = lambda x: parse_by_class_fixed_bboxes(x[0], x[1], params)
         pred_results = tf.map_fn(parse_bboxes_fn, (cls_pred, bboxes_pred), dtype=(tf.float32, tf.float32, tf.float32), back_prop=False)     
  
@@ -293,11 +297,10 @@ def ssd_model_fn(features, labels, mode, params):
                                              output_dir=params['summary_dir'],
                                              summary_op=tf.summary.merge_all())
     if mode == tf.estimator.ModeKeys.PREDICT:
-        est = tf.estimator.EstimatorSpec(
-        mode=mode,
-        predictions=predictions,
-        prediction_hooks=None,
-        loss=None, train_op=None)
+        est = tf.estimator.EstimatorSpec(mode=mode,
+                                         predictions=predictions,
+                                         prediction_hooks=None,
+                                         loss=None, train_op=None)
         return est
     else:
         raise ValueError('This script only support "PREDICT" mode!')
@@ -318,27 +321,23 @@ def evaluate(args):
     summary_dir = os.path.join(args.model_dir, 'predict')
     ssd_detector = tf.estimator.Estimator(
         model_fn=ssd_model_fn, model_dir=args.model_dir, config=run_config,
-        params={
-            'select_threshold': args.select_threshold,
-            'min_size': args.min_size,
-            'nms_threshold': args.nms_threshold,
-            'nms_topk': args.nms_topk,
-            'keep_topk': args.keep_topk,
-            'data_format': args.data_format,
-            'batch_size': args.batch_size_mine,
-            'model_scope': args.model_scope,
-            'save_summary_steps': args.save_summary_steps,
-            'summary_dir': summary_dir,
-            'num_classes': args.num_classes,
-            'negative_ratio': args.negative_ratio,
-            'match_threshold': args.match_threshold,
-            'neg_threshold': args.neg_threshold,
-            'weight_decay': args.weight_decay,
-            'keep_max_boxes': args.keep_max_boxes,
-        })
-    tensors_to_log = {
-        'eval_images_per_bacth': 'eval_images_per_bacth',
-    }
+        params={'select_threshold': args.select_threshold,
+                'min_size': args.min_size,
+                'nms_threshold': args.nms_threshold,
+                'nms_topk': args.nms_topk,
+                'keep_topk': args.keep_topk,
+                'data_format': args.data_format,
+                'batch_size': args.batch_size_mine,
+                'model_scope': args.model_scope,
+                'save_summary_steps': args.save_summary_steps,
+                'summary_dir': summary_dir,
+                'num_classes': args.num_classes,
+                'negative_ratio': args.negative_ratio,
+                'match_threshold': args.match_threshold,
+                'neg_threshold': args.neg_threshold,
+                'weight_decay': args.weight_decay,
+                'keep_max_boxes': args.keep_max_boxes,})
+    tensors_to_log = {'eval_images_per_bacth': 'eval_images_per_bacth',}
     logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=args.log_every_n_steps,
                                               formatter=lambda dicts: (', '.join(['%s=%s' % (k, v) for k, v in dicts.items()])))
     print('Starting a predict cycle.')
@@ -351,24 +350,23 @@ def evaluate(args):
         scores = pred['detection_scores']
         bboxes = pred['detection_bboxes']
         labels = pred['detection_classes']
-        bboxes[:, 0] = (bboxes[:, 0] * shape[0]).astype(np.float32, copy=False)
-        bboxes[:, 1] = (bboxes[:, 1] * shape[1]).astype(np.float32, copy=False)
-        bboxes[:, 2] = (bboxes[:, 2] * shape[0]).astype(np.float32, copy=False)
-        bboxes[:, 3] = (bboxes[:, 3] * shape[1]).astype(np.float32, copy=False)
+        bboxes[:, 0] = (bboxes[:, 0] * shape[1]).astype(np.float32, copy=False)
+        bboxes[:, 1] = (bboxes[:, 1] * shape[0]).astype(np.float32, copy=False)
+        bboxes[:, 2] = (bboxes[:, 2] * shape[1]).astype(np.float32, copy=False)
+        bboxes[:, 3] = (bboxes[:, 3] * shape[0]).astype(np.float32, copy=False)
         valid_mask = np.logical_and((bboxes[:, 2] - bboxes[:, 0] > 0), (bboxes[:, 3] - bboxes[:, 1] > 0))
         for det_ind in range(valid_mask.shape[0]):
             if not valid_mask[det_ind]:
                 continue
             class_ind = int(labels[det_ind])  
             if class_ind in predict_by_class_dict.keys():
-                predict_by_class_dict[class_ind].append(
-                              [filename.decode('utf8')[:-4], scores[det_ind],
-                               bboxes[det_ind, 1], bboxes[det_ind, 0],
-                               bboxes[det_ind, 3], bboxes[det_ind, 2]])
+                predict_by_class_dict[class_ind].append([filename.decode('utf8')[:-4], scores[det_ind],
+                                                         bboxes[det_ind, 0], bboxes[det_ind, 1],
+                                                         bboxes[det_ind, 2], bboxes[det_ind, 3]])
             else:
                 predict_by_class_dict[class_ind] = [[filename.decode('utf8')[:-4], scores[det_ind],
-                               bboxes[det_ind, 1], bboxes[det_ind, 0],
-                               bboxes[det_ind, 3], bboxes[det_ind, 2]]] 
+                                                     bboxes[det_ind, 0], bboxes[det_ind, 1],
+                                                     bboxes[det_ind, 2], bboxes[det_ind, 3]]] 
     return eval_on_coco(predict_by_class_dict)
 
 def main(_):

@@ -2,7 +2,7 @@
 
 This is the reference implementation for MLPerf Inference benchmarks.
 
-You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/cloud/image_classification/GettingStarted.ipynb).
+You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/GettingStarted.ipynb).
 
 ## Supported Models
 
@@ -20,9 +20,6 @@ You can find a short tutorial how to use this benchmark [here](https://github.co
 | ssd-resnet34 1200x1200 | tensorflow | mAP 0.20 | coco resized to 1200x1200| [from zenodo](https://zenodo.org/record/3345892/files/tf_ssd_resnet34_22.1.zip?download=1) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector/tensorflow), [training model](https://github.com/lji72/inference/tree/tf_ssd_resent34_align_onnx/others/cloud/single_stage_detector/tensorflow) | fp32 | NHWC |
 | ssd-resnet34 1200x1200 | pytorch | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3236545/files/resnet34-ssd1200.pytorch) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector/pytorch) | fp32 | NCHW |
 | ssd-resnet34 1200x1200 | onnx | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3228411/files/resnet34-ssd1200.onnx) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector) converted using the these [instructions](https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch#6-onnx) | fp32 | Works but needs more testing |
-
-
-***Note: the tensorflow ssd-resnet34 will change by end of Jul to a new model. The onnx model will most likely change as well to be converted from the tensorflow model at that time.***
 
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.

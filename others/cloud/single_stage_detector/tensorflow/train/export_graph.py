@@ -66,6 +66,8 @@ def ssd_model_fn(features, labels, mode, params):
     detection_bboxes = tf.concat(pred_results[0], axis=0)
     detection_scores = tf.concat(pred_results[1], axis=0)
     detection_classes = tf.concat(pred_results[2], axis=0)
+    xmin, ymin, xmax, ymax = tf.unstack(detection_bboxes, axis=-1)
+    detection_bboxes = tf.stack([ymin, xmin, ymax, xmax], axis=-1)
     predictions['detection_classes'] = detection_classes
     predictions['detection_scores'] = detection_scores
     predictions['detection_bboxes'] = detection_bboxes

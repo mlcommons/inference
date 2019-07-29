@@ -74,7 +74,6 @@ def ssd_model_fn(features, labels, mode, params):
     tf.identity(detection_bboxes, name='detection_bboxes')
     tf.identity(detection_scores, name='detection_scores')
     tf.identity(detection_classes, name='detection_classes')
-    tf.identity(tf.shape(features)[0], name='eval_images_per_bacth')  
     if mode == tf.estimator.ModeKeys.PREDICT:
         est = tf.estimator.EstimatorSpec(mode=mode,
                                          predictions=predictions,

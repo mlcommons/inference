@@ -62,7 +62,7 @@ class Resnet34Backbone(object):
         self._stage1.append(self._stage1_residul_block_2)
         self._stage1.append(self._stage1_residul_block_3)
         ### stage=2
-        self._stage2_residul_block_1 = self.residual_block(128, 3, 'stage2_residul_block1', is_pre_stride=True)
+        self._stage2_residul_block_1 = self.residual_block(128, 3, 'stage2_residul_block1', has_pre_stride=True)
         self._stage2_residul_block_2 = self.residual_block(128, 3, 'stage2_residul_block2')     
         self._stage2_residul_block_3 = self.residual_block(128, 3, 'stage2_residul_block3')     
         self._stage2_residul_block_4 = self.residual_block(128, 3, 'stage2_residul_block4')
@@ -96,15 +96,10 @@ class Resnet34Backbone(object):
         '''
         self._add_chans = [256, 512, 256, 512, 128, 256, 128, 256, 128, 256]
         with tf.variable_scope('additional_layers') as scope:
-            #self._conv7_bn_block = self.ssd_conv_bn_block(self._add_chans[0:2], 2, 'conv7')
-            #self._conv8_bn_block = self.ssd_conv_bn_block(self._add_chans[2:4], 2, 'conv8')
-            #self._conv9_bn_block = self.ssd_conv_bn_block(self._add_chans[4:6], 2, 'conv9')
-            #self._conv10_bn_block = self.ssd_conv_bn_block(self._add_chans[6:8], 3, 'conv10')#, padding='valid')
-            #self._conv11_bn_block = self.ssd_conv_bn_block(self._add_chans[8:10], 2, 'conv11', padding='valid')
             self._conv7_block = self.ssd_conv_block(self._add_chans[0:2], 2, 'conv7', use_bias=True)
             self._conv8_block = self.ssd_conv_block(self._add_chans[2:4], 2, 'conv8', use_bias=True)
             self._conv9_block = self.ssd_conv_block(self._add_chans[4:6], 2, 'conv9', use_bias=True)
-            self._conv10_block = self.ssd_conv_block(self._add_chans[6:8], 2, 'conv10', use_bias=True, paddings=['valid', 'valid'])#padding='valid', use_bias=True)
+            self._conv10_block = self.ssd_conv_block(self._add_chans[6:8], 2, 'conv10', use_bias=True, paddings=['valid', 'valid'])
             self._conv11_block = self.ssd_conv_block(self._add_chans[8:10], 1, 'conv11', use_bias=True, paddings=['valid', 'valid'])
 
     def l2_normalize(self, inputs, name):
@@ -160,22 +155,24 @@ class Resnet34Backbone(object):
                         inputs = inputs + residul_inputs
         return inputs
 
-    def residual_block(self, filters, kernel_size, name, padding='same', is_pre_stride=False, reuse=None):    
-        if not is_pre_stride:
+    def residual_block(self, filters, kernel_size, name, padding='same', has_pre_stride=False, reuse=None):    
+        if not has_pre_stride:
             residual_blocks = self.conv_bn_block(2, filters, kernel_size, strides=(1, 1), name=name, padding=padding)
         else:
             residual_blocks = self.conv_bn_block(1, filters, kernel_size, strides=(2, 2), name=name+'_1', padding=padding)
             residual_blocks.extend(self.conv_bn_block(1, filters, kernel_size, strides=(1, 1), name=name+'_2', padding=padding))
         return residual_blocks
 
-    def conv_block(self, num_blocks, filters, kernel_size, strides, name, padding='same', reuse=None, use_bias=False):
+    def conv_block(self, num_blocks, filters, kernel_size, strides, name, padding='same', reuse=None, use_relu=True, use_bias=False):
         with tf.variable_scope(name):
             conv_blocks = []
             for ind in range(1, num_blocks + 1):
-                conv_blocks.append(tf.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides,
-                                                    padding=padding, data_format=self._data_format, activation=tf.nn.relu, use_bias=use_bias,
+                conv_blocks.append(tf.layers.Conv2D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding,
+                                                    data_format=self._data_format, activation=None, use_bias=use_bias,
                                                     kernel_initializer=self._conv_initializer(),
                                                     name='{}_{}'.format(name, ind), _scope='{}_{}'.format(name, ind), _reuse=None))
+                if use_relu:
+                    conv_blocks.append(ReLuLayer('{}_relu{}'.format(name, ind), _scope='{}_relu{}'.format(name, ind), _reuse=None))
             return conv_blocks
 
     def conv_bn_block(self, num_blocks, filters, kernel_size, strides, name, padding='same', reuse=None, use_relu=True, use_bias=False):

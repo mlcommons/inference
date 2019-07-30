@@ -9,7 +9,9 @@ message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSIO
 
 # Set build options.
 set(CMAKE_CXX_FLAGS "-O2 -W -Wall")
+set(CMAKE_CXX_STANDARD "14")
 message(STATUS "Using compiler flags: ${CMAKE_CXX_FLAGS}")
+message(STATUS "Using c++ standard flags: ${CMAKE_CXX_STANDARD}")
 message(STATUS "Using static linker flags: ${CMAKE_STATIC_LINKER_FLAGS}")
 message(STATUS "Using shared linker flags: ${CMAKE_SHARED_LINKER_FLAGS}")
 

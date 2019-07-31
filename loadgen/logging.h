@@ -36,7 +36,7 @@ namespace mlperf {
 class AsyncLog;
 class Logger;
 class TlsLogger;
-class TlsLoggerWrapper;
+struct TlsLoggerWrapper;
 
 using AsyncLogEntry = std::function<void(AsyncLog&)>;
 using PerfClock = std::chrono::high_resolution_clock;

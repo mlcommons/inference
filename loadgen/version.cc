@@ -10,6 +10,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+/// \file
+/// \brief Non-generated version logic.
+
 #include "version.h"
 
 #include "logging.h"

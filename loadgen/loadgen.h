@@ -10,11 +10,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+/// \file
+/// \brief Provides the entry points for a SUT to start a test and respond
+/// to issued queries.
+
 #ifndef MLPERF_LOADGEN_LOADGEN_H_
 #define MLPERF_LOADGEN_LOADGEN_H_
 
 #include <cstddef>
 
+/// \brief Contains the loadgen API.
 namespace mlperf {
 
 struct QuerySampleResponse;
@@ -23,20 +28,33 @@ class SystemUnderTest;
 struct TestSettings;
 struct LogSettings;
 
-// QuerySamplesComplete must be called by the SUT once it completes samples of
-// a query issued by SystemUnderTest::IssueQuery().
-// The samples may be from any combination of queries or partial queries.
-// TODO(brianderson): This API assumes the response will be allocated and
-// owend by the SUT. This necessarily requires the allocation to be timed,
-// which will benefit SUTs that efficiently recycle response memory.
+/// \addtogroup LoadgenAPI
+/// @{
+
+///
+/// \brief SUT calls this to notify loadgen of completed samples.
+/// \details
+/// The samples may be from any combination of queries or partial queries as
+/// issued by \link mlperf::SystemUnderTest::IssueQuery
+/// SystemUnderTest::IssueQuery \endlink. The SUT is responsible for allocating
+/// and owning the response data which must remain valid until the duration of
+/// this call. The loadgen will copy the response data if needed for e.g.
+/// accuracy mode. Note: This setup requires the allocation to be timed, which
+/// will benefit SUTs that efficiently recycle response memory.
+///
 void QuerySamplesComplete(QuerySampleResponse* responses,
                           size_t response_count);
 
-// Starts the test against |sut| with the specified |settings|.
-// This is the C++ entry point. See mlperf::c::StartTest for the C entry point.
+///
+/// \brief Starts the test against SUT with the specified settings.
+/// \details This is the C++ entry point. See mlperf::c::StartTest for the
+/// C entry point.
+///
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,
                const LogSettings& log_settings);
+
+/// @}
 
 }  // namespace mlperf
 

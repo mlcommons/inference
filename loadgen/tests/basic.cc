@@ -10,6 +10,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+/// \file
+/// \brief Basic functionality unit tests.
+
 #include <algorithm>
 #include <deque>
 #include <future>
@@ -24,10 +27,13 @@ limitations under the License.
 #include "../test_settings.h"
 #include "loadgen_test.h"
 
-// SystemUnderTestBasic implements the client interfaces of the loadgen and
-// has some basic sanity checks that are enabled for all tests.
-// It also forwards calls to overrideable *Ext methods and implements
-// the TestProxy concept.
+/// \brief Correctness unit tests.
+namespace unit_tests {
+
+/// \brief Implements the client interfaces of the loadgen and
+/// has some basic sanity checks that are enabled for all tests.
+/// \details It also forwards calls to overrideable *Ext methods and implements
+/// the TestProxy concept.
 struct SystemUnderTestBasic : public mlperf::QuerySampleLibrary,
                               public mlperf::SystemUnderTest {
   const std::string& Name() const override { return name_; }
@@ -111,6 +117,7 @@ struct SystemUnderTestBasic : public mlperf::QuerySampleLibrary,
   std::vector<size_t> samples_between_flushes_;
 };
 
+/// \brief Provieds common test set up logic.
 struct SystemUnderTestAccuracy : public SystemUnderTestBasic {
   virtual void SetUpTest(size_t samples_per_query,
                          size_t samples_per_query_remainder,
@@ -132,6 +139,8 @@ struct SystemUnderTestAccuracy : public SystemUnderTestBasic {
   }
 };
 
+/// \brief Verifies all samples from the QSL are included at least once
+/// in accuracy mode.
 struct TestAccuracyIncludesAllSamples : public SystemUnderTestAccuracy {
   void EndTest() override {
     std::sort(issued_samples_.begin(), issued_samples_.end());
@@ -172,7 +181,8 @@ REGISTER_TEST_ALL_SCENARIOS(AccuracyIncludesAllSamples,
                             TestProxy<TestAccuracyIncludesAllSamples>(), 4, 0,
                             0);
 
-// Verifies
+/// \brief Verifies offline + accuracy doesn't hang if the last set
+/// in the accuracy series is smaller than others.
 struct TestOfflineRemainderAccuracySet : public SystemUnderTestAccuracy {
   void SetUpTest() {
     SystemUnderTestAccuracy::SetUpTest(4, 0, 7, mlperf::TestScenario::Offline);
@@ -209,9 +219,8 @@ struct TestOfflineRemainderAccuracySet : public SystemUnderTestAccuracy {
 REGISTER_TEST(Offline_RemainderAccuracySets,
               TestProxy<TestOfflineRemainderAccuracySet>());
 
-// Verifies all queries only contain samples that are contiguous
-// as defined by the sample order in LoadSamplesToRam, even if
-// the set size is not a multiple of samples_per_query.
+/// \brief Verifies all queries only contain samples that are contiguous,
+/// even if the set size is not a multiple of samples_per_query.
 struct TestMultiStreamContiguousRemainderQuery
     : public SystemUnderTestAccuracy {
   void SetUpTest(mlperf::TestScenario scenario) {
@@ -275,3 +284,5 @@ REGISTER_TEST(MultiStream_RemainderQueryContiguous,
 REGISTER_TEST(MultiStreamFree_RemainderQueryContiguous,
               TestProxy<TestMultiStreamContiguousRemainderQuery>(),
               mlperf::TestScenario::MultiStreamFree);
+
+}  // namespace unit_tests

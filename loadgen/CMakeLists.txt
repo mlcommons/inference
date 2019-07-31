@@ -16,7 +16,7 @@ message(STATUS "Using static linker flags: ${CMAKE_STATIC_LINKER_FLAGS}")
 message(STATUS "Using shared linker flags: ${CMAKE_SHARED_LINKER_FLAGS}")
 
 # Output directory for libraries.
-SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 message(STATUS "Using output path: ${LIBRARY_OUTPUT_PATH}")
 
 # Detect Python to use for generating source file with version info.

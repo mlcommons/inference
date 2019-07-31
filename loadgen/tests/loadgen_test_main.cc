@@ -10,8 +10,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-// A main entry point a test binary can use if it just wants to execute
-// Test::Run on all statically registered tests.
+/// \file
+/// \brief A main entry point a test binary can use if it just wants to execute
+/// Test::Run on all statically registered tests.
 
 #include <regex>
 

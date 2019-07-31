@@ -16,6 +16,7 @@ limitations under the License.
 #include "utils.h"
 
 namespace mlperf {
+namespace loadgen {
 
 TestSettingsInternal::TestSettingsInternal(
     const TestSettings &requested_settings)
@@ -222,4 +223,5 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("schedule_rng_seed : ", schedule_rng_seed);
 }
 
+}  // namespace loadgen
 }  // namespace mlperf

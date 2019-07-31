@@ -13,17 +13,16 @@
 # limitations under the License.
 # =============================================================================
 
-"""MLPerf Inference LoadGen python bindings.
-
-Creates a module that python can import.
-All source files are compiled by python"s C++ toolchain  without depending
-on a loadgen lib.
-
-This setup.py can be used stand-alone, without the use of an external
-build system. This will polute your source tree with output files
-and binaries. Use one of the gn build targets instead if you want
-to avoid poluting the source tree.
-"""
+## \file
+#  \brief MLPerf Inference LoadGen python module setup.
+#  \details Creates a module that python can import.
+#  All source files are compiled by python"s C++ toolchain  without depending
+#  on a loadgen lib.
+#
+#  This setup.py can be used stand-alone, without the use of an external
+#  build system. This will polute your source tree with output files
+#  and binaries. Use one of the gn build targets instead if you want
+#  to avoid poluting the source tree.
 
 from setuptools import Extension
 from setuptools import setup

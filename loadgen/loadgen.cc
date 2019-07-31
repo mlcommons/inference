@@ -38,7 +38,7 @@ limitations under the License.
 namespace mlperf {
 
 struct SampleMetadata;
-struct QueryMetadata;
+class QueryMetadata;
 
 // Every query and sample within a call to StartTest gets a unique sequence id
 // for easy cross reference.
@@ -1056,9 +1056,9 @@ struct RunFunctions {
     return GetCompileTime<TestScenario::SingleStream>();
   }
 
-  const Signature& accuracy;
-  const Signature& performance;
-  const Signature& find_peak_performance;
+  Signature& accuracy;
+  Signature& performance;
+  Signature& find_peak_performance;
 };
 
 // Generates random sets of samples in the QSL that we can load into RAM

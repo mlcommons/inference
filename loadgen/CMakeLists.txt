@@ -17,8 +17,14 @@ message(STATUS "Using shared linker flags: ${CMAKE_SHARED_LINKER_FLAGS}")
 SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 message(STATUS "Using output path: ${LIBRARY_OUTPUT_PATH}")
 
+# Detect Python to use for generating source file with version info.
+# NB: PythonInterp has been deprecated since CMake 3.12
+# but it works with earlier versions of CMake.
+find_package(PythonInterp)
+message(STATUS "Using Python interpreter: ${PYTHON_EXECUTABLE}")
+
 # Generate source file with version info.
-execute_process(COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/version_generator.py ${CMAKE_BINARY_DIR}/version_generated.cc ${CMAKE_CURRENT_SOURCE_DIR})
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version_generator.py ${CMAKE_BINARY_DIR}/version_generated.cc ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Add source files.
 set(SOURCE

@@ -1,4 +1,4 @@
-# Building the MLPerf Inference Load Generator
+# Building the LoadGen
 
 ## Quick Start
 

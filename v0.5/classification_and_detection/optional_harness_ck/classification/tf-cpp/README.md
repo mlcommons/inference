@@ -334,13 +334,14 @@ $ ck benchmark program:image-classification-tf-cpp \
 --tags=mlperf,image-classification,tf-cpp,accuracy
 ```
 
-#### Top 1
-
-| Model | Pillow | OpenCV | TensorFlow |
-|-|-|-|-|
-| ResNet | 0.76170 | 0.76458 | 0.76522 |
-| MobileNet non-quantized | 0.71226 | 0.71516 | N/A |
-| MobileNet quantized | 0.70348 | 0.70654 | N/A |
+| Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
+|-|-|-|-|-|
+| ResNet                  |  Top1  | 0.76170 | 0.76458 | 0.76522 |
+|                         |  Top5  | 0.92866 | 0.93014 | 0.93066 |
+| MobileNet non-quantized |  Top1  | 0.71226 | 0.71516 | N/A     |
+|                         |  Top5  | 0.89834 | 0.90004 | N/A     |
+| MobileNet quantized     |  Top1  | 0.70348 | 0.70654 | N/A     |
+|                         |  Top5  | 0.89376 | 0.89514 | N/A     |
 
 <a name="further-info"></a>
 ## Further information

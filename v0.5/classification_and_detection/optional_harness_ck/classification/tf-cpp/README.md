@@ -222,12 +222,15 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 <a name="benchmarking"></a>
 ## Benchmarking instructions
 
-### Benchmark the performance
+### ResNet
+
+#### Benchmark the performance
 ```
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
---record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tf-cpp-performance \
---tags=mlperf,image-classification,mobilenet,tf-cpp,performance \
+--dep_add_tags.weights=resnet --dep_add_tags.images=preprocessed,using-opencv \
+--record --record_repo=local --record_uoa=mlperf-image-classification-resnet-tf-cpp-performance \
+--tags=mlperf,image-classification,resnet,tf-cpp,performance \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
 
@@ -259,17 +262,64 @@ Accuracy top 5: 1.0 (2 of 2)
 --------------------------------
 ```
 
-### Benchmark the accuracy
+#### Benchmark the accuracy
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
---repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tf-cpp-accuracy \
---tags=mlperf,image-classification,mobilenet,tf-cpp,accuracy \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--dep_add_tags.weights=resnet --dep_add_tags.images=preprocessed,using-opencv \
+--record --record_repo=local --record_uoa=mlperf-image-classification-resnet-tf-cpp-accuracy \
+--tags=mlperf,image-classification,resnet,tf-cpp,accuracy \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
+
 **NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
 to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as if
 with `--env.CK_BATCH_COUNT=1`).
+
+
+### MobileNet non-quantized
+
+#### Benchmark the performance
+```
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--dep_add_tags.weights=mobilenet,non-quantized --dep_add_tags.images=preprocessed,using-opencv \
+--record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-non-quantized-tf-cpp-performance \
+--tags=mlperf,image-classification,mobilenet,non-quantized,tf-cpp,performance \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```
+
+#### Benchmark the accuracy
+```bash
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--dep_add_tags.weights=mobilenet,non-quantized --dep_add_tags.images=preprocessed,using-opencv \
+--record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-non-quantized-tf-cpp-accuracy \
+--tags=mlperf,image-classification,mobilenet,non-quantized,tf-cpp,accuracy \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```
+
+### MobileNet quantized
+
+#### Benchmark the performance
+```
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--dep_add_tags.weights=mobilenet,quantized --dep_add_tags.images=preprocessed,using-opencv \
+--record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-quantized-tf-cpp-performance \
+--tags=mlperf,image-classification,mobilenet,quantized,tf-cpp,performance \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```
+
+#### Benchmark the accuracy
+```bash
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--dep_add_tags.weights=mobilenet,quantized --dep_add_tags.images=preprocessed,using-opencv \
+--record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-quantized-tf-cpp-accuracy \
+--tags=mlperf,image-classification,mobilenet,quantized,tf-cpp,accuracy \
+--skip_print_timers --skip_stat_analysis --process_multi_keys
+```
 
 
 <a name="accuracy"></a>
@@ -277,10 +327,9 @@ with `--env.CK_BATCH_COUNT=1`).
 
 ### ImageNet validation dataset (50,000 images)
 
-#### 87.5% cropping (default)
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
---repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
 --record --record_repo=local --record_uoa=mlperf-image-classification-tf-cpp-accuracy \
 --tags=mlperf,image-classification,tf-cpp,accuracy \
 --skip_print_timers --skip_stat_analysis --process_multi_keys
@@ -303,34 +352,6 @@ $ ck benchmark program:image-classification-tf-cpp \
 "accuracy_top1": 0.73288
 "accuracy_top5": 0.91606
 ```
-
-#### 100.0% cropping (makes the accuracy worse!)
-```bash
-$ ck benchmark program:image-classification-tf-cpp \
---repetitions=1  --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 --env.CK_CROP_PERCENT=100 \
---record --record_repo=local --record_uoa=mlperf-image-classification-tf-cpp-accuracy-crop100 \
---tags=mlperf,image-classification,tf-cpp,accuracy,crop100 \
---skip_print_timers --skip_stat_analysis --process_multi_keys
-```
-
-##### MobileNet non-quantized
-```
-"accuracy_top1": 0.67698
-"accuracy_top5": 0.87814
-```
-
-##### MobileNet quantized
-```
-"accuracy_top1": 0.66598
-"accuracy_top5": 0.87096
-```
-
-##### ResNet
-```bash
-"accuracy_top1": 0.71360
-"accuracy_top5": 0.90266
-```
-
 
 <a name="further-info"></a>
 ## Further information

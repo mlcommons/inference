@@ -17,36 +17,38 @@ Install TensorFlow (C++) v1.13.1 from source:
 ```bash
 $ ck install package:lib-tensorflow-1.13.1-src-static [--target_os=android23-arm64]
 ```
+**NB:** The ResNet model has a [known issue with v1.14.0](https://github.com/ctuning/ck-tensorflow/blob/master/package/lib-tensorflow-1.14.0-src-static/README.md).
 
-### Install the MobileNet model for TensorFlow (C++)
+### Install models for TensorFlow (C++)
 
+#### ResNet
+
+To install the [ResNet50-v1.5 model](https://zenodo.org/record/2535873):
+```bash
+$ ck install package --tags=model,tf,mlperf,resnet
+```
+
+#### MobileNet
 To select interactively from one of the non-quantized and quantized MobileNets-v1-1.0-224 models:
 ```
 $ ck install package --tags=model,tf,mlperf,mobilenet
 ```
+
+##### MobileNet non-quantized
 
 To install the [non-quantized model](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) directly:
 ```bash
 $ ck install package --tags=model,tf,mlperf,mobilenet,non-quantized
 ```
 
+##### MobileNet quantized
+
 To install the [quantized model](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) directly:
 ```bash
 $ ck install package --tags=model,tf,mlperf,mobilenet,quantized
 ```
 
-#### Bonus
-
-##### Install the ResNet model
-
-To install the ResNet50-v1.5 model:
-```bash
-$ ck install package --tags=model,tf,mlperf,resnet
-```
-You can use this model exactly in the same way as the MobileNet one.
-Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#benchmarking) below.
-
-##### Install other MobileNets models
+#### Bonus: other MobileNets models
 
 You can also install any other MobileNets model compatible with TensorFlow (C++) as follows:
 ```bash
@@ -54,68 +56,168 @@ $ ck install package --tags=tensorflowmodel,mobilenet,frozen --no_tags=mobilenet
 ```
 
 ### Compile the TensorFlow (C++) Image Classification client
+
+Compile the client. (For Android, append e.g. `--target_os=android23-arm64` to the command.)
+
 ```bash
-$ ck compile program:image-classification-tf-cpp [--target_os=android23-arm64]
+$ ck compile program:image-classification-tf-cpp --speed
 ```
 
 ### Run the TensorFlow (C++) Image Classification client
 
-Run the client (if required, connect an Android device to your host machine via USB):
+Run the client. (For Android, connect an Android device to your host machine via USB and append e.g. `--target_os=android23-arm64` to the command).
 
-- with the non-quantized model:
+If you have preprocessed input data using more than one method (OpenCV, Pillow or TensorFlow), you need to select the particular preprocessed dataset. Note that the TensorFlow preprocessing method is not applicable to the MobileNet models.
+
+#### ResNet
+
+##### OpenCV preprocessing
 ```bash
-$ ck run program:image-classification-tf-cpp [--target_os=android23-arm64]
+$ ck run program:image-classification-tf-cpp \
+--dep_add_tags.images=preprocessed,using-opencv \
+--dep_add_tags.weights=resnet
 ...
-*** Dependency 3 = weights (TensorFlow model and weights):
-...
-    Resolved. CK environment UID = f934f3a3faaf4d73 (version 1_1.0_224_2018_02_22)
-...
+---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
-0.84 - (65) n01751748 sea snake
-0.08 - (58) n01737021 water snake
+0.95 - (65) n01751748 sea snake
+0.01 - (58) n01737021 water snake
+0.01 - (54) n01729322 hognose snake, puff adder, sand viper
+0.01 - (66) n01753488 horned viper, cerastes, sand viper, horn...
+0.00 - (60) n01740131 night snake, Hypsiglena torquata
+---------------------------------------
+```
+
+##### Pillow preprocessing
+```bash
+$ ck run program:image-classification-tf-cpp \
+--dep_add_tags.images=preprocessed,using-pillow \
+--dep_add_tags.weights=resnet
+...
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.95 - (65) n01751748 sea snake
+0.02 - (58) n01737021 water snake
+0.01 - (54) n01729322 hognose snake, puff adder, sand viper
+0.01 - (60) n01740131 night snake, Hypsiglena torquata
+0.01 - (66) n01753488 horned viper, cerastes, sand viper, horn...
+---------------------------------------
+```
+
+##### TensorFlow preprocessing
+```bash
+$ ck run program:image-classification-tf-cpp \
+--dep_add_tags.images=preprocessed,using-tf \
+--dep_add_tags.weights=resnet
+...
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.95 - (65) n01751748 sea snake
+0.01 - (54) n01729322 hognose snake, puff adder, sand viper
+0.01 - (58) n01737021 water snake
+0.01 - (66) n01753488 horned viper, cerastes, sand viper, horn...
+0.00 - (60) n01740131 night snake, Hypsiglena torquata
+---------------------------------------
+```
+
+#### MobileNet non-quantized
+
+##### OpenCV preprocessing
+```bash
+$ ck run program:image-classification-tf-cpp \
+--dep_add_tags.images=preprocessed,using-opencv \
+--dep_add_tags.weights=mobilenet,non-quantized
+...
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.86 - (65) n01751748 sea snake
+0.05 - (58) n01737021 water snake
 0.04 - (34) n01665541 leatherback turtle, leatherback, leather...
 0.01 - (54) n01729322 hognose snake, puff adder, sand viper
 0.01 - (57) n01735189 garter snake, grass snake
 ---------------------------------------
-
-Summary:
--------------------------------
-Graph loaded in 0.037618s
-All images loaded in 0.002786s
-All images classified in 0.316360s
-Average classification time: 0.316360s
-Accuracy top 1: 1.0 (1 of 1)
-Accuracy top 5: 1.0 (1 of 1)
---------------------------------
 ```
 
-- with the quantized model:
+##### Pillow preprocessing
 ```bash
-$ ck run program:image-classification-tf-cpp [--target_os=android23-arm64]
+$ ck run program:image-classification-tf-cpp \
+--dep_add_tags.images=preprocessed,using-pillow \
+--dep_add_tags.weights=mobilenet,non-quantized
 ...
-*** Dependency 3 = weights (TensorFlow model and weights):
-...
-    Resolved. CK environment UID = b18ad885d440dc77 (version 1_1.0_224_quant_2018_08_02)
-...
-ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
-0.72 - (65) n01751748 sea snake
-0.16 - (58) n01737021 water snake
-0.05 - (54) n01729322 hognose snake, puff adder, sand viper
-0.03 - (34) n01665541 leatherback turtle, leatherback, leather...
-0.01 - (50) n01698640 American alligator, Alligator mississipi...
 ---------------------------------------
-
-Summary:
--------------------------------
-Graph loaded in 0.096074s
-All images loaded in 0.004774s
-All images classified in 0.568562s
-Average classification time: 0.568562s
-Accuracy top 1: 1.0 (1 of 1)
-Accuracy top 5: 1.0 (1 of 1)
---------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.87 - (65) n01751748 sea snake
+0.06 - (34) n01665541 leatherback turtle, leatherback, leather...
+0.04 - (58) n01737021 water snake
+0.01 - (54) n01729322 hognose snake, puff adder, sand viper
+0.01 - (57) n01735189 garter snake, grass snake
+---------------------------------------
 ```
 
+##### TensorFlow preprocessing (**NOT APPLICABLE!**)
+```bash
+$ ck run program:image-classification-tf-cpp \
+--dep_add_tags.images=preprocessed,using-tf \
+--dep_add_tags.weights=mobilenet,non-quantized
+...
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.67 - (616) n03627232 knot
+0.08 - (584) n03476684 hair slide
+0.06 - (488) n02999410 chain
+0.02 - (792) n04208210 shovel
+0.02 - (549) n03291819 envelope
+---------------------------------------
+```
+
+#### MobileNet quantized
+
+##### OpenCV preprocessing
+```bash
+$ ck run program:image-classification-tf-cpp \
+--dep_add_tags.images=preprocessed,using-opencv \
+--dep_add_tags.weights=mobilenet,quantized
+...
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.91 - (65) n01751748 sea snake
+0.05 - (58) n01737021 water snake
+0.03 - (34) n01665541 leatherback turtle, leatherback, leather...
+0.01 - (54) n01729322 hognose snake, puff adder, sand viper
+0.00 - (57) n01735189 garter snake, grass snake
+---------------------------------------
+```
+
+##### Pillow preprocessing
+```bash
+$ ck run program:image-classification-tf-cpp \
+--dep_add_tags.images=preprocessed,using-pillow \
+--dep_add_tags.weights=mobilenet,quantized
+...
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.92 - (65) n01751748 sea snake
+0.04 - (58) n01737021 water snake
+0.02 - (34) n01665541 leatherback turtle, leatherback, leather...
+0.00 - (390) n02526121 eel
+0.00 - (54) n01729322 hognose snake, puff adder, sand viper
+---------------------------------------
+```
+
+##### TensorFlow preprocessing (**NOT APPLICABLE!**)
+```bash
+$ ck run program:image-classification-tf-cpp \
+--dep_add_tags.images=preprocessed,using-tf \
+--dep_add_tags.weights=mobilenet,quantized
+...
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.55 - (616) n03627232 knot
+0.39 - (488) n02999410 chain
+0.01 - (71) n01770393 scorpion
+0.01 - (310) n02219486 ant, emmet, pismire
+0.01 - (695) n03874599 padlock
+---------------------------------------
+```
 
 <a name="benchmarking"></a>
 ## Benchmarking instructions

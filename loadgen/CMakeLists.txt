@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.1)
 
 project(mlperf_loadgen)
 
@@ -7,18 +7,26 @@ set(mlperf_loadgen_VERSION_MAJOR 0)
 set(mlperf_loadgen_VERSION_MINOR 5)
 message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}")
 
-# Set build options.
-set(CMAKE_CXX_FLAGS "-O2 -W -Wall")
-message(STATUS "Using compiler flags: ${CMAKE_CXX_FLAGS}")
+# Set build options. NB: CXX_STANDARD is supported since CMake 3.1.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -W -Wall")
+message(STATUS "Using C++ compiler flags: ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_STANDARD "14")
+message(STATUS "Using C++ standard: ${CMAKE_CXX_STANDARD}")
 message(STATUS "Using static linker flags: ${CMAKE_STATIC_LINKER_FLAGS}")
 message(STATUS "Using shared linker flags: ${CMAKE_SHARED_LINKER_FLAGS}")
 
 # Output directory for libraries.
-SET(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
+set(LIBRARY_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 message(STATUS "Using output path: ${LIBRARY_OUTPUT_PATH}")
 
+# Detect Python to use for generating source file with version info.
+# NB: PythonInterp has been deprecated since CMake 3.12
+# but it works with earlier versions of CMake.
+find_package(PythonInterp)
+message(STATUS "Using Python interpreter: ${PYTHON_EXECUTABLE}")
+
 # Generate source file with version info.
-execute_process(COMMAND python ${CMAKE_CURRENT_SOURCE_DIR}/version_generator.py ${CMAKE_BINARY_DIR}/version_generated.cc ${CMAKE_CURRENT_SOURCE_DIR})
+execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version_generator.py ${CMAKE_BINARY_DIR}/version_generated.cc ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Add source files.
 set(SOURCE

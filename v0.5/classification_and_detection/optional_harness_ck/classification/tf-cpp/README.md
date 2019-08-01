@@ -334,23 +334,14 @@ $ ck benchmark program:image-classification-tf-cpp \
 --tags=mlperf,image-classification,tf-cpp,accuracy
 ```
 
-##### MobileNet non-quantized
-```
-"accuracy_top1": 0.69966
-"accuracy_top5": 0.89366
-```
+#### Top 1
 
-##### MobileNet quantized
-```
-"accuracy_top1": 0.68978
-"accuracy_top5": 0.88628
-```
+| Preprocessing / model | ResNet | MobileNet non-quantized | MobileNet quantized |
+|-|-|-|-|
+| Pillow | 0.76170 | 0.71226 | 0.70348 |
+| OpenCV | 0.76458 | 0.71516 | 0.70654 |
+| TensorFlow | 0.76522 | N/A | N/A |
 
-##### ResNet
-```
-"accuracy_top1": 0.73288
-"accuracy_top5": 0.91606
-```
 
 <a name="further-info"></a>
 ## Further information

@@ -48,7 +48,7 @@ To install the [quantized model](http://download.tensorflow.org/models/mobilenet
 $ ck install package --tags=model,tf,mlperf,mobilenet,quantized
 ```
 
-#### Bonus: other MobileNets models
+##### Bonus: other MobileNets models
 
 You can also install any other MobileNets model compatible with TensorFlow (C++) as follows:
 ```bash
@@ -222,16 +222,16 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 <a name="benchmarking"></a>
 ## Benchmarking instructions
 
-### ResNet
+### Benchmark the performance
 
-#### Benchmark the performance
+#### ResNet
 ```
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
---dep_add_tags.weights=resnet --dep_add_tags.images=preprocessed,using-opencv \
---record --record_repo=local --record_uoa=mlperf-image-classification-resnet-tf-cpp-performance \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet \
+--record_uoa=mlperf-image-classification-resnet-tf-cpp-performance \
 --tags=mlperf,image-classification,resnet,tf-cpp,performance \
---skip_print_timers --skip_stat_analysis --process_multi_keys
 ```
 
 **NB:** When using the batch count of **N**, the program classifies **N** images, but
@@ -262,14 +262,37 @@ Accuracy top 5: 1.0 (2 of 2)
 --------------------------------
 ```
 
-#### Benchmark the accuracy
+#### MobileNet non-quantized
+```
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized \
+--record_uoa=mlperf-image-classification-mobilenet-non-quantized-tf-cpp-performance \
+--tags=mlperf,image-classification,mobilenet,non-quantized,tf-cpp,performance
+```
+
+#### MobileNet quantized
+```
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized \
+--record_uoa=mlperf-image-classification-mobilenet-quantized-tf-cpp-performance \
+--tags=mlperf,image-classification,mobilenet,quantized,tf-cpp,performance
+```
+
+
+### Benchmark the accuracy
+
+#### ResNet
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---dep_add_tags.weights=resnet --dep_add_tags.images=preprocessed,using-opencv \
---record --record_repo=local --record_uoa=mlperf-image-classification-resnet-tf-cpp-accuracy \
---tags=mlperf,image-classification,resnet,tf-cpp,accuracy \
---skip_print_timers --skip_stat_analysis --process_multi_keys
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet \
+--record_uoa=mlperf-image-classification-resnet-tf-cpp-accuracy \
+--tags=mlperf,image-classification,resnet,tf-cpp,accuracy
 ```
 
 **NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
@@ -277,48 +300,24 @@ to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as i
 with `--env.CK_BATCH_COUNT=1`).
 
 
-### MobileNet non-quantized
-
-#### Benchmark the performance
-```
-$ ck benchmark program:image-classification-tf-cpp \
---repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
---dep_add_tags.weights=mobilenet,non-quantized --dep_add_tags.images=preprocessed,using-opencv \
---record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-non-quantized-tf-cpp-performance \
---tags=mlperf,image-classification,mobilenet,non-quantized,tf-cpp,performance \
---skip_print_timers --skip_stat_analysis --process_multi_keys
-```
-
-#### Benchmark the accuracy
+#### MobileNet non-quantized
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---dep_add_tags.weights=mobilenet,non-quantized --dep_add_tags.images=preprocessed,using-opencv \
---record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-non-quantized-tf-cpp-accuracy \
---tags=mlperf,image-classification,mobilenet,non-quantized,tf-cpp,accuracy \
---skip_print_timers --skip_stat_analysis --process_multi_keys
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized \
+--record_uoa=mlperf-image-classification-mobilenet-non-quantized-tf-cpp-accuracy \
+--tags=mlperf,image-classification,mobilenet,non-quantized,tf-cpp,accuracy
 ```
 
-### MobileNet quantized
-
-#### Benchmark the performance
-```
-$ ck benchmark program:image-classification-tf-cpp \
---repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
---dep_add_tags.weights=mobilenet,quantized --dep_add_tags.images=preprocessed,using-opencv \
---record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-quantized-tf-cpp-performance \
---tags=mlperf,image-classification,mobilenet,quantized,tf-cpp,performance \
---skip_print_timers --skip_stat_analysis --process_multi_keys
-```
-
-#### Benchmark the accuracy
+#### MobileNet quantized
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---dep_add_tags.weights=mobilenet,quantized --dep_add_tags.images=preprocessed,using-opencv \
---record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-quantized-tf-cpp-accuracy \
---tags=mlperf,image-classification,mobilenet,quantized,tf-cpp,accuracy \
---skip_print_timers --skip_stat_analysis --process_multi_keys
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized \
+--record_uoa=mlperf-image-classification-mobilenet-quantized-tf-cpp-accuracy \
+--tags=mlperf,image-classification,mobilenet,quantized,tf-cpp,accuracy
 ```
 
 
@@ -330,9 +329,10 @@ $ ck benchmark program:image-classification-tf-cpp \
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---record --record_repo=local --record_uoa=mlperf-image-classification-tf-cpp-accuracy \
---tags=mlperf,image-classification,tf-cpp,accuracy \
---skip_print_timers --skip_stat_analysis --process_multi_keys
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv \
+--record_uoa=mlperf-image-classification-tf-cpp-accuracy \
+--tags=mlperf,image-classification,tf-cpp,accuracy
 ```
 
 ##### MobileNet non-quantized

@@ -336,12 +336,11 @@ $ ck benchmark program:image-classification-tf-cpp \
 
 #### Top 1
 
-| Preprocessing / model | ResNet | MobileNet non-quantized | MobileNet quantized |
+| Model | Pillow | OpenCV | TensorFlow |
 |-|-|-|-|
-| Pillow | 0.76170 | 0.71226 | 0.70348 |
-| OpenCV | 0.76458 | 0.71516 | 0.70654 |
-| TensorFlow | 0.76522 | N/A | N/A |
-
+| ResNet | 0.76170 | 0.76458 | 0.76522 |
+| MobileNet non-quantized | 0.71226 | 0.71516 | N/A |
+| MobileNet quantized | 0.70348 | 0.70654 | N/A |
 
 <a name="further-info"></a>
 ## Further information

@@ -224,16 +224,6 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 
 ### Benchmark the performance
 
-#### ResNet
-```
-$ ck benchmark program:image-classification-tf-cpp \
---repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
---skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet \
---record_uoa=mlperf-image-classification-resnet-tf-cpp-performance \
---tags=mlperf,image-classification,resnet,tf-cpp,performance \
-```
-
 **NB:** When using the batch count of **N**, the program classifies **N** images, but
 the slow first run is not taken into account when computing the average
 classification time e.g.:
@@ -262,6 +252,16 @@ Accuracy top 5: 1.0 (2 of 2)
 --------------------------------
 ```
 
+#### ResNet
+```
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet \
+--record_uoa=mlperf-image-classification-resnet-tf-cpp-performance \
+--tags=mlperf,image-classification,resnet,tf-cpp,performance \
+```
+
 #### MobileNet non-quantized
 ```
 $ ck benchmark program:image-classification-tf-cpp \
@@ -285,6 +285,10 @@ $ ck benchmark program:image-classification-tf-cpp \
 
 ### Benchmark the accuracy
 
+**NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
+to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as if
+with `--env.CK_BATCH_COUNT=1`).
+
 #### ResNet
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
@@ -294,11 +298,6 @@ $ ck benchmark program:image-classification-tf-cpp \
 --record_uoa=mlperf-image-classification-resnet-tf-cpp-accuracy \
 --tags=mlperf,image-classification,resnet,tf-cpp,accuracy
 ```
-
-**NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
-to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as if
-with `--env.CK_BATCH_COUNT=1`).
-
 
 #### MobileNet non-quantized
 ```bash

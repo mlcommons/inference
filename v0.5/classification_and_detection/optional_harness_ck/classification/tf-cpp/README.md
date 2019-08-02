@@ -84,8 +84,7 @@ If you have preprocessed input data using more than one method (OpenCV, Pillow o
 ##### OpenCV preprocessing
 ```bash
 $ ck run program:image-classification-tf-cpp \
---dep_add_tags.images=preprocessed,using-opencv \
---dep_add_tags.weights=resnet
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -100,8 +99,7 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 ##### Pillow preprocessing
 ```bash
 $ ck run program:image-classification-tf-cpp \
---dep_add_tags.images=preprocessed,using-pillow \
---dep_add_tags.weights=resnet
+--dep_add_tags.images=preprocessed,using-pillow --dep_add_tags.weights=resnet
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -116,8 +114,7 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 ##### TensorFlow preprocessing
 ```bash
 $ ck run program:image-classification-tf-cpp \
---dep_add_tags.images=preprocessed,using-tf \
---dep_add_tags.weights=resnet
+--dep_add_tags.images=preprocessed,using-tf --dep_add_tags.weights=resnet
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -134,8 +131,7 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 ##### OpenCV preprocessing
 ```bash
 $ ck run program:image-classification-tf-cpp \
---dep_add_tags.images=preprocessed,using-opencv \
---dep_add_tags.weights=mobilenet,non-quantized
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -150,8 +146,7 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 ##### Pillow preprocessing
 ```bash
 $ ck run program:image-classification-tf-cpp \
---dep_add_tags.images=preprocessed,using-pillow \
---dep_add_tags.weights=mobilenet,non-quantized
+--dep_add_tags.images=preprocessed,using-pillow --dep_add_tags.weights=mobilenet,non-quantized
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -166,8 +161,7 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 ##### TensorFlow preprocessing (**NOT APPLICABLE!**)
 ```bash
 $ ck run program:image-classification-tf-cpp \
---dep_add_tags.images=preprocessed,using-tf \
---dep_add_tags.weights=mobilenet,non-quantized
+--dep_add_tags.images=preprocessed,using-tf --dep_add_tags.weights=mobilenet,non-quantized
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -184,8 +178,7 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 ##### OpenCV preprocessing
 ```bash
 $ ck run program:image-classification-tf-cpp \
---dep_add_tags.images=preprocessed,using-opencv \
---dep_add_tags.weights=mobilenet,quantized
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -200,8 +193,7 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 ##### Pillow preprocessing
 ```bash
 $ ck run program:image-classification-tf-cpp \
---dep_add_tags.images=preprocessed,using-pillow \
---dep_add_tags.weights=mobilenet,quantized
+--dep_add_tags.images=preprocessed,using-pillow --dep_add_tags.weights=mobilenet,quantized
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -216,8 +208,7 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 ##### TensorFlow preprocessing (**NOT APPLICABLE!**)
 ```bash
 $ ck run program:image-classification-tf-cpp \
---dep_add_tags.images=preprocessed,using-tf \
---dep_add_tags.weights=mobilenet,quantized
+--dep_add_tags.images=preprocessed,using-tf --dep_add_tags.weights=mobilenet,quantized
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -239,7 +230,7 @@ the slow first run is not taken into account when computing the average
 classification time e.g.:
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
---repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2
 ...
 Processing batches...
 
@@ -264,32 +255,32 @@ Accuracy top 5: 1.0 (2 of 2)
 
 #### ResNet
 ```
-$ ck benchmark program:image-classification-tf-cpp \
+$ ck benchmark program:image-classification-tf-cpp --speed \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet \
---record_uoa=mlperf-image-classification-resnet-tf-cpp-performance \
---tags=mlperf,image-classification,resnet,tf-cpp,performance \
+--record_uoa=mlperf-image-classification-tf-cpp-performance-using-opencv-resnet \
+--tags=mlperf,image-classification,tf-cpp,performance,using-opencv,resnet \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet
 ```
 
 #### MobileNet non-quantized
 ```
-$ ck benchmark program:image-classification-tf-cpp \
+$ ck benchmark program:image-classification-tf-cpp --speed \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized \
---record_uoa=mlperf-image-classification-mobilenet-non-quantized-tf-cpp-performance \
---tags=mlperf,image-classification,mobilenet,non-quantized,tf-cpp,performance
+--record_uoa=mlperf-image-classification-tf-cpp-performance-using-opencv-mobilenet-non-quantized \
+--tags=mlperf,image-classification,tf-cpp,performance,using-opencv,mobilenet,non-quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
 ```
 
 #### MobileNet quantized
 ```
-$ ck benchmark program:image-classification-tf-cpp \
+$ ck benchmark program:image-classification-tf-cpp --speed \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized \
---record_uoa=mlperf-image-classification-mobilenet-quantized-tf-cpp-performance \
---tags=mlperf,image-classification,mobilenet,quantized,tf-cpp,performance
+--record_uoa=mlperf-image-classification-tf-cpp-performance-using-opencv-mobilenet-quantized \
+--tags=mlperf,image-classification,tf-cpp,performance,using-opencv,mobilenet,quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized
 ```
 
 
@@ -301,37 +292,47 @@ with `--env.CK_BATCH_COUNT=1`).
 
 #### ResNet
 ```bash
-$ ck benchmark program:image-classification-tf-cpp \
+$ ck benchmark program:image-classification-tf-cpp --speed \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet \
---record_uoa=mlperf-image-classification-resnet-tf-cpp-accuracy \
---tags=mlperf,image-classification,resnet,tf-cpp,accuracy
+--record_uoa=mlperf-image-classification-tf-cpp-accuracy-using-opencv-resnet \
+--tags=mlperf,image-classification,tf-cpp,accuracy,using-opencv,resnet \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet
 ```
 
 #### MobileNet non-quantized
 ```bash
-$ ck benchmark program:image-classification-tf-cpp \
+$ ck benchmark program:image-classification-tf-cpp --speed \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized \
---record_uoa=mlperf-image-classification-mobilenet-non-quantized-tf-cpp-accuracy \
---tags=mlperf,image-classification,mobilenet,non-quantized,tf-cpp,accuracy
+--record_uoa=mlperf-image-classification-tf-cpp-accuracy-using-opencv-mobilenet-non-quantized \
+--tags=mlperf,image-classification,tf-cpp,accuracy,using-opencv,mobilenet,non-quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
 ```
 
 #### MobileNet quantized
 ```bash
-$ ck benchmark program:image-classification-tf-cpp \
+$ ck benchmark program:image-classification-tf-cpp --speed \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized \
---record_uoa=mlperf-image-classification-mobilenet-quantized-tf-cpp-accuracy \
---tags=mlperf,image-classification,mobilenet,quantized,tf-cpp,accuracy
+--record_uoa=mlperf-image-classification-tf-cpp-accuracy-using-opencv-mobilenet-quantized \
+--tags=mlperf,image-classification,tf-cpp,accuracy,using-opencv,mobilenet,quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized
 ```
 
 
 <a name="accuracy"></a>
 ## Reference accuracy
+
+### Example: OpenCV preprocessing (default), MobileNet non-quantized
+```bash
+$ ck benchmark program:image-classification-tf-cpp \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--record_uoa=mlperf-image-classification-tf-cpp-accuracy-using-opencv-mobilenet-non-quantized \
+--tags=mlperf,image-classification,tf-cpp,accuracy,using-opencv,mobilenet,non-quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
+```
 
 ### ImageNet validation dataset (50,000 images)
 
@@ -352,6 +353,7 @@ $ ck benchmark program:image-classification-tf-cpp \
 |                         |  Top5  | 0.89834 | 0.90004 | N/A     |
 | MobileNet quantized     |  Top1  | 0.70348 | 0.70654 | N/A     |
 |                         |  Top5  | 0.89376 | 0.89514 | N/A     |
+
 
 <a name="further-info"></a>
 ## Further information

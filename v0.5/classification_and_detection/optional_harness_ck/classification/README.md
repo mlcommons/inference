@@ -175,6 +175,15 @@ $ ck install package:imagenet-2012-val
 $ ck detect soft:dataset.imagenet.val --full_path=$HOME/ilsvrc2012-val/ILSVRC2012_val_00000001.JPEG
 ```
 
+### Preprocess datasets (**TO BE UPDATED!**)
+
+```
+$ ck install package --tags=dataset,imagenet,preprocessed
+```
+
+**NB:** For more details about preprocessing see [here](https://github.com/ctuning/ck-env/tree/master/package/dataset-imagenet-preprocessed).
+
+
 <a name="benchmarking"></a>
 ## Benchmarking
 

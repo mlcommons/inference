@@ -110,18 +110,10 @@ $ ck install package --tags=model,tflite,mlperf,mobilenet,quantized,from-zenodo
 $ ck install package --tags=model,tflite,mlperf,mobilenet,quantized,from-google
 ```
 
-
 #### Bonus: other MobileNets models
 You can also install any other MobileNets model compatible with TFLite as follows:
 ```
 $ ck install package --tags=tensorflowmodel,mobilenet,tflite
-```
-
-### Preprocess the ImageNet dataset
-**NB:** This step will be moved to the [common instructions](../README.md), once all the clients are updated. For more details about preprocessing see [here](https://github.com/ctuning/ck-env/tree/master/package/dataset-imagenet-preprocessed).
-
-```
-$ ck install package --tags=dataset,imagenet,preprocessed
 ```
 
 ### Compile the TFLite Image Classification client

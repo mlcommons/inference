@@ -135,8 +135,7 @@ If you have preprocessed input data using more than one method (OpenCV, Pillow o
 ##### OpenCV preprocessing
 ```bash
 $ ck run program:image-classification-tflite \
---dep_add_tags.images=preprocessed,using-opencv \
---dep_add_tags.weights=resnet
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -153,8 +152,7 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 ##### OpenCV preprocessing
 ```bash
 $ ck run program:image-classification-tflite \
---dep_add_tags.images=preprocessed,using-opencv \
---dep_add_tags.weights=mobilenet,non-quantized
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
@@ -171,18 +169,18 @@ ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
 ##### OpenCV preprocessing
 ```bash
 $ ck run program:image-classification-tflite \
---dep_add_tags.images=preprocessed,using-opencv \
---dep_add_tags.weights=mobilenet,quantized
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized
 ...
 ---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
-0.91 - (65) n01751748 sea snake
-0.05 - (58) n01737021 water snake
-0.03 - (34) n01665541 leatherback turtle, leatherback, leather...
-0.01 - (54) n01729322 hognose snake, puff adder, sand viper
-0.00 - (57) n01735189 garter snake, grass snake
+0.88 - (65) n01751748 sea snake
+0.07 - (34) n01665541 leatherback turtle, leatherback, leather...
+0.03 - (58) n01737021 water snake
+0.00 - (54) n01729322 hognose snake, puff adder, sand viper
+0.00 - (0) n01440764 tench, Tinca tinca
 ---------------------------------------
 ```
+**NB:** The prediction from `tflite` differs from that from `tf-cpp`.
 
 <a name="benchmarking"></a>
 ## Benchmarking instructions
@@ -194,7 +192,7 @@ the slow first run is not taken into account when computing the average
 classification time e.g.:
 ```
 $ ck benchmark program:image-classification-tflite \
---repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2
 ...
 Processing batches...
 

@@ -44,7 +44,7 @@ dependencies.
 ## Debian
 
 - Common tools and libraries.
-- [Python](https://www.python.org/), [pip](https://pypi.org/project/pip/), [SciPy](https://www.scipy.org/), [Collective Knowledge](https://cknowledge.org) (CK).
+- [Python](https://www.python.org/), [pip](https://pypi.org/project/pip/), [NumPy](https://numpy.org/), [Collective Knowledge](https://cknowledge.org) (CK).
 - (Optional) [Android SDK](https://developer.android.com/studio/), [Android NDK](https://developer.android.com/ndk/).
 
 ### Install common tools and libraries
@@ -97,18 +97,18 @@ with CK at the same time (so there is less chance of mixing things up).
 
 #### Option 1: system-wide installation via pip (under `/usr`)
 ```bash
-$ sudo python3 -m pip install scipy==1.2.1 ck
+$ sudo python3 -m pip install numpy ck
 ```
 #### Option 2: user-space installation via pip (under `$HOME`)
 ```bash
-$ python3 -m pip install scipy==1.2.1 ck --user
+$ python3 -m pip install numpy ck --user
 ```
 #### Option 3: User-space installation via CK (under `$HOME` and `$CK_TOOLS`)
 Install CK via pip (or [from GitHub](https://github.com/ctuning/ck#installation)):
 ```bash
 $ python3 -m pip install ck --user
 $ ck version
-V1.9.7
+V1.10.3
 ```
 
 Install and register Python packages with CK:
@@ -116,7 +116,6 @@ Install and register Python packages with CK:
 $ ck pull repo:ck-env
 $ ck detect soft:compiler.python --full_path=`which python3`
 $ ck install package --tags=lib,python-package,numpy
-$ ck install package --tags=lib,python-package,scipy --force_version=1.2.1
 ```
 
 If the above dependencies have been installed on a clean system, you should be
@@ -126,11 +125,9 @@ $ ck show env --tags=python-package
 Env UID:         Target OS: Bits: Name:                     Version: Tags:
 
 4e82bab01c8ee3b7   linux-64    64 Python NumPy library      1.16.2   64bits,host-os-linux-64,lib,needs-python,needs-python-3.5.2,numpy,python-package,target-os-linux-64,v1,v1.16,v1.16.2,vmaster
-66642698751a2fcf   linux-64    64 Python SciPy library      1.2.1    64bits,host-os-linux-64,lib,needs-python,needs-python-3.5.2,python-package,scipy,target-os-linux-64,v1,v1.2,v1.2.1,vmaster
 
 $ ck cat env --tags=python-package | grep PYTHONPATH
 export PYTHONPATH=/home/anton/CK_TOOLS/lib-python-numpy-compiler.python-3.5.2-linux-64/build:${PYTHONPATH}
-export PYTHONPATH=/home/anton/CK_TOOLS/lib-python-scipy-compiler.python-3.5.2-linux-64/build:${PYTHONPATH}
 ```
 
 ### [Optional] Install Android SDK and NDK

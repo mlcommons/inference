@@ -63,13 +63,6 @@ You can benchmark ResNet exactly in the same way as MobileNet.
 Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#benchmarking) below.
 
 
-### Preprocess the ImageNet dataset
-**NB:** This step will be moved to the [common instructions](../README.md), once all the clients are updated. For more details about preprocessing see [here](https://github.com/ctuning/ck-env/tree/master/package/dataset-imagenet-preprocessed).
-
-```
-$ ck install package --tags=dataset,imagenet,preprocessed
-```
-
 ### Run the ONNX Image Classification client
 
 #### MobileNet, NHWC

@@ -117,79 +117,77 @@ $ ck install package --tags=tensorflowmodel,mobilenet,tflite
 ```
 
 ### Compile the TFLite Image Classification client
-```
-$ ck compile program:image-classification-tflite [--target_os=android23-arm64]
+
+Compile the client. (For Android, append e.g. `--target_os=android23-arm64` to the command.)
+
+```bash
+$ ck compile program:image-classification-tflite --speed
 ```
 
 ### Run the TFLite Image Classification client
 
-Run the client (if required, connect an Android device to your host machine via USB):
+Run the client. (For Android, connect an Android device to your host machine via USB and append e.g. `--target_os=android23-arm64` to the command).
 
-- with the non-quantized model:
-```
-$ ck run program:image-classification-tflite [--target_os=android23-arm64]
+If you have preprocessed input data using more than one method (OpenCV, Pillow or TensorFlow), you need to select the particular preprocessed dataset. Note that the TensorFlow preprocessing method is not applicable to the MobileNet models.
+
+#### ResNet
+
+##### OpenCV preprocessing
+```bash
+$ ck run program:image-classification-tflite \
+--dep_add_tags.images=preprocessed,using-opencv \
+--dep_add_tags.weights=resnet
 ...
-*** Dependency 3 = weights (TensorFlow-Python model and weights):
-...
-    Resolved. CK environment UID = 4edbb2648a48d94d (version 1_1.0_224_2018_08_02)
-...
+---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
-0.84 - (65) n01751748 sea snake
-0.08 - (58) n01737021 water snake
+0.95 - (65) n01751748 sea snake
+0.01 - (58) n01737021 water snake
+0.01 - (54) n01729322 hognose snake, puff adder, sand viper
+0.01 - (66) n01753488 horned viper, cerastes, sand viper, horn...
+0.00 - (60) n01740131 night snake, Hypsiglena torquata
+---------------------------------------
+```
+
+#### MobileNet non-quantized
+
+##### OpenCV preprocessing
+```bash
+$ ck run program:image-classification-tflite \
+--dep_add_tags.images=preprocessed,using-opencv \
+--dep_add_tags.weights=mobilenet,non-quantized
+...
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.86 - (65) n01751748 sea snake
+0.05 - (58) n01737021 water snake
 0.04 - (34) n01665541 leatherback turtle, leatherback, leather...
 0.01 - (54) n01729322 hognose snake, puff adder, sand viper
 0.01 - (57) n01735189 garter snake, grass snake
 ---------------------------------------
-
-Summary:
--------------------------------
-Graph loaded in 0.000860s
-All images loaded in 0.007685s
-All images classified in 0.173653s
-Average classification time: 0.173653s
-Accuracy top 1: 1.0 (1 of 1)
-Accuracy top 5: 1.0 (1 of 1)
---------------------------------
 ```
 
-- with the quantized model:
-```
-$ ck run program:image-classification-tflite [--target_os=android23-arm64]
+#### MobileNet quantized
+
+##### OpenCV preprocessing
+```bash
+$ ck run program:image-classification-tflite \
+--dep_add_tags.images=preprocessed,using-opencv \
+--dep_add_tags.weights=mobilenet,quantized
 ...
-*** Dependency 3 = weights (TensorFlow-Python model and weights):
-...
-    Resolved. CK environment UID = 3f0ca5c4d25b4ea3 (version 1_1.0_224_quant_2018_08_02)
-...
-ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
-0.80 - (65) n01751748 sea snake
-0.09 - (34) n01665541 leatherback turtle, leatherback, leather...
-0.05 - (58) n01737021 water snake
-0.03 - (54) n01729322 hognose snake, puff adder, sand viper
-0.00 - (33) n01664065 loggerhead, loggerhead turtle, Caretta c...
 ---------------------------------------
-
-Summary:
--------------------------------
-Graph loaded in 0.000589s
-All images loaded in 0.000290s
-All images classified in 0.450257s
-Average classification time: 0.450257s
-Accuracy top 1: 1.0 (1 of 1)
-Accuracy top 5: 1.0 (1 of 1)
---------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.91 - (65) n01751748 sea snake
+0.05 - (58) n01737021 water snake
+0.03 - (34) n01665541 leatherback turtle, leatherback, leather...
+0.01 - (54) n01729322 hognose snake, puff adder, sand viper
+0.00 - (57) n01735189 garter snake, grass snake
+---------------------------------------
 ```
 
 <a name="benchmarking"></a>
 ## Benchmarking instructions
 
 ### Benchmark the performance
-```
-$ ck benchmark program:image-classification-tflite \
---repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
---record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tflite-performance \
---tags=mlperf,image-classification,mobilenet,tflite,performance \
---skip_print_timers --skip_stat_analysis --process_multi_keys
-```
 
 **NB:** When using the batch count of **N**, the program classifies **N** images, but
 the slow first run is not taken into account when computing the average
@@ -221,38 +219,97 @@ Accuracy top 5: 1.0 (2 of 2)
 --------------------------------
 ```
 
-### Benchmark the accuracy
+#### ResNet
 ```
 $ ck benchmark program:image-classification-tflite \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet \
+--record_uoa=mlperf-image-classification-resnet-tflite-performance \
+--tags=mlperf,image-classification,resnet,tflite,performance \
+```
+
+#### MobileNet non-quantized
+```
+$ ck benchmark program:image-classification-tflite \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized \
+--record_uoa=mlperf-image-classification-mobilenet-non-quantized-tflite-performance \
+--tags=mlperf,image-classification,mobilenet,non-quantized,tflite,performance
+```
+
+#### MobileNet quantized
+```
+$ ck benchmark program:image-classification-tflite \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized \
+--record_uoa=mlperf-image-classification-mobilenet-quantized-tflite-performance \
+--tags=mlperf,image-classification,mobilenet,quantized,tflite,performance
+```
+
+### Benchmark the accuracy
+
+**NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
+to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as if
+with `--env.CK_BATCH_COUNT=1`).
+
+#### ResNet
+```bash
+$ ck benchmark program:image-classification-tflite \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tflite-accuracy \
---tags=mlperf,image-classification,mobilenet,tflite,accuracy \
---skip_print_timers --skip_stat_analysis --process_multi_keys
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet \
+--record_uoa=mlperf-image-classification-resnet-tflite-accuracy \
+--tags=mlperf,image-classification,resnet,tflite,accuracy
+```
+
+#### MobileNet non-quantized
+```bash
+$ ck benchmark program:image-classification-tflite \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized \
+--record_uoa=mlperf-image-classification-mobilenet-non-quantized-tflite-accuracy \
+--tags=mlperf,image-classification,mobilenet,non-quantized,tflite,accuracy
+```
+
+#### MobileNet quantized
+```bash
+$ ck benchmark program:image-classification-tflite \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized \
+--record_uoa=mlperf-image-classification-mobilenet-quantized-tflite-accuracy \
+--tags=mlperf,image-classification,mobilenet,quantized,tflite,accuracy
 ```
 
 
 <a name="accuracy"></a>
 ## Reference accuracy
 
-### ImageNet validation dataset (50,000 images)
-
+### Example: OpenCV preprocessing (default), MobileNet non-quantized
 ```bash
 $ ck benchmark program:image-classification-tflite \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---record_uoa=mlperf-image-classification-tflite-accuracy \
---tags=mlperf,image-classification,tflite,accuracy \
---dep_add_tags.images=preprocessed,using-opencv
+--record_uoa=mlperf-image-classification-tflite-accuracy-using-opencv-mobilenet-non-quantized \
+--tags=mlperf,image-classification,tflite,accuracy,using-opencv,mobilenet,non-quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
 ```
+
+### ImageNet validation dataset (50,000 images)
 
 | Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
 |-|-|-|-|-|
 | ResNet                  |  Top1  | 0.00000 | 0.00000 | 0.00000 |
 |                         |  Top5  | 0.00000 | 0.00000 | 0.00000 |
-| MobileNet non-quantized |  Top1  | 0.00000 | 0.00000 | N/A     |
-|                         |  Top5  | 0.00000 | 0.00000 | N/A     |
+| MobileNet non-quantized |  Top1  | 0.00000 | 0.71516 | N/A     |
+|                         |  Top5  | 0.00000 | 0.90006 | N/A     |
 | MobileNet quantized     |  Top1  | 0.00000 | 0.00000 | N/A     |
 |                         |  Top5  | 0.00000 | 0.00000 | N/A     |
+
 
 <a name="further-info"></a>
 ## Further information

@@ -172,13 +172,46 @@ $ ck install package:imagenet-2012-val
 $ ck detect soft:dataset.imagenet.val --full_path=$HOME/ilsvrc2012-val/ILSVRC2012_val_00000001.JPEG
 ```
 
-### Preprocess datasets (**TO BE UPDATED!**)
+### Preprocess datasets
 
+ImageNet can be preprocessed in many different ways, which can significantly affect the resulting accuracy. We currently support 3 different preprocessing methods:
 ```
 $ ck install package --tags=dataset,imagenet,preprocessed
+
+More than one package or version found:
+
+ 0) dataset-imagenet-preprocessed-using-tensorflow (fac1d0d5f4e69a85)
+ 1) dataset-imagenet-preprocessed-using-pillow (a6a4613ba6dfd570)
+ 2) dataset-imagenet-preprocessed-using-opencv (4932bbdd2ac7a17b)
+
+Please select the package to install [ hit return for "0" ]: 
 ```
 
-**NB:** For more details about preprocessing see [here](https://github.com/ctuning/ck-env/tree/master/package/dataset-imagenet-preprocessed).
+The table below shows the accuracy on the ImageNet validation set (50,000) images measured [via TensorFlow (C++)](tf-cpp/README.md):
+
+| Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
+|-|-|-|-|-|
+| ResNet                  |  Top1  | 0.76170 | 0.76458 | 0.76522 |
+|                         |  Top5  | 0.92866 | 0.93014 | 0.93066 |
+| MobileNet non-quantized |  Top1  | 0.71226 | 0.71516 | N/A     |
+|                         |  Top5  | 0.89834 | 0.90004 | N/A     |
+| MobileNet quantized     |  Top1  | 0.70348 | 0.70654 | N/A     |
+|                         |  Top5  | 0.89376 | 0.89514 | N/A     |
+
+
+Preprocessing using OpenCV (option 2) is the current official method uses OpenCV. You can perform it directly as follows:
+```
+$ ck install package --tags=dataset,imagenet,preprocessed,using-opencv
+```
+
+Preprocessing using TensorFlow (option 0) only works for ResNet and is only supported on x86 platforms.
+
+Preprocessing Using Pillow (option 1) is widely available, although results in lower accuracy.
+
+
+#### Detect datasets preprocessed on a different machine
+
+**TODO**
 
 
 <a name="benchmarking"></a>

@@ -347,7 +347,7 @@ $ grep CK_CROP_PERCENT /home/anton/CK_REPOS/local/experiment/mlperf-mobilenet-tf
 ```
 
 This can be changed by passing e.g. `--env.CK_CROP_PERCENT=100` to `ck
-benchmark` (but see [here](tf-cpp/README.md#accuracy) how this can make results worse).
+benchmark` (but see [here](https://github.com/mlperf/inference/tree/21efaf57d55ccd78e77b87c668bb09d47564bb6a/v0.5/classification_and_detection/optional_harness_ck/classification/tf-cpp#reference-accuracy) how this can make results worse).
 
 
 ### Visualizing experimental results

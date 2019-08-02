@@ -235,29 +235,24 @@ $ ck benchmark program:image-classification-tflite \
 ## Reference accuracy
 
 ### ImageNet validation dataset (50,000 images)
-```
+
+```bash
 $ ck benchmark program:image-classification-tflite \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---record --record_repo=local --record_uoa=mlperf-image-classification-tflite-accuracy \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--record_uoa=mlperf-image-classification-tflite-accuracy \
 --tags=mlperf,image-classification,tflite,accuracy \
---skip_print_timers --skip_stat_analysis --process_multi_keys
+--dep_add_tags.images=preprocessed,using-opencv
 ```
 
-#### 87.5% cropping (default)
-##### MobileNet non-quantized
-```
-"accuracy_top1": 0.69966 # == 0.69966 for tf-cpp (=000 images)
-"accuracy_top5": 0.87628 # << 0.89366 for tf-cpp (-869 images)
-```
-
-##### MobileNet quantized
-**TODO**
-
-##### ResNet
-```
-"accuracy_top1": 0.73302 # >= 0.73288 for tf-cpp (+007 images)
-"accuracy_top5": 0.90148 # << 0.91606 for tf-cpp (-729 images)
-```
+| Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
+|-|-|-|-|-|
+| ResNet                  |  Top1  | 0.00000 | 0.00000 | 0.00000 |
+|                         |  Top5  | 0.00000 | 0.00000 | 0.00000 |
+| MobileNet non-quantized |  Top1  | 0.00000 | 0.00000 | N/A     |
+|                         |  Top5  | 0.00000 | 0.00000 | N/A     |
+| MobileNet quantized     |  Top1  | 0.00000 | 0.00000 | N/A     |
+|                         |  Top5  | 0.00000 | 0.00000 | N/A     |
 
 <a name="further-info"></a>
 ## Further information

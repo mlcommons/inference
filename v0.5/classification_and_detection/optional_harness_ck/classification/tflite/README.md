@@ -17,6 +17,7 @@ Install TFLite v1.13.1 from source:
 ```
 $ ck install package --tags=lib,tflite,v1.13.1,vsrc [--target_os=android23-arm64]
 ```
+**NB:** TFLite v1.14.0 has [many known issues on Arm platforms](https://github.com/ctuning/ck-tensorflow/blob/master/package/lib-tflite-1.14.0-src-static/README.md), and does not work for Android yet.
 
 You can also install TFLite v0.1.7 from a prebuilt binary package for your target e.g.:
 ```
@@ -31,10 +32,40 @@ $ ck install package:lib-tflite-prebuilt-0.1.7-android-arm64 [--target_os=androi
 prebuilt packages for TFLite 1.13.1.
 
 
-### Install the MobileNet models for TFLite
+### Install the models for TFLite
+
+#### ResNet
+
+To install the ResNet50-v1.5 model:
+```bash
+$ ck install package --tags=model,tflite,mlperf,resnet
+
+More than one package or version found:
+
+ 0) model-tflite-mlperf-resnet-no-argmax  Version 1.5  (afb43014ef38f646)
+ 1) model-tflite-mlperf-resnet  Version 1.5  (d60d4e9a84151271)
+ 2) model-tflite-convert-from-tf (35e84375ac48dcb1), Variations: resnet
+
+Please select the package to install [ hit return for "0" ]:
+```
+
+Option 0 will download a TFLite model preconverted from the TF model.  During
+the conversion, the `ArgMax` operator causing an
+[issue](https://github.com/ARM-software/armnn/issues/150) with ArmNN v19.02
+and v19.05 was excluded.
+
+Option 1 will download a TFLite model preconverted from the TF model, but
+including the `ArgMax` operator. This variant can be used with ArmNN once
+the above issue is resolved.
+
+Option 2 will download the TF model and convert it to TFLite, while excluding
+the `ArgMax` operator.
+
+
+#### MobileNet
 
 To select interactively from one of the non-quantized and quantized
-MobileNets-v1-1.0-224 models adopted for MLPerf Inference v0.5:
+MobileNets-v1-1.0-224 models:
 ```
 $ ck install package --tags=model,tflite,mlperf,mobilenet
 
@@ -55,49 +86,32 @@ version of TF built from source, building TF from source takes a long time on
 Arm platforms (as well as [not being officially
 supported](https://github.com/tensorflow/tensorflow/issues/25607#issuecomment-466583730)).
 
-#### Install the [non-quantized model](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) directly
-```
-$ ck install package --tags=model,tflite,mlperf,mobilenet,non-quantized
-```
+##### MobileNet non-quantized
 
-#### Install the [quantized model](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) directly
-```
-$ ck install package --tags=model,tflite,mlperf,mobilenet,quantized
-```
-
-#### Bonus
-
-##### Install the ResNet model
-
-To install the ResNet50-v1.5 model:
+To install the non-quantized MobileNet model from:
+- [zenodo.org](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) (default):
 ```bash
-$ ck install package --tags=model,tflite,mlperf,resnet
-
-More than one package or version found:
-
- 0) model-tflite-mlperf-resnet-no-argmax  Version 1.5  (afb43014ef38f646)
- 1) model-tflite-mlperf-resnet  Version 1.5  (d60d4e9a84151271)
- 2) model-tflite-convert-from-tf (35e84375ac48dcb1), Variations: resnet
-
-Please select the package to install [ hit return for "0" ]:
+$ ck install package --tags=model,tflite,mlperf,mobilenet,non-quantized,from-zenodo
+```
+- [tensorflow.org](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz)
+```bash
+$ ck install package --tags=model,tflite,mlperf,mobilenet,non-quantized,from-google
 ```
 
-Option 0 will download a TFLite model preconverted from the TF model.  During
-the conversion, the `ArgMax` operator causing an
-[issue](https://github.com/ARM-software/armnn/issues/150) with ArmNN v19.02 was
-excluded.
+##### MobileNet quantized
 
-Option 1 will download a TFLite model preconverted from the TF model, but
-including the `ArgMax` operator. This variant can be used with ArmNN once
-the above issue is resolved.
+To install the quantized MobileNet model from:
+- [zenodo.org](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz) (default):
+```bash
+$ ck install package --tags=model,tflite,mlperf,mobilenet,quantized,from-zenodo
+```
+- [tensorflow.org](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz)
+```bash
+$ ck install package --tags=model,tflite,mlperf,mobilenet,quantized,from-google
+```
 
-Option 2 will download the TF model and convert it to TFLite, while excluding
-the `ArgMax` operator.
 
-You can benchmark ResNet exactly in the same way as MobileNet.
-Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#benchmarking) below.
-
-##### Install other MobileNets models
+#### Bonus: other MobileNets models
 You can also install any other MobileNets model compatible with TFLite as follows:
 ```
 $ ck install package --tags=tensorflowmodel,mobilenet,tflite

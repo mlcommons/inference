@@ -199,7 +199,7 @@ The table below shows the accuracy on the ImageNet validation set (50,000) image
 |                         |  Top5  | 0.89376 | 0.89514 | N/A     |
 
 
-Preprocessing using OpenCV (option 2) is the current official method uses OpenCV. You can perform it directly as follows:
+Preprocessing using OpenCV (option 2) is the current official method. You can perform it directly as follows:
 ```
 $ ck install package --tags=dataset,imagenet,preprocessed,using-opencv
 ```

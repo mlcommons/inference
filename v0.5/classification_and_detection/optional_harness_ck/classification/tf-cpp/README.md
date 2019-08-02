@@ -36,16 +36,26 @@ $ ck install package --tags=model,tf,mlperf,mobilenet
 
 ##### MobileNet non-quantized
 
-To install the [non-quantized model](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) directly:
+To install the non-quantized MobileNet model from:
+- [zenodo.org](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) (default):
 ```bash
-$ ck install package --tags=model,tf,mlperf,mobilenet,non-quantized
+$ ck install package --tags=model,tf,mlperf,mobilenet,non-quantized,from-zenodo
+```
+- [tensorflow.org](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz)
+```bash
+$ ck install package --tags=model,tf,mlperf,mobilenet,non-quantized,from-google
 ```
 
 ##### MobileNet quantized
 
-To install the [quantized model](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) directly:
+To install the quantized MobileNet model from:
+- [zenodo.org](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz) (default):
 ```bash
-$ ck install package --tags=model,tf,mlperf,mobilenet,quantized
+$ ck install package --tags=model,tf,mlperf,mobilenet,quantized,from-zenodo
+```
+- [tensorflow.org](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz)
+```bash
+$ ck install package --tags=model,tf,mlperf,mobilenet,quantized,from-google
 ```
 
 ##### Bonus: other MobileNets models

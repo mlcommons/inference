@@ -29,6 +29,11 @@ namespace mlperf {
 /// \addtogroup LoadgenAPI
 /// @{
 
+/// \addtogroup LoadgenAPITestSettings Test Settings
+/// \brief This page contains a description of all the scenarios, modes,
+/// and log settings as implemented by the LoadGen.
+/// @{
+
 ///
 /// \enum TestScenario
 /// * **SingleStream**
@@ -49,6 +54,8 @@ namespace mlperf {
 ///    too much.
 ///  + By default, only a single query may be outstanding at a time.
 ///  + Latency is tracked on a per-sample basis, as opposed to per-query.
+///  + The samples of each query are guaranteed to be contiguous with respect
+///    to the order they were loaded in the QuerySampleLibrary.
 ///  + **Final performance result is:** PASS if the 90 percentile latency is
 ///    under a given threshold. FAIL otherwise.
 ///   - Threshold is specified by \link
@@ -76,6 +83,9 @@ namespace mlperf {
 ///   \endlink.
 /// * **Offline**
 ///  + Sends all N samples to the SUT inside of a single query.
+///  + The samples of the query are guaranteed to be contiguous with respect
+///    to the order they were loaded in the QuerySampleLibrary.
+///    (WIP. Not true yet.)
 ///  + **Final performance result is:** samples per second.
 ///
 enum class TestScenario {
@@ -239,6 +249,8 @@ struct LogSettings {
   uint64_t log_mode_async_poll_interval_ms = 1000;  ///< TODO: Implement this.
   bool enable_trace = true;                         ///< TODO: Implement this.
 };
+
+/// @}
 
 /// @}
 

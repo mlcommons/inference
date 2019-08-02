@@ -1,4 +1,4 @@
-# Generating the HTML docs
+# Generating the HTML docs {#ReadmeHtmlDocs}
 
 *Prerequisite:* You must have [doxygen](http://www.doxygen.nl) installed
 on your system:
@@ -18,8 +18,5 @@ Alternatively, you can manually run:
 
     python docs/src/doxygen_html_generator.py <target_dir> <loadgen_root>
 
-* If <loadgen_root> is omittted, it will default to ".".
+* If <loadgen_root> is omitted, it will default to ".".
 * If <target_dir> is also omitted, it will default to "./docs/gen".
-
-
-

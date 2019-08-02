@@ -20,9 +20,9 @@ action("generate_doxygen_html") {
   script = "doxygen_html_generator.py"
   args = [ rebase_path(generated_doxygen_out_dir, root_build_dir),
            rebase_path("../..") ]
-  inputs = loadgen_doxygen_sources
   outputs = [ generated_doxygen_out_dir ]
-  deps = [ ":doxygen_html_generator_script",
+  deps = [ ":loadgen_doxygen_sources",
+           ":doxygen_html_generator_script",
            "../..:mlperf_loadgen_sources_no_gen",
            "../..:docs" ]
 }

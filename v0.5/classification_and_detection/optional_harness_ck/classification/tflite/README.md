@@ -221,32 +221,32 @@ Accuracy top 5: 1.0 (2 of 2)
 
 #### ResNet
 ```
-$ ck benchmark program:image-classification-tflite \
+$ ck benchmark program:image-classification-tflite --speed \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet \
---record_uoa=mlperf-image-classification-resnet-tflite-performance \
---tags=mlperf,image-classification,resnet,tflite,performance \
+--record_uoa=mlperf-image-classification-tflite-performance-using-opencv-resnet \
+--tags=mlperf,image-classification,tflite,performance,using-opencv,resnet \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet
 ```
 
 #### MobileNet non-quantized
 ```
-$ ck benchmark program:image-classification-tflite \
+$ ck benchmark program:image-classification-tflite --speed \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized \
---record_uoa=mlperf-image-classification-mobilenet-non-quantized-tflite-performance \
---tags=mlperf,image-classification,mobilenet,non-quantized,tflite,performance
+--record_uoa=mlperf-image-classification-tflite-performance-using-opencv-mobilenet-non-quantized \
+--tags=mlperf,image-classification,tflite,performance,using-opencv,mobilenet,non-quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
 ```
 
 #### MobileNet quantized
 ```
-$ ck benchmark program:image-classification-tflite \
+$ ck benchmark program:image-classification-tflite --speed \
 --repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized \
---record_uoa=mlperf-image-classification-mobilenet-quantized-tflite-performance \
---tags=mlperf,image-classification,mobilenet,quantized,tflite,performance
+--record_uoa=mlperf-image-classification-tflite-performance-using-opencv-mobilenet-quantized \
+--tags=mlperf,image-classification,tflite,performance,using-opencv,mobilenet,quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized
 ```
 
 ### Benchmark the accuracy
@@ -257,32 +257,32 @@ with `--env.CK_BATCH_COUNT=1`).
 
 #### ResNet
 ```bash
-$ ck benchmark program:image-classification-tflite \
+$ ck benchmark program:image-classification-tflite --speed \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet \
---record_uoa=mlperf-image-classification-resnet-tflite-accuracy \
---tags=mlperf,image-classification,resnet,tflite,accuracy
+--record_uoa=mlperf-image-classification-tflite-accuracy-using-opencv-resnet \
+--tags=mlperf,image-classification,tflite,accuracy,using-opencv,resnet \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet
 ```
 
 #### MobileNet non-quantized
 ```bash
-$ ck benchmark program:image-classification-tflite \
+$ ck benchmark program:image-classification-tflite --speed \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized \
---record_uoa=mlperf-image-classification-mobilenet-non-quantized-tflite-accuracy \
---tags=mlperf,image-classification,mobilenet,non-quantized,tflite,accuracy
+--record_uoa=mlperf-image-classification-tflite-accuracy-using-opencv-mobilenet-non-quantized \
+--tags=mlperf,image-classification,tflite,accuracy,using-opencv,mobilenet,non-quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
 ```
 
 #### MobileNet quantized
 ```bash
-$ ck benchmark program:image-classification-tflite \
+$ ck benchmark program:image-classification-tflite --speed \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
 --skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
---dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized \
---record_uoa=mlperf-image-classification-mobilenet-quantized-tflite-accuracy \
---tags=mlperf,image-classification,mobilenet,quantized,tflite,accuracy
+--record_uoa=mlperf-image-classification-tflite-accuracy-using-opencv-mobilenet-quantized \
+--tags=mlperf,image-classification,tflite,accuracy,using-opencv,mobilenet,quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized
 ```
 
 

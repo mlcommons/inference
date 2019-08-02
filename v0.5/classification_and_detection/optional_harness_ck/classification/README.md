@@ -174,7 +174,9 @@ $ ck detect soft:dataset.imagenet.val --full_path=$HOME/ilsvrc2012-val/ILSVRC201
 
 ### Preprocess datasets
 
-ImageNet can be preprocessed in many different ways, which can significantly affect the resulting accuracy. We currently support 3 different preprocessing methods:
+ImageNet can be preprocessed in many different ways,
+which can significantly affect the resulting accuracy.
+We currently support 3 different preprocessing methods:
 ```
 $ ck install package --tags=dataset,imagenet,preprocessed
 
@@ -187,27 +189,51 @@ More than one package or version found:
 Please select the package to install [ hit return for "0" ]: 
 ```
 
-The table below shows the accuracy on the ImageNet validation set (50,000) images measured [via TensorFlow (C++)](tf-cpp/README.md):
+Preprocessing using OpenCV (option 2) is the current official method.
+You can perform it directly by adding the `using-opencv` tag as follows:
+```
+$ ck install package --tags=dataset,imagenet,preprocessed,using-opencv --ask
+```
+
+You can locate the preprocessed files on disk using the same tags as follows:
+```
+$ ck cat env --tags=dataset,imagenet,preprocessed,using-opencv | grep CK_ENV_DATASET_IMAGENET_PREPROCESSED_DIR
+export CK_ENV_DATASET_IMAGENET_PREPROCESSED_DIR=/datasets/dataset-imagenet-preprocessed-using-opencv
+```
+
+CK installs all the dependencies automatically. (More information on recommended choices for dependencies can be provided on demand.)
+
+#### Summary of preprocessing methods
+
+The table below summarizes the available methods.
+
+| Model                   | Pillow            | OpenCV            | TensorFlow         |
+|-|-|-|-|
+| Is official?            | No                | Yes               | No                 |
+| Additional tags         | `using-pillow`    | `using-opencv`    | `using-tensorflow` |
+| Supported models        | ResNet, MobileNet | ResNet, MobileNet | ResNet only        |
+| Supported platforms     | x86, arm          | x86               | x86 (prebuilt TF)  |
+| Data format             | rgb8 (int8)       | rgb8 (int8)       | rgbf32 (float32)   |
+| Data size               | 7.1G              | 7.1G              | 29G                |
+
+
+#### Accuracy on the ImageNet 2012 validation set
+
+The table below shows the accuracy on the ImageNet 2012 validation set
+(50,000 images) measured [via TensorFlow (C++)](tf-cpp/README.md).
 
 | Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
 |-|-|-|-|-|
-| ResNet                  |  Top1  | 0.76170 | 0.76458 | 0.76522 |
-|                         |  Top5  | 0.92866 | 0.93014 | 0.93066 |
-| MobileNet non-quantized |  Top1  | 0.71226 | 0.71516 | N/A     |
-|                         |  Top5  | 0.89834 | 0.90004 | N/A     |
-| MobileNet quantized     |  Top1  | 0.70348 | 0.70654 | N/A     |
-|                         |  Top5  | 0.89376 | 0.89514 | N/A     |
+| ResNet                  |  Top1  | 0.76170 | 0.76458 | 0.76522    |
+|                         |  Top5  | 0.92866 | 0.93014 | 0.93066    |
+| MobileNet non-quantized |  Top1  | 0.71226 | 0.71516 | N/A        |
+|                         |  Top5  | 0.89834 | 0.90004 | N/A        |
+| MobileNet quantized     |  Top1  | 0.70348 | 0.70654 | N/A        |
+|                         |  Top5  | 0.89376 | 0.89514 | N/A        |
 
-
-Preprocessing using OpenCV (option 2) is the current official method. You can perform it directly as follows:
-```
-$ ck install package --tags=dataset,imagenet,preprocessed,using-opencv
-```
-
-Preprocessing using TensorFlow (option 0) only works for ResNet and is only supported on x86 platforms.
-
-Preprocessing Using Pillow (option 1) is widely available, although results in lower accuracy.
-
+**NB:** The accuracy of the non-quantized MobileNet model using OpenCV preprocessing (0.71516)
+differs slightly from the accuracy measured via the official reference code (0.7168).
+While we have tried quite a few different things to improve the accuracy, any ideas are welcome.
 
 #### Detect datasets preprocessed on a different machine
 

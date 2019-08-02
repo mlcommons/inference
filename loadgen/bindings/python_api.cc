@@ -115,6 +115,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 
 }  // namespace
 
+/// \brief Python bindings.
 namespace py {
 
 uintptr_t ConstructSUT(IssueQueryCallback issue_cb,
@@ -169,7 +170,7 @@ void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
   mlperf::StartTest(sut_cast, qsl_cast, test_settings, log_settings);
 }
 
-// TODO: Get rid of copies.
+/// TODO: Get rid of copies.
 void QuerySamplesComplete(std::vector<QuerySampleResponse> responses) {
   pybind11::gil_scoped_release gil_releaser;
   mlperf::QuerySamplesComplete(responses.data(), responses.size());

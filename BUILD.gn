@@ -3,6 +3,7 @@ group("gn_all") {
     "loadgen:docs",
     "loadgen:mlperf_loadgen",
     "loadgen:mlperf_loadgen_pymodule_lib",
+    "loadgen/docs/src:generate_doxygen_html",
     "loadgen/demos:loadgen_demos_python",
     "loadgen/tests:mlperf_loadgen_perftests",
     "loadgen/tests:mlperf_loadgen_tests_basic",

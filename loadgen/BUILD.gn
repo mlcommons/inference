@@ -37,6 +37,10 @@ mlperf_loadgen_sources_no_gen = public_headers + lib_sources + c_api_sources
 mlperf_loadgen_sources = mlperf_loadgen_sources_no_gen +
                          [ generated_version_source_filename ]
 
+source_set("mlperf_loadgen_sources_no_gen") {
+  sources = mlperf_loadgen_sources_no_gen
+}
+
 source_set("docs") {
   sources = [ "README.md" ]
 }
@@ -92,10 +96,10 @@ source_set("version_generator_script") {
 
 action("generate_loadgen_version_header") {
   script = "version_generator.py"
-  deps = [ ":version_generator_script" ]
-  inputs = mlperf_loadgen_sources_no_gen
-  outputs = [ generated_version_source_filename ]
   args = [ rebase_path(generated_version_source_filename, root_build_dir),
            rebase_path(".") ]
+  inputs = mlperf_loadgen_sources_no_gen
+  outputs = [ generated_version_source_filename ]
+  deps = [ ":version_generator_script" ]
 }
 

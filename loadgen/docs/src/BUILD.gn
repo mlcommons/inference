@@ -1,0 +1,28 @@
+generated_doxygen_out_dir =
+    get_path_info(".", "gen_dir") + "/.."
+
+loadgen_doxygen_sources = [
+  "doxygen.cfg",
+  "doxygen_layout.xml",
+  "mlperf_logo_horizontal_color_200x55.png",
+  "README.md"
+]
+
+source_set("loadgen_doxygen_sources") {
+  sources = loadgen_doxygen_sources
+}
+
+source_set("doxygen_html_generator_script") {
+  sources = [ "doxygen_html_generator.py" ]
+}
+
+action("generate_doxygen_html") {
+  script = "doxygen_html_generator.py"
+  args = [ rebase_path(generated_doxygen_out_dir, root_build_dir),
+           rebase_path("../..") ]
+  inputs = loadgen_doxygen_sources
+  outputs = [ generated_doxygen_out_dir ]
+  deps = [ ":doxygen_html_generator_script",
+           "../..:mlperf_loadgen_sources_no_gen",
+           "../..:docs" ]
+}

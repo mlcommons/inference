@@ -16,7 +16,7 @@
 * [Test Settings](@ref LoadgenAPITestSettings) -
   A good description of available scenarios, modes, and knobs.
 * [MLPerf Inference Code](https://github.com/mlperf/inference) -
-  Includes the LoadGen and reference models that use the LoadGen.
+  Includes source for the LoadGen and reference models that use the LoadGen.
 * [MLPerf Inference Rules](https://github.com/mlperf/inference_policies) -
   Any mismatch with this is a bug in the LoadGen.
 * [MLPerf Website](www.mlperf.org)
@@ -25,21 +25,22 @@
 
 ### In Scope
 * **Provide a reusable** C++ library with python bindings.
-* **Implement** the traffic patterns of the MLPerf inference scenarios and
+* **Implement** the traffic patterns of the MLPerf Inference scenarios and
   modes.
 * **Record** all traffic generated and received for later analysis and
   verification.
-* **Summarize** the results and whether the scenario's performance constraints
-  were met.
-* **Target high-performance** systems with an efficient multi-thread friendly
-  logging infrastructure.
-* **Generate trust** via a well-tested and community-hardened code base.
+* **Summarize** the results and whether performance constraints were met.
+* **Target high-performance** systems with efficient multi-thread friendly
+  logging utilities.
+* **Generate trust** via a shared, well-tested, and community-hardened
+  code base.
 
 ### Out of Scope
-* **It is not** aware of the ML model it is running against.
-* **It is not** aware of the data formats of the model's inputs and outputs.
-* **It is not** aware of how to score the acuracy of a model's outputs.
-* **It is not** aware of MLPerf rules regarding scenario-specific constraints.
+The LoadGen is:
+* **NOT** aware of the ML model it is running against.
+* **NOT** aware of the data formats of the model's inputs and outputs.
+* **NOT** aware of how to score the accuracy of a model's outputs.
+* **NOT** aware of MLPerf rules regarding scenario-specific constraints.
 
 Limitting the scope of the LoadGen in this way keeps it reusable across
 different models and datasets without modification. Using composition and
@@ -66,17 +67,17 @@ it easier to respect submission requirements, but it is a work in progress.
 
 ## Responsibilities of a LoadGen User
 
-There are numerous eamples in demos, tests, and reference models of code
-that integrates with the LoadGen that provide detailed templates for you to
-follow. At a high-level, to use the LoadGen, a user must:
+### Implement the Iterfaces
+* Implement the SystemUnderTest and QuerySampleLibrary interfaces and pass
+  them to the StartTest function.
+* Call QuerySampleComplete for every sample received by
+  SystemUnderTest::IssueQuery.
 
-* Implement the Iterfaces
-  + Implement the SystemUnderTest and QuerySampleLibrary interfaces and pass
-    them to the StartTest function.
-  + Call QuerySampleComplete for every sample received in IssueQuery.
+### Assess Accuracy
+* Process the *mlperf_log_accuracy.json* output by the LoadGen to determine
+  the accuracy of your system.
+* For the official models, Python scripts will be provided by the MLPerf model
+  owners for you to do this automatically.
 
-* Assess Accuracy
-  + Process the mlperf_accuracy_log.json output by the LoadGen to determine
-    the accuracy of your system.
-  + Python scripts will be provided by MLPerf model owners for you to do
-    this automatically for the official models.
+For templates of how to do the above in detail, refer to code for the demos,
+tests, and reference models.

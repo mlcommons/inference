@@ -123,7 +123,7 @@ enum class TestMode {
 };
 
 ///
-/// \brief The top-level struct specifing the modes and parameters of the test.
+/// \brief Top-level struct specifing the modes and parameters of the test.
 ///
 /// \todo Create TestSetting from a config file.
 struct TestSettings {
@@ -210,7 +210,7 @@ struct TestSettings {
 /// runtime.
 /// * **AsyncPoll**
 ///  + Logs are serialized and output on an IOThread that polls for new logs at
-///  a fixed interval.
+///  a fixed interval. This is the only mode currently implemented.
 /// * **EndOfTestOnly**
 ///  + TODO: Logs are serialzied and output only at the end of the test.
 /// * **Synchronous**

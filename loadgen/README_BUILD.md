@@ -5,7 +5,7 @@
     pip install absl-py numpy
     git clone --recurse-submodules https://github.com/mlperf/inference.git mlperf_inference
     cd mlperf_inference/loadgen
-    CFLAGS="-std=c++14" python setup.py bdist_wheel
+    CFLAGS="-std=c++14 -O3" python setup.py bdist_wheel
     pip install --force-reinstall dist/mlperf_loadgen-0.5a0-cp36-cp36m-linux_x86_64.whl
     python demos/py_demo_single_stream.py
 

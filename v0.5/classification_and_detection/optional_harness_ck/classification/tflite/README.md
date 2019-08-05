@@ -17,6 +17,7 @@ Install TFLite v1.13.1 from source:
 ```
 $ ck install package --tags=lib,tflite,v1.13.1,vsrc [--target_os=android23-arm64]
 ```
+**NB:** TFLite v1.14.0 has [many known issues on Arm platforms](https://github.com/ctuning/ck-tensorflow/blob/master/package/lib-tflite-1.14.0-src-static/README.md), and does not work for Android yet.
 
 You can also install TFLite v0.1.7 from a prebuilt binary package for your target e.g.:
 ```
@@ -31,10 +32,40 @@ $ ck install package:lib-tflite-prebuilt-0.1.7-android-arm64 [--target_os=androi
 prebuilt packages for TFLite 1.13.1.
 
 
-### Install the MobileNet models for TFLite
+### Install the models for TFLite
+
+#### ResNet
+
+To install the ResNet50-v1.5 model:
+```bash
+$ ck install package --tags=model,tflite,mlperf,resnet
+
+More than one package or version found:
+
+ 0) model-tflite-mlperf-resnet-no-argmax  Version 1.5  (afb43014ef38f646)
+ 1) model-tflite-mlperf-resnet  Version 1.5  (d60d4e9a84151271)
+ 2) model-tflite-convert-from-tf (35e84375ac48dcb1), Variations: resnet
+
+Please select the package to install [ hit return for "0" ]:
+```
+
+Option 0 will download a TFLite model preconverted from the TF model.  During
+the conversion, the `ArgMax` operator causing an
+[issue](https://github.com/ARM-software/armnn/issues/150) with ArmNN v19.02
+and v19.05 was excluded.
+
+Option 1 will download a TFLite model preconverted from the TF model, but
+including the `ArgMax` operator. This variant can be used with ArmNN once
+the above issue is resolved.
+
+Option 2 will download the TF model and convert it to TFLite, while excluding
+the `ArgMax` operator.
+
+
+#### MobileNet
 
 To select interactively from one of the non-quantized and quantized
-MobileNets-v1-1.0-224 models adopted for MLPerf Inference v0.5:
+MobileNets-v1-1.0-224 models:
 ```
 $ ck install package --tags=model,tflite,mlperf,mobilenet
 
@@ -55,142 +86,113 @@ version of TF built from source, building TF from source takes a long time on
 Arm platforms (as well as [not being officially
 supported](https://github.com/tensorflow/tensorflow/issues/25607#issuecomment-466583730)).
 
-#### Install the [non-quantized model](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) directly
-```
-$ ck install package --tags=model,tflite,mlperf,mobilenet,non-quantized
-```
+##### MobileNet non-quantized
 
-#### Install the [quantized model](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) directly
-```
-$ ck install package --tags=model,tflite,mlperf,mobilenet,quantized
-```
-
-#### Bonus
-
-##### Install the ResNet model
-
-To install the ResNet50-v1.5 model:
+To install the non-quantized MobileNet model from:
+- [zenodo.org](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) (default):
 ```bash
-$ ck install package --tags=model,tflite,mlperf,resnet
-
-More than one package or version found:
-
- 0) model-tflite-mlperf-resnet-no-argmax  Version 1.5  (afb43014ef38f646)
- 1) model-tflite-mlperf-resnet  Version 1.5  (d60d4e9a84151271)
- 2) model-tflite-convert-from-tf (35e84375ac48dcb1), Variations: resnet
-
-Please select the package to install [ hit return for "0" ]:
+$ ck install package --tags=model,tflite,mlperf,mobilenet,non-quantized,from-zenodo
+```
+- [tensorflow.org](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz)
+```bash
+$ ck install package --tags=model,tflite,mlperf,mobilenet,non-quantized,from-google
 ```
 
-Option 0 will download a TFLite model preconverted from the TF model.  During
-the conversion, the `ArgMax` operator causing an
-[issue](https://github.com/ARM-software/armnn/issues/150) with ArmNN v19.02 was
-excluded.
+##### MobileNet quantized
 
-Option 1 will download a TFLite model preconverted from the TF model, but
-including the `ArgMax` operator. This variant can be used with ArmNN once
-the above issue is resolved.
+To install the quantized MobileNet model from:
+- [zenodo.org](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz) (default):
+```bash
+$ ck install package --tags=model,tflite,mlperf,mobilenet,quantized,from-zenodo
+```
+- [tensorflow.org](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz)
+```bash
+$ ck install package --tags=model,tflite,mlperf,mobilenet,quantized,from-google
+```
 
-Option 2 will download the TF model and convert it to TFLite, while excluding
-the `ArgMax` operator.
-
-You can benchmark ResNet exactly in the same way as MobileNet.
-Just replace `mobilenet` with `resnet` in the [benchmarking instructions](#benchmarking) below.
-
-##### Install other MobileNets models
+#### Bonus: other MobileNets models
 You can also install any other MobileNets model compatible with TFLite as follows:
 ```
 $ ck install package --tags=tensorflowmodel,mobilenet,tflite
 ```
 
-### Preprocess the ImageNet dataset
-**NB:** This step will be moved to the [common instructions](../README.md), once all the clients are updated. For more details about preprocessing see [here](https://github.com/ctuning/ck-env/tree/master/package/dataset-imagenet-preprocessed).
-
-```
-$ ck install package --tags=dataset,imagenet,preprocessed
-```
-
 ### Compile the TFLite Image Classification client
-```
-$ ck compile program:image-classification-tflite [--target_os=android23-arm64]
+
+Compile the client. (For Android, append e.g. `--target_os=android23-arm64` to the command.)
+
+```bash
+$ ck compile program:image-classification-tflite --speed
 ```
 
 ### Run the TFLite Image Classification client
 
-Run the client (if required, connect an Android device to your host machine via USB):
+Run the client. (For Android, connect an Android device to your host machine via USB and append e.g. `--target_os=android23-arm64` to the command).
 
-- with the non-quantized model:
-```
-$ ck run program:image-classification-tflite [--target_os=android23-arm64]
+If you have preprocessed input data using more than one method (OpenCV, Pillow or TensorFlow), you need to select the particular preprocessed dataset. Note that the TensorFlow preprocessing method is not applicable to the MobileNet models.
+
+#### ResNet
+
+##### OpenCV preprocessing
+```bash
+$ ck run program:image-classification-tflite \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet
 ...
-*** Dependency 3 = weights (TensorFlow-Python model and weights):
-...
-    Resolved. CK environment UID = 4edbb2648a48d94d (version 1_1.0_224_2018_08_02)
-...
+---------------------------------------
 ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
-0.84 - (65) n01751748 sea snake
-0.08 - (58) n01737021 water snake
+0.95 - (65) n01751748 sea snake
+0.01 - (58) n01737021 water snake
+0.01 - (54) n01729322 hognose snake, puff adder, sand viper
+0.01 - (66) n01753488 horned viper, cerastes, sand viper, horn...
+0.00 - (60) n01740131 night snake, Hypsiglena torquata
+---------------------------------------
+```
+
+#### MobileNet non-quantized
+
+##### OpenCV preprocessing
+```bash
+$ ck run program:image-classification-tflite \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
+...
+---------------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.86 - (65) n01751748 sea snake
+0.05 - (58) n01737021 water snake
 0.04 - (34) n01665541 leatherback turtle, leatherback, leather...
 0.01 - (54) n01729322 hognose snake, puff adder, sand viper
 0.01 - (57) n01735189 garter snake, grass snake
 ---------------------------------------
-
-Summary:
--------------------------------
-Graph loaded in 0.000860s
-All images loaded in 0.007685s
-All images classified in 0.173653s
-Average classification time: 0.173653s
-Accuracy top 1: 1.0 (1 of 1)
-Accuracy top 5: 1.0 (1 of 1)
---------------------------------
 ```
 
-- with the quantized model:
-```
-$ ck run program:image-classification-tflite [--target_os=android23-arm64]
+#### MobileNet quantized
+
+##### OpenCV preprocessing
+```bash
+$ ck run program:image-classification-tflite \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized
 ...
-*** Dependency 3 = weights (TensorFlow-Python model and weights):
-...
-    Resolved. CK environment UID = 3f0ca5c4d25b4ea3 (version 1_1.0_224_quant_2018_08_02)
-...
-ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
-0.80 - (65) n01751748 sea snake
-0.09 - (34) n01665541 leatherback turtle, leatherback, leather...
-0.05 - (58) n01737021 water snake
-0.03 - (54) n01729322 hognose snake, puff adder, sand viper
-0.00 - (33) n01664065 loggerhead, loggerhead turtle, Caretta c...
 ---------------------------------------
-
-Summary:
--------------------------------
-Graph loaded in 0.000589s
-All images loaded in 0.000290s
-All images classified in 0.450257s
-Average classification time: 0.450257s
-Accuracy top 1: 1.0 (1 of 1)
-Accuracy top 5: 1.0 (1 of 1)
---------------------------------
+ILSVRC2012_val_00000001.JPEG - (65) n01751748 sea snake
+0.88 - (65) n01751748 sea snake
+0.07 - (34) n01665541 leatherback turtle, leatherback, leather...
+0.03 - (58) n01737021 water snake
+0.00 - (54) n01729322 hognose snake, puff adder, sand viper
+0.00 - (0) n01440764 tench, Tinca tinca
+---------------------------------------
 ```
+**NB:** The prediction from `tflite` differs from that from `tf-cpp`.
 
 <a name="benchmarking"></a>
 ## Benchmarking instructions
 
 ### Benchmark the performance
-```
-$ ck benchmark program:image-classification-tflite \
---repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
---record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tflite-performance \
---tags=mlperf,image-classification,mobilenet,tflite,performance \
---skip_print_timers --skip_stat_analysis --process_multi_keys
-```
 
 **NB:** When using the batch count of **N**, the program classifies **N** images, but
 the slow first run is not taken into account when computing the average
 classification time e.g.:
 ```
 $ ck benchmark program:image-classification-tflite \
---repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2
 ...
 Processing batches...
 
@@ -215,43 +217,97 @@ Accuracy top 5: 1.0 (2 of 2)
 --------------------------------
 ```
 
-### Benchmark the accuracy
+#### ResNet
 ```
-$ ck benchmark program:image-classification-tflite \
+$ ck benchmark program:image-classification-tflite --speed \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--record_uoa=mlperf-image-classification-tflite-performance-using-opencv-resnet \
+--tags=mlperf,image-classification,tflite,performance,using-opencv,resnet \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet
+```
+
+#### MobileNet non-quantized
+```
+$ ck benchmark program:image-classification-tflite --speed \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--record_uoa=mlperf-image-classification-tflite-performance-using-opencv-mobilenet-non-quantized \
+--tags=mlperf,image-classification,tflite,performance,using-opencv,mobilenet,non-quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
+```
+
+#### MobileNet quantized
+```
+$ ck benchmark program:image-classification-tflite --speed \
+--repetitions=10 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=2 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--record_uoa=mlperf-image-classification-tflite-performance-using-opencv-mobilenet-quantized \
+--tags=mlperf,image-classification,tflite,performance,using-opencv,mobilenet,quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized
+```
+
+### Benchmark the accuracy
+
+**NB:** For the `imagenet-2012-val-min` dataset, change `--env.CK_BATCH_COUNT=50000`
+to `--env.CK_BATCH_COUNT=500` (or drop completely to test on a single image as if
+with `--env.CK_BATCH_COUNT=1`).
+
+#### ResNet
+```bash
+$ ck benchmark program:image-classification-tflite --speed \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---record --record_repo=local --record_uoa=mlperf-image-classification-mobilenet-tflite-accuracy \
---tags=mlperf,image-classification,mobilenet,tflite,accuracy \
---skip_print_timers --skip_stat_analysis --process_multi_keys
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--record_uoa=mlperf-image-classification-tflite-accuracy-using-opencv-resnet \
+--tags=mlperf,image-classification,tflite,accuracy,using-opencv,resnet \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=resnet
+```
+
+#### MobileNet non-quantized
+```bash
+$ ck benchmark program:image-classification-tflite --speed \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--record_uoa=mlperf-image-classification-tflite-accuracy-using-opencv-mobilenet-non-quantized \
+--tags=mlperf,image-classification,tflite,accuracy,using-opencv,mobilenet,non-quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
+```
+
+#### MobileNet quantized
+```bash
+$ ck benchmark program:image-classification-tflite --speed \
+--repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--record_uoa=mlperf-image-classification-tflite-accuracy-using-opencv-mobilenet-quantized \
+--tags=mlperf,image-classification,tflite,accuracy,using-opencv,mobilenet,quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,quantized
 ```
 
 
 <a name="accuracy"></a>
 ## Reference accuracy
 
-### ImageNet validation dataset (50,000 images)
-```
+### Example: OpenCV preprocessing (default), MobileNet non-quantized
+```bash
 $ ck benchmark program:image-classification-tflite \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
---record --record_repo=local --record_uoa=mlperf-image-classification-tflite-accuracy \
---tags=mlperf,image-classification,tflite,accuracy \
---skip_print_timers --skip_stat_analysis --process_multi_keys
+--skip_print_timers --skip_stat_analysis --process_multi_keys --record --record_repo=local \
+--record_uoa=mlperf-image-classification-tflite-accuracy-using-opencv-mobilenet-non-quantized \
+--tags=mlperf,image-classification,tflite,accuracy,using-opencv,mobilenet,non-quantized \
+--dep_add_tags.images=preprocessed,using-opencv --dep_add_tags.weights=mobilenet,non-quantized
 ```
 
-#### 87.5% cropping (default)
-##### MobileNet non-quantized
-```
-"accuracy_top1": 0.69966 # == 0.69966 for tf-cpp (=000 images)
-"accuracy_top5": 0.87628 # << 0.89366 for tf-cpp (-869 images)
-```
+### ImageNet validation dataset (50,000 images)
 
-##### MobileNet quantized
-**TODO**
+| Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
+|-|-|-|-|-|
+| ResNet                  |  Top1  | 0.76170 | 0.76458 | 0.76522 |
+|                         |  Top5  | 0.92866 | 0.93014 | 0.93066 |
+| MobileNet non-quantized |  Top1  | 0.71226 | 0.71516 | N/A     |
+|                         |  Top5  | 0.89834 | 0.90006 | N/A     |
+| MobileNet quantized     |  Top1  | 0.70502 | 0.70776 | N/A     |
+|                         |  Top5  | 0.89118 | 0.89198 | N/A     |
 
-##### ResNet
-```
-"accuracy_top1": 0.73302 # >= 0.73288 for tf-cpp (+007 images)
-"accuracy_top5": 0.90148 # << 0.91606 for tf-cpp (-729 images)
-```
 
 <a name="further-info"></a>
 ## Further information

@@ -41,7 +41,8 @@ namespace mlperf {
 ///  + The next query is only issued once the previous one has completed.
 ///  + Internal LoadGen latency between queries is not included in the
 ///    latency results.
-///  + **Final performance result is:** the 90th percentile latency.
+///  + **Final performance result is:** a percentile of the latency.
+///   - Percentile will be programmable via TestSettings soon.
 /// * **MultiStream**
 ///  + Attempts to issue queries containing N samples each at a uniform rate.
 ///   - N is specified by \link
@@ -56,8 +57,9 @@ namespace mlperf {
 ///  + Latency is tracked on a per-sample basis, as opposed to per-query.
 ///  + The samples of each query are guaranteed to be contiguous with respect
 ///    to the order they were loaded in the QuerySampleLibrary.
-///  + **Final performance result is:** PASS if the 90 percentile latency is
+///  + **Final performance result is:** PASS if a percentile of the latency is
 ///    under a given threshold. FAIL otherwise.
+///   - Percentile will be programmable via TestSettings soon.
 ///   - Threshold is specified by \link
 ///   mlperf::TestSettings::multi_stream_target_latency_ns
 ///   multi_stream_target_latency_ns \endlink.
@@ -76,8 +78,9 @@ namespace mlperf {
 ///  + Sends queries with a single sample.
 ///  + Queries have a random poisson (non-uniform) arrival rate that, when
 ///    averaged, hits the target QPS.
-///  + **Final performance result is:** PASS if the 90 percentile latency is
-///    under a given threshold. FAIL otherwise.
+///  + **Final performance result is:** PASS if the a percentile of the latency
+///    is under a given threshold. FAIL otherwise.
+///   - Percentile will be programmable via TestSettings soon.
 ///   - Threshold is specified by \link
 ///   mlperf::TestSettings::server_target_latency_ns server_target_latency_ns
 ///   \endlink.

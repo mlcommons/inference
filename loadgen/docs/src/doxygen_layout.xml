@@ -3,13 +3,18 @@
   <!-- Navigation index tabs for HTML output -->
   <navindex>
     <tab type="mainpage" visible="yes" title="Overview"/>
-    <tab type="user" url="@ref ReadmeBuild" visible="yes" title="Building"/>
-    <tab type="user" url="@ref LoadgenAPI" visible="yes" title="API"/>
-    <tab type="user" url="@ref LoadgenAPITestSettings" visible="yes" title="Settings"/>
+    <tab type="usergroup" visible="yes" title="API and Usage">
+      <tab type="user" url="@ref LoadgenAPI" visible="yes" title="API"/>
+      <tab type="user" url="@ref LoadgenAPITestSettings" visible="yes" title="Settings"/>
+    </tab>
     <tab type="usergroup" visible="yes" title="Development">
       <tab type="user" url="@ref ReadmeBuild" visible="yes" title="Building"/>
       <tab type="user" url="@ref ReadmeHtmlDocs" visible="yes" title="Generating this Document"/>
       <tab type="user" url="@ref todo" visible="yes" title="TODOs"/>
+    </tab>
+    <tab type="usergroup" visible="yes" title="Test Coverage">
+      <tab type="user" url="@ref LoadgenTestsBasic" visible="yes" title="Basic"/>
+      <tab type="user" url="@ref LoadgenTestsPerformance" visible="yes" title="Performance"/>
     </tab>
     <tab type="usergroup" visible="yes" title="The Code">
       <tab type="modules" visible="no" title="" intro=""/>

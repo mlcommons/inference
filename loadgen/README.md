@@ -1,13 +1,34 @@
 # Overview {#mainpage}
 
+*Note:* A compiled html version of this document is hosted online
+[here](https://mlperf.github.io/inference/loadgen/index.html).
+
+## Introduction
+
 * The LoadGen is a *reusable* module that *efficiently* and *fairly* measures
   the performance of inference systems.
 * It generates traffic for scenarios as formulated by a diverse set of experts
   in the [MLPerf working group](https://mlperf.org/about).
-* The scenarios emulate the types of workloads seen in mobile devices,
+* The scenarios emulate the workloads seen in mobile devices,
   autonomous vehicles, robotics, and cloud-based setups.
 * Although the LoadGen is not model or dataset aware, its strength is in its
   reusability with logic that is.
+
+## Integration Example and Flow
+The following is an diagram of how the LoadGen can be integrated into an
+inference system, resembling how some of the MLPerf reference models are
+implemented.
+<div style="display:flex; flex-flow:row wrap; justify-content: space-evenly;">
+<img src="loadgen_integration_diagram.svg" width="500px" style="padding: 20px">
+<ol style="padding: 20px">
+<li>Benchmark knows the model, dataset, and preprocessing.</li>
+<li>Benchmark hands dataset sample IDs to LoadGen.</li>
+<li>LoadGen starts generating queries of sample IDs.</li>
+<li>Benchmark creates requests to backend.</li>
+<li>Result is post processed and forwarded to LoadGen.</li>
+<li>LoadGen outputs logs for analysis.<br>
+</ol>
+</div>
 
 ## Useful Links
 * [FAQ](@ref ReadmeFAQ)

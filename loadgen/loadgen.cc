@@ -692,7 +692,7 @@ struct PerformanceSummary {
   };
   /// \todo Make .90 a TestSetting and update relevant hard-coded strings.
   PercentileEntry latency_target{.90};
-  PercentileEntry latency_percentiles[5] = {{.50}, {.90}, {.95}, {0.97}, {.99}, {.999}};
+  PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95}, {.97}, {.99}, {.999}};
 
   void ProcessLatencies();
 

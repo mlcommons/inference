@@ -258,8 +258,7 @@ auto SampleDistribution(size_t sample_count, size_t stride, std::mt19937* rng) {
     indices.push_back(i);
   }
   std::shuffle(indices.begin(), indices.end(), *rng);
-  return
-      [ indices = std::move(indices), i = size_t(0) ](auto& /*gen*/) mutable {
+  return [indices = std::move(indices), i = size_t(0)](auto& /*gen*/) mutable {
     return indices.at(i++);
   };
 }
@@ -271,9 +270,7 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
                                                    size_t /*stride*/,
                                                    std::mt19937* /*rng*/) {
   return [dist = std::uniform_int_distribution<>(0, sample_count - 1)](
-      auto& gen) mutable {
-    return dist(gen);
-  };
+             auto& gen) mutable { return dist(gen); };
 }
 
 /// \brief Generates queries for the requested settings, templated by
@@ -365,10 +362,8 @@ std::vector<QueryMetadata> GenerateQueries(
     }
   }
 
-  LogDetail([
-    count = queries.size(), spq = settings.samples_per_query,
-    duration = timestamp.count()
-  ](AsyncDetail & detail) {
+  LogDetail([count = queries.size(), spq = settings.samples_per_query,
+             duration = timestamp.count()](AsyncDetail& detail) {
     detail("GeneratedQueries: ", "queries", count, "samples per query", spq,
            "duration", duration);
   });
@@ -563,10 +558,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.
   const double query_seconds_outstanding_threshold =
-      5 *
-      std::chrono::duration_cast<std::chrono::duration<double>>(
-          settings.target_latency)
-          .count();
+      5 * std::chrono::duration_cast<std::chrono::duration<double>>(
+              settings.target_latency)
+              .count();
   const size_t max_queries_outstanding =
       settings.target_qps * query_seconds_outstanding_threshold;
 
@@ -698,8 +692,7 @@ struct PerformanceSummary {
   };
   /// \todo Make .90 a TestSetting and update relevant hard-coded strings.
   PercentileEntry latency_target{.90};
-  PercentileEntry latency_percentiles[5] = {{.50},  {.90}, {.95},
-                                            {0.97}, {.99}, {.999}};
+  PercentileEntry latency_percentiles[5] = {{.50}, {.90}, {.95}, {0.97}, {.99}, {.999}};
 
   void ProcessLatencies();
 
@@ -968,9 +961,9 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   sut->ReportLatencyResults(pr.latencies);
 
-  LogSummary([perf_summary =
-                  PerformanceSummary{sut->Name(), settings, std::move(pr)}](
-      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
+  LogSummary(
+      [perf_summary = PerformanceSummary{sut->Name(), settings, std::move(pr)}](
+          AsyncSummary& summary) mutable { perf_summary.Log(summary); });
 
   qsl->UnloadSamplesFromRam(performance_set.set);
 }
@@ -1016,8 +1009,10 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   for (auto& loadable_set : loadable_sets) {
     {
-      auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
-          AsyncTrace & trace) { trace("LoadSamples", "count", count); });
+      auto tracer = MakeScopedTracer(
+          [count = loadable_set.set.size()](AsyncTrace& trace) {
+            trace("LoadSamples", "count", count);
+          });
       LoadSamplesToRam(qsl, loadable_set.set);
     }
 
@@ -1025,8 +1020,10 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
         sut, settings, loadable_set, sequence_gen));
 
     {
-      auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
-          AsyncTrace & trace) { trace("UnloadSampes", "count", count); });
+      auto tracer = MakeScopedTracer(
+          [count = loadable_set.set.size()](AsyncTrace& trace) {
+            trace("UnloadSampes", "count", count);
+          });
       qsl->UnloadSamplesFromRam(loadable_set.set);
     }
   }

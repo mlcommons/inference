@@ -394,16 +394,16 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
     acc_str = ""
     if show_accuracy:
         result["accuracy"] = 100. * result_dict["good"] / result_dict["total"]
-        acc_str = ", acc={:.2f}".format(result["accuracy"])
+        acc_str = ", acc={:.3f}%".format(result["accuracy"])
         if "mAP" in result_dict:
-            result["mAP"] = result_dict["mAP"]
-            acc_str += ", mAP={:.2f}".format(result_dict["mAP"])
+            result["mAP"] = 100. * result_dict["mAP"]
+            acc_str += ", mAP={:.3f}%".format(result_dict["mAP"])
 
     # add the result to the result dict
     final_results[name] = result
 
     # to stdout
-    print("{} qps={:.2f}, mean={:.4f}, time={:.2f}{}, queries={}, tiles={}".format(
+    print("{} qps={:.2f}, mean={:.4f}, time={:.3f}{}, queries={}, tiles={}".format(
         name, result["qps"], result["mean"], took, acc_str,
         len(result_list), buckets_str))
 

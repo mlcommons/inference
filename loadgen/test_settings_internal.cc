@@ -100,6 +100,9 @@ TestSettingsInternal::TestSettingsInternal(
   }
 
   min_sample_count = min_query_count * samples_per_query;
+
+  latency_percentile = requested.latency_percentile;
+
 }
 
 std::string ToString(TestScenario scenario) {

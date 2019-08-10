@@ -192,6 +192,11 @@ struct TestSettings {
   /// differently in time, but should not affect the average issued QPS.
   uint64_t schedule_rng_seed = 0;
   /**@}*/
+  // ==================================
+  /// \name Latency percentile for Multi-stream and Server mode 
+  /**@{*/
+  double latency_percentile = 0.9;
+  /**@}*/
 };
 
 ///

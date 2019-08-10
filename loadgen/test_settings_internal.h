@@ -68,6 +68,8 @@ struct TestSettingsInternal {
   uint64_t qsl_rng_seed;
   uint64_t sample_index_rng_seed;
   uint64_t schedule_rng_seed;
+
+  double latency_percentile;
 };
 
 }  // namespace loadgen

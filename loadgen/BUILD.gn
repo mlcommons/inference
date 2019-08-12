@@ -42,7 +42,7 @@ source_set("mlperf_loadgen_sources_no_gen") {
 }
 
 source_set("docs") {
-  sources = [ "README.md" ]
+  sources = [ "README.md", "README_BUILD.md", "README_FAQ.md"]
 }
 
 static_library("mlperf_loadgen") {

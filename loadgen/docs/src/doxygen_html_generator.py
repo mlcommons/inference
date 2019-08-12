@@ -33,4 +33,5 @@ def main(argv):
     loadgen_root = "." if len(argv) < 3 else argv[2]
     generate_doxygen_html(doxygen_out_dir, loadgen_root)
 
+
 main(sys.argv)

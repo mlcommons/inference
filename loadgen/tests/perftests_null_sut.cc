@@ -23,6 +23,8 @@ limitations under the License.
 /// \brief Performance unit tests.
 namespace perf_tests {
 
+/// \defgroup LoadgenTestsPerformance Test Coverage: Performance
+
 /// \brief A simple SUT implemenatation that immediately completes
 /// issued queries sychronously ASAP.
 class SystemUnderTestNull : public mlperf::SystemUnderTest {
@@ -73,6 +75,7 @@ class QuerySampleLibraryNull : public mlperf::QuerySampleLibrary {
 };
 
 /// \brief Runs single stream traffic.
+/// \ingroup LoadgenTestsPerformance
 void TestSingleStream() {
   SystemUnderTestNull null_sut;
   QuerySampleLibraryNull null_qsl;
@@ -113,6 +116,7 @@ class SystemUnderTestNullStdAsync : public mlperf::SystemUnderTest {
 };
 
 /// \brief Tests server traffic using SystemUnderTestNullStdAsync.
+/// \ingroup LoadgenTestsPerformance
 void TestServerStdAsync() {
   SystemUnderTestNullStdAsync null_std_async_sut;
   QuerySampleLibraryNull null_qsl;
@@ -203,6 +207,7 @@ class SystemUnderTestNullPool : public mlperf::SystemUnderTest {
 };
 
 /// \brief Tests server traffic using SystemUnderTestNullPool.
+/// \ingroup LoadgenTestsPerformance
 void TestServerPool() {
   SystemUnderTestNullPool null_pool;
   QuerySampleLibraryNull null_qsl;
@@ -218,6 +223,8 @@ void TestServerPool() {
 
   mlperf::StartTest(&null_pool, &null_qsl, ts, log_settings);
 }
+
+/// @}
 
 }  // namespace perf_tests
 

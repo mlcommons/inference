@@ -30,6 +30,8 @@ limitations under the License.
 /// \brief Correctness unit tests.
 namespace unit_tests {
 
+/// \defgroup LoadgenTestsBasic Test Coverage: Basic
+
 /// \brief Implements the client interfaces of the loadgen and
 /// has some basic sanity checks that are enabled for all tests.
 /// \details It also forwards calls to overrideable *Ext methods and implements
@@ -117,7 +119,7 @@ struct SystemUnderTestBasic : public mlperf::QuerySampleLibrary,
   std::vector<size_t> samples_between_flushes_;
 };
 
-/// \brief Provieds common test set up logic.
+/// \brief Provides common test set up logic.
 struct SystemUnderTestAccuracy : public SystemUnderTestBasic {
   virtual void SetUpTest(size_t samples_per_query,
                          size_t samples_per_query_remainder,
@@ -141,6 +143,7 @@ struct SystemUnderTestAccuracy : public SystemUnderTestBasic {
 
 /// \brief Verifies all samples from the QSL are included at least once
 /// in accuracy mode.
+/// \ingroup LoadgenTestsBasic
 struct TestAccuracyIncludesAllSamples : public SystemUnderTestAccuracy {
   void EndTest() override {
     std::sort(issued_samples_.begin(), issued_samples_.end());
@@ -183,6 +186,7 @@ REGISTER_TEST_ALL_SCENARIOS(AccuracyIncludesAllSamples,
 
 /// \brief Verifies offline + accuracy doesn't hang if the last set
 /// in the accuracy series is smaller than others.
+/// \ingroup LoadgenTestsBasic
 struct TestOfflineRemainderAccuracySet : public SystemUnderTestAccuracy {
   void SetUpTest() {
     SystemUnderTestAccuracy::SetUpTest(4, 0, 7, mlperf::TestScenario::Offline);
@@ -221,6 +225,7 @@ REGISTER_TEST(Offline_RemainderAccuracySets,
 
 /// \brief Verifies all queries only contain samples that are contiguous,
 /// even if the set size is not a multiple of samples_per_query.
+/// \ingroup LoadgenTestsBasic
 struct TestMultiStreamContiguousRemainderQuery
     : public SystemUnderTestAccuracy {
   void SetUpTest(mlperf::TestScenario scenario) {

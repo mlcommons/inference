@@ -95,7 +95,7 @@ class Test {
   /// \brief Maps registered test names to a callback.
   using TestMap = std::multimap<const char*, std::function<void()>>;
 
-  /// \brief The regeistered tests.
+  /// \brief The registered tests.
   /// \details Wraps a static local to avoid undefined initialization order
   /// and guarantee it is initialized before the first test registers itself.
   static TestMap& tests() {

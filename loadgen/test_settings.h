@@ -29,6 +29,11 @@ namespace mlperf {
 /// \addtogroup LoadgenAPI
 /// @{
 
+/// \addtogroup LoadgenAPITestSettings Test Settings
+/// \brief This page contains a description of all the scenarios, modes,
+/// and log settings as implemented by the LoadGen.
+/// @{
+
 ///
 /// \enum TestScenario
 /// * **SingleStream**
@@ -36,7 +41,8 @@ namespace mlperf {
 ///  + The next query is only issued once the previous one has completed.
 ///  + Internal LoadGen latency between queries is not included in the
 ///    latency results.
-///  + **Final performance result is:** the 90th percentile latency.
+///  + **Final performance result is:** a percentile of the latency.
+///   - Percentile will be programmable via TestSettings soon.
 /// * **MultiStream**
 ///  + Attempts to issue queries containing N samples each at a uniform rate.
 ///   - N is specified by \link
@@ -49,8 +55,11 @@ namespace mlperf {
 ///    too much.
 ///  + By default, only a single query may be outstanding at a time.
 ///  + Latency is tracked on a per-sample basis, as opposed to per-query.
-///  + **Final performance result is:** PASS if the 90 percentile latency is
+///  + The samples of each query are guaranteed to be contiguous with respect
+///    to the order they were loaded in the QuerySampleLibrary.
+///  + **Final performance result is:** PASS if a percentile of the latency is
 ///    under a given threshold. FAIL otherwise.
+///   - Percentile will be programmable via TestSettings soon.
 ///   - Threshold is specified by \link
 ///   mlperf::TestSettings::multi_stream_target_latency_ns
 ///   multi_stream_target_latency_ns \endlink.
@@ -69,13 +78,17 @@ namespace mlperf {
 ///  + Sends queries with a single sample.
 ///  + Queries have a random poisson (non-uniform) arrival rate that, when
 ///    averaged, hits the target QPS.
-///  + **Final performance result is:** PASS if the 90 percentile latency is
-///    under a given threshold. FAIL otherwise.
+///  + **Final performance result is:** PASS if the a percentile of the latency
+///    is under a given threshold. FAIL otherwise.
+///   - Percentile will be programmable via TestSettings soon.
 ///   - Threshold is specified by \link
 ///   mlperf::TestSettings::server_target_latency_ns server_target_latency_ns
 ///   \endlink.
 /// * **Offline**
 ///  + Sends all N samples to the SUT inside of a single query.
+///  + The samples of the query are guaranteed to be contiguous with respect
+///    to the order they were loaded in the QuerySampleLibrary.
+///    (WIP. Not true yet.)
 ///  + **Final performance result is:** samples per second.
 ///
 enum class TestScenario {
@@ -113,7 +126,7 @@ enum class TestMode {
 };
 
 ///
-/// \brief The top-level struct specifing the modes and parameters of the test.
+/// \brief Top-level struct specifing the modes and parameters of the test.
 ///
 /// \todo Create TestSetting from a config file.
 struct TestSettings {
@@ -200,7 +213,7 @@ struct TestSettings {
 /// runtime.
 /// * **AsyncPoll**
 ///  + Logs are serialized and output on an IOThread that polls for new logs at
-///  a fixed interval.
+///  a fixed interval. This is the only mode currently implemented.
 /// * **EndOfTestOnly**
 ///  + TODO: Logs are serialzied and output only at the end of the test.
 /// * **Synchronous**
@@ -239,6 +252,8 @@ struct LogSettings {
   uint64_t log_mode_async_poll_interval_ms = 1000;  ///< TODO: Implement this.
   bool enable_trace = true;                         ///< TODO: Implement this.
 };
+
+/// @}
 
 /// @}
 

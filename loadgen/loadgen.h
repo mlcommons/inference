@@ -29,24 +29,6 @@ struct TestSettings;
 struct LogSettings;
 
 /// \addtogroup LoadgenAPI Loadgen API
-/// \brief **Note:** The Loadgen is not aware of the MLPerf specifications
-///        nor the model it is running with. For official runs, clients must
-///        ensure the TestSettings they use conform to submission rules.
-/// \details
-/// * Refer to demos, tests, and reference implementations for example API
-///   usage.
-/// * The general flow of a run:
-///   + The client implements the QuerySampleLibrary and SystemUnderTest
-///     interfaces.
-///   + The client creates a TestSettings instance and calls StartTest.
-///   + Then, for each QuerySample included in call to
-///     SystemUnderTest::IssueQuery, the client must include it in a call to
-///     QuerySampleComplete.
-/// * The results are output to various log files, including:
-///   + mlperf_log_summary.txt
-///   + mlperf_log_detail.txt
-///   + mlperf_log_trace.json
-///   + mlperf_log_accuracy.json
 /// @{
 
 ///
@@ -56,8 +38,8 @@ struct LogSettings;
 ///   issued by \link mlperf::SystemUnderTest::IssueQuery
 ///   SystemUnderTest::IssueQuery \endlink.
 /// * The SUT is responsible for allocating and owning the response data
-///   which must remain valid until the duration of this call. The loadgen
-///   will copy the response data if needed for e.g. accuracy mode.
+///   which must remain valid for the duration of this call. The loadgen
+///   will copy the response data if needed (e.g. for accuracy mode).
 ///   + Note: This setup requires the allocation to be timed, which
 ///     will benefit SUTs that efficiently recycle response memory.
 /// * All calls to QuerySampleComplete are thread-safe and wait-free bounded.

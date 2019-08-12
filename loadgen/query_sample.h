@@ -47,7 +47,7 @@ struct QuerySample {
 struct QuerySampleResponse {
   ResponseId id;
   uintptr_t data;
-  size_t size;  // Size in bytes.
+  size_t size;  ///< Size in bytes.
 };
 
 /// \brief A latency in nanoseconds, as recorded by the loadgen.

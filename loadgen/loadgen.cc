@@ -339,21 +339,24 @@ std::vector<QueryMetadata> GenerateQueries(
         // query as the value of samples_per_query increases.
         s = loaded_samples[sample_i++];
       }
-    } else if(mode == TestMode::PerformanceOnly && scenario == TestScenario::Offline ){
+    } else if (mode == TestMode::PerformanceOnly &&
+               scenario == TestScenario::Offline) {
       // For the Offline + Performance scenario, we also want to support
-      // contiguous samples. In this scenario the query can be much larger than what
-      // fits into memory. We simply repeat loaded_samples N times, plus a remainder
-      // to ensure we fill up samples.
-      // Note that this eliminates randomization.
+      // contiguous samples. In this scenario the query can be much larger than
+      // what fits into memory. We simply repeat loaded_samples N times, plus a
+      // remainder to ensure we fill up samples. Note that this eliminates
+      // randomization.
       size_t num_loaded_samples = loaded_samples.size();
-      size_t num_full_repeats = samples_per_query/num_loaded_samples;
+      size_t num_full_repeats = samples_per_query / num_loaded_samples;
       int remainder = samples_per_query % (num_loaded_samples);
 
-      for (int i = 0; i < num_full_repeats; ++i){
-        std::copy (loaded_samples.begin(), loaded_samples.end(), samples.begin() + i * num_loaded_samples);
+      for (int i = 0; i < num_full_repeats; ++i) {
+        std::copy(loaded_samples.begin(), loaded_samples.end(),
+                  samples.begin() + i * num_loaded_samples);
       }
 
-      std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder, samples.begin() + num_full_repeats * num_loaded_samples);
+      std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder,
+                samples.begin() + num_full_repeats * num_loaded_samples);
 
     } else {
       for (auto& s : samples) {
@@ -779,7 +782,8 @@ bool PerformanceSummary::MinDurationMet(std::string* recommendation) {
       break;
     case TestScenario::Offline:
       *recommendation =
-          "Increase expected QPS so the loadgen pre-generates a larger (coalesced) query.";
+          "Increase expected QPS so the loadgen pre-generates a larger "
+          "(coalesced) query.";
       break;
   }
   return false;

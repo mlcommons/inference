@@ -195,7 +195,8 @@ struct TestSettings {
   // ==================================
   /// \name Latency percentile for Multi-stream and Server mode 
   /**@{*/
-  double latency_percentile = 0.9;
+  double latency_percentile_multistream = 0.9;
+  double latency_percentile_server = 0.99;
   /**@}*/
 };
 

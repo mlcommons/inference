@@ -196,7 +196,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def(pybind11::init<>())
       .def_readwrite("scenario", &TestSettings::scenario)
       .def_readwrite("mode", &TestSettings::mode)
-      .def_readwrite("single_stream_expected_latency_ns",
+      .def_readwrite("single_stream_expected_latency_ns",    
                      &TestSettings::single_stream_expected_latency_ns)
       .def_readwrite("multi_stream_target_qps",
                      &TestSettings::multi_stream_target_qps)
@@ -221,7 +221,8 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("sample_index_rng_seed",
                      &TestSettings::sample_index_rng_seed)
       .def_readwrite("schedule_rng_seed", &TestSettings::schedule_rng_seed)
-      .def_readwrite("latency_percentile", &TestSettings::latency_percentile);
+      .def_readwrite("latency_percentile_multistream", &TestSettings::latency_percentile_multistream)
+      .def_readwrite("latency_percentile_server", &TestSettings::latency_percentile_server);
 
   pybind11::enum_<LoggingMode>(m, "LoggingMode")
       .value("AsyncPoll", LoggingMode::AsyncPoll)

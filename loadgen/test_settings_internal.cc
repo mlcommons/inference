@@ -101,7 +101,8 @@ TestSettingsInternal::TestSettingsInternal(
 
   min_sample_count = min_query_count * samples_per_query;
 
-  latency_percentile = requested.latency_percentile;
+  latency_percentile_multistream = requested.latency_percentile_multistream;
+  latency_percentile_server = requested.latency_percentile_server;
 
 }
 

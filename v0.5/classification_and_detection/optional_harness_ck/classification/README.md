@@ -224,16 +224,13 @@ The table below shows the accuracy on the ImageNet 2012 validation set
 
 | Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
 |-|-|-|-|-|
-| ResNet                  |  Top1  | 0.76170 | 0.76458 | 0.76522    |
-|                         |  Top5  | 0.92866 | 0.93014 | 0.93066    |
-| MobileNet non-quantized |  Top1  | 0.71226 | 0.71516 | N/A        |
-|                         |  Top5  | 0.89834 | 0.90004 | N/A        |
-| MobileNet quantized     |  Top1  | 0.70348 | 0.70654 | N/A        |
-|                         |  Top5  | 0.89376 | 0.89514 | N/A        |
+| ResNet                  |  Top1  | 0.76170 | 0.76456 | 0.76522    |
+|                         |  Top5  | 0.92866 | 0.93016 | 0.93066    |
+| MobileNet non-quantized |  Top1  | 0.71226 | 0.71676 | N/A        |
+|                         |  Top5  | 0.89834 | 0.90118 | N/A        |
+| MobileNet quantized     |  Top1  | 0.70348 | 0.70694 | N/A        |
+|                         |  Top5  | 0.89376 | 0.89594 | N/A        |
 
-**NB:** The accuracy of the non-quantized MobileNet model using OpenCV preprocessing (0.71516)
-differs slightly from the accuracy measured via the official reference code (0.7168).
-While we have tried quite a few different things to improve the accuracy, any ideas are welcome.
 
 #### Detect datasets preprocessed on a different machine
 

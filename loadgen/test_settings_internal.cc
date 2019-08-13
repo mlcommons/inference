@@ -41,6 +41,8 @@ TestSettingsInternal::TestSettingsInternal(
       target_qps = static_cast<double>(std::nano::den) /
                    requested.single_stream_expected_latency_ns;
       max_async_queries = 1;
+      target_latency_percentile =
+          requested.single_stream_target_latency_percentile;
       break;
     case TestScenario::MultiStream:
     case TestScenario::MultiStreamFree:
@@ -48,6 +50,8 @@ TestSettingsInternal::TestSettingsInternal(
       target_latency =
           std::chrono::nanoseconds(requested.multi_stream_target_latency_ns);
       max_async_queries = requested.multi_stream_max_async_queries;
+      target_latency_percentile =
+          requested.multi_stream_target_latency_percentile;
       break;
     case TestScenario::Server:
       if (requested.server_target_qps >= 0.0) {
@@ -63,6 +67,8 @@ TestSettingsInternal::TestSettingsInternal(
           std::chrono::nanoseconds(requested.server_target_latency_ns);
       max_async_queries =
           std::numeric_limits<decltype(max_async_queries)>::max();
+      target_latency_percentile =
+          requested.server_target_latency_percentile;
       break;
     case TestScenario::Offline:
       if (requested.offline_expected_qps >= 0.0) {
@@ -100,10 +106,6 @@ TestSettingsInternal::TestSettingsInternal(
   }
 
   min_sample_count = min_query_count * samples_per_query;
-
-  latency_percentile_multistream = requested.latency_percentile_multistream;
-  latency_percentile_server = requested.latency_percentile_server;
-
 }
 
 std::string ToString(TestScenario scenario) {

@@ -696,9 +696,8 @@ struct PerformanceSummary {
     const double percentile;
     QuerySampleLatency value = 0;
   };
-  /// \todo Make .90 a TestSetting and update relevant hard-coded strings.
-  PercentileEntry latency_target_multistream{settings.latency_percentile_multistream};
-  PercentileEntry latency_target_server{settings.latency_percentile_server};
+  // Latency target percentile
+  PercentileEntry target_latency_percentile{settings.target_latency_percentile};
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
 
@@ -727,8 +726,7 @@ void PerformanceSummary::ProcessLatencies() {
 
   std::sort(pr.latencies.begin(), pr.latencies.end());
 
-  latency_target_multistream.value = pr.latencies[sample_count * latency_target_multistream.percentile];
-  latency_target_server.value = pr.latencies[sample_count * latency_target_server.percentile];
+  target_latency_percentile.value = pr.latencies[sample_count * target_latency_percentile.percentile];
   latency_min = pr.latencies.front();
   latency_max = pr.latencies.back();
   for (auto& lp : latency_percentiles) {
@@ -802,14 +800,14 @@ bool PerformanceSummary::PerfConstraintsMet(std::string* recommendation) {
     case TestScenario::MultiStreamFree:
       // TODO: Finalize multi-stream performance targets with working group.
       ProcessLatencies();
-      if (latency_target_multistream.value > settings.target_latency.count()) {
+      if (target_latency_percentile.value > settings.target_latency.count()) {
         *recommendation = "Reduce samples per query to improve latency.";
         perf_constraints_met = false;
       }
       break;
     case TestScenario::Server:
       ProcessLatencies();
-      if (latency_target_server.value > settings.target_latency.count()) {
+      if (target_latency_percentile.value > settings.target_latency.count()) {
         *recommendation = "Reduce target QPS to improve latency.";
         perf_constraints_met = false;
       }
@@ -833,7 +831,7 @@ void PerformanceSummary::Log(AsyncSummary& summary) {
 
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
-      summary("90th percentile latency (ns) : ", latency_percentiles[1].value);
+      summary("90th percentile latency (ns) : ", target_latency_percentile.value);
       break;
     }
     case TestScenario::MultiStream: {

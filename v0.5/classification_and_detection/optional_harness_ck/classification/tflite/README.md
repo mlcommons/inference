@@ -301,12 +301,12 @@ $ ck benchmark program:image-classification-tflite \
 
 | Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
 |-|-|-|-|-|
-| ResNet                  |  Top1  | 0.76170 | 0.76458 | 0.76522 |
-|                         |  Top5  | 0.92866 | 0.93014 | 0.93066 |
-| MobileNet non-quantized |  Top1  | 0.71226 | 0.71516 | N/A     |
-|                         |  Top5  | 0.89834 | 0.90006 | N/A     |
-| MobileNet quantized     |  Top1  | 0.70502 | 0.70776 | N/A     |
-|                         |  Top5  | 0.89118 | 0.89198 | N/A     |
+| ResNet                  |  Top1  | 0.76170 | 0.76456 | 0.76522 |
+|                         |  Top5  | 0.92866 | 0.93016 | 0.93066 |
+| MobileNet non-quantized |  Top1  | 0.71226 | 0.71676 | N/A     |
+|                         |  Top5  | 0.89834 | 0.90118 | N/A     |
+| MobileNet quantized     |  Top1  | 0.70502 | 0.00000 | N/A     |
+|                         |  Top5  | 0.89118 | 0.00000 | N/A     |
 
 
 <a name="further-info"></a>

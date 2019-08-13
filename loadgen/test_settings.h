@@ -141,6 +141,8 @@ struct TestSettings {
   /// \brief The maximum number of queries, to which a SUT has not responded,
   /// before the loadgen will throttle issuance of new queries.
   int multi_stream_max_async_queries = 1;
+  /// \brief The latency percentile for multistream mode
+  double latency_percentile_multistream = 0.9;
   /**@}*/
 
   // ==================================
@@ -153,6 +155,8 @@ struct TestSettings {
   uint64_t server_target_latency_ns = 100000000;
   /// \brief TODO: Implement this.
   bool server_coalesce_queries = false;
+  /// \brief The latency percentile for server mode. The default is for images models. It should be 97% for otherwise.
+  double latency_percentile_server = 0.99;
   /**@}*/
 
   // ==================================
@@ -193,11 +197,6 @@ struct TestSettings {
   uint64_t schedule_rng_seed = 0;
   /**@}*/
   // ==================================
-  /// \name Latency percentile for Multi-stream and Server mode 
-  /**@{*/
-  double latency_percentile_multistream = 0.9;
-  double latency_percentile_server = 0.99;
-  /**@}*/
 };
 
 ///

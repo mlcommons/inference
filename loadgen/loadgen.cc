@@ -923,8 +923,7 @@ void PerformanceSummary::Log(AsyncSummary& summary) {
 
   if (settings.scenario == TestScenario::SingleStream) {
     double qps_w_lg = (sample_count - 1) / pr.final_query_issued_time;
-    /// \todo qps_wo_log should use latency_mean
-    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(latency_min);
+    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(latency_mean);
     summary("QPS w/ loadgen overhead         : " + DoubleToString(qps_w_lg));
     summary("QPS w/o loadgen overhead        : " + DoubleToString(qps_wo_lg));
     summary("");

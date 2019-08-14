@@ -30,6 +30,15 @@ This benchmark app is a reference implementation that is not meant to be the fas
 It is written in python which might make it less suitable for lite models like mobilenet or large number of cpu's.
 We are thinking to provide a c++ implementation with identical functionality in the near future.
 
+## Tools for preparing datasets and validating accuracy
+The reference implementation includes all required pre-processing of datasets. It also includes a ```--accuracy``` option to validate accuracy as required by mlperf.
+If you are not using the reference implementation, a few scripts will help:
+- a tool to prepare the coco dataset is [here](../tools/upscale_coco)
+- a tool to prepare the imagenet dataset is ```comming soon```
+- for image_classification benchmarks the tool to report accuracy based on data logged by loadgen is [here](tools/accuracy-imagenet.py)
+- for object detection benchmarks the tool to report accuracy based on data logged by loadgen is ```comming soon```
+ 
+
 ## Datasets
 | dataset | download link | 
 | ---- | ---- | 

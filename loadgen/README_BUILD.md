@@ -1,5 +1,11 @@
 # Building the LoadGen {#ReadmeBuild}
 
+## Prerequisites
+
+    sudo apt-get install libglib2.0-dev python-pip python3-pip
+    pip2 install absl-py numpy
+    pip3 install absl-py numpy
+
 ## Quick Start
 
     pip install absl-py numpy

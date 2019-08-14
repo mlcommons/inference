@@ -19,7 +19,7 @@ def parse_args():
     parser.add_argument('--annotations', '-a', type=str, default='annotations/instances_val2017.json',
                         help='annotations directory')
     parser.add_argument('--size', required=True, type=int, nargs='+',
-                        help='upscaled image sizes (e.g 300 300, 700 700, 1400 1400')
+                        help='upscaled image sizes (e.g 300 300, 1200 1200')
     parser.add_argument('--format', '-f', type=str, default='jpg',
                         help='image format')
     return parser.parse_args()

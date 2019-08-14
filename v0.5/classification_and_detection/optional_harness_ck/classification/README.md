@@ -207,7 +207,7 @@ CK installs all the dependencies automatically. (More information on recommended
 
 The table below summarizes the available methods.
 
-| Model                | Pillow            | OpenCV (universal)       | OpenCV (for MobileNet)       | OpenCV (for ResNet)       | TensorFlow         |
+| Model                | Pillow            | OpenCV universal         | OpenCV for MobileNet         | OpenCV for ResNet         | TensorFlow         |
 |-|-|-|-|-|-|
 | Matches official?    | No                | No                       | Yes                          | Yes                       | No                 |
 | Additional tags      | `using-pillow`    | `using-opencv,universal` | `using-opencv,for-mobilenet` | `using-opencv,for-resnet` | `using-tensorflow` |
@@ -226,15 +226,16 @@ An alternative, dubbed OpenCV (universal), uses bilinear interpolation and store
 The table below shows the accuracy on the ImageNet 2012 validation set
 (50,000 images) measured [via TensorFlow (C++)](tf-cpp/README.md).
 
-| Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
-|-|-|-|-|-|
-| ResNet                  |  Top1  | 0.76170 | 0.76456 | 0.76522    |
-|                         |  Top5  | 0.92866 | 0.93016 | 0.93066    |
-| MobileNet non-quantized |  Top1  | 0.71226 | 0.71676 | N/A        |
-|                         |  Top5  | 0.89834 | 0.90118 | N/A        |
-| MobileNet quantized     |  Top1  | 0.70348 | 0.70694 | N/A        |
-|                         |  Top5  | 0.89376 | 0.89594 | N/A        |
+| Model                   | Metric | Pillow  | OpenCV universal | OpenCV for ResNet | OpenCV for MobileNet | TensorFlow |
+|-|-|-|-|-|-|-|
+| ResNet                  |  Top1  | 0.76170 | 0.76450          | 0.76456           | N/A                  | 0.76522    |
+|                         |  Top5  | 0.92866 | 0.93058          | 0.93016           | N/A                  | 0.93066    |
+| MobileNet non-quantized |  Top1  | 0.71226 | 0.71676          | N/A               | 0.71676              | N/A        |
+|                         |  Top5  | 0.89834 | 0.90118          | N/A               | 0.90118              | N/A        |
+| MobileNet quantized     |  Top1  | 0.70348 | 0.70700          | N/A               | 0.70694              | N/A        |
+|                         |  Top5  | 0.89376 | 0.89594          | N/A               | 0.89594              | N/A        |
 
+Considering Top1, the universal OpenCV method is slightly less accurate for ResNet, but slightly more accurate for MobileNet quantized than the official code. The TensorFlow method is most accurate for ResNet, but is not suitable for MobileNet. The Pillow method is least accurate, but can be used on Arm platforms.
 
 #### Detect datasets preprocessed on a different machine
 

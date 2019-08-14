@@ -350,7 +350,7 @@ std::vector<QueryMetadata> GenerateQueries(
       size_t num_full_repeats = samples_per_query / num_loaded_samples;
       int remainder = samples_per_query % (num_loaded_samples);
 
-      for (int i = 0; i < num_full_repeats; ++i) {
+      for (size_t i = 0; i < num_full_repeats; ++i) {
         std::copy(loaded_samples.begin(), loaded_samples.end(),
                   samples.begin() + i * num_loaded_samples);
       }

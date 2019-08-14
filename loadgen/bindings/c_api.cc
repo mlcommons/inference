@@ -148,5 +148,9 @@ void StartTest(void* sut, void* qsl, const TestSettings& settings) {
   mlperf::StartTest(sut_cast, qsl_cast, settings, default_log_settings);
 }
 
+void QuerySamplesComplete(QuerySampleResponse* responses, size_t response_count) {
+  mlperf::QuerySamplesComplete(responses, response_count);
+}
+
 }  // namespace c
 }  // namespace mlperf

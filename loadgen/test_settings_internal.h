@@ -51,6 +51,7 @@ struct TestSettingsInternal {
   int samples_per_query;
   double target_qps;
   std::chrono::nanoseconds target_latency{0};
+  double target_latency_percentile; // Single, multistream and server mode
   int max_async_queries;
 
   // Target duration is used to generate queries of a minimum duration before
@@ -68,8 +69,6 @@ struct TestSettingsInternal {
   uint64_t qsl_rng_seed;
   uint64_t sample_index_rng_seed;
   uint64_t schedule_rng_seed;
-
-  double target_latency_percentile; // Single, multistream and server mode
 };
 
 }  // namespace loadgen

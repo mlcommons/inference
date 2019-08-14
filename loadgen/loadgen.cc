@@ -831,7 +831,8 @@ void PerformanceSummary::Log(AsyncSummary& summary) {
 
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
-      summary("90th percentile latency (ns) : ", target_latency_percentile.value);
+      summary(DoubleToString(target_latency_percentile.percentile * 100, 0) +
+              "th percentile latency (ns) : ", target_latency_percentile.value);
       break;
     }
     case TestScenario::MultiStream: {

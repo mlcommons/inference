@@ -25,10 +25,9 @@ limitations under the License.
 #include <stdint.h>
 
 #include "../query_sample.h"
+#include "../test_settings.h"
 
 namespace mlperf {
-
-struct TestSettings;
 
 namespace c {
 
@@ -41,6 +40,10 @@ typedef void (*IssueQueryCallback)(ClientData, const QuerySample*, size_t);
 typedef void (*FlushQueriesCallback)();
 typedef void (*ReportLatencyResultsCallback)(ClientData, const int64_t*,
                                              size_t);
+
+/// \brief SUT calls this function to report query result back to loadgen
+void QuerySamplesComplete(QuerySampleResponse* responses,
+                          size_t response_count);
 
 /// \brief Create an opaque SUT pointer based on C callbacks.
 void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,

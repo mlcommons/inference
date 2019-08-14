@@ -347,8 +347,8 @@ $ ck benchmark program:image-classification-tf-cpp \
 
 | Model                   | Metric | Pillow  | OpenCV universal | OpenCV for ResNet | OpenCV for MobileNet | TensorFlow |
 |-|-|-|-|-|-|-|
-| ResNet                  |  Top1  | 0.76170 | 0.76450          | 0.76456           | N/A                  | 0.76522    |
-|                         |  Top5  | 0.92866 | 0.93058          | 0.93016           | N/A                  | 0.93066    |
+| ResNet                  |  Top1  | 0.76170 | 0.76422          | 0.76456           | N/A                  | 0.76522    |
+|                         |  Top5  | 0.92866 | 0.93074          | 0.93016           | N/A                  | 0.93066    |
 | MobileNet non-quantized |  Top1  | 0.71226 | 0.71676          | N/A               | 0.71676              | N/A        |
 |                         |  Top5  | 0.89834 | 0.90118          | N/A               | 0.90118              | N/A        |
 | MobileNet quantized     |  Top1  | 0.70348 | 0.70700          | N/A               | 0.70694              | N/A        |

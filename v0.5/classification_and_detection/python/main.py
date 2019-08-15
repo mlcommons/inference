@@ -397,7 +397,7 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
         acc_str = ", acc={:.3f}%".format(result["accuracy"])
         if "mAP" in result_dict:
             result["mAP"] = 100. * result_dict["mAP"]
-            acc_str += ", mAP={:.3f}%".format(result_dict["mAP"])
+            acc_str += ", mAP={:.3f}%".format(result["mAP"])
 
     # add the result to the result dict
     final_results[name] = result

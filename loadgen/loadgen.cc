@@ -583,6 +583,10 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   const size_t max_queries_outstanding =
       settings.target_qps * query_seconds_outstanding_threshold;
 
+  LogDetail([date_time = CurrentDateTimeForPower()](AsyncDetail& detail) {
+    detail("POWER_BEGIN: ", "mode", ToString(mode), "time", date_time);
+  });
+
   const PerfClock::time_point start = PerfClock::now();
   PerfClock::time_point last_now = start;
   QueryScheduler<scenario> query_scheduler(settings, start);
@@ -646,6 +650,10 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       }
     }
   }
+
+  LogDetail([date_time = CurrentDateTimeForPower()](AsyncDetail& detail) {
+    detail("POWER_END: ", "mode", ToString(mode), "time", date_time);
+  });
 
   // Let the SUT know it should not expect any more queries.
   sut->FlushQueries();

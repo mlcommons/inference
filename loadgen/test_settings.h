@@ -139,6 +139,7 @@ struct TestSettings {
   /// \brief A hint used by the loadgen to pre-generate enough samples to
   ///        meet the minimum test duration.
   uint64_t single_stream_expected_latency_ns = 1000000;
+  double single_stream_target_latency_percentile = 0.90;
   /**@}*/
 
   // ==================================
@@ -149,6 +150,9 @@ struct TestSettings {
   double multi_stream_target_qps = 10.0;
   /// \brief The latency constraint for the MultiStream scenario.
   uint64_t multi_stream_target_latency_ns = 100000000;
+  /// \brief The latency percentile for multistream mode. This value is combined
+  /// with multi_stream_target_latency_ns to determine if a run is valid.
+  double multi_stream_target_latency_percentile = 0.9;
   /// \brief The number of samples in each query.
   int multi_stream_samples_per_query = 4;
   /// \brief The maximum number of queries, to which a SUT has not responded,
@@ -164,6 +168,12 @@ struct TestSettings {
   double server_target_qps = 1;
   /// \brief The latency constraint for the Server scenario.
   uint64_t server_target_latency_ns = 100000000;
+  /// \brief The latency percentile for server mode. This value is combined with
+  /// server_target_latency_ns to determine if a run is valid.
+  /// \details 99% is the default value, which is correct for image models. GNMT
+  /// should be set to 0.97 (97%) in v0.5.(As always, check the policy page for
+  /// updated values for the benchmark you are running.)
+  double server_target_latency_percentile = 0.99;
   /// \brief TODO: Implement this.
   bool server_coalesce_queries = false;
   /**@}*/

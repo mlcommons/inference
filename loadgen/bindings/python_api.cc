@@ -198,10 +198,14 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("mode", &TestSettings::mode)
       .def_readwrite("single_stream_expected_latency_ns",
                      &TestSettings::single_stream_expected_latency_ns)
+      .def_readwrite("single_stream_target_latency_percentile",
+                     &TestSettings::single_stream_target_latency_percentile)
       .def_readwrite("multi_stream_target_qps",
                      &TestSettings::multi_stream_target_qps)
       .def_readwrite("multi_stream_target_latency_ns",
                      &TestSettings::multi_stream_target_latency_ns)
+      .def_readwrite("multi_stream_target_latency_percentile",
+                     &TestSettings::multi_stream_target_latency_percentile)
       .def_readwrite("multi_stream_samples_per_query",
                      &TestSettings::multi_stream_samples_per_query)
       .def_readwrite("multi_stream_max_async_queries",
@@ -209,6 +213,8 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("server_target_qps", &TestSettings::server_target_qps)
       .def_readwrite("server_target_latency_ns",
                      &TestSettings::server_target_latency_ns)
+      .def_readwrite("server_target_latency_percentile",
+                     &TestSettings::server_target_latency_percentile)
       .def_readwrite("server_coalesce_queries",
                      &TestSettings::server_coalesce_queries)
       .def_readwrite("offline_expected_qps",

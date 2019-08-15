@@ -258,8 +258,7 @@ auto SampleDistribution(size_t sample_count, size_t stride, std::mt19937* rng) {
     indices.push_back(i);
   }
   std::shuffle(indices.begin(), indices.end(), *rng);
-  return
-      [ indices = std::move(indices), i = size_t(0) ](auto& /*gen*/) mutable {
+  return [indices = std::move(indices), i = size_t(0)](auto& /*gen*/) mutable {
     return indices.at(i++);
   };
 }
@@ -271,9 +270,7 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
                                                    size_t /*stride*/,
                                                    std::mt19937* /*rng*/) {
   return [dist = std::uniform_int_distribution<>(0, sample_count - 1)](
-      auto& gen) mutable {
-    return dist(gen);
-  };
+             auto& gen) mutable { return dist(gen); };
 }
 
 /// \brief Generates queries for the requested settings, templated by
@@ -342,21 +339,24 @@ std::vector<QueryMetadata> GenerateQueries(
         // query as the value of samples_per_query increases.
         s = loaded_samples[sample_i++];
       }
-    } else if(mode == TestMode::PerformanceOnly && scenario == TestScenario::Offline ){
+    } else if (mode == TestMode::PerformanceOnly &&
+               scenario == TestScenario::Offline) {
       // For the Offline + Performance scenario, we also want to support
-      // contiguous samples. In this scenario the query can be much larger than what
-      // fits into memory. We simply repeat loaded_samples N times, plus a remainder
-      // to ensure we fill up samples.
-      // Note that this eliminates randomization.
+      // contiguous samples. In this scenario the query can be much larger than
+      // what fits into memory. We simply repeat loaded_samples N times, plus a
+      // remainder to ensure we fill up samples. Note that this eliminates
+      // randomization.
       size_t num_loaded_samples = loaded_samples.size();
-      size_t num_full_repeats = samples_per_query/num_loaded_samples;
+      size_t num_full_repeats = samples_per_query / num_loaded_samples;
       int remainder = samples_per_query % (num_loaded_samples);
 
-      for (int i = 0; i < num_full_repeats; ++i){
-        std::copy (loaded_samples.begin(), loaded_samples.end(), samples.begin() + i * num_loaded_samples);
+      for (size_t i = 0; i < num_full_repeats; ++i) {
+        std::copy(loaded_samples.begin(), loaded_samples.end(),
+                  samples.begin() + i * num_loaded_samples);
       }
 
-      std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder, samples.begin() + num_full_repeats * num_loaded_samples);
+      std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder,
+                samples.begin() + num_full_repeats * num_loaded_samples);
 
     } else {
       for (auto& s : samples) {
@@ -381,10 +381,8 @@ std::vector<QueryMetadata> GenerateQueries(
     }
   }
 
-  LogDetail([
-    count = queries.size(), spq = settings.samples_per_query,
-    duration = timestamp.count()
-  ](AsyncDetail & detail) {
+  LogDetail([count = queries.size(), spq = settings.samples_per_query,
+             duration = timestamp.count()](AsyncDetail& detail) {
     detail("GeneratedQueries: ", "queries", count, "samples per query", spq,
            "duration", duration);
   });
@@ -579,10 +577,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.
   const double query_seconds_outstanding_threshold =
-      5 *
-      std::chrono::duration_cast<std::chrono::duration<double>>(
-          settings.target_latency)
-          .count();
+      5 * std::chrono::duration_cast<std::chrono::duration<double>>(
+              settings.target_latency)
+              .count();
   const size_t max_queries_outstanding =
       settings.target_qps * query_seconds_outstanding_threshold;
 
@@ -712,8 +709,8 @@ struct PerformanceSummary {
     const double percentile;
     QuerySampleLatency value = 0;
   };
-  /// \todo Make .90 a TestSetting and update relevant hard-coded strings.
-  PercentileEntry latency_target{.90};
+  // Latency target percentile
+  PercentileEntry target_latency_percentile{settings.target_latency_percentile};
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
 
@@ -742,7 +739,7 @@ void PerformanceSummary::ProcessLatencies() {
 
   std::sort(pr.latencies.begin(), pr.latencies.end());
 
-  latency_target.value = pr.latencies[sample_count * latency_target.percentile];
+  target_latency_percentile.value = pr.latencies[sample_count * target_latency_percentile.percentile];
   latency_min = pr.latencies.front();
   latency_max = pr.latencies.back();
   for (auto& lp : latency_percentiles) {
@@ -786,7 +783,8 @@ bool PerformanceSummary::MinDurationMet(std::string* recommendation) {
       break;
     case TestScenario::Offline:
       *recommendation =
-          "Increase expected QPS so the loadgen pre-generates a larger (coalesced) query.";
+          "Increase expected QPS so the loadgen pre-generates a larger "
+          "(coalesced) query.";
       break;
   }
   return false;
@@ -816,14 +814,14 @@ bool PerformanceSummary::PerfConstraintsMet(std::string* recommendation) {
     case TestScenario::MultiStreamFree:
       // TODO: Finalize multi-stream performance targets with working group.
       ProcessLatencies();
-      if (latency_target.value > settings.target_latency.count()) {
+      if (target_latency_percentile.value > settings.target_latency.count()) {
         *recommendation = "Reduce samples per query to improve latency.";
         perf_constraints_met = false;
       }
       break;
     case TestScenario::Server:
       ProcessLatencies();
-      if (latency_target.value > settings.target_latency.count()) {
+      if (target_latency_percentile.value > settings.target_latency.count()) {
         *recommendation = "Reduce target QPS to improve latency.";
         perf_constraints_met = false;
       }
@@ -847,7 +845,8 @@ void PerformanceSummary::Log(AsyncSummary& summary) {
 
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
-      summary("90th percentile latency (ns) : ", latency_target.value);
+      summary(DoubleToString(target_latency_percentile.percentile * 100, 0) +
+              "th percentile latency (ns) : ", target_latency_percentile.value);
       break;
     }
     case TestScenario::MultiStream: {
@@ -923,8 +922,7 @@ void PerformanceSummary::Log(AsyncSummary& summary) {
 
   if (settings.scenario == TestScenario::SingleStream) {
     double qps_w_lg = (sample_count - 1) / pr.final_query_issued_time;
-    /// \todo qps_wo_log should use latency_mean
-    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(latency_min);
+    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(latency_mean);
     summary("QPS w/ loadgen overhead         : " + DoubleToString(qps_w_lg));
     summary("QPS w/o loadgen overhead        : " + DoubleToString(qps_wo_lg));
     summary("");
@@ -984,9 +982,9 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   sut->ReportLatencyResults(pr.latencies);
 
-  LogSummary([perf_summary =
-                  PerformanceSummary{sut->Name(), settings, std::move(pr)}](
-      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
+  LogSummary(
+      [perf_summary = PerformanceSummary{sut->Name(), settings, std::move(pr)}](
+          AsyncSummary& summary) mutable { perf_summary.Log(summary); });
 
   qsl->UnloadSamplesFromRam(performance_set.set);
 }
@@ -1032,8 +1030,10 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   for (auto& loadable_set : loadable_sets) {
     {
-      auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
-          AsyncTrace & trace) { trace("LoadSamples", "count", count); });
+      auto tracer = MakeScopedTracer(
+          [count = loadable_set.set.size()](AsyncTrace& trace) {
+            trace("LoadSamples", "count", count);
+          });
       LoadSamplesToRam(qsl, loadable_set.set);
     }
 
@@ -1041,8 +1041,10 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
         sut, settings, loadable_set, sequence_gen));
 
     {
-      auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
-          AsyncTrace & trace) { trace("UnloadSampes", "count", count); });
+      auto tracer = MakeScopedTracer(
+          [count = loadable_set.set.size()](AsyncTrace& trace) {
+            trace("UnloadSampes", "count", count);
+          });
       qsl->UnloadSamplesFromRam(loadable_set.set);
     }
   }

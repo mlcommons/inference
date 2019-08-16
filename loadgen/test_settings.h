@@ -164,7 +164,6 @@ struct TestSettings {
   /// \name Server-specific
   /**@{*/
   /// \brief The average QPS of the poisson distribution.
-  ///        Only used as a hint in SearchForPeakPerformance.
   double server_target_qps = 1;
   /// \brief The latency constraint for the Server scenario.
   uint64_t server_target_latency_ns = 100000000;
@@ -176,6 +175,9 @@ struct TestSettings {
   double server_target_latency_percentile = 0.99;
   /// \brief TODO: Implement this.
   bool server_coalesce_queries = false;
+  /// \brief The precision of qps while finding peak performance
+  ///        Only used as a hint in FindPeakPerformance.
+  uint8_t server_target_qps_precision = 1;
   /**@}*/
 
   // ==================================

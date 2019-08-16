@@ -153,7 +153,6 @@ class PostProcessCoco:
     def finalize(self, result_dict, ds=None, output_dir=None):
         result_dict["good"] += self.good
         result_dict["total"] += self.total
-        image_ids = []
 
         if self.use_inv_map:
             # for pytorch
@@ -165,14 +164,17 @@ class PostProcessCoco:
             inv_map = {v:k for k,v in label_map.items()}
 
         detections = []
+        image_indicies = []
         for batch in range(0, len(self.results)):
             for idx in range(0, len(self.results[batch])):
                 detection = self.results[batch][idx]
-                image_id = int(detection[0])
-                image_ids.append(image_id)
-                # map it to the coco image it
-                detection[0] = ds.image_ids[image_id]
-                height, width = ds.image_sizes[image_id]
+                # this is the index of the coco image
+                image_idx = int(detection[0])
+                # because we need to have the
+                image_indicies.append(image_idx)
+                # map the index to the coco image id
+                detection[0] = ds.image_ids[image_idx]
+                height, width = ds.image_sizes[image_idx]
                 # box comes from model as: ymin, xmin, ymax, xmax
                 ymin = detection[1] * height
                 xmin = detection[2] * width
@@ -191,19 +193,16 @@ class PostProcessCoco:
                     detection[6] =  cat_id
                 detections.append(np.array(detection))
 
-        # for debugging
         if output_dir:
             # for debugging
             pp = []
-            for detection in detections:
+            for image_idx, detection in zip(image_indicies, detections):
                 pp.append({"image_id": int(detection[0]),
-                           "image_loc": ds.get_item_loc(image_ids[idx]),
+                           "image_loc": ds.get_item_loc(image_idx),
                            "category_id": int(detection[6]),
                            "bbox": [float(detection[1]), float(detection[2]),
                                     float(detection[3]), float(detection[4])],
                            "score": float(detection[5])})
-            if not output_dir:
-                output_dir = "/tmp"
             fname = "{}/{}.json".format(output_dir, result_dict["scenario"])
             with open(fname, "w") as fp:
                 json.dump(pp, fp, sort_keys=True, indent=4)

@@ -56,7 +56,7 @@ python tools/accuracy-imagenet.py --mlperf-accuracy-file mlperf_log_accuracy.jso
 ### Validate accuracy for ssd-mobilenet and ssd-resnet34 benchmarks
 The tool is [here](tools/accuracy-coco.py). You can run it like:
 ```
-python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --coco /data/coco
+python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --coco-dir /data/coco
 ```
 
 ## Datasets

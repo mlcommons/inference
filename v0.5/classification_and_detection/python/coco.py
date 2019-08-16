@@ -104,7 +104,7 @@ class Coco(dataset.Dataset):
         return img, self.label_list[nr]
 
     def get_item_loc(self, nr):
-        src = os.path.join(self.data_path, self.image_list[nr])
+        src = os.path.join(self.data_path, nr)
         return src
 
 
@@ -197,7 +197,7 @@ class PostProcessCoco:
             pp = []
             for detection in detections:
                 pp.append({"image_id": int(detection[0]),
-                           "image_loc": ds.get_item_loc(image_ids[idx]),
+                           "image_loc": ds.get_item_loc("{:012d}.jpg".format(int(detection[0]))),
                            "category_id": int(detection[6]),
                            "bbox": [float(detection[1]), float(detection[2]),
                                     float(detection[3]), float(detection[4])],

@@ -50,7 +50,9 @@ $ python run_task.py --run=accuracy
 ```
 
 ### Run GNMT through LoadGen:
-1.  Follow the instructions to install LoadGen from https://github.com/mlperf/inference/blob/master/loadgen/README.md
+1.  For LoadGen introduction, please refer to https://github.com/mlperf/inference/blob/master/loadgen/README.md
+Follow the instructions to install LoadGen from https://github.com/mlperf/inference/blob/master/loadgen/README_BUILD.md
+
 2.  Run:
 ```
 python loadgen_gnmt.py --store_translation

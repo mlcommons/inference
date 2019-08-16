@@ -21,6 +21,9 @@ limitations under the License.
 
 #include "test_settings.h"
 
+#include "logging.h"
+#include "math.h"
+
 namespace mlperf {
 
 namespace logging {
@@ -71,6 +74,127 @@ struct TestSettingsInternal {
   uint64_t schedule_rng_seed;
 };
 
+namespace find_peak_performance {
+
+template <TestScenario scenario>
+TestSettingsInternal InitialSettings(
+    const TestSettingsInternal &reference_settings) {
+  TestSettingsInternal initial_settings = reference_settings;
+  if (scenario == TestScenario::MultiStream ||
+      scenario == TestScenario::MultiStreamFree) {
+    initial_settings.samples_per_query = 1;
+  } else if (scenario == TestScenario::Server) {
+    initial_settings.target_qps =
+        pow(0.1, reference_settings.requested.server_target_qps_precision);
+  } else {
+    LogDetail([](AsyncDetail &detail) {
+      detail(
+          "other types of scenarios (SingleStream & Offline) does not support "
+          "the method.");
+    });
+  }
+  return initial_settings;
+}
+
+template <TestScenario scenario>
+TestSettingsInternal MidOfBoundaries(
+    const TestSettingsInternal &lower_bound_settings,
+    const TestSettingsInternal &upper_bound_settings) {
+  TestSettingsInternal mid_settings = lower_bound_settings;
+  if (scenario == TestScenario::MultiStream ||
+      scenario == TestScenario::MultiStreamFree) {
+    assert(lower_bound_settings.samples_per_query <
+           upper_bound_settings.samples_per_query);
+    mid_settings.samples_per_query = lower_bound_settings.samples_per_query +
+                                     (upper_bound_settings.samples_per_query -
+                                      lower_bound_settings.samples_per_query) /
+                                         2;
+  } else if (scenario == TestScenario::Server) {
+    assert(lower_bound_settings.target_qps < upper_bound_settings.target_qps);
+    mid_settings.target_qps =
+        lower_bound_settings.target_qps +
+        (upper_bound_settings.target_qps - lower_bound_settings.target_qps) / 2;
+  } else {
+    LogDetail([](AsyncDetail &detail) {
+      detail(
+          "other types of scenarios (SingleStream & Offline) does not support "
+          "the method.");
+    });
+  }
+  return mid_settings;
+}
+
+template <TestScenario scenario>
+bool IsFinished(const TestSettingsInternal &lower_bound_settings,
+                const TestSettingsInternal &upper_bound_settings) {
+  if (scenario == TestScenario::MultiStream ||
+      scenario == TestScenario::MultiStreamFree) {
+    return lower_bound_settings.samples_per_query + 1 >=
+           upper_bound_settings.samples_per_query;
+  } else if (scenario == TestScenario::Server) {
+    uint8_t precision =
+        lower_bound_settings.requested.server_target_qps_precision;
+    double l = floor(lower_bound_settings.target_qps * pow(10, precision));
+    double u = floor(upper_bound_settings.target_qps * pow(10, precision));
+    return l + 1 >= u;
+  } else {
+    LogDetail([](AsyncDetail &detail) {
+      detail(
+          "other types of scenarios (SingleStream & Offline) does not support "
+          "the method.");
+    });
+    return true;
+  }
+}
+
+template <TestScenario scenario>
+std::string ToStringPerformanceField(const TestSettingsInternal &settings) {
+  if (scenario == TestScenario::MultiStream ||
+      scenario == TestScenario::MultiStreamFree) {
+    return std::to_string(settings.samples_per_query);
+  } else if (scenario == TestScenario::Server) {
+    return std::to_string(settings.target_qps);
+  } else {
+    // Unreachable
+    assert(false);
+    return ToString(settings.scenario);
+  }
+}
+
+template <TestScenario scenario>
+void SetPerformanceField(TestSettingsInternal &target,
+                         const TestSettingsInternal &source) {
+  if (scenario == TestScenario::MultiStream ||
+      scenario == TestScenario::MultiStreamFree) {
+    target.samples_per_query = source.samples_per_query;
+  } else if (scenario == TestScenario::Server) {
+    target.target_qps = source.target_qps;
+  } else {
+    LogDetail([](AsyncDetail &detail) {
+      detail(
+          "other types of scenarios (SingleStream & Offline) does not support "
+          "the method.");
+    });
+  }
+}
+
+template <TestScenario scenario>
+void WidenPerformanceField(TestSettingsInternal &settings) {
+  if (scenario == TestScenario::MultiStream ||
+      scenario == TestScenario::MultiStreamFree) {
+    settings.samples_per_query = settings.samples_per_query * 2;
+  } else if (scenario == TestScenario::Server) {
+    settings.target_qps = settings.target_qps * 2;
+  } else {
+    LogDetail([](AsyncDetail &detail) {
+      detail(
+          "other types of scenarios (SingleStream & Offline) does not support "
+          "the method.");
+    });
+  }
+}
+
+}  // namespace find_peak_performance
 }  // namespace loadgen
 }  // namespace mlperf
 

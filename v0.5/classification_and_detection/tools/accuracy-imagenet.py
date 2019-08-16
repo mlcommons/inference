@@ -50,9 +50,9 @@ def main():
             good += 1
         else:
             if args.verbose:
-                print("{}, expected: {}, found", img, label, found)
+                print("{}, expected: {}, found {}".format(img, label, found))
 
-    print("accuracy={:.2f}, good={}, total={}".format(100. * good / len(results), good, len(results)))
+    print("accuracy={:.3f}%, good={}, total={}".format(100. * good / len(results), good, len(results)))
 
 
 if __name__ == "__main__":

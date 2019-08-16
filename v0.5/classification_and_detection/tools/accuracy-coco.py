@@ -23,7 +23,7 @@ def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json")
-    parser.add_argument("--coco", required=True, help="coco directory")
+    parser.add_argument("--coco-dir", required=True, help="coco directory")
     parser.add_argument("--verbose", action="store_true", help="verbose messages")
     args = parser.parse_args()
     return args
@@ -32,7 +32,7 @@ def get_args():
 def main():
     args = get_args()
 
-    cocoGt = COCO(os.path.join(args.coco, "annotations/instances_val2017.json"))
+    cocoGt = COCO(os.path.join(args.coco_dir, "annotations/instances_val2017.json"))
 
     with open(args.mlperf_accuracy_file, "r") as f:
         results = json.load(f)
@@ -57,7 +57,7 @@ def main():
             xmin *= width
             ymax *= height
             xmax *= width
-            loc = os.path.join(args.coco, "val2017", image["file_name"])
+            loc = os.path.join(args.coco_dir, "val2017", image["file_name"])
             # pycoco wants {imageID,x1,y1,w,h,score,class}
             detections.append({
                 "image_id": image_id,
@@ -77,7 +77,7 @@ def main():
     cocoEval.accumulate()
     cocoEval.summarize()
 
-    print("mAP={:.5f}".format(cocoEval.stats[0]))
+    print("mAP={:.3f}%".format(100. * cocoEval.stats[0]))
 
 
 if __name__ == "__main__":

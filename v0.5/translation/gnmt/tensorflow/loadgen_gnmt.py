@@ -437,7 +437,7 @@ if __name__ == "__main__":
 
     parser.add_argument("--qps", type=int, default=10, help="target qps estimate")
     
-    parser.add_argument("--samples_per_query", type=int, default=4, help="Samples per query. Only works for \"Offline\" or \"MultiStream\" scenario")
+    parser.add_argument("--samples_per_query", type=int, default=4, help="Samples per query. Only works for Offline or MultiStream scenario")
 
     parser.add_argument("--max-latency", type=str, default="0.100", help="mlperf max latency in 99pct tile")
 

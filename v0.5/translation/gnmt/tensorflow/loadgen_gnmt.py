@@ -436,6 +436,8 @@ if __name__ == "__main__":
         help="For debugging purposes, modify settings to small number of querries.")
 
     parser.add_argument("--qps", type=int, default=10, help="target qps estimate")
+    
+    parser.add_argument("--samples_per_query", type=int, default=4, help="Samples per query. Only works for \"Offline\" or \"MultiStream\" scenario")
 
     parser.add_argument("--max-latency", type=str, default="0.100", help="mlperf max latency in 99pct tile")
 
@@ -448,6 +450,8 @@ if __name__ == "__main__":
     try:
         settings.mode = MODE_MAP[args.mode]
         settings.scenario = SCENARIO_MAP[args.scenario]
+        if args.scenario in ["Offline", "MultiStream"]:
+            settings.multi_stream_samples_per_query = args.samples_per_query
     except KeyError as e:
         print("Unknown mode or scenario: {}".format(e.args[0]))
         raise e

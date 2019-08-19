@@ -69,6 +69,8 @@ struct TestSettingsInternal {
   uint64_t qsl_rng_seed;
   uint64_t sample_index_rng_seed;
   uint64_t schedule_rng_seed;
+  uint64_t acc_log_rng_seed;
+  double acc_log_probability;
 };
 
 }  // namespace loadgen

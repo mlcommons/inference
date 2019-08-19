@@ -172,6 +172,9 @@ struct DurationGeneratorNs {
 template <TestScenario scenario, TestMode mode>
 struct ResponseDelegateDetailed : public ResponseDelegate {
   std::atomic<size_t> queries_completed{0};
+  std::mt19937 acc_log_rng;
+  std::uniform_real_distribution<double> acc_log_dist = std::uniform_real_distribution<double>(0,1);
+  double acc_log_prob = 0.0f;
 
   void SampleComplete(SampleMetadata* sample, QuerySampleResponse* response,
                       PerfClock::time_point complete_begin_time) override {
@@ -180,7 +183,7 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
     // into the lambda; even with C++14.
     std::vector<uint8_t>* sample_data_copy = nullptr;
-    if (mode == TestMode::AccuracyOnly) {
+    if (mode == TestMode::AccuracyOnly || acc_log_dist(acc_log_rng) <= acc_log_prob ) {
       // TODO: Verify accuracy with the data copied here.
       uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
       uint8_t* src_end = src_begin + response->size;
@@ -570,6 +573,8 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                SequenceGen* sequence_gen) {
   GlobalLogger().RestartLatencyRecording(sequence_gen->CurrentSampleId());
   ResponseDelegateDetailed<scenario, mode> response_logger;
+  response_logger.acc_log_rng = std::mt19937(settings.acc_log_rng_seed);
+  response_logger.acc_log_prob = settings.acc_log_probability;
 
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(
       settings, loaded_sample_set, sequence_gen, &response_logger);

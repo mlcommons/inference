@@ -34,7 +34,9 @@ TestSettingsInternal::TestSettingsInternal(
       min_sample_count(0),
       qsl_rng_seed(requested.qsl_rng_seed),
       sample_index_rng_seed(requested.sample_index_rng_seed),
-      schedule_rng_seed(requested.schedule_rng_seed) {
+      schedule_rng_seed(requested.schedule_rng_seed),
+      acc_log_rng_seed(requested.acc_log_rng_seed),
+      acc_log_probability(requested.acc_log_probability) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:

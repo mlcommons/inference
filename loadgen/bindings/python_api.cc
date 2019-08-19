@@ -226,7 +226,9 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("qsl_rng_seed", &TestSettings::qsl_rng_seed)
       .def_readwrite("sample_index_rng_seed",
                      &TestSettings::sample_index_rng_seed)
-      .def_readwrite("schedule_rng_seed", &TestSettings::schedule_rng_seed);
+      .def_readwrite("schedule_rng_seed", &TestSettings::schedule_rng_seed)
+      .def_readwrite("acc_log_rng_seed", &TestSettings::acc_log_rng_seed)
+      .def_readwrite("acc_log_probability", &TestSettings::acc_log_probability);
 
   pybind11::enum_<LoggingMode>(m, "LoggingMode")
       .value("AsyncPoll", LoggingMode::AsyncPoll)

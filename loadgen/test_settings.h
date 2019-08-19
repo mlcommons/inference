@@ -201,7 +201,7 @@ struct TestSettings {
 
   // ==================================
   /// \name Random number generation
-  /// There are 3 separate seeds, so each dimension can be changed
+  /// There are 4 separate seeds, so each dimension can be changed
   /// independently.
   /**@{*/
   /// \brief Affects which subset of samples from the QSL are chosen for
@@ -214,6 +214,13 @@ struct TestSettings {
   /// \details Different seeds will appear to "jitter" the queries
   /// differently in time, but should not affect the average issued QPS.
   uint64_t schedule_rng_seed = 0;
+  /// \brief Affects which samples have their query returns logged to the
+  /// accuracy log in performance mode.
+  uint64_t acc_log_rng_seed = 0;
+
+  /// \brief Probability of the query response of a sample being logged to the accuracy
+  /// log in performance mode
+  double acc_log_probability = 0.0;
   /**@}*/
 };
 

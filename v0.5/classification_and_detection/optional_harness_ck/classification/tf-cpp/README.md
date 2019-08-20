@@ -324,7 +324,7 @@ $ ck benchmark program:image-classification-tf-cpp --speed \
 <a name="accuracy"></a>
 ## Reference accuracy
 
-### Example: OpenCV preprocessing (default), MobileNet non-quantized
+### Example: universal OpenCV preprocessing (default), MobileNet non-quantized
 ```bash
 $ ck benchmark program:image-classification-tf-cpp \
 --repetitions=1 --env.CK_BATCH_SIZE=1 --env.CK_BATCH_COUNT=50000 \
@@ -345,14 +345,14 @@ $ ck benchmark program:image-classification-tf-cpp \
 --tags=mlperf,image-classification,tf-cpp,accuracy
 ```
 
-| Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
-|-|-|-|-|-|
-| ResNet                  |  Top1  | 0.76170 | 0.76458 | 0.76522 |
-|                         |  Top5  | 0.92866 | 0.93014 | 0.93066 |
-| MobileNet non-quantized |  Top1  | 0.71226 | 0.71516 | N/A     |
-|                         |  Top5  | 0.89834 | 0.90004 | N/A     |
-| MobileNet quantized     |  Top1  | 0.70348 | 0.70654 | N/A     |
-|                         |  Top5  | 0.89376 | 0.89514 | N/A     |
+| Model                   | Metric | Pillow  | OpenCV universal | OpenCV for MobileNet | OpenCV for ResNet | TensorFlow |
+|-|-|-|-|-|-|-|
+| ResNet                  |  Top1  | 0.76170 | 0.76422          | N/A                  | 0.76456           | 0.76522    |
+|                         |  Top5  | 0.92866 | 0.93074          | N/A                  | 0.93016           | 0.93066    |
+| MobileNet non-quantized |  Top1  | 0.71226 | 0.71676          | 0.71676              | N/A               | N/A        |
+|                         |  Top5  | 0.89834 | 0.90118          | 0.90118              | N/A               | N/A        |
+| MobileNet quantized     |  Top1  | 0.70348 | 0.70700          | 0.70694              | N/A               | N/A        |
+|                         |  Top5  | 0.89376 | 0.89594          | 0.89594              | N/A               | N/A        |
 
 
 <a name="further-info"></a>

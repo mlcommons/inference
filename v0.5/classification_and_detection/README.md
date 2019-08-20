@@ -30,6 +30,35 @@ This benchmark app is a reference implementation that is not meant to be the fas
 It is written in python which might make it less suitable for lite models like mobilenet or large number of cpu's.
 We are thinking to provide a c++ implementation with identical functionality in the near future.
 
+## Tools for preparing datasets and validating accuracy
+The reference implementation includes all required pre-processing of datasets.
+It also includes a ```--accuracy``` option to validate accuracy as required by mlperf.
+If you are not using the reference implementation, a few scripts will help:
+### Prepare the coco dataset 
+The tool is [here](../tools/upscale_coco).
+You can run it for ssd-mobilenet like:
+```
+python upscale_coco.py --inputs /data/coco/ --outputs /data/coco-300 --size 300 300 --format png
+```
+and for ssd-resnet34 like:
+```
+python upscale_coco.py --inputs /data/coco/ --outputs /data/coco-1200 --size 1200 1200 --format png
+```
+### Prepare the imagenet dataset 
+to come.
+
+### Validate accuracy for resnet50 and mobilenet benchmarks
+The tool is [here](tools/accuracy-imagenet.py). You can run it like:
+```
+python tools/accuracy-imagenet.py --mlperf-accuracy-file mlperf_log_accuracy.json --imagenet-val-file /data/imagenet2012/val_map.txt
+```
+
+### Validate accuracy for ssd-mobilenet and ssd-resnet34 benchmarks
+The tool is [here](tools/accuracy-coco.py). You can run it like:
+```
+python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --coco-dir /data/coco
+```
+
 ## Datasets
 | dataset | download link | 
 | ---- | ---- | 
@@ -158,7 +187,7 @@ or
 
 If you want run with accuracy pass, try:
 ```
-./run_local.sh tf ssd-mobilenet gpu --accuracy --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.2
+./run_local.sh tf ssd-mobilenet gpu --accuracy --time 60 --scenario Server --qps 100 --max-latency 0.2
 ```
 
 

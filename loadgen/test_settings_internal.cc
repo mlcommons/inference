@@ -152,12 +152,16 @@ void LogRequestedTestSettings(const TestSettings &s) {
       case TestScenario::SingleStream:
         detail("single_stream_expected_latency_ns : ",
                s.single_stream_expected_latency_ns);
+        detail("single_stream_target_latency_percentile : ",
+               s.single_stream_target_latency_percentile);
         break;
       case TestScenario::MultiStream:
       case TestScenario::MultiStreamFree:
         detail("multi_stream_target_qps : ", s.multi_stream_target_qps);
         detail("multi_stream_target_latency_ns : ",
                s.multi_stream_target_latency_ns);
+        detail("multi_stream_target_latency_percentile : ",
+               s.multi_stream_target_latency_percentile);
         detail("multi_stream_samples_per_query : ",
                s.multi_stream_samples_per_query);
         detail("multi_stream_max_async_queries : ",
@@ -166,6 +170,8 @@ void LogRequestedTestSettings(const TestSettings &s) {
       case TestScenario::Server:
         detail("server_target_qps : ", s.server_target_qps);
         detail("server_target_latency_ns : ", s.server_target_latency_ns);
+        detail("server_target_latency_percentile : ",
+               s.server_target_latency_percentile);
         detail("server_coalesce_queries : ", s.server_coalesce_queries);
         break;
       case TestScenario::Offline:
@@ -197,6 +203,7 @@ void TestSettingsInternal::LogEffectiveSettings() const {
     detail("samples_per_query : ", s.samples_per_query);
     detail("target_qps : ", s.target_qps);
     detail("target_latency (ns): ", s.target_latency.count());
+    detail("target_latency_percentile : ", s.target_latency_percentile);
     detail("max_async_queries : ", s.max_async_queries);
     detail("target_duration (ms): ", s.target_duration.count());
     detail("min_duration (ms): ", s.min_duration.count());

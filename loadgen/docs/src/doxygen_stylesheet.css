@@ -16,9 +16,10 @@ h1.groupheader {
 
 .title {
 	font: 400 14px/28px Roboto,sans-serif;
-	font-size: 150%;
+	font-size: 175%;
 	font-weight: bold;
 	margin: 10px 2px;
+	color: #135384;
 }
 
 h2.groupheader {
@@ -43,6 +44,8 @@ h1, h2, h3, h4, h5, h6 {
 	-o-transition: text-shadow 0.5s linear;
 	transition: text-shadow 0.5s linear;
 	margin-right: 15px;
+	color: #135384;
+
 }
 
 h1.glow, h2.glow, h3.glow, h4.glow, h5.glow, h6.glow {
@@ -971,13 +974,16 @@ table.fieldtable {
 	font-size: 13px;
 }
 
-.navpath ul
-{
+.navpath ul {
+	display: flex;
+	flex-flow: row wrap;
+	justify-content: flex-start;
+	align-items: center;
 	font-size: 11px;
-	background-image:url('tab_b.png');
+	background-image:none;
 	background-repeat:repeat-x;
 	background-position: 0 -5px;
-	height:30px;
+	height:auto;
 	line-height:30px;
 	color:#8AA0CC;
 	border:solid 1px #C2CDE4;
@@ -1017,8 +1023,13 @@ table.fieldtable {
 
 .navpath li.footer
 {
+	display: flex;
+	flex-flow: row wrap;
+	justify-content: flex-start;
+	align-items: center;
+        flex-grow: 1;
         list-style-type:none;
-        float:right;
+        float:none;
         padding-left:10px;
         padding-right:15px;
         background-image:none;
@@ -1027,7 +1038,6 @@ table.fieldtable {
         color:#364D7C;
         font-size: 8pt;
 }
-
 
 div.summary
 {
@@ -1079,6 +1089,7 @@ div.header
 div.headertitle
 {
 	padding: 5px 5px 5px 10px;
+       	color: #135384;
 }
 
 dl
@@ -1173,7 +1184,7 @@ dl.section dd {
 
 #projectname
 {
-	font: 300% Tahoma, Arial,sans-serif;
+	font: 200% Tahoma, Arial,sans-serif;
 	margin: 0px;
 	padding: 2px 0px;
 }
@@ -1192,12 +1203,34 @@ dl.section dd {
 	padding: 0px;
 }
 
+#top {
+	border-bottom: 1px solid #5373B4;
+}
+
 #titlearea
 {
+	flex-grow: 1;
 	padding: 0px;
 	margin: 0px;
-	width: 100%;
-	border-bottom: 1px solid #5373B4;
+	width: auto;
+	border-bottom: none;
+}
+
+#main-nav {
+}
+
+#main-menu {
+	display: flex;
+	flex-flow: row wrap;
+	justify-content: flex-start;
+	align-items: center;
+	background-image: none;
+	min-width: 770px;
+}
+
+.ui-resizable-e {
+	height: 100%;
+	background-repeat: repeat-y;
 }
 
 .image

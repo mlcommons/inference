@@ -1079,8 +1079,6 @@ template <TestScenario scenario>
 std::pair<TestSettingsInternal, TestSettingsInternal> FindBoundaries(
     SystemUnderTest* sut, QuerySampleLibrary* qsl, SequenceGen* sequence_gen,
     const TestSettingsInternal& reference_settings) {
-  using namespace find_peak_performance;
-
   LogDetail([](AsyncDetail& detail) {
     detail("Starting FindBoundaries by FindPeakPerformance:");
   });
@@ -1088,20 +1086,26 @@ std::pair<TestSettingsInternal, TestSettingsInternal> FindBoundaries(
   std::string msg;
 
   // Initial lower & upper bound of performance config.
-  TestSettingsInternal l_bound = InitialSettings<scenario>(reference_settings);
-  TestSettingsInternal u_bound = InitialSettings<scenario>(reference_settings);
-  WidenPerformanceField<scenario>(u_bound);
+  TestSettingsInternal l_bound =
+      find_peak_performance::InitialSettings<scenario>(reference_settings);
+  TestSettingsInternal u_bound =
+      find_peak_performance::InitialSettings<scenario>(reference_settings);
+  find_peak_performance::WidenPerformanceField<scenario>(u_bound);
 
-  LogDetail([l_field = ToStringPerformanceField<scenario>(l_bound),
-             r_field = ToStringPerformanceField<scenario>(u_bound)](
-                AsyncDetail& detail) {
-    detail("FindBoundaries: Initial fields [" + l_field + ", " + r_field + ")");
-  });
+  LogDetail(
+      [l_field =
+           find_peak_performance::ToStringPerformanceField<scenario>(l_bound),
+       r_field = find_peak_performance::ToStringPerformanceField<scenario>(
+           u_bound)](AsyncDetail& detail) {
+        detail("FindBoundaries: Initial fields [" + l_field + ", " + r_field +
+               ")");
+      });
 
   // Check whether l_bound satisfy the performance constraints or not.
   {
-    LogDetail([l_field = ToStringPerformanceField<scenario>(l_bound)](
-                  AsyncDetail& detail) {
+    LogDetail([l_field =
+                   find_peak_performance::ToStringPerformanceField<scenario>(
+                       l_bound)](AsyncDetail& detail) {
       detail("FindBoundaries: Check validity of initial lower bound field: " +
              l_field);
     });
@@ -1150,15 +1154,17 @@ std::pair<TestSettingsInternal, TestSettingsInternal> FindBoundaries(
       break;
     }
 
-    SetPerformanceField<scenario>(l_bound, u_bound);
-    WidenPerformanceField<scenario>(u_bound);
+    find_peak_performance::SetPerformanceField<scenario>(l_bound, u_bound);
+    find_peak_performance::WidenPerformanceField<scenario>(u_bound);
 
-    LogDetail([l_field = ToStringPerformanceField<scenario>(l_bound),
-               r_field = ToStringPerformanceField<scenario>(u_bound)](
-                  AsyncDetail& detail) {
-      detail("FindBoundaries: Widen fields to [" + l_field + ", " + r_field +
-             ")");
-    });
+    LogDetail(
+        [l_field =
+             find_peak_performance::ToStringPerformanceField<scenario>(l_bound),
+         r_field = find_peak_performance::ToStringPerformanceField<scenario>(
+             u_bound)](AsyncDetail& detail) {
+          detail("FindBoundaries: Widen fields to [" + l_field + ", " +
+                 r_field + ")");
+        });
   }
 
   return std::make_pair(l_bound, u_bound);
@@ -1168,18 +1174,6 @@ template <TestScenario scenario>
 TestSettingsInternal BinarySearchToFindPeakPerformance(
     SystemUnderTest* sut, QuerySampleLibrary* qsl, SequenceGen* sequence_gen,
     const TestSettingsInternal& reference_settings) {
-  using namespace find_peak_performance;
-
-  if (scenario != TestScenario::MultiStream &&
-      scenario != TestScenario::MultiStreamFree &&
-      scenario != TestScenario::Server) {
-    LogDetail([unsupported_scenario = ToString(scenario)](AsyncDetail& detail) {
-      detail("Unsupported scenario, " + unsupported_scenario);
-    });
-
-    return reference_settings;
-  }
-
   std::pair<TestSettingsInternal, TestSettingsInternal> boundaries =
       FindBoundaries<scenario>(sut, qsl, sequence_gen, reference_settings);
   TestSettingsInternal l_bound = boundaries.first;
@@ -1195,9 +1189,12 @@ TestSettingsInternal BinarySearchToFindPeakPerformance(
   const LoadableSampleSet& performance_set = loadable_sets.front();
   LoadSamplesToRam(qsl, performance_set.set);
 
-  LogDetail([l_field = ToStringPerformanceField<scenario>(l_bound),
-             r_field = ToStringPerformanceField<scenario>(u_bound)](
-                AsyncDetail& detail) {
+  LogDetail([l_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     l_bound),
+             r_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     u_bound)](AsyncDetail& detail) {
     detail("Starting BinarySearchForPerformanceConfig by FindPeakPerformance:");
     detail("BinarySearchToFindPeakPerformance: Starting with [" + l_field +
            ", " + r_field + ")");
@@ -1206,21 +1203,24 @@ TestSettingsInternal BinarySearchToFindPeakPerformance(
   std::string msg;
 
   while (true) {
-    LogDetail([l_field = ToStringPerformanceField<scenario>(l_bound),
-               r_field = ToStringPerformanceField<scenario>(u_bound)](
-                  AsyncDetail& detail) {
-      detail("BinarySearchToFindPeakPerformance: Searching fields using [" +
-             l_field + ", " + r_field + ")");
-    });
+    LogDetail(
+        [l_field =
+             find_peak_performance::ToStringPerformanceField<scenario>(l_bound),
+         r_field = find_peak_performance::ToStringPerformanceField<scenario>(
+             u_bound)](AsyncDetail& detail) {
+          detail("BinarySearchToFindPeakPerformance: Searching fields using [" +
+                 l_field + ", " + r_field + ")");
+        });
 
-    if (IsFinished<scenario>(l_bound, u_bound)) {
+    if (find_peak_performance::IsFinished<scenario>(l_bound, u_bound)) {
       break;
     }
 
     const TestSettingsInternal search_settings =
-        MidOfBoundaries<scenario>(l_bound, u_bound);
-    LogDetail([field = ToStringPerformanceField<scenario>(search_settings)](
-                  AsyncDetail& detail) {
+        find_peak_performance::MidOfBoundaries<scenario>(l_bound, u_bound);
+    LogDetail([field =
+                   find_peak_performance::ToStringPerformanceField<scenario>(
+                       search_settings)](AsyncDetail& detail) {
       detail(
           "BinarySearchToFindPeakPerformance: The mid point value of bounds: " +
           field);
@@ -1230,9 +1230,11 @@ TestSettingsInternal BinarySearchToFindPeakPerformance(
         sut, search_settings, performance_set, sequence_gen));
     PerformanceSummary perf_summary{sut->Name(), u_bound, std::move(pr)};
     if (perf_summary.PerfConstraintsMet(&msg)) {
-      SetPerformanceField<scenario>(l_bound, search_settings);
+      find_peak_performance::SetPerformanceField<scenario>(l_bound,
+                                                           search_settings);
     } else {
-      SetPerformanceField<scenario>(u_bound, search_settings);
+      find_peak_performance::SetPerformanceField<scenario>(u_bound,
+                                                           search_settings);
     }
   }
 
@@ -1245,9 +1247,11 @@ TestSettingsInternal BinarySearchToFindPeakPerformance(
 template <TestScenario scenario>
 void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                         const TestSettingsInternal& settings,
-                        const std::vector<LoadableSampleSet>& loadable_sets,
                         SequenceGen* sequence_gen) {
   LogDetail([](AsyncDetail& detail) { detail("Starting performance mode:"); });
+
+  std::vector<loadgen::LoadableSampleSet> loadable_sets(
+      loadgen::GenerateLoadableSets(qsl, settings));
 
   // Use first loadable set as the performance set.
   const LoadableSampleSet& performance_set = loadable_sets.front();
@@ -1269,9 +1273,17 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 template <TestScenario scenario>
 void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                              const TestSettingsInternal& settings,
-                             const std::vector<LoadableSampleSet>& _,
                              SequenceGen* sequence_gen) {
-  using namespace find_peak_performance;
+  if (scenario != TestScenario::MultiStream &&
+      scenario != TestScenario::MultiStreamFree &&
+      scenario != TestScenario::Server) {
+    LogDetail([unsupported_scenario = ToString(scenario)](AsyncDetail& detail) {
+      detail("Unsupported scenario, " + unsupported_scenario);
+    });
+
+    RunPerformanceMode<scenario>(sut, qsl, settings, sequence_gen);
+    return;
+  }
 
   LogDetail([](AsyncDetail& detail) {
     detail("Starting FindPeakPerformance mode:");
@@ -1282,8 +1294,8 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                                                   settings);
 
   // Print-out the peak performance test setting.
-  LogDetail([field = ToStringPerformanceField<scenario>(found_settings)](
-                AsyncDetail& detail) {
+  LogDetail([field = find_peak_performance::ToStringPerformanceField<scenario>(
+                 found_settings)](AsyncDetail& detail) {
     detail("FindPeakPerformance: Found peak performance field: " + field);
   });
 
@@ -1312,9 +1324,11 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 template <TestScenario scenario>
 void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                      const TestSettingsInternal& settings,
-                     const std::vector<LoadableSampleSet>& loadable_sets,
                      SequenceGen* sequence_gen) {
   LogDetail([](AsyncDetail& detail) { detail("Starting accuracy mode:"); });
+
+  std::vector<loadgen::LoadableSampleSet> loadable_sets(
+      loadgen::GenerateLoadableSets(qsl, settings));
 
   for (auto& loadable_set : loadable_sets) {
     {
@@ -1343,7 +1357,6 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 struct RunFunctions {
   using Signature = void(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                          const TestSettingsInternal& settings,
-                         const std::vector<LoadableSampleSet>& loadable_sets,
                          SequenceGen* sequence_gen);
 
   template <TestScenario compile_time_scenario>
@@ -1415,22 +1428,18 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   loadgen::SequenceGen sequence_gen;
   switch (sanitized_settings.mode) {
     case TestMode::SubmissionRun:
-      run_funcs.accuracy(sut, qsl, sanitized_settings, loadable_sets,
-                         &sequence_gen);
-      run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets,
-                            &sequence_gen);
+      run_funcs.accuracy(sut, qsl, sanitized_settings, &sequence_gen);
+      run_funcs.performance(sut, qsl, sanitized_settings, &sequence_gen);
       break;
     case TestMode::AccuracyOnly:
-      run_funcs.accuracy(sut, qsl, sanitized_settings, loadable_sets,
-                         &sequence_gen);
+      run_funcs.accuracy(sut, qsl, sanitized_settings, &sequence_gen);
       break;
     case TestMode::PerformanceOnly:
-      run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets,
-                            &sequence_gen);
+      run_funcs.performance(sut, qsl, sanitized_settings, &sequence_gen);
       break;
     case TestMode::FindPeakPerformance:
       run_funcs.find_peak_performance(sut, qsl, sanitized_settings,
-                                      loadable_sets, &sequence_gen);
+                                      &sequence_gen);
       break;
   }
 

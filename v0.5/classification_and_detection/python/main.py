@@ -207,6 +207,7 @@ def get_args():
     parser.add_argument("--max-latency", type=str, help="mlperf max latency in 99pct tile")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
+    parser.add_argument("--offset", type=bool, default=False, help="decrement label value if True else do nothing")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
@@ -293,7 +294,11 @@ class RunnerBase:
         processed_results = []
         try:
             results = self.model.predict({self.model.inputs[0]: qitem.img})
-            processed_results = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
+            args = get_args()
+            if args.offset == True:
+                processed_results = self.post_process(results, qitem.content_id, qitem.label-1, self.result_dict)
+            else:
+                processed_results = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
                 self.result_timing.append(time.time() - qitem.start)

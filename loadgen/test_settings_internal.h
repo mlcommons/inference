@@ -77,26 +77,6 @@ struct TestSettingsInternal {
 namespace find_peak_performance {
 
 template <TestScenario scenario>
-TestSettingsInternal InitialSettings(
-    const TestSettingsInternal &reference_settings) {
-  TestSettingsInternal initial_settings = reference_settings;
-  if (scenario == TestScenario::MultiStream ||
-      scenario == TestScenario::MultiStreamFree) {
-    initial_settings.samples_per_query = 1;
-  } else if (scenario == TestScenario::Server) {
-    initial_settings.target_qps =
-        pow(0.1, reference_settings.requested.server_target_qps_precision);
-  } else {
-    LogDetail([](AsyncDetail &detail) {
-      detail(
-          "other types of scenarios (SingleStream & Offline) does not support "
-          "the method.");
-    });
-  }
-  return initial_settings;
-}
-
-template <TestScenario scenario>
 TestSettingsInternal MidOfBoundaries(
     const TestSettingsInternal &lower_bound_settings,
     const TestSettingsInternal &upper_bound_settings) {
@@ -158,23 +138,6 @@ std::string ToStringPerformanceField(const TestSettingsInternal &settings) {
     // Unreachable
     assert(false);
     return ToString(settings.scenario);
-  }
-}
-
-template <TestScenario scenario>
-void SetPerformanceField(TestSettingsInternal &target,
-                         const TestSettingsInternal &source) {
-  if (scenario == TestScenario::MultiStream ||
-      scenario == TestScenario::MultiStreamFree) {
-    target.samples_per_query = source.samples_per_query;
-  } else if (scenario == TestScenario::Server) {
-    target.target_qps = source.target_qps;
-  } else {
-    LogDetail([](AsyncDetail &detail) {
-      detail(
-          "other types of scenarios (SingleStream & Offline) does not support "
-          "the method.");
-    });
   }
 }
 

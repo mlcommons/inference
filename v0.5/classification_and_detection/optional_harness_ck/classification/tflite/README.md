@@ -299,15 +299,14 @@ $ ck benchmark program:image-classification-tflite \
 
 ### ImageNet validation dataset (50,000 images)
 
-
-| Model                   | Metric | Pillow  | OpenCV universal | OpenCV for ResNet | OpenCV for MobileNet | TensorFlow |
+| Model                   | Metric | Pillow  | OpenCV universal | OpenCV for MobileNet                                         | OpenCV for ResNet | TensorFlow |
 |-|-|-|-|-|-|-|
-| ResNet                  |  Top1  | 0.76170 | 0.76422          | 0.76456           | N/A                  | 0.76522    |
-|                         |  Top5  | 0.92866 | 0.93074          | 0.93016           | N/A                  | 0.93066    |
-| MobileNet non-quantized |  Top1  | 0.71226 | 0.71676          | N/A               | 0.71676              | N/A        |
-|                         |  Top5  | 0.89834 | 0.90118          | N/A               | 0.90118              | N/A        |
-| MobileNet quantized     |  Top1  | 0.70502 | 0.70762          | N/A               | N/A ([bug?](https://github.com/ctuning/ck-mlperf/issues/40)) | N/A        |
-|                         |  Top5  | 0.89118 | 0.89266          | N/A               | N/A ([bug?](https://github.com/ctuning/ck-mlperf/issues/40)) | N/A        |
+| ResNet                  |  Top1  | 0.76170 | 0.76422          | N/A                                                          | 0.76456           | 0.76522    |
+|                         |  Top5  | 0.92866 | 0.93074          | N/A                                                          | 0.93016           | 0.93066    |
+| MobileNet non-quantized |  Top1  | 0.71226 | 0.71676          | 0.71676                                                      | N/A               | N/A        |
+|                         |  Top5  | 0.89834 | 0.90118          | 0.90118                                                      | N/A               | N/A        |
+| MobileNet quantized     |  Top1  | 0.70502 | 0.70762          | N/A ([bug?](https://github.com/ctuning/ck-mlperf/issues/40)) | N/A               | N/A        |
+|                         |  Top5  | 0.89118 | 0.89266          | N/A ([bug?](https://github.com/ctuning/ck-mlperf/issues/40)) | N/A               | N/A        |
 
 
 <a name="further-info"></a>

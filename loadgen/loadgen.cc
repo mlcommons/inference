@@ -49,10 +49,14 @@ struct SequenceGen {
   uint64_t NextQueryId() { return query_id++; }
   uint64_t NextSampleId() { return sample_id++; }
   uint64_t CurrentSampleId() { return sample_id; }
+  double NextAccLogRng() { return acc_log_dist(acc_log_rng); }
+  void InitAccLogRng(uint64_t acc_log_rng_seed) { acc_log_rng = std::mt19937(acc_log_rng_seed); }
 
  private:
   uint64_t query_id = 0;
   uint64_t sample_id = 0;
+  std::mt19937 acc_log_rng;
+  std::uniform_real_distribution<double> acc_log_dist = std::uniform_real_distribution<double>(0,1);
 };
 
 /// \brief A random set of samples in the QSL that should fit in RAM when
@@ -76,6 +80,7 @@ struct SampleMetadata {
   QueryMetadata* query_metadata;
   uint64_t sequence_id;
   QuerySampleIndex sample_index;
+  double acc_log_val;
 };
 
 /// \brief Maintains data and timing info for a query and all its samples.
@@ -90,7 +95,7 @@ class QueryMetadata {
         wait_count_(query_sample_indices.size()) {
     samples_.reserve(query_sample_indices.size());
     for (QuerySampleIndex qsi : query_sample_indices) {
-      samples_.push_back({this, sequence_gen->NextSampleId(), qsi});
+      samples_.push_back({this, sequence_gen->NextSampleId(), qsi, sequence_gen->NextAccLogRng()});
     }
     query_to_send.reserve(query_sample_indices.size());
     for (auto& s : samples_) {
@@ -172,8 +177,7 @@ struct DurationGeneratorNs {
 template <TestScenario scenario, TestMode mode>
 struct ResponseDelegateDetailed : public ResponseDelegate {
   std::atomic<size_t> queries_completed{0};
-  std::mt19937 acc_log_rng;
-  std::uniform_real_distribution<double> acc_log_dist = std::uniform_real_distribution<double>(0,1);
+  double acc_log_offset = 0.0f;
   double acc_log_prob = 0.0f;
 
   void SampleComplete(SampleMetadata* sample, QuerySampleResponse* response,
@@ -183,7 +187,10 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
     // into the lambda; even with C++14.
     std::vector<uint8_t>* sample_data_copy = nullptr;
-    if (mode == TestMode::AccuracyOnly || acc_log_dist(acc_log_rng) <= acc_log_prob ) {
+    double acc_log_val = sample->acc_log_val + acc_log_offset < 1.0 ?
+        sample->acc_log_val + acc_log_offset :
+        sample->acc_log_val + acc_log_offset - 1.0;
+    if (mode == TestMode::AccuracyOnly || acc_log_val <= acc_log_prob ) {
       // TODO: Verify accuracy with the data copied here.
       uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
       uint8_t* src_end = src_begin + response->size;
@@ -573,7 +580,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                SequenceGen* sequence_gen) {
   GlobalLogger().RestartLatencyRecording(sequence_gen->CurrentSampleId());
   ResponseDelegateDetailed<scenario, mode> response_logger;
-  response_logger.acc_log_rng = std::mt19937(settings.acc_log_rng_seed);
+  std::uniform_real_distribution<double> acc_log_offset_dist = std::uniform_real_distribution<double>(0.0,1.0);
+  std::mt19937 acc_log_offset_rng(settings.acc_log_rng_seed);
+  response_logger.acc_log_offset = acc_log_offset_dist(acc_log_offset_rng);
   response_logger.acc_log_prob = settings.acc_log_probability;
 
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(

@@ -35,8 +35,8 @@ TestSettingsInternal::TestSettingsInternal(
       qsl_rng_seed(requested.qsl_rng_seed),
       sample_index_rng_seed(requested.sample_index_rng_seed),
       schedule_rng_seed(requested.schedule_rng_seed),
-      acc_log_rng_seed(requested.acc_log_rng_seed),
-      acc_log_probability(requested.acc_log_probability) {
+      accuracy_log_rng_seed(requested.accuracy_log_rng_seed),
+      accuracy_log_probability(requested.accuracy_log_probability) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -189,6 +189,8 @@ void LogRequestedTestSettings(const TestSettings &s) {
     detail("qsl_rng_seed : ", s.qsl_rng_seed);
     detail("sample_index_rng_seed : ", s.sample_index_rng_seed);
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
+    detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
+    detail("accuracy_log_probability : ", s.accuracy_log_probability);
 
     detail("");
   });
@@ -216,6 +218,8 @@ void TestSettingsInternal::LogEffectiveSettings() const {
     detail("qsl_rng_seed : ", s.qsl_rng_seed);
     detail("sample_index_rng_seed : ", s.sample_index_rng_seed);
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
+    detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
+    detail("accuracy_log_probability : ", s.accuracy_log_probability);
   });
 }
 
@@ -236,6 +240,8 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("qsl_rng_seed : ", qsl_rng_seed);
   summary("sample_index_rng_seed : ", sample_index_rng_seed);
   summary("schedule_rng_seed : ", schedule_rng_seed);
+  summary("accuracy_log_rng_seed : ", accuracy_log_rng_seed);
+  summary("accuracy_log_probability : ", accuracy_log_probability);
 }
 
 }  // namespace loadgen

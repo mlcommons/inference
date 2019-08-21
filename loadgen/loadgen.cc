@@ -44,19 +44,23 @@ struct SampleMetadata;
 class QueryMetadata;
 
 /// \brief Every query and sample within a call to StartTest gets a unique
-/// sequence id for easy cross reference.
+/// sequence id for easy cross reference, and a random number which is used to
+/// determine accuracy logging when it is enabled.
 struct SequenceGen {
   uint64_t NextQueryId() { return query_id++; }
   uint64_t NextSampleId() { return sample_id++; }
   uint64_t CurrentSampleId() { return sample_id; }
-  double NextAccLogRng() { return acc_log_dist(acc_log_rng); }
-  void InitAccLogRng(uint64_t acc_log_rng_seed) { acc_log_rng = std::mt19937(acc_log_rng_seed); }
+  double NextAccLogRng() { return accuracy_log_dist(accuracy_log_rng); }
+  void InitAccLogRng(uint64_t accuracy_log_rng_seed) {
+    accuracy_log_rng = std::mt19937(accuracy_log_rng_seed);
+  }
 
  private:
   uint64_t query_id = 0;
   uint64_t sample_id = 0;
-  std::mt19937 acc_log_rng;
-  std::uniform_real_distribution<double> acc_log_dist = std::uniform_real_distribution<double>(0,1);
+  std::mt19937 accuracy_log_rng;
+  std::uniform_real_distribution<double> accuracy_log_dist =
+      std::uniform_real_distribution<double>(0, 1);
 };
 
 /// \brief A random set of samples in the QSL that should fit in RAM when
@@ -80,7 +84,7 @@ struct SampleMetadata {
   QueryMetadata* query_metadata;
   uint64_t sequence_id;
   QuerySampleIndex sample_index;
-  double acc_log_val;
+  double accuracy_log_val;
 };
 
 /// \brief Maintains data and timing info for a query and all its samples.
@@ -177,8 +181,8 @@ struct DurationGeneratorNs {
 template <TestScenario scenario, TestMode mode>
 struct ResponseDelegateDetailed : public ResponseDelegate {
   std::atomic<size_t> queries_completed{0};
-  double acc_log_offset = 0.0f;
-  double acc_log_prob = 0.0f;
+  double accuracy_log_offset = 0.0f;
+  double accuracy_log_prob = 0.0f;
 
   void SampleComplete(SampleMetadata* sample, QuerySampleResponse* response,
                       PerfClock::time_point complete_begin_time) override {
@@ -187,10 +191,12 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
     // into the lambda; even with C++14.
     std::vector<uint8_t>* sample_data_copy = nullptr;
-    double acc_log_val = sample->acc_log_val + acc_log_offset < 1.0 ?
-        sample->acc_log_val + acc_log_offset :
-        sample->acc_log_val + acc_log_offset - 1.0;
-    if (mode == TestMode::AccuracyOnly || acc_log_val <= acc_log_prob ) {
+    double accuracy_log_val =
+        sample->accuracy_log_val + accuracy_log_offset < 1.0
+            ? sample->accuracy_log_val + accuracy_log_offset
+            : sample->accuracy_log_val + accuracy_log_offset - 1.0;
+    if (mode == TestMode::AccuracyOnly ||
+        accuracy_log_val <= accuracy_log_prob) {
       // TODO: Verify accuracy with the data copied here.
       uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
       uint8_t* src_end = src_begin + response->size;
@@ -580,10 +586,12 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                SequenceGen* sequence_gen) {
   GlobalLogger().RestartLatencyRecording(sequence_gen->CurrentSampleId());
   ResponseDelegateDetailed<scenario, mode> response_logger;
-  std::uniform_real_distribution<double> acc_log_offset_dist = std::uniform_real_distribution<double>(0.0,1.0);
-  std::mt19937 acc_log_offset_rng(settings.acc_log_rng_seed);
-  response_logger.acc_log_offset = acc_log_offset_dist(acc_log_offset_rng);
-  response_logger.acc_log_prob = settings.acc_log_probability;
+  std::uniform_real_distribution<double> accuracy_log_offset_dist =
+      std::uniform_real_distribution<double>(0.0, 1.0);
+  std::mt19937 accuracy_log_offset_rng(settings.accuracy_log_rng_seed);
+  response_logger.accuracy_log_offset =
+      accuracy_log_offset_dist(accuracy_log_offset_rng);
+  response_logger.accuracy_log_prob = settings.accuracy_log_probability;
 
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(
       settings, loaded_sample_set, sequence_gen, &response_logger);

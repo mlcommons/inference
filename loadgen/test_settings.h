@@ -216,11 +216,11 @@ struct TestSettings {
   uint64_t schedule_rng_seed = 0;
   /// \brief Affects which samples have their query returns logged to the
   /// accuracy log in performance mode.
-  uint64_t acc_log_rng_seed = 0;
+  uint64_t accuracy_log_rng_seed = 0;
 
   /// \brief Probability of the query response of a sample being logged to the accuracy
   /// log in performance mode
-  double acc_log_probability = 0.0;
+  double accuracy_log_probability = 0.0;
   /**@}*/
 };
 

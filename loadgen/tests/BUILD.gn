@@ -4,8 +4,7 @@ static_library("mlperf_loadgen_tests_loadgen_test_main") {
 }
 
 executable("mlperf_loadgen_perftests") {
-  sources = [ "perftests_null_sut.cc",
-              "offline.cc" ]
+  sources = [ "perftests_null_sut.cc" ]
   deps = [ "..:mlperf_loadgen" ]
 }
 
@@ -19,4 +18,8 @@ executable("mlperf_loadgen_tests_basic") {
 source_set("mlperf_loadgen_perftests_py") {
   sources = [ "perftests_null_sut.py" ]
   deps = [ "../..:loadgen_pymodule_wheel_lib" ]
+}
+
+source_set("docs") {
+  sources = [ "README.md" ]
 }

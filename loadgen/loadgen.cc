@@ -99,7 +99,8 @@ class QueryMetadata {
         wait_count_(query_sample_indices.size()) {
     samples_.reserve(query_sample_indices.size());
     for (QuerySampleIndex qsi : query_sample_indices) {
-      samples_.push_back({this, sequence_gen->NextSampleId(), qsi, sequence_gen->NextAccLogRng()});
+      samples_.push_back({this, sequence_gen->NextSampleId(), qsi,
+                          sequence_gen->NextAccLogRng()});
     }
     query_to_send.reserve(query_sample_indices.size());
     for (auto& s : samples_) {

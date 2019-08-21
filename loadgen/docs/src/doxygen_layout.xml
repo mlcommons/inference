@@ -13,6 +13,7 @@
       <tab type="user" url="@ref todo" visible="yes" title="TODOs"/>
     </tab>
     <tab type="usergroup" visible="yes" title="Test Coverage">
+      <tab type="user" url="@ref ReadmeTests" visible="yes" title="Build and Run"/>
       <tab type="user" url="@ref LoadgenTestsBasic" visible="yes" title="Basic"/>
       <tab type="user" url="@ref LoadgenTestsPerformance" visible="yes" title="Performance"/>
     </tab>

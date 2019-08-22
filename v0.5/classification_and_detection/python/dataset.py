@@ -79,7 +79,7 @@ class Dataset():
 # Post processing
 #
 class PostProcessCommon:
-    def __init__(self, offset=0):
+    def __init__(self, offset: int = 0):
         self.offset = offset
         self.good = 0
         self.total = 0
@@ -88,9 +88,9 @@ class PostProcessCommon:
         processed_results = []
         n = len(results[0])
         for idx in range(0, n):
-            result = results[0][idx] + self.offset
+            result = results[0][idx]
             processed_results.append([result])
-            if result == expected[idx]:
+            if result == (expected[idx] + self.offset):
                 self.good += 1
         self.total += n
         return processed_results
@@ -108,7 +108,7 @@ class PostProcessCommon:
 
 
 class PostProcessArgMax:
-    def __init__(self, offset=0):
+    def __init__(self, offset: int = 0):
         self.offset = offset
         self.good = 0
         self.total = 0
@@ -118,9 +118,9 @@ class PostProcessArgMax:
         results = np.argmax(results[0], axis=1)
         n = results.shape[0]
         for idx in range(0, n):
-            result = results[idx] + self.offset
+            result = results[idx]
             processed_results.append([result])
-            if result == expected[idx]:
+            if result == (expected[idx] + self.offset):
                 self.good += 1
         self.total += n
         return processed_results

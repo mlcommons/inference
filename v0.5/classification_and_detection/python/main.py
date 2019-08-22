@@ -33,11 +33,14 @@ MILLI_SEC = 1000
 
 # the datasets we support
 SUPPORTED_DATASETS = {
+    "imagenet_vgg19":
+        (imagenet.Imagenet, dataset.pre_process_vgg, dataset.PostProcessArgMax(offset=-1),
+         {"image_size": [224, 224, 3]}),
     "imagenet":
-        (imagenet.Imagenet, dataset.pre_process_vgg, dataset.PostProcessCommon(offset=-1),
+        (imagenet.Imagenet, dataset.pre_process_vgg, dataset.PostProcessCommon(offset=0),
          {"image_size": [224, 224, 3]}),
     "imagenet_mobilenet":
-        (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.PostProcessArgMax(offset=-1),
+        (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.PostProcessArgMax(offset=0),
          {"image_size": [224, 224, 3]}),
     "coco-300":
         (coco.Coco, dataset.pre_process_coco_mobilenet, coco.PostProcessCoco(),
@@ -77,6 +80,15 @@ SUPPORTED_PROFILES = {
         "queries-multi": 24576,
         "max-latency": DEFAULT_LATENCY,
         "max-batchsize": 32,
+    },
+
+    # vgg19
+    "vgg19-tf": {
+        "inputs": "Placeholder:0",
+        "outputs": "logits:0",
+        "dataset": "imagenet_vgg19",
+        "backend": "tensorflow",
+        "max-latency": DEFAULT_LATENCY,
     },
 
     # resnet
@@ -207,7 +219,6 @@ def get_args():
     parser.add_argument("--max-latency", type=str, help="mlperf max latency in 99pct tile")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
-    parser.add_argument("--offset", type=bool, default=False, help="decrement label value if True else do nothing")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
@@ -294,11 +305,7 @@ class RunnerBase:
         processed_results = []
         try:
             results = self.model.predict({self.model.inputs[0]: qitem.img})
-            args = get_args()
-            if args.offset == True:
-                processed_results = self.post_process(results, qitem.content_id, qitem.label-1, self.result_dict)
-            else:
-                processed_results = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
+            processed_results = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
                 self.result_timing.append(time.time() - qitem.start)

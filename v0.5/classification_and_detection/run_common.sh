@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34] [cpu|gpu]"
+    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|vgg19] [cpu|gpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -21,7 +21,7 @@ for i in $* ; do
        tf|onnxruntime|tflite|pytorch) backend=$i; shift;;
        cpu|gpu) device=$i; shift;;
        gpu) device=gpu; shift;;
-       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf) model=$i; shift;;
+       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf|vgg19) model=$i; shift;;
     esac
 done
 
@@ -35,6 +35,11 @@ extra_args=""
 #
 # tensorflow
 #
+
+if [ $name == "vgg19-tf" ] ; then
+    model_path="$MODEL_DIR/VGG19_keras_original_frozen.pb"
+    profile=vgg19-tf
+fi
 if [ $name == "resnet50-tf" ] ; then
     model_path="$MODEL_DIR/resnet50_v1.pb"
     profile=resnet50-tf

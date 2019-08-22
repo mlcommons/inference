@@ -175,9 +175,12 @@ struct TestSettings {
   double server_target_latency_percentile = 0.99;
   /// \brief TODO: Implement this.
   bool server_coalesce_queries = false;
-  /// \brief The precision of qps while finding peak performance
-  ///        Only used as a hint in FindPeakPerformance.
-  uint8_t server_target_qps_precision = 1;
+  /// \brief The decimal places of QPS precision used to terminate
+  /// FindPeakPerformance mode.
+  int server_find_peak_qps_decimals_of_precision = 1;
+  /// \brief A step size used to widen lower & upper bound to find the initial
+  /// boundaries of binary search
+  double server_find_peak_qps_boundary_step_size = 1;
   /**@}*/
 
   // ==================================

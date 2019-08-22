@@ -17,12 +17,11 @@ limitations under the License.
 #define MLPERF_LOADGEN_TEST_SETTINGS_INTERNAL_H
 
 #include <chrono>
+#include <cmath>
 #include <string>
 
-#include "test_settings.h"
-
 #include "logging.h"
-#include "math.h"
+#include "test_settings.h"
 
 namespace mlperf {
 
@@ -42,10 +41,10 @@ std::string ToString(TestMode mode);
 /// \details It does things like remove scenario-specific naming and introduce
 /// the concept of target_duration used to pre-generate queries.
 struct TestSettingsInternal {
-  explicit TestSettingsInternal(const TestSettings& requested_settings);
+  explicit TestSettingsInternal(const TestSettings &requested_settings);
   void LogEffectiveSettings() const;
   void LogAllSettings() const;
-  void LogSummary(AsyncSummary& summary) const;
+  void LogSummary(AsyncSummary &summary) const;
 
   const TestSettings requested;
   const TestScenario scenario;  // Copied here for convenience.
@@ -54,7 +53,7 @@ struct TestSettingsInternal {
   int samples_per_query;
   double target_qps;
   std::chrono::nanoseconds target_latency{0};
-  double target_latency_percentile; // Single, multistream and server mode
+  double target_latency_percentile;  // Single, multistream and server mode
   int max_async_queries;
 
   // Target duration is used to generate queries of a minimum duration before
@@ -76,6 +75,14 @@ struct TestSettingsInternal {
 
 namespace find_peak_performance {
 
+namespace {
+
+const char *kFindPeakPerformanceNotSupported =
+    "Finding peak performance is only supported in MultiStream, "
+    "MultiStreamFree, and Server scenarios.";
+
+}  // namespace
+
 template <TestScenario scenario>
 TestSettingsInternal MidOfBoundaries(
     const TestSettingsInternal &lower_bound_settings,
@@ -95,11 +102,8 @@ TestSettingsInternal MidOfBoundaries(
         lower_bound_settings.target_qps +
         (upper_bound_settings.target_qps - lower_bound_settings.target_qps) / 2;
   } else {
-    LogDetail([](AsyncDetail &detail) {
-      detail(
-          "other types of scenarios (SingleStream & Offline) does not support "
-          "the method.");
-    });
+    LogDetail(
+        [](AsyncDetail &detail) { detail(kFindPeakPerformanceNotSupported); });
   }
   return mid_settings;
 }
@@ -112,17 +116,16 @@ bool IsFinished(const TestSettingsInternal &lower_bound_settings,
     return lower_bound_settings.samples_per_query + 1 >=
            upper_bound_settings.samples_per_query;
   } else if (scenario == TestScenario::Server) {
-    uint8_t precision =
-        lower_bound_settings.requested.server_target_qps_precision;
-    double l = floor(lower_bound_settings.target_qps * pow(10, precision));
-    double u = floor(upper_bound_settings.target_qps * pow(10, precision));
+    uint8_t precision = lower_bound_settings.requested
+                            .server_find_peak_qps_decimals_of_precision;
+    double l =
+        std::floor(lower_bound_settings.target_qps * std::pow(10, precision));
+    double u =
+        std::floor(upper_bound_settings.target_qps * std::pow(10, precision));
     return l + 1 >= u;
   } else {
-    LogDetail([](AsyncDetail &detail) {
-      detail(
-          "other types of scenarios (SingleStream & Offline) does not support "
-          "the method.");
-    });
+    LogDetail(
+        [](AsyncDetail &detail) { detail(kFindPeakPerformanceNotSupported); });
     return true;
   }
 }
@@ -135,25 +138,24 @@ std::string ToStringPerformanceField(const TestSettingsInternal &settings) {
   } else if (scenario == TestScenario::Server) {
     return std::to_string(settings.target_qps);
   } else {
-    // Unreachable
-    assert(false);
+    LogDetail(
+        [](AsyncDetail &detail) { detail(kFindPeakPerformanceNotSupported); });
     return ToString(settings.scenario);
   }
 }
 
 template <TestScenario scenario>
-void WidenPerformanceField(TestSettingsInternal &settings) {
+void WidenPerformanceField(TestSettingsInternal *settings) {
   if (scenario == TestScenario::MultiStream ||
       scenario == TestScenario::MultiStreamFree) {
-    settings.samples_per_query = settings.samples_per_query * 2;
+    settings->samples_per_query = settings->samples_per_query * 2;
   } else if (scenario == TestScenario::Server) {
-    settings.target_qps = settings.target_qps * 2;
+    settings->target_qps =
+        settings->target_qps *
+        (1 + settings->requested.server_find_peak_qps_boundary_step_size);
   } else {
-    LogDetail([](AsyncDetail &detail) {
-      detail(
-          "other types of scenarios (SingleStream & Offline) does not support "
-          "the method.");
-    });
+    LogDetail(
+        [](AsyncDetail &detail) { detail(kFindPeakPerformanceNotSupported); });
   }
 }
 

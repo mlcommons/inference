@@ -1072,13 +1072,18 @@ struct LogOutputs {
   std::ofstream trace_out;
 };
 
+/// \brief Find boundaries of performance settings by widening bounds
+/// exponentially.
+/// \details To find an upper bound of performance, widen an
+/// upper bound exponentially until finding a bound that can't satisfy
+/// performance constraints. i.e. [1, 2) -> [2, 4) -> [4, 8) -> ...
 template <TestScenario scenario>
 std::pair<PerformanceSummary, PerformanceSummary> FindBoundaries(
     SystemUnderTest* sut, QuerySampleLibrary* qsl, SequenceGen* sequence_gen,
     PerformanceSummary l_perf_summary) {
   // Get upper bound
   TestSettingsInternal u_settings = l_perf_summary.settings;
-  find_peak_performance::WidenPerformanceField<scenario>(u_settings);
+  find_peak_performance::WidenPerformanceField<scenario>(&u_settings);
 
   LogDetail(
       [l_field = find_peak_performance::ToStringPerformanceField<scenario>(
@@ -1108,6 +1113,9 @@ std::pair<PerformanceSummary, PerformanceSummary> FindBoundaries(
   }
 }
 
+/// \brief Find peak performance by binary search.
+/// \details The found lower & upper bounds by the function 'FindBoundaries' are
+/// used as initial bounds of a binary search
 template <TestScenario scenario>
 PerformanceSummary FindPeakPerformanceBinarySearch(
     SystemUnderTest* sut, QuerySampleLibrary* qsl, SequenceGen* sequence_gen,
@@ -1121,12 +1129,20 @@ PerformanceSummary FindPeakPerformanceBinarySearch(
   const TestSettingsInternal m_settings =
       find_peak_performance::MidOfBoundaries<scenario>(l_perf_summary.settings,
                                                        u_perf_summary.settings);
-  LogDetail(
-      [m_field = find_peak_performance::ToStringPerformanceField<scenario>(
-           m_settings)](AsyncDetail& detail) {
-        detail("FindPeakPerformanceBinarySearch: The mid value of bounds: " +
-               m_field);
-      });
+
+  LogDetail([l_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     l_perf_summary.settings),
+             u_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     u_perf_summary.settings),
+             m_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     m_settings)](AsyncDetail& detail) {
+    detail(
+        "FindPeakPerformanceBinarySearch: Testing the mid value of bounds [" +
+        l_field + ", " + u_field + "): " + m_field);
+  });
 
   PerformanceResult m_pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
       sut, m_settings, performance_set, sequence_gen));
@@ -1170,6 +1186,14 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 }
 
 /// \brief Runs the binary search mode, templated by scenario.
+/// \details 1. Check whether the lower bound came from user satisfy performance
+/// constraints or not, 2. Find an upper bound using the function
+/// 'FindBoundaries' based on the lower bound, 3. Find peak performance settings
+/// using the function 'FindPeakPerformanceBinarySearch'.
+/// note: Since we can't find a lower bound programmatically because of the
+/// monotonicity issue of Server scenario, rely on user's settings. After being
+/// resolved the issue, we can make the function 'FindBoundaries' find a lower
+/// bound as well from some random initial settings.
 template <TestScenario scenario>
 void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                              const TestSettingsInternal& base_settings,
@@ -1182,10 +1206,8 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       scenario != TestScenario::MultiStreamFree &&
       scenario != TestScenario::Server) {
     LogDetail([unsupported_scenario = ToString(scenario)](AsyncDetail& detail) {
-      detail("Unsupported scenario, " + unsupported_scenario);
+      detail.Error(find_peak_performance::kFindPeakPerformanceNotSupported);
     });
-
-    RunPerformanceMode<scenario>(sut, qsl, base_settings, sequence_gen);
     return;
   }
 
@@ -1196,6 +1218,8 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
            base_field);
   });
 
+  // 1. Check whether the lower bound came from user satisfy performance
+  // constraints or not.
   std::vector<loadgen::LoadableSampleSet> base_loadable_sets(
       loadgen::GenerateLoadableSets(qsl, base_settings));
   const LoadableSampleSet& base_performance_set = base_loadable_sets.front();
@@ -1206,12 +1230,13 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   PerformanceSummary base_perf_summary{sut->Name(), base_settings,
                                        std::move(base_pr)};
 
-  // Check whether base settings satisfy the performance constraints or
-  // not.
+  // We can also use all_constraints_met to check performance constraints,
+  // but to reduce searching time, leave it up whether the settings satisfy min
+  // duration & min queries or not to users.
   std::string msg;
   if (!base_perf_summary.PerfConstraintsMet(&msg)) {
     LogDetail([msg](AsyncDetail& detail) {
-      detail(
+      detail.Error(
           "FindPeakPerformance: Initial lower bound does not satisfy "
           "performance constraints, msg: " +
           msg);
@@ -1232,7 +1257,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   // Clear loaded samples.
   qsl->UnloadSamplesFromRam(base_performance_set.set);
 
-  // Get boundaries using the base perf summary
+  // 2. Find an upper bound based on the lower bound.
   std::pair<PerformanceSummary, PerformanceSummary> boundaries =
       FindBoundaries<scenario>(sut, qsl, sequence_gen, base_perf_summary);
   PerformanceSummary l_perf_summary = boundaries.first;
@@ -1253,7 +1278,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   const LoadableSampleSet& performance_set = loadable_sets.front();
   LoadSamplesToRam(qsl, performance_set.set);
 
-  // Find peak performance using the boundaries
+  // 3. Find peak performance settings using the found boundaries
   PerformanceSummary perf_summary = FindPeakPerformanceBinarySearch<scenario>(
       sut, qsl, sequence_gen, performance_set, l_perf_summary, u_perf_summary);
 

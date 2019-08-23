@@ -73,6 +73,8 @@ struct TestSettingsInternal {
   uint64_t schedule_rng_seed;
 };
 
+/// \brief A namespace of collections of FindPeakPerformance helper functions,
+/// mainly about binary search.
 namespace find_peak_performance {
 
 namespace {

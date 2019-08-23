@@ -1115,7 +1115,7 @@ std::pair<PerformanceSummary, PerformanceSummary> FindBoundaries(
 
 /// \brief Find peak performance by binary search.
 /// \details The found lower & upper bounds by the function 'FindBoundaries' are
-/// used as initial bounds of a binary search
+/// used as initial bounds of binary search
 template <TestScenario scenario>
 PerformanceSummary FindPeakPerformanceBinarySearch(
     SystemUnderTest* sut, QuerySampleLibrary* qsl, SequenceGen* sequence_gen,
@@ -1186,14 +1186,14 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 }
 
 /// \brief Runs the binary search mode, templated by scenario.
-/// \details 1. Check whether the lower bound came from user satisfy performance
-/// constraints or not, 2. Find an upper bound using the function
-/// 'FindBoundaries' based on the lower bound, 3. Find peak performance settings
-/// using the function 'FindPeakPerformanceBinarySearch'.
-/// note: Since we can't find a lower bound programmatically because of the
-/// monotonicity issue of Server scenario, rely on user's settings. After being
-/// resolved the issue, we can make the function 'FindBoundaries' find a lower
-/// bound as well from some random initial settings.
+/// \details 1. Check whether lower bound from user satisfies the performance
+/// constraints, 2. Find an upper bound using the function 'FindBoundaries'
+/// based on the lower bound, 3. Find peak performance settings using the
+/// function 'FindPeakPerformanceBinarySearch'. note: Since we can't find a
+/// lower bound programmatically because of the monotonicity issue of Server
+/// scenario, rely on user's settings. After resolving this issue, we can
+/// make the function 'FindBoundaries' find a lower bound as well from some
+/// random initial settings.
 template <TestScenario scenario>
 void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                              const TestSettingsInternal& base_settings,
@@ -1231,8 +1231,8 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                                        std::move(base_pr)};
 
   // We can also use all_constraints_met to check performance constraints,
-  // but to reduce searching time, leave it up whether the settings satisfy min
-  // duration & min queries or not to users.
+  // but to reduce searching time, leave it up to whether the settings satisfy
+  // min duration & min queries or not to users.
   std::string msg;
   if (!base_perf_summary.PerfConstraintsMet(&msg)) {
     LogDetail([msg](AsyncDetail& detail) {

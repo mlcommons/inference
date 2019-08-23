@@ -164,14 +164,14 @@ class PostProcessCoco:
             inv_map = {v:k for k,v in label_map.items()}
 
         detections = []
-        image_indicies = []
+        image_indices = []
         for batch in range(0, len(self.results)):
             for idx in range(0, len(self.results[batch])):
                 detection = self.results[batch][idx]
                 # this is the index of the coco image
                 image_idx = int(detection[0])
                 # because we need to have the
-                image_indicies.append(image_idx)
+                image_indices.append(image_idx)
                 # map the index to the coco image id
                 detection[0] = ds.image_ids[image_idx]
                 height, width = ds.image_sizes[image_idx]
@@ -196,7 +196,7 @@ class PostProcessCoco:
         if output_dir:
             # for debugging
             pp = []
-            for image_idx, detection in zip(image_indicies, detections):
+            for image_idx, detection in zip(image_indices, detections):
                 pp.append({"image_id": int(detection[0]),
                            "image_loc": ds.get_item_loc(image_idx),
                            "category_id": int(detection[6]),

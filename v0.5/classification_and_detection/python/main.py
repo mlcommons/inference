@@ -207,6 +207,7 @@ def get_args():
     parser.add_argument("--max-latency", type=str, help="mlperf max latency in 99pct tile")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
+    parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
@@ -481,6 +482,8 @@ def main():
         settings.mode = lg.TestMode.PerformanceOnly
         if args.accuracy:
             settings.mode = lg.TestMode.AccuracyOnly
+        if args.find_peak_performance:
+            settings.mode = lg.TestMode.FindPeakPerformance
 
         if args.time:
             # override the time we want to run

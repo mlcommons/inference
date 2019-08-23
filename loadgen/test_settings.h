@@ -154,6 +154,9 @@ struct TestSettings {
   /// with multi_stream_target_latency_ns to determine if a run is valid.
   double multi_stream_target_latency_percentile = 0.9;
   /// \brief The number of samples in each query.
+  /// \details note: This field is used as a FindPeakPerformance's lower bound.
+  /// When you run FindPeakPerformanceMode, you should make sure that this value
+  /// satisfies performance constraints.
   int multi_stream_samples_per_query = 4;
   /// \brief The maximum number of queries, to which a SUT has not responded,
   /// before the loadgen will throttle issuance of new queries.
@@ -164,7 +167,9 @@ struct TestSettings {
   /// \name Server-specific
   /**@{*/
   /// \brief The average QPS of the poisson distribution.
-  ///        Only used as a hint in SearchForPeakPerformance.
+  /// \details note: This field is used as a FindPeakPerformance's lower bound.
+  /// When you run FindPeakPerformanceMode, you should make sure that this value
+  /// satisfies performance constraints.
   double server_target_qps = 1;
   /// \brief The latency constraint for the Server scenario.
   uint64_t server_target_latency_ns = 100000000;
@@ -176,6 +181,12 @@ struct TestSettings {
   double server_target_latency_percentile = 0.99;
   /// \brief TODO: Implement this.
   bool server_coalesce_queries = false;
+  /// \brief The decimal places of QPS precision used to terminate
+  /// FindPeakPerformance mode.
+  int server_find_peak_qps_decimals_of_precision = 1;
+  /// \brief A step size used to widen lower & upper bound to find the initial
+  /// boundaries of binary search
+  double server_find_peak_qps_boundary_step_size = 1;
   /**@}*/
 
   // ==================================

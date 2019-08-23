@@ -288,7 +288,10 @@ def ssd_random_sample_patch_wrapper(image, labels, bboxes):
             areas = (bboxes[:, 3] - bboxes[:, 1]) * (bboxes[:, 2] - bboxes[:, 0])
             return tf.logical_and(tf.logical_and(areas < 0.9, areas > 0.001),
                                   tf.logical_and((bboxes[:, 3] - bboxes[:, 1]) > 0.025, (bboxes[:, 2] - bboxes[:, 0]) > 0.025))
-       
+        def check_bboxes_small(bboxes):
+            areas = (bboxes[:, 3] - bboxes[:, 1]) * (bboxes[:, 2] - bboxes[:, 0])
+            return tf.logical_and(tf.logical_and(areas < 0.9, areas > 0.0001),
+                                  tf.logical_and((bboxes[:, 3] - bboxes[:, 1]) > 0.005, (bboxes[:, 2] - bboxes[:, 0]) > 0.005))
         index = 0
         max_attempt = 3
         def condition(index, image, labels, bboxes, orgi_image, orgi_labels, orgi_bboxes):

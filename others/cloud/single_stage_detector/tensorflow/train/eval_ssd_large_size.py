@@ -24,10 +24,11 @@ tf.image.non_max_suppression = gen_image_ops.non_max_suppression_v2
 
 from model import ssd_net_resnet34_large
 from dataset import dataset_common
-from utils import ssd_preprocessing
-from utils import anchor_manipulator
+from utils import ssd_preprocessing_m as ssd_preprocessing
+from utils import anchor_manipulator_with_size
 from utils import scaffolds
 from utils.coco_eval import eval_on_coco
+from utils.voc_eval import do_python_eval
 
 tf.app.flags.DEFINE_integer(
     'num_readers', 8,
@@ -44,9 +45,9 @@ tf.app.flags.DEFINE_string(
     'data_dir', './tfrecords/',
     'The directory where the dataset input data is stored.')
 tf.app.flags.DEFINE_integer(
-    'num_classes', 81, 'Number of classes to use in the dataset.')
+    'num_classes', 4, 'Number of classes to use in the dataset.')
 tf.app.flags.DEFINE_string(
-    'model_dir', './logs_mine_sec.pytorch/',
+    'model_dir', './purn_anfang/prune-0.8-ft/',
     'The directory where the model will be stored.')
 tf.app.flags.DEFINE_integer(
     'log_every_n_steps', 10,
@@ -55,8 +56,11 @@ tf.app.flags.DEFINE_integer(
     'save_summary_steps', 500,
     'The frequency with which summaries are saved, in seconds.')
 tf.app.flags.DEFINE_integer(
-    'train_image_size', 1200,
-    'The size of the input image for the model to use.')
+    'image_width', 960,
+    'The width of the input image for the model to use.')
+tf.app.flags.DEFINE_integer(
+    'image_height', 540,
+    'The height of the input image for the model to use.')
 tf.app.flags.DEFINE_integer(
     'train_epochs', 1,
     'The number of epochs to use for training.')
@@ -64,7 +68,7 @@ tf.app.flags.DEFINE_integer(
     'batch_size_mine', 4,
     'Batch size for training and evaluation.')
 tf.app.flags.DEFINE_string(
-    'data_format', 'channels_first',
+    'data_format', 'channels_last',
     'A flag to override the data format used in the model. channels_first '
     'provides a performance boost on GPU but is not always compatible '
     'with CPU. If left unspecified, the data format will be chosen '
@@ -76,7 +80,7 @@ tf.app.flags.DEFINE_float(
 tf.app.flags.DEFINE_float(
     'neg_threshold', 0.5, 'Matching threshold for the negtive examples in the loss function.')
 tf.app.flags.DEFINE_float(
-    'select_threshold', 0.05, 'Class-specific confidence score threshold for selecting a box.')
+    'select_threshold', 0.001, 'Class-specific confidence score threshold for selecting a box.')
 tf.app.flags.DEFINE_float(
     'min_size', 0.003, 'The min size of bboxes to keep.')
 tf.app.flags.DEFINE_float(
@@ -94,7 +98,9 @@ tf.app.flags.DEFINE_string(
     'The path to a checkpoint from which to fine-tune.')
 tf.app.flags.DEFINE_string(
     'model_scope', 'ssd1200',
-    'Model scope name used to replace the name_scope in checkpoint.')  
+    'Model scope name used to replace the name_scope in checkpoint.') 
+ 
+#args = tf.app.flags.FLAGS
 
 def get_checkpoint(args):
     if tf.train.latest_checkpoint(args.model_dir):
@@ -110,18 +116,18 @@ global_anchor_info = dict()
 def input_pipeline(args, dataset_pattern='train-*', is_training=True):
     batch_size = args.batch_size_mine
     def input_fn():
-        out_shape = [args.train_image_size] * 2
-        defaultboxes_creator = anchor_manipulator.DefaultBoxes(out_shape,
-                                                               layers_shapes = [(50, 50), (25, 25), (13, 13), (7, 7), (3, 3), (3, 3)],
-                                                               anchor_scales = [(0.07,), (0.15,), (0.33,), (0.51,), (0.69,), (0.87,)],
-                                                               extra_anchor_scales = [(0.15,), (0.33,), (0.51,), (0.69,), (0.87,), (1.05,)],
-                                                               anchor_ratios = [(2,), ( 2., 3.,), (2., 3.,), (2., 3.,), (2.,), (2.,)],
-                                                               layer_steps = [24, 48, 92, 171, 400, 400])
+        out_shape = [args.image_height, args.image_width]
+        defaultboxes_creator = anchor_manipulator_with_size.DefaultBoxes(out_shape,
+                                                               layers_shapes = [(34, 60), (17, 30), (9, 15), (5, 8), (2, 4), (1, 2)],
+                                                               min_sizes = [(28, 48,), (100,), (180,), (280,), (350,), (440,)],
+                                                               max_sizes = [(60, 82), (200,), (300,), (370,), (450,), (600,)],
+                                                               anchor_ratios = [(2, ), ( 2., 3.,), (2., 3.,), (2., 3.,), (2.,), (2.,)],
+                                                               layer_steps = [16, 32, 64, 120, 240, 540])
         defaultboxes, defaultboxes_ltrb, all_num_anchors_depth, all_num_anchors_spatial = defaultboxes_creator.get_all_anchors()
         num_anchors_per_layer = []
         for ind in range(len(all_num_anchors_depth)):
             num_anchors_per_layer.append(all_num_anchors_depth[ind] * all_num_anchors_spatial[ind])
-        en_decoder = anchor_manipulator.En_Decoder(allowed_borders = [1.0] * 6,
+        en_decoder = anchor_manipulator_with_size.En_Decoder(allowed_borders = [1.0] * 6,
                                                    positive_threshold = args.match_threshold,
                                                    ignore_threshold = args.neg_threshold,
                                                    prior_scaling=[0.1, 0.1, 0.2, 0.2])
@@ -228,6 +234,7 @@ def parse_by_class_fixed_bboxes(cls_pred, bboxes_pred, params):
     detection_scores, idxes = tf.nn.top_k(detection_scores, k=tf.minimum(params['keep_max_boxes'], num_bboxes), sorted=True)
     detection_bboxes = tf.gather(detection_bboxes, idxes)
     detection_classes = tf.gather(detection_classes, idxes)
+    cur_num = tf.shape(detection_classes)[0]
     keep_max_boxes = tf.convert_to_tensor(params['keep_max_boxes']) 
     detection_bboxes = tf.cond(cur_num < keep_max_boxes, lambda: tf.concat([detection_bboxes, tf.zeros(shape=(params['keep_max_boxes'] - cur_num, 4), dtype=tf.float32)], axis=0), lambda: detection_bboxes)
     detection_scores = tf.cond(cur_num < keep_max_boxes, lambda: tf.concat([detection_scores, tf.zeros(shape=(params['keep_max_boxes'] - cur_num,), dtype=tf.float32)], axis=0), lambda: detection_scores)
@@ -263,7 +270,7 @@ def ssd_model_fn(features, labels, mode, params):
     with tf.variable_scope(params['model_scope'], default_name=None, values=[features], reuse=tf.AUTO_REUSE):
         backbone = ssd_net_resnet34_large.Resnet34Backbone(params['data_format'])
         feature_layers = backbone.forward(features, training=(mode == tf.estimator.ModeKeys.TRAIN))
-        location_pred, cls_pred = ssd_net_resnet34_large.multibox_head(feature_layers, params['num_classes'], all_num_anchors_depth, data_format=params['data_format'], strides=(3, 3))
+        location_pred, cls_pred = ssd_net_resnet34_large.multibox_head(feature_layers, params['num_classes'], all_num_anchors_depth, data_format=params['data_format'], strides=(2, 2))
         if params['data_format'] == 'channels_last':
             cls_pred = [tf.transpose(pred, [0, 3, 1, 2]) for pred in cls_pred]
             location_pred = [tf.transpose(pred, [0, 3, 1, 2]) for pred in location_pred]
@@ -312,7 +319,7 @@ def ssd_model_fn(features, labels, mode, params):
 def parse_comma_list(args):
     return [float(s.strip()) for s in args.split(',')]
 
-def evaluate(args):
+def evaluate(args):  #checkpoint_path = get_checkpoint()):
     checkpoint_path = get_checkpoint(args)
     gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=args.gpu_memory_fraction)
     config = tf.ConfigProto(allow_soft_placement=True, log_device_placement=False, intra_op_parallelism_threads=args.num_cpu_threads, inter_op_parallelism_threads=args.num_cpu_threads, gpu_options=gpu_options)
@@ -345,9 +352,12 @@ def evaluate(args):
     logging_hook = tf.train.LoggingTensorHook(tensors=tensors_to_log, every_n_iter=args.log_every_n_steps,
                                               formatter=lambda dicts: (', '.join(['%s=%s' % (k, v) for k, v in dicts.items()])))
     print('Starting a predict cycle.')
-    pred_results = ssd_detector.predict(input_fn=input_pipeline(args, dataset_pattern='coco_2017_val-*', is_training=False), hooks=[logging_hook], checkpoint_path=checkpoint_path)
+    pred_results = ssd_detector.predict(input_fn=input_pipeline(args, dataset_pattern='anfang_new_val-*', is_training=False), hooks=[logging_hook], checkpoint_path=checkpoint_path)
     det_results = list(pred_results)
+    data_records = dataset_common.get_gtdata_from_tfrecord(args.data_dir, "anfang_new_val-")
     predict_by_class_dict = {}
+    print('the length of det_results : ', len(det_results))
+    print('the length of data_records : ', len(data_records))
     for image_ind, pred in enumerate(det_results):
         filename = pred['filename']
         shape = pred['shape']
@@ -371,12 +381,12 @@ def evaluate(args):
                 predict_by_class_dict[class_ind] = [[filename.decode('utf8')[:-4], scores[det_ind],
                                                      bboxes[det_ind, 0], bboxes[det_ind, 1],
                                                      bboxes[det_ind, 2], bboxes[det_ind, 3]]] 
-    return eval_on_coco(predict_by_class_dict)
+    return do_python_eval(predict_by_class_dict, data_records)  #eval_on_coco(predict_by_class_dict)
 
 def main(_):
-    os.environ['CUDA_VISIBLE_DEVICES'] = '4'
+    os.environ['CUDA_VISIBLE_DEVICES'] = '2'
     args = tf.app.flags.FLAGS
-    evaluate(args)
+    evaluate(args) #checkpoint_path = get_checkpoint())
 
 if __name__ == '__main__':
     tf.logging.set_verbosity(tf.logging.INFO)

@@ -39,9 +39,16 @@ def main():
 
     detections = []
     image_ids = set()
+    seen = set()
     image_map = cocoGt.dataset["images"]
+
     for j in results:
         idx = j['qsl_idx']
+        # de-dupe in case loadgen sends the same image multiple times
+        if idx in seen:
+            continue
+        seen.add(idx)
+
         # reconstruct from mlperf accuracy log
         # what is written by the benchmark is an array of float32's:
         # id, box[0], box[1], box[2], box[3], score, detection_class
@@ -78,6 +85,8 @@ def main():
     cocoEval.summarize()
 
     print("mAP={:.3f}%".format(100. * cocoEval.stats[0]))
+    if args.verbose:
+        print("found and ignored {} dupes".format(len(results) - len(seen)))
 
 
 if __name__ == "__main__":

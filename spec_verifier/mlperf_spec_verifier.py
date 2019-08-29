@@ -1,6 +1,7 @@
 import argparse
 import re
 import json
+from enum import Enum
 
 # Parser for command line
 parser = argparse.ArgumentParser(description='Input log, model, and mode.')
@@ -11,18 +12,23 @@ parser.add_argument('--spec', action='store', type=str,
 parser.add_argument('--model', action='store', type=str, dest='model_name',
                     help='Model name you are testing (e.g. Resnet50-v1.5)')
 
-results = parser.parse_args()
+args = parser.parse_args()
 
-bool_dict = {}
+field_compliance = {}
+
+class ExitCode (Enum):
+    COMPLIANT = 0
+    SETTING_ERROR = 1
+    SCENARIO_ERROR = 2
 
 # Scrape lines from txt file
-with open(results.log_filename) as logfile:
+with open(args.log_filename) as logfile:
     log_lines = logfile.readlines()
 
 log_lines = [line.strip() for line in log_lines]
 
 # Import JSON file
-with open(results.spec_filename) as json_file:
+with open(args.spec_filename) as json_file:
     json_dict = json.load(json_file)
 
 def find_string(iter_list, substring):
@@ -57,121 +63,91 @@ def slice_colons(string, character, index):
 
 
 def get_key_value(string, character, index):
+    find_char_result = find_char(character, string)[index]
+
     """Creates a list with a key value pair from parsed log file line."""
-    value = string[find_char(character, string)[index] + 2:]
+    value = string[find_char_result + 2:]
     if value.isdigit():
         value = int(value)
-    return [string[0: find_char(character, string)[index]].strip(), value]
+    return [string[0: find_char_result].strip(), value]
 
 
 for i, s in enumerate(effective_settings):
     """Parses the effective settings list and creates a dictionary out of it."""
     effective_settings[i] = slice_colons(effective_settings[i], ':', 3)
-    effective_dict[get_key_value(effective_settings[i], ':', 0)[0]] = get_key_value(effective_settings[i], ':', 0)[1]
+    get_key_value_result = get_key_value(effective_settings[i], ':', 0)
+    effective_dict[get_key_value_result[0]] = get_key_value_result[1]
 
-keys = list(effective_dict.keys())
+effective_keys = list(effective_dict.keys())
 exit_code = 0
-
-
-def check_in_list(spec_dict, log_dict, result_dict, key):
-    """Checks if attribute from log file equals one of the attributes in a list in the spec dictionary."""
-    for b in range(len(spec_dict)):
-        if spec_dict[b] == log_dict:
-            result_dict[key] = True 
-    if key not in result_dict:
-        result_dict[key] = False
-
-
-def check_in_dict(spec_dict, parsed_results, log_dict, result_dict, key):
-    """Checks if attribute from log file equals one of the attributes in a dict in the spec dictionary."""
-    dict_keys = list(spec_dict.keys())
-    for b in range(len(spec_dict)):
-        if dict_keys[b] == parsed_results.model_name:
-            if spec_dict[dict_keys[b]] <= log_dict:
-                # For MultiStream and Server: target_latency or min_query_count matches
-                result_dict[key] = True
-    if key not in result_dict:
-        result_dict[key] = False
-
-
-def check_samples_per_queries():
-    """Checks the specific samples_per_queries attributes."""
-
-    # if singlestream/server, must be equal
-    if json_dict['Scenarios'][a][keys[0]] == 'SingleStream' or json_dict['Scenarios'][a][keys[0]] == 'Server':
-        if json_dict['Scenarios'][a][keys[d]] == effective_dict[keys[d]]:
-            bool_dict[keys[d]] = True
-        else:
-            bool_dict[keys[d]] = False
-    elif json_dict['Scenarios'][a][keys[0]] == 'Offline':
-        if json_dict['Scenarios'][a][keys[d]] <= effective_dict[keys[d]]:
-            bool_dict[keys[d]] = True
-        else:
-            bool_dict[keys[d]] = False
-    elif json_dict['Scenarios'][a][keys[0]] == 'MultiStream':
-        bool_dict[keys[d]] = True
-
-
-def check_greater_than():
-    """Checks if attribute is greater than or equal to attribute in spec dict."""
-    if (json_dict['Scenarios'][a][keys[0]] == 'Offline'
-        or json_dict['Scenarios'][a][keys[0]] == 'SingleStream'
-            or json_dict['Scenarios'][a][keys[0]] == 'Server'):
-
-        if json_dict['Scenarios'][a][keys[d]] <= effective_dict[keys[d]]:
-            bool_dict[keys[d]] = True
-        else:
-            bool_dict[keys[d]] = False
-
-
-def default_singlestream_offline_true():
-    """Checks for attributes that don't directly apply to SingleStream or Offline."""
-    if json_dict['Scenarios'][a][keys[0]] == 'SingleStream' or json_dict['Scenarios'][a][keys[0]] == 'Offline':
-        bool_dict[keys[d]] = True
-
-def check_normal_attribute():
-    "Checks if normal attributes equal attributes in the spec dict."
-    if json_dict['Scenarios'][a][keys[d]] == effective_dict[keys[d]]:
-        bool_dict[keys[d]] = True
-    else:
-        bool_dict[keys[d]] = False
-
+field_compliance = dict((el, False) for el in effective_keys)
 # first iterate through the Scenarios list
-for a in range(len(json_dict['Scenarios'])):
-    """For Loop for final check"""
-    # if the Scenario value matches, then go deeper into loop
-    if json_dict['Scenarios'][a][keys[0]] == effective_dict[keys[0]]:
+
+if effective_dict[effective_keys[0]] not in json_dict.keys():
+    """Checks if scenario exists"""
+    exit_code = 2
+else:
+    field_compliance[effective_keys[0]] = True
+    scenario = effective_dict[effective_keys[0]]
+
+    for a in json_dict[scenario]:
+        """Checks each attribute"""
+        current_value = json_dict[scenario][a]
+        if effective_dict[a] == current_value:
+            field_compliance[a] = True
+        if a == "target_latency (ns)":
+            if scenario == "MultiStream" or scenario == "Server":
+                current_keys = list(current_value.keys())
+
+                if args.model_name in current_keys:
+                    if current_value[args.model_name] == effective_dict[a]:
+                        field_compliance[a] = True
+            else:
+                field_compliance[a] = True
+        if a == "min_query_count":
+            if scenario == "MultiStream" or scenario == "Server":
+                current_keys = list(current_value.keys())
+
+                if args.model_name in current_keys:
+                    if current_value[args.model_name] <= effective_dict[a]:
+                        field_compliance[a] = True
+            else:
+                if current_value <= effective_dict[a]:
+                        field_compliance[a] = True
+        if a == "samples_per_query":
+            if scenario == "Offline":
+                if current_value <= effective_dict[a]:
+                    field_compliance[a] = True
+            elif scenario == "MultiStream":
+                field_compliance[a] = True
+        if a == "min_duration (ms)":
+            if current_value <= effective_dict[a]:
+                field_compliance[a] = True
+        if a == "min_sample_count":
+            if scenario == "Server":
+                current_keys = list(current_value.keys())
+
+                if args.model_name in current_keys:
+                    if current_value[args.model_name] <= effective_dict[a]:
+                        field_compliance[a] = True
+            else:
+                if current_value <= effective_dict[a]:
+                        field_compliance[a] = True
+
+if exit_code is not 2:
+    """Sets final exit code value"""
+    if all(value == True for value in field_compliance.values()) == True:
         exit_code = 0
-        bool_dict[keys[0]] = True  # Scenario matches
-
-        for d in range(1, len(json_dict['Scenarios'][a])):
-            """Iterates through every attribute"""
-            # check for list or dict
-            if type(json_dict['Scenarios'][a][keys[d]]) == list:
-                """See if the value matches any of the list values"""
-                check_in_list(json_dict['Scenarios'][a][keys[d]],
-                              effective_dict[keys[d]], bool_dict, keys[d])
-            elif type(json_dict['Scenarios'][a][keys[d]]) == dict:
-                """See if the value matches any of the dict values"""
-                check_in_dict(json_dict['Scenarios'][a][keys[d]],
-                              results, effective_dict[keys[d]], bool_dict, keys[d])
-            else:  # so attribute is a number
-                """Checks rest of the attributes"""
-                if d == 2:
-                    check_samples_per_queries()
-                elif d == 7 or d == 9 or d == 11:
-                    check_greater_than()
-                elif d == 4:
-                    default_singlestream_offline_true()
-                else:
-                    check_normal_attribute()
-        if all(value == True for value in bool_dict.values()) == True:
-            exit_code = 0
-        else:
-            exit_code = 1
-        break
     else:
-        exit_code = 2
+        exit_code = 1
 
-print("\nExit Code = " + str(exit_code) + "\n")
-print("Attribute Complies? \n" + str(bool_dict) + "\n")
+
+if exit_code == 0:
+    print("\nSummary: Your TestSettings are compliant with the MLPerf specifications.")
+elif exit_code == 1:
+    print("\nSummary: One or more of your TestSettings is not compliant with the MLPerf specifications. Please examine below to see which attributes do not comply.")
+else:
+    print("\nSummary: Your scenario specification in your TestSettings is incorrect. Please fix before continuing the test.")
+
+print("\nExit Code: " + ExitCode(exit_code).name + "\n")
+print("Attribute Complies? \n" + str(field_compliance) + "\n")

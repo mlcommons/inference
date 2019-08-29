@@ -745,6 +745,13 @@ struct PerformanceSummary {
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
 
+  PerformanceSummary::PerformanceSummary(
+      const std::string& sut_name_arg,
+      const TestSettingsInternal& settings_arg,
+      const PerformanceResult& pr_arg)
+      : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg) {
+  };
+
   void ProcessLatencies();
 
   bool MinDurationMet(std::string* recommendation);

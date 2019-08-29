@@ -36,7 +36,10 @@ TestSettingsInternal::TestSettingsInternal(
       sample_index_rng_seed(requested.sample_index_rng_seed),
       schedule_rng_seed(requested.schedule_rng_seed),
       accuracy_log_rng_seed(requested.accuracy_log_rng_seed),
-      accuracy_log_probability(requested.accuracy_log_probability) {
+      accuracy_log_probability(requested.accuracy_log_probability),
+      issue_unique(requested.issue_unique),
+      issue_same(requested.issue_same),
+      performance_sample_count_override(requested.performance_sample_count_override) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -102,7 +105,8 @@ TestSettingsInternal::TestSettingsInternal(
     constexpr double kSlack = 1.1;
     int target_sample_count =
         kSlack * DurationToSeconds(target_duration) * target_qps;
-    samples_per_query = std::max<int>(min_query_count, target_sample_count);
+    samples_per_query = (requested.issue_unique || requested.issue_same) ? requested.performance_sample_count_override : 
+                                                                           std::max<int>(min_query_count, target_sample_count);
     min_query_count = 1;
     target_duration = std::chrono::milliseconds(0);
   }
@@ -191,6 +195,9 @@ void LogRequestedTestSettings(const TestSettings &s) {
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
     detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
     detail("accuracy_log_probability : ", s.accuracy_log_probability);
+    detail("issue_unique : ", s.issue_unique);
+    detail("issue_same : ", s.issue_same);
+    detail("performance_sample_count_override : ", s.performance_sample_count_override);
 
     detail("");
   });
@@ -220,7 +227,11 @@ void TestSettingsInternal::LogEffectiveSettings() const {
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
     detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
     detail("accuracy_log_probability : ", s.accuracy_log_probability);
-  });
+    detail("accuracy_log_probability : ", s.accuracy_log_probability);
+    detail("issue_unique : ", s.issue_unique);
+    detail("issue_same : ", s.issue_same);
+    detail("performance_sample_count_override : ", s.performance_sample_count_override);
+ });
 }
 
 void TestSettingsInternal::LogAllSettings() const {
@@ -242,6 +253,9 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("schedule_rng_seed : ", schedule_rng_seed);
   summary("accuracy_log_rng_seed : ", accuracy_log_rng_seed);
   summary("accuracy_log_probability : ", accuracy_log_probability);
+  summary("issue_unique : ", issue_unique);
+  summary("issue_same : ", issue_same);
+  summary("performance_sample_count_override : ", performance_sample_count_override);
 }
 
 }  // namespace loadgen

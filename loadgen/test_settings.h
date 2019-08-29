@@ -233,6 +233,16 @@ struct TestSettings {
   /// log in performance mode
   double accuracy_log_probability = 0.0;
   /**@}*/
+  
+  // ==================================
+  /// \name Performance Sample modifiers
+  /// \brief Allows issuing only unique samples in Performance mode of any scenario
+  bool issue_unique = false;
+  /// \brief The Same sample is chosen repeatedley for Inference
+  bool issue_same = false;
+  /// \bried Overrides PerformanceSampleCount() when non-zero
+  uint64_t performance_sample_count_override = 0;
+
 };
 
 ///

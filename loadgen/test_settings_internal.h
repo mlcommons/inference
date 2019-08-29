@@ -73,6 +73,10 @@ struct TestSettingsInternal {
   uint64_t schedule_rng_seed;
   uint64_t accuracy_log_rng_seed;
   double accuracy_log_probability;
+
+  bool issue_unique;
+  bool issue_same;
+  uint64_t performance_sample_count_override;
 };
 
 /// \brief A namespace of collections of FindPeakPerformance helper functions,

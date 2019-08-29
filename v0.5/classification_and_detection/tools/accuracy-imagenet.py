@@ -37,9 +37,16 @@ def main():
     with open(args.mlperf_accuracy_file, "r") as f:
         results = json.load(f)
 
+    seen = set()
     good = 0
     for j in results:
         idx = j['qsl_idx']
+
+        # de-dupe in case loadgen sends the same image multiple times
+        if idx in seen:
+            continue
+        seen.add(idx)
+
         # get the expected label and image
         img, label = imagenet[idx]
 
@@ -52,7 +59,9 @@ def main():
             if args.verbose:
                 print("{}, expected: {}, found {}".format(img, label, found))
 
-    print("accuracy={:.3f}%, good={}, total={}".format(100. * good / len(results), good, len(results)))
+    print("accuracy={:.3f}%, good={}, total={}".format(100. * good / len(seen), good, len(seen)))
+    if args.verbose:
+        print("found and ignored {} dupes".format(len(results) - len(seen)))
 
 
 if __name__ == "__main__":

@@ -8,7 +8,9 @@ set(mlperf_loadgen_VERSION_MINOR 5)
 message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}")
 
 # Set build options. NB: CXX_STANDARD is supported since CMake 3.1.
+if (NOT MSVC)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -W -Wall")
+endif()
 message(STATUS "Using C++ compiler flags: ${CMAKE_CXX_FLAGS}")
 set(CMAKE_CXX_STANDARD "14")
 message(STATUS "Using C++ standard: ${CMAKE_CXX_STANDARD}")

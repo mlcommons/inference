@@ -1244,7 +1244,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       scenario != TestScenario::MultiStreamFree &&
       scenario != TestScenario::Server) {
     LogDetail([unsupported_scenario = ToString(scenario)](AsyncDetail& detail) {
-      detail.Error(find_peak_performance::kFindPeakPerformanceNotSupported);
+      detail.Error(find_peak_performance::kNotSupportedMsg);
     });
     return;
   }

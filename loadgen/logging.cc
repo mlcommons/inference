@@ -842,7 +842,15 @@ TlsLoggerWrapper* InitializeMyTlsLoggerWrapper() {
   // from the thread in the Logger's destructor, which may run before
   // thread-local variables are destroyed when the loadgen is used as a python
   // module and dynamically unloaded.
-  auto forced_detatch = [&]() { tls_logger_wrapper.reset(); };
+  // Note: We capture a pointer to the tls_logger_wrapper since variables of
+  // the thread-local storage class aren't actually captured. C++ spec says
+  // only variables of the automatic storage class are captured.
+  /// \todo There is a race where the same TlsLoggerWrapper might be
+  /// destroyed both naturally and via forced_detatch. Destruction of
+  /// the TlsLoggerWrapper should be locked.
+  auto forced_detatch = [tls_logger_wrapper = &tls_logger_wrapper]() {
+    tls_logger_wrapper->reset();
+  };
   tls_logger_wrapper = std::make_unique<TlsLoggerWrapper>(forced_detatch);
   return tls_logger_wrapper.get();
 }

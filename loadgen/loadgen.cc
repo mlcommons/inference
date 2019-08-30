@@ -745,7 +745,7 @@ struct PerformanceSummary {
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
 
-  PerformanceSummary::PerformanceSummary(
+  PerformanceSummary(
       const std::string& sut_name_arg,
       const TestSettingsInternal& settings_arg,
       const PerformanceResult& pr_arg)

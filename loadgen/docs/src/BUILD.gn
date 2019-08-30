@@ -3,8 +3,13 @@ generated_doxygen_out_dir =
 
 loadgen_doxygen_sources = [
   "doxygen.cfg",
+  "doxygen_footer.html",
+  "doxygen_header.html",
   "doxygen_layout.xml",
-  "mlperf_logo_horizontal_color_200x55.png",
+  "doxygen_stylesheet.css",
+  "loadgen-integration_diagram.dia",
+  "mlperf_icon.png",
+  "mlperf_logo_horizontal_color.svg",
   "README.md"
 ]
 

@@ -69,8 +69,7 @@ TestSettingsInternal::TestSettingsInternal(
           std::chrono::nanoseconds(requested.server_target_latency_ns);
       max_async_queries =
           std::numeric_limits<decltype(max_async_queries)>::max();
-      target_latency_percentile =
-          requested.server_target_latency_percentile;
+      target_latency_percentile = requested.server_target_latency_percentile;
       break;
     case TestScenario::Offline:
       if (requested.offline_expected_qps >= 0.0) {

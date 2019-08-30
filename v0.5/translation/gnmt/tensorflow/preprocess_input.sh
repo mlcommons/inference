@@ -32,7 +32,7 @@
 
 fbase=$1 # basename of the input text file (e.g., newstest2014 for {newstest2014.en, newstest2014.de})
 SCRIPTS="helper_scripts"
-BPE_CODES="${SCRIPTS}/bpe.32000"
+BPE_CODES="./nmt/data/bpe.32000"
 
 # Clone Moses
 if [ ! -d "${SCRIPTS}/mosesdecoder" ]; then

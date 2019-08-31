@@ -17,9 +17,9 @@ args = parser.parse_args()
 field_compliance = {}
 
 class ExitCode (Enum):
-    COMPLIANT = 0
-    SETTING_ERROR = 1
-    SCENARIO_ERROR = 2
+    COMPLIANT = "COMPLIANT"
+    SETTING_ERROR = "SETTING_ERROR"
+    SCENARIO_ERROR = "SCENARIO_ERROR"
 
 # Scrape lines from txt file
 with open(args.log_filename) as logfile:
@@ -51,13 +51,13 @@ effective_dict = {}
 # Find every ":" in each line
 def find_char(character, string):
     """Returns index for every time a character is found in a string."""
-    colon_counter = []
+    char_counter = []
     for m in re.finditer(character, string):
-        colon_counter.append(m.start())
-    return colon_counter
+        char_counter.append(m.start())
+    return char_counter
 
 
-def slice_colons(string, character, index):
+def slice_char(string, character, index):
     """Slices a string to remove everything before a specific character."""
     return string[find_char(character, string)[index] + 2:]
 
@@ -74,21 +74,22 @@ def get_key_value(string, character, index):
 
 for i, s in enumerate(effective_settings):
     """Parses the effective settings list and creates a dictionary out of it."""
-    effective_settings[i] = slice_colons(effective_settings[i], ':', 3)
+    effective_settings[i] = slice_char(effective_settings[i], ':', 3)
     get_key_value_result = get_key_value(effective_settings[i], ':', 0)
     effective_dict[get_key_value_result[0]] = get_key_value_result[1]
 
 effective_keys = list(effective_dict.keys())
-exit_code = 0
-field_compliance = dict((el, False) for el in effective_keys)
+exit_code = ExitCode.COMPLIANT
+field_compliance = {}
 # first iterate through the Scenarios list
 
 if effective_dict[effective_keys[0]] not in json_dict.keys():
     """Checks if scenario exists"""
-    exit_code = 2
+    exit_code = ExitCode.SCENARIO_ERROR
 else:
-    field_compliance[effective_keys[0]] = True
     scenario = effective_dict[effective_keys[0]]
+    field_compliance = dict((el, False) for el in json_dict[scenario].keys())
+    field_compliance[effective_keys[0]] = True
 
     for a in json_dict[scenario]:
         """Checks each attribute"""
@@ -134,20 +135,20 @@ else:
                 if current_value <= effective_dict[a]:
                         field_compliance[a] = True
 
-if exit_code is not 2:
+if exit_code is not ExitCode.SCENARIO_ERROR:
     """Sets final exit code value"""
     if all(value == True for value in field_compliance.values()) == True:
-        exit_code = 0
+        exit_code = ExitCode.COMPLIANT
     else:
-        exit_code = 1
+        exit_code = ExitCode.SETTING_ERROR
 
 
-if exit_code == 0:
+if exit_code == ExitCode.COMPLIANT:
     print("\nSummary: Your TestSettings are compliant with the MLPerf specifications.")
-elif exit_code == 1:
+elif exit_code == ExitCode.SETTING_ERROR:
     print("\nSummary: One or more of your TestSettings is not compliant with the MLPerf specifications. Please examine below to see which attributes do not comply.")
 else:
     print("\nSummary: Your scenario specification in your TestSettings is incorrect. Please fix before continuing the test.")
 
-print("\nExit Code: " + ExitCode(exit_code).name + "\n")
+print("\nExit Code: " + exit_code.value + "\n")
 print("Attribute Complies? \n" + str(field_compliance) + "\n")

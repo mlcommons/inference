@@ -193,7 +193,7 @@ def get_args():
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
 
     # file to use mlperf rules compliant parameters
-    parser.add_argument("--config", default="mlperf.conf", help="mlperf rules config")
+    parser.add_argument("--config", default="../mlperf.conf", help="mlperf rules config")
 
     # below will override mlperf rules compliant settings - don't use for official submission
     parser.add_argument("--time", type=int, help="time to scan in seconds")

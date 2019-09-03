@@ -529,7 +529,7 @@ def main():
     # write final results
     #
     if args.output:
-        with open(args.output, "w") as f:
+        with open(os.path.join(args.output, "results.json"), "w") as f:
             json.dump(final_results, f, sort_keys=True, indent=4)
 
 

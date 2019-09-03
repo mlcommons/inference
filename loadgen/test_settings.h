@@ -232,7 +232,12 @@ struct TestSettings {
   /// \brief Probability of the query response of a sample being logged to the accuracy
   /// log in performance mode
   double accuracy_log_probability = 0.0;
+
+  /// \brief Load mlperf parameter config from file.
+  int FromConfig(const std::string &config_file, 
+      const std::string &model, const std::string &mode);
   /**@}*/
+
 };
 
 ///

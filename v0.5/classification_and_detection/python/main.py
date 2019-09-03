@@ -12,6 +12,7 @@ import collections
 import json
 import logging
 import os
+import sys
 import threading
 import time
 from queue import Queue
@@ -435,8 +436,13 @@ def main():
         "cmdline": str(args),
     }
 
+    config = os.path.abspath(args.config)
+    if not os.path.exists(config):
+        log.error("{} not found".format(config))
+        sys.exit(1)
+
     if args.output:
-        output_dir = os.path.abspath(os.path.dirname(args.output))
+        output_dir = os.path.abspath(args.output)
         os.makedirs(output_dir, exist_ok=True)
         os.chdir(output_dir)
 
@@ -473,10 +479,7 @@ def main():
             last_timeing = [t / NANO_SEC for t in latencies_ns]
 
         settings = lg.TestSettings()
-        if not os.path.exits(args.config):
-            log.error("{} not found".format(args.config))
-            sys.exit(1)
-        settings.FromConfig(args.config, args.model_name, scenario.name)
+        settings.FromConfig(config, args.model_name, scenario.name)
         settings.scenario = scenario
         settings.mode = lg.TestMode.PerformanceOnly
         if args.accuracy:

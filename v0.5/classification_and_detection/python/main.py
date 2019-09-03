@@ -178,7 +178,7 @@ def get_args():
     parser.add_argument("--data-format", choices=["NCHW", "NHWC"], help="data format")
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
     parser.add_argument("--scenario", default="SingleStream",
-                        help="mlperf benchmark scenario, list of " + str(list(SCENARIO_MAP.keys())))
+                        help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
     parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--model", required=True, help="model file")
     parser.add_argument("--output", help="test results")
@@ -217,9 +217,8 @@ def get_args():
         args.inputs = args.inputs.split(",")
     if args.outputs:
         args.outputs = args.outputs.split(",")
-    try:
-        args.scenario = [SCENARIO_MAP[scenario] for scenario in args.scenario.split(",")]
-    except:
+
+    if args.scenario not in SCENARIO_MAP:
         parser.error("valid scanarios:" + str(list(SCENARIO_MAP.keys())))
     return args
 
@@ -458,72 +457,72 @@ def main():
         _ = backend.predict({backend.inputs[0]: img})
     ds.unload_query_samples(None)
 
-    for scenario in args.scenario:
-        runner_map = {
-            lg.TestScenario.SingleStream: RunnerBase,
-            lg.TestScenario.MultiStream: QueueRunner,
-            lg.TestScenario.Server: QueueRunner,
-            lg.TestScenario.Offline: QueueRunner
-        }
-        runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)
+    scenario = SCENARIO_MAP[args.scenario]
+    runner_map = {
+        lg.TestScenario.SingleStream: RunnerBase,
+        lg.TestScenario.MultiStream: QueueRunner,
+        lg.TestScenario.Server: QueueRunner,
+        lg.TestScenario.Offline: QueueRunner
+    }
+    runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)
 
-        def issue_queries(query_samples):
-            runner.enqueue(query_samples)
+    def issue_queries(query_samples):
+        runner.enqueue(query_samples)
 
-        def flush_queries():
-            pass
+    def flush_queries():
+        pass
 
-        def process_latencies(latencies_ns):
-            # called by loadgen to show us the recorded latencies
-            global last_timeing
-            last_timeing = [t / NANO_SEC for t in latencies_ns]
+    def process_latencies(latencies_ns):
+        # called by loadgen to show us the recorded latencies
+        global last_timeing
+        last_timeing = [t / NANO_SEC for t in latencies_ns]
 
-        settings = lg.TestSettings()
-        settings.FromConfig(config, args.model_name, scenario.name)
-        settings.scenario = scenario
-        settings.mode = lg.TestMode.PerformanceOnly
-        if args.accuracy:
-            settings.mode = lg.TestMode.AccuracyOnly
-        if args.find_peak_performance:
-            settings.mode = lg.TestMode.FindPeakPerformance
+    settings = lg.TestSettings()
+    settings.FromConfig(config, args.model_name, args.scenario)
+    settings.scenario = scenario
+    settings.mode = lg.TestMode.PerformanceOnly
+    if args.accuracy:
+        settings.mode = lg.TestMode.AccuracyOnly
+    if args.find_peak_performance:
+        settings.mode = lg.TestMode.FindPeakPerformance
 
-        if args.time:
-            # override the time we want to run
-            settings.min_duration_ms = args.time * MILLI_SEC
-            settings.max_duration_ms = args.time * MILLI_SEC
+    if args.time:
+        # override the time we want to run
+        settings.min_duration_ms = args.time * MILLI_SEC
+        settings.max_duration_ms = args.time * MILLI_SEC
 
-        if args.qps:
-            qps = float(args.qps)
-            settings.server_target_qps = qps
-            settings.offline_expected_qps = qps
+    if args.qps:
+        qps = float(args.qps)
+        settings.server_target_qps = qps
+        settings.offline_expected_qps = qps
 
-        if count_override:
-            settings.min_query_count = count
-            settings.max_query_count = count
+    if count_override:
+        settings.min_query_count = count
+        settings.max_query_count = count
 
-        if args.samples_per_query:
-            settings.multi_stream_samples_per_query = args.samples_per_query
-        if args.max_latency:
-            settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
+    if args.samples_per_query:
+        settings.multi_stream_samples_per_query = args.samples_per_query
+    if args.max_latency:
+        settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
 
-        sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
-        qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
+    sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
+    qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
 
-        log.info("starting {}".format(scenario))
-        result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
-        runner.start_run(result_dict, args.accuracy)
-        lg.StartTest(sut, qsl, settings)
+    log.info("starting {}".format(scenario))
+    result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
+    runner.start_run(result_dict, args.accuracy)
+    lg.StartTest(sut, qsl, settings)
 
-        if not last_timeing:
-            last_timeing = runner.result_timing
-        if args.accuracy:
-            post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
-        add_results(final_results, "{}".format(scenario),
-                    result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
+    if not last_timeing:
+        last_timeing = runner.result_timing
+    if args.accuracy:
+        post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
+    add_results(final_results, "{}".format(scenario),
+                result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
 
-        runner.finish()
-        lg.DestroyQSL(qsl)
-        lg.DestroySUT(sut)
+    runner.finish()
+    lg.DestroyQSL(qsl)
+    lg.DestroySUT(sut)
 
     #
     # write final results

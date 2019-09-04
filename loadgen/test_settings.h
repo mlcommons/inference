@@ -236,20 +236,11 @@ struct TestSettings {
   
   // ==================================
   /// \name Performance Sample modifiers
-  /// \details These can be used for Auditing Performance mode runs by providing flexibility 
-  /// to compare performance when only unique queries are issued vs when the same query 
-  /// is repeatedly issued to detect sample caching by SUT. In offline scenario, issue_same
-  /// fills a query with the same sample whereas issue_unique sends only unqiue samples.
-  /// Only one of performance_issue_unique or performance_issue_same can be True.
   /// \brief Allows issuing only unique samples in Performance mode of any scenario
-  bool performance_issue_unique = false;
-  /// \brief The same sample is chosen repeatedley for Inference. In case of multi-stream, 
-  //  the same query is chosen repeatedley.
-  bool performance_issue_same = false;
-  /// \brief Offset to control which sample is repeated in performance_issue_same mode.
-  /// This should be within [0, performance_sample_count_override)
-  uint64_t performance_issue_same_index = 0;
-  /// \brief Overrides PerformanceSampleCount() when non-zero
+  bool issue_unique = false;
+  /// \brief The Same sample is chosen repeatedley for Inference
+  bool issue_same = false;
+  /// \bried Overrides PerformanceSampleCount() when non-zero
   uint64_t performance_sample_count_override = 0;
 
 };

@@ -19,7 +19,7 @@ namespace mlperf {
 namespace loadgen {
 
 TestSettingsInternal::TestSettingsInternal(
-    const TestSettings &requested_settings, QuerySampleLibrary *qsl)
+    const TestSettings &requested_settings)
     : requested(requested_settings),
       scenario(requested.scenario),
       mode(requested.mode),
@@ -37,10 +37,9 @@ TestSettingsInternal::TestSettingsInternal(
       schedule_rng_seed(requested.schedule_rng_seed),
       accuracy_log_rng_seed(requested.accuracy_log_rng_seed),
       accuracy_log_probability(requested.accuracy_log_probability),
-      performance_issue_unique(requested.performance_issue_unique),
-      performance_issue_same(requested.performance_issue_same),
-      performance_issue_same_index(requested.performance_issue_same_index),
-      performance_sample_count() {
+      issue_unique(requested.issue_unique),
+      issue_same(requested.issue_same),
+      performance_sample_count_override(requested.performance_sample_count_override) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -63,10 +62,8 @@ TestSettingsInternal::TestSettingsInternal(
       if (requested.server_target_qps >= 0.0) {
         target_qps = requested.server_target_qps;
       } else {
-        LogDetail([
-          server_target_qps = requested.server_target_qps,
-          target_qps = target_qps
-        ](AsyncDetail & detail) {
+        LogDetail([server_target_qps = requested.server_target_qps,
+                   target_qps = target_qps](AsyncDetail &detail) {
           detail.Error("Invalid value for server_target_qps requested.",
                        "requested", server_target_qps, "using", target_qps);
         });
@@ -75,16 +72,15 @@ TestSettingsInternal::TestSettingsInternal(
           std::chrono::nanoseconds(requested.server_target_latency_ns);
       max_async_queries =
           std::numeric_limits<decltype(max_async_queries)>::max();
-      target_latency_percentile = requested.server_target_latency_percentile;
+      target_latency_percentile =
+          requested.server_target_latency_percentile;
       break;
     case TestScenario::Offline:
       if (requested.offline_expected_qps >= 0.0) {
         target_qps = requested.offline_expected_qps;
       } else {
-        LogDetail([
-          offline_expected_qps = requested.offline_expected_qps,
-          target_qps = target_qps
-        ](AsyncDetail & detail) {
+        LogDetail([offline_expected_qps = requested.offline_expected_qps,
+                   target_qps = target_qps](AsyncDetail &detail) {
           detail.Error("Invalid value for offline_expected_qps requested.",
                        "requested", offline_expected_qps, "using", target_qps);
         });
@@ -93,11 +89,6 @@ TestSettingsInternal::TestSettingsInternal(
           std::numeric_limits<decltype(max_async_queries)>::max();
       break;
   }
-
-  // Performance Sample Count: TestSettings override QSL->PerformanceSampleCount
-  performance_sample_count = (requested.performance_sample_count_override == 0)
-                                 ? qsl->PerformanceSampleCount()
-                                 : requested.performance_sample_count_override;
 
   // Samples per query.
   if (requested.scenario == TestScenario::MultiStream ||
@@ -114,21 +105,13 @@ TestSettingsInternal::TestSettingsInternal(
     constexpr double kSlack = 1.1;
     int target_sample_count =
         kSlack * DurationToSeconds(target_duration) * target_qps;
-    samples_per_query =
-        (requested.performance_issue_unique || requested.performance_issue_same)
-            ? performance_sample_count
-            : std::max<int>(min_query_count, target_sample_count);
+    samples_per_query = (requested.issue_unique || requested.issue_same) ? requested.performance_sample_count_override : 
+                                                                           std::max<int>(min_query_count, target_sample_count);
     min_query_count = 1;
     target_duration = std::chrono::milliseconds(0);
   }
 
   min_sample_count = min_query_count * samples_per_query;
-
-  // Validate Test Settings
-  assert(requested.performance_issue_same_index <
-         requested.performance_sample_count_override);
-  assert(!(requested.performance_issue_same &&
-           requested.performance_issue_unique));
 }
 
 std::string ToString(TestScenario scenario) {
@@ -212,18 +195,16 @@ void LogRequestedTestSettings(const TestSettings &s) {
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
     detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
     detail("accuracy_log_probability : ", s.accuracy_log_probability);
-    detail("performance_issue_unique : ", s.performance_issue_unique);
-    detail("performance_issue_same : ", s.performance_issue_same);
-    detail("performance_issue_same_index : ", s.performance_issue_same_index);
-    detail("performance_sample_count_override : ",
-           s.performance_sample_count_override);
+    detail("issue_unique : ", s.issue_unique);
+    detail("issue_same : ", s.issue_same);
+    detail("performance_sample_count_override : ", s.performance_sample_count_override);
 
     detail("");
   });
 }
 
 void TestSettingsInternal::LogEffectiveSettings() const {
-  LogDetail([s = *this](AsyncDetail & detail) {
+  LogDetail([s = *this](AsyncDetail &detail) {
     detail("");
     detail("Effective Settings:");
 
@@ -246,11 +227,11 @@ void TestSettingsInternal::LogEffectiveSettings() const {
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
     detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
     detail("accuracy_log_probability : ", s.accuracy_log_probability);
-    detail("performance_issue_unique : ", s.performance_issue_unique);
-    detail("performance_issue_same : ", s.performance_issue_same);
-    detail("performance_issue_same_index : ", s.performance_issue_same_index);
-    detail("performance_sample_count : ", s.performance_sample_count);
-  });
+    detail("accuracy_log_probability : ", s.accuracy_log_probability);
+    detail("issue_unique : ", s.issue_unique);
+    detail("issue_same : ", s.issue_same);
+    detail("performance_sample_count_override : ", s.performance_sample_count_override);
+ });
 }
 
 void TestSettingsInternal::LogAllSettings() const {
@@ -272,10 +253,9 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("schedule_rng_seed : ", schedule_rng_seed);
   summary("accuracy_log_rng_seed : ", accuracy_log_rng_seed);
   summary("accuracy_log_probability : ", accuracy_log_probability);
-  summary("performance_issue_unique : ", performance_issue_unique);
-  summary("performance_issue_same : ", performance_issue_same);
-  summary("performance_issue_same_index : ", performance_issue_same_index);
-  summary("performance_sample_count : ", performance_sample_count);
+  summary("issue_unique : ", issue_unique);
+  summary("issue_same : ", issue_same);
+  summary("performance_sample_count_override : ", performance_sample_count_override);
 }
 
 }  // namespace loadgen

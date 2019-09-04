@@ -53,10 +53,10 @@ SUPPORTED_DATASETS = {
          {"image_size": [1200, 1200, 3]}),
     "coco-1200-pt":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoPt(True,0.05),
-         {"image_size": [1200, 1200, 3]}),
+         {"image_size": [1200, 1200, 3],"use_label_map": True}),
     "coco-1200-tf":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoTf(),
-         {"image_size": [1200, 1200, 3]}),
+         {"image_size": [1200, 1200, 3],"use_label_map": True}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be

@@ -20,10 +20,8 @@ limitations under the License.
 #include <cstring>
 #include <fstream>
 #include <future>
-#include <map>
 #include <queue>
 #include <random>
-#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -1488,111 +1486,6 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
     loadgen::QueryMetadata* query = sample->query_metadata;
     query->response_delegate->SampleComplete(sample, response, timestamp);
   }
-}
-
-int TestSettings::FromConfig(const std::string &path, const std::string &model,
-                             const std::string &scenario) {
-  std::map<std::string, size_t> kv;
-
-  // lookup key/value pairs from config
-  auto lookupkv = [&](const std::string &model, const std::string &scenario,
-                      const std::string &key, size_t &val) {
-    std::map<std::string, size_t>::iterator it;
-
-    // lookup exact key first
-    it = kv.find(model + scenario + "." + key);
-    if (it != kv.end()) {
-      val = it->second;
-      return true;
-    }
-    // lookup key with model wildcard first
-    it = kv.find("*." + scenario + "." + key);
-    if (it != kv.end()) {
-      val = it->second;
-      return true;
-    }
-    return false;
-  };
-
-  // dirt simple config parser
-  std::ifstream fss(path);
-  std::string line;
-  int line_nr = 0;
-  int errors = 0;
-  if (!fss.is_open()) {
-    LogDetail([p = path](AsyncDetail & detail) {
-      detail.Error("can't open ", p);
-    });
-    return -ENOENT;
-  }
-  while (std::getline(fss, line)) {
-    line_nr++;
-    std::istringstream iss(line);
-    std::string s, k;
-    int state = 0;
-    while (iss >> s) {
-      if (s == "#" && state != 2) {
-        // done with this line
-        break;
-      }
-      if (state == 2) {
-        // got key and value
-        char *end;
-        kv[k] = std::strtol(s.c_str(), &end, 10);
-      }
-      if (state == 1 && s != "=") {
-        errors++;
-        LogDetail([l = line_nr](AsyncDetail & detail) {
-          detail.Error("error in line ", l);
-        });
-        break;
-      }
-      if (state == 0) k = s;
-      state++;
-    }
-  }
-  if (errors != 0) return -EINVAL;
-
-  // set final values in TestSettings
-  size_t val;
-
-  // keys that apply to all
-  if (lookupkv(model, scenario, "min_duration", val)) min_duration_ms = val;
-  if (lookupkv(model, scenario, "max_duration", val)) max_duration_ms = val;
-  if (lookupkv(model, scenario, "min_query_count", val)) min_query_count = val;
-  if (lookupkv(model, scenario, "max_query_count", val)) max_query_count = val;
-
-  // keys that apply to SingleStream
-  if (lookupkv(model, "SingleStream", "target_latency_percentile", val))
-    single_stream_target_latency_percentile = double(val) / 100.0;
-  if (lookupkv(model, "SingleStream", "target_latency", val))
-    single_stream_expected_latency_ns = val * 1000 * 1000;
-
-  // keys that apply to MultiStream
-  if (lookupkv(model, "MultiStream", "target_latency_percentile", val))
-    multi_stream_target_latency_percentile = double(val) / 100.0;
-  if (lookupkv(model, "MultiStream", "target_qps", val))
-    multi_stream_target_qps = double(val);
-  if (lookupkv(model, "MultiStream", "samples_per_query", val))
-    multi_stream_samples_per_query = int(val);
-  if (lookupkv(model, "MultiStream", "max_async_queries", val))
-    multi_stream_max_async_queries = int(val);
-
-  // keys that apply to Server
-  if (lookupkv(model, "Server", "target_latency_percentile", val))
-    server_target_latency_percentile = double(val) / 100.0;
-  if (lookupkv(model, "Server", "target_latency", val))
-    server_target_latency_ns = val * 1000 * 1000;
-  if (lookupkv(model, "Server", "coalesce_queries", val))
-    server_coalesce_queries = (val == 0) ? false : true;
-  if (lookupkv(model, "Server", "target_qps", val))
-    server_target_qps = double(val);
-
-  // keys that apply to Offline
-  if (lookupkv(model, "Offline", "target_qps", val))
-    offline_expected_qps = double(val);
-
-  return 0;
 }
 
 }  // namespace mlperf

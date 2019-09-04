@@ -10,8 +10,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
-#include "test_settings_internal.h"
+#include <fstream>
+#include <map>
+#include <string>
+#include <sstream>
 
+#include "test_settings_internal.h"
 #include "logging.h"
 #include "utils.h"
 
@@ -245,4 +249,122 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
 }
 
 }  // namespace loadgen
+
+
+int TestSettings::FromConfig(const std::string &path, const std::string &model,
+                             const std::string &scenario) {
+  std::map<std::string, std::string> kv;
+
+  // lookup key/value pairs from config
+  auto lookupkv = [&](const std::string &model, const std::string &scenario,
+                      const std::string &key, size_t* val_l, double* val_d, double multiplier=1.0) {
+    std::map<std::string, std::string>::iterator it;
+    std::string found;
+    // lookup exact key first
+    it = kv.find(model + scenario + "." + key);
+    if (it != kv.end()) {
+      found = it->second;
+    } else {
+    // lookup key with model wildcard
+    it = kv.find("*." + scenario + "." + key);
+      if (it != kv.end()) {
+        found = it->second;
+      } else {
+        return false;
+      }
+    }
+    // if we get here, found will be set
+    if (val_l) *val_l = strtoul(found.c_str(), 0, 0) * int(multiplier);
+    if (val_d) *val_d = strtod(found.c_str(), 0) * multiplier;
+    return true;
+  };
+
+  // dirt simple config parser
+  std::ifstream fss(path);
+  std::string line;
+  int line_nr = 0;
+  int errors = 0;
+  if (!fss.is_open()) {
+    LogDetail([p = path](AsyncDetail & detail) {
+      detail.Error("can't open ", p);
+    });
+    return -ENOENT;
+  }
+  while (std::getline(fss, line)) {
+    line_nr++;
+    std::istringstream iss(line);
+    std::string s, k;
+    int state = 0;
+    while (iss >> s) {
+      if (s == "#" && state != 2) {
+        // done with this line
+        break;
+      }
+      if (state == 2) {
+        // got key and value
+        const char *start = s.c_str();
+        char *stop; 
+        (void)strtoul(start, &stop, 0);
+        if (start + s.size() == stop) {
+          kv[k] = s;
+          continue;
+        }
+        (void)strtod(start, &stop);
+        if (start + s.size() == stop) {
+          kv[k] = s;
+          continue;
+        }
+        errors++;
+        LogDetail([l = line_nr](AsyncDetail & detail) {
+          detail.Error("error in line ", l);
+        });
+        break;
+
+      }
+      if (state == 1 && s != "=") {
+        errors++;
+        LogDetail([l = line_nr](AsyncDetail & detail) {
+          detail.Error("error in line ", l);
+        });
+        break;
+      }
+      if (state == 0) k = s;
+      state++;
+    }
+  }
+  if (errors != 0) return -EINVAL;
+
+  size_t val;
+  
+  // keys that apply to all scenarios
+  lookupkv(model, scenario, "min_duration", &min_duration_ms, nullptr);
+  lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);
+  lookupkv(model, scenario, "min_query_count", &min_query_count, nullptr);
+  lookupkv(model, scenario, "max_query_count", &max_query_count, nullptr);
+
+  // keys that apply to SingleStream
+  lookupkv(model, "SingleStream", "target_latency_percentile", nullptr, &single_stream_target_latency_percentile, 0.01);
+  lookupkv(model, "SingleStream", "target_latency", &single_stream_expected_latency_ns, nullptr, 1000*1000);
+
+  // keys that apply to MultiStream
+  lookupkv(model, "MultiStream", "target_latency_percentile", nullptr, &multi_stream_target_latency_percentile, 0.01);
+  lookupkv(model, "MultiStream", "target_qps", nullptr, &multi_stream_target_qps);
+  if (lookupkv(model, "MultiStream", "samples_per_query", &val, nullptr))
+    multi_stream_samples_per_query = int(val);
+  if (lookupkv(model, "MultiStream", "max_async_queries", &val, nullptr))
+    multi_stream_max_async_queries = int(val);
+
+  // keys that apply to Server
+  lookupkv(model, "Server", "target_latency_percentile", nullptr, &server_target_latency_percentile, 0.01);
+  lookupkv(model, "Server", "target_latency", &server_target_latency_ns, nullptr, 1000*1000);
+  lookupkv(model, "Server", "target_qps", nullptr, &server_target_qps);
+  if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
+    server_coalesce_queries = (val == 0) ? false : true;
+
+  // keys that apply to Offline
+  lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);
+
+  return 0;
+};
+
 }  // namespace mlperf

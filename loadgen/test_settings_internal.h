@@ -79,7 +79,7 @@ struct TestSettingsInternal {
 
   bool performance_issue_unique;
   bool performance_issue_same;
-  bool performance_issue_same_index;
+  uint64_t performance_issue_same_index;
   uint64_t performance_sample_count;
 };
 

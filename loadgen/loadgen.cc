@@ -314,7 +314,7 @@ std::vector<QueryMetadata> GenerateQueries(
   size_t min_queries = settings.min_query_count;
 
   // We should not exit early in accuracy mode.
-  if (mode == TestMode::AccuracyOnly or settings.performance_issue_unique or 
+  if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique || 
       settings.performance_issue_same) {
     k2xTargetDuration = std::chrono::microseconds(0);
     // Integer truncation here is intentional.
@@ -1444,7 +1444,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                               log_settings.log_output.copy_detail_to_stdout,
                               log_settings.log_output.copy_summary_to_stdout);
   GlobalLogger().StartNewTrace(&log_outputs.trace_out, PerfClock::now());
-    
+
   LogLoadgenVersion();
   LogDetail([sut, qsl, test_date_time](AsyncDetail& detail) {
     detail("Date + time of test: ", test_date_time);
@@ -1453,7 +1453,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     detail("QSL total size: ", qsl->TotalSampleCount());
     detail("QSL performance size*: ", qsl->PerformanceSampleCount());
     detail("*TestSettings (performance_sample_count_override) can override");
-    detail("*Refer Effective Settings for actual value");
+    detail("*Refer to Effective Settings for actual value");
   });
   loadgen::TestSettingsInternal sanitized_settings(requested_settings, qsl);
   sanitized_settings.LogAllSettings();

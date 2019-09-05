@@ -12,11 +12,11 @@ limitations under the License.
 
 #include <fstream>
 #include <map>
-#include <string>
 #include <sstream>
+#include <string>
 
-#include "test_settings_internal.h"
 #include "logging.h"
+#include "test_settings_internal.h"
 #include "utils.h"
 
 namespace mlperf {
@@ -63,8 +63,10 @@ TestSettingsInternal::TestSettingsInternal(
       if (requested.server_target_qps >= 0.0) {
         target_qps = requested.server_target_qps;
       } else {
-        LogDetail([server_target_qps = requested.server_target_qps,
-                   target_qps = target_qps](AsyncDetail &detail) {
+        LogDetail([
+          server_target_qps = requested.server_target_qps,
+          target_qps = target_qps
+        ](AsyncDetail & detail) {
           detail.Error("Invalid value for server_target_qps requested.",
                        "requested", server_target_qps, "using", target_qps);
         });
@@ -73,15 +75,16 @@ TestSettingsInternal::TestSettingsInternal(
           std::chrono::nanoseconds(requested.server_target_latency_ns);
       max_async_queries =
           std::numeric_limits<decltype(max_async_queries)>::max();
-      target_latency_percentile =
-          requested.server_target_latency_percentile;
+      target_latency_percentile = requested.server_target_latency_percentile;
       break;
     case TestScenario::Offline:
       if (requested.offline_expected_qps >= 0.0) {
         target_qps = requested.offline_expected_qps;
       } else {
-        LogDetail([offline_expected_qps = requested.offline_expected_qps,
-                   target_qps = target_qps](AsyncDetail &detail) {
+        LogDetail([
+          offline_expected_qps = requested.offline_expected_qps,
+          target_qps = target_qps
+        ](AsyncDetail & detail) {
           detail.Error("Invalid value for offline_expected_qps requested.",
                        "requested", offline_expected_qps, "using", target_qps);
         });
@@ -201,7 +204,7 @@ void LogRequestedTestSettings(const TestSettings &s) {
 }
 
 void TestSettingsInternal::LogEffectiveSettings() const {
-  LogDetail([s = *this](AsyncDetail &detail) {
+  LogDetail([s = *this](AsyncDetail & detail) {
     detail("");
     detail("Effective Settings:");
 
@@ -250,14 +253,14 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
 
 }  // namespace loadgen
 
-
 int TestSettings::FromConfig(const std::string &path, const std::string &model,
                              const std::string &scenario) {
   std::map<std::string, std::string> kv;
 
   // lookup key/value pairs from config
   auto lookupkv = [&](const std::string &model, const std::string &scenario,
-                      const std::string &key, size_t* val_l, double* val_d, double multiplier=1.0) {
+                      const std::string &key, size_t *val_l, double *val_d,
+                      double multiplier = 1.0) {
     std::map<std::string, std::string>::iterator it;
     std::string found;
     // lookup exact key first
@@ -265,8 +268,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     if (it != kv.end()) {
       found = it->second;
     } else {
-    // lookup key with model wildcard
-    it = kv.find("*." + scenario + "." + key);
+      // lookup key with model wildcard
+      it = kv.find("*." + scenario + "." + key);
       if (it != kv.end()) {
         found = it->second;
       } else {
@@ -303,7 +306,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
       if (state == 2) {
         // got key and value
         const char *start = s.c_str();
-        char *stop; 
+        char *stop;
         (void)strtoul(start, &stop, 0);
         if (start + s.size() == stop) {
           kv[k] = s;
@@ -319,7 +322,6 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
           detail.Error("error in line ", l);
         });
         break;
-
       }
       if (state == 1 && s != "=") {
         errors++;
@@ -335,7 +337,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   if (errors != 0) return -EINVAL;
 
   size_t val;
-  
+
   // keys that apply to all scenarios
   lookupkv(model, scenario, "min_duration", &min_duration_ms, nullptr);
   lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);
@@ -343,20 +345,26 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, scenario, "max_query_count", &max_query_count, nullptr);
 
   // keys that apply to SingleStream
-  lookupkv(model, "SingleStream", "target_latency_percentile", nullptr, &single_stream_target_latency_percentile, 0.01);
-  lookupkv(model, "SingleStream", "target_latency", &single_stream_expected_latency_ns, nullptr, 1000*1000);
+  lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
+           &single_stream_target_latency_percentile, 0.01);
+  lookupkv(model, "SingleStream", "target_latency",
+           &single_stream_expected_latency_ns, nullptr, 1000 * 1000);
 
   // keys that apply to MultiStream
-  lookupkv(model, "MultiStream", "target_latency_percentile", nullptr, &multi_stream_target_latency_percentile, 0.01);
-  lookupkv(model, "MultiStream", "target_qps", nullptr, &multi_stream_target_qps);
+  lookupkv(model, "MultiStream", "target_latency_percentile", nullptr,
+           &multi_stream_target_latency_percentile, 0.01);
+  lookupkv(model, "MultiStream", "target_qps", nullptr,
+           &multi_stream_target_qps);
   if (lookupkv(model, "MultiStream", "samples_per_query", &val, nullptr))
     multi_stream_samples_per_query = int(val);
   if (lookupkv(model, "MultiStream", "max_async_queries", &val, nullptr))
     multi_stream_max_async_queries = int(val);
 
   // keys that apply to Server
-  lookupkv(model, "Server", "target_latency_percentile", nullptr, &server_target_latency_percentile, 0.01);
-  lookupkv(model, "Server", "target_latency", &server_target_latency_ns, nullptr, 1000*1000);
+  lookupkv(model, "Server", "target_latency_percentile", nullptr,
+           &server_target_latency_percentile, 0.01);
+  lookupkv(model, "Server", "target_latency", &server_target_latency_ns,
+           nullptr, 1000 * 1000);
   lookupkv(model, "Server", "target_qps", nullptr, &server_target_qps);
   if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
     server_coalesce_queries = (val == 0) ? false : true;

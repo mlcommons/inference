@@ -235,12 +235,14 @@ void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t
   latencies_recorded_ = 0;
   latencies_expected_ = 0;
   max_latency_ = 0;
+  max_completion_timstamp_ = PerfClock::now();
   latencies_first_sample_sequence_id_ = first_sample_sequence_id;
   latencies_.reserve(latencies_to_reserve);
 }
 
-void AsyncLog::RecordLatency(uint64_t sample_sequence_id,
-                             QuerySampleLatency latency) {
+void AsyncLog::RecordSampleCompletion(uint64_t sample_sequence_id,
+                                      PerfClock::time_point completion_time,
+                                      QuerySampleLatency latency) {
   // Relaxed memory order since the early-out checks are inherently racy.
   // The final check will be ordered by locks on the latencies_mutex.
   max_latency_.store(
@@ -248,6 +250,9 @@ void AsyncLog::RecordLatency(uint64_t sample_sequence_id,
       std::memory_order_relaxed);
 
   std::unique_lock<std::mutex> lock(latencies_mutex_);
+
+  max_completion_timstamp_ =
+      std::max(max_completion_timstamp_, completion_time);
 
   if (sample_sequence_id < latencies_first_sample_sequence_id_) {
     // Call LogErrorSync here since this kind of error could result in a
@@ -297,7 +302,7 @@ std::vector<QuerySampleLatency> AsyncLog::GetLatenciesBlocking(
     // Call LogErrorSync here since this kind of error could result in a
     // segfault in the near future.
     GlobalLogger().LogErrorSync("Received SequenceId that was too large.",
-                                "expectted_size", expected_count, "actual_size",
+                                "expected_size", expected_count, "actual_size",
                                 latencies.size());
   }
 
@@ -316,6 +321,10 @@ std::vector<QuerySampleLatency> AsyncLog::GetLatenciesBlocking(
   }
 
   return latencies;
+}
+
+PerfClock::time_point AsyncLog::GetMaxCompletionTime() {
+  return max_completion_timstamp_;
 }
 
 QuerySampleLatency AsyncLog::GetMaxLatencySoFar() {
@@ -594,6 +603,10 @@ void Logger::RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t l
 std::vector<QuerySampleLatency> Logger::GetLatenciesBlocking(
     size_t expected_count) {
   return async_logger_.GetLatenciesBlocking(expected_count);
+}
+
+PerfClock::time_point Logger::GetMaxCompletionTime() {
+  return async_logger_.GetMaxCompletionTime();
 }
 
 QuerySampleLatency Logger::GetMaxLatencySoFar() {

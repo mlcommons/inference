@@ -516,7 +516,7 @@ def main():
     if not last_timeing:
         last_timeing = runner.result_timing
     if args.accuracy:
-        post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
+        post_proc.finalize(result_dict, ds, output_dir=args.output)
     add_results(final_results, "{}".format(scenario),
                 result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
 
@@ -528,7 +528,7 @@ def main():
     # write final results
     #
     if args.output:
-        with open(os.path.join(args.output, "results.json"), "w") as f:
+        with open("results.json", "w") as f:
             json.dump(final_results, f, sort_keys=True, indent=4)
 
 

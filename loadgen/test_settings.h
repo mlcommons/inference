@@ -236,11 +236,20 @@ struct TestSettings {
   
   // ==================================
   /// \name Performance Sample modifiers
-  /// \brief Allows issuing only unique samples in Performance mode of any scenario
-  bool issue_unique = false;
-  /// \brief The Same sample is chosen repeatedley for Inference
-  bool issue_same = false;
-  /// \bried Overrides PerformanceSampleCount() when non-zero
+  /// \details These settings can be used to Audit Performance mode runs.
+  /// In order to detect sample caching by SUT, performance of runs when only 
+  /// unique queries (with non-repeated samples) are issued can be compared with
+  /// that when the same query is repeatedly issued.
+  /// \brief Allows issuing only unique queries in Performance mode of any scenario
+  /// \details This can be used to send non-repeat & hence unique samples to SUT
+  bool performance_issue_unique = false;
+  /// \brief The Same query is chosen repeatedley for Inference. In offline mode,
+  /// the query is filled with the same sample.
+  bool performance_issue_same = false;
+  /// \brief Offset to control which sample is repeated in performance_issue_same mode
+  /// This should be within [0, performance_saimple_count)
+  uint64_t performance_issue_same_index = 0;
+  /// \brief Overrides QSL->PerformanceSampleCount() when non-zero
   uint64_t performance_sample_count_override = 0;
 
 };

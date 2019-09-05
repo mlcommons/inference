@@ -219,9 +219,7 @@ class PostProcessCoco:
                            "bbox": [float(detection[1]), float(detection[2]),
                                     float(detection[3]), float(detection[4])],
                            "score": float(detection[5])})
-            if not output_dir:
-                output_dir = "/tmp"
-            fname = "{}/{}.json".format(output_dir, result_dict["scenario"])
+            fname = "{}.json".format(result_dict["scenario"])
             with open(fname, "w") as fp:
                 json.dump(pp, fp, sort_keys=True, indent=4)
 

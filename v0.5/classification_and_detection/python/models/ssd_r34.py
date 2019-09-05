@@ -44,11 +44,7 @@ class Encoder(object):
             boxes.append(dbox)
             labels.append(dlabel)
             scores.append(dscore)
-        #print(len([boxes,labels,scores]))    
-        
-        #if boxes.dim()==2:
-        #    return boxes.unsqueeze(0),labels.unsqueeze(0),scores.unsqueeze(0)
-        #else:
+           
         return [boxes,labels,scores]
 
     # perform non-maximum suppression
@@ -61,9 +57,7 @@ class Encoder(object):
 
         for i, score in enumerate(scores_in.split(1, 1)):
             # skip background
-            # print(score[score>0.90])
             if i == 0: continue
-            # print(i)
             
             score = score.squeeze(1)
             mask = score > 0.05
@@ -76,7 +70,6 @@ class Encoder(object):
             # select max_output indices
             score_idx_sorted = score_idx_sorted[-max_num:]
             candidates = []
-            #maxdata, maxloc = scores_in.sort()
         
             while score_idx_sorted.numel() > 0:
                 idx = score_idx_sorted[-1].item()
@@ -356,6 +349,3 @@ class SSD_R34(nn.Module):
             # For SSD 300 with strides=[1,1,2,2,2,1] , shall return nbatch x 8732 x {nlabels, nlocs} results 
             results=self.encoder.decode_batch(locs, confs, 0.50, 200) #[0]
             return results #locs, confs,features_shapes
-            #locs, confs,features_shapes=self.encoder.decode_batch(locs, confs, 0.50, 200) #[0]
-            #import pdb; pdb.set_trace()
-            #return locs[0], confs[0],features_shapes[0]

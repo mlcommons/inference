@@ -234,7 +234,8 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("accuracy_log_rng_seed",
                      &TestSettings::accuracy_log_rng_seed)
       .def_readwrite("accuracy_log_probability",
-                     &TestSettings::accuracy_log_probability);
+                     &TestSettings::accuracy_log_probability)
+      .def("FromConfig", &TestSettings::FromConfig, "FromConfig.");
 
   pybind11::enum_<LoggingMode>(m, "LoggingMode")
       .value("AsyncPoll", LoggingMode::AsyncPoll)

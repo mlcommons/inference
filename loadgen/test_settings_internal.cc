@@ -44,7 +44,7 @@ TestSettingsInternal::TestSettingsInternal(
       performance_issue_unique(requested.performance_issue_unique),
       performance_issue_same(requested.performance_issue_same),
       performance_issue_same_index(requested.performance_issue_same_index),
-      performance_sample_count() {
+      performance_sample_count(0) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:

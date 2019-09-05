@@ -2,8 +2,7 @@
 
 source ./run_common.sh
 
-
-common_opt=""
+common_opt="--config ../mlperf.conf"
 dataset="--dataset-path $DATA_DIR"
 OUTPUT_DIR=`pwd`/output/$name
 if [ ! -d $OUTPUT_DIR ]; then
@@ -11,4 +10,4 @@ if [ ! -d $OUTPUT_DIR ]; then
 fi
 
 python python/main.py --profile $profile $common_opt --model $model_path $dataset \
-    --output $OUTPUT_DIR/results.json $EXTRA_OPS $@
+    --output $OUTPUT_DIR $EXTRA_OPS $@

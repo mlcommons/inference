@@ -179,9 +179,9 @@ During development running the full benchmark is unpractical. Some options to he
 
 So if you want to tune for example Server mode, try:
 ```
-./run_local.sh tf resnet50 gpu --count 100 --time 60 --scenario Server --qps 200 --max-latency 0.2
+./run_local.sh tf resnet50 gpu --count 100 --time 60 --scenario Server --qps 200 --max-latency 0.1
 or
-./run_local.sh tf ssd-mobilenet gpu --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.2
+./run_local.sh tf ssd-mobilenet gpu --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.1
 
 ```
 
@@ -194,19 +194,21 @@ If you want run with accuracy pass, try:
 ### Usage
 ```
 usage: main.py [-h]
+    [--config ../mlperf.conf]
     [--dataset {imagenet,imagenet_mobilenet,coco,coco-300,coco-1200,coco-1200-onnx,coco-1200-pt,coco-1200-tf}]
     --dataset-path DATASET_PATH [--dataset-list DATASET_LIST]
     [--data-format {NCHW,NHWC}]
     [--profile {defaults,resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-pytorch,ssd-resnet34-onnxruntime}]
     [--scenario list of SingleStream,MultiStream,Server,Offline]
-    [--queries-single QUERIES_SINGLE]
-    [--queries-offline QUERIES_OFFLINE]
-    [--queries-multi QUERIES_MULTI] [--max-batchsize MAX_BATCHSIZE]
+    [--max-batchsize MAX_BATCHSIZE]
     --model MODEL [--output OUTPUT] [--inputs INPUTS]
     [--outputs OUTPUTS] [--backend BACKEND] [--threads THREADS]
     [--time TIME] [--count COUNT] [--qps QPS]
     [--max-latency MAX_LATENCY] [--cache CACHE] [--accuracy]
 ```
+
+```--config```
+the mlperf config file to use, defaults to v0.5/mlperf.conf
 
 ```--dataset```
 use the specified dataset. Currently we only support ImageNet.
@@ -249,15 +251,6 @@ Expected QPS.
 
 ```--max-latency MAX_LATENCY```
 comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
-
-```--queries-single QUERIES_SINGLE```
-queries to use for SingleStream scenario (default: 1024).
-
-```--queries-offline QUERIES_OFFLINE```
-queries to use for Offline scenario (default: 24576).
-
-```--queries-multi QUERIES_MULTI```
-queries to use for MultiStream scenario (default: 24576).
 
 ```--max-batchsize MAX_BATCHSIZE```
 maximum batchsize we generate to backend (default: 128).

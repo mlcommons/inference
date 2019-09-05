@@ -79,7 +79,7 @@ struct TestSettingsInternal {
 /// mainly about binary search.
 namespace find_peak_performance {
 
-constexpr char const* kNotSupportedMsg =
+constexpr char const *kNotSupportedMsg =
     "Finding peak performance is only supported in MultiStream, "
     "MultiStreamFree, and Server scenarios.";
 
@@ -102,8 +102,7 @@ TestSettingsInternal MidOfBoundaries(
         lower_bound_settings.target_qps +
         (upper_bound_settings.target_qps - lower_bound_settings.target_qps) / 2;
   } else {
-    LogDetail(
-        [](AsyncDetail &detail) { detail(kNotSupportedMsg); });
+    LogDetail([](AsyncDetail &detail) { detail(kNotSupportedMsg); });
   }
   return mid_settings;
 }
@@ -124,8 +123,7 @@ bool IsFinished(const TestSettingsInternal &lower_bound_settings,
         std::floor(upper_bound_settings.target_qps * std::pow(10, precision));
     return l + 1 >= u;
   } else {
-    LogDetail(
-        [](AsyncDetail &detail) { detail(kNotSupportedMsg); });
+    LogDetail([](AsyncDetail &detail) { detail(kNotSupportedMsg); });
     return true;
   }
 }
@@ -138,8 +136,7 @@ std::string ToStringPerformanceField(const TestSettingsInternal &settings) {
   } else if (scenario == TestScenario::Server) {
     return std::to_string(settings.target_qps);
   } else {
-    LogDetail(
-        [](AsyncDetail &detail) { detail(kNotSupportedMsg); });
+    LogDetail([](AsyncDetail &detail) { detail(kNotSupportedMsg); });
     return ToString(settings.scenario);
   }
 }
@@ -154,8 +151,7 @@ void WidenPerformanceField(TestSettingsInternal *settings) {
         settings->target_qps *
         (1 + settings->requested.server_find_peak_qps_boundary_step_size);
   } else {
-    LogDetail(
-        [](AsyncDetail &detail) { detail(kNotSupportedMsg); });
+    LogDetail([](AsyncDetail &detail) { detail(kNotSupportedMsg); });
   }
 }
 

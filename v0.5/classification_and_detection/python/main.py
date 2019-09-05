@@ -12,6 +12,7 @@ import collections
 import json
 import logging
 import os
+import sys
 import threading
 import time
 from queue import Queue
@@ -53,29 +54,20 @@ SUPPORTED_DATASETS = {
          {"image_size": [1200, 1200, 3]}),
     "coco-1200-pt":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoPt(True,0.05),
-         {"image_size": [1200, 1200, 3]}),
+         {"image_size": [1200, 1200, 3],"use_label_map": True}),
     "coco-1200-tf":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoTf(),
-         {"image_size": [1200, 1200, 3]}),
+         {"image_size": [1200, 1200, 3],"use_label_map": True}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
 # overwritten from command line
-DEFAULT_LATENCY = "0.100"
-LATENCY_RESNET50 = "0.015"
-LATENCY_MOBILENET = "0.010"
-LATENCY_SSD_MOBILENET = "0.010"
- # FIXME: change once final value is known
-LATENCY_SSD_RESNET34 = "0.100"
 
 SUPPORTED_PROFILES = {
     "defaults": {
         "dataset": "imagenet",
         "backend": "tensorflow",
         "cache": 0,
-        "queries-single": 1024,
-        "queries-multi": 24576,
-        "max-latency": DEFAULT_LATENCY,
         "max-batchsize": 32,
     },
 
@@ -85,13 +77,13 @@ SUPPORTED_PROFILES = {
         "outputs": "ArgMax:0",
         "dataset": "imagenet",
         "backend": "tensorflow",
-        "max-latency": LATENCY_RESNET50,
+        "model-name": "resnet50",
     },
     "resnet50-onnxruntime": {
         "dataset": "imagenet",
         "outputs": "ArgMax:0",
         "backend": "onnxruntime",
-        "max-latency": LATENCY_RESNET50,
+        "model-name": "resnet50",
     },
 
     # mobilenet
@@ -100,13 +92,13 @@ SUPPORTED_PROFILES = {
         "outputs": "MobilenetV1/Predictions/Reshape_1:0",
         "dataset": "imagenet_mobilenet",
         "backend": "tensorflow",
-        "max-latency": LATENCY_MOBILENET,
+        "model-name": "mobilenet",
     },
     "mobilenet-onnxruntime": {
         "dataset": "imagenet_mobilenet",
         "outputs": "MobilenetV1/Predictions/Reshape_1:0",
         "backend": "onnxruntime",
-        "max-latency": LATENCY_MOBILENET,
+        "model-name": "mobilenet",
     },
 
     # ssd-mobilenet
@@ -115,21 +107,21 @@ SUPPORTED_PROFILES = {
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
         "dataset": "coco-300",
         "backend": "tensorflow",
-        "max-latency": LATENCY_SSD_MOBILENET,
+        "model-name": "ssd-mobilenet",
     },
     "ssd-mobilenet-pytorch": {
         "inputs": "image",
         "outputs": "bboxes,labels,scores",
         "dataset": "coco-300-pt",
         "backend": "pytorch-native",
-        "max-latency": LATENCY_SSD_MOBILENET,
+        "model-name": "ssd-mobilenet",
     },
     "ssd-mobilenet-onnxruntime": {
         "dataset": "coco-300",
         "outputs": "num_detections:0,detection_boxes:0,detection_scores:0,detection_classes:0",
-        "backend": "onnxruntime",        
+        "backend": "onnxruntime",
         "data-format": "NHWC",
-        "max-latency": LATENCY_SSD_MOBILENET,
+        "model-name": "ssd-mobilenet",
     },
 
     # ssd-resnet34
@@ -139,14 +131,14 @@ SUPPORTED_PROFILES = {
         "dataset": "coco-1200-tf",
         "backend": "tensorflow",
         "data-format": "NCHW",
-        "max-latency": LATENCY_SSD_RESNET34,
+        "model-name": "ssd-resnet34",
     },
     "ssd-resnet34-pytorch": {
         "inputs": "image",
         "outputs": "bboxes,labels,scores",
         "dataset": "coco-1200-pt",
         "backend": "pytorch-native",
-        "max-latency": LATENCY_SSD_RESNET34,
+        "model-name": "ssd-resnet34",
     },
     "ssd-resnet34-onnxruntime": {
         "dataset": "coco-1200-onnx",
@@ -155,7 +147,7 @@ SUPPORTED_PROFILES = {
         "backend": "onnxruntime",
         "data-format": "NCHW",
         "max-batchsize": 1,
-        "max-latency": LATENCY_SSD_RESNET34,
+        "model-name": "ssd-resnet34",
     },
     "ssd-resnet34-onnxruntime-tf": {
         "dataset": "coco-1200-tf",
@@ -163,7 +155,7 @@ SUPPORTED_PROFILES = {
         "outputs": "detection_bboxes:0,detection_classes:0,detection_scores:0",
         "backend": "onnxruntime",
         "data-format": "NHWC",
-        "max-latency": LATENCY_SSD_RESNET34,
+        "model-name": "ssd-resnet34",
     },
 }
 
@@ -186,28 +178,28 @@ def get_args():
     parser.add_argument("--data-format", choices=["NCHW", "NHWC"], help="data format")
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
     parser.add_argument("--scenario", default="SingleStream",
-                        help="mlperf benchmark scenario, list of " + str(list(SCENARIO_MAP.keys())))
-    parser.add_argument("--queries-single", type=int, default=1024,
-                        help="mlperf number of queries for SingleStream")
-    parser.add_argument("--queries-offline", type=int, default=24576,
-                        help="mlperf number of queries for Offline")
-    parser.add_argument("--queries-multi", type=int, default=24576,
-                        help="mlperf number of queries for MultiStream,Server")
-    parser.add_argument("--max-batchsize", type=int,
-                        help="max batch size in a single inference")
+                        help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
+    parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--model", required=True, help="model file")
     parser.add_argument("--output", help="test results")
     parser.add_argument("--inputs", help="model inputs")
     parser.add_argument("--outputs", help="model outputs")
     parser.add_argument("--backend", help="runtime to use")
+    parser.add_argument("--model-name", help="name of the mlperf model, ie. resnet50")
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
-    parser.add_argument("--time", type=int, help="time to scan in seconds")
-    parser.add_argument("--count", type=int, help="dataset items to use")
-    parser.add_argument("--qps", type=int, default=10, help="target qps estimate")
-    parser.add_argument("--max-latency", type=str, help="mlperf max latency in 99pct tile")
+    parser.add_argument("--qps", type=int, help="target qps")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
+
+    # file to use mlperf rules compliant parameters
+    parser.add_argument("--config", default="../mlperf.conf", help="mlperf rules config")
+
+    # below will override mlperf rules compliant settings - don't use for official submission
+    parser.add_argument("--time", type=int, help="time to scan in seconds")
+    parser.add_argument("--count", type=int, help="dataset items to use")
+    parser.add_argument("--max-latency", type=float, help="mlperf max latency in pct tile")
+    parser.add_argument("--samples-per-query", type=int, help="mlperf multi-stream sample per query")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
@@ -225,11 +217,8 @@ def get_args():
         args.inputs = args.inputs.split(",")
     if args.outputs:
         args.outputs = args.outputs.split(",")
-    if args.max_latency:
-        args.max_latency = [float(i) for i in args.max_latency.split(",")]
-    try:
-        args.scenario = [SCENARIO_MAP[scenario] for scenario in args.scenario.split(",")]
-    except:
+
+    if args.scenario not in SCENARIO_MAP:
         parser.error("valid scanarios:" + str(list(SCENARIO_MAP.keys())))
     return args
 
@@ -423,10 +412,10 @@ def main():
 
     # --count applies to accuracy mode only and can be used to limit the number of images
     # for testing. For perf model we always limit count to 200.
+    count_override = False
     count = args.count
-    if not count:
-        if not args.accuracy:
-            count = 200
+    if count:
+        count_override = True
 
     # dataset to use
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
@@ -446,6 +435,16 @@ def main():
         "cmdline": str(args),
     }
 
+    config = os.path.abspath(args.config)
+    if not os.path.exists(config):
+        log.error("{} not found".format(config))
+        sys.exit(1)
+
+    if args.output:
+        output_dir = os.path.abspath(args.output)
+        os.makedirs(output_dir, exist_ok=True)
+        os.chdir(output_dir)
+
     #
     # make one pass over the dataset to validate accuracy
     #
@@ -458,98 +457,79 @@ def main():
         _ = backend.predict({backend.inputs[0]: img})
     ds.unload_query_samples(None)
 
-    for scenario in args.scenario:
-        runner_map = {
-            lg.TestScenario.SingleStream: RunnerBase,
-            lg.TestScenario.MultiStream: QueueRunner,
-            lg.TestScenario.Server: QueueRunner,
-            lg.TestScenario.Offline: QueueRunner
-        }
-        runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)
+    scenario = SCENARIO_MAP[args.scenario]
+    runner_map = {
+        lg.TestScenario.SingleStream: RunnerBase,
+        lg.TestScenario.MultiStream: QueueRunner,
+        lg.TestScenario.Server: QueueRunner,
+        lg.TestScenario.Offline: QueueRunner
+    }
+    runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)
 
-        def issue_queries(query_samples):
-            runner.enqueue(query_samples)
+    def issue_queries(query_samples):
+        runner.enqueue(query_samples)
 
-        def flush_queries(): pass
+    def flush_queries():
+        pass
 
-        def process_latencies(latencies_ns):
-            # called by loadgen to show us the recorded latencies
-            global last_timeing
-            last_timeing = [t / NANO_SEC for t in latencies_ns]
+    def process_latencies(latencies_ns):
+        # called by loadgen to show us the recorded latencies
+        global last_timeing
+        last_timeing = [t / NANO_SEC for t in latencies_ns]
 
-        settings = lg.TestSettings()
-        settings.scenario = scenario
-        settings.mode = lg.TestMode.PerformanceOnly
-        if args.accuracy:
-            settings.mode = lg.TestMode.AccuracyOnly
-        if args.find_peak_performance:
-            settings.mode = lg.TestMode.FindPeakPerformance
+    settings = lg.TestSettings()
+    settings.FromConfig(config, args.model_name, args.scenario)
+    settings.scenario = scenario
+    settings.mode = lg.TestMode.PerformanceOnly
+    if args.accuracy:
+        settings.mode = lg.TestMode.AccuracyOnly
+    if args.find_peak_performance:
+        settings.mode = lg.TestMode.FindPeakPerformance
 
-        if args.time:
-            # override the time we want to run
-            settings.min_duration_ms = args.time * MILLI_SEC
-            settings.max_duration_ms = args.time * MILLI_SEC
+    if args.time:
+        # override the time we want to run
+        settings.min_duration_ms = args.time * MILLI_SEC
+        settings.max_duration_ms = args.time * MILLI_SEC
 
-        if args.qps:
-            qps = float(args.qps)
-            settings.server_target_qps = qps
-            settings.offline_expected_qps = qps
+    if args.qps:
+        qps = float(args.qps)
+        settings.server_target_qps = qps
+        settings.offline_expected_qps = qps
 
-        if scenario == lg.TestScenario.SingleStream:
-            settings.min_query_count = args.queries_single
-            settings.max_query_count = args.queries_single
-        elif scenario == lg.TestScenario.MultiStream:
-            settings.min_query_count = args.queries_multi
-            settings.max_query_count = args.queries_multi
-            settings.multi_stream_samples_per_query = 4
-        elif scenario == lg.TestScenario.Server:
-            max_latency = args.max_latency
-        elif scenario == lg.TestScenario.Offline:
-            settings.min_query_count = args.queries_offline
-            settings.max_query_count = args.queries_offline
+    if count_override:
+        settings.min_query_count = count
+        settings.max_query_count = count
 
-        sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
-        qsl = lg.ConstructQSL(count, min(count, 1000), ds.load_query_samples, ds.unload_query_samples)
+    if args.samples_per_query:
+        settings.multi_stream_samples_per_query = args.samples_per_query
+    if args.max_latency:
+        settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
 
-        if scenario == lg.TestScenario.Server:
-            for target_latency in max_latency:
-                log.info("starting {}, latency={}".format(scenario, target_latency))
-                settings.server_target_latency_ns = int(target_latency * NANO_SEC)
+    sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
+    qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
 
-                result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
-                runner.start_run(result_dict, args.accuracy)
-                lg.StartTest(sut, qsl, settings)
+    log.info("starting {}".format(scenario))
+    result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
+    runner.start_run(result_dict, args.accuracy)
+    lg.StartTest(sut, qsl, settings)
 
-                if not last_timeing:
-                    last_timeing = runner.result_timing
-                if args.accuracy:
-                    post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
-                add_results(final_results, "{}-{}".format(scenario, target_latency),
-                            result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
-        else:
-            log.info("starting {}".format(scenario))
-            result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
-            runner.start_run(result_dict, args.accuracy)
-            lg.StartTest(sut, qsl, settings)
+    if not last_timeing:
+        last_timeing = runner.result_timing
+    if args.accuracy:
+        post_proc.finalize(result_dict, ds, output_dir=args.output)
+    add_results(final_results, "{}".format(scenario),
+                result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
 
-            if not last_timeing:
-                last_timeing = runner.result_timing
-            if args.accuracy:
-                post_proc.finalize(result_dict, ds, output_dir=os.path.dirname(args.output))
-            add_results(final_results, "{}".format(scenario),
-                        result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
-
-        runner.finish()
-        lg.DestroyQSL(qsl)
-        lg.DestroySUT(sut)
+    runner.finish()
+    lg.DestroyQSL(qsl)
+    lg.DestroySUT(sut)
 
     #
     # write final results
     #
     if args.output:
-        with open(args.output, "w") as f:
+        with open("results.json", "w") as f:
             json.dump(final_results, f, sort_keys=True, indent=4)
-
 
 
 if __name__ == "__main__":

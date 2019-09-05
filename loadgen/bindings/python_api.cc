@@ -238,6 +238,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("issue_unique", &TestSettings::issue_unique)
       .def_readwrite("issue_same", &TestSettings::issue_same)
       .def_readwrite("performance_sample_count_override", &TestSettings::performance_sample_count_override);
+      .def("FromConfig", &TestSettings::FromConfig, "FromConfig.");
 
   pybind11::enum_<LoggingMode>(m, "LoggingMode")
       .value("AsyncPoll", LoggingMode::AsyncPoll)

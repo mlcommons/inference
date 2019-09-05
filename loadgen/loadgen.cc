@@ -426,7 +426,7 @@ std::vector<QueryMetadata> GenerateQueries(
   LogDetail([
     count = queries.size(), spq = settings.samples_per_query,
     duration = timestamp.count()
-  ](AsyncDetail & detail) {
+  ](AsyncDetail& detail) {
     detail("GeneratedQueries: ", "queries", count, "samples per query", spq,
            "duration", duration);
   });
@@ -634,7 +634,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   const size_t max_queries_outstanding =
       settings.target_qps * query_seconds_outstanding_threshold;
 
-  LogDetail([date_time = CurrentDateTimeForPower()](AsyncDetail & detail) {
+  LogDetail([date_time = CurrentDateTimeForPower()](AsyncDetail& detail) {
     detail("POWER_BEGIN: ", "mode", ToString(mode), "time", date_time);
   });
 
@@ -702,7 +702,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
     }
   }
 
-  LogDetail([date_time = CurrentDateTimeForPower()](AsyncDetail & detail) {
+  LogDetail([date_time = CurrentDateTimeForPower()](AsyncDetail& detail) {
     detail("POWER_END: ", "mode", ToString(mode), "time", date_time);
   });
 
@@ -1149,7 +1149,7 @@ std::pair<PerformanceSummary, PerformanceSummary> FindBoundaries(
         l_perf_summary.settings),
     u_field =
         find_peak_performance::ToStringPerformanceField<scenario>(u_settings)
-  ](AsyncDetail & detail) {
+  ](AsyncDetail& detail) {
     detail("FindBoundaries: Checking fields [" + l_field + ", " + u_field +
            ")");
   });
@@ -1197,7 +1197,7 @@ PerformanceSummary FindPeakPerformanceBinarySearch(
         u_perf_summary.settings),
     m_field =
         find_peak_performance::ToStringPerformanceField<scenario>(m_settings)
-  ](AsyncDetail & detail) {
+  ](AsyncDetail& detail) {
     detail(
         "FindPeakPerformanceBinarySearch: Testing the mid value of bounds [" +
         l_field + ", " + u_field + "): " + m_field);
@@ -1239,7 +1239,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   LogSummary([perf_summary =
                   PerformanceSummary{sut->Name(), settings, std::move(pr)}](
-      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
+      AsyncSummary& summary) mutable { perf_summary.Log(summary); });
 
   qsl->UnloadSamplesFromRam(performance_set.set);
 }
@@ -1265,7 +1265,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       scenario != TestScenario::MultiStreamFree &&
       scenario != TestScenario::Server) {
     LogDetail([unsupported_scenario =
-                   ToString(scenario)](AsyncDetail & detail) {
+                   ToString(scenario)](AsyncDetail& detail) {
       detail.Error(find_peak_performance::kFindPeakPerformanceNotSupported);
     });
     return;
@@ -1273,7 +1273,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   LogDetail([base_field =
                  find_peak_performance::ToStringPerformanceField<scenario>(
-                     base_settings)](AsyncDetail & detail) {
+                     base_settings)](AsyncDetail& detail) {
     detail("FindPeakPerformance: Check validity of the base settings field: " +
            base_field);
   });
@@ -1307,7 +1307,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     LogSummary([perf_summary =
                     PerformanceSummary{sut->Name(), base_settings,
                                        std::move(base_perf_summary.pr)}](
-        AsyncSummary & summary) mutable { perf_summary.Log(summary); });
+        AsyncSummary& summary) mutable { perf_summary.Log(summary); });
 
     qsl->UnloadSamplesFromRam(base_performance_set.set);
 
@@ -1328,7 +1328,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
         l_perf_summary.settings),
     u_field = find_peak_performance::ToStringPerformanceField<scenario>(
         u_perf_summary.settings)
-  ](AsyncDetail & detail) {
+  ](AsyncDetail& detail) {
     detail("FindPeakPerformance: Found boundaries: [" + l_field + ", " +
            u_field + ")");
   });
@@ -1345,7 +1345,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   // Print-out the peak performance test setting.
   LogDetail([field = find_peak_performance::ToStringPerformanceField<scenario>(
-                 perf_summary.settings)](AsyncDetail & detail) {
+                 perf_summary.settings)](AsyncDetail& detail) {
     detail("FindPeakPerformance: Found peak performance field: " + field);
   });
 
@@ -1354,7 +1354,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   LogSummary([perf_summary =
                   PerformanceSummary{sut->Name(), perf_summary.settings,
                                      std::move(perf_summary.pr)}](
-      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
+      AsyncSummary& summary) mutable { perf_summary.Log(summary); });
 
   qsl->UnloadSamplesFromRam(performance_set.set);
 }
@@ -1372,7 +1372,7 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   for (auto& loadable_set : loadable_sets) {
     {
       auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
-          AsyncTrace & trace) { trace("LoadSamples", "count", count); });
+          AsyncTrace& trace) { trace("LoadSamples", "count", count); });
       LoadSamplesToRam(qsl, loadable_set.set);
     }
 
@@ -1381,7 +1381,7 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
     {
       auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
-          AsyncTrace & trace) { trace("UnloadSampes", "count", count); });
+          AsyncTrace& trace) { trace("UnloadSampes", "count", count); });
       qsl->UnloadSamplesFromRam(loadable_set.set);
     }
   }

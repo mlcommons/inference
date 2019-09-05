@@ -66,7 +66,7 @@ TestSettingsInternal::TestSettingsInternal(
         LogDetail([
           server_target_qps = requested.server_target_qps,
           target_qps = target_qps
-        ](AsyncDetail & detail) {
+        ](AsyncDetail &detail) {
           detail.Error("Invalid value for server_target_qps requested.",
                        "requested", server_target_qps, "using", target_qps);
         });
@@ -84,7 +84,7 @@ TestSettingsInternal::TestSettingsInternal(
         LogDetail([
           offline_expected_qps = requested.offline_expected_qps,
           target_qps = target_qps
-        ](AsyncDetail & detail) {
+        ](AsyncDetail &detail) {
           detail.Error("Invalid value for offline_expected_qps requested.",
                        "requested", offline_expected_qps, "using", target_qps);
         });
@@ -223,7 +223,7 @@ void LogRequestedTestSettings(const TestSettings &s) {
 }
 
 void TestSettingsInternal::LogEffectiveSettings() const {
-  LogDetail([s = *this](AsyncDetail & detail) {
+  LogDetail([s = *this](AsyncDetail &detail) {
     detail("");
     detail("Effective Settings:");
 

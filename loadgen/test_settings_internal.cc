@@ -255,6 +255,7 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
 
 int TestSettings::FromConfig(const std::string &path, const std::string &model,
                              const std::string &scenario) {
+  // TODO: move this method to a new file test_settings.cc
   std::map<std::string, std::string> kv;
 
   // lookup key/value pairs from config
@@ -277,8 +278,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
       }
     }
     // if we get here, found will be set
-    if (val_l) *val_l = strtoul(found.c_str(), 0, 0) * int(multiplier);
-    if (val_d) *val_d = strtod(found.c_str(), 0) * multiplier;
+    if (val_l) *val_l = strtoul(found.c_str(), nullptr, 0) * int(multiplier);
+    if (val_d) *val_d = strtod(found.c_str(), nullptr) * multiplier;
     return true;
   };
 
@@ -289,7 +290,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   int errors = 0;
   if (!fss.is_open()) {
     LogDetail([p = path](AsyncDetail & detail) {
-      detail.Error("can't open ", p);
+      detail.Error("can't open file ", p);
     });
     return -ENOENT;
   }
@@ -297,13 +298,13 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     line_nr++;
     std::istringstream iss(line);
     std::string s, k;
-    int state = 0;
+    int looking_for = 0; // 0=key, 1=equal, 2=value
     while (iss >> s) {
-      if (s == "#" && state != 2) {
+      if (s == "#" && looking_for != 2) {
         // done with this line
         break;
       }
-      if (state == 2) {
+      if (looking_for == 2) {
         // got key and value
         const char *start = s.c_str();
         char *stop;
@@ -319,19 +320,19 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
         }
         errors++;
         LogDetail([l = line_nr](AsyncDetail & detail) {
-          detail.Error("error in line ", l);
+          detail.Error("value needs to be integer or double, line=", l);
         });
         break;
       }
-      if (state == 1 && s != "=") {
+      if (looking_for == 1 && s != "=") {
         errors++;
         LogDetail([l = line_nr](AsyncDetail & detail) {
-          detail.Error("error in line ", l);
+          detail.Error("expected 'key=value', line=", l);
         });
         break;
       }
-      if (state == 0) k = s;
-      state++;
+      if (looking_for == 0) k = s;
+      looking_for++;
     }
   }
   if (errors != 0) return -EINVAL;

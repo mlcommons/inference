@@ -356,8 +356,7 @@ std::vector<QueryMetadata> GenerateQueries(
         // query as the value of samples_per_query increases.
         s = loaded_samples[sample_i++];
       }
-    } else if (mode == TestMode::PerformanceOnly &&
-               scenario == TestScenario::Offline) {
+    } else if (scenario == TestScenario::Offline) {
       // For the Offline + Performance scenario, we also want to support
       // contiguous samples. In this scenario the query can be much larger than
       // what fits into memory. We simply repeat loaded_samples N times, plus a
@@ -1244,7 +1243,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
       scenario != TestScenario::MultiStreamFree &&
       scenario != TestScenario::Server) {
     LogDetail([unsupported_scenario = ToString(scenario)](AsyncDetail& detail) {
-      detail.Error(find_peak_performance::kFindPeakPerformanceNotSupported);
+      detail.Error(find_peak_performance::kNotSupportedMsg);
     });
     return;
   }

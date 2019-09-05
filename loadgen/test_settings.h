@@ -112,7 +112,6 @@ enum class TestScenario {
 ///  + Runs the performance traffic for the given scenario, as described in
 ///    the comments for TestScenario.
 /// * **FindPeakPerformance**
-///  + TODO: Not implemented yet.
 ///  + Determines the maximumum QPS for the Server scenario.
 ///  + Determines the maximum samples per query for the MultiStream and
 ///    MultiStreamFree scenarios.
@@ -184,8 +183,8 @@ struct TestSettings {
   /// \brief The decimal places of QPS precision used to terminate
   /// FindPeakPerformance mode.
   int server_find_peak_qps_decimals_of_precision = 1;
-  /// \brief A step size used to widen lower & upper bound to find the initial
-  /// boundaries of binary search
+  /// \brief A step size (as a fraction of the QPS) used to widen the lower and
+  /// upper bounds to find the initial boundaries of binary search.
   double server_find_peak_qps_boundary_step_size = 1;
   /**@}*/
 
@@ -230,8 +229,7 @@ struct TestSettings {
   uint64_t accuracy_log_rng_seed = 0;
 
   /// \brief Probability of the query response of a sample being logged to the
-  /// accuracy
-  /// log in performance mode
+  /// accuracy log in performance mode
   double accuracy_log_probability = 0.0;
 
   /// \brief Load mlperf parameter config from file.

@@ -21,9 +21,15 @@ def get_args():
     parser.add_argument("--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json")
     parser.add_argument("--imagenet-val-file", required=True, help="path to imagenet val_map.txt")
     parser.add_argument("--verbose", action="store_true", help="verbose messages")
+    parser.add_argument("--dtype", default="float32", choices=["float32", "int32", "int64"], help="data type of the label")
     args = parser.parse_args()
     return args
 
+dtype_map = {
+    "float32": np.float32,
+    "int32": np.int32,
+    "int64": np.int64
+}
 
 def main():
     args = get_args()
@@ -51,7 +57,7 @@ def main():
         img, label = imagenet[idx]
 
         # reconstruct label from mlperf accuracy log
-        data = np.frombuffer(bytes.fromhex(j['data']), np.float32)
+        data = np.frombuffer(bytes.fromhex(j['data']), dtype_map[args.dtype])
         found = int(data[0])
         if label == found:
             good += 1

@@ -129,7 +129,7 @@ TestSettingsInternal::TestSettingsInternal(
   min_sample_count = min_query_count * samples_per_query;
 
   // Validate TestSettings
-  if (requested.performance_issue_same_index <
+  if (requested.performance_issue_same_index >=
          performance_sample_count) {
     LogDetail([
       performance_issue_same_index = requested.performance_issue_same_index,
@@ -392,7 +392,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);
   lookupkv(model, scenario, "min_query_count", &min_query_count, nullptr);
   lookupkv(model, scenario, "max_query_count", &max_query_count, nullptr);
-    
+
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
            &single_stream_target_latency_percentile, 0.01);

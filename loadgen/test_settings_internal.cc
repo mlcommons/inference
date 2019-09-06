@@ -129,10 +129,26 @@ TestSettingsInternal::TestSettingsInternal(
   min_sample_count = min_query_count * samples_per_query;
 
   // Validate TestSettings
-  assert(requested.performance_issue_same_index <
-         performance_sample_count);
-  assert(!(requested.performance_issue_unique &&
-           requested.performance_issue_same));
+  if (requested.performance_issue_same_index <
+         performance_sample_count) {
+    LogDetail([
+      performance_issue_same_index = requested.performance_issue_same_index,
+      performance_sample_count = performance_sample_count] 
+      (AsyncDetail& detail) {
+       detail.Error("Sample Idx to be repeated in performance_issue_same mode",
+		    " cannot be greater than loaded performance_sample_count");
+      });
+  }
+
+  if (requested.performance_issue_unique &&
+           requested.performance_issue_same) {
+    LogDetail([performance_issue_unique = requested.performance_issue_unique, 
+               performance_issue_same = requested.performance_issue_same]
+     (AsyncDetail& detail) {
+     detail.Error("Performance_issue_unique and performance_issue_same, both",
+                  " cannot be true at the same time.");
+     });
+  }
 
 }
 
@@ -376,7 +392,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);
   lookupkv(model, scenario, "min_query_count", &min_query_count, nullptr);
   lookupkv(model, scenario, "max_query_count", &max_query_count, nullptr);
-
+    
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
            &single_stream_target_latency_percentile, 0.01);

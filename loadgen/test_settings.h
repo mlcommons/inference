@@ -248,7 +248,7 @@ struct TestSettings {
   /// \details This can be used to send non-repeat & hence unique samples to SUT
   bool performance_issue_unique = false;
   /// \brief If true, the same query is chosen repeatedley for Inference.
-  /// In offline mode, the query is filled with the same sample.
+  /// In offline scenario, the query is filled with the same sample.
   bool performance_issue_same = false;
   /// \brief Offset to control which sample is repeated in
   /// performance_issue_same mode.

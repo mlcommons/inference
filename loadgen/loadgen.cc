@@ -314,7 +314,7 @@ std::vector<QueryMetadata> GenerateQueries(
   size_t min_queries = settings.min_query_count;
 
   // We should not exit early in accuracy mode.
-  if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique || 
+  if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique ||
       settings.performance_issue_same) {
     k2xTargetDuration = std::chrono::microseconds(0);
     // Integer truncation here is intentional.

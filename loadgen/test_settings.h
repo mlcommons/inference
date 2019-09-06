@@ -252,7 +252,7 @@ struct TestSettings {
   bool performance_issue_same = false;
   /// \brief Offset to control which sample is repeated in 
   /// performance_issue_same mode.
-  /// Value should be within [0, performance_saimple_count)
+  /// Value should be within [0, performance_sample_count)
   uint64_t performance_issue_same_index = 0;
   /// \brief Overrides QSL->PerformanceSampleCount() when non-zero
   uint64_t performance_sample_count_override = 0;

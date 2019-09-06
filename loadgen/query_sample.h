@@ -29,8 +29,9 @@ namespace mlperf {
 
 /// \brief Represents a unique identifier for a sample of an issued query.
 /// \details As currently implemented, the id is a pointer to an internal
-/// loadgen struct.
+/// loadgen struct whose value will never be zero/null.
 typedef uintptr_t ResponseId;
+constexpr ResponseId kResponseIdReserved = 0;
 
 /// \brief An index into the QuerySampleLibrary corresponding to a
 /// single sample.

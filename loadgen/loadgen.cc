@@ -44,15 +44,23 @@ struct SampleMetadata;
 class QueryMetadata;
 
 /// \brief Every query and sample within a call to StartTest gets a unique
-/// sequence id for easy cross reference.
+/// sequence id for easy cross reference, and a random number which is used to
+/// determine accuracy logging when it is enabled.
 struct SequenceGen {
   uint64_t NextQueryId() { return query_id++; }
   uint64_t NextSampleId() { return sample_id++; }
   uint64_t CurrentSampleId() { return sample_id; }
+  double NextAccLogRng() { return accuracy_log_dist(accuracy_log_rng); }
+  void InitAccLogRng(uint64_t accuracy_log_rng_seed) {
+    accuracy_log_rng = std::mt19937(accuracy_log_rng_seed);
+  }
 
  private:
   uint64_t query_id = 0;
   uint64_t sample_id = 0;
+  std::mt19937 accuracy_log_rng;
+  std::uniform_real_distribution<double> accuracy_log_dist =
+      std::uniform_real_distribution<double>(0, 1);
 };
 
 /// \brief A random set of samples in the QSL that should fit in RAM when
@@ -76,6 +84,7 @@ struct SampleMetadata {
   QueryMetadata* query_metadata;
   uint64_t sequence_id;
   QuerySampleIndex sample_index;
+  double accuracy_log_val;
 };
 
 /// \brief Maintains data and timing info for a query and all its samples.
@@ -90,7 +99,8 @@ class QueryMetadata {
         wait_count_(query_sample_indices.size()) {
     samples_.reserve(query_sample_indices.size());
     for (QuerySampleIndex qsi : query_sample_indices) {
-      samples_.push_back({this, sequence_gen->NextSampleId(), qsi});
+      samples_.push_back({this, sequence_gen->NextSampleId(), qsi,
+                          sequence_gen->NextAccLogRng()});
     }
     query_to_send.reserve(query_sample_indices.size());
     for (auto& s : samples_) {
@@ -172,6 +182,8 @@ struct DurationGeneratorNs {
 template <TestScenario scenario, TestMode mode>
 struct ResponseDelegateDetailed : public ResponseDelegate {
   std::atomic<size_t> queries_completed{0};
+  double accuracy_log_offset = 0.0f;
+  double accuracy_log_prob = 0.0f;
 
   void SampleComplete(SampleMetadata* sample, QuerySampleResponse* response,
                       PerfClock::time_point complete_begin_time) override {
@@ -180,7 +192,12 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
     // into the lambda; even with C++14.
     std::vector<uint8_t>* sample_data_copy = nullptr;
-    if (mode == TestMode::AccuracyOnly) {
+    double accuracy_log_val =
+        sample->accuracy_log_val + accuracy_log_offset < 1.0
+            ? sample->accuracy_log_val + accuracy_log_offset
+            : sample->accuracy_log_val + accuracy_log_offset - 1.0;
+    if (mode == TestMode::AccuracyOnly ||
+        accuracy_log_val <= accuracy_log_prob) {
       // TODO: Verify accuracy with the data copied here.
       uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
       uint8_t* src_end = src_begin + response->size;
@@ -258,8 +275,7 @@ auto SampleDistribution(size_t sample_count, size_t stride, std::mt19937* rng) {
     indices.push_back(i);
   }
   std::shuffle(indices.begin(), indices.end(), *rng);
-  return
-      [ indices = std::move(indices), i = size_t(0) ](auto& /*gen*/) mutable {
+  return [indices = std::move(indices), i = size_t(0)](auto& /*gen*/) mutable {
     return indices.at(i++);
   };
 }
@@ -271,9 +287,7 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
                                                    size_t /*stride*/,
                                                    std::mt19937* /*rng*/) {
   return [dist = std::uniform_int_distribution<>(0, sample_count - 1)](
-      auto& gen) mutable {
-    return dist(gen);
-  };
+             auto& gen) mutable { return dist(gen); };
 }
 
 /// \brief Generates queries for the requested settings, templated by
@@ -342,21 +356,23 @@ std::vector<QueryMetadata> GenerateQueries(
         // query as the value of samples_per_query increases.
         s = loaded_samples[sample_i++];
       }
-    } else if(mode == TestMode::PerformanceOnly && scenario == TestScenario::Offline ){
+    } else if (scenario == TestScenario::Offline) {
       // For the Offline + Performance scenario, we also want to support
-      // contiguous samples. In this scenario the query can be much larger than what
-      // fits into memory. We simply repeat loaded_samples N times, plus a remainder
-      // to ensure we fill up samples.
-      // Note that this eliminates randomization.
+      // contiguous samples. In this scenario the query can be much larger than
+      // what fits into memory. We simply repeat loaded_samples N times, plus a
+      // remainder to ensure we fill up samples. Note that this eliminates
+      // randomization.
       size_t num_loaded_samples = loaded_samples.size();
-      size_t num_full_repeats = samples_per_query/num_loaded_samples;
+      size_t num_full_repeats = samples_per_query / num_loaded_samples;
       int remainder = samples_per_query % (num_loaded_samples);
 
-      for (int i = 0; i < num_full_repeats; ++i){
-        std::copy (loaded_samples.begin(), loaded_samples.end(), samples.begin() + i * num_loaded_samples);
+      for (size_t i = 0; i < num_full_repeats; ++i) {
+        std::copy(loaded_samples.begin(), loaded_samples.end(),
+                  samples.begin() + i * num_loaded_samples);
       }
 
-      std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder, samples.begin() + num_full_repeats * num_loaded_samples);
+      std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder,
+                samples.begin() + num_full_repeats * num_loaded_samples);
 
     } else {
       for (auto& s : samples) {
@@ -381,10 +397,8 @@ std::vector<QueryMetadata> GenerateQueries(
     }
   }
 
-  LogDetail([
-    count = queries.size(), spq = settings.samples_per_query,
-    duration = timestamp.count()
-  ](AsyncDetail & detail) {
+  LogDetail([count = queries.size(), spq = settings.samples_per_query,
+             duration = timestamp.count()](AsyncDetail& detail) {
     detail("GeneratedQueries: ", "queries", count, "samples per query", spq,
            "duration", duration);
   });
@@ -572,6 +586,12 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                SequenceGen* sequence_gen) {
   GlobalLogger().RestartLatencyRecording(sequence_gen->CurrentSampleId());
   ResponseDelegateDetailed<scenario, mode> response_logger;
+  std::uniform_real_distribution<double> accuracy_log_offset_dist =
+      std::uniform_real_distribution<double>(0.0, 1.0);
+  std::mt19937 accuracy_log_offset_rng(settings.accuracy_log_rng_seed);
+  response_logger.accuracy_log_offset =
+      accuracy_log_offset_dist(accuracy_log_offset_rng);
+  response_logger.accuracy_log_prob = settings.accuracy_log_probability;
 
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(
       settings, loaded_sample_set, sequence_gen, &response_logger);
@@ -579,12 +599,15 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.
   const double query_seconds_outstanding_threshold =
-      5 *
-      std::chrono::duration_cast<std::chrono::duration<double>>(
-          settings.target_latency)
-          .count();
+      5 * std::chrono::duration_cast<std::chrono::duration<double>>(
+              settings.target_latency)
+              .count();
   const size_t max_queries_outstanding =
       settings.target_qps * query_seconds_outstanding_threshold;
+
+  LogDetail([date_time = CurrentDateTimeForPower()](AsyncDetail& detail) {
+    detail("POWER_BEGIN: ", "mode", ToString(mode), "time", date_time);
+  });
 
   const PerfClock::time_point start = PerfClock::now();
   PerfClock::time_point last_now = start;
@@ -650,6 +673,10 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
     }
   }
 
+  LogDetail([date_time = CurrentDateTimeForPower()](AsyncDetail& detail) {
+    detail("POWER_END: ", "mode", ToString(mode), "time", date_time);
+  });
+
   // Let the SUT know it should not expect any more queries.
   sut->FlushQueries();
 
@@ -675,7 +702,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       GlobalLogger().GetLatenciesBlocking(expected_latencies));
 
   // Log contention counters after every test as a sanity check.
-  GlobalLogger().LogContentionCounters();
+  GlobalLogger().LogContentionAndAllocations();
 
   double max_latency =
       QuerySampleLatencyToSeconds(GlobalLogger().GetMaxLatencySoFar());
@@ -712,10 +739,15 @@ struct PerformanceSummary {
     const double percentile;
     QuerySampleLatency value = 0;
   };
-  /// \todo Make .90 a TestSetting and update relevant hard-coded strings.
-  PercentileEntry latency_target{.90};
+  // Latency target percentile
+  PercentileEntry target_latency_percentile{settings.target_latency_percentile};
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
+
+  PerformanceSummary(const std::string& sut_name_arg,
+                     const TestSettingsInternal& settings_arg,
+                     const PerformanceResult& pr_arg)
+      : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg){};
 
   void ProcessLatencies();
 
@@ -742,7 +774,8 @@ void PerformanceSummary::ProcessLatencies() {
 
   std::sort(pr.latencies.begin(), pr.latencies.end());
 
-  latency_target.value = pr.latencies[sample_count * latency_target.percentile];
+  target_latency_percentile.value =
+      pr.latencies[sample_count * target_latency_percentile.percentile];
   latency_min = pr.latencies.front();
   latency_max = pr.latencies.back();
   for (auto& lp : latency_percentiles) {
@@ -750,9 +783,6 @@ void PerformanceSummary::ProcessLatencies() {
     assert(lp.percentile < 1.0);
     lp.value = pr.latencies[sample_count * lp.percentile];
   }
-
-  // Clear latencies since we are done processing them.
-  pr.latencies = std::vector<QuerySampleLatency>();
 }
 
 bool PerformanceSummary::MinDurationMet(std::string* recommendation) {
@@ -786,7 +816,8 @@ bool PerformanceSummary::MinDurationMet(std::string* recommendation) {
       break;
     case TestScenario::Offline:
       *recommendation =
-          "Increase expected QPS so the loadgen pre-generates a larger (coalesced) query.";
+          "Increase expected QPS so the loadgen pre-generates a larger "
+          "(coalesced) query.";
       break;
   }
   return false;
@@ -816,14 +847,14 @@ bool PerformanceSummary::PerfConstraintsMet(std::string* recommendation) {
     case TestScenario::MultiStreamFree:
       // TODO: Finalize multi-stream performance targets with working group.
       ProcessLatencies();
-      if (latency_target.value > settings.target_latency.count()) {
+      if (target_latency_percentile.value > settings.target_latency.count()) {
         *recommendation = "Reduce samples per query to improve latency.";
         perf_constraints_met = false;
       }
       break;
     case TestScenario::Server:
       ProcessLatencies();
-      if (latency_target.value > settings.target_latency.count()) {
+      if (target_latency_percentile.value > settings.target_latency.count()) {
         *recommendation = "Reduce target QPS to improve latency.";
         perf_constraints_met = false;
       }
@@ -847,7 +878,9 @@ void PerformanceSummary::Log(AsyncSummary& summary) {
 
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
-      summary("90th percentile latency (ns) : ", latency_target.value);
+      summary(DoubleToString(target_latency_percentile.percentile * 100, 0) +
+                  "th percentile latency (ns) : ",
+              target_latency_percentile.value);
       break;
     }
     case TestScenario::MultiStream: {
@@ -923,8 +956,7 @@ void PerformanceSummary::Log(AsyncSummary& summary) {
 
   if (settings.scenario == TestScenario::SingleStream) {
     double qps_w_lg = (sample_count - 1) / pr.final_query_issued_time;
-    /// \todo qps_wo_log should use latency_mean
-    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(latency_min);
+    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(latency_mean);
     summary("QPS w/ loadgen overhead         : " + DoubleToString(qps_w_lg));
     summary("QPS w/o loadgen overhead        : " + DoubleToString(qps_wo_lg));
     summary("");
@@ -966,125 +998,6 @@ void LoadSamplesToRam(QuerySampleLibrary* qsl,
   });
   qsl->LoadSamplesToRam(samples);
 }
-
-/// \brief Runs the performance mode, templated by scenario.
-template <TestScenario scenario>
-void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-                        const TestSettingsInternal& settings,
-                        const std::vector<LoadableSampleSet>& loadable_sets,
-                        SequenceGen* sequence_gen) {
-  LogDetail([](AsyncDetail& detail) { detail("Starting performance mode:"); });
-
-  // Use first loadable set as the performance set.
-  const LoadableSampleSet& performance_set = loadable_sets.front();
-  LoadSamplesToRam(qsl, performance_set.set);
-
-  PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
-      sut, settings, performance_set, sequence_gen));
-
-  sut->ReportLatencyResults(pr.latencies);
-
-  LogSummary([perf_summary =
-                  PerformanceSummary{sut->Name(), settings, std::move(pr)}](
-      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
-
-  qsl->UnloadSamplesFromRam(performance_set.set);
-}
-
-/// \brief Runs the binary search mode, templated by scenario.
-/// \todo Make binary search work for the multi-stream scenario.
-/// \todo Make binary search work for the server scenario.
-template <TestScenario scenario>
-void FindPeakPerformanceMode(
-    SystemUnderTest* sut, QuerySampleLibrary* qsl,
-    const TestSettingsInternal& settings,
-    const std::vector<LoadableSampleSet>& loadable_sets,
-    SequenceGen* sequence_gen) {
-  LogDetail([](AsyncDetail& detail) {
-    detail("Starting FindPeakPerformance mode:");
-  });
-
-  // Use first loadable set as the performance set.
-  const LoadableSampleSet& performance_set = loadable_sets.front();
-
-  LoadSamplesToRam(qsl, performance_set.set);
-
-  TestSettingsInternal search_settings = settings;
-
-  bool still_searching = true;
-  while (still_searching) {
-    PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
-        sut, search_settings, performance_set, sequence_gen));
-    PerformanceSummary perf_summary{sut->Name(), search_settings,
-                                    std::move(pr)};
-  }
-
-  qsl->UnloadSamplesFromRam(performance_set.set);
-}
-
-/// \brief Runs the accuracy mode, templated by scenario.
-template <TestScenario scenario>
-void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-                     const TestSettingsInternal& settings,
-                     const std::vector<LoadableSampleSet>& loadable_sets,
-                     SequenceGen* sequence_gen) {
-  LogDetail([](AsyncDetail& detail) { detail("Starting accuracy mode:"); });
-
-  for (auto& loadable_set : loadable_sets) {
-    {
-      auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
-          AsyncTrace & trace) { trace("LoadSamples", "count", count); });
-      LoadSamplesToRam(qsl, loadable_set.set);
-    }
-
-    PerformanceResult pr(IssueQueries<scenario, TestMode::AccuracyOnly>(
-        sut, settings, loadable_set, sequence_gen));
-
-    {
-      auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
-          AsyncTrace & trace) { trace("UnloadSampes", "count", count); });
-      qsl->UnloadSamplesFromRam(loadable_set.set);
-    }
-  }
-}
-
-/// \brief Routes runtime scenario requests to the corresponding instances
-/// of its templated mode functions.
-struct RunFunctions {
-  using Signature = void(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-                         const TestSettingsInternal& settings,
-                         const std::vector<LoadableSampleSet>& loadable_sets,
-                         SequenceGen* sequence_gen);
-
-  template <TestScenario compile_time_scenario>
-  static RunFunctions GetCompileTime() {
-    return {(RunAccuracyMode<compile_time_scenario>),
-            (RunPerformanceMode<compile_time_scenario>),
-            (FindPeakPerformanceMode<compile_time_scenario>)};
-  }
-
-  static RunFunctions Get(TestScenario run_time_scenario) {
-    switch (run_time_scenario) {
-      case TestScenario::SingleStream:
-        return GetCompileTime<TestScenario::SingleStream>();
-      case TestScenario::MultiStream:
-        return GetCompileTime<TestScenario::MultiStream>();
-      case TestScenario::MultiStreamFree:
-        return GetCompileTime<TestScenario::MultiStreamFree>();
-      case TestScenario::Server:
-        return GetCompileTime<TestScenario::Server>();
-      case TestScenario::Offline:
-        return GetCompileTime<TestScenario::Offline>();
-    }
-    // We should not reach this point.
-    assert(false);
-    return GetCompileTime<TestScenario::SingleStream>();
-  }
-
-  Signature& accuracy;
-  Signature& performance;
-  Signature& find_peak_performance;
-};
 
 /// \brief Generates random sets of samples in the QSL that we can load into
 /// RAM at the same time.
@@ -1194,6 +1107,301 @@ struct LogOutputs {
   std::ofstream trace_out;
 };
 
+/// \brief Find boundaries of performance settings by widening bounds
+/// exponentially.
+/// \details To find an upper bound of performance, widen an
+/// upper bound exponentially until finding a bound that can't satisfy
+/// performance constraints. i.e. [1, 2) -> [2, 4) -> [4, 8) -> ...
+template <TestScenario scenario>
+std::pair<PerformanceSummary, PerformanceSummary> FindBoundaries(
+    SystemUnderTest* sut, QuerySampleLibrary* qsl, SequenceGen* sequence_gen,
+    PerformanceSummary l_perf_summary) {
+  // Get upper bound
+  TestSettingsInternal u_settings = l_perf_summary.settings;
+  find_peak_performance::WidenPerformanceField<scenario>(&u_settings);
+
+  LogDetail(
+      [l_field = find_peak_performance::ToStringPerformanceField<scenario>(
+           l_perf_summary.settings),
+       u_field = find_peak_performance::ToStringPerformanceField<scenario>(
+           u_settings)](AsyncDetail& detail) {
+        detail("FindBoundaries: Checking fields [" + l_field + ", " + u_field +
+               ")");
+      });
+
+  std::vector<loadgen::LoadableSampleSet> loadable_sets(
+      loadgen::GenerateLoadableSets(qsl, u_settings));
+  const LoadableSampleSet& performance_set = loadable_sets.front();
+  LoadSamplesToRam(qsl, performance_set.set);
+
+  PerformanceResult u_pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
+      sut, u_settings, performance_set, sequence_gen));
+  PerformanceSummary u_perf_summary{sut->Name(), u_settings, std::move(u_pr)};
+
+  qsl->UnloadSamplesFromRam(performance_set.set);
+
+  std::string tmp;
+  if (!u_perf_summary.PerfConstraintsMet(&tmp)) {
+    return std::make_pair(l_perf_summary, u_perf_summary);
+  } else {
+    return FindBoundaries<scenario>(sut, qsl, sequence_gen, u_perf_summary);
+  }
+}
+
+/// \brief Find peak performance by binary search.
+/// \details The found lower & upper bounds by the function 'FindBoundaries' are
+/// used as initial bounds of binary search
+template <TestScenario scenario>
+PerformanceSummary FindPeakPerformanceBinarySearch(
+    SystemUnderTest* sut, QuerySampleLibrary* qsl, SequenceGen* sequence_gen,
+    const LoadableSampleSet& performance_set, PerformanceSummary l_perf_summary,
+    PerformanceSummary u_perf_summary) {
+  if (find_peak_performance::IsFinished<scenario>(l_perf_summary.settings,
+                                                  u_perf_summary.settings)) {
+    return l_perf_summary;
+  }
+
+  const TestSettingsInternal m_settings =
+      find_peak_performance::MidOfBoundaries<scenario>(l_perf_summary.settings,
+                                                       u_perf_summary.settings);
+
+  LogDetail([l_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     l_perf_summary.settings),
+             u_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     u_perf_summary.settings),
+             m_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     m_settings)](AsyncDetail& detail) {
+    detail(
+        "FindPeakPerformanceBinarySearch: Testing the mid value of bounds [" +
+        l_field + ", " + u_field + "): " + m_field);
+  });
+
+  PerformanceResult m_pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
+      sut, m_settings, performance_set, sequence_gen));
+  PerformanceSummary m_perf_summary{sut->Name(), m_settings, std::move(m_pr)};
+
+  std::string tmp;
+  if (m_perf_summary.PerfConstraintsMet(&tmp)) {
+    return FindPeakPerformanceBinarySearch<scenario>(
+        sut, qsl, sequence_gen, performance_set, m_perf_summary,
+        u_perf_summary);
+  } else {
+    return FindPeakPerformanceBinarySearch<scenario>(
+        sut, qsl, sequence_gen, performance_set, l_perf_summary,
+        m_perf_summary);
+  }
+}
+
+/// \brief Runs the performance mode, templated by scenario.
+template <TestScenario scenario>
+void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
+                        const TestSettingsInternal& settings,
+                        SequenceGen* sequence_gen) {
+  LogDetail([](AsyncDetail& detail) { detail("Starting performance mode:"); });
+
+  // Use first loadable set as the performance set.
+  std::vector<loadgen::LoadableSampleSet> loadable_sets(
+      loadgen::GenerateLoadableSets(qsl, settings));
+  const LoadableSampleSet& performance_set = loadable_sets.front();
+  LoadSamplesToRam(qsl, performance_set.set);
+
+  PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
+      sut, settings, performance_set, sequence_gen));
+
+  sut->ReportLatencyResults(pr.latencies);
+
+  LogSummary(
+      [perf_summary = PerformanceSummary{sut->Name(), settings, std::move(pr)}](
+          AsyncSummary& summary) mutable { perf_summary.Log(summary); });
+
+  qsl->UnloadSamplesFromRam(performance_set.set);
+}
+
+/// \brief Runs the binary search mode, templated by scenario.
+/// \details 1. Check whether lower bound from user satisfies the performance
+/// constraints, 2. Find an upper bound using the function 'FindBoundaries'
+/// based on the lower bound, 3. Find peak performance settings using the
+/// function 'FindPeakPerformanceBinarySearch'. note: Since we can't find a
+/// lower bound programmatically because of the monotonicity issue of Server
+/// scenario, rely on user's settings. After resolving this issue, we can
+/// make the function 'FindBoundaries' find a lower bound as well from some
+/// random initial settings.
+template <TestScenario scenario>
+void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
+                             const TestSettingsInternal& base_settings,
+                             SequenceGen* sequence_gen) {
+  LogDetail([](AsyncDetail& detail) {
+    detail("Starting FindPeakPerformance mode:");
+  });
+
+  if (scenario != TestScenario::MultiStream &&
+      scenario != TestScenario::MultiStreamFree &&
+      scenario != TestScenario::Server) {
+    LogDetail([unsupported_scenario = ToString(scenario)](AsyncDetail& detail) {
+      detail.Error(find_peak_performance::kNotSupportedMsg);
+    });
+    return;
+  }
+
+  LogDetail([base_field =
+                 find_peak_performance::ToStringPerformanceField<scenario>(
+                     base_settings)](AsyncDetail& detail) {
+    detail("FindPeakPerformance: Check validity of the base settings field: " +
+           base_field);
+  });
+
+  // 1. Check whether the lower bound came from user satisfy performance
+  // constraints or not.
+  std::vector<loadgen::LoadableSampleSet> base_loadable_sets(
+      loadgen::GenerateLoadableSets(qsl, base_settings));
+  const LoadableSampleSet& base_performance_set = base_loadable_sets.front();
+  LoadSamplesToRam(qsl, base_performance_set.set);
+
+  PerformanceResult base_pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
+      sut, base_settings, base_performance_set, sequence_gen));
+  PerformanceSummary base_perf_summary{sut->Name(), base_settings,
+                                       std::move(base_pr)};
+
+  // We can also use all_constraints_met to check performance constraints,
+  // but to reduce searching time, leave it up to whether the settings satisfy
+  // min duration & min queries or not to users.
+  std::string msg;
+  if (!base_perf_summary.PerfConstraintsMet(&msg)) {
+    LogDetail([msg](AsyncDetail& detail) {
+      detail.Error(
+          "FindPeakPerformance: Initial lower bound does not satisfy "
+          "performance constraints, msg: " +
+          msg);
+    });
+
+    sut->ReportLatencyResults(base_perf_summary.pr.latencies);
+
+    LogSummary(
+        [perf_summary = PerformanceSummary{sut->Name(), base_settings,
+                                           std::move(base_perf_summary.pr)}](
+            AsyncSummary& summary) mutable { perf_summary.Log(summary); });
+
+    qsl->UnloadSamplesFromRam(base_performance_set.set);
+
+    return;
+  }
+
+  // Clear loaded samples.
+  qsl->UnloadSamplesFromRam(base_performance_set.set);
+
+  // 2. Find an upper bound based on the lower bound.
+  std::pair<PerformanceSummary, PerformanceSummary> boundaries =
+      FindBoundaries<scenario>(sut, qsl, sequence_gen, base_perf_summary);
+  PerformanceSummary l_perf_summary = boundaries.first;
+  PerformanceSummary u_perf_summary = boundaries.second;
+
+  LogDetail(
+      [l_field = find_peak_performance::ToStringPerformanceField<scenario>(
+           l_perf_summary.settings),
+       u_field = find_peak_performance::ToStringPerformanceField<scenario>(
+           u_perf_summary.settings)](AsyncDetail& detail) {
+        detail("FindPeakPerformance: Found boundaries: [" + l_field + ", " +
+               u_field + ")");
+      });
+
+  // Reuse performance_set, u_perf_summary has the largest 'samples_per_query'.
+  std::vector<loadgen::LoadableSampleSet> loadable_sets(
+      loadgen::GenerateLoadableSets(qsl, u_perf_summary.settings));
+  const LoadableSampleSet& performance_set = loadable_sets.front();
+  LoadSamplesToRam(qsl, performance_set.set);
+
+  // 3. Find peak performance settings using the found boundaries
+  PerformanceSummary perf_summary = FindPeakPerformanceBinarySearch<scenario>(
+      sut, qsl, sequence_gen, performance_set, l_perf_summary, u_perf_summary);
+
+  // Print-out the peak performance test setting.
+  LogDetail([field = find_peak_performance::ToStringPerformanceField<scenario>(
+                 perf_summary.settings)](AsyncDetail& detail) {
+    detail("FindPeakPerformance: Found peak performance field: " + field);
+  });
+
+  sut->ReportLatencyResults(perf_summary.pr.latencies);
+
+  LogSummary(
+      [perf_summary = PerformanceSummary{sut->Name(), perf_summary.settings,
+                                         std::move(perf_summary.pr)}](
+          AsyncSummary& summary) mutable { perf_summary.Log(summary); });
+
+  qsl->UnloadSamplesFromRam(performance_set.set);
+}
+
+/// \brief Runs the accuracy mode, templated by scenario.
+template <TestScenario scenario>
+void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
+                     const TestSettingsInternal& settings,
+                     SequenceGen* sequence_gen) {
+  LogDetail([](AsyncDetail& detail) { detail("Starting accuracy mode:"); });
+
+  std::vector<loadgen::LoadableSampleSet> loadable_sets(
+      loadgen::GenerateLoadableSets(qsl, settings));
+
+  for (auto& loadable_set : loadable_sets) {
+    {
+      auto tracer = MakeScopedTracer(
+          [count = loadable_set.set.size()](AsyncTrace& trace) {
+            trace("LoadSamples", "count", count);
+          });
+      LoadSamplesToRam(qsl, loadable_set.set);
+    }
+
+    PerformanceResult pr(IssueQueries<scenario, TestMode::AccuracyOnly>(
+        sut, settings, loadable_set, sequence_gen));
+
+    {
+      auto tracer = MakeScopedTracer(
+          [count = loadable_set.set.size()](AsyncTrace& trace) {
+            trace("UnloadSampes", "count", count);
+          });
+      qsl->UnloadSamplesFromRam(loadable_set.set);
+    }
+  }
+}
+
+/// \brief Routes runtime scenario requests to the corresponding instances
+/// of its templated mode functions.
+struct RunFunctions {
+  using Signature = void(SystemUnderTest* sut, QuerySampleLibrary* qsl,
+                         const TestSettingsInternal& settings,
+                         SequenceGen* sequence_gen);
+
+  template <TestScenario compile_time_scenario>
+  static RunFunctions GetCompileTime() {
+    return {(RunAccuracyMode<compile_time_scenario>),
+            (RunPerformanceMode<compile_time_scenario>),
+            (FindPeakPerformanceMode<compile_time_scenario>)};
+  }
+
+  static RunFunctions Get(TestScenario run_time_scenario) {
+    switch (run_time_scenario) {
+      case TestScenario::SingleStream:
+        return GetCompileTime<TestScenario::SingleStream>();
+      case TestScenario::MultiStream:
+        return GetCompileTime<TestScenario::MultiStream>();
+      case TestScenario::MultiStreamFree:
+        return GetCompileTime<TestScenario::MultiStreamFree>();
+      case TestScenario::Server:
+        return GetCompileTime<TestScenario::Server>();
+      case TestScenario::Offline:
+        return GetCompileTime<TestScenario::Offline>();
+    }
+    // We should not reach this point.
+    assert(false);
+    return GetCompileTime<TestScenario::SingleStream>();
+  }
+
+  Signature& accuracy;
+  Signature& performance;
+  Signature& find_peak_performance;
+};
+
 }  // namespace loadgen
 
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
@@ -1225,30 +1433,23 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   loadgen::TestSettingsInternal sanitized_settings(requested_settings);
   sanitized_settings.LogAllSettings();
 
-  std::vector<loadgen::LoadableSampleSet> loadable_sets(
-      loadgen::GenerateLoadableSets(qsl, sanitized_settings));
-
   auto run_funcs = loadgen::RunFunctions::Get(sanitized_settings.scenario);
 
   loadgen::SequenceGen sequence_gen;
   switch (sanitized_settings.mode) {
     case TestMode::SubmissionRun:
-      run_funcs.accuracy(sut, qsl, sanitized_settings, loadable_sets,
-                         &sequence_gen);
-      run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets,
-                            &sequence_gen);
+      run_funcs.accuracy(sut, qsl, sanitized_settings, &sequence_gen);
+      run_funcs.performance(sut, qsl, sanitized_settings, &sequence_gen);
       break;
     case TestMode::AccuracyOnly:
-      run_funcs.accuracy(sut, qsl, sanitized_settings, loadable_sets,
-                         &sequence_gen);
+      run_funcs.accuracy(sut, qsl, sanitized_settings, &sequence_gen);
       break;
     case TestMode::PerformanceOnly:
-      run_funcs.performance(sut, qsl, sanitized_settings, loadable_sets,
-                            &sequence_gen);
+      run_funcs.performance(sut, qsl, sanitized_settings, &sequence_gen);
       break;
     case TestMode::FindPeakPerformance:
       run_funcs.find_peak_performance(sut, qsl, sanitized_settings,
-                                      loadable_sets, &sequence_gen);
+                                      &sequence_gen);
       break;
   }
 

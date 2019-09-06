@@ -94,11 +94,16 @@ class AsyncLog {
 
   void SetLogDetailTime(PerfClock::time_point time) { log_detail_time_ = time; }
 
-  // TODO: Warnings.
   void FlagError() {
     std::unique_lock<std::mutex> lock(log_mutex_);
     log_error_count_++;
     error_flagged_ = true;
+  }
+
+  void FlagWarning() {
+    std::unique_lock<std::mutex> lock(log_mutex_);
+    log_warning_count_++;
+    warning_flagged_ = true;
   }
 
   template <typename... Args>
@@ -238,8 +243,10 @@ class AsyncLog {
   bool copy_summary_to_stdout_ = false;
   bool accuracy_needs_comma_ = false;
   PerfClock::time_point log_origin_;
-  uint32_t log_error_count_ = 0;
+  size_t log_error_count_ = 0;
   bool error_flagged_ = false;
+  size_t log_warning_count_ = 0;
+  bool warning_flagged_ = false;
 
   std::mutex trace_mutex_;
   std::ostream* trace_out_ = nullptr;
@@ -280,7 +287,7 @@ class Logger {
   void StartNewTrace(std::ostream* trace_out, PerfClock::time_point origin);
   void StopTracing();
 
-  void LogContentionCounters();
+  void LogContentionAndAllocations();
 
   void RestartLatencyRecording(uint64_t first_sample_sequence_id);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
@@ -523,6 +530,8 @@ void AsyncLog::LogDetail(const std::string& message, const Args... args) {
         << "\"ts\": " << (log_detail_time_ - log_origin_).count() << "ns : ";
     if (error_flagged_) {
       *os << "ERROR : ";
+    } else if (warning_flagged_) {
+      *os << "WARNING : ";
     }
     *os << message;
     LogArgs(os, args...);
@@ -532,6 +541,7 @@ void AsyncLog::LogDetail(const std::string& message, const Args... args) {
     }
   }
   error_flagged_ = false;
+  warning_flagged_ = false;
 }
 
 }  // namespace logging

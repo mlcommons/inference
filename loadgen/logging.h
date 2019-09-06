@@ -203,7 +203,7 @@ class AsyncLog {
     *trace_out_ << " }},\n";
   }
 
-  void RestartLatencyRecording(uint64_t first_sample_sequence_id);
+  void RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve);
   void RecordLatency(uint64_t sample_sequence_id, QuerySampleLatency latency);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
   QuerySampleLatency GetMaxLatencySoFar();
@@ -289,7 +289,7 @@ class Logger {
 
   void LogContentionAndAllocations();
 
-  void RestartLatencyRecording(uint64_t first_sample_sequence_id);
+  void RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
   QuerySampleLatency GetMaxLatencySoFar();
 

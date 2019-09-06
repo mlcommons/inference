@@ -605,7 +605,6 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                const TestSettingsInternal& settings,
                                const LoadableSampleSet& loaded_sample_set,
                                SequenceGen* sequence_gen) {
-  GlobalLogger().RestartLatencyRecording(sequence_gen->CurrentSampleId());
   ResponseDelegateDetailed<scenario, mode> response_logger;
   std::uniform_real_distribution<double> accuracy_log_offset_dist =
       std::uniform_real_distribution<double>(0.0, 1.0);
@@ -614,8 +613,15 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       accuracy_log_offset_dist(accuracy_log_offset_rng);
   response_logger.accuracy_log_prob = settings.accuracy_log_probability;
 
+  auto sequence_id_start = sequence_gen->CurrentSampleId();
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(
       settings, loaded_sample_set, sequence_gen, &response_logger);
+  auto sequence_id_end = sequence_gen->CurrentSampleId();
+  size_t max_latencies_to_record =  sequence_id_end - sequence_id_start;
+
+  GlobalLogger().RestartLatencyRecording(
+        sequence_id_start,
+        max_latencies_to_record);
 
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.

@@ -228,7 +228,7 @@ void AsyncLog::WriteTraceEventFooterLocked() {
               << "}\n";
 }
 
-void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id) {
+void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve) {
   std::unique_lock<std::mutex> lock(latencies_mutex_);
   assert(latencies_.empty());
   assert(latencies_recorded_ == latencies_expected_);
@@ -236,6 +236,7 @@ void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id) {
   latencies_expected_ = 0;
   max_latency_ = 0;
   latencies_first_sample_sequence_id_ = first_sample_sequence_id;
+  latencies_.reserve(latencies_to_reserve);
 }
 
 void AsyncLog::RecordLatency(uint64_t sample_sequence_id,
@@ -329,10 +330,6 @@ QuerySampleLatency AsyncLog::GetMaxLatencySoFar() {
 ///       operations even if other threads have stalled.)
 ///   * Without expensive syscalls or I/O operations, which are deferred to
 ///       the central Logger.
-///
-/// \todo Pre-allocate entries_ with enough space so that allocation
-/// for logging doesn't need to occur at runtime. Maybe override allocator
-/// to print a warning if allocation is performed.
 class TlsLogger {
  public:
   TlsLogger(std::function<void()> forced_detatch);
@@ -590,8 +587,8 @@ void Logger::LogContentionAndAllocations() {
   });
 }
 
-void Logger::RestartLatencyRecording(uint64_t first_sample_sequence_id) {
-  async_logger_.RestartLatencyRecording(first_sample_sequence_id);
+void Logger::RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve) {
+  async_logger_.RestartLatencyRecording(first_sample_sequence_id, latencies_to_reserve);
 }
 
 std::vector<QuerySampleLatency> Logger::GetLatenciesBlocking(

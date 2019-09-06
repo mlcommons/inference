@@ -129,8 +129,8 @@ TestSettingsInternal::TestSettingsInternal(
   min_sample_count = min_query_count * samples_per_query;
 
   // Validate TestSettings
-  if (requested.performance_issue_same_index >=
-         performance_sample_count) {
+  if (requested.performance_issue_same && 
+      (requested.performance_issue_same_index >= performance_sample_count)) {
     LogDetail([
       performance_issue_same_index = requested.performance_issue_same_index,
       performance_sample_count = performance_sample_count] 

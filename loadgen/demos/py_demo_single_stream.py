@@ -75,7 +75,7 @@ def main(argv):
     del argv
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.SingleStream
-    settings.mode = mlperf_loadgen.TestMode.AccuracyOnly
+    settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
     settings.single_stream_expected_latency_ns = 1000000
     settings.min_query_count = 100
     settings.min_duration_ms = 10000

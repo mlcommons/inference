@@ -112,7 +112,6 @@ enum class TestScenario {
 ///  + Runs the performance traffic for the given scenario, as described in
 ///    the comments for TestScenario.
 /// * **FindPeakPerformance**
-///  + TODO: Not implemented yet.
 ///  + Determines the maximumum QPS for the Server scenario.
 ///  + Determines the maximum samples per query for the MultiStream and
 ///    MultiStreamFree scenarios.
@@ -139,6 +138,7 @@ struct TestSettings {
   /// \brief A hint used by the loadgen to pre-generate enough samples to
   ///        meet the minimum test duration.
   uint64_t single_stream_expected_latency_ns = 1000000;
+  double single_stream_target_latency_percentile = 0.90;
   /**@}*/
 
   // ==================================
@@ -149,7 +149,13 @@ struct TestSettings {
   double multi_stream_target_qps = 10.0;
   /// \brief The latency constraint for the MultiStream scenario.
   uint64_t multi_stream_target_latency_ns = 100000000;
+  /// \brief The latency percentile for multistream mode. This value is combined
+  /// with multi_stream_target_latency_ns to determine if a run is valid.
+  double multi_stream_target_latency_percentile = 0.9;
   /// \brief The number of samples in each query.
+  /// \details note: This field is used as a FindPeakPerformance's lower bound.
+  /// When you run FindPeakPerformanceMode, you should make sure that this value
+  /// satisfies performance constraints.
   int multi_stream_samples_per_query = 4;
   /// \brief The maximum number of queries, to which a SUT has not responded,
   /// before the loadgen will throttle issuance of new queries.
@@ -160,12 +166,26 @@ struct TestSettings {
   /// \name Server-specific
   /**@{*/
   /// \brief The average QPS of the poisson distribution.
-  ///        Only used as a hint in SearchForPeakPerformance.
+  /// \details note: This field is used as a FindPeakPerformance's lower bound.
+  /// When you run FindPeakPerformanceMode, you should make sure that this value
+  /// satisfies performance constraints.
   double server_target_qps = 1;
   /// \brief The latency constraint for the Server scenario.
   uint64_t server_target_latency_ns = 100000000;
+  /// \brief The latency percentile for server mode. This value is combined with
+  /// server_target_latency_ns to determine if a run is valid.
+  /// \details 99% is the default value, which is correct for image models. GNMT
+  /// should be set to 0.97 (97%) in v0.5.(As always, check the policy page for
+  /// updated values for the benchmark you are running.)
+  double server_target_latency_percentile = 0.99;
   /// \brief TODO: Implement this.
   bool server_coalesce_queries = false;
+  /// \brief The decimal places of QPS precision used to terminate
+  /// FindPeakPerformance mode.
+  int server_find_peak_qps_decimals_of_precision = 1;
+  /// \brief A step size (as a fraction of the QPS) used to widen the lower and
+  /// upper bounds to find the initial boundaries of binary search.
+  double server_find_peak_qps_boundary_step_size = 1;
   /**@}*/
 
   // ==================================
@@ -191,7 +211,7 @@ struct TestSettings {
 
   // ==================================
   /// \name Random number generation
-  /// There are 3 separate seeds, so each dimension can be changed
+  /// There are 4 separate seeds, so each dimension can be changed
   /// independently.
   /**@{*/
   /// \brief Affects which subset of samples from the QSL are chosen for
@@ -204,6 +224,17 @@ struct TestSettings {
   /// \details Different seeds will appear to "jitter" the queries
   /// differently in time, but should not affect the average issued QPS.
   uint64_t schedule_rng_seed = 0;
+  /// \brief Affects which samples have their query returns logged to the
+  /// accuracy log in performance mode.
+  uint64_t accuracy_log_rng_seed = 0;
+
+  /// \brief Probability of the query response of a sample being logged to the
+  /// accuracy log in performance mode
+  double accuracy_log_probability = 0.0;
+
+  /// \brief Load mlperf parameter config from file.
+  int FromConfig(const std::string &config_file, const std::string &model,
+                 const std::string &scenario);
   /**@}*/
 };
 

@@ -58,8 +58,8 @@ def process_latencies(latencies_ns):
     print(numpy.mean(latencies_ns))
     print("Median latency: ")
     print(numpy.percentile(latencies_ns, 50))
-    print("90 percentile latency: ")
-    print(numpy.percentile(latencies_ns, 90))
+    print("99 percentile latency: ")
+    print(numpy.percentile(latencies_ns, 99))
 
 
 def main(argv):

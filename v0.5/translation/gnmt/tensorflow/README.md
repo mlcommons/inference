@@ -50,7 +50,9 @@ $ python run_task.py --run=accuracy
 ```
 
 ### Run GNMT through LoadGen:
-1.  Follow the instructions to install LoadGen from https://github.com/mlperf/inference/blob/master/loadgen/README.md
+1.  For LoadGen introduction, please refer to https://github.com/mlperf/inference/blob/master/loadgen/README.md
+Follow the instructions to install LoadGen from https://github.com/mlperf/inference/blob/master/loadgen/README_BUILD.md
+
 2.  Run:
 ```
 python loadgen_gnmt.py --store_translation
@@ -67,6 +69,14 @@ To check accuracy, please run the following commands:
 ```
 python loadgen_gnmt.py --mode Accuracy
 python process_accuracy.py
+```
+
+### Running other datasets:
+In order to translate other English texts, the raw text needs to be preprocessed first:
+1. Ensure you have an English text, along with it's German translation, suffixed with, ".en" and ".de", respectively (e.g., newstest2014.en and newstest2014.de).
+2. Run the following command:
+```
+./preprocess_input.sh newstest2014 
 ```
 
 # 3. Dataset

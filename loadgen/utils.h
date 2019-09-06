@@ -53,6 +53,10 @@ inline DurationT SecondsToDuration(double seconds) {
 
 std::string CurrentDateTimeISO8601();
 
+/// \brief Uses a format that matches the one used by SPEC power
+/// measurement logging.
+std::string CurrentDateTimeForPower();
+
 std::string DoubleToString(double value, int precision = 2);
 
 }  // namespace mlperf

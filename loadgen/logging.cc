@@ -62,6 +62,10 @@ bool SwapRequestSlotIsReadable(uintptr_t value) {
 constexpr size_t kMaxThreadsToLog = 1024;
 constexpr std::chrono::milliseconds kLogPollPeriod(10);
 
+/// \brief How many log entries to pre-allocate per thread to help avoid
+/// runtime allocation.
+constexpr size_t kTlsLogReservedEntryCount = 1024;
+
 constexpr auto kInvalidLatency = std::numeric_limits<QuerySampleLatency>::min();
 
 }  // namespace
@@ -103,6 +107,16 @@ void AsyncLog::SetLogFiles(std::ostream* summary, std::ostream* detail,
                            PerfClock::time_point log_origin) {
   std::unique_lock<std::mutex> lock(log_mutex_);
   if (summary_out_ != &std::cerr) {
+    std::string warning_summary;
+    if (log_warning_count_ == 0) {
+      warning_summary = "\nNo warnings encountered during test.\n";
+    } else if (log_warning_count_ == 1) {
+      warning_summary = "\n1 warning encountered. See detailed log.\n";
+    } else if (log_warning_count_ != 0) {
+      warning_summary = "\n" + std::to_string(log_warning_count_) +
+                        " warnings encountered. See detailed log.\n";
+    }
+
     std::string error_summary;
     if (log_error_count_ == 0) {
       error_summary = "\nNo errors encountered during test.\n";
@@ -112,9 +126,10 @@ void AsyncLog::SetLogFiles(std::ostream* summary, std::ostream* detail,
       error_summary = "\n" + std::to_string(log_error_count_) +
                       " ERRORS encountered. See detailed log.\n";
     }
-    *summary_out_ << error_summary;
+
+    *summary_out_ << warning_summary << error_summary;
     if (copy_summary_to_stdout_) {
-      std::cout << error_summary;
+      std::cout << warning_summary << error_summary;
     }
   }
   if (summary_out_) {
@@ -137,6 +152,7 @@ void AsyncLog::SetLogFiles(std::ostream* summary, std::ostream* detail,
   copy_summary_to_stdout_ = copy_summary_to_stdout;
   log_origin_ = log_origin;
   log_error_count_ = 0;
+  log_warning_count_ = 0;
 }
 
 void AsyncLog::StartNewTrace(std::ostream* trace_out,
@@ -329,6 +345,7 @@ class TlsLogger {
   std::vector<AsyncLogEntry>* StartReadingEntries();
   void FinishReadingEntries();
   bool ReadBufferHasBeenConsumed();
+  size_t MaxEntryVectorSize() { return max_entry_size_; }
 
   const std::string* TracePidTidString() const { return &trace_pid_tid_; }
 
@@ -373,6 +390,7 @@ class TlsLogger {
   size_t i_write_prev_ = 0;
   std::string trace_pid_tid_;  // Cached as string.
   std::string tid_as_string_;  // Cached as string.
+  size_t max_entry_size_ = kTlsLogReservedEntryCount;
 
   std::function<void()> forced_detatch_;
 };
@@ -471,6 +489,15 @@ void Logger::CollectTlsLoggerStats(TlsLogger* tls_logger) {
   tls_total_log_cas_fail_count_ += tls_logger->ReportLogCasFailCount();
   tls_total_swap_buffers_slot_retry_count_ +=
       tls_logger->ReportSwapBuffersSlotRetryCount();
+
+  size_t max_entry_vector_size = tls_logger->MaxEntryVectorSize();
+  if (max_entry_vector_size > kTlsLogReservedEntryCount) {
+    async_logger_.FlagWarning();
+    async_logger_.LogDetail("Logging allocation detected: ", "tid",
+                            tls_logger->TidAsString(), "reserved_entries",
+                            kTlsLogReservedEntryCount, "max_entries",
+                            max_entry_vector_size);
+  }
 }
 
 void Logger::StartIOThread() {
@@ -524,7 +551,7 @@ void Logger::StopTracing() {
   async_logger_.StartNewTrace(nullptr, PerfClock::now());
 }
 
-void Logger::LogContentionCounters() {
+void Logger::LogContentionAndAllocations() {
   LogDetail([&](AsyncDetail& detail) {
     {
       std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
@@ -702,6 +729,11 @@ void Logger::IOThread() {
       RemoveValue(&threads_to_read_, nullptr);
     }
 
+    // Explicitly flush every time we wake up. The goal being minimization
+    // of large implicit flushes which could affect tail latency measurements,
+    // especially at percentiles closer to 100%.
+    /// \todo Determine if explicitly flushing logs every wake up is better
+    /// than relying on implicit flushing.
     {
       auto tracer6 =
           MakeScopedTracer([](AsyncTrace& trace) { trace("FlushAll"); });
@@ -727,6 +759,9 @@ TlsLogger::TlsLogger(std::function<void()> forced_detatch)
   tid_as_string_ = ss.str();
   trace_pid_tid_ = "\"pid\": " + std::to_string(MLPERF_GET_PID()) + ", " +
                    "\"tid\": " + tid_as_string_ + ", ";
+  for (auto& entry : entries_) {
+    entry.reserve(kTlsLogReservedEntryCount);
+  }
 }
 
 TlsLogger::~TlsLogger() {}
@@ -801,6 +836,17 @@ std::vector<AsyncLogEntry>* TlsLogger::StartReadingEntries() {
 }
 
 void TlsLogger::FinishReadingEntries() {
+  // Detect first logging allocation and track max allocated size.
+  size_t new_size = entries_[i_read_].size();
+  if (new_size > max_entry_size_) {
+    if (max_entry_size_ == kTlsLogReservedEntryCount) {
+      Log([ts = PerfClock::now()](AsyncLog& log) {
+        log.TraceAsyncInstant("FirstAllocation", 0, ts);
+      });
+    }
+    max_entry_size_ = new_size;
+  }
+
   entries_[i_read_].clear();
   unread_swaps_--;
 }
@@ -842,7 +888,15 @@ TlsLoggerWrapper* InitializeMyTlsLoggerWrapper() {
   // from the thread in the Logger's destructor, which may run before
   // thread-local variables are destroyed when the loadgen is used as a python
   // module and dynamically unloaded.
-  auto forced_detatch = [&]() { tls_logger_wrapper.reset(); };
+  // Note: We capture a pointer to the tls_logger_wrapper since variables of
+  // the thread-local storage class aren't actually captured. C++ spec says
+  // only variables of the automatic storage class are captured.
+  /// \todo There is a race where the same TlsLoggerWrapper might be
+  /// destroyed both naturally and via forced_detatch. Destruction of
+  /// the TlsLoggerWrapper should be locked.
+  auto forced_detatch = [tls_logger_wrapper = &tls_logger_wrapper]() {
+    tls_logger_wrapper->reset();
+  };
   tls_logger_wrapper = std::make_unique<TlsLoggerWrapper>(forced_detatch);
   return tls_logger_wrapper.get();
 }

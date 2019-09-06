@@ -309,14 +309,20 @@ std::vector<QueryMetadata> GenerateQueries(
   auto& loaded_samples = loaded_sample_set.set;
 
   // Generate 2x more samples than we think we'll need given the expected
-  // QPS. We should exit before issuing all queries.
-  std::chrono::microseconds k2xTargetDuration = 2 * settings.target_duration;
+  // QPS in case the SUT is faster than expected.
+  // We should exit before issuing all queries.
+  // Does not apply to the server scenario since the duration only
+  // depends on the ideal scheduled time, not the actual issue time.
+  const int duration_multiplier =
+      scenario == TestScenario::Server ? 1 : 2;
+  std::chrono::microseconds gen_duration =
+      duration_multiplier * settings.target_duration;
   size_t min_queries = settings.min_query_count;
 
   // We should not exit early in accuracy mode.
   if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique ||
       settings.performance_issue_same) {
-    k2xTargetDuration = std::chrono::microseconds(0);
+    gen_duration = std::chrono::microseconds(0);
     // Integer truncation here is intentional.
     // For MultiStream, loaded samples is properly padded.
     // For Offline, we create a 'remainder' query at the end of this function.
@@ -355,7 +361,7 @@ std::vector<QueryMetadata> GenerateQueries(
   // Choose a single sample to repeat when in performance_issue_same mode
   QuerySampleIndex same_sample = settings.performance_issue_same_index;
 
-  while (timestamp <= k2xTargetDuration || queries.size() < min_queries) {
+  while (timestamp <= gen_duration || queries.size() < min_queries) {
     if (kIsMultiStream) {
       QuerySampleIndex sample_i = settings.performance_issue_unique
                                    ? sample_distribution_unique(sample_rng)
@@ -640,6 +646,10 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   PerfClock::time_point last_now = start;
   QueryScheduler<scenario> query_scheduler(settings, start);
 
+  // We can never run out of generated queries in the server scenario,
+  // since the duration depends on the scheduled query time and not
+  // the actual issue time.
+  bool ran_out_of_generated_queries = scenario != TestScenario::Server;
   size_t expected_latencies = 0;
   for (auto& query : queries) {
     auto tracer1 =
@@ -663,29 +673,6 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
     }
 
     auto duration = (last_now - start);
-    if (queries_issued >= settings.min_query_count &&
-        duration > settings.min_duration) {
-      LogDetail([](AsyncDetail& detail) {
-        detail("Ending naturally: Minimum query count and test duration met.");
-      });
-      break;
-    }
-    if (settings.max_query_count != 0 &&
-        queries_issued >= settings.max_query_count) {
-      LogDetail([queries_issued](AsyncDetail& detail) {
-        detail.Error("Ending early: Max query count reached.", "query_count",
-                     queries_issued);
-      });
-      break;
-    }
-    if (settings.max_duration.count() != 0 &&
-        duration > settings.max_duration) {
-      LogDetail([duration](AsyncDetail& detail) {
-        detail.Error("Ending early: Max test duration reached.", "duration_ns",
-                     duration.count());
-      });
-      break;
-    }
     if (scenario == TestScenario::Server) {
       size_t queries_outstanding =
           queries_issued -
@@ -697,6 +684,35 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
         });
         break;
       }
+    } else {
+      if (queries_issued >= settings.min_query_count &&
+          duration > settings.min_duration) {
+        LogDetail([](AsyncDetail& detail) {
+          detail("Ending naturally: Minimum query count and test duration met.");
+        });
+        ran_out_of_generated_queries = false;
+        break;
+      }
+    }
+
+    if (settings.max_query_count != 0 &&
+        queries_issued >= settings.max_query_count) {
+      LogDetail([queries_issued](AsyncDetail& detail) {
+        detail.Error("Ending early: Max query count reached.", "query_count",
+                     queries_issued);
+      });
+      ran_out_of_generated_queries = false;
+      break;
+    }
+
+    if (settings.max_duration.count() != 0 &&
+        duration > settings.max_duration) {
+      LogDetail([duration](AsyncDetail& detail) {
+        detail.Error("Ending early: Max test duration reached.", "duration_ns",
+                     duration.count());
+      });
+      ran_out_of_generated_queries = false;
+      break;
     }
   }
 
@@ -707,10 +723,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   // Let the SUT know it should not expect any more queries.
   sut->FlushQueries();
 
-  // The offline scenario always only has a single query, so this check
-  // doesn't apply.
-  if (scenario != TestScenario::Offline && mode == TestMode::PerformanceOnly &&
-      queries_issued >= queries.size()) {
+  if (mode == TestMode::PerformanceOnly && ran_out_of_generated_queries) {
     LogDetail([](AsyncDetail& detail) {
       detail.Error(
           "Ending early: Ran out of generated queries to issue before the "
@@ -815,9 +828,20 @@ void PerformanceSummary::ProcessLatencies() {
 bool PerformanceSummary::MinDurationMet(std::string* recommendation) {
   recommendation->clear();
   const double min_duration = DurationToSeconds(settings.min_duration);
-  bool min_duration_met = (settings.scenario == TestScenario::Offline)
-                              ? pr.max_latency > min_duration
-                              : pr.final_query_issued_time >= min_duration;
+  bool min_duration_met = false;
+  switch (settings.scenario) {
+    case TestScenario::Offline:
+      min_duration_met = pr.max_latency >= min_duration;
+      break;
+    case TestScenario::Server:
+      min_duration_met = pr.final_query_scheduled_time >= min_duration;
+      break;
+    case TestScenario::SingleStream:
+    case TestScenario::MultiStream:
+    case TestScenario::MultiStreamFree:
+      min_duration_met = pr.final_query_issued_time >= min_duration;
+      break;
+  }
   if (min_duration_met) {
     return true;
   }

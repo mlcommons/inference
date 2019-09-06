@@ -314,7 +314,8 @@ std::vector<QueryMetadata> GenerateQueries(
   size_t min_queries = settings.min_query_count;
 
   // We should not exit early in accuracy mode.
-  if (mode == TestMode::AccuracyOnly) {
+  if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique ||
+      settings.performance_issue_same) {
     k2xTargetDuration = std::chrono::microseconds(0);
     // Integer truncation here is intentional.
     // For MultiStream, loaded samples is properly padded.
@@ -335,6 +336,12 @@ std::vector<QueryMetadata> GenerateQueries(
 
   auto sample_distribution = SampleDistribution<mode>(
       loaded_sample_set.sample_distribution_end, sample_stride, &sample_rng);
+  // Use the unique sample distribution same as in AccuracyMode to 
+  // to choose samples when either flag performance_issue_unique 
+  // or performance_issue_same is set.
+  auto sample_distribution_unique = SampleDistribution<TestMode::AccuracyOnly>(
+      loaded_sample_set.sample_distribution_end, sample_stride, &sample_rng);
+
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
@@ -345,9 +352,16 @@ std::vector<QueryMetadata> GenerateQueries(
 
   std::vector<QuerySampleIndex> samples(samples_per_query);
   std::chrono::nanoseconds timestamp(0);
+  // Choose a single sample to repeat when in performance_issue_same mode
+  QuerySampleIndex same_sample = settings.performance_issue_same_index;
+
   while (timestamp <= k2xTargetDuration || queries.size() < min_queries) {
     if (kIsMultiStream) {
-      QuerySampleIndex sample_i = sample_distribution(sample_rng);
+      QuerySampleIndex sample_i = settings.performance_issue_unique
+                                   ? sample_distribution_unique(sample_rng)
+				   : settings.performance_issue_same
+				     ? same_sample
+                                     : sample_distribution(sample_rng);
       for (auto& s : samples) {
         // Select contiguous samples in the MultiStream scenario.
         // This will not overflow, since GenerateLoadableSets adds padding at
@@ -365,18 +379,25 @@ std::vector<QueryMetadata> GenerateQueries(
       size_t num_loaded_samples = loaded_samples.size();
       size_t num_full_repeats = samples_per_query / num_loaded_samples;
       int remainder = samples_per_query % (num_loaded_samples);
+      if (settings.performance_issue_same) {
+         std::fill(samples.begin(), samples.begin()+num_loaded_samples, 
+	           loaded_samples[same_sample]);
+      } else {
+         for (size_t i = 0; i < num_full_repeats; ++i) {
+           std::copy(loaded_samples.begin(), loaded_samples.end(),
+                     samples.begin() + i * num_loaded_samples);
+         }
 
-      for (size_t i = 0; i < num_full_repeats; ++i) {
-        std::copy(loaded_samples.begin(), loaded_samples.end(),
-                  samples.begin() + i * num_loaded_samples);
+         std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder,
+                   samples.begin() + num_full_repeats * num_loaded_samples);
       }
-
-      std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder,
-                samples.begin() + num_full_repeats * num_loaded_samples);
-
     } else {
       for (auto& s : samples) {
-        s = loaded_samples[sample_distribution(sample_rng)];
+        s = loaded_samples[settings.performance_issue_unique 
+	                       ? sample_distribution_unique(sample_rng)
+       	                       : settings.performance_issue_same  
+			       ? same_sample
+			       : sample_distribution(sample_rng)];
       }
     }
     queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
@@ -1020,7 +1041,7 @@ std::vector<LoadableSampleSet> GenerateLoadableSets(
   std::shuffle(samples.begin(), samples.end(), qsl_rng);
 
   // Partition the samples into loadable sets.
-  const size_t set_size = qsl->PerformanceSampleCount();
+  const size_t set_size = settings.performance_sample_count;
   const size_t set_padding =
       (settings.scenario == TestScenario::MultiStream ||
        settings.scenario == TestScenario::MultiStreamFree)
@@ -1428,9 +1449,11 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     detail("System Under Test (SUT) name: ", sut->Name());
     detail("Query Sample Library (QSL) name: ", qsl->Name());
     detail("QSL total size: ", qsl->TotalSampleCount());
-    detail("QSL performance size: ", qsl->PerformanceSampleCount());
+    detail("QSL performance size*: ", qsl->PerformanceSampleCount());
+    detail("*TestSettings (performance_sample_count_override) can override");
+    detail("*Refer to Effective Settings for actual value");
   });
-  loadgen::TestSettingsInternal sanitized_settings(requested_settings);
+  loadgen::TestSettingsInternal sanitized_settings(requested_settings, qsl);
   sanitized_settings.LogAllSettings();
 
   auto run_funcs = loadgen::RunFunctions::Get(sanitized_settings.scenario);

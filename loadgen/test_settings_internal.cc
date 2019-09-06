@@ -10,13 +10,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include "test_settings_internal.h"
+
 #include <fstream>
 #include <map>
 #include <sstream>
 #include <string>
 
 #include "logging.h"
-#include "test_settings_internal.h"
 #include "utils.h"
 
 namespace mlperf {
@@ -67,10 +68,8 @@ TestSettingsInternal::TestSettingsInternal(
       if (requested.server_target_qps >= 0.0) {
         target_qps = requested.server_target_qps;
       } else {
-        LogDetail([
-          server_target_qps = requested.server_target_qps,
-          target_qps = target_qps
-        ](AsyncDetail & detail) {
+        LogDetail([server_target_qps = requested.server_target_qps,
+                   target_qps = target_qps](AsyncDetail &detail) {
           detail.Error("Invalid value for server_target_qps requested.",
                        "requested", server_target_qps, "using", target_qps);
         });
@@ -85,10 +84,8 @@ TestSettingsInternal::TestSettingsInternal(
       if (requested.offline_expected_qps >= 0.0) {
         target_qps = requested.offline_expected_qps;
       } else {
-        LogDetail([
-          offline_expected_qps = requested.offline_expected_qps,
-          target_qps = target_qps
-        ](AsyncDetail & detail) {
+        LogDetail([offline_expected_qps = requested.offline_expected_qps,
+                   target_qps = target_qps](AsyncDetail &detail) {
           detail.Error("Invalid value for offline_expected_qps requested.",
                        "requested", offline_expected_qps, "using", target_qps);
         });
@@ -244,7 +241,7 @@ void LogRequestedTestSettings(const TestSettings &s) {
 }
 
 void TestSettingsInternal::LogEffectiveSettings() const {
-  LogDetail([s = *this](AsyncDetail & detail) {
+  LogDetail([s = *this](AsyncDetail &detail) {
     detail("");
     detail("Effective Settings:");
 
@@ -301,6 +298,9 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
 
 }  // namespace loadgen
 
+/// \todo The TestSettings::FromConfig definition belongs in a test_settings.cc
+/// file which doesn't yet exist. To avoid churn so close to the submission
+/// deadline, adding a test_settings.cc file has been deferred to v0.6.
 int TestSettings::FromConfig(const std::string &path, const std::string &model,
                              const std::string &scenario) {
   // TODO: move this method to a new file test_settings.cc
@@ -337,7 +337,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   int line_nr = 0;
   int errors = 0;
   if (!fss.is_open()) {
-    LogDetail([p = path](AsyncDetail & detail) {
+    LogDetail([p = path](AsyncDetail &detail) {
       detail.Error("can't open file ", p);
     });
     return -ENOENT;
@@ -346,7 +346,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     line_nr++;
     std::istringstream iss(line);
     std::string s, k;
-    int looking_for = 0; // 0=key, 1=equal, 2=value
+    int looking_for = 0;  // 0=key, 1=equal, 2=value
     while (iss >> s) {
       if (s == "#" && looking_for != 2) {
         // done with this line
@@ -367,14 +367,14 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
           continue;
         }
         errors++;
-        LogDetail([l = line_nr](AsyncDetail & detail) {
+        LogDetail([l = line_nr](AsyncDetail &detail) {
           detail.Error("value needs to be integer or double, line=", l);
         });
         break;
       }
       if (looking_for == 1 && s != "=") {
         errors++;
-        LogDetail([l = line_nr](AsyncDetail & detail) {
+        LogDetail([l = line_nr](AsyncDetail &detail) {
           detail.Error("expected 'key=value', line=", l);
         });
         break;
@@ -422,6 +422,6 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);
 
   return 0;
-};
+}
 
 }  // namespace mlperf

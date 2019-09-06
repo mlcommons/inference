@@ -723,7 +723,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       GlobalLogger().GetLatenciesBlocking(expected_latencies));
 
   // Log contention counters after every test as a sanity check.
-  GlobalLogger().LogContentionCounters();
+  GlobalLogger().LogContentionAndAllocations();
 
   double max_latency =
       QuerySampleLatencyToSeconds(GlobalLogger().GetMaxLatencySoFar());
@@ -765,12 +765,10 @@ struct PerformanceSummary {
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
 
-  PerformanceSummary(
-      const std::string& sut_name_arg,
-      const TestSettingsInternal& settings_arg,
-      const PerformanceResult& pr_arg)
-      : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg) {
-  };
+  PerformanceSummary(const std::string& sut_name_arg,
+                     const TestSettingsInternal& settings_arg,
+                     const PerformanceResult& pr_arg)
+      : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg){};
 
   void ProcessLatencies();
 

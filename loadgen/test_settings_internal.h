@@ -22,6 +22,8 @@ limitations under the License.
 
 #include "logging.h"
 #include "test_settings.h"
+#include "query_sample.h"
+#include "query_sample_library.h"
 
 namespace mlperf {
 
@@ -41,7 +43,8 @@ std::string ToString(TestMode mode);
 /// \details It does things like remove scenario-specific naming and introduce
 /// the concept of target_duration used to pre-generate queries.
 struct TestSettingsInternal {
-  explicit TestSettingsInternal(const TestSettings &requested_settings);
+  explicit TestSettingsInternal(const TestSettings &requested_settings,
+                                QuerySampleLibrary* qsl);
   void LogEffectiveSettings() const;
   void LogAllSettings() const;
   void LogSummary(AsyncSummary &summary) const;
@@ -73,6 +76,11 @@ struct TestSettingsInternal {
   uint64_t schedule_rng_seed;
   uint64_t accuracy_log_rng_seed;
   double accuracy_log_probability;
+
+  bool performance_issue_unique;
+  bool performance_issue_same;
+  uint64_t performance_issue_same_index;
+  uint64_t performance_sample_count;
 };
 
 /// \brief A namespace of collections of FindPeakPerformance helper functions,

@@ -388,10 +388,40 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   size_t val;
 
   // keys that apply to all scenarios
+  if (lookupkv(model, scenario, "mode", &val, nullptr)) {
+     switch (val) {
+       case 0 : mode = TestMode::SubmissionRun;
+                break;
+       case 1 : mode = TestMode::AccuracyOnly;
+                break;
+       case 2 : mode = TestMode::PerformanceOnly;
+                break;
+       case 3 : mode = TestMode::FindPeakPerformance;
+                break;
+     }
+  }
   lookupkv(model, scenario, "min_duration", &min_duration_ms, nullptr);
   lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);
   lookupkv(model, scenario, "min_query_count", &min_query_count, nullptr);
   lookupkv(model, scenario, "max_query_count", &max_query_count, nullptr);
+  lookupkv(model, scenario, "qsl_rng_seed", &qsl_rng_seed, nullptr);
+  lookupkv(model, scenario, "sample_index_rng_seed", &sample_index_rng_seed,
+           nullptr);
+  lookupkv(model, scenario, "schedule_rng_seed", &schedule_rng_seed, nullptr);
+  lookupkv(model, scenario, "accuracy_log_rng_seed", &accuracy_log_rng_seed,
+           nullptr);
+  lookupkv(model, scenario, "accuracy_log_probability", nullptr,
+           &accuracy_log_probability, 0.01);
+  if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr)) {
+     performance_issue_unique = (val == 0) ? false : true; 
+  }
+  if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr)) {
+     performance_issue_same = (val == 0) ? false : true;
+  }
+  lookupkv(model, scenario, "performance_issue_same_index",
+           &performance_issue_same_index, nullptr);
+  lookupkv(model, scenario, "performance_sample_count_override", 
+           &performance_sample_count_override, nullptr);
 
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,

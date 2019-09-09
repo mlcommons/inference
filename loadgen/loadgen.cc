@@ -1426,7 +1426,7 @@ struct RunFunctions {
 }  // namespace loadgen
 
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-               const TestSettings& requested_settings,
+               TestSettings& requested_settings,
                const LogSettings& log_settings) {
   GlobalLogger().StartIOThread();
 
@@ -1453,6 +1453,24 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     detail("*TestSettings (performance_sample_count_override) can override");
     detail("*Refer to Effective Settings for actual value");
   });
+
+  // Look for Audit Config file to override TestSettings during audit
+  std::ifstream audit_config("audit.config");
+  if (audit_config.good()) {
+    LogDetail([] (AsyncDetail& detail) {
+      detail("Found Audit Config file (audit.config).",
+              " Overriding TestSettings from audit.config file.");
+    });
+    std::string audit_scenario = loadgen::ToString(requested_settings.scenario);
+    // Remove Spaces from the string
+    audit_scenario.erase(remove(audit_scenario.begin(), audit_scenario.end(),
+                         ' '), audit_scenario.end());
+    const std::string generic_model = "*";
+    const std::string audit_config_filename = "audit.config";
+    requested_settings.FromConfig(audit_config_filename, generic_model, 
+                                  audit_scenario);
+  }
+
   loadgen::TestSettingsInternal sanitized_settings(requested_settings, qsl);
   sanitized_settings.LogAllSettings();
 

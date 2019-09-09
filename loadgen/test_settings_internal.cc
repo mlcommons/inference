@@ -412,15 +412,13 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
            nullptr);
   lookupkv(model, scenario, "accuracy_log_probability", nullptr,
            &accuracy_log_probability, 0.01);
-  if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr)) {
-     performance_issue_unique = (val == 0) ? false : true; 
-  }
-  if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr)) {
+  if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr))
+     performance_issue_unique = (val == 0) ? false : true;
+  if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr))
      performance_issue_same = (val == 0) ? false : true;
-  }
   lookupkv(model, scenario, "performance_issue_same_index",
            &performance_issue_same_index, nullptr);
-  lookupkv(model, scenario, "performance_sample_count_override", 
+  lookupkv(model, scenario, "performance_sample_count_override",
            &performance_sample_count_override, nullptr);
 
   // keys that apply to SingleStream

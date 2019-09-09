@@ -58,7 +58,7 @@ These benchmarks have been tested on the following machine configuration:
   * Cuda10.0, TF 1.14
 
 * Tested HW configurations:
-  * Intel(R) Core(TM) i7-8700K CPU @ 3.70GHz with 12 PCUs with one Titan XP
+  * Intel(R) Core(TM) i7-8700K CPU @ 3.70GHz with 12 threads (vCPUs) and one Titan XP
   * 64G DRAM
   * 200G Disk (recommmended)
 

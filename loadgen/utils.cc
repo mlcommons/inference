@@ -28,10 +28,12 @@ std::string DoubleToString(double value, int precision) {
 }
 
 namespace {
-std::string CurrentDateTime(const char* format, bool append_ms) {
-  auto now = std::chrono::system_clock::now();
-  std::time_t now_time_t = std::chrono::system_clock::to_time_t(now);
-  std::tm date_time = *std::localtime(&now_time_t);
+
+std::string DateTimeString(const char* format,
+                           std::chrono::system_clock::time_point tp,
+                           bool append_ms) {
+  std::time_t tp_time_t = std::chrono::system_clock::to_time_t(tp);
+  std::tm date_time = *std::localtime(&tp_time_t);
   constexpr size_t kDateTimeMaxSize = 256;
   char date_time_cstring[kDateTimeMaxSize];
   std::strftime(date_time_cstring, kDateTimeMaxSize, format, &date_time);
@@ -40,9 +42,9 @@ std::string CurrentDateTime(const char* format, bool append_ms) {
     return date_time_string;
   }
 
-  auto now_time_t_part = std::chrono::system_clock::from_time_t(now_time_t);
-  auto now_remainder = now - now_time_t_part;
-  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(now_remainder)
+  auto tp_time_t_part = std::chrono::system_clock::from_time_t(tp_time_t);
+  auto tp_remainder = tp - tp_time_t_part;
+  auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(tp_remainder)
                 .count();
   if (ms < 0 || ms >= 1000) {
     LogDetail([ms](AsyncDetail& detail) {
@@ -55,14 +57,15 @@ std::string CurrentDateTime(const char* format, bool append_ms) {
   ms_string.insert(0, std::min<size_t>(2, 3 - ms_string.length()), '0');
   return date_time_string + "." + ms_string;
 }
+
 }  // namespace
 
 std::string CurrentDateTimeISO8601() {
-  return CurrentDateTime("%FT%TZ", false);
+  return DateTimeString("%FT%TZ", std::chrono::system_clock::now(), false);
 }
 
-std::string CurrentDateTimeForPower() {
-  return CurrentDateTime("%m-%d-%Y %T", true);
+std::string DateTimeStringForPower(std::chrono::system_clock::time_point tp) {
+  return DateTimeString("%m-%d-%Y %T", tp, true);
 }
 
 }  // namespace mlperf

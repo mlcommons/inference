@@ -203,9 +203,13 @@ class AsyncLog {
     *trace_out_ << " }},\n";
   }
 
-  void RestartLatencyRecording(uint64_t first_sample_sequence_id);
-  void RecordLatency(uint64_t sample_sequence_id, QuerySampleLatency latency);
+  void RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve);
+  void RecordSampleCompletion(
+      uint64_t sample_sequence_id,
+      PerfClock::time_point completion_time,
+      QuerySampleLatency latency);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
+  PerfClock::time_point GetMaxCompletionTime();
   QuerySampleLatency GetMaxLatencySoFar();
 
  private:
@@ -262,6 +266,7 @@ class AsyncLog {
   uint64_t latencies_first_sample_sequence_id_ = 0;
   std::vector<QuerySampleLatency> latencies_;
   std::atomic<QuerySampleLatency> max_latency_{0};
+  PerfClock::time_point max_completion_timstamp_;
   size_t latencies_recorded_ = 0;
   size_t latencies_expected_ = 0;
   // Must be called with latencies_mutex_ held.
@@ -289,8 +294,9 @@ class Logger {
 
   void LogContentionAndAllocations();
 
-  void RestartLatencyRecording(uint64_t first_sample_sequence_id);
+  void RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
+  PerfClock::time_point GetMaxCompletionTime();
   QuerySampleLatency GetMaxLatencySoFar();
 
  private:

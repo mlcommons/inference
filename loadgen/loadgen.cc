@@ -234,7 +234,8 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
       // Record the latency at the end, since it will unblock the issuing
       // thread and potentially destroy the metadata being used above.
       QuerySampleLatency latency = sched.delta(complete_begin_time);
-      log.RecordLatency(sample->sequence_id, latency);
+      log.RecordSampleCompletion(sample->sequence_id, complete_begin_time,
+                                 latency);
     });
   }
 
@@ -605,7 +606,6 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                const TestSettingsInternal& settings,
                                const LoadableSampleSet& loaded_sample_set,
                                SequenceGen* sequence_gen) {
-  GlobalLogger().RestartLatencyRecording(sequence_gen->CurrentSampleId());
   ResponseDelegateDetailed<scenario, mode> response_logger;
   std::uniform_real_distribution<double> accuracy_log_offset_dist =
       std::uniform_real_distribution<double>(0.0, 1.0);
@@ -614,8 +614,15 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       accuracy_log_offset_dist(accuracy_log_offset_rng);
   response_logger.accuracy_log_prob = settings.accuracy_log_probability;
 
+  auto sequence_id_start = sequence_gen->CurrentSampleId();
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(
       settings, loaded_sample_set, sequence_gen, &response_logger);
+  auto sequence_id_end = sequence_gen->CurrentSampleId();
+  size_t max_latencies_to_record =  sequence_id_end - sequence_id_start;
+
+  GlobalLogger().RestartLatencyRecording(
+        sequence_id_start,
+        max_latencies_to_record);
 
   size_t queries_issued = 0;
   // TODO: Replace the constant 5 below with a TestSetting.
@@ -626,10 +633,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   const size_t max_queries_outstanding =
       settings.target_qps * query_seconds_outstanding_threshold;
 
-  LogDetail([date_time = CurrentDateTimeForPower()](AsyncDetail& detail) {
-    detail("POWER_BEGIN: ", "mode", ToString(mode), "time", date_time);
-  });
-
+  auto start_for_power = std::chrono::system_clock::now();
   const PerfClock::time_point start = PerfClock::now();
   PerfClock::time_point last_now = start;
   QueryScheduler<scenario> query_scheduler(settings, start);
@@ -694,10 +698,6 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
     }
   }
 
-  LogDetail([date_time = CurrentDateTimeForPower()](AsyncDetail& detail) {
-    detail("POWER_END: ", "mode", ToString(mode), "time", date_time);
-  });
-
   // Let the SUT know it should not expect any more queries.
   sut->FlushQueries();
 
@@ -724,6 +724,21 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
 
   // Log contention counters after every test as a sanity check.
   GlobalLogger().LogContentionAndAllocations();
+
+  // This properly accounts for the fact that the max completion time may not
+  // belong to the final query. It also excludes any time spent postprocessing
+  // in the loadgen itself after final completion, which may be significant
+  // in the offline scenario.
+  PerfClock::time_point max_completion_time =
+      GlobalLogger().GetMaxCompletionTime();
+  auto sut_active_duration = max_completion_time - start;
+  LogDetail([start_for_power, sut_active_duration](AsyncDetail& detail) {
+    auto end_for_power = start_for_power + sut_active_duration;
+    detail("POWER_BEGIN: ", "mode", ToString(mode), "time",
+           DateTimeStringForPower(start_for_power));
+    detail("POWER_END: ", "mode", ToString(mode), "time",
+           DateTimeStringForPower(end_for_power));
+  });
 
   double max_latency =
       QuerySampleLatencyToSeconds(GlobalLogger().GetMaxLatencySoFar());

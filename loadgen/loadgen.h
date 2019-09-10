@@ -55,7 +55,7 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 /// C entry point.
 ///
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
-               TestSettings& requested_settings,
+               const TestSettings& requested_settings,
                const LogSettings& log_settings);
 
 /// @}

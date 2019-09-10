@@ -39,6 +39,15 @@ limitations under the License.
 #define MLPERF_GET_PID() getpid()
 #endif
 
+// Use system-level TID for tracing. This enables correlation with other
+// performance tools that are not aware of C++ std::thread::id.
+#if defined(__linux__)
+#include <sys/syscall.h>
+#define MLPERF_GET_TID() syscall(SYS_gettid)
+#else
+#define MLPERF_GET_TID() std::this_thread::get_id()
+#endif
+
 #include "utils.h"
 
 namespace mlperf {
@@ -97,9 +106,34 @@ const std::string ArgValueTransform(const LogBinaryAsHexString& value) {
   return hex;
 }
 
-AsyncLog::AsyncLog() = default;
+ChromeTracer::ChromeTracer(std::ostream* out, PerfClock::time_point origin)
+    : out_(out), origin_(origin) {
+  WriteTraceEventHeader();
+}
 
-AsyncLog::~AsyncLog() { StartNewTrace(nullptr, PerfClock::now()); }
+ChromeTracer::~ChromeTracer() {
+  WriteTraceEventFooter();
+  out_->flush();
+}
+
+void ChromeTracer::WriteTraceEventHeader() {
+  *out_ << "{ \"traceEvents\": [\n";
+}
+
+void ChromeTracer::WriteTraceEventFooter() {
+  *out_ << "{ \"name\": \"LastTrace\" }\n"
+        << "],\n"
+        << "\"displayTimeUnit\": \"ns\",\n"
+        << "\"otherData\": {\n"
+        << "\"version\": \"MLPerf LoadGen v0.5a0\"\n"
+        << "}\n"
+        << "}\n";
+}
+
+void AsyncLog::SetCurrentPidTid(uint64_t pid, uint64_t tid) {
+  current_pid_ = pid;
+  current_tid_ = tid;
+}
 
 void AsyncLog::SetLogFiles(std::ostream* summary, std::ostream* detail,
                            std::ostream* accuracy, bool copy_detail_to_stdout,
@@ -158,18 +192,16 @@ void AsyncLog::SetLogFiles(std::ostream* summary, std::ostream* detail,
 void AsyncLog::StartNewTrace(std::ostream* trace_out,
                              PerfClock::time_point origin) {
   std::unique_lock<std::mutex> lock(trace_mutex_);
-  // Cleanup previous trace.
-  if (trace_out_) {
-    WriteTraceEventFooterLocked();
-    trace_out_->flush();
+  if (trace_out) {
+    tracer_ = std::make_unique<ChromeTracer>(trace_out, origin);
+  } else {
+    tracer_.reset();
   }
+}
 
-  // Setup new trace.
-  trace_out_ = trace_out;
-  trace_origin_ = origin;
-  if (trace_out_) {
-    WriteTraceEventHeaderLocked();
-  }
+void AsyncLog::StopTrace() {
+  std::unique_lock<std::mutex> lock(trace_mutex_);
+  tracer_.reset();
 }
 
 void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
@@ -201,8 +233,8 @@ void AsyncLog::Flush() {
 
   {
     std::unique_lock<std::mutex> lock(trace_mutex_);
-    if (trace_out_) {
-      trace_out_->flush();
+    if (tracer_) {
+      tracer_->Flush();
     }
   }
 }
@@ -213,20 +245,6 @@ void AsyncLog::WriteAccuracyHeaderLocked() {
 }
 
 void AsyncLog::WriteAccuracyFooterLocked() { *accuracy_out_ << "\n]\n"; }
-
-void AsyncLog::WriteTraceEventHeaderLocked() {
-  *trace_out_ << "{ \"traceEvents\": [\n";
-}
-
-void AsyncLog::WriteTraceEventFooterLocked() {
-  *trace_out_ << "{ \"name\": \"LastTrace\" }\n"
-              << "],\n"
-              << "\"displayTimeUnit\": \"ns\",\n"
-              << "\"otherData\": {\n"
-              << "\"version\": \"MLPerf LoadGen v0.5a0\"\n"
-              << "}\n"
-              << "}\n";
-}
 
 void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve) {
   std::unique_lock<std::mutex> lock(latencies_mutex_);
@@ -353,9 +371,8 @@ class TlsLogger {
   bool ReadBufferHasBeenConsumed();
   size_t MaxEntryVectorSize() { return max_entry_size_; }
 
-  const std::string* TracePidTidString() const { return &trace_pid_tid_; }
-
-  const std::string* TidAsString() const { return &tid_as_string_; }
+  uint64_t Pid() const { return pid_; }
+  uint64_t Tid() const { return tid_; }
 
   void RequestSwapBuffersSlotRetried() {
     swap_buffers_slot_retry_count_.fetch_add(1, std::memory_order_relaxed);
@@ -394,8 +411,8 @@ class TlsLogger {
   // Accessed by consumer only.
   size_t unread_swaps_ = 0;
   size_t i_write_prev_ = 0;
-  std::string trace_pid_tid_;  // Cached as string.
-  std::string tid_as_string_;  // Cached as string.
+  uint64_t pid_;
+  uint64_t tid_;
   size_t max_entry_size_ = kTlsLogReservedEntryCount;
 
   std::function<void()> forced_detatch_;
@@ -500,7 +517,7 @@ void Logger::CollectTlsLoggerStats(TlsLogger* tls_logger) {
   if (max_entry_vector_size > kTlsLogReservedEntryCount) {
     async_logger_.FlagWarning();
     async_logger_.LogDetail("Logging allocation detected: ", "tid",
-                            tls_logger->TidAsString(), "reserved_entries",
+                            tls_logger->Tid(), "reserved_entries",
                             kTlsLogReservedEntryCount, "max_entries",
                             max_entry_vector_size);
   }
@@ -554,7 +571,7 @@ void Logger::StopTracing() {
   std::promise<void> io_thread_flushed_this_thread;
   Log([&](AsyncLog&) { io_thread_flushed_this_thread.set_value(); });
   io_thread_flushed_this_thread.get_future().wait();
-  async_logger_.StartNewTrace(nullptr, PerfClock::now());
+  async_logger_.StopTrace();
 }
 
 void Logger::LogContentionAndAllocations() {
@@ -713,8 +730,8 @@ void Logger::IOThread() {
       // Read from the threads we are confident have activity.
       for (std::vector<TlsLogger*>::iterator thread = threads_to_read_.begin();
            thread != threads_to_read_.end(); thread++) {
-        auto tracer5 = MakeScopedTracer(
-            [tid = *(*thread)->TidAsString()](AsyncTrace& trace) {
+        auto tracer5 =
+            MakeScopedTracer([tid = (*thread)->Tid()](AsyncTrace& trace) {
               trace("Thread", "tid", tid);
             });
         std::vector<AsyncLogEntry>* entries = (*thread)->StartReadingEntries();
@@ -723,8 +740,7 @@ void Logger::IOThread() {
           continue;
         }
 
-        async_logger_.SetCurrentTracePidTidString(
-            (*thread)->TracePidTidString());
+        async_logger_.SetCurrentPidTid((*thread)->Pid(), (*thread)->Tid());
         for (auto& entry : *entries) {
           // Execute the entry to perform the serialization and I/O.
           entry(async_logger_);
@@ -763,12 +779,9 @@ void Logger::IOThread() {
 }
 
 TlsLogger::TlsLogger(std::function<void()> forced_detatch)
-    : forced_detatch_(std::move(forced_detatch)) {
-  std::stringstream ss;
-  ss << std::this_thread::get_id();
-  tid_as_string_ = ss.str();
-  trace_pid_tid_ = "\"pid\": " + std::to_string(MLPERF_GET_PID()) + ", " +
-                   "\"tid\": " + tid_as_string_ + ", ";
+  : pid_(MLPERF_GET_PID()),
+    tid_(MLPERF_GET_TID()),
+    forced_detatch_(std::move(forced_detatch)) {
   for (auto& entry : entries_) {
     entry.reserve(kTlsLogReservedEntryCount);
   }

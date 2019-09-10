@@ -184,6 +184,48 @@ REGISTER_TEST_ALL_SCENARIOS(AccuracyIncludesAllSamples,
                             TestProxy<TestAccuracyIncludesAllSamples>(), 4, 0,
                             0);
 
+/// \brief Verifies samples from the QSL aren't included too many times.
+/// \detail This is a regression test for:
+/// https://github.com/mlperf/inference/pull/386
+/// The root cause was using different values for samples_per_query while
+/// generating queries for the GNMT dataset.
+/// \ingroup LoadgenTestsBasic
+struct TestAccuracyDupesAreLimitted : public SystemUnderTestAccuracy {
+  void SetUpTest(bool, mlperf::TestScenario scenario) {
+    SystemUnderTestAccuracy::SetUpTest(4, 0, 0, scenario);
+    total_sample_count_ = 3003;
+    performance_sample_count_ = 1001;
+  }
+
+  void EndTest() override {
+    std::sort(issued_samples_.begin(), issued_samples_.end());
+
+    FAIL_IF(issued_samples_.size() < total_sample_count_) &&
+        FAIL_EXP(issued_samples_.size()) && FAIL_EXP(total_sample_count_);
+    FAIL_IF(issued_samples_.front() != 0) && FAIL_EXP(issued_samples_.front());
+    FAIL_IF(issued_samples_.back() != total_sample_count_ - 1) &&
+        FAIL_EXP(issued_samples_.back()) && FAIL_EXP(total_sample_count_);
+
+    std::vector<size_t> issue_counts(total_sample_count_, 0);
+    for (auto s : issued_samples_) {
+      issue_counts.at(s)++;
+    }
+
+    const bool multistream =
+        test_settings_.scenario == mlperf::TestScenario::MultiStream ||
+        test_settings_.scenario == mlperf::TestScenario::MultiStreamFree;
+    const size_t max_count = multistream ? 2 : 1;
+
+    for (size_t i = 0; i < issue_counts.size(); i++) {
+      FAIL_IF(issue_counts[i] > max_count) &&
+          FAIL_EXP(i) && FAIL_EXP(max_count) && FAIL_EXP(issue_counts[i]);
+    }
+  }
+};
+
+REGISTER_TEST_ALL_SCENARIOS(TestAccuracyDupesAreLimitted,
+                            TestProxy<TestAccuracyDupesAreLimitted>(), true);
+
 /// \brief Verifies offline + accuracy doesn't hang if the last set
 /// in the accuracy series is smaller than others.
 /// \ingroup LoadgenTestsBasic

@@ -398,6 +398,10 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
                 break;
        case 3 : mode = TestMode::FindPeakPerformance;
                 break;
+       default : LogDetail([val = val](AsyncDetail &detail) {
+                   detail.Error("Invalid value passed to Mode key in config.");
+		 });
+		 break;
      }
   }
   lookupkv(model, scenario, "min_duration", &min_duration_ms, nullptr);

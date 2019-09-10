@@ -1503,8 +1503,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     });
     std::string audit_scenario = loadgen::ToString(test_settings.scenario);
     // Remove Spaces from the string
-    audit_scenario.erase(remove(audit_scenario.begin(), audit_scenario.end(),
-                         ' '), audit_scenario.end());
+    RemoveValue(&audit_scenario, ' ');
     const std::string generic_model = "*";
     const std::string audit_config_filename = "audit.config";
     test_settings.FromConfig(audit_config_filename, generic_model, 

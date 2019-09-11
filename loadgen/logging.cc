@@ -28,6 +28,7 @@ limitations under the License.
 
 #include <cassert>
 #include <future>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
@@ -117,15 +118,18 @@ ChromeTracer::~ChromeTracer() {
 }
 
 void ChromeTracer::WriteTraceEventHeader() {
-  *out_ << "{ \"traceEvents\": [\n";
+  // Times and durations are converted from nanoseconds to microseconds, use
+  // 3 decimal digits to preserve precision.
+  *out_ << std::fixed << std::setprecision(3) << "{\"traceEvents\":[\n";
 }
 
 void ChromeTracer::WriteTraceEventFooter() {
-  *out_ << "{ \"name\": \"LastTrace\" }\n"
+  *out_ << "{\"name\":\"LastTrace\"}\n"
         << "],\n"
-        << "\"displayTimeUnit\": \"ns\",\n"
-        << "\"otherData\": {\n"
-        << "\"version\": \"MLPerf LoadGen v0.5a0\"\n"
+        << "\"displayTimeUnit\":\"ns\",\n"
+        << "\"otherData\":{\n"
+        << "\"ts\":" << NanoToMicroString(origin_.time_since_epoch()) << ",\n"
+        << "\"version\":\"MLPerf LoadGen v0.5a0\"\n"
         << "}\n"
         << "}\n";
 }

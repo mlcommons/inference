@@ -1495,8 +1495,8 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   TestSettings test_settings = requested_settings;
   // Look for Audit Config file to override TestSettings during audit
-  std::ifstream audit_config("audit.config");
-  if (audit_config.good()) {
+  const std::string audit_config_filename = "audit.config";
+  if (FileExists(audit_config_filename)) {
     LogDetail([] (AsyncDetail& detail) {
       detail("Found Audit Config file (audit.config)."
               " Overriding TestSettings from audit.config file.");
@@ -1505,7 +1505,6 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     // Remove Spaces from the string
     RemoveValue(&audit_scenario, ' ');
     const std::string generic_model = "*";
-    const std::string audit_config_filename = "audit.config";
     test_settings.FromConfig(audit_config_filename, generic_model, 
                                   audit_scenario);
   }

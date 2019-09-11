@@ -32,7 +32,9 @@ limitations under the License.
 #include <sstream>
 
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+#define WIN32_LEAN_AND_MEAN
 #include <process.h>
+#include <windows.h>
 #define MLPERF_GET_PID() _getpid()
 #else
 #include <unistd.h>
@@ -44,7 +46,10 @@ limitations under the License.
 #if defined(__linux__)
 #include <sys/syscall.h>
 #define MLPERF_GET_TID() syscall(SYS_gettid)
+#elif defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+#define MLPERF_GET_TID() GetCurrentThreadId()
 #else
+// TODO: std::this_thread::id is a class but MLPERF_GET_TID() assigned to uint64_t
 #define MLPERF_GET_TID() std::this_thread::get_id()
 #endif
 

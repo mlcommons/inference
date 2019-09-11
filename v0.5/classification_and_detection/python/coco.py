@@ -97,7 +97,7 @@ class Coco(dataset.Dataset):
             self.label_list.append((img["category"], img["bbox"]))
 
             # limit the dataset if requested
-            if self.count and len(self.image_list) > self.count:
+            if self.count and len(self.image_list) >= self.count:
                 break
 
         time_taken = time.time() - start
@@ -133,6 +133,7 @@ class PostProcessCoco:
         self.results = []
         self.good = 0
         self.total = 0
+        self.content_ids = []
         self.use_inv_map = False
 
     def add_results(self, results):
@@ -145,6 +146,8 @@ class PostProcessCoco:
         # batch size
         bs = len(results[0])
         for idx in range(0, bs):
+            # keep the content_id from loadgen to handle content_id's without results
+            self.content_ids.append(ids[idx])
             processed_results.append([])
             detection_num = int(results[0][idx])
             detection_boxes = results[1][idx]
@@ -183,12 +186,14 @@ class PostProcessCoco:
         detections = []
         image_indices = []
         for batch in range(0, len(self.results)):
+            image_indices.append(self.content_ids[batch])
             for idx in range(0, len(self.results[batch])):
                 detection = self.results[batch][idx]
                 # this is the index of the coco image
                 image_idx = int(detection[0])
-                # because we need to have the
-                image_indices.append(image_idx)
+                if image_idx != self.content_ids[batch]:
+                    # this index thingies are error prone - extra check to make sure it is consistent
+                    log.error("image_idx missmatch, lg={} / result={}".format(image_idx, self.content_ids[batch]))
                 # map the index to the coco image id
                 detection[0] = ds.image_ids[image_idx]
                 height, width = ds.image_sizes[image_idx]
@@ -210,22 +215,8 @@ class PostProcessCoco:
                     detection[6] =  cat_id
                 detections.append(np.array(detection))
 
-        if output_dir:
-            # for debugging
-            pp = []
-            for image_idx, detection in zip(image_indices, detections):
-                pp.append({"image_id": int(detection[0]),
-                           "image_loc": ds.get_item_loc(image_idx),
-                           "category_id": int(detection[6]),
-                           "bbox": [float(detection[1]), float(detection[2]),
-                                    float(detection[3]), float(detection[4])],
-                           "score": float(detection[5])})
-            fname = "{}.json".format(result_dict["scenario"])
-            with open(fname, "w") as fp:
-                json.dump(pp, fp, sort_keys=True, indent=4)
-
-        
-        image_ids = list(set([i[0] for i in detections]))
+        # map indices to coco image id's
+        image_ids = [ds.image_ids[i]  for i in image_indices]
         self.results = []
         cocoGt = pycoco.COCO(ds.annotation_file)
         cocoDt = cocoGt.loadRes(np.array(detections))

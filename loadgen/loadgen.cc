@@ -320,6 +320,11 @@ std::vector<QueryMetadata> GenerateQueries(
       duration_multiplier * settings.target_duration;
   size_t min_queries = settings.min_query_count;
 
+  size_t samples_per_query = settings.samples_per_query;
+  if (mode == TestMode::AccuracyOnly && scenario == TestScenario::Offline) {
+    samples_per_query = loaded_sample_set.sample_distribution_end;
+  }
+
   // We should not exit early in accuracy mode.
   if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique ||
       settings.performance_issue_same) {
@@ -327,7 +332,7 @@ std::vector<QueryMetadata> GenerateQueries(
     // Integer truncation here is intentional.
     // For MultiStream, loaded samples is properly padded.
     // For Offline, we create a 'remainder' query at the end of this function.
-    min_queries = loaded_samples.size() / settings.samples_per_query;
+    min_queries = loaded_samples.size() / samples_per_query;
   }
 
   std::vector<QueryMetadata> queries;
@@ -339,7 +344,7 @@ std::vector<QueryMetadata> GenerateQueries(
 
   constexpr bool kIsMultiStream = scenario == TestScenario::MultiStream ||
                                   scenario == TestScenario::MultiStreamFree;
-  const size_t sample_stride = kIsMultiStream ? settings.samples_per_query : 1;
+  const size_t sample_stride = kIsMultiStream ? samples_per_query : 1;
 
   auto sample_distribution = SampleDistribution<mode>(
       loaded_sample_set.sample_distribution_end, sample_stride, &sample_rng);
@@ -351,11 +356,6 @@ std::vector<QueryMetadata> GenerateQueries(
 
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
-
-  size_t samples_per_query = settings.samples_per_query;
-  if (mode == TestMode::AccuracyOnly && scenario == TestScenario::Offline) {
-    samples_per_query = loaded_sample_set.sample_distribution_end;
-  }
 
   std::vector<QuerySampleIndex> samples(samples_per_query);
   std::chrono::nanoseconds timestamp(0);

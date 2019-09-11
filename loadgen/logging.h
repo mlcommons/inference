@@ -129,7 +129,7 @@ class ChromeTracer {
     *out_ << "{\"name\":\"" << name << "\","
           << "\"ph\": \"C\","
           << "\"pid\":" << pid << ","
-          << "\"ts\":" << NanoToMicroString(time - origin_)<< ","
+          << "\"ts\":" << NanoToMicroString(time - origin_) << ","
           << "\"args\":{ ";
     AddArgs(args...);
     *out_ << "}},\n";
@@ -174,11 +174,6 @@ class ChromeTracer {
   void WriteTraceEventFooter();
 
   void AddArgs() {}
-
-  template <typename T>
-  void AddArgs(const T& value_only) {
-    *out_ << ArgValueTransform(value_only);
-  }
 
   template <typename T>
   void AddArgs(const std::string& arg_name,

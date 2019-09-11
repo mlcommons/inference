@@ -192,7 +192,7 @@ class PostProcessCoco:
                 # this is the index of the coco image
                 image_idx = int(detection[0])
                 if image_idx != self.content_ids[batch]:
-                    # this index thingies are error prone - extra check to make sure it is consistent
+                    # working with the coco index/id is error prone - extra check to make sure it is consistent
                     log.error("image_idx missmatch, lg={} / result={}".format(image_idx, self.content_ids[batch]))
                 # map the index to the coco image id
                 detection[0] = ds.image_ids[image_idx]

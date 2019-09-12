@@ -19,7 +19,6 @@ limitations under the License.
 #include <algorithm>
 #include <atomic>
 #include <cassert>
-#include <cinttypes>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -80,8 +79,8 @@ class ChromeTracer {
           << "\"ph\":\"X\","
           << "\"pid\":" << pid << ","
           << "\"tid\":" << tid << ","
-          << "\"ts\":" << NanoToMicroString(start - origin_) << ","
-          << "\"dur\":" << NanoToMicroString(end - start) << ","
+          << "\"ts\":" << Micros(start - origin_).count() << ","
+          << "\"dur\":" << Micros(end - start).count() << ","
           << "\"args\":{";
     AddArgs(args...);
     *out_ << "}},\n";
@@ -94,7 +93,7 @@ class ChromeTracer {
           << "\"cat\":\"default\","
           << "\"ph\":\"b\","
           << "\"id\":" << id << ","
-          << "\"ts\":" << NanoToMicroString(time - origin_) << ","
+          << "\"ts\":" << Micros(time - origin_).count() << ","
           << "\"args\":{";
     AddArgs(args...);
     *out_ << "}},\n";
@@ -107,7 +106,7 @@ class ChromeTracer {
           << "\"cat\":\"default\","
           << "\"ph\":\"n\","
           << "\"id\":" << id << ","
-          << "\"ts\":" << NanoToMicroString(time - origin_) << ","
+          << "\"ts\":" << Micros(time - origin_).count() << ","
           << "\"args\":{";
     AddArgs(args...);
     *out_ << "}},\n";
@@ -120,7 +119,7 @@ class ChromeTracer {
           << "\"cat\":\"default\","
           << "\"ph\":\"e\", "
           << "\"id\":" << id << ","
-          << "\"ts\":" << NanoToMicroString(time - origin_) << "},\n";
+          << "\"ts\":" << Micros(time - origin_).count() << "},\n";
   }
 
   template <typename... Args>
@@ -129,7 +128,7 @@ class ChromeTracer {
     *out_ << "{\"name\":\"" << name << "\","
           << "\"ph\": \"C\","
           << "\"pid\":" << pid << ","
-          << "\"ts\":" << NanoToMicroString(time - origin_) << ","
+          << "\"ts\":" << Micros(time - origin_).count() << ","
           << "\"args\":{ ";
     AddArgs(args...);
     *out_ << "}},\n";
@@ -138,37 +137,7 @@ class ChromeTracer {
   void Flush() { out_->flush(); }
 
  private:
-  // Print as floating point microsecond string from integer nanoseconds.
-  // Prints the integer value and adds zeros + decimal as needed.
-  // This only works if called from a single thread, which is currently true.
-  const char* NanoToMicroString(std::chrono::nanoseconds ns) {
-    constexpr int kMaxSize = 64;
-    constexpr int kPrependZerosSize = 4;
-    static char buffer[kMaxSize + kPrependZerosSize];
-    static char* buffer_non_zeros = buffer + kPrependZerosSize;
-    int length = snprintf(buffer_non_zeros, kMaxSize, "%" PRIi64, ns.count());
-    if (length > kMaxSize - 1) {
-      // The number was too large, which shouldn't happen.
-      assert(false);
-    } else if (length >= 4) {
-      for (int i : { 0, 1, 2, 3 }) {
-        buffer_non_zeros[length - i + 1] = buffer_non_zeros[length - i];
-      }
-      buffer_non_zeros[length - 3] = '.';
-      return buffer_non_zeros;
-    } else if (length > 0) {
-      for (int i = 0; i < kPrependZerosSize; i++) {
-        buffer[i] = '0';
-      }
-      int decimal_place = kPrependZerosSize + length - 4;
-      buffer[decimal_place] = '.';
-      return &(buffer[decimal_place - 1]);
-    } else {
-      // snprintf encountered an encoding error, which shouldn't happen.
-      assert(false);
-    }
-    return "0";
-  }
+  using Micros = std::chrono::duration<double, std::micro>;
 
   void WriteTraceEventHeader();
   void WriteTraceEventFooter();

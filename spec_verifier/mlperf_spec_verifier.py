@@ -44,6 +44,9 @@ requested_string = 'Requested Settings:'
 effective_index = find_string(log_lines, effective_string)
 requested_index = find_string(log_lines, requested_string)
 
+if effective_index == None or requested_index == None:
+  print("\nUnable to parse log file properly. Please check for any errors.")
+
 effective_settings = log_lines[effective_index+1:requested_index-1]
 effective_dict = {}
 
@@ -60,6 +63,7 @@ def find_char(character, string):
 def slice_char(string, character, index):
     """Slices a string to remove everything before a specific character."""
     return string[find_char(character, string)[index] + 2:]
+    # + 2 because the first character of the attribute exists 2 characters after the colon.
 
 
 def get_key_value(string, character, index):
@@ -67,6 +71,7 @@ def get_key_value(string, character, index):
 
     """Creates a list with a key value pair from parsed log file line."""
     value = string[find_char_result + 2:]
+    # + 2 because the first character of the attribute exists 2 characters after the colon.
     if value.isdigit():
         value = int(value)
     return [string[0: find_char_result].strip(), value]
@@ -74,6 +79,7 @@ def get_key_value(string, character, index):
 
 for i, s in enumerate(effective_settings):
     """Parses the effective settings list and creates a dictionary out of it."""
+    # 3 used below because the attributes exist after the 3rd colon.
     effective_settings[i] = slice_char(effective_settings[i], ':', 3)
     get_key_value_result = get_key_value(effective_settings[i], ':', 0)
     effective_dict[get_key_value_result[0]] = get_key_value_result[1]
@@ -83,56 +89,56 @@ exit_code = ExitCode.COMPLIANT
 field_compliance = {}
 # first iterate through the Scenarios list
 
-if effective_dict[effective_keys[0]] not in json_dict.keys():
+if effective_dict["Scenario"] not in json_dict.keys():
     """Checks if scenario exists"""
     exit_code = ExitCode.SCENARIO_ERROR
 else:
-    scenario = effective_dict[effective_keys[0]]
+    scenario = effective_dict["Scenario"]
     field_compliance = dict((el, False) for el in json_dict[scenario].keys())
-    field_compliance[effective_keys[0]] = True
+    field_compliance["Scenario"] = True
 
     for a in json_dict[scenario]:
         """Checks each attribute"""
-        current_value = json_dict[scenario][a]
-        if effective_dict[a] == current_value:
+        spec_value = json_dict[scenario][a]
+        if effective_dict[a] == spec_value:
             field_compliance[a] = True
         if a == "target_latency (ns)":
             if scenario == "MultiStream" or scenario == "Server":
-                current_keys = list(current_value.keys())
+                current_keys = list(spec_value.keys())
 
                 if args.model_name in current_keys:
-                    if current_value[args.model_name] == effective_dict[a]:
+                    if spec_value[args.model_name] == effective_dict[a]:
                         field_compliance[a] = True
             else:
                 field_compliance[a] = True
         if a == "min_query_count":
             if scenario == "MultiStream" or scenario == "Server":
-                current_keys = list(current_value.keys())
+                spec_keys = list(spec_value.keys())
 
                 if args.model_name in current_keys:
-                    if current_value[args.model_name] <= effective_dict[a]:
+                    if spec_value[args.model_name] <= effective_dict[a]:
                         field_compliance[a] = True
             else:
-                if current_value <= effective_dict[a]:
+                if spec_value <= effective_dict[a]:
                         field_compliance[a] = True
         if a == "samples_per_query":
             if scenario == "Offline":
-                if current_value <= effective_dict[a]:
+                if spec_value <= effective_dict[a]:
                     field_compliance[a] = True
             elif scenario == "MultiStream":
                 field_compliance[a] = True
         if a == "min_duration (ms)":
-            if current_value <= effective_dict[a]:
+            if spec_value <= effective_dict[a]:
                 field_compliance[a] = True
         if a == "min_sample_count":
             if scenario == "Server":
-                current_keys = list(current_value.keys())
+                spec_keys = list(spec_value.keys())
 
                 if args.model_name in current_keys:
-                    if current_value[args.model_name] <= effective_dict[a]:
+                    if spec_value[args.model_name] <= effective_dict[a]:
                         field_compliance[a] = True
             else:
-                if current_value <= effective_dict[a]:
+                if spec_value <= effective_dict[a]:
                         field_compliance[a] = True
 
 if exit_code is not ExitCode.SCENARIO_ERROR:

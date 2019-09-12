@@ -308,7 +308,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
 
   // lookup key/value pairs from config
   auto lookupkv = [&](const std::string &model, const std::string &scenario,
-                      const std::string &key, size_t *val_l, double *val_d,
+                      const std::string &key, uint64_t *val_l, double *val_d,
                       double multiplier = 1.0) {
     std::map<std::string, std::string>::iterator it;
     std::string found;
@@ -385,7 +385,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   }
   if (errors != 0) return -EINVAL;
 
-  size_t val;
+  uint64_t val;
 
   // keys that apply to all scenarios
   if (lookupkv(model, scenario, "mode", &val, nullptr)) {

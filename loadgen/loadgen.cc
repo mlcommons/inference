@@ -748,15 +748,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       GlobalLogger().GetMaxCompletionTime();
   auto sut_active_duration = max_completion_time - start;
   LogDetail([start_for_power, sut_active_duration](AsyncDetail& detail) {
-#if defined(WIN32) || defined(WIN64)
-    // nanoseconds may lose info when adding to timepoint. msvc will complain about it.
-    // TODO: do we need this on linux to?
     auto end_for_power =
         start_for_power +
-        std::chrono::duration_cast<std::chrono::milliseconds::duration>(sut_active_duration);
-#else
-    auto end_for_power = start_for_power + sut_active_duration;
-#endif
+        std::chrono::duration_cast<std::chrono::system_clock::duration>(sut_active_duration);
     detail("POWER_BEGIN: ", "mode", ToString(mode), "time",
            DateTimeStringForPower(start_for_power));
     detail("POWER_END: ", "mode", ToString(mode), "time",

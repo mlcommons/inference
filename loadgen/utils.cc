@@ -14,8 +14,8 @@ limitations under the License.
 
 #include <chrono>
 #include <ctime>
-#include <sstream>
 #include <fstream>
+#include <sstream>
 
 #include "logging.h"
 
@@ -29,8 +29,8 @@ std::string DoubleToString(double value, int precision) {
 }
 
 bool FileExists(const std::string filename) {
- std::ifstream file_object(filename);
- return file_object.good();
+  std::ifstream file_object(filename);
+  return file_object.good();
 }
 
 namespace {

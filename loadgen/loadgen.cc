@@ -282,7 +282,6 @@ auto SampleDistribution(size_t sample_count, size_t stride, std::mt19937* rng) {
 }
 
 /// \brief Selects samples for the performance mode.
-/// \todo Contiguous samples for the offline scenario.
 template <>
 auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
                                                    size_t /*stride*/,

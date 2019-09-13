@@ -359,10 +359,11 @@ std::vector<QueryMetadata> GenerateQueries(
 
   std::vector<QuerySampleIndex> samples(samples_per_query);
   std::chrono::nanoseconds timestamp(0);
+  std::chrono::nanoseconds prev_timestamp(0);
   // Choose a single sample to repeat when in performance_issue_same mode
   QuerySampleIndex same_sample = settings.performance_issue_same_index;
 
-  while (timestamp <= gen_duration || queries.size() < min_queries) {
+  while (prev_timestamp <= gen_duration || queries.size() < min_queries) {
     if (kIsMultiStream) {
       QuerySampleIndex sample_i = settings.performance_issue_unique
                                    ? sample_distribution_unique(sample_rng)
@@ -408,6 +409,7 @@ std::vector<QueryMetadata> GenerateQueries(
       }
     }
     queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
+    prev_timestamp = timestamp;
     timestamp += schedule_distribution(schedule_rng);
   }
 

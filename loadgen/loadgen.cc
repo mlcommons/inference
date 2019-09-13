@@ -327,7 +327,7 @@ std::vector<QueryMetadata> GenerateQueries(
   // We should not exit early in accuracy mode.
   if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique ||
       settings.performance_issue_same) {
-    gen_duration = std::chrono::microseconds(0);
+    gen_duration = std::chrono::microseconds(-1);
     // Integer truncation here is intentional.
     // For MultiStream, loaded samples is properly padded.
     // For Offline, we create a 'remainder' query at the end of this function.

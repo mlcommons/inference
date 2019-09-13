@@ -185,7 +185,7 @@ REGISTER_TEST_ALL_SCENARIOS(AccuracyIncludesAllSamples,
                             0);
 
 /// \brief Verifies samples from the QSL aren't included too many times.
-/// \detail This is a regression test for:
+/// \details This is a regression test for:
 /// https://github.com/mlperf/inference/pull/386
 /// The root cause was using different values for samples_per_query while
 /// generating queries for the GNMT dataset.

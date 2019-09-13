@@ -42,7 +42,6 @@ namespace mlperf {
 ///  + Internal LoadGen latency between queries is not included in the
 ///    latency results.
 ///  + **Final performance result is:** a percentile of the latency.
-///   - Percentile will be programmable via TestSettings soon.
 /// * **MultiStream**
 ///  + Attempts to issue queries containing N samples each at a uniform rate.
 ///   - N is specified by \link
@@ -54,15 +53,27 @@ namespace mlperf {
 ///  + The loadgen will skip sending for one interval if the SUT falls behind
 ///    too much.
 ///  + By default, only a single query may be outstanding at a time.
-///  + Latency is tracked on a per-sample basis, as opposed to per-query.
 ///  + The samples of each query are guaranteed to be contiguous with respect
 ///    to the order they were loaded in the QuerySampleLibrary.
-///  + **Final performance result is:** PASS if a percentile of the latency is
-///    under a given threshold. FAIL otherwise.
-///   - Percentile will be programmable via TestSettings soon.
-///   - Threshold is specified by \link
-///   mlperf::TestSettings::multi_stream_target_latency_ns
-///   multi_stream_target_latency_ns \endlink.
+///  + Latency is tracked and reported on a per-query and per-sample basis.
+///  + The latency of a query is the maximum latency of its samples, including
+///    any cross-thread communication within the loadgen.
+///     - If the loadgen has to skip producing for an interval because it
+///       couldn't detect that all samples were completed in time, then the
+///       query will not be considered meeting the latency constraint.
+///     - This is fair since the loadgen skipping production will reduce
+///       pressure on the SUT and should be reflected negatively in the
+///       latency percentiles.
+///     - The last query is special cased since there isn't a subsequent query
+///       to delay. For the last query, the query latency without cross-thread
+///       communication is used.
+///  + **Final performance result is:** PASS if a percentile of the qer-query
+///    latencies is under a given threshold. FAIL otherwise.
+///   - The latency constraint is specified by the function (
+///     \link mlperf::TestSettings::multi_stream_max_async_queries
+///     multi_stream_max_async_queries \endlink /
+///     \link mlperf::TestSettings::multi_stream_target_qps
+///     multi_stream_target_qps \endlink).
 /// * **MultiStreamFree**
 ///  + Behaves similar to MultiStream, with the exceptions that it:
 ///   - Allows up to N async queries where N is limited only by the latency
@@ -73,14 +84,17 @@ namespace mlperf {
 ///    and testing purposes.
 ///  + Compared to MultiStream, there is no frequency quantization, which
 ///    allows the results to reflect small performance improvements.
-///  + **Final performance result is:** samples per second.
+///  + **Final performance result is:** PASS if a percentile of the per-query
+///    latencies is under a given threhsold. FAIL otherwise.
+///   - The latency constraint is specified by
+///     \link mlperf::TestSettings::multi_stream_target_latency_ns
+///     multi_stream_target_latency_ns \endlink.
 /// * **Server**
 ///  + Sends queries with a single sample.
 ///  + Queries have a random poisson (non-uniform) arrival rate that, when
 ///    averaged, hits the target QPS.
 ///  + **Final performance result is:** PASS if the a percentile of the latency
 ///    is under a given threshold. FAIL otherwise.
-///   - Percentile will be programmable via TestSettings soon.
 ///   - Threshold is specified by \link
 ///   mlperf::TestSettings::server_target_latency_ns server_target_latency_ns
 ///   \endlink.
@@ -88,7 +102,6 @@ namespace mlperf {
 ///  + Sends all N samples to the SUT inside of a single query.
 ///  + The samples of the query are guaranteed to be contiguous with respect
 ///    to the order they were loaded in the QuerySampleLibrary.
-///    (WIP. Not true yet.)
 ///  + **Final performance result is:** samples per second.
 ///
 enum class TestScenario {
@@ -127,7 +140,6 @@ enum class TestMode {
 ///
 /// \brief Top-level struct specifing the modes and parameters of the test.
 ///
-/// \todo Create TestSetting from a config file.
 struct TestSettings {
   TestScenario scenario = TestScenario::SingleStream;
   TestMode mode = TestMode::PerformanceOnly;
@@ -138,6 +150,7 @@ struct TestSettings {
   /// \brief A hint used by the loadgen to pre-generate enough samples to
   ///        meet the minimum test duration.
   uint64_t single_stream_expected_latency_ns = 1000000;
+  /// \brief The latency percentile reported as the final result.
   double single_stream_target_latency_percentile = 0.90;
   /**@}*/
 
@@ -145,12 +158,15 @@ struct TestSettings {
   /// \name MultiStream-specific
   /**@{*/
   /// \brief The uniform rate at which queries are produced.
-  ///        Does not apply to the MultiStreamFree scenario.
+  /// The inverse of this is used to determine the latency constraint for the
+  /// MultiStream scenario. Does not apply to the MultiStreamFree scenario,
+  /// except as a hint for how many queries to pre-generate.
   double multi_stream_target_qps = 10.0;
-  /// \brief The latency constraint for the MultiStream scenario.
+  /// \brief The latency constraint for the MultiStreamFree scenario.
+  /// Does not apply to the MultiStream scenario, whose target latency
+  /// is a function of the QPS and max_async_queries.
   uint64_t multi_stream_target_latency_ns = 100000000;
-  /// \brief The latency percentile for multistream mode. This value is combined
-  /// with multi_stream_target_latency_ns to determine if a run is valid.
+  /// \brief The latency percentile for multistream mode.
   double multi_stream_target_latency_percentile = 0.9;
   /// \brief The number of samples in each query.
   /// \details note: This field is used as a FindPeakPerformance's lower bound.
@@ -178,7 +194,8 @@ struct TestSettings {
   /// should be set to 0.97 (97%) in v0.5.(As always, check the policy page for
   /// updated values for the benchmark you are running.)
   double server_target_latency_percentile = 0.99;
-  /// \brief TODO: Implement this.
+  /// \brief TODO: Implement this. Would combine samples from multiple queries
+  /// into a single query if their scheduled issue times have passed.
   bool server_coalesce_queries = false;
   /// \brief The decimal places of QPS precision used to terminate
   /// FindPeakPerformance mode.
@@ -192,8 +209,8 @@ struct TestSettings {
   /// \name Offline-specific
   /**@{*/
   /// \brief Specifies the QPS the SUT expects to hit for the offline load.
-  ///        The loadgen generates 10% more queries than it thinks it
-  ///        needs to meet the minimum test duration.
+  /// The loadgen generates 10% more queries than it thinks it needs to meet
+  /// the minimum test duration.
   double offline_expected_qps = 1;
   /**@}*/
 

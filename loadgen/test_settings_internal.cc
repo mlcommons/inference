@@ -55,12 +55,22 @@ TestSettingsInternal::TestSettingsInternal(
       target_latency_percentile =
           requested.single_stream_target_latency_percentile;
       break;
-    case TestScenario::MultiStream:
+    case TestScenario::MultiStream: {
+      max_async_queries = requested.multi_stream_max_async_queries;
+      target_qps = requested.multi_stream_target_qps;
+      double target_latency_seconds =
+          max_async_queries / requested.multi_stream_target_qps;
+      target_latency = SecondsToDuration<std::chrono::nanoseconds>(
+          target_latency_seconds);
+      target_latency_percentile =
+          requested.multi_stream_target_latency_percentile;
+      break;
+    }
     case TestScenario::MultiStreamFree:
+      max_async_queries = requested.multi_stream_max_async_queries;
       target_qps = requested.multi_stream_target_qps;
       target_latency =
           std::chrono::nanoseconds(requested.multi_stream_target_latency_ns);
-      max_async_queries = requested.multi_stream_max_async_queries;
       target_latency_percentile =
           requested.multi_stream_target_latency_percentile;
       break;

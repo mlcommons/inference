@@ -83,8 +83,9 @@ for submission.
 * Since the LoadGen is oblivious to the model, it can't enforce the MLPerf
 requirements for submission. *e.g.:* target percentiles and latencies.
 * For verification, the values in TestSettings are logged.
-* *Note:* There is an effort to load TestSettings from a config file to make
-it easier to respect submission requirements, but it is a work in progress.
+* To help make sure your settings are spec compliant, use
+TestSettings::FromConfig in conjunction with the relevant config file provided
+with the reference models.
 
 ## Responsibilities of a LoadGen User
 

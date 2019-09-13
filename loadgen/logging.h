@@ -62,9 +62,9 @@ const T& ArgValueTransform(const T& value) {
   return value;
 }
 
-/// \brief outputs a trace that can be uploaded to chrome://tracing for
+/// \brief Outputs a trace that can be uploaded to chrome://tracing for
 /// visualization.
-/// \detail Trace event format definition:
+/// \details Trace event format definition:
 /// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/edit?usp=sharing
 class ChromeTracer {
  public:
@@ -165,8 +165,6 @@ class ChromeTracer {
 /// \details Passed as an argument to the log lambda on the
 /// recording thread to serialize the data captured by the lambda and
 /// forward it to the output stream.
-/// \todo Pre-allocate the latency results vector (latencies_) so the
-/// IOThread doesn't need to grow it during the performance run.
 /// \todo Make summary_out_, detail_out_, accuracy_out_, and trace_out_
 /// instances of a new LogOutput interface that the client may override.
 class AsyncLog {

@@ -217,8 +217,8 @@ struct TestAccuracyDupesAreLimitted : public SystemUnderTestAccuracy {
     const size_t max_count = multistream ? 2 : 1;
 
     for (size_t i = 0; i < issue_counts.size(); i++) {
-      FAIL_IF(issue_counts[i] > max_count) &&
-          FAIL_EXP(i) && FAIL_EXP(max_count) && FAIL_EXP(issue_counts[i]);
+      FAIL_IF(issue_counts[i] > max_count) && FAIL_EXP(i) &&
+          FAIL_EXP(max_count) && FAIL_EXP(issue_counts[i]);
     }
   }
 };

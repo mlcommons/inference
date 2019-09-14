@@ -253,7 +253,7 @@ struct TestSettings {
   int FromConfig(const std::string &config_file, const std::string &model,
                  const std::string &scenario);
   /**@}*/
-  
+
   // ==================================
   /// \name Performance Sample modifiers
   /// \details These settings can be used to Audit Performance mode runs.
@@ -261,8 +261,9 @@ struct TestSettings {
   /// unique queries (with non-repeated samples) are issued can be compared with
   /// that when the same query is repeatedly issued.
   /**@{*/
-  /// \brief Allows issuing only unique queries in Performance mode of any scenario
-  /// \details This can be used to send non-repeat & hence unique samples to SUT
+  /// \brief Allows issuing only unique queries in Performance mode of any
+  /// scenario \details This can be used to send non-repeat & hence unique
+  /// samples to SUT
   bool performance_issue_unique = false;
   /// \brief If true, the same query is chosen repeatedley for Inference.
   /// In offline scenario, the query is filled with the same sample.
@@ -274,7 +275,6 @@ struct TestSettings {
   /// \brief Overrides QSL->PerformanceSampleCount() when non-zero
   uint64_t performance_sample_count_override = 0;
   /**@}*/
-
 };
 
 ///

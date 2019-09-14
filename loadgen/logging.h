@@ -145,14 +145,13 @@ class ChromeTracer {
   void AddArgs() {}
 
   template <typename T>
-  void AddArgs(const std::string& arg_name,
-               const T& arg_value) {
+  void AddArgs(const std::string& arg_name, const T& arg_value) {
     *out_ << "\"" << arg_name << "\":" << ArgValueTransform(arg_value);
   }
 
   template <typename T, typename... Args>
-  void AddArgs(const std::string& arg_name,
-               const T& arg_value, const Args... args) {
+  void AddArgs(const std::string& arg_name, const T& arg_value,
+               const Args... args) {
     *out_ << "\"" << arg_name << "\":" << ArgValueTransform(arg_value) << ",";
     AddArgs(args...);
   }
@@ -257,11 +256,11 @@ class AsyncLog {
     }
   }
 
-  void RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve);
-  void RecordSampleCompletion(
-      uint64_t sample_sequence_id,
-      PerfClock::time_point completion_time,
-      QuerySampleLatency latency);
+  void RestartLatencyRecording(uint64_t first_sample_sequence_id,
+                               size_t latencies_to_reserve);
+  void RecordSampleCompletion(uint64_t sample_sequence_id,
+                              PerfClock::time_point completion_time,
+                              QuerySampleLatency latency);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
   PerfClock::time_point GetMaxCompletionTime();
   QuerySampleLatency GetMaxLatencySoFar();
@@ -346,7 +345,8 @@ class Logger {
 
   void LogContentionAndAllocations();
 
-  void RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve);
+  void RestartLatencyRecording(uint64_t first_sample_sequence_id,
+                               size_t latencies_to_reserve);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
   PerfClock::time_point GetMaxCompletionTime();
   QuerySampleLatency GetMaxLatencySoFar();

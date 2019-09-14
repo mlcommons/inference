@@ -21,9 +21,9 @@ limitations under the License.
 #include <string>
 
 #include "logging.h"
-#include "test_settings.h"
 #include "query_sample.h"
 #include "query_sample_library.h"
+#include "test_settings.h"
 
 namespace mlperf {
 
@@ -44,7 +44,7 @@ std::string ToString(TestMode mode);
 /// the concept of target_duration used to pre-generate queries.
 struct TestSettingsInternal {
   explicit TestSettingsInternal(const TestSettings &requested_settings,
-                                QuerySampleLibrary* qsl);
+                                QuerySampleLibrary *qsl);
   void LogEffectiveSettings() const;
   void LogAllSettings() const;
   void LogSummary(AsyncSummary &summary) const;

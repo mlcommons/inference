@@ -24,7 +24,7 @@ namespace mlperf {
 namespace loadgen {
 
 TestSettingsInternal::TestSettingsInternal(
-    const TestSettings &requested_settings, QuerySampleLibrary* qsl)
+    const TestSettings &requested_settings, QuerySampleLibrary *qsl)
     : requested(requested_settings),
       scenario(requested.scenario),
       mode(requested.mode),
@@ -60,8 +60,8 @@ TestSettingsInternal::TestSettingsInternal(
       target_qps = requested.multi_stream_target_qps;
       double target_latency_seconds =
           max_async_queries / requested.multi_stream_target_qps;
-      target_latency = SecondsToDuration<std::chrono::nanoseconds>(
-          target_latency_seconds);
+      target_latency =
+          SecondsToDuration<std::chrono::nanoseconds>(target_latency_seconds);
       target_latency_percentile =
           requested.multi_stream_target_latency_percentile;
       break;
@@ -105,10 +105,11 @@ TestSettingsInternal::TestSettingsInternal(
       break;
   }
 
-  // Performance Sample Count: TestSettings override QSL -> PerformanceSampleCount
+  // Performance Sample Count: TestSettings override QSL ->
+  // PerformanceSampleCount
   performance_sample_count = (requested.performance_sample_count_override == 0)
-                             ? qsl->PerformanceSampleCount()
-			     : requested.performance_sample_count_override;
+                                 ? qsl->PerformanceSampleCount()
+                                 : requested.performance_sample_count_override;
 
   // Samples per query.
   if (requested.scenario == TestScenario::MultiStream ||
@@ -125,10 +126,10 @@ TestSettingsInternal::TestSettingsInternal(
     constexpr double kSlack = 1.1;
     int target_sample_count =
         kSlack * DurationToSeconds(target_duration) * target_qps;
-    samples_per_query = 
-        (requested.performance_issue_unique || requested.performance_issue_same) 
-	     ? performance_sample_count
-	     : std::max<int>(min_query_count, target_sample_count);
+    samples_per_query =
+        (requested.performance_issue_unique || requested.performance_issue_same)
+            ? performance_sample_count
+            : std::max<int>(min_query_count, target_sample_count);
     min_query_count = 1;
     target_duration = std::chrono::milliseconds(0);
   }
@@ -136,27 +137,25 @@ TestSettingsInternal::TestSettingsInternal(
   min_sample_count = min_query_count * samples_per_query;
 
   // Validate TestSettings
-  if (requested.performance_issue_same && 
+  if (requested.performance_issue_same &&
       (requested.performance_issue_same_index >= performance_sample_count)) {
-    LogDetail([
-      performance_issue_same_index = requested.performance_issue_same_index,
-      performance_sample_count = performance_sample_count] 
-      (AsyncDetail& detail) {
-       detail.Error("Sample Idx to be repeated in performance_issue_same mode",
-		    " cannot be greater than loaded performance_sample_count");
-      });
+    LogDetail([performance_issue_same_index =
+                   requested.performance_issue_same_index,
+               performance_sample_count =
+                   performance_sample_count](AsyncDetail &detail) {
+      detail.Error("Sample Idx to be repeated in performance_issue_same mode",
+                   " cannot be greater than loaded performance_sample_count");
+    });
   }
 
-  if (requested.performance_issue_unique &&
-           requested.performance_issue_same) {
-    LogDetail([performance_issue_unique = requested.performance_issue_unique, 
-               performance_issue_same = requested.performance_issue_same]
-     (AsyncDetail& detail) {
-     detail.Error("Performance_issue_unique and performance_issue_same, both",
-                  " cannot be true at the same time.");
-     });
+  if (requested.performance_issue_unique && requested.performance_issue_same) {
+    LogDetail([performance_issue_unique = requested.performance_issue_unique,
+               performance_issue_same =
+                   requested.performance_issue_same](AsyncDetail &detail) {
+      detail.Error("Performance_issue_unique and performance_issue_same, both",
+                   " cannot be true at the same time.");
+    });
   }
-
 }
 
 std::string ToString(TestScenario scenario) {
@@ -243,7 +242,7 @@ void LogRequestedTestSettings(const TestSettings &s) {
     detail("performance_issue_unique : ", s.performance_issue_unique);
     detail("performance_issue_same : ", s.performance_issue_same);
     detail("performance_issue_same_index : ", s.performance_issue_same_index);
-    detail("performance_sample_count_override : ", 
+    detail("performance_sample_count_override : ",
            s.performance_sample_count_override);
 
     detail("");
@@ -278,7 +277,7 @@ void TestSettingsInternal::LogEffectiveSettings() const {
     detail("performance_issue_same : ", s.performance_issue_same);
     detail("performance_issue_same_index : ", s.performance_issue_same_index);
     detail("performance_sample_count : ", s.performance_sample_count);
- });
+  });
 }
 
 void TestSettingsInternal::LogAllSettings() const {
@@ -399,20 +398,25 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
 
   // keys that apply to all scenarios
   if (lookupkv(model, scenario, "mode", &val, nullptr)) {
-     switch (val) {
-       case 0 : mode = TestMode::SubmissionRun;
-                break;
-       case 1 : mode = TestMode::AccuracyOnly;
-                break;
-       case 2 : mode = TestMode::PerformanceOnly;
-                break;
-       case 3 : mode = TestMode::FindPeakPerformance;
-                break;
-       default : LogDetail([](AsyncDetail &detail) {
-                   detail.Error("Invalid value passed to Mode key in config.");
-		 });
-		 break;
-     }
+    switch (val) {
+      case 0:
+        mode = TestMode::SubmissionRun;
+        break;
+      case 1:
+        mode = TestMode::AccuracyOnly;
+        break;
+      case 2:
+        mode = TestMode::PerformanceOnly;
+        break;
+      case 3:
+        mode = TestMode::FindPeakPerformance;
+        break;
+      default:
+        LogDetail([](AsyncDetail &detail) {
+          detail.Error("Invalid value passed to Mode key in config.");
+        });
+        break;
+    }
   }
   lookupkv(model, scenario, "min_duration", &min_duration_ms, nullptr);
   lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);
@@ -427,9 +431,9 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, scenario, "accuracy_log_probability", nullptr,
            &accuracy_log_probability, 0.01);
   if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr))
-     performance_issue_unique = (val == 0) ? false : true;
+    performance_issue_unique = (val == 0) ? false : true;
   if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr))
-     performance_issue_same = (val == 0) ? false : true;
+    performance_issue_same = (val == 0) ? false : true;
   lookupkv(model, scenario, "performance_issue_same_index",
            &performance_issue_same_index, nullptr);
   lookupkv(model, scenario, "performance_sample_count_override",

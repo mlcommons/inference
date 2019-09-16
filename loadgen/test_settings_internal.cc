@@ -24,7 +24,7 @@ namespace mlperf {
 namespace loadgen {
 
 TestSettingsInternal::TestSettingsInternal(
-    const TestSettings &requested_settings, QuerySampleLibrary *qsl)
+    const TestSettings &requested_settings, size_t qsl_performance_sample_count)
     : requested(requested_settings),
       scenario(requested.scenario),
       mode(requested.mode),
@@ -108,7 +108,7 @@ TestSettingsInternal::TestSettingsInternal(
   // Performance Sample Count: TestSettings override QSL ->
   // PerformanceSampleCount
   performance_sample_count = (requested.performance_sample_count_override == 0)
-                                 ? qsl->PerformanceSampleCount()
+                                 ? qsl_performance_sample_count
                                  : requested.performance_sample_count_override;
 
   // Samples per query.
@@ -139,21 +139,27 @@ TestSettingsInternal::TestSettingsInternal(
   // Validate TestSettings
   if (requested.performance_issue_same &&
       (requested.performance_issue_same_index >= performance_sample_count)) {
-    LogDetail([performance_issue_same_index =
-                   requested.performance_issue_same_index,
-               performance_sample_count =
-                   performance_sample_count](AsyncDetail &detail) {
-      detail.Error("Sample Idx to be repeated in performance_issue_same mode",
-                   " cannot be greater than loaded performance_sample_count");
-    });
+    LogDetail(
+        [performance_issue_same_index = requested.performance_issue_same_index,
+         performance_sample_count =
+             performance_sample_count](AsyncDetail &detail) {
+          detail.Error(
+              "Sample Idx to be repeated in performance_issue_same mode"
+              " cannot be greater than loaded performance_sample_count.",
+              "performance_issue_same_index", performance_issue_same_index,
+              "performance_sample_count", performance_sample_count);
+        });
   }
 
   if (requested.performance_issue_unique && requested.performance_issue_same) {
     LogDetail([performance_issue_unique = requested.performance_issue_unique,
                performance_issue_same =
                    requested.performance_issue_same](AsyncDetail &detail) {
-      detail.Error("Performance_issue_unique and performance_issue_same, both",
-                   " cannot be true at the same time.");
+      detail.Error(
+          "Performance_issue_unique and performance_issue_same, both"
+          " cannot be true at the same time.",
+          "performance_issue_unique", performance_issue_unique,
+          "performance_issue_same", performance_issue_same);
     });
   }
 }
@@ -335,7 +341,10 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
       }
     }
     // if we get here, found will be set
-    if (val_l) *val_l = strtoul(found.c_str(), nullptr, 0) * int(multiplier);
+    if (val_l) {
+      *val_l =
+          strtoul(found.c_str(), nullptr, 0) * static_cast<int>(multiplier);
+    }
     if (val_d) *val_d = strtod(found.c_str(), nullptr) * multiplier;
     return true;
   };
@@ -451,9 +460,9 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, "MultiStream", "target_qps", nullptr,
            &multi_stream_target_qps);
   if (lookupkv(model, "MultiStream", "samples_per_query", &val, nullptr))
-    multi_stream_samples_per_query = int(val);
+    multi_stream_samples_per_query = static_cast<int>(val);
   if (lookupkv(model, "MultiStream", "max_async_queries", &val, nullptr))
-    multi_stream_max_async_queries = int(val);
+    multi_stream_max_async_queries = static_cast<int>(val);
 
   // keys that apply to Server
   lookupkv(model, "Server", "target_latency_percentile", nullptr,

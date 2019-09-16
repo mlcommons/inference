@@ -12,6 +12,11 @@ limitations under the License.
 
 #include "test_settings_internal.h"
 
+#include <fstream>
+#include <map>
+#include <sstream>
+#include <string>
+
 #include "logging.h"
 #include "utils.h"
 
@@ -19,7 +24,7 @@ namespace mlperf {
 namespace loadgen {
 
 TestSettingsInternal::TestSettingsInternal(
-    const TestSettings &requested_settings)
+    const TestSettings &requested_settings, QuerySampleLibrary *qsl)
     : requested(requested_settings),
       scenario(requested.scenario),
       mode(requested.mode),
@@ -36,7 +41,11 @@ TestSettingsInternal::TestSettingsInternal(
       sample_index_rng_seed(requested.sample_index_rng_seed),
       schedule_rng_seed(requested.schedule_rng_seed),
       accuracy_log_rng_seed(requested.accuracy_log_rng_seed),
-      accuracy_log_probability(requested.accuracy_log_probability) {
+      accuracy_log_probability(requested.accuracy_log_probability),
+      performance_issue_unique(requested.performance_issue_unique),
+      performance_issue_same(requested.performance_issue_same),
+      performance_issue_same_index(requested.performance_issue_same_index),
+      performance_sample_count(0) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -46,12 +55,22 @@ TestSettingsInternal::TestSettingsInternal(
       target_latency_percentile =
           requested.single_stream_target_latency_percentile;
       break;
-    case TestScenario::MultiStream:
+    case TestScenario::MultiStream: {
+      max_async_queries = requested.multi_stream_max_async_queries;
+      target_qps = requested.multi_stream_target_qps;
+      double target_latency_seconds =
+          max_async_queries / requested.multi_stream_target_qps;
+      target_latency =
+          SecondsToDuration<std::chrono::nanoseconds>(target_latency_seconds);
+      target_latency_percentile =
+          requested.multi_stream_target_latency_percentile;
+      break;
+    }
     case TestScenario::MultiStreamFree:
+      max_async_queries = requested.multi_stream_max_async_queries;
       target_qps = requested.multi_stream_target_qps;
       target_latency =
           std::chrono::nanoseconds(requested.multi_stream_target_latency_ns);
-      max_async_queries = requested.multi_stream_max_async_queries;
       target_latency_percentile =
           requested.multi_stream_target_latency_percentile;
       break;
@@ -69,8 +88,7 @@ TestSettingsInternal::TestSettingsInternal(
           std::chrono::nanoseconds(requested.server_target_latency_ns);
       max_async_queries =
           std::numeric_limits<decltype(max_async_queries)>::max();
-      target_latency_percentile =
-          requested.server_target_latency_percentile;
+      target_latency_percentile = requested.server_target_latency_percentile;
       break;
     case TestScenario::Offline:
       if (requested.offline_expected_qps >= 0.0) {
@@ -87,6 +105,12 @@ TestSettingsInternal::TestSettingsInternal(
       break;
   }
 
+  // Performance Sample Count: TestSettings override QSL ->
+  // PerformanceSampleCount
+  performance_sample_count = (requested.performance_sample_count_override == 0)
+                                 ? qsl->PerformanceSampleCount()
+                                 : requested.performance_sample_count_override;
+
   // Samples per query.
   if (requested.scenario == TestScenario::MultiStream ||
       requested.scenario == TestScenario::MultiStreamFree) {
@@ -102,12 +126,36 @@ TestSettingsInternal::TestSettingsInternal(
     constexpr double kSlack = 1.1;
     int target_sample_count =
         kSlack * DurationToSeconds(target_duration) * target_qps;
-    samples_per_query = std::max<int>(min_query_count, target_sample_count);
+    samples_per_query =
+        (requested.performance_issue_unique || requested.performance_issue_same)
+            ? performance_sample_count
+            : std::max<int>(min_query_count, target_sample_count);
     min_query_count = 1;
     target_duration = std::chrono::milliseconds(0);
   }
 
   min_sample_count = min_query_count * samples_per_query;
+
+  // Validate TestSettings
+  if (requested.performance_issue_same &&
+      (requested.performance_issue_same_index >= performance_sample_count)) {
+    LogDetail([performance_issue_same_index =
+                   requested.performance_issue_same_index,
+               performance_sample_count =
+                   performance_sample_count](AsyncDetail &detail) {
+      detail.Error("Sample Idx to be repeated in performance_issue_same mode",
+                   " cannot be greater than loaded performance_sample_count");
+    });
+  }
+
+  if (requested.performance_issue_unique && requested.performance_issue_same) {
+    LogDetail([performance_issue_unique = requested.performance_issue_unique,
+               performance_issue_same =
+                   requested.performance_issue_same](AsyncDetail &detail) {
+      detail.Error("Performance_issue_unique and performance_issue_same, both",
+                   " cannot be true at the same time.");
+    });
+  }
 }
 
 std::string ToString(TestScenario scenario) {
@@ -191,7 +239,11 @@ void LogRequestedTestSettings(const TestSettings &s) {
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
     detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
     detail("accuracy_log_probability : ", s.accuracy_log_probability);
-
+    detail("performance_issue_unique : ", s.performance_issue_unique);
+    detail("performance_issue_same : ", s.performance_issue_same);
+    detail("performance_issue_same_index : ", s.performance_issue_same_index);
+    detail("performance_sample_count_override : ",
+           s.performance_sample_count_override);
     detail("");
   });
 }
@@ -220,6 +272,10 @@ void TestSettingsInternal::LogEffectiveSettings() const {
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
     detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
     detail("accuracy_log_probability : ", s.accuracy_log_probability);
+    detail("performance_issue_unique : ", s.performance_issue_unique);
+    detail("performance_issue_same : ", s.performance_issue_same);
+    detail("performance_issue_same_index : ", s.performance_issue_same_index);
+    detail("performance_sample_count : ", s.performance_sample_count);
   });
 }
 
@@ -242,7 +298,175 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("schedule_rng_seed : ", schedule_rng_seed);
   summary("accuracy_log_rng_seed : ", accuracy_log_rng_seed);
   summary("accuracy_log_probability : ", accuracy_log_probability);
+  summary("performance_issue_unique : ", performance_issue_unique);
+  summary("performance_issue_same : ", performance_issue_same);
+  summary("performance_issue_same_index : ", performance_issue_same_index);
+  summary("performance_sample_count : ", performance_sample_count);
 }
 
 }  // namespace loadgen
+
+/// \todo The TestSettings::FromConfig definition belongs in a test_settings.cc
+/// file which doesn't yet exist. To avoid churn so close to the submission
+/// deadline, adding a test_settings.cc file has been deferred to v0.6.
+int TestSettings::FromConfig(const std::string &path, const std::string &model,
+                             const std::string &scenario) {
+  // TODO: move this method to a new file test_settings.cc
+  std::map<std::string, std::string> kv;
+
+  // lookup key/value pairs from config
+  auto lookupkv = [&](const std::string &model, const std::string &scenario,
+                      const std::string &key, uint64_t *val_l, double *val_d,
+                      double multiplier = 1.0) {
+    std::map<std::string, std::string>::iterator it;
+    std::string found;
+    // lookup exact key first
+    it = kv.find(model + scenario + "." + key);
+    if (it != kv.end()) {
+      found = it->second;
+    } else {
+      // lookup key with model wildcard
+      it = kv.find("*." + scenario + "." + key);
+      if (it != kv.end()) {
+        found = it->second;
+      } else {
+        return false;
+      }
+    }
+    // if we get here, found will be set
+    if (val_l) *val_l = strtoul(found.c_str(), nullptr, 0) * int(multiplier);
+    if (val_d) *val_d = strtod(found.c_str(), nullptr) * multiplier;
+    return true;
+  };
+
+  // dirt simple config parser
+  std::ifstream fss(path);
+  std::string line;
+  int line_nr = 0;
+  int errors = 0;
+  if (!fss.is_open()) {
+    LogDetail([p = path](AsyncDetail &detail) {
+      detail.Error("can't open file ", p);
+    });
+    return -ENOENT;
+  }
+  while (std::getline(fss, line)) {
+    line_nr++;
+    std::istringstream iss(line);
+    std::string s, k;
+    int looking_for = 0;  // 0=key, 1=equal, 2=value
+    while (iss >> s) {
+      if (s == "#" && looking_for != 2) {
+        // done with this line
+        break;
+      }
+      if (looking_for == 2) {
+        // got key and value
+        const char *start = s.c_str();
+        char *stop;
+        (void)strtoul(start, &stop, 0);
+        if (start + s.size() == stop) {
+          kv[k] = s;
+          continue;
+        }
+        (void)strtod(start, &stop);
+        if (start + s.size() == stop) {
+          kv[k] = s;
+          continue;
+        }
+        errors++;
+        LogDetail([l = line_nr](AsyncDetail &detail) {
+          detail.Error("value needs to be integer or double, line=", l);
+        });
+        break;
+      }
+      if (looking_for == 1 && s != "=") {
+        errors++;
+        LogDetail([l = line_nr](AsyncDetail &detail) {
+          detail.Error("expected 'key=value', line=", l);
+        });
+        break;
+      }
+      if (looking_for == 0) k = s;
+      looking_for++;
+    }
+  }
+  if (errors != 0) return -EINVAL;
+
+  uint64_t val;
+
+  // keys that apply to all scenarios
+  if (lookupkv(model, scenario, "mode", &val, nullptr)) {
+    switch (val) {
+      case 0:
+        mode = TestMode::SubmissionRun;
+        break;
+      case 1:
+        mode = TestMode::AccuracyOnly;
+        break;
+      case 2:
+        mode = TestMode::PerformanceOnly;
+        break;
+      case 3:
+        mode = TestMode::FindPeakPerformance;
+        break;
+      default:
+        LogDetail([](AsyncDetail &detail) {
+          detail.Error("Invalid value passed to Mode key in config.");
+        });
+        break;
+    }
+  }
+  lookupkv(model, scenario, "min_duration", &min_duration_ms, nullptr);
+  lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);
+  lookupkv(model, scenario, "min_query_count", &min_query_count, nullptr);
+  lookupkv(model, scenario, "max_query_count", &max_query_count, nullptr);
+  lookupkv(model, scenario, "qsl_rng_seed", &qsl_rng_seed, nullptr);
+  lookupkv(model, scenario, "sample_index_rng_seed", &sample_index_rng_seed,
+           nullptr);
+  lookupkv(model, scenario, "schedule_rng_seed", &schedule_rng_seed, nullptr);
+  lookupkv(model, scenario, "accuracy_log_rng_seed", &accuracy_log_rng_seed,
+           nullptr);
+  lookupkv(model, scenario, "accuracy_log_probability", nullptr,
+           &accuracy_log_probability, 0.01);
+  if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr))
+    performance_issue_unique = (val == 0) ? false : true;
+  if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr))
+    performance_issue_same = (val == 0) ? false : true;
+  lookupkv(model, scenario, "performance_issue_same_index",
+           &performance_issue_same_index, nullptr);
+  lookupkv(model, scenario, "performance_sample_count_override",
+           &performance_sample_count_override, nullptr);
+
+  // keys that apply to SingleStream
+  lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
+           &single_stream_target_latency_percentile, 0.01);
+  lookupkv(model, "SingleStream", "target_latency",
+           &single_stream_expected_latency_ns, nullptr, 1000 * 1000);
+
+  // keys that apply to MultiStream
+  lookupkv(model, "MultiStream", "target_latency_percentile", nullptr,
+           &multi_stream_target_latency_percentile, 0.01);
+  lookupkv(model, "MultiStream", "target_qps", nullptr,
+           &multi_stream_target_qps);
+  if (lookupkv(model, "MultiStream", "samples_per_query", &val, nullptr))
+    multi_stream_samples_per_query = int(val);
+  if (lookupkv(model, "MultiStream", "max_async_queries", &val, nullptr))
+    multi_stream_max_async_queries = int(val);
+
+  // keys that apply to Server
+  lookupkv(model, "Server", "target_latency_percentile", nullptr,
+           &server_target_latency_percentile, 0.01);
+  lookupkv(model, "Server", "target_latency", &server_target_latency_ns,
+           nullptr, 1000 * 1000);
+  lookupkv(model, "Server", "target_qps", nullptr, &server_target_qps);
+  if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
+    server_coalesce_queries = (val == 0) ? false : true;
+
+  // keys that apply to Offline
+  lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);
+
+  return 0;
+}
+
 }  // namespace mlperf

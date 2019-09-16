@@ -207,14 +207,18 @@ CK installs all the dependencies automatically. (More information on recommended
 
 The table below summarizes the available methods.
 
-| Model                   | Pillow            | OpenCV            | TensorFlow         |
-|-|-|-|-|
-| Is official?            | No                | Yes               | No                 |
-| Additional tags         | `using-pillow`    | `using-opencv`    | `using-tensorflow` |
-| Supported models        | ResNet, MobileNet | ResNet, MobileNet | ResNet only        |
-| Supported platforms     | x86, arm          | x86               | x86 (prebuilt TF)  |
-| Data format             | rgb8 (int8)       | rgb8 (int8)       | rgbf32 (float32)   |
-| Data size               | 7.1G              | 7.1G              | 29G                |
+| Model                | Pillow            | OpenCV universal         | OpenCV for MobileNet         | OpenCV for ResNet         | TensorFlow         |
+|-|-|-|-|-|-|
+| Matches official?    | No                | No                       | Yes                          | Yes                       | No                 |
+| Additional tags      | `using-pillow`    | `using-opencv,universal` | `using-opencv,for-mobilenet` | `using-opencv,for-resnet` | `using-tensorflow` |
+| Supported models     | ResNet, MobileNet | ResNet, MobileNet        | MobileNet only               | ResNet only               | ResNet only        |
+| Supported platforms  | x86, arm          | x86                      | x86                          | x86                       | x86 (prebuilt TF)  |
+| Data format          | rgb8 (int8)       | rgb8 (int8)              | rgbf32 (float32)             | rgbf32 (float32)          | rgbf32 (float32)   |
+| Data size            | 7.1G              | 7.1G                     | 29G                          | 29G                       | 29G                |
+
+The official code [preprocesses](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/python/dataset.py) images using OpenCV. ResNet and MobileNet require different preprocessing after resizing: ResNet requires [means to be subtracted](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/python/dataset.py#L178); MobileNet requires [normalization to the (-1, 1) range](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/python/dataset.py#L195). In addition, the official ResNet preprocessing uses [area interpolation](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/python/dataset.py#L172), instead of the default [bilinear interpolation](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/python/dataset.py#L154). The same behaviour can be reproduced via CK. Preprocessed images for both MobileNet and ResNet, however, require 58G on disk, as pixels are stored as 32-bit floats.
+
+An alternative, dubbed OpenCV (universal), uses bilinear interpolation and stores pixels as 8-bit integers. At load time, however, minor additional processing may be required depending on the model (e.g. see sample [code for normalization](https://github.com/ctuning/ck-tensorflow/blob/master/program/image-classification-tflite/benchmark.h#L463) and [code for subtracting means](https://github.com/ctuning/ck-tensorflow/blob/master/program/image-classification-tflite/benchmark.h#L469)).
 
 
 #### Accuracy on the ImageNet 2012 validation set
@@ -222,18 +226,16 @@ The table below summarizes the available methods.
 The table below shows the accuracy on the ImageNet 2012 validation set
 (50,000 images) measured [via TensorFlow (C++)](tf-cpp/README.md).
 
-| Model                   | Metric | Pillow  | OpenCV  | TensorFlow |
-|-|-|-|-|-|
-| ResNet                  |  Top1  | 0.76170 | 0.76458 | 0.76522    |
-|                         |  Top5  | 0.92866 | 0.93014 | 0.93066    |
-| MobileNet non-quantized |  Top1  | 0.71226 | 0.71516 | N/A        |
-|                         |  Top5  | 0.89834 | 0.90004 | N/A        |
-| MobileNet quantized     |  Top1  | 0.70348 | 0.70654 | N/A        |
-|                         |  Top5  | 0.89376 | 0.89514 | N/A        |
+| Model                   | Metric | Pillow  | OpenCV universal | OpenCV for MobileNet | OpenCV for ResNet | TensorFlow |
+|-|-|-|-|-|-|-|
+| ResNet                  |  Top1  | 0.76170 | 0.76422          | N/A                  | 0.76456           | 0.76522    |
+|                         |  Top5  | 0.92866 | 0.93074          | N/A                  | 0.93016           | 0.93066    |
+| MobileNet non-quantized |  Top1  | 0.71226 | 0.71676          | 0.71676              | N/A               | N/A        |
+|                         |  Top5  | 0.89834 | 0.90118          | 0.90118              | N/A               | N/A        |
+| MobileNet quantized     |  Top1  | 0.70348 | 0.70700          | 0.70694              | N/A               | N/A        |
+|                         |  Top5  | 0.89376 | 0.89594          | 0.89594              | N/A               | N/A        |
 
-**NB:** The accuracy of the non-quantized MobileNet model using OpenCV preprocessing (0.71516)
-differs slightly from the accuracy measured via the official reference code (0.7168).
-While we have tried quite a few different things to improve the accuracy, any ideas are welcome.
+Considering Top1, the universal OpenCV method is slightly less accurate for ResNet, but slightly more accurate for MobileNet quantized than the official code. The TensorFlow method is most accurate for ResNet, but is not suitable for MobileNet. The Pillow method is least accurate, but can be used on Arm platforms. The difference between the universal OpenCV and the TensorFlow methods on ResNet is exactly 0.1% or 50 images.
 
 #### Detect datasets preprocessed on a different machine
 

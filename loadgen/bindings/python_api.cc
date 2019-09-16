@@ -217,6 +217,10 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::server_target_latency_percentile)
       .def_readwrite("server_coalesce_queries",
                      &TestSettings::server_coalesce_queries)
+      .def_readwrite("server_find_peak_qps_decimals_of_precision",
+                     &TestSettings::server_find_peak_qps_decimals_of_precision)
+      .def_readwrite("server_find_peak_qps_boundary_step_size",
+                     &TestSettings::server_find_peak_qps_boundary_step_size)
       .def_readwrite("offline_expected_qps",
                      &TestSettings::offline_expected_qps)
       .def_readwrite("min_duration_ms", &TestSettings::min_duration_ms)
@@ -230,7 +234,16 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("accuracy_log_rng_seed",
                      &TestSettings::accuracy_log_rng_seed)
       .def_readwrite("accuracy_log_probability",
-                     &TestSettings::accuracy_log_probability);
+                     &TestSettings::accuracy_log_probability)
+      .def_readwrite("performance_issue_unique",
+                     &TestSettings::performance_issue_unique)
+      .def_readwrite("performance_issue_same",
+                     &TestSettings::performance_issue_same)
+      .def_readwrite("performance_issue_same_index",
+                     &TestSettings::performance_issue_same_index)
+      .def_readwrite("performance_sample_count_override",
+                     &TestSettings::performance_sample_count_override)
+      .def("FromConfig", &TestSettings::FromConfig, "FromConfig.");
 
   pybind11::enum_<LoggingMode>(m, "LoggingMode")
       .value("AsyncPoll", LoggingMode::AsyncPoll)

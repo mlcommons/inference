@@ -8,20 +8,21 @@ You can find a short tutorial how to use this benchmark [here](https://github.co
 
 | model | framework | accuracy | dataset | model link | model source | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| resnet50-v1.5 | tensorflow | 76.46% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb) | [mlperf](https://github.com/mlperf/training/tree/master/image_classification), [tensorflow](https://github.com/tensorflow/models/tree/master/official/resnet) | fp32 | NHWC. More information on resnet50 v1.5 can be found [here](https://github.com/tensorflow/models/tree/master/official/resnet).||
-| resnet50-v1.5 | onnx, pytorch | 76.46% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2592612/files/resnet50_v1.onnx) | [from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/resnet50-to-onnx.sh) | fp32 | NCHW, tested on pytorch and onnxruntime |
-| mobilenet-v1 | tensorflow | 71.68% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | fp32 | NHWC |
-| mobilenet-v1 quantized | tensorflow | 70.654% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) | int8 | NHWC |
-| mobilenet-v1 | tflite | 71.516% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | fp32 | NHWC |
-| mobilenet-v1 quantized | tflite | 70.776% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) | int8 | NHWC |
-| mobilenet-v1 | onnx, pytorch | 71.68% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/3157894/files/mobilenet_v1_1.0_224.onnx) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) converted with [this script](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/tools/resnet50-to-onnx.sh) | fp32 | NCHW, tested on pytorch and onnxruntime |
+| resnet50-v1.5 | tensorflow | 76.456% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb) | [mlperf](https://github.com/mlperf/training/tree/master/image_classification), [tensorflow](https://github.com/tensorflow/models/tree/master/official/resnet) | fp32 | NHWC. More information on resnet50 v1.5 can be found [here](https://github.com/tensorflow/models/tree/master/official/resnet).||
+| resnet50-v1.5 | onnx, pytorch | 76.456% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2592612/files/resnet50_v1.onnx) | [from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/resnet50-to-onnx.sh) | fp32 | NCHW, tested on pytorch and onnxruntime |
+| mobilenet-v1 | tensorflow | 71.676% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | fp32 | NHWC |
+| mobilenet-v1 quantized | tensorflow | 70.694% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) | int8 | NHWC |
+| mobilenet-v1 | tflite | 71.676% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | fp32 | NHWC |
+| mobilenet-v1 quantized | tflite | 70.762% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) | int8 | NHWC |
+| mobilenet-v1 | onnx, pytorch | 71.676% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/3157894/files/mobilenet_v1_1.0_224.onnx) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) converted with [this script](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/tools/resnet50-to-onnx.sh) | fp32 | NCHW, tested on pytorch and onnxruntime |
 | mobilenet-v1 | onnx, pytorch | 70.9% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/3353417/files/Quantized%20MobileNet.zip) | ??? | int8 | ??? |
 | ssd-mobilenet 300x300 | tensorflow | mAP 0.23 | coco resized to 300x300 | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | fp32 | NHWC |
 | ssd-mobilenet 300x300 quantized finetuned | tensorflow | mAP 0.23594 | coco resized to 300x300 | [from zenodo](https://zenodo.org/record/3252084/files/mobilenet_v1_ssd_8bit_finetuned.tar.gz) | Habana | int8 | ??? |
+| ssd-mobilenet 300x300 symmetrically quantized finetuned | tensorflow | mAP 0.234 | coco resized to 300x300 | [from zenodo](https://zenodo.org/record/3401714/files/ssd_mobilenet_v1_quant_ft_no_zero_point_frozen_inference_graph.pb) | Habana | int8 | ??? |
 | ssd-mobilenet 300x300 | pytorch | mAP 0.23 | coco resized to 300x300 | [from zenodo](https://zenodo.org/record/3239977/files/ssd_mobilenet_v1.pytorch) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | fp32 | NHWC |
 | ssd-mobilenet 300x300 | onnx | mAP 0.23 | coco resized to 300x300 | [from zenodo](https://zenodo.org/record/3163026/files/ssd_mobilenet_v1_coco_2018_01_28.onnx) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) converted with [this script](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/tools/ssd-mobilenet-to-onnx.sh) | fp32 | NHWC, tested on onnxruntime, some runtime warnings |
 | ssd-mobilenet 300x300 | onnx, pytorch | mAP 0.23 | coco resized to 300x300  | [from zenodo](https://zenodo.org/record/3252084/files/mobilenet_v1_ssd_8bit_finetuned.tar.gz) | ??? | int8 | ??? |
-| ssd-resnet34 1200x1200 | tensorflow | mAP 0.20 | coco resized to 1200x1200| [from zenodo](https://zenodo.org/record/3345892/files/tf_ssd_resnet34_22.1.zip?download=1) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector/tensorflow), [training model](https://github.com/lji72/inference/tree/tf_ssd_resent34_align_onnx/others/cloud/single_stage_detector/tensorflow) | fp32 | NHWC |
+| ssd-resnet34 1200x1200 | tensorflow | mAP 0.20 | coco resized to 1200x1200| [from zenodo](https://zenodo.org/record/3345892/files/tf_ssd_resnet34_22.1.zip?download=1) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector/tensorflow), [training model](https://github.com/lji72/inference/tree/tf_ssd_resent34_align_onnx/others/cloud/single_stage_detector/tensorflow) | fp32 | NCHW |
 | ssd-resnet34 1200x1200 | pytorch | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3236545/files/resnet34-ssd1200.pytorch) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector/pytorch) | fp32 | NCHW |
 | ssd-resnet34 1200x1200 | onnx | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3228411/files/resnet34-ssd1200.onnx) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector) converted using the these [instructions](https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch#6-onnx) | fp32 | Works but needs more testing |
 
@@ -29,6 +30,35 @@ You can find a short tutorial how to use this benchmark [here](https://github.co
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
 It is written in python which might make it less suitable for lite models like mobilenet or large number of cpu's.
 We are thinking to provide a c++ implementation with identical functionality in the near future.
+
+## Tools for preparing datasets and validating accuracy
+The reference implementation includes all required pre-processing of datasets.
+It also includes a ```--accuracy``` option to validate accuracy as required by mlperf.
+If you are not using the reference implementation, a few scripts will help:
+### Prepare the coco dataset 
+The tool is [here](../tools/upscale_coco).
+You can run it for ssd-mobilenet like:
+```
+python upscale_coco.py --inputs /data/coco/ --outputs /data/coco-300 --size 300 300 --format png
+```
+and for ssd-resnet34 like:
+```
+python upscale_coco.py --inputs /data/coco/ --outputs /data/coco-1200 --size 1200 1200 --format png
+```
+### Prepare the imagenet dataset 
+to come.
+
+### Validate accuracy for resnet50 and mobilenet benchmarks
+The tool is [here](tools/accuracy-imagenet.py). You can run it like:
+```
+python tools/accuracy-imagenet.py --mlperf-accuracy-file mlperf_log_accuracy.json --imagenet-val-file /data/imagenet2012/val_map.txt
+```
+
+### Validate accuracy for ssd-mobilenet and ssd-resnet34 benchmarks
+The tool is [here](tools/accuracy-coco.py). You can run it like:
+```
+python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --coco-dir /data/coco
+```
 
 ## Datasets
 | dataset | download link | 
@@ -150,34 +180,36 @@ During development running the full benchmark is unpractical. Some options to he
 
 So if you want to tune for example Server mode, try:
 ```
-./run_local.sh tf resnet50 gpu --count 100 --time 60 --scenario Server --qps 200 --max-latency 0.2
+./run_local.sh tf resnet50 gpu --count 100 --time 60 --scenario Server --qps 200 --max-latency 0.1
 or
-./run_local.sh tf ssd-mobilenet gpu --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.2
+./run_local.sh tf ssd-mobilenet gpu --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.1
 
 ```
 
 If you want run with accuracy pass, try:
 ```
-./run_local.sh tf ssd-mobilenet gpu --accuracy --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.2
+./run_local.sh tf ssd-mobilenet gpu --accuracy --time 60 --scenario Server --qps 100 --max-latency 0.2
 ```
 
 
 ### Usage
 ```
 usage: main.py [-h]
+    [--config ../mlperf.conf]
     [--dataset {imagenet,imagenet_mobilenet,coco,coco-300,coco-1200,coco-1200-onnx,coco-1200-pt,coco-1200-tf}]
     --dataset-path DATASET_PATH [--dataset-list DATASET_LIST]
     [--data-format {NCHW,NHWC}]
     [--profile {defaults,resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-pytorch,ssd-resnet34-onnxruntime}]
     [--scenario list of SingleStream,MultiStream,Server,Offline]
-    [--queries-single QUERIES_SINGLE]
-    [--queries-offline QUERIES_OFFLINE]
-    [--queries-multi QUERIES_MULTI] [--max-batchsize MAX_BATCHSIZE]
+    [--max-batchsize MAX_BATCHSIZE]
     --model MODEL [--output OUTPUT] [--inputs INPUTS]
     [--outputs OUTPUTS] [--backend BACKEND] [--threads THREADS]
     [--time TIME] [--count COUNT] [--qps QPS]
     [--max-latency MAX_LATENCY] [--cache CACHE] [--accuracy]
 ```
+
+```--config```
+the mlperf config file to use, defaults to v0.5/mlperf.conf
 
 ```--dataset```
 use the specified dataset. Currently we only support ImageNet.
@@ -220,15 +252,6 @@ Expected QPS.
 
 ```--max-latency MAX_LATENCY```
 comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
-
-```--queries-single QUERIES_SINGLE```
-queries to use for SingleStream scenario (default: 1024).
-
-```--queries-offline QUERIES_OFFLINE```
-queries to use for Offline scenario (default: 24576).
-
-```--queries-multi QUERIES_MULTI```
-queries to use for MultiStream scenario (default: 24576).
 
 ```--max-batchsize MAX_BATCHSIZE```
 maximum batchsize we generate to backend (default: 128).

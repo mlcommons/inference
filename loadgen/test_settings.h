@@ -93,6 +93,8 @@ namespace mlperf {
 ///  + Sends queries with a single sample.
 ///  + Queries have a random poisson (non-uniform) arrival rate that, when
 ///    averaged, hits the target QPS.
+///  + There is no limit on the number of outstanding queries, as long as
+///    the latency constraints are met.
 ///  + **Final performance result is:** PASS if the a percentile of the latency
 ///    is under a given threshold. FAIL otherwise.
 ///   - Threshold is specified by \link
@@ -158,8 +160,9 @@ struct TestSettings {
   /// \name MultiStream-specific
   /**@{*/
   /// \brief The uniform rate at which queries are produced.
-  /// The inverse of this is used to determine the latency constraint for the
-  /// MultiStream scenario. Does not apply to the MultiStreamFree scenario,
+  /// The latency constraint for the MultiStream scenario is equal to
+  /// (multi_stream_max_async_queries / multi_stream_target_qps).
+  /// This does not apply to the MultiStreamFree scenario,
   /// except as a hint for how many queries to pre-generate.
   double multi_stream_target_qps = 10.0;
   /// \brief The latency constraint for the MultiStreamFree scenario.
@@ -203,6 +206,10 @@ struct TestSettings {
   /// \brief A step size (as a fraction of the QPS) used to widen the lower and
   /// upper bounds to find the initial boundaries of binary search.
   double server_find_peak_qps_boundary_step_size = 1;
+  /// \brief The maximum number of outstanding queries to allow before earlying
+  /// out from a performance run. Useful for performance tuning and speeding up
+  /// the FindPeakPerformance mode.
+  uint64_t server_max_async_queries = 0;  ///< 0: Infinity.
   /**@}*/
 
   // ==================================

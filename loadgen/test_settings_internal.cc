@@ -42,6 +42,7 @@ TestSettingsInternal::TestSettingsInternal(
       schedule_rng_seed(requested.schedule_rng_seed),
       accuracy_log_rng_seed(requested.accuracy_log_rng_seed),
       accuracy_log_probability(requested.accuracy_log_probability),
+      print_timestamps(requested.print_timestamps),
       performance_issue_unique(requested.performance_issue_unique),
       performance_issue_same(requested.performance_issue_same),
       performance_issue_same_index(requested.performance_issue_same_index),
@@ -239,12 +240,12 @@ void LogRequestedTestSettings(const TestSettings &s) {
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
     detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
     detail("accuracy_log_probability : ", s.accuracy_log_probability);
+    detail("print_timestamps : ", s.print_timestamps);
     detail("performance_issue_unique : ", s.performance_issue_unique);
     detail("performance_issue_same : ", s.performance_issue_same);
     detail("performance_issue_same_index : ", s.performance_issue_same_index);
     detail("performance_sample_count_override : ",
            s.performance_sample_count_override);
-
     detail("");
   });
 }
@@ -273,6 +274,7 @@ void TestSettingsInternal::LogEffectiveSettings() const {
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
     detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
     detail("accuracy_log_probability : ", s.accuracy_log_probability);
+    detail("print_timestamps : ", s.print_timestamps);
     detail("performance_issue_unique : ", s.performance_issue_unique);
     detail("performance_issue_same : ", s.performance_issue_same);
     detail("performance_issue_same_index : ", s.performance_issue_same_index);
@@ -299,6 +301,7 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("schedule_rng_seed : ", schedule_rng_seed);
   summary("accuracy_log_rng_seed : ", accuracy_log_rng_seed);
   summary("accuracy_log_probability : ", accuracy_log_probability);
+  summary("print_timestamps : ", print_timestamps);
   summary("performance_issue_unique : ", performance_issue_unique);
   summary("performance_issue_same : ", performance_issue_same);
   summary("performance_issue_same_index : ", performance_issue_same_index);
@@ -430,6 +433,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
            nullptr);
   lookupkv(model, scenario, "accuracy_log_probability", nullptr,
            &accuracy_log_probability, 0.01);
+  if (lookupkv(model, scenario, "print_timestamps", &val, nullptr))
+    print_timestamps = (val == 0) ? false : true;
   if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr))
     performance_issue_unique = (val == 0) ? false : true;
   if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr))

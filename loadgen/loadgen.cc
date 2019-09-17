@@ -17,9 +17,12 @@ limitations under the License.
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <cstring>
+#include <ctime>
 #include <fstream>
 #include <future>
+#include <iomanip>
 #include <iostream>
 #include <queue>
 #include <random>
@@ -1354,26 +1357,53 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   const LoadableSampleSet& performance_set = loadable_sets.front();
   LoadSamplesToRam(qsl, performance_set.set);
 
-  auto start_ts = PerfClock::now();
+  // Start PerfClock/system_clock timers for measuring performance interval
+  // for comparison vs external timer.
+  auto pc_start_ts = PerfClock::now();
+  auto sc_start_ts = std::chrono::system_clock::now();
   if (settings.print_timestamps) {
-    std::cout << "Loadgen :: Perf mode start. Timestamp = "
-              << std::chrono::system_clock::to_time_t(start_ts) << "\n"
+    std::cout << "Loadgen :: Perf mode start. system_clock Timestamp = "
+              << std::chrono::system_clock::to_time_t(sc_start_ts) << "\n"
               << std::flush;
   }
+
   PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
       sut, settings, performance_set, sequence_gen));
 
-  auto stop_ts = PerfClock::now();
+  // Measure PerfClock/system_clock timer durations for comparison vs
+  // external timer.
+  auto pc_stop_ts = PerfClock::now();
+  auto sc_stop_ts = std::chrono::system_clock::now();
+  auto pc_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                         pc_stop_ts - pc_start_ts)
+                         .count();
+  auto sc_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                         sc_stop_ts - sc_start_ts)
+                         .count();
+  float pc_sc_ratio = (float)pc_duration / sc_duration;
   if (settings.print_timestamps) {
-    std::cout << "Loadgen :: Perf mode stop. Timestamp = "
-              << std::chrono::system_clock::to_time_t(stop_ts) << "\n"
+    std::cout << "Loadgen :: Perf mode stop. systme_clock Timestamp = "
+              << std::chrono::system_clock::to_time_t(sc_stop_ts) << "\n"
               << std::flush;
-    std::cout << "Loadgen :: Perf duration = "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(stop_ts -
-                                                                       start_ts)
-                     .count()
+    std::cout << "Loadgen :: PerfClock Perf duration = " << pc_duration
               << "ms\n"
               << std::flush;
+    std::cout << "Loadgen :: system_clock Perf duration = " << sc_duration
+              << "ms\n"
+              << std::flush;
+    std::cout << "Loadgen :: PerfClock/system_clock ratio = " << std::fixed
+              << std::setprecision(4) << pc_sc_ratio << "\n"
+              << std::flush;
+  }
+
+  if (pc_sc_ratio > 1.01 || pc_sc_ratio < 0.99) {
+    LogDetail([](AsyncDetail& detail) {
+      detail.Error("PerfClock and system_clock differ by more than 1\%!.");
+    });
+  } else if (pc_sc_ratio > 1.001 || pc_sc_ratio < 0.999) {
+    LogDetail([](AsyncDetail& detail) {
+      detail.Warning("PerfClock and system_clock differ by more than 0.1\%.");
+    });
   }
 
   sut->ReportLatencyResults(pr.sample_latencies);

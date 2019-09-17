@@ -262,6 +262,7 @@ struct TestSettings {
   /// that when the same query is repeatedly issued.
   /**@{*/
   /// \brief Prints measurement interval start and stop timestamps to std::cout
+  /// for the purpose of comparison against an external timer
   bool print_timestamps = false;
   /// \brief Allows issuing only unique queries in Performance mode of any
   /// scenario \details This can be used to send non-repeat & hence unique

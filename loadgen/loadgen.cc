@@ -1380,7 +1380,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   auto sc_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
                          sc_stop_ts - sc_start_ts)
                          .count();
-  float pc_sc_ratio = (float)pc_duration / sc_duration;
+  float pc_sc_ratio = static_cast<float>(pc_duration) / sc_duration;
   if (settings.print_timestamps) {
     std::cout << "Loadgen :: Perf mode stop. systme_clock Timestamp = "
               << std::chrono::system_clock::to_time_t(sc_stop_ts) << "\n"
@@ -1397,12 +1397,14 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   }
 
   if (pc_sc_ratio > 1.01 || pc_sc_ratio < 0.99) {
-    LogDetail([](AsyncDetail& detail) {
-      detail.Error("PerfClock and system_clock differ by more than 1\%!.");
+    LogDetail([pc_sc_ratio](AsyncDetail& detail) {
+      detail.Error("PerfClock and system_clock differ by more than 1\%! ",
+                   "pc_sc_ratio", pc_sc_ratio);
     });
   } else if (pc_sc_ratio > 1.001 || pc_sc_ratio < 0.999) {
-    LogDetail([](AsyncDetail& detail) {
-      detail.Warning("PerfClock and system_clock differ by more than 0.1\%.");
+    LogDetail([pc_sc_ratio](AsyncDetail& detail) {
+      detail.Warning("PerfClock and system_clock differ by more than 0.1\%. ",
+                     "pc_sc_ratio", pc_sc_ratio);
     });
   }
 

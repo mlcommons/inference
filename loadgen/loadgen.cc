@@ -632,13 +632,6 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                          max_latencies_to_record);
 
   size_t queries_issued = 0;
-  // TODO: Replace the constant 5 below with a TestSetting.
-  const double query_seconds_outstanding_threshold =
-      5 * std::chrono::duration_cast<std::chrono::duration<double>>(
-              settings.target_latency)
-              .count();
-  const size_t max_queries_outstanding =
-      settings.target_qps * query_seconds_outstanding_threshold;
 
   auto start_for_power = std::chrono::system_clock::now();
   const PerfClock::time_point start = PerfClock::now();
@@ -673,15 +666,18 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
 
     auto duration = (last_now - start);
     if (scenario == TestScenario::Server) {
-      size_t queries_outstanding =
-          queries_issued -
-          response_logger.queries_completed.load(std::memory_order_relaxed);
-      if (queries_outstanding > max_queries_outstanding) {
-        LogDetail([queries_issued, queries_outstanding](AsyncDetail& detail) {
-          detail.Error("Ending early: Too many outstanding queries.", "issued",
-                       queries_issued, "outstanding", queries_outstanding);
-        });
-        break;
+      if (settings.max_async_queries != 0) {
+        size_t queries_outstanding =
+            queries_issued -
+            response_logger.queries_completed.load(std::memory_order_relaxed);
+        if (queries_outstanding > settings.max_async_queries) {
+          LogDetail([queries_issued, queries_outstanding](AsyncDetail& detail) {
+            detail.Error("Ending early: Too many outstanding queries.",
+                         "issued", queries_issued, "outstanding",
+                         queries_outstanding);
+          });
+          break;
+        }
       }
     } else {
       if (queries_issued >= settings.min_query_count &&

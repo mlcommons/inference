@@ -30,7 +30,7 @@ TestSettingsInternal::TestSettingsInternal(
       mode(requested.mode),
       samples_per_query(1),
       target_qps(1),
-      max_async_queries(-1),
+      max_async_queries(0),
       target_duration(std::chrono::milliseconds(requested.min_duration_ms)),
       min_duration(std::chrono::milliseconds(requested.min_duration_ms)),
       max_duration(std::chrono::milliseconds(requested.max_duration_ms)),
@@ -86,9 +86,8 @@ TestSettingsInternal::TestSettingsInternal(
       }
       target_latency =
           std::chrono::nanoseconds(requested.server_target_latency_ns);
-      max_async_queries =
-          std::numeric_limits<decltype(max_async_queries)>::max();
       target_latency_percentile = requested.server_target_latency_percentile;
+      max_async_queries = requested.server_max_async_queries;
       break;
     case TestScenario::Offline:
       if (requested.offline_expected_qps >= 0.0) {
@@ -100,8 +99,7 @@ TestSettingsInternal::TestSettingsInternal(
                        "requested", offline_expected_qps, "using", target_qps);
         });
       }
-      max_async_queries =
-          std::numeric_limits<decltype(max_async_queries)>::max();
+      max_async_queries = 1;
       break;
   }
 
@@ -223,6 +221,11 @@ void LogRequestedTestSettings(const TestSettings &s) {
         detail("server_target_latency_percentile : ",
                s.server_target_latency_percentile);
         detail("server_coalesce_queries : ", s.server_coalesce_queries);
+        detail("server_find_peak_qps_decimals_of_precision : ",
+               s.server_find_peak_qps_decimals_of_precision);
+        detail("server_find_peak_qps_boundary_step_size : ",
+               s.server_find_peak_qps_boundary_step_size);
+        detail("server_max_async_queries : ", s.server_max_async_queries);
         break;
       case TestScenario::Offline:
         detail("offline_expected_qps : ", s.offline_expected_qps);
@@ -463,6 +466,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, "Server", "target_qps", nullptr, &server_target_qps);
   if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
     server_coalesce_queries = (val == 0) ? false : true;
+  if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))
+    server_max_async_queries = int(val);
 
   // keys that apply to Offline
   lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);

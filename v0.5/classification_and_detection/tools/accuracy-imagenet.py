@@ -21,9 +21,15 @@ def get_args():
     parser.add_argument("--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json")
     parser.add_argument("--imagenet-val-file", required=True, help="path to imagenet val_map.txt")
     parser.add_argument("--verbose", action="store_true", help="verbose messages")
+    parser.add_argument("--dtype", default="float32", choices=["float32", "int32", "int64"], help="data type of the label")
     args = parser.parse_args()
     return args
 
+dtype_map = {
+    "float32": np.float32,
+    "int32": np.int32,
+    "int64": np.int64
+}
 
 def main():
     args = get_args()
@@ -37,14 +43,21 @@ def main():
     with open(args.mlperf_accuracy_file, "r") as f:
         results = json.load(f)
 
+    seen = set()
     good = 0
     for j in results:
         idx = j['qsl_idx']
+
+        # de-dupe in case loadgen sends the same image multiple times
+        if idx in seen:
+            continue
+        seen.add(idx)
+
         # get the expected label and image
         img, label = imagenet[idx]
 
         # reconstruct label from mlperf accuracy log
-        data = np.frombuffer(bytes.fromhex(j['data']), np.float32)
+        data = np.frombuffer(bytes.fromhex(j['data']), dtype_map[args.dtype])
         found = int(data[0])
         if label == found:
             good += 1
@@ -52,7 +65,9 @@ def main():
             if args.verbose:
                 print("{}, expected: {}, found {}".format(img, label, found))
 
-    print("accuracy={:.3f}%, good={}, total={}".format(100. * good / len(results), good, len(results)))
+    print("accuracy={:.3f}%, good={}, total={}".format(100. * good / len(seen), good, len(seen)))
+    if args.verbose:
+        print("found and ignored {} dupes".format(len(results) - len(seen)))
 
 
 if __name__ == "__main__":

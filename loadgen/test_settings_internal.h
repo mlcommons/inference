@@ -56,8 +56,8 @@ struct TestSettingsInternal {
   int samples_per_query;
   double target_qps;
   std::chrono::nanoseconds target_latency{0};
-  double target_latency_percentile;  // Single, multistream and server mode
-  int max_async_queries;
+  double target_latency_percentile;  // Single, multistream, and server modes.
+  uint64_t max_async_queries;
 
   // Target duration is used to generate queries of a minimum duration before
   // the test run.

@@ -19,7 +19,7 @@ field_compliance = {}
 class ExitCode (Enum):
     COMPLIANT = "COMPLIANT"
     SETTING_ERROR = "SETTING_ERROR"
-    SCENARIO_ERROR = "SCENARIO_ERROR"
+    PARSE_ERROR = "PARSE_ERROR"
 
 # Scrape lines from txt file
 with open(args.log_filename) as logfile:
@@ -46,6 +46,7 @@ requested_index = find_string(log_lines, requested_string)
 
 if effective_index == None or requested_index == None:
   print("\nUnable to parse log file properly. Please check for any errors.")
+  exit_code = ExitCode.PARSE_ERROR
 
 effective_settings = log_lines[effective_index+1:requested_index-1]
 effective_dict = {}
@@ -60,18 +61,18 @@ def find_char(character, string):
     return char_counter
 
 
-def slice_char(string, character, index):
+def slice_char(string, character, index, find_char_results):
     """Slices a string to remove everything before a specific character."""
-    return string[find_char(character, string)[index] + 2:]
     # + 2 because the first character of the attribute exists 2 characters after the colon.
+    return string[find_char_results[index] + 2:]
 
 
-def get_key_value(string, character, index):
-    find_char_result = find_char(character, string)[index]
+def get_key_value(string, character, index, find_char_results):
+    find_char_result = find_char_results[index]
 
     """Creates a list with a key value pair from parsed log file line."""
-    value = string[find_char_result + 2:]
     # + 2 because the first character of the attribute exists 2 characters after the colon.
+    value = string[find_char_result + 2:]
     if value.isdigit():
         value = int(value)
     return [string[0: find_char_result].strip(), value]
@@ -79,9 +80,10 @@ def get_key_value(string, character, index):
 
 for i, s in enumerate(effective_settings):
     """Parses the effective settings list and creates a dictionary out of it."""
-    # 3 used below because the attributes exist after the 3rd colon.
-    effective_settings[i] = slice_char(effective_settings[i], ':', 3)
-    get_key_value_result = get_key_value(effective_settings[i], ':', 0)
+    find_char_results = find_char(effective_settings[i], ':')
+    # 3 used below because the attributes exist after the 4th colon.
+    effective_settings[i] = slice_char(effective_settings[i], ':', 3, find_char_results)
+    get_key_value_result = get_key_value(effective_settings[i], ':', 0, find_char_results)
     effective_dict[get_key_value_result[0]] = get_key_value_result[1]
 
 effective_keys = list(effective_dict.keys())
@@ -91,7 +93,7 @@ field_compliance = {}
 
 if effective_dict["Scenario"] not in json_dict.keys():
     """Checks if scenario exists"""
-    exit_code = ExitCode.SCENARIO_ERROR
+    exit_code = ExitCode.PARSE_ERROR
 else:
     scenario = effective_dict["Scenario"]
     field_compliance = dict((el, False) for el in json_dict[scenario].keys())
@@ -100,8 +102,7 @@ else:
     for a in json_dict[scenario]:
         """Checks each attribute"""
         spec_value = json_dict[scenario][a]
-        if effective_dict[a] == spec_value:
-            field_compliance[a] = True
+        
         if a == "target_latency (ns)":
             if scenario == "MultiStream" or scenario == "Server":
                 current_keys = list(spec_value.keys())
@@ -111,7 +112,7 @@ else:
                         field_compliance[a] = True
             else:
                 field_compliance[a] = True
-        if a == "min_query_count":
+        elif a == "min_query_count":
             if scenario == "MultiStream" or scenario == "Server":
                 spec_keys = list(spec_value.keys())
 
@@ -121,16 +122,16 @@ else:
             else:
                 if spec_value <= effective_dict[a]:
                         field_compliance[a] = True
-        if a == "samples_per_query":
+        elif a == "samples_per_query":
             if scenario == "Offline":
                 if spec_value <= effective_dict[a]:
                     field_compliance[a] = True
             elif scenario == "MultiStream":
                 field_compliance[a] = True
-        if a == "min_duration (ms)":
+        elif a == "min_duration (ms)":
             if spec_value <= effective_dict[a]:
                 field_compliance[a] = True
-        if a == "min_sample_count":
+        elif a == "min_sample_count":
             if scenario == "Server":
                 spec_keys = list(spec_value.keys())
 
@@ -140,8 +141,10 @@ else:
             else:
                 if spec_value <= effective_dict[a]:
                         field_compliance[a] = True
+        elif effective_dict[a] == spec_value:
+            field_compliance[a] = True
 
-if exit_code is not ExitCode.SCENARIO_ERROR:
+if exit_code is not ExitCode.PARSE_ERROR:
     """Sets final exit code value"""
     if all(value == True for value in field_compliance.values()) == True:
         exit_code = ExitCode.COMPLIANT
@@ -154,7 +157,7 @@ if exit_code == ExitCode.COMPLIANT:
 elif exit_code == ExitCode.SETTING_ERROR:
     print("\nSummary: One or more of your TestSettings is not compliant with the MLPerf specifications. Please examine below to see which attributes do not comply.")
 else:
-    print("\nSummary: Your scenario specification in your TestSettings is incorrect. Please fix before continuing the test.")
+    print("\nSummary: There is an error with parsing the log file. Please fix before continuing the test.")
 
 print("\nExit Code: " + exit_code.value + "\n")
 print("Attribute Complies? \n" + str(field_compliance) + "\n")

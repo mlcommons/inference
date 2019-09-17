@@ -221,7 +221,7 @@ class GNMTRunner (Runner):
 
         # If no value is provided for the construtor arguments, set defaults here
         if input_file is None:
-            input_file = os.path.join(os.getcwd(), 'nmt', 'data', 'newstest2014.tok.bpe.32000.en')
+            input_file = os.path.join(os.getcwd(), 'nmt', 'data', 'newstest2014.tok.bpe.32000.repl.en')
 
         self.gnmt = model
         self.input_file = input_file
@@ -239,6 +239,16 @@ class GNMTRunner (Runner):
 
         # Reset translation count
         self.gnmt.resetCount()
+
+    ##
+    # @brief Calculate total number of sentences in the input file
+    # @note this can be accelerated by returning len(self.gnmt.infer_data)
+    # however, this requires load_samples_to_ram be called prior
+    def getTotalNumSentences(self):
+        with open(self.input_file) as ifh:
+            for line_no, l in enumerate(ifh):
+                pass
+            return line_no + 1
 
     ##
     # @brief Invoke GNMT to translate the query qitem
@@ -472,8 +482,8 @@ if __name__ == "__main__":
         
         # Specify exactly how many queries need to be made
         if args.debug_settings:
-            settings.min_query_count = 100
-            settings.max_query_count = 100
+            settings.min_query_count = 80
+            settings.max_query_count = 80
 
     elif args.scenario == "Offline":
         runner = GNMTRunner(gnmt_model, verbose=args.verbose)
@@ -506,8 +516,11 @@ if __name__ == "__main__":
     # Create a thread in the GNMTRunner to start accepting work
     runner.start_worker()
 
-    total_queries = 3003 # Maximum sample ID + 1
-    perf_queries = 3003   # Select the same subset of $perf_queries samples
+    total_queries = runner.getTotalNumSentences() # Maximum sample ID + 1
+    if args.mode == "Accuracy":
+        total_queries = min(total_queries, 3003)
+
+    perf_queries = min(total_queries, 3003)   # Select the same subset of $perf_queries samples
 
     sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries, process_latencies_gnmt)
     qsl = mlperf_loadgen.ConstructQSL(

@@ -20,6 +20,7 @@ limitations under the License.
 #include <cstring>
 #include <fstream>
 #include <future>
+#include <iostream>
 #include <queue>
 #include <random>
 #include <string>
@@ -1353,8 +1354,27 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   const LoadableSampleSet& performance_set = loadable_sets.front();
   LoadSamplesToRam(qsl, performance_set.set);
 
+  auto start_ts = PerfClock::now();
+  if (settings.print_timestamps) {
+    std::cout << "Loadgen :: Perf mode start. Timestamp = "
+              << std::chrono::system_clock::to_time_t(start_ts) << "\n"
+              << std::flush;
+  }
   PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
       sut, settings, performance_set, sequence_gen));
+
+  auto stop_ts = PerfClock::now();
+  if (settings.print_timestamps) {
+    std::cout << "Loadgen :: Perf mode stop. Timestamp = "
+              << std::chrono::system_clock::to_time_t(stop_ts) << "\n"
+              << std::flush;
+    std::cout << "Loadgen :: Perf duration = "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(stop_ts -
+                                                                       start_ts)
+                     .count()
+              << "ms\n"
+              << std::flush;
+  }
 
   sut->ReportLatencyResults(pr.sample_latencies);
 

@@ -313,6 +313,12 @@ std::vector<QueryMetadata> GenerateQueries(
   std::chrono::microseconds k2xTargetDuration = 2 * settings.target_duration;
   size_t min_queries = settings.min_query_count;
 
+  if (scenario == TestScenario::Server) {
+    min_queries_from_duration = DurationToSeconds(min_duration) * requested_qps;
+    min_queries_from_duration = std::ceil(min_queries_from_duration);
+    min_queries = std::max(min_queries, min_queries_from_duration);
+}
+    
   // We should not exit early in accuracy mode.
   if (mode == TestMode::AccuracyOnly) {
     k2xTargetDuration = std::chrono::microseconds(0);
@@ -384,6 +390,15 @@ std::vector<QueryMetadata> GenerateQueries(
     timestamp += schedule_distribution(schedule_rng);
   }
 
+  if (scenario == TestScenario::Server) {
+    last_scheduled_delta_ideal = (queries.size() - 1) / settings.target_qps;
+    last_scheduled_delta_current = DurationToSeconds(queries.back().scheduled_delta);
+    scaling_value = last_scheduled_delta_ideal / last_scheduled_delta_current;
+    for (auto&q : queries) {
+        q.scheduled_delta *= scaling_value;
+    }
+  }
+    
   // See if we need to create a "remainder" query for offline+accuracy to
   // ensure we issue all samples in loaded_samples. Offline doesn't pad
   // loaded_samples like MultiStream does.

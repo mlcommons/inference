@@ -485,6 +485,13 @@ class AsyncDetail {
     return async_log_;
   }
 
+  template <typename... Args>
+  AsyncLog& Warning(Args&&... args) {
+    async_log_.FlagWarning();
+    async_log_.LogDetail(std::forward<Args>(args)...);
+    return async_log_;
+  }
+
  private:
   AsyncLog& async_log_;
 };

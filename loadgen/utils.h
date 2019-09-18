@@ -59,6 +59,8 @@ std::string DateTimeStringForPower(std::chrono::system_clock::time_point tp);
 
 std::string DoubleToString(double value, int precision = 2);
 
+bool FileExists(const std::string filename);
+
 }  // namespace mlperf
 
 #endif  // MLPERF_LOADGEN_UTILS_H

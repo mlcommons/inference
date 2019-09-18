@@ -24,6 +24,11 @@ import os
 
 from absl import app
 
+# Creates a C++ raw string literal using a delimiter that is very
+# unlikely to show up in a git stats.
+def make_raw_string(str) :
+    delimeter = "LGVG_RSLD"
+    return "R\"" + delimeter + "(" + str + ")" + delimeter + "\""
 
 def func_def(name, string):
     return ("const std::string& Loadgen" + name + "() {\n" +
@@ -42,8 +47,8 @@ def generate_loadgen_version_definitions_git(ofile, git_command):
         git_command + "log --pretty=oneline -n 16 --no-decorate").read()
     ofile.write(func_def("GitRevision", "\"" + git_rev[0:-1] + "\""))
     ofile.write(func_def("GitCommitDate", "\"" + git_commit_date[0:-1] + "\""))
-    ofile.write(func_def("GitStatus", "R\"(" + git_status[0:-1] + ")\""))
-    ofile.write(func_def("GitLog", "R\"(" + git_log[0:-1] + ")\""))
+    ofile.write(func_def("GitStatus", make_raw_string(git_status[0:-1])))
+    ofile.write(func_def("GitLog", make_raw_string(git_log[0:-1])))
 
 
 # For clients that might not import the loadgen code as the original git
@@ -72,7 +77,7 @@ def generate_loadgen_version_definitions_sha1(ofile, loadgen_root):
         file_data = open(full_fn, "rb").read()
         sha1s += hashlib.sha1(file_data).hexdigest() + " " + fn + "\n"
 
-    ofile.write(func_def("Sha1OfFiles", "R\"(" + sha1s[0:-1] + ")\""))
+    ofile.write(func_def("Sha1OfFiles", make_raw_string(sha1s[0:-1])))
 
 
 # Outputs version function definitions to cc_filename.

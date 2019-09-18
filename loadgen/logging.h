@@ -62,9 +62,9 @@ const T& ArgValueTransform(const T& value) {
   return value;
 }
 
-/// \brief outputs a trace that can be uploaded to chrome://tracing for
+/// \brief Outputs a trace that can be uploaded to chrome://tracing for
 /// visualization.
-/// \detail Trace event format definition:
+/// \details Trace event format definition:
 /// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/edit?usp=sharing
 class ChromeTracer {
  public:
@@ -87,11 +87,12 @@ class ChromeTracer {
   }
 
   template <typename... Args>
-  void AddAsyncBeginEvent(const std::string& name, uint64_t id,
+  void AddAsyncBeginEvent(const std::string& name, uint64_t pid, uint64_t id,
                           PerfClock::time_point time, const Args... args) {
     *out_ << "{\"name\":\"" << name << "\","
           << "\"cat\":\"default\","
           << "\"ph\":\"b\","
+          << "\"pid\":" << pid << ","
           << "\"id\":" << id << ","
           << "\"ts\":" << Micros(time - origin_).count() << ","
           << "\"args\":{";
@@ -100,11 +101,12 @@ class ChromeTracer {
   }
 
   template <typename... Args>
-  void AddAsyncInstantEvent(const std::string& name, uint64_t id,
+  void AddAsyncInstantEvent(const std::string& name, uint64_t pid, uint64_t id,
                             PerfClock::time_point time, const Args... args) {
     *out_ << "{\"name\":\"" << name << "\","
           << "\"cat\":\"default\","
           << "\"ph\":\"n\","
+          << "\"pid\":" << pid << ","
           << "\"id\":" << id << ","
           << "\"ts\":" << Micros(time - origin_).count() << ","
           << "\"args\":{";
@@ -113,11 +115,12 @@ class ChromeTracer {
   }
 
   template <typename... Args>
-  void AddAsyncEndEvent(const std::string& name, uint64_t id,
+  void AddAsyncEndEvent(const std::string& name, uint64_t pid, uint64_t id,
                         PerfClock::time_point time) {
     *out_ << "{\"name\":\"" << name << "\","
           << "\"cat\":\"default\","
           << "\"ph\":\"e\", "
+          << "\"pid\":" << pid << ","
           << "\"id\":" << id << ","
           << "\"ts\":" << Micros(time - origin_).count() << "},\n";
   }
@@ -145,19 +148,13 @@ class ChromeTracer {
   void AddArgs() {}
 
   template <typename T>
-  void AddArgs(const T& value_only) {
-    *out_ << ArgValueTransform(value_only);
-  }
-
-  template <typename T>
-  void AddArgs(const std::string& arg_name,
-               const T& arg_value) {
+  void AddArgs(const std::string& arg_name, const T& arg_value) {
     *out_ << "\"" << arg_name << "\":" << ArgValueTransform(arg_value);
   }
 
   template <typename T, typename... Args>
-  void AddArgs(const std::string& arg_name,
-               const T& arg_value, const Args... args) {
+  void AddArgs(const std::string& arg_name, const T& arg_value,
+               const Args... args) {
     *out_ << "\"" << arg_name << "\":" << ArgValueTransform(arg_value) << ",";
     AddArgs(args...);
   }
@@ -170,8 +167,6 @@ class ChromeTracer {
 /// \details Passed as an argument to the log lambda on the
 /// recording thread to serialize the data captured by the lambda and
 /// forward it to the output stream.
-/// \todo Pre-allocate the latency results vector (latencies_) so the
-/// IOThread doesn't need to grow it during the performance run.
 /// \todo Make summary_out_, detail_out_, accuracy_out_, and trace_out_
 /// instances of a new LogOutput interface that the client may override.
 class AsyncLog {
@@ -225,7 +220,8 @@ class AsyncLog {
                          const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
     if (tracer_) {
-      tracer_->AddAsyncInstantEvent(trace_name, id, instant_time, args...);
+      tracer_->AddAsyncInstantEvent(trace_name, current_pid_, id, instant_time,
+                                    args...);
     }
   }
 
@@ -250,8 +246,8 @@ class AsyncLog {
                    const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
     if (tracer_) {
-      tracer_->AddAsyncBeginEvent(trace_name, id, start, args...);
-      tracer_->AddAsyncEndEvent(trace_name, id, end);
+      tracer_->AddAsyncBeginEvent(trace_name, current_pid_, id, start, args...);
+      tracer_->AddAsyncEndEvent(trace_name, current_pid_, id, end);
     }
   }
 
@@ -264,11 +260,11 @@ class AsyncLog {
     }
   }
 
-  void RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve);
-  void RecordSampleCompletion(
-      uint64_t sample_sequence_id,
-      PerfClock::time_point completion_time,
-      QuerySampleLatency latency);
+  void RestartLatencyRecording(uint64_t first_sample_sequence_id,
+                               size_t latencies_to_reserve);
+  void RecordSampleCompletion(uint64_t sample_sequence_id,
+                              PerfClock::time_point completion_time,
+                              QuerySampleLatency latency);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
   PerfClock::time_point GetMaxCompletionTime();
   QuerySampleLatency GetMaxLatencySoFar();
@@ -353,7 +349,8 @@ class Logger {
 
   void LogContentionAndAllocations();
 
-  void RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve);
+  void RestartLatencyRecording(uint64_t first_sample_sequence_id,
+                               size_t latencies_to_reserve);
   std::vector<QuerySampleLatency> GetLatenciesBlocking(size_t expected_count);
   PerfClock::time_point GetMaxCompletionTime();
   QuerySampleLatency GetMaxLatencySoFar();
@@ -488,6 +485,13 @@ class AsyncDetail {
   template <typename... Args>
   AsyncLog& Error(Args&&... args) {
     async_log_.FlagError();
+    async_log_.LogDetail(std::forward<Args>(args)...);
+    return async_log_;
+  }
+
+  template <typename... Args>
+  AsyncLog& Warning(Args&&... args) {
+    async_log_.FlagWarning();
     async_log_.LogDetail(std::forward<Args>(args)...);
     return async_log_;
   }

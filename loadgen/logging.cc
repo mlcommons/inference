@@ -28,11 +28,14 @@ limitations under the License.
 
 #include <cassert>
 #include <future>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+#define WIN32_LEAN_AND_MEAN
 #include <process.h>
+#include <windows.h>
 #define MLPERF_GET_PID() _getpid()
 #else
 #include <unistd.h>
@@ -44,7 +47,11 @@ limitations under the License.
 #if defined(__linux__)
 #include <sys/syscall.h>
 #define MLPERF_GET_TID() syscall(SYS_gettid)
+#elif defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+#define MLPERF_GET_TID() GetCurrentThreadId()
 #else
+// TODO: std::this_thread::id is a class but MLPERF_GET_TID() assigned to
+// uint64_t
 #define MLPERF_GET_TID() std::this_thread::get_id()
 #endif
 
@@ -117,15 +124,18 @@ ChromeTracer::~ChromeTracer() {
 }
 
 void ChromeTracer::WriteTraceEventHeader() {
-  *out_ << "{ \"traceEvents\": [\n";
+  // Times and durations are converted from nanoseconds to microseconds, use
+  // 3 decimal digits to preserve precision.
+  *out_ << std::fixed << std::setprecision(3) << "{\"traceEvents\":[\n";
 }
 
 void ChromeTracer::WriteTraceEventFooter() {
-  *out_ << "{ \"name\": \"LastTrace\" }\n"
+  *out_ << "{\"name\":\"LastTrace\"}\n"
         << "],\n"
-        << "\"displayTimeUnit\": \"ns\",\n"
-        << "\"otherData\": {\n"
-        << "\"version\": \"MLPerf LoadGen v0.5a0\"\n"
+        << "\"displayTimeUnit\":\"ns\",\n"
+        << "\"otherData\":{\n"
+        << "\"ts\":" << Micros(origin_.time_since_epoch()).count() << ",\n"
+        << "\"version\":\"MLPerf LoadGen v0.5a0\"\n"
         << "}\n"
         << "}\n";
 }
@@ -246,7 +256,8 @@ void AsyncLog::WriteAccuracyHeaderLocked() {
 
 void AsyncLog::WriteAccuracyFooterLocked() { *accuracy_out_ << "\n]\n"; }
 
-void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve) {
+void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id,
+                                       size_t latencies_to_reserve) {
   std::unique_lock<std::mutex> lock(latencies_mutex_);
   assert(latencies_.empty());
   assert(latencies_recorded_ == latencies_expected_);
@@ -613,8 +624,10 @@ void Logger::LogContentionAndAllocations() {
   });
 }
 
-void Logger::RestartLatencyRecording(uint64_t first_sample_sequence_id, size_t latencies_to_reserve) {
-  async_logger_.RestartLatencyRecording(first_sample_sequence_id, latencies_to_reserve);
+void Logger::RestartLatencyRecording(uint64_t first_sample_sequence_id,
+                                     size_t latencies_to_reserve) {
+  async_logger_.RestartLatencyRecording(first_sample_sequence_id,
+                                        latencies_to_reserve);
 }
 
 std::vector<QuerySampleLatency> Logger::GetLatenciesBlocking(
@@ -779,9 +792,9 @@ void Logger::IOThread() {
 }
 
 TlsLogger::TlsLogger(std::function<void()> forced_detatch)
-  : pid_(MLPERF_GET_PID()),
-    tid_(MLPERF_GET_TID()),
-    forced_detatch_(std::move(forced_detatch)) {
+    : pid_(MLPERF_GET_PID()),
+      tid_(MLPERF_GET_TID()),
+      forced_detatch_(std::move(forced_detatch)) {
   for (auto& entry : entries_) {
     entry.reserve(kTlsLogReservedEntryCount);
   }

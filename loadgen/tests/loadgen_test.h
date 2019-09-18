@@ -13,6 +13,9 @@ limitations under the License.
 /// \file
 /// \brief A minimal test framework.
 
+#ifndef MLPERF_LOADGEN_TESTS_LOADGEN_TEST_H_
+#define MLPERF_LOADGEN_TESTS_LOADGEN_TEST_H_
+
 #include <algorithm>
 #include <exception>
 #include <functional>
@@ -192,3 +195,5 @@ class Test {
 // The testing namespace exists for documentation purposes.
 // Export the testing namespace for all files that define tests.
 using namespace testing;
+
+#endif  // MLPERF_LOADGEN_TESTS_LOADGEN_TEST_H_

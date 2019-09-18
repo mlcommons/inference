@@ -827,11 +827,6 @@ struct PerformanceSummary {
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
 
-  PerformanceSummary(const std::string& sut_name_arg,
-                     const TestSettingsInternal& settings_arg,
-                     const PerformanceResult& pr_arg)
-      : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg){};
-
   void ProcessLatencies();
 
   bool MinDurationMet(std::string* recommendation);
@@ -1643,7 +1638,8 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                              audit_scenario);
   }
 
-  loadgen::TestSettingsInternal sanitized_settings(test_settings, qsl);
+  loadgen::TestSettingsInternal sanitized_settings(
+      test_settings, qsl->PerformanceSampleCount());
   sanitized_settings.LogAllSettings();
 
   auto run_funcs = loadgen::RunFunctions::Get(sanitized_settings.scenario);

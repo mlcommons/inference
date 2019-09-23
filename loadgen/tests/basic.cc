@@ -185,7 +185,7 @@ REGISTER_TEST_ALL_SCENARIOS(AccuracyIncludesAllSamples,
                             0);
 
 /// \brief Verifies samples from the QSL aren't included too many times.
-/// \detail This is a regression test for:
+/// \details This is a regression test for:
 /// https://github.com/mlperf/inference/pull/386
 /// The root cause was using different values for samples_per_query while
 /// generating queries for the GNMT dataset.
@@ -217,8 +217,8 @@ struct TestAccuracyDupesAreLimitted : public SystemUnderTestAccuracy {
     const size_t max_count = multistream ? 2 : 1;
 
     for (size_t i = 0; i < issue_counts.size(); i++) {
-      FAIL_IF(issue_counts[i] > max_count) &&
-          FAIL_EXP(i) && FAIL_EXP(max_count) && FAIL_EXP(issue_counts[i]);
+      FAIL_IF(issue_counts[i] > max_count) && FAIL_EXP(i) &&
+          FAIL_EXP(max_count) && FAIL_EXP(issue_counts[i]);
     }
   }
 };

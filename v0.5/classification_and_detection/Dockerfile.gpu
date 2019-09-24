@@ -38,7 +38,7 @@ RUN pip install --upgrade pip && \
     ldconfig
 
 RUN conda install pytorch torchvision -c pytorch
-RUN pip install tensorflow-gpu==1.14.0 onnxruntime-gpu
+RUN pip install tensorflow-gpu==1.14 onnxruntime-gpu
 RUN pip install Cython && pip install pycocotools
 
 

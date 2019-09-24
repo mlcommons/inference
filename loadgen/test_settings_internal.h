@@ -21,8 +21,6 @@ limitations under the License.
 #include <string>
 
 #include "logging.h"
-#include "query_sample.h"
-#include "query_sample_library.h"
 #include "test_settings.h"
 
 namespace mlperf {
@@ -44,7 +42,7 @@ std::string ToString(TestMode mode);
 /// the concept of target_duration used to pre-generate queries.
 struct TestSettingsInternal {
   explicit TestSettingsInternal(const TestSettings &requested_settings,
-                                QuerySampleLibrary *qsl);
+                                size_t qsl_performance_sample_count);
   void LogEffectiveSettings() const;
   void LogAllSettings() const;
   void LogSummary(AsyncSummary &summary) const;
@@ -56,8 +54,8 @@ struct TestSettingsInternal {
   int samples_per_query;
   double target_qps;
   std::chrono::nanoseconds target_latency{0};
-  double target_latency_percentile;  // Single, multistream and server mode
-  int max_async_queries;
+  double target_latency_percentile;  // Single, multistream, and server modes.
+  uint64_t max_async_queries;
 
   // Target duration is used to generate queries of a minimum duration before
   // the test run.
@@ -76,6 +74,7 @@ struct TestSettingsInternal {
   uint64_t schedule_rng_seed;
   uint64_t accuracy_log_rng_seed;
   double accuracy_log_probability;
+  bool print_timestamps;
   bool performance_issue_unique;
   bool performance_issue_same;
   uint64_t performance_issue_same_index;

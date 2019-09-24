@@ -17,9 +17,13 @@ limitations under the License.
 #include <algorithm>
 #include <atomic>
 #include <cassert>
+#include <chrono>
 #include <cstring>
+#include <ctime>
 #include <fstream>
 #include <future>
+#include <iomanip>
+#include <iostream>
 #include <queue>
 #include <random>
 #include <string>
@@ -632,13 +636,6 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                          max_latencies_to_record);
 
   size_t queries_issued = 0;
-  // TODO: Replace the constant 5 below with a TestSetting.
-  const double query_seconds_outstanding_threshold =
-      5 * std::chrono::duration_cast<std::chrono::duration<double>>(
-              settings.target_latency)
-              .count();
-  const size_t max_queries_outstanding =
-      settings.target_qps * query_seconds_outstanding_threshold;
 
   auto start_for_power = std::chrono::system_clock::now();
   const PerfClock::time_point start = PerfClock::now();
@@ -673,15 +670,18 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
 
     auto duration = (last_now - start);
     if (scenario == TestScenario::Server) {
-      size_t queries_outstanding =
-          queries_issued -
-          response_logger.queries_completed.load(std::memory_order_relaxed);
-      if (queries_outstanding > max_queries_outstanding) {
-        LogDetail([queries_issued, queries_outstanding](AsyncDetail& detail) {
-          detail.Error("Ending early: Too many outstanding queries.", "issued",
-                       queries_issued, "outstanding", queries_outstanding);
-        });
-        break;
+      if (settings.max_async_queries != 0) {
+        size_t queries_outstanding =
+            queries_issued -
+            response_logger.queries_completed.load(std::memory_order_relaxed);
+        if (queries_outstanding > settings.max_async_queries) {
+          LogDetail([queries_issued, queries_outstanding](AsyncDetail& detail) {
+            detail.Error("Ending early: Too many outstanding queries.",
+                         "issued", queries_issued, "outstanding",
+                         queries_outstanding);
+          });
+          break;
+        }
       }
     } else {
       if (queries_issued >= settings.min_query_count &&
@@ -826,11 +826,6 @@ struct PerformanceSummary {
   PercentileEntry target_latency_percentile{settings.target_latency_percentile};
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
-
-  PerformanceSummary(const std::string& sut_name_arg,
-                     const TestSettingsInternal& settings_arg,
-                     const PerformanceResult& pr_arg)
-      : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg){};
 
   void ProcessLatencies();
 
@@ -1353,8 +1348,56 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   const LoadableSampleSet& performance_set = loadable_sets.front();
   LoadSamplesToRam(qsl, performance_set.set);
 
+  // Start PerfClock/system_clock timers for measuring performance interval
+  // for comparison vs external timer.
+  auto pc_start_ts = PerfClock::now();
+  auto sc_start_ts = std::chrono::system_clock::now();
+  if (settings.print_timestamps) {
+    std::cout << "Loadgen :: Perf mode start. system_clock Timestamp = "
+              << std::chrono::system_clock::to_time_t(sc_start_ts) << "\n"
+              << std::flush;
+  }
+
   PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
       sut, settings, performance_set, sequence_gen));
+
+  // Measure PerfClock/system_clock timer durations for comparison vs
+  // external timer.
+  auto pc_stop_ts = PerfClock::now();
+  auto sc_stop_ts = std::chrono::system_clock::now();
+  auto pc_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                         pc_stop_ts - pc_start_ts)
+                         .count();
+  auto sc_duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+                         sc_stop_ts - sc_start_ts)
+                         .count();
+  float pc_sc_ratio = static_cast<float>(pc_duration) / sc_duration;
+  if (settings.print_timestamps) {
+    std::cout << "Loadgen :: Perf mode stop. systme_clock Timestamp = "
+              << std::chrono::system_clock::to_time_t(sc_stop_ts) << "\n"
+              << std::flush;
+    std::cout << "Loadgen :: PerfClock Perf duration = " << pc_duration
+              << "ms\n"
+              << std::flush;
+    std::cout << "Loadgen :: system_clock Perf duration = " << sc_duration
+              << "ms\n"
+              << std::flush;
+    std::cout << "Loadgen :: PerfClock/system_clock ratio = " << std::fixed
+              << std::setprecision(4) << pc_sc_ratio << "\n"
+              << std::flush;
+  }
+
+  if (pc_sc_ratio > 1.01 || pc_sc_ratio < 0.99) {
+    LogDetail([pc_sc_ratio](AsyncDetail& detail) {
+      detail.Error("PerfClock and system_clock differ by more than 1\%! ",
+                   "pc_sc_ratio", pc_sc_ratio);
+    });
+  } else if (pc_sc_ratio > 1.001 || pc_sc_ratio < 0.999) {
+    LogDetail([pc_sc_ratio](AsyncDetail& detail) {
+      detail.Warning("PerfClock and system_clock differ by more than 0.1\%. ",
+                     "pc_sc_ratio", pc_sc_ratio);
+    });
+  }
 
   sut->ReportLatencyResults(pr.sample_latencies);
 
@@ -1595,7 +1638,8 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                              audit_scenario);
   }
 
-  loadgen::TestSettingsInternal sanitized_settings(test_settings, qsl);
+  loadgen::TestSettingsInternal sanitized_settings(
+      test_settings, qsl->PerformanceSampleCount());
   sanitized_settings.LogAllSettings();
 
   auto run_funcs = loadgen::RunFunctions::Get(sanitized_settings.scenario);

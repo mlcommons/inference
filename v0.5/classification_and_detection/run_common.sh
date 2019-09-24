@@ -111,5 +111,5 @@ if [ $name == "mobilenet-tflite" ] ; then
     extra_args="$extra_args --backend tflite"
 fi
 
-name="$name-$device"
+name="$backend-$device/$model"
 EXTRA_OPS="$extra_args $EXTRA_OPS"

@@ -27,6 +27,7 @@ def get_args():
     parser.add_argument("--verbose", action="store_true", help="verbose messages")
     parser.add_argument("--output-file", default="coco-results.json", help="path to output file")
     parser.add_argument("--use-inv-map", action="store_true", help="use inverse label map")
+    parser.add_argument("--remove-48-empty-images", action="store_true", help="use inverse label map")
     args = parser.parse_args()
     return args
 
@@ -45,15 +46,21 @@ def main():
     detections = []
     image_ids = set()
     seen = set()
-    image_map = cocoGt.dataset["images"]
-
+    if args.remove_48_empty_images:        
+        im_ids = []
+        for i in cocoGt.getCatIds():
+            im_ids += cocoGt.catToImgs[i]
+        im_ids = list(set(im_ids))
+        image_map = [cocoGt.imgs[id] for id in im_ids]
+    else:
+        image_map = cocoGt.dataset["images"]
+    
     for j in results:
         idx = j['qsl_idx']
         # de-dupe in case loadgen sends the same image multiple times
         if idx in seen:
             continue
         seen.add(idx)
-
         # reconstruct from mlperf accuracy log
         # what is written by the benchmark is an array of float32's:
         # id, box[0], box[1], box[2], box[3], score, detection_class
@@ -61,7 +68,11 @@ def main():
         data = np.frombuffer(bytes.fromhex(j['data']), np.float32)
         for i in range(0, len(data), 7):
             image_idx, ymin, xmin, ymax, xmax, score, label = data[i:i + 7]
-            image = image_map[idx]
+            if args.remove_48_empty_images:
+                image = image_map[int(image_idx)]
+            else:
+                image = image_map[idx]
+
             image_id = image["id"]
             height, width = image["height"], image["width"]
             ymin *= height
@@ -71,7 +82,8 @@ def main():
             loc = os.path.join(args.coco_dir, "val2017", image["file_name"])
             label = int(label)
             if args.use_inv_map:
-                label = inv_map[label]
+                label = inv_map.index(label)
+                #label = inv_map[label]
             # pycoco wants {imageID,x1,y1,w,h,score,class}
             detections.append({
                 "image_id": image_id,

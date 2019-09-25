@@ -330,7 +330,7 @@ std::vector<QueryMetadata> GenerateQueries(
   // We should not exit early in accuracy mode.
   if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique ||
       settings.performance_issue_same) {
-    gen_duration = std::chrono::microseconds(-1);
+    gen_duration = std::chrono::microseconds(0);
     // Integer truncation here is intentional.
     // For MultiStream, loaded samples is properly padded.
     // For Offline, we create a 'remainder' query at the end of this function.
@@ -365,7 +365,7 @@ std::vector<QueryMetadata> GenerateQueries(
   // Choose a single sample to repeat when in performance_issue_same mode
   QuerySampleIndex same_sample = settings.performance_issue_same_index;
 
-  while (prev_timestamp <= gen_duration || queries.size() < min_queries) {
+  while (prev_timestamp < gen_duration || queries.size() < min_queries) {
     if (kIsMultiStream) {
       QuerySampleIndex sample_i = settings.performance_issue_unique
                                       ? sample_distribution_unique(sample_rng)

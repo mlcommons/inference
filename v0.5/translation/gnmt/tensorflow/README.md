@@ -1,6 +1,6 @@
 # 1. Problem
 - This problem uses recurrent neural network to do language translation.
-- The steps to train the model and generate the dataset are listed in [train_gnmt.txt](https://github.intel.com/Intel-MLPerf/inference/blob/master/gnmt/nmt/train_gnmt.txt). Basically, they follow the MLPerf training code. However, you can download the model and dataset with the scripts in this directory.
+- The steps to train the model and generate the dataset are listed in [train_gnmt.txt](https://github.com/mlperf/inference/blob/master/v0.5/translation/gnmt/tensorflow/train_gnmt.txt). Basically, they follow the MLPerf training code. However, you can download the model and dataset with the scripts in this directory.
 
 # 2. Directions
 

@@ -827,6 +827,14 @@ struct PerformanceSummary {
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
 
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+  // MSVC complains if there is no explicit constructor.
+  // (target_latency_percentile above depends on construction with settings)
+  PerformanceSummary(
+      const std::string& sut_name_arg, const TestSettingsInternal& settings_arg,
+      const PerformanceResult& pr_arg)
+      : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg){};
+#endif
   void ProcessLatencies();
 
   bool MinDurationMet(std::string* recommendation);

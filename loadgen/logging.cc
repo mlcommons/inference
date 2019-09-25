@@ -50,6 +50,8 @@ limitations under the License.
 #define MLPERF_GET_TID() syscall(SYS_gettid)
 #elif defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 #define MLPERF_GET_TID() GetCurrentThreadId()
+#elif defined(__APPLE__)
+#define MLPERF_GET_TID() std::hash<std::thread::id>{}(std::this_thread::get_id())
 #else
 // TODO: std::this_thread::id is a class but MLPERF_GET_TID() assigned to
 // uint64_t

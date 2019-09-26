@@ -57,7 +57,7 @@ SUPPORTED_DATASETS = {
          {"image_size": [1200, 1200, 3],"use_label_map": True}),
     "coco-1200-tf":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoTf(),
-         {"image_size": [1200, 1200, 3],"use_label_map": True}),
+         {"image_size": [1200, 1200, 3],"use_label_map": False}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
@@ -504,6 +504,7 @@ def main():
         settings.multi_stream_samples_per_query = args.samples_per_query
     if args.max_latency:
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
+        settings.multi_stream_target_latency_ns = int(args.max_latency * NANO_SEC)
 
     sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
     qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)

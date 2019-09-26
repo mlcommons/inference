@@ -37,7 +37,7 @@ def main():
     imagenet = []
     with open(args.imagenet_val_file, "r") as f:
         for line in f:
-            cols = line.strip().split("\t")
+            cols = line.strip().split()
             imagenet.append((cols[0], int(cols[1])))
 
     with open(args.mlperf_accuracy_file, "r") as f:

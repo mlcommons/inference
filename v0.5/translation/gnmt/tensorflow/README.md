@@ -71,6 +71,9 @@ python loadgen_gnmt.py --mode Accuracy
 python process_accuracy.py
 ```
 
+Please ensure the performance mode uses nmt/data/newstest2014.tok.bpe.32000.en.large and accuracy mode uses nmt/data/newstest2014.tok.bpe.32000.en from the dataset link. 
+
+
 ### Running other datasets:
 In order to translate other English texts, the raw text needs to be preprocessed first:
 1. Ensure you have an English text, along with it's German translation, suffixed with, ".en" and ".de", respectively (e.g., newstest2014.en and newstest2014.de).

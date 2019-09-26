@@ -241,6 +241,16 @@ class GNMTRunner (Runner):
         self.gnmt.resetCount()
 
     ##
+    # @brief Calculate total number of sentences in the input file
+    # @note this can be accelerated by returning len(self.gnmt.infer_data)
+    # however, this requires load_samples_to_ram be called prior
+    def getTotalNumSentences(self):
+        with open(self.input_file) as ifh:
+            for line_no, l in enumerate(ifh):
+                pass
+            return line_no + 1
+
+    ##
     # @brief Invoke GNMT to translate the query qitem
     # @pre Ensure load_samples_to_ram was called to fill self.infer_data
     def process(self, qitem):
@@ -459,6 +469,12 @@ if __name__ == "__main__":
 
     max_latency = [float(i) for i in args.max_latency.split(",")]
 
+    # Specify input file
+    if args.mode == "Accuracy":
+        input_file = os.path.join(os.getcwd(), 'nmt', 'data', "newstest2014.tok.bpe.32000.en")
+    else:
+        input_file = os.path.join(os.getcwd(), 'nmt', 'data', "newstest2014.tok.bpe.32000.en.large")
+
     # Build the GNMT model
     if args.scenario == "SingleStream":
         batch_size = 1
@@ -468,15 +484,15 @@ if __name__ == "__main__":
     gnmt_model = GNMTWrapper(batch_size = batch_size, outdir=outdir)
 
     if args.scenario == "SingleStream":
-        runner = SingleStreamGNMTRunner(gnmt_model, store_translation=args.store_translation, verbose=args.verbose, outdir=outdir)
+        runner = SingleStreamGNMTRunner(gnmt_model, input_file=input_file, store_translation=args.store_translation, verbose=args.verbose, outdir=outdir)
         
         # Specify exactly how many queries need to be made
         if args.debug_settings:
-            settings.min_query_count = 100
-            settings.max_query_count = 100
+            settings.min_query_count = 80
+            settings.max_query_count = 80
 
     elif args.scenario == "Offline":
-        runner = GNMTRunner(gnmt_model, verbose=args.verbose)
+        runner = GNMTRunner(gnmt_model, input_file=input_file, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
         if args.debug_settings:
@@ -484,7 +500,7 @@ if __name__ == "__main__":
             settings.max_query_count = 1
 
     elif args.scenario == "MultiStream":
-        runner = GNMTRunner(gnmt_model, verbose=args.verbose)
+        runner = GNMTRunner(gnmt_model, input_file=input_file, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
         if args.debug_settings:
@@ -493,7 +509,7 @@ if __name__ == "__main__":
             settings.multi_stream_samples_per_query = 8
 
     elif args.scenario == "Server":
-        runner = ServerGNMTRunner(gnmt_model, verbose=args.verbose)
+        runner = ServerGNMTRunner(gnmt_model, input_file=input_file, verbose=args.verbose)
         
         # Specify exactly how many queries need to be made
         if args.debug_settings:
@@ -506,8 +522,8 @@ if __name__ == "__main__":
     # Create a thread in the GNMTRunner to start accepting work
     runner.start_worker()
 
-    total_queries = 3003 # Maximum sample ID + 1
-    perf_queries = 3003   # Select the same subset of $perf_queries samples
+    total_queries = runner.getTotalNumSentences() # Maximum sample ID + 1
+    perf_queries = min(total_queries, 3003)   # Select the same subset of $perf_queries samples
 
     sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries, process_latencies_gnmt)
     qsl = mlperf_loadgen.ConstructQSL(

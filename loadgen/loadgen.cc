@@ -214,21 +214,20 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
       if (scenario == TestScenario::Server) {
         // Trace the server scenario as a stacked graph via counter events.
         DurationGeneratorNs issued{query->issued_start_time};
-        log.TraceCounterEvent(
-            "Latency", query->scheduled_time, "sample_seq", sample->sequence_id,
-            "query_seq", query->sequence_id, "sample_idx", sample->sample_index,
-            "issue_delay", sched.delta(query->issued_start_time),
-            "issue_to_done", issued.delta(complete_begin_time));
-      } else {
-        // While visualizing overlapping samples in offline mode is not
-        // practical, sample completion is still recorded for auditing purposes.
-        log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
-                        complete_begin_time, "sample_seq", sample->sequence_id,
-                        "query_seq", query->sequence_id, "sample_idx",
-                        sample->sample_index, "issue_start_ns",
-                        sched.delta(query->issued_start_time), "complete_ns",
-                        sched.delta(complete_begin_time));
+        log.TraceCounterEvent("Latency", query->scheduled_time, "issue_delay",
+                              sched.delta(query->issued_start_time),
+                              "issue_to_done",
+                              issued.delta(complete_begin_time));
       }
+
+      // While visualizing overlapping samples in offline mode is not
+      // practical, sample completion is still recorded for auditing purposes.
+      log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
+                      complete_begin_time, "sample_seq", sample->sequence_id,
+                      "query_seq", query->sequence_id, "sample_idx",
+                      sample->sample_index, "issue_start_ns",
+                      sched.delta(query->issued_start_time), "complete_ns",
+                      sched.delta(complete_begin_time));
 
       if (sample_data_copy) {
         log.LogAccuracy(sample->sequence_id, sample->sample_index,

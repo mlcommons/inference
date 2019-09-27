@@ -334,7 +334,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     std::map<std::string, std::string>::iterator it;
     std::string found;
     // lookup exact key first
-    it = kv.find(model + scenario + "." + key);
+    it = kv.find(model + "." + scenario + "." + key);
     if (it != kv.end()) {
       found = it->second;
     } else {

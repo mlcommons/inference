@@ -1608,7 +1608,10 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                               &log_outputs.accuracy_out,
                               log_settings.log_output.copy_detail_to_stdout,
                               log_settings.log_output.copy_summary_to_stdout);
-  GlobalLogger().StartNewTrace(&log_outputs.trace_out, PerfClock::now());
+
+  if (log_settings.enable_trace) {
+    GlobalLogger().StartNewTrace(&log_outputs.trace_out, PerfClock::now());
+  }
 
   LogLoadgenVersion();
   LogDetail([sut, qsl, test_date_time](AsyncDetail& detail) {

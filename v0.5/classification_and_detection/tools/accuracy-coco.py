@@ -27,6 +27,7 @@ def get_args():
     parser.add_argument("--verbose", action="store_true", help="verbose messages")
     parser.add_argument("--output-file", default="coco-results.json", help="path to output file")
     parser.add_argument("--use-inv-map", action="store_true", help="use inverse label map")
+    parser.add_argument("--remove-48-empty-images", action="store_true", help="used in case you removed 48 empty images while preprocessing the dataset")
     args = parser.parse_args()
     return args
 
@@ -46,7 +47,14 @@ def main():
     image_ids = set()
     seen = set()
     no_results = 0
-    image_map = cocoGt.dataset["images"]
+    if args.remove_48_empty_images:        
+        im_ids = []
+        for i in cocoGt.getCatIds():
+            im_ids += cocoGt.catToImgs[i]
+        im_ids = list(set(im_ids))
+        image_map = [cocoGt.imgs[id] for id in im_ids]
+    else:
+        image_map = cocoGt.dataset["images"]
 
     for j in results:
         idx = j['qsl_idx']

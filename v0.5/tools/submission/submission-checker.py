@@ -25,7 +25,7 @@ VALID_MODELS = ["ssd-small", "ssd-large", "mobilenet", "resnet", "gnmt"]
 REQUIRED_DIRECTORIES = ["code", "results", "measurements", "systems"]
 REQUIRED_PERF_FILES = ["mlperf_log_accuracy.json", "mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
-REQUIRED_MESAURE_FILES = ["mlperf.conf", "README.md"]
+REQUIRED_MEASURE_FILES = ["mlperf.conf", "README.md"]
 
 
 def get_args():
@@ -171,7 +171,7 @@ def check_measurement_dir(good_submissions):
         system_id = cols[0]
         system_file = None
         dirs, files = path_to_dict(fname)
-        for i in REQUIRED_MESAURE_FILES:
+        for i in REQUIRED_MEASURE_FILES:
             if i not in files[fname]:
                 errors.append("{} is missing {}".format(fname, i))
         for i in files[fname]:
@@ -184,12 +184,11 @@ def check_measurement_dir(good_submissions):
         code_dir = os.path.join("code", cols[1], impl)
         if not os.path.exists(code_dir):
             errors.append("{} is missing code dir {}".format(fname, code_dir))
+        log.info("{} OK".format(fname))
 
     if errors:
         for i in errors:
             log.error(i)
-    else:
-        log.info("{} OK".format(fname))
     return errors
 
 

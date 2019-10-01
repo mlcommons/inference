@@ -470,11 +470,8 @@ if __name__ == "__main__":
     max_latency = [float(i) for i in args.max_latency.split(",")]
 
     # Specify input file
-    if args.mode == "Accuracy":
-        input_file = os.path.join(os.getcwd(), 'nmt', 'data', "newstest2014.tok.bpe.32000.en")
-    else:
-        input_file = os.path.join(os.getcwd(), 'nmt', 'data', "newstest2014.tok.bpe.32000.en.large")
-
+    input_file = os.path.join(os.getcwd(), 'nmt', 'data', "newstest2014.tok.bpe.32000.en.large")
+    
     # Build the GNMT model
     if args.scenario == "SingleStream":
         batch_size = 1
@@ -523,7 +520,12 @@ if __name__ == "__main__":
     runner.start_worker()
 
     total_queries = runner.getTotalNumSentences() # Maximum sample ID + 1
-    perf_queries = min(total_queries, 3003)   # Select the same subset of $perf_queries samples
+    
+    # For accuracy mode, we only want the first 3003 samples from the enlarged dataset
+    # These are the only unique sentences.
+    if args.mode == "Accuracy":
+        total_queries = 3003
+    perf_queries = total_queries   # Select the same subset of $perf_queries samples
 
     sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries, process_latencies_gnmt)
     qsl = mlperf_loadgen.ConstructQSL(

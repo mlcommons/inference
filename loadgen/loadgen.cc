@@ -685,7 +685,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       }
     } else {
       if (queries_issued >= settings.min_query_count &&
-          duration > settings.min_duration) {
+          duration >= settings.target_duration) {
         LogDetail([](AsyncDetail& detail) {
           detail(
               "Ending naturally: Minimum query count and test duration met.");

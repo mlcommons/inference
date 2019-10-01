@@ -1,5 +1,5 @@
 """
-collect mlperf loadgen output to csv
+A checker for mlperf inference submissions
 """
 
 from __future__ import division
@@ -11,11 +11,9 @@ import collections
 import json
 import logging
 import os
-import sys
 import re
+import sys
 import time
-from glob import glob
-
 
 # pylint: disable=missing-docstring
 
@@ -23,19 +21,19 @@ from glob import glob
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
+VALID_MODELS = ["ssd-small", "ssd-large", "mobilenet", "resnet", "gnmt"]
+REQUIRED_DIRECTORIES = ["code", "results", "measurements", "systems"]
+REQUIRED_PERF_FILES = ["mlperf_log_accuracy.json", "mlperf_log_summary.txt", "mlperf_log_detail.txt"]
+REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
+REQUIRED_MESAURE_FILES = ["mlperf.conf", "README.md"]
+
+
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="submission directory")
     args = parser.parse_args()
     return args
-
-
-VALID_MODELS = ["ssd-small", "ssd-large", "mobilenet", "resnet", "gnmt"]
-REQUIRED_DIRECTORIES = ["code", "results", "measurements", "systems"]
-REQUIRED_PERF_FILES = ["mlperf_log_accuracy.json", "mlperf_log_summary.txt", "mlperf_log_detail.txt"]
-REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
-REQUIRED_MESAURE_FILES = ["mlperf.conf", "README.md"]
 
 
 def path_to_dict(path):
@@ -57,7 +55,7 @@ def check_accuracy(model, dir):
             m = re.match("^mAP=(\d+\.\d+).*", line)
             if m:
                 return True
-            # TODO: we might as well check the total count
+                # TODO: we might as well check the total count
     return False
 
 
@@ -81,6 +79,7 @@ def files_exists(list1, list2):
         return sorted(list1) == sorted(list2)
     return False
 
+
 def check_results_dir(dir):
     good_submissions = []
     bad_submissions = {}
@@ -88,7 +87,7 @@ def check_results_dir(dir):
 
     for device in dirs["results"]:
         # check if system_id is good. Report failure for each model/scenario.
-        system_id = os.path.join("systems", device+".json")
+        system_id = os.path.join("systems", device + ".json")
         device_bad = not os.path.exists(system_id)
         for model in dirs[os.path.join("results", device)]:
             for scenario in dirs[os.path.join("results", device, model)]:
@@ -124,7 +123,7 @@ def check_results_dir(dir):
 
 
 def check_meta(dir, good_submissions, meta):
-    system_ids = set([i.replace("\\","//").split("/")[0] for i in good_submissions])
+    system_ids = set([i.replace("\\", "//").split("/")[0] for i in good_submissions])
     for system_id in system_ids:
         errors = []
         fname = os.path.join("systems", system_id + ".json")
@@ -168,7 +167,7 @@ def check_measurement_dir(good_submissions):
         fname = os.path.join("measurements", submission)
         if not os.path.exists(fname):
             errors.append("{} directory missing".format(fname))
-        cols = submission.replace("\\","/").split("/")
+        cols = submission.replace("\\", "/").split("/")
         system_id = cols[0]
         system_file = None
         dirs, files = path_to_dict(fname)
@@ -181,7 +180,7 @@ def check_measurement_dir(good_submissions):
                 break
         if not system_file:
             errors.append("{} is missing {}*.json".format(fname, system_id))
-        impl = system_file[len(system_id)+1:-5]
+        impl = system_file[len(system_id) + 1:-5]
         code_dir = os.path.join("code", cols[1], impl)
         if not os.path.exists(code_dir):
             errors.append("{} is missing code dir {}".format(fname, code_dir))

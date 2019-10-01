@@ -45,28 +45,48 @@ def path_to_dict(path):
 
 
 def check_accuracy(model, dir):
+    is_valid = False
+    # look for: accuracy=... or mAP=...
     with open(os.path.join(dir, "accuracy.txt"), "r") as f:
         for line in f:
-            # look for: accuracy = 71.676%, good = 35838, total = 50000
             m = re.match("^accuracy=(\d+\.\d+).*", line)
             if m:
-                return True
-            # look for: mAP = 25.460%
+                is_valid = True
+                break
             m = re.match("^mAP=(\d+\.\d+).*", line)
             if m:
-                return True
+                is_valid = True
+                break
                 # TODO: we might as well check the total count
-    return False
+    # check if there are any errors in the detailed log
+    fname = os.path.join(dir, "mlperf_log_detail.txt")
+    with open(fname, "r") as f:
+        for line in f:
+            # look for: ERROR
+            if "ERROR" in line:
+                # TODO: should this be a failed run?
+                log.warning("{} contains errors".format(fname))
+    return is_valid
 
 
 def check_performance(model, dir):
+    is_valid = False
+    # look for: Result is: VALID
     with open(os.path.join(dir, "mlperf_log_summary.txt"), "r") as f:
         for line in f:
-            # look for: Result is: VALID
             m = re.match("^Result\s+is\s*\:\s+VALID", line)
             if m:
-                return True
-    return False
+                is_valid = True
+                break
+    # check if there are any errors in the detailed log
+    fname = os.path.join(dir, "mlperf_log_detail.txt")
+    with open(fname, "r") as f:
+        for line in f:
+            # look for: ERROR
+            if "ERROR" in line:
+                # TODO: does this make the run fail?
+                log.warning("{} contains errors".format(fname))
+    return is_valid
 
 
 def files_exists(list1, list2):

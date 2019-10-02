@@ -139,13 +139,13 @@ void DestroyQSL(void* qsl) {
 
 // mlperf::c::StartTest just forwards to mlperf::StartTest after doing the
 // proper cast.
-void StartTest(void* sut, void* qsl, const TestSettings& settings) {
+void StartTest(void* sut, void* qsl, const TestSettings& settings, LogSettings& log_settings) {
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   QuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
-  LogSettings default_log_settings;
-  mlperf::StartTest(sut_cast, qsl_cast, settings, default_log_settings);
+  //LogSettings default_log_settings;
+  mlperf::StartTest(sut_cast, qsl_cast, settings, log_settings);
 }
 
 void QuerySamplesComplete(QuerySampleResponse* responses,

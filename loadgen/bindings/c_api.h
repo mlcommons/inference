@@ -69,7 +69,7 @@ void DestroyQSL(void* qsl);
 /// \brief Run tests on a SUT created by ConstructSUT().
 /// \details This is the C entry point. See mlperf::StartTest for the C++ entry
 /// point.
-void StartTest(void* sut, void* qsl, const TestSettings& settings);
+void StartTest(void* sut, void* qsl, const TestSettings& settings, LogSettings& log_settings);
 
 }  // namespace c
 }  // namespace mlperf

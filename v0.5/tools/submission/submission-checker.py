@@ -22,10 +22,9 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
 VALID_MODELS = ["ssd-small", "ssd-large", "mobilenet", "resnet", "gnmt"]
-REQUIRED_DIRECTORIES = ["code", "results", "measurements", "systems"]
 REQUIRED_PERF_FILES = ["mlperf_log_accuracy.json", "mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
-REQUIRED_MEASURE_FILES = ["mlperf.conf", "README.md"]
+REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 
 
 def get_args():
@@ -36,6 +35,10 @@ def get_args():
     return args
 
 
+def split_path(m):
+    return m.replace("\\", "/").split("/")
+
+
 def path_to_dict(path):
     d, f = {}, {}
     for dirName, subdirList, fileList in os.walk(path):
@@ -44,20 +47,23 @@ def path_to_dict(path):
     return d, f
 
 
-def check_accuracy(model, dir):
+def check_accuracy_dir(model, dir):
     is_valid = False
     # look for: accuracy=... or mAP=...
     with open(os.path.join(dir, "accuracy.txt"), "r") as f:
         for line in f:
-            m = re.match("^accuracy=(\d+\.\d+).*", line)
+            m = re.match("^accuracy=([\d\.]+).*", line)
             if m:
                 is_valid = True
                 break
-            m = re.match("^mAP=(\d+\.\d+).*", line)
+            m = re.match("^mAP=([\d\.]+).*", line)
             if m:
                 is_valid = True
                 break
-                # TODO: we might as well check the total count
+            m = re.match("^BLEU\:\s*([\d\.]+).*", line)
+            if m:
+                is_valid = True
+                break
     # check if there are any errors in the detailed log
     fname = os.path.join(dir, "mlperf_log_detail.txt")
     with open(fname, "r") as f:
@@ -69,7 +75,7 @@ def check_accuracy(model, dir):
     return is_valid
 
 
-def check_performance(model, dir):
+def check_performance_dir(model, dir):
     is_valid = False
     # look for: Result is: VALID
     with open(os.path.join(dir, "mlperf_log_summary.txt"), "r") as f:
@@ -89,15 +95,19 @@ def check_performance(model, dir):
     return is_valid
 
 
-def files_exists(list1, list2):
+def files_diff(list1, list2):
+    """returns a list of files that are missing or added."""
     if list1 and list2:
         for i in ["mlperf_log_trace.json", "results.json"]:
             try:
                 list1.remove(i)
             except:
                 pass
-        return sorted(list1) == sorted(list2)
-    return False
+        if len(list1) > len(list2):
+            return list(set(list1) - set(list2))
+        else:
+            return list(set(list2) - set(list1))
+    return []
 
 
 def check_results_dir(dir):
@@ -110,24 +120,34 @@ def check_results_dir(dir):
         system_id = os.path.join("systems", device + ".json")
         device_bad = not os.path.exists(system_id)
         for model in dirs[os.path.join("results", device)]:
+            if model not in VALID_MODELS:
+                bad_submissions[os.path.join(device, model)] = \
+                    "{} has an invalid model name {}".format(os.path.join("results", device), model)
+                log.error("{} has an invalid model name {}".format(os.path.join("results", device), model))
+                continue
             for scenario in dirs[os.path.join("results", device, model)]:
                 name = os.path.join(device, model, scenario)
                 acc_path = os.path.join("results", device, model, scenario, "accuracy")
-                if not files_exists(files.get(acc_path), REQUIRED_ACC_FILES):
-                    bad_submissions[name] = "{} has file missmatch".format(acc_path)
+                if not os.path.exists(os.path.join(acc_path, "accuracy.txt")):
+                    log.error("{} has no accuracy.txt. Generate it with accuracy-imagenet.py or accuracy-coco.py or "
+                              "process_accuracy.py".format(acc_path))
+                diff = files_diff(files.get(acc_path), REQUIRED_ACC_FILES)
+                if diff:
+                    bad_submissions[name] = "{} has file list mismatch ({})".format(acc_path, diff)
                     continue
-                if not check_accuracy(model, acc_path):
+                if not check_accuracy_dir(model, acc_path):
                     bad_submissions[name] = "{} has issues".format(acc_path)
                     continue
                 n = ["1"]
                 if scenario in ["Server"]:
                     n = ["1", "2", "3", "4", "5"]
                 for i in n:
-                    perf_path = os.path.join("results", device, model, scenario, "performance", i)
-                    if not files_exists(files.get(perf_path), REQUIRED_PERF_FILES):
-                        bad_submissions[name] = "{} has file missmatch".format(perf_path)
+                    perf_path = os.path.join("results", device, model, scenario, "performance", "run_" + str(i))
+                    diff = files_diff(files.get(perf_path), REQUIRED_PERF_FILES)
+                    if diff:
+                        bad_submissions[name] = "{} has file list mismatch ({})".format(perf_path, diff)
                         continue
-                    if not check_performance(model, perf_path):
+                    if not check_performance_dir(model, perf_path):
                         bad_submissions[name] = "{} has issues".format(perf_path)
                         continue
                 if device_bad:
@@ -142,37 +162,31 @@ def check_results_dir(dir):
     return good_submissions, bad_submissions
 
 
-def check_meta(dir, good_submissions, meta):
-    system_ids = set([i.replace("\\", "//").split("/")[0] for i in good_submissions])
+def compare_json(fname, template, errors):
+    try:
+        with open(fname, "r") as f:
+            j = json.load(f)
+        # make sure all required sections/fields are there
+        for k, v in template.items():
+            sz = j.get(k)
+            if sz is None and v == "required":
+                errors.append("{} field {} missing".format(fname, k))
+
+        # make sure no undefined sections/fields are in the meta data
+        for k, v in j.items():
+            z = template.get(k)
+            if z is None:
+                errors.append("{} has unknwon field {}".format(fname, k))
+    except Exception as ex:
+        errors.append("{} unexpected error {}".format(fname, ex))
+
+
+def check_meta(dir, good_submissions, system_desc_id, system_desc_id_imp):
+    system_ids = set([split_path(i)[0] for i in good_submissions])
     for system_id in system_ids:
         errors = []
         fname = os.path.join("systems", system_id + ".json")
-        try:
-            with open(fname, "r") as f:
-                j = json.load(f)
-                # make sure all required sections/fields are in the meta data
-                for k, v in meta.items():
-                    z = j.get(k)
-                    if z is None:
-                        errors.append("{} has no section".format(fname, k))
-                    else:
-                        for field, fieldval in v.items():
-                            sz = j[k].get(field)
-                            if sz is None and fieldval == "required":
-                                errors.append("{} section {} field {} missing".format(fname, k, field))
-                # make sure no undefined sections/fields are in the meta data
-                for k, v in j.items():
-                    z = meta.get(k)
-                    if z is None:
-                        errors.append("{} has unknwon section {}".format(fname, k))
-                    else:
-                        for field, fieldval in v.items():
-                            sz = meta[k].get(field)
-                            if sz is None:
-                                errors.append("{} section {} field {} unknown".format(fname, k, field))
-
-        except Exception as ex:
-            errors.append("{} unexpected error {}".format(fname, ex))
+        compare_json(fname, system_desc_id, errors)
         if errors:
             for i in errors:
                 log.error(i)
@@ -187,7 +201,7 @@ def check_measurement_dir(good_submissions):
         fname = os.path.join("measurements", submission)
         if not os.path.exists(fname):
             errors.append("{} directory missing".format(fname))
-        cols = submission.replace("\\", "/").split("/")
+        cols = split_path(submission)
         system_id = cols[0]
         system_file = None
         dirs, files = path_to_dict(fname)
@@ -216,15 +230,17 @@ def main():
     args = get_args()
 
     script_path = os.path.dirname(sys.argv[0])
-    with open(os.path.join(script_path, "meta.json"), "r") as f:
-        meta = json.load(f)
+    with open(os.path.join(script_path, "system_desc_id.json"), "r") as f:
+        system_desc_id = json.load(f)
+    with open(os.path.join(script_path, "system_desc_id_imp.json"), "r") as f:
+        system_desc_id_imp = json.load(f)
 
     os.chdir(args.input)
     # 1. check results directory
     good_submissions, bad_submissions = check_results_dir(args.input)
 
     # 2. check the meta data under systems
-    meta_errors = check_meta(args.input, good_submissions, meta)
+    meta_errors = check_meta(args.input, good_submissions, system_desc_id, system_desc_id_imp)
 
     # 3. check measurement and code dir
     measurement_errros = check_measurement_dir(good_submissions)

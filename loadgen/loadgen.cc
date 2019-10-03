@@ -218,16 +218,16 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
                               sched.delta(query->issued_start_time),
                               "issue_to_done",
                               issued.delta(complete_begin_time));
-      } else if (scenario != TestScenario::Offline) {
-        // Disable tracing of each sample in offline mode, where visualizing
-        // all samples overlapping isn't practical.
-        log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
-                        complete_begin_time, "sample_seq", sample->sequence_id,
-                        "query_seq", query->sequence_id, "sample_idx",
-                        sample->sample_index, "issue_start_ns",
-                        sched.delta(query->issued_start_time), "complete_ns",
-                        sched.delta(complete_begin_time));
       }
+
+      // While visualizing overlapping samples in offline mode is not
+      // practical, sample completion is still recorded for auditing purposes.
+      log.TraceSample("Sample", sample->sequence_id, query->scheduled_time,
+                      complete_begin_time, "sample_seq", sample->sequence_id,
+                      "query_seq", query->sequence_id, "sample_idx",
+                      sample->sample_index, "issue_start_ns",
+                      sched.delta(query->issued_start_time), "complete_ns",
+                      sched.delta(complete_begin_time));
 
       if (sample_data_copy) {
         log.LogAccuracy(sample->sequence_id, sample->sample_index,
@@ -827,6 +827,14 @@ struct PerformanceSummary {
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
 
+#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
+  // MSVC complains if there is no explicit constructor.
+  // (target_latency_percentile above depends on construction with settings)
+  PerformanceSummary(
+      const std::string& sut_name_arg, const TestSettingsInternal& settings_arg,
+      const PerformanceResult& pr_arg)
+      : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg){};
+#endif
   void ProcessLatencies();
 
   bool MinDurationMet(std::string* recommendation);

@@ -240,14 +240,14 @@ struct TestSettings {
   /**@{*/
   /// \brief Affects which subset of samples from the QSL are chosen for
   /// the performance sample set and accuracy sample sets.
-  uint64_t qsl_rng_seed = 0;
+  uint64_t qsl_rng_seed = 0x2b7e151628aed2a6ULL;
   /// \brief Affects the order in which samples from the performance set will
   /// be included in queries.
-  uint64_t sample_index_rng_seed = 0;
+  uint64_t sample_index_rng_seed = 0x093c467e37db0c7aULL;
   /// \brief Affects the poisson arrival process of the Server scenario.
   /// \details Different seeds will appear to "jitter" the queries
   /// differently in time, but should not affect the average issued QPS.
-  uint64_t schedule_rng_seed = 0;
+  uint64_t schedule_rng_seed = 0x3243f6a8885a308dULL;
   /// \brief Affects which samples have their query returns logged to the
   /// accuracy log in performance mode.
   uint64_t accuracy_log_rng_seed = 0;

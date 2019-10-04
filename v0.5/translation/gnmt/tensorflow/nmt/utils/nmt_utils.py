@@ -40,7 +40,8 @@ def decode_and_evaluate(run,
                         tgt_eos,
                         num_translations_per_input=1,
                         decode=True,
-                        infer_mode="greedy"):
+                        infer_mode="greedy",
+                        index_pair=[]):
   """Decode a test set and compute a score according to the evaluation task."""
   # Decode
   if decode:
@@ -55,6 +56,7 @@ def decode_and_evaluate(run,
         num_translations_per_input = 1
       elif infer_mode == "beam_search":
         num_translations_per_input = min(num_translations_per_input, beam_width)
+      translation = []
 
       print("  infer_mode %s, beam_width %g, num translations per input %d. " \
             % (infer_mode, beam_width, num_translations_per_input))
@@ -81,19 +83,26 @@ def decode_and_evaluate(run,
             num_sentences += batch_size
             for sent_id in range(batch_size):
               for beam_id in range(num_translations_per_input):
-                translation = get_translation(
-                          nmt_outputs[beam_id],
-                         sent_id,
-                         tgt_eos=tgt_eos,
-                         subword_option=subword_option)
-                if run == 'accuracy':
-                  trans_f.write((translation + b"\n").decode("utf-8"))
+                translation.append(get_translation(
+                    nmt_outputs[beam_id],
+                    sent_id,
+                    tgt_eos=tgt_eos,
+                    subword_option=subword_option))
 
           except tf.errors.OutOfRangeError:
             utils.print_time(
                 "  done, num sentences %d, num translations per input %d" %
                 (num_sentences, num_translations_per_input), overall_start)
             break
+
+
+    if run == 'accuracy':
+      if len(index_pair) is 0:
+        for sentence in translation:
+          trans_f.write(sentence + b"\n").decode("utf-8")
+      else:
+        for i in index_pair:
+          trans_f.write((translation[index_pair[i]] + b"\n").decode("utf-8"))
 
     overall_time = (time.time() - overall_start)
     if run == 'performance':

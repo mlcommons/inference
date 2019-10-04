@@ -99,11 +99,11 @@ def start_sess_and_load_model(infer_model, ckpt_path, hparams):
   """Start session and load model."""
   print("num_intra_threads = %d, num_inter_threads = %d \n"
         %(hparams.num_intra_threads, hparams.num_inter_threads))
-  sess = tf.Session(graph=infer_model.graph,
-         config=utils.get_config_proto(
-         num_intra_threads=hparams.num_intra_threads,
-         num_inter_threads=hparams.num_inter_threads)
-         )
+  sess = tf.Session(
+      graph=infer_model.graph,
+      config=utils.get_config_proto(
+          num_intra_threads=hparams.num_intra_threads,
+          num_inter_threads=hparams.num_inter_threads))
   with infer_model.graph.as_default():
     loaded_infer_model = model_helper.load_model(
         infer_model.model, ckpt_path, sess, "infer")
@@ -164,12 +164,25 @@ def single_worker_inference(run,
 
   # Read data
   infer_data = load_data(inference_input_file, hparams)
+  infer_data_feed = infer_data
+
+  # Sort the input file if no hparams.inference_indices is defined to improve
+  # throughput when batch_size > 1
+  index_pair = {}
+  new_input = []
+  if hparams.inference_indices is None and hparams.infer_batch_size > 1:
+    input_length = [(len(line.split()), i) for i, line in enumerate(infer_data)]
+    sorted_input_bylens = sorted(input_length)
+    for newi, (_, oldi) in enumerate(sorted_input_bylens):
+      new_input.append(infer_data[oldi])
+      index_pair[oldi] = newi
+    infer_data_feed = new_input
 
   with infer_model.graph.as_default():
     sess.run(
         infer_model.iterator.initializer,
         feed_dict={
-            infer_model.src_placeholder: infer_data,
+            infer_model.src_placeholder: infer_data_feed,
             infer_model.batch_size_placeholder: hparams.infer_batch_size
         })
     # Decode
@@ -197,7 +210,8 @@ def single_worker_inference(run,
           beam_width=hparams.beam_width,
           tgt_eos=hparams.eos,
           num_translations_per_input=hparams.num_translations_per_input,
-          infer_mode=hparams.infer_mode)
+          infer_mode=hparams.infer_mode,
+          index_pair=index_pair)
 
 
 def multi_worker_inference(sess,

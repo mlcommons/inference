@@ -32,6 +32,7 @@ def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="submission directory")
+    parser.add_argument("--submitter", help="filter to submitter")
     args = parser.parse_args()
     return args
 
@@ -113,12 +114,14 @@ def files_diff(list1, list2):
     return []
 
 
-def check_results_dir(dir):
+def check_results_dir(dir, filter_submitter):
     good_submissions = []
     bad_submissions = {}
 
     for division in list_dir("."):
         for submitter in list_dir(division):
+            if filter_submitter and submitter != filter_submitter:
+                continue
             results_path = os.path.join(division, submitter, "results")
             for system_desc in list_dir(results_path):
                 # check if system_id is good. Report failure for each model/scenario.
@@ -270,7 +273,7 @@ def main():
     os.chdir(args.input)
 
     # 1. check results directory
-    good_submissions, bad_submissions = check_results_dir(args.input)
+    good_submissions, bad_submissions = check_results_dir(args.input, args.submitter)
 
     # 2. check the meta data under systems
     meta_errors = check_system_desc_id(good_submissions, systems_json)

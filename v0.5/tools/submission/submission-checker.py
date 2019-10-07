@@ -26,6 +26,13 @@ VALID_DIVISIONS = ["open", "closed"]
 REQUIRED_PERF_FILES = ["mlperf_log_accuracy.json", "mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
+PERFORMANCE_SAMPLE_COUNT = {
+    "mobilenet": 1024,
+    "resnet50": 1024,
+    "ssd-mobilenet": 256,
+    "ssd-resnet34": 64,
+    "gnmt": 3003,
+}
 
 
 def get_args():
@@ -81,13 +88,22 @@ def check_accuracy_dir(model, dir):
 
 def check_performance_dir(model, dir):
     is_valid = False
+    rt = {}
     # look for: Result is: VALID
-    with open(os.path.join(dir, "mlperf_log_summary.txt"), "r") as f:
+    fname = os.path.join(dir, "mlperf_log_summary.txt")
+    with open(fname, "r") as f:
         for line in f:
             m = re.match("^Result\s+is\s*\:\s+VALID", line)
             if m:
                 is_valid = True
-                break
+            m = re.match("^\s*([\w\s.\(\)\/]+)\s*\:\s*([\d\.]+).*", line)
+            if m:
+                rt[m.group(1).strip()] = m.group(2).strip()
+
+    if int(rt['performance_sample_count']) < PERFORMANCE_SAMPLE_COUNT[model]:
+        log.error("{} performance_sample_count should be {}".format(fname, PERFORMANCE_SAMPLE_COUNT[model]))
+        is_valid = False
+
     # check if there are any errors in the detailed log
     fname = os.path.join(dir, "mlperf_log_detail.txt")
     with open(fname, "r") as f:
@@ -96,6 +112,7 @@ def check_performance_dir(model, dir):
             if "ERROR" in line:
                 # TODO: does this make the run fail?
                 log.warning("{} contains errors".format(fname))
+
     return is_valid
 
 
@@ -279,8 +296,8 @@ def main():
     meta_errors = check_system_desc_id(good_submissions, systems_json)
 
     # 3. check measurement and code dir
-    measurement_errros = check_measurement_dir(good_submissions, systems_imp_json)
-    if bad_submissions or meta_errors or measurement_errros:
+    measurement_errors = check_measurement_dir(good_submissions, systems_imp_json)
+    if bad_submissions or meta_errors or measurement_errors:
         log.error("SUMMARY: there are errros in the submission")
         return 1
     else:

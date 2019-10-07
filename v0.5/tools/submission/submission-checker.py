@@ -31,7 +31,7 @@ PERFORMANCE_SAMPLE_COUNT = {
     "resnet50": 1024,
     "ssd-mobilenet": 256,
     "ssd-resnet34": 64,
-    "gnmt": 3003,
+    "gnmt": 3903900,
 }
 
 

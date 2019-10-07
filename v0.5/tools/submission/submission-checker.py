@@ -29,8 +29,11 @@ REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 PERFORMANCE_SAMPLE_COUNT = {
     "mobilenet": 1024,
     "resnet50": 1024,
+    "resnet": 1024,
     "ssd-mobilenet": 256,
+    "ssd-small": 256,
     "ssd-resnet34": 64,
+    "ssd-large": 64,
     "gnmt": 3903900,
 }
 

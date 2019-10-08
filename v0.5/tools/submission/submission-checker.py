@@ -261,19 +261,24 @@ def check_measurement_dir(good_submissions, systems_imp_json):
             if i not in files:
                 errors.append("{} is missing {}".format(fname, i))
         for i in files:
-            if i.startswith(system_desc) and i.endswith(".json"):
+            if i.startswith(system_desc) and i.endswith("_" + scenario + ".json"):
                 system_file = i
+                end = len("_" + scenario + ".json")
                 break
-        if not system_file:
-            errors.append("{} is missing {}*.json".format(fname, system_desc))
-        else:
+            elif i.startswith(system_desc) and i.endswith(".json"):
+                system_file = i
+                end = len(".json")
+                break
+        if system_file:
             compare_json(os.path.join(fname, system_file), systems_imp_json, errors)
-
-        impl = system_file[len(system_desc) + 1:-5]
-        code_dir = os.path.join(parts[0], parts[1], "code", model, impl)
-        if not os.path.exists(code_dir):
-            errors.append("{} is missing".format(code_dir))
-        log.info("{} OK".format(fname))
+            impl = system_file[len(system_desc) + 1:-end]
+            code_dir = os.path.join(parts[0], parts[1], "code", model, impl)
+            if not os.path.exists(code_dir):
+                errors.append("{} is missing".format(code_dir))
+            else:
+                log.info("{} OK".format(fname))
+        else:
+            errors.append("{} is missing {}*.json".format(fname, system_desc))
 
     if errors:
         for i in errors:

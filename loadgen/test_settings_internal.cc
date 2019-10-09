@@ -343,13 +343,22 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
       if (it != kv.end()) {
         found = it->second;
       } else {
-        return false;
+        it = kv.find(model + ".*." + key);
+        if (it != kv.end()) {
+          found = it->second;
+        } else {
+          it = kv.find("*.*." + key);
+          if (it != kv.end()) {
+            found = it->second;
+          } else {
+            return false;
+          }
+        }
       }
     }
     // if we get here, found will be set
     if (val_l) {
-      *val_l =
-          strtoul(found.c_str(), nullptr, 0) * static_cast<int>(multiplier);
+      *val_l = strtoull(found.c_str(), nullptr, 0) * static_cast<uint64_t>(multiplier);
     }
     if (val_d) *val_d = strtod(found.c_str(), nullptr) * multiplier;
     return true;

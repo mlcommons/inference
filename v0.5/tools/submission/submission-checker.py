@@ -121,14 +121,17 @@ def check_accuracy_dir(model, dir):
 
     # check if there are any errors in the detailed log
     fname = os.path.join(dir, "mlperf_log_detail.txt")
-    with open(fname, "r") as f:
-        for line in f:
-            # look for: ERROR
-            if "ERROR" in line:
-                if ignore_errors(line):
-                    continue
-                # TODO: should this be a failed run?
-                log.warning("{} contains error: {}".format(fname, line))
+    if not os.path.exists(fname):
+        log.warning("{} missing".format(fname))
+    else:
+        with open(fname, "r") as f:
+            for line in f:
+                # look for: ERROR
+                if "ERROR" in line:
+                    if ignore_errors(line):
+                        continue
+                    # TODO: should this be a failed run?
+                    log.warning("{} contains error: {}".format(fname, line))
     return is_valid
 
 
@@ -213,10 +216,9 @@ def check_results_dir(dir, filter_submitter):
                 system_id_json = os.path.join(division, submitter, "systems", system_desc + ".json")
                 device_bad = not os.path.exists(system_id_json)
                 for model in list_dir(results_path, system_desc):
-                    if False and model not in VALID_MODELS:
+                    if division in "closed" and model not in VALID_MODELS:
                         bad_submissions[os.path.join(system_desc, model)] = \
                             "{} has an invalid model name {}".format(os.path.join(results_path, system_desc), model)
-                        log.error("{} has an invalid model name {}".format(os.path.join(results_path, system_desc), model))
 
                     for scenario in list_dir(results_path, system_desc, model):
                         name = os.path.join(results_path, system_desc, model, scenario)
@@ -224,25 +226,25 @@ def check_results_dir(dir, filter_submitter):
                         if not os.path.exists(os.path.join(acc_path, "accuracy.txt")):
                             log.error("{} has no accuracy.txt. Generate it with accuracy-imagenet.py or accuracy-coco.py or "
                                       "process_accuracy.py".format(acc_path))
+                            continue
                         diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
                         if diff:
                             bad_submissions[name] = "{} has file list mismatch ({})".format(acc_path, diff)
-                            continue
                         if not check_accuracy_dir(model, acc_path):
                             bad_submissions[name] = "{} has issues".format(acc_path)
-                            continue
                         n = ["1"]
                         if scenario in ["Server"]:
                             n = ["1", "2", "3", "4", "5"]
                         for i in n:
                             perf_path = os.path.join(name, "performance", "run_" + str(i))
+                            if not os.path.exists(perf_path):
+                                bad_submissions[name] = "{} missing".format(perf_path)
+                                continue
                             diff = files_diff(list_files(perf_path), REQUIRED_PERF_FILES)
                             if diff:
                                 bad_submissions[name] = "{} has file list mismatch ({})".format(perf_path, diff)
-                                continue
                             if not check_performance_dir(model, perf_path):
                                 bad_submissions[name] = "{} has issues".format(perf_path)
-                                continue
                         if device_bad:
                             bad_submissions[name] = "{}: no such system id {}".format(name, system_desc)
                         else:

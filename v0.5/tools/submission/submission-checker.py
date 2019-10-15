@@ -37,6 +37,24 @@ PERFORMANCE_SAMPLE_COUNT = {
     "gnmt": 3903900,
 }
 
+ACCURAY_TARGET = {
+    "mobilenet": 71.68*0.98,
+    "resnet50": 76.46*0.99,
+    "resnet": 76.46*0.99,
+    "ssd-mobilenet": 22*0.99,
+    "ssd-small": 22*0.99,
+    "ssd-resnet34": 20*0.99,
+    "ssd-large": 20*0.99,
+    "gnmt": 23.9*0.99,
+}
+
+
+SEEDS = {
+    "qsl_rng_seed": 3133965575612453542,
+    "sample_index_rng_seed": 665484352860916858,
+    "schedule_rng_seed": 3622009729038561421
+}
+
 
 def get_args():
     """Parse commandline."""
@@ -61,32 +79,64 @@ def split_path(m):
     return m.replace("\\", "/").split("/")
 
 
+def ignore_errors(line):
+    if "check for ERROR in detailed" in line:
+        return True
+    if "Loadgen built with uncommitted changes" in line:
+        return True
+    if "Ran out of generated queries to issue before the minimum query count and test duration were reached" in line:
+        return True
+    if "CAS failed":
+        return True
+    return False
+
+
 def check_accuracy_dir(model, dir):
     is_valid = False
+    acc = 0
     # look for: accuracy=... or mAP=...
     with open(os.path.join(dir, "accuracy.txt"), "r") as f:
         for line in f:
             m = re.match("^accuracy=([\d\.]+).*", line)
             if m:
                 is_valid = True
+                acc = m.group(1)
                 break
             m = re.match("^mAP=([\d\.]+).*", line)
             if m:
                 is_valid = True
+                acc = m.group(1)
                 break
             m = re.match("^BLEU\:\s*([\d\.]+).*", line)
             if m:
                 is_valid = True
+                acc = m.group(1)
                 break
+
+    if is_valid:
+        target_acc = ACCURAY_TARGET[model_map(model)]
+        if float(acc) < target_acc:
+            log.error("{} accuracy not met: {:.2f}/{}".format(dir, target_acc, acc))
+            is_valid = False
+
     # check if there are any errors in the detailed log
     fname = os.path.join(dir, "mlperf_log_detail.txt")
     with open(fname, "r") as f:
         for line in f:
             # look for: ERROR
             if "ERROR" in line:
+                if ignore_errors(line):
+                    continue
                 # TODO: should this be a failed run?
-                log.warning("{} contains errors".format(fname))
+                log.warning("{} contains error: {}".format(fname, line))
     return is_valid
+
+
+def model_map(model):
+    if model not in PERFORMANCE_SAMPLE_COUNT:
+        if model.startswith("mobilenet"):
+            model = "mobilenet"
+    return model
 
 
 def check_performance_dir(model, dir):
@@ -103,9 +153,13 @@ def check_performance_dir(model, dir):
             if m:
                 rt[m.group(1).strip()] = m.group(2).strip()
 
-    if int(rt['performance_sample_count']) < PERFORMANCE_SAMPLE_COUNT[model]:
-        log.error("{} performance_sample_count should be {}".format(fname, PERFORMANCE_SAMPLE_COUNT[model]))
-        is_valid = False
+    model = model_map(model)
+    if model in PERFORMANCE_SAMPLE_COUNT:
+        if int(rt['performance_sample_count']) < PERFORMANCE_SAMPLE_COUNT[model]:
+            log.error("{} performance_sample_count should be {}".format(fname, PERFORMANCE_SAMPLE_COUNT[model]))
+            is_valid = False
+    else:
+        log.error("{} performance_sample_count not checked, bad model name {}".format(fname, model))
 
     # check if there are any errors in the detailed log
     fname = os.path.join(dir, "mlperf_log_detail.txt")
@@ -113,8 +167,14 @@ def check_performance_dir(model, dir):
         for line in f:
             # look for: ERROR
             if "ERROR" in line:
+                if ignore_errors(line):
+                    continue
                 # TODO: does this make the run fail?
-                log.warning("{} contains errors".format(fname))
+                log.warning("{} contains error: {}".format(fname, line))
+
+        for seed in ["qsl_rng_seed", "sample_index_rng_seed", "schedule_rng_seed"]:
+            if int(rt[seed]) != SEEDS[seed]:
+                log.error("{} {} wrong, {}/{}".format(fname, seed, rt[seed], SEEDS[seed]))
 
     return is_valid
 
@@ -139,20 +199,25 @@ def check_results_dir(dir, filter_submitter):
     bad_submissions = {}
 
     for division in list_dir("."):
+        if division not in ["closed", "open"]:
+            continue
         for submitter in list_dir(division):
             if filter_submitter and submitter != filter_submitter:
                 continue
             results_path = os.path.join(division, submitter, "results")
+            if not os.path.exists(results_path):
+                log.warning("no submission in {}/{}".format(division, submitter))
+                continue
             for system_desc in list_dir(results_path):
                 # check if system_id is good. Report failure for each model/scenario.
                 system_id_json = os.path.join(division, submitter, "systems", system_desc + ".json")
                 device_bad = not os.path.exists(system_id_json)
                 for model in list_dir(results_path, system_desc):
-                    if model not in VALID_MODELS:
+                    if False and model not in VALID_MODELS:
                         bad_submissions[os.path.join(system_desc, model)] = \
                             "{} has an invalid model name {}".format(os.path.join(results_path, system_desc), model)
                         log.error("{} has an invalid model name {}".format(os.path.join(results_path, system_desc), model))
-                        continue
+
                     for scenario in list_dir(results_path, system_desc, model):
                         name = os.path.join(results_path, system_desc, model, scenario)
                         acc_path = os.path.join(name, "accuracy")
@@ -182,11 +247,6 @@ def check_results_dir(dir, filter_submitter):
                             bad_submissions[name] = "{}: no such system id {}".format(name, system_desc)
                         else:
                             good_submissions.append(name)
-        for k, v in bad_submissions.items():
-            log.error(v)
-        for name in good_submissions:
-            log.info("{} OK".format(name))
-
     return good_submissions, bad_submissions
 
 
@@ -236,7 +296,6 @@ def check_system_desc_id(good_submissions, systems_json):
                 if j["division"] != division:
                     errors.append(("{} has division {}, division has {}".format(fname, j["division"], division)))
                     continue
-            log.info("{} OK".format(fname))
     if errors:
         for i in errors:
             log.error(i)
@@ -275,8 +334,6 @@ def check_measurement_dir(good_submissions, systems_imp_json):
             code_dir = os.path.join(parts[0], parts[1], "code", model, impl)
             if not os.path.exists(code_dir):
                 errors.append("{} is missing".format(code_dir))
-            else:
-                log.info("{} OK".format(fname))
         else:
             errors.append("{} is missing {}*.json".format(fname, system_desc))
 

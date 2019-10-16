@@ -27,6 +27,7 @@ def get_args():
     parser.add_argument("--verbose", action="store_true", help="verbose messages")
     parser.add_argument("--output-file", default="coco-results.json", help="path to output file")
     parser.add_argument("--use-inv-map", action="store_true", help="use inverse label map")
+    parser.add_argument("--remove-48-empty-images", action="store_true", help="used in case you removed 48 empty images while preprocessing the dataset")
     args = parser.parse_args()
     return args
 
@@ -45,7 +46,15 @@ def main():
     detections = []
     image_ids = set()
     seen = set()
-    image_map = cocoGt.dataset["images"]
+    no_results = 0
+    if args.remove_48_empty_images:        
+        im_ids = []
+        for i in cocoGt.getCatIds():
+            im_ids += cocoGt.catToImgs[i]
+        im_ids = list(set(im_ids))
+        image_map = [cocoGt.imgs[id] for id in im_ids]
+    else:
+        image_map = cocoGt.dataset["images"]
 
     for j in results:
         idx = j['qsl_idx']
@@ -59,9 +68,22 @@ def main():
         # id, box[0], box[1], box[2], box[3], score, detection_class
         # note that id is a index into instances_val2017.json, not the actual image_id
         data = np.frombuffer(bytes.fromhex(j['data']), np.float32)
+        if len(data) < 7:
+            # handle images that had no results
+            image = image_map[idx]
+            # by adding the id to image_ids we make pycoco aware of the no-result image
+            image_ids.add(image["id"])
+            no_results += 1
+            if args.verbose:
+                print("no results: {}, idx={}".format(image["coco_url"], idx))
+            continue
+
         for i in range(0, len(data), 7):
             image_idx, ymin, xmin, ymax, xmax, score, label = data[i:i + 7]
             image = image_map[idx]
+            image_idx = int(image_idx)
+            if image_idx != idx:
+                print("ERROR: loadgen({}) and payload({}) disagree on image_idx".format(idx, image_idx))
             image_id = image["id"]
             height, width = image["height"], image["width"]
             ymin *= height
@@ -93,7 +115,10 @@ def main():
 
     print("mAP={:.3f}%".format(100. * cocoEval.stats[0]))
     if args.verbose:
-        print("found and ignored {} dupes".format(len(results) - len(seen)))
+        print("found {} results".format(len(results)))
+        print("found {} images".format(len(image_ids)))
+        print("found {} images with no results".format(no_results))
+        print("ignored {} dupes".format(len(results) - len(seen)))
 
 
 if __name__ == "__main__":

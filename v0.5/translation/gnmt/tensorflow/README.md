@@ -1,6 +1,6 @@
 # 1. Problem
 - This problem uses recurrent neural network to do language translation.
-- The steps to train the model and generate the dataset are listed in [train_gnmt.txt](https://github.intel.com/Intel-MLPerf/inference/blob/master/gnmt/nmt/train_gnmt.txt). Basically, they follow the MLPerf training code. However, you can download the model and dataset with the scripts in this directory.
+- The steps to train the model and generate the dataset are listed in [train_gnmt.txt](https://github.com/mlperf/inference/blob/master/v0.5/translation/gnmt/tensorflow/train_gnmt.txt). Basically, they follow the MLPerf training code. However, you can download the model and dataset with the scripts in this directory.
 
 # 2. Directions
 
@@ -70,6 +70,9 @@ To check accuracy, please run the following commands:
 python loadgen_gnmt.py --mode Accuracy
 python process_accuracy.py
 ```
+
+Please ensure the performance mode uses nmt/data/newstest2014.tok.bpe.32000.en.large and accuracy mode uses nmt/data/newstest2014.tok.bpe.32000.en from the dataset link. 
+
 
 ### Running other datasets:
 In order to translate other English texts, the raw text needs to be preprocessed first:

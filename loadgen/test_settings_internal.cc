@@ -24,13 +24,13 @@ namespace mlperf {
 namespace loadgen {
 
 TestSettingsInternal::TestSettingsInternal(
-    const TestSettings &requested_settings, QuerySampleLibrary *qsl)
+    const TestSettings &requested_settings, size_t qsl_performance_sample_count)
     : requested(requested_settings),
       scenario(requested.scenario),
       mode(requested.mode),
       samples_per_query(1),
       target_qps(1),
-      max_async_queries(-1),
+      max_async_queries(0),
       target_duration(std::chrono::milliseconds(requested.min_duration_ms)),
       min_duration(std::chrono::milliseconds(requested.min_duration_ms)),
       max_duration(std::chrono::milliseconds(requested.max_duration_ms)),
@@ -42,6 +42,7 @@ TestSettingsInternal::TestSettingsInternal(
       schedule_rng_seed(requested.schedule_rng_seed),
       accuracy_log_rng_seed(requested.accuracy_log_rng_seed),
       accuracy_log_probability(requested.accuracy_log_probability),
+      print_timestamps(requested.print_timestamps),
       performance_issue_unique(requested.performance_issue_unique),
       performance_issue_same(requested.performance_issue_same),
       performance_issue_same_index(requested.performance_issue_same_index),
@@ -86,9 +87,8 @@ TestSettingsInternal::TestSettingsInternal(
       }
       target_latency =
           std::chrono::nanoseconds(requested.server_target_latency_ns);
-      max_async_queries =
-          std::numeric_limits<decltype(max_async_queries)>::max();
       target_latency_percentile = requested.server_target_latency_percentile;
+      max_async_queries = requested.server_max_async_queries;
       break;
     case TestScenario::Offline:
       if (requested.offline_expected_qps >= 0.0) {
@@ -100,15 +100,14 @@ TestSettingsInternal::TestSettingsInternal(
                        "requested", offline_expected_qps, "using", target_qps);
         });
       }
-      max_async_queries =
-          std::numeric_limits<decltype(max_async_queries)>::max();
+      max_async_queries = 1;
       break;
   }
 
   // Performance Sample Count: TestSettings override QSL ->
   // PerformanceSampleCount
   performance_sample_count = (requested.performance_sample_count_override == 0)
-                                 ? qsl->PerformanceSampleCount()
+                                 ? qsl_performance_sample_count
                                  : requested.performance_sample_count_override;
 
   // Samples per query.
@@ -139,21 +138,27 @@ TestSettingsInternal::TestSettingsInternal(
   // Validate TestSettings
   if (requested.performance_issue_same &&
       (requested.performance_issue_same_index >= performance_sample_count)) {
-    LogDetail([performance_issue_same_index =
-                   requested.performance_issue_same_index,
-               performance_sample_count =
-                   performance_sample_count](AsyncDetail &detail) {
-      detail.Error("Sample Idx to be repeated in performance_issue_same mode",
-                   " cannot be greater than loaded performance_sample_count");
-    });
+    LogDetail(
+        [performance_issue_same_index = requested.performance_issue_same_index,
+         performance_sample_count =
+             performance_sample_count](AsyncDetail &detail) {
+          detail.Error(
+              "Sample Idx to be repeated in performance_issue_same mode"
+              " cannot be greater than loaded performance_sample_count.",
+              "performance_issue_same_index", performance_issue_same_index,
+              "performance_sample_count", performance_sample_count);
+        });
   }
 
   if (requested.performance_issue_unique && requested.performance_issue_same) {
     LogDetail([performance_issue_unique = requested.performance_issue_unique,
                performance_issue_same =
                    requested.performance_issue_same](AsyncDetail &detail) {
-      detail.Error("Performance_issue_unique and performance_issue_same, both",
-                   " cannot be true at the same time.");
+      detail.Error(
+          "Performance_issue_unique and performance_issue_same, both"
+          " cannot be true at the same time.",
+          "performance_issue_unique", performance_issue_unique,
+          "performance_issue_same", performance_issue_same);
     });
   }
 }
@@ -223,6 +228,11 @@ void LogRequestedTestSettings(const TestSettings &s) {
         detail("server_target_latency_percentile : ",
                s.server_target_latency_percentile);
         detail("server_coalesce_queries : ", s.server_coalesce_queries);
+        detail("server_find_peak_qps_decimals_of_precision : ",
+               s.server_find_peak_qps_decimals_of_precision);
+        detail("server_find_peak_qps_boundary_step_size : ",
+               s.server_find_peak_qps_boundary_step_size);
+        detail("server_max_async_queries : ", s.server_max_async_queries);
         break;
       case TestScenario::Offline:
         detail("offline_expected_qps : ", s.offline_expected_qps);
@@ -239,6 +249,7 @@ void LogRequestedTestSettings(const TestSettings &s) {
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
     detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
     detail("accuracy_log_probability : ", s.accuracy_log_probability);
+    detail("print_timestamps : ", s.print_timestamps);
     detail("performance_issue_unique : ", s.performance_issue_unique);
     detail("performance_issue_same : ", s.performance_issue_same);
     detail("performance_issue_same_index : ", s.performance_issue_same_index);
@@ -272,6 +283,7 @@ void TestSettingsInternal::LogEffectiveSettings() const {
     detail("schedule_rng_seed : ", s.schedule_rng_seed);
     detail("accuracy_log_rng_seed : ", s.accuracy_log_rng_seed);
     detail("accuracy_log_probability : ", s.accuracy_log_probability);
+    detail("print_timestamps : ", s.print_timestamps);
     detail("performance_issue_unique : ", s.performance_issue_unique);
     detail("performance_issue_same : ", s.performance_issue_same);
     detail("performance_issue_same_index : ", s.performance_issue_same_index);
@@ -298,6 +310,7 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("schedule_rng_seed : ", schedule_rng_seed);
   summary("accuracy_log_rng_seed : ", accuracy_log_rng_seed);
   summary("accuracy_log_probability : ", accuracy_log_probability);
+  summary("print_timestamps : ", print_timestamps);
   summary("performance_issue_unique : ", performance_issue_unique);
   summary("performance_issue_same : ", performance_issue_same);
   summary("performance_issue_same_index : ", performance_issue_same_index);
@@ -321,7 +334,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     std::map<std::string, std::string>::iterator it;
     std::string found;
     // lookup exact key first
-    it = kv.find(model + scenario + "." + key);
+    it = kv.find(model + "." + scenario + "." + key);
     if (it != kv.end()) {
       found = it->second;
     } else {
@@ -330,11 +343,23 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
       if (it != kv.end()) {
         found = it->second;
       } else {
-        return false;
+        it = kv.find(model + ".*." + key);
+        if (it != kv.end()) {
+          found = it->second;
+        } else {
+          it = kv.find("*.*." + key);
+          if (it != kv.end()) {
+            found = it->second;
+          } else {
+            return false;
+          }
+        }
       }
     }
     // if we get here, found will be set
-    if (val_l) *val_l = strtoul(found.c_str(), nullptr, 0) * int(multiplier);
+    if (val_l) {
+      *val_l = strtoull(found.c_str(), nullptr, 0) * static_cast<uint64_t>(multiplier);
+    }
     if (val_d) *val_d = strtod(found.c_str(), nullptr) * multiplier;
     return true;
   };
@@ -429,6 +454,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
            nullptr);
   lookupkv(model, scenario, "accuracy_log_probability", nullptr,
            &accuracy_log_probability, 0.01);
+  if (lookupkv(model, scenario, "print_timestamps", &val, nullptr))
+    print_timestamps = (val == 0) ? false : true;
   if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr))
     performance_issue_unique = (val == 0) ? false : true;
   if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr))
@@ -450,9 +477,9 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, "MultiStream", "target_qps", nullptr,
            &multi_stream_target_qps);
   if (lookupkv(model, "MultiStream", "samples_per_query", &val, nullptr))
-    multi_stream_samples_per_query = int(val);
+    multi_stream_samples_per_query = static_cast<int>(val);
   if (lookupkv(model, "MultiStream", "max_async_queries", &val, nullptr))
-    multi_stream_max_async_queries = int(val);
+    multi_stream_max_async_queries = static_cast<int>(val);
 
   // keys that apply to Server
   lookupkv(model, "Server", "target_latency_percentile", nullptr,
@@ -462,6 +489,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, "Server", "target_qps", nullptr, &server_target_qps);
   if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
     server_coalesce_queries = (val == 0) ? false : true;
+  if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))
+    server_max_async_queries = int(val);
 
   // keys that apply to Offline
   lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);

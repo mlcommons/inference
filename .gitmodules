@@ -2,9 +2,6 @@
 	path = build
 	url = https://chromium.googlesource.com/chromium/src/build
 	branch = master
-[submodule "third_party/gn"]
-	path = third_party/gn
-	url = https://gn.googlesource.com/gn
 [submodule "third_party/ninja"]
 	path = third_party/ninja
 	url = https://github.com/ninja-build/ninja.git

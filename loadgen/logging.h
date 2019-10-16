@@ -87,11 +87,12 @@ class ChromeTracer {
   }
 
   template <typename... Args>
-  void AddAsyncBeginEvent(const std::string& name, uint64_t id,
+  void AddAsyncBeginEvent(const std::string& name, uint64_t pid, uint64_t id,
                           PerfClock::time_point time, const Args... args) {
     *out_ << "{\"name\":\"" << name << "\","
           << "\"cat\":\"default\","
           << "\"ph\":\"b\","
+          << "\"pid\":" << pid << ","
           << "\"id\":" << id << ","
           << "\"ts\":" << Micros(time - origin_).count() << ","
           << "\"args\":{";
@@ -100,11 +101,12 @@ class ChromeTracer {
   }
 
   template <typename... Args>
-  void AddAsyncInstantEvent(const std::string& name, uint64_t id,
+  void AddAsyncInstantEvent(const std::string& name, uint64_t pid, uint64_t id,
                             PerfClock::time_point time, const Args... args) {
     *out_ << "{\"name\":\"" << name << "\","
           << "\"cat\":\"default\","
           << "\"ph\":\"n\","
+          << "\"pid\":" << pid << ","
           << "\"id\":" << id << ","
           << "\"ts\":" << Micros(time - origin_).count() << ","
           << "\"args\":{";
@@ -113,11 +115,12 @@ class ChromeTracer {
   }
 
   template <typename... Args>
-  void AddAsyncEndEvent(const std::string& name, uint64_t id,
+  void AddAsyncEndEvent(const std::string& name, uint64_t pid, uint64_t id,
                         PerfClock::time_point time) {
     *out_ << "{\"name\":\"" << name << "\","
           << "\"cat\":\"default\","
           << "\"ph\":\"e\", "
+          << "\"pid\":" << pid << ","
           << "\"id\":" << id << ","
           << "\"ts\":" << Micros(time - origin_).count() << "},\n";
   }
@@ -217,7 +220,8 @@ class AsyncLog {
                          const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
     if (tracer_) {
-      tracer_->AddAsyncInstantEvent(trace_name, id, instant_time, args...);
+      tracer_->AddAsyncInstantEvent(trace_name, current_pid_, id, instant_time,
+                                    args...);
     }
   }
 
@@ -242,8 +246,8 @@ class AsyncLog {
                    const Args... args) {
     std::unique_lock<std::mutex> lock(trace_mutex_);
     if (tracer_) {
-      tracer_->AddAsyncBeginEvent(trace_name, id, start, args...);
-      tracer_->AddAsyncEndEvent(trace_name, id, end);
+      tracer_->AddAsyncBeginEvent(trace_name, current_pid_, id, start, args...);
+      tracer_->AddAsyncEndEvent(trace_name, current_pid_, id, end);
     }
   }
 
@@ -481,6 +485,13 @@ class AsyncDetail {
   template <typename... Args>
   AsyncLog& Error(Args&&... args) {
     async_log_.FlagError();
+    async_log_.LogDetail(std::forward<Args>(args)...);
+    return async_log_;
+  }
+
+  template <typename... Args>
+  AsyncLog& Warning(Args&&... args) {
+    async_log_.FlagWarning();
     async_log_.LogDetail(std::forward<Args>(args)...);
     return async_log_;
   }

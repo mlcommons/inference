@@ -121,7 +121,7 @@ def main():
 
     if float(test_score) < float(ref_score) * (1 + threshold) and float(test_score) > float(ref_score) * (1 - threshold):
         print("TEST PASS")
-    elif (float(test_score) > float(ref_score) and test_mode == "Single Stream":
+    elif (float(test_score) > float(ref_score) and test_mode == "Single Stream"):
         print("TEST PASS")
         print("Note: TEST04-B is significantly slower than TEST04-A")
     elif (float(test_score) < float(ref_score) and test_mode != "Single Stream"):

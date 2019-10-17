@@ -77,7 +77,7 @@ def main():
             data_perf = np.frombuffer(bytes.fromhex(results_dict[qsl_idx]), dtype_map[args.dtype]) \
                 if py3 == True else np.frombuffer(bytearray.fromhex(results_dict[qsl_idx]), dtype_map[args.dtype])
             if data_perf.size == 0 or data.size == 0:
-                if data_perf.size != data_perf.size:
+                if data_perf.size != data.size:
                     num_perf_log_data_mismatch += 1
             elif data[0] != data_perf[0]:
                 num_perf_log_data_mismatch += 1

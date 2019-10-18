@@ -20,10 +20,8 @@ results. To keep the size of the accuracy log file reasonable, accuracy_log_prob
 keep the total number of logged inferences on the order of ~1000 samples for SSD-Large, and ~10000 samples
 elsewhere. The probability setting can be calculated as follows:
   accuracy_log_probability = 100% * (1000 or 10000) / <expected number of samples completed during performance run>
-Alternatively, if the accuracy log is too large, it can be truncated using the provided truncate_log.sh script
-before uploading results.
-
-UPDATE: An alternate script has been provided for reducing the accuracy log. Check truncate_log.py
+Alternatively, if the accuracy log is too large, it can be truncated using the provided truncate_log.py script
+before uploading results to remove duplicate entries from the log.
 
 The mode is set assuming that an accuracy JSON in accuracy mode already exists (i.e. from the submission results)
 that can be used to for verification. If not, the mode should be changed from PerformanceOnly (mode=2) to 

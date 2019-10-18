@@ -25,7 +25,8 @@ Part II
 Run the benchmark in the same manner as the original submission, once in AccuracyOnly mode and once in
 SubmissionOnly mode. Ensure that accuracy.txt is generated along with the other mlperf_log_* logs.  
 Note that the expected accuracies are lower than the MLPerf targets so the benchmark may report failure.
-This is expected behavior and does not neccessarily mean that the audit has failed. 
+This is expected behavior and does not neccessarily mean that the audit has failed. To save disk space,
+it is sufficient to perform and upload a single accuracy run per benchmark.
 
 Part III
 Ensure that performance matches that achieved in the submission run.

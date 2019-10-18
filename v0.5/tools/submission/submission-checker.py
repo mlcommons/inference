@@ -26,6 +26,9 @@ VALID_DIVISIONS = ["open", "closed"]
 REQUIRED_PERF_FILES = ["mlperf_log_accuracy.json", "mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
+TOMS = 1000 * 1000
+
+
 PERFORMANCE_SAMPLE_COUNT = {
     "mobilenet": 1024,
     "resnet50": 1024,
@@ -38,21 +41,27 @@ PERFORMANCE_SAMPLE_COUNT = {
 }
 
 ACCURAY_TARGET = {
-    "mobilenet": 71.68*0.98,
-    "resnet50": 76.46*0.99,
-    "resnet": 76.46*0.99,
-    "ssd-mobilenet": 22*0.99,
-    "ssd-small": 22*0.99,
-    "ssd-resnet34": 20*0.99,
-    "ssd-large": 20*0.99,
-    "gnmt": 23.9*0.99,
+    "mobilenet": 71.68 * 0.98,
+    "resnet50": 76.46 * 0.99,
+    "resnet": 76.46 * 0.99,
+    "ssd-mobilenet": 22 * 0.99,
+    "ssd-small": 22 * 0.99,
+    "ssd-resnet34": 20 * 0.99,
+    "ssd-large": 20 * 0.99,
+    "gnmt": 23.9 * 0.99,
 }
-
 
 SEEDS = {
     "qsl_rng_seed": 3133965575612453542,
     "sample_index_rng_seed": 665484352860916858,
     "schedule_rng_seed": 3622009729038561421
+}
+
+RESULT_VALUE = {
+    "Offline": "Samples per second",
+    "Single": "90th percentile latency (ns)",
+    "Multi": "Samples per query",
+    "Server": "Scheduled samples per second"
 }
 
 
@@ -63,6 +72,19 @@ def get_args():
     parser.add_argument("--submitter", help="filter to submitter")
     args = parser.parse_args()
     return args
+
+
+def model_map(model):
+    if model.startswith("mobilenet"):
+        model = "mobilenet"
+    elif model.startswith("rcnn"):
+        model = "ssd-small"
+    elif model.startswith("ssdlite") or model.startswith("ssd-inception") or  model.startswith("yolo") or \
+            model.startswith("ssd-mobilenet") or model.startswith("ssd-resnet50"):
+        model = "ssd-small"
+    if model not in PERFORMANCE_SAMPLE_COUNT:
+        model = None
+    return model
 
 
 def list_dir(*path):
@@ -114,10 +136,14 @@ def check_accuracy_dir(model, dir):
                 break
 
     if is_valid:
-        target_acc = ACCURAY_TARGET[model_map(model)]
-        if float(acc) < target_acc:
-            log.error("{} accuracy not met: {:.2f}/{}".format(dir, target_acc, acc))
-            is_valid = False
+        model_norm = model_map(model)
+        if model_norm:
+            target_acc = ACCURAY_TARGET[model_norm]
+            if float(acc) < target_acc:
+                log.error("{} accuracy not met: {:.2f}/{}".format(dir, target_acc, acc))
+                is_valid = False
+        else:
+            log.error("{} unknown model, can't find target accuracy".format(dir))
 
     # check if there are any errors in the detailed log
     fname = os.path.join(dir, "mlperf_log_detail.txt")
@@ -135,13 +161,6 @@ def check_accuracy_dir(model, dir):
     return is_valid
 
 
-def model_map(model):
-    if model not in PERFORMANCE_SAMPLE_COUNT:
-        if model.startswith("mobilenet"):
-            model = "mobilenet"
-    return model
-
-
 def check_performance_dir(model, dir):
     is_valid = False
     rt = {}
@@ -152,7 +171,7 @@ def check_performance_dir(model, dir):
             m = re.match("^Result\s+is\s*\:\s+VALID", line)
             if m:
                 is_valid = True
-            m = re.match("^\s*([\w\s.\(\)\/]+)\s*\:\s*([\d\.]+).*", line)
+            m = re.match("^\s*([\w\s.\(\)\/]+)\s*\:\s*([\w\+\.]+).*", line)
             if m:
                 rt[m.group(1).strip()] = m.group(2).strip()
 
@@ -179,7 +198,12 @@ def check_performance_dir(model, dir):
             if int(rt[seed]) != SEEDS[seed]:
                 log.error("{} {} wrong, {}/{}".format(fname, seed, rt[seed], SEEDS[seed]))
 
-    return is_valid
+    scenario = rt["Scenario"]
+    res = float(rt[RESULT_VALUE[scenario]])
+    if scenario in ["Single Stream"]:
+        res /= TOMS
+
+    return is_valid, res
 
 
 def files_diff(list1, list2):
@@ -200,6 +224,7 @@ def files_diff(list1, list2):
 def check_results_dir(dir, filter_submitter):
     good_submissions = []
     bad_submissions = {}
+    results = {}
 
     for division in list_dir("."):
         if division not in ["closed", "open"]:
@@ -222,34 +247,50 @@ def check_results_dir(dir, filter_submitter):
 
                     for scenario in list_dir(results_path, system_desc, model):
                         name = os.path.join(results_path, system_desc, model, scenario)
+                        results[name] = "NoResults"
                         acc_path = os.path.join(name, "accuracy")
                         if not os.path.exists(os.path.join(acc_path, "accuracy.txt")):
-                            log.error("{} has no accuracy.txt. Generate it with accuracy-imagenet.py or accuracy-coco.py or "
-                                      "process_accuracy.py".format(acc_path))
-                            continue
-                        diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
-                        if diff:
-                            bad_submissions[name] = "{} has file list mismatch ({})".format(acc_path, diff)
-                        if not check_accuracy_dir(model, acc_path):
-                            bad_submissions[name] = "{} has issues".format(acc_path)
-                        n = ["1"]
+                            log.error(
+                                "{} has no accuracy.txt. Generate it with accuracy-imagenet.py or accuracy-coco.py or "
+                                "process_accuracy.py".format(acc_path))
+                            bad_submissions[name] = "{} has no accuracy.txt".format(acc_path)
+                        else:
+                            diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
+                            if diff:
+                                bad_submissions[name] = "{} has file list mismatch ({})".format(acc_path, diff)
+                            if not check_accuracy_dir(model, acc_path):
+                                bad_submissions[name] = "{} has issues".format(acc_path)
+                        n = ["run_1"]
                         if scenario in ["Server"]:
-                            n = ["1", "2", "3", "4", "5"]
+                            n = ["run_1", "run_2", "run_3", "run_4", "run_5"]
+                        if not os.path.exists(os.path.join(name, "performance", n[0])):
+                            n = ["run1"]
+                            if not os.path.exists(os.path.join(name, "performance", n[0])):
+                                n = ["."]
+                            else:
+                                if scenario in ["Server"]:
+                                    n = ["run1", "run2", "run3", "run4", "run5"]
+
                         for i in n:
-                            perf_path = os.path.join(name, "performance", "run_" + str(i))
+                            perf_path = os.path.join(name, "performance", i)
                             if not os.path.exists(perf_path):
                                 bad_submissions[name] = "{} missing".format(perf_path)
                                 continue
                             diff = files_diff(list_files(perf_path), REQUIRED_PERF_FILES)
                             if diff:
                                 bad_submissions[name] = "{} has file list mismatch ({})".format(perf_path, diff)
-                            if not check_performance_dir(model, perf_path):
+                            try:
+                                is_valid, results[name] = check_performance_dir(model, perf_path)
+                            except Exception as ex:
+                                is_valid, results[name] = False, "NoResults"
+                            if not is_valid:
                                 bad_submissions[name] = "{} has issues".format(perf_path)
                         if device_bad:
                             bad_submissions[name] = "{}: no such system id {}".format(name, system_desc)
                         else:
                             good_submissions.append(name)
-    return good_submissions, bad_submissions
+
+    return good_submissions, bad_submissions, results
 
 
 def compare_json(fname, template, errors):
@@ -309,7 +350,7 @@ def check_measurement_dir(good_submissions, systems_imp_json):
     for submission in good_submissions:
         parts = split_path(submission)
         system_desc = parts[3]
-        measurement_dir = os.path.join(parts[0], parts[1], "measurements",  system_desc)
+        measurement_dir = os.path.join(parts[0], parts[1], "measurements", system_desc)
         if not os.path.exists(measurement_dir):
             errors.append("{} directory missing".format(measurement_dir))
             continue
@@ -357,15 +398,24 @@ def main():
     os.chdir(args.input)
 
     # 1. check results directory
-    good_submissions, bad_submissions = check_results_dir(args.input, args.submitter)
+    good_submissions, bad_submissions, results = check_results_dir(args.input, args.submitter)
 
     # 2. check the meta data under systems
     meta_errors = check_system_desc_id(good_submissions, systems_json)
 
     # 3. check measurement and code dir
     measurement_errors = check_measurement_dir(good_submissions, systems_imp_json)
+    with_results = 0
+    for k, v in results.items():
+        if v == "NoResults":
+            log.error("NoResults {}".format(k))
+        else:
+            log.info("Results {} {}".format(k, v))
+            with_results +=1
+
+    log.info("Results={}, NoResults={}".format(with_results, len(results)-with_results))
     if bad_submissions or meta_errors or measurement_errors:
-        log.error("SUMMARY: there are errros in the submission")
+        log.error("SUMMARY: submission has errors")
         return 1
     else:
         log.info("SUMMARY: submission looks OK")

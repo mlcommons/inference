@@ -114,9 +114,9 @@ class Resnet34Backbone(object):
         for layer in self._conv1_bn_block:
             inputs = forward_module(layer, inputs, training=training)
         inputs = self._pool1.apply(inputs)
-        inputs = self.forward_residual_stage(inputs, self._stage1) 
-        inputs = self.forward_residual_stage(inputs, self._stage2, downsample=self._stage2_downsample)
-        inputs = self.forward_residual_stage(inputs, self._stage3, downsample=self._stage3_downsample)  
+        inputs = self.forward_residual_stage(inputs, self._stage1, training=training) 
+        inputs = self.forward_residual_stage(inputs, self._stage2, downsample=self._stage2_downsample, training=training)
+        inputs = self.forward_residual_stage(inputs, self._stage3, downsample=self._stage3_downsample, training=training)  
         #inputs = self.forward_residual_stage(inputs, self._stage4)
         feature_layers.append(inputs)
         for layer in self._conv7_block:

@@ -1,0 +1,74 @@
+#mainDiv {
+    /*position:absolute;
+    left:0px;
+    top:0px;*/
+    position: relative;
+    margin: 0 auto;
+    margin-left: 50% ;
+    autowidth:1100px;
+    height: 660px;
+    z-index: 6;
+    top: 0px;
+    width: 600px;
+}
+
+#container1 {
+    position: absolute;
+    width: 600px;
+    height: 200px;
+    left: -600px;
+    top: 0px;
+}
+
+#container2 {
+    position: absolute;
+    width: 600px;
+    height: 200px;
+    left: 50px;
+    top: 0px;
+}
+
+#container3 {
+    position: absolute;
+    width: 600px;
+    height: 200px;
+    left:-600px;
+    top: 200px;
+}
+
+#container4 {
+    position: absolute;
+    width: 600px;
+    height: 200px;
+    left: 50px;
+    top: 200px;
+} 
+
+#container5 {
+    position: absolute;
+    width: 600px;
+    height: 200px;
+    left:-600px;
+    top: 400px;
+}
+
+#container6 {
+    position: absolute;
+    width: 600px;
+    height: 200px;
+    left: 50px;
+    top: 400px;
+} 
+#containerControl {
+    position: absolute;
+    width: 100px;
+    left: 444px;
+    top: 8px;
+    height: 20px;
+    z-index:55;
+}
+
+#startButton { color:rgb(255, 255, 255);font-size:12px;padding-top:2px;padding-bottom:2px;padding-left:6px;padding-right:6px;border-width:0px;border-color:rgb(197, 229, 145);border-style:solid;border-radius:3px;background-color:rgb(120, 195, 0);}#startButton:hover{color:#ffffff;background-color:#84cf0b;border-color:#c5e591;}
+#startHadoopButton1 { color:rgb(255, 255, 255);font-size:12px;padding-top:2px;padding-bottom:2px;padding-left:6px;padding-right:6px;border-width:0px;border-color:rgb(197, 229, 145);border-style:solid;border-radius:3px;background-color:rgb(120, 195, 0);}#startHadoopButton1:hover{color:#ffffff;background-color:#84cf0b;border-color:#c5e591;}
+#deleteButton { color:rgb(255, 255, 255);font-size:12px;padding-top:2px;padding-bottom:2px;padding-left:6px;padding-right:6px;border-width:0px;border-color:rgb(197, 229, 145);border-style:solid;border-radius:3px;background-color:rgb(255, 81, 0);}#deleteButton:hover{color:#ffffff;background-color:#ff6f00;border-color:#84cf0b;}
+#viewButton { color:rgb(255, 255, 255);font-size:12px;padding-top:2px;padding-bottom:2px;padding-left:6px;padding-right:6px;border-width:0px;border-color:rgb(197, 229, 145);border-style:solid;border-radius:3px;background-color:rgb(11, 82, 224);}#viewButton:hover{color:#ffffff;background-color:#2256f2;border-color:#c5e591;}

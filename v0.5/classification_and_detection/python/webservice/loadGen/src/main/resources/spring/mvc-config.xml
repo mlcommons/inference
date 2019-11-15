@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <context:annotation-config/>
+
+    <!-- 配置注解驱动 可以将request参数与绑定到controller参数上 -->
+    <mvc:annotation-driven/>
+
+    <!--静态资源映射-->
+    <mvc:resources mapping="/statics/css/**" location="/WEB-INF/statics/css/"/>
+    <mvc:resources mapping="/statics/js/**" location="/WEB-INF/statics/js/"/>
+    <mvc:resources mapping="/statics/images/**" location="/WEB-INF/statics/images/"/>
+    <mvc:resources mapping="/statics/lib/**" location="/WEB-INF/statics/lib/"/>
+    <mvc:resources mapping="/pages/**" location="/WEB-INF/pages/"/>
+    <!--默认的视图解析器-->
+    <bean id="defaultViewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+        <property name="viewClass" value="org.springframework.web.servlet.view.JstlView"/>
+        <property name="prefix" value="/WEB-INF/pages/"/><!--设置JSP文件的目录位置-->
+        <property name="suffix" value=".jsp"/>
+        <property name="exposeContextBeansAsAttributes" value="true"/>
+    </bean>
+    
+    <!-- 自动扫描装配 -->
+    <context:component-scan base-package="scs.controller"/> 
+    
+</beans>

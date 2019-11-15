@@ -1,0 +1,96 @@
+
+@charset "utf-8"; 
+/* DIVCSS5-CSS PARD专用 */
+/*.pard_demo{
+    padding-left: 20%;
+}*/
+
+/* DIVCSS5-CSS PARD Core Title */
+.box_core_text{
+    display:inline-block; 
+    float: left; 
+    background-size:100%;
+    text-align:center;
+}
+
+.box_core_bus{
+    display:inline-block; 
+    float: left; 
+    background-size:100%;
+    text-align:center;
+    background:url(../images/v_line.png) no-repeat center;
+}
+
+.box_core_buse_size{width:25%;height:100%}
+.box_core_text_size{width:25%}
+.box_core_title_group{border:0px solid #F00;width:80%;}
+
+/* DIVCSS5-CSS PARD Core Image */
+.box_core_off{
+    display:inline-block; 
+    float: left; 
+    background:url(../images/core_off.png) no-repeat center; 
+    background-size:41%;
+    text-align:center;
+}
+.box_core_on_1{
+    display:inline-block; 
+    float: left; 
+    background:url(../images/core_on_1.jpg) no-repeat center; 
+    background-size:41%;
+    text-align:center;
+}
+
+.box_core_on_2{
+    display:inline-block; 
+    float: left; 
+    background:url(../images/core_on_2.jpg) no-repeat center; 
+    background-size:41%;
+    text-align:center;
+}
+.box_core_on_3{
+    display:inline-block; 
+    float: left; 
+    background:url(../images/core_on_3.jpg) no-repeat center; 
+    background-size:41%;
+    text-align:center;
+}
+.box_core_on_0{
+    display:inline-block; 
+    float: left; 
+    background:url(../images/core_on_0.jpg) no-repeat center; 
+    background-size:41%;
+    text-align:center;
+}
+
+.box_norm_size{border:0px solid #F00; width:25%; height:105%}
+.box_core_group{border:0px solid #F00;width:80%; height:10%}
+.box_core_bus_group{border:0px solid #F00;width:80%; height:10%}
+
+.box_hbus{
+   border:0px solid #F00; width:80%; height:20pt;
+}
+
+.box_vbus{
+   background:url(../images/v_line.png) no-repeat center;
+   border:0px solid #F00;width:80%; height:10%;
+}
+
+/* DIVCSS5-CSS PARD NoC */
+.div_noc{
+    border:0px solid #F00; width:80%; height:20%;
+    background:url(../images/noc.png) no-repeat center; 
+}
+
+/* DIVCSS5-CSS PARD Cache */
+.box_cache{
+    border:1px solid #000;width:80%; height:30%;    
+}
+
+/* DIVCSS5-CSS PARD Meme */
+.box_mem{
+    border:1px solid #000;width:80%; height:30%;    
+}
+
+
+

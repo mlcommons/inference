@@ -1,0 +1,32 @@
+@charset "utf-8";
+#wrap{ width:990px; overflow:hidden; height:1200px;}
+.box-163css{ width:500px; height:900px; margin:220px auto; position:relative;}
+.box-163css input{ margin-left:10px; border:none; border:1px solid #a10000; background:#c00; text-align:center; height:24px; line-height:20px; color:#fff; cursor:pointer;}
+#dvMsgBox{display:none;position:absolute;font-size:12px;width:300px;overflow:hidden;z-index:999; border-radius:3px; font-family: 微软雅黑;}  
+#dvMsgBox .top{height:40px; background-color:#72D1FF;padding-left:16px; float:left; width:100%;}  
+#dvMsgBox .top .right{height:100%;padding-right:6px;}  
+#dvMsgBox .top .right .title{height:100%;line-height:40px;color:#fff;vertical-align:middle;font-size:14px;overflow:hidden;}  
+#dvMsgBox .body{background:#fff;padding-left:10px;}  
+#dvMsgBox .body .right{background:#fff;padding-right:2px;}  
+#dvMsgBox .body .right .ct{  line-height: 60px;
+  vertical-align: middle;
+  width: 100%;
+  text-align: center;
+  color:#2b9bc5;
+  font-size: 14px;
+  font-family: 微软雅黑;
+  }  
+#dvMsgBox .body .right .ct .pro{width:280px;border:solid 1px #6593cf;height:25px;background:#ffffff;line-height:23px;overflow:hidden;}  
+#dvMsgBox .body .right .ct .pro .bg{width:0%;height:100%;background:#c9dffc;}  
+#dvMsgBox .bottom{background:#fff;padding-left:6px;}  
+#dvMsgBox .bottom .right{height:100%;/*background:transparent url(right-corners.png) no-repeat right bottom;*/padding-right:6px;}  
+input.btn{width:56px;   border-radius: 3px; font-family: 微软雅黑; cursor:pointer; color:#fff; border:none; height:25px; text-align:center;  background-color:#72D1FF;text-align:center; margin:0px auto;}  
+input.btnfocus{ background-color:#EC6D51;font-family: 微软雅黑;border-radius: 3px;width:56px;margin:0px auto; border:none; height:25px; cursor:pointer; color:#fff;}  
+#dvMsgBox .icon{width:32px;height:32px;float:left;margin-right:10px;}  
+#dvMsgBox .error{background:url(icon-error.gif) no-repeat;}  
+#dvMsgBox .info{background:url(icon-info.gif) no-repeat;}  
+#dvMsgBox .warning{background:url(icon-warning.gif) no-repeat;}  
+#dvMsgBox .clear{clear:both;}  
+#dvMsgBox .height{height:10px;line-height:10px;}  
+#ShowBolightBox{display:none;-moz-opacity:0.5;filter:alpha(opacity=50);opacity:0.5;background-color:#000000;z-index:100;position:absolute;left:0px;top:0px;}
+#dvMsgBtns{ text-align:center; width:100%;}

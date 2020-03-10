@@ -245,6 +245,7 @@ class PostProcessCocoPt(PostProcessCoco):
         # batch size
         bs = len(results[0])
         for idx in range(0, bs):
+            self.content_ids.append(ids[idx])
             processed_results.append([])
             detection_boxes = results[0][idx]
             detection_classes = results[1][idx]
@@ -283,6 +284,7 @@ class PostProcessCocoOnnx(PostProcessCoco):
         # batch size
         bs = len(results[0])
         for idx in range(0, bs):
+            self.content_ids.append(ids[idx])
             processed_results.append([])
             detection_boxes = results[0][idx]
             detection_classes = results[1][idx]
@@ -319,6 +321,7 @@ class PostProcessCocoTf(PostProcessCoco):
         # batch size
         bs = len(results[0])
         for idx in range(0, bs):
+            self.content_ids.append(ids[idx])
             processed_results.append([])
             detection_boxes = results[0][idx]
             detection_classes = results[1][idx]

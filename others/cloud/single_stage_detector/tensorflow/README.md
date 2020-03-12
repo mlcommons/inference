@@ -25,7 +25,10 @@ bash download_model.sh
 ```
 python eval_tf.py 
 ```
-
+### pb to tflite tools(support NHWC format pb model)
+```
+python convert_pb2litte.py -p path_to_pb  -t name_of_tflite
+```
 # 3. Dataset/Environment
 ### Publiction/Attribution.
 Microsoft COCO: COmmon Objects in Context. 2017.

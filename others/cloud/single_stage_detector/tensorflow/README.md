@@ -48,7 +48,7 @@ Backbone is ResNet34 pretrained on ILSVRC 2012 (from torchvision). Modifications
 Metric is COCO box mAP (averaged over IoU of 0.5:0.95), computed over 2017 COCO val data.
 
 ### Quality target
-mAP of 0.221
+mAP of 0.225
 
 ### Evaluation frequency
 

@@ -110,7 +110,10 @@ def export_graph(args):
         glabels = tf.cast(glabels, tf.int64)
         gbboxes = [[10., 10., 200., 200.]] 
         gt_targets, gt_labels, gt_scores = encoder_fn(glabels, gbboxes)
-        image = tf.placeholder(name='image', dtype=tf.float32, shape=[None, 3, args.train_image_size, args.train_image_size])
+        if args.data_format == "channels_first":
+            image = tf.placeholder(name='image', dtype=tf.float32, shape=[None, 3, args.train_image_size, args.train_image_size])
+        elif args.data_format == "channels_last":
+            image = tf.placeholder(name='image', dtype=tf.float32, shape=[None, args.train_image_size, args.train_image_size, 3])
         filename = tf.placeholder(name='filename', dtype=tf.string, shape=[None,])
         shape = tf.placeholder(name='shape', dtype=tf.int32, shape=[None, 3])
         input_ = {'image': image, 'filename': filename, 'shape': shape, 'loc_targets': [gt_targets], 'cls_targets': [gt_labels], 'match_scores': [gt_scores]}

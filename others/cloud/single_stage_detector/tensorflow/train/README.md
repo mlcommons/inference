@@ -37,9 +37,12 @@ python eval_ssd_large.py
 
 ### frozen pb
 ```
-1. python export_graph.py 
+1. python export_graph.py (config data_fortmat in eval_ssd_large.py to specify NHWC or NCHW format pb)
 2. bash run_freeze_graph.sh
  ```
+### ckpt and pb links
+ckpt and pb links at:  https://zenodo.org/record/3712664#.XnB1D8eP63A
+
 ### Hyperparameter settings
 
 Hyperparameters are recorded in the `train_*.py` and `eval_*.py` files for each configure.
@@ -61,7 +64,7 @@ Backbone is ResNet34 pretrained on ILSVRC. Modifications to the backbone network
 Metric is COCO box mAP (averaged over IoU of 0.5:0.95), computed over 2017 COCO val data.
 
 ### Quality target
-mAP of 0.221
+mAP of 0.225
 
 ### Evaluation frequency
 

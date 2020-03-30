@@ -1,4 +1,3 @@
-python export_graph.py
 
 freeze_graph \
   --input_graph="resnet34_ssd.pbtxt" \

@@ -41,7 +41,7 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_integer(
     'num_classes', 81, 'Number of classes to use in the dataset.')
 tf.app.flags.DEFINE_string(
-    'model_dir', './logs_mine_sec.pytorch/',
+    'model_dir', './logs/',
     'The directory where the model will be stored.')
 tf.app.flags.DEFINE_integer(
     'log_every_n_steps', 10,
@@ -94,7 +94,7 @@ tf.app.flags.DEFINE_string(
     'lr_decay_factors', '0.0, 0.1, 1, 0.4, 0.1, 0.01, 0.001, 0.001',
     'The values of learning_rate decay factor for each segment between boundaries (comma-separated list).')
 tf.app.flags.DEFINE_string(
-    'checkpoint_path', './logs_mine_sec.pytorch.22.1/model.ckpt-shuffle',
+    'checkpoint_path', './ckpt_update/model.ckpt-192757',
     'The path to a checkpoint from which to fine-tune.')
 tf.app.flags.DEFINE_string(
     'checkpoint_model_scope', 'ssd1200',

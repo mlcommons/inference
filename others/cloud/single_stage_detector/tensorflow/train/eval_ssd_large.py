@@ -46,7 +46,7 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_integer(
     'num_classes', 81, 'Number of classes to use in the dataset.')
 tf.app.flags.DEFINE_string(
-    'model_dir', './logs_mine_sec.pytorch/',
+    'model_dir', './logs/',
     'The directory where the model will be stored.')
 tf.app.flags.DEFINE_integer(
     'log_every_n_steps', 10,
@@ -228,7 +228,9 @@ def parse_by_class_fixed_bboxes(cls_pred, bboxes_pred, params):
     detection_scores, idxes = tf.nn.top_k(detection_scores, k=tf.minimum(params['keep_max_boxes'], num_bboxes), sorted=True)
     detection_bboxes = tf.gather(detection_bboxes, idxes)
     detection_classes = tf.gather(detection_classes, idxes)
-    keep_max_boxes = tf.convert_to_tensor(params['keep_max_boxes']) 
+    keep_max_boxes = tf.convert_to_tensor(params['keep_max_boxes'])
+    
+    cur_num = tf.shape(detection_classes)[0]
     detection_bboxes = tf.cond(cur_num < keep_max_boxes, lambda: tf.concat([detection_bboxes, tf.zeros(shape=(params['keep_max_boxes'] - cur_num, 4), dtype=tf.float32)], axis=0), lambda: detection_bboxes)
     detection_scores = tf.cond(cur_num < keep_max_boxes, lambda: tf.concat([detection_scores, tf.zeros(shape=(params['keep_max_boxes'] - cur_num,), dtype=tf.float32)], axis=0), lambda: detection_scores)
     detection_classes = tf.cond(cur_num < keep_max_boxes, lambda: tf.concat([detection_classes, tf.zeros(shape=(params['keep_max_boxes'] - cur_num,), dtype=tf.float32)], axis=0), lambda: detection_classes)   

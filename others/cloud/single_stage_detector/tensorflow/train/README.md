@@ -37,7 +37,7 @@ python eval_ssd_large.py
 
 ### frozen pb
 ```
-1. python export_graph.py (config data_fortmat in eval_ssd_large.py to specify NHWC or NCHW format pb)
+1. python export_graph.py (config data_format in eval_ssd_large.py to specify NHWC or NCHW format pb)
 2. bash run_freeze_graph.sh
  ```
 ### ckpt and pb links

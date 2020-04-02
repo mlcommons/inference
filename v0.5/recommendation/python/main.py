@@ -23,6 +23,7 @@ import numpy as np
 import dataset
 import imagenet
 import coco
+import criteoterabyte
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -45,7 +46,7 @@ SUPPORTED_DATASETS = {
          {"image_size": [300, 300, 3]}),
     "coco-300-pt":
         (coco.Coco, dataset.pre_process_coco_pt_mobilenet, coco.PostProcessCocoPt(False,0.3),
-         {"image_size": [300, 300, 3]}),         
+         {"image_size": [300, 300, 3]}),
     "coco-1200":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCoco(),
          {"image_size": [1200, 1200, 3]}),
@@ -58,6 +59,9 @@ SUPPORTED_DATASETS = {
     "coco-1200-tf":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoTf(),
          {"image_size": [1200, 1200, 3],"use_label_map": False}),
+    "criteo-terabyte":
+        (criteoterabyte.CriteoTerabyte, dataset.pre_process_criteoterabyte_dlrm, dataset.PostProcessCommon(),
+         {"max_ind_range": 40000000, "sub_sample_rate": 0.0, "randomize": 'total',  "memory_map": True}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
@@ -157,6 +161,15 @@ SUPPORTED_PROFILES = {
         "data-format": "NHWC",
         "model-name": "ssd-resnet34",
     },
+    "dlrm-pytorch": {
+        "dataset": "criteo-terabyte",
+        "inputs": "something",
+        "outputs": "probability",
+        #"backend": "pytorch-native",
+        "backend": "pytorch-native-dlrm",
+        "data-format": "floats_and_offsets_indices",
+        "model-name": "dlrm",
+    },
 }
 
 SCENARIO_MAP = {
@@ -238,7 +251,13 @@ def get_backend(backend):
         backend = BackendPytorch()
     elif backend == "pytorch-native":
         from backend_pytorch_native import BackendPytorchNative
-        backend = BackendPytorchNative()      
+        backend = BackendPytorchNative()
+    elif backend == "pytorch-native-dlrm":
+        from backend_pytorch_native_dlrm import BackendPytorchNativeDLRM
+        # WARNING: pass model parameters here (see run_and_time.sh MLPerf training script)
+        # --arch-sparse-feature-size=128 --arch-mlp-bot="13-512-256-128" --arch-mlp-top="1024-1024-512-256-1" 
+        #backend = BackendPytorchNativeDLRM(m_spa=128, ln_emb="1460-583-10131227-2202608-305-24-12517-633-3-93145-5683-8351593-3194-27-14992-5461306-10-5652-2173-4-7046547-18-15-286181-105-142572", ln_bot="13-512-256-128", ln_top="1024-1024-512-256-1")
+        backend = BackendPytorchNativeDLRM(m_spa=16, ln_emb=np.array([1460,583,10131227,2202608,305,24,12517,633,3,93145,5683,8351593,3194,27,14992,5461306,10,5652,2173,4,7046547,18,15,286181,105,142572]), ln_bot=np.array([13,512,256,64,16]), ln_top=np.array([367,512,256,1]))
     elif backend == "tflite":
         from backend_tflite import BackendTflite
         backend = BackendTflite()
@@ -418,6 +437,7 @@ def main():
         count_override = True
 
     # dataset to use
+    print(args.dataset)
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
     ds = wanted_dataset(data_path=args.dataset_path,
                         image_list=args.dataset_list,

@@ -4,7 +4,7 @@ pytoch native backend
 # pylint: disable=unused-argument,missing-docstring
 import torch  # currently supports pytorch1.0
 import backend
-
+#import dlrm_s_pytorch
 
 
 class BackendPytorchNative(backend.Backend):
@@ -23,6 +23,9 @@ class BackendPytorchNative(backend.Backend):
         return "NCHW"
 
     def load(self, model_path, inputs=None, outputs=None):
+        #debug prints
+        print(model_path, inputs, outputs)
+
         self.model = torch.load(model_path,map_location=lambda storage, loc: storage)
         self.model.eval()
         # find inputs from the model if not passed in by config

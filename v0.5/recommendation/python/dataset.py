@@ -255,3 +255,7 @@ def pre_process_coco_resnet34_tf(img, dims=None, need_transpose=False):
         img = img.transpose([2, 0, 1])
 
     return img
+
+def pre_process_criteoterabyte_dlrm(x):
+    return x
+    

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34] [cpu|gpu]"
+    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|dlrm] [cpu|gpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -21,9 +21,15 @@ for i in $* ; do
        tf|onnxruntime|tflite|pytorch) backend=$i; shift;;
        cpu|gpu) device=$i; shift;;
        gpu) device=gpu; shift;;
-       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf) model=$i; shift;;
+       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf|dlrm) model=$i; shift;;
     esac
 done
+# debuging
+echo $backend
+echo $device
+echo $model
+echo $MODEL_DIR
+echo $DATA_DIR
 
 if [ $device == "cpu" ] ; then
     export CUDA_VISIBLE_DEVICES=""
@@ -95,7 +101,14 @@ if [ $name == "ssd-resnet34-pytorch" ] ; then
     model_path="$MODEL_DIR/resnet34-ssd1200.pytorch"
     profile=ssd-resnet34-pytorch
 fi
-
+if [ $name == "dlrm-pytorch" ] ; then
+    model_path="$MODEL_DIR/dlrm.pytorch"
+    profile=dlrm-pytorch
+fi
+# debuging
+echo $model_path
+echo $profile
+echo $extra_args
 
 #
 # tflite

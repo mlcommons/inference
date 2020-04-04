@@ -24,9 +24,10 @@ import subprocess
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--backend", choices=["tf","pytorch"], default="tf", help="Backend")
+    parser.add_argument("--backend", choices=["tf","pytorch","onnxruntime"], default="tf", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline", "Server", "MultiStream"], default="Offline", help="Scenario")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
+    parser.add_argument("--quantized", action="store_true", help="use quantized model (only valid for onnxruntime backend)")
     parser.add_argument("--mlperf_conf", default="mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf", help="mlperf rules config")
     args = parser.parse_args()
@@ -43,11 +44,16 @@ def main():
     args = get_args()
 
     if args.backend == "pytorch":
+        assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
         from pytorch_SUT import get_pytorch_sut
         sut = get_pytorch_sut()
     elif args.backend == "tf":
+        assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
         from tf_SUT import get_tf_sut
         sut = get_tf_sut()
+    elif args.backend == "onnxruntime":
+        from onnxruntime_SUT import get_onnxruntime_sut
+        sut = get_onnxruntime_sut(args.quantized)
     else:
         raise ValueError("Unknown backend: {:}".format(args.backend))
 

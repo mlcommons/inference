@@ -15,9 +15,6 @@
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 
-# Install dependencies
-RUN python3 -m pip install torch==1.4.0 onnx==1.6.0 transformers==2.4.0
-
 # Install LoadGen
 # Cloning the LoadGen so that we have clean git repo from within the docker container.
 RUN cd /tmp \
@@ -28,6 +25,9 @@ RUN cd /tmp \
  && python3 setup.py install \
  && cd /tmp \
  && rm -rf inference
+
+# Install dependencies
+RUN python3 -m pip install torch==1.4.0 onnx==1.6.0 transformers==2.4.0 onnxruntime==1.2.0 numpy==1.18.0
 
 # Add user
 ARG GID

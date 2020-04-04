@@ -70,6 +70,7 @@ download_data:
 download_model:
 	@$(MAKE) -f $(MAKEFILE_NAME) download_tf_model
 	@$(MAKE) -f $(MAKEFILE_NAME) download_pytorch_model
+	@$(MAKE) -f $(MAKEFILE_NAME) download_onnx_model
 
 .PHONY: download_tf_model
 download_tf_model:
@@ -93,6 +94,18 @@ download_pytorch_model:
 	fi
 	@if [ ! -e $(BERT_DIR)/vocab.txt ]; then \
 		wget -O $(BERT_DIR)/vocab.txt https://zenodo.org/record/3733896/files/vocab.txt?download=1; \
+	fi
+
+.PHONY: download_onnx_model
+download_onnx_model:
+	@if [ ! -e $(BERT_DIR)/model.onnx ]; then \
+		wget -O $(BERT_DIR)/model.onnx https://zenodo.org/record/3733910/files/model.onnx?download=1; \
+	fi
+	@if [ ! -e $(BERT_DIR)/bert_large_v1_1_fake_quant.onnx ]; then \
+		wget -O $(BERT_DIR)/bert_large_v1_1_fake_quant.onnx https://zenodo.org/record/3739583/files/bert_large_v1_1_fake_quant.onnx?download=1; \
+	fi
+	@if [ ! -e $(BERT_DIR)/vocab.txt ]; then \
+		wget -O $(BERT_DIR)/vocab.txt https://zenodo.org/record/3733910/files/vocab.txt?download=1; \
 	fi
 
 .PHONY: build_docker
@@ -126,6 +139,22 @@ run_pytorch_performance:
 .PHONY: run_pytorch_accuracy
 run_pytorch_accuracy:
 	@python3 run.py --backend=pytorch --accuracy
+
+.PHONY: run_onnxruntime_performance
+run_onnxruntime_performance:
+	@python3 run.py --backend=onnxruntime
+
+.PHONY: run_onnxruntime_accuracy
+run_onnxruntime_accuracy:
+	@python3 run.py --backend=onnxruntime --accuracy
+
+.PHONY: run_onnxruntime_quantized_performance
+run_onnxruntime_quantized_performance:
+	@python3 run.py --backend=onnxruntime --quantized
+
+.PHONY: run_onnxruntime_quantized_accuracy
+run_onnxruntime_quantized_accuracy:
+	@python3 run.py --backend=onnxruntime --quantized --accuracy
 
 .PHONY: evaluate
 evaluate:

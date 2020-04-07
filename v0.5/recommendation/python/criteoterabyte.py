@@ -10,12 +10,12 @@ import re
 import time
 
 import numpy as np
-
+import inspect
 # pytorch
 import torch
 from torch.utils.data import Dataset, RandomSampler
 
-import dataset
+#import dataset
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("imagenet")
@@ -26,36 +26,39 @@ log = logging.getLogger("imagenet")
 import sys
 sys.path.append('/root/mnaumov/github/dlrm')
 
-import data_loader_terabyte
+#import data_loader_terabyte as dltb
 import dlrm_data_pytorch as dp
 
-class CriteoTerabyte(dataset.Dataset):
+class CriteoTerabyte(Dataset):
 
     def __init__(self, data_path, image_list, name, image_format, pre_process, use_cache, count, max_ind_range, sub_sample_rate, randomize, memory_map=False):
         # debug print
-        print(data_path, image_list, name, image_format, pre_process, use_cache, count, max_ind_range, sub_sample_rate, randomize, memory_map)
-        
+        print('CriteoTerabyte __init__', data_path, image_list, name, image_format, pre_process, use_cache, count, max_ind_range, sub_sample_rate, randomize, memory_map)
+        super().__init__()
 
         if True:
             dataset_name = "kaggle"
             #raw_data_file = data_path + "/train.txt"
             raw_data_file = data_path + "/train_tiny2.txt"
+            print('CriteoTerabyte  raw_data_file ', raw_data_file)
             processed_data_file = data_path + "/kaggleAdDisplayChallenge_processed.npz"
+            print('CriteoTerabyte  processed_data_file ', processed_data_file)
         else:
             dataset_name = "terabyte"
             raw_data_file = data_path + "/day"
             processed_data_file = data_path + "/terabyte_processed.npz"
         
         self.test_data = dp.CriteoDataset(
-            dataset_name,
-            max_ind_range,
-            sub_sample_rate,
-            randomize,
-            "test",
-            raw_data_file,
-            processed_data_file,
-            memory_map
+            dataset=dataset_name,
+            max_ind_range=max_ind_range,
+            sub_sample_rate=sub_sample_rate,
+            randomize=randomize,
+            split="test",
+            raw_path=raw_data_file,
+            pro_data=processed_data_file,
+            memory_map=memory_map
         )
+
 
         self.test_loader = torch.utils.data.DataLoader(
             self.test_data,
@@ -66,6 +69,8 @@ class CriteoTerabyte(dataset.Dataset):
             pin_memory=False,
             drop_last=False,  # True
         )
+        
+        self.data_iter = iter(self.test_loader)
 
         '''
         data_path, image_list, name, use_cache=0, image_size=None,
@@ -95,7 +100,7 @@ class CriteoTerabyte(dataset.Dataset):
 
         os.makedirs(self.cache_dir, exist_ok=True)
 
-        start = time.time()
+        start = time.time()unload_query_samples
         with open(image_list, 'r') as f:
             for s in f:
                 image_name, label = re.split(r"\s+", s.strip())
@@ -132,19 +137,34 @@ class CriteoTerabyte(dataset.Dataset):
 
         self.label_list = np.array(self.label_list)
         '''
-        
-    def get_item(self, nr):
-        """Get image by number in the list."""
-        X, lS_o, lS_i, T = self.test_loader[nr]
-        return (X, lS_o, lS_i, T)
-        '''
-        dst = os.path.join(self.cache_dir, self.image_list[nr])
-        img = np.load(dst + ".npy")
-        return img, self.label_list[nr]
-        '''
+#    def __getitem__(self, index):
+#        return super(CriteoTerabyte, self).__getitem__(index)
 
-    '''
-    def get_item_loc(self, nr):
-        src = os.path.join(self.data_path, self.image_list[nr])
-        return src
-    '''
+    def get_item_count(self):
+        return len(self.test_data.X_int)
+    
+
+    ''' lg compatibilty routine '''
+    def unload_query_samples(self, sample_list):
+        self=self
+    
+    ''' lg compatibilty routine '''
+    # sample_list is unused in dlrm
+    def load_query_samples(self, sample_list):
+#        print('CriteoTerabyte load_query_samples', len(sample_list), sample_list)        
+        self.last_loaded = time.time()
+
+    ''' lg compatibilty routine '''
+    # id_list is unused in dlrm
+    def get_samples(self, id_list):
+        print('CriteoTerabyte get_samples', len(id_list), id_list)
+        try:
+            item = next(self.data_iter)
+        except:
+            self.data_iter = iter(self.test_loader)
+            item = next(self.data_iter)
+
+        X, lS_o, lS_i, T = item
+
+        return (X, lS_o, lS_i, T)
+

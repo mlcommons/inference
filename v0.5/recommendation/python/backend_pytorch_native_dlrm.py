@@ -5,6 +5,7 @@ pytoch native backend for dlrm
 import torch  # currently supports pytorch1.0
 import backend
 from dlrm_s_pytorch import DLRM_Net
+import numpy as np
 
 class BackendPytorchNativeDLRM(backend.Backend):
     def __init__(self, m_spa, ln_emb, ln_bot, ln_top):
@@ -26,7 +27,7 @@ class BackendPytorchNativeDLRM(backend.Backend):
     def load(self, model_path, inputs=None, outputs=None):
         #debug prints
         print(model_path, inputs, outputs)
-        #print("Loading saved model {}".format(args.load_model))
+        print("BackendPytorchNativeDLRM Loading saved model", model_path)
 
         self.model = DLRM_Net(
             self.m_spa,
@@ -48,6 +49,7 @@ class BackendPytorchNativeDLRM(backend.Backend):
             md_threshold=None,
         )
         ld_model = torch.load(model_path, map_location=torch.device('cpu')) #use self.device
+        print('load', ld_model)
         self.model.load_state_dict(ld_model["state_dict"])
 
         ###self.model = torch.load(model_path,map_location=lambda storage, loc: storage)
@@ -73,12 +75,23 @@ class BackendPytorchNativeDLRM(backend.Backend):
 
         # prepare the backend
         ###self.model = self.model.to(self.device)
+        
+        for e in self.ln_emb:
+            print('Embedding', type(e), e)
         return self
 
 
-    def predict(self, feed):
-        key=[key for key in feed.keys()][0]
-        feed[key] = torch.tensor(feed[key]).float().to(self.device)
+    def predict(self, batch_dense_X, batch_lS_o, batch_lS_i):
+        
+        batch_dense_X = torch.tensor(batch_dense_X).float().to(self.device)
+
+        batch_lS_i = [S_i.to(self.device) for S_i in batch_lS_i] if isinstance(batch_lS_i, list) \
+                else batch_lS_i.to(self.device)
+        
+        
+        batch_lS_o = [S_o.to(self.device) for S_o in batch_lS_o] if isinstance(batch_lS_o, list) \
+                else batch_lS_o.to(self.device)
+
         with torch.no_grad():
-            output = self.model(feed[key])
+             output = self.model(dense_x=batch_dense_X, lS_o=batch_lS_o, lS_i=batch_lS_i)
         return output

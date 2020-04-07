@@ -376,7 +376,6 @@ class RunnerBase:
     def enqueue_dlrm(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
-        print('RunnerBase enqueue_dlrm idx', idx, query_id)
 
         if len(query_samples) < self.max_batchsize:
             
@@ -420,7 +419,6 @@ class QueueRunner(RunnerBase):
     def enqueue(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
-        print('QueueRunner enqueue idx', idx, query_id)
         
         if len(query_samples) < self.max_batchsize:
             data, label = self.ds.get_samples(idx)
@@ -468,7 +466,6 @@ class QueueRunnerDlrm(RunnerBase):
     def enqueue_dlrm(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
-        print('QueueRunner enqueue_dlrm idx', idx, query_id)
         
         if len(query_samples) < self.max_batchsize:
             batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx)
@@ -490,7 +487,6 @@ class QueueRunnerDlrm(RunnerBase):
 
 
 def add_results(final_results, name, result_dict, result_list, took, show_accuracy=False):
-    print('add_results')
     percentiles = [50., 80., 90., 95., 99., 99.9]
     buckets = np.percentile(result_list, percentiles).tolist()
     buckets_str = ",".join(["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)])
@@ -545,10 +541,8 @@ def main():
         count_override = True
 
     # dataset to use
-    print('args.dataset', args.dataset)
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
     
-    print('post_proc', post_proc)
     ds = wanted_dataset(data_path=args.dataset_path,
                         image_list=args.dataset_list,
                         name=args.dataset,
@@ -579,7 +573,6 @@ def main():
     # make one pass over the dataset to validate accuracy
     #
     count = ds.get_item_count()
-    print('main ds.get_item_count()',  count)
     # warmup
     ds.load_query_samples([0])
 
@@ -593,8 +586,6 @@ def main():
             _ = backend.predict({backend.inputs[0]: img})
             
     ds.unload_query_samples(None)
-    print('main, completed warm up')
-    #return
     
     if 'dlrm' in args.backend:    
         scenario = SCENARIO_MAP[args.scenario]
@@ -614,15 +605,12 @@ def main():
             }            
     
     runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)
-    print('runner', runner)
-    #return
+
     def issue_queries(query_samples):
-        #print('main issue_queries', query_samples)
+
         if 'dlrm' in args.backend:
-            print('main issue_queries  enqueue_dlrm', query_samples)            
             runner.enqueue_dlrm(query_samples)
         else:
-            print('main issue_queries  enqueue', query_samples)                        
             runner.enqueue(query_samples)
             
     def flush_queries():
@@ -662,8 +650,6 @@ def main():
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
         settings.multi_stream_target_latency_ns = int(args.max_latency * NANO_SEC)
 
-
-    print('main constructing queries')
     sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
     qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
 

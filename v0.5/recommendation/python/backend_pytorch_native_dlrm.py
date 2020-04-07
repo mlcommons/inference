@@ -27,7 +27,6 @@ class BackendPytorchNativeDLRM(backend.Backend):
     def load(self, model_path, inputs=None, outputs=None):
         #debug prints
         print(model_path, inputs, outputs)
-        print("BackendPytorchNativeDLRM Loading saved model", model_path)
 
         self.model = DLRM_Net(
             self.m_spa,
@@ -49,7 +48,7 @@ class BackendPytorchNativeDLRM(backend.Backend):
             md_threshold=None,
         )
         ld_model = torch.load(model_path, map_location=torch.device('cpu')) #use self.device
-        print('load', ld_model)
+#        print('load', ld_model)
         self.model.load_state_dict(ld_model["state_dict"])
 
         ###self.model = torch.load(model_path,map_location=lambda storage, loc: storage)
@@ -76,8 +75,8 @@ class BackendPytorchNativeDLRM(backend.Backend):
         # prepare the backend
         ###self.model = self.model.to(self.device)
         
-        for e in self.ln_emb:
-            print('Embedding', type(e), e)
+#        for e in self.ln_emb:
+#            print('Embedding', type(e), e)
         return self
 
 

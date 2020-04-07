@@ -62,7 +62,7 @@ class CriteoTerabyte(Dataset):
 
         self.test_loader = torch.utils.data.DataLoader(
             self.test_data,
-            batch_size=1, #FIGURE THIS OUT args.test_mini_batch_size,
+            batch_size=1, 
             shuffle=False,
             num_workers=0, #FIGURE THIS OUT args.test_num_workers,
             collate_fn=dp.collate_wrapper_criteo,
@@ -70,7 +70,6 @@ class CriteoTerabyte(Dataset):
             drop_last=False,  # True
         )
         
-        self.data_iter = iter(self.test_loader)
 
         '''
         data_path, image_list, name, use_cache=0, image_size=None,
@@ -137,34 +136,36 @@ class CriteoTerabyte(Dataset):
 
         self.label_list = np.array(self.label_list)
         '''
-#    def __getitem__(self, index):
-#        return super(CriteoTerabyte, self).__getitem__(index)
 
     def get_item_count(self):
         return len(self.test_data.X_int)
     
-
     ''' lg compatibilty routine '''
     def unload_query_samples(self, sample_list):
-        self=self
-    
+        self.items_in_memory = {}
+            
     ''' lg compatibilty routine '''
-    # sample_list is unused in dlrm
     def load_query_samples(self, sample_list):
-#        print('CriteoTerabyte load_query_samples', len(sample_list), sample_list)        
+        
+        self.items_in_memory = {}
+        
+        for l in sample_list:
+            
+            self.items_in_memory[l] = (self.test_data.X_int[l], self.test_data.X_cat[l], self.test_data.y[l])
+
         self.last_loaded = time.time()
 
     ''' lg compatibilty routine '''
-    # id_list is unused in dlrm
     def get_samples(self, id_list):
-        print('CriteoTerabyte get_samples', len(id_list), id_list)
-        try:
-            item = next(self.data_iter)
-        except:
-            self.data_iter = iter(self.test_loader)
-            item = next(self.data_iter)
+        
+        ls = []
+        
+        # build list tuples as need by the batch conversion routine
+        for i in id_list:
+            ls.append(self.items_in_memory[i])
 
-        X, lS_o, lS_i, T = item
+        X, lS_o, lS_i, T = self.test_loader.collate_fn(ls)
 
+        #print('get_samples', (X, lS_o, lS_i, T))
         return (X, lS_o, lS_i, T)
 

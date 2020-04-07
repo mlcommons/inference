@@ -24,6 +24,7 @@ import dataset
 import imagenet
 import coco
 import criteoterabyte
+import dlrm_postprocess
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -60,8 +61,8 @@ SUPPORTED_DATASETS = {
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCocoTf(),
          {"image_size": [1200, 1200, 3],"use_label_map": False}),
     "criteo-terabyte":
-        (criteoterabyte.CriteoTerabyte, dataset.pre_process_criteoterabyte_dlrm, dataset.PostProcessCommon(),
-         {"max_ind_range": 40000000, "sub_sample_rate": 0.0, "randomize": 'total',  "memory_map": True}),
+        (criteoterabyte.CriteoTerabyte, dataset.pre_process_criteoterabyte_dlrm, dlrm_postprocess.DlrmPostProcess(),
+         {"max_ind_range": 40000, "sub_sample_rate": 0.0, "randomize": 'total',  "memory_map": True}),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
@@ -163,12 +164,13 @@ SUPPORTED_PROFILES = {
     },
     "dlrm-pytorch": {
         "dataset": "criteo-terabyte",
-        "inputs": "something",
+        "inputs": "inputs are not used in dlrm",
         "outputs": "probability",
         #"backend": "pytorch-native",
         "backend": "pytorch-native-dlrm",
         "data-format": "floats_and_offsets_indices",
         "model-name": "dlrm",
+        "max-batchsize": 32,
     },
 }
 
@@ -276,6 +278,17 @@ class Item:
         self.label = label
         self.start = time.time()
 
+class Dlrm_Item:
+    """An item that we queue for processing by the thread pool."""
+
+    def __init__(self, query_id, content_id, batch_dense_X, batch_lS_o, batch_lS_i, batch_T=None):
+        self.query_id = query_id
+        self.content_id = content_id
+        self.batch_dense_X = batch_dense_X
+        self.batch_lS_o=batch_lS_o
+        self.batch_lS_i=batch_lS_i
+        self.batch_T = batch_T
+        self.start = time.time()
 
 class RunnerBase:
     def __init__(self, model, ds, threads, post_proc=None, max_batchsize=128):
@@ -284,7 +297,6 @@ class RunnerBase:
         self.model = model
         self.post_process = post_proc
         self.threads = threads
-        self.take_accuracy = False
         self.max_batchsize = max_batchsize
         self.result_timing = []
 
@@ -321,10 +333,38 @@ class RunnerBase:
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
             lg.QuerySamplesComplete(response)
 
+
+    def run_one_item_dlrm(self, qitem):
+        # run the prediction
+        processed_results = []
+        try:
+            results = self.model.predict(qitem.batch_dense_X, qitem.batch_lS_o, qitem.batch_lS_i)
+            processed_results = self.post_process(results, qitem.batch_T, self.result_dict)
+            if self.take_accuracy:
+                self.post_process.add_results(processed_results)
+                self.result_timing.append(time.time() - qitem.start)
+        except Exception as ex:  # pylint: disable=broad-except
+            log.error("thread: failed, %s", ex)
+            # since post_process will not run, fake empty responses
+            processed_results = [[]] * len(qitem.query_id)
+        finally:
+            response_array_refs = []
+            response = []
+            for idx, query_id in enumerate(qitem.query_id):
+                response_array = array.array("B", np.array(processed_results[idx], np.float32).tobytes())
+                response_array_refs.append(response_array)
+                bi = response_array.buffer_info()
+                response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
+            lg.QuerySamplesComplete(response)
+
+
     def enqueue(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
+        print('RunnerBase enqueue idx', idx, query_id)
+
         if len(query_samples) < self.max_batchsize:
+            
             data, label = self.ds.get_samples(idx)
             self.run_one_item(Item(query_id, idx, data, label))
         else:
@@ -332,6 +372,22 @@ class RunnerBase:
             for i in range(0, len(idx), bs):
                 data, label = self.ds.get_samples(idx[i:i+bs])
                 self.run_one_item(Item(query_id[i:i+bs], idx[i:i+bs], data, label))
+
+    def enqueue_dlrm(self, query_samples):
+        idx = [q.index for q in query_samples]
+        query_id = [q.id for q in query_samples]
+        print('RunnerBase enqueue_dlrm idx', idx, query_id)
+
+        if len(query_samples) < self.max_batchsize:
+            
+            batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx)
+            self.run_one_item_dlrm(Dlrm_Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
+        else:
+            bs = self.max_batchsize
+            for i in range(0, len(idx), bs):
+                dbatch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx[i:i+bs])
+                self.run_one_item_dlrm(Dlrm_Item(query_id[i:i+bs], idx[i:i+bs], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
+
 
     def finish(self):
         pass
@@ -364,6 +420,8 @@ class QueueRunner(RunnerBase):
     def enqueue(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
+        print('QueueRunner enqueue idx', idx, query_id)
+        
         if len(query_samples) < self.max_batchsize:
             data, label = self.ds.get_samples(idx)
             self.tasks.put(Item(query_id, idx, data, label))
@@ -382,7 +440,57 @@ class QueueRunner(RunnerBase):
             worker.join()
 
 
+class QueueRunnerDlrm(RunnerBase):
+    def __init__(self, model, ds, threads, post_proc=None, max_batchsize=128):
+        super().__init__(model, ds, threads, post_proc, max_batchsize)
+        self.tasks = Queue(maxsize=threads * 4)
+        self.workers = []
+        self.result_dict = {}
+
+        for _ in range(self.threads):
+            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
+            worker.daemon = True
+            self.workers.append(worker)
+            worker.start()
+
+    def handle_tasks(self, tasks_queue):
+        """Worker thread."""
+        while True:
+            qitem = tasks_queue.get()
+            if qitem is None:
+                # None in the queue indicates the parent want us to exit
+                tasks_queue.task_done()
+                break
+            #self.run_one_item(qitem)
+            self.run_one_item_dlrm(qitem)
+            tasks_queue.task_done()
+
+    def enqueue_dlrm(self, query_samples):
+        idx = [q.index for q in query_samples]
+        query_id = [q.id for q in query_samples]
+        print('QueueRunner enqueue_dlrm idx', idx, query_id)
+        
+        if len(query_samples) < self.max_batchsize:
+            batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx)
+            self.tasks.put(Dlrm_Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
+        else:
+            bs = self.max_batchsize
+            for i in range(0, len(idx), bs):
+                ie = i + bs
+                data, label = self.ds.get_samples(idx[i:ie])
+                self.tasks.put(Item(query_id[i:ie], idx[i:ie], data, label))
+
+    def finish(self):
+        # exit all threads
+        for _ in self.workers:
+            self.tasks.put(None)
+        for worker in self.workers:
+            worker.join()
+
+
+
 def add_results(final_results, name, result_dict, result_list, took, show_accuracy=False):
+    print('add_results')
     percentiles = [50., 80., 90., 95., 99., 99.9]
     buckets = np.percentile(result_list, percentiles).tolist()
     buckets_str = ",".join(["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)])
@@ -437,8 +545,10 @@ def main():
         count_override = True
 
     # dataset to use
-    print(args.dataset)
+    print('args.dataset', args.dataset)
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
+    
+    print('post_proc', post_proc)
     ds = wanted_dataset(data_path=args.dataset_path,
                         image_list=args.dataset_list,
                         name=args.dataset,
@@ -469,26 +579,52 @@ def main():
     # make one pass over the dataset to validate accuracy
     #
     count = ds.get_item_count()
-
+    print('main ds.get_item_count()',  count)
     # warmup
     ds.load_query_samples([0])
-    for _ in range(5):
-        img, _ = ds.get_samples([0])
-        _ = backend.predict({backend.inputs[0]: img})
+
+    if 'dlrm' in args.backend:
+        for _ in range(5):
+            batch_dense_X, batch_lS_o, batch_lS_i, batch_T = ds.get_samples([0])
+            _ = backend.predict(batch_dense_X, batch_lS_o, batch_lS_i)
+    else:            
+        for _ in range(5):
+            img, _ = ds.get_samples([0])
+            _ = backend.predict({backend.inputs[0]: img})
+            
     ds.unload_query_samples(None)
-
-    scenario = SCENARIO_MAP[args.scenario]
-    runner_map = {
-        lg.TestScenario.SingleStream: RunnerBase,
-        lg.TestScenario.MultiStream: QueueRunner,
-        lg.TestScenario.Server: QueueRunner,
-        lg.TestScenario.Offline: QueueRunner
-    }
+    print('main, completed warm up')
+    #return
+    
+    if 'dlrm' in args.backend:    
+        scenario = SCENARIO_MAP[args.scenario]
+        runner_map = {
+            lg.TestScenario.SingleStream: RunnerBase,
+            lg.TestScenario.MultiStream: QueueRunnerDlrm,
+            lg.TestScenario.Server: QueueRunnerDlrm,
+            lg.TestScenario.Offline: QueueRunnerDlrm
+            }
+    else:
+        scenario = SCENARIO_MAP[args.scenario]
+        runner_map = {
+            lg.TestScenario.SingleStream: RunnerBase,
+            lg.TestScenario.MultiStream: QueueRunner,
+            lg.TestScenario.Server: QueueRunner,
+            lg.TestScenario.Offline: QueueRunner
+            }            
+    
     runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)
-
+    print('runner', runner)
+    #return
     def issue_queries(query_samples):
-        runner.enqueue(query_samples)
-
+        #print('main issue_queries', query_samples)
+        if 'dlrm' in args.backend:
+            print('main issue_queries  enqueue_dlrm', query_samples)            
+            runner.enqueue_dlrm(query_samples)
+        else:
+            print('main issue_queries  enqueue', query_samples)                        
+            runner.enqueue(query_samples)
+            
     def flush_queries():
         pass
 
@@ -526,6 +662,8 @@ def main():
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
         settings.multi_stream_target_latency_ns = int(args.max_latency * NANO_SEC)
 
+
+    print('main constructing queries')
     sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
     qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
 

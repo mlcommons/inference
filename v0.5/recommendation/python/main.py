@@ -474,8 +474,8 @@ class QueueRunnerDlrm(RunnerBase):
             bs = self.max_batchsize
             for i in range(0, len(idx), bs):
                 ie = i + bs
-                data, label = self.ds.get_samples(idx[i:ie])
-                self.tasks.put(Item(query_id[i:ie], idx[i:ie], data, label))
+                batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx[i:ie])
+                self.tasks.put(Dlrm_Item(query_id[i:ie], idx[i:ie], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))                
 
     def finish(self):
         # exit all threads

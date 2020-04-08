@@ -256,10 +256,38 @@ def get_backend(backend):
         backend = BackendPytorchNative()
     elif backend == "pytorch-native-dlrm":
         from backend_pytorch_native_dlrm import BackendPytorchNativeDLRM
-        # WARNING: pass model parameters here (see run_and_time.sh MLPerf training script)
-        # --arch-sparse-feature-size=128 --arch-mlp-bot="13-512-256-128" --arch-mlp-top="1024-1024-512-256-1" 
-        #backend = BackendPytorchNativeDLRM(m_spa=128, ln_emb="1460-583-10131227-2202608-305-24-12517-633-3-93145-5683-8351593-3194-27-14992-5461306-10-5652-2173-4-7046547-18-15-286181-105-142572", ln_bot="13-512-256-128", ln_top="1024-1024-512-256-1")
-        backend = BackendPytorchNativeDLRM(m_spa=16, ln_emb=np.array([1460,583,10131227,2202608,305,24,12517,633,3,93145,5683,8351593,3194,27,14992,5461306,10,5652,2173,4,7046547,18,15,286181,105,142572]), ln_bot=np.array([13,512,256,64,16]), ln_top=np.array([367,512,256,1]))
+        # NOTE: pass model parameters here, the following options are available
+        #
+        # 1. Criteo Kaggle Display Advertisement Challenge Dataset (see ./bench/dlrm_s_criteo_kaggle.sh)
+        # backend = BackendPytorchNativeDLRM(
+        #    m_spa=16,
+        #    ln_emb=np.array([1460,583,10131227,2202608,305,24,12517,633,3,93145,5683,8351593,3194,27,14992,5461306,10,5652,2173,4,7046547,18,15,286181,105,142572]),
+        #    ln_bot=np.array([13,512,256,64,16]),
+        #    ln_top=np.array([367,512,256,1])
+        #  )
+        #
+        # 2. Criteo Terabyte (see ./bench/dlrm_s_criteo_terabyte.sh [--sub-sample=0.875] --max-in-range=10000000)
+        # backend = BackendPytorchNativeDLRM(
+        #    m_spa=64,
+        #    ln_emb=np.array([10000000,39060,17295,7424,20265,3,7122,1543,63,10000000,3067956,405282,10,2209,11938,155,4,976,14,10000000,10000000,10000000,590152,12973,108,36]),
+        #    with sub-sampling 9980333,36084,17217,7378,20134,3,7112,1442,61, 9758201,1333352,313829,10,2208,11156,122,4,970,14, 9994222, 7267859, 9946608,415421,12420,101, 3
+        #    ln_bot=np.array([13,512,256,64]),
+        #    ln_top=np.array([415,512,512,256,1])
+        # )
+        #
+        # 3. Criteo Terabyte MLPerf training (see ./bench/run_and_time.sh --max-in-range=40000000)
+        # backend = BackendPytorchNativeDLRM(
+        #    m_spa=128,
+        #    ln_emb=np.array([40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36]),
+        #    ln_bot=([13,512,256,128]),
+        #    ln_top=([479,1024,1024,512,256,1])
+        # )
+        backend = BackendPytorchNativeDLRM(
+            m_spa=16,
+            ln_emb=np.array([1460,583,10131227,2202608,305,24,12517,633,3,93145,5683,8351593,3194,27,14992,5461306,10,5652,2173,4,7046547,18,15,286181,105,142572]),
+            ln_bot=np.array([13,512,256,64,16]),
+            ln_top=np.array([367,512,256,1])
+        )
     elif backend == "tflite":
         from backend_tflite import BackendTflite
         backend = BackendTflite()
@@ -285,8 +313,8 @@ class Dlrm_Item:
         self.query_id = query_id
         self.content_id = content_id
         self.batch_dense_X = batch_dense_X
-        self.batch_lS_o=batch_lS_o
-        self.batch_lS_i=batch_lS_i
+        self.batch_lS_o = batch_lS_o
+        self.batch_lS_i = batch_lS_i
         self.batch_T = batch_T
         self.start = time.time()
 
@@ -364,7 +392,7 @@ class RunnerBase:
         print('RunnerBase enqueue idx', idx, query_id)
 
         if len(query_samples) < self.max_batchsize:
-            
+
             data, label = self.ds.get_samples(idx)
             self.run_one_item(Item(query_id, idx, data, label))
         else:
@@ -378,7 +406,7 @@ class RunnerBase:
         query_id = [q.id for q in query_samples]
 
         if len(query_samples) < self.max_batchsize:
-            
+
             batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx)
             self.run_one_item_dlrm(Dlrm_Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
         else:
@@ -419,7 +447,7 @@ class QueueRunner(RunnerBase):
     def enqueue(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
-        
+
         if len(query_samples) < self.max_batchsize:
             data, label = self.ds.get_samples(idx)
             self.tasks.put(Item(query_id, idx, data, label))
@@ -466,7 +494,7 @@ class QueueRunnerDlrm(RunnerBase):
     def enqueue_dlrm(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
-        
+
         if len(query_samples) < self.max_batchsize:
             batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx)
             self.tasks.put(Dlrm_Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
@@ -475,7 +503,7 @@ class QueueRunnerDlrm(RunnerBase):
             for i in range(0, len(idx), bs):
                 ie = i + bs
                 batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx[i:ie])
-                self.tasks.put(Dlrm_Item(query_id[i:ie], idx[i:ie], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))                
+                self.tasks.put(Dlrm_Item(query_id[i:ie], idx[i:ie], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
 
     def finish(self):
         # exit all threads
@@ -542,12 +570,12 @@ def main():
 
     # dataset to use
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
-    
+
     ds = wanted_dataset(data_path=args.dataset_path,
-                        image_list=args.dataset_list,
+                        image_list=args.dataset_list, # not needed - remove
                         name=args.dataset,
-                        image_format=image_format,
-                        pre_process=pre_proc,
+                        image_format=image_format, # not needed - remove
+                        pre_process=pre_proc, # not needed - remove
                         use_cache=args.cache,
                         count=count, **kwargs)
     # load model to backend
@@ -580,14 +608,14 @@ def main():
         for _ in range(5):
             batch_dense_X, batch_lS_o, batch_lS_i, batch_T = ds.get_samples([0])
             _ = backend.predict(batch_dense_X, batch_lS_o, batch_lS_i)
-    else:            
+    else:
         for _ in range(5):
             img, _ = ds.get_samples([0])
             _ = backend.predict({backend.inputs[0]: img})
-            
+
     ds.unload_query_samples(None)
-    
-    if 'dlrm' in args.backend:    
+
+    if 'dlrm' in args.backend:
         scenario = SCENARIO_MAP[args.scenario]
         runner_map = {
             lg.TestScenario.SingleStream: RunnerBase,
@@ -602,8 +630,8 @@ def main():
             lg.TestScenario.MultiStream: QueueRunner,
             lg.TestScenario.Server: QueueRunner,
             lg.TestScenario.Offline: QueueRunner
-            }            
-    
+            }
+
     runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)
 
     def issue_queries(query_samples):
@@ -612,7 +640,7 @@ def main():
             runner.enqueue_dlrm(query_samples)
         else:
             runner.enqueue(query_samples)
-            
+
     def flush_queries():
         pass
 

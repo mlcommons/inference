@@ -4,6 +4,7 @@ the code is adapted from PostProcessCommon
 """
 
 import torch
+# import sys
 
 #
 # Post processing
@@ -19,7 +20,16 @@ class DlrmPostProcess:
         for idx in range(0, n):
             result = results[idx]
             processed_results.append([result])
-            if torch.tensor(result, dtype=torch.float).round() == expected[idx]:
+            # debug prints
+            # print(result.__class__)
+            # print(result.type())
+            # print(result)
+            # print(expected[idx].__class__)
+            # print(expected[idx].type())
+            # print(expected[idx])
+            # sys.exit(0)
+
+            if result.round() == expected[idx]:
                 self.good += 1
         self.total += n
         return processed_results
@@ -34,4 +44,3 @@ class DlrmPostProcess:
     def finalize(self, results, ds=False,  output_dir=None):
         results["good"] = self.good
         results["total"] = self.total
-

@@ -6,6 +6,7 @@ implementation of imagenet dataset
 
 import logging
 import os
+import sys
 import re
 import time
 
@@ -15,24 +16,25 @@ import inspect
 import torch
 from torch.utils.data import Dataset, RandomSampler
 
-#import dataset
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("criteo")
 
-
-# dlrm
-import sys
-sys.path.append('/root/mnaumov/github/dlrm')
-
+# add dlrm code path
+try:
+    dlrm_dir_path = os.environ['DLRM_DIR']
+    sys.path.append(dlrm_dir_path)
+except KeyError:
+    print("ERROR: Please set DLRM_DIR environment variable to the dlrm code location")
+    sys.exit(0)
+#import dataset
 #import data_loader_terabyte as dltb
 import dlrm_data_pytorch as dp
 
 class Criteo(Dataset):
 
-    def __init__(self, data_path, name, pre_process, use_cache, count, max_ind_range=-1, sub_sample_rate=0.0, randomize="total", memory_map=False):
+    def __init__(self, data_path, name, pre_process, use_cache, count, test_num_workers, max_ind_range=-1, sub_sample_rate=0.0, randomize="total", memory_map=False):
         # debug print
-        print('Criteo __init__', data_path, name, pre_process, use_cache, count, max_ind_range, sub_sample_rate, randomize, memory_map)
+        print('Criteo __init__', data_path, name, pre_process, use_cache, count, test_num_workers, max_ind_range, sub_sample_rate, randomize, memory_map)
         super().__init__()
 
         if True:
@@ -46,7 +48,7 @@ class Criteo(Dataset):
             dataset_name = "terabyte"
             raw_data_file = data_path + "/day"
             processed_data_file = data_path + "/terabyte_processed.npz"
-        
+
         self.test_data = dp.CriteoDataset(
             dataset=dataset_name,
             max_ind_range=max_ind_range,
@@ -61,9 +63,9 @@ class Criteo(Dataset):
 
         self.test_loader = torch.utils.data.DataLoader(
             self.test_data,
-            batch_size=1, 
+            batch_size=1,
             shuffle=False,
-            num_workers=0, #FIGURE THIS OUT args.test_num_workers,
+            num_workers=test_num_workers,
             collate_fn=dp.collate_wrapper_criteo,
             pin_memory=False,
             drop_last=False,  # True
@@ -71,27 +73,27 @@ class Criteo(Dataset):
 
     def get_item_count(self):
         return len(self.test_data)
-    
+
     ''' lg compatibilty routine '''
     def unload_query_samples(self, sample_list):
         self.items_in_memory = {}
-            
+
     ''' lg compatibilty routine '''
     def load_query_samples(self, sample_list):
-        
+
         self.items_in_memory = {}
-        
+
         for l in sample_list:
-            
+
             self.items_in_memory[l] = (self.test_data.X_int[l], self.test_data.X_cat[l], self.test_data.y[l])
 
         self.last_loaded = time.time()
 
     ''' lg compatibilty routine '''
     def get_samples(self, id_list):
-        
+
         ls = []
-        
+
         # build list tuples as need by the batch conversion routine
         for i in id_list:
             ls.append(self.items_in_memory[i])
@@ -102,7 +104,13 @@ class Criteo(Dataset):
 
         return (X, lS_o, lS_i, T)
 
-# Post processing                                                                                                                                                                                      
+
+# Pre  processing
+def pre_process_criteo_dlrm(x):
+    return x
+
+
+# Post processing
 class DlrmPostProcess:
     def __init__(self):
         self.good = 0
@@ -115,12 +123,12 @@ class DlrmPostProcess:
             result = results[idx]
             processed_results.append([result])
             # debug prints
-            # print(result.__class__)                                                                                                                                                                              # print(result.type())
+            # print(result.__class__)
+            # print(result.type())
             # print(result)
             # print(expected[idx].__class__)
             # print(expected[idx].type())
-            # print(expected[idx])                                                                                                                                                                     
-            # sys.exit(0)                                                                                                                                                                              
+            # print(expected[idx])
 
             if result.round() == expected[idx]:
                 self.good += 1

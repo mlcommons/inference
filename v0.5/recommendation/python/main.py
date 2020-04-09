@@ -23,6 +23,14 @@ import numpy as np
 import dataset
 import criteo
 
+# add dlrm code path
+try:
+    dlrm_dir_path = os.environ['DLRM_DIR']
+    sys.path.append(dlrm_dir_path)
+except KeyError:
+    print("ERROR: Please set DLRM_DIR environment variable to the dlrm code location")
+    sys.exit(0)
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
@@ -34,10 +42,10 @@ MILLI_SEC = 1000
 # the datasets we support
 SUPPORTED_DATASETS = {
     "kaggle":
-        (criteo.Criteo, dataset.pre_process_criteo_dlrm, criteo.DlrmPostProcess(),
-         {"randomize": 'total',  "memory_map": True}),    
+        (criteo.Criteo, criteo.pre_process_criteo_dlrm, criteo.DlrmPostProcess(),
+         {"randomize": 'total',  "memory_map": True}),
     "terabyte":
-        (criteo.Criteo, dataset.pre_process_criteo_dlrm, criteo.DlrmPostProcess(),
+        (criteo.Criteo, criteo.pre_process_criteo_dlrm, criteo.DlrmPostProcess(),
          {"max_ind_range": 40000000, "sub_sample_rate": 0.0, "randomize": 'total',  "memory_map": True}),
 }
 
@@ -91,6 +99,7 @@ def get_args():
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
     parser.add_argument("--scenario", default="SingleStream",
                         help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
+    parser.add_argument("--test-num-workers", type=int, default=0, help='# of workers reading the data')
     parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--output", help="test results")
     parser.add_argument("--inputs", help="model inputs")
@@ -189,16 +198,6 @@ def get_backend(backend):
 
 
 class Item:
-    """An item that we queue for processing by the thread pool."""
-
-    def __init__(self, query_id, content_id, img, label=None):
-        self.query_id = query_id
-        self.content_id = content_id
-        self.img = img
-        self.label = label
-        self.start = time.time()
-
-class Dlrm_Item:
     """An item that we queue for processing by the thread pool."""
 
     def __init__(self, query_id, content_id, batch_dense_X, batch_lS_o, batch_lS_i, batch_T=None):
@@ -300,12 +299,12 @@ class RunnerBase:
         if len(query_samples) < self.max_batchsize:
 
             batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx)
-            self.run_one_item_dlrm(Dlrm_Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
+            self.run_one_item_dlrm(Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
         else:
             bs = self.max_batchsize
             for i in range(0, len(idx), bs):
                 dbatch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx[i:i+bs])
-                self.run_one_item_dlrm(Dlrm_Item(query_id[i:i+bs], idx[i:i+bs], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
+                self.run_one_item_dlrm(Item(query_id[i:i+bs], idx[i:i+bs], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
 
 
     def finish(self):
@@ -313,52 +312,6 @@ class RunnerBase:
 
 
 class QueueRunner(RunnerBase):
-    def __init__(self, model, ds, threads, post_proc=None, max_batchsize=128):
-        super().__init__(model, ds, threads, post_proc, max_batchsize)
-        self.tasks = Queue(maxsize=threads * 4)
-        self.workers = []
-        self.result_dict = {}
-
-        for _ in range(self.threads):
-            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
-            worker.daemon = True
-            self.workers.append(worker)
-            worker.start()
-
-    def handle_tasks(self, tasks_queue):
-        """Worker thread."""
-        while True:
-            qitem = tasks_queue.get()
-            if qitem is None:
-                # None in the queue indicates the parent want us to exit
-                tasks_queue.task_done()
-                break
-            self.run_one_item(qitem)
-            tasks_queue.task_done()
-
-    def enqueue(self, query_samples):
-        idx = [q.index for q in query_samples]
-        query_id = [q.id for q in query_samples]
-
-        if len(query_samples) < self.max_batchsize:
-            data, label = self.ds.get_samples(idx)
-            self.tasks.put(Item(query_id, idx, data, label))
-        else:
-            bs = self.max_batchsize
-            for i in range(0, len(idx), bs):
-                ie = i + bs
-                data, label = self.ds.get_samples(idx[i:ie])
-                self.tasks.put(Item(query_id[i:ie], idx[i:ie], data, label))
-
-    def finish(self):
-        # exit all threads
-        for _ in self.workers:
-            self.tasks.put(None)
-        for worker in self.workers:
-            worker.join()
-
-
-class QueueRunnerDlrm(RunnerBase):
     def __init__(self, model, ds, threads, post_proc=None, max_batchsize=128):
         super().__init__(model, ds, threads, post_proc, max_batchsize)
         self.tasks = Queue(maxsize=threads * 4)
@@ -389,13 +342,13 @@ class QueueRunnerDlrm(RunnerBase):
 
         if len(query_samples) < self.max_batchsize:
             batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx)
-            self.tasks.put(Dlrm_Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
+            self.tasks.put(Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
         else:
             bs = self.max_batchsize
             for i in range(0, len(idx), bs):
                 ie = i + bs
                 batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx[i:ie])
-                self.tasks.put(Dlrm_Item(query_id[i:ie], idx[i:ie], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
+                self.tasks.put(Item(query_id[i:ie], idx[i:ie], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
 
     def finish(self):
         # exit all threads
@@ -444,7 +397,7 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
 def main():
     global last_timeing
     args = get_args()
-    
+
     log.info(args)
 
     # find backend
@@ -464,7 +417,9 @@ def main():
                         name=args.dataset,
                         pre_process=pre_proc,  # currently an identity function
                         use_cache=args.cache,  # currently not used
-                        count=count, **kwargs)
+                        count=count,
+                        test_num_workers=args.test_num_workers,
+                        **kwargs)
     # load model to backend
     model = backend.load(args.model_path, inputs=args.inputs, outputs=args.outputs)
     final_results = {
@@ -500,9 +455,9 @@ def main():
     scenario = SCENARIO_MAP[args.scenario]
     runner_map = {
         lg.TestScenario.SingleStream: RunnerBase,
-        lg.TestScenario.MultiStream: QueueRunnerDlrm,
-        lg.TestScenario.Server: QueueRunnerDlrm,
-        lg.TestScenario.Offline: QueueRunnerDlrm
+        lg.TestScenario.MultiStream: QueueRunner,
+        lg.TestScenario.Server: QueueRunner,
+        lg.TestScenario.Offline: QueueRunner
     }
 
     runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)

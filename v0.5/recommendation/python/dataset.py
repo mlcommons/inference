@@ -54,7 +54,6 @@ class Dataset():
         raise NotImplementedError("Dataset:get_list")
 
     def load_query_samples(self, sample_list):
-        print('Dataset load_query_samples sample_list', sample_list)
         self.image_list_inmemory = {}
         for sample in sample_list:
             self.image_list_inmemory[sample], _ = self.get_item(sample)
@@ -84,10 +83,8 @@ class PostProcessCommon:
         self.offset = offset
         self.good = 0
         self.total = 0
-        print('PostProcessCommon __init__')
 
     def __call__(self, results, ids, expected=None, result_dict=None):
-        print('PostProcessCommon __call__', 'results', results, 'ids', ids, 'expected', expected, 'result_dict', result_dict)
         processed_results = []
         n = len(results[0])
         for idx in range(0, n):
@@ -258,7 +255,3 @@ def pre_process_coco_resnet34_tf(img, dims=None, need_transpose=False):
         img = img.transpose([2, 0, 1])
 
     return img
-
-def pre_process_criteoterabyte_dlrm(x):
-    return x
-    

@@ -36,10 +36,12 @@ done
 
 if [ $device == "cpu" ] ; then
     export CUDA_VISIBLE_DEVICES=""
+    extra_args=""
+else
+    extra_args="--use-gpu"
 fi
-
 name="$model-$dataset-$backend"
-extra_args=""
+
 
 #
 # pytorch

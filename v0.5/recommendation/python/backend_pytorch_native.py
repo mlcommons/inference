@@ -67,12 +67,12 @@ class BackendPytorchNative(backend.Backend):
                 # NOTE: when targeting inference on multiple GPUs,
                 # load the model as is on CPU or GPU, with the move
                 # to multiple GPUs to be done in parallel_forward
-                ld_model = torch.load(args.load_model)
+                ld_model = torch.load(model_path)
             else:
                 # NOTE: when targeting inference on single GPU,
                 # note that the call to .to(device) has already happened
                 ld_model = torch.load(
-                    args.load_model,
+                    model_path,
                     map_location=torch.device('cuda')
                     # map_location=lambda storage, loc: storage.cuda(0)
                 )

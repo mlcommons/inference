@@ -105,6 +105,7 @@ def get_args():
     parser.add_argument("--inputs", help="model inputs")
     parser.add_argument("--outputs", help="model outputs")
     parser.add_argument("--backend", help="runtime to use")
+    parser.add_argument("--use-gpu", action="store_true", default=False)
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--qps", type=int, help="target qps")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
@@ -142,7 +143,7 @@ def get_args():
     return args
 
 
-def get_backend(backend):
+def get_backend(backend, use_gpu=False):
     if backend == "tensorflow":
         from backend_tf import BackendTensorflow
         backend = BackendTensorflow()
@@ -167,7 +168,8 @@ def get_backend(backend):
         #    m_spa=16,
         #    ln_emb=np.array([1460,583,10131227,2202608,305,24,12517,633,3,93145,5683,8351593,3194,27,14992,5461306,10,5652,2173,4,7046547,18,15,286181,105,142572]),
         #    ln_bot=np.array([13,512,256,64,16]),
-        #    ln_top=np.array([367,512,256,1])
+        #    ln_top=np.array([367,512,256,1]),
+        #    use_gpu=use_gpu
         #  )
         #
         # 2. Criteo Terabyte (see ./bench/dlrm_s_criteo_terabyte.sh [--sub-sample=0.875] --max-in-range=10000000)
@@ -176,7 +178,8 @@ def get_backend(backend):
         #    ln_emb=np.array([10000000,39060,17295,7424,20265,3,7122,1543,63,10000000,3067956,405282,10,2209,11938,155,4,976,14,10000000,10000000,10000000,590152,12973,108,36]),
         #    with sub-sampling 9980333,36084,17217,7378,20134,3,7112,1442,61, 9758201,1333352,313829,10,2208,11156,122,4,970,14, 9994222, 7267859, 9946608,415421,12420,101, 3
         #    ln_bot=np.array([13,512,256,64]),
-        #    ln_top=np.array([415,512,512,256,1])
+        #    ln_top=np.array([415,512,512,256,1]),
+        #    use_gpu=use_gpu
         # )
         #
         # 3. Criteo Terabyte MLPerf training (see ./bench/run_and_time.sh --max-in-range=40000000)
@@ -184,13 +187,15 @@ def get_backend(backend):
         #    m_spa=128,
         #    ln_emb=np.array([40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36]),
         #    ln_bot=([13,512,256,128]),
-        #    ln_top=([479,1024,1024,512,256,1])
+        #    ln_top=([479,1024,1024,512,256,1]),
+        #    use_gpu=use_gpu
         # )
         backend = BackendPytorchNative(
             m_spa=16,
             ln_emb=np.array([1460,583,10131227,2202608,305,24,12517,633,3,93145,5683,8351593,3194,27,14992,5461306,10,5652,2173,4,7046547,18,15,286181,105,142572]),
             ln_bot=np.array([13,512,256,64,16]),
-            ln_top=np.array([367,512,256,1])
+            ln_top=np.array([367,512,256,1]),
+            use_gpu=use_gpu
         )
     else:
         raise ValueError("unknown backend: " + backend)
@@ -401,7 +406,7 @@ def main():
     log.info(args)
 
     # find backend
-    backend = get_backend(args.backend)
+    backend = get_backend(args.backend, use_gpu=args.use_gpu)
 
     # --count applies to accuracy mode only and can be used to limit the number of images
     # for testing. For perf model we always limit count to 200.

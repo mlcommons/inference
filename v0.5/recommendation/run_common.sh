@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|dlrm] [cpu|gpu]"
+    echo "usage: $0 pytorch|onnxruntime|tf|tflite dlrm [kaggle|terabyte] [cpu|gpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -12,117 +12,67 @@ if [ "x$MODEL_DIR" == "x" ]; then
 fi
 
 # defaults
-backend=tf
-model=resnet50
+backend=pytorch
+model=dlrm
+dataset=kaggle
 device="cpu"
 
 for i in $* ; do
     case $i in
        tf|onnxruntime|tflite|pytorch) backend=$i; shift;;
+       dlrm) model=$i; shift;;
+       kaggle|terabyte) dataset=$i; shift;;
        cpu|gpu) device=$i; shift;;
-       gpu) device=gpu; shift;;
-       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf|dlrm) model=$i; shift;;
     esac
 done
 # debuging
-echo $backend
-echo $device
-echo $model
-echo $MODEL_DIR
-echo $DATA_DIR
+# echo $backend
+# echo $model
+# echo $dataset
+# echo $device
+# echo $MODEL_DIR
+# echo $DATA_DIR
+# echo $EXTRA_OPS
 
 if [ $device == "cpu" ] ; then
     export CUDA_VISIBLE_DEVICES=""
 fi
 
-name="$model-$backend"
+name="$model-$dataset-$backend"
 extra_args=""
 
 #
-# tensorflow
+# pytorch
 #
-if [ $name == "resnet50-tf" ] ; then
-    model_path="$MODEL_DIR/resnet50_v1.pb"
-    profile=resnet50-tf
+if [ $name == "dlrm-kaggle-pytorch" ] ; then
+    model_path="$MODEL_DIR/dlrm_kaggle.pytorch"
+    profile=dlrm-kaggle-pytorch
 fi
-if [ $name == "mobilenet-tf" ] ; then
-    model_path="$MODEL_DIR/mobilenet_v1_1.0_224_frozen.pb"
-    profile=mobilenet-tf
-fi
-if [ $name == "ssd-mobilenet-tf" ] ; then
-    model_path="$MODEL_DIR/ssd_mobilenet_v1_coco_2018_01_28.pb"
-    profile=ssd-mobilenet-tf
-fi
-if [ $name == "ssd-resnet34-tf" ] ; then
-    model_path="$MODEL_DIR/resnet34_tf.22.1.pb"
-    profile=ssd-resnet34-tf
+if [ $name == "dlrm-terabyte-pytorch" ] ; then
+    model_path="$MODEL_DIR/dlrm_terabyte.pytorch"
+    profile=dlrm-terabyte-pytorch
 fi
 
 #
 # onnxruntime
 #
-if [ $name == "resnet50-onnxruntime" ] ; then
-    model_path="$MODEL_DIR/resnet50_v1.onnx"
-    profile=resnet50-onnxruntime
-fi
-if [ $name == "mobilenet-onnxruntime" ] ; then
-    model_path="$MODEL_DIR/mobilenet_v1_1.0_224.onnx"
-    profile=mobilenet-onnxruntime
-fi
-if [ $name == "ssd-mobilenet-onnxruntime" ] ; then
-    model_path="$MODEL_DIR/ssd_mobilenet_v1_coco_2018_01_28.onnx"
-    profile=ssd-mobilenet-onnxruntime
-fi
-if [ $name == "ssd-resnet34-onnxruntime" ] ; then
-    # use onnx model converted from pytorch
-    model_path="$MODEL_DIR/resnet34-ssd1200.onnx"
-    profile=ssd-resnet34-onnxruntime
-fi
-if [ $name == "ssd-resnet34-tf-onnxruntime" ] ; then
-    # use onnx model converted from tensorflow
-    model_path="$MODEL_DIR/ssd_resnet34_mAP_20.2.onnx"
-    profile=ssd-resnet34-onnxruntime-tf
-fi
+# ...
 
 #
-# pytorch
+# tensorflow
 #
-if [ $name == "resnet50-pytorch" ] ; then
-    model_path="$MODEL_DIR/resnet50_v1.onnx"
-    profile=resnet50-onnxruntime
-    extra_args="$extra_args --backend pytorch"
-fi
-if [ $name == "mobilenet-pytorch" ] ; then
-    model_path="$MODEL_DIR/mobilenet_v1_1.0_224.onnx"
-    profile=mobilenet-onnxruntime
-    extra_args="$extra_args --backend pytorch"
-fi
-if [ $name == "ssd-resnet34-pytorch" ] ; then
-    model_path="$MODEL_DIR/resnet34-ssd1200.pytorch"
-    profile=ssd-resnet34-pytorch
-fi
-if [ $name == "dlrm-pytorch" ] ; then
-    model_path="$MODEL_DIR/dlrm.pytorch"
-    profile=dlrm-pytorch
-fi
-# debuging
-echo $model_path
-echo $profile
-echo $extra_args
+# ...
 
 #
 # tflite
 #
-if [ $name == "resnet50-tflite" ] ; then
-    model_path="$MODEL_DIR/resnet50_v1.tflite"
-    profile=resnet50-tf
-    extra_args="$extra_args --backend tflite"
-fi
-if [ $name == "mobilenet-tflite" ] ; then
-    model_path="$MODEL_DIR/mobilenet_v1_1.0_224.tflite"
-    profile=mobilenet-tf
-    extra_args="$extra_args --backend tflite"
-fi
+# ...
+
+
+# debuging
+# echo $model_path
+# echo $profile
+# echo $extra_args
 
 name="$backend-$device/$model"
 EXTRA_OPS="$extra_args $EXTRA_OPS"

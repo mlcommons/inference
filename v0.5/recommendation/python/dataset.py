@@ -259,6 +259,6 @@ def pre_process_coco_resnet34_tf(img, dims=None, need_transpose=False):
 
     return img
 
-def pre_process_criteoterabyte_dlrm(x):
+def pre_process_criteo_dlrm(x):
     return x
     

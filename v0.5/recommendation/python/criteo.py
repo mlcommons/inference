@@ -18,8 +18,7 @@ from torch.utils.data import Dataset, RandomSampler
 #import dataset
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("imagenet")
-
+log = logging.getLogger("criteo")
 
 
 # dlrm
@@ -29,11 +28,11 @@ sys.path.append('/root/mnaumov/github/dlrm')
 #import data_loader_terabyte as dltb
 import dlrm_data_pytorch as dp
 
-class CriteoTerabyte(Dataset):
+class Criteo(Dataset):
 
-    def __init__(self, data_path, image_list, name, image_format, pre_process, use_cache, count, max_ind_range, sub_sample_rate, randomize, memory_map=False):
+    def __init__(self, data_path, name, pre_process, use_cache, count, max_ind_range=-1, sub_sample_rate=0.0, randomize="total", memory_map=False):
         # debug print
-        print('CriteoTerabyte __init__', data_path, image_list, name, image_format, pre_process, use_cache, count, max_ind_range, sub_sample_rate, randomize, memory_map)
+        print('Criteo __init__', data_path, name, pre_process, use_cache, count, max_ind_range, sub_sample_rate, randomize, memory_map)
         super().__init__()
 
         if True:
@@ -103,3 +102,38 @@ class CriteoTerabyte(Dataset):
 
         return (X, lS_o, lS_i, T)
 
+# Post processing                                                                                                                                                                                      
+class DlrmPostProcess:
+    def __init__(self):
+        self.good = 0
+        self.total = 0
+
+    def __call__(self, results, expected=None, result_dict=None):
+        processed_results = []
+        n = len(results)
+        for idx in range(0, n):
+            result = results[idx]
+            processed_results.append([result])
+            # debug prints
+            # print(result.__class__)                                                                                                                                                                              # print(result.type())
+            # print(result)
+            # print(expected[idx].__class__)
+            # print(expected[idx].type())
+            # print(expected[idx])                                                                                                                                                                     
+            # sys.exit(0)                                                                                                                                                                              
+
+            if result.round() == expected[idx]:
+                self.good += 1
+        self.total += n
+        return processed_results
+
+    def add_results(self, results):
+        pass
+
+    def start(self):
+        self.good = 0
+        self.total = 0
+
+    def finalize(self, results, ds=False,  output_dir=None):
+        results["good"] = self.good
+        results["total"] = self.total

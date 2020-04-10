@@ -27,12 +27,13 @@ except KeyError:
     print("ERROR: Please set DLRM_DIR environment variable to the dlrm code location")
     sys.exit(0)
 #import dataset
-#import data_loader_terabyte as dltb
 import dlrm_data_pytorch as dp
+import data_loader_terabyte
+
 
 class Criteo(Dataset):
 
-    def __init__(self, data_path, name, pre_process, use_cache, count, test_num_workers, max_ind_range=-1, sub_sample_rate=0.0, randomize="total", memory_map=False):
+    def __init__(self, data_path, name, pre_process, use_cache, count, test_num_workers, max_ind_range=-1, sub_sample_rate=0.0, mlperf_bin_loader=False, randomize="total", memory_map=False):
         super().__init__()
         # debug prints
         # print('__init__', data_path, name, pre_process, use_cache, count, test_num_workers, max_ind_range, sub_sample_rate, randomize, memory_map)
@@ -45,6 +46,7 @@ class Criteo(Dataset):
             processed_data_file = data_path + "/terabyte_processed.npz"
         else:
             raise ValueError("only kaggle|terabyte dataset options are supported")
+        self.use_mlperf_bin_loader = mlperf_bin_loader and memory_map and name == "terabyte"
         # debug prints
         # print("dataset filenames", raw_data_file, processed_data_file)
 
@@ -59,15 +61,43 @@ class Criteo(Dataset):
             memory_map=memory_map
         )
 
-        self.test_loader = torch.utils.data.DataLoader(
-            self.test_data,
-            batch_size=1,
-            shuffle=False,
-            num_workers=test_num_workers,
-            collate_fn=dp.collate_wrapper_criteo,
-            pin_memory=False,
-            drop_last=False,  # True
-        )
+        if self.use_mlperf_bin_loader:
+            test_file = data_path + "/terabyte_processed_test.bin"
+            counts_file = raw_data_file + '_fea_count.npz'
+
+            data_loader_terabyte.numpy_to_binary(
+                input_files=[raw_data_file + '_23_reordered.npz'],
+                output_file_path=data_path + "/terabyte_processed_test.bin",
+                split="test")
+
+            self.test_data = data_loader_terabyte.CriteoBinDataset(
+                data_file=test_file,
+                counts_file=counts_file,
+                batch_size=1, # FIGURE this out
+                max_ind_range=max_ind_range
+            )
+
+            self.test_loader = torch.utils.data.DataLoader(
+                self.test_data,
+                batch_size=None,
+                batch_sampler=None,
+                shuffle=False,
+                num_workers=0,
+                collate_fn=None,
+                pin_memory=False,
+                drop_last=False,
+            )
+        else:
+
+            self.test_loader = torch.utils.data.DataLoader(
+                self.test_data,
+                batch_size=1,  # FIGURE this out
+                shuffle=False,
+                num_workers=test_num_workers,
+                collate_fn=dp.collate_wrapper_criteo,
+                pin_memory=False,
+                drop_last=False,
+            )
 
     def get_item_count(self):
         return len(self.test_data)
@@ -82,21 +112,29 @@ class Criteo(Dataset):
         self.items_in_memory = {}
 
         for l in sample_list:
-
-            self.items_in_memory[l] = (self.test_data.X_int[l], self.test_data.X_cat[l], self.test_data.y[l])
+            self.items_in_memory[l] = self.test_data[l]
 
         self.last_loaded = time.time()
 
     ''' lg compatibilty routine '''
     def get_samples(self, id_list):
 
-        ls = []
-
         # build list tuples as need by the batch conversion routine
+        ls = []
         for i in id_list:
             ls.append(self.items_in_memory[i])
 
-        X, lS_o, lS_i, T = self.test_loader.collate_fn(ls)
+        # collate a mini-batch of samples
+        if self.use_mlperf_bin_loader:
+            # needs a custom collate equivalent
+            ls_t = list(zip(*ls))
+            print(ls[0])
+            print(len(ls_t))
+            sys.exit(0)
+
+            X, lS_o, lS_i, T = ls_t[0], ls_t[1], ls_t[2], ls_t[3]
+        else:
+            X, lS_o, lS_i, T = self.test_loader.collate_fn(ls)
         # debug prints
         # print('get_samples', (X, lS_o, lS_i, T))
 
@@ -118,7 +156,7 @@ class DlrmPostProcess:
         processed_results = []
         n = len(results)
         for idx in range(0, n):
-            # NOTE: copy from GPU to CPU while processing, if needed. Alternatively,
+            # NOTE: copy from GPU to CPU while post processing, if needed. Alternatively,
             # we could do this on the output of predict function in backend_pytorch_native.py
             result = results[idx].detach().cpu()
             processed_results.append([result])

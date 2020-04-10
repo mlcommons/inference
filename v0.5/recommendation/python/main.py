@@ -102,6 +102,7 @@ def get_args():
     parser.add_argument("--test-num-workers", type=int, default=0, help='# of workers reading the data')
     parser.add_argument("--max-ind-range", type=int, default=-1)
     parser.add_argument("--data-sub-sample-rate", type=float, default=0.0)
+    parser.add_argument("--mlperf-bin-loader", action='store_true', default=False)
     parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--output", help="test results")
     parser.add_argument("--inputs", help="model inputs")
@@ -424,6 +425,9 @@ def main():
                         use_cache=args.cache,  # currently not used
                         count=count,
                         test_num_workers=args.test_num_workers,
+                        max_ind_range=args.max_ind_range,
+                        sub_sample_rate=args.data_sub_sample_rate,
+                        mlperf_bin_loader=args.mlperf_bin_loader,
                         **kwargs)
     # load model to backend
     model = backend.load(args.model_path, inputs=args.inputs, outputs=args.outputs)

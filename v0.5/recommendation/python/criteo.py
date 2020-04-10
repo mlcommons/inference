@@ -1,5 +1,5 @@
 """
-implementation of imagenet dataset
+implementation of criteo dataset
 """
 
 # pylint: disable=unused-argument,missing-docstring
@@ -33,24 +33,23 @@ import dlrm_data_pytorch as dp
 class Criteo(Dataset):
 
     def __init__(self, data_path, name, pre_process, use_cache, count, test_num_workers, max_ind_range=-1, sub_sample_rate=0.0, randomize="total", memory_map=False):
-        # debug print
-        print('Criteo __init__', data_path, name, pre_process, use_cache, count, test_num_workers, max_ind_range, sub_sample_rate, randomize, memory_map)
         super().__init__()
+        # debug prints
+        # print('__init__', data_path, name, pre_process, use_cache, count, test_num_workers, max_ind_range, sub_sample_rate, randomize, memory_map)
 
-        if True:
-            dataset_name = "kaggle"
-            #raw_data_file = data_path + "/train.txt"
-            raw_data_file = data_path + "/train_tiny2.txt"
-            print('CriteoTerabyte  raw_data_file ', raw_data_file)
+        if name == "kaggle":
+            raw_data_file = data_path + "/train.txt"
             processed_data_file = data_path + "/kaggleAdDisplayChallenge_processed.npz"
-            print('CriteoTerabyte  processed_data_file ', processed_data_file)
-        else:
-            dataset_name = "terabyte"
+        elif name == "terabyte":
             raw_data_file = data_path + "/day"
             processed_data_file = data_path + "/terabyte_processed.npz"
+        else:
+            raise ValueError("only kaggle|terabyte dataset options are supported")
+        # debug prints
+        # print("dataset filenames", raw_data_file, processed_data_file)
 
         self.test_data = dp.CriteoDataset(
-            dataset=dataset_name,
+            dataset=name,
             max_ind_range=max_ind_range,
             sub_sample_rate=sub_sample_rate,
             randomize=randomize,
@@ -59,7 +58,6 @@ class Criteo(Dataset):
             pro_data=processed_data_file,
             memory_map=memory_map
         )
-
 
         self.test_loader = torch.utils.data.DataLoader(
             self.test_data,
@@ -99,7 +97,7 @@ class Criteo(Dataset):
             ls.append(self.items_in_memory[i])
 
         X, lS_o, lS_i, T = self.test_loader.collate_fn(ls)
-        # debug print
+        # debug prints
         # print('get_samples', (X, lS_o, lS_i, T))
 
         return (X, lS_o, lS_i, T)

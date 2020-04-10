@@ -60,7 +60,7 @@ class BackendPytorchNative(backend.Backend):
         if self.use_gpu:
             dlrm = dlrm.to(self.device)  # .cuda()
             if dlrm.ndevices > 1:
-                dlrm.emb_l = dlrm.create_emb(m_spa, ln_emb)
+                dlrm.emb_l = dlrm.create_emb(self.m_spa, self.ln_emb)
 
         if self.use_gpu:
             if dlrm.ndevices > 1:

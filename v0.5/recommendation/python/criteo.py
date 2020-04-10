@@ -118,7 +118,9 @@ class DlrmPostProcess:
         processed_results = []
         n = len(results)
         for idx in range(0, n):
-            result = results[idx]
+            # NOTE: copy from GPU to CPU while processing, if needed. Alternatively,
+            # we could do this on the output of predict function in backend_pytorch_native.py
+            result = results[idx].detach().cpu()
             processed_results.append([result])
             # debug prints
             # print(result.__class__)

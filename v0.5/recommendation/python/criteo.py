@@ -62,6 +62,7 @@ class Criteo(Dataset):
         )
 
         if self.use_mlperf_bin_loader:
+
             test_file = data_path + "/terabyte_processed_test.bin"
             counts_file = raw_data_file + '_fea_count.npz'
 
@@ -126,13 +127,8 @@ class Criteo(Dataset):
 
         # collate a mini-batch of samples
         if self.use_mlperf_bin_loader:
-            # needs a custom collate equivalent
             ls_t = list(zip(*ls))
-            print(ls[0])
-            print(len(ls_t))
-            sys.exit(0)
-
-            X, lS_o, lS_i, T = ls_t[0], ls_t[1], ls_t[2], ls_t[3]
+            X, lS_o, lS_i, T = torch.cat(ls_t[0]), torch.cat(ls_t[1], dim=1), torch.cat(ls_t[2], dim=1), torch.cat(ls_t[3])
         else:
             X, lS_o, lS_i, T = self.test_loader.collate_fn(ls)
         # debug prints
@@ -161,11 +157,7 @@ class DlrmPostProcess:
             result = results[idx].detach().cpu()
             processed_results.append([result])
             # debug prints
-            # print(result.__class__)
-            # print(result.type())
             # print(result)
-            # print(expected[idx].__class__)
-            # print(expected[idx].type())
             # print(expected[idx])
 
             if result.round() == expected[idx]:

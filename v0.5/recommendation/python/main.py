@@ -147,22 +147,8 @@ def get_args():
 
 
 def get_backend(backend, dataset, max_ind_range, data_sub_sample_rate, use_gpu):
-    if backend == "tensorflow":
-        from backend_tf import BackendTensorflow
-        backend = BackendTensorflow()
-    elif backend == "tflite":
-        from backend_tflite import BackendTflite
-        backend = BackendTflite()
-    elif backend == "onnxruntime":
-        from backend_onnxruntime import BackendOnnxruntime
-        backend = BackendOnnxruntime()
-    elif backend == "null":
-        from backend_null import BackendNull
-        backend = BackendNull()
-    elif backend == "pytorch":
-        from backend_pytorch import BackendPytorch
-        backend = BackendPytorch()
-    elif backend == "pytorch-native":
+
+    if backend == "pytorch-native":
         from backend_pytorch_native import BackendPytorchNative
         # NOTE: pass model parameters here, the following options are available
         if dataset == "kaggle":

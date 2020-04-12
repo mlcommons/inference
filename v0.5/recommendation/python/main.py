@@ -147,22 +147,8 @@ def get_args():
 
 
 def get_backend(backend, dataset, max_ind_range, data_sub_sample_rate, use_gpu):
-    if backend == "tensorflow":
-        from backend_tf import BackendTensorflow
-        backend = BackendTensorflow()
-    elif backend == "tflite":
-        from backend_tflite import BackendTflite
-        backend = BackendTflite()
-    elif backend == "onnxruntime":
-        from backend_onnxruntime import BackendOnnxruntime
-        backend = BackendOnnxruntime()
-    elif backend == "null":
-        from backend_null import BackendNull
-        backend = BackendNull()
-    elif backend == "pytorch":
-        from backend_pytorch import BackendPytorch
-        backend = BackendPytorch()
-    elif backend == "pytorch-native":
+
+    if backend == "pytorch-native":
         from backend_pytorch_native import BackendPytorchNative
         # NOTE: pass model parameters here, the following options are available
         if dataset == "kaggle":
@@ -179,7 +165,7 @@ def get_backend(backend, dataset, max_ind_range, data_sub_sample_rate, use_gpu):
                 # 2. Criteo Terabyte (see ./bench/dlrm_s_criteo_terabyte.sh [--sub-sample=0.875] --max-in-range=10000000)
                 backend = BackendPytorchNative(
                     m_spa=64,
-                    ln_emb=np.array([ 9980333,36084,17217,7378,20134,3,7112,1442,61, 9758201,1333352,313829,10,2208,11156,122,4,970,14, 9994222, 7267859, 9946608,415421,12420,101, 36]),
+                    ln_emb=np.array([9980333,36084,17217,7378,20134,3,7112,1442,61, 9758201,1333352,313829,10,2208,11156,122,4,970,14, 9994222, 7267859, 9946608,415421,12420,101, 36]),
                     ln_bot=np.array([13,512,256,64]),
                     ln_top=np.array([415,512,512,256,1]),
                     use_gpu=use_gpu

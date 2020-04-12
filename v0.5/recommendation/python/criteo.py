@@ -128,7 +128,12 @@ class Criteo(Dataset):
         # collate a mini-batch of samples
         if self.use_mlperf_bin_loader:
             ls_t = list(zip(*ls))
-            X, lS_o, lS_i, T = torch.cat(ls_t[0]), torch.cat(ls_t[1], dim=1), torch.cat(ls_t[2], dim=1), torch.cat(ls_t[3])
+
+            X = torch.cat(ls_t[0])
+            (num_s, len_ls) = torch.cat(ls_t[1], dim=1).size()
+            lS_o = torch.stack([torch.tensor(range(len_ls)) for _ in range(num_s)])
+            lS_i = torch.cat(ls_t[2], dim=1)
+            T = torch.cat(ls_t[3])
         else:
             X, lS_o, lS_i, T = self.test_loader.collate_fn(ls)
         # debug prints

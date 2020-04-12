@@ -99,7 +99,7 @@ class OverLastDim(torch.nn.Module):
 class LstmDrop(torch.nn.Module):
 
     def __init__(self, input_size, hidden_size, num_layers, dropout, forget_gate_bias,
-             **kwargs):
+                 **kwargs):
         """Returns an LSTM with forget gate bias init to `forget_gate_bias`.
 
         Args:
@@ -125,7 +125,8 @@ class LstmDrop(torch.nn.Module):
             for name, v in self.lstm.named_parameters():
                 if "bias_ih" in name:
                     bias = getattr(self.lstm, name)
-                    bias.data[hidden_size:2*hidden_size].fill_(forget_gate_bias)
+                    bias.data[hidden_size:2 *
+                              hidden_size].fill_(forget_gate_bias)
                 if "bias_hh" in name:
                     bias = getattr(self.lstm, name)
                     bias.data[hidden_size:2*hidden_size].fill_(0)
@@ -142,9 +143,9 @@ class LstmDrop(torch.nn.Module):
         return x, h
 
 
-
 class RNNLayer(torch.nn.Module):
     """A single RNNLayer with optional batch norm."""
+
     def __init__(self, input_size, hidden_size, rnn_type=torch.nn.LSTM,
                  batch_norm=True, forget_gate_bias=1.0):
         super().__init__()
@@ -181,6 +182,7 @@ class BNRNNSum(torch.nn.Module):
     the input with the statistics computed over all time steps.  If dropout > 0
     then it is applied to all layer outputs except the last.
     """
+
     def __init__(self, input_size, hidden_size, rnn_type=torch.nn.LSTM,
                  rnn_layers=1, batch_norm=True, dropout=0.0,
                  forget_gate_bias=1.0, norm_first_rnn=False, **kwargs):
@@ -380,13 +382,13 @@ class StackedLSTM(torch.nn.Module):
                         layer.cell.hidden_size,
                         dtype=input.dtype,
                         device=input.device
-                     ),
-                     torch.zeros(
-                         batch,
-                         layer.cell.hidden_size,
-                         dtype=input.dtype,
-                         device=input.device
-                     )
+                    ),
+                        torch.zeros(
+                        batch,
+                        layer.cell.hidden_size,
+                        dtype=input.dtype,
+                        device=input.device
+                    )
                     )
                 )
 

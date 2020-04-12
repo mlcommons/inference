@@ -26,6 +26,7 @@ jasper_activations = {
     "selu": nn.SELU,
 }
 
+
 def init_weights(m, mode='xavier_uniform'):
     if type(m) == nn.Conv1d or type(m) == MaskedConv1d:
         if mode == 'xavier_uniform':
@@ -47,34 +48,40 @@ def init_weights(m, mode='xavier_uniform'):
             nn.init.ones_(m.weight)
             nn.init.zeros_(m.bias)
 
+
 def get_same_padding(kernel_size, stride, dilation):
     if stride > 1 and dilation > 1:
         raise ValueError("Only stride OR dilation may be greater than 1")
     return (kernel_size // 2) * dilation
 
+
 class AudioPreprocessing(nn.Module):
     """GPU accelerated audio preprocessing
     """
+
     def __init__(self, **kwargs):
         nn.Module.__init__(self)    # For PyTorch API
-        self.optim_level = kwargs.get('optimization_level', Optimization.nothing)
+        self.optim_level = kwargs.get(
+            'optimization_level', Optimization.nothing)
         self.featurizer = FeatureFactory.from_config(kwargs)
 
     def forward(self, x):
         input_signal, length = x
         length.requires_grad_(False)
-        if self.optim_level not in  [Optimization.nothing, Optimization.mxprO0, Optimization.mxprO3]:
+        if self.optim_level not in [Optimization.nothing, Optimization.mxprO0, Optimization.mxprO3]:
             with amp.disable_casts():
                 processed_signal = self.featurizer(x)
                 processed_length = self.featurizer.get_seq_len(length)
         else:
-                processed_signal = self.featurizer(x)
-                processed_length = self.featurizer.get_seq_len(length)
+            processed_signal = self.featurizer(x)
+            processed_length = self.featurizer.get_seq_len(length)
         return processed_signal, processed_length
+
 
 class SpectrogramAugmentation(nn.Module):
     """Spectrogram augmentation
     """
+
     def __init__(self, **kwargs):
         nn.Module.__init__(self)
         self.spec_cutout_regions = SpecCutoutRegions(kwargs)
@@ -86,9 +93,11 @@ class SpectrogramAugmentation(nn.Module):
         augmented_spec = self.spec_augment(augmented_spec)
         return augmented_spec
 
+
 class SpecAugment(nn.Module):
     """Spec augment. refer to https://arxiv.org/abs/1904.08779
     """
+
     def __init__(self, cfg):
         super(SpecAugment, self).__init__()
         self.cutout_x_regions = cfg.get('cutout_x_regions', 0)
@@ -104,12 +113,15 @@ class SpecAugment(nn.Module):
         mask = torch.zeros(x.shape).byte()
         for idx in range(sh[0]):
             for _ in range(self.cutout_x_regions):
-                cutout_x_left = int(random.uniform(0, sh[1] - self.cutout_x_width))
+                cutout_x_left = int(random.uniform(
+                    0, sh[1] - self.cutout_x_width))
 
-                mask[idx, cutout_x_left:cutout_x_left + self.cutout_x_width, :] = 1
+                mask[idx, cutout_x_left:cutout_x_left +
+                     self.cutout_x_width, :] = 1
 
             for _ in range(self.cutout_y_regions):
-                cutout_y_left = int(random.uniform(0, sh[2] - self.cutout_y_width))
+                cutout_y_left = int(random.uniform(
+                    0, sh[2] - self.cutout_y_width))
 
                 mask[idx, :, cutout_y_left:cutout_y_left + self.cutout_y_width] = 1
 
@@ -117,9 +129,11 @@ class SpecAugment(nn.Module):
 
         return x
 
+
 class SpecCutoutRegions(nn.Module):
     """Cutout. refer to https://arxiv.org/pdf/1708.04552.pdf
     """
+
     def __init__(self, cfg):
         super(SpecCutoutRegions, self).__init__()
 
@@ -136,21 +150,23 @@ class SpecCutoutRegions(nn.Module):
         for idx in range(sh[0]):
             for i in range(self.cutout_rect_regions):
                 cutout_rect_x = int(random.uniform(
-                        0, sh[1] - self.cutout_rect_freq))
+                    0, sh[1] - self.cutout_rect_freq))
                 cutout_rect_y = int(random.uniform(
-                        0, sh[2] - self.cutout_rect_time))
+                    0, sh[2] - self.cutout_rect_time))
 
                 mask[idx, cutout_rect_x:cutout_rect_x + self.cutout_rect_freq,
-                         cutout_rect_y:cutout_rect_y + self.cutout_rect_time] = 1
+                     cutout_rect_y:cutout_rect_y + self.cutout_rect_time] = 1
 
         x = x.masked_fill(mask.to(device=x.device), 0)
 
         return x
 
+
 class JasperEncoder(nn.Module):
 
     """Jasper encoder
     """
+
     def __init__(self, **kwargs):
         cfg = {}
         for key, value in kwargs.items():
@@ -161,7 +177,8 @@ class JasperEncoder(nn.Module):
 
         activation = jasper_activations[cfg['encoder']['activation']]()
         self.use_conv_mask = cfg['encoder'].get('convmask', False)
-        feat_in = cfg['input']['features'] * cfg['input'].get('frame_splicing', 1)
+        feat_in = cfg['input']['features'] * \
+            cfg['input'].get('frame_splicing', 1)
         init_mode = cfg.get('init_mode', 'xavier_uniform')
 
         residual_panes = []
@@ -175,10 +192,10 @@ class JasperEncoder(nn.Module):
                 self.dense_residual = True
             encoder_layers.append(
                 JasperBlock(feat_in, lcfg['filters'], repeat=lcfg['repeat'],
-                                        kernel_size=lcfg['kernel'], stride=lcfg['stride'],
-                                        dilation=lcfg['dilation'], dropout=lcfg['dropout'],
-                                        residual=lcfg['residual'], activation=activation,
-                                        residual_panes=dense_res, use_conv_mask=self.use_conv_mask))
+                            kernel_size=lcfg['kernel'], stride=lcfg['stride'],
+                            dilation=lcfg['dilation'], dropout=lcfg['dropout'],
+                            residual=lcfg['residual'], activation=activation,
+                            residual_panes=dense_res, use_conv_mask=self.use_conv_mask))
             feat_in = lcfg['filters']
 
         self.encoder = nn.Sequential(*encoder_layers)
@@ -194,9 +211,11 @@ class JasperEncoder(nn.Module):
         else:
             return self.encoder([x])
 
+
 class JasperDecoderForCTC(nn.Module):
     """Jasper decoder
     """
+
     def __init__(self, **kwargs):
         nn.Module.__init__(self)
         self._feat_in = kwargs.get("feat_in")
@@ -214,21 +233,27 @@ class JasperDecoderForCTC(nn.Module):
         out = self.decoder_layers(encoder_output[-1]).transpose(1, 2)
         return nn.functional.log_softmax(out, dim=2)
 
+
 class Jasper(nn.Module):
     """Contains data preprocessing, spectrogram augmentation, jasper encoder and decoder
     """
+
     def __init__(self, **kwargs):
         nn.Module.__init__(self)
         if kwargs.get("no_featurizer", False):
             self.audio_preprocessor = None
         else:
-            self.audio_preprocessor = AudioPreprocessing(**kwargs.get("feature_config"))
+            self.audio_preprocessor = AudioPreprocessing(
+                **kwargs.get("feature_config"))
 
-        self.data_spectr_augmentation = SpectrogramAugmentation(**kwargs.get("feature_config"))
-        self.jasper_encoder = JasperEncoder(**kwargs.get("jasper_model_definition"))
+        self.data_spectr_augmentation = SpectrogramAugmentation(
+            **kwargs.get("feature_config"))
+        self.jasper_encoder = JasperEncoder(
+            **kwargs.get("jasper_model_definition"))
         self.jasper_decoder = JasperDecoderForCTC(feat_in=kwargs.get("feat_in"),
                                                   num_classes=kwargs.get("num_classes"))
-        self.acoustic_model = JasperAcousticModel(self.jasper_encoder, self.jasper_decoder)
+        self.acoustic_model = JasperAcousticModel(
+            self.jasper_encoder, self.jasper_decoder)
 
     def num_weights(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
@@ -240,8 +265,9 @@ class Jasper(nn.Module):
             t_processed_signal, p_length_t = self.audio_preprocessor(x)
         # Apply optional spectral augmentation
         if self.training:
-            t_processed_signal = self.data_spectr_augmentation(input_spec=t_processed_signal)
-            
+            t_processed_signal = self.data_spectr_augmentation(
+                input_spec=t_processed_signal)
+
         if (self.jasper_encoder.use_conv_mask):
             a_inp = (t_processed_signal, p_length_t)
         else:
@@ -256,12 +282,13 @@ class JasperAcousticModel(nn.Module):
         self.jasper_encoder = enc
         self.jasper_decoder = dec
         self.transpose_in = transpose_in
+
     def forward(self, x):
         if self.jasper_encoder.use_conv_mask:
             t_encoded_t, t_encoded_len_t = self.jasper_encoder(x)
         else:
             if self.transpose_in:
-                x = x.transpose(1, 2)                
+                x = x.transpose(1, 2)
             t_encoded_t = self.jasper_encoder(x)
 
         out = self.jasper_decoder(encoder_output=t_encoded_t)
@@ -270,33 +297,38 @@ class JasperAcousticModel(nn.Module):
         else:
             return out
 
+
 class JasperEncoderDecoder(nn.Module):
     """Contains jasper encoder and decoder
     """
+
     def __init__(self, **kwargs):
         nn.Module.__init__(self)
-        self.jasper_encoder = JasperEncoder(**kwargs.get("jasper_model_definition"))
+        self.jasper_encoder = JasperEncoder(
+            **kwargs.get("jasper_model_definition"))
         self.jasper_decoder = JasperDecoderForCTC(feat_in=kwargs.get("feat_in"),
                                                   num_classes=kwargs.get("num_classes"))
         self.acoustic_model = JasperAcousticModel(self.jasper_encoder,
                                                   self.jasper_decoder,
                                                   kwargs.get("transpose_in", False))
-        
+
     def num_weights(self):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
     def forward(self, x):
         return self.acoustic_model.forward(x)
 
+
 class MaskedConv1d(nn.Conv1d):
     """1D convolution with sequence masking
     """
+
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
-                             padding=0, dilation=1, groups=1, bias=False, use_conv_mask=True):
+                 padding=0, dilation=1, groups=1, bias=False, use_conv_mask=True):
         super(MaskedConv1d, self).__init__(in_channels, out_channels, kernel_size,
-                                                                             stride=stride,
-                                                                             padding=padding, dilation=dilation,
-                                                                             groups=groups, bias=bias)
+                                           stride=stride,
+                                           padding=padding, dilation=dilation,
+                                           groups=groups, bias=bias)
         self.use_conv_mask = use_conv_mask
 
     def get_seq_len(self, lens):
@@ -307,7 +339,8 @@ class MaskedConv1d(nn.Conv1d):
         if self.use_conv_mask:
             x, lens = inp
             max_len = x.size(2)
-            idxs = torch.arange(max_len).to(lens.dtype).to(lens.device).expand(len(lens), max_len)
+            idxs = torch.arange(max_len).to(lens.dtype).to(
+                lens.device).expand(len(lens), max_len)
             mask = idxs >= lens.unsqueeze(1)
             x = x.masked_fill(mask.unsqueeze(1).to(device=x.device), 0)
             del mask
@@ -322,17 +355,18 @@ class MaskedConv1d(nn.Conv1d):
         else:
             return out
 
+
 class JasperBlock(nn.Module):
     """Jasper Block. See https://arxiv.org/pdf/1904.03288.pdf
     """
+
     def __init__(self, inplanes, planes, repeat=3, kernel_size=11, stride=1,
-                             dilation=1, padding='same', dropout=0.2, activation=None,
-                             residual=True, residual_panes=[], use_conv_mask=False):
+                 dilation=1, padding='same', dropout=0.2, activation=None,
+                 residual=True, residual_panes=[], use_conv_mask=False):
         super(JasperBlock, self).__init__()
 
         if padding != "same":
             raise ValueError("currently only 'same' padding is supported")
-
 
         padding_val = get_same_padding(kernel_size[0], stride[0], dilation[0])
         self.use_conv_mask = use_conv_mask
@@ -341,15 +375,15 @@ class JasperBlock(nn.Module):
         for _ in range(repeat - 1):
             self.conv.extend(
                 self._get_conv_bn_layer(inplanes_loop, planes, kernel_size=kernel_size,
-                                                                stride=stride, dilation=dilation,
-                                                                padding=padding_val))
+                                        stride=stride, dilation=dilation,
+                                        padding=padding_val))
             self.conv.extend(
                 self._get_act_dropout_layer(drop_prob=dropout, activation=activation))
             inplanes_loop = planes
         self.conv.extend(
             self._get_conv_bn_layer(inplanes_loop, planes, kernel_size=kernel_size,
-                                                            stride=stride, dilation=dilation,
-                                                            padding=padding_val))
+                                    stride=stride, dilation=dilation,
+                                    padding=padding_val))
 
         self.res = nn.ModuleList() if residual else None
         res_panes = residual_panes.copy()
@@ -365,11 +399,11 @@ class JasperBlock(nn.Module):
             *self._get_act_dropout_layer(drop_prob=dropout, activation=activation))
 
     def _get_conv_bn_layer(self, in_channels, out_channels, kernel_size=11,
-                                                 stride=1, dilation=1, padding=0, bias=False):
+                           stride=1, dilation=1, padding=0, bias=False):
         layers = [
             MaskedConv1d(in_channels, out_channels, kernel_size, stride=stride,
-                                     dilation=dilation, padding=padding, bias=bias,
-                                     use_conv_mask=self.use_conv_mask),
+                         dilation=dilation, padding=padding, bias=bias,
+                         use_conv_mask=self.use_conv_mask),
             nn.BatchNorm1d(out_channels, eps=1e-3, momentum=0.1)
         ]
         return layers
@@ -423,9 +457,11 @@ class JasperBlock(nn.Module):
         else:
             return out
 
+
 class GreedyCTCDecoder(nn.Module):
     """ Greedy CTC Decoder
     """
+
     def __init__(self, **kwargs):
         nn.Module.__init__(self)    # For PyTorch API
 
@@ -434,9 +470,11 @@ class GreedyCTCDecoder(nn.Module):
             argmx = log_probs.argmax(dim=-1, keepdim=False).int()
             return argmx
 
+
 class CTCLossNM:
     """ CTC loss
     """
+
     def __init__(self, **kwargs):
         self._blank = kwargs['num_classes'] - 1
         self._criterion = nn.CTCLoss(blank=self._blank, reduction='none')
@@ -446,7 +484,7 @@ class CTCLossNM:
         target_length = target_length.long()
         targets = targets.long()
         loss = self._criterion(log_probs.transpose(1, 0), targets, input_length,
-                                                     target_length)
+                               target_length)
         # note that this is different from reduction = 'mean'
         # because we are not dividing by target lengths
         return torch.mean(loss)

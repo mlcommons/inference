@@ -1,5 +1,6 @@
 import torch.utils.tensorboard as tb
 
+
 class DummyLogger:
     def log_scalar(*args, **kwargs):
         pass

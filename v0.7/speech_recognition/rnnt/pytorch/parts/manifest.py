@@ -48,13 +48,14 @@ def normalize_string(s, labels, table, **unused_kwargs):
         print("WARNING: Normalizing {} failed".format(s))
         return None
 
+
 class Manifest(object):
     def __init__(self, data_dir, manifest_paths, labels, blank_index, max_duration=None, pad_to_max=False,
                  min_duration=None, sort_by_duration=False, max_utts=0,
                  normalize=True, speed_perturbation=False, filter_speed=1.0):
         self.labels_map = dict([(labels[i], i) for i in range(len(labels))])
         self.blank_index = blank_index
-        self.max_duration= max_duration
+        self.max_duration = max_duration
         ids = []
         duration = 0.0
         filtered_duration = 0.0
@@ -66,12 +67,12 @@ class Manifest(object):
             punctuation = string.punctuation
             punctuation = punctuation.replace("+", "")
             punctuation = punctuation.replace("&", "")
-            ### We might also want to consider:
-            ### @ -> at
-            ### # -> number, pound, hashtag
-            ### ~ -> tilde
-            ### _ -> underscore
-            ### % -> percent
+            # We might also want to consider:
+            # @ -> at
+            # -> number, pound, hashtag
+            # ~ -> tilde
+            # _ -> underscore
+            # % -> percent
             # If a punctuation symbol is inside our vocab, we do not remove from text
             for l in labels:
                 punctuation = punctuation.replace(l, "")
@@ -79,7 +80,7 @@ class Manifest(object):
             table = str.maketrans(punctuation, " " * len(punctuation))
         for manifest_path in manifest_paths:
             with open(manifest_path, "r", encoding="utf-8") as fh:
-                a=json.load(fh)
+                a = json.load(fh)
                 for data in a:
                     files_and_speeds = data['files']
 
@@ -87,7 +88,8 @@ class Manifest(object):
                         if not speed_perturbation:
                             min_speed = filter_speed
                         else:
-                            min_speed = min(x['speed'] for x in files_and_speeds)
+                            min_speed = min(x['speed']
+                                            for x in files_and_speeds)
                         max_duration = self.max_duration * min_speed
 
                     data['duration'] = data['original_duration']
@@ -104,22 +106,27 @@ class Manifest(object):
                         data['text_filepath'])
                     if normalize:
                         transcript_text = normalize_string(transcript_text, labels=labels,
-                                                                                             table=table)
+                                                           table=table)
                     if not isinstance(transcript_text, str):
                         print(
                             "WARNING: Got transcript: {}. It is not a string. Dropping data point".format(
                                 transcript_text))
                         filtered_duration += data['duration']
                         continue
-                    data["transcript"] = self.parse_transcript(transcript_text) # convert to vocab indices
+                    data["transcript"] = self.parse_transcript(
+                        transcript_text)  # convert to vocab indices
 
                     if speed_perturbation:
                         audio_paths = [x['fname'] for x in files_and_speeds]
-                        data['audio_duration'] = [x['duration'] for x in files_and_speeds]
+                        data['audio_duration'] = [x['duration']
+                                                  for x in files_and_speeds]
                     else:
-                        audio_paths = [x['fname'] for x in files_and_speeds if x['speed'] == filter_speed]
-                        data['audio_duration'] = [x['duration'] for x in files_and_speeds if x['speed'] == filter_speed]
-                    data['audio_filepath'] = [os.path.join(data_dir, x) for x in audio_paths]
+                        audio_paths = [
+                            x['fname'] for x in files_and_speeds if x['speed'] == filter_speed]
+                        data['audio_duration'] = [x['duration']
+                                                  for x in files_and_speeds if x['speed'] == filter_speed]
+                    data['audio_filepath'] = [os.path.join(
+                        data_dir, x) for x in audio_paths]
                     data.pop('files')
                     data.pop('original_duration')
 
@@ -144,7 +151,8 @@ class Manifest(object):
         return transcript
 
     def parse_transcript(self, transcript):
-        chars = [self.labels_map.get(x, self.blank_index) for x in list(transcript)]
+        chars = [self.labels_map.get(x, self.blank_index)
+                 for x in list(transcript)]
         transcript = list(filter(lambda x: x != self.blank_index, chars))
         return transcript
 

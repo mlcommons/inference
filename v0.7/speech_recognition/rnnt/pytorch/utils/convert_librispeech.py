@@ -31,7 +31,7 @@ parser.add_argument('--dest_dir', type=str, required=True,
                     help='Output dir')
 parser.add_argument('--output_json', type=str, default='./',
                     help='name of the output json file.')
-parser.add_argument('-s','--speed', type=float, nargs='*',
+parser.add_argument('-s', '--speed', type=float, nargs='*',
                     help='Speed perturbation ratio')
 parser.add_argument('--target_sr', type=int, default=None,
                     help='Target sample rate. '
@@ -44,6 +44,7 @@ args = parser.parse_args()
 
 args.input_dir = args.input_dir.rstrip('/')
 args.dest_dir = args.dest_dir.rstrip('/')
+
 
 def build_input_arr(input_dir):
     txt_files = glob.glob(os.path.join(input_dir, '**', '*.trans.txt'),

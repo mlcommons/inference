@@ -34,24 +34,39 @@ import time
 
 import torchvision
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Jasper')
     parser.add_argument("--local_rank", default=None, type=int)
-    parser.add_argument("--batch_size", default=16, type=int, help='data batch size')
-    parser.add_argument("--steps", default=None, help='if not specified do evaluation on full dataset. otherwise only evaluates the specified number of iterations for each worker', type=int)
-    parser.add_argument("--model_toml", type=str, help='relative model configuration path given dataset folder')
-    parser.add_argument("--dataset_dir", type=str, help='absolute path to dataset folder')
-    parser.add_argument("--val_manifest", type=str, help='relative path to evaluation dataset manifest file')
-    parser.add_argument("--ckpt", default=None, type=str, required=True, help='path to model checkpoint')
-    parser.add_argument("--max_duration", default=None, type=float, help='maximum duration of sequences. if None uses attribute from model configuration file')
-    parser.add_argument("--pad_to", default=None, type=int, help="default is pad to value as specified in model configurations. if -1 pad to maximum duration. If > 0 pad batch to next multiple of value")
-    parser.add_argument("--fp16", action='store_true', help='use half precision')
-    parser.add_argument("--cudnn_benchmark", action='store_true', help="enable cudnn benchmark")
-    parser.add_argument("--save_prediction", type=str, default=None, help="if specified saves predictions in text form at this location")
-    parser.add_argument("--logits_save_to", default=None, type=str, help="if specified will save logits to path")
+    parser.add_argument("--batch_size", default=16,
+                        type=int, help='data batch size')
+    parser.add_argument("--steps", default=None,
+                        help='if not specified do evaluation on full dataset. otherwise only evaluates the specified number of iterations for each worker', type=int)
+    parser.add_argument("--model_toml", type=str,
+                        help='relative model configuration path given dataset folder')
+    parser.add_argument("--dataset_dir", type=str,
+                        help='absolute path to dataset folder')
+    parser.add_argument("--val_manifest", type=str,
+                        help='relative path to evaluation dataset manifest file')
+    parser.add_argument("--ckpt", default=None, type=str,
+                        required=True, help='path to model checkpoint')
+    parser.add_argument("--max_duration", default=None, type=float,
+                        help='maximum duration of sequences. if None uses attribute from model configuration file')
+    parser.add_argument("--pad_to", default=None, type=int,
+                        help="default is pad to value as specified in model configurations. if -1 pad to maximum duration. If > 0 pad batch to next multiple of value")
+    parser.add_argument("--fp16", action='store_true',
+                        help='use half precision')
+    parser.add_argument("--cudnn_benchmark",
+                        action='store_true', help="enable cudnn benchmark")
+    parser.add_argument("--save_prediction", type=str, default=None,
+                        help="if specified saves predictions in text form at this location")
+    parser.add_argument("--logits_save_to", default=None,
+                        type=str, help="if specified will save logits to path")
     parser.add_argument("--seed", default=42, type=int, help='seed')
-    parser.add_argument("--wav", type=str, help='absolute path to .wav file (16KHz)')
+    parser.add_argument("--wav", type=str,
+                        help='absolute path to .wav file (16KHz)')
     return parser.parse_args()
+
 
 def eval(
         data_layer,
@@ -71,17 +86,15 @@ def eval(
         multi_gpu: true if using multiple gpus
         args: script input arguments
     """
-    logits_save_to=args.logits_save_to
+    logits_save_to = args.logits_save_to
     encoderdecoder.eval()
     with torch.no_grad():
         _global_var_dict = {
             'predictions': [],
             'transcripts': [],
-            'logits' : [],
+            'logits': [],
         }
 
-
-        
         if args.wav:
             features, p_length_e = audio_processor(audio_from_file(args.wav))
             torch.cuda.synchronize()
@@ -90,18 +103,22 @@ def eval(
             torch.cuda.synchronize()
             t1 = time.perf_counter()
             t_predictions_e = greedy_decoder(log_probs=t_log_probs_e)
-            hypotheses = __ctc_decoder_predictions_tensor(t_predictions_e, labels=labels)
+            hypotheses = __ctc_decoder_predictions_tensor(
+                t_predictions_e, labels=labels)
             print("INFERENCE TIME\t\t: {} ms".format((t1-t0)*1000.0))
             print("TRANSCRIPT\t\t:", hypotheses[0])
             return
-        
+
         for it, data in enumerate(tqdm(data_layer.data_iterator)):
-            t_audio_signal_e, t_a_sig_length_e, t_transcript_e, t_transcript_len_e = audio_processor(data)
+            t_audio_signal_e, t_a_sig_length_e, t_transcript_e, t_transcript_len_e = audio_processor(
+                data)
 
             t_log_probs_e, (x_len, y_len) = encoderdecoder(
-                    ((t_audio_signal_e, t_transcript_e), (t_a_sig_length_e, t_transcript_len_e)),
+                ((t_audio_signal_e, t_transcript_e),
+                 (t_a_sig_length_e, t_transcript_len_e)),
             )
-            t_predictions_e = greedy_decoder.decode(t_audio_signal_e, t_a_sig_length_e)
+            t_predictions_e = greedy_decoder.decode(
+                t_audio_signal_e, t_a_sig_length_e)
 
             values_dict = dict(
                 predictions=[t_predictions_e],
@@ -109,7 +126,8 @@ def eval(
                 transcript_length=[t_transcript_len_e],
                 output=[t_log_probs_e]
             )
-            process_evaluation_batch(values_dict, _global_var_dict, labels=labels)
+            process_evaluation_batch(
+                values_dict, _global_var_dict, labels=labels)
 
             if args.steps is not None and it + 1 >= args.steps:
                 break
@@ -127,6 +145,7 @@ def eval(
                 with open(logits_save_to, 'wb') as f:
                     pickle.dump(logits, f, protocol=pickle.HIGHEST_PROTOCOL)
 
+
 def main(args):
     random.seed(args.seed)
     np.random.seed(args.seed)
@@ -137,7 +156,8 @@ def main(args):
 
     if args.local_rank is not None:
         torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(backend='nccl', init_method='env://')
+        torch.distributed.init_process_group(
+            backend='nccl', init_method='env://')
     multi_gpu = args.local_rank is not None
     if multi_gpu:
         print("DISTRIBUTED with ", torch.distributed.get_world_size())
@@ -165,10 +185,10 @@ def main(args):
     print('feature_config')
     print_dict(featurizer_config)
     data_layer = None
-    
+
     if args.wav is None:
         data_layer = AudioToTextDataLayer(
-            dataset_dir=args.dataset_dir, 
+            dataset_dir=args.dataset_dir,
             featurizer_config=featurizer_config,
             manifest_filepath=val_manifest,
             labels=dataset_vocab,
@@ -195,11 +215,13 @@ def main(args):
     # print("Number of parameters in encoder: {0}".format(model.jasper_encoder.num_weights()))
     if args.wav is None:
         N = len(data_layer)
-        step_per_epoch = math.ceil(N / (args.batch_size * (1 if not torch.distributed.is_initialized() else torch.distributed.get_world_size())))
+        step_per_epoch = math.ceil(N / (args.batch_size * (
+            1 if not torch.distributed.is_initialized() else torch.distributed.get_world_size())))
 
         if args.steps is not None:
             print('-----------------')
-            print('Have {0} examples to eval on.'.format(args.steps * args.batch_size * (1 if not torch.distributed.is_initialized() else torch.distributed.get_world_size())))
+            print('Have {0} examples to eval on.'.format(args.steps * args.batch_size * (
+                1 if not torch.distributed.is_initialized() else torch.distributed.get_world_size())))
             print('Have {0} steps / (gpu * epoch).'.format(args.steps))
             print('-----------------')
         else:
@@ -208,9 +230,10 @@ def main(args):
             print('Have {0} steps / (gpu * epoch).'.format(step_per_epoch))
             print('-----------------')
     else:
-            audio_preprocessor.featurizer.normalize = "per_feature"
+        audio_preprocessor.featurizer.normalize = "per_feature"
 
-    print ("audio_preprocessor.normalize: ", audio_preprocessor.featurizer.normalize)
+    print("audio_preprocessor.normalize: ",
+          audio_preprocessor.featurizer.normalize)
     audio_preprocessor.cuda()
     audio_preprocessor.eval()
 
@@ -228,7 +251,8 @@ def main(args):
 
     model = model_multi_gpu(model, multi_gpu)
 
-    greedy_decoder = RNNTGreedyDecoder(len(ctc_vocab) - 1, model.module if multi_gpu else model)
+    greedy_decoder = RNNTGreedyDecoder(
+        len(ctc_vocab) - 1, model.module if multi_gpu else model)
 
     eval(
         data_layer=data_layer,
@@ -239,7 +263,8 @@ def main(args):
         args=args,
         multi_gpu=multi_gpu)
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     args = parse_args()
 
     print_dict(vars(args))

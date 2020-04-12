@@ -53,14 +53,14 @@ def word_error_rate(hypotheses: List[str], references: List[str]) -> float:
     words = 0
     if len(hypotheses) != len(references):
         raise ValueError("In word error rate calculation, hypotheses and reference"
-                                         " lists must have the same number of elements. But I got:"
-                                         "{0} and {1} correspondingly".format(len(hypotheses), len(references)))
+                         " lists must have the same number of elements. But I got:"
+                         "{0} and {1} correspondingly".format(len(hypotheses), len(references)))
     for h, r in zip(hypotheses, references):
         h_list = h.split()
         r_list = r.split()
         words += len(r_list)
         scores += __levenshtein(h_list, r_list)
-    if words!=0:
+    if words != 0:
         wer = 1.0*scores/words
     else:
         wer = float('inf')

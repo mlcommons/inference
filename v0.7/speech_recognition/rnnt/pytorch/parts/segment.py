@@ -27,7 +27,7 @@ class AudioSegment(object):
     """
 
     def __init__(self, samples, sample_rate, target_sr=None, trim=False,
-                             trim_db=60):
+                 trim_db=60):
         """Create audio segment from samples.
         Samples are convert float32 internally, with int scaled to [-1, 1].
         """
@@ -61,8 +61,8 @@ class AudioSegment(object):
     def __str__(self):
         """Return human-readable representation of segment."""
         return ("%s: num_samples=%d, sample_rate=%d, duration=%.2fsec, "
-                        "rms=%.2fdB" % (type(self), self.num_samples, self.sample_rate,
-                                                        self.duration, self.rms_db))
+                "rms=%.2fdB" % (type(self), self.num_samples, self.sample_rate,
+                                self.duration, self.rms_db))
 
     @staticmethod
     def _convert_samples_to_float32(samples):
@@ -82,7 +82,7 @@ class AudioSegment(object):
 
     @classmethod
     def from_file(cls, filename, target_sr=None, int_values=False, offset=0,
-                                duration=0, trim=False):
+                  duration=0, trim=False):
         """
         Load a file supported by librosa and return as an AudioSegment.
         :param filename: path of file to load

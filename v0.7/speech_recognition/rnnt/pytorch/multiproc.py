@@ -78,6 +78,7 @@ from argparse import ArgumentParser, REMAINDER
 
 import torch
 
+
 def parse_args():
     """
     Helper function parsing the command line options
@@ -148,7 +149,8 @@ def main():
 
         print(cmd)
 
-        stdout = None if local_rank == 0 else open("GPU_"+str(local_rank)+".log", "w")
+        stdout = None if local_rank == 0 else open(
+            "GPU_"+str(local_rank)+".log", "w")
 
         process = subprocess.Popen(cmd, env=current_env, stdout=stdout)
         processes.append(process)

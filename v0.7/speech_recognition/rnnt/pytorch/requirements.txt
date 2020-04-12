@@ -11,3 +11,4 @@ tensorboard==2.0.0
 Unidecode==1.1.1
 inflect==4.1.0
 requests==2.23.0
+autopep8==1.5.1

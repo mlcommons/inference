@@ -82,11 +82,13 @@ def _expand_number(m):
     else:
         return _inflect.number_to_words(num, andword='')
 
+
 def _expand_time(m):
     mins = int(m.group(2))
     if mins == 0:
         return _inflect.number_to_words(m.group(1))
     return " ".join([_inflect.number_to_words(m.group(1)), _inflect.number_to_words(m.group(2))])
+
 
 def normalize_numbers(text):
     text = re.sub(_comma_number_re, _remove_commas, text)

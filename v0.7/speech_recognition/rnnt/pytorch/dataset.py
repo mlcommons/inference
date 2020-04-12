@@ -23,6 +23,7 @@ import torch.distributed as dist
 from parts.manifest import Manifest
 from parts.features import WaveformFeaturizer
 
+
 class DistributedBucketBatchSampler(Sampler):
     def __init__(self, dataset, batch_size, num_replicas=None, rank=None):
         """Distributed sampler that buckets samples with similar length to minimize padding,
@@ -37,11 +38,13 @@ class DistributedBucketBatchSampler(Sampler):
         """
         if num_replicas is None:
             if not dist.is_available():
-                raise RuntimeError("Requires distributed package to be available")
+                raise RuntimeError(
+                    "Requires distributed package to be available")
             num_replicas = dist.get_world_size()
         if rank is None:
             if not dist.is_available():
-                raise RuntimeError("Requires distributed package to be available")
+                raise RuntimeError(
+                    "Requires distributed package to be available")
             rank = dist.get_rank()
         self.dataset = dataset
         self.dataset_size = len(dataset)
@@ -51,7 +54,8 @@ class DistributedBucketBatchSampler(Sampler):
         self.batch_size = batch_size
         self.tile_size = batch_size * self.num_replicas
         self.num_buckets = 6
-        self.bucket_size = self.round_up_to(math.ceil(self.dataset_size / self.num_buckets), self.tile_size)
+        self.bucket_size = self.round_up_to(
+            math.ceil(self.dataset_size / self.num_buckets), self.tile_size)
         self.index_count = self.round_up_to(self.dataset_size, self.tile_size)
         self.num_samples = self.index_count // self.num_replicas
 
@@ -65,9 +69,11 @@ class DistributedBucketBatchSampler(Sampler):
         for bucket in range(self.num_buckets):
             bucket_start = self.bucket_size * bucket
             bucket_end = min(bucket_start + self.bucket_size, self.index_count)
-            indices[bucket_start:bucket_end] = indices[bucket_start:bucket_end][torch.randperm(bucket_end - bucket_start, generator=g)]
+            indices[bucket_start:bucket_end] = indices[bucket_start:bucket_end][torch.randperm(
+                bucket_end - bucket_start, generator=g)]
 
-        tile_indices = torch.randperm(self.index_count // self.tile_size, generator=g)
+        tile_indices = torch.randperm(
+            self.index_count // self.tile_size, generator=g)
         for tile_index in tile_indices:
             start_index = self.tile_size * tile_index + self.batch_size * self.rank
             end_index = start_index + self.batch_size
@@ -78,6 +84,7 @@ class DistributedBucketBatchSampler(Sampler):
 
     def set_epoch(self, epoch):
         self.epoch = epoch
+
 
 class data_prefetcher():
     def __init__(self, loader):
@@ -92,17 +99,21 @@ class data_prefetcher():
             self.next_input = None
             return
         with torch.cuda.stream(self.stream):
-            self.next_input = [ x.cuda(non_blocking=True) for x in self.next_input]
+            self.next_input = [x.cuda(non_blocking=True)
+                               for x in self.next_input]
 
     def __next__(self):
         torch.cuda.current_stream().wait_stream(self.stream)
         input = self.next_input
         self.preload()
         return input
+
     def next(self):
         return self.__next__()
+
     def __iter__(self):
         return self
+
 
 def seq_collate_fn(batch):
     """batches samples and returns as tensors
@@ -112,6 +123,7 @@ def seq_collate_fn(batch):
     batches of tensors
     """
     batch_size = len(batch)
+
     def _find_max_len(lst, ind):
         max_len = -1
         for item in lst:
@@ -126,16 +138,20 @@ def seq_collate_fn(batch):
     audio_lengths = []
     transcript_lengths = []
     for ind, sample in enumerate(batch):
-        batched_audio_signal[ind].narrow(0, 0, sample[0].size(0)).copy_(sample[0])
+        batched_audio_signal[ind].narrow(
+            0, 0, sample[0].size(0)).copy_(sample[0])
         audio_lengths.append(sample[1])
-        batched_transcript[ind].narrow(0, 0, sample[2].size(0)).copy_(sample[2])
+        batched_transcript[ind].narrow(
+            0, 0, sample[2].size(0)).copy_(sample[2])
         transcript_lengths.append(sample[3])
     return batched_audio_signal, torch.stack(audio_lengths), batched_transcript, \
-         torch.stack(transcript_lengths)
+        torch.stack(transcript_lengths)
+
 
 class AudioToTextDataLayer:
     """Data layer with data loader
     """
+
     def __init__(self, **kwargs):
         self._device = torch.device("cuda")
 
@@ -155,8 +171,9 @@ class AudioToTextDataLayer:
         multi_gpu = kwargs.get('multi_gpu', False)
         sampler_type = kwargs.get('sampler', 'default')
         speed_perturbation = featurizer_config.get('speed_perturbation', False)
-        sort_by_duration=sampler_type == 'bucket'
-        self._featurizer = WaveformFeaturizer.from_config(featurizer_config, perturbation_configs=perturb_config)
+        sort_by_duration = sampler_type == 'bucket'
+        self._featurizer = WaveformFeaturizer.from_config(
+            featurizer_config, perturbation_configs=perturb_config)
         self._dataset = AudioDataset(
             dataset_dir=dataset_dir,
             manifest_filepath=manifest_filepath,
@@ -182,7 +199,8 @@ class AudioToTextDataLayer:
                 sampler=self.sampler
             )
         elif sampler_type == 'bucket':
-            self.sampler = DistributedBucketBatchSampler(self._dataset, batch_size=batch_size)
+            self.sampler = DistributedBucketBatchSampler(
+                self._dataset, batch_size=batch_size)
             print("DDBucketSampler")
             self._dataloader = torch.utils.data.DataLoader(
                 dataset=self._dataset,
@@ -192,7 +210,8 @@ class AudioToTextDataLayer:
                 batch_sampler=self.sampler
             )
         elif sampler_type == 'default':
-            self.sampler = torch.utils.data.distributed.DistributedSampler(self._dataset)
+            self.sampler = torch.utils.data.distributed.DistributedSampler(
+                self._dataset)
             print("DDSampler")
             self._dataloader = torch.utils.data.DataLoader(
                 dataset=self._dataset,
@@ -213,6 +232,7 @@ class AudioToTextDataLayer:
     @property
     def data_iterator(self):
         return self._dataloader
+
 
 class AudioDataset(Dataset):
     def __init__(self, dataset_dir, manifest_filepath, labels, featurizer, max_duration=None, pad_to_max=False,
@@ -237,17 +257,17 @@ class AudioDataset(Dataset):
         """
         m_paths = manifest_filepath.split(',')
         self.manifest = Manifest(dataset_dir, m_paths, labels, blank_index, pad_to_max=pad_to_max,
-                             max_duration=max_duration,
-                             sort_by_duration=sort_by_duration,
-                             min_duration=min_duration, max_utts=max_utts,
-                             normalize=normalize, speed_perturbation=speed_perturbation)
+                                 max_duration=max_duration,
+                                 sort_by_duration=sort_by_duration,
+                                 min_duration=min_duration, max_utts=max_utts,
+                                 normalize=normalize, speed_perturbation=speed_perturbation)
         self.featurizer = featurizer
         self.blank_index = blank_index
         self.trim = trim
         print(
             "Dataset loaded with {0:.2f} hours. Filtered {1:.2f} hours.".format(
-            self.manifest.duration / 3600,
-            self.manifest.filtered_duration / 3600))
+                self.manifest.duration / 3600,
+                self.manifest.filtered_duration / 3600))
 
     def __getitem__(self, index):
         sample = self.manifest[index]
@@ -259,8 +279,8 @@ class AudioDataset(Dataset):
                                            trim=self.trim)
 
         return features, torch.tensor(features.shape[0]).int(), \
-               torch.tensor(sample["transcript"]), torch.tensor(
-               len(sample["transcript"])).int()
+            torch.tensor(sample["transcript"]), torch.tensor(
+            len(sample["transcript"])).int()
 
     def __len__(self):
         return len(self.manifest)

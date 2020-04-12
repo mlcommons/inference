@@ -35,15 +35,18 @@ AmpOptimizations = {Optimization.mxprO0: "O0",
                     Optimization.mxprO2: "O2",
                     Optimization.mxprO3: "O3"}
 
+
 def print_once(msg):
     if (not torch.distributed.is_initialized() or (torch.distributed.is_initialized() and torch.distributed.get_rank() == 0)):
         print(msg)
+
 
 def add_blank_label(labels):
     if not isinstance(labels, list):
         raise ValueError("labels must be a list of symbols")
     labels.append("<BLANK>")
     return labels
+
 
 def __rnnt_decoder_predictions_tensor(tensor, labels):
     """
@@ -87,7 +90,8 @@ def monitor_asr_train_progress(tensors: list, labels: list):
             target = targets_cpu_tensor[ind][:tgt_len].numpy().tolist()
             reference = ''.join([labels_map[c] for c in target])
             references.append(reference)
-        hypotheses = __rnnt_decoder_predictions_tensor(tensors[0], labels=labels)
+        hypotheses = __rnnt_decoder_predictions_tensor(
+            tensors[0], labels=labels)
     tag = "training_batch_WER"
     wer, _, _ = word_error_rate(hypotheses, references)
     print_once('{0}: {1}'.format(tag, wer))
@@ -108,7 +112,7 @@ def __gather_predictions(predictions_list: list, labels: list) -> list:
 
 
 def __gather_transcripts(transcript_list: list, transcript_len_list: list,
-                                                 labels: list) -> list:
+                         labels: list) -> list:
     results = []
     labels_map = dict([(i, labels[i]) for i in range(len(labels))])
     # iterate over workers
@@ -136,7 +140,8 @@ def process_evaluation_batch(tensors: dict, global_vars: dict, labels: list):
         if kv.startswith('loss'):
             global_vars['EvalLoss'] += __gather_losses(v)
         elif kv.startswith('predictions'):
-            global_vars['predictions'] += __gather_predictions(v, labels=labels)
+            global_vars['predictions'] += __gather_predictions(
+                v, labels=labels)
         elif kv.startswith('transcript_length'):
             transcript_len_list = v
         elif kv.startswith('transcript'):
@@ -166,7 +171,8 @@ def process_evaluation_epoch(global_vars: dict, tag=None):
     hypotheses = global_vars['predictions']
     references = global_vars['transcripts']
 
-    wer, scores, num_words = word_error_rate(hypotheses=hypotheses, references=references)
+    wer, scores, num_words = word_error_rate(
+        hypotheses=hypotheses, references=references)
     multi_gpu = torch.distributed.is_initialized()
     if multi_gpu:
         if eloss is not None:
@@ -184,9 +190,8 @@ def process_evaluation_epoch(global_vars: dict, tag=None):
         dist.all_reduce(num_words_tensor)
         num_words = num_words_tensor.item()
         del num_words_tensor
-        wer = scores *1.0/num_words
+        wer = scores * 1.0/num_words
     return wer, eloss
-
 
 
 def norm(x):
@@ -201,8 +206,7 @@ def print_dict(d):
     fmtString = '\t%' + str(maxLen) + 's : %s'
     print('Arguments:')
     for keyPair in sorted(d.items()):
-            print(fmtString % keyPair)
-
+        print(fmtString % keyPair)
 
 
 def model_multi_gpu(model, multi_gpu=False):

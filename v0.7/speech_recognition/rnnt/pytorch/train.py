@@ -49,8 +49,10 @@ def lr_decay(N, step, learning_rate):
     res = learning_rate * ((N - step) / N) ** 2
     return max(res, min_lr)
 
+
 def lr_warmup(warmup_steps, step, learning_rate):
     return min(1, (step / warmup_steps)) * learning_rate
+
 
 def save(model, optimizer, epoch, output_dir):
     """
@@ -64,14 +66,16 @@ def save(model, optimizer, epoch, output_dir):
     class_name = model.__class__.__name__
     unix_time = time.time()
     file_name = "{0}_{1}-epoch-{2}.pt".format(class_name, unix_time, epoch)
-    print_once("Saving module {0} in {1}".format(class_name, os.path.join(output_dir, file_name)))
+    print_once("Saving module {0} in {1}".format(
+        class_name, os.path.join(output_dir, file_name)))
     if (not torch.distributed.is_initialized() or (torch.distributed.is_initialized() and torch.distributed.get_rank() == 0)):
-        model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
-        save_checkpoint={
-                        'epoch': epoch,
-                        'state_dict': model_to_save.state_dict(),
-                        'optimizer': optimizer.state_dict()
-                        }
+        model_to_save = model.module if hasattr(
+            model, 'module') else model  # Only save the model it-self
+        save_checkpoint = {
+            'epoch': epoch,
+            'state_dict': model_to_save.state_dict(),
+            'optimizer': optimizer.state_dict()
+        }
 
         torch.save(save_checkpoint, os.path.join(output_dir, file_name))
     print_once('Saved.')
@@ -88,7 +92,8 @@ def evaluator(model, data_transforms, loss_fn, greedy_decoder, labels, eval_data
             if epoch % frequency != 0:
                 continue
 
-            print_once(f"Doing {name} ....................... ......  ... .. . .")
+            print_once(
+                f"Doing {name} ....................... ......  ... .. . .")
 
             with torch.no_grad():
                 _global_var_dict = {
@@ -99,17 +104,20 @@ def evaluator(model, data_transforms, loss_fn, greedy_decoder, labels, eval_data
                 dataloader = dataset.data_iterator
                 for data in dataloader:
 
-                    t_audio_signal_e, t_a_sig_length_e, t_transcript_e, t_transcript_len_e = data_transforms(data)
+                    t_audio_signal_e, t_a_sig_length_e, t_transcript_e, t_transcript_len_e = data_transforms(
+                        data)
 
                     t_log_probs_e, (x_len, y_len) = model(
-                        ((t_audio_signal_e, t_transcript_e), (t_a_sig_length_e, t_transcript_len_e)),
+                        ((t_audio_signal_e, t_transcript_e),
+                         (t_a_sig_length_e, t_transcript_len_e)),
                     )
                     t_loss_e = loss_fn(
                         (t_log_probs_e, x_len), (t_transcript_e, y_len)
                     )
                     del t_log_probs_e
 
-                    t_predictions_e = greedy_decoder.decode(t_audio_signal_e, t_a_sig_length_e)
+                    t_predictions_e = greedy_decoder.decode(
+                        t_audio_signal_e, t_a_sig_length_e)
 
                     values_dict = dict(
                         loss=[t_loss_e],
@@ -117,7 +125,8 @@ def evaluator(model, data_transforms, loss_fn, greedy_decoder, labels, eval_data
                         transcript=[t_transcript_e],
                         transcript_length=[t_transcript_len_e]
                     )
-                    process_evaluation_batch(values_dict, _global_var_dict, labels=labels)
+                    process_evaluation_batch(
+                        values_dict, _global_var_dict, labels=labels)
 
                 # final aggregation across all workers and minibatches) and logging of results
                 wer, eloss = process_evaluation_epoch(_global_var_dict)
@@ -177,15 +186,17 @@ def train(
 
                 adjusted_lr = fn_lr_policy(step)
                 for param_group in optimizer.param_groups:
-                        param_group['lr'] = adjusted_lr
+                    param_group['lr'] = adjusted_lr
                 optimizer.zero_grad()
                 last_iter_start = time.time()
 
-            t_audio_signal_t, t_a_sig_length_t, t_transcript_t, t_transcript_len_t = data_transforms(data)
+            t_audio_signal_t, t_a_sig_length_t, t_transcript_t, t_transcript_len_t = data_transforms(
+                data)
             model.train()
 
             t_log_probs_t, (x_len, y_len) = model(
-                ((t_audio_signal_t, t_transcript_t), (t_a_sig_length_t, t_transcript_len_t)),
+                ((t_audio_signal_t, t_transcript_t),
+                 (t_a_sig_length_t, t_transcript_len_t)),
             )
 
             t_loss_t = loss_fn(
@@ -208,12 +219,17 @@ def train(
                 optimizer.step()
 
                 if (step + 1) % args.train_frequency == 0:
-                    t_predictions_t = greedy_decoder.decode(t_audio_signal_t, t_a_sig_length_t)
+                    t_predictions_t = greedy_decoder.decode(
+                        t_audio_signal_t, t_a_sig_length_t)
 
-                    e_tensors = [t_predictions_t, t_transcript_t, t_transcript_len_t]
-                    train_wer = monitor_asr_train_progress(e_tensors, labels=labels)
-                    print_once("Loss@Step: {0}  ::::::: {1}".format(step, str(average_loss)))
-                    print_once("Step time: {0} seconds".format(time.time() - last_iter_start))
+                    e_tensors = [t_predictions_t,
+                                 t_transcript_t, t_transcript_len_t]
+                    train_wer = monitor_asr_train_progress(
+                        e_tensors, labels=labels)
+                    print_once("Loss@Step: {0}  ::::::: {1}".format(
+                        step, str(average_loss)))
+                    print_once("Step time: {0} seconds".format(
+                        time.time() - last_iter_start))
                     logger.log_scalar('wer', train_wer, step)
 
                 step += 1
@@ -226,7 +242,8 @@ def train(
 
         if args.num_steps is not None and step >= args.num_steps:
             break
-        print_once("Finished epoch {0} in {1}".format(epoch, time.time() - last_epoch_start))
+        print_once("Finished epoch {0} in {1}".format(
+            epoch, time.time() - last_epoch_start))
         epoch += 1
         if epoch % args.save_frequency == 0 and epoch > 0:
             save(model, optimizer, epoch, output_dir=args.output_dir)
@@ -236,6 +253,7 @@ def train(
     print_once("Final Evaluation ....................... ......  ... .. . .")
     evalutaion()
     save(model, optimizer, epoch, output_dir=args.output_dir)
+
 
 def main(args):
     random.seed(args.seed)
@@ -249,11 +267,13 @@ def main(args):
     if args.local_rank is not None:
         args.local_rank = int(args.local_rank)
         torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(backend='nccl', init_method='env://')
+        torch.distributed.init_process_group(
+            backend='nccl', init_method='env://')
 
     multi_gpu = torch.distributed.is_initialized()
     if multi_gpu:
-        print_once("DISTRIBUTED TRAINING with {} gpus".format(torch.distributed.get_world_size()))
+        print_once("DISTRIBUTED TRAINING with {} gpus".format(
+            torch.distributed.get_world_size()))
 
     # define amp optimiation level
     if args.fp16:
@@ -285,10 +305,11 @@ def main(args):
     print_dict(model_definition)
 
     if args.gradient_accumulation_steps < 1:
-        raise ValueError('Invalid gradient accumulation steps parameter {}'.format(args.gradient_accumulation_steps))
+        raise ValueError('Invalid gradient accumulation steps parameter {}'.format(
+            args.gradient_accumulation_steps))
     if args.batch_size % args.gradient_accumulation_steps != 0:
-        raise ValueError('gradient accumulation step {} is not divisible by batch size {}'.format(args.gradient_accumulation_steps, args.batch_size))
-
+        raise ValueError('gradient accumulation step {} is not divisible by batch size {}'.format(
+            args.gradient_accumulation_steps, args.batch_size))
 
     preprocessor = preprocessing.AudioPreprocessing(**featurizer_config)
     preprocessor.cuda()
@@ -310,15 +331,15 @@ def main(args):
     ])
 
     data_layer = AudioToTextDataLayer(
-                                    dataset_dir=args.dataset_dir,
-                                    featurizer_config=featurizer_config,
-                                    perturb_config=perturb_config,
-                                    manifest_filepath=train_manifest,
-                                    labels=dataset_vocab,
-                                    batch_size=args.batch_size // args.gradient_accumulation_steps,
-                                    multi_gpu=multi_gpu,
-                                    pad_to_max=args.pad_to_max,
-                                    sampler=sampler_type)
+        dataset_dir=args.dataset_dir,
+        featurizer_config=featurizer_config,
+        perturb_config=perturb_config,
+        manifest_filepath=train_manifest,
+        labels=dataset_vocab,
+        batch_size=args.batch_size // args.gradient_accumulation_steps,
+        multi_gpu=multi_gpu,
+        pad_to_max=args.pad_to_max,
+        sampler=sampler_type)
 
     eval_datasets = [(
         AudioToTextDataLayer(
@@ -367,38 +388,40 @@ def main(args):
 
     N = len(data_layer)
     if sampler_type == 'default':
-        args.step_per_epoch = math.ceil(N / (args.batch_size * (1 if not torch.distributed.is_initialized() else torch.distributed.get_world_size())))
+        args.step_per_epoch = math.ceil(N / (args.batch_size * (
+            1 if not torch.distributed.is_initialized() else torch.distributed.get_world_size())))
     elif sampler_type == 'bucket':
-        args.step_per_epoch = int(len(data_layer.sampler) / args.batch_size )
+        args.step_per_epoch = int(len(data_layer.sampler) / args.batch_size)
 
     print_once('-----------------')
     print_once('Have {0} examples to train on.'.format(N))
     print_once('Have {0} steps / (gpu * epoch).'.format(args.step_per_epoch))
     print_once('-----------------')
 
-    constant_lr_policy = lambda _: args.lr
+    def constant_lr_policy(_): return args.lr
     fn_lr_policy = constant_lr_policy
     if args.lr_decay:
         pre_decay_policy = fn_lr_policy
-        fn_lr_policy = lambda s: lr_decay(args.num_epochs * args.step_per_epoch, s, pre_decay_policy(s))
+        def fn_lr_policy(s): return lr_decay(
+            args.num_epochs * args.step_per_epoch, s, pre_decay_policy(s))
     if args.lr_warmup:
         pre_warmup_policy = fn_lr_policy
-        fn_lr_policy = lambda s: lr_warmup(args.lr_warmup, s, pre_warmup_policy(s) )
-
+        def fn_lr_policy(s): return lr_warmup(
+            args.lr_warmup, s, pre_warmup_policy(s))
 
     model.cuda()
 
-
     if args.optimizer_kind == "novograd":
         optimizer = Novograd(model.parameters(),
-                        lr=args.lr,
-                        weight_decay=args.weight_decay)
+                             lr=args.lr,
+                             weight_decay=args.weight_decay)
     elif args.optimizer_kind == "adam":
         optimizer = AdamW(model.parameters(),
-                        lr=args.lr,
-                        weight_decay=args.weight_decay)
+                          lr=args.lr,
+                          weight_decay=args.weight_decay)
     else:
-        raise ValueError("invalid optimizer choice: {}".format(args.optimizer_kind))
+        raise ValueError(
+            "invalid optimizer choice: {}".format(args.optimizer_kind))
 
     if optim_level in AmpOptimizations:
         model, optimizer = amp.initialize(
@@ -413,11 +436,14 @@ def main(args):
 
     model = model_multi_gpu(model, multi_gpu)
     print_once(model)
-    print_once("# parameters: {}".format(sum(p.numel() for p in model.parameters())))
-    greedy_decoder = RNNTGreedyDecoder(len(ctc_vocab) - 1, model.module if multi_gpu else model)
+    print_once("# parameters: {}".format(sum(p.numel()
+                                             for p in model.parameters())))
+    greedy_decoder = RNNTGreedyDecoder(
+        len(ctc_vocab) - 1, model.module if multi_gpu else model)
 
     if args.tb_path and args.local_rank == 0:
-        logger = TensorBoardLogger(args.tb_path, model.module if multi_gpu else model, args.histogram)
+        logger = TensorBoardLogger(
+            args.tb_path, model.module if multi_gpu else model, args.histogram)
     else:
         logger = DummyLogger()
 
@@ -432,46 +458,74 @@ def main(args):
         optim_level=optim_level,
         multi_gpu=multi_gpu,
         fn_lr_policy=fn_lr_policy,
-        evalutaion=evaluator(model, eval_transforms, loss_fn, greedy_decoder, ctc_vocab, eval_datasets, logger),
+        evalutaion=evaluator(model, eval_transforms, loss_fn,
+                             greedy_decoder, ctc_vocab, eval_datasets, logger),
         logger=logger,
         args=args)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='RNNT Training Reference')
     parser.add_argument("--local_rank", default=None, type=int)
-    parser.add_argument("--batch_size", default=16, type=int, help='data batch size')
-    parser.add_argument("--eval_batch_size", default=1, type=int, help='eval data batch size')
-    parser.add_argument("--num_epochs", default=10, type=int, help='number of training epochs. if number of steps if specified will overwrite this')
-    parser.add_argument("--num_steps", default=None, type=int, help='if specified overwrites num_epochs and will only train for this number of iterations')
-    parser.add_argument("--save_freq", dest="save_frequency", default=300, type=int, help='number of epochs until saving checkpoint. will save at the end of training too.')
-    parser.add_argument("--eval_freq", dest="eval_frequency", default=1, type=int, help='number of epochs until doing evaluation on full dataset')
-    parser.add_argument("--test_freq", dest="test_frequency", default=2, type=int, help='number of epochs until doing test on full dataset')
-    parser.add_argument("--train_freq", dest="train_frequency", default=25, type=int, help='number of iterations until printing training statistics on the past iteration')
+    parser.add_argument("--batch_size", default=16,
+                        type=int, help='data batch size')
+    parser.add_argument("--eval_batch_size", default=1,
+                        type=int, help='eval data batch size')
+    parser.add_argument("--num_epochs", default=10, type=int,
+                        help='number of training epochs. if number of steps if specified will overwrite this')
+    parser.add_argument("--num_steps", default=None, type=int,
+                        help='if specified overwrites num_epochs and will only train for this number of iterations')
+    parser.add_argument("--save_freq", dest="save_frequency", default=300, type=int,
+                        help='number of epochs until saving checkpoint. will save at the end of training too.')
+    parser.add_argument("--eval_freq", dest="eval_frequency", default=1,
+                        type=int, help='number of epochs until doing evaluation on full dataset')
+    parser.add_argument("--test_freq", dest="test_frequency", default=2,
+                        type=int, help='number of epochs until doing test on full dataset')
+    parser.add_argument("--train_freq", dest="train_frequency", default=25, type=int,
+                        help='number of iterations until printing training statistics on the past iteration')
     parser.add_argument("--lr", default=1e-3, type=float, help='learning rate')
-    parser.add_argument("--weight_decay", default=1e-3, type=float, help='weight decay rate')
-    parser.add_argument("--train_manifest", type=str, required=True, help='relative path given dataset folder of training manifest file')
-    parser.add_argument("--model_toml", type=str, required=True, help='relative path given dataset folder of model configuration file')
-    parser.add_argument("--val_manifest", type=str, required=True, help='relative path given dataset folder of evaluation manifest file')
-    parser.add_argument("--tst_manifest", type=str, required=False, help='relative path given dataset folder of test manifest file')
-    parser.add_argument("--max_duration", type=float, help='maximum duration of audio samples for training and evaluation')
-    parser.add_argument("--pad_to_max", action="store_true", default=False, help="pad sequence to max_duration")
-    parser.add_argument("--gradient_accumulation_steps", default=1, type=int, help='number of accumulation steps')
-    parser.add_argument("--optimizer", dest="optimizer_kind", default="novograd", type=str, help='optimizer')
-    parser.add_argument("--dataset_dir", dest="dataset_dir", required=True, type=str, help='root dir of dataset')
-    parser.add_argument("--lr_decay", action="store_true", default=False, help='use learning rate decay')
-    parser.add_argument("--lr_warmup", type=int, default=None, help='if provided, the learning rate will linearly scale for given number of iterations from zero')
-    parser.add_argument("--cudnn", action="store_true", default=False, help="enable cudnn benchmark")
-    parser.add_argument("--fp16", action="store_true", default=False, help="use mixed precision training")
-    parser.add_argument("--output_dir", type=str, required=True, help='saves results in this directory')
-    parser.add_argument("--ckpt", default=None, type=str, help="if specified continues training from given checkpoint. Otherwise starts from beginning")
+    parser.add_argument("--weight_decay", default=1e-3,
+                        type=float, help='weight decay rate')
+    parser.add_argument("--train_manifest", type=str, required=True,
+                        help='relative path given dataset folder of training manifest file')
+    parser.add_argument("--model_toml", type=str, required=True,
+                        help='relative path given dataset folder of model configuration file')
+    parser.add_argument("--val_manifest", type=str, required=True,
+                        help='relative path given dataset folder of evaluation manifest file')
+    parser.add_argument("--tst_manifest", type=str, required=False,
+                        help='relative path given dataset folder of test manifest file')
+    parser.add_argument("--max_duration", type=float,
+                        help='maximum duration of audio samples for training and evaluation')
+    parser.add_argument("--pad_to_max", action="store_true",
+                        default=False, help="pad sequence to max_duration")
+    parser.add_argument("--gradient_accumulation_steps",
+                        default=1, type=int, help='number of accumulation steps')
+    parser.add_argument("--optimizer", dest="optimizer_kind",
+                        default="novograd", type=str, help='optimizer')
+    parser.add_argument("--dataset_dir", dest="dataset_dir",
+                        required=True, type=str, help='root dir of dataset')
+    parser.add_argument("--lr_decay", action="store_true",
+                        default=False, help='use learning rate decay')
+    parser.add_argument("--lr_warmup", type=int, default=None,
+                        help='if provided, the learning rate will linearly scale for given number of iterations from zero')
+    parser.add_argument("--cudnn", action="store_true",
+                        default=False, help="enable cudnn benchmark")
+    parser.add_argument("--fp16", action="store_true",
+                        default=False, help="use mixed precision training")
+    parser.add_argument("--output_dir", type=str, required=True,
+                        help='saves results in this directory')
+    parser.add_argument("--ckpt", default=None, type=str,
+                        help="if specified continues training from given checkpoint. Otherwise starts from beginning")
     parser.add_argument("--seed", default=42, type=int, help='seed')
-    parser.add_argument("--tb_path", default=None, type=str, help='where to store tensorboard data')
-    parser.add_argument("--histogram", default=False, action='store_true', help='whether to log param and grad histograms')
-    args=parser.parse_args()
+    parser.add_argument("--tb_path", default=None, type=str,
+                        help='where to store tensorboard data')
+    parser.add_argument("--histogram", default=False, action='store_true',
+                        help='whether to log param and grad histograms')
+    args = parser.parse_args()
     return args
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     args = parse_args()
     print_dict(vars(args))
     main(args)

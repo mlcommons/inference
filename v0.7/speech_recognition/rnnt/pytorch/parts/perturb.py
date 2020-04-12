@@ -53,7 +53,6 @@ class GainPerturbation(Perturbation):
         data._samples = data._samples * (10. ** (gain / 20.))
 
 
-
 class ShiftPerturbation(Perturbation):
     def __init__(self, min_shift_ms=-5.0, max_shift_ms=5.0, rng=None):
         self._min_shift_ms = min_shift_ms

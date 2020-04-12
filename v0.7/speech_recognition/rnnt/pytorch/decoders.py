@@ -18,6 +18,7 @@ import torch
 import torch.nn.functional as F
 from model_rnnt import label_collate
 
+
 class TransducerDecoder:
     """Decoder base class.
 
@@ -66,6 +67,7 @@ class RNNTGreedyDecoder(TransducerDecoder):
         cutoff_prob: Skip to next step in search if current highest character
             probability is less than this.
     """
+
     def __init__(self, blank_index, model, max_symbols_per_step=30):
         super().__init__(blank_index, model)
         assert max_symbols_per_step is None or max_symbols_per_step > 0

@@ -20,6 +20,7 @@ import torch.nn as nn
 from rnn import rnn
 from rnn import StackTime
 
+
 class BnReLUDropout(torch.nn.Module):
     def __init__(self, input_size, dropout):
         super(BnReLUDropout, self).__init__()
@@ -32,6 +33,7 @@ class BnReLUDropout(torch.nn.Module):
         x = self.relu(x)
         x = self.dropout(x)
         return x
+
 
 class RNNT(torch.nn.Module):
     """A Recurrent Neural Network Transducer (RNN-T).
@@ -51,13 +53,15 @@ class RNNT(torch.nn.Module):
         joint_n_hidden: Internal hidden unit size of the joint network.
         rnn_type: string. Type of rnn in SUPPORTED_RNNS.
     """
+
     def __init__(self, rnnt=None, num_classes=1, **kwargs):
         super().__init__()
         if kwargs.get("no_featurizer", False):
             in_features = kwargs.get("in_features")
         else:
             feat_config = kwargs.get("feature_config")
-            in_features = feat_config['features'] * feat_config.get("frame_splicing", 1)
+            in_features = feat_config['features'] * \
+                feat_config.get("frame_splicing", 1)
 
         self._pred_n_hidden = rnnt['pred_n_hidden']
 
@@ -147,11 +151,11 @@ class RNNT(torch.nn.Module):
         layers = [
             torch.nn.Linear(pred_n_hidden + enc_n_hidden, joint_n_hidden),
             torch.nn.ReLU(),
-        ] + ([ torch.nn.Dropout(p=dropout), ] if dropout else [ ]) + [
+        ] + ([torch.nn.Dropout(p=dropout), ] if dropout else []) + [
             torch.nn.Linear(joint_n_hidden, vocab_size)
         ]
         return torch.nn.Sequential(
-                *layers
+            *layers
         )
 
     def forward(self, batch, state=None):
@@ -221,7 +225,7 @@ class RNNT(torch.nn.Module):
         else:
             start = None   # makes del call later easier
 
-        #if state is None:
+        # if state is None:
         #    batch = y.size(0)
         #    state = [
         #        (torch.zeros(batch, self.pred_n_hidden, dtype=y.dtype, device=y.device),
@@ -229,9 +233,9 @@ class RNNT(torch.nn.Module):
         #        for _ in range(self.pred_rnn_layers)
         #    ]
 
-        y = y.transpose(0, 1)#.contiguous()   # (U + 1, B, H)
+        y = y.transpose(0, 1)  # .contiguous()   # (U + 1, B, H)
         g, hid = self.prediction["dec_rnn"](y, state)
-        g = g.transpose(0, 1)#.contiguous()   # (B, U + 1, H)
+        g = g.transpose(0, 1)  # .contiguous()   # (B, U + 1, H)
         del y, start, state
         return g, hid
 

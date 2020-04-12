@@ -20,7 +20,8 @@ import pandas as pd
 
 from download_utils import download_file, md5_checksum, extract
 
-parser = argparse.ArgumentParser(description='Download, verify and extract dataset files')
+parser = argparse.ArgumentParser(
+    description='Download, verify and extract dataset files')
 parser.add_argument('csv', type=str,
                     help='CSV file with urls and checksums to download.')
 parser.add_argument('dest', type=str,

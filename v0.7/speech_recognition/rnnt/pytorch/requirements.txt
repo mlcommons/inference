@@ -2,9 +2,12 @@ pandas==0.24.2
 tqdm==4.31.1
 ascii-graph==1.5.1
 wrapt==1.10.11
-librosa
-toml
-soundfile
-ipdb
-sox
+librosa==0.7.2
+toml==0.10.00
+SoundFile==0.10.3.post1
+ipdb==0.13.2
+sox==1.3.7
 tensorboard==2.0.0
+Unidecode==1.1.1
+inflect==4.1.0
+requests==2.23.0

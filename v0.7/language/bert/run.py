@@ -28,7 +28,7 @@ def get_args():
     parser.add_argument("--scenario", choices=["SingleStream", "Offline", "Server", "MultiStream"], default="Offline", help="Scenario")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--quantized", action="store_true", help="use quantized model (only valid for onnxruntime backend)")
-    parser.add_argument("--mlperf_conf", default="mlperf.conf", help="mlperf rules config")
+    parser.add_argument("--mlperf_conf", default="build/mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf", help="mlperf rules config")
     args = parser.parse_args()
     return args

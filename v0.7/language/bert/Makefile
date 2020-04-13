@@ -27,6 +27,7 @@ BUILD_DIR := build
 DATA_DIR := $(BUILD_DIR)/data
 BERT_DIR := $(DATA_DIR)/bert_tf_v1_1_large_fp32_384_v2
 RESULT_DIR := $(BUILD_DIR)/result
+MLPERF_CONF := $(BUILD_DIR)/mlperf.conf
 
 # Handle different nvidia-docker version
 ifneq ($(wildcard /usr/bin/nvidia-docker),)
@@ -39,6 +40,9 @@ endif
 setup:
 	@if [ ! -e $(BUILD_DIR) ]; then \
 		mkdir $(BUILD_DIR); \
+	fi
+	@if [ ! -e $(MLPERF_CONF) ]; then \
+		cp ../../mlperf.conf $(MLPERF_CONF); \
 	fi
 	@$(MAKE) -f $(MAKEFILE_NAME) init_submodule
 	@$(MAKE) -f $(MAKEFILE_NAME) download_data
@@ -102,7 +106,7 @@ download_onnx_model:
 		wget -O $(BERT_DIR)/model.onnx https://zenodo.org/record/3733910/files/model.onnx?download=1; \
 	fi
 	@if [ ! -e $(BERT_DIR)/bert_large_v1_1_fake_quant.onnx ]; then \
-		wget -O $(BERT_DIR)/bert_large_v1_1_fake_quant.onnx https://zenodo.org/record/3739583/files/bert_large_v1_1_fake_quant.onnx?download=1; \
+		wget -O $(BERT_DIR)/bert_large_v1_1_fake_quant.onnx https://zenodo.org/record/3750364/files/bert_large_v1_1_fake_quant.onnx?download=1; \
 	fi
 	@if [ ! -e $(BERT_DIR)/vocab.txt ]; then \
 		wget -O $(BERT_DIR)/vocab.txt https://zenodo.org/record/3733910/files/vocab.txt?download=1; \

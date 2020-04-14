@@ -12,7 +12,7 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
-It is written in python which might make it less suitable for lite models like mobilenet or large number of cpu's.
+It is written in python which might make it less suitable for large number of cpu's.
 
 ## Tools for preparing datasets and validating accuracy
 The reference implementation includes all required pre-processing of datasets.
@@ -21,24 +21,26 @@ If you are not using the reference implementation, a few scripts will help:
 
 ### Prepare the Criteo Terabyte dataset
 1. Download [Criteo Terabyte dataset](https://labs.criteo.com/2013/12/download-terabyte-click-logs/)
-2. Download or clone the DLRM model source code
+2. Download or clone the DLRM source code from [MLPerf trainining](https://github.com/mlperf/training) 
 ```
 git clone https://github.com/mlperf/training.git
 ```
 3. Prepare the environment. Set environment variable pointing to
-a. The model source code
-```
-export DLRM_DIR=.../dlrm
-```
-b. The model weights (that have been saved after training)
-```
-export MODEL_DIR=./model
-```
-c. The dataset location
-```
-export DATA_DIR=./criteo
-```
-4. Select the run parameters, either
+    
+    a. The model source code
+    ```
+    export DLRM_DIR=.../dlrm
+    ```
+    b. The model weights (that have been saved after training)
+    ```
+    export MODEL_DIR=./model
+    ```
+    c. The dataset location
+    ```
+    export DATA_DIR=./criteo
+    ```
+
+4.Select the run parameters, either
 ```
 export EXTRA_OPS="--time 10 --max-latency 0.2 --count=100 --scenario SingleStream [--max-ind-range=10000000 --data-sub-sample-rate=0.875] [--mlperf-bin-loader]"
 ```

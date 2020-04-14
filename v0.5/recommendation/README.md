@@ -50,9 +50,14 @@ Note that the code support (i) original and (ii) mlperf binary loader, that have
 
 5. Run the following script to perform the inference runs
 ```
-/run_local.sh pytorch dlrm terabyte cpu --accuracy
+/run_local.sh pytorch dlrm terabyte cpu|gpu --accuracy
 ```
 Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.  
+
+Also, if running on GPU then the number of GPUs to be used is controlled by environment variable 
+```
+export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+```
 
 ### Validate accuracy for dlrm benchmark
 TBD
@@ -153,38 +158,40 @@ If you want run with accuracy pass, try:
 ```
 usage: main.py [-h]
     [--config ../mlperf.conf]
-    [--dataset {imagenet,imagenet_mobilenet,coco,coco-300,coco-1200,coco-1200-onnx,coco-1200-pt,coco-1200-tf}]
-    --dataset-path DATASET_PATH [--dataset-list DATASET_LIST]
-    [--data-format {NCHW,NHWC}]
-    [--profile {defaults,resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-pytorch,ssd-resnet34-onnxruntime}]
-    [--scenario list of SingleStream,MultiStream,Server,Offline]
+    [--model MODEL] --model-path MODEL_PATH
+    [--dataset {kaggle,terabyte}] --dataset-path DATASET_PATH 
+    [--profile {defaults,dlrm-kaggle-pytorch,dlrm-terabyte-pytorch}]
+    [--scenario SCENARIO]
+    [--max-ind-range MAX_IND_RANGE] [--data-sub-sample-rate DATA_SUB_SAMPLE_RATE]
+    [--mlperf-bin-loader] 
     [--max-batchsize MAX_BATCHSIZE]
-    --model MODEL [--output OUTPUT] [--inputs INPUTS]
-    [--outputs OUTPUTS] [--backend BACKEND] [--threads THREADS]
-    [--time TIME] [--count COUNT] [--qps QPS]
-    [--max-latency MAX_LATENCY] [--cache CACHE] [--accuracy]
+    [--output OUTPUT] [--inputs INPUTS] [--outputs OUTPUTS] 
+    [--backend BACKEND] [--use-gpu]
+    [--threads THREADS] [--time TIME] [--count COUNT] [--qps QPS]
+    [--max-latency MAX_LATENCY] [--cache CACHE] 
+    [--accuracy] [--find-peak-performance]    
 ```
 
 ```--config```
 the mlperf config file to use, defaults to v0.5/mlperf.conf
 
+```--model```
+model name, i.e. dlrm
+
+```--model-path MODEL_PATH```
+path to the file with model weights.
+
 ```--dataset```
-use the specified dataset. Currently we only support ImageNet.
+use the specified dataset. Currently we only support Criteo Terabyte.
 
 ```--dataset-path```
 path to the dataset.
 
-```--data-format {NCHW,NHWC}```
-data-format of the model (default: the backends prefered format).
-
 ```--scenario {SingleStream,MultiStream,Server,Offline}```
-comma separated list of benchmark modes.
+TBD
 
-```--profile {resnet50-tf,resnet50-onnxruntime,mobilenet-tf,mobilenet-onnxruntime,ssd-mobilenet-tf,ssd-mobilenet-onnxruntime,ssd-resnet34-tf,ssd-resnet34-onnxruntime}```
+```--profile {dlrm-kaggle-pytorch,dlrm-terabyte-pytorch}```
 this fills in default command line options with the once specified in the profile. Command line options that follow may override the those.
-
-```--model MODEL```
-the model file.
 
 ```--inputs INPUTS```
 comma separated input name list in case the model format does not provide the input names. This is needed for tensorflow since the graph does not specify the inputs.

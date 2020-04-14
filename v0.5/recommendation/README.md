@@ -22,7 +22,7 @@ If you are not using the reference implementation, a few scripts will help:
 ### Prepare the Criteo Terabyte dataset
 1. Download [Criteo Terabyte dataset](https://labs.criteo.com/2013/12/download-terabyte-click-logs/)
 ```
-cd mlperf/inference/v0.5/recommendation
+cd $HOME/mlperf/inference/v0.5/recommendation
 export DATA_DIR=./criteo
 ```
 2. Download [DLRM model weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) 
@@ -36,6 +36,7 @@ cd ..
 ```
 cd ../../../
 git clone https://github.com/mlperf/training.git
+export DLRM_DIR=$HOME/mlperf/training/recommendation
 ls mlperf/training/recommendation
 ```
 4. Select the run parameters, for instance
@@ -94,38 +95,42 @@ python setup.py develop
 
 Download the model and dataset for the model you want to benchmark.
 
-Both local and docker environment need to set 2 environment variables:
+Both local and docker environment need to set 3 environment variables:
 ```
+export DATA_DIR=YourCriteoTerabyteLocation
 export MODEL_DIR=YourModelFileLocation
-export DATA_DIR=YourImageNetLocation
+export DLRM_DIR=YourDLRMSourceLocation
 ```
 
 
 ### Run local
 ```
-./run_local.sh backend model device
+./run_local.sh backend model dataset device
 
-backend is one of [tf|onnxruntime|pytorch|tflite]
-model is one of [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34]
+backend is one of [pytorch]
+model is one of [dlrm]
+dataset is one of [kaggle|terabyte]
 device is one of [cpu|gpu]
 
 
 For example:
 
-./run_local.sh tf resnet50 gpu
+./run_local.sh pytorch dlrm terabyte gpu
 ```
 
 ### Run as Docker container
+TBD
 ```
-./run_and_time.sh backend model device
+./run_and_time.sh backend model dataset device
 
-backend is one of [tf|onnxruntime|pytorch|tflite]
-model is one of [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34]
+backend is one of [pytorch]
+model is one of [dlrm]
+dataset is one of [kaggle|terabyte]
 device is one of [cpu|gpu]
 
 For example:
 
-./run_and_time.sh tf resnet50 gpu
+./run_and_time.sh pytorch dlrm terabyte gpu
 ```
 This will build and run the benchmark.
 
@@ -142,15 +147,15 @@ During development running the full benchmark is unpractical. Some options to he
 
 So if you want to tune for example Server mode, try:
 ```
-./run_local.sh tf resnet50 gpu --count 100 --time 60 --scenario Server --qps 200 --max-latency 0.1
+./run_local.sh pytorch dlrm terabyte gpu --count 100 --time 60 --scenario Server --qps 200 --max-latency 0.1
 or
-./run_local.sh tf ssd-mobilenet gpu --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.1
+./run_local.sh pytorch dlrm terabyte gpu --count 100 --time 60 --scenario Server --qps 100 --max-latency 0.1
 
 ```
 
 If you want run with accuracy pass, try:
 ```
-./run_local.sh tf ssd-mobilenet gpu --accuracy --time 60 --scenario Server --qps 100 --max-latency 0.2
+./run_local.sh pytorch dlrm terabyte gpu --accuracy --time 60 --scenario Server --qps 100 --max-latency 0.2
 ```
 
 

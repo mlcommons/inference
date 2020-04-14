@@ -31,13 +31,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Quick generator of random samples for debugging."
     )
-    parser.add_argument("--num-samples", type=int, default=4000)
-    parser.add_argument("--num-dense-features", type=int, default=13)
+    parser.add_argument("--num-samples",         type=int, default=4000)
+    parser.add_argument("--num-dense-features",  type=int, default=13)
     parser.add_argument("--num-sparse-features", type=str, default="4-3-2")
-    parser.add_argument("--num-targets", type=int, default=1)
-    parser.add_argument("--profile", type=str, default="") # kaggle|teabyte0875|terabyte
-    parser.add_argument("--num-days", type=int, default=23)
-    parser.add_argument("--numpy-rand-seed", type=int, default=123)
+    parser.add_argument("--num-targets",         type=int, default=1)
+    parser.add_argument("--profile",             type=str, default="") # kaggle|terabyte0875|terabyte
+    parser.add_argument("--num-days",            type=int, default=23)
+    parser.add_argument("--numpy-rand-seed",     type=int, default=123)
+    parser.add_argument("--output-dir",          type=str, default="./")
     args = parser.parse_args()
 
     np.random.seed(args.numpy_rand_seed)
@@ -53,12 +54,12 @@ if __name__ == "__main__":
         # 3. Criteo Terabyte MLPerf training (see ./bench/run_and_time.sh --max-in-range=40000000)
         ln_emb=np.array([39884406,39043,17289,7420,20263,3,7120,1543,63,38532951,2953546,403346,10,2208,11938,155,4,976,14,39979771,25641295,39664984,585935,12972,108,36])
 
-    num_d = args.num_dense_features
-    num_s = len(ln_emb)
-    num_t = args.num_targets
-
+    num_d   = args.num_dense_features
+    num_s   = len(ln_emb)
+    num_t   = args.num_targets
+    out_dir = args.output_dir 
     for k in range(args.num_days):
-        text_file = "day_" + str(k)
+        text_file =  out_dir + "day_" + str(k)
         print(text_file)
 
         quickgen(args.num_samples, num_t, num_d, num_s, ln_emb, text_file)

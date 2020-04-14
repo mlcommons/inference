@@ -1,15 +1,17 @@
 #!/bin/bash
 
-
-
 OUTPUT_DIR=`pwd`/fake_data/$name
 if [ ! -d $OUTPUT_DIR ]; then
     mkdir -p $OUTPUT_DIR
 fi
 
-echo $OUTPUT_DIR
+if [[ $# == 1 ]]; then
+    QUICKGEN_PROFILE=$1
+else
+    echo "usage: $0 [kaggle|terabyte0875|terabyte]"
+    exit 1
+fi
 
-python ./tools/quickgen.py --num-samples=4000 --num-dense-features=13  \
-        --num-sparse-features=”4-3-2” --num-targets=1 --profile=kaggle \
-        --num-days=23 --numpy-rand-seed=123 --output-dir=$OUTPUT_DIR
+set -x # echo the next command
+python ./tools/quickgen.py --num-samples=4096 --profile=$QUICKGEN_PROFILE --output-dir=$OUTPUT_DIR
 

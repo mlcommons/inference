@@ -119,7 +119,6 @@ For example:
 ```
 
 ### Run as Docker container
-TBD
 ```
 ./run_and_time.sh backend model dataset device
 
@@ -198,6 +197,21 @@ TBD
 ```--profile {dlrm-kaggle-pytorch,dlrm-terabyte-pytorch}```
 this fills in default command line options with the once specified in the profile. Command line options that follow may override the those.
 
+```--backend```
+only the PyTorch backedn is currently supported. However, we expect to add TensorFlow backend in the future.
+
+```--use-gpu```
+flag that enables use of GPU. The number of GPUs used is controlled by CUDA_VISIBLE_DEVICES environment variable.
+
+```--max-ind-range```
+the maximum number of vectors allowed in an embedding table.
+
+```--data-sub-sample-rate```
+the rate of sub-sampling of negative samples, either 0.875 or 0.0.
+
+```--mlperf-bin-loader```
+flag that enables mlperf binary loader to be used.
+
 ```--inputs INPUTS```
 comma separated input name list in case the model format does not provide the input names. This is needed for tensorflow since the graph does not specify the inputs.
 
@@ -214,10 +228,16 @@ which backend to use. Currently supported is tensorflow, onnxruntime, pytorch an
 number of worker threads to use (default: the number of processors in the system).
 
 ```--count COUNT```
-Number of images the dataset we use (default: use all images in the dataset).
+number of images the dataset we use (default: use all images in the dataset).
 
 ```--qps QPS```
-Expected QPS.
+expected QPS.
+
+```--time```
+time to scan in seconds
+
+```--cache```
+use cache
 
 ```--max-latency MAX_LATENCY```
 comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).

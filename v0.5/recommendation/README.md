@@ -6,8 +6,8 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 | model | framework | accuracy | dataset | model link | model source | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| dlrm | pytorch | TBD% | Criteo Terabyte (sub-sampled=0.875) | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=10000000 |
-| dlrm | pytorch | TBD% | Criteo Terabyte | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=40000000 |
+| dlrm | PyTorch | TBD% | Criteo Terabyte (sub-sampled=0.875) | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=10000000 |
+| dlrm | PyTorch | TBD% | Criteo Terabyte | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=40000000 |
 
 
 ## Disclaimer
@@ -63,7 +63,7 @@ TBD
 | Criteo Terabyte | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
 ## Prerequisites and Installation
-We support [pytoch](http://pytorch.org) backend's with the same benchmark tool. We expect to add TensorFlow implementation in the future
+We support [PyTorch](http://pytorch.org) and expect to add TensorFlow backend implementation.
 Support for other backends can be easily added.
 
 The following steps are **only** needed if you run the benchmark **without Docker**.
@@ -78,7 +78,7 @@ pip install torch torchvision
 
 Build and install the benchmark:
 ```
-cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop --user; cd ../v0.5/classification_and_detection
+cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop --user; cd ../v0.5/recommendation
 
 python setup.py develop
 ```

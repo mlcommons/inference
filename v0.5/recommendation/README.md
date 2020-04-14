@@ -1,108 +1,68 @@
-# MLPerf Inference Benchmarks for Image Classification and Object Detection Tasks
+# MLPerf Inference Benchmarks for Recommendation Task
 
 This is the reference implementation for MLPerf Inference benchmarks.
-
-You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/GettingStarted.ipynb).
 
 ## Supported Models
 
 | model | framework | accuracy | dataset | model link | model source | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| resnet50-v1.5 | tensorflow | 76.456% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb) | [mlperf](https://github.com/mlperf/training/tree/master/image_classification), [tensorflow](https://github.com/tensorflow/models/tree/master/official/resnet) | fp32 | NHWC. More information on resnet50 v1.5 can be found [here](https://github.com/tensorflow/models/tree/master/official/resnet).||
-| resnet50-v1.5 | onnx, pytorch | 76.456% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2592612/files/resnet50_v1.onnx) | [from zenodo](https://zenodo.org/record/2535873/files/resnet50_v1.pb) converted with [this script](https://github.com/mlperf/inference/blob/master/cloud/image_classification/tools/resnet50-to-onnx.sh) | fp32 | NCHW, tested on pytorch and onnxruntime |
-| mobilenet-v1 | tensorflow | 71.676% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | fp32 | NHWC |
-| mobilenet-v1 quantized | tensorflow | 70.694% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) | int8 | NHWC |
-| mobilenet-v1 | tflite | 71.676% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | fp32 | NHWC |
-| mobilenet-v1 quantized | tflite | 70.762% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) | int8 | NHWC |
-| mobilenet-v1 | onnx, pytorch | 71.676% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/3157894/files/mobilenet_v1_1.0_224.onnx) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) converted with [this script](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/tools/resnet50-to-onnx.sh) | fp32 | NCHW, tested on pytorch and onnxruntime |
-| mobilenet-v1 | onnx, pytorch | 70.9% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/3353417/files/Quantized%20MobileNet.zip) | ??? | int8 | ??? |
-| ssd-mobilenet 300x300 | tensorflow | mAP 0.23 | coco resized to 300x300 | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | fp32 | NHWC |
-| ssd-mobilenet 300x300 quantized finetuned | tensorflow | mAP 0.23594 | coco resized to 300x300 | [from zenodo](https://zenodo.org/record/3252084/files/mobilenet_v1_ssd_8bit_finetuned.tar.gz) | Habana | int8 | ??? |
-| ssd-mobilenet 300x300 symmetrically quantized finetuned | tensorflow | mAP 0.234 | coco resized to 300x300 | [from zenodo](https://zenodo.org/record/3401714/files/ssd_mobilenet_v1_quant_ft_no_zero_point_frozen_inference_graph.pb) | Habana | int8 | ??? |
-| ssd-mobilenet 300x300 | pytorch | mAP 0.23 | coco resized to 300x300 | [from zenodo](https://zenodo.org/record/3239977/files/ssd_mobilenet_v1.pytorch) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) | fp32 | NHWC |
-| ssd-mobilenet 300x300 | onnx | mAP 0.23 | coco resized to 300x300 | [from zenodo](https://zenodo.org/record/3163026/files/ssd_mobilenet_v1_coco_2018_01_28.onnx) | [from tensorflow](http://download.tensorflow.org/models/object_detection/ssd_mobilenet_v1_coco_2018_01_28.tar.gz) converted with [this script](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/tools/ssd-mobilenet-to-onnx.sh) | fp32 | NHWC, tested on onnxruntime, some runtime warnings |
-| ssd-mobilenet 300x300 | onnx, pytorch | mAP 0.23 | coco resized to 300x300  | [from zenodo](https://zenodo.org/record/3252084/files/mobilenet_v1_ssd_8bit_finetuned.tar.gz) | ??? | int8 | ??? |
-| ssd-resnet34 1200x1200 | tensorflow | mAP 0.20 | coco resized to 1200x1200| [from zenodo](https://zenodo.org/record/3345892/files/tf_ssd_resnet34_22.1.zip?download=1) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector/tensorflow), [training model](https://github.com/lji72/inference/tree/tf_ssd_resent34_align_onnx/others/cloud/single_stage_detector/tensorflow) | fp32 | NCHW |
-| ssd-resnet34 1200x1200 | pytorch | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3236545/files/resnet34-ssd1200.pytorch) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector/pytorch) | fp32 | NCHW |
-| ssd-resnet34 1200x1200 | onnx | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3228411/files/resnet34-ssd1200.onnx) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector) converted using the these [instructions](https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch#6-onnx) | fp32 | Works but needs more testing |
+| dlrm | pytorch | TBD% | Criteo Terabyte (sub-sampled=0.875) | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=10000000 |
+| dlrm | pytorch | TBD% | Criteo Terabyte | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=40000000 |
+
 
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
 It is written in python which might make it less suitable for lite models like mobilenet or large number of cpu's.
-We are thinking to provide a c++ implementation with identical functionality in the near future.
 
 ## Tools for preparing datasets and validating accuracy
 The reference implementation includes all required pre-processing of datasets.
 It also includes a ```--accuracy``` option to validate accuracy as required by mlperf.
 If you are not using the reference implementation, a few scripts will help:
-### Prepare the coco dataset 
-The tool is [here](../tools/upscale_coco).
-You can run it for ssd-mobilenet like:
-```
-python upscale_coco.py --inputs /data/coco/ --outputs /data/coco-300 --size 300 300 --format png
-```
-and for ssd-resnet34 like:
-```
-python upscale_coco.py --inputs /data/coco/ --outputs /data/coco-1200 --size 1200 1200 --format png
-```
-### Prepare the imagenet dataset 
-to come.
 
-### Validate accuracy for resnet50 and mobilenet benchmarks
-The tool is [here](tools/accuracy-imagenet.py). You can run it like:
+### Prepare the Criteo Terabyte dataset
+1. Download [Criteo Terabyte dataset](https://labs.criteo.com/2013/12/download-terabyte-click-logs/)
+2. Download or clone the DLRM model source code
 ```
-python tools/accuracy-imagenet.py --mlperf-accuracy-file mlperf_log_accuracy.json --imagenet-val-file /data/imagenet2012/val_map.txt
+git clone https://github.com/mlperf/training.git
+```
+3. Prepare the environment. Set environment variable pointing to
+a. The model source code
+```
+export DLRM_DIR=.../dlrm
+```
+b. The model weights (that have been saved after training)
+```
+export MODEL_DIR=./model
+```
+c. The dataset location
+```
+export DATA_DIR=./criteo
+```
+4. Select the run parameters, either
+```
+export EXTRA_OPS="--time 10 --max-latency 0.2 --count=100 --scenario SingleStream [--max-ind-range=10000000 --data-sub-sample-rate=0.875] [--mlperf-bin-loader]"
+```
+or
+```
+export EXTRA_OPS="--time 10 --max-latency 0.2 --count=100 --scenario SingleStream  --max-ind-range=40000000 [--mlperf-bin-loader]"
+```
+5. Run the following script to perform the inference runs*
+```
+/run_local.sh pytorch dlrm terabyte cpu --accuracy
 ```
 
-### Validate accuracy for ssd-mobilenet and ssd-resnet34 benchmarks
-The tool is [here](tools/accuracy-coco.py). You can run it like:
-```
-python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --coco-dir /data/coco
-```
+*: Note that this script will pre-process the data the first time it runs, which can take a significant amount of time. Also, not that the code support two data loaders: (i) original and (ii) binary loader, that have slightly different performance characteristics.
+
+### Validate accuracy for dlrm benchmark
+TBD
 
 ## Datasets
-| dataset | download link | 
-| ---- | ---- | 
-| imagenet2012 (validation) | http://image-net.org/challenges/LSVRC/2012/ | 
-| coco (validation) | http://images.cocodataset.org/zips/val2017.zip | 
-
-### Using Collective Knowledge (CK)
-
-Alternatively, you can download the datasets using the [Collective Knowledge](http://cknowledge.org)
-framework (CK) for collaborative and reproducible research.
-
-First, install CK and pull its repositories containing dataset packages:
-```bash
-$ python -m pip install ck --user
-$ ck version
-V1.9.8.1
-$ ck pull repo:ck-env
-```
-
-#### ImageNet 2012 validation dataset
-Download the original dataset and auxiliaries:
-```bash
-$ ck install package --tags=image-classification,dataset,imagenet,val,original,full
-$ ck install package --tags=image-classification,dataset,imagenet,aux
-```
-Copy the labels next to the images:
-```bash
-$ ck locate env --tags=image-classification,dataset,imagenet,val,original,full
-/home/dvdt/CK-TOOLS/dataset-imagenet-ilsvrc2012-val
-$ ck locate env --tags=image-classification,dataset,imagenet,aux
-/home/dvdt/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux
-$ cp `ck locate env --tags=aux`/val.txt `ck locate env --tags=val`/val_map.txt
-```
-
-#### COCO 2017 validation dataset
-```bash
-$ ck install package --tags=object-detection,dataset,coco,2017,val,original
-$ ck locate env --tags=object-detection,dataset,coco,2017,val,original
-/home/dvdt/CK-TOOLS/dataset-coco-2017-val
-```
+| dataset | download link |
+| ---- | ---- |
+| Criteo Terabyte | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
 ## Prerequisites and Installation
-We support [tensorfow+tflite](https://github.com/tensorflow/tensorflow), [onnxruntime](https://github.com/Microsoft/onnxruntime)  and [pytoch](http://pytorch.org) backend's with the same benchmark tool.
+We support [pytoch](http://pytorch.org) backend's with the same benchmark tool. We expect to add TensorFlow implementation in the future
 Support for other backends can be easily added.
 
 The following steps are **only** needed if you run the benchmark **without Docker**.
@@ -110,13 +70,9 @@ The following steps are **only** needed if you run the benchmark **without Docke
 Python 3.5, 3.6 or 3.7 is supported and we recommend to use Anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal Anaconda install).
 
 Install the desired backend.
-For tensorflow:
+For pytoch:
 ```
-pip install tensorflow or pip install tensorflow-gpu
-```
-For onnxruntime:
-```
-pip install onnxruntime or pip install onnxruntime-gpu
+pip install torch torchvision
 ```
 
 Build and install the benchmark:

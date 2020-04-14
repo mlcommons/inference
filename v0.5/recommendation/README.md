@@ -68,6 +68,12 @@ TBD
 | ---- | ---- |
 | Criteo Terabyte | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
+Note that in order to facilitate debugging and testing, we provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following 
+```
+./tools/make_fake_data.sh [terabyte0875|terabyte]
+```
+to quickly create random data samples for the corresponding models. 
+
 ## Prerequisites and Installation
 We support [PyTorch](http://pytorch.org) and expect to add TensorFlow backend implementation.
 Support for other backends can be easily added.

@@ -70,7 +70,7 @@ TBD
 
 Note that in order to facilitate debugging and testing, we provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following
 ```
-./tools/make_fake_data.sh [terabyte0875|terabyte]
+./tools/make_fake_criteo.sh [terabyte0875|terabyte]
 ```
 to quickly create random data samples for the corresponding models.
 

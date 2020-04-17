@@ -25,14 +25,14 @@ If you are not using the reference implementation, a few scripts will help:
 cd $HOME/mlperf/inference/v0.5/recommendation
 export DATA_DIR=./criteo
 ```
-2. Download [DLRM model weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) 
+2. Download [DLRM model weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt)
 ```
 export MODEL_DIR=./model
 cd $MODEL_DIR
 mv <downloaded_file> dlrm_terabyte.pytorch
 cd ..
 ```
-3. Download or clone the DLRM source code from [MLPerf trainining](https://github.com/mlperf/training) 
+3. Download or clone the DLRM source code from [MLPerf trainining](https://github.com/mlperf/training)
 ```
 cd ../../../
 git clone https://github.com/mlperf/training.git
@@ -53,9 +53,9 @@ Note that the code support (i) original and (ii) mlperf binary loader, that have
 ```
 /run_local.sh pytorch dlrm terabyte cpu|gpu --accuracy
 ```
-Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.  
+Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.
 
-Also, if running on GPU then the number of GPUs to be used is controlled by environment variable 
+Also, if running on GPU then the number of GPUs to be used is controlled by environment variable
 ```
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 ```
@@ -68,11 +68,11 @@ TBD
 | ---- | ---- |
 | Criteo Terabyte | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
-Note that in order to facilitate debugging and testing, we provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following 
+Note that in order to facilitate debugging and testing, we provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following
 ```
 ./tools/make_fake_data.sh [terabyte0875|terabyte]
 ```
-to quickly create random data samples for the corresponding models. 
+to quickly create random data samples for the corresponding models.
 
 ## Prerequisites and Installation
 We support [PyTorch](http://pytorch.org) and expect to add TensorFlow backend implementation.
@@ -169,17 +169,17 @@ If you want run with accuracy pass, try:
 usage: main.py [-h]
     [--config ../mlperf.conf]
     [--model MODEL] --model-path MODEL_PATH
-    [--dataset {kaggle,terabyte}] --dataset-path DATASET_PATH 
+    [--dataset {kaggle,terabyte}] --dataset-path DATASET_PATH
     [--profile {defaults,dlrm-kaggle-pytorch,dlrm-terabyte-pytorch}]
     [--scenario SCENARIO]
     [--max-ind-range MAX_IND_RANGE] [--data-sub-sample-rate DATA_SUB_SAMPLE_RATE]
-    [--mlperf-bin-loader] 
+    [--mlperf-bin-loader]
     [--max-batchsize MAX_BATCHSIZE]
-    [--output OUTPUT] [--inputs INPUTS] [--outputs OUTPUTS] 
+    [--output OUTPUT] [--inputs INPUTS] [--outputs OUTPUTS]
     [--backend BACKEND] [--use-gpu]
     [--threads THREADS] [--time TIME] [--count COUNT] [--qps QPS]
-    [--max-latency MAX_LATENCY] [--cache CACHE] 
-    [--accuracy] [--find-peak-performance]    
+    [--max-latency MAX_LATENCY] [--cache CACHE]
+    [--accuracy] [--find-peak-performance]
 ```
 
 ```--config```

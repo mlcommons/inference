@@ -33,13 +33,13 @@ import data_loader_terabyte
 
 class Criteo(Dataset):
 
-    def __init__(self, data_path, name, pre_process, use_cache, count=None, test_num_workers=1, max_ind_range=-1, sub_sample_rate=0.0, mlperf_bin_loader=False, randomize="total", memory_map=False):
+    def __init__(self, data_path, name, pre_process, use_cache, count=None, test_num_workers=0, max_ind_range=-1, sub_sample_rate=0.0, mlperf_bin_loader=False, randomize="total", memory_map=False):
         super().__init__()
         # debug prints
         # print('__init__', data_path, name, pre_process, use_cache, count, test_num_workers, max_ind_range, sub_sample_rate, randomize, memory_map)
 
         self.count = count
-        
+
         if name == "kaggle":
             raw_data_file = data_path + "/train.txt"
             processed_data_file = data_path + "/kaggleAdDisplayChallenge_processed.npz"
@@ -107,7 +107,7 @@ class Criteo(Dataset):
             return min(self.count, len(self.test_data))
         else:
             return len(self.test_data)
-        
+
     ''' lg compatibilty routine '''
     def unload_query_samples(self, sample_list):
         self.items_in_memory = {}

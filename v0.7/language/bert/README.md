@@ -28,7 +28,7 @@ Please run the following commands:
 - `make setup`: initialize submodule, download datasets, and download models.
 - `make build_docker`: build docker image.
 - `make launch_docker`: launch docker container with an interaction session.
-- `python3 run.py --backend=[tf|pytorch] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
+- `python3 run.py --backend=[tf|pytorch|onnxruntime] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy] [--quantized]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
 
 ## Details
 

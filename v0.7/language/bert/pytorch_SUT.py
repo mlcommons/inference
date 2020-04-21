@@ -29,7 +29,7 @@ from squad_QSL import get_squad_QSL
 class BERT_PyTorch_SUT():
     def __init__(self):
         print("Loading BERT configs...")
-        with open("build/data/bert_tf_v1_1_large_fp32_384_v2/bert_config.json") as f:
+        with open("bert_config.json") as f:
             config_json = json.load(f)
 
         config = BertConfig(

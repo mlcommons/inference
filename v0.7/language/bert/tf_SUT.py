@@ -30,7 +30,7 @@ from squad_QSL import get_squad_QSL
 class BERT_TF_SUT():
     def __init__(self, batch_size=8):
         print("Loading TF model...")
-        bert_config = modeling.BertConfig.from_json_file("build/data/bert_tf_v1_1_large_fp32_384_v2/bert_config.json")
+        bert_config = modeling.BertConfig.from_json_file("bert_config.json")
 
         model_fn = self.model_fn_builder(
             bert_config=bert_config,

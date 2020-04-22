@@ -55,9 +55,10 @@ Note that the code support (i) original and (ii) mlperf binary loader, that have
 ```
 Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.
 
-Also, if running on GPU then the number of GPUs to be used is controlled by environment variable
+Also, you can perform inference runs on GPU, with the number of GPUs controlled by environment variable
 ```
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
+./run_local.sh pytorch dlrm terabyte gpu --accuracy
 ```
 
 ### Validate accuracy for dlrm benchmark
@@ -68,11 +69,17 @@ TBD
 | ---- | ---- |
 | Criteo Terabyte | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
+The Criteo Terabyte dataset is stored in several files corresponding to 24 days: day_0.gz, day_1.gz, ..., day_23.gz. Please unzip all files
+```
+gunzip day_{0..23}
+```
+to obtain the text files day_0, day_1, ..., day_23 expected by the code.
+
 Note that in order to facilitate debugging and testing, we provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following
 ```
 ./tools/make_fake_criteo.sh [terabyte0875|terabyte]
 ```
-to quickly create random data samples for the corresponding models.
+to quickly create random data samples for the corresponding models, which will be placed into day_0, day_1, ..., day_23 files.
 
 ## Prerequisites and Installation
 We support [PyTorch](http://pytorch.org) and expect to add TensorFlow backend implementation.

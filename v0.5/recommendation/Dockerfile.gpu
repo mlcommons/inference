@@ -40,7 +40,10 @@ RUN pip install --upgrade pip && \
 RUN conda install pytorch torchvision -c pytorch
 RUN pip install tensorflow-gpu==1.14 onnxruntime-gpu
 RUN pip install Cython && pip install pycocotools
-
+RUN pip install scikit-learn
+RUN pip install numpy
+RUN pip install pydot
+RUN pip install torchviz
 
 RUN cd /tmp && \
     git clone https://github.com/mlperf/inference && \

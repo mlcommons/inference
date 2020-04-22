@@ -34,6 +34,11 @@ RUN cd /opt && \
 RUN conda install pytorch-cpu torchvision-cpu -c pytorch
 RUN pip install future pillow onnx opencv-python-headless tensorflow onnxruntime
 RUN pip install Cython && pip install pycocotools
+RUN pip install scikit-learn
+RUN pip install numpy
+RUN pip install pydot
+RUN pip install torchviz
+
 RUN cd /tmp && \
     git clone https://github.com/mlperf/inference && \
     cd inference/loadgen && \

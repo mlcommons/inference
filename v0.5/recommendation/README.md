@@ -51,7 +51,7 @@ Note that the code support (i) original and (ii) mlperf binary loader, that have
 
 5. Run the following script to perform the inference runs
 ```
-/run_local.sh pytorch dlrm terabyte cpu|gpu --accuracy
+./run_local.sh pytorch dlrm terabyte cpu --accuracy
 ```
 Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.
 

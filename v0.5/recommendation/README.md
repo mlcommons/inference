@@ -71,7 +71,7 @@ TBD
 
 The Criteo Terabyte dataset is stored in several files corresponding to 24 days: day_0.gz, day_1.gz, ..., day_23.gz. Please unzip all files
 ```
-gunzip day_{0..23}
+gunzip day_{0..23}.gz
 ```
 to obtain the text files day_0, day_1, ..., day_23 expected by the code.
 

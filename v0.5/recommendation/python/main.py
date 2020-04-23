@@ -224,31 +224,6 @@ class RunnerBase:
         # run the prediction
         processed_results = []
         try:
-            results = self.model.predict({self.model.inputs[0]: qitem.img})
-            processed_results = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
-            if self.take_accuracy:
-                self.post_process.add_results(processed_results)
-                self.result_timing.append(time.time() - qitem.start)
-        except Exception as ex:  # pylint: disable=broad-except
-            src = [self.ds.get_item_loc(i) for i in qitem.content_id]
-            log.error("thread: failed on contentid=%s, %s", src, ex)
-            # since post_process will not run, fake empty responses
-            processed_results = [[]] * len(qitem.query_id)
-        finally:
-            response_array_refs = []
-            response = []
-            for idx, query_id in enumerate(qitem.query_id):
-                response_array = array.array("B", np.array(processed_results[idx], np.float32).tobytes())
-                response_array_refs.append(response_array)
-                bi = response_array.buffer_info()
-                response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
-            lg.QuerySamplesComplete(response)
-
-
-    def run_one_item_dlrm(self, qitem):
-        # run the prediction
-        processed_results = []
-        try:
             results = self.model.predict(qitem.batch_dense_X, qitem.batch_lS_o, qitem.batch_lS_i)
             processed_results = self.post_process(results, qitem.batch_T, self.result_dict)
             if self.take_accuracy:
@@ -268,35 +243,19 @@ class RunnerBase:
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
             lg.QuerySamplesComplete(response)
 
-
     def enqueue(self, query_samples):
-        idx = [q.index for q in query_samples]
-        query_id = [q.id for q in query_samples]
-        print('RunnerBase enqueue idx', idx, query_id)
-
-        if len(query_samples) < self.max_batchsize:
-
-            data, label = self.ds.get_samples(idx)
-            self.run_one_item(Item(query_id, idx, data, label))
-        else:
-            bs = self.max_batchsize
-            for i in range(0, len(idx), bs):
-                data, label = self.ds.get_samples(idx[i:i+bs])
-                self.run_one_item(Item(query_id[i:i+bs], idx[i:i+bs], data, label))
-
-    def enqueue_dlrm(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
 
         if len(query_samples) < self.max_batchsize:
 
             batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx)
-            self.run_one_item_dlrm(Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
+            self.run_one_item(Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
         else:
             bs = self.max_batchsize
             for i in range(0, len(idx), bs):
                 dbatch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx[i:i+bs])
-                self.run_one_item_dlrm(Item(query_id[i:i+bs], idx[i:i+bs], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
+                self.run_one_item(Item(query_id[i:i+bs], idx[i:i+bs], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
 
 
     def finish(self):
@@ -324,11 +283,10 @@ class QueueRunner(RunnerBase):
                 # None in the queue indicates the parent want us to exit
                 tasks_queue.task_done()
                 break
-            #self.run_one_item(qitem)
-            self.run_one_item_dlrm(qitem)
+            self.run_one_item(qitem)
             tasks_queue.task_done()
 
-    def enqueue_dlrm(self, query_samples):
+    def enqueue(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
 
@@ -458,7 +416,7 @@ def main():
     runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)
 
     def issue_queries(query_samples):
-        runner.enqueue_dlrm(query_samples)
+        runner.enqueue(query_samples)
 
     def flush_queries():
         pass

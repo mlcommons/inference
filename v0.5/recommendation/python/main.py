@@ -223,16 +223,18 @@ class RunnerBase:
     def run_one_item(self, qitem):
         # run the prediction
         processed_results = []
+        processed_targets = []
         try:
             results = self.model.predict(qitem.batch_dense_X, qitem.batch_lS_o, qitem.batch_lS_i)
-            processed_results = self.post_process(results, qitem.batch_T, self.result_dict)
+            processed_results, processed_targets = self.post_process(results, qitem.batch_T, self.result_dict)
             if self.take_accuracy:
-                self.post_process.add_results(processed_results)
+                self.post_process.add_results(processed_results, processed_targets)
                 self.result_timing.append(time.time() - qitem.start)
         except Exception as ex:  # pylint: disable=broad-except
             log.error("thread: failed, %s", ex)
             # since post_process will not run, fake empty responses
             processed_results = [[]] * len(qitem.query_id)
+            processed_targets = [[]] * len(qitem.query_id)
         finally:
             response_array_refs = []
             response = []
@@ -326,11 +328,13 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
         "count": len(result_list),
         "good_items": result_dict["good"],
         "total_items": result_dict["total"],
+        "roc_auc": result_dict["roc_auc"]
     }
     acc_str = ""
     if show_accuracy:
         result["accuracy"] = 100. * result_dict["good"] / result_dict["total"]
         acc_str = ", acc={:.3f}%".format(result["accuracy"])
+        acc_str += ", auc={:.3f}".format(result["roc_auc"])
         if "mAP" in result_dict:
             result["mAP"] = 100. * result_dict["mAP"]
             acc_str += ", mAP={:.3f}%".format(result["mAP"])
@@ -459,7 +463,7 @@ def main():
     qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
 
     log.info("starting {}".format(scenario))
-    result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
+    result_dict = {"good": 0, "total": 0, "roc_auc": 0, "scenario": str(scenario)}
     runner.start_run(result_dict, args.accuracy)
     lg.StartTest(sut, qsl, settings)
 

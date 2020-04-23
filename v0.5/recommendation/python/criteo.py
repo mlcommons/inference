@@ -11,6 +11,7 @@ import re
 import time
 
 import numpy as np
+import sklearn.metrics
 import inspect
 # pytorch
 import torch
@@ -157,31 +158,48 @@ class DlrmPostProcess:
     def __init__(self):
         self.good = 0
         self.total = 0
+        self.roc_auc = 0
+        self.results = []
+        self.targets = []
 
     def __call__(self, results, expected=None, result_dict=None):
         processed_results = []
+        processed_targets = []
         n = len(results)
         for idx in range(0, n):
             # NOTE: copy from GPU to CPU while post processing, if needed. Alternatively,
             # we could do this on the output of predict function in backend_pytorch_native.py
             result = results[idx].detach().cpu()
-            processed_results.append([result])
+            processed_results.append(result)
+            target = expected[idx]
+            processed_targets.append(target)
             # debug prints
             # print(result)
             # print(expected[idx])
 
-            if result.round() == expected[idx]:
+            # accuracy metric
+            if result.round() == target:
                 self.good += 1
         self.total += n
-        return processed_results
+        return processed_results, processed_targets
 
-    def add_results(self, results):
-        pass
+    def add_results(self, results, targets):
+        self.results = self.results + results
+        self.targets = self.targets + targets
 
     def start(self):
         self.good = 0
         self.total = 0
+        self.roc_auc = 0
+        self.results = []
+        self.targets = []
 
-    def finalize(self, results, ds=False,  output_dir=None):
-        results["good"] = self.good
-        results["total"] = self.total
+    def finalize(self, result_dict, ds=False,  output_dir=None):
+        # AUC metric
+        results = np.concatenate(self.results, axis=0)
+        targets = np.concatenate(self.targets, axis=0)
+        self.roc_auc = sklearn.metrics.roc_auc_score(targets, results)
+
+        result_dict["good"] = self.good
+        result_dict["total"] = self.total
+        result_dict["roc_auc"] = self.roc_auc

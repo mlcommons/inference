@@ -44,6 +44,8 @@ RUN pip install scikit-learn
 RUN pip install numpy
 RUN pip install pydot
 RUN pip install torchviz
+RUN pip install protobuf
+RUN pip install tqdm
 
 RUN cd /tmp && \
     git clone https://github.com/mlperf/inference && \

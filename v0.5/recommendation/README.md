@@ -4,12 +4,11 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 ## Supported Models
 
-| model | framework | accuracy | AUC | dataset | model link | model source | precision | notes |
-| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| dlrm | PyTorch | TBD% | TBD | Criteo Kaggle DAC | N/A | | fp32 | |
-| dlrm | PyTorch | TBD% | TBD | Criteo Terabyte (sub-sampled=0.875) | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=10000000 |
-| dlrm | PyTorch | TBD% | TBD | Criteo Terabyte | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=40000000 |
-
+| model | framework | accuracy | AUC | dataset | weigths  | precision | notes |
+| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| dlrm | PyTorch | TBD% | TBD | Criteo Kaggle DAC | N/A | fp32 | |
+| dlrm | PyTorch | TBD% | TBD | Criteo Terabyte (0.875) | [AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |
+| dlrm | PyTorch | TBD% | TBD | Criteo Terabyte | [AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | fp32 | --max-ind-range 40000000 |
 
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.

@@ -12,7 +12,7 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
-It is written in python which might make it less suitable for large number of cpu's.
+It is written in python which might make it less suitable for large number of CPU's.
 
 ## Tools for preparing datasets and validating accuracy
 The reference implementation includes all required pre-processing of datasets.
@@ -41,11 +41,11 @@ ls mlperf/training/recommendation
 ```
 4. Select the run parameters, for instance
 ```
-export EXTRA_OPS="--time 10 --scenario SingleStream --max-ind-range=10000000 --data-sub-sample-rate=0.875 [--mlperf-bin-loader]"
+export EXTRA_OPS=" --scenario SingleStream --max-ind-range=10000000 --data-sub-sample-rate=0.875 [--mlperf-bin-loader]"
 ```
 or
 ```
-export EXTRA_OPS="--time 10 --scenario SingleStream  --max-ind-range=40000000 [--mlperf-bin-loader]"
+export EXTRA_OPS="--scenario SingleStream  --max-ind-range=40000000 [--mlperf-bin-loader]"
 ```
 Note that the code support (i) original and (ii) mlperf binary loader, that have slightly different performance characteristics. The latter loader can be enabled by adding `--mlperf-bin-loader` to the command line.
 

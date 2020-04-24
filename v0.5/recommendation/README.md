@@ -4,10 +4,11 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 ## Supported Models
 
-| model | framework | accuracy | dataset | model link | model source | precision | notes |
-| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| dlrm | PyTorch | TBD% | Criteo Terabyte (sub-sampled=0.875) | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=10000000 |
-| dlrm | PyTorch | TBD% | Criteo Terabyte | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=40000000 |
+| model | framework | accuracy | AUC | dataset | model link | model source | precision | notes |
+| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| dlrm | PyTorch | TBD% | TBD | Criteo Kaggle DAC | N/A | | fp32 | |
+| dlrm | PyTorch | TBD% | TBD | Criteo Terabyte (sub-sampled=0.875) | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=10000000 |
+| dlrm | PyTorch | TBD% | TBD | Criteo Terabyte | [from AWS S3](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | [from Facebook Research Github](https://github.com/facebookresearch/dlrm) | fp32 | --max-ind-range=40000000 |
 
 
 ## Disclaimer
@@ -16,7 +17,7 @@ It is written in python which might make it less suitable for large number of cp
 
 ## Tools for preparing datasets and validating accuracy
 The reference implementation includes all required pre-processing of datasets.
-It also includes a ```--accuracy``` option to validate accuracy as required by mlperf.
+It also includes a ```--accuracy``` option to validate accuracy and AUC as required by mlperf.
 If you are not using the reference implementation, a few scripts will help:
 
 ### Prepare the Criteo Terabyte dataset
@@ -35,7 +36,7 @@ cd ..
 3. Download or clone the DLRM source code from [MLPerf trainining](https://github.com/mlperf/training)
 ```
 cd ../../../
-git clone https://github.com/mlperf/training.git
+git clone --recurse-submodules https://github.com/mlperf/training.git
 export DLRM_DIR=$HOME/mlperf/training/recommendation
 ls mlperf/training/recommendation
 ```

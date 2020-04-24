@@ -6,7 +6,6 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 | model | framework | accuracy | AUC | dataset | trained  | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| dlrm | PyTorch | TBD% | TBD | Criteo Kaggle DAC       | N/A                                                                     | fp32 |                          |
 | dlrm | PyTorch | TBD% | TBD | Criteo Terabyte (0.875) | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |
 | dlrm | PyTorch | TBD% | TBD | Criteo Terabyte         | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt)   | fp32 | --max-ind-range=40000000 |
 
@@ -67,7 +66,6 @@ TBD
 ## Datasets
 | dataset | download link |
 | ---- | ---- |
-| Criteo Kaggle DAC | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
 | Criteo Terabyte   | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
 The Criteo Terabyte dataset is stored in several files corresponding to 24 days: `day_0.gz, day_1.gz, ..., day_23.gz`. Please unzip all files
@@ -76,11 +74,11 @@ gunzip day_{0..23}.gz
 ```
 to obtain the text files `day_0, day_1, ..., day_23` expected by the code.
 
-Note that in order to facilitate debugging and testing, we provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following
+Note that in order to facilitate debugging and testing, we provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. If needed then you can use the following script
 ```
 ./tools/make_fake_criteo.sh [terabyte0875|terabyte]
 ```
-to quickly create random data samples for the corresponding models, which will be placed into `./fake_criteo/day_0, day_1, ..., day_23` files.
+to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo/day_0, day_1, ..., day_23` files.
 
 ## Prerequisites and Installation
 We support [PyTorch](http://pytorch.org) and expect to add TensorFlow backend implementation.

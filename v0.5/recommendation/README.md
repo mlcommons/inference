@@ -4,7 +4,7 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 ## Supported Models
 
-| model | framework | accuracy | AUC | dataset | pre-trained  | precision | notes |
+| model | framework | accuracy | AUC | dataset | trained  | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | dlrm | PyTorch | TBD% | TBD | Criteo Kaggle DAC       | N/A                                                                     | fp32 |                          |
 | dlrm | PyTorch | TBD% | TBD | Criteo Terabyte (0.875) | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |

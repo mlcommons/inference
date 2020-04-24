@@ -4,11 +4,11 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 ## Supported Models
 
-| name | framework | accuracy | AUC | dataset | model  | precision | notes |
+| model | framework | accuracy | AUC | dataset | pre-trained  | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | dlrm | PyTorch | TBD% | TBD | Criteo Kaggle DAC       | N/A                                                                     | fp32 |                          |
 | dlrm | PyTorch | TBD% | TBD | Criteo Terabyte (0.875) | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |
-| dlrm | PyTorch | TBD% | TBD | Criteo Terabyte (0.0)   | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt)   | fp32 | --max-ind-range=40000000 |
+| dlrm | PyTorch | TBD% | TBD | Criteo Terabyte         | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt)   | fp32 | --max-ind-range=40000000 |
 
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
@@ -25,14 +25,14 @@ If you are not using the reference implementation, a few scripts will help:
 cd $HOME/mlperf/inference/v0.5/recommendation
 export DATA_DIR=./criteo
 ```
-2. Download [DLRM model weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt)
+2. Download pre-trained model weights
 ```
 export MODEL_DIR=./model
 cd $MODEL_DIR
 mv <downloaded_file> dlrm_terabyte.pytorch
 cd ..
 ```
-3. Download or clone the DLRM source code from [MLPerf trainining](https://github.com/mlperf/training)
+3. Download or clone the DLRM source code with [MLPerf trainining](https://github.com/mlperf/training)
 ```
 cd ../../../
 git clone --recurse-submodules https://github.com/mlperf/training.git
@@ -41,25 +41,25 @@ ls mlperf/training/recommendation
 ```
 4. Select the run parameters, for instance
 ```
-export EXTRA_OPS="--time 10 --max-latency 0.2 --count=100 --scenario SingleStream [--max-ind-range=10000000 --data-sub-sample-rate=0.875] [--mlperf-bin-loader]"
+export EXTRA_OPS="--time 10 --scenario SingleStream --max-ind-range=10000000 --data-sub-sample-rate=0.875 [--mlperf-bin-loader]"
 ```
 or
 ```
-export EXTRA_OPS="--time 10 --max-latency 0.2 --count=100 --scenario SingleStream  --max-ind-range=40000000 [--mlperf-bin-loader]"
+export EXTRA_OPS="--time 10 --scenario SingleStream  --max-ind-range=40000000 [--mlperf-bin-loader]"
 ```
-Note that the code support (i) original and (ii) mlperf binary loader, that have slightly different performance characteristics.
+Note that the code support (i) original and (ii) mlperf binary loader, that have slightly different performance characteristics. The latter loader can be enabled by adding `--mlperf-bin-loader` to the command line.
 
-5. Run the following script to perform the inference runs
+5. Run the following script to perform the inference runs on CPU
 ```
 ./run_local.sh pytorch dlrm terabyte cpu --accuracy
 ```
-Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.
-
-Also, you can perform inference runs on GPU, with the number of GPUs controlled by environment variable
+Run the following script to perform the inference runs on GPU(s), with the number of GPUs controlled by environment variable `CUDA_VISIBLE_DEVICES` as shown below
 ```
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 ./run_local.sh pytorch dlrm terabyte gpu --accuracy
 ```
+Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.
+
 
 ### Validate accuracy for dlrm benchmark
 TBD
@@ -67,19 +67,20 @@ TBD
 ## Datasets
 | dataset | download link |
 | ---- | ---- |
-| Criteo Terabyte | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
+| Criteo Kaggle DAC | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
+| Criteo Terabyte   | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
-The Criteo Terabyte dataset is stored in several files corresponding to 24 days: day_0.gz, day_1.gz, ..., day_23.gz. Please unzip all files
+The Criteo Terabyte dataset is stored in several files corresponding to 24 days: `day_0.gz, day_1.gz, ..., day_23.gz`. Please unzip all files
 ```
 gunzip day_{0..23}.gz
 ```
-to obtain the text files day_0, day_1, ..., day_23 expected by the code.
+to obtain the text files `day_0, day_1, ..., day_23` expected by the code.
 
 Note that in order to facilitate debugging and testing, we provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following
 ```
 ./tools/make_fake_criteo.sh [terabyte0875|terabyte]
 ```
-to quickly create random data samples for the corresponding models, which will be placed into day_0, day_1, ..., day_23 files.
+to quickly create random data samples for the corresponding models, which will be placed into `./fake_criteo/day_0, day_1, ..., day_23` files.
 
 ## Prerequisites and Installation
 We support [PyTorch](http://pytorch.org) and expect to add TensorFlow backend implementation.

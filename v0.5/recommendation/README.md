@@ -80,7 +80,7 @@ TBD
 | Criteo Kaggle DAC | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
 | Criteo Terabyte   | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
-1. The Criteo Kaggle DAC dataset is composed of 7 days, all of which are stored in file: `train.txt`. This file is expected by the code.
+1. The Criteo Kaggle DAC dataset is composed of 7 days, which are stored in file: `train.txt`. This file is expected by the code.
 
 
 2. The Criteo Terabyte dataset is stored in several files corresponding to 24 days: `day_0.gz, day_1.gz, ..., day_23.gz`. Please unzip all files

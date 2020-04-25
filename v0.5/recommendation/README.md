@@ -43,12 +43,20 @@ export DATA_DIR=./criteo
 ```
 
 ### Perform inference runs
-1. For Criteo Terabyte (0.875). For instance, select the run parameters and run on CPU
+Select the run parameters, for instance:
+
+1. Criteo Kaggle DAC
 ```
-export EXTRA_OPS=" --scenario SingleStream --max-ind-range=10000000 --data-sub-sample-rate=0.875 [--mlperf-bin-loader]"
+export EXTRA_OPS="--scenario SingleStream"
+./run_local.sh pytorch dlrm kaggle cpu --accuracy
+```
+
+2. Criteo Terabyte (0.875)
+```
+export EXTRA_OPS="--scenario SingleStream --max-ind-range=10000000 --data-sub-sample-rate=0.875 [--mlperf-bin-loader]"
 ./run_local.sh pytorch dlrm terabyte cpu --accuracy
 ```
-2. For Criteo Terabyte. For instance, select the run parameters and run on CPU
+3. Criteo Terabyte
 ```
 export EXTRA_OPS="--scenario SingleStream  --max-ind-range=40000000 [--mlperf-bin-loader]"
 ./run_local.sh pytorch dlrm terabyte cpu --accuracy
@@ -63,8 +71,6 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 ./run_local.sh pytorch dlrm terabyte gpu --accuracy
 ```
 
-
-
 ### Validate accuracy for dlrm benchmark
 TBD
 
@@ -74,17 +80,21 @@ TBD
 | Criteo Kaggle DAC | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
 | Criteo Terabyte   | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
-The Criteo Terabyte dataset is stored in several files corresponding to 24 days: `day_0.gz, day_1.gz, ..., day_23.gz`. Please unzip all files
+1. The Criteo Kaggle DAC dataset is composed of 7 days, all of which are stored in file: `train.txt`. This file is expected by the code.
+
+
+2. The Criteo Terabyte dataset is stored in several files corresponding to 24 days: `day_0.gz, day_1.gz, ..., day_23.gz`. Please unzip all files
 ```
 gunzip day_{0..23}.gz
 ```
 to obtain the text files `day_0, day_1, ..., day_23` expected by the code.
 
-Note that in order to facilitate debugging and testing, we provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. If needed then you can use the following script
+3. The Criteo Fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. If needed you can use the following script
 ```
-./tools/make_fake_criteo.sh [terabyte0875|terabyte]
+cd ./tools
+./make_fake_criteo.sh [kaggle|terabyte0875|terabyte]
 ```
-to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo/day_0, day_1, ..., day_23` files.
+to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory.
 
 ## Prerequisites and Installation
 We support [PyTorch](http://pytorch.org) and expect to add TensorFlow backend implementation.

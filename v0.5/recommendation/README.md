@@ -10,7 +10,7 @@ This is the reference implementation for MLPerf Inference benchmarks.
 | dlrm | PyTorch | TBD% | TBD | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) (0.875) | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |
 | dlrm | PyTorch | TBD% | TBD | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/)         | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt)   | fp32 | --max-ind-range=40000000 |
 
-## Disclaimer
+### Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
 It is written in python which might make it less suitable for large number of CPU's.
 
@@ -18,8 +18,26 @@ The reference implementation includes all required pre-processing of datasets.
 It also includes a ```--accuracy``` option to validate accuracy and AUC as required by mlperf.
 If you are not using the reference implementation, a few scripts will help:
 
+## Prerequisites and Installation
+We support [PyTorch](http://pytorch.org) and might add TensorFlow backend implementation.
+
+The following steps are **only** needed if you run the benchmark **without Docker**.
+
+Python 3.5, 3.6 or 3.7 is supported and we recommend to use Anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal Anaconda install).
+
+Install the desired backend. For pytoch:
+```
+pip install torch torchvision
+pip install scikit-learn
+pip install numpy
+pip install pydot
+pip install torchviz
+pip install protobuf
+pip install tqdm
+```
+
 ### Prepare the code and dataset
-1. Download or clone the MLPerf [inference](https://github.com/mlperf/inference) and [trainining](https://github.com/mlperf/training)
+1. Download or clone the MLPerf [inference](https://github.com/mlperf/inference) and [trainining](https://github.com/mlperf/training) code
 ```
 cd $HOME
 mkdir ./mlperf && cd ./mlperf
@@ -41,9 +59,53 @@ mkdir ./criteo && cd ./criteo
 mv <downloaded_file> ./
 export DATA_DIR=./criteo
 ```
+4. Build and install the loadgen
+```
+cd $HOME/mlperf/inference/loadgen
+CFLAGS="-std=c++14" python setup.py develop --user
+```
 
-### Perform inference runs
-Select the run parameters, for instance:
+### Datasets
+| dataset | download link |
+| ---- | ---- |
+| Criteo Kaggle DAC | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
+| Criteo Terabyte   | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
+
+1. The Criteo Kaggle DAC dataset is composed of 7 days, which are stored in file: `train.txt`. This file is expected by the code.
+
+
+2. The Criteo Terabyte dataset is stored in several files corresponding to 24 days: `day_0.gz, day_1.gz, ..., day_23.gz`. Please unzip all the files to obtain the text files `day_0, day_1, ..., day_23` expected by the code.
+```
+gunzip day_{0..23}.gz
+```
+
+3. The Criteo Fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following script to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory.
+```
+./make_fake_criteo.sh [kaggle|terabyte0875|terabyte]
+```
+
+## Running the benchmark
+
+Download and install all the pre-requisites.
+
+Both local and docker environment need to set 3 environment variables:
+```
+export DATA_DIR=YourCriteoTerabyteLocation
+export MODEL_DIR=YourModelFileLocation
+export DLRM_DIR=YourDLRMSourceLocation
+```
+
+### Run local
+```
+./run_local.sh backend model dataset device
+
+backend is one of [pytorch]
+model is one of [dlrm]
+dataset is one of [kaggle|terabyte]
+device is one of [cpu|gpu]
+```
+
+For example, to run on CPU you may choose to use:
 
 1. Criteo Kaggle DAC
 ```
@@ -71,78 +133,6 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 ./run_local.sh pytorch dlrm terabyte gpu --accuracy
 ```
 
-### Validate accuracy for dlrm benchmark
-TBD
-
-## Datasets
-| dataset | download link |
-| ---- | ---- |
-| Criteo Kaggle DAC | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
-| Criteo Terabyte   | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
-
-1. The Criteo Kaggle DAC dataset is composed of 7 days, which are stored in file: `train.txt`. This file is expected by the code.
-
-
-2. The Criteo Terabyte dataset is stored in several files corresponding to 24 days: `day_0.gz, day_1.gz, ..., day_23.gz`. Please unzip all the files to obtain the text files `day_0, day_1, ..., day_23` expected by the code.
-```
-gunzip day_{0..23}.gz
-```
-
-3. The Criteo Fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following script to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory.
-```
-./make_fake_criteo.sh [kaggle|terabyte0875|terabyte]
-```
-
-## Prerequisites and Installation
-We support [PyTorch](http://pytorch.org) and expect to add TensorFlow backend implementation.
-Support for other backends can be easily added.
-
-The following steps are **only** needed if you run the benchmark **without Docker**.
-
-Python 3.5, 3.6 or 3.7 is supported and we recommend to use Anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal Anaconda install).
-
-Install the desired backend.
-For pytoch:
-```
-pip install torch torchvision
-```
-
-Build and install the benchmark:
-```
-cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop --user; cd ../v0.5/recommendation
-
-python setup.py develop
-```
-
-
-## Running the benchmark
-### One time setup
-
-Download the model and dataset for the model you want to benchmark.
-
-Both local and docker environment need to set 3 environment variables:
-```
-export DATA_DIR=YourCriteoTerabyteLocation
-export MODEL_DIR=YourModelFileLocation
-export DLRM_DIR=YourDLRMSourceLocation
-```
-
-
-### Run local
-```
-./run_local.sh backend model dataset device
-
-backend is one of [pytorch]
-model is one of [dlrm]
-dataset is one of [kaggle|terabyte]
-device is one of [cpu|gpu]
-
-
-For example:
-
-./run_local.sh pytorch dlrm terabyte gpu
-```
-
 ### Run as Docker container
 ```
 ./run_and_time.sh backend model dataset device
@@ -151,12 +141,16 @@ backend is one of [pytorch]
 model is one of [dlrm]
 dataset is one of [kaggle|terabyte]
 device is one of [cpu|gpu]
+```
 
 For example:
-
+```
 ./run_and_time.sh pytorch dlrm terabyte gpu
 ```
 This will build and run the benchmark.
+
+### Validate accuracy for dlrm benchmark
+TBD
 
 ### Examples for testing
 During development running the full benchmark is unpractical. Some options to help:
@@ -181,7 +175,6 @@ If you want run with accuracy pass, try:
 ```
 ./run_local.sh pytorch dlrm terabyte gpu --accuracy --time 60 --scenario Server --qps 100 --max-latency 0.2
 ```
-
 
 ### Usage
 ```
@@ -223,7 +216,7 @@ TBD
 this fills in default command line options with the once specified in the profile. Command line options that follow may override the those.
 
 ```--backend```
-only the PyTorch backedn is currently supported. However, we expect to add TensorFlow backend in the future.
+only the pytorch backedn is currently supported. However, we expect to add TensorFlow backend in the future.
 
 ```--use-gpu```
 flag that enables use of GPU. The number of GPUs used is controlled by CUDA_VISIBLE_DEVICES environment variable.

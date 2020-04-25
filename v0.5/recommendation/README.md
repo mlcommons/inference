@@ -95,31 +95,29 @@ export DLRM_DIR=YourDLRMSourceLocation
 
 ### Run local
 ```
-./run_local.sh backend model dataset device
+./run_local.sh backend model dataset device [options]
 
 backend is one of [pytorch]
 model is one of [dlrm]
 dataset is one of [kaggle|terabyte]
 device is one of [cpu|gpu]
+options are arguments that are passed along
 ```
 
 For example, to run on CPU you may choose to use:
 
 1. Criteo Kaggle DAC
 ```
-export EXTRA_OPS="--scenario SingleStream"
-./run_local.sh pytorch dlrm kaggle cpu --accuracy
+./run_local.sh pytorch dlrm kaggle cpu --accuracy --scenario SingleStream
 ```
 
 2. Criteo Terabyte (0.875)
 ```
-export EXTRA_OPS="--scenario SingleStream --max-ind-range=10000000 --data-sub-sample-rate=0.875 [--mlperf-bin-loader]"
-./run_local.sh pytorch dlrm terabyte cpu --accuracy
+./run_local.sh pytorch dlrm terabyte cpu --accuracy --scenario SingleStream --max-ind-range=10000000 --data-sub-sample-rate=0.875 [--mlperf-bin-loader]
 ```
 3. Criteo Terabyte
 ```
-export EXTRA_OPS="--scenario SingleStream  --max-ind-range=40000000 [--mlperf-bin-loader]"
-./run_local.sh pytorch dlrm terabyte cpu --accuracy
+./run_local.sh pytorch dlrm terabyte cpu --accuracy --scenario SingleStream  --max-ind-range=40000000 [--mlperf-bin-loader]
 ```
 Note that the code support (i) original and (ii) mlperf binary loader, that have slightly different performance characteristics. The latter loader can be enabled by adding `--mlperf-bin-loader` to the command line.
 

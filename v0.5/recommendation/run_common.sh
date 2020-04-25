@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 pytorch|onnxruntime|tf|tflite dlrm [kaggle|terabyte] [cpu|gpu]"
+    echo "usage: $0 pytorch dlrm [kaggle|terabyte] [cpu|gpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -9,6 +9,9 @@ if [ "x$DATA_DIR" == "x" ]; then
 fi
 if [ "x$MODEL_DIR" == "x" ]; then
     echo "MODEL_DIR not set" && exit 1
+fi
+if [ "x$DLRM_DIR" == "x" ]; then
+    echo "DLRM_DIR not set" && exit 1
 fi
 
 # defaults
@@ -19,7 +22,7 @@ device="cpu"
 
 for i in $* ; do
     case $i in
-       tf|onnxruntime|tflite|pytorch) backend=$i; shift;;
+       pytorch) backend=$i; shift;;
        dlrm) model=$i; shift;;
        kaggle|terabyte) dataset=$i; shift;;
        cpu|gpu) device=$i; shift;;
@@ -32,6 +35,7 @@ done
 # echo $device
 # echo $MODEL_DIR
 # echo $DATA_DIR
+# echo $DLRM_DIR
 # echo $EXTRA_OPS
 
 if [ $device == "cpu" ] ; then
@@ -54,23 +58,6 @@ if [ $name == "dlrm-terabyte-pytorch" ] ; then
     model_path="$MODEL_DIR/dlrm_terabyte.pytorch"
     profile=dlrm-terabyte-pytorch
 fi
-
-#
-# onnxruntime
-#
-# ...
-
-#
-# tensorflow
-#
-# ...
-
-#
-# tflite
-#
-# ...
-
-
 # debuging
 # echo $model_path
 # echo $profile

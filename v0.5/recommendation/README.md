@@ -2,7 +2,7 @@
 
 This is the reference implementation for MLPerf Inference benchmarks.
 
-## Supported Models
+### Supported Models
 
 | model | framework | accuracy | AUC | dataset | trained  | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
@@ -65,7 +65,7 @@ cd $HOME/mlperf/inference/loadgen
 CFLAGS="-std=c++14" python setup.py develop --user
 ```
 
-### Datasets
+### More information about the datasets
 | dataset | download link |
 | ---- | ---- |
 | Criteo Kaggle DAC | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
@@ -79,16 +79,14 @@ CFLAGS="-std=c++14" python setup.py develop --user
 gunzip day_{0..23}.gz
 ```
 
-3. The Criteo Fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following script to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory.
+3. The Criteo fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following script to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory.
 ```
 ./make_fake_criteo.sh [kaggle|terabyte0875|terabyte]
 ```
 
 ## Running the benchmark
 
-Download and install all the pre-requisites.
-
-Both local and docker environment need to set 3 environment variables:
+Download and install all the pre-requisites. Both local and docker environment need to set 3 environment variables:
 ```
 export DATA_DIR=YourCriteoTerabyteLocation
 export MODEL_DIR=YourModelFileLocation
@@ -127,33 +125,20 @@ Note that the code support (i) original and (ii) mlperf binary loader, that have
 
 Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.
 
-In order to run on GPU, select the number of GPUs with the environment variable `CUDA_VISIBLE_DEVICES`, and run
+In order to use GPU(s), select the number of GPUs with the environment variable `CUDA_VISIBLE_DEVICES`, and run
 ```
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 ./run_local.sh pytorch dlrm terabyte gpu --accuracy
 ```
 
 ### Run as Docker container
-```
-./run_and_time.sh backend model dataset device
-
-backend is one of [pytorch]
-model is one of [dlrm]
-dataset is one of [kaggle|terabyte]
-device is one of [cpu|gpu]
-```
-
-For example:
-```
-./run_and_time.sh pytorch dlrm terabyte gpu
-```
-This will build and run the benchmark.
+TBD
 
 ### Validate accuracy for dlrm benchmark
 TBD
 
 ### Examples for testing
-During development running the full benchmark is unpractical. Some options to help:
+During development running the full benchmark is unpractical. Here are some options to help:
 
 ```--count``` limits the number of items in the dataset used for accuracy pass
 

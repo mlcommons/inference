@@ -105,13 +105,12 @@ def get_args():
     parser.add_argument("--mlperf-bin-loader", action='store_true', default=False)
     parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--output", help="test results")
-    parser.add_argument("--inputs", help="model inputs")
-    parser.add_argument("--outputs", help="model outputs")
+    parser.add_argument("--inputs", help="model inputs (currently not used)")
+    parser.add_argument("--outputs", help="model outputs (currently not used)")
     parser.add_argument("--backend", help="runtime to use")
     parser.add_argument("--use-gpu", action="store_true", default=False)
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
-    parser.add_argument("--qps", type=int, help="target qps")
-    parser.add_argument("--cache", type=int, default=0, help="use cache")
+    parser.add_argument("--cache", type=int, default=0, help="use cache (currently not used)")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
 
@@ -119,7 +118,8 @@ def get_args():
     parser.add_argument("--config", default="../mlperf.conf", help="mlperf rules config")
 
     # below will override mlperf rules compliant settings - don't use for official submission
-    parser.add_argument("--time", type=int, help="time to scan in seconds")
+    parser.add_argument("--duration", type=int, help="duration in milliseconds (ms)")
+    parser.add_argument("--target-qps", type=int, help="target/expected qps")
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--max-latency", type=float, help="mlperf max latency in pct tile")
     parser.add_argument("--samples-per-query", type=int, help="mlperf multi-stream sample per query")
@@ -328,16 +328,15 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
         "count": len(result_list),
         "good_items": result_dict["good"],
         "total_items": result_dict["total"],
-        "roc_auc": result_dict["roc_auc"]
     }
     acc_str = ""
     if show_accuracy:
         result["accuracy"] = 100. * result_dict["good"] / result_dict["total"]
         acc_str = ", acc={:.3f}%".format(result["accuracy"])
         acc_str += ", auc={:.3f}".format(result["roc_auc"])
-        if "mAP" in result_dict:
-            result["mAP"] = 100. * result_dict["mAP"]
-            acc_str += ", mAP={:.3f}%".format(result["mAP"])
+        if "roc_auc" in result_dict:
+            result["roc_auc"] = 100. * result_dict["roc_auc"]
+            acc_str += ", auc={:.3f}%".format(result["roc_auc"])
 
     # add the result to the result dict
     final_results[name] = result
@@ -439,13 +438,13 @@ def main():
     if args.find_peak_performance:
         settings.mode = lg.TestMode.FindPeakPerformance
 
-    if args.time:
+    if args.duration:
         # override the time we want to run
-        settings.min_duration_ms = args.time * MILLI_SEC
-        settings.max_duration_ms = args.time * MILLI_SEC
+        settings.min_duration_ms = args.duration
+        settings.max_duration_ms = args.duration
 
-    if args.qps:
-        qps = float(args.qps)
+    if args.target_qps:
+        qps = float(args.target_qps)
         settings.server_target_qps = qps
         settings.offline_expected_qps = qps
 

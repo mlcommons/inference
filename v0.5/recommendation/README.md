@@ -200,9 +200,6 @@ this fills in default command line options with the once specified in the profil
 ```--backend```
 only the PyTorch backedn is currently supported. However, we expect to add TensorFlow backend in the future.
 
-```--use-gpu```
-flag that enables use of GPU. The number of GPUs used is controlled by CUDA_VISIBLE_DEVICES environment variable.
-
 ```--max-ind-range```
 the maximum number of vectors allowed in an embedding table.
 
@@ -210,7 +207,7 @@ the maximum number of vectors allowed in an embedding table.
 the rate of sub-sampling of negative samples, either 0.875 or 0.0.
 
 ```--max-batchsize MAX_BATCHSIZE```
-maximum batchsize we generate to backend (default: 128). If the query contains a very large number of samples it will be broken up into smaller mini-batches of MAX_BATCHSIZE samples before forwarding it to the model.
+maximum batchsize we generate to backend (default: 128). If the query contains a very large number of samples it will be broken up into smaller mini-batches of `MAX_BATCHSIZE` samples before forwarding it to the model.
 
 ```--mlperf-bin-loader```
 flag that enables mlperf binary loader to be used.
@@ -222,7 +219,7 @@ location of the JSON output.
 which backend to use. Currently supported is tensorflow, onnxruntime, PyTorch and tflite.
 
 ```--use-gpu```
-use GPU(s), with the number controlled by the `CUDA_VISIBLE_DEVICES` environment variable.
+flag that enables use of GPU. The number of GPUs used is controlled by `CUDA_VISIBLE_DEVICES` environment variable.
 
 ```--threads THREADS```
 number of worker threads to use (default: the number of processors in the system).

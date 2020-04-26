@@ -79,7 +79,7 @@ CFLAGS="-std=c++14" python setup.py develop --user
 gunzip day_{0..23}.gz
 ```
 
-3. The Criteo fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following script to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory.
+3. The Criteo fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following script in `./tools` to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory.
 ```
 ./make_fake_criteo.sh [kaggle|terabyte0875|terabyte]
 ```

@@ -333,7 +333,6 @@ def add_results(final_results, name, result_dict, result_list, took, show_accura
     if show_accuracy:
         result["accuracy"] = 100. * result_dict["good"] / result_dict["total"]
         acc_str = ", acc={:.3f}%".format(result["accuracy"])
-        acc_str += ", auc={:.3f}".format(result["roc_auc"])
         if "roc_auc" in result_dict:
             result["roc_auc"] = 100. * result_dict["roc_auc"]
             acc_str += ", auc={:.3f}%".format(result["roc_auc"])

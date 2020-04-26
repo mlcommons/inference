@@ -212,7 +212,7 @@ maximum batchsize we generate to backend (default: 128). If the query contains a
 ```--mlperf-bin-loader```
 flag that enables mlperf binary loader to be used.
 
-```--output OUTPUT]```
+```--output OUTPUT```
 location of the JSON output.
 
 ```--backend BACKEND```

@@ -19,7 +19,6 @@ import math
 import librosa
 from .perturb import AudioAugmentor
 from .segment import AudioSegment
-from apex import amp
 
 
 def audio_from_file(file_path, offset=0, duration=0, trim=False, target_sr=16000):

@@ -15,7 +15,6 @@
 
 import torch
 import torch.distributed as dist
-from apex.parallel import DistributedDataParallel as DDP
 from enum import Enum
 from metrics import word_error_rate
 
@@ -198,10 +197,3 @@ def print_dict(d):
     print('Arguments:')
     for keyPair in sorted(d.items()):
         print(fmtString % keyPair)
-
-
-def model_multi_gpu(model, multi_gpu=False):
-    if multi_gpu:
-        model = DDP(model)
-        print('DDP(model)')
-    return model

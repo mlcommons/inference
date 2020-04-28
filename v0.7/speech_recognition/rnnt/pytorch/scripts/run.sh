@@ -5,7 +5,7 @@ set -euo pipefail
 work_dir=work_dir
 librispeech_download_dir=$work_dir/local_data/LibriSpeech5
 seed=87
-stage=1
+stage=3
 
 mkdir -p $work_dir/local_data/
 
@@ -54,15 +54,12 @@ if [[ $stage -le 2 ]]; then
       --output_json $work_dir/local_data5/dev-clean-wav.json
 fi
 
-exit 0
-
 if [[ $stage -le 3 ]]; then
-  # TODO: Add trace to this. Strip out unused files.
-  coverage run -a inference.py \
+   ipython --pdb -c "%run inference.py \
       --model_toml configs/rnnt.toml \
       --ckpt $work_dir/rnnt.pt \
       --dataset_dir $work_dir/local_data5 \
-      --val_manifest $work_dir/local_data5/dev-clean-wav-small.json \
-      --batch_size 1 \
-      --seed $seed
+      --val_manifest $work_dir/local_data5/dev-clean-wav.json \
+      --batch_size 2 \
+      --seed $seed"
 fi

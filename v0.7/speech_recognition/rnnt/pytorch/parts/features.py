@@ -260,12 +260,9 @@ class FilterbankFeatures(nn.Module):
         self.max_length = max_length + max_pad
 
     def get_seq_len(self, seq_len):
-        x = torch.ceil(seq_len.to(dtype=torch.float) / self.hop_length).to(
-            dtype=torch.int)
-        # dtype=torch.long)
-        if self.frame_splicing > 1:
-            x = torch.ceil(x.float() / self.frame_splicing).to(dtype=torch.int)
-        return x
+        seq_len = (seq_len + self.hop_length - 1) // self.hop_length
+        seq_len = (seq_len + self.frame_splicing - 1) // self.frame_splicing
+        return seq_len
 
     @torch.no_grad()
     def forward(self, inp):
@@ -280,6 +277,7 @@ class FilterbankFeatures(nn.Module):
             x += self.dither * torch.randn_like(x)
 
         # do preemphasis
+        # Ideally, we would mask immediately after this... Ugh :(
         if self.preemph is not None:
             x = torch.cat((x[:, 0].unsqueeze(1), x[:, 1:] - self.preemph * x[:, :-1]),
                           dim=1)
@@ -306,6 +304,8 @@ class FilterbankFeatures(nn.Module):
         # normalize if required
         if self.normalize:
             x = normalize_batch(x, seq_len, normalize_type=self.normalize)
+
+        # Hmmm... They don't do any masking anymore. Seems concerning!
 
         # mask to zero any values beyond seq_len in batch, pad to multiple of `pad_to` (for efficiency)
         #max_len = x.size(-1)

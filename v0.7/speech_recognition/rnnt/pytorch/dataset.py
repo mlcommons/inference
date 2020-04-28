@@ -15,6 +15,7 @@
 """
 This file contains classes and functions related to data loading
 """
+from collections import namedtuple
 import torch
 import numpy as np
 import math
@@ -122,30 +123,28 @@ def seq_collate_fn(batch):
     Returns
     batches of tensors
     """
-    batch_size = len(batch)
+    audio_lengths = torch.LongTensor([sample.waveform.size(0)
+                                      for sample in batch])
+    transcript_lengths = torch.LongTensor([sample.transcript.size(0)
+                                           for sample in batch])
+    permute_indices = torch.argsort(audio_lengths, descending=True)
 
-    def _find_max_len(lst, ind):
-        max_len = -1
-        for item in lst:
-            if item[ind].size(0) > max_len:
-                max_len = item[ind].size(0)
-        return max_len
-    max_audio_len = _find_max_len(batch, 0)
-    max_transcript_len = _find_max_len(batch, 2)
+    audio_lengths = audio_lengths[permute_indices]
+    transcript_lengths = transcript_lengths[permute_indices]
+    padded_audio_signals = torch.nn.utils.rnn.pad_sequence(
+        [batch[i].waveform for i in permute_indices],
+        batch_first=True
+    )
+    transcript_list = [batch[i].transcript
+                       for i in permute_indices]
+    # from IPython import embed; embed()
+    # transcripts = torch.cat(transcript_list)
+    packed_transcripts = torch.nn.utils.rnn.pack_sequence(transcript_list,
+                                                          enforce_sorted=False)
 
-    batched_audio_signal = torch.zeros(batch_size, max_audio_len)
-    batched_transcript = torch.zeros(batch_size, max_transcript_len)
-    audio_lengths = []
-    transcript_lengths = []
-    for ind, sample in enumerate(batch):
-        batched_audio_signal[ind].narrow(
-            0, 0, sample[0].size(0)).copy_(sample[0])
-        audio_lengths.append(sample[1])
-        batched_transcript[ind].narrow(
-            0, 0, sample[2].size(0)).copy_(sample[2])
-        transcript_lengths.append(sample[3])
-    return batched_audio_signal, torch.stack(audio_lengths), batched_transcript, \
-        torch.stack(transcript_lengths)
+    # TODO: Don't I need to stop grad at some point now?
+    return (padded_audio_signals, audio_lengths, transcript_list,
+            packed_transcripts, transcript_lengths)
 
 
 class AudioToTextDataLayer:
@@ -186,45 +185,16 @@ class AudioToTextDataLayer:
 
         print('sort_by_duration', sort_by_duration)
 
-        if not multi_gpu:
-            self.sampler = None
-            self._dataloader = torch.utils.data.DataLoader(
-                dataset=self._dataset,
-                batch_size=batch_size,
-                collate_fn=lambda b: seq_collate_fn(b),
-                drop_last=drop_last,
-                shuffle=shuffle if self.sampler is None else False,
-                num_workers=4,
-                pin_memory=True,
-                sampler=self.sampler
-            )
-        elif sampler_type == 'bucket':
-            self.sampler = DistributedBucketBatchSampler(
-                self._dataset, batch_size=batch_size)
-            print("DDBucketSampler")
-            self._dataloader = torch.utils.data.DataLoader(
-                dataset=self._dataset,
-                collate_fn=lambda b: seq_collate_fn(b),
-                num_workers=4,
-                pin_memory=True,
-                batch_sampler=self.sampler
-            )
-        elif sampler_type == 'default':
-            self.sampler = torch.utils.data.distributed.DistributedSampler(
-                self._dataset)
-            print("DDSampler")
-            self._dataloader = torch.utils.data.DataLoader(
-                dataset=self._dataset,
-                batch_size=batch_size,
-                collate_fn=lambda b: seq_collate_fn(b),
-                drop_last=drop_last,
-                shuffle=shuffle if self.sampler is None else False,
-                num_workers=4,
-                pin_memory=True,
-                sampler=self.sampler
-            )
-        else:
-            raise RuntimeError("Sampler {} not supported".format(sampler_type))
+        self._dataloader = torch.utils.data.DataLoader(
+            dataset=self._dataset,
+            batch_size=batch_size,
+            collate_fn=lambda b: seq_collate_fn(b),
+            drop_last=drop_last,
+            shuffle=shuffle,
+            num_workers=0,
+            pin_memory=True,
+            sampler=None
+        )
 
     def __len__(self):
         return len(self._dataset)
@@ -278,9 +248,10 @@ class AudioDataset(Dataset):
                                            offset=offset, duration=duration,
                                            trim=self.trim)
 
-        return features, torch.tensor(features.shape[0]).int(), \
-            torch.tensor(sample["transcript"]), torch.tensor(
-            len(sample["transcript"])).int()
+        AudioSample = namedtuple('AudioSample', ['waveform',
+                                                 'transcript'])
+        return AudioSample(features,
+                           torch.LongTensor(sample["transcript"]))
 
     def __len__(self):
         return len(self.manifest)

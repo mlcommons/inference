@@ -88,7 +88,8 @@ class RNNTGreedyDecoder(TransducerDecoder):
         with torch.no_grad():
             # Apply optional preprocessing
 
-            logits, out_lens = self._model.encode((x, out_lens))
+            x_packed = torch.nn.utils.rnn.pack_padded_sequence(x, out_lens)
+            logits, out_lens = self._model.encode(x_packed)
 
             output = []
             for batch_idx in range(logits.size(0)):

@@ -115,16 +115,10 @@ def __gather_transcripts(transcript_list: list, transcript_len_list: list,
                          labels: list) -> list:
     results = []
     labels_map = dict([(i, labels[i]) for i in range(len(labels))])
-    # iterate over workers
-    for t, ln in zip(transcript_list, transcript_len_list):
-        # iterate over batch
-        t_lc = t.long().cpu()
-        ln_lc = ln.long().cpu()
-        for ind in range(t.shape[0]):
-            tgt_len = ln_lc[ind].item()
-            target = t_lc[ind][:tgt_len].numpy().tolist()
-            reference = ''.join([labels_map[c] for c in target])
-            results.append(reference)
+    for i, t in enumerate(transcript_list):
+        target = t.numpy().tolist()
+        reference = ''.join([labels_map[c] for c in target])
+        results.append(reference)
     return results
 
 
@@ -145,10 +139,7 @@ def process_evaluation_batch(tensors: dict, global_vars: dict, labels: list):
         elif kv.startswith('transcript_length'):
             transcript_len_list = v
         elif kv.startswith('transcript'):
-
             transcript_list = v
-        elif kv.startswith('output'):
-            global_vars['logits'] += v
 
     global_vars['transcripts'] += __gather_transcripts(transcript_list,
                                                        transcript_len_list,

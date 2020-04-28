@@ -115,6 +115,9 @@ class LstmDrop(torch.nn.Module):
         """
         super(LstmDrop, self).__init__()
 
+        # Interesting, torch LSTM allows specifying number of
+        # layers... Fan-out parallelism.
+        # WARNING: Is dropout repeated twice?
         self.lstm = torch.nn.LSTM(
             input_size=input_size,
             hidden_size=hidden_size,
@@ -131,14 +134,14 @@ class LstmDrop(torch.nn.Module):
                     bias = getattr(self.lstm, name)
                     bias.data[hidden_size:2*hidden_size].fill_(0)
 
-        self.dropout = torch.nn.Dropout(dropout) if dropout else None
+        self.inplace_dropout = (torch.nn.Dropout(dropout, inplace=True)
+                                if dropout else None)
 
     def forward(self, x, h=None):
-
         x, h = self.lstm(x, h)
 
-        if self.dropout:
-            x = self.dropout(x)
+        if self.inplace_dropout:
+            self.inplace_dropout(x.data)
 
         return x, h
 
@@ -218,6 +221,7 @@ class BNRNNSum(torch.nn.Module):
             if isinstance(layer, torch.nn.Dropout):
                 x = layer(x)
             else:
+                # So what does hx contain? A tensor.
                 x, h_out = layer(x, hx=hx[rnn_idx])
                 hs.append(h_out[0])
                 cs.append(h_out[1])
@@ -258,10 +262,12 @@ class StackTime(torch.nn.Module):
         x, x_lens = x
         seq = [x]
         for i in range(1, self.factor):
+            # This doesn't seem to make much sense...
             tmp = torch.zeros_like(x)
             tmp[:-i, :, :] = x[i:, :, :]
             seq.append(tmp)
         x_lens = torch.ceil(x_lens.float() / self.factor).int()
+        #Gross, this is horrible. What a waste of memory...
         return torch.cat(seq, dim=2)[::self.factor, :, :], x_lens
 
 

@@ -158,21 +158,25 @@ class RNNT(torch.nn.Module):
             *layers
         )
 
+    # Perhaps what I really need to do is provide a value for
+    # state. But why can't I just specify a type for abstract
+    # intepretation? That's what I really want!
+    # We really want two "states" here...
     def forward(self, batch, state=None):
         # batch: ((x, y), (x_lens, y_lens))
 
-        # x: (B, channels, features, seq_len)
-        (x, y), (x_lens, y_lens) = batch
-        y = label_collate(y)
+        # x: TxBxF
+        (x, y_packed), (x_lens, y_lens) = batch
+        x_packed = torch.nn.utils.rnn.pack_padded_sequence(x, x_lens)
 
-        f, x_lens = self.encode((x, x_lens))
+        f, x_lens = self.encode(x_packed)
 
-        g, _ = self.predict(y, state)
+        g, _ = self.predict(y_packed, state)
         out = self.joint(f, g)
 
         return out, (x_lens, y_lens)
 
-    def encode(self, x):
+    def encode(self, x_packed):
         """
         Args:
             x: tuple of ``(input, input_lens)``. ``input`` has shape (T, B, I),
@@ -182,12 +186,13 @@ class RNNT(torch.nn.Module):
             f: tuple of ``(output, output_lens)``. ``output`` has shape
                 (B, T, H), ``output_lens``
         """
-        x, x_lens = x
-        x, _ = self.encoder["pre_rnn"](x, None)
+        x_packed, _ = self.encoder["pre_rnn"](x_packed, None)
+        x, x_lens = torch.nn.utils.rnn.pad_packed_sequence(x_packed)
         x, x_lens = self.encoder["stack_time"]((x, x_lens))
-        x, _ = self.encoder["post_rnn"](x, None)
-
-        return x.transpose(0, 1), x_lens
+        x_packed = torch.nn.utils.rnn.pack_padded_sequence(x, x_lens)
+        x_packed, _ = self.encoder["post_rnn"](x_packed, None)
+        x, x_lens = torch.nn.utils.rnn.pad_packed_sequence(x_packed, batch_first=True)
+        return x, x_lens
 
     def predict(self, y, state=None, add_sos=True):
         """
@@ -207,10 +212,14 @@ class RNNT(torch.nn.Module):
                         h (tensor), shape (L, B, H)
                         c (tensor), shape (L, B, H)
         """
-        if y is not None:
-            # (B, U) -> (B, U, H)
+        if isinstance(y, torch.Tensor):
             y = self.prediction["embed"](y)
+        elif isinstance(y, torch.nn.utils.rnn.PackedSequence):
+            # Teacher-forced training mode
+            # (B, U) -> (B, U, H)
+            y._replace(data=self.prediction["embed"](y.data))
         else:
+            # inference mode
             B = 1 if state is None else state[0].size(1)
             y = torch.zeros((B, 1, self.pred_n_hidden)).to(
                 device=self.joint_net[0].weight.device,

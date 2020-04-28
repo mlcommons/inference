@@ -14,19 +14,16 @@
 
 import argparse
 from tqdm import tqdm
-import math
 import toml
 from dataset import AudioToTextDataLayer
-from helpers import process_evaluation_batch, process_evaluation_epoch, Optimization, add_blank_label, AmpOptimizations, print_dict
+from helpers import process_evaluation_batch, process_evaluation_epoch, add_blank_label, print_dict
 from decoders import RNNTGreedyDecoder
 from model_rnnt import RNNT
 from preprocessing import AudioPreprocessing
-from parts.features import audio_from_file
 import torch
 import random
 import numpy as np
 import pickle
-import time
 
 import torchvision
 
@@ -119,7 +116,7 @@ def eval(
 
             if args.steps is not None and it + 1 >= args.steps:
                 break
-        wer, _ = process_evaluation_epoch(_global_var_dict)
+        wer = process_evaluation_epoch(_global_var_dict)
         print("==========>>>>>>Evaluation WER: {0}\n".format(wer))
         if args.save_prediction is not None:
             with open(args.save_prediction, 'w') as fp:

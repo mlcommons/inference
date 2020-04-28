@@ -1,6 +1,5 @@
 # Copyright (c) 2017 Keith Ito
 """ from https://github.com/keithito/tacotron """
-import re
 from . import cleaners
 
 

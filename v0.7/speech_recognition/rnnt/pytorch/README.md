@@ -3,9 +3,17 @@ Speech recognition accepts raw audio samples and produces a corresponding
 character transcription, without an external language model.
 
 # 2. Directions
+
+Open `steps/run.sh`. Set the stage variable to "-1". You need conda on
+your PATH.
+
 Run `steps/run.sh`.
 
-NOTE: This part will be elaborated on later.
+As you complete stages, you can set the variable "stage" to a higher
+number for rerunning.
+
+NOTE: This part will be elaborated on later. There is no Loadgen
+integration right now.
 
 # 3. Dataset/Environment
 ### Publication/Attribution
@@ -60,5 +68,5 @@ The differences are as follows:
 
 # 5. Quality
 ### Quality metric
-7.32% Word Error Rate (WER) across all words in the output text of all samples in the
+7.31% Word Error Rate (WER) across all words in the output text of all samples in the
 dev-clean set, using a greedy decoder and a fully FP32 model.

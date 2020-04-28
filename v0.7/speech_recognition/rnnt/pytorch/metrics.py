@@ -61,7 +61,7 @@ def word_error_rate(hypotheses: List[str], references: List[str]) -> float:
         words += len(r_list)
         scores += __levenshtein(h_list, r_list)
     if words != 0:
-        wer = 1.0*scores/words
+        wer = (1.0 * scores) / words
     else:
         wer = float('inf')
     return wer, scores, words

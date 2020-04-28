@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/usr/bin/env python
 
 import hashlib
 import requests
@@ -50,7 +50,7 @@ def download_file(url, dest_folder, fname, overwrite=False):
 def md5_checksum(fpath, target_hash):
     file_hash = hashlib.md5()
     with open(fpath, "rb") as fp:
-        for chunk in iter(lambda: fp.read(1024*1024), b""):
+        for chunk in iter(lambda: fp.read(1024 * 1024), b""):
             file_hash.update(chunk)
     return file_hash.hexdigest() == target_hash
 

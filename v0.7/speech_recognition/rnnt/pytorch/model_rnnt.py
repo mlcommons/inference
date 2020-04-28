@@ -15,24 +15,9 @@
 
 import numpy as np
 import torch
-import torch.nn as nn
 
 from rnn import rnn
 from rnn import StackTime
-
-
-class BnReLUDropout(torch.nn.Module):
-    def __init__(self, input_size, dropout):
-        super(BnReLUDropout, self).__init__()
-        self.bn = torch.nn.BatchNorm1d(input_size)
-        self.relu = torch.nn.ReLU()
-        self.dropout = nn.Dropout(p=dropout)
-
-    def forward(self, x):
-        x = self.bn(x)
-        x = self.relu(x)
-        x = self.dropout(x)
-        return x
 
 
 class RNNT(torch.nn.Module):
@@ -60,6 +45,8 @@ class RNNT(torch.nn.Module):
             in_features = kwargs.get("in_features")
         else:
             feat_config = kwargs.get("feature_config")
+            # This may be useful in the future, for MLPerf
+            # configuration.
             in_features = feat_config['features'] * \
                 feat_config.get("frame_splicing", 1)
 
@@ -119,7 +106,7 @@ class RNNT(torch.nn.Module):
             "stack_time": StackTime(factor=encoder_stack_time_factor),
             "post_rnn": rnn(
                 rnn=rnn_type,
-                input_size=encoder_stack_time_factor*encoder_n_hidden,
+                input_size=encoder_stack_time_factor * encoder_n_hidden,
                 hidden_size=encoder_n_hidden,
                 num_layers=encoder_post_rnn_layers,
                 norm=norm,
@@ -164,6 +151,11 @@ class RNNT(torch.nn.Module):
     # We really want two "states" here...
     def forward(self, batch, state=None):
         # batch: ((x, y), (x_lens, y_lens))
+
+        raise RuntimeError(
+            "RNNT::forward is not currently used. "
+            "It corresponds to training, where your entire output sequence "
+            "is known before hand.")
 
         # x: TxBxF
         (x, y_packed), (x_lens, y_lens) = batch

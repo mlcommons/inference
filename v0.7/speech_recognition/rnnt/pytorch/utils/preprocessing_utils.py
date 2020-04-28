@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/usr/bin/env python
 import os
 import multiprocessing
-import librosa
 import functools
 
 import sox

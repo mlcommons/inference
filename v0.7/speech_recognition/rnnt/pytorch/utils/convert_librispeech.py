@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 # Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,7 +14,6 @@
 # limitations under the License.
 
 
-#!/usr/bin/env python
 import argparse
 import os
 import glob
@@ -56,7 +56,7 @@ def build_input_arr(input_dir):
             for line in fp:
                 fname, _, transcript = line.partition(' ')
                 input_data.append(dict(input_relpath=os.path.dirname(rel_path),
-                                       input_fname=fname+'.flac',
+                                       input_fname=fname + '.flac',
                                        transcript=transcript))
     return input_data
 

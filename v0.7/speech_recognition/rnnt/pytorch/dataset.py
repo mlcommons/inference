@@ -18,102 +18,9 @@ This file contains classes and functions related to data loading
 from collections import namedtuple
 import torch
 import numpy as np
-import math
-from torch.utils.data import Dataset, Sampler
-import torch.distributed as dist
+from torch.utils.data import Dataset
 from parts.manifest import Manifest
 from parts.features import WaveformFeaturizer
-
-
-class DistributedBucketBatchSampler(Sampler):
-    def __init__(self, dataset, batch_size, num_replicas=None, rank=None):
-        """Distributed sampler that buckets samples with similar length to minimize padding,
-          similar concept as pytorch BucketBatchSampler  https://pytorchnlp.readthedocs.io/en/latest/source/torchnlp.samplers.html#torchnlp.samplers.BucketBatchSampler
-
-        Args:
-            dataset: Dataset used for sampling.
-            batch_size: data batch size
-            num_replicas (optional): Number of processes participating in
-                distributed training.
-            rank (optional): Rank of the current process within num_replicas.
-        """
-        if num_replicas is None:
-            if not dist.is_available():
-                raise RuntimeError(
-                    "Requires distributed package to be available")
-            num_replicas = dist.get_world_size()
-        if rank is None:
-            if not dist.is_available():
-                raise RuntimeError(
-                    "Requires distributed package to be available")
-            rank = dist.get_rank()
-        self.dataset = dataset
-        self.dataset_size = len(dataset)
-        self.num_replicas = num_replicas
-        self.rank = rank
-        self.epoch = 0
-        self.batch_size = batch_size
-        self.tile_size = batch_size * self.num_replicas
-        self.num_buckets = 6
-        self.bucket_size = self.round_up_to(
-            math.ceil(self.dataset_size / self.num_buckets), self.tile_size)
-        self.index_count = self.round_up_to(self.dataset_size, self.tile_size)
-        self.num_samples = self.index_count // self.num_replicas
-
-    def round_up_to(self, x, mod):
-        return (x + mod - 1) // mod * mod
-
-    def __iter__(self):
-        g = torch.Generator()
-        g.manual_seed(self.epoch)
-        indices = np.arange(self.index_count) % self.dataset_size
-        for bucket in range(self.num_buckets):
-            bucket_start = self.bucket_size * bucket
-            bucket_end = min(bucket_start + self.bucket_size, self.index_count)
-            indices[bucket_start:bucket_end] = indices[bucket_start:bucket_end][torch.randperm(
-                bucket_end - bucket_start, generator=g)]
-
-        tile_indices = torch.randperm(
-            self.index_count // self.tile_size, generator=g)
-        for tile_index in tile_indices:
-            start_index = self.tile_size * tile_index + self.batch_size * self.rank
-            end_index = start_index + self.batch_size
-            yield indices[start_index:end_index]
-
-    def __len__(self):
-        return self.num_samples
-
-    def set_epoch(self, epoch):
-        self.epoch = epoch
-
-
-class data_prefetcher():
-    def __init__(self, loader):
-        self.loader = iter(loader)
-        self.stream = torch.cuda.Stream()
-        self.preload()
-
-    def preload(self):
-        try:
-            self.next_input = next(self.loader)
-        except StopIteration:
-            self.next_input = None
-            return
-        with torch.cuda.stream(self.stream):
-            self.next_input = [x.cuda(non_blocking=True)
-                               for x in self.next_input]
-
-    def __next__(self):
-        torch.cuda.current_stream().wait_stream(self.stream)
-        input = self.next_input
-        self.preload()
-        return input
-
-    def next(self):
-        return self.__next__()
-
-    def __iter__(self):
-        return self
 
 
 def seq_collate_fn(batch):
@@ -167,7 +74,6 @@ class AudioToTextDataLayer:
         max_duration = featurizer_config.get('max_duration', None)
         normalize_transcripts = kwargs.get('normalize_transcripts', True)
         trim_silence = kwargs.get('trim_silence', False)
-        multi_gpu = kwargs.get('multi_gpu', False)
         sampler_type = kwargs.get('sampler', 'default')
         speed_perturbation = featurizer_config.get('speed_perturbation', False)
         sort_by_duration = sampler_type == 'bucket'

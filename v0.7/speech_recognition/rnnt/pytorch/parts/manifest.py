@@ -13,9 +13,7 @@
 # limitations under the License.
 
 import json
-import re
 import string
-import numpy as np
 import os
 
 from .text import _clean_text
@@ -37,7 +35,7 @@ def normalize_string(s, labels, table, **unused_kwargs):
     def good_token(token, labels):
         s = set(labels)
         for t in token:
-            if not t in s:
+            if t not in s:
                 return False
         return True
 

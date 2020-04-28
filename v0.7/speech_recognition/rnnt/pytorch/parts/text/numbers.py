@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" from https://github.com/keithito/tacotron 
+""" from https://github.com/keithito/tacotron
 Modifed to add support for time and slight tweaks to _expand_number
 """
 

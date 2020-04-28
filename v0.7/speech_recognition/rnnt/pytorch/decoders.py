@@ -114,9 +114,7 @@ class RNNTGreedyDecoder(TransducerDecoder):
             not_blank = True
             symbols_added = 0
 
-            while not_blank and (
-                    self.max_symbols is None or
-                    symbols_added < self.max_symbols):
+            while not_blank and (self.max_symbols is None or symbols_added < self.max_symbols):
                 g, hidden_prime = self._pred_step(
                     self._get_last_symb(label),
                     hidden,

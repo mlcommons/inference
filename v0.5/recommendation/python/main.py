@@ -36,6 +36,7 @@ log = logging.getLogger("main")
 
 NANO_SEC = 1e9
 MILLI_SEC = 1000
+QUERY_LEN_CAP = 2048
 
 # pylint: disable=missing-docstring
 
@@ -223,23 +224,23 @@ class RunnerBase:
     def run_one_item(self, qitem):
         # run the prediction
         processed_results = []
-        processed_targets = []
         try:
             results = self.model.predict(qitem.batch_dense_X, qitem.batch_lS_o, qitem.batch_lS_i)
-            processed_results, processed_targets = self.post_process(results, qitem.batch_T, self.result_dict)
+            processed_results = self.post_process(results, qitem.batch_T, self.result_dict)
             if self.take_accuracy:
-                self.post_process.add_results(processed_results, processed_targets)
+                self.post_process.add_results(processed_results)
                 self.result_timing.append(time.time() - qitem.start)
         except Exception as ex:  # pylint: disable=broad-except
             log.error("thread: failed, %s", ex)
             # since post_process will not run, fake empty responses
             processed_results = [[]] * len(qitem.query_id)
-            processed_targets = [[]] * len(qitem.query_id)
         finally:
             response_array_refs = []
             response = []
             for idx, query_id in enumerate(qitem.query_id):
-                response_array = array.array("B", np.array(processed_results[idx], np.float32).tobytes())
+                # NOTE: processed_results returned by DlrmPostProcess store both
+                # result = processed_results[idx][0] and target = processed_results[idx][1]
+                response_array = array.array("B", np.array(processed_results[idx][0], np.float32).tobytes())
                 response_array_refs.append(response_array)
                 bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
@@ -248,16 +249,17 @@ class RunnerBase:
     def enqueue(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
+        query_len = len(query_samples)
 
-        if len(query_samples) < self.max_batchsize:
-
+        if query_len < self.max_batchsize:
             batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx)
             self.run_one_item(Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
         else:
             bs = self.max_batchsize
-            for i in range(0, len(idx), bs):
-                dbatch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx[i:i+bs])
-                self.run_one_item(Item(query_id[i:i+bs], idx[i:i+bs], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
+            for i in range(0, query_len, bs):
+                ie = min(i + bs, query_len)
+                batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx[i:ie])
+                self.run_one_item(Item(query_id[i:ie], idx[i:ie], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
 
 
     def finish(self):
@@ -267,7 +269,8 @@ class RunnerBase:
 class QueueRunner(RunnerBase):
     def __init__(self, model, ds, threads, post_proc=None, max_batchsize=128):
         super().__init__(model, ds, threads, post_proc, max_batchsize)
-        self.tasks = Queue(maxsize=threads * 4)
+        queue_size_multiplier = 4 #(QUERY_LEN_CAP + max_batchsize - 1) // max_batchsize)
+        self.tasks = Queue(maxsize=threads * queue_size_multiplier)
         self.workers = []
         self.result_dict = {}
 
@@ -291,14 +294,15 @@ class QueueRunner(RunnerBase):
     def enqueue(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
+        query_len = len(query_samples)
 
-        if len(query_samples) < self.max_batchsize:
+        if query_len < self.max_batchsize:
             batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx)
             self.tasks.put(Item(query_id, idx, batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
         else:
             bs = self.max_batchsize
-            for i in range(0, len(idx), bs):
-                ie = i + bs
+            for i in range(0, query_len, bs):
+                ie = min(i + bs, query_len)
                 batch_dense_X, batch_lS_o, batch_lS_i, batch_T = self.ds.get_samples(idx[i:ie])
                 self.tasks.put(Item(query_id[i:ie], idx[i:ie], batch_dense_X, batch_lS_o, batch_lS_i, batch_T))
 
@@ -458,7 +462,7 @@ def main():
         settings.multi_stream_target_latency_ns = int(args.max_latency * NANO_SEC)
 
     sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
-    qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
+    qsl = lg.ConstructQSL(count, min(count, QUERY_LEN_CAP), ds.load_query_samples, ds.unload_query_samples)
 
     log.info("starting {}".format(scenario))
     result_dict = {"good": 0, "total": 0, "roc_auc": 0, "scenario": str(scenario)}

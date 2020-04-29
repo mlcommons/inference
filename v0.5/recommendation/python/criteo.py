@@ -160,19 +160,16 @@ class DlrmPostProcess:
         self.total = 0
         self.roc_auc = 0
         self.results = []
-        self.targets = []
 
     def __call__(self, results, expected=None, result_dict=None):
         processed_results = []
-        processed_targets = []
         n = len(results)
         for idx in range(0, n):
             # NOTE: copy from GPU to CPU while post processing, if needed. Alternatively,
             # we could do this on the output of predict function in backend_pytorch_native.py
             result = results[idx].detach().cpu()
-            processed_results.append(result)
             target = expected[idx]
-            processed_targets.append(target)
+            processed_results.append([result, target])
             # debug prints
             # print(result)
             # print(expected[idx])
@@ -181,23 +178,22 @@ class DlrmPostProcess:
             if result.round() == target:
                 self.good += 1
         self.total += n
-        return processed_results, processed_targets
+        return processed_results
 
-    def add_results(self, results, targets):
+    def add_results(self, results):
         self.results = self.results + results
-        self.targets = self.targets + targets
 
     def start(self):
         self.good = 0
         self.total = 0
         self.roc_auc = 0
         self.results = []
-        self.targets = []
 
     def finalize(self, result_dict, ds=False,  output_dir=None):
         # AUC metric
-        results = np.concatenate(self.results, axis=0)
-        targets = np.concatenate(self.targets, axis=0)
+        results, targets = zip(*self.results)
+        results = np.concatenate(results, axis=0)
+        targets = np.concatenate(targets, axis=0)
         self.roc_auc = sklearn.metrics.roc_auc_score(targets, results)
 
         result_dict["good"] = self.good

@@ -101,23 +101,23 @@ backend is one of [pytorch]
 model is one of [dlrm]
 dataset is one of [kaggle|terabyte]
 device is one of [cpu|gpu]
-options are arguments that are passed along
+options are extra arguments that are passed along
 ```
 
 For example, to run on CPU you may choose to use:
 
 1. Criteo Kaggle DAC
 ```
-./run_local.sh pytorch dlrm kaggle cpu --accuracy --scenario SingleStream
+./run_local.sh pytorch dlrm kaggle cpu --accuracy --scenario Offline
 ```
 
 2. Criteo Terabyte (0.875)
 ```
-./run_local.sh pytorch dlrm terabyte cpu --accuracy --scenario SingleStream --max-ind-range=10000000 --data-sub-sample-rate=0.875 [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --accuracy --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 [--mlperf-bin-loader]
 ```
 3. Criteo Terabyte
 ```
-./run_local.sh pytorch dlrm terabyte cpu --accuracy --scenario SingleStream  --max-ind-range=40000000 [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --accuracy --scenario Offline  --max-ind-range=40000000 [--mlperf-bin-loader]
 ```
 Note that the code support (i) original and (ii) mlperf binary loader, that have slightly different performance characteristics. The latter loader can be enabled by adding `--mlperf-bin-loader` to the command line.
 
@@ -130,10 +130,19 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 ```
 
 ### Run as Docker container
-TBD
+```
+./run_and_time.sh backend model dataset device [options]
+backend is one of [pytorch]
+model is one of [dlrm]
+dataset is one of [kaggle|terabyte]
+device is one of [cpu|gpu]
+options are extra arguments that are passed along
+```
 
-### Validate accuracy for dlrm benchmark
-TBD
+For example, to run Criteo Terabyte on CPU you may choose to use:
+```
+./run_and_time.sh pytorch dlrm terabyte cpu --scenario Offline
+```
 
 ### Examples for testing
 During development running the full benchmark is unpractical. Here are some options to help:
@@ -142,11 +151,11 @@ During development running the full benchmark is unpractical. Here are some opti
 
 ```--duration``` limits the time the benchmark runs
 
-```--max-latency``` the latency used for Server mode
+```--max-latency``` the latency used for Server scenario
 
 ```--accuracy``` enables accuracy pass
 
-So if you want to tune for example Server mode, try:
+So if you want to tune for example Server scenario, try:
 ```
 ./run_local.sh pytorch dlrm terabyte cpu --count 100 --duration 60000 --scenario Server --target-qps 200 --max-latency 0.1
 or
@@ -216,7 +225,7 @@ flag that enables mlperf binary loader to be used.
 location of the JSON output.
 
 ```--backend BACKEND```
-which backend to use. Currently supported is tensorflow, onnxruntime, PyTorch and tflite.
+which backend to use. Currently supported is PyTorch.
 
 ```--use-gpu```
 flag that enables use of GPU. The number of GPUs used is controlled by `CUDA_VISIBLE_DEVICES` environment variable.
@@ -237,13 +246,13 @@ target/expected QPS for Server and Offline scenarios.
 comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
 
 ```--samples-per-query```
-number of samples per query in multi-stream scenario.
+number of samples per query in MultiStream scenario.
 
 ```--accuracy```
 perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 
 ```--find-peak-performance```
-TBD
+determine the maximumum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.
 
 ## License
 

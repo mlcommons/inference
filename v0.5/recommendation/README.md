@@ -147,7 +147,7 @@ For example, to run Criteo Terabyte on CPU you may choose to use:
 ### Examples for testing
 During development running the full benchmark is unpractical. Here are some options to help:
 
-```--count``` limits the number of items in the dataset used for accuracy pass
+```--count-samples``` limits the number of items in the dataset used for accuracy pass
 
 ```--duration``` limits the time the benchmark runs
 
@@ -157,9 +157,9 @@ During development running the full benchmark is unpractical. Here are some opti
 
 So if you want to tune for example Server scenario, try:
 ```
-./run_local.sh pytorch dlrm terabyte cpu --count 100 --duration 60000 --scenario Server --target-qps 200 --max-latency 0.1
+./run_local.sh pytorch dlrm terabyte cpu --count-samples 100 --duration 60000 --scenario Server --target-qps 200 --max-latency 0.1
 or
-./run_local.sh pytorch dlrm terabyte cpu --count 100 --duration 60000 --scenario Server --target-qps 100 --max-latency 0.1
+./run_local.sh pytorch dlrm terabyte cpu --count-samples 100 --duration 60000 --scenario Server --target-qps 100 --max-latency 0.1
 
 ```
 
@@ -179,8 +179,8 @@ usage: main.py [-h]
     [--max-ind-range MAX_IND_RANGE] [--data-sub-sample-rate DATA_SUB_SAMPLE_RATE]
     [--max-batchsize MAX_BATCHSIZE] [--mlperf-bin-loader]
     [--output OUTPUT] [--inputs INPUTS] [--outputs OUTPUTS]
-    [--backend BACKEND] [--use-gpu] [--threads THREADS]
-    [--duration TIME_IN_MS] [--count COUNT] [--target-qps QPS]
+    [--backend BACKEND] [--use-gpu] [--threads THREADS] [--duration TIME_IN_MS]
+    [--count-samples COUNT] [--count-queries COUNT] [--target-qps QPS]
     [--max-latency MAX_LATENCY] [--samples-per-query NUM_SAMPLES] [--cache CACHE]
     [--accuracy] [--find-peak-performance]
 ```
@@ -236,8 +236,11 @@ number of worker threads to use (default: the number of processors in the system
 ```--duration```
 duration of the benchmark run in milliseconds (ms).
 
-```--count COUNT```
+```--count-samples COUNT```
 number of samples from the dataset we use (default: use all samples in the dataset).
+
+```--count-queries COUNT```
+number of queries we use (default: no limit).
 
 ```--target-qps QPS```
 target/expected QPS for Server and Offline scenarios.

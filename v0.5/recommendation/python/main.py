@@ -121,7 +121,8 @@ def get_args():
     # below will override mlperf rules compliant settings - don't use for official submission
     parser.add_argument("--duration", type=int, help="duration in milliseconds (ms)")
     parser.add_argument("--target-qps", type=int, help="target/expected qps")
-    parser.add_argument("--count", type=int, help="dataset items to use")
+    parser.add_argument("--count-samples", type=int, help="dataset items to use")
+    parser.add_argument("--count-queries", type=int, help="number of queries to use")
     parser.add_argument("--max-latency", type=float, help="mlperf max latency in pct tile")
     parser.add_argument("--samples-per-query", type=int, help="mlperf multi-stream sample per query")
     args = parser.parse_args()
@@ -359,21 +360,16 @@ def main():
     # find backend
     backend = get_backend(args.backend, args.dataset, args.max_ind_range, args.data_sub_sample_rate, args.use_gpu)
 
-    # --count applies to accuracy mode only and can be used to limit the number of images
-    # for testing. For perf model we always limit count to 200.
-    count_override = False
-    count = args.count
-    if count:
-        count_override = True
-
     # dataset to use
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
 
+    # --count-samples applies to accuracy mode only and can be used to limit the number
+    # of samples used for testing. For perf model we always cap count to QUERY_LEN_CAP.
     ds = wanted_dataset(data_path=args.dataset_path,
                         name=args.dataset,
                         pre_process=pre_proc,  # currently an identity function
                         use_cache=args.cache,  # currently not used
-                        count=count,
+                        count=args.count_samples,
                         test_num_workers=args.test_num_workers,
                         max_ind_range=args.max_ind_range,
                         sub_sample_rate=args.data_sub_sample_rate,
@@ -436,27 +432,28 @@ def main():
     settings.FromConfig(config, args.model, args.scenario)
     settings.scenario = scenario
     settings.mode = lg.TestMode.PerformanceOnly
+
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly
+
     if args.find_peak_performance:
         settings.mode = lg.TestMode.FindPeakPerformance
 
     if args.duration:
-        # override the time we want to run
         settings.min_duration_ms = args.duration
         settings.max_duration_ms = args.duration
 
     if args.target_qps:
-        qps = float(args.target_qps)
-        settings.server_target_qps = qps
-        settings.offline_expected_qps = qps
+        settings.server_target_qps = float(args.target_qps)
+        settings.offline_expected_qps = float(args.target_qps)
 
-    if count_override:
-        settings.min_query_count = count
-        settings.max_query_count = count
+    if args.count_queries:
+        settings.min_query_count = args.count_queries
+        settings.max_query_count = args.count_queries
 
     if args.samples_per_query:
         settings.multi_stream_samples_per_query = args.samples_per_query
+
     if args.max_latency:
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
         settings.multi_stream_target_latency_ns = int(args.max_latency * NANO_SEC)

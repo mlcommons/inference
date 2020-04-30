@@ -21,3 +21,5 @@ printf "\nCompiling loadgen\n"
 cd $HOME/mlperf/inference/loadgen 
 CFLAGS="-std=c++14" python setup.py develop --user
 
+cd $HOME/mlperf/inference/v0.5/recommendation
+echo "Setup Complete."

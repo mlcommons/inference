@@ -43,19 +43,20 @@ cd $HOME
 mkdir ./mlperf && cd ./mlperf
 git clone --recurse-submodules https://github.com/mlperf/training.git
 git clone --recurse-submodules https://github.com/mlperf/inference.git
-export DLRM_DIR=$HOME/mlperf/training/recommendation
+export DLRM_DIR=$HOME/mlperf/training/recommendation/dlrm
 ```
-2. Download pre-trained model weights
+2. Download pre-trained model weights (other weights and links available above)
 ```
 cd $HOME/mlperf/inference/v0.5/recommendation
 mkdir ./model && cd ./model
-mv <downloaded_file> dlrm_terabyte.pytorch
+curl https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt --output model/dlrm_terabyte.pytorch
+# Or download any above models and mv <downloaded_file> dlrm_terabyte.pytorch
 export MODEL_DIR=./model
 ```
-3. Download Criteo dataset
+3. Download corresponding dataset: Criteo (other datasets and links available above)
 ```
 cd $HOME/mlperf/inference/v0.5/recommendation
-mkdir ./criteo && cd ./criteo
+mkdir ./dataset && cd ./dataset
 mv <downloaded_file> ./
 export DATA_DIR=./criteo
 ```
@@ -82,6 +83,8 @@ gunzip day_{0..23}.gz
 3. The Criteo fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following script in `./tools` to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory.
 ```
 ./make_fake_criteo.sh [kaggle|terabyte0875|terabyte]
+mv ./fake_criteo .. && cd ..
+export DATA_DIR=./fake_criteo
 ```
 
 ## Running the benchmark
@@ -129,19 +132,25 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 ./run_local.sh pytorch dlrm terabyte gpu --accuracy
 ```
 
-### Run as Docker container
+### Get started quickly with Docker
+
+Ensure you have a working docker setup on your machine.
+
+#### CPU
+
+Build Dockerfile configuration
 ```
-./run_and_time.sh backend model dataset device [options]
-backend is one of [pytorch]
-model is one of [dlrm]
-dataset is one of [kaggle|terabyte]
-device is one of [cpu|gpu]
-options are extra arguments that are passed along
+cd $HOME/mlperf/inference/v0.5/recommendation
+docker build -t dlrm-cpu docker_cpu/.
 ```
 
-For example, to run Criteo Terabyte on CPU you may choose to use:
+Run Docker container in interactive mode and 
 ```
-./run_and_time.sh pytorch dlrm terabyte cpu --scenario Offline
+docker run -it dlrm-cpu
+```
+Inside container kickstart default setup (environment, git checkout, fake dataset and model download)
+```
+source kickstart.sh
 ```
 
 ### Examples for testing

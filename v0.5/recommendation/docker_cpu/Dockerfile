@@ -40,12 +40,9 @@ RUN pip install pydot
 RUN pip install torchviz
 RUN pip install protobuf
 RUN pip install tqdm
+RUN pip install pybind11
 
-RUN cd /tmp && \
-    git clone https://github.com/mlperf/inference && \
-    cd inference/loadgen && \
-    pip install pybind11 && \
-    CFLAGS="-std=c++14" python setup.py install && \
-    rm -rf mlperf
+COPY ./kickstart.sh $HOME/.
+RUN chmod +x ./kickstart.sh
 
 ENTRYPOINT ["/bin/bash"]

@@ -146,11 +146,34 @@ cd $HOME/mlperf/inference/v0.5/recommendation
 docker build -t dlrm-cpu docker_cpu/.
 ```
 
-Run Docker container in interactive mode and
+Run Docker container in interactive mode and enter the docker console
 ```
 docker run -it dlrm-cpu
 ```
 Inside container kickstart default setup (environment, git checkout, fake dataset and model download)
+```
+source kickstart.sh
+```
+
+#### GPU
+
+Build Dockerfile configuration
+```
+cd $HOME/mlperf/inference/v0.5/recommendation
+docker build -t dlrm-cpu docker_gpu/.
+```
+
+Run Docker container in interactive mode and enter the docker console
+```
+docker run --gpus all -it dlrm-gpu
+```
+
+Ensure you have a working docker setup with CUDA support (Should return True); If false ensure you have a functioning Docker installation with CUDA and GPU support.
+```
+python -c "exec(\"import torch\nprint(torch.cuda.is_available())\")"
+```
+
+Inside container kickstart default setup (environment, git checkout, fake dataset, model download and default to single GPU). See above for changing CUDA_VISBILE.
 ```
 source kickstart.sh
 ```

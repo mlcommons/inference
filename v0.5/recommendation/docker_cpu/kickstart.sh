@@ -1,7 +1,8 @@
 #!/bin/bash
 printf "Checking out code respositories\n\n"
 cd ~/ 
-mkdir ./mlperf && cd ./mlperf 
+mkdir ./mlperf 
+cd ./mlperf 
 git clone --progress --recurse-submodules https://github.com/mlperf/training.git 
 git clone --progress --recurse-submodules https://github.com/mlperf/inference.git 
 export DLRM_DIR=$HOME/mlperf/training/recommendation/dlrm 

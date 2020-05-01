@@ -4,26 +4,27 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 ### Supported Models
 
-| model | framework | accuracy | AUC | dataset | trained  | precision | notes |
-| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| dlrm | PyTorch | 78.9% | N/A | [Criteo Kaggle DAC](https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/)       | N/A                                                                     | fp32 |                          |
-| dlrm | PyTorch | 81.07% | N/A | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) (0.875) | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |
-| dlrm | PyTorch | N/A | 80.25% | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/)         | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt)   | fp32 | --max-ind-range=40000000 |
+| model | framework | acc. | AUC | dataset | trained  | size | prec. | notes |
+| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| dlrm | PyTorch | 78.9% | N/A | [Criteo Kaggle DAC](https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/)       | N/A                                                                     | ~1GB | fp32 |                          |
+| dlrm | PyTorch | 81.07% | N/A | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) (0.875) | [weights)](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | ~10GB | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |
+| dlrm | PyTorch | N/A | 80.25% | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/)         | [weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt)   | ~100GB | fp32 | --max-ind-range=40000000 |
 
 ### Disclaimer
-This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
-It is written in python which might make it less suitable for large number of CPU's.
+This is a reference implementation of the benchmark that is not meant to be the fastest implementation possible.
+The official model is the largest model on the order of 100GB, while interface to other models is only provided to facilitate debugging.
 
 The reference implementation includes all required pre-processing of datasets.
-It also includes a ```--accuracy``` option to validate accuracy and AUC as required by mlperf.
-If you are not using the reference implementation, a few scripts will help:
+It also includes ```--accuracy``` option to validate accuracy and AUC metrics [1] as required by MLPerf.
+
+[1] [T. Fawcett, An introduction to ROC analysis, Pattern Recognition Letters, 2006](https://dl.acm.org/doi/10.1016/j.patrec.2005.10.010)
 
 ## Prerequisites and Installation
 We support [PyTorch](http://pytorch.org) and might add TensorFlow backend implementation.
 
 The following steps are **only** needed if you run the benchmark **without Docker**.
 
-Python 3.5, 3.6 or 3.7 is supported and we recommend to use Anaconda (See [Dockerfile](Dockerfile.cpu) for a minimal Anaconda install).
+Python 3.5, 3.6 or 3.7 is supported and we recommend to use Anaconda.
 
 Install the desired backend. For pytoch:
 ```
@@ -45,19 +46,18 @@ git clone --recurse-submodules https://github.com/mlperf/training.git
 git clone --recurse-submodules https://github.com/mlperf/inference.git
 export DLRM_DIR=$HOME/mlperf/training/recommendation/dlrm
 ```
-2. Download pre-trained model weights (other weights and links available above)
+2. Download pre-trained model weights (see links available above)
 ```
 cd $HOME/mlperf/inference/v0.5/recommendation
 mkdir ./model && cd ./model
-curl https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt --output model/dlrm_terabyte.pytorch
-# Or download any above models and mv <downloaded_file> dlrm_terabyte.pytorch
+mv <downloaded_file> dlrm_terabyte.pytorch
 export MODEL_DIR=./model
 ```
-3. Download corresponding dataset: Criteo (other datasets and links available above)
+3. Download corresponding Criteo dataset (see links available above)
 ```
 cd $HOME/mlperf/inference/v0.5/recommendation
-mkdir ./dataset && cd ./dataset
-mv <downloaded_file> ./
+mkdir ./criteo && cd ./criteo
+mv <downloaded_file(s)> ./
 export DATA_DIR=./criteo
 ```
 4. Build and install the loadgen
@@ -144,7 +144,7 @@ cd $HOME/mlperf/inference/v0.5/recommendation
 docker build -t dlrm-cpu docker_cpu/.
 ```
 
-Run Docker container in interactive mode and 
+Run Docker container in interactive mode and
 ```
 docker run -it dlrm-cpu
 ```

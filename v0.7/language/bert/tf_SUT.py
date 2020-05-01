@@ -27,6 +27,11 @@ import numpy as np
 import tensorflow as tf
 from squad_QSL import get_squad_QSL
 
+# Allow TF to increase GPU memory usage dynamically to prevent cuBLAS init problems.
+config = tf.compat.v1.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.compat.v1.Session(config=config)
+
 class BERT_TF_SUT():
     def __init__(self, batch_size=8):
         print("Loading TF model...")
@@ -135,12 +140,12 @@ class BERT_TF_SUT():
                 segment_ids=segment_ids,
                 use_one_hot_embeddings=use_one_hot_embeddings)
 
-            tvars = tf.trainable_variables()
+            tvars = tf.compat.v1.trainable_variables()
 
             initialized_variable_names = {}
             (assignment_map, initialized_variable_names) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
 
-            tf.train.init_from_checkpoint(init_checkpoint, assignment_map)
+            tf.compat.v1.train.init_from_checkpoint(init_checkpoint, assignment_map)
 
             predictions = {
                 "logits": logits

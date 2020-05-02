@@ -60,7 +60,7 @@ if [[ $stage -le 3 ]]; then
       --model_toml configs/rnnt.toml \
       --ckpt $work_dir/rnnt.pt \
       --dataset_dir $local_data_dir \
-      --val_manifest $local_data_dir/dev-clean-wav.json \
-      --batch_size 2 \
+      --val_manifest $local_data_dir/dev-clean-wav-small.json \
+      --batch_size 1 \
       --seed $seed
 fi

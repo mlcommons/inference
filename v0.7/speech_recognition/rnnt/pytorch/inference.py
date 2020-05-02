@@ -171,7 +171,10 @@ def main(args):
     if args.ckpt is not None:
         print("loading model from ", args.ckpt)
         checkpoint = torch.load(args.ckpt, map_location="cpu")
-        model.load_state_dict(checkpoint['state_dict'], strict=False)
+        migrated_state_dict = checkpoint['state_dict']
+        del migrated_state_dict["audio_preprocessor.featurizer.fb"]
+        del migrated_state_dict["audio_preprocessor.featurizer.window"]
+        model.load_state_dict(migrated_state_dict, strict=True)
 
     # model = torch.jit.script(model)
 

@@ -160,7 +160,7 @@ source kickstart.sh
 Build Dockerfile configuration
 ```
 cd $HOME/mlperf/inference/v0.5/recommendation
-docker build -t dlrm-cpu docker_gpu/.
+docker build -t dlrm-gpu docker_gpu/.
 ```
 
 Run Docker container in interactive mode and enter the docker console

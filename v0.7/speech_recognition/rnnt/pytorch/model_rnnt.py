@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Optional, Tuple
+
 import numpy as np
 import torch
 
@@ -76,6 +78,7 @@ class RNNT(torch.nn.Module):
             rnnt["pred_n_hidden"],
             rnnt["pred_rnn_layers"],
             rnnt["forget_gate_bias"],
+            # Note: This is clearly an error
             None if "norm" not in "rnnt" else rnnt["norm"],
             rnnt["rnn_type"],
             rnnt["dropout"],
@@ -149,26 +152,29 @@ class RNNT(torch.nn.Module):
     # state. But why can't I just specify a type for abstract
     # intepretation? That's what I really want!
     # We really want two "states" here...
-    def forward(self, batch, state=None):
+    def forward(self, x_padded, x_lens, y_packed, y_lens, state=None):
         # batch: ((x, y), (x_lens, y_lens))
 
         raise RuntimeError(
             "RNNT::forward is not currently used. "
             "It corresponds to training, where your entire output sequence "
             "is known before hand.")
-
         # x: TxBxF
-        (x, y_packed), (x_lens, y_lens) = batch
-        x_packed = torch.nn.utils.rnn.pack_padded_sequence(x, x_lens)
-
-        f, x_lens = self.encode(x_packed)
+        f, x_lens = self.encode(x_padded, x_lens)
 
         g, _ = self.predict(y_packed, state)
         out = self.joint(f, g)
 
         return out, (x_lens, y_lens)
 
-    def encode(self, x_packed):
+    @staticmethod
+    def _select(module_dict, key, *args, **kwargs):
+        for k, module in module_dict.items():
+            if k == key:
+                return module(*args, **kwargs)
+        raise ValueError(f"key {key} not found in dictionary")
+
+    def encode(self, x_padded: torch.Tensor, x_lens: torch.Tensor):
         """
         Args:
             x: tuple of ``(input, input_lens)``. ``input`` has shape (T, B, I),
@@ -178,15 +184,16 @@ class RNNT(torch.nn.Module):
             f: tuple of ``(output, output_lens)``. ``output`` has shape
                 (B, T, H), ``output_lens``
         """
-        x_packed, _ = self.encoder["pre_rnn"](x_packed, None)
-        x, x_lens = torch.nn.utils.rnn.pad_packed_sequence(x_packed)
-        x, x_lens = self.encoder["stack_time"]((x, x_lens))
-        x_packed = torch.nn.utils.rnn.pack_padded_sequence(x, x_lens)
-        x_packed, _ = self.encoder["post_rnn"](x_packed, None)
-        x, x_lens = torch.nn.utils.rnn.pad_packed_sequence(x_packed, batch_first=True)
-        return x, x_lens
+        x_padded, _ = self._select(self.encoder, "pre_rnn", x_padded, None)
+        x_padded, x_lens = self._select(self.encoder, "stack_time", x_padded, x_lens)
+        # (T, B, H)
+        x_padded, _ = self._select(self.encoder, "post_rnn", x_padded, None)
+        # (B, T, H)
+        x_padded = x_padded.transpose(0, 1)
+        return x_padded, x_lens
 
-    def predict(self, y, state=None, add_sos=True):
+    def predict(self, y: Optional[torch.Tensor],
+                state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         """
         B - batch size
         U - label length
@@ -204,27 +211,15 @@ class RNNT(torch.nn.Module):
                         h (tensor), shape (L, B, H)
                         c (tensor), shape (L, B, H)
         """
-        if isinstance(y, torch.Tensor):
-            y = self.prediction["embed"](y)
-        elif isinstance(y, torch.nn.utils.rnn.PackedSequence):
-            # Teacher-forced training mode
-            # (B, U) -> (B, U, H)
-            y._replace(data=self.prediction["embed"](y.data))
+        if y is None:
+            # This is gross. I should really just pass in an SOS token
+            # instead. Is there no SOS token?
+            assert state is None
+            # Hacky, no way to determine this right now!
+            B = 1
+            y = torch.zeros((B, 1, self.pred_n_hidden), dtype=torch.float32)
         else:
-            # inference mode
-            B = 1 if state is None else state[0].size(1)
-            y = torch.zeros((B, 1, self.pred_n_hidden)).to(
-                device=self.joint_net[0].weight.device,
-                dtype=self.joint_net[0].weight.dtype
-            )
-
-        # preprend blank "start of sequence" symbol
-        if add_sos:
-            B, U, H = y.shape
-            start = torch.zeros((B, 1, H)).to(device=y.device, dtype=y.dtype)
-            y = torch.cat([start, y], dim=1).contiguous()   # (B, U + 1, H)
-        else:
-            start = None   # makes del call later easier
+            y = self._select(self.prediction, "embed", y)
 
         # if state is None:
         #    batch = y.size(0)
@@ -235,12 +230,12 @@ class RNNT(torch.nn.Module):
         #    ]
 
         y = y.transpose(0, 1)  # .contiguous()   # (U + 1, B, H)
-        g, hid = self.prediction["dec_rnn"](y, state)
+        g, hid = self._select(self.prediction, "dec_rnn", y, state)
         g = g.transpose(0, 1)  # .contiguous()   # (B, U + 1, H)
-        del y, start, state
+        del y, state
         return g, hid
 
-    def joint(self, f, g):
+    def joint(self, f: torch.Tensor, g: torch.Tensor):
         """
         f should be shape (B, T, H)
         g should be shape (B, U + 1, H)

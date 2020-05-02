@@ -36,11 +36,11 @@ class TransducerDecoder:
 
     def _pred_step(self, label, hidden, device):
         if label == self._SOS:
-            return self._model.predict(None, hidden, add_sos=False)
+            return self._model.predict(None, hidden)
         if label > self._blank_id:
             label -= 1
         label = label_collate([[label]]).to(device)
-        return self._model.predict(label, hidden, add_sos=False)
+        return self._model.predict(label, hidden)
 
     def _joint_step(self, enc, pred, log_normalize=False):
         logits = self._model.joint(enc, pred)[:, 0, 0, :]
@@ -88,8 +88,7 @@ class RNNTGreedyDecoder(TransducerDecoder):
         with torch.no_grad():
             # Apply optional preprocessing
 
-            x_packed = torch.nn.utils.rnn.pack_padded_sequence(x, out_lens)
-            logits, out_lens = self._model.encode(x_packed)
+            logits, out_lens = self._model.encode(x, out_lens)
 
             output = []
             for batch_idx in range(logits.size(0)):

@@ -15,6 +15,8 @@
 
 import torch
 
+from typing import Optional, Tuple
+
 
 def rnn(rnn, input_size, hidden_size, num_layers, norm=None,
         forget_gate_bias=1.0, dropout=0.0, **kwargs):
@@ -75,10 +77,11 @@ class LstmDrop(torch.nn.Module):
         self.inplace_dropout = (torch.nn.Dropout(dropout, inplace=True)
                                 if dropout else None)
 
-    def forward(self, x, h=None):
+    def forward(self, x: torch.Tensor,
+                h: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         x, h = self.lstm(x, h)
 
-        if self.inplace_dropout:
+        if self.inplace_dropout is not None:
             self.inplace_dropout(x.data)
 
         return x, h
@@ -89,9 +92,8 @@ class StackTime(torch.nn.Module):
         super().__init__()
         self.factor = int(factor)
 
-    def forward(self, x):
+    def forward(self, x, x_lens):
         # T, B, U
-        x, x_lens = x
         seq = [x]
         for i in range(1, self.factor):
             # This doesn't seem to make much sense...

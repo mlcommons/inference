@@ -56,11 +56,11 @@ if [[ $stage -le 2 ]]; then
 fi
 
 if [[ $stage -le 3 ]]; then
-   python inference.py \
+   ipython --pdb -c "%run inference.py \
       --model_toml configs/rnnt.toml \
       --ckpt $work_dir/rnnt.pt \
       --dataset_dir $local_data_dir \
       --val_manifest $local_data_dir/dev-clean-wav-small.json \
       --batch_size 1 \
-      --seed $seed
+      --seed $seed"
 fi

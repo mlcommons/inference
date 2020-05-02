@@ -171,7 +171,10 @@ def main(args):
     if args.ckpt is not None:
         print("loading model from ", args.ckpt)
         checkpoint = torch.load(args.ckpt, map_location="cpu")
-        migrated_state_dict = checkpoint['state_dict']
+        migrated_state_dict = {}
+        for key, value in checkpoint['state_dict'].items():
+            key = key.replace("encoder.", "encoder_").replace("prediction.", "prediction_")
+            migrated_state_dict[key] = value
         del migrated_state_dict["audio_preprocessor.featurizer.fb"]
         del migrated_state_dict["audio_preprocessor.featurizer.window"]
         model.load_state_dict(migrated_state_dict, strict=True)

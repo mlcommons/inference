@@ -61,7 +61,7 @@ class RNNT(torch.nn.Module):
         self.pred_n_hidden = rnnt["pred_n_hidden"]
         self.pred_rnn_layers = rnnt["pred_rnn_layers"]
 
-        self.encoder = self._encoder(
+        self.encoder_pre_rnn, self.encoder_stack_time, self.encoder_post_rnn = self._encoder(
             in_features,
             rnnt["encoder_n_hidden"],
             rnnt["encoder_pre_rnn_layers"],
@@ -73,7 +73,7 @@ class RNNT(torch.nn.Module):
             rnnt["dropout"],
         )
 
-        self.prediction = self._predict(
+        self.prediction_embed, self.prediction_dec_rnn = self._predict(
             num_classes,
             rnnt["pred_n_hidden"],
             rnnt["pred_rnn_layers"],
@@ -96,8 +96,8 @@ class RNNT(torch.nn.Module):
                  encoder_pre_rnn_layers, encoder_post_rnn_layers,
                  forget_gate_bias, norm, rnn_type, encoder_stack_time_factor,
                  dropout):
-        layers = torch.nn.ModuleDict({
-            "pre_rnn": rnn(
+        return (
+            rnn(
                 rnn=rnn_type,
                 input_size=in_features,
                 hidden_size=encoder_n_hidden,
@@ -106,8 +106,8 @@ class RNNT(torch.nn.Module):
                 forget_gate_bias=forget_gate_bias,
                 dropout=dropout,
             ),
-            "stack_time": StackTime(factor=encoder_stack_time_factor),
-            "post_rnn": rnn(
+            StackTime(factor=encoder_stack_time_factor),
+            rnn(
                 rnn=rnn_type,
                 input_size=encoder_stack_time_factor * encoder_n_hidden,
                 hidden_size=encoder_n_hidden,
@@ -117,24 +117,21 @@ class RNNT(torch.nn.Module):
                 norm_first_rnn=True,
                 dropout=dropout,
             ),
-        })
-        return layers
+        )
 
     def _predict(self, vocab_size, pred_n_hidden, pred_rnn_layers,
                  forget_gate_bias, norm, rnn_type, dropout):
-        layers = torch.nn.ModuleDict({
-            "embed": torch.nn.Embedding(vocab_size - 1, pred_n_hidden),
-            "dec_rnn": rnn(
-                rnn=rnn_type,
-                input_size=pred_n_hidden,
-                hidden_size=pred_n_hidden,
-                num_layers=pred_rnn_layers,
-                norm=norm,
-                forget_gate_bias=forget_gate_bias,
-                dropout=dropout,
-            ),
-        })
-        return layers
+        return (torch.nn.Embedding(vocab_size - 1, pred_n_hidden),
+                rnn(
+                    rnn=rnn_type,
+                    input_size=pred_n_hidden,
+                    hidden_size=pred_n_hidden,
+                    num_layers=pred_rnn_layers,
+                    norm=norm,
+                    forget_gate_bias=forget_gate_bias,
+                    dropout=dropout,
+                )
+        )
 
     def _joint_net(self, vocab_size, pred_n_hidden, enc_n_hidden,
                    joint_n_hidden, dropout):
@@ -167,13 +164,6 @@ class RNNT(torch.nn.Module):
 
         return out, (x_lens, y_lens)
 
-    @staticmethod
-    def _select(module_dict, key, *args, **kwargs):
-        for k, module in module_dict.items():
-            if k == key:
-                return module(*args, **kwargs)
-        raise ValueError(f"key {key} not found in dictionary")
-
     def encode(self, x_padded: torch.Tensor, x_lens: torch.Tensor):
         """
         Args:
@@ -184,10 +174,10 @@ class RNNT(torch.nn.Module):
             f: tuple of ``(output, output_lens)``. ``output`` has shape
                 (B, T, H), ``output_lens``
         """
-        x_padded, _ = self._select(self.encoder, "pre_rnn", x_padded, None)
-        x_padded, x_lens = self._select(self.encoder, "stack_time", x_padded, x_lens)
+        x_padded, _ = self.encoder_pre_rnn(x_padded, None)
+        x_padded, x_lens = self.encoder_stack_time(x_padded, x_lens)
         # (T, B, H)
-        x_padded, _ = self._select(self.encoder, "post_rnn", x_padded, None)
+        x_padded, _ = self.encoder_post_rnn(x_padded, None)
         # (B, T, H)
         x_padded = x_padded.transpose(0, 1)
         return x_padded, x_lens
@@ -219,7 +209,7 @@ class RNNT(torch.nn.Module):
             B = 1
             y = torch.zeros((B, 1, self.pred_n_hidden), dtype=torch.float32)
         else:
-            y = self._select(self.prediction, "embed", y)
+            y = self.prediction_embed(y)
 
         # if state is None:
         #    batch = y.size(0)
@@ -230,7 +220,7 @@ class RNNT(torch.nn.Module):
         #    ]
 
         y = y.transpose(0, 1)  # .contiguous()   # (U + 1, B, H)
-        g, hid = self._select(self.prediction, "dec_rnn", y, state)
+        g, hid = self.prediction_dec_rnn(y, state)
         g = g.transpose(0, 1)  # .contiguous()   # (B, U + 1, H)
         del y, state
         return g, hid

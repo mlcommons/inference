@@ -25,6 +25,8 @@ import random
 import numpy as np
 import pickle
 
+from copy import deepcopy
+
 import torchvision
 
 # import sys
@@ -87,6 +89,10 @@ def eval(
             'logits': [],
         }
 
+        if hasattr(greedy_decoder._model.encode, "inlined_graph"):
+            with open("encode_graph.txt", "w") as fh:
+                fh.write(str(greedy_decoder._model.encode.inlined_graph))
+
         for it, data in enumerate(tqdm(data_layer.data_iterator)):
             (t_audio_signal_e, t_a_sig_length_e,
              transcript_list, t_transcript_e,
@@ -103,11 +109,40 @@ def eval(
             #     ((t_audio_signal_e, t_transcript_e),
             #      (t_a_sig_length_e, t_transcript_len_e),)
             # )
-            t_predictions_e = greedy_decoder.decode(
-                t_audio_signal_e, t_a_sig_length_e)
 
+            # model = torch.jit.script(encoderdecoder)
+            model = encoderdecoder
+            with open("encode_graph_outside_decoder.txt", "w") as fh:
+                fh.write(str(model.encode.inlined_graph))
+            # t_audio_signal_e, t_a_sig_length_e = encoderdecoder.encode(t_audio_signal_e, t_a_sig_length_e)
+            
+
+            # t_audio_signal_e = t_audio_signal_e[:2, :, :]
+            # t_a_sig_length_e[0] = 2
+            # vanilla, vanilla_len = model.encode(t_audio_signal_e, t_a_sig_length_e)
+            # jitted_model = torch.jit.script(model)
+            # jit, jit_len = jitted_model.encode(t_audio_signal_e, t_a_sig_length_e)
+            # from IPython import embed; embed()
+
+            # t_audio_signal_e = t_audio_signal_e[:2, :, :]
+            # t_a_sig_length_e[0] = 2
+
+            logits, logits_lens, t_predictions_e = greedy_decoder.decode(
+                t_audio_signal_e, t_a_sig_length_e, False)
+            print(t_audio_signal_e.dtype)
+            print(type(model))
+            x, x_lens = model.encode(t_audio_signal_e, t_a_sig_length_e)
+            # This gives the correct results. But why?
+            logits2, logits_lens2, t_predictions_e2 = greedy_decoder.decode(
+                x, x_lens, True)
+
+            print(t_predictions_e)
+            print(t_predictions_e2)
+
+            # from IPython import embed; embed()
+            
             values_dict = dict(
-                predictions=[t_predictions_e],
+                predictions=[t_predictions_e2],
                 transcript=transcript_list,
                 transcript_length=t_transcript_len_e,
             )
@@ -200,6 +235,7 @@ def main(args):
         model.cuda()
 
     # Ideally, I would jit this as well... But this is just the constructor...
+    model = torch.jit.script(model)
     greedy_decoder = RNNTGreedyDecoder(len(ctc_vocab) - 1, model)
 
     eval(

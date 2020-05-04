@@ -18,6 +18,8 @@ import torch
 import torch.nn.functional as F
 from model_rnnt import label_collate
 
+from contextlib import ExitStack
+
 
 class TransducerDecoder:
     """Decoder base class.
@@ -31,6 +33,8 @@ class TransducerDecoder:
 
     def __init__(self, blank_index, model):
         self._model = model
+        print(type(self._model))
+        # self._model = torch.jit.script(model)
         self._SOS = -1   # start of sequence
         self._blank_id = blank_index
 
@@ -73,7 +77,7 @@ class RNNTGreedyDecoder(TransducerDecoder):
         assert max_symbols_per_step is None or max_symbols_per_step > 0
         self.max_symbols = max_symbols_per_step
 
-    def decode(self, x, out_lens):
+    def decode(self, x, out_lens, x_is_logits=False):
         """Returns a list of sentences given an input batch.
 
         Args:
@@ -85,19 +89,23 @@ class RNNTGreedyDecoder(TransducerDecoder):
         Returns:
             list containing batch number of sentences (strings).
         """
-        with torch.no_grad():
-            # Apply optional preprocessing
+        # Apply optional preprocessing
 
+        with open("encode_graph_inside_decoder.txt", "w") as fh:
+            fh.write(str(self._model.encode.inlined_graph))
+        if x_is_logits:
+            logits = x
+        else:
             logits, out_lens = self._model.encode(x, out_lens)
+            
+        output = []
+        for batch_idx in range(logits.size(0)):
+            inseq = logits[batch_idx, :, :].unsqueeze(1)
+            logitlen = out_lens[batch_idx]
+            sentence = self._greedy_decode(inseq, logitlen)
+            output.append(sentence)
 
-            output = []
-            for batch_idx in range(logits.size(0)):
-                inseq = logits[batch_idx, :, :].unsqueeze(1)
-                logitlen = out_lens[batch_idx]
-                sentence = self._greedy_decode(inseq, logitlen)
-                output.append(sentence)
-
-        return output
+        return logits, out_lens, output
 
     def _greedy_decode(self, x, out_len):
         training_state = self._model.training

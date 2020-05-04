@@ -92,6 +92,7 @@ class StackTime(torch.nn.Module):
         super().__init__()
         self.factor = int(factor)
 
+    @torch.jit.ignore
     def forward(self, x, x_lens):
         # T, B, U
         seq = [x]

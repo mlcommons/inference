@@ -72,6 +72,9 @@ class RNNT(torch.nn.Module):
             rnnt["encoder_stack_time_factor"],
             rnnt["dropout"],
         )
+        # self.encoder_pre_rnn = torch.jit.ignore(self.encoder_pre_rnn)
+        # self.encoder_stack_time = torch.jit.ignore(self.encoder_stack_time)
+        # self.encoder_post_rnn = torch.jit.ignore(self.encoder_post_rnn)
 
         self.prediction_embed, self.prediction_dec_rnn = self._predict(
             num_classes,
@@ -149,7 +152,9 @@ class RNNT(torch.nn.Module):
     # state. But why can't I just specify a type for abstract
     # intepretation? That's what I really want!
     # We really want two "states" here...
-    def forward(self, x_padded, x_lens, y_packed, y_lens, state=None):
+    @torch.jit.unused
+    def forward(self, x_padded, x_lens, y_packed, y_lens,
+                state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         # batch: ((x, y), (x_lens, y_lens))
 
         raise RuntimeError(
@@ -164,7 +169,20 @@ class RNNT(torch.nn.Module):
 
         return out, (x_lens, y_lens)
 
-    def encode(self, x_padded: torch.Tensor, x_lens: torch.Tensor):
+    # @torch.jit.ignore
+    # @torch.jit.export
+    def apply_encode_pre_rnn(self, x_padded):
+        x_padded, _ = self.encoder_pre_rnn(x_padded, None)
+        return x_padded
+
+    # @torch.jit.ignore
+    # @torch.jit.export
+    def apply_encode_post_rnn(self, x_padded):
+        x_padded, _ = self.encoder_post_rnn(x_padded, None)
+        return x_padded
+
+    @torch.jit.export
+    def encode(self, x_padded: torch.Tensor, x_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
         Args:
             x: tuple of ``(input, input_lens)``. ``input`` has shape (T, B, I),
@@ -174,16 +192,23 @@ class RNNT(torch.nn.Module):
             f: tuple of ``(output, output_lens)``. ``output`` has shape
                 (B, T, H), ``output_lens``
         """
-        x_padded, _ = self.encoder_pre_rnn(x_padded, None)
+        x_padded = self.apply_encode_pre_rnn(x_padded)
         x_padded, x_lens = self.encoder_stack_time(x_padded, x_lens)
         # (T, B, H)
-        x_padded, _ = self.encoder_post_rnn(x_padded, None)
+        x_padded = self.apply_encode_post_rnn(x_padded)
         # (B, T, H)
-        x_padded = x_padded.transpose(0, 1)
+        # x_padded = x_padded.transpose(0, 1)
+        x_padded = self._encode_transpose(x_padded)
         return x_padded, x_lens
 
+    @torch.jit.ignore
+    def _encode_transpose(self, x_padded):
+        return x_padded.transpose(0, 1)
+
+    # @torch.jit.ignore
+    @torch.jit.export
     def predict(self, y: Optional[torch.Tensor],
-                state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
+                state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         B - batch size
         U - label length
@@ -222,9 +247,10 @@ class RNNT(torch.nn.Module):
         y = y.transpose(0, 1)  # .contiguous()   # (U + 1, B, H)
         g, hid = self.prediction_dec_rnn(y, state)
         g = g.transpose(0, 1)  # .contiguous()   # (B, U + 1, H)
-        del y, state
+        # del y, state
         return g, hid
 
+    @torch.jit.export
     def joint(self, f: torch.Tensor, g: torch.Tensor):
         """
         f should be shape (B, T, H)
@@ -245,7 +271,7 @@ class RNNT(torch.nn.Module):
 
         inp = torch.cat([f, g], dim=3)   # (B, T, U, 2H)
         res = self.joint_net(inp)
-        del f, g, inp
+        # del f, g, inp
         return res
 
 

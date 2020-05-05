@@ -173,7 +173,7 @@ Ensure you have a working docker setup with CUDA support (Should return True); I
 python -c "exec(\"import torch\nprint(torch.cuda.is_available())\")"
 ```
 
-Inside container kickstart default setup (environment, git checkout, fake dataset, model download and default to single GPU). See above for changing CUDA_VISBILE.
+Inside container kickstart default setup (environment, git checkout, fake dataset, model download and default to single GPU). See above for changing `CUDA_VISIBLE_DEVICES`.
 ```
 source kickstart.sh
 ```
@@ -181,18 +181,16 @@ source kickstart.sh
 ### Examples for testing
 During development running the full benchmark is unpractical. Here are some options to help:
 
-```--count-samples``` limits the number of items in the dataset used for accuracy pass
+`--count-samples` limits the number of items in the dataset used for accuracy pass
 
-```--duration``` limits the time the benchmark runs
+`--duration` limits the time the benchmark runs
 
-```--max-latency``` the latency used for Server scenario
+`--max-latency` the latency used for Server scenario
 
-```--accuracy``` enables accuracy pass
+`--accuracy` enables accuracy pass
 
 So if you want to tune for example Server scenario, try:
 ```
-./run_local.sh pytorch dlrm terabyte cpu --count-samples 100 --duration 60000 --scenario Server --target-qps 200 --max-latency 0.1
-or
 ./run_local.sh pytorch dlrm terabyte cpu --count-samples 100 --duration 60000 --scenario Server --target-qps 100 --max-latency 0.1
 
 ```
@@ -219,77 +217,53 @@ usage: main.py [-h]
     [--accuracy] [--find-peak-performance]
 ```
 
-```--config```
-the mlperf config file to use, defaults to v0.5/mlperf.conf
+`--config` the mlperf config file to use, defaults to v0.5/mlperf.conf
 
-```--model```
-model name, i.e. dlrm
+`--model` model name, i.e. dlrm
 
-```--model-path MODEL_PATH```
-path to the file with model weights.
+`--model-path MODEL_PATH` path to the file with model weights.
 
-```--dataset```
-use the specified dataset. Currently we only support Criteo Terabyte.
+`--dataset` use the specified dataset. Currently we only support Criteo Terabyte.
 
-```--dataset-path```
-path to the dataset.
+`--dataset-path` path to the dataset.
 
-```--scenario {SingleStream,MultiStream,Server,Offline}```
-benchmarking mode to be used.
+`--scenario {SingleStream,MultiStream,Server,Offline}` benchmarking mode to be used.
 
-```--profile {dlrm-kaggle-pytorch,dlrm-terabyte-pytorch}```
-this fills in default command line options with the once specified in the profile. Command line options that follow may override the those.
+`--profile {dlrm-kaggle-pytorch,dlrm-terabyte-pytorch}` this fills in default command line options with the once specified in the profile. Command line options that follow may override the those.
 
-```--backend```
-only the PyTorch backedn is currently supported. However, we expect to add TensorFlow backend in the future.
+`--backend` only the PyTorch backedn is currently supported. However, we expect to add TensorFlow backend in the future.
 
-```--max-ind-range```
-the maximum number of vectors allowed in an embedding table.
+`--max-ind-range` the maximum number of vectors allowed in an embedding table.
 
-```--data-sub-sample-rate```
-the rate of sub-sampling of negative samples, either 0.875 or 0.0.
+`--data-sub-sample-rate` the rate of sub-sampling of negative samples, either 0.875 or 0.0.
 
-```--max-batchsize MAX_BATCHSIZE```
-maximum batchsize we generate to backend (default: 128). If the query contains a very large number of samples it will be broken up into smaller mini-batches of `MAX_BATCHSIZE` samples before forwarding it to the model.
+`--max-batchsize MAX_BATCHSIZE` maximum batchsize we generate to backend (default: 128). If the query contains a very large number of samples it will be broken up into smaller mini-batches of `MAX_BATCHSIZE` samples before forwarding it to the model.
 
-```--mlperf-bin-loader```
-flag that enables mlperf binary loader to be used.
+`--mlperf-bin-loader` flag that enables mlperf binary loader to be used.
 
-```--output OUTPUT```
-location of the JSON output.
+`--output OUTPUT` location of the JSON output.
 
-```--backend BACKEND```
-which backend to use. Currently supported is PyTorch.
+`--backend BACKEND` which backend to use. Currently supported is PyTorch.
 
-```--use-gpu```
-flag that enables use of GPU. The number of GPUs used is controlled by `CUDA_VISIBLE_DEVICES` environment variable.
+`--use-gpu` flag that enables use of GPU. The number of GPUs used is controlled by `CUDA_VISIBLE_DEVICES` environment variable.
 
-```--threads THREADS```
-number of worker threads to use (default: the number of processors in the system).
+`--threads THREADS` number of worker threads to use (default: the number of processors in the system).
 
-```--duration```
-duration of the benchmark run in milliseconds (ms).
+`--duration` duration of the benchmark run in milliseconds (ms).
 
-```--count-samples COUNT```
-number of samples from the dataset we use (default: use all samples in the dataset).
+`--count-samples COUNT` number of samples from the dataset we use (default: use all samples in the dataset).
 
-```--count-queries COUNT```
-number of queries we use (default: no limit).
+`--count-queries COUNT` number of queries we use (default: no limit).
 
-```--target-qps QPS```
-target/expected QPS for Server and Offline scenarios.
+`--target-qps QPS` target/expected QPS for Server and Offline scenarios.
 
-```--max-latency MAX_LATENCY```
-comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
+`--max-latency MAX_LATENCY` comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
 
-```--samples-per-query```
-number of samples per query in MultiStream scenario.
+`--samples-per-query` number of samples per query in MultiStream scenario.
 
-```--accuracy```
-perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
+`--accuracy` perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 
-```--find-peak-performance```
-determine the maximumum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.
+`--find-peak-performance` determine the maximumum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.
 
 ## License
 

@@ -388,7 +388,7 @@ std::vector<QueryMetadata> GenerateQueries(
       // randomization.
       size_t num_loaded_samples = loaded_samples.size();
       size_t num_full_repeats = samples_per_query / num_loaded_samples;
-      int remainder = samples_per_query % (num_loaded_samples);
+      uint64_t remainder = samples_per_query % (num_loaded_samples);
       if (settings.performance_issue_same) {
         std::fill(samples.begin(), samples.begin() + num_loaded_samples,
                   loaded_samples[same_sample]);

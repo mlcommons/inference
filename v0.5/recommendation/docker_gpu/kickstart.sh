@@ -24,3 +24,5 @@ CFLAGS="-std=c++14" python setup.py develop --user
 
 cd $HOME/mlperf/inference/v0.5/recommendation
 echo "Setup Complete."
+
+export CUDA_VISIBLE_DEVICES=0

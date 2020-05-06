@@ -125,6 +125,7 @@ def get_args():
     parser.add_argument("--count-queries", type=int, help="number of queries to use")
     parser.add_argument("--max-latency", type=float, help="mlperf max latency in pct tile")
     parser.add_argument("--samples-per-query", type=int, help="mlperf multi-stream sample per query")
+    parser.add_argument("--num-samples-to-aggregate", type=int, help="number of samples to be treated as one")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
@@ -370,6 +371,7 @@ def main():
                         pre_process=pre_proc,  # currently an identity function
                         use_cache=args.cache,  # currently not used
                         count=args.count_samples,
+                        num_samples_to_aggregate=args.num_samples_to_aggregate,
                         test_num_workers=args.test_num_workers,
                         max_ind_range=args.max_ind_range,
                         sub_sample_rate=args.data_sub_sample_rate,

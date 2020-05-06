@@ -15,7 +15,7 @@ This is a reference implementation of the benchmark that is not meant to be the 
 The official model is the largest model on the order of 100GB, while interface to other models is only provided to facilitate debugging.
 
 The reference implementation includes all required pre-processing of datasets.
-It also includes ```--accuracy``` option to validate accuracy and AUC metrics as required by MLPerf [1].
+It also includes ```--accuracy``` option to validate accuracy and receiver operating charcteritics area under the curve (ROC AUC) metrics as required by MLPerf [1].
 
 The reference implementation was tested on a machine with 256GB RAM and 8x32GB GPUs.
 

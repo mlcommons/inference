@@ -34,12 +34,11 @@ import data_loader_terabyte
 
 class Criteo(Dataset):
 
-    def __init__(self, data_path, name, pre_process, use_cache, count=None, test_num_workers=0, max_ind_range=-1, sub_sample_rate=0.0, mlperf_bin_loader=False, randomize="total", memory_map=False):
+    def __init__(self, data_path, name, pre_process, use_cache, count=None, num_samples_to_aggregate=None, test_num_workers=0, max_ind_range=-1, sub_sample_rate=0.0, mlperf_bin_loader=False, randomize="total", memory_map=False):
         super().__init__()
-        # debug prints
-        # print('__init__', data_path, name, pre_process, use_cache, count, test_num_workers, max_ind_range, sub_sample_rate, randomize, memory_map)
 
         self.count = count
+        self.num_samples_to_aggregate = 1 if num_samples_to_aggregate is None else num_samples_to_aggregate
 
         if name == "kaggle":
             raw_data_file = data_path + "/train.txt"
@@ -63,6 +62,7 @@ class Criteo(Dataset):
             pro_data=processed_data_file,
             memory_map=memory_map
         )
+        self.num_individual_samples = len(self.test_data)
 
         if self.use_mlperf_bin_loader:
 
@@ -77,7 +77,7 @@ class Criteo(Dataset):
             self.test_data = data_loader_terabyte.CriteoBinDataset(
                 data_file=test_file,
                 counts_file=counts_file,
-                batch_size=1, # FIGURE this out
+                batch_size=self.num_samples_to_aggregate,
                 max_ind_range=max_ind_range
             )
 
@@ -95,7 +95,7 @@ class Criteo(Dataset):
 
             self.test_loader = torch.utils.data.DataLoader(
                 self.test_data,
-                batch_size=1,  # FIGURE this out
+                batch_size=self.num_samples_to_aggregate,
                 shuffle=False,
                 num_workers=test_num_workers,
                 collate_fn=dp.collate_wrapper_criteo,
@@ -104,10 +104,24 @@ class Criteo(Dataset):
             )
 
     def get_item_count(self):
-        if self.count is not None:
-            return min(self.count, len(self.test_data))
+        # get number of items in the dataset
+
+        # WARNING: Note that the orignal dataset returns number of samples, while the
+        # binary dataset returns the number of batches. Therefore, when using a mini-batch
+        # of size num_samples_to_aggregate as an item we need to adjust the original dataset item_count.
+        # On the other hand, data loader always returns number of batches.
+        if self.use_mlperf_bin_loader:
+            self.num_aggregated_samples = len(self.test_data)
+            # self.num_aggregated_samples2 = len(self.test_loader)
         else:
-            return len(self.test_data)
+            self.num_aggregated_samples = (self.num_individual_samples + self.num_samples_to_aggregate - 1) // self.num_samples_to_aggregate
+            # self.num_aggregated_samples2 = len(self.test_loader)
+
+        # limit number of items to count if needed
+        if self.count is not None:
+            self.num_aggregated_samples = min(self.count, self.num_aggregated_samples)
+
+        return self.num_aggregated_samples
 
     ''' lg compatibilty routine '''
     def unload_query_samples(self, sample_list):
@@ -118,8 +132,32 @@ class Criteo(Dataset):
 
         self.items_in_memory = {}
 
+        # WARNING: notice that while DataLoader is iterable-style, the Dataset
+        # can be iterable- or map-style, and Criteo[Bin]Dataset are the latter
+        # This means that we can not index into DataLoader, but can enumerate it,
+        # while we can index into the dataset itself.
         for l in sample_list:
+            # approach 1: single sample as an item
+            '''
             self.items_in_memory[l] = self.test_data[l]
+            '''
+            # approach 2: multiple samples as an item
+            s = l * self.num_samples_to_aggregate
+            e = min((l + 1) * self.num_samples_to_aggregate, self.num_individual_samples)
+            ls = [self.test_data[i] for i in range(s, e)]
+            if self.use_mlperf_bin_loader:
+                # NOTE: in binary dataset the values are transformed
+                ls_t = list(zip(*ls))
+                X = torch.cat(ls_t[0])
+                (num_s, len_ls) = torch.cat(ls_t[1], dim=1).size()
+                lS_o = torch.stack([torch.tensor(range(len_ls)) for _ in range(num_s)])
+                lS_i = torch.cat(ls_t[2], dim=1)
+                T = torch.cat(ls_t[3])
+                self.items_in_memory[l] = (X, lS_o, lS_i, T)
+            else:
+                # NOTE: in original dataset the values are not transformed
+                # and collate besides stacking them also transforms them
+                self.items_in_memory[l] = self.test_loader.collate_fn(ls)
 
         self.last_loaded = time.time()
 
@@ -131,8 +169,10 @@ class Criteo(Dataset):
         for i in id_list:
             ls.append(self.items_in_memory[i])
 
-        # collate a mini-batch of samples
+        # approach 1: collate a mini-batch of single samples
+        '''
         if self.use_mlperf_bin_loader:
+            # NOTE: in binary dataset the values are transformed
             ls_t = list(zip(*ls))
 
             X = torch.cat(ls_t[0])
@@ -141,7 +181,19 @@ class Criteo(Dataset):
             lS_i = torch.cat(ls_t[2], dim=1)
             T = torch.cat(ls_t[3])
         else:
+            # NOTE: in original dataset the values are not transformed and collate besides stacking transforms them
             X, lS_o, lS_i, T = self.test_loader.collate_fn(ls)
+        '''
+        # approach 2: collate a mini-batch of multiple samples
+        # NOTE: recall that the samples have already been transformed for both datasets
+        # (by earlier calls in load_query_samples), therefore we just need to stack them
+        ls_t = list(zip(*ls))
+
+        X = torch.cat(ls_t[0])
+        (num_s, len_ls) = torch.cat(ls_t[1], dim=1).size()
+        lS_o = torch.stack([torch.tensor(range(len_ls)) for _ in range(num_s)])
+        lS_i = torch.cat(ls_t[2], dim=1)
+        T = torch.cat(ls_t[3])
         # debug prints
         # print('get_samples', (X, lS_o, lS_i, T))
 

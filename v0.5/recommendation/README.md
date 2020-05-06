@@ -15,7 +15,7 @@ This is a reference implementation of the benchmark that is not meant to be the 
 The official model is the largest model on the order of 100GB, while interface to other models is only provided to facilitate debugging.
 
 The reference implementation includes all required pre-processing of datasets.
-It also includes ```--accuracy``` option to validate accuracy and receiver operating charcteritics area under the curve (ROC AUC) metrics as required by MLPerf [1].
+It also includes ```--accuracy``` option to validate accuracy and ROC AUC (receiver operating characteritics area under the curve) metrics as required by MLPerf [1].
 
 The reference implementation was tested on a machine with 256GB RAM and 8x32GB GPUs.
 
@@ -213,7 +213,9 @@ usage: main.py [-h]
     [--output OUTPUT] [--inputs INPUTS] [--outputs OUTPUTS]
     [--backend BACKEND] [--use-gpu] [--threads THREADS] [--duration TIME_IN_MS]
     [--count-samples COUNT] [--count-queries COUNT] [--target-qps QPS]
-    [--max-latency MAX_LATENCY] [--samples-per-query NUM_SAMPLES] [--cache CACHE]
+    [--max-latency MAX_LATENCY]  [--cache CACHE]
+    [--samples-per-query NUM_SAMPLES]
+    [--samples-to-aggregate NUM_SAMPLES]]
     [--accuracy] [--find-peak-performance]
 ```
 
@@ -260,6 +262,8 @@ usage: main.py [-h]
 `--max-latency MAX_LATENCY` comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
 
 `--samples-per-query` number of samples per query in MultiStream scenario.
+
+`--samples-to-aggregate` number of samples to aggregate and treat as a single sample during runs.
 
 `--accuracy` perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 

@@ -34,11 +34,11 @@ import data_loader_terabyte
 
 class Criteo(Dataset):
 
-    def __init__(self, data_path, name, pre_process, use_cache, count=None, num_samples_to_aggregate=None, test_num_workers=0, max_ind_range=-1, sub_sample_rate=0.0, mlperf_bin_loader=False, randomize="total", memory_map=False):
+    def __init__(self, data_path, name, pre_process, use_cache, count=None, samples_to_aggregate=None, test_num_workers=0, max_ind_range=-1, sub_sample_rate=0.0, mlperf_bin_loader=False, randomize="total", memory_map=False):
         super().__init__()
 
         self.count = count
-        self.num_samples_to_aggregate = 1 if num_samples_to_aggregate is None else num_samples_to_aggregate
+        self.samples_to_aggregate = 1 if samples_to_aggregate is None else samples_to_aggregate
 
         if name == "kaggle":
             raw_data_file = data_path + "/train.txt"
@@ -77,7 +77,7 @@ class Criteo(Dataset):
             self.test_data = data_loader_terabyte.CriteoBinDataset(
                 data_file=test_file,
                 counts_file=counts_file,
-                batch_size=self.num_samples_to_aggregate,
+                batch_size=self.samples_to_aggregate,
                 max_ind_range=max_ind_range
             )
 
@@ -95,7 +95,7 @@ class Criteo(Dataset):
 
             self.test_loader = torch.utils.data.DataLoader(
                 self.test_data,
-                batch_size=self.num_samples_to_aggregate,
+                batch_size=self.samples_to_aggregate,
                 shuffle=False,
                 num_workers=test_num_workers,
                 collate_fn=dp.collate_wrapper_criteo,
@@ -108,13 +108,13 @@ class Criteo(Dataset):
 
         # WARNING: Note that the orignal dataset returns number of samples, while the
         # binary dataset returns the number of batches. Therefore, when using a mini-batch
-        # of size num_samples_to_aggregate as an item we need to adjust the original dataset item_count.
+        # of size samples_to_aggregate as an item we need to adjust the original dataset item_count.
         # On the other hand, data loader always returns number of batches.
         if self.use_mlperf_bin_loader:
             self.num_aggregated_samples = len(self.test_data)
             # self.num_aggregated_samples2 = len(self.test_loader)
         else:
-            self.num_aggregated_samples = (self.num_individual_samples + self.num_samples_to_aggregate - 1) // self.num_samples_to_aggregate
+            self.num_aggregated_samples = (self.num_individual_samples + self.samples_to_aggregate - 1) // self.samples_to_aggregate
             # self.num_aggregated_samples2 = len(self.test_loader)
 
         # limit number of items to count if needed
@@ -142,8 +142,8 @@ class Criteo(Dataset):
             self.items_in_memory[l] = self.test_data[l]
             '''
             # approach 2: multiple samples as an item
-            s = l * self.num_samples_to_aggregate
-            e = min((l + 1) * self.num_samples_to_aggregate, self.num_individual_samples)
+            s = l * self.samples_to_aggregate
+            e = min((l + 1) * self.samples_to_aggregate, self.num_individual_samples)
             ls = [self.test_data[i] for i in range(s, e)]
             if self.use_mlperf_bin_loader:
                 # NOTE: in binary dataset the values are transformed

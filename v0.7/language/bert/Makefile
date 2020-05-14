@@ -28,6 +28,7 @@ DATA_DIR := $(BUILD_DIR)/data
 BERT_DIR := $(DATA_DIR)/bert_tf_v1_1_large_fp32_384_v2
 RESULT_DIR := $(BUILD_DIR)/result
 MLPERF_CONF := $(BUILD_DIR)/mlperf.conf
+FEATURE_CACHE := eval_features.pickle
 
 # Handle different nvidia-docker version
 ifneq ($(wildcard /usr/bin/nvidia-docker),)
@@ -166,4 +167,5 @@ evaluate:
 
 .PHONY: clean
 clean:
-	@rm -rf build
+	@rm -rf ${BUILD_DIR}
+	@rm -f  ${FEATURE_CACHE}

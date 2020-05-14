@@ -329,8 +329,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--vocab_file", default="build/data/bert_tf_v1_1_large_fp32_384_v2/vocab.txt", help="Path to vocab.txt")
     parser.add_argument("--val_data", default="build/data/dev-v1.1.json", help="Path to validation data")
-    parser.add_argument("--log_file", default="build/logs/mlperf_log_accuracy.json", help="Path to loadge accuracy log")
-    parser.add_argument("--out_file", default="build/result/predictions.json", help="Path to output prediction file")
+    parser.add_argument("--log_file", default="build/logs/mlperf_log_accuracy.json", help="Path to LoadGen accuracy log")
+    parser.add_argument("--out_file", default="build/result/predictions.json", help="Path to output predictions file")
     parser.add_argument("--features_cache_file", default="eval_features.pickle", help="Path to features' cache file")
     parser.add_argument("--output_transposed", action="store_true", help="Transpose the output")
     args = parser.parse_args()
@@ -371,10 +371,10 @@ def main():
         with open(cache_path, 'wb') as cache_file:
             pickle.dump(eval_features, cache_file)
 
-    print("Loading loadgen logs...")
+    print("Loading LoadGen logs...")
     results = load_loadgen_log(args.log_file, eval_features, args.output_transposed)
 
-    print("Post-processing predicions...")
+    print("Post-processing predictions...")
     write_predictions(eval_examples, eval_features, results, 20, 30, True, args.out_file)
 
     print("Evaluating predictions...")

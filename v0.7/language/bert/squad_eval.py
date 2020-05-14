@@ -36,6 +36,9 @@ import tokenization
 from transformers import BertConfig, BertTokenizer, BertForQuestionAnswering
 from utils.create_squad_data import read_squad_examples, convert_examples_to_features
 
+# To support feature cache.
+import pickle
+
 max_seq_length = 384
 max_query_length = 64
 doc_stride = 128
@@ -335,6 +338,10 @@ def main():
     parser.add_argument("--output_transposed", action="store_true", help="Transpose the output")
     args = parser.parse_args()
 
+    print("Reading examples...")
+    eval_examples = read_squad_examples(input_file=args.val_data,
+        is_training=False, version_2_with_negative=False)
+
     eval_features = []
     # Load features if cached, convert from examples otherwise.
     cache_path = args.features_cache_file
@@ -347,11 +354,6 @@ def main():
 
         print("Creating tokenizer...")
         tokenizer = BertTokenizer(args.vocab_file)
-
-        print("Reading examples...")
-        eval_examples = read_squad_examples(
-            input_file=args.val_data, is_training=False,
-            version_2_with_negative=False)
 
         print("Converting examples to features...")
         def append_feature(feature):

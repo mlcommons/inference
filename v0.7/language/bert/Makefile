@@ -169,3 +169,4 @@ evaluate:
 clean:
 	@rm -rf ${BUILD_DIR}
 	@rm -f  ${FEATURE_CACHE}
+	@rm -f  onnxruntime_profile__*.json

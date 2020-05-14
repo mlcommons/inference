@@ -53,8 +53,9 @@ class BERT_PyTorch_SUT():
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
-        self.qsl = get_squad_QSL()
         print("Finished constructing SUT.")
+
+        self.qsl = get_squad_QSL()
 
     def issue_queries(self, query_samples):
         with torch.no_grad():
@@ -77,7 +78,6 @@ class BERT_PyTorch_SUT():
         pass
 
     def __del__(self):
-        lg.DestroySUT(self.sut)
         print("Finished destroying SUT.")
 
 def get_pytorch_sut():

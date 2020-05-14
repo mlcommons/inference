@@ -22,12 +22,15 @@ import argparse
 import mlperf_loadgen as lg
 import subprocess
 
+from squad_QSL import get_squad_QSL
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--backend", choices=["tf","pytorch","onnxruntime"], default="tf", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline", "Server", "MultiStream"], default="Offline", help="Scenario")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--quantized", action="store_true", help="use quantized model (only valid for onnxruntime backend)")
+    parser.add_argument("--profile", action="store_true", help="enable profiling (only valid for onnxruntime backend)")
     parser.add_argument("--mlperf_conf", default="build/mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf", help="mlperf rules config")
     args = parser.parse_args()
@@ -45,15 +48,17 @@ def main():
 
     if args.backend == "pytorch":
         assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
+        assert not args.profile, "Profiling is only supported by onnxruntime backend!"
         from pytorch_SUT import get_pytorch_sut
         sut = get_pytorch_sut()
     elif args.backend == "tf":
         assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
+        assert not args.profile, "Profiling is only supported by onnxruntime backend!"
         from tf_SUT import get_tf_sut
         sut = get_tf_sut()
     elif args.backend == "onnxruntime":
         from onnxruntime_SUT import get_onnxruntime_sut
-        sut = get_onnxruntime_sut(args.quantized)
+        sut = get_onnxruntime_sut(args)
     else:
         raise ValueError("Unknown backend: {:}".format(args.backend))
 
@@ -76,7 +81,7 @@ def main():
     log_settings = lg.LogSettings()
     log_settings.log_output = log_output_settings
 
-    print("Running Loadgen test...")
+    print("Running LoadGen test...")
     lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
 
     if args.accuracy:
@@ -84,6 +89,12 @@ def main():
         subprocess.check_call(cmd, shell=True)
 
     print("Done!")
+
+    print("Destroying SUT...")
+    lg.DestroySUT(sut.sut)
+
+    print("Destroying QSL...")
+    lg.DestroyQSL(sut.qsl.qsl)
 
 if __name__ == "__main__":
     main()

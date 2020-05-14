@@ -46,8 +46,9 @@ class BERT_TF_SUT():
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
-        self.qsl = get_squad_QSL()
         print("Finished constructing SUT.")
+
+        self.qsl = get_squad_QSL()
 
     def issue_queries(self, query_samples):
         input_ids = np.zeros((len(query_samples), 1, 384), dtype=np.int32)
@@ -81,7 +82,6 @@ class BERT_TF_SUT():
         pass
 
     def __del__(self):
-        lg.DestroySUT(self.sut)
         print("Finished destroying SUT.")
 
     def create_model(self, bert_config, is_training, input_ids, input_mask, segment_ids, use_one_hot_embeddings):

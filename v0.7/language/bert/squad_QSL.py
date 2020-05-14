@@ -84,7 +84,6 @@ class SQuAD_v1_QSL():
         return self.eval_features[sample_id]
 
     def __del__(self):
-        lg.DestroyQSL(self.qsl)
         print("Finished destroying QSL.")
 
 def get_squad_QSL():

@@ -14,6 +14,7 @@ if [ "x$DLRM_DIR" == "x" ]; then
     echo "DLRM_DIR not set" && exit 1
 fi
 
+
 # defaults
 backend=pytorch
 model=dlrm

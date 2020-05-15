@@ -13,6 +13,7 @@ import random
 
 import numpy as np
 import sklearn.metrics
+
 import inspect
 # pytorch
 import torch
@@ -77,6 +78,7 @@ class Criteo(Dataset):
             pro_data=processed_data_file,
             memory_map=memory_map
         )
+
         self.num_individual_samples = len(self.test_data)
 
         if self.use_mlperf_bin_loader:
@@ -240,6 +242,7 @@ class Criteo(Dataset):
         # debug prints
         # print('get_samples', (X, lS_o, lS_i, T))
         # print('get_samples', X.shape)
+
         return (X, lS_o, lS_i, T)
 
 
@@ -255,6 +258,7 @@ class DlrmPostProcess:
         self.total = 0
         self.roc_auc = 0
         self.results = []
+
 
     def __call__(self, results, expected=None, result_dict=None):
         processed_results = []

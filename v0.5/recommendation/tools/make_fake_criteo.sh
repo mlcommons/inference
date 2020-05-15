@@ -15,3 +15,4 @@ fi
 set -x # echo the next command
 python quickgen.py --num-samples=4096 --profile=$QUICKGEN_PROFILE --output-dir=$OUTPUT_DIR
 
+

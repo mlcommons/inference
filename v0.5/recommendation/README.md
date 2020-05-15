@@ -92,6 +92,7 @@ export DATA_DIR=./fake_criteo
 ## Running the benchmark
 
 Download and install all the pre-requisites. Both local and docker environment need to set 3 environment variables:
+
 ```
 export DATA_DIR=YourCriteoTerabyteLocation
 export MODEL_DIR=YourModelFileLocation
@@ -192,7 +193,6 @@ During development running the full benchmark is unpractical. Here are some opti
 So if you want to tune for example Server scenario, try:
 ```
 ./run_local.sh pytorch dlrm terabyte cpu --count-samples 100 --duration 60000 --scenario Server --target-qps 100 --max-latency 0.1
-
 ```
 
 If you want run with accuracy pass, try:
@@ -268,6 +268,7 @@ usage: main.py [-h]
 `--accuracy` perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 
 `--find-peak-performance` determine the maximumum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.
+
 
 ## License
 

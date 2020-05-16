@@ -123,12 +123,12 @@ TestSettingsInternal::TestSettingsInternal(
     // to take longer than than the minimum test duration required by the
     // MLPerf spec.
     constexpr double kSlack = 1.1;
-    int target_sample_count =
+    uint64_t target_sample_count =
         kSlack * DurationToSeconds(target_duration) * target_qps;
     samples_per_query =
         (requested.performance_issue_unique || requested.performance_issue_same)
             ? performance_sample_count
-            : std::max<int>(min_query_count, target_sample_count);
+            : std::max<uint64_t>(min_query_count, target_sample_count);
     min_query_count = 1;
     target_duration = std::chrono::milliseconds(0);
   }

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-OUTPUT_DIR=`pwd`/fake_data/$name
+OUTPUT_DIR=`pwd`/fake_criteo/
 if [ ! -d $OUTPUT_DIR ]; then
     mkdir -p $OUTPUT_DIR
 fi
@@ -13,5 +13,6 @@ else
 fi
 
 set -x # echo the next command
-python ./tools/quickgen.py --num-samples=4096 --profile=$QUICKGEN_PROFILE --output-dir=$OUTPUT_DIR
+python quickgen.py --num-samples=4096 --profile=$QUICKGEN_PROFILE --output-dir=$OUTPUT_DIR
+
 

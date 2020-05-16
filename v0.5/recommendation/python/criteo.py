@@ -13,7 +13,6 @@ import random
 
 import numpy as np
 import sklearn.metrics
-
 import inspect
 # pytorch
 import torch
@@ -36,26 +35,37 @@ import data_loader_terabyte
 
 class Criteo(Dataset):
 
-    def __init__(self, data_path, name, pre_process, use_cache, 
-                 count=None, 
-                 samples_to_aggregate=None, 
-                 min_samples_to_aggregate=None, 
-                 max_samples_to_aggregate=None, 
-                 test_num_workers=0, 
-                 max_ind_range=-1, 
-                 sub_sample_rate=0.0, 
-                 mlperf_bin_loader=False, 
-                 randomize="total", 
+    def __init__(self,
+                 data_path,
+                 name,
+                 pre_process,
+                 use_cache,
+                 count=None,
+                 samples_to_aggregate=None,
+                 min_samples_to_aggregate=None,
+                 max_samples_to_aggregate=None,
+                 test_num_workers=0,
+                 max_ind_range=-1,
+                 sub_sample_rate=0.0,
+                 mlperf_bin_loader=False,
+                 randomize="total",
                  memory_map=False):
         super().__init__()
 
         self.count = count
-        self.samples_to_aggregate = 1 if samples_to_aggregate is None else samples_to_aggregate
-        self.min_samples_to_aggregate = None if min_samples_to_aggregate is None else min_samples_to_aggregate
-        self.max_samples_to_aggregate = None if max_samples_to_aggregate is None else max_samples_to_aggregate
-
         self.random_offsets = []
-        
+        self.use_fixed_size = min_samples_to_aggregate is None or max_samples_to_aggregate is None
+        if self.use_fixed_size:
+            # fixed size queries
+            self.samples_to_aggregate = 1 if samples_to_aggregate is None else samples_to_aggregate
+            self.min_samples_to_aggregate = None
+            self.max_samples_to_aggregate = None
+        else:
+            # variable size queries
+            self.samples_to_aggregate = 1
+            self.min_samples_to_aggregate = min_samples_to_aggregate
+            self.max_samples_to_aggregate = max_samples_to_aggregate
+
         if name == "kaggle":
             raw_data_file = data_path + "/train.txt"
             processed_data_file = data_path + "/kaggleAdDisplayChallenge_processed.npz"
@@ -78,7 +88,6 @@ class Criteo(Dataset):
             pro_data=processed_data_file,
             memory_map=memory_map
         )
-
         self.num_individual_samples = len(self.test_data)
 
         if self.use_mlperf_bin_loader:
@@ -120,43 +129,56 @@ class Criteo(Dataset):
                 drop_last=False,
             )
 
-    def get_item_count(self):
-        # get number of items in the dataset
-
         # WARNING: Note that the orignal dataset returns number of samples, while the
         # binary dataset returns the number of batches. Therefore, when using a mini-batch
         # of size samples_to_aggregate as an item we need to adjust the original dataset item_count.
         # On the other hand, data loader always returns number of batches.
-        if self.use_mlperf_bin_loader:
-            self.num_aggregated_samples = len(self.test_data)
-            # self.num_aggregated_samples2 = len(self.test_loader)
-        else:
-
-            if self.min_samples_to_aggregate is None and self.max_samples_to_aggregate is None:
-                self.num_aggregated_samples = (self.num_individual_samples + self.samples_to_aggregate - 1) // self.samples_to_aggregate
+        if self.use_fixed_size:
+            # the offsets for fixed query size will be generated on-the-fly later on
+            if self.use_mlperf_bin_loader:
+                self.num_aggregated_samples = len(self.test_data)
+                # self.num_aggregated_samples2 = len(self.test_loader)
             else:
-                # generate random offsets for variable query sizes
-                done = False
-                qo = 0
-                self.random_offsets.append(int(0))
-                while done == False:
-                
-                    qs = random.randint(self.min_samples_to_aggregate,self.max_samples_to_aggregate)
-                    if qo+qs < self.num_individual_samples:
-                        self.random_offsets.append(int(qo+qs))
-                        qo = qo + qs
-                    else:
-                        done = True
-                
-                self.num_aggregated_samples = len(self.random_offsets)
+                self.num_aggregated_samples = (self.num_individual_samples + self.samples_to_aggregate - 1) // self.samples_to_aggregate
+                # self.num_aggregated_samples2 = len(self.test_loader)
+        else:
+            # the offsets for variable query sizes will be pre-generated here
+            done = False
+            qo = 0
+            while done == False:
+                self.random_offsets.append(int(qo))
+                qs = random.randint(self.min_samples_to_aggregate, self.max_samples_to_aggregate)
+                qo = min(qo + qs, self.num_individual_samples)
+                if qo >= self.num_individual_samples:
+                    done = True
+            self.random_offsets.append(int(qo))
 
-            # self.num_aggregated_samples2 = len(self.test_loader)
+            # reset num_aggregated_samples
+            self.num_aggregated_samples = len(self.random_offsets) - 1
+
+            # check num_aggregated_samples
+            nas_max = (self.num_individual_samples + self.min_samples_to_aggregate - 1) // self.min_samples_to_aggregate
+            nas_min = (self.num_individual_samples + self.max_samples_to_aggregate - 1) // self.max_samples_to_aggregate
+            if self.num_aggregated_samples < nas_min or nas_max < self.num_aggregated_samples:
+                raise ValueError("Sannity check failed")
 
         # limit number of items to count if needed
         if self.count is not None:
             self.num_aggregated_samples = min(self.count, self.num_aggregated_samples)
 
+        # dump the trace of aggregated samples
+        with open('dlrm_trace_of_aggregated_samples.txt', 'w') as f:
+            for l in range(self.num_aggregated_samples):
+                if self.use_fixed_size:
+                    s = l * self.samples_to_aggregate
+                    e = min((l + 1) * self.samples_to_aggregate, self.num_individual_samples)
+                else:
+                    s = self.random_offsets[l]
+                    e = self.random_offsets[l+1]
+                f.write(str(s) + ", " + str(e) + "\n")
 
+    def get_item_count(self):
+        # get number of items in the dataset
         return self.num_aggregated_samples
 
     ''' lg compatibilty routine '''
@@ -165,7 +187,6 @@ class Criteo(Dataset):
 
     ''' lg compatibilty routine '''
     def load_query_samples(self, sample_list):
-
         self.items_in_memory = {}
 
         # WARNING: notice that while DataLoader is iterable-style, the Dataset
@@ -177,18 +198,14 @@ class Criteo(Dataset):
             '''
             self.items_in_memory[l] = self.test_data[l]
             '''
-            if self.min_samples_to_aggregate is None and self.max_samples_to_aggregate is None:
-                # approach 2: multiple samples as an item
+            # approach 2: multiple samples as an item
+            if self.use_fixed_size:
                 s = l * self.samples_to_aggregate
                 e = min((l + 1) * self.samples_to_aggregate, self.num_individual_samples)
             else:
                 s = self.random_offsets[l]
-                
-                if l < len(self.random_offsets)-1:
-                    e = self.random_offsets[l+1]
-                else:
-                    e = self.num_individual_samples
-            
+                e = self.random_offsets[l+1]
+
             ls = [self.test_data[i] for i in range(s, e)]
             if self.use_mlperf_bin_loader:
                 # NOTE: in binary dataset the values are transformed
@@ -242,7 +259,6 @@ class Criteo(Dataset):
         # debug prints
         # print('get_samples', (X, lS_o, lS_i, T))
         # print('get_samples', X.shape)
-
         return (X, lS_o, lS_i, T)
 
 
@@ -258,7 +274,6 @@ class DlrmPostProcess:
         self.total = 0
         self.roc_auc = 0
         self.results = []
-
 
     def __call__(self, results, expected=None, result_dict=None):
         processed_results = []

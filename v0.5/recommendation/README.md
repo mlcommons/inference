@@ -92,7 +92,6 @@ export DATA_DIR=./fake_criteo
 ## Running the benchmark
 
 Download and install all the pre-requisites. Both local and docker environment need to set 3 environment variables:
-
 ```
 export DATA_DIR=YourCriteoTerabyteLocation
 export MODEL_DIR=YourModelFileLocation
@@ -193,6 +192,7 @@ During development running the full benchmark is unpractical. Here are some opti
 So if you want to tune for example Server scenario, try:
 ```
 ./run_local.sh pytorch dlrm terabyte cpu --count-samples 100 --duration 60000 --scenario Server --target-qps 100 --max-latency 0.1
+
 ```
 
 If you want run with accuracy pass, try:
@@ -215,7 +215,9 @@ usage: main.py [-h]
     [--count-samples COUNT] [--count-queries COUNT] [--target-qps QPS]
     [--max-latency MAX_LATENCY]  [--cache CACHE]
     [--samples-per-query NUM_SAMPLES]
-    [--samples-to-aggregate NUM_SAMPLES]]
+    [--samples-to-aggregate NUM_FIXED_SAMPLES]
+    [--min-samples-to-aggregate MIN_NUM_VARIABLE_SAMPLES]
+    [--max-samples-to-aggregate MAX_NUM_VARIABLE_SAMPLES]
     [--accuracy] [--find-peak-performance]
 ```
 
@@ -263,12 +265,13 @@ usage: main.py [-h]
 
 `--samples-per-query` number of samples per query in MultiStream scenario.
 
-`--samples-to-aggregate` number of samples to aggregate and treat as a single sample during runs.
+`--samples-to-aggregate` number of samples to aggregate and treat as a single sample. This number will stay fixed during runs.
+
+`--min-samples-to-aggregate, --max-samples-to-aggregate` number of samples to aggregate and treat as a single sample. This number will vary randomly between min and max during runs.
 
 `--accuracy` perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 
 `--find-peak-performance` determine the maximumum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.
-
 
 ## License
 

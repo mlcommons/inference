@@ -56,9 +56,6 @@ class LstmDrop(torch.nn.Module):
         """
         super(LstmDrop, self).__init__()
 
-        # Interesting, torch LSTM allows specifying number of
-        # layers... Fan-out parallelism.
-        # WARNING: Is dropout repeated twice?
         self.lstm = torch.nn.LSTM(
             input_size=input_size,
             hidden_size=hidden_size,
@@ -74,8 +71,10 @@ class LstmDrop(torch.nn.Module):
                     bias = getattr(self.lstm, name)
                     bias.data[hidden_size:2 * hidden_size].fill_(0)
 
-        self.inplace_dropout = (torch.nn.Dropout(dropout, inplace=True)
-                                if dropout else None)
+        if dropout:
+            self.inplace_dropout = torch.nn.Dropout(dropout, inplace=True)
+        else:
+            self.inplace_droput = None
 
     def forward(self, x: torch.Tensor,
                 h: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
@@ -88,11 +87,13 @@ class LstmDrop(torch.nn.Module):
 
 
 class StackTime(torch.nn.Module):
+
+    __constants__ = ["factor"]
+
     def __init__(self, factor):
         super().__init__()
         self.factor = int(factor)
 
-    @torch.jit.ignore
     def forward(self, x, x_lens):
         # T, B, U
         seq = [x]

@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
+import torch
 import torch.nn as nn
 
 from helpers import Optimization
@@ -28,7 +31,7 @@ class AudioPreprocessing(nn.Module):
             'optimization_level', Optimization.nothing)
         self.featurizer = FeatureFactory.from_config(kwargs)
 
-    def forward(self, x):
+    def forward(self, x: Tuple[torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
         input_signal, length = x
         length.requires_grad_(False)
         processed_signal = self.featurizer(x)

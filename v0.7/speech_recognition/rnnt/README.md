@@ -4,16 +4,14 @@ character transcription, without an external language model.
 
 # 2. Directions
 
-Open `steps/run.sh`. Set the stage variable to "-1". You need conda on
-your PATH.
+Open `run.sh`. Set the stage variable to "-1". You need conda and a
+C/C++ compiler on your PATH. This script is responsible for
+downloading dependencies, data, and the model.
 
-Run `steps/run.sh`.
+Run `./run.sh` from this directory.
 
 As you complete stages, you can set the variable "stage" to a higher
 number for rerunning.
-
-NOTE: This part will be elaborated on later. There is no Loadgen
-integration right now.
 
 # 3. Dataset/Environment
 ### Publication/Attribution
@@ -27,20 +25,10 @@ windows of size 20 milliseconds. Note that every three filterbanks are
 concatenated together ("feature splicing"), so the model's effective
 frame rate is actually 30 milliseconds.
 
-TODO: Figure out if preprocessing is considered part of the
-benchmark. For streaming inference, it definitely should be part of
-the benchmark. For training, it should not be part of the
-benchmark. For offline inference, it probably shouldn't be part of the
-benchmark, but I'm not sure. It depends upon whether your offline
-workload will be running more the one model on the inputs (e.g., voice
-activity detection, followed by actual speech-to-text. I am fairly
-skeptical that computing log mel spectra is particularly compute
-intensive.) Slide 11 here confirms that skipping featurization can be
-reasonable for offline use case:
-https://developer.download.nvidia.com/video/gputechconf/gtc/2019/presentation/s9672-accelerate-your-speech-recognition-pipeline-on-the-gpu.pdf It's not a bottleneck.
+No dithering takes place.
 
 ### Test data order
-In what order is the test data traversed? TODO
+TODO. Does this even matter?
 
 # 4. Model
 This is a variant of the model described in sections 3.1 and 6.2 of:
@@ -58,7 +46,7 @@ The differences are as follows:
 
 1. The model has 45.3 million parameters, rather than 120 million parameters
 1. The LSTMs are not followed by projection layers
-1. No layernormalization is used
+1. No layer normalization is used
 1. Hidden dimensions are smaller.
 1. The prediction network is made of two LSTMs, rather than seven.
 1. The labels are characters, rather than word pieces.

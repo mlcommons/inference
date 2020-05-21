@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 import math
@@ -113,6 +115,8 @@ class FilterbankFeatures(nn.Module):
         self.nfilt = nfilt
         self.preemph = preemph
         self.pad_to = pad_to
+        # For now, always enable this.
+        self.use_deterministic_dithering = True
         highfreq = highfreq or sample_rate / 2
         window_fn = torch_windows.get(window, None)
         window_tensor = window_fn(self.win_length,
@@ -137,7 +141,7 @@ class FilterbankFeatures(nn.Module):
         return seq_len
 
     @torch.no_grad()
-    def forward(self, inp):
+    def forward(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
         x, seq_len = inp
 
         dtype = x.dtype
@@ -145,7 +149,7 @@ class FilterbankFeatures(nn.Module):
         seq_len = self.get_seq_len(seq_len)
 
         # dither
-        if self.dither > 0:
+        if self.dither > 0 and not self.use_deterministic_dithering:
             x += self.dither * torch.randn_like(x)
 
         # do preemphasis
@@ -162,6 +166,8 @@ class FilterbankFeatures(nn.Module):
         # get power spectrum
         x = x.pow(2).sum(-1)
 
+        if self.dither > 0 and self.use_deterministic_dithering:
+            x = x + self.dither ** 2
         # dot with filterbank energies
         x = torch.matmul(self.fb.to(x.dtype), x)
 

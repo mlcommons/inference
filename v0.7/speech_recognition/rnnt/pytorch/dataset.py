@@ -58,8 +58,6 @@ class AudioToTextDataLayer:
     """
 
     def __init__(self, **kwargs):
-        self._device = torch.device("cuda")
-
         featurizer_config = kwargs['featurizer_config']
         pad_to_max = kwargs.get('pad_to_max', False)
         perturb_config = kwargs.get('perturb_config', None)

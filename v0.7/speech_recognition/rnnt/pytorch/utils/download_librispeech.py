@@ -58,7 +58,10 @@ if not args.skip_checksum:
         fpath = os.path.join(args.dest, fname)
         print("Verifing %s: " % fname, end='')
         ret = md5_checksum(fpath=fpath, target_hash=md5)
-        print("Passed" if ret else "Failed")
+        if not ret:
+            raise ValueError(f"Checksum for {fname} failed!")
+        else:
+            print(f"Checksum correct for {fname}")
 else:
     print("Skipping checksum")
 

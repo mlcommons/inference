@@ -4,9 +4,10 @@ character transcription, without an external language model.
 
 # 2. Directions
 
-Open `run.sh`. Set the stage variable to "-1". You need conda and a
-C/C++ compiler on your PATH. This script is responsible for
-downloading dependencies, data, and the model.
+Open `run.sh`. Set the stage variable to "-1". Set "work_dir" to a
+path backed by a disk with at least 2 GB of space. You need conda and
+a C/C++ compiler on your PATH. I used conda 4.8.2. This script is
+responsible for downloading dependencies, data, and the model.
 
 Run `./run.sh` from this directory.
 
@@ -28,7 +29,7 @@ frame rate is actually 30 milliseconds.
 No dithering takes place.
 
 ### Test data order
-TODO. Does this even matter?
+TODO. Does this even matter for inference?
 
 # 4. Model
 This is a variant of the model described in sections 3.1 and 6.2 of:

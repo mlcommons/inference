@@ -328,6 +328,8 @@ usage: main.py [-h]
 
 `--min-samples-to-aggregate, --max-samples-to-aggregate` number of samples to aggregate and treat as a single sample. This number will vary randomly between min and max during runs.
 
+`--samples-to-aggregate-trace-file` filename for writing the trace of queries. Each query is written on a single line, with a range of aggregated samples indicated in square brackets.
+
 `--accuracy` perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 
 `--find-peak-performance` determine the maximum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.

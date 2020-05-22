@@ -44,6 +44,7 @@ class Criteo(Dataset):
                  samples_to_aggregate=None,
                  min_samples_to_aggregate=None,
                  max_samples_to_aggregate=None,
+                 samples_to_aggregate_trace_file=None,
                  test_num_workers=0,
                  max_ind_range=-1,
                  sub_sample_rate=0.0,
@@ -167,15 +168,16 @@ class Criteo(Dataset):
             self.num_aggregated_samples = min(self.count, self.num_aggregated_samples)
 
         # dump the trace of aggregated samples
-        with open('dlrm_trace_of_aggregated_samples.txt', 'w') as f:
-            for l in range(self.num_aggregated_samples):
-                if self.use_fixed_size:
-                    s = l * self.samples_to_aggregate
-                    e = min((l + 1) * self.samples_to_aggregate, self.num_individual_samples)
-                else:
-                    s = self.random_offsets[l]
-                    e = self.random_offsets[l+1]
-                f.write(str(s) + ", " + str(e) + "\n")
+        if samples_to_aggregate_trace_file is not None:
+            with open(samples_to_aggregate_trace_file, 'w') as f:
+                for l in range(self.num_aggregated_samples):
+                    if self.use_fixed_size:
+                        s = l * self.samples_to_aggregate
+                        e = min((l + 1) * self.samples_to_aggregate, self.num_individual_samples)
+                    else:
+                        s = self.random_offsets[l]
+                        e = self.random_offsets[l+1]
+                    f.write(str(s) + ", " + str(e) + "\n")
 
     def get_item_count(self):
         # get number of items in the dataset

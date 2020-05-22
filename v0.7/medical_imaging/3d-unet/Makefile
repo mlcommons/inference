@@ -112,28 +112,23 @@ preprocess_data:
 	@if [ ! -e $(PREPROCESSE_DATA_DIR) ]; then \
 		mkdir $(PREPROCESSE_DATA_DIR); \
 	fi
-	@nnUNet_plan_and_preprocess -t 43 -pl2d None
+	@python3 preprocess.py
 
 .PHONY: run_pytorch_performance
 run_pytorch_performance:
-	# @python3 run.py --backend=pytorch
-	@nnUNet_predict -i $(RAW_DATA_DIR)/nnUNet_raw_data/Task043_BraTS2019/imagesTr -o $(RESULT_DIR) \
-		-t Task043_BraTS2019 -f 0 -tr nnUNetTrainerV2 -m 3d_fullres -p nnUNetPlansv2.mlperf.1
+	@python3 run.py --backend=pytorch
 
 .PHONY: run_pytorch_accuracy
 run_pytorch_accuracy:
-	@echo "Not implemented yet!"
-	# @python3 run.py --backend=pytorch --accuracy
+	@python3 run.py --backend=pytorch --accuracy
 
 .PHONY: run_onnxruntime_performance
 run_onnxruntime_performance:
-	@echo "Not implemented yet!"
-	# @python3 run.py --backend=onnxruntime
+	@python3 run.py --backend=onnxruntime
 
 .PHONY: run_onnxruntime_accuracy
 run_onnxruntime_accuracy:
-	@echo "Not implemented yet!"
-	# @python3 run.py --backend=onnxruntime --accuracy
+	@python3 run.py --backend=onnxruntime --accuracy
 
 .PHONY: evaluate
 evaluate:

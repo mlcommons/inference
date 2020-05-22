@@ -104,7 +104,6 @@ def main():
 
             copy_BraTS_segmentation_and_convert_labels(seg, join(target_labelsTr, patient_name + ".nii.gz"))
 
-
     json_dict = OrderedDict()
     json_dict['name'] = "BraTS2019"
     json_dict['description'] = "nothing"

@@ -78,8 +78,9 @@ def main():
     lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
 
     if args.accuracy:
-        # cmd = "python3 brats_eval.py"
-        # subprocess.check_call(cmd, shell=True)
+        print("Running accuracy script...")
+        cmd = "python3 brats_eval.py"
+        subprocess.check_call(cmd, shell=True)
 
     print("Done!")
 

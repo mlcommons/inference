@@ -28,7 +28,8 @@ ifndef DOWNLOAD_DATA_DIR
 	export DOWNLOAD_DATA_DIR := $(HOST_VOL)/$(BUILD_DIR)/MICCAI_BraTS_2019_Data_Training
 endif
 RAW_DATA_DIR := $(BUILD_DIR)/raw_data
-PREPROCESSE_DATA_DIR := $(BUILD_DIR)/preprocessed_data
+PREPROCESSED_DATA_DIR := $(BUILD_DIR)/preprocessed_data
+POSTPROCESSED_DATA_DIR := $(BUILD_DIR)/postprocessed_data
 MODEL_DIR := $(BUILD_DIR)/model
 PYTORCH_MODEL := $(MODEL_DIR)/3d-unet.pytorch
 RESULT_DIR := $(BUILD_DIR)/result
@@ -36,7 +37,7 @@ MLPERF_CONF := $(BUILD_DIR)/mlperf.conf
 
 # Env variables needed by nnUnet
 export nnUNet_raw_data_base=$(RAW_DATA_DIR)
-export nnUNet_preprocessed=$(PREPROCESSE_DATA_DIR)
+export nnUNet_preprocessed=$(PREPROCESSED_DATA_DIR)
 export RESULTS_FOLDER=$(RESULT_DIR)
 
 # Handle different nvidia-docker version
@@ -79,9 +80,15 @@ download_model:
 
 .PHONY: download_pytorch_model
 download_pytorch_model:
+	# Will download model from Zenodo
 	# @if [ ! -e $(PYTORCH_MODEL)/model.pytorch ]; then \
 	# 	wget -O ; \
 	# fi
+	# For now, assume that fold_4.zip is in build/result
+	@if [ ! -e $(RESULT_DIR)/fold_4.zip ]; then \
+		echo "Please download model fold_4.zip to $(RESULT_DIR)/" && false; \
+	fi
+	@cd $(RESULT_DIR) && unzip -o fold_4.zip
 
 .PHONY: build_docker
 build_docker:
@@ -108,18 +115,24 @@ preprocess_data:
 		mkdir $(RAW_DATA_DIR); \
 	fi
 	@python3 Task043_BraTS_2019.py --downloaded_data_dir /downloaded_data_dir
-	@echo "Preprocessing and saving preprocessed data to $(PREPROCESSE_DATA_DIR)..."
-	@if [ ! -e $(PREPROCESSE_DATA_DIR) ]; then \
-		mkdir $(PREPROCESSE_DATA_DIR); \
+	@echo "Preprocessing and saving preprocessed data to $(PREPROCESSED_DATA_DIR)..."
+	@if [ ! -e $(PREPROCESSED_DATA_DIR) ]; then \
+		mkdir $(PREPROCESSED_DATA_DIR); \
 	fi
 	@python3 preprocess.py
+
+.PHONY: mkdir_postprocessed_data
+mkdir_postprocessed_data:
+	@if [ ! -e $(POSTPROCESSED_DATA_DIR) ]; then \
+		mkdir $(POSTPROCESSED_DATA_DIR); \
+	fi
 
 .PHONY: run_pytorch_performance
 run_pytorch_performance:
 	@python3 run.py --backend=pytorch
 
 .PHONY: run_pytorch_accuracy
-run_pytorch_accuracy:
+run_pytorch_accuracy: mkdir_postprocessed_data
 	@python3 run.py --backend=pytorch --accuracy
 
 .PHONY: run_onnxruntime_performance
@@ -127,12 +140,12 @@ run_onnxruntime_performance:
 	@python3 run.py --backend=onnxruntime
 
 .PHONY: run_onnxruntime_accuracy
-run_onnxruntime_accuracy:
+run_onnxruntime_accuracy: mkdir_postprocessed_data
 	@python3 run.py --backend=onnxruntime --accuracy
 
 .PHONY: evaluate
 evaluate:
-	@echo "TODO"
+	@python3 brats_eval.py
 
 .PHONY: clean
 clean:

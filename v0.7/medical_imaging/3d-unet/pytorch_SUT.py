@@ -47,9 +47,11 @@ class BERT_PyTorch_SUT():
             for i in range(len(query_samples)):
                 data = self.qsl.get_features(query_samples[i].index)
 
+                print("Processing sample id {:d} with shape = {:}".format(query_samples[i].index, data.shape))
+
                 softmax = self.trainer.predict_preprocessed_data_return_seg_and_softmax(
                 data, None, self.trainer.data_aug_params["mirror_axes"], True, step_size=0.5, use_gaussian=True,
-                all_in_gpu="None")[1][0]
+                all_in_gpu="None")[1]
 
                 transpose_forward = self.trainer.plans.get("transpose_forward")
                 transpose_backward = self.trainer.plans.get("transpose_backward")

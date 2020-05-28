@@ -23,6 +23,7 @@ import torch
 
 sys.path.insert(0, os.path.join(os.getcwd(), "nnUnet"))
 
+from batchgenerators.augmentations.utils import pad_nd_image
 from batchgenerators.utilities.file_and_folder_operations import subfiles
 from nnunet.training.model_restore import load_model_and_checkpoint_files
 from nnunet.inference.predict import preprocess_multithreaded
@@ -35,7 +36,7 @@ def get_args():
         help="Path to the directory containing raw nii.gz files")
     parser.add_argument("--preprocessed_data_dir", default="build/preprocessed_data", help="Path to the directory containing preprocessed data")
     parser.add_argument("--validation_fold_file", default="fold4_validation.npy", help="Path to the npy file storing all the sample names for the validation fold")
-    parser.add_argument("--num_threads_preprocessing", type=int, default=1, help="Number of threads to run the preprocessing with")
+    parser.add_argument("--num_threads_preprocessing", type=int, default=12, help="Number of threads to run the preprocessing with")
     args = parser.parse_args()
     return args
 
@@ -61,6 +62,10 @@ def preprocess_MLPerf(model, checkpoint_name, folds, fp16, list_of_lists, output
             data = np.load(d)
             os.remove(d)
             d = data
+
+        # Pad to the desired full volume
+        d = pad_nd_image(d, trainer.patch_size, "constant", None, False, None)
+
         with open(os.path.join(preprocessing_folder, output_filename+ ".pkl"), "wb") as f:
             pickle.dump([d, dct], f)
         f.close()

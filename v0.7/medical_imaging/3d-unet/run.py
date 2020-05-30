@@ -31,8 +31,9 @@ def get_args():
     parser.add_argument("--user_conf", default="user.conf", help="mlperf rules config")
     parser.add_argument("--model_dir", default="build/result/nnUNet/3d_fullres/Task043_BraTS2019/nnUNetTrainerV2__nnUNetPlansv2.mlperf.1",
         help="Path to the directory containing plans.pkl")
+    parser.add_argument("--onnx_model", default="build/model/192_224_192.onnx", help="Path to the ONNX model")
     parser.add_argument("--preprocessed_data_dir", default="build/preprocessed_data", help="path to preprocessed data")
-    parser.add_argument("--performance_count", type=int, default=32, help="performance count")
+    parser.add_argument("--performance_count", type=int, default=16, help="performance count")
     args = parser.parse_args()
     return args
 
@@ -49,9 +50,9 @@ def main():
     if args.backend == "pytorch":
         from pytorch_SUT import get_pytorch_sut
         sut = get_pytorch_sut(args.model_dir, args.preprocessed_data_dir, args.performance_count)
-    # elif args.backend == "onnxruntime":
-    #     from onnxruntime_SUT import get_onnxruntime_sut
-    #     sut = get_onnxruntime_sut()
+    elif args.backend == "onnxruntime":
+        from onnxruntime_SUT import get_onnxruntime_sut
+        sut = get_onnxruntime_sut(args.onnx_model, args.preprocessed_data_dir, args.performance_count)
     else:
         raise ValueError("Unknown backend: {:}".format(args.backend))
 

@@ -28,7 +28,7 @@ from brats_QSL import get_brats_QSL
 sys.path.insert(0, os.path.join(os.getcwd(), "nnUnet"))
 from nnunet.training.model_restore import load_model_and_checkpoint_files
 
-class BERT_PyTorch_SUT():
+class _3DUNET_PyTorch_SUT():
     def __init__(self, model_dir, preprocessed_data_dir, performance_count, folds, checkpoint_name):
 
         print("Loading PyTorch model...")
@@ -70,4 +70,4 @@ class BERT_PyTorch_SUT():
         pass
 
 def get_pytorch_sut(model_dir, preprocessed_data_dir, performance_count, folds=4, checkpoint_name="model_best"):
-    return BERT_PyTorch_SUT(model_dir, preprocessed_data_dir, performance_count, folds, checkpoint_name)
+    return _3DUNET_PyTorch_SUT(model_dir, preprocessed_data_dir, performance_count, folds, checkpoint_name)

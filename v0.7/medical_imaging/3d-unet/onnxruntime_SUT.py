@@ -23,43 +23,31 @@ sys.path.insert(0, os.getcwd())
 import mlperf_loadgen as lg
 import numpy as np
 import onnxruntime
-from transformers import BertConfig, BertForQuestionAnswering
-from squad_QSL import get_squad_QSL
 
-class BERT_ONNXRuntime_SUT():
-    def __init__(self, quantized):
+from brats_QSL import get_brats_QSL
+
+class _3DUNET_ONNXRuntime_SUT():
+    def __init__(self, model_path, preprocessed_data_dir, performance_count):
         print("Loading ONNX model...")
-        self.quantized = quantized
-        if not quantized:
-            model_path = "build/data/bert_tf_v1_1_large_fp32_384_v2/model.onnx"
-        else:
-            model_path = "build/data/bert_tf_v1_1_large_fp32_384_v2/bert_large_v1_1_fake_quant.onnx"
         self.sess = onnxruntime.InferenceSession(model_path)
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
-        self.qsl = get_squad_QSL()
+        self.qsl = get_brats_QSL(preprocessed_data_dir, performance_count)
         print("Finished constructing SUT.")
 
     def issue_queries(self, query_samples):
         for i in range(len(query_samples)):
-            eval_features = self.qsl.get_features(query_samples[i].index)
-            if not self.quantized:
-                fd = {
-                    "input_ids": np.array(eval_features.input_ids).astype(np.int64)[np.newaxis, :],
-                    "input_mask": np.array(eval_features.input_mask).astype(np.int64)[np.newaxis, :],
-                    "segment_ids": np.array(eval_features.segment_ids).astype(np.int64)[np.newaxis, :]
-                }
-            else:
-                fd = {
-                    "input_ids": np.array(eval_features.input_ids).astype(np.int64)[np.newaxis, :],
-                    "attention_mask": np.array(eval_features.input_mask).astype(np.int64)[np.newaxis, :],
-                    "token_type_ids": np.array(eval_features.segment_ids).astype(np.int64)[np.newaxis, :]
-                }
-            scores = self.sess.run([o.name for o in self.sess.get_outputs()], fd)
-            output = np.stack(scores, axis=-1)[0]
+            data = self.qsl.get_features(query_samples[i].index)
 
-            response_array = array.array("B", output.tobytes())
+            print("Processing sample id {:d} with shape = {:}".format(query_samples[i].index, data.shape))
+
+            # Follow the PyTorch implementation.
+            # The ONNX file has five outputs, but we only care about the one named "output".
+            before_softmax = self.sess.run(["output"], {"input": data[np.newaxis, ...]})[0]
+            softmax = np.softmax(before_softmax, axis=0).astype(np.float16)
+
+            response_array = array.array("B", softmax.tobytes())
             bi = response_array.buffer_info()
             response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
             lg.QuerySamplesComplete([response])
@@ -74,5 +62,5 @@ class BERT_ONNXRuntime_SUT():
         lg.DestroySUT(self.sut)
         print("Finished destroying SUT.")
 
-def get_onnxruntime_sut(quantized=False):
-    return BERT_ONNXRuntime_SUT(quantized)
+def get_onnxruntime_sut(model_path, preprocessed_data_dir, performance_count):
+    return _3DUNET_ONNXRuntime_SUT(model_path, preprocessed_data_dir, performance_count)

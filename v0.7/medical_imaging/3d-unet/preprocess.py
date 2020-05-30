@@ -43,9 +43,6 @@ def get_args():
 def preprocess_MLPerf(model, checkpoint_name, folds, fp16, list_of_lists, output_filenames, preprocessing_folder, num_threads_preprocessing):
     assert len(list_of_lists) == len(output_filenames)
 
-    print("emptying cuda cache")
-    torch.cuda.empty_cache()
-
     print("loading parameters for folds", folds)
     trainer, params = load_model_and_checkpoint_files(model, folds, fp16=fp16, checkpoint_name=checkpoint_name)
 

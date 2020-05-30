@@ -31,9 +31,10 @@ RAW_DATA_DIR := $(BUILD_DIR)/raw_data
 PREPROCESSED_DATA_DIR := $(BUILD_DIR)/preprocessed_data
 POSTPROCESSED_DATA_DIR := $(BUILD_DIR)/postprocessed_data
 MODEL_DIR := $(BUILD_DIR)/model
-PYTORCH_MODEL := $(MODEL_DIR)/3d-unet.pytorch
 RESULT_DIR := $(BUILD_DIR)/result
 MLPERF_CONF := $(BUILD_DIR)/mlperf.conf
+PYTORCH_MODEL := $(RESULT_DIR)/fold_4.zip
+ONNX_MODEL := $(MODEL_DIR)/192_224_192.onnx
 
 # Env variables needed by nnUnet
 export nnUNet_raw_data_base=$(RAW_DATA_DIR)
@@ -77,6 +78,7 @@ init_submodule:
 download_model:
 	@echo "Download models..."
 	@$(MAKE) -f $(MAKEFILE_NAME) download_pytorch_model
+	@$(MAKE) -f $(MAKEFILE_NAME) download_onnx_model
 
 .PHONY: download_pytorch_model
 download_pytorch_model:
@@ -85,10 +87,17 @@ download_pytorch_model:
 	# 	wget -O ; \
 	# fi
 	# For now, assume that fold_4.zip is in build/result
-	@if [ ! -e $(RESULT_DIR)/fold_4.zip ]; then \
-		echo "Please download model fold_4.zip to $(RESULT_DIR)/" && false; \
+	@if [ ! -e $(PYTORCH_MODEL) ]; then \
+		echo "For now, please manually download PyTorch model to $(PYTORCH_MODEL)/"; \
 	fi
 	@cd $(RESULT_DIR) && unzip -o fold_4.zip
+
+.PHONY: download_onnx_model
+download_onnx_model:
+	# Will download model from Zenodo
+	@if [ ! -e $(ONNX_MODEL) ]; then \
+		echo "For now, please manually download ONNX model to $(ONNX_MODEL)"; \
+	fi
 
 .PHONY: build_docker
 build_docker:

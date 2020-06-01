@@ -21,12 +21,11 @@ class AudioQSL:
                                  normalize=True)
         self.sample_rate = sample_rate
         self.count = len(self.manifest)
-        self.perf_count = self.count if perf_count is not None else self.count
+        perf_count = self.count if perf_count is None else perf_count
         self.sample_id_to_sample = {}
-        self.qsl = lg.ConstructQSL(self.count, self.perf_count,
+        self.qsl = lg.ConstructQSL(self.count, perf_count,
                                    self.load_query_samples,
                                    self.unload_query_samples)
-        print("GALVEZ:length=", len(self.manifest))
         print(
             "Dataset loaded with {0:.2f} hours. Filtered {1:.2f} hours.".format(
                 self.manifest.duration / 3600,

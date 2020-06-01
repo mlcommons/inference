@@ -13,11 +13,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import List, Optional, Tuple
+
 import torch
 
 import torch.nn.functional as F
 from model_separable_rnnt import label_collate
-from typing import List, Optional, Tuple
 
 
 class TransducerDecoder:
@@ -178,17 +179,17 @@ class ScriptGreedyDecoder(torch.nn.Module):
         """
         # Apply optional preprocessing
 
-        logits, out_lens = self._model.encoder(x, out_lens)
+        logits, logits_lens = self._model.encoder(x, out_lens)
 
         output: List[List[int]] = []
         for batch_idx in range(logits.size(0)):
             inseq = logits[batch_idx, :, :].unsqueeze(1)
             # inseq: TxBxF
-            logitlen = out_lens[batch_idx]
+            logitlen = logits_lens[batch_idx]
             sentence = self._greedy_decode(inseq, logitlen)
             output.append(sentence)
 
-        return logits, out_lens, output
+        return logits, logits_lens, output
 
     def _greedy_decode(self, x: torch.Tensor, out_len: torch.Tensor) -> List[int]:
         hidden: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
@@ -224,11 +225,7 @@ class ScriptGreedyDecoder(torch.nn.Module):
             return self._model.prediction(None, hidden)
         if label > self._blank_id:
             label -= 1
-        # Most likely to cause an error
         label = torch.tensor([[label]], dtype=torch.int64)
-        # label = torch.nn.utils.rnn.pad_sequence([torch.Tensor(label, dtype=torch.int64)],
-        #                                         batch_first=False)
-        # label = label_collate([[label]])
         return self._model.prediction(label, hidden)
 
     def _joint_step(self, enc: torch.Tensor, pred: torch.Tensor, log_normalize: bool=False) -> torch.Tensor:

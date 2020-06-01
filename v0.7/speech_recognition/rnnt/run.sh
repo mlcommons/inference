@@ -64,23 +64,27 @@ if [[ $stage -le 2 ]]; then
 fi
 
 if [[ $stage -le 3 ]]; then
-    
-    # python run.py --backend pytorch \
-    #        --dataset_dir $local_data_dir \
-    #        --manifest $local_data_dir/dev-clean-wav.json \
-    #        --pytorch_config_toml pytorch/configs/rnnt.toml \
-    #        --pytorch_checkpoint pytorch/work_dir/rnnt.pt \
-    #        --scenario SingleStream \
-    #        --accuracy
+  for backend in pytorch; do
+    for accuracy in "" "--accuracy"; do
+      # No MultiStream right now. It's a bit confusing.
+      for scenario in SingleStream Offline Server; do
+        log_dir=${work_dir}/${scenario}_${backend}
+        if [ ! -z ${accuracy} ]; then
+          log_dir+=_accuracy
+        fi
 
-    # ipython --pdb -c "%run \
-    # python \
-    gdb --ex run --args python \
-    pytorch/inference.py \
-      --model_toml pytorch/configs/rnnt.toml \
-      --ckpt $work_dir/rnnt.pt \
-      --dataset_dir $local_data_dir \
-      --val_manifest $local_data_dir/dev-clean-wav.json \
-      --batch_size 1 \
-      --seed 87
+        python run.py --backend pytorch \
+               --dataset_dir $local_data_dir \
+               --manifest $local_data_dir/dev-clean-wav.json \
+               --pytorch_config_toml pytorch/configs/rnnt.toml \
+               --pytorch_checkpoint $work_dir/rnnt.pt \
+               --scenario ${scenario} \
+               --backend ${backend} \
+               --perf_count 1 \
+               --log_dir ${log_dir} \
+               ${accuracy} &
+      done
+    done
+  done
+  wait
 fi

@@ -33,10 +33,10 @@ def get_args():
     parser.add_argument("--user_conf", default="user.conf", help="mlperf rules config")
     parser.add_argument("--pytorch_config_toml", default="pytorch/configs/rnnt.toml")
     parser.add_argument("--pytorch_checkpoint", default="pytorch/work_dir/rnnt.pt")
-    parser.add_argument("--dataset_dir", default="pytorch/work_dir/local_data")
-    parser.add_argument("--manifest", default="pytorch/work_dir/local_data/dev-clean-wav.json")
-    # TODO: Is this one necessary? Is perf_count defined via mlperf.conf instead?
+    parser.add_argument("--dataset_dir", required=True)
+    parser.add_argument("--manifest", required=True)
     parser.add_argument("--perf_count", type=int, default=None)
+    parser.add_argument("--log_dir", required=True)
     args = parser.parse_args()
     return args
 
@@ -69,7 +69,7 @@ def main():
     else:
         settings.mode = lg.TestMode.PerformanceOnly
 
-    log_path = "work_dir/logs"
+    log_path = args.log_dir
     os.makedirs(log_path, exist_ok=True)
     log_output_settings = lg.LogOutputSettings()
     log_output_settings.outdir = log_path
@@ -81,8 +81,7 @@ def main():
     lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
 
     if args.accuracy:
-        assert False, "not done yet"
-        cmd = "python3 squad_eval.py"
+        cmd = f"python3 accuracy_eval.py --log_dir {log_path} --dataset_dir {args.dataset_dir} --manifest {args.manifest}"
         subprocess.check_call(cmd, shell=True)
 
     print("Done!")

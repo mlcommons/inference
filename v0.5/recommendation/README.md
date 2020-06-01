@@ -280,9 +280,9 @@ usage: main.py [-h]
     [--accuracy] [--find-peak-performance]
 ```
 
-`--config` the mlperf config file to use, defaults to v0.5/mlperf.conf
+`--config` the mlperf config file to use (default: `v0.5/mlperf.conf`).
 
-`--model` model name, i.e. dlrm
+`--model` model name, i.e. `dlrm`.
 
 `--model-path MODEL_PATH` path to the file with model weights.
 
@@ -318,9 +318,9 @@ usage: main.py [-h]
 
 `--count-queries COUNT` number of queries we use (default: no limit).
 
-`--target-qps QPS` target/expected QPS for Server and Offline scenarios.
+`--target-qps QPS` target/expected QPS for the Server and Offline scenarios.
 
-`--max-latency MAX_LATENCY` comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (deault: 0.01,0.05,0.100).
+`--max-latency MAX_LATENCY` comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (default: 0.01,0.05,0.100).
 
 `--samples-per-query` number of samples per query in MultiStream scenario.
 
@@ -330,7 +330,7 @@ usage: main.py [-h]
 
 `--accuracy` perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 
-`--find-peak-performance` determine the maximumum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.
+`--find-peak-performance` determine the maximum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.
 
 ## License
 

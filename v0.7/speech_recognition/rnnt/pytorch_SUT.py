@@ -51,9 +51,9 @@ class PytorchSUT:
 
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries,
                                    self.process_latencies)
-        # TODO: What to do about perf_count?
         self.qsl = AudioQSL(dataset_dir, manifest_filepath,
-                            dataset_vocab, featurizer_config["sample_rate"])
+                            dataset_vocab, featurizer_config["sample_rate"],
+                            perf_count)
 
         self.audio_preprocessor = AudioPreprocessing(**featurizer_config)
 
@@ -70,7 +70,6 @@ class PytorchSUT:
 
     def issue_queries(self, query_samples):
         for query_sample in query_samples:
-            print("GALVEZ:", query_sample)
             waveform, waveform_length = self.qsl[query_sample.index]
             assert waveform.ndim == 1
             assert waveform_length.ndim == 0
@@ -89,7 +88,8 @@ class PytorchSUT:
             assert len(transcript) == 1
             response_array = array.array('q', transcript[0])
             bi = response_array.buffer_info()
-            response = lg.QuerySampleResponse(query_sample.id, bi[0], bi[1])
+            response = lg.QuerySampleResponse(query_sample.id, bi[0],
+                                              bi[1] * response_array.itemsize)
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):

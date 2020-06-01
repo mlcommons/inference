@@ -57,5 +57,5 @@ The differences are as follows:
 
 # 5. Quality
 ### Quality metric
-7.31% Word Error Rate (WER) across all words in the output text of all samples in the
+7.337965515973677% Word Error Rate (WER) across all words in the output text of all samples in the
 dev-clean set, using a greedy decoder and a fully FP32 model.

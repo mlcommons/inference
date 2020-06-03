@@ -1,3 +1,4 @@
+# t
 # Copyright (c) 2020, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,11 +42,18 @@ export nnUNet_raw_data_base=$(RAW_DATA_DIR)
 export nnUNet_preprocessed=$(PREPROCESSED_DATA_DIR)
 export RESULTS_FOLDER=$(RESULT_DIR)
 
-# Handle different nvidia-docker version
-ifneq ($(wildcard /usr/bin/nvidia-docker),)
-	DOCKER_RUN_CMD := nvidia-docker run
+HAS_GPU := $(shell command -v nvidia-smi 2> /dev/null)
+
+ifndef $HAS_GPU
+    DOCKER_RUN_CMD := docker run
 else
+
+   ifneq ($(wildcard /usr/bin/nvidia-docker),)
+	DOCKER_RUN_CMD := nvidia-docker run
+   else
 	DOCKER_RUN_CMD := docker run --gpus=all
+   endif
+
 endif
 
 .PHONY: setup
@@ -108,6 +116,7 @@ build_docker:
 
 .PHONY: launch_docker
 launch_docker: check_download_data_dir
+	@mkdir -p build/postprocessed_data
 	@echo "Launching docker container..."
 	@$(DOCKER_RUN_CMD) --rm -it -w $(CONTAINER_VOL) -v $(HOST_VOL):$(CONTAINER_VOL) -v ${HOME}:/mnt/${HOME} \
 		-v $(DOWNLOAD_DATA_DIR):/downloaded_data_dir \

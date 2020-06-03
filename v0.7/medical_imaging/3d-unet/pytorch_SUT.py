@@ -23,6 +23,7 @@ sys.path.insert(0, os.getcwd())
 import mlperf_loadgen as lg
 import numpy as np
 import torch
+import torch.nn.functional as F
 from brats_QSL import get_brats_QSL
 
 sys.path.insert(0, os.path.join(os.getcwd(), "nnUnet"))
@@ -36,6 +37,7 @@ class _3DUNET_PyTorch_SUT():
         assert os.path.isfile(model_path), "Cannot find the model file {:}!".format(model_path)
         self.trainer, params = load_model_and_checkpoint_files(model_dir, folds, fp16=False, checkpoint_name=checkpoint_name)
         self.trainer.load_checkpoint_ram(params[0], False)
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
@@ -49,9 +51,9 @@ class _3DUNET_PyTorch_SUT():
 
                 print("Processing sample id {:d} with shape = {:}".format(query_samples[i].index, data.shape))
 
-                softmax = self.trainer.predict_preprocessed_data_return_seg_and_softmax(
-                data, None, self.trainer.data_aug_params["mirror_axes"], True, step_size=0.5, use_gaussian=True,
-                all_in_gpu="None")[1]
+                image = torch.from_numpy(data[np.newaxis,...]).float().to(self.device)
+                prediction = self.trainer.network(image)
+                softmax = F.softmax(prediction[0], dim=1).cpu().numpy().astype(np.float16)
 
                 transpose_forward = self.trainer.plans.get("transpose_forward")
                 transpose_backward = self.trainer.plans.get("transpose_backward")

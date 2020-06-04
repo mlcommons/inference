@@ -46,7 +46,7 @@ HAS_GPU := $(shell command -v nvidia-smi 2> /dev/null)
 ifndef $HAS_GPU
     DOCKER_RUN_CMD := docker run
 else
-
+   # Handle different nvidia-docker version
    ifneq ($(wildcard /usr/bin/nvidia-docker),)
 	DOCKER_RUN_CMD := nvidia-docker run
    else

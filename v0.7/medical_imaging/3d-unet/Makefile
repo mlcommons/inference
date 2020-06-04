@@ -115,7 +115,7 @@ build_docker:
 
 .PHONY: launch_docker
 launch_docker: check_download_data_dir
-	@mkdir -p build/postprocessed_data
+	@mkdir -p $(POSTPROCESSED_DATA_DIR)
 	@echo "Launching docker container..."
 	@$(DOCKER_RUN_CMD) --rm -it -w $(CONTAINER_VOL) -v $(HOST_VOL):$(CONTAINER_VOL) -v ${HOME}:/mnt/${HOME} \
 		-v $(DOWNLOAD_DATA_DIR):/downloaded_data_dir \

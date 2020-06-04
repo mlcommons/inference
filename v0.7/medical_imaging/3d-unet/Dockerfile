@@ -27,7 +27,7 @@ RUN cd /tmp \
  && rm -rf inference
 
 # Install dependencies
-RUN python3 -m pip install onnx==1.6.0 onnxruntime==1.2.0 numpy==1.18.0 Pillow==7.0.0
+RUN python3 -m pip install onnx onnxruntime numpy==1.18.0 Pillow==7.0.0
 
 # Install nnUnet
 COPY nnUnet /workspace/nnUnet

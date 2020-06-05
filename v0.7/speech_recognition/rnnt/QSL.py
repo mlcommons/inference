@@ -8,11 +8,6 @@ import mlperf_loadgen as lg
 import typing
 
 
-class AudioSample(typing.NamedTuple):
-    waveform: np.ndarray
-    waveform_length: np.ndarray
-
-
 class AudioQSL:
     def __init__(self, dataset_dir, manifest_filepath, labels,
                  sample_rate=16000, perf_count=None):
@@ -27,9 +22,10 @@ class AudioQSL:
                                    self.load_query_samples,
                                    self.unload_query_samples)
         print(
-            "Dataset loaded with {0:.2f} hours. Filtered {1:.2f} hours.".format(
+            "Dataset loaded with {0:.2f} hours. Filtered {1:.2f} hours. Number of samples: {2}".format(
                 self.manifest.duration / 3600,
-                self.manifest.filtered_duration / 3600))
+                self.manifest.filtered_duration / 3600,
+                self.count))
 
     def load_query_samples(self, sample_list):
         for sample_id in sample_list:
@@ -45,7 +41,7 @@ class AudioQSL:
                                          target_sr=self.sample_rate)
         waveform = segment.samples
         assert isinstance(waveform, np.ndarray) and waveform.dtype == np.float32
-        return AudioSample(waveform, np.array(waveform.shape[0], dtype=np.int64))
+        return waveform
 
     def __getitem__(self, index):
         return self.sample_id_to_sample[index]

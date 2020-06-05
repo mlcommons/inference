@@ -21,6 +21,7 @@ import torch
 import numpy as np
 import toml
 import mlperf_loadgen as lg
+from tqdm import tqdm
 
 from QSL import AudioQSL
 from decoders import ScriptGreedyDecoder
@@ -56,6 +57,10 @@ class PytorchSUT:
                             perf_count)
 
         self.audio_preprocessor = AudioPreprocessing(**featurizer_config)
+        self.audio_preprocessor.eval()
+        self.audio_preprocessor = torch.jit.script(self.audio_preprocessor)
+        self.audio_preprocessor = torch.jit._recursive.wrap_cpp_module(
+            torch._C._freeze_module(self.audio_preprocessor._c))
 
         model = RNNT(
             feature_config=featurizer_config,
@@ -65,14 +70,24 @@ class PytorchSUT:
         model.load_state_dict(load_and_migrate_checkpoint(checkpoint_path),
                               strict=True)
         model.eval()
+        model.encoder = torch.jit.script(model.encoder)
+        model.encoder = torch.jit._recursive.wrap_cpp_module(
+            torch._C._freeze_module(model.encoder._c))
+        model.prediction = torch.jit.script(model.prediction)
+        model.prediction = torch.jit._recursive.wrap_cpp_module(
+            torch._C._freeze_module(model.prediction._c))
+        model.joint = torch.jit.script(model.joint)
+        model.joint = torch.jit._recursive.wrap_cpp_module(
+            torch._C._freeze_module(model.joint._c))
         model = torch.jit.script(model)
+
         self.greedy_decoder = ScriptGreedyDecoder(len(rnnt_vocab) - 1, model)
 
     def issue_queries(self, query_samples):
         for query_sample in query_samples:
-            waveform, waveform_length = self.qsl[query_sample.index]
+            waveform = self.qsl[query_sample.index]
             assert waveform.ndim == 1
-            assert waveform_length.ndim == 0
+            waveform_length = np.array(waveform.shape[0], dtype=np.int64)
             waveform = np.expand_dims(waveform, 0)
             waveform_length = np.expand_dims(waveform_length, 0)
             with torch.no_grad():
@@ -106,3 +121,46 @@ class PytorchSUT:
     def __del__(self):
         lg.DestroySUT(self.sut)
         print("Finished destroying SUT.")
+
+
+class PytorchOfflineSUT(PytorchSUT):
+    def __init__(self, config_toml, checkpoint_path, dataset_dir,
+                 manifest_filepath, perf_count, batch_size):
+        super().__init__(config_toml, checkpoint_path, dataset_dir,
+                         manifest_filepath, perf_count)
+        self.batch_size = batch_size
+    
+    def issue_queries(self, query_samples):
+        # print(query_samples)
+        # lg.QuerySamplesComplete([])
+        # return
+        # Make sure samples in the same batch are about the same
+        # length.
+        query_samples.sort(key=lambda k: self.qsl[k.index].shape[0])
+        responses = []
+        i = 0
+        for query_samples_batch in tqdm([query_samples[i:i + self.batch_size] for i in
+                                         range(0, len(query_samples), self.batch_size)]):
+            waveform_list = []
+            for query_sample in query_samples_batch:
+                waveform = self.qsl[query_sample.index]
+                waveform_list.append(torch.from_numpy(waveform))
+            waveform_batch = torch.nn.utils.rnn.pad_sequence(waveform_list, batch_first=True)
+            waveform_lengths = torch.tensor([waveform.shape[0] for waveform in waveform_list],
+                                            dtype=torch.int64)
+            feature, feature_length = self.audio_preprocessor.forward((waveform_batch, waveform_lengths))
+            assert feature.ndim == 3
+            assert feature_length.ndim == 1
+            feature = feature.permute(2, 0, 1)
+
+            _, _, transcripts = self.greedy_decoder.forward(feature, feature_length)
+
+            assert len(transcripts) == min(self.batch_size, len(query_samples_batch))
+            for transcript in transcripts:
+                response_array = array.array('q', transcript)
+                bi = response_array.buffer_info()
+                response = lg.QuerySampleResponse(query_sample.id, bi[0],
+                                                  bi[1] * response_array.itemsize)
+                responses.append(response)
+        assert len(responses) == len(query_samples)
+        lg.QuerySamplesComplete(responses)

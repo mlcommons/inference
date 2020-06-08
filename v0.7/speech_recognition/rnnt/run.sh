@@ -81,7 +81,6 @@ if [[ $stage -le 3 ]]; then
                --scenario ${scenario} \
                --backend ${backend} \
                --log_dir ${log_dir} \
-               --offline_batch_size 64 \
                ${accuracy}
 #               --perf_count 1 \
       done

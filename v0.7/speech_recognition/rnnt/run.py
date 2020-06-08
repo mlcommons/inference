@@ -37,7 +37,6 @@ def get_args():
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--perf_count", type=int, default=None)
     parser.add_argument("--log_dir", required=True)
-    parser.add_argument("--offline_batch_size", type=int, default=1)
     args = parser.parse_args()
     return args
 
@@ -54,14 +53,9 @@ def main():
     args = get_args()
 
     if args.backend == "pytorch":
-        from pytorch_SUT import PytorchSUT, PytorchOfflineSUT
-        if args.scenario == "Offline":
-            sut = PytorchOfflineSUT(args.pytorch_config_toml, args.pytorch_checkpoint,
-                                    args.dataset_dir, args.manifest, args.perf_count,
-                                    args.offline_batch_size)
-        else:
-            sut = PytorchSUT(args.pytorch_config_toml, args.pytorch_checkpoint,
-                             args.dataset_dir, args.manifest, args.perf_count)
+        from pytorch_SUT import PytorchSUT
+        sut = PytorchSUT(args.pytorch_config_toml, args.pytorch_checkpoint,
+                         args.dataset_dir, args.manifest, args.perf_count)
     else:
         raise ValueError("Unknown backend: {:}".format(args.backend))
 

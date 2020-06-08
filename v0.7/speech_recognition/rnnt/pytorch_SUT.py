@@ -129,11 +129,8 @@ class PytorchOfflineSUT(PytorchSUT):
         super().__init__(config_toml, checkpoint_path, dataset_dir,
                          manifest_filepath, perf_count)
         self.batch_size = batch_size
-    
+
     def issue_queries(self, query_samples):
-        # print(query_samples)
-        # lg.QuerySamplesComplete([])
-        # return
         # Make sure samples in the same batch are about the same
         # length.
         query_samples.sort(key=lambda k: self.qsl[k.index].shape[0])
@@ -155,8 +152,8 @@ class PytorchOfflineSUT(PytorchSUT):
 
             _, _, transcripts = self.greedy_decoder.forward(feature, feature_length)
 
-            assert len(transcripts) == min(self.batch_size, len(query_samples_batch))
-            for transcript in transcripts:
+            assert len(transcripts) == len(query_samples_batch)
+            for query_sample, transcript in (query_samples_batch, transcripts):
                 response_array = array.array('q', transcript)
                 bi = response_array.buffer_info()
                 response = lg.QuerySampleResponse(query_sample.id, bi[0],

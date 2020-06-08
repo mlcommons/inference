@@ -13,7 +13,7 @@ class AudioQSL:
                  sample_rate=16000, perf_count=None):
         m_paths = [manifest_filepath]
         self.manifest = Manifest(dataset_dir, m_paths, labels, len(labels),
-                                 normalize=True)
+                                 normalize=True, max_duration=15.0)
         self.sample_rate = sample_rate
         self.count = len(self.manifest)
         perf_count = self.count if perf_count is None else perf_count

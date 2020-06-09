@@ -49,3 +49,18 @@ class AudioQSL:
     def __del__(self):
         lg.DestroyQSL(self.qsl)
         print("Finished destroying QSL.")
+
+# We have no problem fitting all data in memory, so we do that, in
+# order to speed up execution of the benchmark.
+class AudioQSLInMemory(AudioQSL):
+    def __init__(self, dataset_dir, manifest_filepath, labels,
+                 sample_rate=16000, perf_count=None):
+        super().__init__(dataset_dir, manifest_filepath, labels,
+                         sample_rate, perf_count)
+        super().load_query_samples(range(self.count))
+
+    def load_query_samples(self, sample_list):
+        pass
+
+    def unload_query_samples(self, sample_list):
+        pass

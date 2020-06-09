@@ -65,15 +65,15 @@ fi
 
 if [[ $stage -le 3 ]]; then
   for backend in pytorch; do
-    for accuracy in "--accuracy"; do
+    for accuracy in "--accuracy" ""; do
       # No MultiStream right now. It's a bit confusing.
-      for scenario in Offline; do
+      for scenario in SingleStream Offline Server; do
         log_dir=${work_dir}/${scenario}_${backend}
         if [ ! -z ${accuracy} ]; then
           log_dir+=_accuracy
         fi
 
-        time python run.py --backend pytorch \
+        python run.py --backend pytorch \
                --dataset_dir $local_data_dir \
                --manifest $local_data_dir/dev-clean-wav.json \
                --pytorch_config_toml pytorch/configs/rnnt.toml \
@@ -81,8 +81,8 @@ if [[ $stage -le 3 ]]; then
                --scenario ${scenario} \
                --backend ${backend} \
                --log_dir ${log_dir} \
-               ${accuracy}
-#               --perf_count 1 \
+               ${accuracy} &
+
       done
     done
   done

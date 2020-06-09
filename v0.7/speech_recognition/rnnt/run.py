@@ -27,7 +27,7 @@ MLPERF_CONF = MLPERF_CONF.resolve()
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--backend", choices=["pytorch"], default="pytorch", help="Backend")
-    parser.add_argument("--scenario", choices=["SingleStream", "Offline", "Server", "MultiStream"], default="Offline", help="Scenario")
+    parser.add_argument("--scenario", choices=["SingleStream", "Offline", "Server"], default="Offline", help="Scenario")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--mlperf_conf", default=str(MLPERF_CONF), help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf", help="mlperf rules config")
@@ -45,7 +45,6 @@ scenario_map = {
     "SingleStream": lg.TestScenario.SingleStream,
     "Offline": lg.TestScenario.Offline,
     "Server": lg.TestScenario.Server,
-    "MultiStream": lg.TestScenario.MultiStream
 }
 
 
@@ -82,6 +81,7 @@ def main():
 
     if args.accuracy:
         cmd = f"python3 accuracy_eval.py --log_dir {log_path} --dataset_dir {args.dataset_dir} --manifest {args.manifest}"
+        print(f"Running accuracy script: cmd")
         subprocess.check_call(cmd, shell=True)
 
     print("Done!")

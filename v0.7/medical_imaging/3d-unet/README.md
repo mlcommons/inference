@@ -36,15 +36,16 @@ Please run the following commands:
 - `export DOWNLOAD_DATA_DIR=<path/to/MICCAI_BraTS_2019_Data_Training>`: point to location of downloaded BraTS 2019 Training dataset.
 - **Temporary:** Download the (192, 224, 192) PyTorch model named `fold_4.zip` to `build/result/`.
 - **Temporary:** Download the (192, 224, 192) ONNX model named `192_224_192.onnx` to `build/`.
+- **Temporary:** Download the (192, 224, 192) TF model named `192_224_192.pb` to `build/`.
 - `make setup`: initialize submodule and download models.
 - `make build_docker`: build docker image.
 - `make launch_docker`: launch docker container with an interaction session.
 - `make preprocess_data`: preprocess the BraTS 2019 dataset.
-- `python3 run.py --backend=[pytorch|onnxruntime] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
+- `python3 run.py --backend=[tf|pytorch|onnxruntime] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
 
 ## Details
 
-- SUT implementations are in [pytorch_SUT.py](pytorch_SUT.py) and [onnxruntime_SUT.py](onnxruntime_SUT.py). QSL implementation is in [brats_QSL.py](brats_QSL.py).
+- SUT implementations are in [pytorch_SUT.py](pytorch_SUT.py), [onnxruntime_SUT.py](onnxruntime_SUT.py) and [tf_SUT.py](tf_SUT.py). QSL implementation is in [brats_QSL.py](brats_QSL.py).
 - The script [brats_eval.py](brats_eval.py) parses LoadGen accuracy log, post-processes it, and computes the accuracy.
 - Preprocessing and evaluation (including post-processing) are not included in the timed path.
 - The input to the SUT is a volume of size `[4, 192, 224, 192]`. The output from SUT is a volume of size `[4, 192, 224, 192]` with predicted label logits for each voxel.

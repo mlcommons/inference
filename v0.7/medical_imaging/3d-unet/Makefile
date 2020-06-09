@@ -35,6 +35,7 @@ RESULT_DIR := $(BUILD_DIR)/result
 MLPERF_CONF := $(BUILD_DIR)/mlperf.conf
 PYTORCH_MODEL := $(RESULT_DIR)/fold_4.zip
 ONNX_MODEL := $(MODEL_DIR)/192_224_192.onnx
+TF_MODEL := $(MODEL_DIR)/192_224_192.pb
 
 # Env variables needed by nnUnet
 export nnUNet_raw_data_base=$(RAW_DATA_DIR)
@@ -104,6 +105,13 @@ download_onnx_model:
 	# Will download model from Zenodo
 	@if [ ! -e $(ONNX_MODEL) ]; then \
 		echo "For now, please manually download ONNX model to $(ONNX_MODEL)"; \
+	fi
+
+.PHONY: download_tf_model
+download_tf_model:
+	# Will download model from Zenodo
+	@if [ ! -e $(TF_MODEL) ]; then \
+		echo "For now, please manually download ONNX model to $(TF_MODEL)"; \
 	fi
 
 .PHONY: build_docker

@@ -6,6 +6,8 @@ import json
 import sys
 import os
 
+from QSL import AudioQSL
+
 sys.path.insert(0, os.path.join(os.getcwd(), "pytorch"))
 from helpers import process_evaluation_epoch, __gather_predictions
 from parts.manifest import Manifest
@@ -22,8 +24,8 @@ def get_args():
 def main():
     args = get_args()
     labels = [" ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "'"]
-    manifest = Manifest(args.dataset_dir, [args.manifest], labels,
-                        len(labels), normalize=True)
+    qsl = AudioQSL(args.dataset_dir, args.manifest, labels)
+    manifest = qsl.manifest
     with open(os.path.join(args.log_dir, "mlperf_log_accuracy.json")) as fh:
         results = json.load(fh)
     hypotheses = []

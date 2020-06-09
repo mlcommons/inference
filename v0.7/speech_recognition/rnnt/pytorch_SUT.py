@@ -23,7 +23,7 @@ import toml
 import mlperf_loadgen as lg
 from tqdm import tqdm
 
-from QSL import AudioQSL
+from QSL import AudioQSL, AudioQSLInMemory
 from decoders import ScriptGreedyDecoder
 from helpers import add_blank_label
 from preprocessing import AudioPreprocessing
@@ -52,10 +52,11 @@ class PytorchSUT:
 
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries,
                                    self.process_latencies)
-        self.qsl = AudioQSL(dataset_dir, manifest_filepath,
-                            dataset_vocab, featurizer_config["sample_rate"],
-                            perf_count)
-
+        self.qsl = AudioQSLInMemory(dataset_dir,
+                                    manifest_filepath,
+                                    dataset_vocab,
+                                    featurizer_config["sample_rate"],
+                                    perf_count)
         self.audio_preprocessor = AudioPreprocessing(**featurizer_config)
         self.audio_preprocessor.eval()
         self.audio_preprocessor = torch.jit.script(self.audio_preprocessor)

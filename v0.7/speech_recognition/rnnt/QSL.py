@@ -1,11 +1,13 @@
-from pytorch.parts.manifest import Manifest
-from pytorch.parts.segment import AudioSegment
+import sys
+import os
+sys.path.insert(0, os.path.join(os.getcwd(), "pytorch"))
+
+from parts.manifest import Manifest
+from parts.segment import AudioSegment
 
 import numpy as np
 
 import mlperf_loadgen as lg
-
-import typing
 
 
 class AudioQSL:

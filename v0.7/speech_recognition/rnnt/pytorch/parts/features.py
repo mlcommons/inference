@@ -116,6 +116,7 @@ class FilterbankFeatures(nn.Module):
         self.preemph = preemph
         self.pad_to = pad_to
         # For now, always enable this.
+        # See https://docs.google.com/presentation/d/1IVC3J-pHB-ipJpKsJox_SqmDHYdkIaoCXTbKmJmV2-I/edit?usp=sharing for elaboration
         self.use_deterministic_dithering = True
         highfreq = highfreq or sample_rate / 2
         window_fn = torch_windows.get(window, None)

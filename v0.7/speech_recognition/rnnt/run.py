@@ -81,7 +81,7 @@ def main():
 
     if args.accuracy:
         cmd = f"python3 accuracy_eval.py --log_dir {log_path} --dataset_dir {args.dataset_dir} --manifest {args.manifest}"
-        print(f"Running accuracy script: cmd")
+        print(f"Running accuracy script: {cmd}")
         subprocess.check_call(cmd, shell=True)
 
     print("Done!")

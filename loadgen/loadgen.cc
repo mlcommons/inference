@@ -151,6 +151,31 @@ class QueryMetadata {
     return all_samples_done_time;
   }
 
+  // When server_coalesce_queries is set to true in Server scenario, we
+  // sometimes coalesce multiple queries into one query. This is done by moving
+  // the other query's sample into current query, while maintaining their
+  // original scheduled_time.
+  void CoalesceQueries(
+      std::vector<QueryMetadata>& queries, size_t first, size_t last) {
+    // Copy sample data over to current query, boldly assuming that each query
+    // only has one sample.
+    auto prev_scheduled_time = scheduled_time;
+    query_to_send.reserve(last - first + 2); // Extra one for the current query.
+    for (size_t i = first; i <= last; i++) {
+      auto& q = queries[i];
+      auto& s = q.samples_[0];
+      query_to_send.push_back(
+        {reinterpret_cast<ResponseId>(&s), s.sample_index});
+      q.scheduled_time = prev_scheduled_time + q.scheduled_delta;
+      q.issued_start_time = issued_start_time;
+      prev_scheduled_time = q.scheduled_time;
+    }
+  }
+
+  void Decoalesce() {
+    query_to_send.resize(1);
+  }
+
  public:
   std::vector<QuerySample> query_to_send;
   const std::chrono::nanoseconds scheduled_delta;
@@ -561,16 +586,18 @@ struct QueryScheduler<TestScenario::Server> {
                  const PerfClock::time_point start)
       : start(start) {}
 
-  // TODO: Coalesce all queries whose scheduled timestamps have passed.
   PerfClock::time_point Wait(QueryMetadata* next_query) {
     auto tracer =
         MakeScopedTracer([](AsyncTrace& trace) { trace("Scheduling"); });
 
     auto scheduled_time = start + next_query->scheduled_delta;
     next_query->scheduled_time = scheduled_time;
-    std::this_thread::sleep_until(scheduled_time);
 
     auto now = PerfClock::now();
+    if (now < scheduled_time) {
+      std::this_thread::sleep_until(scheduled_time);
+      now = PerfClock::now();
+    }
     next_query->issued_start_time = now;
     return now;
   }
@@ -636,6 +663,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                          max_latencies_to_record);
 
   size_t queries_issued = 0;
+  size_t queries_count = queries.size();
 
   auto start_for_power = std::chrono::system_clock::now();
   const PerfClock::time_point start = PerfClock::now();
@@ -647,10 +675,32 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   // the actual issue time.
   bool ran_out_of_generated_queries = scenario != TestScenario::Server;
   size_t expected_latencies = 0;
-  for (auto& query : queries) {
+  while (queries_issued < queries_count) {
+    auto& query = queries[queries_issued];
     auto tracer1 =
         MakeScopedTracer([](AsyncTrace& trace) { trace("SampleLoop"); });
     last_now = query_scheduler.Wait(&query);
+
+    // If in Server scenario and server_coalesce_queries is enabled, multiple
+    // queries are coalesed into one big query if the current time has already
+    // passed the scheduled time of multiple queries.
+    if (scenario == TestScenario::Server
+        && settings.requested.server_coalesce_queries) {
+      auto current_query_idx = queries_issued;
+      auto scheduled_time = query.scheduled_time;
+      while(queries_issued < queries_count - 1) {
+        auto next_scheduled_time =
+          scheduled_time + queries[queries_issued + 1].scheduled_delta;
+        if (last_now < next_scheduled_time) {
+          break;
+        }
+        scheduled_time = next_scheduled_time;
+        queries_issued++;
+      }
+      if (queries_issued > current_query_idx) {
+        query.CoalesceQueries(queries, current_query_idx + 1, queries_issued);
+      }
+    }
 
     // Issue the query to the SUT.
     {
@@ -661,6 +711,12 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
 
     expected_latencies += query.query_to_send.size();
     queries_issued++;
+
+    if (scenario == TestScenario::Server
+        && settings.requested.server_coalesce_queries) {
+      // Set the query back to its clean state.
+      query.Decoalesce();
+    }
 
     if (mode == TestMode::AccuracyOnly) {
       // TODO: Rate limit in accuracy mode so accuracy mode works even

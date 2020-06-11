@@ -12,10 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-echo "Building loadgen..."
+echo "Building loadgen in Debug mode..."
 if [ ! -e loadgen_build ]; then mkdir loadgen_build; fi;
-cd loadgen_build && cmake ../.. && make -j && cd ..
-echo "Building test program..."
+cd loadgen_build && cmake -DCMAKE_BUILD_TYPE=Debug ../.. && make -j && cd ..
+echo "Building test program in Debug mode..."
 if [ ! -e build ]; then mkdir build; fi;
-g++ --std=c++11 -O3 -I.. -o build/repro.exe repro.cpp -Lloadgen_build -lmlperf_loadgen -lpthread && \
-LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so.2 build/repro.exe $1 $2 $3 $4 $5
+g++ --std=c++11 -O0 -g -I.. -o build/repro.exe repro.cpp -Lloadgen_build -lmlperf_loadgen -lpthread && \
+valgrind build/repro.exe $1 $2 $3 $4 $5

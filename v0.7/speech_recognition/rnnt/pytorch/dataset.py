@@ -44,7 +44,6 @@ def seq_collate_fn(batch):
     )
     transcript_list = [batch[i].transcript
                        for i in permute_indices]
-    # Packed sequences are no good in Torchscript! Just torch.concatenate the list!
     packed_transcripts = torch.nn.utils.rnn.pack_sequence(transcript_list,
                                                           enforce_sorted=False)
 
@@ -115,7 +114,7 @@ class AudioDataset(Dataset):
         (in seconds). Each entry is a different audio sample.
         Args:
             dataset_dir: absolute path to dataset folder
-            manifest_filepath: relative path from dataset folder to manifest json as described above.=
+            manifest_filepath: relative path from dataset folder to manifest json as described above.
             labels: String containing all the possible characters to map to
             featurizer: Initialized featurizer class that converts paths of audio to feature tensors
             max_duration: If audio exceeds this length, do not include in dataset

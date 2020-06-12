@@ -197,8 +197,9 @@ struct TestSettings {
   /// should be set to 0.97 (97%) in v0.5.(As always, check the policy page for
   /// updated values for the benchmark you are running.)
   double server_target_latency_percentile = 0.99;
-  /// \brief Implement this. Would combine samples from multiple queries
-  /// into a single query if their scheduled issue times have passed.
+  /// \brief If this flag is set to true, LoadGen will combine samples from
+  /// multiple queries into a single query if their scheduled issue times have
+  /// passed.
   bool server_coalesce_queries = false;
   /// \brief The decimal places of QPS precision used to terminate
   /// FindPeakPerformance mode.

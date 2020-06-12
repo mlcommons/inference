@@ -155,26 +155,24 @@ class QueryMetadata {
   // sometimes coalesce multiple queries into one query. This is done by moving
   // the other query's sample into current query, while maintaining their
   // original scheduled_time.
-  void CoalesceQueries(
-      std::vector<QueryMetadata>& queries, size_t first, size_t last) {
+  void CoalesceQueries(QueryMetadata* queries, size_t first, size_t last) {
     // Copy sample data over to current query, boldly assuming that each query
     // only has one sample.
     auto prev_scheduled_time = scheduled_time;
-    query_to_send.reserve(last - first + 2); // Extra one for the current query.
-    for (size_t i = first; i <= last; i++) {
+    query_to_send.reserve(last - first +
+                          2);  // Extra one for the current query.
+    for (size_t i = first; i <= last; ++i) {
       auto& q = queries[i];
       auto& s = q.samples_[0];
       query_to_send.push_back(
-        {reinterpret_cast<ResponseId>(&s), s.sample_index});
+          {reinterpret_cast<ResponseId>(&s), s.sample_index});
       q.scheduled_time = prev_scheduled_time + q.scheduled_delta;
       q.issued_start_time = issued_start_time;
       prev_scheduled_time = q.scheduled_time;
     }
   }
 
-  void Decoalesce() {
-    query_to_send.resize(1);
-  }
+  void Decoalesce() { query_to_send.resize(1); }
 
  public:
   std::vector<QuerySample> query_to_send;
@@ -305,7 +303,8 @@ auto SampleDistribution(size_t sample_count, size_t stride, std::mt19937* rng) {
     indices.push_back(i);
   }
   std::shuffle(indices.begin(), indices.end(), *rng);
-  return [indices = std::move(indices), i = size_t(0)](auto& /*gen*/) mutable {
+  return
+      [ indices = std::move(indices), i = size_t(0) ](auto& /*gen*/) mutable {
     return indices.at(i++);
   };
 }
@@ -316,7 +315,9 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
                                                    size_t /*stride*/,
                                                    std::mt19937* /*rng*/) {
   return [dist = std::uniform_int_distribution<>(0, sample_count - 1)](
-             auto& gen) mutable { return dist(gen); };
+      auto& gen) mutable {
+    return dist(gen);
+  };
 }
 
 /// \brief Generates queries for the requested settings, templated by
@@ -454,8 +455,10 @@ std::vector<QueryMetadata> GenerateQueries(
     }
   }
 
-  LogDetail([count = queries.size(), spq = settings.samples_per_query,
-             duration = timestamp.count()](AsyncDetail& detail) {
+  LogDetail([
+    count = queries.size(), spq = settings.samples_per_query,
+    duration = timestamp.count()
+  ](AsyncDetail & detail) {
     detail("GeneratedQueries: ", "queries", count, "samples per query", spq,
            "duration", duration);
   });
@@ -684,13 +687,13 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
     // If in Server scenario and server_coalesce_queries is enabled, multiple
     // queries are coalesed into one big query if the current time has already
     // passed the scheduled time of multiple queries.
-    if (scenario == TestScenario::Server
-        && settings.requested.server_coalesce_queries) {
+    if (scenario == TestScenario::Server &&
+        settings.requested.server_coalesce_queries) {
       auto current_query_idx = queries_issued;
       auto scheduled_time = query.scheduled_time;
-      while(queries_issued < queries_count - 1) {
+      while (queries_issued < queries_count - 1) {
         auto next_scheduled_time =
-          scheduled_time + queries[queries_issued + 1].scheduled_delta;
+            scheduled_time + queries[queries_issued + 1].scheduled_delta;
         if (last_now < next_scheduled_time) {
           break;
         }
@@ -698,7 +701,8 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
         queries_issued++;
       }
       if (queries_issued > current_query_idx) {
-        query.CoalesceQueries(queries, current_query_idx + 1, queries_issued);
+        query.CoalesceQueries(queries.data(), current_query_idx + 1,
+                              queries_issued);
       }
     }
 
@@ -712,8 +716,8 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
     expected_latencies += query.query_to_send.size();
     queries_issued++;
 
-    if (scenario == TestScenario::Server
-        && settings.requested.server_coalesce_queries) {
+    if (scenario == TestScenario::Server &&
+        settings.requested.server_coalesce_queries) {
       // Set the query back to its clean state.
       query.Decoalesce();
     }
@@ -886,9 +890,9 @@ struct PerformanceSummary {
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
   // MSVC complains if there is no explicit constructor.
   // (target_latency_percentile above depends on construction with settings)
-  PerformanceSummary(
-      const std::string& sut_name_arg, const TestSettingsInternal& settings_arg,
-      const PerformanceResult& pr_arg)
+  PerformanceSummary(const std::string& sut_name_arg,
+                     const TestSettingsInternal& settings_arg,
+                     const PerformanceResult& pr_arg)
       : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg){};
 #endif
   void ProcessLatencies();
@@ -1324,14 +1328,15 @@ std::pair<PerformanceSummary, PerformanceSummary> FindBoundaries(
   TestSettingsInternal u_settings = l_perf_summary.settings;
   find_peak_performance::WidenPerformanceField<scenario>(&u_settings);
 
-  LogDetail(
-      [l_field = find_peak_performance::ToStringPerformanceField<scenario>(
-           l_perf_summary.settings),
-       u_field = find_peak_performance::ToStringPerformanceField<scenario>(
-           u_settings)](AsyncDetail& detail) {
-        detail("FindBoundaries: Checking fields [" + l_field + ", " + u_field +
-               ")");
-      });
+  LogDetail([
+    l_field = find_peak_performance::ToStringPerformanceField<scenario>(
+        l_perf_summary.settings),
+    u_field =
+        find_peak_performance::ToStringPerformanceField<scenario>(u_settings)
+  ](AsyncDetail & detail) {
+    detail("FindBoundaries: Checking fields [" + l_field + ", " + u_field +
+           ")");
+  });
 
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
       loadgen::GenerateLoadableSets(qsl, u_settings));
@@ -1369,15 +1374,14 @@ PerformanceSummary FindPeakPerformanceBinarySearch(
       find_peak_performance::MidOfBoundaries<scenario>(l_perf_summary.settings,
                                                        u_perf_summary.settings);
 
-  LogDetail([l_field =
-                 find_peak_performance::ToStringPerformanceField<scenario>(
-                     l_perf_summary.settings),
-             u_field =
-                 find_peak_performance::ToStringPerformanceField<scenario>(
-                     u_perf_summary.settings),
-             m_field =
-                 find_peak_performance::ToStringPerformanceField<scenario>(
-                     m_settings)](AsyncDetail& detail) {
+  LogDetail([
+    l_field = find_peak_performance::ToStringPerformanceField<scenario>(
+        l_perf_summary.settings),
+    u_field = find_peak_performance::ToStringPerformanceField<scenario>(
+        u_perf_summary.settings),
+    m_field =
+        find_peak_performance::ToStringPerformanceField<scenario>(m_settings)
+  ](AsyncDetail & detail) {
     detail(
         "FindPeakPerformanceBinarySearch: Testing the mid value of bounds [" +
         l_field + ", " + u_field + "): " + m_field);
@@ -1465,9 +1469,9 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   sut->ReportLatencyResults(pr.sample_latencies);
 
-  LogSummary(
-      [perf_summary = PerformanceSummary{sut->Name(), settings, std::move(pr)}](
-          AsyncSummary& summary) mutable { perf_summary.Log(summary); });
+  LogSummary([perf_summary =
+                  PerformanceSummary{sut->Name(), settings, std::move(pr)}](
+      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
 
   qsl->UnloadSamplesFromRam(performance_set.set);
 }
@@ -1492,7 +1496,8 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   if (scenario != TestScenario::MultiStream &&
       scenario != TestScenario::MultiStreamFree &&
       scenario != TestScenario::Server) {
-    LogDetail([unsupported_scenario = ToString(scenario)](AsyncDetail& detail) {
+    LogDetail([unsupported_scenario =
+                   ToString(scenario)](AsyncDetail & detail) {
       detail.Error(find_peak_performance::kNotSupportedMsg);
     });
     return;
@@ -1500,7 +1505,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   LogDetail([base_field =
                  find_peak_performance::ToStringPerformanceField<scenario>(
-                     base_settings)](AsyncDetail& detail) {
+                     base_settings)](AsyncDetail & detail) {
     detail("FindPeakPerformance: Check validity of the base settings field: " +
            base_field);
   });
@@ -1531,10 +1536,10 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
     sut->ReportLatencyResults(base_perf_summary.pr.sample_latencies);
 
-    LogSummary(
-        [perf_summary = PerformanceSummary{sut->Name(), base_settings,
-                                           std::move(base_perf_summary.pr)}](
-            AsyncSummary& summary) mutable { perf_summary.Log(summary); });
+    LogSummary([perf_summary =
+                    PerformanceSummary{sut->Name(), base_settings,
+                                       std::move(base_perf_summary.pr)}](
+        AsyncSummary & summary) mutable { perf_summary.Log(summary); });
 
     qsl->UnloadSamplesFromRam(base_performance_set.set);
 
@@ -1550,14 +1555,15 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   PerformanceSummary l_perf_summary = boundaries.first;
   PerformanceSummary u_perf_summary = boundaries.second;
 
-  LogDetail(
-      [l_field = find_peak_performance::ToStringPerformanceField<scenario>(
-           l_perf_summary.settings),
-       u_field = find_peak_performance::ToStringPerformanceField<scenario>(
-           u_perf_summary.settings)](AsyncDetail& detail) {
-        detail("FindPeakPerformance: Found boundaries: [" + l_field + ", " +
-               u_field + ")");
-      });
+  LogDetail([
+    l_field = find_peak_performance::ToStringPerformanceField<scenario>(
+        l_perf_summary.settings),
+    u_field = find_peak_performance::ToStringPerformanceField<scenario>(
+        u_perf_summary.settings)
+  ](AsyncDetail & detail) {
+    detail("FindPeakPerformance: Found boundaries: [" + l_field + ", " +
+           u_field + ")");
+  });
 
   // Reuse performance_set, u_perf_summary has the largest 'samples_per_query'.
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
@@ -1571,16 +1577,16 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   // Print-out the peak performance test setting.
   LogDetail([field = find_peak_performance::ToStringPerformanceField<scenario>(
-                 perf_summary.settings)](AsyncDetail& detail) {
+                 perf_summary.settings)](AsyncDetail & detail) {
     detail("FindPeakPerformance: Found peak performance field: " + field);
   });
 
   sut->ReportLatencyResults(perf_summary.pr.sample_latencies);
 
-  LogSummary(
-      [perf_summary = PerformanceSummary{sut->Name(), perf_summary.settings,
-                                         std::move(perf_summary.pr)}](
-          AsyncSummary& summary) mutable { perf_summary.Log(summary); });
+  LogSummary([perf_summary =
+                  PerformanceSummary{sut->Name(), perf_summary.settings,
+                                     std::move(perf_summary.pr)}](
+      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
 
   qsl->UnloadSamplesFromRam(performance_set.set);
 }
@@ -1597,10 +1603,8 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   for (auto& loadable_set : loadable_sets) {
     {
-      auto tracer = MakeScopedTracer(
-          [count = loadable_set.set.size()](AsyncTrace& trace) {
-            trace("LoadSamples", "count", count);
-          });
+      auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
+          AsyncTrace & trace) { trace("LoadSamples", "count", count); });
       LoadSamplesToRam(qsl, loadable_set.set);
     }
 
@@ -1608,10 +1612,8 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
         sut, settings, loadable_set, sequence_gen));
 
     {
-      auto tracer = MakeScopedTracer(
-          [count = loadable_set.set.size()](AsyncTrace& trace) {
-            trace("UnloadSampes", "count", count);
-          });
+      auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
+          AsyncTrace & trace) { trace("UnloadSampes", "count", count); });
       qsl->UnloadSamplesFromRam(loadable_set.set);
     }
   }

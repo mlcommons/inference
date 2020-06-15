@@ -328,7 +328,7 @@ usage: main.py [-h]
 
 `--min-samples-to-aggregate, --max-samples-to-aggregate` number of samples to aggregate and treat as a single sample. This number will vary randomly between min and max during runs.
 
-`--samples-to-aggregate-quantile-file` number of samples to aggregate and treat as a single sample. This number will be sampled according to a custom distribution quantile stored in a file.
+`--samples-to-aggregate-quantile-file` number of samples to aggregate and treat as a single sample. This number will be sampled according to a custom distribution quantile stored in a file (e.g. tools/dist_quantile.txt).
 
 `--samples-to-aggregate-trace-file` filename for writing the trace of queries. Each query is written on a single line, with a range of aggregated samples indicated in square brackets.
 

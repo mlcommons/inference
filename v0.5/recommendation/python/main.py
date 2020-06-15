@@ -128,6 +128,8 @@ def get_args():
     parser.add_argument("--samples-to-aggregate", type=int, help="number of samples to be treated as one")
     parser.add_argument("--min-samples-to-aggregate", type=int, help="min number of samples to be treated as one in random query size")
     parser.add_argument("--max-samples-to-aggregate", type=int, help="max number of samples to be treated as one in random query size")
+    parser.add_argument("--samples-to-aggregate-quantile-file", type=str, help="distribution quantile used to generate number of samples to be treated as one in random query size")
+    parser.add_argument("--samples-to-aggregate-trace-file", type=str, default="dlrm_trace_of_aggregated_samples.txt")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
@@ -375,6 +377,8 @@ def main():
                         samples_to_aggregate=args.samples_to_aggregate,
                         min_samples_to_aggregate=args.min_samples_to_aggregate,
                         max_samples_to_aggregate=args.max_samples_to_aggregate,
+                        samples_to_aggregate_quantile_file=args.samples_to_aggregate_quantile_file,
+                        samples_to_aggregate_trace_file=args.samples_to_aggregate_trace_file,
                         test_num_workers=args.test_num_workers,
                         max_ind_range=args.max_ind_range,
                         sub_sample_rate=args.data_sub_sample_rate,

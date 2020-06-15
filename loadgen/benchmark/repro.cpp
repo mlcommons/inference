@@ -17,6 +17,7 @@
 #include <condition_variable>
 #include <deque>
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -151,6 +152,65 @@ class QueueSUT : public mlperf::SystemUnderTest {
   bool mDone{false};
 };
 
+class MultiBasicSUT : public mlperf::SystemUnderTest {
+ public:
+  MultiBasicSUT(int numThreads)
+      : mNumThreads(numThreads), mResponses(numThreads) {
+    // Start with some large value so that we don't reallocate memory.
+    initResponse(10000);
+    for (int i = 0; i < mNumThreads; ++i) {
+      mThreads.emplace_back(&MultiBasicSUT::startIssueThread, this, i);
+    }
+  }
+  ~MultiBasicSUT() override {
+    for (auto& thread : mThreads) {
+      thread.join();
+    }
+  }
+  const std::string& Name() const override { return mName; }
+  void IssueQuery(const std::vector<mlperf::QuerySample>& samples) override {
+    int thread_idx = mThreadMap[std::this_thread::get_id()];
+    int n = samples.size();
+    auto& reponses = mResponses[thread_idx];
+    if (n > reponses.size()) {
+      std::cout
+          << "Warning: reallocating response buffer in MultiBasicSUT. Maybe "
+             "you should initResponse with larger value!?"
+          << std::endl;
+      initResponse(samples.size());
+    }
+    for (int i = 0; i < n; i++) {
+      reponses[i].id = samples[i].id;
+    }
+    mlperf::QuerySamplesComplete(reponses.data(), n);
+  }
+  void FlushQueries() override {}
+  void ReportLatencyResults(
+      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override{};
+
+ private:
+  void initResponse(int size) {
+    for (auto& responses : mResponses) {
+      responses.resize(size,
+                       {0, reinterpret_cast<uintptr_t>(&mBuf), sizeof(int)});
+    }
+  }
+  void startIssueThread(int thread_idx) {
+    {
+      std::lock_guard<std::mutex> lock(mMtx);
+      mThreadMap[std::this_thread::get_id()] = thread_idx;
+    }
+    mlperf::RegisterIssueQueryThread();
+  }
+  int mBuf{0};
+  int mNumThreads{0};
+  std::string mName{"MultiBasicSUT"};
+  std::vector<std::vector<mlperf::QuerySampleResponse>> mResponses;
+  std::mutex mMtx;
+  std::vector<std::thread> mThreads;
+  std::map<std::thread::id, int> mThreadMap;
+};
+
 int main(int argc, char** argv) {
   assert(argc >= 2 && "Need to pass in at least one argument: target_qps");
   int target_qps = std::stoi(argv[1]);
@@ -160,6 +220,7 @@ int main(int argc, char** argv) {
   int numCompleteThreads{4};
   int maxSize{1};
   bool server_coalesce_queries{false};
+  int num_issue_threads{0};
   if (argc >= 3) {
     useQueue = std::stoi(argv[2]) != 0;
   }
@@ -171,6 +232,9 @@ int main(int argc, char** argv) {
   }
   if (argc >= 6) {
     server_coalesce_queries = std::stoi(argv[5]) != 0;
+  }
+  if (argc >= 7) {
+    num_issue_threads = std::stoi(argv[6]);
   }
 
   QSL qsl;
@@ -188,6 +252,8 @@ int main(int argc, char** argv) {
   testSettings.server_coalesce_queries = server_coalesce_queries;
   std::cout << "testSettings.server_coalesce_queries = "
             << (server_coalesce_queries ? "True" : "False") << std::endl;
+  testSettings.server_num_issue_query_threads = num_issue_threads;
+  std::cout << "num_issue_threads = " << num_issue_threads << std::endl;
 
   // Configure the logging settings
   mlperf::LogSettings logSettings;
@@ -202,13 +268,28 @@ int main(int argc, char** argv) {
   logSettings.enable_trace = false;
 
   // Choose SUT
-  if (useQueue) {
-    std::cout << "Using QueueSUT with " << numCompleteThreads
-              << " complete threads" << std::endl;
-    sut.reset(new QueueSUT(numCompleteThreads, maxSize));
+  if (num_issue_threads == 0) {
+    if (useQueue) {
+      std::cout << "Using QueueSUT with " << numCompleteThreads
+                << " complete threads" << std::endl;
+      sut.reset(new QueueSUT(numCompleteThreads, maxSize));
+    } else {
+      std::cout << "Using BasicSUT" << std::endl;
+      sut.reset(new BasicSUT());
+    }
   } else {
-    std::cout << "Using BasicSUT" << std::endl;
-    sut.reset(new BasicSUT());
+    if (useQueue) {
+      std::cout << "Using MultiQueueSUT with " << numCompleteThreads
+                << " complete threads" << std::endl;
+      std::cout << "!!!! MultiQueueSUT is NOT implemented yet !!!!"
+                << std::endl;
+      return 1;
+      // sut.reset(new MultiQueueSUT(num_issue_threads, numCompleteThreads,
+      // maxSize));
+    } else {
+      std::cout << "Using MultiBasicSUT" << std::endl;
+      sut.reset(new MultiBasicSUT(num_issue_threads));
+    }
   }
 
   // Start test

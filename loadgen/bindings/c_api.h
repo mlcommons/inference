@@ -71,6 +71,10 @@ void DestroyQSL(void* qsl);
 /// point.
 void StartTest(void* sut, void* qsl, const TestSettings& settings);
 
+/// \brief TODO
+/// \details TODO
+void RegisterIssueQueryThread();
+
 }  // namespace c
 }  // namespace mlperf
 

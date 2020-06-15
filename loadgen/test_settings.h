@@ -211,6 +211,8 @@ struct TestSettings {
   /// out from a performance run. Useful for performance tuning and speeding up
   /// the FindPeakPerformance mode.
   uint64_t server_max_async_queries = 0;  ///< 0: Infinity.
+  /// \brief TODO
+  uint64_t server_num_issue_query_threads = 0;
   /**@}*/
 
   // ==================================

@@ -79,8 +79,10 @@ TestSettingsInternal::TestSettingsInternal(
       if (requested.server_target_qps >= 0.0) {
         target_qps = requested.server_target_qps;
       } else {
-        LogDetail([server_target_qps = requested.server_target_qps,
-                   target_qps = target_qps](AsyncDetail &detail) {
+        LogDetail([
+          server_target_qps = requested.server_target_qps,
+          target_qps = target_qps
+        ](AsyncDetail & detail) {
           detail.Error("Invalid value for server_target_qps requested.",
                        "requested", server_target_qps, "using", target_qps);
         });
@@ -94,8 +96,10 @@ TestSettingsInternal::TestSettingsInternal(
       if (requested.offline_expected_qps >= 0.0) {
         target_qps = requested.offline_expected_qps;
       } else {
-        LogDetail([offline_expected_qps = requested.offline_expected_qps,
-                   target_qps = target_qps](AsyncDetail &detail) {
+        LogDetail([
+          offline_expected_qps = requested.offline_expected_qps,
+          target_qps = target_qps
+        ](AsyncDetail & detail) {
           detail.Error("Invalid value for offline_expected_qps requested.",
                        "requested", offline_expected_qps, "using", target_qps);
         });
@@ -138,22 +142,23 @@ TestSettingsInternal::TestSettingsInternal(
   // Validate TestSettings
   if (requested.performance_issue_same &&
       (requested.performance_issue_same_index >= performance_sample_count)) {
-    LogDetail(
-        [performance_issue_same_index = requested.performance_issue_same_index,
-         performance_sample_count =
-             performance_sample_count](AsyncDetail &detail) {
-          detail.Error(
-              "Sample Idx to be repeated in performance_issue_same mode"
-              " cannot be greater than loaded performance_sample_count.",
-              "performance_issue_same_index", performance_issue_same_index,
-              "performance_sample_count", performance_sample_count);
-        });
+    LogDetail([
+      performance_issue_same_index = requested.performance_issue_same_index,
+      performance_sample_count = performance_sample_count
+    ](AsyncDetail & detail) {
+      detail.Error(
+          "Sample Idx to be repeated in performance_issue_same mode"
+          " cannot be greater than loaded performance_sample_count.",
+          "performance_issue_same_index", performance_issue_same_index,
+          "performance_sample_count", performance_sample_count);
+    });
   }
 
   if (requested.performance_issue_unique && requested.performance_issue_same) {
-    LogDetail([performance_issue_unique = requested.performance_issue_unique,
-               performance_issue_same =
-                   requested.performance_issue_same](AsyncDetail &detail) {
+    LogDetail([
+      performance_issue_unique = requested.performance_issue_unique,
+      performance_issue_same = requested.performance_issue_same
+    ](AsyncDetail & detail) {
       detail.Error(
           "Performance_issue_unique and performance_issue_same, both"
           " cannot be true at the same time.",
@@ -233,6 +238,8 @@ void LogRequestedTestSettings(const TestSettings &s) {
         detail("server_find_peak_qps_boundary_step_size : ",
                s.server_find_peak_qps_boundary_step_size);
         detail("server_max_async_queries : ", s.server_max_async_queries);
+        detail("server_num_issue_query_threads : ",
+               s.server_num_issue_query_threads);
         break;
       case TestScenario::Offline:
         detail("offline_expected_qps : ", s.offline_expected_qps);
@@ -260,7 +267,7 @@ void LogRequestedTestSettings(const TestSettings &s) {
 }
 
 void TestSettingsInternal::LogEffectiveSettings() const {
-  LogDetail([s = *this](AsyncDetail &detail) {
+  LogDetail([s = *this](AsyncDetail & detail) {
     detail("");
     detail("Effective Settings:");
 
@@ -358,7 +365,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     }
     // if we get here, found will be set
     if (val_l) {
-      *val_l = strtoull(found.c_str(), nullptr, 0) * static_cast<uint64_t>(multiplier);
+      *val_l = strtoull(found.c_str(), nullptr, 0) *
+               static_cast<uint64_t>(multiplier);
     }
     if (val_d) *val_d = strtod(found.c_str(), nullptr) * multiplier;
     return true;
@@ -370,7 +378,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   int line_nr = 0;
   int errors = 0;
   if (!fss.is_open()) {
-    LogDetail([p = path](AsyncDetail &detail) {
+    LogDetail([p = path](AsyncDetail & detail) {
       detail.Error("can't open file ", p);
     });
     return -ENOENT;
@@ -400,14 +408,14 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
           continue;
         }
         errors++;
-        LogDetail([l = line_nr](AsyncDetail &detail) {
+        LogDetail([l = line_nr](AsyncDetail & detail) {
           detail.Error("value needs to be integer or double, line=", l);
         });
         break;
       }
       if (looking_for == 1 && s != "=") {
         errors++;
-        LogDetail([l = line_nr](AsyncDetail &detail) {
+        LogDetail([l = line_nr](AsyncDetail & detail) {
           detail.Error("expected 'key=value', line=", l);
         });
         break;

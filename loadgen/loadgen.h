@@ -58,6 +58,12 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,
                const LogSettings& log_settings);
 
+///
+/// \brief TODO
+/// \details TODO
+///
+void RegisterIssueQueryThread();
+
 /// @}
 
 }  // namespace mlperf

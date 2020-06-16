@@ -34,7 +34,8 @@ class _3DUNET_TF_SUT():
         graph_def = graph_pb2.GraphDef()
         with open(model_path, "rb") as f:
             graph_def.ParseFromString(f.read())
-        g = tf.compat.v1.import_graph_def(graph_def, name='')
+        with tf.Graph().as_default() as g:
+            g = tf.compat.v1.import_graph_def(graph_def)
         self.sess = tf.compat.v1.Session(graph=g)
         self.input = g.get_tensor_by_name("import/input:0")
         self.output = g.get_tensor_by_name("import/output:0")

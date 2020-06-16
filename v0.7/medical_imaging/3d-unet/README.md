@@ -15,6 +15,7 @@ The chosen model is 3D-Unet in [nnUnet](https://github.com/MIC-DKFZ/nnUNet) perf
 | ----- | --------- | -------- | ------- | ---------- | ------------ | --------- | ----- |
 | 3D-Unet | PyTorch | mean = 0.82400, whole tumor = 0.8922, tumor core = 0.8158, enhancing tumor = 0.7640 | last 20% of BraTS 2019 Training Dataset (67 samples) | [from zenodo](???) | Trained in PyTorch using codes from [nnUnet](https://github.com/MIC-DKFZ/nnUNet) on the first 80% of BraTS 2019 Training Dataset. | fp32 | |
 | 3D-Unet | ONNX | mean = 0.82400, whole tumor = 0.8922, tumor core = 0.8158, enhancing tumor = 0.7640 | last 20% of BraTS 2019 Training Dataset (67 samples) | [from zenodo](???) | Converted from the PyTorch model using ??? script. | fp32 | |
+| 3D-Unet | Tensorflow | mean = 0.82400, whole tumor = 0.8922, tumor core = 0.8158, enhancing tumor = 0.7640 | last 20% of BraTS 2019 Training Dataset (67 samples) | [from zenodo](???) | Converted from the PyTorch model using ??? script. | fp32 | |
 
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.

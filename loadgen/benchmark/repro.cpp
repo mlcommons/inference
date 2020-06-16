@@ -53,7 +53,7 @@ class BasicSUT : public mlperf::SystemUnderTest {
   void IssueQuery(const std::vector<mlperf::QuerySample>& samples) override {
     int n = samples.size();
     if (n > mResponses.size()) {
-      std::cout << "Warning: reallocating response buffer in BasicSUT. Maybe "
+      std::cerr << "Warning: reallocating response buffer in BasicSUT. Maybe "
                    "you should initResponse with larger value!?"
                 << std::endl;
       initResponse(samples.size());
@@ -281,7 +281,7 @@ int main(int argc, char** argv) {
     if (useQueue) {
       std::cout << "Using MultiQueueSUT with " << numCompleteThreads
                 << " complete threads" << std::endl;
-      std::cout << "!!!! MultiQueueSUT is NOT implemented yet !!!!"
+      std::cerr << "!!!! MultiQueueSUT is NOT implemented yet !!!!"
                 << std::endl;
       return 1;
       // sut.reset(new MultiQueueSUT(num_issue_threads, numCompleteThreads,

@@ -345,6 +345,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                const TestSettingsInternal& settings,
                                const LoadableSampleSet& loaded_sample_set,
                                SequenceGen* sequence_gen) {
+  // Create reponse handler.
   ResponseDelegateDetailed<scenario, mode> response_logger;
   std::uniform_real_distribution<double> accuracy_log_offset_dist =
       std::uniform_real_distribution<double>(0.0, 1.0);
@@ -353,23 +354,30 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       accuracy_log_offset_dist(accuracy_log_offset_rng);
   response_logger.accuracy_log_prob = settings.accuracy_log_probability;
 
+  // Generate queries.
   auto sequence_id_start = sequence_gen->CurrentSampleId();
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(
       settings, loaded_sample_set, sequence_gen, &response_logger);
   auto sequence_id_end = sequence_gen->CurrentSampleId();
   size_t max_latencies_to_record = sequence_id_end - sequence_id_start;
 
+  // Initialize logger for latency recording.
   GlobalLogger().RestartLatencyRecording(sequence_id_start,
                                          max_latencies_to_record);
 
+  // Create and initialize an IssueQueryState.
   IssueQueryState state{
       sut, &queries, &response_logger, &settings, mode, {}, {}, false, 0,
       0,   {}};
   auto& controller = IssueQueryController::GetInstance();
+
+  // Set number of IssueQueryThreads and wait for the threads to register.
   controller.SetNumThreads(settings.requested.server_num_issue_query_threads);
 
+  // Start issuing the queries.
   controller.StartIssueQueries<scenario>(&state);
 
+  // Gather query issuing statistics.
   const auto start_for_power = state.start_for_power;
   const auto start = state.start_time;
   const auto ran_out_of_generated_queries = state.ran_out_of_generated_queries;

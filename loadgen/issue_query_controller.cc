@@ -11,7 +11,8 @@ limitations under the License.
 ==============================================================================*/
 
 /// \file
-/// \brief TODO
+/// \brief Implements IssueQueryController and other helper classes for
+/// query issuing.
 
 #include "issue_query_controller.h"
 
@@ -266,11 +267,13 @@ struct QueryScheduler<TestScenario::Offline> {
 };
 
 IssueQueryController& IssueQueryController::GetInstance() {
+  // The singleton.
   static IssueQueryController instance;
   return instance;
 }
 
 void IssueQueryController::RegisterThread() {
+  // Push this thread to thread queue.
   auto thread_id = std::this_thread::get_id();
   size_t thread_idx{0};
   {
@@ -285,11 +288,13 @@ void IssueQueryController::RegisterThread() {
            std::to_string(std::hash<std::thread::id>()(thread_id)));
   });
 
+  // Start test.
   while (true) {
     // Wait until the main thread signals a start or the end.
     {
       std::unique_lock<std::mutex> lock(mtx);
       cond_var.wait(lock, [this]() { return issuing || end_test; });
+      // The test has ended.
       if (end_test) {
         break;
       }
@@ -314,11 +319,14 @@ void IssueQueryController::RegisterThread() {
 }
 
 void IssueQueryController::SetNumThreads(size_t n) {
+  // Try waiting for IssueQueryThreads() to registered themselves.
   std::unique_lock<std::mutex> lock(mtx);
   const std::chrono::seconds timeout(10);
   num_threads = n;
   cond_var.wait_for(lock, timeout,
-                    [this]() { return num_threads == thread_ids.size(); });
+                    [this]() { return thread_ids.size() >= num_threads; });
+  // If the number of registered threads do not match the settings, report an
+  // error.
   if (num_threads != thread_ids.size()) {
     LogDetail([this](AsyncDetail& detail) {
       detail.Error(
@@ -331,13 +339,18 @@ void IssueQueryController::SetNumThreads(size_t n) {
 
 template <TestScenario scenario>
 void IssueQueryController::StartIssueQueries(IssueQueryState* s) {
+  // Get the state.
   state = s;
   state->start_for_power = std::chrono::system_clock::now();
   state->start_time = PerfClock::now();
+
   if (scenario != TestScenario::Server || num_threads == 0) {
+    // Usually, we just use the same thread to issue queries.
     IssueQueriesInternal<scenario, false>(1, 0);
   } else {
-    // Tell all issue threads to start issuing queries.
+    // If server_num_issue_query_threads is non-zero, issue queries on the
+    // registered threads.
+    // Tell all threads to start issuing queries.
     {
       std::unique_lock<std::mutex> lock(mtx);
       issuing = true;
@@ -380,9 +393,12 @@ void IssueQueryController::EndThreads() {
 template <TestScenario scenario, bool multi_thread>
 void IssueQueryController::IssueQueriesInternal(size_t query_stride,
                                                 size_t thread_idx) {
+  // Get all the needed information.
   auto sut = state->sut;
   auto& queries = *state->queries;
   auto& response_logger = *state->response_delegate;
+
+  // Some book-keeping about the number of queries issued.
   size_t queries_issued = 0;
   size_t queries_issued_per_iter = 0;
   size_t queries_count = queries.size();
@@ -409,7 +425,9 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
   // since the duration depends on the scheduled query time and not
   // the actual issue time.
   bool ran_out_of_generated_queries = scenario != TestScenario::Server;
+  // This is equal to the sum of numbers of samples issued.
   size_t expected_latencies = 0;
+
   for (size_t queries_idx = thread_idx; queries_idx < queries_count;
        queries_idx += query_stride) {
     queries_issued_per_iter = 0;
@@ -430,6 +448,8 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
         auto next_scheduled_time =
             scheduled_time +
             queries[queries_idx + query_stride].scheduled_delta;
+        // If current time hasn't reached the next query's scheduled time yet,
+        // don't include next query.
         if (last_now < next_scheduled_time) {
           break;
         }
@@ -437,6 +457,7 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
         queries_issued_per_iter++;
       }
       if (queries_idx > current_query_idx) {
+        // Coalesced all the pass due queries.
         query.CoalesceQueries(queries.data(), current_query_idx + query_stride,
                               queries_idx, query_stride);
       }
@@ -449,6 +470,7 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
       sut->IssueQuery(query.query_to_send);
     }
 
+    // Increment the counter.
     expected_latencies += query.query_to_send.size();
     queries_issued_per_iter++;
     queries_issued += queries_issued_per_iter;
@@ -468,10 +490,12 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
     auto duration = (last_now - start);
     if (scenario == TestScenario::Server) {
       if (settings.max_async_queries != 0) {
+        // Checks if there are too many outstanding queries.
         size_t queries_issued_total{0};
         if (multi_thread) {
-          // To check actual number of async queries, we would have to combine
-          // the number of queries_issued from all issue threads.
+          // To check actual number of async queries in multi-thread case,
+          // we would have to combine the number of queries_issued from all
+          // issue threads.
           {
             std::lock_guard<std::mutex> lock(state->mtx);
             state->queries_issued += queries_issued_per_iter;
@@ -495,6 +519,7 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
         }
       }
     } else {
+      // Checks if we end normally.
       if (queries_issued >= min_query_count_for_thread &&
           duration >= settings.target_duration) {
         LogDetail([thread_idx](AsyncDetail& detail) {
@@ -506,6 +531,7 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
       }
     }
 
+    // Checks if we have exceeded max_query_count for this thread.
     if (settings.max_query_count != 0 &&
         queries_issued >= max_query_count_for_thread) {
       LogDetail([thread_idx, queries_issued](AsyncDetail& detail) {
@@ -517,6 +543,7 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
       break;
     }
 
+    // Checks if we have exceeded max_duration.
     if (settings.max_duration.count() != 0 &&
         duration > settings.max_duration) {
       LogDetail([thread_idx, duration](AsyncDetail& detail) {

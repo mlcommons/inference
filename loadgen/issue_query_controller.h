@@ -11,7 +11,8 @@ limitations under the License.
 ==============================================================================*/
 
 /// \file
-/// \brief TODO
+/// \brief Declare IssueQueryController and other helper classes for
+/// query issuing.
 
 #ifndef MLPERF_LOADGEN_ISSUE_QUERY_CONTROLLER_H_
 #define MLPERF_LOADGEN_ISSUE_QUERY_CONTROLLER_H_
@@ -94,13 +95,15 @@ class QueryMetadata {
 
   PerfClock::time_point WaitForAllSamplesCompletedWithTimestamp();
 
-  // When server_coalesce_queries is set to true in Server scenario, we
-  // sometimes coalesce multiple queries into one query. This is done by moving
-  // the other query's sample into current query, while maintaining their
-  // original scheduled_time.
+  /// \brief Coalesce multiple queries into one query.
+  /// When server_coalesce_queries is set to true in Server scenario, we
+  /// sometimes coalesce multiple queries into one query. This is done by moving
+  /// the other query's sample into current query, while maintaining their
+  /// original scheduled_time.
   void CoalesceQueries(QueryMetadata* queries, size_t first, size_t last,
                        size_t stride);
 
+  /// \brief Set a coalesced query back to its original state.
   void Decoalesce();
 
  public:
@@ -124,45 +127,80 @@ class QueryMetadata {
   std::vector<SampleMetadata> samples_;
 };
 
+/// \brief A state object for communications between the controller and its
+/// caller.
 struct IssueQueryState {
+  // Information from caller to controller.
   SystemUnderTest* sut;
   std::vector<QueryMetadata>* queries;
   ResponseDelegate* response_delegate;
   const TestSettingsInternal* settings;
   TestMode mode;
+  // Information from controller to caller.
   std::chrono::system_clock::time_point start_for_power;
   PerfClock::time_point start_time;
   bool ran_out_of_generated_queries;
   size_t queries_issued;
   size_t expected_latencies;
+  // The lock to modify this state (in multi-thread case).
   std::mutex mtx;
 };
 
-/// \brief TODO
+/// \brief Controls the query issuing part.
+/// This controller handles both the cases if the user registers or does not
+/// register IssueQueryThreads. It is implemented as a singleton, and is NOT
+/// thread-safe (i.e. users should not call StartTest() on multiple threads).
+/// It is thread-safe with regard to IssueQueryThreads.
 class IssueQueryController {
  public:
+  /// \brief Get the controller instance singleton.
   static IssueQueryController& GetInstance();
+
+  /// \brief Don't allow copy. This is a singleton.
   IssueQueryController(IssueQueryController const&) = delete;
   void operator=(IssueQueryController const&) = delete;
+
+  /// \brief Register an IssueQueryThread.
+  /// It is blocking until the entire test ends.
   void RegisterThread();
+
+  /// \brief Set number of IssueQueryThreads and wait for thread registration.
+  /// If for any reason the number of registered threads do not match the
+  /// specified number, it prints out an error.
   void SetNumThreads(size_t n);
+
+  /// \brief Kick off the query issuing.
+  /// The query issuing will be done on the current thread if there is no
+  /// registered IssueQueryThreads or if it is not in Server scenario.
   template <TestScenario scenario>
   void StartIssueQueries(IssueQueryState* s);
+
+  /// \brief Notify the IssueQueryThreads to end.
   void EndThreads();
 
  private:
-  /// \note Hide constructor so that it cannot be explicitly created.
+  /// \brief Hide constructor. This is a singleton.
   IssueQueryController() {}
+
+  /// \brief The internal helper which actually issues queries.
+  /// This should be called by the thread(s) which issues queries.
   template <TestScenario scenario, bool multi_thread>
   void IssueQueriesInternal(size_t query_stride, size_t thread_idx);
 
+  /// \brief The issue query state.
   IssueQueryState* state;
+  /// \brief Locks for communications across IssueQueryThreads and the main
+  /// thread.
   std::mutex mtx;
   std::condition_variable cond_var;
+  /// \brief Thread ids of the registered IssueQueryThreads.
   std::vector<std::thread::id> thread_ids;
   size_t num_threads{0};
+  /// \brief Whether the threads should be actively issuing queries.
   bool issuing{false};
+  /// \brief Flags for each IssueQueryThread to mark that it is done.
   std::vector<bool> thread_complete;
+  /// \brief Whether the threads can end now.
   bool end_test{false};
 };
 

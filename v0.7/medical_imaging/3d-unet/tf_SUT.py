@@ -35,7 +35,7 @@ class _3DUNET_TF_SUT():
         with open(model_path, "rb") as f:
             graph_def.ParseFromString(f.read())
         with tf.Graph().as_default() as g:
-            g = tf.compat.v1.import_graph_def(graph_def)
+            tf.compat.v1.import_graph_def(graph_def)
         self.sess = tf.compat.v1.Session(graph=g)
         self.input = g.get_tensor_by_name("import/input:0")
         self.output = g.get_tensor_by_name("import/output:0")
@@ -55,7 +55,8 @@ class _3DUNET_TF_SUT():
 
             before_softmax = self.sess.run(
                 self.output, feed_dict={self.input: data[np.newaxis, ...]})[0]
-            softmax = np.softmax(before_softmax, axis=0).astype(np.float16)
+            softmax = tf.nn.softmax(before_softmax,
+                                    axis=0).numpy().astype(np.float16)
 
             response_array = array.array("B", softmax.tobytes())
             bi = response_array.buffer_info()

@@ -277,6 +277,9 @@ usage: main.py [-h]
     [--samples-to-aggregate NUM_FIXED_SAMPLES]
     [--min-samples-to-aggregate MIN_NUM_VARIABLE_SAMPLES]
     [--max-samples-to-aggregate MAX_NUM_VARIABLE_SAMPLES]
+    [--samples-to-aggregate-quantile-file FILE]
+    [--samples-to-aggregate-trace-file FILE]
+    [--numpy-rand-seed SEED]
     [--accuracy] [--find-peak-performance]
 ```
 
@@ -331,6 +334,8 @@ usage: main.py [-h]
 `--samples-to-aggregate-quantile-file` number of samples to aggregate and treat as a single sample. This number will be sampled according to a custom distribution quantile stored in a file (e.g. tools/dist_quantile.txt).
 
 `--samples-to-aggregate-trace-file` filename for writing the trace of queries. Each query is written on a single line, with a range of aggregated samples indicated in square brackets.
+
+`--numpy-rand-seed` random seed for numpy package.
 
 `--accuracy` perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 

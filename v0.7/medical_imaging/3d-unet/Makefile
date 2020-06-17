@@ -87,6 +87,7 @@ download_model:
 	@echo "Download models..."
 	@$(MAKE) -f $(MAKEFILE_NAME) download_pytorch_model
 	@$(MAKE) -f $(MAKEFILE_NAME) download_onnx_model
+	@$(MAKE) -f $(MAKEFILE_NAME) download_tf_model
 
 .PHONY: download_pytorch_model
 download_pytorch_model:
@@ -162,11 +163,19 @@ run_pytorch_accuracy: mkdir_postprocessed_data
 
 .PHONY: run_onnxruntime_performance
 run_onnxruntime_performance:
-	@python3 run.py --backend=onnxruntime
+	@python3 run.py --backend=onnxruntime --model=build/model/192_224_192.onnx
 
 .PHONY: run_onnxruntime_accuracy
 run_onnxruntime_accuracy: mkdir_postprocessed_data
-	@python3 run.py --backend=onnxruntime --accuracy
+	@python3 run.py --backend=onnxruntime --model=build/model/192_224_192.onnx --accuracy
+
+.PHONY: run_tf_performance
+run_tf_performance:
+	@python3 run.py --backend=tf --model=build/model/192_224_192.pb
+
+.PHONY: run_tf_accuracy
+run_tf_accuracy: mkdir_postprocessed_data
+	@python3 run.py --backend=tf --model=build/model/192_224_192.pb --accuracy
 
 .PHONY: evaluate
 evaluate:

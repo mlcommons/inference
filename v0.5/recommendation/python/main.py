@@ -130,7 +130,11 @@ def get_args():
     parser.add_argument("--max-samples-to-aggregate", type=int, help="max number of samples to be treated as one in random query size")
     parser.add_argument("--samples-to-aggregate-quantile-file", type=str, help="distribution quantile used to generate number of samples to be treated as one in random query size")
     parser.add_argument("--samples-to-aggregate-trace-file", type=str, default="dlrm_trace_of_aggregated_samples.txt")
+    parser.add_argument("--numpy-rand-seed", type=int, default=123)
     args = parser.parse_args()
+
+    # set random seed
+    np.random.seed(args.numpy_rand_seed)
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
     # and take this as default unless command line give

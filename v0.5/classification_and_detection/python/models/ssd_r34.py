@@ -113,7 +113,7 @@ def calc_iou_tensor(box1, box2):
     lt = torch.max(be1[:,:,:2], be2[:,:,:2])
     rb = torch.min(be1[:,:,2:], be2[:,:,2:])
     delta = rb - lt
-    delta.clone().masked_fill_(delta < 0,0)
+    delta.masked_fill_(delta < 0,0)
     intersect = delta[:,:,0]*delta[:,:,1]
     delta1 = be1[:,:,2:] - be1[:,:,:2]
     area1 = delta1[:,:,0]*delta1[:,:,1]

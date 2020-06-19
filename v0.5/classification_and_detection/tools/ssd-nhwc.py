@@ -66,6 +66,12 @@ def convert_mp_nhwc(node_mp):
     convert_list_nhwc(node_mp.attr['ksize'].list)
     convert_list_nhwc(node_mp.attr['strides'].list)
 
+def convert_image_nhwc(node_image):
+    c = node_image.attr['shape'].shape.dim[1].size
+    del node_image.attr['shape'].shape.dim[1]
+    d = node_image.attr['shape'].shape.dim.add()
+    d.size = c
+
 def init_node(n):
     node = {}
     node['node'] = n
@@ -228,10 +234,24 @@ def main():
         elif node_map[n]['node'].op == 'MaxPool':
             convert_mp_nhwc(node_map[n]['node'])
       
-    for n in transpose_nhwc_nodes:
-        for i in node_map[n]['inputs']:
-            if i not in nhwc_nodes:
-                insert_transpose(graph, node_map[i]['node'], node_map[n]['node'], False)
+    done_nhwc = False
+    if len(transpose_nhwc_nodes) == 1:
+        for n in transpose_nhwc_nodes:
+            if len(node_map[n]['inputs']) == 1 and node_map[n]['inputs'][0] == 'image':
+                image_outputs = []
+                for o in node_map['image']['outputs']:
+                    if o != n:
+                        image_outputs.append(node_map[o]['node'])
+                insert_transpose(graph, node_map['image']['node'], image_outputs, True)
+                convert_image_nhwc(node_map['image']['node'])
+                done_nhwc = True
+
+    if not done_nhwc:
+        for n in transpose_nhwc_nodes:
+            for i in node_map[n]['inputs']:
+                if i not in nhwc_nodes:
+                    insert_transpose(graph, node_map[i]['node'], node_map[n]['node'], False)
+
     for n in transpose_nchw_nodes:
         node_outputs = []
         for o in node_map[n]['outputs']:

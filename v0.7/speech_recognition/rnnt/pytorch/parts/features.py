@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Tuple
+
 import torch
 import torch.nn as nn
 import math
@@ -113,6 +115,9 @@ class FilterbankFeatures(nn.Module):
         self.nfilt = nfilt
         self.preemph = preemph
         self.pad_to = pad_to
+        # For now, always enable this.
+        # See https://docs.google.com/presentation/d/1IVC3J-pHB-ipJpKsJox_SqmDHYdkIaoCXTbKmJmV2-I/edit?usp=sharing for elaboration
+        self.use_deterministic_dithering = True
         highfreq = highfreq or sample_rate / 2
         window_fn = torch_windows.get(window, None)
         window_tensor = window_fn(self.win_length,
@@ -137,7 +142,7 @@ class FilterbankFeatures(nn.Module):
         return seq_len
 
     @torch.no_grad()
-    def forward(self, inp):
+    def forward(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
         x, seq_len = inp
 
         dtype = x.dtype
@@ -145,7 +150,7 @@ class FilterbankFeatures(nn.Module):
         seq_len = self.get_seq_len(seq_len)
 
         # dither
-        if self.dither > 0:
+        if self.dither > 0 and not self.use_deterministic_dithering:
             x += self.dither * torch.randn_like(x)
 
         # do preemphasis
@@ -162,6 +167,8 @@ class FilterbankFeatures(nn.Module):
         # get power spectrum
         x = x.pow(2).sum(-1)
 
+        if self.dither > 0 and self.use_deterministic_dithering:
+            x = x + self.dither ** 2
         # dot with filterbank energies
         x = torch.matmul(self.fb.to(x.dtype), x)
 
@@ -171,11 +178,37 @@ class FilterbankFeatures(nn.Module):
 
         # frame splicing if required
         if self.frame_splicing > 1:
-            x = splice_frames(x, self.frame_splicing)
+            seq = [x]
+            for n in range(1, self.frame_splicing):
+                tmp = torch.zeros_like(x)
+                tmp[:, :, :-n] = x[:, :, n:]
+                seq.append(tmp)
+            x = torch.cat(seq, dim=1)[:, :, ::self.frame_splicing]
 
         # normalize if required
-        if self.normalize:
-            x = normalize_batch(x, seq_len, normalize_type=self.normalize)
+        constant = 1e-5
+        if self.normalize == "per_feature":
+            x_mean = torch.zeros((seq_len.shape[0], x.shape[1]), dtype=x.dtype,
+                                 device=x.device)
+            x_std = torch.zeros((seq_len.shape[0], x.shape[1]), dtype=x.dtype,
+                                device=x.device)
+            for i in range(x.shape[0]):
+                x_mean[i, :] = x[i, :, :seq_len[i]].mean(dim=1)
+                x_std[i, :] = x[i, :, :seq_len[i]].std(dim=1)
+                # make sure x_std is not zero
+                x_std += constant
+            x = (x - x_mean.unsqueeze(2)) / x_std.unsqueeze(2)
+        elif self.normalize == "all_features":
+            x_mean = torch.zeros(seq_len.shape, dtype=x.dtype, device=x.device)
+            x_std = torch.zeros(seq_len.shape, dtype=x.dtype, device=x.device)
+            for i in range(x.shape[0]):
+                x_mean[i] = x[i, :, :seq_len[i].item()].mean()
+                x_std[i] = x[i, :, :seq_len[i].item()].std()
+                # make sure x_std is not zero
+                x_std += constant
+            x = (x - x_mean.view(-1, 1, 1)) / x_std.view(-1, 1, 1)
+        else:
+            x = x
 
         # Hmmm... They don't do any masking anymore. Seems concerning!
 

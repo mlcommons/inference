@@ -15,6 +15,8 @@
 
 import torch
 
+from typing import Optional, Tuple
+
 
 def rnn(rnn, input_size, hidden_size, num_layers, norm=None,
         forget_gate_bias=1.0, dropout=0.0, **kwargs):
@@ -54,9 +56,6 @@ class LstmDrop(torch.nn.Module):
         """
         super(LstmDrop, self).__init__()
 
-        # Interesting, torch LSTM allows specifying number of
-        # layers... Fan-out parallelism.
-        # WARNING: Is dropout repeated twice?
         self.lstm = torch.nn.LSTM(
             input_size=input_size,
             hidden_size=hidden_size,
@@ -72,26 +71,31 @@ class LstmDrop(torch.nn.Module):
                     bias = getattr(self.lstm, name)
                     bias.data[hidden_size:2 * hidden_size].fill_(0)
 
-        self.inplace_dropout = (torch.nn.Dropout(dropout, inplace=True)
-                                if dropout else None)
+        if dropout:
+            self.inplace_dropout = torch.nn.Dropout(dropout, inplace=True)
+        else:
+            self.inplace_droput = None
 
-    def forward(self, x, h=None):
+    def forward(self, x: torch.Tensor,
+                h: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
         x, h = self.lstm(x, h)
 
-        if self.inplace_dropout:
+        if self.inplace_dropout is not None:
             self.inplace_dropout(x.data)
 
         return x, h
 
 
 class StackTime(torch.nn.Module):
+
+    __constants__ = ["factor"]
+
     def __init__(self, factor):
         super().__init__()
         self.factor = int(factor)
 
-    def forward(self, x):
+    def forward(self, x, x_lens):
         # T, B, U
-        x, x_lens = x
         seq = [x]
         for i in range(1, self.factor):
             # This doesn't seem to make much sense...

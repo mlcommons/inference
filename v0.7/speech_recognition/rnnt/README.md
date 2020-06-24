@@ -106,7 +106,7 @@ The differences are as follows:
 1. The prediction network is made of two LSTMs, rather than seven.
 1. The labels are characters, rather than word pieces.
 1. No quantization is done at this time for inference.
-1. A greey decoder is used, rather than a beamsearch decoder. This greatly
+1. A greedy decoder is used, rather than a beamsearch decoder. This greatly
    reduces inference complexity.
 
 # 5. Quality

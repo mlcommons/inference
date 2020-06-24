@@ -44,8 +44,6 @@ def seq_collate_fn(batch):
     )
     transcript_list = [batch[i].transcript
                        for i in permute_indices]
-    # from IPython import embed; embed()
-    # transcripts = torch.cat(transcript_list)
     packed_transcripts = torch.nn.utils.rnn.pack_sequence(transcript_list,
                                                           enforce_sorted=False)
 
@@ -59,8 +57,6 @@ class AudioToTextDataLayer:
     """
 
     def __init__(self, **kwargs):
-        self._device = torch.device("cuda")
-
         featurizer_config = kwargs['featurizer_config']
         pad_to_max = kwargs.get('pad_to_max', False)
         perturb_config = kwargs.get('perturb_config', None)
@@ -118,7 +114,7 @@ class AudioDataset(Dataset):
         (in seconds). Each entry is a different audio sample.
         Args:
             dataset_dir: absolute path to dataset folder
-            manifest_filepath: relative path from dataset folder to manifest json as described above. Can be coma-separated paths.
+            manifest_filepath: relative path from dataset folder to manifest json as described above.
             labels: String containing all the possible characters to map to
             featurizer: Initialized featurizer class that converts paths of audio to feature tensors
             max_duration: If audio exceeds this length, do not include in dataset
@@ -131,7 +127,7 @@ class AudioDataset(Dataset):
             trim: if specified trims leading and trailing silence from an audio signal.
             speed_perturbation: specify if using data contains speed perburbation
         """
-        m_paths = manifest_filepath.split(',')
+        m_paths = [manifest_filepath]
         self.manifest = Manifest(dataset_dir, m_paths, labels, blank_index, pad_to_max=pad_to_max,
                                  max_duration=max_duration,
                                  sort_by_duration=sort_by_duration,

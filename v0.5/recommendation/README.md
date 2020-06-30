@@ -259,6 +259,10 @@ If you want run with accuracy pass, try:
 ./run_local.sh pytorch dlrm terabyte cpu --accuracy --duration 60000 --scenario Server --target-qps 100 --max-latency 0.2
 ```
 
+### Verifying aggregation trace
+
+In the reference implementation, each sample is mapped to 100-700 user-item pairs following the distribution specified by [tools/dist_quantile.txt](tools/dist_quantile.txt). To verify that your sample aggregation trace matches the reference, please follow the steps in [tools/dist_trace_verification.txt](tools/dist_trace_verification.txt). Or simply download the reference [dlrm_trace_of_aggregated_samples.txt from Zenodo](https://zenodo.org/record/3941795/files/dlrm_trace_of_aggregated_samples.txt?download=1) (MD5:3db90209564316f2506c99cc994ad0b2).
+
 ### Usage
 ```
 usage: main.py [-h]

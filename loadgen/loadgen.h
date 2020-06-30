@@ -58,6 +58,17 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,
                const LogSettings& log_settings);
 
+///
+/// \brief Register a thread for query issuing in Server scenario.
+/// \details If a thread registers itself, the thread(s) is used to call SUT's
+/// IssueQuery(). This function is blocking until the entire test is done. The
+/// number of registered threads must match server_num_issue_query_threads in
+/// TestSettings. This function only has effect in Server scenario.
+/// This is the C++ entry point. See mlperf::c::RegisterIssueQueryThread for the
+/// C entry point.
+///
+void RegisterIssueQueryThread();
+
 /// @}
 
 }  // namespace mlperf

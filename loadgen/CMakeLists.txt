@@ -9,7 +9,7 @@ message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSIO
 
 # Set build options. NB: CXX_STANDARD is supported since CMake 3.1.
 if (NOT MSVC)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -W -Wall")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -W -Wall")
 endif()
 message(STATUS "Using C++ compiler flags: ${CMAKE_CXX_FLAGS}")
 set(CMAKE_CXX_STANDARD "14")
@@ -34,6 +34,7 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version
 set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/bindings/c_api.h
   ${CMAKE_CURRENT_SOURCE_DIR}/bindings/c_api.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/issue_query_controller.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/loadgen.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/logging.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/logging.h

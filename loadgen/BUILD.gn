@@ -17,6 +17,8 @@ public_headers = [
 ]
 
 lib_sources = [
+  "issue_query_controller.cc",
+  "issue_query_controller.h",
   "loadgen.cc",
   "logging.cc",
   "logging.h",

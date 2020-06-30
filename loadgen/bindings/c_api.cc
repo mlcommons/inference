@@ -153,5 +153,7 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
   mlperf::QuerySamplesComplete(responses, response_count);
 }
 
+void RegisterIssueQueryThread() { mlperf::RegisterIssueQueryThread(); }
+
 }  // namespace c
 }  // namespace mlperf

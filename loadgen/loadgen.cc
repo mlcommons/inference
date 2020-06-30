@@ -30,6 +30,7 @@ limitations under the License.
 #include <thread>
 #include <vector>
 
+#include "issue_query_controller.h"
 #include "logging.h"
 #include "query_sample.h"
 #include "query_sample_library.h"
@@ -44,132 +45,11 @@ namespace mlperf {
 /// \brief Loadgen implementation details.
 namespace loadgen {
 
-struct SampleMetadata;
-class QueryMetadata;
-
-/// \brief Every query and sample within a call to StartTest gets a unique
-/// sequence id for easy cross reference, and a random number which is used to
-/// determine accuracy logging when it is enabled.
-struct SequenceGen {
-  uint64_t NextQueryId() { return query_id++; }
-  uint64_t NextSampleId() { return sample_id++; }
-  uint64_t CurrentSampleId() { return sample_id; }
-  double NextAccLogRng() { return accuracy_log_dist(accuracy_log_rng); }
-  void InitAccLogRng(uint64_t accuracy_log_rng_seed) {
-    accuracy_log_rng = std::mt19937(accuracy_log_rng_seed);
-  }
-
- private:
-  uint64_t query_id = 0;
-  uint64_t sample_id = 0;
-  std::mt19937 accuracy_log_rng;
-  std::uniform_real_distribution<double> accuracy_log_dist =
-      std::uniform_real_distribution<double>(0, 1);
-};
-
 /// \brief A random set of samples in the QSL that should fit in RAM when
 /// loaded together.
 struct LoadableSampleSet {
   std::vector<QuerySampleIndex> set;
   const size_t sample_distribution_end;  // Excludes padding in multi-stream.
-};
-
-/// \brief An interface for a particular scenario + mode to implement for
-/// extended hanlding of sample completion.
-struct ResponseDelegate {
-  virtual ~ResponseDelegate() = default;
-  virtual void SampleComplete(SampleMetadata*, QuerySampleResponse*,
-                              PerfClock::time_point) = 0;
-  virtual void QueryComplete() = 0;
-};
-
-/// \brief Used by the loadgen to coordinate response data and completion.
-struct SampleMetadata {
-  QueryMetadata* query_metadata;
-  uint64_t sequence_id;
-  QuerySampleIndex sample_index;
-  double accuracy_log_val;
-};
-
-/// \brief Maintains data and timing info for a query and all its samples.
-class QueryMetadata {
- public:
-  QueryMetadata(const std::vector<QuerySampleIndex>& query_sample_indices,
-                std::chrono::nanoseconds scheduled_delta,
-                ResponseDelegate* response_delegate, SequenceGen* sequence_gen)
-      : scheduled_delta(scheduled_delta),
-        response_delegate(response_delegate),
-        sequence_id(sequence_gen->NextQueryId()),
-        wait_count_(query_sample_indices.size()) {
-    samples_.reserve(query_sample_indices.size());
-    for (QuerySampleIndex qsi : query_sample_indices) {
-      samples_.push_back({this, sequence_gen->NextSampleId(), qsi,
-                          sequence_gen->NextAccLogRng()});
-    }
-    query_to_send.reserve(query_sample_indices.size());
-    for (auto& s : samples_) {
-      query_to_send.push_back(
-          {reinterpret_cast<ResponseId>(&s), s.sample_index});
-    }
-  }
-
-  QueryMetadata(QueryMetadata&& src)
-      : query_to_send(std::move(src.query_to_send)),
-        scheduled_delta(src.scheduled_delta),
-        response_delegate(src.response_delegate),
-        sequence_id(src.sequence_id),
-        wait_count_(src.samples_.size()),
-        samples_(std::move(src.samples_)) {
-    // The move constructor should only be called while generating a
-    // vector of QueryMetadata, before it's been used.
-    // Assert that wait_count_ is in its initial state.
-    assert(src.wait_count_.load() == samples_.size());
-    // Update the "parent" of each sample to be this query; the old query
-    // address will no longer be valid.
-    // TODO: Only set up the sample parenting once after all the queries have
-    //       been created, rather than re-parenting on move here.
-    for (size_t i = 0; i < samples_.size(); i++) {
-      SampleMetadata* s = &samples_[i];
-      s->query_metadata = this;
-      query_to_send[i].id = reinterpret_cast<ResponseId>(s);
-    }
-  }
-
-  void NotifyOneSampleCompleted(PerfClock::time_point timestamp) {
-    size_t old_count = wait_count_.fetch_sub(1, std::memory_order_relaxed);
-    if (old_count == 1) {
-      all_samples_done_time = timestamp;
-      all_samples_done_.set_value();
-      response_delegate->QueryComplete();
-    }
-  }
-
-  void WaitForAllSamplesCompleted() { all_samples_done_.get_future().wait(); }
-
-  PerfClock::time_point WaitForAllSamplesCompletedWithTimestamp() {
-    all_samples_done_.get_future().wait();
-    return all_samples_done_time;
-  }
-
- public:
-  std::vector<QuerySample> query_to_send;
-  const std::chrono::nanoseconds scheduled_delta;
-  ResponseDelegate* const response_delegate;
-  const uint64_t sequence_id;
-
-  // Performance information.
-
-  size_t scheduled_intervals = 0;  // Number of intervals between queries, as
-                                   // actually scheduled during the run.
-                                   // For the multi-stream scenario only.
-  PerfClock::time_point scheduled_time;
-  PerfClock::time_point issued_start_time;
-  PerfClock::time_point all_samples_done_time;
-
- private:
-  std::atomic<size_t> wait_count_;
-  std::promise<void> all_samples_done_;
-  std::vector<SampleMetadata> samples_;
 };
 
 /// \brief Generates nanoseconds from a start time to multiple end times.
@@ -185,7 +65,6 @@ struct DurationGeneratorNs {
 /// \brief ResponseDelegate implementation templated by scenario and mode.
 template <TestScenario scenario, TestMode mode>
 struct ResponseDelegateDetailed : public ResponseDelegate {
-  std::atomic<size_t> queries_completed{0};
   double accuracy_log_offset = 0.0f;
   double accuracy_log_prob = 0.0f;
 
@@ -280,7 +159,8 @@ auto SampleDistribution(size_t sample_count, size_t stride, std::mt19937* rng) {
     indices.push_back(i);
   }
   std::shuffle(indices.begin(), indices.end(), *rng);
-  return [indices = std::move(indices), i = size_t(0)](auto& /*gen*/) mutable {
+  return
+      [ indices = std::move(indices), i = size_t(0) ](auto& /*gen*/) mutable {
     return indices.at(i++);
   };
 }
@@ -291,7 +171,9 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
                                                    size_t /*stride*/,
                                                    std::mt19937* /*rng*/) {
   return [dist = std::uniform_int_distribution<>(0, sample_count - 1)](
-             auto& gen) mutable { return dist(gen); };
+      auto& gen) mutable {
+    return dist(gen);
+  };
 }
 
 /// \brief Generates queries for the requested settings, templated by
@@ -429,171 +311,16 @@ std::vector<QueryMetadata> GenerateQueries(
     }
   }
 
-  LogDetail([count = queries.size(), spq = settings.samples_per_query,
-             duration = timestamp.count()](AsyncDetail& detail) {
+  LogDetail([
+    count = queries.size(), spq = settings.samples_per_query,
+    duration = timestamp.count()
+  ](AsyncDetail & detail) {
     detail("GeneratedQueries: ", "queries", count, "samples per query", spq,
            "duration", duration);
   });
 
   return queries;
 }
-
-/// \brief A base template that should never be used since each scenario has
-/// its own specialization.
-template <TestScenario scenario>
-struct QueryScheduler {
-  static_assert(scenario != scenario, "Unhandled TestScenario");
-};
-
-/// \brief Schedules queries for issuance in the single stream scenario.
-template <>
-struct QueryScheduler<TestScenario::SingleStream> {
-  QueryScheduler(const TestSettingsInternal& /*settings*/,
-                 const PerfClock::time_point) {}
-
-  PerfClock::time_point Wait(QueryMetadata* next_query) {
-    auto tracer = MakeScopedTracer([](AsyncTrace& trace) { trace("Waiting"); });
-    if (prev_query != nullptr) {
-      prev_query->WaitForAllSamplesCompleted();
-    }
-    prev_query = next_query;
-
-    auto now = PerfClock::now();
-    next_query->scheduled_time = now;
-    next_query->issued_start_time = now;
-    return now;
-  }
-
-  QueryMetadata* prev_query = nullptr;
-};
-
-/// \brief Schedules queries for issuance in the multi stream scenario.
-template <>
-struct QueryScheduler<TestScenario::MultiStream> {
-  QueryScheduler(const TestSettingsInternal& settings,
-                 const PerfClock::time_point start)
-      : qps(settings.target_qps),
-        max_async_queries(settings.max_async_queries),
-        start_time(start) {}
-
-  PerfClock::time_point Wait(QueryMetadata* next_query) {
-    {
-      prev_queries.push(next_query);
-      auto tracer =
-          MakeScopedTracer([](AsyncTrace& trace) { trace("Waiting"); });
-      if (prev_queries.size() > max_async_queries) {
-        prev_queries.front()->WaitForAllSamplesCompleted();
-        prev_queries.pop();
-      }
-    }
-
-    {
-      auto tracer =
-          MakeScopedTracer([](AsyncTrace& trace) { trace("Scheduling"); });
-      // TODO(brianderson): Skip ticks based on the query complete time,
-      //     before the query synchronization + notification thread hop,
-      //     rather than after.
-      PerfClock::time_point now = PerfClock::now();
-      auto i_period_old = i_period;
-      PerfClock::time_point tick_time;
-      do {
-        i_period++;
-        tick_time =
-            start_time + SecondsToDuration<PerfClock::duration>(i_period / qps);
-        Log([tick_time](AsyncLog& log) {
-          log.TraceAsyncInstant("QueryInterval", 0, tick_time);
-        });
-      } while (tick_time < now);
-      next_query->scheduled_intervals = i_period - i_period_old;
-      next_query->scheduled_time = tick_time;
-      std::this_thread::sleep_until(tick_time);
-    }
-
-    auto now = PerfClock::now();
-    next_query->issued_start_time = now;
-    return now;
-  }
-
-  size_t i_period = 0;
-  double qps;
-  const size_t max_async_queries;
-  PerfClock::time_point start_time;
-  std::queue<QueryMetadata*> prev_queries;
-};
-
-/// \brief Schedules queries for issuance in the single stream free scenario.
-template <>
-struct QueryScheduler<TestScenario::MultiStreamFree> {
-  QueryScheduler(const TestSettingsInternal& settings,
-                 const PerfClock::time_point /*start*/)
-      : max_async_queries(settings.max_async_queries) {}
-
-  PerfClock::time_point Wait(QueryMetadata* next_query) {
-    bool schedule_time_needed = true;
-    {
-      prev_queries.push(next_query);
-      auto tracer =
-          MakeScopedTracer([](AsyncTrace& trace) { trace("Waiting"); });
-      if (prev_queries.size() > max_async_queries) {
-        next_query->scheduled_time =
-            prev_queries.front()->WaitForAllSamplesCompletedWithTimestamp();
-        schedule_time_needed = false;
-        prev_queries.pop();
-      }
-    }
-
-    auto now = PerfClock::now();
-    if (schedule_time_needed) {
-      next_query->scheduled_time = now;
-    }
-    next_query->issued_start_time = now;
-    return now;
-  }
-
-  const size_t max_async_queries;
-  std::queue<QueryMetadata*> prev_queries;
-};
-
-/// \brief Schedules queries for issuance in the server scenario.
-template <>
-struct QueryScheduler<TestScenario::Server> {
-  QueryScheduler(const TestSettingsInternal& /*settings*/,
-                 const PerfClock::time_point start)
-      : start(start) {}
-
-  // TODO: Coalesce all queries whose scheduled timestamps have passed.
-  PerfClock::time_point Wait(QueryMetadata* next_query) {
-    auto tracer =
-        MakeScopedTracer([](AsyncTrace& trace) { trace("Scheduling"); });
-
-    auto scheduled_time = start + next_query->scheduled_delta;
-    next_query->scheduled_time = scheduled_time;
-    std::this_thread::sleep_until(scheduled_time);
-
-    auto now = PerfClock::now();
-    next_query->issued_start_time = now;
-    return now;
-  }
-
-  const PerfClock::time_point start;
-};
-
-/// \brief Schedules queries for issuance in the offline scenario.
-template <>
-struct QueryScheduler<TestScenario::Offline> {
-  QueryScheduler(const TestSettingsInternal& /*settings*/,
-                 const PerfClock::time_point start)
-      : start(start) {}
-
-  PerfClock::time_point Wait(QueryMetadata* next_query) {
-    next_query->scheduled_time = start;
-    auto now = PerfClock::now();
-    next_query->issued_start_time = now;
-    return now;
-  }
-
-  const PerfClock::time_point start;
-};
 
 /// \brief Provides performance results that are independent of scenario
 /// and other context.
@@ -618,6 +345,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                const TestSettingsInternal& settings,
                                const LoadableSampleSet& loaded_sample_set,
                                SequenceGen* sequence_gen) {
+  // Create reponse handler.
   ResponseDelegateDetailed<scenario, mode> response_logger;
   std::uniform_real_distribution<double> accuracy_log_offset_dist =
       std::uniform_real_distribution<double>(0.0, 1.0);
@@ -626,95 +354,35 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       accuracy_log_offset_dist(accuracy_log_offset_rng);
   response_logger.accuracy_log_prob = settings.accuracy_log_probability;
 
+  // Generate queries.
   auto sequence_id_start = sequence_gen->CurrentSampleId();
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(
       settings, loaded_sample_set, sequence_gen, &response_logger);
   auto sequence_id_end = sequence_gen->CurrentSampleId();
   size_t max_latencies_to_record = sequence_id_end - sequence_id_start;
 
+  // Initialize logger for latency recording.
   GlobalLogger().RestartLatencyRecording(sequence_id_start,
                                          max_latencies_to_record);
 
-  size_t queries_issued = 0;
+  // Create and initialize an IssueQueryState.
+  IssueQueryState state{
+      sut, &queries, &response_logger, &settings, mode, {}, {}, false, 0,
+      0,   {}};
+  auto& controller = IssueQueryController::GetInstance();
 
-  auto start_for_power = std::chrono::system_clock::now();
-  const PerfClock::time_point start = PerfClock::now();
-  PerfClock::time_point last_now = start;
-  QueryScheduler<scenario> query_scheduler(settings, start);
+  // Set number of IssueQueryThreads and wait for the threads to register.
+  controller.SetNumThreads(settings.requested.server_num_issue_query_threads);
 
-  // We can never run out of generated queries in the server scenario,
-  // since the duration depends on the scheduled query time and not
-  // the actual issue time.
-  bool ran_out_of_generated_queries = scenario != TestScenario::Server;
-  size_t expected_latencies = 0;
-  for (auto& query : queries) {
-    auto tracer1 =
-        MakeScopedTracer([](AsyncTrace& trace) { trace("SampleLoop"); });
-    last_now = query_scheduler.Wait(&query);
+  // Start issuing the queries.
+  controller.StartIssueQueries<scenario>(&state);
 
-    // Issue the query to the SUT.
-    {
-      auto tracer3 =
-          MakeScopedTracer([](AsyncTrace& trace) { trace("IssueQuery"); });
-      sut->IssueQuery(query.query_to_send);
-    }
-
-    expected_latencies += query.query_to_send.size();
-    queries_issued++;
-
-    if (mode == TestMode::AccuracyOnly) {
-      // TODO: Rate limit in accuracy mode so accuracy mode works even
-      //       if the expected/target performance is way off.
-      continue;
-    }
-
-    auto duration = (last_now - start);
-    if (scenario == TestScenario::Server) {
-      if (settings.max_async_queries != 0) {
-        size_t queries_outstanding =
-            queries_issued -
-            response_logger.queries_completed.load(std::memory_order_relaxed);
-        if (queries_outstanding > settings.max_async_queries) {
-          LogDetail([queries_issued, queries_outstanding](AsyncDetail& detail) {
-            detail.Error("Ending early: Too many outstanding queries.",
-                         "issued", queries_issued, "outstanding",
-                         queries_outstanding);
-          });
-          break;
-        }
-      }
-    } else {
-      if (queries_issued >= settings.min_query_count &&
-          duration >= settings.target_duration) {
-        LogDetail([](AsyncDetail& detail) {
-          detail(
-              "Ending naturally: Minimum query count and test duration met.");
-        });
-        ran_out_of_generated_queries = false;
-        break;
-      }
-    }
-
-    if (settings.max_query_count != 0 &&
-        queries_issued >= settings.max_query_count) {
-      LogDetail([queries_issued](AsyncDetail& detail) {
-        detail.Error("Ending early: Max query count reached.", "query_count",
-                     queries_issued);
-      });
-      ran_out_of_generated_queries = false;
-      break;
-    }
-
-    if (settings.max_duration.count() != 0 &&
-        duration > settings.max_duration) {
-      LogDetail([duration](AsyncDetail& detail) {
-        detail.Error("Ending early: Max test duration reached.", "duration_ns",
-                     duration.count());
-      });
-      ran_out_of_generated_queries = false;
-      break;
-    }
-  }
+  // Gather query issuing statistics.
+  const auto start_for_power = state.start_for_power;
+  const auto start = state.start_time;
+  const auto ran_out_of_generated_queries = state.ran_out_of_generated_queries;
+  const auto queries_issued = state.queries_issued;
+  const auto expected_latencies = state.expected_latencies;
 
   // Let the SUT know it should not expect any more queries.
   sut->FlushQueries();
@@ -830,9 +498,9 @@ struct PerformanceSummary {
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
   // MSVC complains if there is no explicit constructor.
   // (target_latency_percentile above depends on construction with settings)
-  PerformanceSummary(
-      const std::string& sut_name_arg, const TestSettingsInternal& settings_arg,
-      const PerformanceResult& pr_arg)
+  PerformanceSummary(const std::string& sut_name_arg,
+                     const TestSettingsInternal& settings_arg,
+                     const PerformanceResult& pr_arg)
       : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg){};
 #endif
   void ProcessLatencies();
@@ -1268,14 +936,15 @@ std::pair<PerformanceSummary, PerformanceSummary> FindBoundaries(
   TestSettingsInternal u_settings = l_perf_summary.settings;
   find_peak_performance::WidenPerformanceField<scenario>(&u_settings);
 
-  LogDetail(
-      [l_field = find_peak_performance::ToStringPerformanceField<scenario>(
-           l_perf_summary.settings),
-       u_field = find_peak_performance::ToStringPerformanceField<scenario>(
-           u_settings)](AsyncDetail& detail) {
-        detail("FindBoundaries: Checking fields [" + l_field + ", " + u_field +
-               ")");
-      });
+  LogDetail([
+    l_field = find_peak_performance::ToStringPerformanceField<scenario>(
+        l_perf_summary.settings),
+    u_field =
+        find_peak_performance::ToStringPerformanceField<scenario>(u_settings)
+  ](AsyncDetail & detail) {
+    detail("FindBoundaries: Checking fields [" + l_field + ", " + u_field +
+           ")");
+  });
 
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
       loadgen::GenerateLoadableSets(qsl, u_settings));
@@ -1313,15 +982,14 @@ PerformanceSummary FindPeakPerformanceBinarySearch(
       find_peak_performance::MidOfBoundaries<scenario>(l_perf_summary.settings,
                                                        u_perf_summary.settings);
 
-  LogDetail([l_field =
-                 find_peak_performance::ToStringPerformanceField<scenario>(
-                     l_perf_summary.settings),
-             u_field =
-                 find_peak_performance::ToStringPerformanceField<scenario>(
-                     u_perf_summary.settings),
-             m_field =
-                 find_peak_performance::ToStringPerformanceField<scenario>(
-                     m_settings)](AsyncDetail& detail) {
+  LogDetail([
+    l_field = find_peak_performance::ToStringPerformanceField<scenario>(
+        l_perf_summary.settings),
+    u_field = find_peak_performance::ToStringPerformanceField<scenario>(
+        u_perf_summary.settings),
+    m_field =
+        find_peak_performance::ToStringPerformanceField<scenario>(m_settings)
+  ](AsyncDetail & detail) {
     detail(
         "FindPeakPerformanceBinarySearch: Testing the mid value of bounds [" +
         l_field + ", " + u_field + "): " + m_field);
@@ -1409,9 +1077,9 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   sut->ReportLatencyResults(pr.sample_latencies);
 
-  LogSummary(
-      [perf_summary = PerformanceSummary{sut->Name(), settings, std::move(pr)}](
-          AsyncSummary& summary) mutable { perf_summary.Log(summary); });
+  LogSummary([perf_summary =
+                  PerformanceSummary{sut->Name(), settings, std::move(pr)}](
+      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
 
   qsl->UnloadSamplesFromRam(performance_set.set);
 }
@@ -1436,7 +1104,8 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   if (scenario != TestScenario::MultiStream &&
       scenario != TestScenario::MultiStreamFree &&
       scenario != TestScenario::Server) {
-    LogDetail([unsupported_scenario = ToString(scenario)](AsyncDetail& detail) {
+    LogDetail([unsupported_scenario =
+                   ToString(scenario)](AsyncDetail & detail) {
       detail.Error(find_peak_performance::kNotSupportedMsg);
     });
     return;
@@ -1444,7 +1113,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   LogDetail([base_field =
                  find_peak_performance::ToStringPerformanceField<scenario>(
-                     base_settings)](AsyncDetail& detail) {
+                     base_settings)](AsyncDetail & detail) {
     detail("FindPeakPerformance: Check validity of the base settings field: " +
            base_field);
   });
@@ -1475,10 +1144,10 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
     sut->ReportLatencyResults(base_perf_summary.pr.sample_latencies);
 
-    LogSummary(
-        [perf_summary = PerformanceSummary{sut->Name(), base_settings,
-                                           std::move(base_perf_summary.pr)}](
-            AsyncSummary& summary) mutable { perf_summary.Log(summary); });
+    LogSummary([perf_summary =
+                    PerformanceSummary{sut->Name(), base_settings,
+                                       std::move(base_perf_summary.pr)}](
+        AsyncSummary & summary) mutable { perf_summary.Log(summary); });
 
     qsl->UnloadSamplesFromRam(base_performance_set.set);
 
@@ -1494,14 +1163,15 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   PerformanceSummary l_perf_summary = boundaries.first;
   PerformanceSummary u_perf_summary = boundaries.second;
 
-  LogDetail(
-      [l_field = find_peak_performance::ToStringPerformanceField<scenario>(
-           l_perf_summary.settings),
-       u_field = find_peak_performance::ToStringPerformanceField<scenario>(
-           u_perf_summary.settings)](AsyncDetail& detail) {
-        detail("FindPeakPerformance: Found boundaries: [" + l_field + ", " +
-               u_field + ")");
-      });
+  LogDetail([
+    l_field = find_peak_performance::ToStringPerformanceField<scenario>(
+        l_perf_summary.settings),
+    u_field = find_peak_performance::ToStringPerformanceField<scenario>(
+        u_perf_summary.settings)
+  ](AsyncDetail & detail) {
+    detail("FindPeakPerformance: Found boundaries: [" + l_field + ", " +
+           u_field + ")");
+  });
 
   // Reuse performance_set, u_perf_summary has the largest 'samples_per_query'.
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
@@ -1515,16 +1185,16 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   // Print-out the peak performance test setting.
   LogDetail([field = find_peak_performance::ToStringPerformanceField<scenario>(
-                 perf_summary.settings)](AsyncDetail& detail) {
+                 perf_summary.settings)](AsyncDetail & detail) {
     detail("FindPeakPerformance: Found peak performance field: " + field);
   });
 
   sut->ReportLatencyResults(perf_summary.pr.sample_latencies);
 
-  LogSummary(
-      [perf_summary = PerformanceSummary{sut->Name(), perf_summary.settings,
-                                         std::move(perf_summary.pr)}](
-          AsyncSummary& summary) mutable { perf_summary.Log(summary); });
+  LogSummary([perf_summary =
+                  PerformanceSummary{sut->Name(), perf_summary.settings,
+                                     std::move(perf_summary.pr)}](
+      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
 
   qsl->UnloadSamplesFromRam(performance_set.set);
 }
@@ -1541,10 +1211,8 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   for (auto& loadable_set : loadable_sets) {
     {
-      auto tracer = MakeScopedTracer(
-          [count = loadable_set.set.size()](AsyncTrace& trace) {
-            trace("LoadSamples", "count", count);
-          });
+      auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
+          AsyncTrace & trace) { trace("LoadSamples", "count", count); });
       LoadSamplesToRam(qsl, loadable_set.set);
     }
 
@@ -1552,10 +1220,8 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
         sut, settings, loadable_set, sequence_gen));
 
     {
-      auto tracer = MakeScopedTracer(
-          [count = loadable_set.set.size()](AsyncTrace& trace) {
-            trace("UnloadSampes", "count", count);
-          });
+      auto tracer = MakeScopedTracer([count = loadable_set.set.size()](
+          AsyncTrace & trace) { trace("UnloadSampes", "count", count); });
       qsl->UnloadSamplesFromRam(loadable_set.set);
     }
   }
@@ -1672,6 +1338,8 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                                       &sequence_gen);
       break;
   }
+
+  loadgen::IssueQueryController::GetInstance().EndThreads();
 
   // Stop tracing after logging so all logs are captured in the trace.
   GlobalLogger().StopLogging();

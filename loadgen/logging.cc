@@ -824,7 +824,6 @@ void TlsLogger::Log(AsyncLogEntry&& entry) {
     if (cas_fail_count >= 3) {
       GlobalLogger().LogErrorSync("CAS failed.", "times", cas_fail_count,
                                   "line", __LINE__);
-      assert(cas_fail_count < 3);
     }
     log_cas_fail_count_.fetch_add(1, std::memory_order_relaxed);
   }

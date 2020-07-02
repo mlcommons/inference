@@ -23,6 +23,8 @@ elsewhere. The probability setting can be calculated as follows:
 Alternatively, if the accuracy log is too large, it can be truncated using the provided truncate_log.sh script
 before uploading results.
 
+UPDATE: An alternate script has been provided for reducing the accuracy log. Check truncate_log.py
+
 The mode is set assuming that an accuracy JSON in accuracy mode already exists (i.e. from the submission results)
 that can be used to for verification. If not, the mode should be changed from PerformanceOnly (mode=2) to 
 AccuracyOnly (mode=1) so that accuracy mode results can be generated.

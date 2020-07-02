@@ -142,4 +142,8 @@ echo "Replacing original dataset files with custom dataset files"
 cp "${OUTPUT_DIR}/newstest2014.tok.bpe.en" "${CUSTOM_DATASET_OUTPUT}/newstest2014.tok.bpe.32000.en"
 cp "${OUTPUT_DIR}/newstest2014.tok.bpe.de" "${CUSTOM_DATASET_OUTPUT}/newstest2014.tok.bpe.32000.de"
 
+echo "Preparing perf mode dataset"
+rm "${CUSTOM_DATASET_OUTPUT}/newstest2014.tok.bpe.32000.en.large"
+for i in {1..1300};do cat "${CUSTOM_DATASET_OUTPUT}/newstest2014.tok.bpe.32000.en" >> "${CUSTOM_DATASET_OUTPUT}/newstest2014.tok.bpe.32000.en.large"; done
+
 echo "All done."

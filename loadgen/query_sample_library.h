@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <memory>
 #include <vector>
+#include <string>
 
 #include "query_sample.h"
 

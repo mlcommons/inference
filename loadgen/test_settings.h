@@ -197,8 +197,9 @@ struct TestSettings {
   /// should be set to 0.97 (97%) in v0.5.(As always, check the policy page for
   /// updated values for the benchmark you are running.)
   double server_target_latency_percentile = 0.99;
-  /// \brief TODO: Implement this. Would combine samples from multiple queries
-  /// into a single query if their scheduled issue times have passed.
+  /// \brief If this flag is set to true, LoadGen will combine samples from
+  /// multiple queries into a single query if their scheduled issue times have
+  /// passed.
   bool server_coalesce_queries = false;
   /// \brief The decimal places of QPS precision used to terminate
   /// FindPeakPerformance mode.
@@ -210,6 +211,11 @@ struct TestSettings {
   /// out from a performance run. Useful for performance tuning and speeding up
   /// the FindPeakPerformance mode.
   uint64_t server_max_async_queries = 0;  ///< 0: Infinity.
+  /// \brief The number of issue query threads that will be registered and used
+  /// to call SUT's IssueQuery(). If this is 0, the same thread calling
+  /// StartTest() will be used to call IssueQuery(). See also
+  /// mlperf::RegisterIssueQueryThread().
+  uint64_t server_num_issue_query_threads = 0;
   /**@}*/
 
   // ==================================

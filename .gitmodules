@@ -2,12 +2,18 @@
 	path = build
 	url = https://chromium.googlesource.com/chromium/src/build
 	branch = master
-[submodule "third_party/gn"]
-	path = third_party/gn
-	url = https://gn.googlesource.com/gn
 [submodule "third_party/ninja"]
 	path = third_party/ninja
 	url = https://github.com/ninja-build/ninja.git
 [submodule "third_party/pybind"]
 	path = third_party/pybind
 	url = https://github.com/pybind/pybind11.git
+[submodule "third_party/gn"]
+	path = third_party/gn
+	url = https://gn.googlesource.com/gn
+[submodule "v0.7/language/bert/DeepLearningExamples"]
+	path = v0.7/language/bert/DeepLearningExamples
+	url = https://github.com/NVIDIA/DeepLearningExamples.git
+[submodule "v0.7/medical_imaging/3d-unet/nnUnet"]
+	path = v0.7/medical_imaging/3d-unet/nnUnet
+	url = https://github.com/MIC-DKFZ/nnUNet.git

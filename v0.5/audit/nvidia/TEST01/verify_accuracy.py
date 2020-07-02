@@ -87,13 +87,13 @@ def main():
         results_dict[sample["qsl_idx"]] = sample["data"]
 
 
-    print("num_acc_log_entries = {}".format(len(acc_data)))
-    print("num_acc_log_duplicate_keys = {}".format(num_acc_log_duplicate_keys))
-    print("num_acc_log_data_mismatch = {}".format(num_acc_log_data_mismatch))
-    print("num_perf_log_entries = {}".format(len(perf_data)))
-    print("num_perf_log_qsl_idx_match = {}".format(num_perf_log_qsl_idx_match))
-    print("num_perf_log_data_mismatch = {}".format(num_perf_log_data_mismatch))
-    print("num_missing_qsl_idxs = {}".format(num_missing_qsl_idxs))
+    print("num_acc_log_entries = {:}".format(len(acc_data)))
+    print("num_acc_log_duplicate_keys = {:}".format(num_acc_log_duplicate_keys))
+    print("num_acc_log_data_mismatch = {:}".format(num_acc_log_data_mismatch))
+    print("num_perf_log_entries = {:}".format(len(perf_data)))
+    print("num_perf_log_qsl_idx_match = {:}".format(num_perf_log_qsl_idx_match))
+    print("num_perf_log_data_mismatch = {:}".format(num_perf_log_data_mismatch))
+    print("num_missing_qsl_idxs = {:}".format(num_missing_qsl_idxs))
     if num_perf_log_data_mismatch > 0 :
         print("TEST FAIL\n");
     else :
@@ -101,4 +101,3 @@ def main():
 
 if __name__ == '__main__':
 	main()
-

@@ -49,6 +49,7 @@ lib_headers = [
 ]
 
 lib_sources = [
+    "issue_query_controller.cc",
     "loadgen.cc",
     "logging.cc",
     "test_settings_internal.cc",

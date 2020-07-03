@@ -71,5 +71,5 @@ class _3DUNET_PyTorch_SUT():
     def process_latencies(self, latencies_ns):
         pass
 
-def get_pytorch_sut(model_dir, preprocessed_data_dir, performance_count, folds=4, checkpoint_name="model_best"):
+def get_pytorch_sut(model_dir, preprocessed_data_dir, performance_count, folds=1, checkpoint_name="model_final_checkpoint"):
     return _3DUNET_PyTorch_SUT(model_dir, preprocessed_data_dir, performance_count, folds, checkpoint_name)

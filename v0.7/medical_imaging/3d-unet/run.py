@@ -22,20 +22,43 @@ import argparse
 import mlperf_loadgen as lg
 import subprocess
 
+
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--backend", choices=["pytorch","onnxruntime"], default="pytorch", help="Backend")
-    parser.add_argument("--scenario", choices=["SingleStream", "Offline", "Server", "MultiStream"], default="Offline", help="Scenario")
-    parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
-    parser.add_argument("--mlperf_conf", default="build/mlperf.conf", help="mlperf rules config")
-    parser.add_argument("--user_conf", default="user.conf", help="mlperf rules config")
-    parser.add_argument("--model_dir", default="build/result/nnUNet/3d_fullres/Task043_BraTS2019/nnUNetTrainerV2__nnUNetPlansv2.mlperf.1",
+    parser.add_argument("--backend",
+                        choices=["pytorch", "onnxruntime", "tf"],
+                        default="pytorch",
+                        help="Backend")
+    parser.add_argument(
+        "--scenario",
+        choices=["SingleStream", "Offline", "Server", "MultiStream"],
+        default="Offline",
+        help="Scenario")
+    parser.add_argument("--accuracy",
+                        action="store_true",
+                        help="enable accuracy pass")
+    parser.add_argument("--mlperf_conf",
+                        default="build/mlperf.conf",
+                        help="mlperf rules config")
+    parser.add_argument("--user_conf",
+                        default="user.conf",
+                        help="mlperf rules config")
+    parser.add_argument(
+        "--model_dir",
+        default=
+        "build/result/nnUNet/3d_fullres/Task043_BraTS2019/nnUNetTrainerV2__nnUNetPlansv2.mlperf.1",
         help="Path to the directory containing plans.pkl")
-    parser.add_argument("--onnx_model", default="build/model/192_224_192.onnx", help="Path to the ONNX model")
-    parser.add_argument("--preprocessed_data_dir", default="build/preprocessed_data", help="path to preprocessed data")
-    parser.add_argument("--performance_count", type=int, default=16, help="performance count")
+    parser.add_argument("--model", help="Path to the ONNX or TF model")
+    parser.add_argument("--preprocessed_data_dir",
+                        default="build/preprocessed_data",
+                        help="path to preprocessed data")
+    parser.add_argument("--performance_count",
+                        type=int,
+                        default=16,
+                        help="performance count")
     args = parser.parse_args()
     return args
+
 
 scenario_map = {
     "SingleStream": lg.TestScenario.SingleStream,
@@ -44,15 +67,22 @@ scenario_map = {
     "MultiStream": lg.TestScenario.MultiStream
 }
 
+
 def main():
     args = get_args()
 
     if args.backend == "pytorch":
         from pytorch_SUT import get_pytorch_sut
-        sut = get_pytorch_sut(args.model_dir, args.preprocessed_data_dir, args.performance_count)
+        sut = get_pytorch_sut(args.model_dir, args.preprocessed_data_dir,
+                              args.performance_count)
     elif args.backend == "onnxruntime":
         from onnxruntime_SUT import get_onnxruntime_sut
-        sut = get_onnxruntime_sut(args.onnx_model, args.preprocessed_data_dir, args.performance_count)
+        sut = get_onnxruntime_sut(args.model, args.preprocessed_data_dir,
+                                  args.performance_count)
+    elif args.backend == "tf":
+        from tf_SUT import get_tf_sut
+        sut = get_tf_sut(args.model, args.preprocessed_data_dir,
+                         args.performance_count)
     else:
         raise ValueError("Unknown backend: {:}".format(args.backend))
 
@@ -80,7 +110,7 @@ def main():
 
     if args.accuracy:
         print("Running accuracy script...")
-        cmd = "python3 brats_eval.py"
+        cmd = "python3 accuracy-brats.py"
         subprocess.check_call(cmd, shell=True)
 
     print("Done!")
@@ -90,6 +120,7 @@ def main():
 
     print("Destroying QSL...")
     lg.DestroyQSL(sut.qsl.qsl)
+
 
 if __name__ == "__main__":
     main()

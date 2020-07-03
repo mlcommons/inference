@@ -84,8 +84,7 @@ def load_loadgen_log(log_file, result_dtype, dictionaries):
 
     assert len(predictions) == len(dictionaries), "Number of predictions does not match number of samples in validation set!"
 
-    # TODO: need to change to [160, 224, 224]
-    padded_shape = [192, 224, 192]
+    padded_shape = [224, 224, 160]
     results = [None for i in range(len(predictions))]
     for prediction in predictions:
         qsl_idx = prediction["qsl_idx"]

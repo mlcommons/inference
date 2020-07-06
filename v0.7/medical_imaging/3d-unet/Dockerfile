@@ -27,7 +27,13 @@ RUN cd /tmp \
  && rm -rf inference
 
 # Install dependencies
-RUN python3 -m pip install onnx onnxruntime numpy==1.18.0 Pillow==7.0.0
+RUN python3 -m pip install wrapt --upgrade --ignore-installed
+RUN python3 -m pip install onnx numpy==1.18.0 Pillow==7.0.0 tensorflow
+RUN python3 -m pip install tensorflow-addons https://github.com/onnx/onnx-tensorflow/archive/master.zip
+
+# Install onnxruntime
+# TODO: Switch to release version with 3D TransposedConvolution support.
+RUN python3 -m pip install -i https://test.pypi.org/simple/ ort-nightly
 
 # Install nnUnet
 COPY nnUnet /workspace/nnUnet

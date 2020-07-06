@@ -38,7 +38,7 @@ Please run the following commands:
 
 ## Details
 
-- SUT implementations are in [pytorch_SUT.py](pytorch_SUT.py), [onnxruntime_SUT.py](onnxruntime_SUT.py), and [tf_SUT.py](tf_SUT.py). QSL implementation is in [brats_QSL.py](brats_QSL.py).
+- SUT implementations are in [ov_SUT.py](ov_SUT.py), [pytorch_SUT.py](pytorch_SUT.py), [onnxruntime_SUT.py](onnxruntime_SUT.py), and [tf_SUT.py](tf_SUT.py). QSL implementation is in [brats_QSL.py](brats_QSL.py).
 - The script [accuracy-brats.py](accuracy-brats.py) parses LoadGen accuracy log, post-processes it, and computes the accuracy.
 - Preprocessing and evaluation (including post-processing) are not included in the timed path.
 - The input to the SUT is a volume of size `[4, 224, 224, 160]`. The output from SUT is a volume of size `[4, 224, 224, 160]` with predicted label logits for each voxel.

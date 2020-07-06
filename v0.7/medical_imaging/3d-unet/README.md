@@ -33,7 +33,7 @@ Please run the following commands:
 - `make build_docker`: build docker image.
 - `make launch_docker`: launch docker container with an interaction session.
 - `make preprocess_data`: preprocess the BraTS 2019 dataset.
-- `python3 run.py --backend=[tf|pytorch|onnxruntime] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy] --model=[path/to/model_file(tf/onnx only)]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
+- `python3 run.py --backend=[tf|pytorch|onnxruntime|ov] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy] --model=[path/to/model_file(tf/onnx/OpenVINO only)]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
 - `python3 accuracy-brats.py --log_file=<LOADGEN_LOG> --output_dtype=<DTYPE>`: compute accuracy from a LoadGen accuracy JSON log file. 
 
 ## Details

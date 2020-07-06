@@ -35,7 +35,7 @@ def get_args():
     parser.add_argument("--raw_data_dir", default="build/raw_data/nnUNet_raw_data/Task043_BraTS2019/imagesTr",
         help="Path to the directory containing raw nii.gz files")
     parser.add_argument("--preprocessed_data_dir", default="build/preprocessed_data", help="Path to the directory containing preprocessed data")
-    parser.add_argument("--validation_fold_file", default="fold4_validation.npy", help="Path to the npy file storing all the sample names for the validation fold")
+    parser.add_argument("--validation_fold_file", default="folds/fold1_validation.txt", help="Path to the txt file storing all the sample names for the validation fold")
     parser.add_argument("--num_threads_preprocessing", type=int, default=12, help="Number of threads to run the preprocessing with")
     args = parser.parse_args()
     return args
@@ -75,15 +75,15 @@ def main():
 
     print("Preparing for preprocessing data...")
 
-    # Validation set is fold 4
-    fold = 4
+    # Validation set is fold 1
+    fold = 1
     validation_fold_file = args.validation_fold_file
 
     # Make sure the model exists
     model_dir = args.model_dir
     model_path = os.path.join(model_dir, "plans.pkl")
     assert os.path.isfile(model_path), "Cannot find the model file {:}!".format(model_path)
-    checkpoint_name = "model_best"
+    checkpoint_name = "model_final_checkpoint"
 
     # Other settings
     fp16 = False
@@ -91,9 +91,11 @@ def main():
     raw_data_dir = args.raw_data_dir
     preprocessed_data_dir = args.preprocessed_data_dir
 
-    # Open npy containing validation images from specific fold (e.g. 4)
-    with open(validation_fold_file, "rb") as f:
-        validation_files = numpy.load(f)
+    # Open list containing validation images from specific fold (e.g. 1)
+    validation_files = []
+    with open(validation_fold_file) as f:
+        for line in f:
+            validation_files.append(line.rstrip())
 
     # Create output and preprocessed directory
     if not os.path.isdir(preprocessed_data_dir):

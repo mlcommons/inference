@@ -32,6 +32,7 @@ class _3DUNET_TF_SUT():
     def __init__(self, model_path, preprocessed_data_dir, performance_count):
         print("Loading TF model...")
         graph_def = graph_pb2.GraphDef()
+        print(model_path)
         with open(model_path, "rb") as f:
             graph_def.ParseFromString(f.read())
         with tf.Graph().as_default() as g:

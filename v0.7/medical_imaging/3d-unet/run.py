@@ -1,5 +1,6 @@
 # coding=utf-8
 # Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2020 INTEL CORPORATION. All rights reserved.
 # Copyright 2020 Division of Medical Image Computing, German Cancer Research Center (DKFZ), Heidelberg, Germany
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -114,7 +115,7 @@ def main():
 
     if args.accuracy:
         print("Running accuracy script...")
-        cmd = "python3 brats_eval.py"
+        cmd = "python3 accuracy-brats.py"
         subprocess.check_call(cmd, shell=True)
 
     print("Done!")

@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2020 INTEL CORPORATION. All rights reserved.
 # Copyright 2020 Division of Medical Image Computing, German Cancer Research Center (DKFZ), Heidelberg, Germany
 #
 # Licensed under the Apache License, Version 2.0 (the "License");

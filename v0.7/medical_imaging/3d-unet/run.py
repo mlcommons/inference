@@ -1,5 +1,6 @@
 # coding=utf-8
 # Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2020 INTEL CORPORATION. All rights reserved.
 # Copyright 2020 Division of Medical Image Computing, German Cancer Research Center (DKFZ), Heidelberg, Germany
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +27,7 @@ import subprocess
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--backend",
-                        choices=["pytorch", "onnxruntime", "tf"],
+                        choices=["pytorch", "onnxruntime", "tf", "ov"],
                         default="pytorch",
                         help="Backend")
     parser.add_argument(
@@ -48,7 +49,7 @@ def get_args():
         default=
         "build/result/nnUNet/3d_fullres/Task043_BraTS2019/nnUNetTrainerV2__nnUNetPlansv2.mlperf.1",
         help="Path to the directory containing plans.pkl")
-    parser.add_argument("--model", help="Path to the ONNX or TF model")
+    parser.add_argument("--model", help="Path to the ONNX, OpenVINO, or TF model")
     parser.add_argument("--preprocessed_data_dir",
                         default="build/preprocessed_data",
                         help="path to preprocessed data")
@@ -82,6 +83,10 @@ def main():
     elif args.backend == "tf":
         from tf_SUT import get_tf_sut
         sut = get_tf_sut(args.model, args.preprocessed_data_dir,
+                         args.performance_count)
+    elif args.backend == "ov":
+        from ov_SUT import get_ov_sut
+        sut = get_ov_sut(args.model, args.preprocessed_data_dir,
                          args.performance_count)
     else:
         raise ValueError("Unknown backend: {:}".format(args.backend))

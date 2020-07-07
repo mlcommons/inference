@@ -6,9 +6,9 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 | name | framework | acc. | AUC | dataset | weights  | size | prec. | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| dlrm | PyTorch | 78.9% | N/A | [Criteo KaggleDAC](https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/)       | N/A                                                                     | ~1GB | fp32 |                          |
-| dlrm | PyTorch | 81.07% | N/A | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) | [pytorch](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt), [onnx](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.onnx.tar) | ~10GB | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |
-| dlrm | PyTorch | N/A | 80.25% | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) | [pytorch](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt), [onnx](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.onnx.tar) | ~100GB | fp32 | --max-ind-range=40000000 |
+| dlrm (debugging) | PyTorch | 78.9% | N/A | [Criteo KaggleDAC](https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/)       | N/A                                                                     | ~1GB | fp32 |                          |
+| dlrm (debugging) | PyTorch | 81.07% | N/A | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) | [pytorch](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt), [onnx](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.onnx.tar) | ~10GB | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |
+| dlrm (official) | PyTorch | N/A | 80.25% | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) | [pytorch](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt), [onnx](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.onnx.tar) | ~100GB | fp32 | --max-ind-range=40000000 |
 
 ### Disclaimer
 This is a reference implementation of the benchmark that is not meant to be the fastest implementation possible.
@@ -274,9 +274,9 @@ usage: main.py [-h]
     [--count-samples COUNT] [--count-queries COUNT] [--target-qps QPS]
     [--max-latency MAX_LATENCY]  [--cache CACHE]
     [--samples-per-query NUM_SAMPLES]
-    [--samples-to-aggregate NUM_FIXED_SAMPLES]
-    [--min-samples-to-aggregate MIN_NUM_VARIABLE_SAMPLES]
-    [--max-samples-to-aggregate MAX_NUM_VARIABLE_SAMPLES]
+    [--samples-to-aggregate-fix NUM_FIXED_SAMPLES]
+    [--samples-to-aggregate-min MIN_NUM_VARIABLE_SAMPLES]
+    [--samples-to-aggregate-max MAX_NUM_VARIABLE_SAMPLES]
     [--samples-to-aggregate-quantile-file FILE]
     [--samples-to-aggregate-trace-file FILE]
     [--numpy-rand-seed SEED]
@@ -327,9 +327,9 @@ usage: main.py [-h]
 
 `--samples-per-query` number of samples per query in MultiStream scenario.
 
-`--samples-to-aggregate` number of samples to aggregate and treat as a single sample. This number will stay fixed during runs.
+`--samples-to-aggregate-fix` number of samples to aggregate and treat as a single sample. This number will stay fixed during runs.
 
-`--min-samples-to-aggregate, --max-samples-to-aggregate` number of samples to aggregate and treat as a single sample. This number will vary randomly between min and max during runs.
+`--samples-to-aggregate-min, --samples-to-aggregate-max` number of samples to aggregate and treat as a single sample. This number will vary randomly between min and max during runs.
 
 `--samples-to-aggregate-quantile-file` number of samples to aggregate and treat as a single sample. This number will be sampled according to a custom distribution quantile stored in a file (e.g. tools/dist_quantile.txt).
 

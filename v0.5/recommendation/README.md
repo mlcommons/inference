@@ -274,9 +274,9 @@ usage: main.py [-h]
     [--count-samples COUNT] [--count-queries COUNT] [--target-qps QPS]
     [--max-latency MAX_LATENCY]  [--cache CACHE]
     [--samples-per-query NUM_SAMPLES]
-    [--samples-to-aggregate NUM_FIXED_SAMPLES]
-    [--min-samples-to-aggregate MIN_NUM_VARIABLE_SAMPLES]
-    [--max-samples-to-aggregate MAX_NUM_VARIABLE_SAMPLES]
+    [--samples-to-aggregate-fix NUM_FIXED_SAMPLES]
+    [--samples-to-aggregate-min MIN_NUM_VARIABLE_SAMPLES]
+    [--samples-to-aggregate-max MAX_NUM_VARIABLE_SAMPLES]
     [--samples-to-aggregate-quantile-file FILE]
     [--samples-to-aggregate-trace-file FILE]
     [--numpy-rand-seed SEED]
@@ -327,9 +327,9 @@ usage: main.py [-h]
 
 `--samples-per-query` number of samples per query in MultiStream scenario.
 
-`--samples-to-aggregate` number of samples to aggregate and treat as a single sample. This number will stay fixed during runs.
+`--samples-to-aggregate-fix` number of samples to aggregate and treat as a single sample. This number will stay fixed during runs.
 
-`--min-samples-to-aggregate, --max-samples-to-aggregate` number of samples to aggregate and treat as a single sample. This number will vary randomly between min and max during runs.
+`--samples-to-aggregate-min, --samples-to-aggregate-max` number of samples to aggregate and treat as a single sample. This number will vary randomly between min and max during runs.
 
 `--samples-to-aggregate-quantile-file` number of samples to aggregate and treat as a single sample. This number will be sampled according to a custom distribution quantile stored in a file (e.g. tools/dist_quantile.txt).
 

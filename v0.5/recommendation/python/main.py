@@ -125,9 +125,9 @@ def get_args():
     parser.add_argument("--count-queries", type=int, help="number of queries to use")
     parser.add_argument("--max-latency", type=float, help="mlperf max latency in pct tile")
     parser.add_argument("--samples-per-query", type=int, help="mlperf multi-stream sample per query")
-    parser.add_argument("--samples-to-aggregate", type=int, help="number of samples to be treated as one")
-    parser.add_argument("--min-samples-to-aggregate", type=int, help="min number of samples to be treated as one in random query size")
-    parser.add_argument("--max-samples-to-aggregate", type=int, help="max number of samples to be treated as one in random query size")
+    parser.add_argument("--samples-to-aggregate-fix", type=int, help="number of samples to be treated as one")
+    parser.add_argument("--samples-to-aggregate-min", type=int, help="min number of samples to be treated as one in random query size")
+    parser.add_argument("--samples-to-aggregate-max", type=int, help="max number of samples to be treated as one in random query size")
     parser.add_argument("--samples-to-aggregate-quantile-file", type=str, help="distribution quantile used to generate number of samples to be treated as one in random query size")
     parser.add_argument("--samples-to-aggregate-trace-file", type=str, default="dlrm_trace_of_aggregated_samples.txt")
     parser.add_argument("--numpy-rand-seed", type=int, default=123)
@@ -250,7 +250,9 @@ class RunnerBase:
             for idx, query_id in enumerate(qitem.query_id):
                 # NOTE: processed_results returned by DlrmPostProcess store both
                 # result = processed_results[idx][0] and target = processed_results[idx][1]
-                response_array = array.array("B", np.array(processed_results[idx][0], np.float32).tobytes())
+                # also each idx might be a query of samples, rather than a single sample
+                # depending on the --samples-to-aggregate* arguments.
+                response_array = array.array("B", np.array(processed_results, np.float32).tobytes())
                 response_array_refs.append(response_array)
                 bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
@@ -378,9 +380,9 @@ def main():
                         pre_process=pre_proc,  # currently an identity function
                         use_cache=args.cache,  # currently not used
                         count=args.count_samples,
-                        samples_to_aggregate=args.samples_to_aggregate,
-                        min_samples_to_aggregate=args.min_samples_to_aggregate,
-                        max_samples_to_aggregate=args.max_samples_to_aggregate,
+                        samples_to_aggregate_fix=args.samples_to_aggregate_fix,
+                        samples_to_aggregate_min=args.samples_to_aggregate_min,
+                        samples_to_aggregate_max=args.samples_to_aggregate_max,
                         samples_to_aggregate_quantile_file=args.samples_to_aggregate_quantile_file,
                         samples_to_aggregate_trace_file=args.samples_to_aggregate_trace_file,
                         test_num_workers=args.test_num_workers,

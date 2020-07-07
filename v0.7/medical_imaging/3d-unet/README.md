@@ -33,12 +33,12 @@ Please run the following commands:
 - `make build_docker`: build docker image.
 - `make launch_docker`: launch docker container with an interaction session.
 - `make preprocess_data`: preprocess the BraTS 2019 dataset.
-- `python3 run.py --backend=[tf|pytorch|onnxruntime] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy] --model=[path/to/model_file(tf/onnx only)]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
+- `python3 run.py --backend=[tf|pytorch|onnxruntime|ov] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy] --model=[path/to/model_file(tf/onnx/OpenVINO only)]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
 - `python3 accuracy-brats.py --log_file=<LOADGEN_LOG> --output_dtype=<DTYPE>`: compute accuracy from a LoadGen accuracy JSON log file. 
 
 ## Details
 
-- SUT implementations are in [pytorch_SUT.py](pytorch_SUT.py), [onnxruntime_SUT.py](onnxruntime_SUT.py), and [tf_SUT.py](tf_SUT.py). QSL implementation is in [brats_QSL.py](brats_QSL.py).
+- SUT implementations are in [ov_SUT.py](ov_SUT.py), [pytorch_SUT.py](pytorch_SUT.py), [onnxruntime_SUT.py](onnxruntime_SUT.py), and [tf_SUT.py](tf_SUT.py). QSL implementation is in [brats_QSL.py](brats_QSL.py).
 - The script [accuracy-brats.py](accuracy-brats.py) parses LoadGen accuracy log, post-processes it, and computes the accuracy.
 - Preprocessing and evaluation (including post-processing) are not included in the timed path.
 - The input to the SUT is a volume of size `[4, 224, 224, 160]`. The output from SUT is a volume of size `[4, 224, 224, 160]` with predicted label logits for each voxel.

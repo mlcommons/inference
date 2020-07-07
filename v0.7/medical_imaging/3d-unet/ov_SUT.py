@@ -1,5 +1,5 @@
 # coding=utf-8
-# Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
+# Copyright (c) 2020 INTEL CORPORATION. All rights reserved.
 # Copyright 2020 Division of Medical Image Computing, German Cancer Research Center (DKFZ), Heidelberg, Germany
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,24 +22,26 @@ sys.path.insert(0, os.getcwd())
 
 import mlperf_loadgen as lg
 import numpy as np
-import tensorflow as tf
-from tensorflow.core.framework import graph_pb2
 
 from brats_QSL import get_brats_QSL
 
+from openvino.inference_engine import IECore
+from scipy.special import softmax
 
-class _3DUNET_TF_SUT():
+class _3DUNET_OV_SUT():
     def __init__(self, model_path, preprocessed_data_dir, performance_count):
-        print("Loading TF model...")
-        graph_def = graph_pb2.GraphDef()
-        print(model_path)
-        with open(model_path, "rb") as f:
-            graph_def.ParseFromString(f.read())
-        with tf.Graph().as_default() as g:
-            tf.compat.v1.import_graph_def(graph_def)
-        self.sess = tf.compat.v1.Session(graph=g)
-        self.input = g.get_tensor_by_name("import/input:0")
-        self.output = g.get_tensor_by_name("import/output:0")
+        print("Loading OV model...")
+
+        model_xml = model_path
+        model_bin = os.path.splitext(model_xml)[0] + '.bin'
+        
+        ie = IECore()
+        net = ie.read_network(model=model_xml, weights=model_bin)
+
+        self.input_name = next(iter(net.inputs))
+        self.output_name = 'output'
+
+        self.exec_net = ie.load_network(network=net, device_name='CPU')
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries,
@@ -54,12 +56,10 @@ class _3DUNET_TF_SUT():
             print("Processing sample id {:d} with shape = {:}".format(
                 query_samples[i].index, data.shape))
 
-            before_softmax = self.sess.run(
-                self.output, feed_dict={self.input: data[np.newaxis, ...]})[0]
-            softmax = tf.nn.softmax(before_softmax,
-                                    axis=0).numpy().astype(np.float16)
+            before_softmax = self.exec_net.infer(inputs={self.input_name: data[np.newaxis, ...]})[self.output_name]
+            after_softmax = softmax(before_softmax, axis=1).astype(np.float16)
 
-            response_array = array.array("B", softmax.tobytes())
+            response_array = array.array("B", after_softmax.tobytes())
             bi = response_array.buffer_info()
             response = lg.QuerySampleResponse(query_samples[i].id, bi[0],
                                               bi[1])
@@ -72,5 +72,5 @@ class _3DUNET_TF_SUT():
         pass
 
 
-def get_tf_sut(model_path, preprocessed_data_dir, performance_count):
-    return _3DUNET_TF_SUT(model_path, preprocessed_data_dir, performance_count)
+def get_ov_sut(model_path, preprocessed_data_dir, performance_count):
+    return _3DUNET_OV_SUT(model_path, preprocessed_data_dir, performance_count)

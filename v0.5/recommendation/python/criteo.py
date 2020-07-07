@@ -41,9 +41,9 @@ class Criteo(Dataset):
                  pre_process,
                  use_cache,
                  count=None,
-                 samples_to_aggregate=None,
-                 min_samples_to_aggregate=None,
-                 max_samples_to_aggregate=None,
+                 samples_to_aggregate_fix=None,
+                 samples_to_aggregate_min=None,
+                 samples_to_aggregate_max=None,
                  samples_to_aggregate_quantile_file=None,
                  samples_to_aggregate_trace_file=None,
                  test_num_workers=0,
@@ -57,17 +57,17 @@ class Criteo(Dataset):
         self.count = count
         self.random_offsets = []
         self.use_fixed_size = ((samples_to_aggregate_quantile_file is None) and
-                               (min_samples_to_aggregate is None or max_samples_to_aggregate is None))
+                               (samples_to_aggregate_min is None or samples_to_aggregate_max is None))
         if self.use_fixed_size:
             # fixed size queries
-            self.samples_to_aggregate = 1 if samples_to_aggregate is None else samples_to_aggregate
-            self.min_samples_to_aggregate = None
-            self.max_samples_to_aggregate = None
+            self.samples_to_aggregate = 1 if samples_to_aggregate_fix is None else samples_to_aggregate_fix
+            self.samples_to_aggregate_min = None
+            self.samples_to_aggregate_max = None
         else:
             # variable size queries
             self.samples_to_aggregate = 1
-            self.min_samples_to_aggregate = min_samples_to_aggregate
-            self.max_samples_to_aggregate = max_samples_to_aggregate
+            self.samples_to_aggregate_min = samples_to_aggregate_min
+            self.samples_to_aggregate_max = samples_to_aggregate_max
             self.samples_to_aggregate_quantile_file = samples_to_aggregate_quantile_file
 
         if name == "kaggle":
@@ -150,20 +150,20 @@ class Criteo(Dataset):
             # the offsets for variable query sizes will be pre-generated here
             if self.samples_to_aggregate_quantile_file is None:
                 # generate number of samples in a query from a uniform(min,max) distribution
-                print("Using variable query size: uniform distribution (" + str(self.min_samples_to_aggregate) + "," + str(self.max_samples_to_aggregate) +  ")")
+                print("Using variable query size: uniform distribution (" + str(self.samples_to_aggregate_min) + "," + str(self.samples_to_aggregate_max) +  ")")
                 done = False
                 qo = 0
                 while done == False:
                     self.random_offsets.append(int(qo))
-                    qs = random.randint(self.min_samples_to_aggregate, self.max_samples_to_aggregate)
+                    qs = random.randint(self.samples_to_aggregate_min, self.samples_to_aggregate_max)
                     qo = min(qo + qs, self.num_individual_samples)
                     if qo >= self.num_individual_samples:
                         done = True
                 self.random_offsets.append(int(qo))
 
                 # compute min and max number of samples
-                nas_max = (self.num_individual_samples + self.min_samples_to_aggregate - 1) // self.min_samples_to_aggregate
-                nas_min = (self.num_individual_samples + self.max_samples_to_aggregate - 1) // self.max_samples_to_aggregate
+                nas_max = (self.num_individual_samples + self.samples_to_aggregate_min - 1) // self.samples_to_aggregate_min
+                nas_min = (self.num_individual_samples + self.samples_to_aggregate_max - 1) // self.samples_to_aggregate_max
             else:
                 # generate number of samples in a query from a custom distribution,
                 # with quantile (inverse of its cdf) given in the file. Note that
@@ -342,7 +342,7 @@ class DlrmPostProcess:
         return processed_results
 
     def add_results(self, results):
-        self.results = self.results + results
+        self.results.append(results)
 
     def start(self):
         self.good = 0
@@ -352,9 +352,10 @@ class DlrmPostProcess:
 
     def finalize(self, result_dict, ds=False,  output_dir=None):
         # AUC metric
-        results, targets = zip(*self.results)
-        results = np.concatenate(results, axis=0)
-        targets = np.concatenate(targets, axis=0)
+        self.results = np.concatenate(self.results, axis=0)
+        results, targets = list(zip(*self.results))
+        results = np.array(results)
+        targets = np.array(targets)
         self.roc_auc = sklearn.metrics.roc_auc_score(targets, results)
 
         result_dict["good"] = self.good

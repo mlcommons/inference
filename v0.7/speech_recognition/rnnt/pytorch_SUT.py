@@ -94,7 +94,7 @@ class PytorchSUT:
             with torch.no_grad():
                 waveform = torch.from_numpy(waveform)
                 waveform_length = torch.from_numpy(waveform_length)
-                feature, feature_length = self.audio_preprocessor.forward((waveform, waveform_length))
+                feature, feature_length = self.audio_preprocessor.forward(waveform, waveform_length)
                 assert feature.ndim == 3
                 assert feature_length.ndim == 1
                 feature = feature.permute(2, 0, 1)

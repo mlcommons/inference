@@ -31,9 +31,8 @@ class AudioPreprocessing(nn.Module):
             'optimization_level', Optimization.nothing)
         self.featurizer = FeatureFactory.from_config(kwargs)
 
-    def forward(self, x: Tuple[torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
-        input_signal, length = x
+    def forward(self, input_signal: torch.Tensor, length: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         length.requires_grad_(False)
-        processed_signal = self.featurizer(x)
+        processed_signal = self.featurizer((input_signal, length))
         processed_length = self.featurizer.get_seq_len(length)
         return processed_signal, processed_length

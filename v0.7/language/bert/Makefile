@@ -91,6 +91,9 @@ download_tf_model:
 	@if [ ! -e $(BERT_DIR)/vocab.txt ]; then \
 		wget -O $(BERT_DIR)/vocab.txt https://zenodo.org/record/3733868/files/vocab.txt?download=1; \
 	fi
+	@if [ ! -e $(BERT_DIR)/model.pb ]; then \
+		wget -O $(BERT_DIR)/model.pb https://zenodo.org/record/3939747/files/model.pb?download=1; \
+	fi
 
 .PHONY: download_pytorch_model
 download_pytorch_model:

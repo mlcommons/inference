@@ -32,7 +32,6 @@ Please run the following commands:
 
 ## Details
 
-- SUT implementations are in [tf_SUT.py](tf_SUT.py) and [pytorch_SUT.py](pytorch_SUT.py). QSL implementation is in [squad_QSL.py](squad_QSL.py).
 - SUT implementations are in [tf_SUT.py](tf_SUT.py), [tf_infer_SUT.py](tf_infer_SUT.py) and [pytorch_SUT.py](pytorch_SUT.py). QSL implementation is in [squad_QSL.py](squad_QSL.py).
 - The script [accuracy-squad.py](accuracy-squad.py) parses LoadGen accuracy log, post-processes it, and computes the accuracy.
 - Tokenization and detokenization (post-processing) are not included in the timed path.

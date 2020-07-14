@@ -21,7 +21,7 @@ log = logging.getLogger("coco")
 
 class Coco(dataset.Dataset):
     def __init__(self, data_path, image_list, name, use_cache=0, image_size=None,
-                 image_format="NHWC", pre_process=None, count=None, cache_dir=None,use_label_map=False):
+                 image_format="NHWC", pre_process=None, count=None, cache_dir=None,use_label_map=False, split='val2017', calibrate=False):
         super().__init__()
         self.image_size = image_size
         self.image_list = []
@@ -33,8 +33,11 @@ class Coco(dataset.Dataset):
         self.data_path = data_path
         self.pre_process = pre_process
         self.use_label_map=use_label_map
+        self.split = split
+        self.calibrate = calibrate
         if not cache_dir:
-            cache_dir = os.getcwd()
+            #cache_dir = os.getcwd()
+            cache_dir = '/datasets/mlperf-v0.5/' # Centaur
         self.cache_dir = os.path.join(cache_dir, "preprocessed", name, image_format)
         # input images are in HWC
         self.need_transpose = True if image_format == "NCHW" else False
@@ -71,8 +74,19 @@ class Coco(dataset.Dataset):
             i["category"].append(catagory_ids)
             i["bbox"].append(a.get("bbox"))
 
+        # Populate list of allowed calibration images.
+        if self.calibrate:
+            import re
+            calibration_list_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../../', 'calibration/COCO/coco_cal_images_list.txt')
+            with open(calibration_list_path, 'r') as f:
+                for s in f:
+                    image_name = re.split(r"\s+", s.strip())
+                    self.calibrate_whitelist.append(image_name[0])
+            log.info('Found {} white-listed calibration images.'.format(len(self.calibrate_whitelist)))
+
+
         for image_id, img in images.items():
-            image_name = os.path.join("val2017", img["file_name"])
+            image_name = os.path.join(self.split, img["file_name"])
             src = os.path.join(data_path, image_name)
             if not os.path.exists(src):
                 # if the image does not exists ignore it

@@ -10,6 +10,8 @@ from torch.autograd import Variable
 from collections import OrderedDict
 
 from torchvision.models.resnet import resnet18, resnet34, resnet50
+from torchvision.models.quantization.resnet import _resnet, QuantizableBasicBlock
+
 
 def _ModifyConvStrideDilation(conv, stride=(1, 1), padding=None):
     conv.stride = stride
@@ -56,7 +58,22 @@ class ResNet18(nn.Module):
 class ResNet34(nn.Module):
     def __init__(self):
         super().__init__()
-        rn34 = resnet34(pretrained=True)
+        #rn34 = resnet34(pretrained=True) # Uses non-quantizable PyTorch API.
+
+        # For some reason torchvision.models.quantization.resnet has everything 
+        # from torchvision.models.resnet, *except* resnet34 so creating one here:
+        def resnet34_quantized(pretrained=False, progress=True, quantize=False):
+            r"""ResNet-34 model from
+            `"Deep Residual Learning for Image Recognition" <https://arxiv.org/pdf/1512.03385.pdf>`_
+            Args:
+                pretrained (bool): If True, returns a model pre-trained on ImageNet
+                progress (bool): If True, displays a progress bar of the download to stderr
+            """
+            # We need the QuantizableBasicBlock however passing quantize=True will error out during forward().
+            return _resnet('resnet34', QuantizableBasicBlock, [3, 4, 6, 3], pretrained, progress, quantize=False)
+
+        # We will load the backbone with newer (quantizable) API, but still FP32:
+        rn34 = resnet34_quantized(pretrained=False, quantize=False)
 
         # discard last Resnet block, avrpooling and classification FC
         self.layer1 = nn.Sequential(*list(rn34.children())[:6])

@@ -5,8 +5,15 @@ import numpy as np
 from math import sqrt, ceil
 import itertools
 import torch.nn.functional as F
+import torchvision
+
+# From Microsoft/ONNX MLPerf port: https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch
+import os
+torch.ops.load_library(os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../pytorch/lib/', 'custom_ops.cpython-36m-x86_64-linux-gnu.so'))
+from torch.onnx import operators
 
 ##Inspired by https://github.com/kuangliu/pytorch-ssd
+
 
 class Encoder(object):
     """
@@ -147,6 +154,100 @@ def scale_back_batch(bboxes_in, scores_in,scale_xy,scale_wh,dboxes_xywh):
     bboxes_in[:, :, 3] = b
     return bboxes_in, F.softmax(scores_in, dim=-1)
 
+@torch.jit.script
+def decode_batch_with_nms_trace(bboxes_in:torch.Tensor, scores_in:torch.Tensor, scale_xy:torch.Tensor, scale_wh:torch.Tensor, dboxes_xywh:torch.Tensor): #, criteria:float, max_output:int, device:int=0):
+    criteria:float = 0.5
+    max_output:int = 200
+    device:int = 0
+
+    bboxes, probs = scale_back_batch(bboxes_in, scores_in, scale_xy, scale_wh, dboxes_xywh)
+
+    #assert bboxes.size(0) == 1, 'batch size must be 1'
+    bboxes = bboxes.squeeze(0)
+    probs = probs.squeeze(0)
+    # for each label
+    bboxes_out = []
+    scores_out = []
+    labels_out = []
+    # bboxes shape  [box num, 4]
+    # probs shape   [box num, label num]
+    for i in range(probs.size(1)):
+        # skip background
+        if i == 0:
+            continue
+
+        scores_per_label = probs[:, i]
+        mask = scores_per_label > 0.05
+        bboxes_masked, scores_masked = bboxes[mask, :], scores_per_label[mask]
+        # print('decode single iter scores masked:', scores_masked, scores_masked.shape)
+
+        num_selected = operators.shape_as_tensor(scores_masked)[0].unsqueeze(0)
+        k = torch.min(
+            torch.cat(
+                (torch.tensor([max_output], dtype=torch.long),
+                 num_selected), 0))
+        _, sorted_idx = scores_masked.topk(k, dim=0)
+        bboxes_masked = bboxes_masked[sorted_idx]
+        scores_masked = scores_masked[sorted_idx]
+
+        out_idx = torch.ops.roi_ops.nms(bboxes_masked.float(), scores_masked, criteria)
+
+        bboxes_out.append(bboxes_masked[out_idx])
+        scores_out.append(scores_masked[out_idx])
+        labels_out.append(torch.full_like(out_idx, i, dtype=torch.long))
+        # print('decode single iter output:', scores_out[-1], labels_out[-1])
+    # return top max_output
+    bboxes_out = torch.cat(bboxes_out, dim=0)
+    labels_out = torch.cat(labels_out, dim=0)
+    scores_out = torch.cat(scores_out, dim=0)
+
+    num_selected = operators.shape_as_tensor(scores_out)[0].unsqueeze(0)
+    k = torch.min(
+        torch.cat(
+            (torch.tensor([max_output], dtype=torch.long), num_selected),
+            0
+        )
+    )
+    _, max_ids = scores_out.topk(k, dim=0)
+
+    return bboxes_out[max_ids, :].unsqueeze(0), labels_out[max_ids].unsqueeze(0), scores_out[max_ids].unsqueeze(0)
+
+@torch.jit.script
+def decode_batch_with_multi_label_nms_trace(bboxes_in:torch.Tensor, scores_in:torch.Tensor, scale_xy:torch.Tensor, scale_wh:torch.Tensor, dboxes_xywh:torch.Tensor): #, criteria = 0.45, max_output=200, device=0):
+    criteria:float = 0.5
+    max_output:int = 200
+    device:int = 0
+
+    bboxes, probs = scale_back_batch(bboxes_in, scores_in, scale_xy, scale_wh, dboxes_xywh)
+
+    # bboxes shape  [batch, box num, 4]
+    # probs shape   [batch, box num, label num]
+    probs = probs.permute(0, 2, 1)
+    # probs shape   [batch, label num, box num]
+    
+    # remove background
+    probs = probs[:, 1:, :]
+    selected_indices = torch.ops.roi_ops.multi_label_nms(bboxes, probs, torch.full((1,), max_output, dtype=torch.long), torch.full((1, ), criteria, dtype=torch.float), torch.full((1, ), 0.05, dtype=torch.float))
+    
+    labels = selected_indices[:, 1]
+    box_indices = selected_indices[:, 2]
+    scores_out = probs.reshape(-1)[labels * operators.shape_as_tensor(probs)[2] + box_indices]
+    
+    # return top max_output
+    num_selected = operators.shape_as_tensor(scores_out)[0].unsqueeze(0)
+    k = torch.min(
+        torch.cat(
+            (torch.tensor([max_output], dtype=torch.long), num_selected),
+            0
+        )
+    )
+    _, max_ids = scores_out.topk(k, dim=0)
+    
+    bboxes = bboxes.squeeze(0)[box_indices.index_select(0, max_ids), :].unsqueeze(0)
+    labels = labels.index_select(0, max_ids).unsqueeze(0) + 1
+    scores_out = scores_out.index_select(0, max_ids).unsqueeze(0)
+    
+    return bboxes, labels, scores_out
 
 class DefaultBoxes(object):
     def __init__(self, fig_size, feat_size, steps, scales, aspect_ratios, \
@@ -254,6 +355,10 @@ class SSD_R34(nn.Module):
         # intitalize all weights
         self._init_weights()
         self.device = 1
+
+        self.quant = torch.quantization.QuantStub() 
+        self.dequant = torch.quantization.DeQuantStub()
+
     def _build_additional_features(self, input_channels):
         idx = 0
         self.additional_blocks = []
@@ -329,6 +434,8 @@ class SSD_R34(nn.Module):
         return locs, confs,features_shapes
 
     def forward(self, data):
+        #data = self.quant(data)
+
         layers = self.model(data)
 
         # last result from network goes into additional blocks
@@ -341,11 +448,39 @@ class SSD_R34(nn.Module):
             additional_results.append(x)
 
         src = [*layers, *additional_results]
-        # Feature maps sizes depend on the image size. For 300x300 with strides=[1,1,2,2,2,1] it is 38x38x4, 19x19x6, 10x10x6, 5x5x6, 3x3x4, 1x1x4 
-        locs, confs,features_shapes = self.bbox_view(src, self.loc, self.conf,extract_shapes=self.extract_shapes)
-        if self.extract_shapes:
-            return locs, confs,features_shapes
-        else:    
-            # For SSD 300 with strides=[1,1,2,2,2,1] , shall return nbatch x 8732 x {nlabels, nlocs} results 
-            results=self.encoder.decode_batch(locs, confs, 0.50, 200) #[0]
-            return results #locs, confs,features_shapes
+
+        locs = []
+        confs = []
+        for layer_output, loc_conv, conf_conv in zip(src, self.loc, self.conf):
+            num_batches:int = 1#layer_output.size(0) 
+            num_labels:int = 81#self.label_num
+            # Location
+            output_loc = loc_conv(layer_output)
+            #output_loc = self.dequant(output_loc)
+            reshaped_output_loc = output_loc.reshape(num_batches, 4, -1)
+            locs.append(reshaped_output_loc)
+            # Confidence
+            output_conf = conf_conv(layer_output)
+            #output_conf = self.dequant(output_conf)
+            reshaped_output_conf = output_conf.reshape(num_batches, num_labels, -1)
+            confs.append(reshaped_output_conf)
+        # Concat all the location tensors, and concat all the confidence tensors:
+        locs, confs = torch.cat(locs, 2).contiguous(), torch.cat(confs, 2).contiguous()
+ 
+        results = decode_batch_with_nms_trace(locs, confs, self.encoder.scale_xy, self.encoder.scale_wh, self.encoder.dboxes_xywh)
+        #results = decode_batch_with_multi_label_nms_trace(locs, confs, self.encoder.scale_xy, self.encoder.scale_wh, self.encoder.dboxes_xywh)
+        return results
+
+    # Fuse Conv+BN and Conv+BN+Relu modules prior to quantization.
+    # This does not change the numerics but is required by PyTorch.
+    def fuse_model(self):
+        torch.quantization.fuse_modules(self, ['model.layer1.0', 'model.layer1.1', 'model.layer1.2'], inplace=True)
+        for i in range(5):
+            torch.quantization.fuse_modules(self, [['additional_blocks.'+str(i)+'.0', 'additional_blocks.'+str(i)+'.1'], ['additional_blocks.'+str(i)+'.2', 'additional_blocks.'+str(i)+'.3']], inplace=True)
+        # Fuse ops in R34 the backbone.
+        for m in self.modules():
+            if type(m) == torchvision.models.quantization.resnet.QuantizableBottleneck:
+                m.fuse_model()
+            if type(m) == torchvision.models.quantization.resnet.QuantizableBasicBlock:
+                m.fuse_model()
+

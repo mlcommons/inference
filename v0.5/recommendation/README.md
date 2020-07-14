@@ -150,7 +150,7 @@ export DATA_DIR=./fake_criteo
 
 ### Calibration set
 
-For MLPerf Inference, we use the first 128000 rows (user-item pairs) of the second half of `day_23` as the calibration set. Specifically, `day_23` contains 178274637 rows in total, so we use the rows **from the 89137319-th row to the 89265318-th row in `day_23`** as the calibration set (assuming 0-based indexing).
+For MLPerf Inference, we use the first 128000 rows (user-item pairs) of the second half of `day_23` as the calibration set. Specifically, `day_23` contains 178274637 rows in total, so we use the rows **from the 89137319-th row to the 89265318-th row (both inclusive) in `day_23`** as the calibration set (assuming 0-based indexing).
 
 ## Running the benchmark
 

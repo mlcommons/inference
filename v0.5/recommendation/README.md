@@ -341,6 +341,13 @@ usage: main.py [-h]
 
 `--find-peak-performance` determine the maximum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.
 
+### Run accuracy script
+
+To get the accuracy from a LoadGen accuracy json log file, run the following commands:
+
+- `python3 tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON>`: if your SUT outputs the predictions and the ground truth labels in a packed format like the reference implementation.
+- `python3 tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON> --day-23-file <path/to/day_23> --aggregation-trace-file <path/to/dlrm_trace_of_aggregated_samples.txt>`: if your SUT outputs only the predictions. In this case, you need to make sure that the data in day_23 are not shuffled.
+
 ## License
 
 [Apache License 2.0](LICENSE)

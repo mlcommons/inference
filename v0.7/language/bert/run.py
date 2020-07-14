@@ -26,7 +26,7 @@ from squad_QSL import get_squad_QSL
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--backend", choices=["tf","pytorch","onnxruntime"], default="tf", help="Backend")
+    parser.add_argument("--backend", choices=["tf","tf_infer","pytorch","onnxruntime"], default="tf", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline", "Server", "MultiStream"], default="Offline", help="Scenario")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--quantized", action="store_true", help="use quantized model (only valid for onnxruntime backend)")
@@ -52,10 +52,15 @@ def main():
         from pytorch_SUT import get_pytorch_sut
         sut = get_pytorch_sut()
     elif args.backend == "tf":
-        assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
-        assert not args.profile, "Profiling is only supported by onnxruntime backend!"
+        assert not args.quantized, "Quantized model is only supported by tensorflow backend!"
+        assert not args.profile, "Profiling is only supported by tensorflow backend!"
         from tf_SUT import get_tf_sut
         sut = get_tf_sut()
+    elif args.backend == "tf_infer":
+        assert not args.quantized, "Quantized model is only supported by tensorflow inference backend!"
+        assert not args.profile, "Profiling is only supported by tensorflow inference backend!"
+        from tf_infer_SUT import get_tf_infer_sut
+        sut = get_tf_infer_sut()
     elif args.backend == "onnxruntime":
         from onnxruntime_SUT import get_onnxruntime_sut
         sut = get_onnxruntime_sut(args)

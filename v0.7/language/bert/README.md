@@ -28,11 +28,11 @@ Please run the following commands:
 - `make setup`: initialize submodule, download datasets, and download models.
 - `make build_docker`: build docker image.
 - `make launch_docker`: launch docker container with an interaction session.
-- `python3 run.py --backend=[tf|tf_infer|pytorch|onnxruntime] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy] [--quantized]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
+- `python3 run.py --backend=[tf|pytorch|onnxruntime|tf_estimator] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy] [--quantized]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
 
 ## Details
 
-- SUT implementations are in [tf_SUT.py](tf_SUT.py), [tf_infer_SUT.py](tf_infer_SUT.py) and [pytorch_SUT.py](pytorch_SUT.py). QSL implementation is in [squad_QSL.py](squad_QSL.py).
+- SUT implementations are in [tf_SUT.py](tf_SUT.py), [tf_estimator_SUT.py](tf_estimator_SUT.py) and [pytorch_SUT.py](pytorch_SUT.py). QSL implementation is in [squad_QSL.py](squad_QSL.py).
 - The script [accuracy-squad.py](accuracy-squad.py) parses LoadGen accuracy log, post-processes it, and computes the accuracy.
 - Tokenization and detokenization (post-processing) are not included in the timed path.
 - The inputs to the SUT are `input_ids`, `input_make`, and `segment_ids`. The output from SUT is `start_logits` and `end_logits` concatenated together.

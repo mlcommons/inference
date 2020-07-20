@@ -56,6 +56,7 @@ of Docker images for this workflow including Ubuntu, Debian and CentOS.
     1. Install [Collective Knowledge](#install_ck) (CK) and its repositories
     1. Detect [GCC](#detect_gcc)
     1. Detect [Python](#detect_python)
+    1. Install [Python dependencies](#install_python_deps)
 
 <a name="install"></a>
 ## Installation
@@ -145,3 +146,26 @@ Env UID:         Target OS: Bits: Name:  Version: Tags:
 633a6b22205eb07f   linux-64    64 python 3.7.6    64bits,compiler,host-os-linux-64,lang-python,python,target-os-linux-64,v3,v3.7,v3.7.6
 ```
 **NB:** CK can normally detect available Python interpreters automatically, but we are playing safe here.
+
+<a name="install_python_deps"></a>
+### Install Python dependencies (in userspace)
+
+#### Install implicit dependencies via pip
+```bash
+$ export CK_PYTHON=/usr/bin/python3
+$ $CK_PYTHON -m pip install --user --upgrade \
+  tqdm wheel toml unidecode inflect sndfile librosa numba==0.48
+...
+Successfully installed inflect-4.1.0 librosa-0.7.2 llvmlite-0.31.0 numba-0.48.0 sndfile-0.2.0 unidecode-1.1.1 wheel-0.34.2
+```
+**NB:** These dependencies are _implicit_, i.e. CK will not try to satisfy them. If they are not installed, however, the workflow will fail.
+
+
+#### Install explicit dependencies via CK (also via `pip`, but register with CK at the same time)
+```bash
+$ ck install package --tags=python-package,torch
+$ ck install package --tags=python-package,pandas
+$ ck install package --tags=python-package,sox
+$ ck install package --tags=python-package,absl
+```
+**NB:** These dependencies are _explicit_, i.e. CK will try to satisfy them automatically. On a machine with multiple versions of Python, things can get messy, so we are playing safe here.

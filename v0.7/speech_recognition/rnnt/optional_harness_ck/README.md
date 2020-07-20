@@ -61,49 +61,49 @@ of Docker images for this workflow including Ubuntu, Debian and CentOS.
 <a name="install_system"></a>
 ### Install system-wide prerequisites
 
-**NB:** Run the below commands for your Linux system as superuser or with `sudo`.
+**NB:** Run the below commands for your Linux system with `sudo` or as superuser.
 
 <a name="install_system_ubuntu"></a>
 #### Ubuntu 20.04 or similar
 ```bash
-# DEBIAN_FRONTEND="noninteractive" apt update -y\
- && apt install -y apt-utils\
- && apt upgrade -y\
- && apt install -y\
+$ sudo apt update -y
+$ sudo apt install -y apt-utils
+$ sudo apt upgrade -y
+$ sudo apt install -y\
  python3 python3-pip\
  gcc g++\
  make patch vim\
  git wget zip libz-dev\
- libsndfile1-dev\
- && apt clean
+ libsndfile1-dev
+$ sudo apt clean
 ```
 
 <a name="install_system_centos_7"></a>
 #### CentOS 7 or similar
 ```bash
-# yum upgrade -y\
- && yum install -y\
+$ sudo yum upgrade -y
+$ sudo yum install -y\
  python3 python3-pip python3-devel\
  gcc gcc-c++\
  make which patch vim\
  git wget zip unzip\
  tar xz\
- libsndfile-devel\
- && yum clean all
+ libsndfile-devel
+$ sudo yum clean all
 ```
 
 <a name="install_system_centos_8"></a>
 #### CentOS 8 or similar
 ```bash
-# yum upgrade -y\
- && yum install -y\
+$ sudo yum upgrade -y
+$ sudo yum install -y\
  gcc gcc-c++\
  make which patch vim\
  git wget zip unzip\
  openssl-devel bzip2-devel libffi-devel\
- && yum clean all
-# dnf install -y python3 python3-pip python3-devel
-# dnf --enablerepo=PowerTools install -y libsndfile-devel
+$ sudo yum clean all
+$ sudo dnf install -y python3 python3-pip python3-devel
+$ sudo dnf --enablerepo=PowerTools install -y libsndfile-devel
 ```
 
 

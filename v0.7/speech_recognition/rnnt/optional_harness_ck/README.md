@@ -57,6 +57,7 @@ of Docker images for this workflow including Ubuntu, Debian and CentOS.
     1. Detect [GCC](#detect_gcc)
     1. Detect [Python](#detect_python)
     1. Install [Python dependencies](#install_python_deps)
+    1. Install a branch of the [MLPerf Inference](#install_inference_repo) repo
 
 <a name="install"></a>
 ## Installation
@@ -169,3 +170,10 @@ $ ck install package --tags=python-package,sox
 $ ck install package --tags=python-package,absl
 ```
 **NB:** These dependencies are _explicit_, i.e. CK will try to satisfy them automatically. On a machine with multiple versions of Python, things can get messy, so we are playing safe here.
+
+<a name="install_inference_repo"></a>
+### Install an MLPerf Inference [branch](https://github.com/dividiti/inference/tree/dvdt-rnnt) with [dividiti](http://dividiti.com)'s tweaks for RNN-T
+```bash
+$ ck install package --tags=mlperf,inference,source,dividiti.rnnt
+```
+**NB:** This source will be used for building LoadGen as well.

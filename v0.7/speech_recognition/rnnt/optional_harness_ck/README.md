@@ -49,11 +49,13 @@ of Docker images for this workflow including Ubuntu, Debian and CentOS.
 # Table of Contents
 
 1. [Installation](#install)
-    1. [System-wide prerequisites](#install_system)
+    1. Install [system-wide prerequisites](#install_system)
         1. [Ubuntu 20.04 or similar](#install_system_ubuntu)
         1. [CentOS 7 or similar](#install_system_centos_7)
         1. [CentOS 8 or similar](#install_system_centos_8)
-    1. [Collective Knowledge](#install_ck) (CK) and its repositories
+    1. Install [Collective Knowledge](#install_ck) (CK) and its repositories
+    1. Detect [GCC](#detect_gcc)
+    1. Detect [Python](#detect_python)
 
 <a name="install"></a>
 ## Installation
@@ -119,3 +121,27 @@ V1.15.0
 $ ck pull repo:ck-mlperf
 $ ck pull repo:ck-pytorch
 ```
+
+<a name="detect_gcc"></a>
+### Detect (system) GCC
+```
+$ export CK_CC=/usr/bin/gcc
+$ ck detect soft:compiler.gcc --full_path=$CK_CC
+$ ck show env --tags=compiler,gcc
+Env UID:         Target OS: Bits: Name:          Version: Tags:
+
+b8bd7b49f72f9794   linux-64    64 GNU C compiler 7.3.1    64bits,compiler,gcc,host-os-linux-64,lang-c,lang-cpp,target-os-linux-64,v7,v7.3,v7.3.1
+```
+**NB:** Required to build the FLAC and SoX dependencies of preprocessing. CK can normally detect compilers automatically, but we are playing safe here.
+
+<a name="detect_python"></a>
+### Detect (system) Python
+```
+$ export CK_PYTHON=/usr/bin/python3
+$ ck detect soft:compiler.python --full_path=$CK_PYTHON
+$ ck show env --tags=compiler,python
+Env UID:         Target OS: Bits: Name:  Version: Tags:
+
+633a6b22205eb07f   linux-64    64 python 3.7.6    64bits,compiler,host-os-linux-64,lang-python,python,target-os-linux-64,v3,v3.7,v3.7.6
+```
+**NB:** CK can normally detect available Python interpreters automatically, but we are playing safe here.

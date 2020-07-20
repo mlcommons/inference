@@ -1,7 +1,13 @@
-# MLPerf Inference - Speech Recognition
+# MLPerf Inference - Speech Recognition - RNN-T
 
-Below we give an _essential_ sequence of steps that should result in a successful setup
-of the RNN-T workflow on Linux systems.
+We describe an automated and reproducible workflow for the [RNN-T
+workload](https://github.com/mlperf/inference/tree/master/v0.7/speech_recognition/rnnt)
+implemented using the [Collective Knowledge](http://cknowledge.org) technology. It automatically
+downloads the model and the dataset, preprocesses the dataset, builds the LoadGen API, etc.
+For any questions or questions, please email info@dividiti.com or simply [open an issue](https://github.com/mlperf/inference/issues) on GitHub.
+
+**NB:** Below we give an _essential_ sequence of steps that should result in a successful setup
+of the RNN-T workflow on a minimally configured Linux system.
 
 The steps are extracted from a [minimalistic Amazon Linux
 2](https://github.com/ctuning/ck-mlperf/blob/master/docker/speech-recognition.rnnt/Dockerfile.amazonlinux.min)

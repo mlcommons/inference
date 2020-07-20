@@ -53,6 +53,7 @@ of Docker images for this workflow including Ubuntu, Debian and CentOS.
         1. [Ubuntu 20.04 or similar](#install_system_ubuntu)
         1. [CentOS 7 or similar](#install_system_centos_7)
         1. [CentOS 8 or similar](#install_system_centos_8)
+    1. [Collective Knowledge](#install_ck) (CK) and its repositories
 
 <a name="install"></a>
 ## Installation
@@ -60,10 +61,12 @@ of Docker images for this workflow including Ubuntu, Debian and CentOS.
 <a name="install_system"></a>
 ### Install system-wide prerequisites
 
+**NB:** Run the below commands for your Linux system as superuser or with `sudo`.
+
 <a name="install_system_ubuntu"></a>
 #### Ubuntu 20.04 or similar
-```
-DEBIAN_FRONTEND="noninteractive" apt update -y\
+```bash
+# DEBIAN_FRONTEND="noninteractive" apt update -y\
  && apt install -y apt-utils\
  && apt upgrade -y\
  && apt install -y\
@@ -77,7 +80,7 @@ DEBIAN_FRONTEND="noninteractive" apt update -y\
 
 <a name="install_system_centos_7"></a>
 #### CentOS 7 or similar
-```
+```bash
 # yum upgrade -y\
  && yum install -y\
  python3 python3-pip python3-devel\
@@ -91,7 +94,7 @@ DEBIAN_FRONTEND="noninteractive" apt update -y\
 
 <a name="install_system_centos_8"></a>
 #### CentOS 8 or similar
-```
+```bash
 # yum upgrade -y\
  && yum install -y\
  gcc gcc-c++\
@@ -100,5 +103,19 @@ DEBIAN_FRONTEND="noninteractive" apt update -y\
  openssl-devel bzip2-devel libffi-devel\
  && yum clean all
 # dnf install -y python3 python3-pip python3-devel
-## dnf --enablerepo=PowerTools install -y libsndfile-devel
+# dnf --enablerepo=PowerTools install -y libsndfile-devel
+```
+
+
+<a name="install_ck"></a>
+### Install [Collective Knowledge](http://cknowledge.org/) (CK) and its repositories
+
+```bash
+$ export CK_PYTHON=/usr/bin/python3
+$ $CK_PYTHON -m pip install --ignore-installed pip setuptools --user
+$ $CK_PYTHON -m pip install ck
+$ ck version
+V1.15.0
+$ ck pull repo:ck-mlperf
+$ ck pull repo:ck-pytorch
 ```

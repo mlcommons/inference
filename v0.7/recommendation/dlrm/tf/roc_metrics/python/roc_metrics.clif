@@ -1,0 +1,5 @@
+from "third_party/tensorflow_models/mlperf/models/rough/util/roc_metrics/roc_metrics.h":
+  namespace `rocmetrics`:
+    class RocMetrics:
+      def __init__(self, py_scores: object, py_targets: object)
+      def ComputeRocAuc(self) -> float

@@ -43,6 +43,10 @@ Please run the following commands:
 - Preprocessing and evaluation (including post-processing) are not included in the timed path.
 - The input to the SUT is a volume of size `[4, 224, 224, 160]`. The output from SUT is a volume of size `[4, 224, 224, 160]` with predicted label logits for each voxel.
 
+## Calibration Set
+
+The calibration set is the forty images listed in [brats_cal_images_list.txt](../../../calibration/BraTS/brats_cal_images_list.txt). They are randomly selected from [Fold 0](folds/fold0_validation.txt), [Fold 2](folds/fold2_validation.txt), [Fold 3](folds/fold3_validation.txt), and [Fold 4](folds/fold4_validation.txt) of [BraTS 2019](https://www.med.upenn.edu/cbica/brats2019/data.html) Training Dataset.
+
 ## License
 
 Apache License 2.0

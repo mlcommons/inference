@@ -43,5 +43,16 @@ python3 [DLRM code directory]/dlrm_main.py \
 --vocab_sizes_embed=39884406,39043,17289,7420,20263,3,7120,1543,63,38532951,2953546,403346,10,2208,11938,155,4,976,14,39979771,25641295,39664984,585935,12972,108,36
 ```
 
-A model checkpoint is available in this public GCS bucket: 
+A model checkpoint is available in this public GCS bucket:
 gs://dmchen-data/dlrm_tf1_data/model_dir_0.
+
+The Criteo dataset is stored in a format compatible with the model in this
+public GCS bucket:
+gs://dmchen-data/dlrm_tf1_data/criteo.
+
+The model checkpoint and Criteo dataset files can be accessed with the
+[gsutil tool](https://cloud.google.com/storage/docs/gsutil).
+
+```sh
+gsutil cp -r gs://dmchen-data/dlrm_tf1_data/model_dir_0 [your folder]
+```

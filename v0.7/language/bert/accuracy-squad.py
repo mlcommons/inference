@@ -26,15 +26,15 @@ import subprocess
 import sys
 import time
 
-sys.path.insert(0, os.path.join(os.getcwd(), "DeepLearningExamples", "TensorFlow", "LanguageModeling", "BERT"))
-sys.path.insert(0, os.getcwd())
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "DeepLearningExamples", "TensorFlow", "LanguageModeling", "BERT"))
+sys.path.insert(0, os.path.dirname(__file__))
 
 import numpy as np
 import six
 import torch
 import tokenization
 from transformers import BertConfig, BertTokenizer, BertForQuestionAnswering
-from utils.create_squad_data import read_squad_examples, convert_examples_to_features
+from create_squad_data import read_squad_examples, convert_examples_to_features
 
 # To support feature cache.
 import pickle

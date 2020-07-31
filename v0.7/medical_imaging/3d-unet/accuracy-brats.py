@@ -21,7 +21,7 @@ import os
 import pickle
 import sys
 
-sys.path.insert(0, os.path.join(os.getcwd(), "nnUnet"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "nnUnet"))
 
 from multiprocessing import Pool
 from nnunet.evaluation.region_based_evaluation import evaluate_regions, get_brats_regions

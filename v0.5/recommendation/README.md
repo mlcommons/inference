@@ -276,16 +276,22 @@ If you want run with accuracy pass, try:
 
 In the reference implementation, each sample is mapped to 100-700 user-item pairs following the distribution specified by [tools/dist_quantile.txt](tools/dist_quantile.txt). To verify that your sample aggregation trace matches the reference, please follow the steps in [tools/dist_trace_verification.txt](tools/dist_trace_verification.txt). Or simply download the reference [dlrm_trace_of_aggregated_samples.txt from Zenodo](https://zenodo.org/record/3941795/files/dlrm_trace_of_aggregated_samples.txt?download=1) (MD5:3db90209564316f2506c99cc994ad0b2).
 
-### Run accuracy script
+### Running accuracy script
 
-To get the accuracy from a LoadGen accuracy json log file, run the following commands:
+To get the accuracy from a LoadGen accuracy json log file,
 
-`python tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON>`: if your SUT outputs the predictions and the ground truth labels in a packed format like the reference implementation.
-`python tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON> --day-23-file <path/to/day_23> --aggregation-trace-file <path/to/dlrm_trace_of_aggregated_samples.txt>`: if your SUT outputs only the predictions. In this case, you need to make sure that the data in day_23 are not shuffled.
-
-For instance, you can run the following command
+1. If your SUT outputs the predictions and the ground truth labels in a packed format like the reference implementation then run
+```
+python tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON>
+```
+For instance, if the output is given in a standard directory then you can run
 ```
 python ./tools/accuracy-dlrm.py --mlperf-accuracy-file=./output/pytorch-cpu/dlrm/mlperf_log_accuracy.json
+```
+
+2. If your SUT outputs only the predictions then you need to make sure that the data in day_23 are not shuffled and run
+```
+python tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON> --day-23-file <path/to/day_23> --aggregation-trace-file <path/to/dlrm_trace_of_aggregated_samples.txt>
 ```
 
 ### Usage

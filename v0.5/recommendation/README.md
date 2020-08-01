@@ -68,6 +68,13 @@ cd $HOME/mlperf/inference/loadgen
 CFLAGS="-std=c++14" python setup.py develop --user
 ```
 
+### More information about the model weights
+
+File name | framework | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
+-|-|-|-
+[tb0875_10M.pt](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | pytorch | 12GB | b7cacffcf75f767faa9cb2af397723aa
+[tb00_40M.pt](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | pytorch | 90GB | 2d49a5288cddb37c3c64860a06d79bb9
+
 ### More information about the datasets
 | dataset | download link |
 | ---- | ---- |
@@ -147,7 +154,6 @@ File name | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
 mv ./fake_criteo .. && cd ..
 export DATA_DIR=./fake_criteo
 ```
-
 ### Calibration set
 
 For MLPerf Inference, we use the first 128000 rows (user-item pairs) of the second half of `day_23` as the calibration set. Specifically, `day_23` contains 178274637 rows in total, so we use the rows **from the 89137319-th row to the 89265318-th row (both inclusive) in `day_23`** as the calibration set (assuming 0-based indexing).
@@ -176,16 +182,19 @@ For example, to run on CPU you may choose to use:
 
 1. Criteo Kaggle DAC
 ```
-./run_local.sh pytorch dlrm kaggle cpu --accuracy --scenario Offline
+./run_local.sh pytorch dlrm kaggle cpu --scenario Offline --samples-per-query-offline=1 --samples-to-aggregate-fix=2048 --max-batchsize=2048 --accuracy
+./run_local.sh pytorch dlrm kaggle cpu --scenario Server --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048
 ```
 
 2. Criteo Terabyte (0.875)
 ```
-./run_local.sh pytorch dlrm terabyte cpu --accuracy --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-per-query-offline=1 --samples-to-aggregate-fix=2048 --max-batchsize=2048 --accuracy [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --scenario Server  --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048
 ```
 3. Criteo Terabyte
 ```
-./run_local.sh pytorch dlrm terabyte cpu --accuracy --scenario Offline  --max-ind-range=40000000 [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=40000000 --samples-per-query-offline=1 --samples-to-aggregate-fix=2048 --max-batchsize=2048 --accuracy [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --scenario Server  --max-ind-range=40000000 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048
 ```
 Note that the code support (i) original and (ii) mlperf binary loader, that have slightly different performance characteristics. The latter loader can be enabled by adding `--mlperf-bin-loader` to the command line.
 
@@ -254,18 +263,30 @@ During development running the full benchmark is unpractical. Here are some opti
 
 So if you want to tune for example Server scenario, try:
 ```
-./run_local.sh pytorch dlrm terabyte cpu --count-samples 100 --duration 60000 --scenario Server --target-qps 100 --max-latency 0.1
+./run_local.sh pytorch dlrm terabyte cpu --scenario Server  --count-samples 1024 --max-ind-range=10000000 --data-sub-sample-rate=0.875 --duration 60000 --target-qps 100 --max-latency 0.1
 
 ```
 
 If you want run with accuracy pass, try:
 ```
-./run_local.sh pytorch dlrm terabyte cpu --accuracy --duration 60000 --scenario Server --target-qps 100 --max-latency 0.2
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --count-samples 1024 --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-per-query-offline=1 --samples-to-aggregate-fix=128 --accuracy [--mlperf-bin-loader]
 ```
 
 ### Verifying aggregation trace
 
 In the reference implementation, each sample is mapped to 100-700 user-item pairs following the distribution specified by [tools/dist_quantile.txt](tools/dist_quantile.txt). To verify that your sample aggregation trace matches the reference, please follow the steps in [tools/dist_trace_verification.txt](tools/dist_trace_verification.txt). Or simply download the reference [dlrm_trace_of_aggregated_samples.txt from Zenodo](https://zenodo.org/record/3941795/files/dlrm_trace_of_aggregated_samples.txt?download=1) (MD5:3db90209564316f2506c99cc994ad0b2).
+
+### Run accuracy script
+
+To get the accuracy from a LoadGen accuracy json log file, run the following commands:
+
+`python tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON>`: if your SUT outputs the predictions and the ground truth labels in a packed format like the reference implementation.
+`python tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON> --day-23-file <path/to/day_23> --aggregation-trace-file <path/to/dlrm_trace_of_aggregated_samples.txt>`: if your SUT outputs only the predictions. In this case, you need to make sure that the data in day_23 are not shuffled.
+
+For instance, you can run the following command
+```
+python ./tools/accuracy-dlrm.py --mlperf-accuracy-file=./output/pytorch-cpu/dlrm/mlperf_log_accuracy.json
+```
 
 ### Usage
 ```
@@ -281,7 +302,8 @@ usage: main.py [-h]
     [--backend BACKEND] [--use-gpu] [--threads THREADS] [--duration TIME_IN_MS]
     [--count-samples COUNT] [--count-queries COUNT] [--target-qps QPS]
     [--max-latency MAX_LATENCY]  [--cache CACHE]
-    [--samples-per-query NUM_SAMPLES]
+    [--samples-per-query-multistream NUM_SAMPLES]
+    [--samples-per-query-offline NUM_SAMPLES]
     [--samples-to-aggregate-fix NUM_FIXED_SAMPLES]
     [--samples-to-aggregate-min MIN_NUM_VARIABLE_SAMPLES]
     [--samples-to-aggregate-max MAX_NUM_VARIABLE_SAMPLES]
@@ -333,7 +355,9 @@ usage: main.py [-h]
 
 `--max-latency MAX_LATENCY` comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (default: 0.01,0.05,0.100).
 
-`--samples-per-query` number of samples per query in MultiStream scenario.
+`--samples-per-query-multistream` maximum number of (aggregated) samples per query in MultiStream scenario.
+
+`--samples-per-query-offline` maximum number of (aggregated) samples per query in Offline scenario.
 
 `--samples-to-aggregate-fix` number of samples to aggregate and treat as a single sample. This number will stay fixed during runs.
 
@@ -348,13 +372,6 @@ usage: main.py [-h]
 `--accuracy` perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 
 `--find-peak-performance` determine the maximum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.
-
-### Run accuracy script
-
-To get the accuracy from a LoadGen accuracy json log file, run the following commands:
-
-- `python3 tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON>`: if your SUT outputs the predictions and the ground truth labels in a packed format like the reference implementation.
-- `python3 tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON> --day-23-file <path/to/day_23> --aggregation-trace-file <path/to/dlrm_trace_of_aggregated_samples.txt>`: if your SUT outputs only the predictions. In this case, you need to make sure that the data in day_23 are not shuffled.
 
 ## License
 

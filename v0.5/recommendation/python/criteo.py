@@ -274,9 +274,16 @@ class Criteo(Dataset):
     def get_samples(self, id_list):
 
         # build list tuples as need by the batch conversion routine
+        # index i from id_list corresponds to a particular query_id
+        idx_offsets = [0]
         ls = []
         for i in id_list:
+            (_, _, _, T) = self.items_in_memory[i]
+            idx_offsets.append(idx_offsets[-1] + T.numel())
+
             ls.append(self.items_in_memory[i])
+        # debug prints
+        # print(idx_offsets)
 
         # approach 1: collate a mini-batch of single samples
         '''
@@ -304,9 +311,8 @@ class Criteo(Dataset):
         lS_i = torch.cat(ls_t[2], dim=1)
         T = torch.cat(ls_t[3])
         # debug prints
-        # print('get_samples', (X, lS_o, lS_i, T))
-        # print('get_samples', X.shape)
-        return (X, lS_o, lS_i, T)
+        # print('get_samples', (X, lS_o, lS_i, T, idx_offsets))
+        return (X, lS_o, lS_i, T, idx_offsets)
 
 
 # Pre  processing

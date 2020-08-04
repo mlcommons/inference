@@ -6,9 +6,9 @@ import json
 import sys
 import os
 
-from QSL import AudioQSL
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "pytorch"))
 
-sys.path.insert(0, os.path.join(os.getcwd(), "pytorch"))
+from QSL import AudioQSL
 from helpers import process_evaluation_epoch, __gather_predictions
 from parts.manifest import Manifest
 
@@ -31,13 +31,19 @@ def main():
     hypotheses = []
     references = []
     for result in results:
-        hypotheses.append(array.array('q', bytes.fromhex(result["data"])).tolist())
+        hypotheses.append(array.array('b', bytes.fromhex(result["data"])).tolist())
         references.append(manifest[result["qsl_idx"]]["transcript"])
-    hypotheses = __gather_predictions([hypotheses], labels=labels)
+
+    # Convert ASCII output into string
+    for idx in range(len(hypotheses)):
+        hypotheses[idx] = ''.join([chr(c) for c in hypotheses[idx]])
+
     references = __gather_predictions([references], labels=labels)
+
     d = dict(predictions=hypotheses,
              transcripts=references)
-    print("Word Error Rate:", process_evaluation_epoch(d))
+    wer = process_evaluation_epoch(d)
+    print("Word Error Rate: {:}%, accuracy={:}%".format(wer * 100, (1 - wer) * 100))
 
 if __name__ == '__main__':
     main()

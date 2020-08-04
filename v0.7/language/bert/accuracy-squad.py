@@ -45,6 +45,16 @@ doc_stride = 128
 
 RawResult = collections.namedtuple("RawResult", ["unique_id", "start_logits", "end_logits"])
 
+dtype_map = {
+    "int8": np.int8,
+    "int16": np.int16,
+    "int32": np.int32,
+    "int64": np.int64,
+    "float16": np.float16,
+    "float32": np.float32,
+    "float64": np.float64
+}
+
 def get_final_text(pred_text, orig_text, do_lower_case):
     """Project the tokenized prediction back to the original text."""
 
@@ -302,7 +312,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
     with open(output_prediction_file, "w") as writer:
         writer.write(json.dumps(all_predictions, indent=4) + "\n")
 
-def load_loadgen_log(log_path, eval_features, output_transposed=False):
+def load_loadgen_log(log_path, eval_features, dtype=np.float32, output_transposed=False):
     with open(log_path) as f:
         predictions = json.load(f)
 
@@ -310,10 +320,10 @@ def load_loadgen_log(log_path, eval_features, output_transposed=False):
     for prediction in predictions:
         qsl_idx = prediction["qsl_idx"]
         if output_transposed:
-            logits = np.frombuffer(bytes.fromhex(prediction["data"]), np.float32).reshape(2, -1)
+            logits = np.frombuffer(bytes.fromhex(prediction["data"]), dtype).reshape(2, -1)
             logits = np.transpose(logits)
         else:
-            logits = np.frombuffer(bytes.fromhex(prediction["data"]), np.float32).reshape(-1, 2)
+            logits = np.frombuffer(bytes.fromhex(prediction["data"]), dtype).reshape(-1, 2)
         # Pad logits to max_seq_length
         seq_length = logits.shape[0]
         start_logits = np.ones(max_seq_length) * -10000.0
@@ -336,7 +346,10 @@ def main():
     parser.add_argument("--out_file", default="build/result/predictions.json", help="Path to output predictions file")
     parser.add_argument("--features_cache_file", default="eval_features.pickle", help="Path to features' cache file")
     parser.add_argument("--output_transposed", action="store_true", help="Transpose the output")
+    parser.add_argument("--output_dtype", default="float16", choices=dtype_map.keys(), help="Output data type")
     args = parser.parse_args()
+
+    output_dtype = dtype_map[args.output_dtype]
 
     print("Reading examples...")
     eval_examples = read_squad_examples(input_file=args.val_data,
@@ -374,13 +387,14 @@ def main():
             pickle.dump(eval_features, cache_file)
 
     print("Loading LoadGen logs...")
-    results = load_loadgen_log(args.log_file, eval_features, args.output_transposed)
+    results = load_loadgen_log(args.log_file, eval_features, output_dtype, args.output_transposed)
 
     print("Post-processing predictions...")
     write_predictions(eval_examples, eval_features, results, 20, 30, True, args.out_file)
 
     print("Evaluating predictions...")
-    cmd = "python3 build/data/evaluate-v1.1.py build/data/dev-v1.1.json build/result/predictions.json"
+    cmd = "python3 {:}/evaluate.py {:} {:}".format(os.path.dirname(__file__),
+        args.val_data, args.out_file)
     subprocess.check_call(cmd, shell=True)
 
 if __name__ == "__main__":

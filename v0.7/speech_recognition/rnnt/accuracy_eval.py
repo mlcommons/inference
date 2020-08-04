@@ -12,12 +12,19 @@ from QSL import AudioQSL
 from helpers import process_evaluation_epoch, __gather_predictions
 from parts.manifest import Manifest
 
+dtype_map = {
+    "int8": 'b',
+    "int16": 'h',
+    "int32": 'l',
+    "int64": 'q',
+}
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--log_dir", required=True)
     parser.add_argument("--dataset_dir", required=True)
     parser.add_argument("--manifest", required=True)
+    parser.add_argument("--output_dtype", default="int64", choices=dtype_map.keys(), help="Output data type")
     args = parser.parse_args()
     return args
 
@@ -31,7 +38,7 @@ def main():
     hypotheses = []
     references = []
     for result in results:
-        hypotheses.append(array.array('b', bytes.fromhex(result["data"])).tolist())
+        hypotheses.append(array.array(dtype_map[args.output_dtype], bytes.fromhex(result["data"])).tolist())
         references.append(manifest[result["qsl_idx"]]["transcript"])
 
     # Convert ASCII output into string

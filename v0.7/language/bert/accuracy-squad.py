@@ -346,7 +346,7 @@ def main():
     parser.add_argument("--out_file", default="build/result/predictions.json", help="Path to output predictions file")
     parser.add_argument("--features_cache_file", default="eval_features.pickle", help="Path to features' cache file")
     parser.add_argument("--output_transposed", action="store_true", help="Transpose the output")
-    parser.add_argument("--output_dtype", default="float16", choices=dtype_map.keys(), help="Output data type")
+    parser.add_argument("--output_dtype", default="float32", choices=dtype_map.keys(), help="Output data type")
     args = parser.parse_args()
 
     output_dtype = dtype_map[args.output_dtype]
@@ -393,7 +393,7 @@ def main():
     write_predictions(eval_examples, eval_features, results, 20, 30, True, args.out_file)
 
     print("Evaluating predictions...")
-    cmd = "python3 {:}/evaluate.py {:} {:}".format(os.path.dirname(__file__),
+    cmd = "python3 {:}/evaluate-v1.1.py {:} {:}".format(os.path.dirname(__file__),
         args.val_data, args.out_file)
     subprocess.check_call(cmd, shell=True)
 

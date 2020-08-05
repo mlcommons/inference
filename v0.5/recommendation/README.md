@@ -6,7 +6,7 @@ This is the reference implementation for MLPerf Inference benchmarks.
 
 | name | framework | acc. | AUC | dataset | weights  | size | prec. | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| dlrm (debugging) | PyTorch | 78.9% | N/A | [Criteo KaggleDAC](https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/)       | N/A                                                                     | ~1GB | fp32 |                          |
+| dlrm (debugging) | PyTorch | 78.82% | N/A | [Criteo KaggleDAC](https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/)       | N/A                                                                     | ~1GB | fp32 |                          |
 | dlrm (debugging) | PyTorch | 81.07% | N/A | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) | [pytorch](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt), [onnx](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.onnx.tar) | ~10GB | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |
 | dlrm (official) | PyTorch | N/A | 80.25% | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) | [pytorch](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt), [onnx](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.onnx.tar) | ~100GB | fp32 | --max-ind-range=40000000 |
 
@@ -181,21 +181,38 @@ options are extra arguments that are passed along
 For example, to run on CPU you may choose to use:
 
 1. Criteo Kaggle DAC
+Offline scenario perf and accuracy modes
 ```
-./run_local.sh pytorch dlrm kaggle cpu --scenario Offline --samples-per-query-offline=1 --samples-to-aggregate-fix=2048 --max-batchsize=2048 --accuracy
+./run_local.sh pytorch dlrm kaggle cpu --scenario Offline --samples-to-aggregate-fix=2048 --max-batchsize=2048
+./run_local.sh pytorch dlrm kaggle cpu --scenario Offline --samples-to-aggregate-fix=2048 --max-batchsize=2048 --samples-per-query-offline=1 --accuracy
+```
+Server scenario perf mode
+```
 ./run_local.sh pytorch dlrm kaggle cpu --scenario Server --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048
 ```
 
 2. Criteo Terabyte (0.875)
+Offline scenario perf and accuracy modes
 ```
-./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-per-query-offline=1 --samples-to-aggregate-fix=2048 --max-batchsize=2048 --accuracy [--mlperf-bin-loader]
-./run_local.sh pytorch dlrm terabyte cpu --scenario Server  --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-fix=2048 --max-batchsize=2048 [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-fix=2048 --max-batchsize=2048 --samples-per-query-offline=1 --accuracy [--mlperf-bin-loader]
 ```
+Server scenario perf mode
+```
+./run_local.sh pytorch dlrm terabyte cpu --scenario Server  --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048 [--mlperf-bin-loader]
+```
+
 3. Criteo Terabyte
+Offline scenario perf and accuracy modes
 ```
-./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=40000000 --samples-per-query-offline=1 --samples-to-aggregate-fix=2048 --max-batchsize=2048 --accuracy [--mlperf-bin-loader]
-./run_local.sh pytorch dlrm terabyte cpu --scenario Server  --max-ind-range=40000000 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=40000000 --samples-to-aggregate-fix=2048 --max-batchsize=2048 [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=40000000 --samples-to-aggregate-fix=2048 --max-batchsize=2048 --samples-per-query-offline=1 --accuracy [--mlperf-bin-loader]
 ```
+Server scenario perf mode
+```
+./run_local.sh pytorch dlrm terabyte cpu --scenario Server  --max-ind-range=40000000 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048 [--mlperf-bin-loader]
+```
+
 Note that the code support (i) original and (ii) mlperf binary loader, that have slightly different performance characteristics. The latter loader can be enabled by adding `--mlperf-bin-loader` to the command line.
 
 Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.

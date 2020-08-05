@@ -181,6 +181,7 @@ options are extra arguments that are passed along
 For example, to run on CPU you may choose to use:
 
 1. Criteo Kaggle DAC
+
 Offline scenario perf and accuracy modes
 ```
 ./run_local.sh pytorch dlrm kaggle cpu --scenario Offline --samples-to-aggregate-fix=2048 --max-batchsize=2048
@@ -192,6 +193,7 @@ Server scenario perf mode
 ```
 
 2. Criteo Terabyte (0.875)
+
 Offline scenario perf and accuracy modes
 ```
 ./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-fix=2048 --max-batchsize=2048 [--mlperf-bin-loader]
@@ -203,6 +205,7 @@ Server scenario perf mode
 ```
 
 3. Criteo Terabyte
+
 Offline scenario perf and accuracy modes
 ```
 ./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=40000000 --samples-to-aggregate-fix=2048 --max-batchsize=2048 [--mlperf-bin-loader]

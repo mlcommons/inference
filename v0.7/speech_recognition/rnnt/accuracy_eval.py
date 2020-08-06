@@ -41,11 +41,8 @@ def main():
         hypotheses.append(array.array(dtype_map[args.output_dtype], bytes.fromhex(result["data"])).tolist())
         references.append(manifest[result["qsl_idx"]]["transcript"])
 
-    # Convert ASCII output into string
-    for idx in range(len(hypotheses)):
-        hypotheses[idx] = ''.join([chr(c) for c in hypotheses[idx]])
-
     references = __gather_predictions([references], labels=labels)
+    hypotheses = __gather_predictions([hypotheses], labels=labels)
 
     d = dict(predictions=hypotheses,
              transcripts=references)

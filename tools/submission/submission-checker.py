@@ -245,7 +245,6 @@ def check_accuracy_dir(config, model, dir):
         for line in f:
             m = re.match(pattern, line)
             if m:
-                is_valid = True
                 acc = m.group(1)
                 break
 
@@ -255,7 +254,7 @@ def check_accuracy_dir(config, model, dir):
                 is_valid = True
                 break
         if not is_valid:
-            log.error("%s accuracy not met: expected=%f, found=%f", dir, acc_target, acc)
+            log.error("%s accuracy not met: expected=%s, found=%s", dir, acc_target, acc)
 
     # check if there are any errors in the detailed log
     fname = os.path.join(dir, "mlperf_log_detail.txt")
@@ -418,6 +417,11 @@ def check_results_dir(config, dir, filter_submitter, csv):
                             if diff:
                                 log.error("%s has file list mismatch (%s)", acc_path, diff)
                             accuracy_is_valid, acc = check_accuracy_dir(config, model, acc_path)
+                            if not accuracy_is_valid and not is_closed:
+                                log.warning("%s, accuracy not valid but taken for open", acc_path)
+                                # TODO: is this correct?
+                                accuracy_is_valid = True
+
                             if accuracy_is_valid:
                                 log.info("%s, accuracy is %s", acc_path, acc)
                             else:

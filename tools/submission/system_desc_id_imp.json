@@ -1,7 +1,0 @@
-{
-    "input_data_types": "required",
-    "retraining": "required",
-    "starting_weights_filename": "required",
-    "weight_data_types": "required",
-    "weight_transformations": "required"
-}

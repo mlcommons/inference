@@ -50,30 +50,41 @@ MODEL_CONFIG = {
         },
     },
     "v0.7": {
-        "models": ["ssd-large", "resnet", "rnnt", "3d-unet", "dlrm", "bert"],
+        "models": [
+            "ssd-large", "resnet", "rnnt",
+            "bert", "bert-99", "bert-99.9",
+            "dlrm", "dlrm-99", "dlrm-99.9"
+            "3dunet", "3d-unet-99", "3d-unet-99.9"
+        ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
             "ssd-large": ["Server", "Offline"],
             "rnnt": ["Server", "Offline"],
             "bert": ["Server", "Offline"],
             "dlrm": ["Server", "Offline"],
-            "3d-unet": ["Offline"],
+            "3dunet": ["Offline"],
         },
         "required-scenarios-edge": {
-            "resnet": ["Server", "Offline"],
-            "ssd-large": ["Server", "Offline"],
-            "rnnt": ["Server", "Offline"],
-            "bert": ["Server", "Offline"],
-            "dlrm": ["Server", "Offline"],
-            "3d-unet": ["Offline"],
+            "resnet": ["SingleStream", "Offline"],
+            "ssd-large": ["SingleStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert": ["SingleStream", "Offline"],
+            "dlrm": ["SingleStream", "Offline"],
+            "3dunet": ["SingleStream", "Offline"],
         },
         "accuracy-target": {
             "resnet": ("acc", 76.46 * 0.99),
             "ssd-large": ("mAP", 20 * 0.99),
             "rnnt": ("WER", 7.452 * 0.99),
             "bert": ("F1", [90.874 * 0.99, 90.874 * 0.999]),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
             "dlrm": ("AUC", [76.46 * 0.99, 76.46 * 0.999]),
-            "3d-unet": ("mean", [0.853 * 0.99, 0.853 * 0.999]),
+            "dlrm-99": ("AUC", 76.46 * 0.99),
+            "dlrm-99.9": ("AUC", 76.46 * 0.999),
+            "3dunet": ("DICE", [0.853 * 0.99, 0.853 * 0.999]),
+            "3dunet-99": ("DICE", 0.853 * 0.99),
+            "3dunet-99.9": ("DICE", 0.853 * 0.999),
         },
         "performance-sample-count": {
             "ssd-large": 64,
@@ -81,7 +92,7 @@ MODEL_CONFIG = {
             "rnnt": 2513,
             "bert": 3903900,
             "dlrm": 204800,
-            "3d-unet": 16,
+            "3dunet": 16,
         },
         "seeds": {
             "qsl_rng_seed": 3133965575612453542,
@@ -100,7 +111,13 @@ TO_MS = 1000 * 1000
 MODEL_MAPPING = {
     "ssd-mobilenet": "ssd-small",
     "ssd-resnet34": "ssd-large",
-    "resnet50": "resnet"
+    "resnet50": "resnet",
+    "bert-99": "bert",
+    "bert-99.9": "bert",
+    "dlrm-99": "dlrm",
+    "dlrm-99.9": "dlrm",
+    "3dunet-99": "3dunet",
+    "3dunet-99.9": "3dunet",
 }
 
 RESULT_FIELD = {
@@ -117,7 +134,7 @@ ACC_PATTERN = {
     "bleu": r"^BLEU\:\s*([\d\.]+).*",
     "F1": r"^{\"exact_match\"\:\s*[\d\.]+,\s*\"f1\"\:\s*([\d\.]+)}",
     "WER": r"Word Error Rate\:\s*([\d\.]+).*",
-    "mean": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
+    "DICE": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -164,6 +181,7 @@ class Config():
     def get_required(self, model):
         if self.version in ["v0.5"]:
             return set()
+        model = MODEL_MAPPING.get(model, model)
         if model not in self.required:
             raise ValueError("model not known: " + model)
         return set(self.required[model])
@@ -174,6 +192,7 @@ class Config():
         return self.accuracy_target[model]
 
     def get_performance_sample_count(self, model):
+        model = MODEL_MAPPING.get(model, model)
         if model not in self.performance_sample_count:
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
@@ -333,7 +352,7 @@ def files_diff(list1, list2):
 
 
 def check_results_dir(config, dir, filter_submitter, csv):
-    head = ["Organization", "Availability", "Division", "Platform", "Model", "Scenario", "Result", "Accuracy", "Location"]
+    head = ["Organization", "Availability", "Division", "SystemType", "Platform", "Model", "Scenario", "Result", "Accuracy", "Location"]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
     results = {}
@@ -453,7 +472,7 @@ def check_results_dir(config, dir, filter_submitter, csv):
                         if results.get(name):
                             if accuracy_is_valid:
                                 log.info("%s is OK", name)
-                                csv.write(fmt.format(submitter, available, division, system_desc, model, scenario,
+                                csv.write(fmt.format(submitter, available, division, system_type, system_desc, model, scenario,
                                           r, acc, name))
                             else:
                                 results[name] = None

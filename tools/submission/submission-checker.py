@@ -60,7 +60,7 @@ MODEL_CONFIG = {
             "ssd-small", "ssd-large", "resnet", "rnnt",
             "bert", "bert-99", "bert-99.9",
             "dlrm", "dlrm-99", "dlrm-99.9"
-            "3dunet", "3d-unet-99", "3d-unet-99.9"
+            "3dunet", "3dunet-99", "3dunet-99.9"
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],

@@ -60,7 +60,7 @@ MODEL_CONFIG = {
             "ssd-small", "ssd-large", "resnet", "rnnt",
             "bert", "bert-99", "bert-99.9",
             "dlrm", "dlrm-99", "dlrm-99.9"
-            "3dunet", "3dunet-99", "3dunet-99.9"
+            "3d-unet", "3d-unet-99", "3d-unet-99.9"
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
@@ -68,7 +68,7 @@ MODEL_CONFIG = {
             "rnnt": ["Server", "Offline"],
             "bert": ["Server", "Offline"],
             "dlrm": ["Server", "Offline"],
-            "3dunet": ["Offline"],
+            "3d-unet": ["Offline"],
         },
         "optional-scenarios-datacenter": {
         },
@@ -79,7 +79,7 @@ MODEL_CONFIG = {
             "rnnt": ["SingleStream", "Offline"],
             "bert": ["SingleStream", "Offline"],
             "dlrm": ["SingleStream", "Offline"],
-            "3dunet": ["SingleStream", "Offline"],
+            "3d-unet": ["SingleStream", "Offline"],
         },
         "optional-scenarios-edge": {
             "resnet": ["MultiStream"],
@@ -97,9 +97,9 @@ MODEL_CONFIG = {
             "dlrm": ("AUC", 80.25 * 0.99),
             "dlrm-99": ("AUC", 80.25 * 0.99),
             "dlrm-99.9": ("AUC", 80.25 * 0.999),
-            "3dunet": ("DICE", 0.853 * 0.99),
-            "3dunet-99": ("DICE", 0.853 * 0.99),
-            "3dunet-99.9": ("DICE", 0.853 * 0.999),
+            "3d-unet": ("DICE", 0.853 * 0.99),
+            "3d-unet-99": ("DICE", 0.853 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.853 * 0.999),
         },
         "performance-sample-count": {
             "ssd-small": 256,
@@ -108,7 +108,7 @@ MODEL_CONFIG = {
             "rnnt": 2513,
             "bert": 3903900,
             "dlrm": 204800,
-            "3dunet": 16,
+            "3d-unet": 16,
         },
         "seeds": {
             "qsl_rng_seed": 3133965575612453542,
@@ -132,8 +132,8 @@ MODEL_MAPPING = {
     "bert-99.9": "bert",
     "dlrm-99": "dlrm",
     "dlrm-99.9": "dlrm",
-    "3dunet-99": "3dunet",
-    "3dunet-99.9": "3dunet",
+    "3d-unet-99": "3d-unet",
+    "3d-unet-99.9": "3d-unet",
 }
 
 RESULT_FIELD = {

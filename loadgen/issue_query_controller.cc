@@ -92,16 +92,14 @@ void QueryMetadata::CoalesceQueries(QueryMetadata* queries, size_t first,
                                     size_t last, size_t stride) {
   // Copy sample data over to current query, boldly assuming that each query
   // only has one sample.
-  auto prev_scheduled_time = scheduled_time;
   query_to_send.reserve((last - first) / stride +
                         2);  // Extra one for the current query.
   for (size_t i = first; i <= last; i += stride) {
     auto& q = queries[i];
     auto& s = q.samples_[0];
     query_to_send.push_back({reinterpret_cast<ResponseId>(&s), s.sample_index});
-    q.scheduled_time = prev_scheduled_time + q.scheduled_delta;
+    q.scheduled_time = scheduled_time + q.scheduled_delta - scheduled_delta;
     q.issued_start_time = issued_start_time;
-    prev_scheduled_time = q.scheduled_time;
   }
 }
 
@@ -442,18 +440,16 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
     if (scenario == TestScenario::Server &&
         settings.requested.server_coalesce_queries) {
       auto current_query_idx = queries_idx;
-      auto scheduled_time = query.scheduled_time;
       for (; queries_idx + query_stride < queries_count;
            queries_idx += query_stride) {
         auto next_scheduled_time =
-            scheduled_time +
+            start +
             queries[queries_idx + query_stride].scheduled_delta;
         // If current time hasn't reached the next query's scheduled time yet,
         // don't include next query.
         if (last_now < next_scheduled_time) {
           break;
         }
-        scheduled_time = next_scheduled_time;
         queries_issued_per_iter++;
       }
       if (queries_idx > current_query_idx) {

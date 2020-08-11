@@ -78,7 +78,6 @@ MODEL_CONFIG = {
             "ssd-large": ["SingleStream", "Offline"],
             "rnnt": ["SingleStream", "Offline"],
             "bert": ["SingleStream", "Offline"],
-            "dlrm": ["SingleStream", "Offline"],
             "3d-unet": ["SingleStream", "Offline"],
         },
         "optional-scenarios-edge": {

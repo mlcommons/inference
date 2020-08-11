@@ -123,6 +123,13 @@ REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 TO_MS = 1000 * 1000
 
+SCENARIO_MAPPING = {
+    "singlestream": "SingleStream",
+    "multistream": "MultiStream",
+    "server": "server",
+    "offline": "Offline",
+}
+
 MODEL_MAPPING = {
     "ssd-mobilenet": "ssd-small",
     "ssd-resnet34": "ssd-large",
@@ -465,11 +472,14 @@ def check_results_dir(config, filter_submitter, csv):
                     required_scenarios = config.get_required(MODEL_MAPPING.get(model, model))
                     all_scenarios = set(list(required_scenarios) + list(config.get_optional(MODEL_MAPPING.get(model, model))))
                     for scenario in list_dir(results_path, system_desc, model):
+                        # some submissions in v0.5 use lower case scenarios - map them for now
+                        scenario_fixed = SCENARIO_MAPPING.get(scenario, scenario)
+
                         # we are looking at ./$division/$submitter/$system_desc/$model/$scenario,
                         #   ie ./closed/mlperf_org/t4-ort/bert/Offline
                         name = os.path.join(results_path, system_desc, model, scenario)
                         results[name] = None
-                        if scenario not in all_scenarios:
+                        if scenario_fixed not in all_scenarios:
                             log.warning("%s ignoring scenario %s (neither required nor optional)", name, scenario)
                             continue
 
@@ -534,7 +544,7 @@ def check_results_dir(config, filter_submitter, csv):
                             if accuracy_is_valid:
                                 log.info("%s is OK", name)
                                 csv.write(fmt.format(submitter, available, division, system_type, system_desc, model,
-                                                     scenario, r, acc, name))
+                                                     scenario_fixed, r, acc, name))
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)

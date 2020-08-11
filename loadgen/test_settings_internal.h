@@ -74,6 +74,7 @@ struct TestSettingsInternal {
   uint64_t schedule_rng_seed;
   uint64_t accuracy_log_rng_seed;
   double accuracy_log_probability;
+  uint64_t accuracy_log_sampling_target;
   bool print_timestamps;
   bool performance_issue_unique;
   bool performance_issue_same;

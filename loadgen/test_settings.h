@@ -262,6 +262,10 @@ struct TestSettings {
   /// accuracy log in performance mode
   double accuracy_log_probability = 0.0;
 
+  /// \brief Target number of samples that will have their results printed to
+  /// accuracy log in performance mode for compliance testing
+  uint64_t accuracy_log_sampling_target = 0;
+
   /// \brief Load mlperf parameter config from file.
   int FromConfig(const std::string &path, const std::string &model,
                  const std::string &scenario);

@@ -321,7 +321,7 @@ def check_accuracy_dir(config, model, path):
     if acc and float(acc) >= acc_target:
         is_valid = True
     else:
-        log.error("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
+        log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
 
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")

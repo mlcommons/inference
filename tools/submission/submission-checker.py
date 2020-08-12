@@ -64,21 +64,18 @@ MODEL_CONFIG = {
     "v0.7": {
         "models": [
             "ssd-small", "ssd-large", "resnet", "rnnt",
-            "bert", "bert-99", "bert-99.9",
-            "dlrm", "dlrm-99", "dlrm-99.9"
-            "3d-unet", "3d-unet-99", "3d-unet-99.9"
+            "bert-99", "bert-99.9",
+            "dlrm-99", "dlrm-99.9"
+            "3d-unet-99", "3d-unet-99.9"
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
             "ssd-large": ["Server", "Offline"],
             "rnnt": ["Server", "Offline"],
-            "bert": ["Server", "Offline"],
             "bert-99": ["Server", "Offline"],
             "bert-99.9": ["Server", "Offline"],
-            "dlrm": ["Server", "Offline"],
             "dlrm-99": ["Server", "Offline"],
             "dlrm-99.9": ["Server", "Offline"],
-            "3d-unet": ["Offline"],
             "3d-unet-99": ["Offline"],
             "3d-unet-99.9": ["Offline"],
         },
@@ -89,8 +86,7 @@ MODEL_CONFIG = {
             "ssd-small": ["SingleStream", "Offline"],
             "ssd-large": ["SingleStream", "Offline"],
             "rnnt": ["SingleStream", "Offline"],
-            "bert": ["SingleStream", "Offline"],
-            "3d-unet": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
         },
@@ -104,13 +100,10 @@ MODEL_CONFIG = {
             "ssd-small": ("mAP", 22 * 0.99),
             "ssd-large": ("mAP", 20 * 0.99),
             "rnnt": ("WER", (100 - 7.452) * 0.99),
-            "bert": ("F1", 90.874 * 0.99),
             "bert-99": ("F1", 90.874 * 0.99),
             "bert-99.9": ("F1", 90.874 * 0.999),
-            "dlrm": ("AUC", 80.25 * 0.99),
             "dlrm-99": ("AUC", 80.25 * 0.99),
             "dlrm-99.9": ("AUC", 80.25 * 0.999),
-            "3d-unet": ("DICE", 0.853 * 0.99),
             "3d-unet-99": ("DICE", 0.853 * 0.99),
             "3d-unet-99.9": ("DICE", 0.853 * 0.999),
         },
@@ -119,9 +112,12 @@ MODEL_CONFIG = {
             "ssd-large": 64,
             "resnet": 1024,
             "rnnt": 2513,
-            "bert": 3903900,
-            "dlrm": 204800,
-            "3d-unet": 16,
+            "bert-99": 3903900,
+            "bert-99.9": 3903900,
+            "dlrm-99": 204800,
+            "dlrm-99.9": 204800,
+            "3d-unet-99": 16,
+            "3d-unet-99.9": 16,
         },
         "model_mapping": {
             # map model names to the official mlperf model class
@@ -129,12 +125,6 @@ MODEL_CONFIG = {
             "ssd-resnet34": "ssd-large",
             "mobilenet": "resnet",
             "resnet50": "resnet",
-            "bert-99": "bert",
-            "bert-99.9": "bert",
-            "dlrm-99": "dlrm",
-            "dlrm-99.9": "dlrm",
-            "3d-unet-99": "3d-unet",
-            "3d-unet-99.9": "3d-unet",
         },
         "seeds": {
             "qsl_rng_seed": 3133965575612453542,
@@ -232,6 +222,8 @@ class Config():
         # try to guess
         if model.startswith("mobilenet"):
             model = "mobilenet"
+        if model.startswith("efficientnet"):
+            model = "resnet"
         elif model.startswith("rcnn"):
             model = "ssd-small"
         elif model.startswith("ssdlite") or model.startswith("ssd-inception") or model.startswith("yolo") or \
@@ -581,9 +573,11 @@ def check_results_dir(config, filter_submitter, csv):
 
                     if required_scenarios:
                         name = os.path.join(results_path, system_desc, model_name)
-                        results[name] = None
-                        log.error("%s does not have all required scenarios, missing %s", name, required_scenarios)
-
+                        if is_closed:
+                            results[name] = None
+                            log.error("%s does not have all required scenarios, missing %s", name, required_scenarios)
+                        else:
+                            log.warning("%s ignorning missing scenarios in open division (%s)", name, required_scenarios)
 
     return results
 

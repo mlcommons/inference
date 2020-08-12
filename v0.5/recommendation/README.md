@@ -180,7 +180,7 @@ options are extra arguments that are passed along
 
 For example, to run on CPU you may choose to use:
 
-1. Criteo Kaggle DAC
+1. Criteo Kaggle DAC (debugging)
 
 Offline scenario perf and accuracy modes
 ```
@@ -189,16 +189,16 @@ Offline scenario perf and accuracy modes
 ```
 Server scenario perf and accuracy modes
 ```
-./run_local.sh pytorch dlrm kaggle cpu --scenario Server --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048
-./run_local.sh pytorch dlrm kaggle cpu --scenario Server --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048 --accuracy
+./run_local.sh pytorch dlrm kaggle cpu --scenario Server --samples-to-aggregate-fix=2048 --max-batchsize=2048
+./run_local.sh pytorch dlrm kaggle cpu --scenario Server --samples-to-aggregate-fix=2048 --max-batchsize=2048 --accuracy
 ```
 
-2. Criteo Terabyte (0.875)
+2. Criteo Terabyte with 0.875 sub-sampling (debugging)
 
 Offline scenario perf and accuracy modes
 ```
-./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-fix=2048 --max-batchsize=2048 [--mlperf-bin-loader]
-./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-fix=2048 --max-batchsize=2048 --samples-per-query-offline=1 --accuracy [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048 --samples-per-query-offline=1 [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048 --samples-per-query-offline=1 --accuracy [--mlperf-bin-loader]
 ```
 Server scenario perf and accuracy modes
 ```
@@ -206,12 +206,12 @@ Server scenario perf and accuracy modes
 ./run_local.sh pytorch dlrm terabyte cpu --scenario Server  --max-ind-range=10000000 --data-sub-sample-rate=0.875 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048 --accuracy [--mlperf-bin-loader]
 ```
 
-3. Criteo Terabyte
+3. Criteo Terabyte (official)
 
 Offline scenario perf and accuracy modes
 ```
-./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=40000000 --samples-to-aggregate-fix=2048 --max-batchsize=2048 [--mlperf-bin-loader]
-./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=40000000 --samples-to-aggregate-fix=2048 --max-batchsize=2048 --samples-per-query-offline=1 --accuracy [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=40000000 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048 --samples-per-query-offline=204800 [--mlperf-bin-loader]
+./run_local.sh pytorch dlrm terabyte cpu --scenario Offline --max-ind-range=40000000 --samples-to-aggregate-quantile-file=./tools/dist_quantile.txt --max-batchsize=2048 --samples-per-query-offline=204800 --accuracy [--mlperf-bin-loader]
 ```
 Server scenario perf and accuracy modes
 ```

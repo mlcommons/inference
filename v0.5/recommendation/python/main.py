@@ -124,6 +124,7 @@ def get_args():
     parser.add_argument("--count-samples", type=int, help="dataset items to use")
     parser.add_argument("--count-queries", type=int, help="number of queries to use")
     parser.add_argument("--samples-per-query-multistream", type=int, help="query length for multi-stream scenario (in terms of aggregated samples)")
+    # --samples-per-query-offline is equivalent to perf_sample_count
     parser.add_argument("--samples-per-query-offline", type=int, default=2048, help="query length for offline scenario (in terms of aggregated samples)")
     parser.add_argument("--samples-to-aggregate-fix", type=int, help="number of samples to be treated as one")
     parser.add_argument("--samples-to-aggregate-min", type=int, help="min number of samples to be treated as one in random query size")

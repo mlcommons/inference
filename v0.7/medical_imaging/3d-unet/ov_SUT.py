@@ -39,7 +39,13 @@ class _3DUNET_OV_SUT():
         net = ie.read_network(model=model_xml, weights=model_bin)
 
         self.input_name = next(iter(net.inputs))
-        self.output_name = 'output'
+        
+        # After model conversion output name could be any
+        # So we are looking for output with max number of channels
+        max_channels = 0
+        for output in net.outputs:
+            if max_channels < net.outputs[output].shape[-1]:
+                _3DUNET_OV_SUT.output_name = output
 
         self.exec_net = ie.load_network(network=net, device_name='CPU')
 
@@ -56,10 +62,9 @@ class _3DUNET_OV_SUT():
             print("Processing sample id {:d} with shape = {:}".format(
                 query_samples[i].index, data.shape))
 
-            before_softmax = self.exec_net.infer(inputs={self.input_name: data[np.newaxis, ...]})[self.output_name]
-            after_softmax = softmax(before_softmax, axis=1).astype(np.float16)
+            output = request.output_blobs[_3DUNET_OV_SUT.output_name].buffer.squeeze(0).astype(np.float16)
 
-            response_array = array.array("B", after_softmax.tobytes())
+            response_array = array.array("B", output.tobytes())
             bi = response_array.buffer_info()
             response = lg.QuerySampleResponse(query_samples[i].id, bi[0],
                                               bi[1])

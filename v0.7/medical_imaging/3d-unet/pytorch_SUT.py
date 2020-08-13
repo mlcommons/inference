@@ -52,15 +52,14 @@ class _3DUNET_PyTorch_SUT():
                 print("Processing sample id {:d} with shape = {:}".format(query_samples[i].index, data.shape))
 
                 image = torch.from_numpy(data[np.newaxis,...]).float().to(self.device)
-                prediction = self.trainer.network(image)
-                softmax = F.softmax(prediction[0], dim=1).cpu().numpy().astype(np.float16)
+                output = self.trainer.network(image)[0].cpu().numpy().astype(np.float16)
 
                 transpose_forward = self.trainer.plans.get("transpose_forward")
                 transpose_backward = self.trainer.plans.get("transpose_backward")
                 assert transpose_forward == [0, 1, 2], "Unexpected transpose_forward {:}".format(transpose_forward)
                 assert transpose_backward == [0, 1, 2], "Unexpected transpose_backward {:}".format(transpose_backward)
 
-                response_array = array.array("B", softmax.tobytes())
+                response_array = array.array("B", output.tobytes())
                 bi = response_array.buffer_info()
                 response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
                 lg.QuerySamplesComplete([response])

@@ -62,7 +62,7 @@ class _3DUNET_OV_SUT():
             print("Processing sample id {:d} with shape = {:}".format(
                 query_samples[i].index, data.shape))
 
-            output = request.output_blobs[_3DUNET_OV_SUT.output_name].buffer.squeeze(0).astype(np.float16)
+            output = self.exec_net.infer(inputs={self.input_name: data[np.newaxis, ...]})[_3DUNET_OV_SUT.output_name].astype(np.float16)
 
             response_array = array.array("B", output.tobytes())
             bi = response_array.buffer_info()

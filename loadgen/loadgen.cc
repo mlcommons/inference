@@ -358,6 +358,16 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   auto sequence_id_start = sequence_gen->CurrentSampleId();
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(
       settings, loaded_sample_set, sequence_gen, &response_logger);
+
+  // Calculated expected number of queries
+  uint64_t expected_queries = settings.target_qps * settings.min_duration.count() / 1000;
+  if (scenario != TestScenario::Offline) {
+      expected_queries *= settings.samples_per_query;
+  }
+
+  if (settings.accuracy_log_sampling_target > 0) {
+    response_logger.accuracy_log_prob = (double) settings.accuracy_log_sampling_target / expected_queries;
+  }
   auto sequence_id_end = sequence_gen->CurrentSampleId();
   size_t max_latencies_to_record = sequence_id_end - sequence_id_start;
 

@@ -12,10 +12,10 @@ The subset of samples results chosen to to be written to the accuracy JSON is de
 There is an audit.config file for each individual benchmark, located in the benchmark subdirectories in this test directory. The `accuracy_log_sampling_target` value for each benchmark is chosen taking into consideration the performance sample count and size of the inference result. If performance with sampling enabled cannot meet the pass threshold set in verify_performance.py, `accuracy_log_sampling_target` may be reduced to check that performance approaches the submission score.
 
 ## Log size
-3d-unet is unique in that its inference result output per-sample is drastically larger than that of other benchmarks. For all other benchmarks, the accuracy JSON results can be checked using python JSON libraries, which can be enabled by providing `--fastmode` to the run_verification.py script. For 3d-unet, using fastmode will result in verify_performance.py running out of memory, so the alternative way of using UNIX-based commandline utilities must be used by not supplying the `--fastmode` switch.
+By default, the accuracy JSON results can be checked using python JSON libraries. 3d-unet is unique in that its inference result output per-sample is drastically larger than that of other benchmarks, which may result in Out-of-Memory errors. An alternative verification method using UNIX commandline utilities is provided and can be enabled by providing `--unixmode` to the run_verification.py script. 
 
 ## Prerequisites
-This script works best with Python 3.3 or later, although `--fastmode` will work with earlier versions. For 3d-unet, the accuracy verification script require the `wc`,`sed`,`awk`,`head`,`tail`,`grep`, and `md5sum` UNIX commandline utilities.
+This script works is compatible with both Python2 and Python3, but `--unixmode` work only work with Python 3.3. `--unixmode` also requires the `wc`,`sed`,`awk`,`head`,`tail`,`grep`, and `md5sum` UNIX commandline utilities.
 
 ## Non-determinism
 Note that under MLPerf inference rules, certain forms of non-determinism is acceptable, which can cause inference results to differ across runs. It is foreseeable that the results obtained during the accuracy run can be different from that obtained during the performance run, which will cause the accuracy checking script to report failure. Test failure will automatically result in an objection, but the objection can be overturned by comparing the quality of the results generated in performance mode to that obtained in accuracy mode. This can be done by using the accuracy measurement scripts provided as part of the repo to ensure that the accuracy score meets the target. An example is provided for GNMT in the gnmt folder.
@@ -27,7 +27,7 @@ Run test with the provided audit.config in the corresponding benchmark subdirect
 
 ### Part II
 Run the verification script:
-  `python3 run_verification.py -r RESULTS_DIR -c COMPLIANCE_DIR -o OUTPUT_DIR [--dtype {byte,float32,int32,int64}] [--fastmode]`
+  `python3 run_verification.py -r RESULTS_DIR -c COMPLIANCE_DIR -o OUTPUT_DIR [--dtype {byte,float32,int32,int64}] [--unixmode]`
   
 RESULTS_DIR: Specifies the path to the corresponding results directory that contains the accuracy and performance subdirectories containing the submission logs, i.e. `inference_results_v0.7/closed/NVIDIA/results/GPU/resnet/Offline`
 COMPLIANCE_DIR: Specifies the path to the directory containing the logs from the compliance test run.

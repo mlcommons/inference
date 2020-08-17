@@ -1,3 +1,4 @@
+# MLPerf Inference Benchmark Suite
 MLPerf Inference is a benchmark suite for measuring how fast systems can run models in a variety of deployment scenarios. 
 
 Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.02549) for a detailed description of the benchmarks along with the motivation and guiding principles behind the benchmark suite. If you use any part of this benchmark (e.g., reference implementations, submissions, etc.), please cite the following:
@@ -12,3 +13,33 @@ Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.025
     primaryClass={cs.LG}
 }
 ```
+
+## MLPerf Inference master
+The master of this repository contains work in progress for the next official release. This is currently ***v0.7***.
+It provides the benchmarks below.
+
+See the individual Readme files in the reference app for details.
+
+
+| model | reference app | framework | dataset |
+| ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| resnet50-v1.5 | [vision/classification_and_detection](vision/classification_and_detection) | tensorflow | imagenet2012 | 
+| ssd-mobilenet 300x300 | [vision/classification_and_detection](vision/classification_and_detection) | tensorflow, pytorch, onnx| coco resized to 300x300 | 
+| ssd-resnet34 1200x1200 | [vision/classification_and_detection](vision/classification_and_detection) | tensorflow, pytorch, onnx | coco resized to 1200x1200|
+| bert | [language/bert](language/bert) | tensorflow, pytorch, onnx | squad-1.1 |
+| dlrm | [recommendation/dlrm](recommendation/dlrm/pytorch) | pytorch, tensorflow(?), onnx(?) | Criteo Terabyte |
+| 3d-unet | [vision/medical_imageing/3d-unet](vision/medical_imageing/3d-unet) | pytorch, tensorflow(?), onnx(?) | BraTS 2019 |
+| rnnt | [speech_recognition/rnnt](speech_recognition/rnnt) | pytorch | OpenSLR LibriSpeech Corpus |
+
+
+## MLPerf Inference v0.5
+
+See the individual Readme files in the reference app for details.
+
+| model | reference app | framework | dataset |
+| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| resnet50-v1.5 | [v0.5/classification_and_detection](https://github.com/mlperf/inference/tree/r0.5/vision/classification_and_detection) | tensorflow, pytorch, onnx | imagenet2012 |
+| mobilenet-v1 | [v0.5/classification_and_detection](https://github.com/mlperf/inference/tree/r0.5/v0.5/classification_and_detection) |tensorflow, pytorch, onnx | imagenet2012 |
+| ssd-mobilenet 300x300 | [v0.5/classification_and_detection](https://github.com/mlperf/inference/tree/r0.5/v0.5/classification_and_detection) |tensorflow, pytorch, onnx | coco resized to 300x300 |
+| ssd-resnet34 1200x1200 | [v0.5/classification_and_detection](https://github.com/mlperf/inference/tree/r0.5/v0.5/classification_and_detection) | tensorflow, pytorch, onnx | coco resized to 1200x1200 |
+| gnmt | [v0.5/translation/gnmt/](https://github.com/mlperf/inference/tree/r0.5/v0.5/translation/gnmt/tensorflow) | tensorflow, pytorch | See Readme |

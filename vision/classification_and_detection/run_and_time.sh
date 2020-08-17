@@ -8,7 +8,7 @@ if [ $device == "gpu" ]; then
 fi
 
 # copy the config to cwd so the docker contrainer has access
-cp ../mlperf.conf .
+cp ../../mlperf.conf .
 
 OUTPUT_DIR=`pwd`/output/$name
 if [ ! -d $OUTPUT_DIR ]; then

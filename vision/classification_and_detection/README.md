@@ -121,7 +121,7 @@ pip install onnxruntime or pip install onnxruntime-gpu
 
 Build and install the benchmark:
 ```
-cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop --user; cd ../v0.5/classification_and_detection
+cd ../../loadgen; CFLAGS="-std=c++14" python setup.py develop --user; cd ../vision/classification_and_detection
 
 python setup.py develop
 ```

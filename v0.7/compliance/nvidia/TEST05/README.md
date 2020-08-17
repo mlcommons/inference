@@ -23,9 +23,9 @@ Run the benchmark with the provided audit.config in the corresponding benchmark 
 Run the verification script:
   `python3 run_verification.py -r RESULTS_DIR -c COMPLIANCE_DIR -o OUTPUT_DIR [--dtype {byte,float32,int32,int64}]`
   
-RESULTS_DIR: Specifies the path to the corresponding results directory that contains the accuracy and performance subdirectories containing the submission logs, i.e. `inference_results_v0.7/closed/NVIDIA/results/GPU/resnet/Offline`
-COMPLIANCE_DIR: Specifies the path to the directory containing the logs from the compliance test run.
-OUTPUT_DIR: Specifies the path to the output directory where compliance logs will be uploaded from, i.e. `inference_results_v0.7/closed/NVIDIA/compliance/GPU/resnet/Offline`
+- RESULTS_DIR: Specifies the path to the corresponding results directory that contains the accuracy and performance subdirectories containing the submission logs, i.e. `inference_results_v0.7/closed/NVIDIA/results/GPU/resnet/Offline`
+- COMPLIANCE_DIR: Specifies the path to the directory containing the logs from the compliance test run.
+- OUTPUT_DIR: Specifies the path to the output directory where compliance logs will be uploaded from, i.e. `inference_results_v0.7/closed/NVIDIA/compliance/GPU/resnet/Offline`
 
 Expected outcome:
               

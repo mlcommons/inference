@@ -38,7 +38,7 @@ See the individual Readme files in the reference app for details.
 
 | model | reference app | framework | dataset |
 | ---- | ---- | ---- | ---- |
-| resnet50-v1.5 | [v0.5/classification_and_detection](https://github.com/mlperf/inference/tree/r0.5/vision/classification_and_detection) | tensorflow, pytorch, onnx | imagenet2012 |
+| resnet50-v1.5 | [v0.5/classification_and_detection](https://github.com/mlperf/inference/tree/r0.5/v0.5/classification_and_detection) | tensorflow, pytorch, onnx | imagenet2012 |
 | mobilenet-v1 | [v0.5/classification_and_detection](https://github.com/mlperf/inference/tree/r0.5/v0.5/classification_and_detection) |tensorflow, pytorch, onnx | imagenet2012 |
 | ssd-mobilenet 300x300 | [v0.5/classification_and_detection](https://github.com/mlperf/inference/tree/r0.5/v0.5/classification_and_detection) |tensorflow, pytorch, onnx | coco resized to 300x300 |
 | ssd-resnet34 1200x1200 | [v0.5/classification_and_detection](https://github.com/mlperf/inference/tree/r0.5/v0.5/classification_and_detection) | tensorflow, pytorch, onnx | coco resized to 1200x1200 |

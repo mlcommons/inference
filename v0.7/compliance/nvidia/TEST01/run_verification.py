@@ -41,23 +41,23 @@ def main():
     parser.add_argument(
         "--results_dir", "-r",
         help="Specifies the path to the corresponding results directory that contains the accuracy and performance subdirectories containing the submission logs, i.e. inference_results_v0.7/closed/NVIDIA/results/T4x8/resnet/Offline.",
-        default=""
+        required=True
     )
     parser.add_argument(
         "--compliance_dir", "-c",
         help="Specifies the path to the directory containing the logs from the compliance test run.",
-        default=""
+        required=True
     )
     parser.add_argument(
         "--output_dir", "-o",
         help="Specifies the path to the output directory where compliance logs will be uploaded from, i.e. inference_results_v0.7/closed/NVIDIA/compliance/T4x8/resnet/Offline.",
-        default=""
+        required=True
     )
     parser.add_argument(
-        "--dtype", default="byte", choices=["byte", "float32", "int32", "int64"], help="data type of the label (only needed in fastmode")
+        "--dtype", default="byte", choices=["byte", "float32", "int32", "int64"], help="data type of the label (not needed in unixmode")
     parser.add_argument(
-        "--fastmode", action="store_true",
-        help="Use legacy method using python JSON library instead of unix commandline utilities (uses more memory but much faster.")
+        "--unixmode", action="store_true",
+        help="Use UNIX commandline utilities to verify accuracy (uses less memory but much slower.")
 
     args = parser.parse_args()
 
@@ -65,10 +65,9 @@ def main():
     results_dir = args.results_dir
     compliance_dir = args.compliance_dir
     output_dir = os.path.join(args.output_dir, "TEST01")
-    fastmode = ""
-    if args.fastmode:
-        fastmode = " --fastmode"
-    else: 
+    unixmode = ""
+    if args.unixmode:
+        unixmode = " --unixmode"
         for binary in ["wc", "md5sum", "grep", "awk", "sed", "head", "tail"]:
             missing_binary = False
             if shutil.which(binary) == None:
@@ -79,8 +78,9 @@ def main():
 
     dtype = args.dtype
 
+    verify_accuracy_binary = os.path.join(os.path.dirname(__file__),"verify_accuracy.py")
     # run verify accuracy
-    verify_accuracy_command = "python3 verify_accuracy.py --dtype " + args.dtype + fastmode + " -r " + results_dir + "/accuracy/mlperf_log_accuracy.json" + " -t " + compliance_dir + "/mlperf_log_accuracy.json | tee verify_accuracy.txt"
+    verify_accuracy_command = "python3 " + verify_accuracy_binary + " --dtype " + args.dtype + unixmode + " -r " + results_dir + "/accuracy/mlperf_log_accuracy.json" + " -t " + compliance_dir + "/mlperf_log_accuracy.json | tee verify_accuracy.txt"
     try:
         os.system(verify_accuracy_command)
     except:
@@ -91,7 +91,8 @@ def main():
     accuracy_pass = "TEST PASS" in subprocess.check_output(accuracy_pass_command, shell=True).decode("utf-8")
 
     # run verify performance
-    verify_performance_command = "python3 verify_performance.py -r " + results_dir + "/performance/run_1/mlperf_log_summary.txt" + " -t " + compliance_dir + "/mlperf_log_summary.txt | tee verify_performance.txt"
+    verify_performance_binary = os.path.join(os.path.dirname(__file__),"verify_performance.py")
+    verify_performance_command = "python3 " + verify_performance_binary + " -r " + results_dir + "/performance/run_1/mlperf_log_summary.txt" + " -t " + compliance_dir + "/mlperf_log_summary.txt | tee verify_performance.txt"
     try:
         os.system(verify_performance_command)
     except:

@@ -24,13 +24,6 @@ import numpy as np
 
 sys.path.append(os.getcwd())
 
-dtype_map = {
-    "byte": np.byte,
-    "float32": np.float32,
-    "int32": np.int32,
-    "int64": np.int64
-}
-
 def main():
 
 
@@ -40,20 +33,18 @@ def main():
     parser.add_argument(
         "--results_dir", "-r",
         help="Specifies the path to the corresponding results directory that contains the performance subdirectories containing the submission logs, i.e. inference_results_v0.7/closed/NVIDIA/results/T4x8/resnet/Offline.",
-        default=""
+        required=True
     )
     parser.add_argument(
         "--compliance_dir", "-c",
         help="Specifies the path to the directory containing the logs from the compliance test run.",
-        default=""
+        required=True
     )
     parser.add_argument(
         "--output_dir", "-o",
         help="Specifies the path to the output directory where compliance logs will be uploaded from, i.e. inference_results_v0.7/closed/NVIDIA/compliance/T4x8/resnet/Offline.",
-        default=""
+        required=True
     )
-    parser.add_argument(
-        "--dtype", default="byte", choices=["byte", "float32", "int32", "int64"], help="data type of the label (only needed in fastmode")
 
     args = parser.parse_args()
 
@@ -62,10 +53,9 @@ def main():
     compliance_dir = args.compliance_dir
     output_dir = os.path.join(args.output_dir, "TEST05")
 
-    dtype = args.dtype
-
     # run verify performance
-    verify_performance_command = "python3 verify_performance.py -r " + results_dir + "/performance/run_1/mlperf_log_summary.txt" + " -t " + compliance_dir + "/mlperf_log_summary.txt | tee verify_performance.txt"
+    verify_performance_binary = os.path.join(os.path.dirname(__file__),"verify_performance.py")
+    verify_performance_command = "python3 " + verify_performance_binary + " -r " + results_dir + "/performance/run_1/mlperf_log_summary.txt" + " -t " + compliance_dir + "/mlperf_log_summary.txt | tee verify_performance.txt"
     try:
         os.system(verify_performance_command)
     except:

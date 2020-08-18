@@ -1,5 +1,5 @@
 ﻿# Compliance Testing
-This repository provides the compliance tests that need to be run in order to demonstrate a valid submission.
+This repository provides the compliance tests that need to be run by the submitter in order to demonstrate a valid submission.
 
 # Table of Contents
 1. [Introduction](#introduction)
@@ -7,10 +7,12 @@ This repository provides the compliance tests that need to be run in order to de
 3. [Test Methodology](#Test-Methodology)
 
 ## Introduction
-A handful of compliance tests have been created to help ensure that submissions comply with a subset of the MLPerf rules. Each compliance test must be run once for each submission run and the logs from the compliance test run must be uploaded along with the rest of submission collateral. Scripts are provided in each of the test subdirectories to help with copying the compliance test logs into the correct directory structure for upload. 
+The purpose of compliance testing is to ensure a basic level of compliance with a subset of the MLPerf rules. The tests are designed to be complementary to third-party auditing which will be introduced in future rounds of MLPerf. The tests are not meant to root-cause issues with the submission, but can help detect anomalies in the submission that need to be investigated further by the submitter.
+
+Each compliance test must be run once for each submission run and the logs from the compliance test run must be uploaded along with the rest of the submission collateral. In MLPerf Inference v0.7, effort has been made to reduce the burden on submitters to perform compliance testing through improvements to documentation, scripting, and LoadGen's compliance functionality. More documentation is provided on the purpose of each test in the corresponding test directory, along with more detailed instructions. 
 
 ## Test Infrastructure
-The compliance tests exercise functionality in LoadGen, enabled through the use of a config file that overrides LoadGen functionality, enabling it to run in a variety of compliance testing modes. Upon invocation, LoadGen checks if a `audit.config` file exists in the current working directory. The configuration parameters in `audit.config` override any settings set by `mlperf.conf` or `user.conf`.
+The compliance tests exercise functionality in LoadGen, triggered through the use of a config file that overrides LoadGen functionality. This enables LoadGen to run in a variety of compliance testing modes. When LoadGen::StartTest() is invoked, LoadGen checks if a `audit.config` file exists in the current working directory. If the file is found, LoadGen will log this event in `mlperf_log_detail.txt`.  The LoadGen settings that are used will be logged in `mlperf_log_summary.txt`. The configuration parameters in `audit.config` override any settings set by `mlperf.conf` or `user.conf`.
 ## Test Methodology
 Running a compliance test entails typically three steps:
 #### 1. Setup
@@ -20,6 +22,8 @@ Run the benchmark as one normally would for a submission run. LoadGen will read 
 Note: remove `audit.config` file from the working directory afterwards to prevent unintentionally running in compliance testing mode in future runs.
 #### 3. Verification
 Run the provided python-based verification script to ensure that the compliance test has successfully completed and meets expectations in terms of performance and/or accuracy. The script will also copy the output compliance logs to a path specified by the user in the correct  directory structure in preparation for upload to the MLPerf submission repository.
+## Test Submission
+The `run_verification.py` found in each test directory will copy the test files to be submitted to the directory specified. These files will follow the directory structure specified in [https://github.com/mlperf/policies/blob/master/submission_rules.adoc#562-inference](https://github.com/mlperf/policies/blob/master/submission_rules.adoc#562-inference) under `audit/` and are must be uploaded in order for the submission to be considered valid.
 
 
 

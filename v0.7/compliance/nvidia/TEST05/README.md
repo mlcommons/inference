@@ -10,7 +10,7 @@ The seeds that are changed are listed below:
 
 ## Prerequisites
 This script works best with Python 3.3 or later.
-
+This script also assumes that the submission runs have already been run and that results comply with the submission directory structure as described in [https://github.com/mlperf/policies/blob/master/submission_rules.adoc#562-inference](https://github.com/mlperf/policies/blob/master/submission_rules.adoc#562-inference)
 ## Pass Criteria
 Performance must be within 5% of the submission performance. In single stream mode, latencies can be very short for high performance systems and run-to-run variation due to external disturbances (OS) can be significant. In such cases and when submission latencies are less or equal to 0.2ms, the pass threshold is relaxed to 20%.
 
@@ -23,9 +23,9 @@ Run the benchmark with the provided audit.config in the corresponding benchmark 
 Run the verification script:
   `python3 run_verification.py -r RESULTS_DIR -c COMPLIANCE_DIR -o OUTPUT_DIR [--dtype {byte,float32,int32,int64}]`
   
-RESULTS_DIR: Specifies the path to the corresponding results directory that contains the accuracy and performance subdirectories containing the submission logs, i.e. `inference_results_v0.7/closed/NVIDIA/results/GPU/resnet/Offline`
-COMPLIANCE_DIR: Specifies the path to the directory containing the logs from the compliance test run.
-OUTPUT_DIR: Specifies the path to the output directory where compliance logs will be uploaded from, i.e. `inference_results_v0.7/closed/NVIDIA/compliance/GPU/resnet/Offline`
+- RESULTS_DIR: Specifies the path to the corresponding results directory that contains the accuracy and performance subdirectories containing the submission logs, i.e. `inference_results_v0.7/closed/NVIDIA/results/GPU/resnet/Offline`
+- COMPLIANCE_DIR: Specifies the path to the directory containing the logs from the compliance test run.
+- OUTPUT_DIR: Specifies the path to the output directory where compliance logs will be uploaded from, i.e. `inference_results_v0.7/closed/NVIDIA/compliance/GPU/resnet/Offline`
 
 Expected outcome:
               

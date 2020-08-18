@@ -49,6 +49,12 @@ MODEL_CONFIG = {
             "ssd-large": 64,
             "gnmt": 3903900,
         },
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-mobilenet": "ssd-small",
+            "ssd-resnet34": "ssd-large",
+            "resnet50": "resnet",
+        },
         "seeds": {
             "qsl_rng_seed": 3133965575612453542,
             "sample_index_rng_seed": 665484352860916858,
@@ -58,17 +64,20 @@ MODEL_CONFIG = {
     "v0.7": {
         "models": [
             "ssd-small", "ssd-large", "resnet", "rnnt",
-            "bert", "bert-99", "bert-99.9",
-            "dlrm", "dlrm-99", "dlrm-99.9"
-            "3d-unet", "3d-unet-99", "3d-unet-99.9"
+            "bert-99", "bert-99.9",
+            "dlrm-99", "dlrm-99.9"
+            "3d-unet-99", "3d-unet-99.9"
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
             "ssd-large": ["Server", "Offline"],
             "rnnt": ["Server", "Offline"],
-            "bert": ["Server", "Offline"],
-            "dlrm": ["Server", "Offline"],
-            "3d-unet": ["Offline"],
+            "bert-99": ["Server", "Offline"],
+            "bert-99.9": ["Server", "Offline"],
+            "dlrm-99": ["Server", "Offline"],
+            "dlrm-99.9": ["Server", "Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
         },
         "optional-scenarios-datacenter": {
         },
@@ -77,8 +86,9 @@ MODEL_CONFIG = {
             "ssd-small": ["SingleStream", "Offline"],
             "ssd-large": ["SingleStream", "Offline"],
             "rnnt": ["SingleStream", "Offline"],
-            "bert": ["SingleStream", "Offline"],
-            "3d-unet": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
         },
         "optional-scenarios-edge": {
             "resnet": ["MultiStream"],
@@ -90,13 +100,10 @@ MODEL_CONFIG = {
             "ssd-small": ("mAP", 22 * 0.99),
             "ssd-large": ("mAP", 20 * 0.99),
             "rnnt": ("WER", (100 - 7.452) * 0.99),
-            "bert": ("F1", 90.874 * 0.99),
             "bert-99": ("F1", 90.874 * 0.99),
             "bert-99.9": ("F1", 90.874 * 0.999),
-            "dlrm": ("AUC", 80.25 * 0.99),
             "dlrm-99": ("AUC", 80.25 * 0.99),
             "dlrm-99.9": ("AUC", 80.25 * 0.999),
-            "3d-unet": ("DICE", 0.853 * 0.99),
             "3d-unet-99": ("DICE", 0.853 * 0.99),
             "3d-unet-99.9": ("DICE", 0.853 * 0.999),
         },
@@ -105,9 +112,19 @@ MODEL_CONFIG = {
             "ssd-large": 64,
             "resnet": 1024,
             "rnnt": 2513,
-            "bert": 3903900,
-            "dlrm": 204800,
-            "3d-unet": 16,
+            "bert-99": 3903900,
+            "bert-99.9": 3903900,
+            "dlrm-99": 204800,
+            "dlrm-99.9": 204800,
+            "3d-unet-99": 16,
+            "3d-unet-99.9": 16,
+        },
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-mobilenet": "ssd-small",
+            "ssd-resnet34": "ssd-large",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
         },
         "seeds": {
             "qsl_rng_seed": 3133965575612453542,
@@ -126,20 +143,8 @@ TO_MS = 1000 * 1000
 SCENARIO_MAPPING = {
     "singlestream": "SingleStream",
     "multistream": "MultiStream",
-    "server": "server",
+    "server": "Server",
     "offline": "Offline",
-}
-
-MODEL_MAPPING = {
-    "ssd-mobilenet": "ssd-small",
-    "ssd-resnet34": "ssd-large",
-    "resnet50": "resnet",
-    "bert-99": "bert",
-    "bert-99.9": "bert",
-    "dlrm-99": "dlrm",
-    "dlrm-99.9": "dlrm",
-    "3d-unet-99": "3d-unet",
-    "3d-unet-99.9": "3d-unet",
 }
 
 RESULT_FIELD = {
@@ -204,18 +209,42 @@ class Config():
         else:
             raise ValueError("innvalid system type")
 
+    def get_mlperf_model(self, model):
+        # prefered - user is already using the official name
+        if model in self.models:
+            return model
+        
+        # simple mapping, ie resnet50->resnet ?
+        mlperf_model = self.base["model_mapping"].get(model)
+        if mlperf_model:
+            return mlperf_model
+
+        # try to guess
+        if model.startswith("mobilenet"):
+            model = "mobilenet"
+        if model.startswith("efficientnet"):
+            model = "resnet"
+        elif model.startswith("rcnn"):
+            model = "ssd-small"
+        elif model.startswith("ssdlite") or model.startswith("ssd-inception") or model.startswith("yolo") or \
+            model.startswith("ssd-mobilenet") or model.startswith("ssd-resnet50"):
+            model = "ssd-small"
+        # map again, for example v0.7 does not have mobilenet so it needs to be mapped to resnet
+        mlperf_model = self.base["model_mapping"].get(model, model)        
+        return mlperf_model
+
     def get_required(self, model):
         if self.version in ["v0.5"]:
             return set()
-        model = MODEL_MAPPING.get(model, model)
+        model = self.get_mlperf_model(model)
         if model not in self.required:
-            raise ValueError("model not known: " + model)
+            return None
         return set(self.required[model])
 
     def get_optional(self, model):
         if self.version in ["v0.5"]:
             return set(["SingleStream", "MultiStream", "Server", "Offline"])
-        model = MODEL_MAPPING.get(model, model)
+        model = self.get_mlperf_model(model)
         if model not in self.optional:
             return set()
         return set(self.optional[model])
@@ -226,7 +255,7 @@ class Config():
         return self.accuracy_target[model]
 
     def get_performance_sample_count(self, model):
-        model = MODEL_MAPPING.get(model, model)
+        model = self.get_mlperf_model(model)
         if model not in self.performance_sample_count:
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
@@ -241,22 +270,6 @@ def get_args():
     parser.add_argument("--csv", default="summary.csv", help="csv file with results")
     args = parser.parse_args()
     return args
-
-
-def model_map(config, model):
-    """Map models names to the official mlperf name."""
-    if model in config.models:
-        return model
-    if model in MODEL_MAPPING:
-        return  MODEL_MAPPING[model]
-    if model.startswith("mobilenet"):
-        model = "mobilenet"
-    elif model.startswith("rcnn"):
-        model = "ssd-small"
-    elif model.startswith("ssdlite") or model.startswith("ssd-inception") or model.startswith("yolo") or \
-            model.startswith("ssd-mobilenet") or model.startswith("ssd-resnet50"):
-        model = "ssd-small"
-    return model
 
 
 def list_dir(*path):
@@ -288,8 +301,7 @@ def ignore_errors_for_v0_5(line):
 def check_accuracy_dir(config, model, path):
     is_valid = False
     acc = None
-    model_norm = model_map(config, model)
-    acc_type, acc_target = config.get_accuracy_target(model_norm)
+    acc_type, acc_target = config.get_accuracy_target(model)
     pattern = ACC_PATTERN[acc_type]
     with open(os.path.join(path, "accuracy.txt"), "r") as f:
         for line in f:
@@ -301,7 +313,7 @@ def check_accuracy_dir(config, model, path):
     if acc and float(acc) >= acc_target:
         is_valid = True
     else:
-        log.error("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
+        log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
 
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
@@ -335,7 +347,6 @@ def check_performance_dir(config, model, path):
             if m:
                 rt[m.group(1).strip()] = m.group(2).strip()
 
-    model = model_map(config, model)
     performance_sample_count = config.get_performance_sample_count(model)
     if int(rt['performance_sample_count']) < performance_sample_count:
         log.error("%s performance_sample_count, found %s, needs to be > %d",
@@ -406,7 +417,7 @@ def check_results_dir(config, filter_submitter, csv):
     """
     head = [
         "Organization", "Availability", "Division", "SystemType", "Platform", "Model",
-        "Scenario", "Result", "Accuracy", "Location",
+        "MlperfModel", "Scenario", "Result", "Accuracy", "Location",
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
@@ -458,26 +469,37 @@ def check_results_dir(config, filter_submitter, csv):
                 # 
                 # Look at each model
                 #
-                for model in list_dir(results_path, system_desc):
+                for model_name in list_dir(results_path, system_desc):
                     # we are looking at ./$division/$submitter/$system_desc/$model,
                     #   ie ./closed/mlperf_org/t4-ort/bert
-                    if is_closed and model not in config.models:
-                        log.error("%s has a invalid model (%s) for closed division", name, model)
+                    name = os.path.join(results_path, system_desc, model_name)
+
+                    if is_closed and model_name not in config.models:
+                        # for closed division we want the model name to match.
+                        # for open division the model_name might be different than the task
+                        log.error("%s has a invalid model (%s) for closed division", name, model_name)
                         results[name] = None
                         continue
+
+                    mlperf_model = config.get_mlperf_model(model_name)
 
                     #
                     # Look at each scenario
                     #
-                    required_scenarios = config.get_required(MODEL_MAPPING.get(model, model))
-                    all_scenarios = set(list(required_scenarios) + list(config.get_optional(MODEL_MAPPING.get(model, model))))
-                    for scenario in list_dir(results_path, system_desc, model):
+                    required_scenarios = config.get_required(mlperf_model)
+                    if required_scenarios is None:
+                        log.error("%s has a invalid model %s, system_type=%s", name, mlperf_model, system_type)
+                        results[name] = None
+                        continue
+
+                    all_scenarios = set(list(required_scenarios) + list(config.get_optional(mlperf_model)))
+                    for scenario in list_dir(results_path, system_desc, model_name):
                         # some submissions in v0.5 use lower case scenarios - map them for now
                         scenario_fixed = SCENARIO_MAPPING.get(scenario, scenario)
 
                         # we are looking at ./$division/$submitter/$system_desc/$model/$scenario,
                         #   ie ./closed/mlperf_org/t4-ort/bert/Offline
-                        name = os.path.join(results_path, system_desc, model, scenario)
+                        name = os.path.join(results_path, system_desc, model_name, scenario)
                         results[name] = None
                         if scenario_fixed not in all_scenarios:
                             log.warning("%s ignoring scenario %s (neither required nor optional)", name, scenario)
@@ -485,13 +507,13 @@ def check_results_dir(config, filter_submitter, csv):
 
                         # check if measurement_dir is good.
                         measurement_dir = os.path.join(division, submitter, "measurements",
-                                                       system_desc, model, scenario)
+                                                       system_desc, model_name, scenario)
                         if not os.path.exists(measurement_dir):
                             log.error("no measurement_dir for %s", name)
                             results[measurement_dir] = None
                         else:
                             if not check_measurement_dir(measurement_dir, name, system_desc,
-                                                         os.path.join(division, submitter), model, scenario):
+                                                         os.path.join(division, submitter), model_name, scenario):
                                 log.error("measurement_dir %s has issues", measurement_dir)
                                 results[measurement_dir] = None
 
@@ -506,7 +528,7 @@ def check_results_dir(config, filter_submitter, csv):
                             diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
                             if diff:
                                 log.error("%s has file list mismatch (%s)", acc_path, diff)
-                            accuracy_is_valid, acc = check_accuracy_dir(config, model, acc_path)
+                            accuracy_is_valid, acc = check_accuracy_dir(config, mlperf_model, acc_path)
                             if not accuracy_is_valid and not is_closed:
                                 log.warning("%s, accuracy not valid but taken for open", acc_path)
                                 # TODO: is this correct?
@@ -531,29 +553,31 @@ def check_results_dir(config, filter_submitter, csv):
                             if diff:
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
                             try:
-                                is_valid, r = check_performance_dir(config, model, perf_path)
+                                is_valid, r = check_performance_dir(config, mlperf_model, perf_path)
                             except:
                                 is_valid, r = False, None
                             if is_valid:
                                 results[name] = r
-                                required_scenarios.discard(scenario)
+                                required_scenarios.discard(scenario_fixed)
                             else:
                                 log.error("%s has issues", perf_path)
 
                         if results.get(name):
                             if accuracy_is_valid:
                                 log.info("%s is OK", name)
-                                csv.write(fmt.format(submitter, available, division, system_type, system_desc, model,
-                                                     scenario_fixed, r, acc, name))
+                                csv.write(fmt.format(submitter, available, division, system_type, system_desc, model_name,
+                                                     mlperf_model, scenario_fixed, r, acc, name))
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)
 
                     if required_scenarios:
-                        name = os.path.join(results_path, system_desc, model)
-                        results[name] = None
-                        log.error("%s does not have all required scenarios, missing %s", name, required_scenarios)
-
+                        name = os.path.join(results_path, system_desc, model_name)
+                        if is_closed:
+                            results[name] = None
+                            log.error("%s does not have all required scenarios, missing %s", name, required_scenarios)
+                        else:
+                            log.warning("%s ignorning missing scenarios in open division (%s)", name, required_scenarios)
 
     return results
 

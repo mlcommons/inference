@@ -33,6 +33,8 @@ namespace mlperf {
 namespace {
 
 using IssueQueryCallback = std::function<void(std::vector<QuerySample>)>;
+using IssueMillionQueriesCallback = 
+    std::function<void(std::vector<ResponseId>, std::vector<QuerySampleIndex>)>;
 using FlushQueriesCallback = std::function<void()>;
 using ReportLatencyResultsCallback = std::function<void(std::vector<int64_t>)>;
 
@@ -64,11 +66,38 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
     report_latency_results_cb_(latencies_ns);
   }
 
- private:
+ protected:
   std::string name_;
   IssueQueryCallback issue_cb_;
   FlushQueriesCallback flush_queries_cb_;
   ReportLatencyResultsCallback report_latency_results_cb_;
+};
+
+class MillionQueriesSystemUnderTestTrampoline : 
+                                              public SystemUnderTestTrampoline {
+ public:
+  MillionQueriesSystemUnderTestTrampoline(
+      std::string name, IssueMillionQueriesCallback issue_million_queries_cb,
+      FlushQueriesCallback flush_queries_cb,
+      ReportLatencyResultsCallback report_latency_results_cb)
+      : SystemUnderTestTrampoline(
+                    name, nullptr, flush_queries_cb, report_latency_results_cb),
+        issue_million_queries_cb_(issue_million_queries_cb){}
+  ~MillionQueriesSystemUnderTestTrampoline() override = default;
+
+  void IssueQuery(const std::vector<QuerySample>& samples) override {
+    pybind11::gil_scoped_acquire gil_acquirer;
+    std::vector<ResponseId> responseIds;
+    std::vector<QuerySampleIndex> querySampleIndices;
+    for (auto& s : samples) {
+      responseIds.push_back(s.id);
+      querySampleIndices.push_back(s.index);
+    }
+    issue_million_queries_cb_(responseIds,querySampleIndices);
+  }
+
+  private:
+    IssueMillionQueriesCallback issue_million_queries_cb_;
 };
 
 using LoadSamplesToRamCallback =
@@ -131,6 +160,26 @@ void DestroySUT(uintptr_t sut) {
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   delete sut_cast;
 }
+
+uintptr_t ConstructMillionQueriesSUT(
+                       IssueMillionQueriesCallback issue_million_queries_cb,
+                       FlushQueriesCallback flush_queries_cb,
+                       ReportLatencyResultsCallback report_latency_results_cb) {
+  MillionQueriesSystemUnderTestTrampoline* sut = 
+                       new MillionQueriesSystemUnderTestTrampoline(
+                                                  "PyMillionQueriesSUT", 
+                                                  issue_million_queries_cb, 
+                                                  flush_queries_cb, 
+                                                  report_latency_results_cb);
+  return reinterpret_cast<uintptr_t>(sut);
+}
+
+void DestroyMillionQueriesSUT(uintptr_t sut) {
+  MillionQueriesSystemUnderTestTrampoline* sut_cast =
+      reinterpret_cast<MillionQueriesSystemUnderTestTrampoline*>(sut);
+  delete sut_cast;
+}
+
 
 uintptr_t ConstructQSL(
     size_t total_sample_count, size_t performance_sample_count,
@@ -294,6 +343,11 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
   m.def("ConstructSUT", &py::ConstructSUT, "Construct the system under test.");
   m.def("DestroySUT", &py::DestroySUT,
         "Destroy the object created by ConstructSUT.");
+
+  m.def("ConstructMillionQueriesSUT", &py::ConstructMillionQueriesSUT, 
+        "Construct the system under test, optimized for millions of queries.");
+  m.def("DestroyMillionQueriesSUT", &py::DestroyMillionQueriesSUT,
+        "Destroy the object created by ConstructMillionQueriesSUT.");
 
   m.def("ConstructQSL", &py::ConstructQSL,
         "Construct the query sample library.");

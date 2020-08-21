@@ -33,6 +33,7 @@ dtype_map = {
 
 def main():
 
+    py3 = sys.version_info >= (3,0)
     # Parse arguments to identify the path to the accuracy logs from
     #   the accuracy and performance runs
     parser = argparse.ArgumentParser()
@@ -50,15 +51,19 @@ def main():
         "--dtype", default="byte", choices=["byte", "float32", "int32", "int64"], help="data type of the label")
 
     parser.add_argument(
+        "--unixmode", action="store_true",
+        help="Use unix commandline utilities instead of python JSON library (uses less memory but much slower.")
+
+    parser.add_argument(
         "--fastmode", action="store_true",
-        help="Use legacy method using python JSON library instead of unix commandline utilities (uses more memory but much faster.")
+        help="This flag has been deprecated. This script runs in fastmode by default. Use --unixmode to run in low memory consumption mode.")
     args = parser.parse_args()
 
     print("Verifying accuracy. This might take a while...")
     acc_log  = args.reference_accuracy
     perf_log = args.test_accuracy
 
-    if args.fastmode:
+    if not args.unixmode:
         with open(acc_log, "r") as acc_json:
             acc_data = json.load(acc_json)
 
@@ -90,13 +95,13 @@ def main():
         print("Reading performance mode results...")
         for sample in perf_data:
             qsl_idx = sample["qsl_idx"]
-            data = np.frombuffer(bytes.fromhex(sample['data']), dtype_map[args.dtype]) if py33 == True \
+            data = np.frombuffer(bytes.fromhex(sample['data']), dtype_map[args.dtype]) if py3 == True \
                 else np.frombuffer(bytearray.fromhex(sample['data']), dtype_map[args.dtype])
 
             if qsl_idx in results_dict.keys():
                 num_perf_log_qsl_idx_match += 1
                 data_perf = np.frombuffer(bytes.fromhex(results_dict[qsl_idx]), dtype_map[args.dtype]) \
-                    if py33 == True else np.frombuffer(bytearray.fromhex(results_dict[qsl_idx]), dtype_map[args.dtype])
+                    if py3 == True else np.frombuffer(bytearray.fromhex(results_dict[qsl_idx]), dtype_map[args.dtype])
                 if data_perf.size == 0 or data.size == 0:
                     if data_perf.size != data.size:
                         num_perf_log_data_mismatch += 1
@@ -141,9 +146,11 @@ def main():
     #print(num_perf_lines)
     
     num_perf_log_data_mismatch = 0
+    print("Each dot represents 1% completion:")
     for perf_line in range(0, num_perf_lines):
         if perf_line % int(num_perf_lines/100) == 0:
-            print(".", end = "", flush=True)
+            sys.stdout.write(".")
+            sys.stdout.flush()
         # first and last line are brackets
         if perf_line == 0 or perf_line == int(num_perf_lines)-1:
             continue

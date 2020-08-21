@@ -21,14 +21,37 @@ log = logging.getLogger("main")
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
 VIEWABLE_SIZE = 4096
 
+HELP_TEXT = """
+You can run this tool in 2 ways:
+
+1. pick an existing submission directory and create a brand new submission tree with the trucated
+    mlperf_log_accuracy.json files. The original submission directory is not modified.
+
+    python tools/submission/truncate_accuracy_log.py --input ORIGINAL_SUBMISSION_DIRECTORY --submitter MY_ORG \\
+        --output NEW_SUBMISSION_DIRECTORY
+
+2. pick a existing submission directory and a backup location for files that are going to be modified.
+    The tool will copy files that are modified into the backup directory and than modify the existing
+    submission directory.
+
+    python tools/submission/truncate_accuracy_log.py --input ROOT_OF_SUBMISSION_DIRECTORY --submitter MY_ORG \\
+        --backup MY_SUPER_SAFE_STORAGE 
+"""
 
 def get_args():
     """Parse commandline."""
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--input", required=True, help="submission directory")
+    parser = argparse.ArgumentParser(description="Truncate mlperf_log_accuracy.json files.",
+                                     formatter_class=argparse.RawDescriptionHelpFormatter, epilog=HELP_TEXT)
+    parser.add_argument("--input", required=True, help="orignal submission directory")
+    parser.add_argument("--output", help="new submission directory")
     parser.add_argument("--submitter", required=True, help="filter to submitter")
-    parser.add_argument("--backup", required=True, help="directory to store the original accuacy log")
+    parser.add_argument("--backup", help="directory to store the original accuacy log")
+
     args = parser.parse_args()
+    if not args.output and not args.backup:
+        parser.print_help()
+        sys.exit(1)
+
     return args
 
 
@@ -55,17 +78,28 @@ def get_hash(fname):
     return m.hexdigest()
 
 
-def truncate_file(src_name, dst_name):
+def truncate_file(fname):
     """Truncate file to 4K from start and 4K from end."""
-    size = os.stat(src_name).st_size
-    with open(src_name, "r") as src:
+    size = os.stat(fname).st_size
+    with open(fname, "r") as src:
         start = src.read(VIEWABLE_SIZE)
         src.seek(size - VIEWABLE_SIZE, 0)
         end = src.read(VIEWABLE_SIZE)
-    with open(dst_name, "w") as dst:
+    with open(fname, "w") as dst:
         dst.write(start)
         dst.write("\n\n...\n\n")
         dst.write(end)
+
+
+def copy_submission_dir(src, dst, filter_submitter):
+    for division in list_dir(src):
+        if division not in ["closed", "open"]:
+            continue
+        for submitter in list_dir(os.path.join(src, division)):
+            if filter_submitter and submitter != filter_submitter:
+                continue
+            shutil.copytree(os.path.join(src, division, submitter),
+                            os.path.join(dst, division, submitter))
 
 
 def truncate_results_dir(filter_submitter, backup):
@@ -75,12 +109,15 @@ def truncate_results_dir(filter_submitter, backup):
        truncate mlperf_log_accuracy.
     """
     for division in list_dir("."):
+        # we are looking at ./$division, ie ./closed
         if division not in ["closed", "open"]:
             continue
 
         for submitter in list_dir(division):
+            # we are looking at ./$division/$submitter, ie ./closed/mlperf_org
             if filter_submitter and submitter != filter_submitter:
                 continue
+
             results_path = os.path.join(division, submitter, "results")
             if not os.path.exists(results_path):
                 log.error("no submission in %s", results_path)
@@ -90,7 +127,6 @@ def truncate_results_dir(filter_submitter, backup):
                 for model in list_dir(results_path, system_desc):
                     for scenario in list_dir(results_path, system_desc, model):
                         name = os.path.join(results_path, system_desc, model, scenario)
-
                         hash_val = None
                         acc_path = os.path.join(name, "accuracy")
                         acc_log = os.path.join(acc_path, "mlperf_log_accuracy.json")
@@ -112,28 +148,39 @@ def truncate_results_dir(filter_submitter, backup):
                             log.info("%s already has hash and size seems truncated", acc_path)
                             continue
 
-                        backup_dir = os.path.join(backup, name, "accuracy")
-                        os.makedirs(backup_dir, exist_ok=True)
-                        dst = os.path.join(backup, name, "mlperf_log_accuracy.json")
-                        if os.path.exists(dst):
-                            log.error("not processing %s because %s already exist", acc_log, dst)
-                            continue
+                        if backup:
+                            backup_dir = os.path.join(backup, name, "accuracy")
+                            os.makedirs(backup_dir, exist_ok=True)
+                            dst = os.path.join(backup, name, "mlperf_log_accuracy.json")
+                            if os.path.exists(dst):
+                                log.error("not processing %s because %s already exist", acc_log, dst)
+                                continue
+                            shutil.copy(acc_log, dst)
 
                         # get to work
-                        shutil.copy(acc_log, dst)
                         hash_val = get_hash(acc_log)
                         with open(acc_txt, "a") as f:
                             f.write("hash={}\n".format(hash_val))
-                        truncate_file(dst, acc_log)
+                        truncate_file(acc_log)
                         log.info("%s truncated", acc_log)
 
 
 def main():
     args = get_args()
 
-    os.chdir(args.input)
+    src_dir = args.input
+    if args.output:
+        if os.path.exists(args.output):
+            print("output directory already exists")
+            sys.exit(1)
+        os.makedirs(args.output)
+        copy_submission_dir(args.input, args.output, args.submitter)
+        src_dir = args.output
+
+    os.chdir(src_dir)
     # truncate results directory
     truncate_results_dir(args.submitter, args.backup)
+
     return 0
 
 

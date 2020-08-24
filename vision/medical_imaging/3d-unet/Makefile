@@ -62,7 +62,7 @@ endif
 setup: check_download_data_dir create_directories
 	@echo "Running basic setup..."
 	@if [ ! -e $(MLPERF_CONF) ]; then \
-		cp ../../mlperf.conf $(MLPERF_CONF); \
+		cp ../../../mlperf.conf $(MLPERF_CONF); \
 	fi
 	@$(MAKE) -f $(MAKEFILE_NAME) init_submodule
 	@$(MAKE) -f $(MAKEFILE_NAME) download_model

@@ -11,9 +11,9 @@
 [submodule "third_party/gn"]
 	path = third_party/gn
 	url = https://gn.googlesource.com/gn
-[submodule "v0.7/language/bert/DeepLearningExamples"]
-	path = v0.7/language/bert/DeepLearningExamples
+[submodule "language/bert/DeepLearningExamples"]
+	path = language/bert/DeepLearningExamples
 	url = https://github.com/NVIDIA/DeepLearningExamples.git
-[submodule "v0.7/medical_imaging/3d-unet/nnUnet"]
-	path = v0.7/medical_imaging/3d-unet/nnUnet
+[submodule "vision/medical_imaging/3d-unet/nnUnet"]
+	path = vision/medical_imaging/3d-unet/nnUnet
 	url = https://github.com/MIC-DKFZ/nnUNet.git

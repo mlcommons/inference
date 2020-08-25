@@ -18,6 +18,7 @@ import array
 import json
 import os
 import sys
+
 sys.path.insert(0, os.getcwd())
 
 import mlperf_loadgen as lg
@@ -28,18 +29,25 @@ from brats_QSL import get_brats_QSL
 from openvino.inference_engine import IECore
 from scipy.special import softmax
 
+
 class _3DUNET_OV_SUT():
     def __init__(self, model_path, preprocessed_data_dir, performance_count):
         print("Loading OV model...")
 
         model_xml = model_path
         model_bin = os.path.splitext(model_xml)[0] + '.bin'
-        
+
         ie = IECore()
         net = ie.read_network(model=model_xml, weights=model_bin)
 
         self.input_name = next(iter(net.inputs))
-        self.output_name = 'output'
+
+        # After model conversion output name could be any
+        # So we are looking for output with max number of channels
+        max_channels = 0
+        for output in net.outputs:
+            if max_channels < net.outputs[output].shape[-1]:
+                _3DUNET_OV_SUT.output_name = output
 
         self.exec_net = ie.load_network(network=net, device_name='CPU')
 
@@ -56,10 +64,11 @@ class _3DUNET_OV_SUT():
             print("Processing sample id {:d} with shape = {:}".format(
                 query_samples[i].index, data.shape))
 
-            before_softmax = self.exec_net.infer(inputs={self.input_name: data[np.newaxis, ...]})[self.output_name]
-            after_softmax = softmax(before_softmax, axis=1).astype(np.float16)
+            output = self.exec_net.infer(
+                inputs={self.input_name: data[np.newaxis, ...]})[
+                _3DUNET_OV_SUT.output_name].astype(np.float16)
 
-            response_array = array.array("B", after_softmax.tobytes())
+            response_array = array.array("B", output.tobytes())
             bi = response_array.buffer_info()
             response = lg.QuerySampleResponse(query_samples[i].id, bi[0],
                                               bi[1])

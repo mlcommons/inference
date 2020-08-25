@@ -29,16 +29,15 @@ for i in $* ; do
        cpu|gpu) device=$i; shift;;
     esac
 done
-
 # debuging
-echo $backend
-echo $model
-echo $dataset
-echo $device
-echo $MODEL_DIR
-echo $DATA_DIR
-echo $DLRM_DIR
-echo $EXTRA_OPS
+# echo $backend
+# echo $model
+# echo $dataset
+# echo $device
+# echo $MODEL_DIR
+# echo $DATA_DIR
+# echo $DLRM_DIR
+# echo $EXTRA_OPS
 
 if [ $device == "cpu" ] ; then
     export CUDA_VISIBLE_DEVICES=""
@@ -47,8 +46,8 @@ else
     extra_args="--use-gpu"
 fi
 name="$model-$dataset-$backend"
-
-echo $name
+# debuging
+# echo $name
 
 #
 # pytorch

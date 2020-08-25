@@ -22,46 +22,36 @@ class BackendOnnxruntime(backend.Backend):
         return "onnxruntime"
 
     def load(self, model_path, inputs=None, outputs=None):
-        
-        inputs = None
-        outputs = None
-        print("onnx load", model_path, inputs, outputs)
         """Load model and find input/outputs from the model file."""
         opt = rt.SessionOptions()
         # enable level 3 optimizations
         # FIXME: enable below once onnxruntime 0.5 is released
         # opt.set_graph_optimization_level(3)
+        # print("onnx load", model_path, inputs, outputs)
         self.sess = rt.InferenceSession(model_path, opt)
-        
         # get input and output names
-#        if inputs is None:
-        self.inputs = [meta.name for meta in self.sess.get_inputs()]
-#        else:
-#            self.inputs = inputs
-        
-#        if outputs is None:
-        self.outputs = [meta.name for meta in self.sess.get_outputs()]
-#        else:
-#            self.outputs = outputs
-        
-        print("inputs", self.inputs)
-        print("outputs", self.outputs)
-        #self.outputs = ["predict"]
+        if True: #not inputs:
+            self.inputs = [meta.name for meta in self.sess.get_inputs()]
+        else:
+            self.inputs = inputs
+        if True: #not outputs:
+            self.outputs = [meta.name for meta in self.sess.get_outputs()]
+        else:
+            self.outputs = outputs
         return self
 
     def predict(self, batch_dense_X, batch_lS_o, batch_lS_i):
-        #print("onnx predict")
         """Run the prediction."""
+        # print("onnx predict")
+        # print(self.inputs)
+        # print(self.outputs)
         
         dict_inputs = {}
-        # dict_inputs[self.inputs[0]] = batch_dense_X.numpy().astype(np.float32)
-        # dict_inputs[self.inputs[1]] = batch_lS_o.numpy().astype(np.int64)
-        # dict_inputs[self.inputs[2]] = batch_lS_i.numpy().astype(np.int64)
 
+        # Dmitriy's approach to build dictionaries
         ind = 0
-        
         for i in self.inputs:
-            
+
             if "input.1" == i:
                 dict_inputs[i] = batch_dense_X.numpy().astype(np.float32)
             
@@ -71,8 +61,21 @@ class BackendOnnxruntime(backend.Backend):
             else:
                 dict_inputs[i] = batch_lS_i[ind].numpy().astype(np.int64)
                 ind = ind + 1
+        '''
+        # Maxim's approach to build dictionaries
+        dict_inputs[self.inputs[0]] = batch_dense_X.numpy().astype(np.float32)
+        dict_inputs[self.inputs[1]] = batch_lS_o.numpy().astype(np.int64)
+        if False: #torch.is_tensor(batch_lS_i): # approach 1: tensor
+            dict_inputs[self.inputs[2]] = batch_lS_i.numpy().astype(np.int64)
+        else: # approach 2: list
+            for j in range(26): # 26 sparse features
+                dict_inputs[self.inputs[j+2]] = batch_lS_i[j].numpy().astype(np.int64)
+        '''
+        # predict and return output
+        # print(dict_inputs)
+        output = self.sess.run(output_names=self.outputs, input_feed=dict_inputs)
+        output = torch.tensor(output, requires_grad=False).view(-1, 1)
+        # print("output", output)
+        # print("output.shape", output.shape)
 
-        prediction = self.sess.run(output_names=self.outputs, input_feed=dict_inputs)
-       # print("prediction", prediction)
-        
-        return torch.tensor(prediction, requires_grad=False).view(-1,1)
+        return output

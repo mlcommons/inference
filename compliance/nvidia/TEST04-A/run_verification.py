@@ -40,17 +40,17 @@ def main():
     parser.add_argument(
         "--test4A_dir", "-a",
         help="Specifies the path to the directory containing the logs from the TEST04-A audit config run.",
-        default=""
+        required=True
     )
     parser.add_argument(
         "--test4B_dir", "-b",
         help="Specifies the path to the directory containing the logs from the TEST04-B audit config test run.",
-        default=""
+        required=True
     )
     parser.add_argument(
         "--output_dir", "-o",
         help="Specifies the path to the output directory where compliance logs will be uploaded to, i.e. inference_results_v0.7/closed/NVIDIA/compliance/T4x8/resnet/Offline.",
-        default=""
+        required=True
     )
     parser.add_argument(
         "--dtype", default="byte", choices=["byte", "float32", "int32", "int64"], help="data type of the label (only needed in fastmode")
@@ -67,7 +67,9 @@ def main():
     dtype = args.dtype
 
     # run verify performance
-    verify_performance_command = "python3 verify_test4_performance.py -u " + test4A_dir + "/mlperf_log_summary.txt" + " -s " + test4B_dir + "/mlperf_log_summary.txt | tee verify_performance.txt"
+    verify_performance_binary = os.path.join(os.path.dirname(__file__),"verify_test4_performance.py")
+    
+    verify_performance_command = "python3 " + verify_performance_binary + " -u " + test4A_dir + "/mlperf_log_summary.txt" + " -s " + test4B_dir + "/mlperf_log_summary.txt | tee verify_performance.txt"
     try:
         os.system(verify_performance_command)
     except:

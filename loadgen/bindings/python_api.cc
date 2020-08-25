@@ -33,6 +33,8 @@ namespace mlperf {
 namespace {
 
 using IssueQueryCallback = std::function<void(std::vector<QuerySample>)>;
+using FastIssueQueriesCallback =
+    std::function<void(std::vector<ResponseId>, std::vector<QuerySampleIndex>)>;
 using FlushQueriesCallback = std::function<void()>;
 using ReportLatencyResultsCallback = std::function<void(std::vector<int64_t>)>;
 
@@ -64,11 +66,37 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
     report_latency_results_cb_(latencies_ns);
   }
 
- private:
+ protected:
   std::string name_;
   IssueQueryCallback issue_cb_;
   FlushQueriesCallback flush_queries_cb_;
   ReportLatencyResultsCallback report_latency_results_cb_;
+};
+
+class FastSystemUnderTestTrampoline : public SystemUnderTestTrampoline {
+ public:
+  FastSystemUnderTestTrampoline(
+      std::string name, FastIssueQueriesCallback fast_issue_cb,
+      FlushQueriesCallback flush_queries_cb,
+      ReportLatencyResultsCallback report_latency_results_cb)
+      : SystemUnderTestTrampoline(name, nullptr, flush_queries_cb,
+                                  report_latency_results_cb),
+        fast_issue_cb_(fast_issue_cb) {}
+  ~FastSystemUnderTestTrampoline() override = default;
+
+  void IssueQuery(const std::vector<QuerySample>& samples) override {
+    pybind11::gil_scoped_acquire gil_acquirer;
+    std::vector<ResponseId> responseIds;
+    std::vector<QuerySampleIndex> querySampleIndices;
+    for (auto& s : samples) {
+      responseIds.push_back(s.id);
+      querySampleIndices.push_back(s.index);
+    }
+    fast_issue_cb_(responseIds, querySampleIndices);
+  }
+
+  private:
+   FastIssueQueriesCallback fast_issue_cb_;
 };
 
 using LoadSamplesToRamCallback =
@@ -131,6 +159,22 @@ void DestroySUT(uintptr_t sut) {
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   delete sut_cast;
 }
+
+uintptr_t ConstructFastSUT(
+    FastIssueQueriesCallback fast_issue_cb,
+    FlushQueriesCallback flush_queries_cb,
+    ReportLatencyResultsCallback report_latency_results_cb) {
+  FastSystemUnderTestTrampoline* sut = new FastSystemUnderTestTrampoline(
+      "PyFastSUT", fast_issue_cb, flush_queries_cb, report_latency_results_cb);
+  return reinterpret_cast<uintptr_t>(sut);
+}
+
+void DestroyFastSUT(uintptr_t sut) {
+  FastSystemUnderTestTrampoline* sut_cast =
+      reinterpret_cast<FastSystemUnderTestTrampoline*>(sut);
+  delete sut_cast;
+}
+
 
 uintptr_t ConstructQSL(
     size_t total_sample_count, size_t performance_sample_count,
@@ -294,6 +338,11 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
   m.def("ConstructSUT", &py::ConstructSUT, "Construct the system under test.");
   m.def("DestroySUT", &py::DestroySUT,
         "Destroy the object created by ConstructSUT.");
+
+  m.def("ConstructFastSUT", &py::ConstructFastSUT,
+        "Construct the system under test, fast issue query");
+  m.def("DestroyFastSUT", &py::DestroyFastSUT,
+        "Destroy the object created by ConstructFastSUT.");
 
   m.def("ConstructQSL", &py::ConstructQSL,
         "Construct the query sample library.");

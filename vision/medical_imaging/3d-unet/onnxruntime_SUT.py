@@ -44,10 +44,9 @@ class _3DUNET_ONNXRuntime_SUT():
 
             # Follow the PyTorch implementation.
             # The ONNX file has five outputs, but we only care about the one named "output".
-            before_softmax = self.sess.run(["output"], {"input": data[np.newaxis, ...]})[0]
-            softmax = (np.exp(before_softmax) / np.sum(np.exp(before_softmax), axis=0, keepdims=True)).astype(np.float16)
+            output = self.sess.run(["output"], {"input": data[np.newaxis, ...]})[0].squeeze(0).astype(np.float16)
 
-            response_array = array.array("B", softmax.tobytes())
+            response_array = array.array("B", output.tobytes())
             bi = response_array.buffer_info()
             response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
             lg.QuerySamplesComplete([response])

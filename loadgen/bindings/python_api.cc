@@ -33,7 +33,7 @@ namespace mlperf {
 namespace {
 
 using IssueQueryCallback = std::function<void(std::vector<QuerySample>)>;
-using IssueMillionQueriesCallback = 
+using FastIssueQueriesCallback =
     std::function<void(std::vector<ResponseId>, std::vector<QuerySampleIndex>)>;
 using FlushQueriesCallback = std::function<void()>;
 using ReportLatencyResultsCallback = std::function<void(std::vector<int64_t>)>;
@@ -73,17 +73,16 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
   ReportLatencyResultsCallback report_latency_results_cb_;
 };
 
-class MillionQueriesSystemUnderTestTrampoline : 
-                                              public SystemUnderTestTrampoline {
+class FastSystemUnderTestTrampoline : public SystemUnderTestTrampoline {
  public:
-  MillionQueriesSystemUnderTestTrampoline(
-      std::string name, IssueMillionQueriesCallback issue_million_queries_cb,
+  FastSystemUnderTestTrampoline(
+      std::string name, FastIssueQueriesCallback fast_issue_cb,
       FlushQueriesCallback flush_queries_cb,
       ReportLatencyResultsCallback report_latency_results_cb)
-      : SystemUnderTestTrampoline(
-                    name, nullptr, flush_queries_cb, report_latency_results_cb),
-        issue_million_queries_cb_(issue_million_queries_cb){}
-  ~MillionQueriesSystemUnderTestTrampoline() override = default;
+      : SystemUnderTestTrampoline(name, nullptr, flush_queries_cb,
+                                  report_latency_results_cb),
+        fast_issue_cb_(fast_issue_cb) {}
+  ~FastSystemUnderTestTrampoline() override = default;
 
   void IssueQuery(const std::vector<QuerySample>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
@@ -93,11 +92,11 @@ class MillionQueriesSystemUnderTestTrampoline :
       responseIds.push_back(s.id);
       querySampleIndices.push_back(s.index);
     }
-    issue_million_queries_cb_(responseIds,querySampleIndices);
+    fast_issue_cb_(responseIds, querySampleIndices);
   }
 
   private:
-    IssueMillionQueriesCallback issue_million_queries_cb_;
+   FastIssueQueriesCallback fast_issue_cb_;
 };
 
 using LoadSamplesToRamCallback =
@@ -161,22 +160,18 @@ void DestroySUT(uintptr_t sut) {
   delete sut_cast;
 }
 
-uintptr_t ConstructMillionQueriesSUT(
-                       IssueMillionQueriesCallback issue_million_queries_cb,
-                       FlushQueriesCallback flush_queries_cb,
-                       ReportLatencyResultsCallback report_latency_results_cb) {
-  MillionQueriesSystemUnderTestTrampoline* sut = 
-                       new MillionQueriesSystemUnderTestTrampoline(
-                                                  "PyMillionQueriesSUT", 
-                                                  issue_million_queries_cb, 
-                                                  flush_queries_cb, 
-                                                  report_latency_results_cb);
+uintptr_t ConstructFastSUT(
+    FastIssueQueriesCallback fast_issue_cb,
+    FlushQueriesCallback flush_queries_cb,
+    ReportLatencyResultsCallback report_latency_results_cb) {
+  FastSystemUnderTestTrampoline* sut = new FastSystemUnderTestTrampoline(
+      "PyFastSUT", fast_issue_cb, flush_queries_cb, report_latency_results_cb);
   return reinterpret_cast<uintptr_t>(sut);
 }
 
-void DestroyMillionQueriesSUT(uintptr_t sut) {
-  MillionQueriesSystemUnderTestTrampoline* sut_cast =
-      reinterpret_cast<MillionQueriesSystemUnderTestTrampoline*>(sut);
+void DestroyFastSUT(uintptr_t sut) {
+  FastSystemUnderTestTrampoline* sut_cast =
+      reinterpret_cast<FastSystemUnderTestTrampoline*>(sut);
   delete sut_cast;
 }
 
@@ -344,10 +339,10 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
   m.def("DestroySUT", &py::DestroySUT,
         "Destroy the object created by ConstructSUT.");
 
-  m.def("ConstructMillionQueriesSUT", &py::ConstructMillionQueriesSUT, 
-        "Construct the system under test, optimized for millions of queries.");
-  m.def("DestroyMillionQueriesSUT", &py::DestroyMillionQueriesSUT,
-        "Destroy the object created by ConstructMillionQueriesSUT.");
+  m.def("ConstructFastSUT", &py::ConstructFastSUT,
+        "Construct the system under test, fast issue query");
+  m.def("DestroyFastSUT", &py::DestroyFastSUT,
+        "Destroy the object created by ConstructFastSUT.");
 
   m.def("ConstructQSL", &py::ConstructQSL,
         "Construct the query sample library.");

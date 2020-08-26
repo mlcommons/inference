@@ -181,6 +181,9 @@ def main():
     # truncate results directory
     truncate_results_dir(args.submitter, args.backup)
 
+    backup_location = args.output or args.backup
+    log.info("Make sure you keep a backup of %s in case mlperf wants to see the original accuracy logs", backup_location)
+
     return 0
 
 

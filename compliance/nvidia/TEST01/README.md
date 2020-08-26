@@ -21,14 +21,21 @@ The subset of samples results chosen to to be written to the accuracy JSON is de
 
 There is an audit.config file for each individual benchmark, located in the benchmark subdirectories in this test directory. The `accuracy_log_sampling_target` value for each benchmark is chosen taking into consideration the performance sample count and size of the inference result. If performance with sampling enabled cannot meet the pass threshold set in verify_performance.py, `accuracy_log_sampling_target` may be reduced to check that performance approaches the submission score.
 
+
 ## Log size
-3d-unet is unique in that its inference result output per-sample is drastically larger than that of other benchmarks. For all other benchmarks, the accuracy JSON results can be checked using python JSON libraries, which can be enabled by providing `--fastmode` to the run_verification.py script. For 3d-unet, using fastmode will result in verify_performance.py running out of memory, so the alternative way of using UNIX-based commandline utilities must be used by not supplying the `--fastmode` switch.
+In v0.7, the new workloads that have been added can generate significantly more output data than the workloads used in v0.5. Typically, the default mode of operation of the accuracy script is to check the accuracy JSON files using python JSON libraries. In the case that such scripts run out of memory, another fallback mode of operation can be enabled using UNIX-based commandline utilities which can be enabled using the `--unixmode` switch.
 
 ## Prerequisites
-This script works best with Python 3.3 or later. For 3d-unet, the accuracy verification script require the `wc`,`sed`,`awk`,`head`,`tail`,`grep`, and `md5sum` UNIX commandline utilities.
+This script works best with Python 3.3 or later. For `--unixmode`,  the accuracy verification script also require the `wc`,`sed`,`awk`,`head`,`tail`,`grep`, and `md5sum` UNIX commandline utilities.
 This script also assumes that the submission runs have already been run and that results comply with the submission directory structure as described in [https://github.com/mlperf/policies/blob/master/submission_rules.adoc#562-inference](https://github.com/mlperf/policies/blob/master/submission_rules.adoc#562-inference)
 ## Non-determinism
-Note that under MLPerf inference rules, certain forms of non-determinism is acceptable, which can cause inference results to differ across runs. It is foreseeable that the results obtained during the accuracy run can be different from that obtained during the performance run, which will cause the accuracy checking script to report failure. Test failure will automatically result in an objection, but the objection can be overturned by comparing the quality of the results generated in performance mode to that obtained in accuracy mode. This can be done by using the accuracy measurement scripts provided as part of the repo to ensure that the accuracy score meets the target. An example is provided for GNMT in the gnmt folder.
+Under MLPerf inference rules, certain forms of non-determinism is acceptable, which can cause inference results to differ across runs. It is foreseeable that the results obtained during the accuracy run can be different from that obtained during the performance run, which will cause the accuracy checking script to report failure. Test failure will automatically result in an objection, but the objection can be overruled by providing proof of the quality of inference results. 
+`create_accuracy_baseline.sh` is provided for this purpose. By running:
+
+    bash ./create_accuracy_baseline.sh <path to mlperf_log_accuracy.json from the accuracy run> <path to mlperf_log_accuracy.json from the compliance test run>
+
+ this script creates a baseline accuracy log called `mlperf_log_accuracy_baseline.json` using only a subset of the results from `mlperf_log_accuracy.json` from the accuracy run that corresponds to the QSL indices contained in `mlperf_log_accuracy.json` in the compliance test run. This provides an apples-to-apples accuracy log comparison between the accuracy run and compliance run.
+The submitter can then run the reference accuracy script on `mlperf_log_accuracy_baseline.json` and the compliance test run's `mlperf_log_accuracy.json` and report the F1/mAP/DICE/WER/Top1%/AUC score. 
 
 ## Instructions
 
@@ -37,7 +44,9 @@ Run test with the provided audit.config in the corresponding benchmark subdirect
 
 ### Part II
 Run the verification script:
-  `python3 run_verification.py -r RESULTS_DIR -c COMPLIANCE_DIR -o OUTPUT_DIR [--dtype {byte,float32,int32,int64}] [--fastmode]`
+  
+    python3 run_verification.py -r RESULTS_DIR -c COMPLIANCE_DIR -o OUTPUT_DIR [--dtype {byte,float32,int32,int64}] [--unixmode]
+
   
 
  - RESULTS_DIR: Specifies the path to the corresponding results

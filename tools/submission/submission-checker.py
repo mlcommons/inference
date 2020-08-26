@@ -286,7 +286,7 @@ def split_path(m):
     return m.replace("\\", "/").split("/")
 
 
-def ignore_errors_for_v0_5(line):
+def ignore_errors(line):
     if "check for ERROR in detailed" in line:
         return True
     if "Loadgen built with uncommitted changes" in line:
@@ -325,9 +325,8 @@ def check_accuracy_dir(config, model, path):
             for line in f:
                 # look for: ERROR
                 if "ERROR" in line:
-                    if config.version in ["v0.5"] and ignore_errors_for_v0_5(line):
+                    if ignore_errors(line):
                         continue
-                    # TODO: should this be a failed run?
                     log.error("%s contains error: %s", fname, line)
                     is_valid = False
     return is_valid, acc
@@ -359,7 +358,7 @@ def check_performance_dir(config, model, path):
         for line in f:
             # look for: ERROR
             if "ERROR" in line:
-                if config.version in ["v0.5"] and ignore_errors_for_v0_5(line):
+                if ignore_errors(line):
                     continue
                 log.error("%s contains error: %s", fname, line)
                 is_valid = False

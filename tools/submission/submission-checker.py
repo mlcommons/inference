@@ -139,6 +139,7 @@ REQUIRED_PERF_FILES = ["mlperf_log_accuracy.json", "mlperf_log_summary.txt", "ml
 REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 TO_MS = 1000 * 1000
+MAX_ACCURACY_LOG_SIZE = 10 * 1024
 
 SCENARIO_MAPPING = {
     "singlestream": "SingleStream",
@@ -301,6 +302,7 @@ def ignore_errors_for_v0_5(line):
 def check_accuracy_dir(config, model, path):
     is_valid = False
     acc = None
+    hash_val = None
     acc_type, acc_target = config.get_accuracy_target(model)
     pattern = ACC_PATTERN[acc_type]
     with open(os.path.join(path, "accuracy.txt"), "r") as f:
@@ -308,12 +310,30 @@ def check_accuracy_dir(config, model, path):
             m = re.match(pattern, line)
             if m:
                 acc = m.group(1)
+            m = re.match(r"^hash=([\w\d]+)$", line)
+            if m:
+                hash_val = m.group(1)
+            if hash_val and acc:
                 break
 
     if acc and float(acc) >= acc_target:
         is_valid = True
     else:
         log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
+
+    if not hash_val:
+        log.error("%s not hash value for mlperf_log_accuracy.json", path)
+        is_valid = False
+
+    # check mlperf_log_accuracy.json
+    fname = os.path.join(path, "mlperf_log_accuracy.json")
+    if not os.path.exists(fname):
+        log.error("%s is missing", fname)
+        is_valid = False
+    else:
+        if os.stat(fname).st_size > MAX_ACCURACY_LOG_SIZE:
+            log.error("%s is not truncated", fname)
+            is_valid = False
 
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
@@ -330,6 +350,7 @@ def check_accuracy_dir(config, model, path):
                     # TODO: should this be a failed run?
                     log.error("%s contains error: %s", fname, line)
                     is_valid = False
+
     return is_valid, acc
 
 
@@ -425,9 +446,10 @@ def check_results_dir(config, filter_submitter, csv):
 
     # we are at the top of the submission directory
     for division in list_dir("."):
-        # we are looking at ./$division, ie ./closed
+        # we are looking at ./$division, ie ./closed        
         if division not in VALID_DIVISIONS:
-            log.error("invalid division in input dir %s", division)
+            if division != ".git":
+                log.error("invalid division in input dir %s", division)
             continue
         is_closed = division == "closed"
 

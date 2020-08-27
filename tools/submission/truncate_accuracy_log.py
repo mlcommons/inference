@@ -118,51 +118,71 @@ def truncate_results_dir(filter_submitter, backup):
             if filter_submitter and submitter != filter_submitter:
                 continue
 
-            results_path = os.path.join(division, submitter, "results")
-            if not os.path.exists(results_path):
-                log.error("no submission in %s", results_path)
-                continue
+            # process results
+            for directory in ["results", "compliance"]:
 
-            for system_desc in list_dir(results_path):
-                for model in list_dir(results_path, system_desc):
-                    for scenario in list_dir(results_path, system_desc, model):
-                        name = os.path.join(results_path, system_desc, model, scenario)
-                        hash_val = None
-                        acc_path = os.path.join(name, "accuracy")
-                        acc_log = os.path.join(acc_path, "mlperf_log_accuracy.json")
-                        acc_txt = os.path.join(acc_path, "accuracy.txt")
-                        if not os.path.exists(acc_log):
-                            log.error("%s missing", acc_log)
-                            continue
-                        if not os.path.exists(acc_txt):
-                            log.error("%s missing, generate to continue", acc_txt)
-                            continue
-                        with open(acc_txt, "r") as f:
-                            for line in f:
-                                m = re.match(r"^hash=([\w\d]+)$", line)
-                                if m:
-                                    hash_val = m.group(1)
+                log_path = os.path.join(division, submitter, directory)
+                if not os.path.exists(log_path):
+                    log.error("no submission in %s", log_path)
+                    continue
+
+                for system_desc in list_dir(log_path):
+                    for model in list_dir(log_path, system_desc):
+                        for scenario in list_dir(log_path, system_desc, model):
+                            for test in list_dir(log_path, system_desc, model, scenario):
+
+                                name = os.path.join(log_path, system_desc, model, scenario)
+                                if directory == "compliance":
+                                    name = os.path.join(log_path, system_desc, model, scenario, test)
+
+                                hash_val = None
+                                acc_path = os.path.join(name, "accuracy")
+                                acc_log = os.path.join(acc_path, "mlperf_log_accuracy.json")
+                                acc_txt = os.path.join(acc_path, "accuracy.txt")
+
+                                # only TEST01 has an accuracy log
+                                if directory == "compliance" and test != "TEST01":
+                                    continue
+                                if not os.path.exists(acc_log):
+                                    log.error("%s missing", acc_log)
+                                    continue
+                                if not os.path.exists(acc_txt) and directory == "compliance":
+                                    # compliance test directory will not have an accuracy.txt file by default
+                                    log.info("no accuracy.txt in compliance directory %s", acc_path)
+                                else:
+                                    if not os.path.exists(acc_txt):
+                                        log.error("%s missing, generate to continue", acc_txt)
+                                        continue
+                                    with open(acc_txt, "r") as f:
+                                        for line in f:
+                                            m = re.match(r"^hash=([\w\d]+)$", line)
+                                            if m:
+                                                hash_val = m.group(1)
+                                                break
+                                size = os.stat(acc_log).st_size
+                                if hash_val and size < MAX_ACCURACY_LOG_SIZE:
+                                    log.info("%s already has hash and size seems truncated", acc_path)
+                                    continue
+
+                                if backup:
+                                    backup_dir = os.path.join(backup, name, "accuracy")
+                                    os.makedirs(backup_dir, exist_ok=True)
+                                    dst = os.path.join(backup, name, "mlperf_log_accuracy.json")
+                                    if os.path.exists(dst):
+                                        log.error("not processing %s because %s already exist", acc_log, dst)
+                                        continue
+                                    shutil.copy(acc_log, dst)
+
+                                # get to work
+                                hash_val = get_hash(acc_log)
+                                with open(acc_txt, "a") as f:
+                                    f.write("hash={0}\n".format(hash_val))
+                                truncate_file(acc_log)
+                                log.info("%s truncated", acc_log)
+
+                                # No need to iterate on compliance test subdirectories in the results folder
+                                if directory == "results":
                                     break
-                        size = os.stat(acc_log).st_size
-                        if hash_val and size < MAX_ACCURACY_LOG_SIZE:
-                            log.info("%s already has hash and size seems truncated", acc_path)
-                            continue
-
-                        if backup:
-                            backup_dir = os.path.join(backup, name, "accuracy")
-                            os.makedirs(backup_dir, exist_ok=True)
-                            dst = os.path.join(backup, name, "mlperf_log_accuracy.json")
-                            if os.path.exists(dst):
-                                log.error("not processing %s because %s already exist", acc_log, dst)
-                                continue
-                            shutil.copy(acc_log, dst)
-
-                        # get to work
-                        hash_val = get_hash(acc_log)
-                        with open(acc_txt, "a") as f:
-                            f.write("hash={}\n".format(hash_val))
-                        truncate_file(acc_log)
-                        log.info("%s truncated", acc_log)
 
 
 def main():

@@ -63,5 +63,14 @@ Expected outcome:
     TEST01 verification complete        
 
      
+### Part III
+**Note: This part is only necessary if the accuracy check in Part II fails.**
 
+1. Create the baseline accuracy log for comparison to the compliance accuracy log, which will be named mlperf_log_accuracy_baseline.json:
 
+ `bash ./create_accuracy_baseline.sh <path to mlperf_log_accuracy.json from the accuracy run> <path to mlperf_log_accuracy.json from the compliance test run>`
+
+2. Run accuracy script on mlperf_log_accuracy_baseline.json, capture output and save to `<submitting_organization>/compliance/<system_desc_id>/<benchmark>/<scenario>/TEST01/accuracy/baseline_accuracy.txt` for upload.
+3. Run accuracy script on mlperf_log_accuracy.json from the compliance run, capture output and save to `<submitting_organization>/compliance/<system_desc_id>/<benchmark>/<scenario>/TEST01/accuracy/compliance_accuracy.txt` for upload.
+
+**The delta between the two accuracy metrics should be within 1% for the 99% target accuracy category and within 0.1% for the 99.9% target accuracy category.**

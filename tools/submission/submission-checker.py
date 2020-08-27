@@ -60,6 +60,12 @@ MODEL_CONFIG = {
             "sample_index_rng_seed": 665484352860916858,
             "schedule_rng_seed": 3622009729038561421,
         },
+        "ignore_errors": [
+            "check for ERROR in detailed",
+            "Loadgen built with uncommitted changes",
+            "Ran out of generated queries to issue before the minimum query count and test duration were reached",
+            "CAS failed",
+        ],
     },
     "v0.7": {
         "models": [
@@ -131,6 +137,9 @@ MODEL_CONFIG = {
             "sample_index_rng_seed": 665484352860916858,
             "schedule_rng_seed": 3622009729038561421,
         },
+        "ignore_errors": [
+            "CAS failed",
+        ],
     },
 }
 
@@ -261,6 +270,12 @@ class Config():
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
 
+    def ignore_errors(self, line):
+        for error in self.base["ignore_errors"]:
+            if error in line:
+                return True
+        return False
+
 
 def get_args():
     """Parse commandline."""
@@ -285,18 +300,6 @@ def list_files(*path):
 
 def split_path(m):
     return m.replace("\\", "/").split("/")
-
-
-def ignore_errors(line):
-    if "check for ERROR in detailed" in line:
-        return True
-    if "Loadgen built with uncommitted changes" in line:
-        return True
-    if "Ran out of generated queries to issue before the minimum query count and test duration were reached" in line:
-        return True
-    if "CAS failed" in line:
-        return True
-    return False
 
 
 def check_accuracy_dir(config, model, path):
@@ -345,7 +348,7 @@ def check_accuracy_dir(config, model, path):
             for line in f:
                 # look for: ERROR
                 if "ERROR" in line:
-                    if ignore_errors(line):
+                    if config.ignore_errors(line):
                         continue
                     log.error("%s contains error: %s", fname, line)
                     is_valid = False
@@ -379,7 +382,7 @@ def check_performance_dir(config, model, path):
         for line in f:
             # look for: ERROR
             if "ERROR" in line:
-                if ignore_errors(line):
+                if config.ignore_errors(line):
                     continue
                 log.error("%s contains error: %s", fname, line)
                 is_valid = False

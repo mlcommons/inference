@@ -497,15 +497,15 @@ def check_results_dir(config, filter_submitter, csv):
                     # we are looking at ./$division/$submitter/$system_desc/$model,
                     #   ie ./closed/mlperf_org/t4-ort/bert
                     name = os.path.join(results_path, system_desc, model_name)
+                    mlperf_model = config.get_mlperf_model(model_name)
 
-                    if is_closed and model_name not in config.models:
+                    if is_closed and mlperf_model not in config.models:
                         # for closed division we want the model name to match.
                         # for open division the model_name might be different than the task
-                        log.error("%s has a invalid model (%s) for closed division", name, model_name)
+                        log.error("%s has a invalid model %s for closed division", name, model_name)
                         results[name] = None
                         continue
 
-                    mlperf_model = config.get_mlperf_model(model_name)
 
                     #
                     # Look at each scenario

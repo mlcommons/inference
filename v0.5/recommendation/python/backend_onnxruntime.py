@@ -45,7 +45,16 @@ class BackendOnnxruntime(backend.Backend):
         # print("onnx predict")
         # print(self.inputs)
         # print(self.outputs)
-        
+
+        '''
+        incoming_bs = batch_dense_X.shape[0]
+        model_saved_bs = 2048
+        if (incoming_bs != model_saved_bs):
+            print("WARNING: mismatch beween incoming " + str(incoming_bs) + " and model saved " + str(model_saved_bs) + " mini-batch size")
+            fake_output = torch.zeros(size=(incoming_bs,1), dtype=torch.float32)
+            return fake_output
+        '''
+
         dict_inputs = {}
 
         # Dmitriy's approach to build dictionaries

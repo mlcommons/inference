@@ -140,6 +140,28 @@ MODEL_CONFIG = {
         "ignore_errors": [
             "CAS failed",
         ],
+        "latency-constraint": {
+            "resnet": {"Server": 15000000, "MultiStream": 50000000},
+            "ssd-small": {"MultiStream": 50000000},
+            "ssd-large": {"Server": 100000000, "MultiStream": 66000000},
+            "rnnt": {"Server": 1000000000},
+            "bert-99": {"Server": 130000000},
+            "bert-99.9": {"Server": 130000000},
+            "dlrm-99": {"Server": 30000000},
+            "dlrm-99.9": {"Server": 30000000},
+        },
+        "min-queries": {
+            "resnet": {"SingleStream":1024, "Server": 270336, "MultiStream": 270336, "Offline": 1},
+            "ssd-small": {"SingleStream":1024, "MultiStream": 270336, "Offline": 1},
+            "ssd-large": {"SingleStream":1024, "Server": 270336, "MultiStream": 270336, "Offline": 1},
+            "rnnt": {"SingleStream": 1024, "Server": 90112, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Server": 90112, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Server": 90112, "Offline": 1},
+            "dlrm-99": {"Server": 90112, "Offline": 1},
+            "dlrm-99.9": {"Server": 90112, "Offline": 1},
+            "3d-unet-99": {"SingleStream":1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream":1024, "Offline": 1},
+        },
     },
 }
 
@@ -149,6 +171,8 @@ REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 TO_MS = 1000 * 1000
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
+OFFLINE_MIN_SPQ = 24576
+TEST_DURATION_MS = 60000
 
 SCENARIO_MAPPING = {
     "singlestream": "SingleStream",
@@ -204,6 +228,8 @@ class Config():
         self.seeds = self.base["seeds"]
         self.accuracy_target = self.base["accuracy-target"]
         self.performance_sample_count = self.base["performance-sample-count"]
+        self.latency_constraint = self.base["latency-constraint"]
+        self.min_queries = self.base["min-queries"]
         self.required = None
         self.optional = None
 
@@ -217,7 +243,7 @@ class Config():
             self.required = self.base["required-scenarios-edge"]
             self.optional = self.base["optional-scenarios-edge"]
         else:
-            raise ValueError("innvalid system type")
+            raise ValueError("invalid system type")
 
     def get_mlperf_model(self, model):
         # prefered - user is already using the official name
@@ -240,7 +266,7 @@ class Config():
             model.startswith("ssd-mobilenet") or model.startswith("ssd-resnet50"):
             model = "ssd-small"
         # map again, for example v0.7 does not have mobilenet so it needs to be mapped to resnet
-        mlperf_model = self.base["model_mapping"].get(model, model)        
+        mlperf_model = self.base["model_mapping"].get(model, model)
         return mlperf_model
 
     def get_required(self, model):
@@ -276,6 +302,12 @@ class Config():
                 return True
         return False
 
+    def get_min_query_count(self, model, scenario):
+        model = self.get_mlperf_model(model)
+        if model not in self.min_queries:
+            raise ValueError("model not known: " + model)
+        return self.min_queries[model].get(scenario)
+
 
 def get_args():
     """Parse commandline."""
@@ -308,7 +340,7 @@ def check_accuracy_dir(config, model, path):
     hash_val = None
     acc_type, acc_target = config.get_accuracy_target(model)
     pattern = ACC_PATTERN[acc_type]
-    with open(os.path.join(path, "accuracy.txt"), "r") as f:
+    with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
             m = re.match(pattern, line)
             if m:
@@ -372,10 +404,10 @@ def check_performance_dir(config, model, path):
 
     performance_sample_count = config.get_performance_sample_count(model)
     if int(rt['performance_sample_count']) < performance_sample_count:
-        log.error("%s performance_sample_count, found %s, needs to be > %d",
+        log.error("%s performance_sample_count, found %d, needs to be > %s",
                   fname, performance_sample_count, rt['performance_sample_count'])
         is_valid = False
-
+ 
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
     with open(fname, "r") as f:
@@ -395,6 +427,27 @@ def check_performance_dir(config, model, path):
     res = float(rt[RESULT_FIELD[scenario]])
     if scenario in ["Single Stream"]:
         res /= TO_MS
+
+    # check if the benchmark meets latency constraint
+    target_latency = config.latency_constraint.get(model).get(scenario)
+    if target_latency:
+        if int(rt['99.00 percentile latency (ns)']) > target_latency:
+            log.error("%s Latency constraint not met, expected=%s, found=%s",
+                         fname, target_latency, rt['99.00 percentile latency (ns)'])
+
+    # Check Minimum queries were issued to meet test duration
+    min_query_count = config.get_min_query_count(model, scenario)
+    if int(rt['min_query_count']) < min_query_count:
+        log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
+                      fname, min_query_count, rt['min_query_count'])
+    if scenario == "Offline" and (int(rt['samples_per_query']) < OFFLINE_MIN_SPQ):
+        log.error("%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
+                      fname, OFFLINE_MIN_SPQ, rt['samples_per_query'])
+
+    # Test duration of 60s is met
+    if int(rt["min_duration (ms)"]) < TEST_DURATION_MS:
+         log.error("%s Test duration lesser than 60s in user config. expected=%s, found=%s",
+                       fname, TEST_DURATION_MS, rt["min_duration (ms)"])
 
     return is_valid, res
 
@@ -466,7 +519,7 @@ def check_results_dir(config, filter_submitter, csv):
                 continue
 
             for system_desc in list_dir(results_path):
-                # we are looking at ./$division/$submitter/$system_desc, ie ./closed/mlperf_org/t4-ort
+                # we are looking at ./$division/$submitter/results/$system_desc, ie ./closed/mlperf_org/results/t4-ort
 
                 #
                 # check if system_id is good.
@@ -494,8 +547,8 @@ def check_results_dir(config, filter_submitter, csv):
                 # Look at each model
                 #
                 for model_name in list_dir(results_path, system_desc):
-                    # we are looking at ./$division/$submitter/$system_desc/$model,
-                    #   ie ./closed/mlperf_org/t4-ort/bert
+                    # we are looking at ./$division/$submitter/results/$system_desc/$model,
+                    #   ie ./closed/mlperf_org/results/t4-ort/bert
                     name = os.path.join(results_path, system_desc, model_name)
                     mlperf_model = config.get_mlperf_model(model_name)
 
@@ -521,8 +574,8 @@ def check_results_dir(config, filter_submitter, csv):
                         # some submissions in v0.5 use lower case scenarios - map them for now
                         scenario_fixed = SCENARIO_MAPPING.get(scenario, scenario)
 
-                        # we are looking at ./$division/$submitter/$system_desc/$model/$scenario,
-                        #   ie ./closed/mlperf_org/t4-ort/bert/Offline
+                        # we are looking at ./$division/$submitter/results/$system_desc/$model/$scenario,
+                        #   ie ./closed/mlperf_org/results/t4-ort/bert/Offline
                         name = os.path.join(results_path, system_desc, model_name, scenario)
                         results[name] = None
                         if scenario_fixed not in all_scenarios:

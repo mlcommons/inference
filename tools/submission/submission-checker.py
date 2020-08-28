@@ -60,13 +60,19 @@ MODEL_CONFIG = {
             "sample_index_rng_seed": 665484352860916858,
             "schedule_rng_seed": 3622009729038561421,
         },
+        "ignore_errors": [
+            "check for ERROR in detailed",
+            "Loadgen built with uncommitted changes",
+            "Ran out of generated queries to issue before the minimum query count and test duration were reached",
+            "CAS failed",
+        ],
     },
     "v0.7": {
         "models": [
             "ssd-small", "ssd-large", "resnet", "rnnt",
             "bert-99", "bert-99.9",
-            "dlrm-99", "dlrm-99.9"
-            "3d-unet-99", "3d-unet-99.9"
+            "dlrm-99", "dlrm-99.9",
+            "3d-unet-99", "3d-unet-99.9",
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
@@ -131,6 +137,9 @@ MODEL_CONFIG = {
             "sample_index_rng_seed": 665484352860916858,
             "schedule_rng_seed": 3622009729038561421,
         },
+        "ignore_errors": [
+            "CAS failed",
+        ],
         "latency-constraint": {
             "resnet": {"Server": 15000000, "MultiStream": 50000000},
             "ssd-small": {"MultiStream": 50000000},
@@ -287,6 +296,12 @@ class Config():
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
 
+    def ignore_errors(self, line):
+        for error in self.base["ignore_errors"]:
+            if error in line:
+                return True
+        return False
+
     def get_min_query_count(self, model, scenario):
         model = self.get_mlperf_model(model)
         if model not in self.min_queries:
@@ -317,18 +332,6 @@ def list_files(*path):
 
 def split_path(m):
     return m.replace("\\", "/").split("/")
-
-
-def ignore_errors_for_v0_5(line):
-    if "check for ERROR in detailed" in line:
-        return True
-    if "Loadgen built with uncommitted changes" in line:
-        return True
-    if "Ran out of generated queries to issue before the minimum query count and test duration were reached" in line:
-        return True
-    if "CAS failed" in line:
-        return True
-    return False
 
 
 def check_accuracy_dir(config, model, path):
@@ -377,9 +380,8 @@ def check_accuracy_dir(config, model, path):
             for line in f:
                 # look for: ERROR
                 if "ERROR" in line:
-                    if config.version in ["v0.5"] and ignore_errors_for_v0_5(line):
+                    if config.ignore_errors(line):
                         continue
-                    # TODO: should this be a failed run?
                     log.error("%s contains error: %s", fname, line)
                     is_valid = False
 
@@ -412,7 +414,7 @@ def check_performance_dir(config, model, path):
         for line in f:
             # look for: ERROR
             if "ERROR" in line:
-                if config.version in ["v0.5"] and ignore_errors_for_v0_5(line):
+                if config.ignore_errors(line):
                     continue
                 log.error("%s contains error: %s", fname, line)
                 is_valid = False
@@ -548,15 +550,15 @@ def check_results_dir(config, filter_submitter, csv):
                     # we are looking at ./$division/$submitter/results/$system_desc/$model,
                     #   ie ./closed/mlperf_org/results/t4-ort/bert
                     name = os.path.join(results_path, system_desc, model_name)
+                    mlperf_model = config.get_mlperf_model(model_name)
 
-                    if is_closed and model_name not in config.models:
+                    if is_closed and mlperf_model not in config.models:
                         # for closed division we want the model name to match.
                         # for open division the model_name might be different than the task
-                        log.error("%s has a invalid model (%s) for closed division", name, model_name)
+                        log.error("%s has a invalid model %s for closed division", name, model_name)
                         results[name] = None
                         continue
 
-                    mlperf_model = config.get_mlperf_model(model_name)
 
                     #
                     # Look at each scenario

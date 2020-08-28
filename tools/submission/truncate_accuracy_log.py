@@ -175,7 +175,7 @@ def truncate_results_dir(filter_submitter, backup):
 
                                 # get to work
                                 hash_val = get_hash(acc_log)
-                                with open(acc_txt, "a") as f:
+                                with open(acc_txt, "a", encoding="utf-8") as f:
                                     f.write("hash={0}\n".format(hash_val))
                                 truncate_file(acc_log)
                                 log.info("%s truncated", acc_log)

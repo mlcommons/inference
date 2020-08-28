@@ -305,7 +305,7 @@ def check_accuracy_dir(config, model, path):
     hash_val = None
     acc_type, acc_target = config.get_accuracy_target(model)
     pattern = ACC_PATTERN[acc_type]
-    with open(os.path.join(path, "accuracy.txt"), "r") as f:
+    with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
             m = re.match(pattern, line)
             if m:
@@ -370,7 +370,7 @@ def check_performance_dir(config, model, path):
 
     performance_sample_count = config.get_performance_sample_count(model)
     if int(rt['performance_sample_count']) < performance_sample_count:
-        log.error("%s performance_sample_count, found %s, needs to be > %d",
+        log.error("%s performance_sample_count, found %d, needs to be > %s",
                   fname, performance_sample_count, rt['performance_sample_count'])
         is_valid = False
 
@@ -464,7 +464,7 @@ def check_results_dir(config, filter_submitter, csv):
                 continue
 
             for system_desc in list_dir(results_path):
-                # we are looking at ./$division/$submitter/$system_desc, ie ./closed/mlperf_org/t4-ort
+                # we are looking at ./$division/$submitter/results/$system_desc, ie ./closed/mlperf_org/results/t4-ort
 
                 #
                 # check if system_id is good.
@@ -492,8 +492,8 @@ def check_results_dir(config, filter_submitter, csv):
                 # Look at each model
                 #
                 for model_name in list_dir(results_path, system_desc):
-                    # we are looking at ./$division/$submitter/$system_desc/$model,
-                    #   ie ./closed/mlperf_org/t4-ort/bert
+                    # we are looking at ./$division/$submitter/results/$system_desc/$model,
+                    #   ie ./closed/mlperf_org/results/t4-ort/bert
                     name = os.path.join(results_path, system_desc, model_name)
 
                     if is_closed and model_name not in config.models:
@@ -519,8 +519,8 @@ def check_results_dir(config, filter_submitter, csv):
                         # some submissions in v0.5 use lower case scenarios - map them for now
                         scenario_fixed = SCENARIO_MAPPING.get(scenario, scenario)
 
-                        # we are looking at ./$division/$submitter/$system_desc/$model/$scenario,
-                        #   ie ./closed/mlperf_org/t4-ort/bert/Offline
+                        # we are looking at ./$division/$submitter/results/$system_desc/$model/$scenario,
+                        #   ie ./closed/mlperf_org/results/t4-ort/bert/Offline
                         name = os.path.join(results_path, system_desc, model_name, scenario)
                         results[name] = None
                         if scenario_fixed not in all_scenarios:

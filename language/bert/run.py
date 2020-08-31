@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument("--quantized", action="store_true", help="use quantized model (only valid for onnxruntime backend)")
     parser.add_argument("--profile", action="store_true", help="enable profiling (only valid for onnxruntime backend)")
     parser.add_argument("--mlperf_conf", default="build/mlperf.conf", help="mlperf rules config")
-    parser.add_argument("--user_conf", default="user.conf", help="mlperf rules config")
+    parser.add_argument("--user_conf", default="user.conf", help="user config for user LoadGen settings such as target QPS")
     args = parser.parse_args()
     return args
 

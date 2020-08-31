@@ -320,7 +320,8 @@ python tools/accuracy-dlrm.py --mlperf-accuracy-file <LOADGEN_ACCURACY_JSON> --d
 ### Usage
 ```
 usage: main.py [-h]
-    [--config ../mlperf.conf]
+    [--mlperf_conf ../../mlperf.conf]
+    [--user_conf user.conf]
     [--model MODEL] --model-path MODEL_PATH
     [--dataset {kaggle,terabyte}] --dataset-path DATASET_PATH
     [--profile {defaults,dlrm-kaggle-pytorch,dlrm-terabyte-pytorch}]
@@ -342,7 +343,9 @@ usage: main.py [-h]
     [--accuracy] [--find-peak-performance]
 ```
 
-`--config` the mlperf config file to use (default: `v0.5/mlperf.conf`).
+`--mlperf_conf` the mlperf config file to use for rules compliant parameters (default: ../../mlperf.conf)
+
+`--user_conf` the user config file to use for user LoadGen settings such as target QPS (default: user.conf)
 
 `--model` model name, i.e. `dlrm`.
 

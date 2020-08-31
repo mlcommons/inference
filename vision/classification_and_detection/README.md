@@ -195,7 +195,8 @@ If you want run with accuracy pass, try:
 ### Usage
 ```
 usage: main.py [-h]
-    [--config ../mlperf.conf]
+    [--mlperf_conf ../../mlperf.conf]
+    [--user_conf user.conf]
     [--dataset {imagenet,imagenet_mobilenet,coco,coco-300,coco-1200,coco-1200-onnx,coco-1200-pt,coco-1200-tf}]
     --dataset-path DATASET_PATH [--dataset-list DATASET_LIST]
     [--data-format {NCHW,NHWC}]
@@ -208,8 +209,11 @@ usage: main.py [-h]
     [--max-latency MAX_LATENCY] [--cache CACHE] [--accuracy]
 ```
 
-```--config```
-the mlperf config file to use, defaults to v0.5/mlperf.conf
+```--mlperf_conf```
+the mlperf config file to use for rules compliant parameters, defaults to ../../mlperf.conf
+
+```--user_conf```
+the user config file to use for user LoadGen settings such as target QPS, defaults to user.conf
 
 ```--dataset```
 use the specified dataset. Currently we only support ImageNet.

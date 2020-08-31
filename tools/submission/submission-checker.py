@@ -118,8 +118,8 @@ MODEL_CONFIG = {
             "ssd-large": 64,
             "resnet": 1024,
             "rnnt": 2513,
-            "bert-99": 3903900,
-            "bert-99.9": 3903900,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
             "dlrm-99": 204800,
             "dlrm-99.9": 204800,
             "3d-unet-99": 16,
@@ -194,7 +194,7 @@ ACC_PATTERN = {
     "mAP": r"^mAP=([\d\.]+).*",
     "bleu": r"^BLEU\:\s*([\d\.]+).*",
     "F1": r"^{\"exact_match\"\:\s*[\d\.]+,\s*\"f1\"\:\s*([\d\.]+)}",
-    "WER": r"Word Error Rate\:\s*([\d\.]+).*",
+    "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
     "DICE": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
 }
 
@@ -407,7 +407,7 @@ def check_performance_dir(config, model, path):
         log.error("%s performance_sample_count, found %d, needs to be > %s",
                   fname, performance_sample_count, rt['performance_sample_count'])
         is_valid = False
- 
+
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
     with open(fname, "r") as f:
@@ -429,7 +429,7 @@ def check_performance_dir(config, model, path):
         res /= TO_MS
 
     # check if the benchmark meets latency constraint
-    target_latency = config.latency_constraint.get(model).get(scenario)
+    target_latency = config.latency_constraint.get(model, dict()).get(scenario)
     if target_latency:
         if int(rt['99.00 percentile latency (ns)']) > target_latency:
             log.error("%s Latency constraint not met, expected=%s, found=%s",
@@ -709,7 +709,7 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model, scen
         impl = system_file[len(system_desc) + 1:-end]
         code_dir = os.path.join(root, "code", model, impl)
         if not os.path.exists(code_dir):
-            log.error("%s is missing %s*.json", fname, system_desc)
+            log.error("%s is missing code_dir %s", fname, code_dir)
     else:
         log.error("%s is missing %s*.json", fname, system_desc)
 

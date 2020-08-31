@@ -30,7 +30,7 @@ def get_args():
     parser.add_argument("--scenario", choices=["SingleStream", "Offline", "Server"], default="Offline", help="Scenario")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--mlperf_conf", default=str(MLPERF_CONF), help="mlperf rules config")
-    parser.add_argument("--user_conf", default="user.conf", help="mlperf rules config")
+    parser.add_argument("--user_conf", default="user.conf", help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--pytorch_config_toml", default="pytorch/configs/rnnt.toml")
     parser.add_argument("--pytorch_checkpoint", default="pytorch/work_dir/rnnt.pt")
     parser.add_argument("--dataset_dir", required=True)

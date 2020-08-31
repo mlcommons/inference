@@ -43,7 +43,7 @@ def get_args():
                         help="mlperf rules config")
     parser.add_argument("--user_conf",
                         default="user.conf",
-                        help="mlperf rules config")
+                        help="user config for user LoadGen settings such as target QPS")
     parser.add_argument(
         "--model_dir",
         default=

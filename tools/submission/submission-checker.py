@@ -166,8 +166,9 @@ MODEL_CONFIG = {
 }
 
 VALID_DIVISIONS = ["open", "closed"]
-REQUIRED_PERF_FILES = ["mlperf_log_accuracy.json", "mlperf_log_summary.txt", "mlperf_log_detail.txt"]
-REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
+REQUIRED_PERF_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
+OPTIONAL_PERF_FILES = ["mlperf_log_accuracy.json"]
+REQUIRED_ACC_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt", "accuracy.txt", "mlperf_log_accuracy.json"]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 TO_MS = 1000 * 1000
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
@@ -228,8 +229,8 @@ class Config():
         self.seeds = self.base["seeds"]
         self.accuracy_target = self.base["accuracy-target"]
         self.performance_sample_count = self.base["performance-sample-count"]
-        self.latency_constraint = self.base["latency-constraint"]
-        self.min_queries = self.base["min-queries"]
+        self.latency_constraint = self.base.get("latency-constraint", {})
+        self.min_queries = self.base.get("min-queries", {})
         self.required = None
         self.optional = None
 
@@ -428,34 +429,39 @@ def check_performance_dir(config, model, path):
     if scenario in ["Single Stream"]:
         res /= TO_MS
 
-    # check if the benchmark meets latency constraint
-    target_latency = config.latency_constraint.get(model, dict()).get(scenario)
-    if target_latency:
-        if int(rt['99.00 percentile latency (ns)']) > target_latency:
-            log.error("%s Latency constraint not met, expected=%s, found=%s",
-                         fname, target_latency, rt['99.00 percentile latency (ns)'])
+    if config.version != "v0.5":
+        # not supported for v0.5
 
-    # Check Minimum queries were issued to meet test duration
-    min_query_count = config.get_min_query_count(model, scenario)
-    if int(rt['min_query_count']) < min_query_count:
-        log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
-                      fname, min_query_count, rt['min_query_count'])
-    if scenario == "Offline" and (int(rt['samples_per_query']) < OFFLINE_MIN_SPQ):
-        log.error("%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
-                      fname, OFFLINE_MIN_SPQ, rt['samples_per_query'])
+        # check if the benchmark meets latency constraint
+        target_latency = config.latency_constraint.get(model, dict()).get(scenario)
+        if target_latency:
+            if int(rt['99.00 percentile latency (ns)']) > target_latency:
+                log.error("%s Latency constraint not met, expected=%s, found=%s",
+                            fname, target_latency, rt['99.00 percentile latency (ns)'])
 
-    # Test duration of 60s is met
-    if int(rt["min_duration (ms)"]) < TEST_DURATION_MS:
-         log.error("%s Test duration lesser than 60s in user config. expected=%s, found=%s",
-                       fname, TEST_DURATION_MS, rt["min_duration (ms)"])
+        # Check Minimum queries were issued to meet test duration
+        min_query_count = config.get_min_query_count(model, scenario)
+        if int(rt['min_query_count']) < min_query_count:
+            log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
+                        fname, min_query_count, rt['min_query_count'])
+        if scenario == "Offline" and (int(rt['samples_per_query']) < OFFLINE_MIN_SPQ):
+            log.error("%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
+                        fname, OFFLINE_MIN_SPQ, rt['samples_per_query'])
+
+        # Test duration of 60s is met
+        if int(rt["min_duration (ms)"]) < TEST_DURATION_MS:
+            log.error("%s Test duration lesser than 60s in user config. expected=%s, found=%s",
+                        fname, TEST_DURATION_MS, rt["min_duration (ms)"])
 
     return is_valid, res
 
 
-def files_diff(list1, list2):
+def files_diff(list1, list2, optional=None):
     """returns a list of files that are missing or added."""
+    if not optional:
+        optional = []
     if list1 and list2:
-        for i in ["mlperf_log_trace.json", "results.json"]:
+        for i in ["mlperf_log_trace.json", "results.json"] + optional:
             try:
                 list1.remove(i)
             except:
@@ -626,7 +632,7 @@ def check_results_dir(config, filter_submitter, csv):
                             if not os.path.exists(perf_path):
                                 log.error("%s is missing", perf_path)
                                 continue
-                            diff = files_diff(list_files(perf_path), REQUIRED_PERF_FILES)
+                            diff = files_diff(list_files(perf_path), REQUIRED_PERF_FILES, OPTIONAL_PERF_FILES)
                             if diff:
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
                             try:

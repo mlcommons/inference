@@ -23,7 +23,7 @@ device="cpu"
 
 for i in $* ; do
     case $i in
-       pytorch) backend=$i; shift;;
+       pytorch|onnxruntime) backend=$i; shift;;
        dlrm) model=$i; shift;;
        kaggle|terabyte) dataset=$i; shift;;
        cpu|gpu) device=$i; shift;;
@@ -46,7 +46,8 @@ else
     extra_args="--use-gpu"
 fi
 name="$model-$dataset-$backend"
-
+# debuging
+# echo $name
 
 #
 # pytorch
@@ -59,6 +60,15 @@ if [ $name == "dlrm-terabyte-pytorch" ] ; then
     model_path="$MODEL_DIR/dlrm_terabyte.pytorch"
     profile=dlrm-terabyte-pytorch
 fi
+if [ $name == "dlrm-kaggle-onnxruntime" ] ; then
+    model_path="$MODEL_DIR/dlrm_kaggle.onnxruntime"
+    profile=dlrm-kaggle-onnxruntime
+fi
+if [ $name == "dlrm-terabyte-onnxruntime" ] ; then
+    model_path="$MODEL_DIR/dlrm_terabyte.onnxruntime"
+    profile=dlrm-terabyte-onnxruntime
+fi
+
 # debuging
 # echo $model_path
 # echo $profile

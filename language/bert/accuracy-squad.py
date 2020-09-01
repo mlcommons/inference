@@ -205,7 +205,13 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
         null_start_logit = 0  # the start logit at the slice with min null score
         null_end_logit = 0  # the end logit at the slice with min null score
         for (feature_index, feature) in enumerate(features):
-            result = unique_id_to_result[feature.unique_id]
+            # FIX: During compliance/audit runs, we only generate a small subset of
+            # all entries from the dataset. As a result, sometimes dict retrieval
+            # fails because a key is missing.
+            # result = unique_id_to_result[feature.unique_id]
+            result = unique_id_to_result.get(feature.unique_id, None)
+            if result is None:
+                continue
             start_indexes = _get_best_indexes(result.start_logits, n_best_size)
             end_indexes = _get_best_indexes(result.end_logits, n_best_size)
             # if we could have irrelevant answers, get the min score of irrelevant

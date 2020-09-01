@@ -253,7 +253,10 @@ class Criteo(Dataset):
                 s = self.random_offsets[l]
                 e = self.random_offsets[l+1]
 
-            ls = [self.test_data[i] for i in range(s, e)]
+            if self.use_mlperf_bin_loader and self.samples_to_aggregate > 1:
+                ls = [self.test_data[l]]
+            else:
+                ls = [self.test_data[i] for i in range(s, e)]
             if self.use_mlperf_bin_loader:
                 # NOTE: in binary dataset the values are transformed
                 ls_t = list(zip(*ls))

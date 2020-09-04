@@ -133,9 +133,9 @@ MODEL_CONFIG = {
             "resnet50": "resnet",
         },
         "seeds": {
-            "qsl_rng_seed": 3133965575612453542,
-            "sample_index_rng_seed": 665484352860916858,
-            "schedule_rng_seed": 3622009729038561421,
+            "qsl_rng_seed": 12786827339337101903,
+            "sample_index_rng_seed": 12640797754436136668,
+            "schedule_rng_seed": 3135815929913719677,
         },
         "ignore_errors": [
             "CAS failed",

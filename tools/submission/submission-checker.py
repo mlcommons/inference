@@ -154,11 +154,11 @@ MODEL_CONFIG = {
             "resnet": {"SingleStream":1024, "Server": 270336, "MultiStream": 270336, "Offline": 1},
             "ssd-small": {"SingleStream":1024, "MultiStream": 270336, "Offline": 1},
             "ssd-large": {"SingleStream":1024, "Server": 270336, "MultiStream": 270336, "Offline": 1},
-            "rnnt": {"SingleStream": 1024, "Server": 90112, "Offline": 1},
-            "bert-99": {"SingleStream": 1024, "Server": 90112, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 90112, "Offline": 1},
-            "dlrm-99": {"Server": 90112, "Offline": 1},
-            "dlrm-99.9": {"Server": 90112, "Offline": 1},
+            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-99": {"Server": 270336, "Offline": 1},
+            "dlrm-99.9": {"Server": 270336, "Offline": 1},
             "3d-unet-99": {"SingleStream":1024, "Offline": 1},
             "3d-unet-99.9": {"SingleStream":1024, "Offline": 1},
         },
@@ -184,8 +184,8 @@ SCENARIO_MAPPING = {
 
 RESULT_FIELD = {
     "Offline": "Samples per second",
-    "Single": "90th percentile latency (ns)",
-    "Multi": "Samples per query",
+    "SingleStream": "90th percentile latency (ns)",
+    "MultiStream": "Samples per query",
     "Server": "Scheduled samples per second"
 }
 
@@ -247,7 +247,7 @@ class Config():
             raise ValueError("invalid system type")
 
     def get_mlperf_model(self, model):
-        # prefered - user is already using the official name
+        # preferred - user is already using the official name
         if model in self.models:
             return model
         
@@ -392,6 +392,7 @@ def check_accuracy_dir(config, model, path):
 def check_performance_dir(config, model, path):
     is_valid = False
     rt = {}
+
     # look for: Result is: VALID
     fname = os.path.join(path, "mlperf_log_summary.txt")
     with open(fname, "r") as f:
@@ -399,7 +400,7 @@ def check_performance_dir(config, model, path):
             m = re.match(r"^Result\s+is\s*\:\s+VALID", line)
             if m:
                 is_valid = True
-            m = re.match(r"^\s*([\w\s.\(\)\/]+)\s*\:\s*([\w\+\.]+).*", line)
+            m = re.match(r"^\s*([\w\s.\(\)\/]+)\s*\:\s*([\w\+\.][\w\+\.\s]*)", line)
             if m:
                 rt[m.group(1).strip()] = m.group(2).strip()
 
@@ -424,9 +425,9 @@ def check_performance_dir(config, model, path):
             if int(rt[seed]) != config.seeds[seed]:
                 log.error("%s %s is wrong, expected=%s, found=%s", fname, seed, config.seeds[seed], rt[seed])
 
-    scenario = rt["Scenario"]
+    scenario = rt["Scenario"].replace(" ","")
     res = float(rt[RESULT_FIELD[scenario]])
-    if scenario in ["Single Stream"]:
+    if scenario in ["SingleStream"]:
         res /= TO_MS
 
     if config.version != "v0.5":
@@ -637,8 +638,10 @@ def check_results_dir(config, filter_submitter, csv):
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
                             try:
                                 is_valid, r = check_performance_dir(config, mlperf_model, perf_path)
-                            except:
+                            except Exception as e:
+                                log.error("%s caused expection in check_performance_dir: %s", perf_path, e)
                                 is_valid, r = False, None
+
                             if is_valid:
                                 results[name] = r
                                 required_scenarios.discard(scenario_fixed)
@@ -660,7 +663,7 @@ def check_results_dir(config, filter_submitter, csv):
                             results[name] = None
                             log.error("%s does not have all required scenarios, missing %s", name, required_scenarios)
                         else:
-                            log.warning("%s ignorning missing scenarios in open division (%s)", name, required_scenarios)
+                            log.warning("%s ignoring missing scenarios in open division (%s)", name, required_scenarios)
 
     return results
 
@@ -676,7 +679,7 @@ def check_system_desc_id(fname, systems_json, submitter, division):
     all_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_OPTIONAL_FIELDS
     for k in systems_json.keys():
         if k not in all_fields:
-            log.warning("%s, field %s is unknwon", fname, k)
+            log.warning("%s, field %s is unknown", fname, k)
 
     if systems_json.get("submitter") != submitter:
         log.error("%s has submitter %s, directory has %s", fname, systems_json.get("submitter"), submitter)

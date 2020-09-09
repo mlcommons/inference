@@ -543,6 +543,8 @@ def check_results_dir(config, filter_submitter, csv):
                     available = system_json.get("status").lower()
                     if available not in VALID_AVAILABILITIES:
                         log.error("%s has invalid status (%s)", system_id_json, available)
+                        results[name] = None
+                        continue
                     system_type = system_json.get("system_type")
                     if config.version == "v0.7" and system_type not in ["datacenter", "edge"]:
                         log.error("%s has invalid system type (%s)", system_id_json, system_type)

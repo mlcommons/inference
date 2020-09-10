@@ -52,8 +52,10 @@ class BackendOnnxruntime(backend.Backend):
         # if torch.is_tensor(lS_i_onnx):
         #    lS_i_onnx = [lS_i_onnx[j] for j in range(len(lS_i_onnx))]
         # force tensor conversion
-        # lS_o_onnx = torch.stack(lS_o_onnx)
-        lS_i_onnx = torch.stack(lS_i_onnx)
+        # if isinstance(lS_o_onnx, list):
+        #     lS_o_onnx = torch.stack(lS_o_onnx)
+        # if isinstance(lS_i_onnx, list):
+        #     lS_i_onnx = torch.stack(lS_i_onnx)
 
         dict_inputs = {}
         dict_inputs["dense_x"] = batch_dense_X.numpy().astype(np.float32)
@@ -69,7 +71,7 @@ class BackendOnnxruntime(backend.Backend):
                 dict_inputs["indices_"+str(i)] = batch_lS_i[i].numpy().astype(np.int64)
 
         # predict and return output
-        print("dict_inputs", dict_inputs)
+        # print("dict_inputs", dict_inputs)
         output = self.sess.run(output_names=self.outputs, input_feed=dict_inputs)
         output = torch.tensor(output, requires_grad=False).view(-1, 1)
         # print("output", output)

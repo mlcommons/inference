@@ -3,8 +3,24 @@
 source run_common.sh
 
 dockercmd=docker
+
+# Get the Docker version
+
+version_major=$(docker version -f '{{.Client.Version}}' | cut -f1 -d.)
+version_minor=$(docker version -f '{{.Client.Version}}' | cut -f2 -d.)
+version_patch=$(docker version -f '{{.Client.Version}}' | cut -f3 -d.)
+
+# Set the appropriate GPU runtime flags based on the Docker version
+
 if [ $device == "gpu" ]; then
+    # Docker is older than 19.03
     runtime="--runtime=nvidia"
+    # Docker is 19.03 or newer
+    if [ $version_major -gt 18 ]; then
+	if [ $version_minor -ge 3 ]; then
+	    runtime="--gpus=all"
+	fi
+    fi
 fi
 
 # copy the config to cwd so the docker contrainer has access

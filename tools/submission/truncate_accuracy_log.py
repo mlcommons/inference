@@ -153,7 +153,7 @@ def truncate_results_dir(filter_submitter, backup):
                                     if not os.path.exists(acc_txt):
                                         log.error("%s missing, generate to continue", acc_txt)
                                         continue
-                                    with open(acc_txt, "r") as f:
+                                    with open(acc_txt, "r", encoding="utf-8") as f:
                                         for line in f:
                                             m = re.match(r"^hash=([\w\d]+)$", line)
                                             if m:

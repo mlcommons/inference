@@ -361,10 +361,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
 
   // Calculated expected number of queries
   uint64_t expected_queries = settings.target_qps * settings.min_duration.count() / 1000;
-  uint64_t minimum_queries = settings.min_query_count;
+  uint64_t minimum_queries = settings.min_query_count * settings.samples_per_query;
   if (scenario != TestScenario::Offline) {
       expected_queries *= settings.samples_per_query;
-      minimum_queries *= settings.samples_per_query;
   } else {
       minimum_queries = settings.min_sample_count;
   }

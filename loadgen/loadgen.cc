@@ -371,10 +371,6 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
 
   expected_queries = expected_queries < minimum_queries ? minimum_queries : expected_queries;
 
-  std::cout << "Loadgen :: expected_queries = "
-            << expected_queries << "\n"
-            << std::flush;
-
   if (settings.accuracy_log_sampling_target > 0) {
     response_logger.accuracy_log_prob = (double) settings.accuracy_log_sampling_target / expected_queries;
   }

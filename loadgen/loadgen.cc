@@ -361,9 +361,19 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
 
   // Calculated expected number of queries
   uint64_t expected_queries = settings.target_qps * settings.min_duration.count() / 1000;
+  uint64_t minimum_queries = settings.min_query_count;
   if (scenario != TestScenario::Offline) {
       expected_queries *= settings.samples_per_query;
+      minimum_queries *= settings.samples_per_query;
+  } else {
+      minimum_queries = settings.min_sample_count;
   }
+
+  expected_queries = expected_queries < minimum_queries ? minimum_queries : expected_queries;
+
+  std::cout << "Loadgen :: expected_queries = "
+            << expected_queries << "\n"
+            << std::flush;
 
   if (settings.accuracy_log_sampling_target > 0) {
     response_logger.accuracy_log_prob = (double) settings.accuracy_log_sampling_target / expected_queries;

@@ -65,7 +65,7 @@ MODEL_CONFIG = {
         "models": [
             "ssd-small", "ssd-large", "resnet", "rnnt",
             "bert-99", "bert-99.9",
-            "dlrm-99", "dlrm-99.9"
+            "dlrm-99", "dlrm-99.9",
             "3d-unet-99", "3d-unet-99.9"
         ],
         "required-scenarios-datacenter": {
@@ -164,6 +164,9 @@ TO_MS = 1000 * 1000
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
 OFFLINE_MIN_SPQ = 24576
 TEST_DURATION_MS = 60000
+REQUIRED_COMP_PER_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
+REQUIRED_TEST01_ACC_FILES_1 = ["mlperf_log_accuracy.json", "accuracy.txt"]
+REQUIRED_TEST01_ACC_FILES = REQUIRED_TEST01_ACC_FILES_1 + ["baseline_accuracy.txt", "compliance_accuracy.txt"]
 
 SCENARIO_MAPPING = {
     "singlestream": "SingleStream",
@@ -337,7 +340,7 @@ def check_accuracy_dir(config, model, path):
     hash_val = None
     acc_type, acc_target = config.get_accuracy_target(model)
     pattern = ACC_PATTERN[acc_type]
-    with open(os.path.join(path, "accuracy.txt"), "r") as f:
+    with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
             m = re.match(pattern, line)
             if m:
@@ -402,7 +405,7 @@ def check_performance_dir(config, model, path):
 
     performance_sample_count = config.get_performance_sample_count(model)
     if int(rt['performance_sample_count']) < performance_sample_count:
-        log.error("%s performance_sample_count, found %s, needs to be > %d",
+        log.error("%s performance_sample_count, found %s, needs to be > %s",
                   fname, performance_sample_count, rt['performance_sample_count'])
         is_valid = False
  
@@ -646,6 +649,18 @@ def check_results_dir(config, filter_submitter, csv):
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)
 
+                        # check if compliance dir is good for CLOSED division
+                        if is_closed:
+                           compliance_dir = os.path.join(division, submitter, "compliance",
+                                                          system_desc, model_name, scenario)
+                           if not os.path.exists(compliance_dir):
+                               log.error("no compliance dir for %s", name)
+                               results[name] = None
+                           else:
+                               if not check_compliance_dir(compliance_dir, mlperf_model, scenario):
+                                   log.error("compliance dir %s has issues", compliance_dir)
+                                   results[name] = None
+
                     if required_scenarios:
                         name = os.path.join(results_path, system_desc, model_name)
                         if is_closed:
@@ -713,6 +728,87 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model, scen
 
     return is_valid
 
+def check_compliance_perf_dir(test_dir):
+    is_valid = False
+
+    fname = os.path.join(test_dir, "verify_performance.txt")
+    if not os.path.exists(fname):
+        log.error("%s is missing in %s", fname, test_dir)
+        is_valid = False
+    else:
+        with open(fname, "r") as f:
+            for line in f:
+                # look for: TEST PASS
+                if "TEST PASS" in line:
+                    is_valid = True
+                    break
+        # Check performance dir
+        test_perf_path = os.path.join(test_dir, "performance", "run_1")
+        if not os.path.exists(test_perf_path):
+            log.error("%s has no performance/run_1 directory", test_dir)
+            is_valid = False
+        else:
+            diff = files_diff(list_files(test_perf_path), REQUIRED_COMP_PER_FILES)
+            if diff:
+                log.error("%s has file list mismatch (%s)", test_perf_path, diff)
+                is_valid = False
+
+    return is_valid
+
+def check_compliance_acc_dir(test_dir):
+    is_valid = False
+    acc_passed = False
+
+    fname = os.path.join(test_dir, "verify_accuracy.txt")
+    if not os.path.exists(fname):
+        log.error("%s is missing in %s", fname, test_dir)
+        is_valid = False
+    else:
+        # Accuracy can fail for TEST01
+        is_valid = True
+        with open(fname, "r") as f:
+            for line in f:
+                # look for: TEST PASS
+                if "TEST PASS" in line:
+                    acc_passed = True
+                    break
+        # Check Accuracy dir
+        test_acc_path = os.path.join(test_dir, "accuracy")
+        if not os.path.exists(test_acc_path):
+            log.error("%s has no accuracy directory", test_dir)
+            is_valid = False
+        else:
+            diff = files_diff(list_files(test_acc_path), REQUIRED_TEST01_ACC_FILES_1 if acc_passed else REQUIRED_TEST01_ACC_FILES)
+            if diff:
+                log.error("%s has file list mismatch (%s)", test_acc_path, diff)
+                is_valid = False
+
+    return is_valid
+
+def check_compliance_dir(compliance_dir, model, scenario):
+    compliance_perf_pass = True
+    compliance_acc_pass = True
+    test_list = ["TEST01", "TEST04-A", "TEST04-B", "TEST05"]
+
+    if model in ["rnnt", "bert-99", "bert-99.9", "dlrm-99", "dlrm-99.9"] or scenario in ["MultiStream"]:
+       test_list.remove("TEST04-A")
+       test_list.remove("TEST04-B")
+
+    #Check performance of all Tests
+    for test in test_list:
+        test_dir = os.path.join(compliance_dir, test)
+        if not os.path.exists(test_dir):
+            log.error("Missing %s in compliance dir %s", test, compliance_dir)
+            compliance_perf_pass = False
+        else:
+            compliance_perf_pass = check_compliance_perf_dir(test_dir)
+
+
+
+    #Check accuracy for TEST01
+    compliance_acc_pass = check_compliance_acc_dir(os.path.join(compliance_dir, "TEST01"))
+
+    return compliance_perf_pass and compliance_acc_pass
 
 def main():
     args = get_args()

@@ -506,7 +506,9 @@ def check_results_dir(config, filter_submitter, csv):
     """
     head = [
         "Organization", "Availability", "Division", "SystemType", "Platform", "Model",
-        "MlperfModel", "Scenario", "Result", "Accuracy", "Location",
+        "MlperfModel", "Scenario", "Result", "Accuracy", "number_of_nodes", "host_processor_model_name",
+        "host_processors_per_node", "host_processor_core_count", "accelerator_model_name", "accelerators_per_node",
+        "Location", "framework", "operating_system", "notes"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
@@ -655,8 +657,14 @@ def check_results_dir(config, filter_submitter, csv):
                         if results.get(name):
                             if accuracy_is_valid:
                                 log.info("%s is OK", name)
-                                csv.write(fmt.format(submitter, available, division, system_type, system_desc, model_name,
-                                                     mlperf_model, scenario_fixed, r, acc, name))
+                                csv.write(fmt.format(
+                                    submitter, available, division, system_type, system_desc, model_name,
+                                    mlperf_model, scenario_fixed, r, acc,
+                                    system_json.get("number_of_nodes"), system_json.get("host_processor_model_name"),
+                                    system_json.get("host_processors_per_node"), system_json.get("host_processor_core_count"),
+                                    system_json.get("accelerator_model_name"), system_json.get("accelerators_per_node"),
+                                    name, system_json.get("framework", ""), system_json.get("operating_system", ""),
+                                    system_json.get("notes", "")))
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)

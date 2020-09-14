@@ -167,7 +167,7 @@ def truncate_results_dir(filter_submitter, backup):
                                 if backup:
                                     backup_dir = os.path.join(backup, name, "accuracy")
                                     os.makedirs(backup_dir, exist_ok=True)
-                                    dst = os.path.join(backup, name, "mlperf_log_accuracy.json")
+                                    dst = os.path.join(backup, name, "accuracy", "mlperf_log_accuracy.json")
                                     if os.path.exists(dst):
                                         log.error("not processing %s because %s already exist", acc_log, dst)
                                         continue
@@ -175,7 +175,7 @@ def truncate_results_dir(filter_submitter, backup):
 
                                 # get to work
                                 hash_val = get_hash(acc_log)
-                                with open(acc_txt, "a") as f:
+                                with open(acc_txt, "a", encoding="utf-8") as f:
                                     f.write("hash={0}\n".format(hash_val))
                                 truncate_file(acc_log)
                                 log.info("%s truncated", acc_log)

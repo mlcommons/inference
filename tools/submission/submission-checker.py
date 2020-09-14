@@ -60,13 +60,19 @@ MODEL_CONFIG = {
             "sample_index_rng_seed": 665484352860916858,
             "schedule_rng_seed": 3622009729038561421,
         },
+        "ignore_errors": [
+            "check for ERROR in detailed",
+            "Loadgen built with uncommitted changes",
+            "Ran out of generated queries to issue before the minimum query count and test duration were reached",
+            "CAS failed",
+        ],
     },
     "v0.7": {
         "models": [
             "ssd-small", "ssd-large", "resnet", "rnnt",
             "bert-99", "bert-99.9",
             "dlrm-99", "dlrm-99.9",
-            "3d-unet-99", "3d-unet-99.9"
+            "3d-unet-99", "3d-unet-99.9",
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
@@ -112,8 +118,8 @@ MODEL_CONFIG = {
             "ssd-large": 64,
             "resnet": 1024,
             "rnnt": 2513,
-            "bert-99": 3903900,
-            "bert-99.9": 3903900,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
             "dlrm-99": 204800,
             "dlrm-99.9": 204800,
             "3d-unet-99": 16,
@@ -127,10 +133,13 @@ MODEL_CONFIG = {
             "resnet50": "resnet",
         },
         "seeds": {
-            "qsl_rng_seed": 3133965575612453542,
-            "sample_index_rng_seed": 665484352860916858,
-            "schedule_rng_seed": 3622009729038561421,
+            "qsl_rng_seed": 12786827339337101903,
+            "sample_index_rng_seed": 12640797754436136668,
+            "schedule_rng_seed": 3135815929913719677,
         },
+        "ignore_errors": [
+            "CAS failed",
+        ],
         "latency-constraint": {
             "resnet": {"Server": 15000000, "MultiStream": 50000000},
             "ssd-small": {"MultiStream": 50000000},
@@ -157,8 +166,9 @@ MODEL_CONFIG = {
 }
 
 VALID_DIVISIONS = ["open", "closed"]
-REQUIRED_PERF_FILES = ["mlperf_log_accuracy.json", "mlperf_log_summary.txt", "mlperf_log_detail.txt"]
-REQUIRED_ACC_FILES = REQUIRED_PERF_FILES + ["accuracy.txt"]
+REQUIRED_PERF_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
+OPTIONAL_PERF_FILES = ["mlperf_log_accuracy.json"]
+REQUIRED_ACC_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt", "accuracy.txt", "mlperf_log_accuracy.json"]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 TO_MS = 1000 * 1000
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
@@ -188,7 +198,7 @@ ACC_PATTERN = {
     "mAP": r"^mAP=([\d\.]+).*",
     "bleu": r"^BLEU\:\s*([\d\.]+).*",
     "F1": r"^{\"exact_match\"\:\s*[\d\.]+,\s*\"f1\"\:\s*([\d\.]+)}",
-    "WER": r"Word Error Rate\:\s*([\d\.]+).*",
+    "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
     "DICE": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
 }
 
@@ -222,8 +232,8 @@ class Config():
         self.seeds = self.base["seeds"]
         self.accuracy_target = self.base["accuracy-target"]
         self.performance_sample_count = self.base["performance-sample-count"]
-        self.latency_constraint = self.base["latency-constraint"]
-        self.min_queries = self.base["min-queries"]
+        self.latency_constraint = self.base.get("latency-constraint", {})
+        self.min_queries = self.base.get("min-queries", {})
         self.required = None
         self.optional = None
 
@@ -290,6 +300,12 @@ class Config():
             raise ValueError("model not known: " + model)
         return self.performance_sample_count[model]
 
+    def ignore_errors(self, line):
+        for error in self.base["ignore_errors"]:
+            if error in line:
+                return True
+        return False
+
     def get_min_query_count(self, model, scenario):
         model = self.get_mlperf_model(model)
         if model not in self.min_queries:
@@ -320,18 +336,6 @@ def list_files(*path):
 
 def split_path(m):
     return m.replace("\\", "/").split("/")
-
-
-def ignore_errors_for_v0_5(line):
-    if "check for ERROR in detailed" in line:
-        return True
-    if "Loadgen built with uncommitted changes" in line:
-        return True
-    if "Ran out of generated queries to issue before the minimum query count and test duration were reached" in line:
-        return True
-    if "CAS failed" in line:
-        return True
-    return False
 
 
 def check_accuracy_dir(config, model, path):
@@ -380,9 +384,8 @@ def check_accuracy_dir(config, model, path):
             for line in f:
                 # look for: ERROR
                 if "ERROR" in line:
-                    if config.version in ["v0.5"] and ignore_errors_for_v0_5(line):
+                    if config.ignore_errors(line):
                         continue
-                    # TODO: should this be a failed run?
                     log.error("%s contains error: %s", fname, line)
                     is_valid = False
 
@@ -405,17 +408,17 @@ def check_performance_dir(config, model, path):
 
     performance_sample_count = config.get_performance_sample_count(model)
     if int(rt['performance_sample_count']) < performance_sample_count:
-        log.error("%s performance_sample_count, found %s, needs to be > %s",
+        log.error("%s performance_sample_count, found %d, needs to be > %s",
                   fname, performance_sample_count, rt['performance_sample_count'])
         is_valid = False
- 
+
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
     with open(fname, "r") as f:
         for line in f:
             # look for: ERROR
             if "ERROR" in line:
-                if config.version in ["v0.5"] and ignore_errors_for_v0_5(line):
+                if config.ignore_errors(line):
                     continue
                 log.error("%s contains error: %s", fname, line)
                 is_valid = False
@@ -429,34 +432,39 @@ def check_performance_dir(config, model, path):
     if scenario in ["Single Stream"]:
         res /= TO_MS
 
-    # check if the benchmark meets latency constraint
-    target_latency = config.latency_constraint.get(model).get(scenario)
-    if target_latency:
-        if int(rt['99.00 percentile latency (ns)']) > target_latency:
-            log.error("%s Latency constraint not met, expected=%s, found=%s",
-                         fname, target_latency, rt['99.00 percentile latency (ns)'])
+    if config.version != "v0.5":
+        # not supported for v0.5
 
-    # Check Minimum queries were issued to meet test duration
-    min_query_count = config.get_min_query_count(model, scenario)
-    if int(rt['min_query_count']) < min_query_count:
-        log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
-                      fname, min_query_count, rt['min_query_count'])
-    if scenario == "Offline" and (int(rt['samples_per_query']) < OFFLINE_MIN_SPQ):
-        log.error("%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
-                      fname, OFFLINE_MIN_SPQ, rt['samples_per_query'])
+        # check if the benchmark meets latency constraint
+        target_latency = config.latency_constraint.get(model, dict()).get(scenario)
+        if target_latency:
+            if int(rt['99.00 percentile latency (ns)']) > target_latency:
+                log.error("%s Latency constraint not met, expected=%s, found=%s",
+                            fname, target_latency, rt['99.00 percentile latency (ns)'])
 
-    # Test duration of 60s is met
-    if int(rt["min_duration (ms)"]) < TEST_DURATION_MS:
-         log.error("%s Test duration lesser than 60s in user config. expected=%s, found=%s",
-                       fname, TEST_DURATION_MS, rt["min_duration (ms)"])
+        # Check Minimum queries were issued to meet test duration
+        min_query_count = config.get_min_query_count(model, scenario)
+        if int(rt['min_query_count']) < min_query_count:
+            log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
+                        fname, min_query_count, rt['min_query_count'])
+        if scenario == "Offline" and (int(rt['samples_per_query']) < OFFLINE_MIN_SPQ):
+            log.error("%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
+                        fname, OFFLINE_MIN_SPQ, rt['samples_per_query'])
+
+        # Test duration of 60s is met
+        if int(rt["min_duration (ms)"]) < TEST_DURATION_MS:
+            log.error("%s Test duration lesser than 60s in user config. expected=%s, found=%s",
+                        fname, TEST_DURATION_MS, rt["min_duration (ms)"])
 
     return is_valid, res
 
 
-def files_diff(list1, list2):
+def files_diff(list1, list2, optional=None):
     """returns a list of files that are missing or added."""
+    if not optional:
+        optional = []
     if list1 and list2:
-        for i in ["mlperf_log_trace.json", "results.json"]:
+        for i in ["mlperf_log_trace.json", "results.json"] + optional:
             try:
                 list1.remove(i)
             except:
@@ -520,7 +528,7 @@ def check_results_dir(config, filter_submitter, csv):
                 continue
 
             for system_desc in list_dir(results_path):
-                # we are looking at ./$division/$submitter/$system_desc, ie ./closed/mlperf_org/t4-ort
+                # we are looking at ./$division/$submitter/results/$system_desc, ie ./closed/mlperf_org/results/t4-ort
 
                 #
                 # check if system_id is good.
@@ -548,18 +556,18 @@ def check_results_dir(config, filter_submitter, csv):
                 # Look at each model
                 #
                 for model_name in list_dir(results_path, system_desc):
-                    # we are looking at ./$division/$submitter/$system_desc/$model,
-                    #   ie ./closed/mlperf_org/t4-ort/bert
+                    # we are looking at ./$division/$submitter/results/$system_desc/$model,
+                    #   ie ./closed/mlperf_org/results/t4-ort/bert
                     name = os.path.join(results_path, system_desc, model_name)
+                    mlperf_model = config.get_mlperf_model(model_name)
 
-                    if is_closed and model_name not in config.models:
+                    if is_closed and mlperf_model not in config.models:
                         # for closed division we want the model name to match.
                         # for open division the model_name might be different than the task
-                        log.error("%s has a invalid model (%s) for closed division", name, model_name)
+                        log.error("%s has a invalid model %s for closed division", name, model_name)
                         results[name] = None
                         continue
 
-                    mlperf_model = config.get_mlperf_model(model_name)
 
                     #
                     # Look at each scenario
@@ -575,8 +583,8 @@ def check_results_dir(config, filter_submitter, csv):
                         # some submissions in v0.5 use lower case scenarios - map them for now
                         scenario_fixed = SCENARIO_MAPPING.get(scenario, scenario)
 
-                        # we are looking at ./$division/$submitter/$system_desc/$model/$scenario,
-                        #   ie ./closed/mlperf_org/t4-ort/bert/Offline
+                        # we are looking at ./$division/$submitter/results/$system_desc/$model/$scenario,
+                        #   ie ./closed/mlperf_org/results/t4-ort/bert/Offline
                         name = os.path.join(results_path, system_desc, model_name, scenario)
                         results[name] = None
                         if scenario_fixed not in all_scenarios:
@@ -627,7 +635,7 @@ def check_results_dir(config, filter_submitter, csv):
                             if not os.path.exists(perf_path):
                                 log.error("%s is missing", perf_path)
                                 continue
-                            diff = files_diff(list_files(perf_path), REQUIRED_PERF_FILES)
+                            diff = files_diff(list_files(perf_path), REQUIRED_PERF_FILES, OPTIONAL_PERF_FILES)
                             if diff:
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
                             try:
@@ -722,7 +730,7 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model, scen
         impl = system_file[len(system_desc) + 1:-end]
         code_dir = os.path.join(root, "code", model, impl)
         if not os.path.exists(code_dir):
-            log.error("%s is missing %s*.json", fname, system_desc)
+            log.error("%s is missing code_dir %s", fname, code_dir)
     else:
         log.error("%s is missing %s*.json", fname, system_desc)
 

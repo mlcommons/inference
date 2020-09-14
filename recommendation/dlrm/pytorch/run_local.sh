@@ -2,7 +2,7 @@
 
 source ./run_common.sh
 
-common_opt="--config ../mlperf.conf"
+common_opt="--mlperf_conf ../../../mlperf.conf"
 OUTPUT_DIR=`pwd`/output/$name
 if [ ! -d $OUTPUT_DIR ]; then
     mkdir -p $OUTPUT_DIR

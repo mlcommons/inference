@@ -35,7 +35,7 @@ This test is not applicable for the following benchmarks whose performance is de
  - This test is not applicable for Multi-Stream scenario if samples_per_query >= Performance Sample Count
 
 ## Pass Criteria
-Performance of TEST04-B should be slower than performance of TEST04-A. To account for noise, TEST04-A can be upto 5% slower than TEST04-B.
+Performance of TEST04-B should be slower than performance of TEST04-A. To account for noise, TEST04-A can be upto 20% slower than TEST04-B for SingleStream scenario with very short latencies (<200us) & upto 10% slower otherwise.
 
 ## Instructions
 

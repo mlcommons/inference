@@ -320,7 +320,7 @@ def get_args():
     parser.add_argument("--version", default="v0.7", choices=list(MODEL_CONFIG.keys()), help="mlperf version")
     parser.add_argument("--submitter", help="filter to submitter")
     parser.add_argument("--csv", default="summary.csv", help="csv file with results")
-    parser.add_argument("--compliance", action="store_false", help="Pass this cmdline option to check compliance/ dir")
+    parser.add_argument("--skip_compliance", action="store_true", help="Pass this cmdline option to skip checking compliance/ dir")
     args = parser.parse_args()
     return args
 
@@ -477,7 +477,7 @@ def files_diff(list1, list2, optional=None):
     return []
 
 
-def check_results_dir(config, filter_submitter, check_compliance, csv):
+def check_results_dir(config, filter_submitter, skip_compliance, csv):
     """
     Walk the results directory and do the checking.
 
@@ -659,7 +659,7 @@ def check_results_dir(config, filter_submitter, check_compliance, csv):
                                 log.error("%s is OK but accuracy has issues", name)
 
                         # check if compliance dir is good for CLOSED division
-                        if is_closed and check_compliance:
+                        if is_closed and not skip_compliance:
                            compliance_dir = os.path.join(division, submitter, "compliance",
                                                           system_desc, model_name, scenario)
                            if not os.path.exists(compliance_dir):
@@ -827,7 +827,7 @@ def main():
     with open(args.csv, "w") as csv:
         os.chdir(args.input)
         # check results directory
-        results = check_results_dir(config, args.submitter, args.compliance, csv)
+        results = check_results_dir(config, args.submitter, args.skip_compliance, csv)
 
     # log results
     with_results = 0

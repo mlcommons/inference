@@ -75,17 +75,24 @@ MODEL_CONFIG = {
             "3d-unet-99", "3d-unet-99.9",
         ],
         "required-scenarios-datacenter": {
-            "resnet": ["Server", "Offline"],
-            "ssd-large": ["Server", "Offline"],
-            "rnnt": ["Server", "Offline"],
-            "bert-99": ["Server", "Offline"],
-            "bert-99.9": ["Server", "Offline"],
-            "dlrm-99": ["Server", "Offline"],
-            "dlrm-99.9": ["Server", "Offline"],
+            "resnet": ["Offline"],
+            "ssd-large": ["Offline"],
+            "rnnt": ["Offline"],
+            "bert-99": ["Offline"],
+            "bert-99.9": ["Offline"],
+            "dlrm-99": ["Offline"],
+            "dlrm-99.9": ["Offline"],
             "3d-unet-99": ["Offline"],
             "3d-unet-99.9": ["Offline"],
         },
         "optional-scenarios-datacenter": {
+            "resnet": ["Server"],
+            "ssd-large": ["Server"],
+            "rnnt": ["Server"],
+            "bert-99": ["Server"],
+            "bert-99.9": ["Server"],
+            "dlrm-99": ["Server"],
+            "dlrm-99.9": ["Server"],
         },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "Offline"],
@@ -431,8 +438,8 @@ def check_performance_dir(config, model, path):
         res /= TO_MS
 
     if config.version != "v0.5":
+        # FIXME: for open we script this because open can submit in all scenarios
         # not supported for v0.5
-
         # check if the benchmark meets latency constraint
         target_latency = config.latency_constraint.get(model, dict()).get(scenario)
         if target_latency:
@@ -442,7 +449,7 @@ def check_performance_dir(config, model, path):
 
         # Check Minimum queries were issued to meet test duration
         min_query_count = config.get_min_query_count(model, scenario)
-        if int(rt['min_query_count']) < min_query_count:
+        if min_query_count and int(rt['min_query_count']) < min_query_count:
             log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
                         fname, min_query_count, rt['min_query_count'])
         if scenario == "Offline" and (int(rt['samples_per_query']) < OFFLINE_MIN_SPQ):
@@ -500,7 +507,9 @@ def check_results_dir(config, filter_submitter, csv):
     """
     head = [
         "Organization", "Availability", "Division", "SystemType", "Platform", "Model",
-        "MlperfModel", "Scenario", "Result", "Accuracy", "Location",
+        "MlperfModel", "Scenario", "Result", "Accuracy", "number_of_nodes", "host_processor_model_name",
+        "host_processors_per_node", "host_processor_core_count", "accelerator_model_name", "accelerators_per_node",
+        "Location", "framework", "operating_system", "notes"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
@@ -585,7 +594,7 @@ def check_results_dir(config, filter_submitter, csv):
                         #   ie ./closed/mlperf_org/results/t4-ort/bert/Offline
                         name = os.path.join(results_path, system_desc, model_name, scenario)
                         results[name] = None
-                        if scenario_fixed not in all_scenarios:
+                        if is_closed and scenario_fixed not in all_scenarios:
                             log.warning("%s ignoring scenario %s (neither required nor optional)", name, scenario)
                             continue
 
@@ -651,8 +660,14 @@ def check_results_dir(config, filter_submitter, csv):
                         if results.get(name):
                             if accuracy_is_valid:
                                 log.info("%s is OK", name)
-                                csv.write(fmt.format(submitter, available, division, system_type, system_desc, model_name,
-                                                     mlperf_model, scenario_fixed, r, acc, name))
+                                csv.write(fmt.format(
+                                    submitter, available, division, system_type, system_desc, model_name,
+                                    mlperf_model, scenario_fixed, r, acc,
+                                    system_json.get("number_of_nodes"), system_json.get("host_processor_model_name"),
+                                    system_json.get("host_processors_per_node"), system_json.get("host_processor_core_count"),
+                                    system_json.get("accelerator_model_name"), system_json.get("accelerators_per_node"),
+                                    name, system_json.get("framework", ""), system_json.get("operating_system", ""),
+                                    system_json.get("notes", "")))
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)

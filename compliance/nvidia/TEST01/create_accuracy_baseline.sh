@@ -14,6 +14,6 @@ accuracy_baseline="${accuracy_baseline%.*}"_baseline.json
 cut -d ':' -f 2,3 ${perf_log} | cut -d ',' -f 2- | sort | uniq | grep qsl > ${patterns}
 echo '[' > ${accuracy_baseline}
 grep -f ${patterns} ${accuracy_log} >> ${accuracy_baseline}
-sed -i '$ s/,$/]/g' ${accuracy_baseline}
+echo ']' >> ${accuracy_baseline}
 rm ${patterns}
 echo "Created a baseline accuracy file: ${accuracy_baseline}"

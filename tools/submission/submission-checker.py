@@ -740,20 +740,21 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model, scen
 
     return is_valid
 
-def check_compliance_perf_dir(test_dir):
+def check_compliance_perf_dir(test_dir, require_verify_perf=True):
     is_valid = False
 
     fname = os.path.join(test_dir, "verify_performance.txt")
-    if not os.path.exists(fname):
+    if require_verify_perf and not os.path.exists(fname):
         log.error("%s is missing in %s", fname, test_dir)
         is_valid = False
     else:
-        with open(fname, "r") as f:
-            for line in f:
-                # look for: TEST PASS
-                if "TEST PASS" in line:
-                    is_valid = True
-                    break
+        if require_verify_perf:
+            with open(fname, "r") as f:
+                for line in f:
+                    # look for: TEST PASS
+                    if "TEST PASS" in line:
+                        is_valid = True
+                        break
         # Check performance dir
         test_perf_path = os.path.join(test_dir, "performance", "run_1")
         if not os.path.exists(test_perf_path):
@@ -813,7 +814,7 @@ def check_compliance_dir(compliance_dir, model, scenario):
             log.error("Missing %s in compliance dir %s", test, compliance_dir)
             compliance_perf_pass = False
         else:
-            compliance_perf_pass = check_compliance_perf_dir(test_dir)
+            compliance_perf_pass = check_compliance_perf_dir(test_dir, test != "TEST04-B")
 
 
 

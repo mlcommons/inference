@@ -46,42 +46,32 @@ class BackendOnnxruntime(backend.Backend):
         # print(self.inputs)
         # print(self.outputs)
 
-        '''
-        incoming_bs = batch_dense_X.shape[0]
-        model_saved_bs = 2048
-        if (incoming_bs != model_saved_bs):
-            print("WARNING: mismatch beween incoming " + str(incoming_bs) + " and model saved " + str(model_saved_bs) + " mini-batch size")
-            fake_output = torch.zeros(size=(incoming_bs,1), dtype=torch.float32)
-            return fake_output
-        '''
+        # force list conversion
+        # if torch.is_tensor(lS_o_onnx):
+        #    lS_o_onnx = [lS_o_onnx[j] for j in range(len(lS_o_onnx))]
+        # if torch.is_tensor(lS_i_onnx):
+        #    lS_i_onnx = [lS_i_onnx[j] for j in range(len(lS_i_onnx))]
+        # force tensor conversion
+        # if isinstance(lS_o_onnx, list):
+        #     lS_o_onnx = torch.stack(lS_o_onnx)
+        # if isinstance(lS_i_onnx, list):
+        #     lS_i_onnx = torch.stack(lS_i_onnx)
 
         dict_inputs = {}
+        dict_inputs["dense_x"] = batch_dense_X.numpy().astype(np.float32)
+        if torch.is_tensor(batch_lS_o):
+            dict_inputs["offsets"] = batch_lS_o.numpy().astype(np.int64)
+        else:  # list
+            for i in range(len(batch_lS_o)):
+                dict_inputs["offsets_"+str(i)] = batch_lS_o[i].numpy().astype(np.int64)
+        if torch.is_tensor(batch_lS_i):
+            dict_inputs["indices"] = batch_lS_i.numpy().astype(np.int64)
+        else:  # list
+            for i in range(len(batch_lS_i)):
+                dict_inputs["indices_"+str(i)] = batch_lS_i[i].numpy().astype(np.int64)
 
-        # Dmitriy's approach to build dictionaries
-        ind = 0
-        for i in self.inputs:
-
-            if "input.1" == i:
-                dict_inputs[i] = batch_dense_X.numpy().astype(np.float32)
-            
-            elif "lS_o" == i:
-                dict_inputs[i] = batch_lS_o.numpy().astype(np.int64)
-
-            else:
-                dict_inputs[i] = batch_lS_i[ind].numpy().astype(np.int64)
-                ind = ind + 1
-        '''
-        # Maxim's approach to build dictionaries
-        dict_inputs[self.inputs[0]] = batch_dense_X.numpy().astype(np.float32)
-        dict_inputs[self.inputs[1]] = batch_lS_o.numpy().astype(np.int64)
-        if False: #torch.is_tensor(batch_lS_i): # approach 1: tensor
-            dict_inputs[self.inputs[2]] = batch_lS_i.numpy().astype(np.int64)
-        else: # approach 2: list
-            for j in range(26): # 26 sparse features
-                dict_inputs[self.inputs[j+2]] = batch_lS_i[j].numpy().astype(np.int64)
-        '''
         # predict and return output
-        # print(dict_inputs)
+        # print("dict_inputs", dict_inputs)
         output = self.sess.run(output_names=self.outputs, input_feed=dict_inputs)
         output = torch.tensor(output, requires_grad=False).view(-1, 1)
         # print("output", output)

@@ -28,3 +28,4 @@ See the individual Readme files in the reference app for details.
 | dlrm | [recommendation/dlrm](https://github.com/mlperf/inference/tree/r0.7/recommendation/dlrm/pytorch) | pytorch, tensorflow(?), onnx(?) | Criteo Terabyte |
 | 3d-unet | [vision/medical_imageing/3d-unet](https://github.com/mlperf/inference/tree/r0.7/vision/medical_imaging/3d-unet) | pytorch, tensorflow(?), onnx(?) | BraTS 2019 |
 | rnnt | [speech_recognition/rnnt](https://github.com/mlperf/inference/tree/r0.7/speech_recognition/rnnt) | pytorch | OpenSLR LibriSpeech Corpus |
+

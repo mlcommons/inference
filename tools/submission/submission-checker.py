@@ -229,8 +229,9 @@ SYSTEM_IMP_REQUIRED_FILES = [
 
 class Config():
     """Select config value by mlperf version and submission type."""
-    def __init__(self, version):
+    def __init__(self, version, extra_model_benchmark_map):
         self.base = MODEL_CONFIG.get(version)
+        self.set_extra_model_benchmark_map(extra_model_benchmark_map)
         self.version = version
         self.models = self.base["models"]
         self.seeds = self.base["seeds"]
@@ -241,6 +242,12 @@ class Config():
         self.required = None
         self.optional = None
 
+    def set_extra_model_benchmark_map(self, extra_model_benchmark_map):
+        if extra_model_benchmark_map:
+            for mapping in extra_model_benchmark_map.split(';'):
+                model_name, mlperf_model = mapping.split(':')
+                self.base['model_mapping'][model_name] = mlperf_model
+              
     def set_type(self, submission_type):
         if submission_type is None and self.version in ["v0.5"]:
             return
@@ -324,6 +331,7 @@ def get_args():
     parser.add_argument("--version", default="v0.7", choices=list(MODEL_CONFIG.keys()), help="mlperf version")
     parser.add_argument("--submitter", help="filter to submitter")
     parser.add_argument("--csv", default="summary.csv", help="csv file with results")
+    parser.add_argument("--extra-model-benchmark-map", help="extra model name to benchmark mapping")
     args = parser.parse_args()
     return args
 
@@ -743,7 +751,7 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model, scen
 def main():
     args = get_args()
 
-    config = Config(args.version)
+    config = Config(args.version, args.extra_model_benchmark_map)
 
     with open(args.csv, "w") as csv:
         os.chdir(args.input)

@@ -674,8 +674,8 @@ def check_results_dir(config, filter_submitter, csv):
                                     system_json.get("number_of_nodes"), system_json.get("host_processor_model_name"),
                                     system_json.get("host_processors_per_node"), system_json.get("host_processor_core_count"),
                                     system_json.get("accelerator_model_name"), system_json.get("accelerators_per_node"),
-                                    name, system_json.get("framework", ""), system_json.get("operating_system", ""),
-                                    system_json.get("notes", "")))
+                                    name, '"'+system_json.get("framework", "")+'"', system_json.get("operating_system", ""),
+                                    '"'+system_json.get("notes", "")+'"'))
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)

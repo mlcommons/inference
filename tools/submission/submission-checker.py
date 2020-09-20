@@ -173,6 +173,7 @@ MODEL_CONFIG = {
 }
 
 VALID_DIVISIONS = ["open", "closed"]
+VALID_STATUS = ["available", "on-premise", "rdi", "preview"]
 REQUIRED_PERF_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 OPTIONAL_PERF_FILES = ["mlperf_log_accuracy.json"]
 REQUIRED_ACC_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt", "accuracy.txt", "mlperf_log_accuracy.json"]
@@ -557,7 +558,17 @@ def check_results_dir(config, filter_submitter, csv, debug=False):
                 with open(system_id_json) as f:
                     system_json = json.load(f)
                     system_type = system_json.get("system_type")
-                    available = system_json.get("status")
+                    available = system_json.get("status").lower()
+
+                    # FIXME: workaround for v0.7 submission
+                    if available == "research, development, or internal":
+                        available = "rdi"
+
+                    if available not in VALID_STATUS:
+                        log.error("%s has invalid status (%s)", system_id_json, available)
+                        results[name] = None
+                        continue
+
                     if config.version == "v0.7" and system_type not in ["datacenter", "edge"]:
                         log.error("%s has invalid system type (%s)", system_id_json, system_type)
                         results[name] = None
@@ -566,7 +577,8 @@ def check_results_dir(config, filter_submitter, csv, debug=False):
                     if not check_system_desc_id(name, system_json, submitter, division):
                         results[name] = None
 
-                # 
+
+                #
                 # Look at each model
                 #
                 for model_name in list_dir(results_path, system_desc):
@@ -668,10 +680,15 @@ def check_results_dir(config, filter_submitter, csv, debug=False):
                                 csv.write(fmt.format(
                                     submitter, available, division, system_type, system_desc, model_name,
                                     mlperf_model, scenario_fixed, r, acc,
-                                    system_json.get("number_of_nodes"), system_json.get("host_processor_model_name"),
-                                    system_json.get("host_processors_per_node"), system_json.get("host_processor_core_count"),
-                                    system_json.get("accelerator_model_name"), system_json.get("accelerators_per_node"),
-                                    name.replace("\\", "/"), '"'+system_json.get("framework", "")+'"', system_json.get("operating_system", ""),
+                                    system_json.get("number_of_nodes"),
+                                    '"'+system_json.get("host_processor_model_name")+ '"',
+                                    system_json.get("host_processors_per_node"),
+                                    system_json.get("host_processor_core_count"),
+                                    '"'+system_json.get("accelerator_model_name")+ '"',
+                                    system_json.get("accelerators_per_node"),
+                                    name.replace("\\", "/"),
+                                    '"'+system_json.get("framework", "")+'"',
+                                    '"'+system_json.get("operating_system", "")+'"',
                                     '"'+system_json.get("notes", "")+'"'))
                             else:
                                 results[name] = None

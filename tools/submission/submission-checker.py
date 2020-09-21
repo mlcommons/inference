@@ -75,17 +75,24 @@ MODEL_CONFIG = {
             "3d-unet-99", "3d-unet-99.9",
         ],
         "required-scenarios-datacenter": {
-            "resnet": ["Server", "Offline"],
-            "ssd-large": ["Server", "Offline"],
-            "rnnt": ["Server", "Offline"],
-            "bert-99": ["Server", "Offline"],
-            "bert-99.9": ["Server", "Offline"],
-            "dlrm-99": ["Server", "Offline"],
-            "dlrm-99.9": ["Server", "Offline"],
+            "resnet": ["Offline"],
+            "ssd-large": ["Offline"],
+            "rnnt": ["Offline"],
+            "bert-99": ["Offline"],
+            "bert-99.9": ["Offline"],
+            "dlrm-99": ["Offline"],
+            "dlrm-99.9": ["Offline"],
             "3d-unet-99": ["Offline"],
             "3d-unet-99.9": ["Offline"],
         },
         "optional-scenarios-datacenter": {
+            "resnet": ["Server"],
+            "ssd-large": ["Server"],
+            "rnnt": ["Server"],
+            "bert-99": ["Server"],
+            "bert-99.9": ["Server"],
+            "dlrm-99": ["Server"],
+            "dlrm-99.9": ["Server"],
         },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "Offline"],
@@ -166,6 +173,7 @@ MODEL_CONFIG = {
 }
 
 VALID_DIVISIONS = ["open", "closed"]
+VALID_STATUS = ["available", "on-premise", "rdi", "preview"]
 REQUIRED_PERF_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 OPTIONAL_PERF_FILES = ["mlperf_log_accuracy.json"]
 REQUIRED_ACC_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt", "accuracy.txt", "mlperf_log_accuracy.json"]
@@ -225,8 +233,9 @@ SYSTEM_IMP_REQUIRED_FILES = [
 
 class Config():
     """Select config value by mlperf version and submission type."""
-    def __init__(self, version):
+    def __init__(self, version, extra_model_benchmark_map):
         self.base = MODEL_CONFIG.get(version)
+        self.set_extra_model_benchmark_map(extra_model_benchmark_map)
         self.version = version
         self.models = self.base["models"]
         self.seeds = self.base["seeds"]
@@ -237,6 +246,12 @@ class Config():
         self.required = None
         self.optional = None
 
+    def set_extra_model_benchmark_map(self, extra_model_benchmark_map):
+        if extra_model_benchmark_map:
+            for mapping in extra_model_benchmark_map.split(';'):
+                model_name, mlperf_model = mapping.split(':')
+                self.base['model_mapping'][model_name] = mlperf_model
+              
     def set_type(self, submission_type):
         if submission_type is None and self.version in ["v0.5"]:
             return
@@ -260,14 +275,14 @@ class Config():
             return mlperf_model
 
         # try to guess
-        if model.startswith("mobilenet"):
-            model = "mobilenet"
-        if model.startswith("efficientnet"):
-            model = "resnet"
-        elif model.startswith("rcnn"):
+        if "ssdlite" in model or "ssd-inception" in model or "yolo" in model or \
+            "ssd-mobilenet" in model or "ssd-resnet50" in model:
             model = "ssd-small"
-        elif model.startswith("ssdlite") or model.startswith("ssd-inception") or model.startswith("yolo") or \
-            model.startswith("ssd-mobilenet") or model.startswith("ssd-resnet50"):
+        elif "mobilenet" in model:
+            model = "mobilenet"
+        elif "efficientnet" in model:
+            model = "resnet"
+        elif "rcnn" in model:
             model = "ssd-small"
         # map again, for example v0.7 does not have mobilenet so it needs to be mapped to resnet
         mlperf_model = self.base["model_mapping"].get(model, model)
@@ -321,6 +336,8 @@ def get_args():
     parser.add_argument("--submitter", help="filter to submitter")
     parser.add_argument("--csv", default="summary.csv", help="csv file with results")
     parser.add_argument("--skip_compliance", action="store_true", help="Pass this cmdline option to skip checking compliance/ dir")
+    parser.add_argument("--extra-model-benchmark-map", help="extra model name to benchmark mapping")
+    parser.add_argument("--debug", action="store_true", help="extra debug output")
     args = parser.parse_args()
     return args
 
@@ -339,7 +356,7 @@ def split_path(m):
     return m.replace("\\", "/").split("/")
 
 
-def check_accuracy_dir(config, model, path):
+def check_accuracy_dir(config, model, path, verbose):
     is_valid = False
     acc = None
     hash_val = None
@@ -358,7 +375,7 @@ def check_accuracy_dir(config, model, path):
 
     if acc and float(acc) >= acc_target:
         is_valid = True
-    else:
+    elif verbose:
         log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
 
     if not hash_val:
@@ -435,8 +452,8 @@ def check_performance_dir(config, model, path):
         res /= TO_MS
 
     if config.version != "v0.5":
+        # FIXME: for open we script this because open can submit in all scenarios
         # not supported for v0.5
-
         # check if the benchmark meets latency constraint
         target_latency = config.latency_constraint.get(model, dict()).get(scenario)
         if target_latency:
@@ -446,7 +463,7 @@ def check_performance_dir(config, model, path):
 
         # Check Minimum queries were issued to meet test duration
         min_query_count = config.get_min_query_count(model, scenario)
-        if int(rt['min_query_count']) < min_query_count:
+        if min_query_count and int(rt['min_query_count']) < min_query_count:
             log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
                         fname, min_query_count, rt['min_query_count'])
         if scenario == "Offline" and (int(rt['samples_per_query']) < OFFLINE_MIN_SPQ):
@@ -478,7 +495,7 @@ def files_diff(list1, list2, optional=None):
     return []
 
 
-def check_results_dir(config, filter_submitter, skip_compliance, csv):
+def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=False):
     """
     Walk the results directory and do the checking.
 
@@ -504,7 +521,9 @@ def check_results_dir(config, filter_submitter, skip_compliance, csv):
     """
     head = [
         "Organization", "Availability", "Division", "SystemType", "Platform", "Model",
-        "MlperfModel", "Scenario", "Result", "Accuracy", "Location",
+        "MlperfModel", "Scenario", "Result", "Accuracy", "number_of_nodes", "host_processor_model_name",
+        "host_processors_per_node", "host_processor_core_count", "accelerator_model_name", "accelerators_per_node",
+        "Location", "framework", "operating_system", "notes"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
@@ -525,8 +544,6 @@ def check_results_dir(config, filter_submitter, skip_compliance, csv):
                 continue
             results_path = os.path.join(division, submitter, "results")
             if not os.path.exists(results_path):
-                log.error("no submission in %s", results_path)
-                results[results_path] = None
                 continue
 
             for system_desc in list_dir(results_path):
@@ -545,7 +562,17 @@ def check_results_dir(config, filter_submitter, skip_compliance, csv):
                 with open(system_id_json) as f:
                     system_json = json.load(f)
                     system_type = system_json.get("system_type")
-                    available = system_json.get("status")
+                    available = system_json.get("status").lower()
+
+                    # FIXME: workaround for v0.7 submission
+                    if available == "research, development, or internal":
+                        available = "rdi"
+
+                    if available not in VALID_STATUS:
+                        log.error("%s has invalid status (%s)", system_id_json, available)
+                        results[name] = None
+                        continue
+
                     if config.version == "v0.7" and system_type not in ["datacenter", "edge"]:
                         log.error("%s has invalid system type (%s)", system_id_json, system_type)
                         results[name] = None
@@ -554,7 +581,8 @@ def check_results_dir(config, filter_submitter, skip_compliance, csv):
                     if not check_system_desc_id(name, system_json, submitter, division):
                         results[name] = None
 
-                # 
+
+                #
                 # Look at each model
                 #
                 for model_name in list_dir(results_path, system_desc):
@@ -589,7 +617,7 @@ def check_results_dir(config, filter_submitter, skip_compliance, csv):
                         #   ie ./closed/mlperf_org/results/t4-ort/bert/Offline
                         name = os.path.join(results_path, system_desc, model_name, scenario)
                         results[name] = None
-                        if scenario_fixed not in all_scenarios:
+                        if is_closed and scenario_fixed not in all_scenarios:
                             log.warning("%s ignoring scenario %s (neither required nor optional)", name, scenario)
                             continue
 
@@ -616,15 +644,13 @@ def check_results_dir(config, filter_submitter, skip_compliance, csv):
                             diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
                             if diff:
                                 log.error("%s has file list mismatch (%s)", acc_path, diff)
-                            accuracy_is_valid, acc = check_accuracy_dir(config, mlperf_model, acc_path)
+                            accuracy_is_valid, acc = check_accuracy_dir(config, mlperf_model, acc_path, debug or is_closed)
                             if not accuracy_is_valid and not is_closed:
-                                log.warning("%s, accuracy not valid but taken for open", acc_path)
-                                # TODO: is this correct?
+                                if debug:
+                                    log.warning("%s, accuracy not valid but taken for open", acc_path)
                                 accuracy_is_valid = True
 
-                            if accuracy_is_valid:
-                                log.info("%s, accuracy is %s", acc_path, acc)
-                            else:
+                            if not accuracy_is_valid:
                                 log.error("%s, accuracy not valid", acc_path)
 
                         if scenario in ["Server"]:
@@ -654,9 +680,20 @@ def check_results_dir(config, filter_submitter, skip_compliance, csv):
 
                         if results.get(name):
                             if accuracy_is_valid:
-                                log.info("%s is OK", name)
-                                csv.write(fmt.format(submitter, available, division, system_type, system_desc, model_name,
-                                                     mlperf_model, scenario_fixed, r, acc, name))
+                                # log.info("%s is OK", name)
+                                csv.write(fmt.format(
+                                    submitter, available, division, system_type, system_desc, model_name,
+                                    mlperf_model, scenario_fixed, r, acc,
+                                    system_json.get("number_of_nodes"),
+                                    '"'+system_json.get("host_processor_model_name")+ '"',
+                                    system_json.get("host_processors_per_node"),
+                                    system_json.get("host_processor_core_count"),
+                                    '"'+system_json.get("accelerator_model_name")+ '"',
+                                    system_json.get("accelerators_per_node"),
+                                    name.replace("\\", "/"),
+                                    '"'+system_json.get("framework", "")+'"',
+                                    '"'+system_json.get("operating_system", "")+'"',
+                                    '"'+system_json.get("notes", "")+'"'))
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)
@@ -678,7 +715,7 @@ def check_results_dir(config, filter_submitter, skip_compliance, csv):
                         if is_closed:
                             results[name] = None
                             log.error("%s does not have all required scenarios, missing %s", name, required_scenarios)
-                        else:
+                        elif debug:
                             log.warning("%s ignoring missing scenarios in open division (%s)", name, required_scenarios)
 
     return results
@@ -697,7 +734,7 @@ def check_system_desc_id(fname, systems_json, submitter, division):
         if k not in all_fields:
             log.warning("%s, field %s is unknown", fname, k)
 
-    if systems_json.get("submitter") != submitter:
+    if systems_json.get("submitter").lower() != submitter.lower():
         log.error("%s has submitter %s, directory has %s", fname, systems_json.get("submitter"), submitter)
         is_valid = False
     if systems_json.get("division") != division:
@@ -732,7 +769,14 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model, scen
                     log.error("%s, field %s is missing", fname, k)
 
         impl = system_file[len(system_desc) + 1:-end]
-        code_dir = os.path.join(root, "code", model, impl)
+        code_dir = os.path.join(root, "code", model)
+        if os.path.isfile(code_dir):
+            with open(code_dir, "r") as f:
+                line = f.read()
+                code_dir = os.path.join(root, "code", line.strip(), impl)
+        else:
+            code_dir = os.path.join(root, "code", model, impl)
+
         if not os.path.exists(code_dir):
             log.error("%s is missing code_dir %s", fname, code_dir)
     else:
@@ -826,25 +870,29 @@ def check_compliance_dir(compliance_dir, model, scenario):
 def main():
     args = get_args()
 
-    config = Config(args.version)
+    config = Config(args.version, args.extra_model_benchmark_map)
 
     with open(args.csv, "w") as csv:
         os.chdir(args.input)
         # check results directory
-        results = check_results_dir(config, args.submitter, args.skip_compliance, csv)
+        results = check_results_dir(config, args.submitter, args.skip_compliance, csv, args.debug)
 
     # log results
+    log.info("---")
     with_results = 0
+    for k, v in results.items():
+        if v:
+            log.info("Results %s %s", k, v)
+            with_results += 1
+    log.info("---")
     for k, v in results.items():
         if v is None:
             log.error("NoResults %s", k)
-        else:
-            log.info("Results %s %s", k, v)
-            with_results += 1
 
     # print summary
+    log.info("---")
     log.info("Results=%d, NoResults=%d", with_results, len(results) - with_results)
-    if len(results) != with_results: # bad_submissions or meta_errors or measurement_errors:
+    if len(results) != with_results:
         log.error("SUMMARY: submission has errors")
         return 1
     else:

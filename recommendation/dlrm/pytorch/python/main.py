@@ -133,7 +133,7 @@ def get_args():
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
 
     # file to use mlperf rules compliant parameters
-    parser.add_argument("--mlperf_conf", default="../../mlperf.conf", help="mlperf rules config")
+    parser.add_argument("--mlperf_conf", default="mlperf.conf", help="mlperf rules config")
     # file for user LoadGen settings such as target QPS
     parser.add_argument("--user_conf", default="user.conf", help="user config for user LoadGen settings such as target QPS")
 
@@ -511,8 +511,8 @@ def main():
         last_timeing = [t / NANO_SEC for t in latencies_ns]
 
     settings = lg.TestSettings()
-    settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
-    settings.FromConfig(user_conf, args.model_name, args.scenario)
+    settings.FromConfig(mlperf_conf, args.model_path, args.scenario)
+    settings.FromConfig(user_conf, args.model_path, args.scenario)
     settings.scenario = scenario
     settings.mode = lg.TestMode.PerformanceOnly
 

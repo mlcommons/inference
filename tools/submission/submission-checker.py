@@ -807,8 +807,7 @@ def check_compliance_perf_dir(test_dir, require_verify_perf=True):
         else:
             diff = files_diff(list_files(test_perf_path), REQUIRED_COMP_PER_FILES)
             if diff:
-                log.error("%s has file list mismatch (%s)", test_perf_path, diff)
-                is_valid = False
+                log.info("%s has file list mismatch (%s)", test_perf_path, diff)
 
     return is_valid
 
@@ -837,8 +836,7 @@ def check_compliance_acc_dir(test_dir):
         else:
             diff = files_diff(list_files(test_acc_path), REQUIRED_TEST01_ACC_FILES_1 if acc_passed else REQUIRED_TEST01_ACC_FILES)
             if diff:
-                log.error("%s has file list mismatch (%s)", test_acc_path, diff)
-                is_valid = False
+                log.info("%s has file list mismatch (%s)", test_acc_path, diff)
 
     return is_valid
 

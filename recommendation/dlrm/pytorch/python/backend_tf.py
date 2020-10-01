@@ -98,7 +98,7 @@ class BackendTF(backend.Backend):
         ph_2 = self.graph.get_tensor_by_name('ph_2:0')
 
         np_tensor_out = out_operation.outputs[0].eval(session=self.sess, feed_dict = {ph_1 : np_tensor_int, ph_2 : np_tensor_cat})
+        # print("1st output element: ", np_tensor_out[:1])
 
-        print("1st output element: ", np_tensor_out[:1])
         output = torch.from_numpy(np_tensor_out)
         return output

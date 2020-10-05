@@ -233,7 +233,7 @@ SYSTEM_IMP_REQUIRED_FILES = [
 
 class Config():
     """Select config value by mlperf version and submission type."""
-    def __init__(self, version, extra_model_benchmark_map):
+    def __init__(self, version, extra_model_benchmark_map, ignore_uncommited=False):
         self.base = MODEL_CONFIG.get(version)
         self.set_extra_model_benchmark_map(extra_model_benchmark_map)
         self.version = version
@@ -245,6 +245,7 @@ class Config():
         self.min_queries = self.base.get("min-queries", {})
         self.required = None
         self.optional = None
+        self.ignore_uncommited = ignore_uncommited
 
     def set_extra_model_benchmark_map(self, extra_model_benchmark_map):
         if extra_model_benchmark_map:
@@ -319,6 +320,8 @@ class Config():
         for error in self.base["ignore_errors"]:
             if error in line:
                 return True
+        if self.ignore_uncommited and "ERROR : Loadgen built with uncommitted changes!" in line:
+            return True
         return False
 
     def get_min_query_count(self, model, scenario):
@@ -338,6 +341,7 @@ def get_args():
     parser.add_argument("--skip_compliance", action="store_true", help="Pass this cmdline option to skip checking compliance/ dir")
     parser.add_argument("--extra-model-benchmark-map", help="extra model name to benchmark mapping")
     parser.add_argument("--debug", action="store_true", help="extra debug output")
+    parser.add_argument("--submission-exceptions", action="store_true", help="ignore certain errors for submission")
     args = parser.parse_args()
     return args
 
@@ -403,6 +407,8 @@ def check_accuracy_dir(config, model, path, verbose):
                 # look for: ERROR
                 if "ERROR" in line:
                     if config.ignore_errors(line):
+                        if "ERROR : Loadgen built with uncommitted changes!" in line:
+                            log.warning("%s contains error: %s", fname, line)
                         continue
                     log.error("%s contains error: %s", fname, line)
                     is_valid = False
@@ -438,6 +444,8 @@ def check_performance_dir(config, model, path):
             # look for: ERROR
             if "ERROR" in line:
                 if config.ignore_errors(line):
+                    if "ERROR : Loadgen built with uncommitted changes!" in line:
+                        log.warning("%s contains error: %s", fname, line)
                     continue
                 log.error("%s contains error: %s", fname, line)
                 is_valid = False
@@ -446,7 +454,8 @@ def check_performance_dir(config, model, path):
             if int(rt[seed]) != config.seeds[seed]:
                 log.error("%s %s is wrong, expected=%s, found=%s", fname, seed, config.seeds[seed], rt[seed])
 
-    scenario = rt["Scenario"].replace(" ","")
+
+    scenario = rt["Scenario"].replace(" ", "")
     res = float(rt[RESULT_FIELD[scenario]])
     if scenario in ["SingleStream"]:
         res /= TO_MS
@@ -475,7 +484,7 @@ def check_performance_dir(config, model, path):
             log.error("%s Test duration lesser than 60s in user config. expected=%s, found=%s",
                         fname, TEST_DURATION_MS, rt["min_duration (ms)"])
 
-    return is_valid, res
+    return is_valid, res, rt
 
 
 def files_diff(list1, list2, optional=None):
@@ -520,14 +529,34 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
         if there are errors write a None as result so we can report later what failed
     """
     head = [
-        "Organization", "Availability", "Division", "SystemType", "Platform", "Model",
+        "Organization", "Availability", "Division", "SystemType", "SystemName", "Platform", "Model",
         "MlperfModel", "Scenario", "Result", "Accuracy", "number_of_nodes", "host_processor_model_name",
         "host_processors_per_node", "host_processor_core_count", "accelerator_model_name", "accelerators_per_node",
-        "Location", "framework", "operating_system", "notes"
+        "Location", "framework", "operating_system", "notes", "compilance", "errors", "version", "infered"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
     results = {}
+
+    def log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
+                   scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=0):
+        csv.write(fmt.format(
+            submitter, available, division, system_type, system_name, system_desc, model_name,
+            mlperf_model, scenario_fixed, r, acc,
+            system_json.get("number_of_nodes"),
+            '"'+system_json.get("host_processor_model_name")+ '"',
+            system_json.get("host_processors_per_node"),
+            system_json.get("host_processor_core_count"),
+            '"'+system_json.get("accelerator_model_name")+ '"',
+            system_json.get("accelerators_per_node"),
+            name.replace("\\", "/"),
+            '"'+system_json.get("framework", "")+'"',
+            '"'+system_json.get("operating_system", "")+'"',
+            '"'+system_json.get("notes", "")+'"',
+            compilance,
+            errors,
+            config.version,
+            infered))
 
     # we are at the top of the submission directory
     for division in list_dir("."):
@@ -563,16 +592,14 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                     system_json = json.load(f)
                     system_type = system_json.get("system_type")
                     available = system_json.get("status").lower()
-
+                    system_name = system_json.get("system_name") or system_desc
                     # FIXME: workaround for v0.7 submission
                     if available == "research, development, or internal":
                         available = "rdi"
-
                     if available not in VALID_STATUS:
                         log.error("%s has invalid status (%s)", system_id_json, available)
                         results[name] = None
                         continue
-
                     if config.version == "v0.7" and system_type not in ["datacenter", "edge"]:
                         log.error("%s has invalid system type (%s)", system_id_json, system_type)
                         results[name] = None
@@ -580,12 +607,13 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                     config.set_type(system_type)
                     if not check_system_desc_id(name, system_json, submitter, division):
                         results[name] = None
-
+                        continue
 
                 #
                 # Look at each model
                 #
                 for model_name in list_dir(results_path, system_desc):
+
                     # we are looking at ./$division/$submitter/results/$system_desc/$model,
                     #   ie ./closed/mlperf_org/results/t4-ort/bert
                     name = os.path.join(results_path, system_desc, model_name)
@@ -598,7 +626,6 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         results[name] = None
                         continue
 
-
                     #
                     # Look at each scenario
                     #
@@ -608,6 +635,9 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         results[name] = None
                         continue
 
+                    errors = 0
+                    single_stream_acc = 0
+                    single_stream_qps = 0
                     all_scenarios = set(list(required_scenarios) + list(config.get_optional(mlperf_model)))
                     for scenario in list_dir(results_path, system_desc, model_name):
                         # some submissions in v0.5 use lower case scenarios - map them for now
@@ -627,11 +657,15 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         if not os.path.exists(measurement_dir):
                             log.error("no measurement_dir for %s", name)
                             results[measurement_dir] = None
+                            errors += 1
                         else:
                             if not check_measurement_dir(measurement_dir, name, system_desc,
                                                          os.path.join(division, submitter), model_name, scenario):
-                                log.error("measurement_dir %s has issues", measurement_dir)
-                                results[measurement_dir] = None
+                                log.error("%s measurement_dir has issues", measurement_dir)
+                                # results[measurement_dir] = None
+                                errors += 1
+                                # FIXME: we should not accept this submission
+                                # continue
 
                         # check accuracy
                         accuracy_is_valid = False
@@ -649,8 +683,9 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 if debug:
                                     log.warning("%s, accuracy not valid but taken for open", acc_path)
                                 accuracy_is_valid = True
-
                             if not accuracy_is_valid:
+                                # a little below we'll not copy this into the results csv
+                                errors += 1
                                 log.error("%s, accuracy not valid", acc_path)
 
                         if scenario in ["Server"]:
@@ -667,7 +702,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             if diff:
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
                             try:
-                                is_valid, r = check_performance_dir(config, mlperf_model, perf_path)
+                                is_valid, r, rt = check_performance_dir(config, mlperf_model, perf_path)
                             except Exception as e:
                                 log.error("%s caused expection in check_performance_dir: %s", perf_path, e)
                                 is_valid, r = False, None
@@ -675,42 +710,48 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             if is_valid:
                                 results[name] = r
                                 required_scenarios.discard(scenario_fixed)
+                                if scenario_fixed == "SingleStream":
+                                    single_stream_qps = rt.get("QPS w/o loadgen overhead")
                             else:
                                 log.error("%s has issues", perf_path)
+                                errors += 1
+
+                        # check if compliance dir is good for CLOSED division
+                        compilance = 0 if is_closed else 1
+                        if is_closed and not skip_compliance:
+                            compliance_dir = os.path.join(division, submitter, "compliance",
+                                                          system_desc, model_name, scenario)
+                            if not os.path.exists(compliance_dir):
+                                log.error("no compliance dir for %s", name)
+                                # results[name] = None
+                            else:
+                                if not check_compliance_dir(compliance_dir, mlperf_model, scenario):
+                                    log.error("compliance dir %s has issues", compliance_dir)
+                                    # results[name] = None
+                                else:
+                                    compilance = 1
 
                         if results.get(name):
                             if accuracy_is_valid:
-                                # log.info("%s is OK", name)
-                                csv.write(fmt.format(
-                                    submitter, available, division, system_type, system_desc, model_name,
-                                    mlperf_model, scenario_fixed, r, acc,
-                                    system_json.get("number_of_nodes"),
-                                    '"'+system_json.get("host_processor_model_name")+ '"',
-                                    system_json.get("host_processors_per_node"),
-                                    system_json.get("host_processor_core_count"),
-                                    '"'+system_json.get("accelerator_model_name")+ '"',
-                                    system_json.get("accelerators_per_node"),
-                                    name.replace("\\", "/"),
-                                    '"'+system_json.get("framework", "")+'"',
-                                    '"'+system_json.get("operating_system", "")+'"',
-                                    '"'+system_json.get("notes", "")+'"'))
+                                if scenario_fixed == "SingleStream":
+                                    single_stream_acc = acc
+                                log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
+                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config)
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)
 
-                        # check if compliance dir is good for CLOSED division
-                        if is_closed and not skip_compliance:
-                           compliance_dir = os.path.join(division, submitter, "compliance",
-                                                          system_desc, model_name, scenario)
-                           if not os.path.exists(compliance_dir):
-                               log.error("no compliance dir for %s", name)
-                               results[name] = None
-                           else:
-                               if not check_compliance_dir(compliance_dir, mlperf_model, scenario):
-                                   log.error("compliance dir %s has issues", compliance_dir)
-                                   results[name] = None
-
                     if required_scenarios:
+                        if is_closed and system_type == 'edge' and 'Offline' in required_scenarios:
+                            # special to infer offline results from singlestream
+                            measurement_dir = os.path.join(division, submitter, "measurements",
+                                                       system_desc, model_name, "Offline")
+                            if os.path.exists(measurement_dir):
+                                name = os.path.join(results_path, system_desc, model_name, "Offline")
+                                log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
+                                           "Offline", single_stream_qps, single_stream_acc, system_json, name, compilance, errors, config, infered=1)
+                                results[name] = single_stream_qps
+                                continue
                         name = os.path.join(results_path, system_desc, model_name)
                         if is_closed:
                             results[name] = None
@@ -778,9 +819,13 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model, scen
             code_dir = os.path.join(root, "code", model, impl)
 
         if not os.path.exists(code_dir):
-            log.error("%s is missing code_dir %s", fname, code_dir)
+            # see if the code dir is per model
+            if not os.path.exists(os.path.dirname(code_dir)):
+                log.error("%s is missing code_dir %s", fname, code_dir)
+                is_valid = False
     else:
         log.error("%s is missing %s*.json", fname, system_desc)
+        is_valid = False
 
     return is_valid
 
@@ -868,7 +913,7 @@ def check_compliance_dir(compliance_dir, model, scenario):
 def main():
     args = get_args()
 
-    config = Config(args.version, args.extra_model_benchmark_map)
+    config = Config(args.version, args.extra_model_benchmark_map, ignore_uncommited=args.submission_exceptions)
 
     with open(args.csv, "w") as csv:
         os.chdir(args.input)

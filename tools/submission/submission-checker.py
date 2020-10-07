@@ -540,6 +540,11 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
 
     def log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
                    scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=0):
+
+        notes = system_json.get("hw_notes", "")
+        if system_json.get("sw_notes"):
+            notes = notes + ". " + system_json.get("sw_notes")
+
         csv.write(fmt.format(
             submitter, available, division, system_type, system_name, system_desc, model_name,
             mlperf_model, scenario_fixed, r, acc,
@@ -552,7 +557,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
             name.replace("\\", "/"),
             '"'+system_json.get("framework", "")+'"',
             '"'+system_json.get("operating_system", "")+'"',
-            '"'+system_json.get("notes", "")+'"',
+            '"'+notes +'"',
             compilance,
             errors,
             config.version,
@@ -636,8 +641,6 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         continue
 
                     errors = 0
-                    single_stream_acc = 0
-                    single_stream_qps = 0
                     all_scenarios = set(list(required_scenarios) + list(config.get_optional(mlperf_model)))
                     for scenario in list_dir(results_path, system_desc, model_name):
                         # some submissions in v0.5 use lower case scenarios - map them for now
@@ -688,6 +691,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 errors += 1
                                 log.error("%s, accuracy not valid", acc_path)
 
+                        infered = 0
                         if scenario in ["Server"]:
                             n = ["run_1", "run_2", "run_3", "run_4", "run_5"]
                         else:
@@ -703,6 +707,11 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
                             try:
                                 is_valid, r, rt = check_performance_dir(config, mlperf_model, perf_path)
+                                if scenario_fixed in ["Offline"] and rt["Scenario"] != scenario_fixed:
+                                    # special case for Offline results infered from SingleStream
+                                    infered = 1
+                                    r = rt.get("QPS w/o loadgen overhead")
+                                    log.info("%s has infered resuls, qps=%s", perf_path, r)
                             except Exception as e:
                                 log.error("%s caused expection in check_performance_dir: %s", perf_path, e)
                                 is_valid, r = False, None
@@ -710,8 +719,6 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             if is_valid:
                                 results[name] = r
                                 required_scenarios.discard(scenario_fixed)
-                                if scenario_fixed == "SingleStream":
-                                    single_stream_qps = rt.get("QPS w/o loadgen overhead")
                             else:
                                 log.error("%s has issues", perf_path)
                                 errors += 1
@@ -733,25 +740,13 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
 
                         if results.get(name):
                             if accuracy_is_valid:
-                                if scenario_fixed == "SingleStream":
-                                    single_stream_acc = acc
                                 log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
-                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config)
+                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered)
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)
 
                     if required_scenarios:
-                        if is_closed and system_type == 'edge' and 'Offline' in required_scenarios:
-                            # special to infer offline results from singlestream
-                            measurement_dir = os.path.join(division, submitter, "measurements",
-                                                       system_desc, model_name, "Offline")
-                            if os.path.exists(measurement_dir):
-                                name = os.path.join(results_path, system_desc, model_name, "Offline")
-                                log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
-                                           "Offline", single_stream_qps, single_stream_acc, system_json, name, compilance, errors, config, infered=1)
-                                results[name] = single_stream_qps
-                                continue
                         name = os.path.join(results_path, system_desc, model_name)
                         if is_closed:
                             results[name] = None

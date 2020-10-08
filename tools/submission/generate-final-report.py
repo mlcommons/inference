@@ -40,7 +40,9 @@ def main():
     df['host_processor_core_count'] = df['host_processor_core_count'].apply(lambda x: 2 if x == '2 (big); 4 (LITTLE)' else x)
     df['Availability'] = df['Availability'].apply(lambda x: "available" if x == 'on-premise' else x)
 
-    df['a#'] = df['a#'].apply(lambda x: int(x) if x != "" else "")
+    df['Accelerator'] = df['Accelerator'].apply(lambda x: x if x != "-" else "")
+    df['a#'] = df['a#'].apply(lambda x: int(x) if x != "" else 0)
+    df['a#'] = df['a#'].apply(lambda x: x if x > 0 else "")
     df['p#'] = df.apply(lambda x: int(x['host_processor_core_count']) * int(x['host_processors_per_node']), axis=1)
 
     base_url = "https://github.com/mlperf/submissions_inference_0_7/tree/master"

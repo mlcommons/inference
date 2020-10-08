@@ -23,6 +23,8 @@ def main():
     args = get_args()
 
     df = pd.read_csv(args.input).fillna("")
+
+    # rename some fields
     df.rename(columns={
         "Organization": "Submitter",
         "Division": "Category",
@@ -40,35 +42,47 @@ def main():
     df['host_processor_core_count'] = df['host_processor_core_count'].apply(lambda x: 2 if x == '2 (big); 4 (LITTLE)' else x)
     df['Availability'] = df['Availability'].apply(lambda x: "available" if x == 'on-premise' else x)
 
+    # cleanup counts
     df['Accelerator'] = df['Accelerator'].apply(lambda x: x if x != "-" else "")
     df['a#'] = df['a#'].apply(lambda x: int(x) if x != "" else 0)
     df['a#'] = df['a#'].apply(lambda x: x if x > 0 else "")
     df['p#'] = df.apply(lambda x: int(x['host_processor_core_count']) * int(x['host_processors_per_node']), axis=1)
 
+    # details url
     base_url = "https://github.com/mlperf/submissions_inference_0_7/tree/master"
     df['Details'] = df.apply(
         lambda x: '=HYPERLINK("{}","details")'.format("/".join([base_url, x['Category'], x['Submitter'], "results", x['Platform']])), axis=1)
 
     output = args.input[:-4]
+    writer = pd.ExcelWriter(output + '.xlsx', engine='xlsxwriter')
 
     index = [
-        'Unique ID (e.g. for Audit)', 'Suite', 'Category', 'Submitter',
+        'Unique ID (e.g. for Audit)', 'Submitter',
         'Availability', 'System', 'Processor', "p#", 'Accelerator', "a#",
-        "Notes", "Details", 
+        "Notes", "Details",
     ]
     columns = [
         'Model', 'Scenario',
     ]
+
+    # closed
     df['Unique ID (e.g. for Audit)'] = df.apply(
         lambda x: "/".join([x['Suite'], x['Category'], x['Submitter'], x['Platform']]), axis=1)
-    df1 = df[df['Category'] == "closed"].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
-    df1.to_excel(output + "_closed.xlsx")
+    df1 = df[(df['Category'] == "closed") & (df['Suite'] == "datacenter")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
+    df1.to_excel(writer, sheet_name="closed,datacenter")
+    df1 = df[(df['Category'] == "closed") & (df['Suite'] == "edge")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
+    df1.to_excel(writer, sheet_name="closed,edge")
 
+    # open
     df['Unique ID (e.g. for Audit)'] = df.apply(
         lambda x: "/".join([x['Suite'], x['Category'], x['Submitter'], x['Platform'], x['UsedModel']]), axis=1)
-    df1 = df[df['Category'] == "open"].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
-    df1.to_excel(output + "_open.xlsx")
-
+    df1 = df[(df['Category'] == "open") & (df['Suite'] == "datacenter")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
+    df1.to_excel(writer, sheet_name="open,datacenter")
+    df1 = df[(df['Category'] == "open") & (df['Suite'] == "edge")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
+    df1.to_excel(writer, sheet_name="open,edge")
+    
+    writer.save()
+    
     return 0
 
 

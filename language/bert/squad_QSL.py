@@ -16,11 +16,11 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.join(os.getcwd(), "DeepLearningExamples", "TensorFlow", "LanguageModeling", "BERT"))
 sys.path.insert(0, os.getcwd())
+sys.path.insert(0, os.path.join(os.getcwd(), "DeepLearningExamples", "TensorFlow", "LanguageModeling", "BERT"))
 
 from transformers import BertTokenizer
-from utils.create_squad_data import read_squad_examples, convert_examples_to_features
+from create_squad_data import read_squad_examples, convert_examples_to_features
 
 import mlperf_loadgen as lg
 

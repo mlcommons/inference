@@ -31,7 +31,7 @@ import tensorflow as tf
 # import horovod.tensorflow as hvd
 import time
 
-flags = tf.flags
+flags = tf.compat.v1.flags
 FLAGS = None
 
 def extract_flags():
@@ -154,7 +154,7 @@ class InputFeatures(object):
 
 def read_squad_examples(input_file, is_training, version_2_with_negative=False):
   """Read a SQuAD json file into a list of SquadExample."""
-  with tf.gfile.Open(input_file, "r") as reader:
+  with tf.compat.v1.gfile.Open(input_file, "r") as reader:
     input_data = json.load(reader)["data"]
 
   def is_whitespace(c):

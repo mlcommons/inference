@@ -27,7 +27,7 @@ from transformers import BertConfig, BertForQuestionAnswering
 from squad_QSL import get_squad_QSL
 
 class BERT_PyTorch_SUT():
-    def __init__(self):
+    def __init__(self, args):
         print("Loading BERT configs...")
         with open("bert_config.json") as f:
             config_json = json.load(f)
@@ -55,7 +55,7 @@ class BERT_PyTorch_SUT():
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
         print("Finished constructing SUT.")
 
-        self.qsl = get_squad_QSL()
+        self.qsl = get_squad_QSL(args.max_examples)
 
     def issue_queries(self, query_samples):
         with torch.no_grad():
@@ -80,5 +80,5 @@ class BERT_PyTorch_SUT():
     def __del__(self):
         print("Finished destroying SUT.")
 
-def get_pytorch_sut():
-    return BERT_PyTorch_SUT()
+def get_pytorch_sut(args):
+    return BERT_PyTorch_SUT(args)

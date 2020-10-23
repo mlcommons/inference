@@ -56,7 +56,7 @@ def main():
         assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
         assert not args.profile, "Profiling is only supported by onnxruntime backend!"
         from tf_SUT import get_tf_sut
-        sut = get_tf_sut()
+        sut = get_tf_sut(args)
     elif args.backend == "tf_estimator":
         assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
         assert not args.profile, "Profiling is only supported by onnxruntime backend!"

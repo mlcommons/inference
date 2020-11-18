@@ -1362,7 +1362,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   GlobalLogger().StopIOThread();
 }
 
-void EndTest() {
+void AbortTest() {
   loadgen::IssueQueryController::GetInstance().EndThreads();
   GlobalLogger().StopLogging();
   GlobalLogger().StopTracing();

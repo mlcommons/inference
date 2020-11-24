@@ -2,7 +2,7 @@
 
 This is the reference implementation for MLPerf Inference benchmarks.
 
-You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/v0.5/classification_and_detection/GettingStarted.ipynb).
+You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
 
 ## Supported Models
 

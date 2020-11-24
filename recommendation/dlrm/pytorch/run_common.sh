@@ -23,8 +23,8 @@ device="cpu"
 
 for i in $* ; do
     case $i in
-       pytorch|onnxruntime) backend=$i; shift;;
-       dlrm) model=$i; shift;;
+       pytorch|onnxruntime|tensorflow) backend=$i; shift;;
+       dlrm|tf_dlrm) model=$i; shift;;
        kaggle|terabyte) dataset=$i; shift;;
        cpu|gpu) device=$i; shift;;
     esac
@@ -67,6 +67,14 @@ fi
 if [ $name == "dlrm-terabyte-onnxruntime" ] ; then
     model_path="$MODEL_DIR/dlrm_terabyte.onnxruntime"
     profile=dlrm-terabyte-onnxruntime
+fi
+if [ $name == "tf_dlrm-kaggle-tensorflow" ] ; then
+    model_path="$MODEL_DIR"
+    profile=tf_dlrm-kaggle-tensorflow
+fi
+if [ $name == "tf_dlrm-terabyte-tensorflow" ] ; then
+    model_path="$MODEL_DIR"
+    profile=tf_dlrm-terabyte-tensorflow
 fi
 
 # debuging

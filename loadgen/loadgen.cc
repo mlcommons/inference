@@ -315,8 +315,14 @@ std::vector<QueryMetadata> GenerateQueries(
     count = queries.size(), spq = settings.samples_per_query,
     duration = timestamp.count()
   ](AsyncDetail & detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "generated_query_count", count);
+    MLPERF_LOG(detail, "generated_samples_per_query", spq);
+    MLPERF_LOG(detail, "generated_query_duration", duration);
+#else
     detail("GeneratedQueries: ", "queries", count, "samples per query", spq,
            "duration", duration);
+#endif
   });
 
   return queries;
@@ -404,12 +410,20 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
 
   if (mode == TestMode::PerformanceOnly && ran_out_of_generated_queries) {
     LogDetail([](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+      MLPERF_LOG_ERROR(detail, "error_runtime",
+          "Ending early: Ran out of generated queries to issue before the "
+          "minimum query count and test duration were reached. "
+          "Please update the relevant expected latency or target qps in the "
+          "TestSettings so they are more accurate.");
+#else
       detail.Error(
           "Ending early: Ran out of generated queries to issue before the "
           "minimum query count and test duration were reached.");
       detail(
           "Please update the relevant expected latency or target qps in the "
           "TestSettings so they are more accurate.");
+#endif
     });
   }
 
@@ -435,10 +449,15 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
         start_for_power +
         std::chrono::duration_cast<std::chrono::system_clock::duration>(
             sut_active_duration);
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG_INTERVAL_START(detail, "power_begin", DateTimeStringForPower(start_for_power));
+    MLPERF_LOG_INTERVAL_END(detail, "power_end", DateTimeStringForPower(end_for_power));
+#else
     detail("POWER_BEGIN: ", "mode", ToString(mode), "time",
            DateTimeStringForPower(start_for_power));
     detail("POWER_END: ", "mode", ToString(mode), "time",
            DateTimeStringForPower(end_for_power));
+#endif
   });
 
   double max_latency =
@@ -525,7 +544,8 @@ struct PerformanceSummary {
   bool MinSamplesMet();
   bool HasPerfConstraints();
   bool PerfConstraintsMet(std::string* recommendation);
-  void Log(AsyncSummary& summary);
+  void LogSummary(AsyncSummary& summary);
+  void LogDetail(AsyncDetail& detail);
 };
 
 void PerformanceSummary::ProcessLatencies() {
@@ -673,7 +693,7 @@ bool PerformanceSummary::PerfConstraintsMet(std::string* recommendation) {
   return perf_constraints_met;
 }
 
-void PerformanceSummary::Log(AsyncSummary& summary) {
+void PerformanceSummary::LogSummary(AsyncSummary& summary) {
   ProcessLatencies();
 
   summary(
@@ -816,9 +836,104 @@ void PerformanceSummary::Log(AsyncSummary& summary) {
   settings.LogSummary(summary);
 }
 
+void PerformanceSummary::LogDetail(AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+  ProcessLatencies();
+
+  // General validity checking
+  std::string min_duration_recommendation;
+  std::string perf_constraints_recommendation;
+  bool min_duration_met = MinDurationMet(&min_duration_recommendation);
+  bool min_queries_met = MinQueriesMet() && MinSamplesMet();
+  bool perf_constraints_met =
+      PerfConstraintsMet(&perf_constraints_recommendation);
+  bool all_constraints_met =
+      min_duration_met && min_queries_met && perf_constraints_met;
+
+  MLPERF_LOG(detail, "result_validity", all_constraints_met ? "VALID" : "INVALID");
+  if (HasPerfConstraints()) {
+    MLPERF_LOG(detail, "result_perf_constraints_met", perf_constraints_met);
+  }
+  MLPERF_LOG(detail, "result_min_duration_met", min_duration_met);
+  MLPERF_LOG(detail, "result_min_queries_met", min_queries_met);
+  if (!all_constraints_met) {
+    std::string recommendation;
+    if (!perf_constraints_met) {
+      recommendation += perf_constraints_recommendation + " ";
+    }
+    if (!min_duration_met) {
+      recommendation += min_duration_recommendation + " ";
+    }
+    if (!min_queries_met) {
+      recommendation += "The test exited early, before enough queries were issued.";
+    }
+    MLPERF_LOG(detail, "result_invalid_reason", recommendation);
+  }
+
+  // Per-scenario performance results.
+  switch (settings.scenario) {
+    case TestScenario::SingleStream: {
+      double qps_w_lg = (sample_count - 1) / pr.final_query_issued_time;
+      double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(sample_latency_mean);
+      MLPERF_LOG(detail, "result_qps_with_loadgen_overhead", qps_w_lg);
+      MLPERF_LOG(detail, "result_qps_without_loadgen_overhead", qps_wo_lg);
+      break;
+    }
+    case TestScenario::MultiStreamFree: {
+      double samples_per_second = pr.queries_issued *
+                                  settings.samples_per_query /
+                                  pr.final_query_all_samples_done_time;
+      MLPERF_LOG(detail, "result_samples_per_second", samples_per_second);
+      // Intentional fall-through to also print out per-query latencies in MultiStreamFree scenario.
+    }
+    case TestScenario::MultiStream: {
+      for (auto& lp : latency_percentiles) {
+        std::string percentile = DoubleToString(lp.percentile * 100);
+        MLPERF_LOG(detail, "result_" + percentile + "_percentile_num_intervals_between_queries", lp.query_intervals);
+        MLPERF_LOG(detail, "result_" + percentile + "_percentile_per_query_latency_ns", lp.query_latency);
+      }
+      break;
+    }
+    case TestScenario::Server: {
+      // Subtract 1 from sample count since the start of the final sample
+      // represents the open end of the time range: i.e. [begin, end).
+      // This makes sense since:
+      // a) QPS doesn't apply if there's only one sample; it's pure latency.
+      // b) If you have precisely 1k QPS, there will be a sample exactly on
+      //    the 1 second time point; but that would be the 1001th sample in
+      //    the stream. Given the first 1001 queries, the QPS is
+      //    1000 queries / 1 second.
+      double qps_as_scheduled =
+          (sample_count - 1) / pr.final_query_scheduled_time;
+      MLPERF_LOG(detail, "result_scheduled_samples_per_sec", qps_as_scheduled);
+      double qps_as_completed =
+        (sample_count - 1) / pr.final_query_all_samples_done_time;
+      MLPERF_LOG(detail, "result_completed_samples_per_sec", qps_as_completed);
+      break;
+    }
+    case TestScenario::Offline: {
+      double samples_per_second = sample_count / pr.max_latency;
+      MLPERF_LOG(detail, "result_samples_per_second", samples_per_second);
+      break;
+    }
+  }
+
+  // Detailed latencies
+  MLPERF_LOG(detail, "result_min_latency_ns", sample_latency_min);
+  MLPERF_LOG(detail, "result_max_latency_ns", sample_latency_max);
+  MLPERF_LOG(detail, "result_mean_latency_ns", sample_latency_mean);
+  for (auto& lp : latency_percentiles) {
+    MLPERF_LOG(detail, "result_" + DoubleToString(lp.percentile * 100) + "_percentile_latency_ns", lp.sample_latency);
+  }
+#endif
+}
+
 void LoadSamplesToRam(QuerySampleLibrary* qsl,
                       const std::vector<QuerySampleIndex>& samples) {
   LogDetail([&samples](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "loaded_qsl_set", samples);
+#else
     std::string set("\"[");
     for (auto i : samples) {
       set += std::to_string(i) + ",";
@@ -826,6 +941,7 @@ void LoadSamplesToRam(QuerySampleLibrary* qsl,
     set.resize(set.size() - 1);
     set += "]\"";
     detail("Loading QSL : ", "set", set);
+#endif
   });
   qsl->LoadSamplesToRam(samples);
 }
@@ -957,8 +1073,13 @@ std::pair<PerformanceSummary, PerformanceSummary> FindBoundaries(
     u_field =
         find_peak_performance::ToStringPerformanceField<scenario>(u_settings)
   ](AsyncDetail & detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "generic_message",
+      "FindBoundaries: Checking fields [" + l_field + ", " + u_field + ")");
+#else
     detail("FindBoundaries: Checking fields [" + l_field + ", " + u_field +
            ")");
+#endif
   });
 
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
@@ -1005,9 +1126,15 @@ PerformanceSummary FindPeakPerformanceBinarySearch(
     m_field =
         find_peak_performance::ToStringPerformanceField<scenario>(m_settings)
   ](AsyncDetail & detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "generic_message",
+      "FindPeakPerformanceBinarySearch: Testing the mid value of bounds [" +
+      l_field + ", " + u_field + "): " + m_field);
+#else
     detail(
         "FindPeakPerformanceBinarySearch: Testing the mid value of bounds [" +
         l_field + ", " + u_field + "): " + m_field);
+#endif
   });
 
   PerformanceResult m_pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
@@ -1031,7 +1158,13 @@ template <TestScenario scenario>
 void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                         const TestSettingsInternal& settings,
                         SequenceGen* sequence_gen) {
-  LogDetail([](AsyncDetail& detail) { detail("Starting performance mode:"); });
+  LogDetail([](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "generic_message", "Starting performance mode");
+#else
+    detail("Starting performance mode:");
+#endif
+  });
 
   // Use first loadable set as the performance set.
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
@@ -1092,9 +1225,9 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   sut->ReportLatencyResults(pr.sample_latencies);
 
-  LogSummary([perf_summary =
-                  PerformanceSummary{sut->Name(), settings, std::move(pr)}](
-      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
+  PerformanceSummary perf_summary{sut->Name(), settings, std::move(pr)};
+  LogSummary([perf_summary](AsyncSummary & summary) mutable { perf_summary.LogSummary(summary); });
+  LogDetail([perf_summary](AsyncDetail & detail) mutable { perf_summary.LogDetail(detail); });
 
   qsl->UnloadSamplesFromRam(performance_set.set);
 }
@@ -1113,7 +1246,11 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                              const TestSettingsInternal& base_settings,
                              SequenceGen* sequence_gen) {
   LogDetail([](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "generic_message", "Starting FindPeakPerformance mode");
+#else
     detail("Starting FindPeakPerformance mode:");
+#endif
   });
 
   if (scenario != TestScenario::MultiStream &&
@@ -1129,8 +1266,14 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   LogDetail([base_field =
                  find_peak_performance::ToStringPerformanceField<scenario>(
                      base_settings)](AsyncDetail & detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "generic_message",
+        "FindPeakPerformance: Check validity of the base settings field: " +
+        base_field);
+#else
     detail("FindPeakPerformance: Check validity of the base settings field: " +
            base_field);
+#endif
   });
 
   // 1. Check whether the lower bound came from user satisfy performance
@@ -1159,10 +1302,10 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
     sut->ReportLatencyResults(base_perf_summary.pr.sample_latencies);
 
-    LogSummary([perf_summary =
-                    PerformanceSummary{sut->Name(), base_settings,
-                                       std::move(base_perf_summary.pr)}](
-        AsyncSummary & summary) mutable { perf_summary.Log(summary); });
+    PerformanceSummary perf_summary{sut->Name(), base_settings,
+                                    std::move(base_perf_summary.pr)};
+    LogSummary([perf_summary](AsyncSummary & summary) mutable { perf_summary.LogSummary(summary); });
+    LogDetail([perf_summary](AsyncDetail & detail) mutable { perf_summary.LogDetail(detail); });
 
     qsl->UnloadSamplesFromRam(base_performance_set.set);
 
@@ -1184,8 +1327,14 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     u_field = find_peak_performance::ToStringPerformanceField<scenario>(
         u_perf_summary.settings)
   ](AsyncDetail & detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "generic_message",
+        "FindPeakPerformance: Found boundaries: [" + l_field + ", " +
+        u_field + ")");
+#else
     detail("FindPeakPerformance: Found boundaries: [" + l_field + ", " +
            u_field + ")");
+#endif
   });
 
   // Reuse performance_set, u_perf_summary has the largest 'samples_per_query'.
@@ -1201,15 +1350,18 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   // Print-out the peak performance test setting.
   LogDetail([field = find_peak_performance::ToStringPerformanceField<scenario>(
                  perf_summary.settings)](AsyncDetail & detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "generic_message",
+        "FindPeakPerformance: Found peak performance field: " + field);
+#else
     detail("FindPeakPerformance: Found peak performance field: " + field);
+#endif
   });
 
   sut->ReportLatencyResults(perf_summary.pr.sample_latencies);
 
-  LogSummary([perf_summary =
-                  PerformanceSummary{sut->Name(), perf_summary.settings,
-                                     std::move(perf_summary.pr)}](
-      AsyncSummary & summary) mutable { perf_summary.Log(summary); });
+  LogSummary([perf_summary](AsyncSummary & summary) mutable { perf_summary.LogSummary(summary); });
+  LogDetail([perf_summary](AsyncDetail & detail) mutable { perf_summary.LogDetail(detail); });
 
   qsl->UnloadSamplesFromRam(performance_set.set);
 }
@@ -1219,7 +1371,13 @@ template <TestScenario scenario>
 void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                      const TestSettingsInternal& settings,
                      SequenceGen* sequence_gen) {
-  LogDetail([](AsyncDetail& detail) { detail("Starting accuracy mode:"); });
+  LogDetail([](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "generic_message", "Starting accuracy mode");
+#else
+    detail("Starting accuracy mode:");
+#endif
+  });
 
   std::vector<loadgen::LoadableSampleSet> loadable_sets(
       loadgen::GenerateLoadableSets(qsl, settings));
@@ -1304,6 +1462,13 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   LogLoadgenVersion();
   LogDetail([sut, qsl, test_date_time](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "test_datetime", test_date_time);
+    MLPERF_LOG(detail, "sut_name", sut->Name());
+    MLPERF_LOG(detail, "qsl_name", qsl->Name());
+    MLPERF_LOG(detail, "qsl_reported_total_count", qsl->TotalSampleCount());
+    MLPERF_LOG(detail, "qsl_reported_performance_count", qsl->PerformanceSampleCount());
+#else
     detail("Date + time of test: ", test_date_time);
     detail("System Under Test (SUT) name: ", sut->Name());
     detail("Query Sample Library (QSL) name: ", qsl->Name());
@@ -1311,6 +1476,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     detail("QSL performance size*: ", qsl->PerformanceSampleCount());
     detail("*TestSettings (performance_sample_count_override) can override");
     detail("*Refer to Effective Settings for actual value");
+#endif
   });
 
   TestSettings test_settings = requested_settings;
@@ -1318,9 +1484,15 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   const std::string audit_config_filename = "audit.config";
   if (FileExists(audit_config_filename)) {
     LogDetail([](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+      MLPERF_LOG_WARNING(detail, "warning_generic_message",
+          "Found Audit Config file (audit.config)."
+          " Overriding TestSettings from audit.config file.");
+#else
       detail(
           "Found Audit Config file (audit.config)."
           " Overriding TestSettings from audit.config file.");
+#endif
     });
     std::string audit_scenario = loadgen::ToString(test_settings.scenario);
     // Remove Spaces from the string

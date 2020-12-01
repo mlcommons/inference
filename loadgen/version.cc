@@ -21,6 +21,18 @@ namespace mlperf {
 
 void LogLoadgenVersion() {
   LogDetail([](AsyncDetail &detail) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "loadgen_version", LoadgenVersion() + " @ " + LoadgenGitRevision());
+    MLPERF_LOG(detail, "loadgen_build_date_local", LoadgenBuildDateLocal());
+    MLPERF_LOG(detail, "loadgen_build_date_utc", LoadgenBuildDateUtc());
+    MLPERF_LOG(detail, "loadgen_git_commit_date", LoadgenGitCommitDate());
+    MLPERF_LOG(detail, "loadgen_git_log_message", LoadgenGitLog());
+    MLPERF_LOG(detail, "loadgen_git_status_message", LoadgenGitStatus());
+    if (!LoadgenGitStatus().empty() && LoadgenGitStatus() != "NA") {
+      MLPERF_LOG_ERROR(detail, "error_uncommitted_loadgen_changes", "Loadgen built with uncommitted changes!");;
+    }
+    MLPERF_LOG(detail, "loadgen_file_sha1", LoadgenSha1OfFiles());
+#else
     detail("LoadgenVersionInfo:");
     detail("version : " + LoadgenVersion() + " @ " + LoadgenGitRevision());
     detail("build_date_local : " + LoadgenBuildDateLocal());
@@ -32,6 +44,7 @@ void LogLoadgenVersion() {
       detail.Error("Loadgen built with uncommitted changes!");
     }
     detail("SHA1 of files :\n\n" + LoadgenSha1OfFiles() + "\n");
+#endif
   });
 }
 

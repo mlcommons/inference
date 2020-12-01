@@ -530,10 +530,19 @@ void Logger::CollectTlsLoggerStats(TlsLogger* tls_logger) {
   size_t max_entry_vector_size = tls_logger->MaxEntryVectorSize();
   if (max_entry_vector_size > kTlsLogReservedEntryCount) {
     async_logger_.FlagWarning();
+#if USE_NEW_LOGGING_FORMAT
+    std::stringstream msg;
+    msg << "Logging allocation detected:"
+        << " tid: " << tls_logger->Tid()
+        << " reserved_entries: " << kTlsLogReservedEntryCount
+        << " max_entries: " << max_entry_vector_size;
+    async_logger_.LogDetailNew("warning_generic_message", msg.str(), __FILE__, __LINE__);
+#else
     async_logger_.LogDetail("Logging allocation detected: ", "tid",
                             tls_logger->Tid(), "reserved_entries",
                             kTlsLogReservedEntryCount, "max_entries",
                             max_entry_vector_size);
+#endif
   }
 }
 
@@ -604,6 +613,14 @@ void Logger::LogContentionAndAllocations() {
       }
     }
 
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG(detail, "logger_swap_request_slots_retry_count", swap_request_slots_retry_count_);
+    MLPERF_LOG(detail, "logger_swap_request_slots_retry_retry_count", swap_request_slots_retry_retry_count_);
+    MLPERF_LOG(detail, "logger_swap_request_slots_retry_reencounter_count", swap_request_slots_retry_reencounter_count_);
+    MLPERF_LOG(detail, "logger_start_reading_entries_retry_count", start_reading_entries_retry_count_);
+    MLPERF_LOG(detail, "logger_tls_total_log_cas_fail_count", tls_total_log_cas_fail_count_);
+    MLPERF_LOG(detail, "logger_tls_total_swap_buffers_slot_retry_count", tls_total_swap_buffers_slot_retry_count_);
+#else
     detail("Log Contention Counters:");
     detail(std::to_string(swap_request_slots_retry_count_) +
            " : swap_request_slots_retry_count");
@@ -617,6 +634,7 @@ void Logger::LogContentionAndAllocations() {
            " : tls_total_log_cas_fail_count");
     detail(std::to_string(tls_total_swap_buffers_slot_retry_count_) +
            " : tls_total_swap_buffers_slot_retry_count");
+#endif
 
     swap_request_slots_retry_count_ = 0;
     swap_request_slots_retry_retry_count_ = 0;

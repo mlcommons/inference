@@ -1362,6 +1362,13 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   GlobalLogger().StopIOThread();
 }
 
+void AbortTest() {
+  loadgen::IssueQueryController::GetInstance().EndThreads();
+  GlobalLogger().StopLogging();
+  GlobalLogger().StopTracing();
+  GlobalLogger().StopIOThread();
+}
+
 void QuerySamplesComplete(QuerySampleResponse* responses,
                           size_t response_count) {
   PerfClock::time_point timestamp = PerfClock::now();

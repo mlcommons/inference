@@ -59,6 +59,13 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const LogSettings& log_settings);
 
 ///
+/// \brief Aborts the running test.
+/// \details This function will stop issueing new samples to the SUT. StartTest
+/// will return after the current inference finishes. Since StartTest is a
+/// blocking function, this function can only be called in another thread.
+void AbortTest();
+
+///
 /// \brief Register a thread for query issuing in Server scenario.
 /// \details If a thread registers itself, the thread(s) is used to call SUT's
 /// IssueQuery(). This function is blocking until the entire test is done. The

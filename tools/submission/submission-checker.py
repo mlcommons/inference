@@ -173,7 +173,7 @@ MODEL_CONFIG = {
 }
 
 VALID_DIVISIONS = ["open", "closed"]
-VALID_STATUS = ["available", "on-premise", "rdi", "preview"]
+VALID_AVAILABILITIES = ["available", "preview", "rdi"]
 REQUIRED_PERF_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 OPTIONAL_PERF_FILES = ["mlperf_log_accuracy.json"]
 REQUIRED_ACC_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt", "accuracy.txt", "mlperf_log_accuracy.json"]
@@ -269,7 +269,7 @@ class Config():
         # preferred - user is already using the official name
         if model in self.models:
             return model
-        
+
         # simple mapping, ie resnet50->resnet ?
         mlperf_model = self.base["model_mapping"].get(model)
         if mlperf_model:
@@ -565,7 +565,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
 
     # we are at the top of the submission directory
     for division in list_dir("."):
-        # we are looking at ./$division, ie ./closed        
+        # we are looking at ./$division, ie ./closed
         if division not in VALID_DIVISIONS:
             if division != ".git":
                 log.error("invalid division in input dir %s", division)
@@ -595,16 +595,12 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                 name = os.path.join(results_path, system_desc)
                 with open(system_id_json) as f:
                     system_json = json.load(f)
-                    system_type = system_json.get("system_type")
                     available = system_json.get("status").lower()
-                    system_name = system_json.get("system_name") or system_desc
-                    # FIXME: workaround for v0.7 submission
-                    if available == "research, development, or internal":
-                        available = "rdi"
-                    if available not in VALID_STATUS:
+                    if available not in VALID_AVAILABILITIES:
                         log.error("%s has invalid status (%s)", system_id_json, available)
                         results[name] = None
                         continue
+                    system_type = system_json.get("system_type")
                     if config.version == "v0.7" and system_type not in ["datacenter", "edge"]:
                         log.error("%s has invalid system type (%s)", system_id_json, system_type)
                         results[name] = None

@@ -13,6 +13,8 @@ import os
 import re
 import sys
 
+from log_parser import MLPerfLog
+
 # pylint: disable=missing-docstring
 
 
@@ -170,6 +172,108 @@ MODEL_CONFIG = {
             "3d-unet-99.9": {"SingleStream":1024, "Offline": 1},
         },
     },
+    "v1.0": {
+        "models": [
+            "ssd-small", "ssd-large", "resnet", "rnnt",
+            "bert-99", "bert-99.9",
+            "dlrm-99", "dlrm-99.9",
+            "3d-unet-99", "3d-unet-99.9",
+        ],
+        "required-scenarios-datacenter": {
+            "resnet": ["Offline"],
+            "ssd-large": ["Offline"],
+            "rnnt": ["Offline"],
+            "bert-99": ["Offline"],
+            "bert-99.9": ["Offline"],
+            "dlrm-99": ["Offline"],
+            "dlrm-99.9": ["Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+        },
+        "optional-scenarios-datacenter": {
+            "resnet": ["Server"],
+            "ssd-large": ["Server"],
+            "rnnt": ["Server"],
+            "bert-99": ["Server"],
+            "bert-99.9": ["Server"],
+            "dlrm-99": ["Server"],
+            "dlrm-99.9": ["Server"],
+        },
+        "required-scenarios-edge": {
+            "resnet": ["SingleStream", "Offline"],
+            "ssd-small": ["SingleStream", "Offline"],
+            "ssd-large": ["SingleStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-edge": {
+            "resnet": ["MultiStream"],
+            "ssd-small": ["MultiStream"],
+            "ssd-large": ["MultiStream"],
+        },
+        "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
+            "ssd-small": ("mAP", 22 * 0.99),
+            "ssd-large": ("mAP", 20 * 0.99),
+            "rnnt": ("WER", (100 - 7.452) * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "dlrm-99": ("AUC", 80.25 * 0.99),
+            "dlrm-99.9": ("AUC", 80.25 * 0.999),
+            "3d-unet-99": ("DICE", 0.853 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.853 * 0.999),
+        },
+        "performance-sample-count": {
+            "ssd-small": 256,
+            "ssd-large": 64,
+            "resnet": 1024,
+            "rnnt": 2513,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-99": 204800,
+            "dlrm-99.9": 204800,
+            "3d-unet-99": 16,
+            "3d-unet-99.9": 16,
+        },
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-mobilenet": "ssd-small",
+            "ssd-resnet34": "ssd-large",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
+        },
+        "seeds": {
+            "qsl_rng_seed": 12786827339337101903,
+            "sample_index_rng_seed": 12640797754436136668,
+            "schedule_rng_seed": 3135815929913719677,
+        },
+        "ignore_errors": [
+        ],
+        "latency-constraint": {
+            "resnet": {"Server": 15000000, "MultiStream": 50000000},
+            "ssd-small": {"MultiStream": 50000000},
+            "ssd-large": {"Server": 100000000, "MultiStream": 66000000},
+            "rnnt": {"Server": 1000000000},
+            "bert-99": {"Server": 130000000},
+            "bert-99.9": {"Server": 130000000},
+            "dlrm-99": {"Server": 30000000},
+            "dlrm-99.9": {"Server": 30000000},
+        },
+        "min-queries": {
+            "resnet": {"SingleStream":1024, "Server": 270336, "MultiStream": 270336, "Offline": 1},
+            "ssd-small": {"SingleStream":1024, "MultiStream": 270336, "Offline": 1},
+            "ssd-large": {"SingleStream":1024, "Server": 270336, "MultiStream": 270336, "Offline": 1},
+            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-99": {"Server": 270336, "Offline": 1},
+            "dlrm-99.9": {"Server": 270336, "Offline": 1},
+            "3d-unet-99": {"SingleStream":1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream":1024, "Offline": 1},
+        },
+    },
 }
 
 VALID_DIVISIONS = ["open", "closed"]
@@ -198,6 +302,13 @@ RESULT_FIELD = {
     "SingleStream": "90th percentile latency (ns)",
     "MultiStream": "Samples per query",
     "Server": "Scheduled samples per second"
+}
+
+RESULT_FIELD_NEW = {
+    "Offline": "result_samples_per_second",
+    "SingleStream": "result_99.00_percentile_latency_ns",
+    "MultiStream": "effective_samples_per_query",
+    "Server": "result_scheduled_samples_per_sec"
 }
 
 ACC_PATTERN = {
@@ -330,12 +441,15 @@ class Config():
             raise ValueError("model not known: " + model)
         return self.min_queries[model].get(scenario)
 
+    def has_new_logging_format(self):
+        return self.version not in ["v0.5", "v0.7"]
+
 
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="submission directory")
-    parser.add_argument("--version", default="v0.7", choices=list(MODEL_CONFIG.keys()), help="mlperf version")
+    parser.add_argument("--version", default="v1.0", choices=list(MODEL_CONFIG.keys()), help="mlperf version")
     parser.add_argument("--submitter", help="filter to submitter")
     parser.add_argument("--csv", default="summary.csv", help="csv file with results")
     parser.add_argument("--skip_compliance", action="store_true", help="Pass this cmdline option to skip checking compliance/ dir")
@@ -358,6 +472,33 @@ def list_files(*path):
 
 def split_path(m):
     return m.replace("\\", "/").split("/")
+
+
+def find_error_in_detail_log(config, fname):
+    is_valid = True
+    if not os.path.exists(fname):
+        log.error("%s is missing", fname)
+        is_valid = False
+    else:
+        if config.has_new_logging_format():
+            mlperf_log = MLPerfLog(fname)
+            if mlperf_log.has_error():
+                log.error("%s contains errors:", fname)
+                for error in mlperf_log.get_errors():
+                    log.error("%s", error["value"])
+                is_valid = False
+        else:
+            with open(fname, "r") as f:
+                for line in f:
+                    # look for: ERROR
+                    if "ERROR" in line:
+                        if config.ignore_errors(line):
+                            if "ERROR : Loadgen built with uncommitted changes!" in line:
+                                log.warning("%s contains error: %s", fname, line)
+                            continue
+                        log.error("%s contains error: %s", fname, line)
+                        is_valid = False
+    return is_valid
 
 
 def check_accuracy_dir(config, model, path, verbose):
@@ -398,20 +539,8 @@ def check_accuracy_dir(config, model, path, verbose):
 
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
-    if not os.path.exists(fname):
-        log.error("%s is missing", fname)
+    if not find_error_in_detail_log(config, fname):
         is_valid = False
-    else:
-        with open(fname, "r") as f:
-            for line in f:
-                # look for: ERROR
-                if "ERROR" in line:
-                    if config.ignore_errors(line):
-                        if "ERROR : Loadgen built with uncommitted changes!" in line:
-                            log.warning("%s contains error: %s", fname, line)
-                        continue
-                    log.error("%s contains error: %s", fname, line)
-                    is_valid = False
 
     return is_valid, acc
 
@@ -421,42 +550,60 @@ def check_performance_dir(config, model, path):
     rt = {}
 
     # look for: Result is: VALID
-    fname = os.path.join(path, "mlperf_log_summary.txt")
-    with open(fname, "r") as f:
-        for line in f:
-            m = re.match(r"^Result\s+is\s*\:\s+VALID", line)
-            if m:
-                is_valid = True
-            m = re.match(r"^\s*([\w\s.\(\)\/]+)\s*\:\s*([\w\+\.][\w\+\.\s]*)", line)
-            if m:
-                rt[m.group(1).strip()] = m.group(2).strip()
-
-    performance_sample_count = config.get_performance_sample_count(model)
-    if int(rt['performance_sample_count']) < performance_sample_count:
-        log.error("%s performance_sample_count, found %d, needs to be > %s",
-                  fname, performance_sample_count, rt['performance_sample_count'])
-        is_valid = False
+    if config.has_new_logging_format():
+        fname = os.path.join(path, "mlperf_log_detail.txt")
+        mlperf_log = MLPerfLog(fname)
+        if "result_validity" in mlperf_log.keys() and mlperf_log["result_validity"] == "VALID":
+            is_valid = True
+        performance_sample_count = mlperf_log["effective_performance_sample_count"]
+        qsl_rng_seed = mlperf_log["effective_qsl_rng_seed"]
+        sample_index_rng_seed = mlperf_log["effective_sample_index_rng_seed"]
+        schedule_rng_seed = mlperf_log["effective_schedule_rng_seed"]
+        scenario = mlperf_log["effective_scenario"]
+        res = float(rt[RESULT_FIELD_NEW[scenario]])
+        latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
+        min_query_count = mlperf_log["effective_min_query_count"]
+        samples_per_query = mlperf_log["effective_samples_per_query"]
+        min_duration = mlperf_log["effective_min_duration_ms"]
+    else:
+        fname = os.path.join(path, "mlperf_log_summary.txt")
+        with open(fname, "r") as f:
+            for line in f:
+                m = re.match(r"^Result\s+is\s*\:\s+VALID", line)
+                if m:
+                    is_valid = True
+                m = re.match(r"^\s*([\w\s.\(\)\/]+)\s*\:\s*([\w\+\.][\w\+\.\s]*)", line)
+                if m:
+                    rt[m.group(1).strip()] = m.group(2).strip()
+        performance_sample_count = int(rt['performance_sample_count'])
+        qsl_rng_seed = int(rt["qsl_rng_seed"])
+        sample_index_rng_seed = int(rt["sample_index_rng_seed"])
+        schedule_rng_seed = int(rt["schedule_rng_seed"])
+        scenario = rt["Scenario"].replace(" ","")
+        res = float(rt[RESULT_FIELD[scenario]])
+        latency_99_percentile = int(rt['99.00 percentile latency (ns)'])
+        min_query_count = int(rt['min_query_count'])
+        samples_per_query = int(rt['samples_per_query'])
+        min_duration = int(rt["min_duration (ms)"])
 
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
-    with open(fname, "r") as f:
-        for line in f:
-            # look for: ERROR
-            if "ERROR" in line:
-                if config.ignore_errors(line):
-                    if "ERROR : Loadgen built with uncommitted changes!" in line:
-                        log.warning("%s contains error: %s", fname, line)
-                    continue
-                log.error("%s contains error: %s", fname, line)
-                is_valid = False
+    if not find_error_in_detail_log(config, fname):
+        is_valid = False
 
-        for seed in ["qsl_rng_seed", "sample_index_rng_seed", "schedule_rng_seed"]:
-            if int(rt[seed]) != config.seeds[seed]:
-                log.error("%s %s is wrong, expected=%s, found=%s", fname, seed, config.seeds[seed], rt[seed])
+    required_performance_sample_count = config.get_performance_sample_count(model)
+    if performance_sample_count < required_performance_sample_count:
+        log.error("%s performance_sample_count, found %d, needs to be > %s",
+                  fname, required_performance_sample_count, performance_sample_count)
+        is_valid = False
 
+    if qsl_rng_seed != config.seeds["qsl_rng_seed"]:
+        log.error("%s qsl_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], qsl_rng_seed)
+    if sample_index_rng_seed != config.seeds["sample_index_rng_seed"]:
+        log.error("%s sample_index_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], sample_index_rng_seed)
+    if schedule_rng_seed != config.seeds["schedule_rng_seed"]:
+        log.error("%s schedule_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], schedule_rng_seed)
 
-    scenario = rt["Scenario"].replace(" ", "")
-    res = float(rt[RESULT_FIELD[scenario]])
     if scenario in ["SingleStream"]:
         res /= TO_MS
 
@@ -466,23 +613,23 @@ def check_performance_dir(config, model, path):
         # check if the benchmark meets latency constraint
         target_latency = config.latency_constraint.get(model, dict()).get(scenario)
         if target_latency:
-            if int(rt['99.00 percentile latency (ns)']) > target_latency:
+            if latency_99_percentile > target_latency:
                 log.error("%s Latency constraint not met, expected=%s, found=%s",
-                            fname, target_latency, rt['99.00 percentile latency (ns)'])
+                            fname, target_latency, latency_99_percentile)
 
         # Check Minimum queries were issued to meet test duration
-        min_query_count = config.get_min_query_count(model, scenario)
-        if min_query_count and int(rt['min_query_count']) < min_query_count:
+        required_min_query_count = config.get_min_query_count(model, scenario)
+        if required_min_query_count and min_query_count < required_min_query_count:
             log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
-                        fname, min_query_count, rt['min_query_count'])
-        if scenario == "Offline" and (int(rt['samples_per_query']) < OFFLINE_MIN_SPQ):
+                        fname, required_min_query_count, min_query_count)
+        if scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ):
             log.error("%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
-                        fname, OFFLINE_MIN_SPQ, rt['samples_per_query'])
+                        fname, OFFLINE_MIN_SPQ, samples_per_query)
 
         # Test duration of 60s is met
-        if int(rt["min_duration (ms)"]) < TEST_DURATION_MS:
+        if min_duration < TEST_DURATION_MS:
             log.error("%s Test duration lesser than 60s in user config. expected=%s, found=%s",
-                        fname, TEST_DURATION_MS, rt["min_duration (ms)"])
+                        fname, TEST_DURATION_MS, min_duration)
 
     return is_valid, res, rt
 

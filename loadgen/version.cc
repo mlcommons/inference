@@ -16,22 +16,56 @@ limitations under the License.
 #include "version.h"
 
 #include "logging.h"
+#include "utils.h"
 
 namespace mlperf {
 
+/// Helper function to split a string based on a delimiting character.
+std::vector<std::string> splitString(const std::string& input,
+                                     const std::string& delimiter) {
+  std::vector<std::string> result;
+  size_t start = 0;
+  size_t next = 0;
+  while (next != std::string::npos) {
+    next = input.find(delimiter, start);
+    result.emplace_back(input, start, next - start);
+    start = next + 1;
+  }
+  return result;
+}
+
+/// Converts the hash-filename pairs to a dict.
+std::map<std::string, std::string> LoadgenSha1OfFilesToDict(
+    const std::string& in) {
+  std::map<std::string, std::string> result;
+  auto files = splitString(in, "\n");
+  for (const auto& file : files) {
+    auto hash_and_name = splitString(file, " ");
+    assert(hash_and_name.size() > 1);
+    result[hash_and_name[1]] = hash_and_name[0];
+  }
+  return result;
+}
+
 void LogLoadgenVersion() {
-  LogDetail([](AsyncDetail &detail) {
+  LogDetail([](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT
-    MLPERF_LOG(detail, "loadgen_version", LoadgenVersion() + " @ " + LoadgenGitRevision());
+    MLPERF_LOG(detail, "loadgen_version",
+               LoadgenVersion() + " @ " + LoadgenGitRevision());
     MLPERF_LOG(detail, "loadgen_build_date_local", LoadgenBuildDateLocal());
     MLPERF_LOG(detail, "loadgen_build_date_utc", LoadgenBuildDateUtc());
     MLPERF_LOG(detail, "loadgen_git_commit_date", LoadgenGitCommitDate());
-    MLPERF_LOG(detail, "loadgen_git_log_message", LoadgenGitLog());
-    MLPERF_LOG(detail, "loadgen_git_status_message", LoadgenGitStatus());
+    MLPERF_LOG(detail, "loadgen_git_log_message",
+               EscapeStringJson(LoadgenGitLog()));
+    MLPERF_LOG(detail, "loadgen_git_status_message",
+               EscapeStringJson(LoadgenGitStatus()));
     if (!LoadgenGitStatus().empty() && LoadgenGitStatus() != "NA") {
-      MLPERF_LOG_ERROR(detail, "error_uncommitted_loadgen_changes", "Loadgen built with uncommitted changes!");;
+      MLPERF_LOG_ERROR(detail, "error_uncommitted_loadgen_changes",
+                       "Loadgen built with uncommitted changes!");
+      ;
     }
-    MLPERF_LOG(detail, "loadgen_file_sha1", LoadgenSha1OfFiles());
+    MLPERF_LOG(detail, "loadgen_file_sha1",
+               LoadgenSha1OfFilesToDict(LoadgenSha1OfFiles()));
 #else
     detail("LoadgenVersionInfo:");
     detail("version : " + LoadgenVersion() + " @ " + LoadgenGitRevision());

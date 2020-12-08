@@ -51,7 +51,8 @@ limitations under the License.
 #elif defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
 #define MLPERF_GET_TID() GetCurrentThreadId()
 #elif defined(__APPLE__)
-#define MLPERF_GET_TID() std::hash<std::thread::id>{}(std::this_thread::get_id())
+#define MLPERF_GET_TID() \
+  std::hash<std::thread::id>{}(std::this_thread::get_id())
 #else
 // TODO: std::this_thread::id is a class but MLPERF_GET_TID() assigned to
 // uint64_t
@@ -115,6 +116,38 @@ const std::string ArgValueTransform(const LogBinaryAsHexString& value) {
   hex.push_back('"');
   return hex;
 }
+
+#if USE_NEW_LOGGING_FORMAT
+const std::string ArgValueTransform(const std::string& value) {
+  return std::string("\"") + value + std::string("\"");
+}
+const std::string ArgValueTransform(const char* value) {
+  return std::string("\"") + std::string(value) + std::string("\"");
+}
+const std::string ArgValueTransform(const std::vector<uint64_t>& value) {
+  std::string s("[");
+  for (auto i : value) {
+    s += std::to_string(i) + ",";
+  }
+  s.resize(s.size() - 1);
+  s += "]";
+  return s;
+}
+const std::string ArgValueTransform(
+    const std::map<std::string, std::string>& value) {
+  std::string s("{");
+  for (const auto& i : value) {
+    s += "\"";
+    s += i.first;
+    s += "\":\"";
+    s += i.second;
+    s += "\",";
+  }
+  s.resize(s.size() - 1);
+  s += "}";
+  return s;
+}
+#endif
 
 ChromeTracer::ChromeTracer(std::ostream* out, PerfClock::time_point origin)
     : out_(out), origin_(origin) {
@@ -289,9 +322,17 @@ void AsyncLog::RecordSampleCompletion(uint64_t sample_sequence_id,
   if (sample_sequence_id < latencies_first_sample_sequence_id_) {
     // Call LogErrorSync here since this kind of error could result in a
     // segfault in the near future.
+#if USE_NEW_LOGGING_FORMAT
+    std::stringstream ss;
+    ss << "Received completion for an old sample."
+       << " Min expected id: " << latencies_first_sample_sequence_id_
+       << " Actual id: " << sample_sequence_id;
+    MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime", ss.str());
+#else
     GlobalLogger().LogErrorSync(
         "Received completion for an old sample.", "Min expected id",
         latencies_first_sample_sequence_id_, "Actual id", sample_sequence_id);
+#endif
     return;
   }
 
@@ -303,7 +344,12 @@ void AsyncLog::RecordSampleCompletion(uint64_t sample_sequence_id,
   } else if (latencies_[i] != kInvalidLatency) {
     // Call LogErrorSync here since this kind of error could result in a
     // segfault in the near future.
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
+                          "Attempted to complete a sample twice.");
+#else
     GlobalLogger().LogErrorSync("Attempted to complete a sample twice.");
+#endif
 
     // Return without recording the latency again to avoid potentially
     // ending the test before the SUT is actually done, which could result
@@ -333,9 +379,17 @@ std::vector<QuerySampleLatency> AsyncLog::GetLatenciesBlocking(
   if (latencies.size() != expected_count) {
     // Call LogErrorSync here since this kind of error could result in a
     // segfault in the near future.
+#if USE_NEW_LOGGING_FORMAT
+    std::stringstream ss;
+    ss << "Received SequenceId that was too large."
+       << " expected_size: " << expected_count
+       << " actual_size: " << latencies.size();
+    MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime", ss.str());
+#else
     GlobalLogger().LogErrorSync("Received SequenceId that was too large.",
                                 "expected_size", expected_count, "actual_size",
                                 latencies.size());
+#endif
   }
 
   size_t invalid_latency_count = 0;
@@ -347,9 +401,16 @@ std::vector<QuerySampleLatency> AsyncLog::GetLatenciesBlocking(
   if (invalid_latency_count != 0) {
     // Call LogErrorSync here since this kind of error could result in a
     // segfault in the near future.
+#if USE_NEW_LOGGING_FORMAT
+    std::stringstream ss;
+    ss << "Encountered incomplete samples at the end of a series of queries."
+       << " count: " << invalid_latency_count;
+    MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime", ss.str());
+#else
     GlobalLogger().LogErrorSync(
         "Encountered incomplete samples at the end of a series of queries.",
         "count", invalid_latency_count);
+#endif
   }
 
   return latencies;
@@ -488,9 +549,15 @@ void Logger::RequestSwapBuffers(TlsLogger* tls_logger) {
 void Logger::RegisterTlsLogger(TlsLogger* tls_logger) {
   std::unique_lock<std::mutex> lock(tls_loggers_registerd_mutex_);
   if (tls_loggers_registerd_.size() >= max_threads_to_log_) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG_ERROR_SYNC((*this), "error_runtime",
+                          "Warning: More TLS loggers registerd than can be "
+                          "active simultaneously.");
+#else
     LogErrorSync(
         "Warning: More TLS loggers registerd than can "
         "be active simultaneously.\n");
+#endif
   }
   tls_loggers_registerd_.insert(tls_logger);
 }
@@ -529,15 +596,15 @@ void Logger::CollectTlsLoggerStats(TlsLogger* tls_logger) {
 
   size_t max_entry_vector_size = tls_logger->MaxEntryVectorSize();
   if (max_entry_vector_size > kTlsLogReservedEntryCount) {
-    async_logger_.FlagWarning();
 #if USE_NEW_LOGGING_FORMAT
     std::stringstream msg;
     msg << "Logging allocation detected:"
         << " tid: " << tls_logger->Tid()
         << " reserved_entries: " << kTlsLogReservedEntryCount
         << " max_entries: " << max_entry_vector_size;
-    async_logger_.LogDetailNew("warning_generic_message", msg.str(), __FILE__, __LINE__);
+    MLPERF_LOG_WARNING((*this), "warning_generic_message", msg.str());
 #else
+    async_logger_.FlagWarning();
     async_logger_.LogDetail("Logging allocation detected: ", "tid",
                             tls_logger->Tid(), "reserved_entries",
                             kTlsLogReservedEntryCount, "max_entries",
@@ -572,7 +639,12 @@ void Logger::StartLogging(std::ostream* summary, std::ostream* detail,
 
 void Logger::StopLogging() {
   if (std::this_thread::get_id() == io_thread_.get_id()) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG_ERROR_SYNC((*this), "error_runtime",
+                          "StopLogging() not supported from IO thread.");
+#else
     LogErrorSync("StopLogging() not supported from IO thread.");
+#endif
     return;
   }
 
@@ -614,12 +686,18 @@ void Logger::LogContentionAndAllocations() {
     }
 
 #if USE_NEW_LOGGING_FORMAT
-    MLPERF_LOG(detail, "logger_swap_request_slots_retry_count", swap_request_slots_retry_count_);
-    MLPERF_LOG(detail, "logger_swap_request_slots_retry_retry_count", swap_request_slots_retry_retry_count_);
-    MLPERF_LOG(detail, "logger_swap_request_slots_retry_reencounter_count", swap_request_slots_retry_reencounter_count_);
-    MLPERF_LOG(detail, "logger_start_reading_entries_retry_count", start_reading_entries_retry_count_);
-    MLPERF_LOG(detail, "logger_tls_total_log_cas_fail_count", tls_total_log_cas_fail_count_);
-    MLPERF_LOG(detail, "logger_tls_total_swap_buffers_slot_retry_count", tls_total_swap_buffers_slot_retry_count_);
+    MLPERF_LOG(detail, "logger_swap_request_slots_retry_count",
+               swap_request_slots_retry_count_);
+    MLPERF_LOG(detail, "logger_swap_request_slots_retry_retry_count",
+               swap_request_slots_retry_retry_count_);
+    MLPERF_LOG(detail, "logger_swap_request_slots_retry_reencounter_count",
+               swap_request_slots_retry_reencounter_count_);
+    MLPERF_LOG(detail, "logger_start_reading_entries_retry_count",
+               start_reading_entries_retry_count_);
+    MLPERF_LOG(detail, "logger_tls_total_log_cas_fail_count",
+               tls_total_log_cas_fail_count_);
+    MLPERF_LOG(detail, "logger_tls_total_swap_buffers_slot_retry_count",
+               tls_total_swap_buffers_slot_retry_count_);
 #else
     detail("Log Contention Counters:");
     detail(std::to_string(swap_request_slots_retry_count_) +
@@ -672,7 +750,11 @@ TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {
     bool success = thread_swap_request_slots_[slot].compare_exchange_strong(
         slot_value, SwapRequestSlotIsWritableValue(next_id));
     if (!success) {
+#if USE_NEW_LOGGING_FORMAT
+      MLPERF_LOG_WARNING((*this), "warning_generic_message", "CAS failed.");
+#else
       LogErrorSync("CAS failed.", "line", __LINE__);
+#endif
       assert(success);
     }
     return reinterpret_cast<TlsLogger*>(slot_value);
@@ -840,8 +922,13 @@ void TlsLogger::Log(AsyncLogEntry&& entry) {
     // loading i_write_ above.
     cas_fail_count++;
     if (cas_fail_count >= 3) {
+#if USE_NEW_LOGGING_FORMAT
+      MLPERF_LOG_WARNING(GlobalLogger(), "warning_generic_message",
+                         "CAS failed.");
+#else
       GlobalLogger().LogErrorSync("CAS failed.", "times", cas_fail_count,
                                   "line", __LINE__);
+#endif
     }
     log_cas_fail_count_.fetch_add(1, std::memory_order_relaxed);
   }
@@ -853,7 +940,12 @@ void TlsLogger::Log(AsyncLogEntry&& entry) {
   bool success = entry_states_[i_write].compare_exchange_strong(
       write_lock, EntryState::Unlocked, std::memory_order_release);
   if (!success) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG_WARNING(GlobalLogger(), "warning_generic_message",
+                       "CAS failed.");
+#else
     GlobalLogger().LogErrorSync("CAS failed.", "line", __LINE__);
+#endif
     assert(success);
   }
 
@@ -871,7 +963,12 @@ void TlsLogger::SwapBuffers() {
   bool success = entry_states_[i_read_].compare_exchange_strong(
       read_lock, EntryState::Unlocked, std::memory_order_release);
   if (!success) {
+#if USE_NEW_LOGGING_FORMAT
+    MLPERF_LOG_WARNING(GlobalLogger(), "warning_generic_message",
+                       "CAS failed.");
+#else
     GlobalLogger().LogErrorSync("CAS failed.", "line", __LINE__);
+#endif
     assert(success);
   }
 

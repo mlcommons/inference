@@ -29,9 +29,9 @@ from squad_QSL import get_squad_QSL
 class BERT_TF_SUT():
     def __init__(self):
         print("Loading TF model...")
-        self.sess = tf.Session()
+        self.sess = tf.compat.v1.Session()
         with gfile.FastGFile('build/data/bert_tf_v1_1_large_fp32_384_v2/model.pb', 'rb') as f:
-            graph_def = tf.GraphDef()
+            graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f.read())
             self.sess.graph.as_default()
             tf.import_graph_def(graph_def, name='')

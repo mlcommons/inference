@@ -40,7 +40,7 @@ class BackendTensorflow(backend.Backend):
         infer_config.intra_op_parallelism_threads = int(os.environ['MLPERF_NUM_INTRA_THREADS']) \
                 if 'MLPERF_NUM_INTRA_THREADS' in os.environ else os.cpu_count()
         infer_config.inter_op_parallelism_threads = int(os.environ['MLPERF_NUM_INTER_THREADS']) \
-                if 'MLPERF_NUM_INTER_THREADS' in os.environ else 1
+                if 'MLPERF_NUM_INTER_THREADS' in os.environ else os.cpu_count()
         infer_config.use_per_session_threads = 1
 
         # TODO: support checkpoint and saved_model formats?

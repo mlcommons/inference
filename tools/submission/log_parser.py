@@ -49,7 +49,7 @@ class MLPerfLog():
             self.keys.add(message["key"])
         self.logger.info("Sucessfully loaded MLPerf log from {:}.".format(log_path))
 
-    def __getattr__(self, key):
+    def __getitem__(self, key):
         """
         Get the value of the message with the specific key. If a key appears multiple times, the first one is used.
         """

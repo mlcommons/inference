@@ -483,10 +483,18 @@ def find_error_in_detail_log(config, fname):
         if config.has_new_logging_format():
             mlperf_log = MLPerfLog(fname)
             if mlperf_log.has_error():
+                if config.ignore_uncommited:
+                    has_other_errors = False
+                    for error in mlperf_log.get_errors():
+                        if "Loadgen built with uncommitted changes!" not in error["value"]:
+                            has_other_errors = True
+
                 log.error("%s contains errors:", fname)
                 for error in mlperf_log.get_errors():
                     log.error("%s", error["value"])
-                is_valid = False
+
+                if not config.ignore_uncommited or has_other_errors:
+                    is_valid = False
         else:
             with open(fname, "r") as f:
                 for line in f:
@@ -553,15 +561,17 @@ def check_performance_dir(config, model, path):
     if config.has_new_logging_format():
         fname = os.path.join(path, "mlperf_log_detail.txt")
         mlperf_log = MLPerfLog(fname)
-        if "result_validity" in mlperf_log.keys() and mlperf_log["result_validity"] == "VALID":
+        if "result_validity" in mlperf_log.get_keys() and mlperf_log["result_validity"] == "VALID":
             is_valid = True
         performance_sample_count = mlperf_log["effective_performance_sample_count"]
         qsl_rng_seed = mlperf_log["effective_qsl_rng_seed"]
         sample_index_rng_seed = mlperf_log["effective_sample_index_rng_seed"]
         schedule_rng_seed = mlperf_log["effective_schedule_rng_seed"]
         scenario = mlperf_log["effective_scenario"]
-        res = float(rt[RESULT_FIELD_NEW[scenario]])
+        res = float(mlperf_log[RESULT_FIELD_NEW[scenario]])
         latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
+        if scenario in ["MultiStream"]:
+            latency_99_percentile = mlperf_log["result_99.00_percentile_per_query_latency_ns"]
         min_query_count = mlperf_log["effective_min_query_count"]
         samples_per_query = mlperf_log["effective_samples_per_query"]
         min_duration = mlperf_log["effective_min_duration_ms"]
@@ -856,7 +866,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                     r = rt.get("QPS w/o loadgen overhead")
                                     log.info("%s has infered resuls, qps=%s", perf_path, r)
                             except Exception as e:
-                                log.error("%s caused expection in check_performance_dir: %s", perf_path, e)
+                                log.error("%s caused exception in check_performance_dir: %s", perf_path, e)
                                 is_valid, r = False, None
 
                             if is_valid:
@@ -883,7 +893,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
 
                         if results.get(name):
                             if accuracy_is_valid:
-                                log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
+                                log_result(submitter, available, division, system_type, system_json.get("system_name"), system_desc, model_name, mlperf_model,
                                            scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered)
                             else:
                                 results[name] = None

@@ -24,7 +24,7 @@ import sys
 logging.basicConfig(level=logging.INFO, format="[%(asctime)s %(filename)s:%(lineno)d %(levelname)s] %(message)s")
 
 class MLPerfLog():
-    def __init__(self, log_path, strict=False):
+    def __init__(self, log_path, strict=True):
         """
         Helper class to parse the detail logs.
         log_path: path to the detail log.
@@ -156,7 +156,7 @@ def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="path to the detail log")
-    parser.add_argument("--strict", action="store_true", help="whether to stop if there are lines with invalid formats")
+    parser.add_argument("--ignore_invalid_lines", action="store_true", help="whether to stop if there are lines with invalid formats")
     args = parser.parse_args()
     return args
 
@@ -165,7 +165,7 @@ def main():
     Inspect a detailed log.
     """
     args = get_args()
-    mlperf_log = MLPerfLog(args.input, strict=args.strict)
+    mlperf_log = MLPerfLog(args.input, strict=not args.ignore_invalid_lines)
     logger = logging.getLogger("main")
     logger.info("Details of the log:")
     logger.info("- Number of messages: {:d}".format(mlperf_log.num_messages()))

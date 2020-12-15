@@ -37,6 +37,7 @@ limitations under the License.
 #include <condition_variable>
 #include <functional>
 #include <future>
+#include <iomanip>
 #include <iostream>
 #include <list>
 #include <map>
@@ -687,13 +688,17 @@ void AsyncLog::LogDetail(const std::string& key, const T& value,
   if (!copy_detail_to_stdout_) {
     detail_streams.pop_back();
   }
+  auto time_ns = (log_detail_time_ - log_origin_).count();
   for (auto os : detail_streams) {
-    *os << ":::MLLOG {\"namespace\": \"mlperf::logging\", "
-        << "\"time_ns\": "
-        << ArgValueTransform((log_detail_time_ - log_origin_).count()) << ", "
-        << "\"event_type\": \"POINT_IN_TIME\", "
+    *os << ":::MLLOG {"
         << "\"key\": " << ArgValueTransform(key) << ", "
         << "\"value\": " << ArgValueTransform(value) << ", "
+        << "\"time_ms\": "
+        << ArgValueTransform(time_ns / 1000000ULL) << "."
+        << std::setfill('0') << std::setw(6)
+        << ArgValueTransform(time_ns % 1000000ULL) << ", "
+        << "\"namespace\": \"mlperf::logging\", "
+        << "\"event_type\": \"POINT_IN_TIME\", "
         << "\"metadata\": {"
         << "\"is_error\": " << ArgValueTransform(error_flagged_) << ", "
         << "\"is_warning\": " << ArgValueTransform(warning_flagged_) << ", "

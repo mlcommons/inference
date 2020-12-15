@@ -874,6 +874,19 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
     MLPERF_LOG(detail, "result_invalid_reason", recommendation);
   }
 
+  auto reportPerQueryLatencies = [&]() {
+    for (auto& lp : latency_percentiles) {
+      std::string percentile = DoubleToString(lp.percentile * 100);
+      MLPERF_LOG(detail,
+                  "result_" + percentile +
+                      "_percentile_num_intervals_between_queries",
+                  lp.query_intervals);
+      MLPERF_LOG(detail,
+                  "result_" + percentile + "_percentile_per_query_latency_ns",
+                  lp.query_latency);
+    }
+  };
+
   // Per-scenario performance results.
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
@@ -888,20 +901,11 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
                                   settings.samples_per_query /
                                   pr.final_query_all_samples_done_time;
       MLPERF_LOG(detail, "result_samples_per_second", samples_per_second);
-      // Intentional fall-through to also print out per-query latencies in
-      // MultiStreamFree scenario.
+      reportPerQueryLatencies();
+      break;
     }
     case TestScenario::MultiStream: {
-      for (auto& lp : latency_percentiles) {
-        std::string percentile = DoubleToString(lp.percentile * 100);
-        MLPERF_LOG(detail,
-                   "result_" + percentile +
-                       "_percentile_num_intervals_between_queries",
-                   lp.query_intervals);
-        MLPERF_LOG(detail,
-                   "result_" + percentile + "_percentile_per_query_latency_ns",
-                   lp.query_latency);
-      }
+      reportPerQueryLatencies();
       break;
     }
     case TestScenario::Server: {

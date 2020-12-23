@@ -16,9 +16,7 @@ Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.025
 
 ## MLPerf Inference master
 
-The master of this repository contains ***work in progress*** for the next official release. 
-
-The list of models for the next official releases (***> 0.7***) is not finalized at this point.
+The master of this repository contains ***work in progress*** for the next official (***1.0***) release. 
 
 See the individual Readme files in the reference app for details.
 

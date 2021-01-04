@@ -18,7 +18,7 @@ FROM ${BASE_IMAGE}
 # Install LoadGen
 # Cloning the LoadGen so that we have clean git repo from within the docker container.
 RUN cd /tmp \
- && git clone https://github.com/mlperf/inference.git \
+ && git clone https://github.com/mlcommons/inference.git \
  && cd inference \
  && git submodule update --init third_party/pybind \
  && cd loadgen \

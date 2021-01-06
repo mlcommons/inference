@@ -33,6 +33,7 @@ def get_args():
     parser.add_argument("--profile", action="store_true", help="enable profiling (only valid for onnxruntime backend)")
     parser.add_argument("--mlperf_conf", default="build/mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf", help="user config for user LoadGen settings such as target QPS")
+    parser.add_argument("--max_examples", type=int, help="Maximum number of examples to consider (not limited by default)")
     args = parser.parse_args()
     return args
 
@@ -50,12 +51,12 @@ def main():
         assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
         assert not args.profile, "Profiling is only supported by onnxruntime backend!"
         from pytorch_SUT import get_pytorch_sut
-        sut = get_pytorch_sut()
+        sut = get_pytorch_sut(args)
     elif args.backend == "tf":
         assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
         assert not args.profile, "Profiling is only supported by onnxruntime backend!"
         from tf_SUT import get_tf_sut
-        sut = get_tf_sut()
+        sut = get_tf_sut(args)
     elif args.backend == "tf_estimator":
         assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
         assert not args.profile, "Profiling is only supported by onnxruntime backend!"
@@ -85,12 +86,13 @@ def main():
     log_output_settings.copy_summary_to_stdout = True
     log_settings = lg.LogSettings()
     log_settings.log_output = log_output_settings
+    log_settings.enable_trace = True
 
     print("Running LoadGen test...")
     lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
 
     if args.accuracy:
-        cmd = "python3 {:}/accuracy-squad.py".format(os.path.dirname(__file__))
+        cmd = "python3 {:}/accuracy-squad.py {}".format(os.path.dirname(__file__), '--max_examples={}'.format(args.max_examples) if args.max_examples else '')
         subprocess.check_call(cmd, shell=True)
 
     print("Done!")

@@ -175,7 +175,7 @@ def _compute_softmax(scores):
 
 
 def write_predictions(all_examples, all_features, all_results, n_best_size,
-                      max_answer_length, do_lower_case, output_prediction_file):
+                      max_answer_length, do_lower_case, output_prediction_file, max_examples=None):
     """Write final predictions to the json file and log-odds of null if needed."""
     print("Writing predictions to: %s" % (output_prediction_file))
 
@@ -196,6 +196,8 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
     scores_diff_json = collections.OrderedDict()
 
     for (example_index, example) in enumerate(all_examples):
+        if max_examples and example_index==max_examples: break
+
         features = example_index_to_features[example_index]
 
         prelim_predictions = []
@@ -353,6 +355,7 @@ def main():
     parser.add_argument("--features_cache_file", default="eval_features.pickle", help="Path to features' cache file")
     parser.add_argument("--output_transposed", action="store_true", help="Transpose the output")
     parser.add_argument("--output_dtype", default="float32", choices=dtype_map.keys(), help="Output data type")
+    parser.add_argument("--max_examples", type=int, help="Maximum number of examples to consider (not limited by default)")
     args = parser.parse_args()
 
     output_dtype = dtype_map[args.output_dtype]
@@ -396,11 +399,11 @@ def main():
     results = load_loadgen_log(args.log_file, eval_features, output_dtype, args.output_transposed)
 
     print("Post-processing predictions...")
-    write_predictions(eval_examples, eval_features, results, 20, 30, True, args.out_file)
+    write_predictions(eval_examples, eval_features, results, 20, 30, True, args.out_file, args.max_examples)
 
     print("Evaluating predictions...")
-    cmd = "python3 {:}/evaluate-v1.1.py {:} {:}".format(os.path.dirname(__file__),
-        args.val_data, args.out_file)
+    cmd = "python3 {:}/evaluate-v1.1.py {:} {:} {}".format(os.path.dirname(__file__),
+        args.val_data, args.out_file, '--max_examples={}'.format(args.max_examples) if args.max_examples else '')
     subprocess.check_call(cmd, shell=True)
 
 if __name__ == "__main__":

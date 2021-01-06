@@ -78,6 +78,8 @@ def upscale_coco(indir, outdir, image_dir, annotate_file, size, fmt):
             image = cv2.cvtColor(image, cv2.COLOR_GRAY2RGB)
         image = cv2.resize(image, size, interpolation=cv2.INTER_LINEAR)
         cv2.imwrite(os.path.join(image_out_path, img['file_name'][0:-3] + fmt), image)
+        # Update image file extension
+        img['file_name'] = img['file_name'][0:-3] + fmt
         # Image dimensions
         img['width'] = size[0]
         img['height'] = size[1]

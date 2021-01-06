@@ -70,20 +70,39 @@ struct LogBinaryAsHexString {
   std::vector<uint8_t>* data;
 };
 
+/// \brief By default, print out the value directly.
+template <typename T>
+const T& ArgValueTransform(const T& value) {
+  return value;
+}
+
+/// \brief Print out True/False.
 const std::string& ArgValueTransform(const bool& value);
+/// \brief Print out binary day as hex string.
 const std::string ArgValueTransform(const LogBinaryAsHexString& value);
 #if USE_NEW_LOGGING_FORMAT
+/// \brief Print out a string in JSON format (with quotes).
 const std::string ArgValueTransform(const std::string& value);
 const std::string ArgValueTransform(const char* value);
-/// \brief Prints a list of int.
+/// \brief Prints a list of int in JSON format.
 const std::string ArgValueTransform(const std::vector<uint64_t>& value);
-/// \brief Prints a dict.
+/// \brief Prints a dict in JSON format.
 const std::string ArgValueTransform(
     const std::map<std::string, std::string>& value);
 #endif
 
+/// \brief Helper to print out values without quotes when value is a string.
 template <typename T>
-const T& ArgValueTransform(const T& value) {
+const T& ArgValueTransformWithoutQuote(const T& value) {
+  return ArgValueTransform<T>(value);
+}
+inline const std::string ArgValueTransformWithoutQuote(
+    const LogBinaryAsHexString& value) {
+  return ArgValueTransform(value);
+}
+/// \brief Helper to print out a string without the quotes.
+inline const std::string ArgValueTransformWithoutQuote(
+    const std::string& value) {
   return value;
 }
 
@@ -308,19 +327,21 @@ class AsyncLog {
 
   template <typename T>
   void LogArgs(std::ostream* out, const T& value_only) {
-    *out << ArgValueTransform(value_only);
+    *out << ArgValueTransformWithoutQuote(value_only);
   }
 
   template <typename T>
   void LogArgs(std::ostream* out, const std::string& arg_name,
                const T& arg_value) {
-    *out << "\"" << arg_name << "\" : " << ArgValueTransform(arg_value);
+    *out << "\"" << arg_name
+         << "\" : " << ArgValueTransformWithoutQuote(arg_value);
   }
 
   template <typename T, typename... Args>
   void LogArgs(std::ostream* out, const std::string& arg_name,
                const T& arg_value, const Args... args) {
-    *out << "\"" << arg_name << "\" : " << ArgValueTransform(arg_value) << ", ";
+    *out << "\"" << arg_name
+         << "\" : " << ArgValueTransformWithoutQuote(arg_value) << ", ";
     LogArgs(out, args...);
   }
 
@@ -406,8 +427,8 @@ class Logger {
   /// \todo Provide client hook to set logging thead affinity and priority.
   void IOThread();
 
-  // Slow synchronous error logging for internals that may prevent
-  // async logging from working.
+// Slow synchronous error logging for internals that may prevent
+// async logging from working.
 #if USE_NEW_LOGGING_FORMAT
   template <typename T>
   void LogErrorSync(const std::string& key, const T& value,
@@ -512,7 +533,7 @@ class AsyncSummary {
 /// \brief A helper to simplify adding a summary log entry.
 template <typename LambdaT>
 void LogSummary(LambdaT&& lambda) {
-  Log([lambda = std::forward<LambdaT>(lambda)](AsyncLog& log) mutable {
+  Log([lambda = std::forward<LambdaT>(lambda)](AsyncLog & log) mutable {
     AsyncSummary async_summary(log);
     lambda(async_summary);
   });
@@ -594,8 +615,8 @@ class AsyncDetail {
 /// \brief A helper to simplify adding a detail log entry.
 template <typename LambdaT>
 void LogDetail(LambdaT&& lambda) {
-  Log([lambda = std::forward<LambdaT>(lambda),
-       timestamp = PerfClock::now()](AsyncLog& log) mutable {
+  Log([ lambda = std::forward<LambdaT>(lambda),
+        timestamp = PerfClock::now() ](AsyncLog & log) mutable {
     log.SetLogDetailTime(timestamp);
     AsyncDetail async_detail(log);
     lambda(async_detail);
@@ -628,8 +649,8 @@ class ScopedTracer {
       : start_(PerfClock::now()), lambda_(std::forward<LambdaT>(lambda)) {}
 
   ~ScopedTracer() {
-    Log([start = start_, lambda = std::move(lambda_),
-         end = PerfClock::now()](AsyncLog& log) {
+    Log([ start = start_, lambda = std::move(lambda_),
+          end = PerfClock::now() ](AsyncLog & log) {
       log.SetScopedTraceTimes(start, end);
       AsyncTrace async_trace(log);
       lambda(async_trace);
@@ -693,8 +714,7 @@ void AsyncLog::LogDetail(const std::string& key, const T& value,
     *os << ":::MLLOG {"
         << "\"key\": " << ArgValueTransform(key) << ", "
         << "\"value\": " << ArgValueTransform(value) << ", "
-        << "\"time_ms\": "
-        << ArgValueTransform(time_ns / 1000000ULL) << "."
+        << "\"time_ms\": " << ArgValueTransform(time_ns / 1000000ULL) << "."
         << std::setfill('0') << std::setw(6)
         << ArgValueTransform(time_ns % 1000000ULL) << ", "
         << "\"namespace\": \"mlperf::logging\", "

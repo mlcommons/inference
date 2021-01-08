@@ -6,7 +6,7 @@ character transcription, without an external language model.
 
 Open `run.sh`. Set the stage variable to "-1". Set "work_dir" to a
 path backed by a disk with at least 30 GB of space. Most space is used
-by loadgen logs, not the data or model. You need conda and a C/C++
+by loadgen logs, not the data or model. You need conda (conda env create -f environment.yml) and a C/C++
 compiler on your PATH. I used conda 4.8.2. This script is responsible
 for downloading dependencies, data, and the model.
 

@@ -65,12 +65,16 @@ def metric_max_over_ground_truths(metric_fn, prediction, ground_truths):
     return max(scores_for_ground_truths)
 
 
-def evaluate(dataset, predictions):
+def evaluate(dataset, predictions, max_examples=None):
     f1 = exact_match = total = 0
     for article in dataset:
+        if max_examples and max_examples==total: break
         for paragraph in article['paragraphs']:
+            if max_examples and max_examples==total: break
             for qa in paragraph['qas']:
                 total += 1
+                if max_examples and max_examples==total: break
+
                 if qa['id'] not in predictions:
                     message = 'Unanswered question ' + qa['id'] + \
                               ' will receive score 0.'
@@ -95,6 +99,7 @@ if __name__ == '__main__':
         description='Evaluation for SQuAD ' + expected_version)
     parser.add_argument('dataset_file', help='Dataset file')
     parser.add_argument('prediction_file', help='Prediction File')
+    parser.add_argument('--max_examples', type=int, help='Maximum number of examples to consider (not limited by default)')
     args = parser.parse_args()
     with open(args.dataset_file) as dataset_file:
         dataset_json = json.load(dataset_file)
@@ -105,4 +110,4 @@ if __name__ == '__main__':
         dataset = dataset_json['data']
     with open(args.prediction_file) as prediction_file:
         predictions = json.load(prediction_file)
-    print(json.dumps(evaluate(dataset, predictions)))
+    print(json.dumps(evaluate(dataset, predictions, args.max_examples)))

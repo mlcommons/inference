@@ -44,7 +44,7 @@ class BERT_ONNXRuntime_SUT():
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
         print("Finished constructing SUT.")
 
-        self.qsl = get_squad_QSL()
+        self.qsl = get_squad_QSL(args.max_examples)
 
     def issue_queries(self, query_samples):
         for i in range(len(query_samples)):

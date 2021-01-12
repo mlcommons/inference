@@ -16,6 +16,20 @@ limitations under the License.
 #ifndef MLPERF_LOADGEN_LOGGING_H_
 #define MLPERF_LOADGEN_LOGGING_H_
 
+#define USE_NEW_LOGGING_FORMAT 1
+#define MLPERF_LOG(logger, key, value) \
+  logger.Log((key), (value), __FILE__, __LINE__)
+#define MLPERF_LOG_ERROR(logger, key, value) \
+  logger.LogError((key), (value), __FILE__, __LINE__)
+#define MLPERF_LOG_ERROR_SYNC(logger, key, value) \
+  logger.LogErrorSync((key), (value), __FILE__, __LINE__)
+#define MLPERF_LOG_WARNING(logger, key, value) \
+  logger.LogWarning((key), (value), __FILE__, __LINE__)
+#define MLPERF_LOG_INTERVAL_START(logger, key, value) \
+  logger.LogIntervalStart((key), (value), __FILE__, __LINE__)
+#define MLPERF_LOG_INTERVAL_END(logger, key, value) \
+  logger.LogIntervalEnd((key), (value), __FILE__, __LINE__)
+
 #include <algorithm>
 #include <atomic>
 #include <cassert>
@@ -23,8 +37,10 @@ limitations under the License.
 #include <condition_variable>
 #include <functional>
 #include <future>
+#include <iomanip>
 #include <iostream>
 #include <list>
+#include <map>
 #include <mutex>
 #include <set>
 #include <string>
@@ -54,11 +70,39 @@ struct LogBinaryAsHexString {
   std::vector<uint8_t>* data;
 };
 
-const std::string& ArgValueTransform(const bool& value);
-const std::string ArgValueTransform(const LogBinaryAsHexString& value);
-
+/// \brief By default, print out the value directly.
 template <typename T>
 const T& ArgValueTransform(const T& value) {
+  return value;
+}
+
+/// \brief Print out True/False.
+const std::string& ArgValueTransform(const bool& value);
+/// \brief Print out binary day as hex string.
+const std::string ArgValueTransform(const LogBinaryAsHexString& value);
+#if USE_NEW_LOGGING_FORMAT
+/// \brief Print out a string in JSON format (with quotes).
+const std::string ArgValueTransform(const std::string& value);
+const std::string ArgValueTransform(const char* value);
+/// \brief Prints a list of int in JSON format.
+const std::string ArgValueTransform(const std::vector<uint64_t>& value);
+/// \brief Prints a dict in JSON format.
+const std::string ArgValueTransform(
+    const std::map<std::string, std::string>& value);
+#endif
+
+/// \brief Helper to print out values without quotes when value is a string.
+template <typename T>
+const T& ArgValueTransformWithoutQuote(const T& value) {
+  return ArgValueTransform<T>(value);
+}
+inline const std::string ArgValueTransformWithoutQuote(
+    const LogBinaryAsHexString& value) {
+  return ArgValueTransform(value);
+}
+/// \brief Helper to print out a string without the quotes.
+inline const std::string ArgValueTransformWithoutQuote(
+    const std::string& value) {
   return value;
 }
 
@@ -201,8 +245,14 @@ class AsyncLog {
     warning_flagged_ = true;
   }
 
+#if USE_NEW_LOGGING_FORMAT
+  template <typename T>
+  void LogDetail(const std::string& key, const T& value,
+                 const std::string file_name, const unsigned int line_no);
+#else
   template <typename... Args>
   void LogDetail(const std::string& message, const Args... args);
+#endif
 
   template <typename... Args>
   void Trace(const std::string& trace_name, PerfClock::time_point start,
@@ -277,19 +327,21 @@ class AsyncLog {
 
   template <typename T>
   void LogArgs(std::ostream* out, const T& value_only) {
-    *out << ArgValueTransform(value_only);
+    *out << ArgValueTransformWithoutQuote(value_only);
   }
 
   template <typename T>
   void LogArgs(std::ostream* out, const std::string& arg_name,
                const T& arg_value) {
-    *out << "\"" << arg_name << "\" : " << ArgValueTransform(arg_value);
+    *out << "\"" << arg_name
+         << "\" : " << ArgValueTransformWithoutQuote(arg_value);
   }
 
   template <typename T, typename... Args>
   void LogArgs(std::ostream* out, const std::string& arg_name,
                const T& arg_value, const Args... args) {
-    *out << "\"" << arg_name << "\" : " << ArgValueTransform(arg_value) << ", ";
+    *out << "\"" << arg_name
+         << "\" : " << ArgValueTransformWithoutQuote(arg_value) << ", ";
     LogArgs(out, args...);
   }
 
@@ -375,8 +427,25 @@ class Logger {
   /// \todo Provide client hook to set logging thead affinity and priority.
   void IOThread();
 
-  // Slow synchronous error logging for internals that may prevent
-  // async logging from working.
+// Slow synchronous error logging for internals that may prevent
+// async logging from working.
+#if USE_NEW_LOGGING_FORMAT
+  template <typename T>
+  void LogErrorSync(const std::string& key, const T& value,
+                    const std::string file_name, const unsigned int line_no) {
+    /// \todo Acquire mutex once for FlagError + LogDetail to avoid
+    ///       races. Better yet, switch to a non-stateful error API.
+    //       This is better than nothing though.
+    async_logger_.FlagError();
+    async_logger_.LogDetail(key, value, file_name, line_no);
+  }
+  template <typename T>
+  void LogWarning(const std::string& key, const T& value,
+                  const std::string file_name, const unsigned int line_no) {
+    async_logger_.FlagWarning();
+    async_logger_.LogDetail(key, value, file_name, line_no);
+  }
+#else
   template <typename... Args>
   void LogErrorSync(const std::string& message, Args&&... args) {
     /// \todo Acquire mutex once for FlagError + LogDetail to avoid
@@ -385,6 +454,7 @@ class Logger {
     async_logger_.FlagError();
     async_logger_.LogDetail(message, std::forward<Args>(args)...);
   }
+#endif
 
   // Accessed by IOThead only.
   const std::chrono::duration<double> poll_period_;
@@ -463,7 +533,7 @@ class AsyncSummary {
 /// \brief A helper to simplify adding a summary log entry.
 template <typename LambdaT>
 void LogSummary(LambdaT&& lambda) {
-  Log([lambda = std::forward<LambdaT>(lambda)](AsyncLog& log) mutable {
+  Log([lambda = std::forward<LambdaT>(lambda)](AsyncLog & log) mutable {
     AsyncSummary async_summary(log);
     lambda(async_summary);
   });
@@ -476,6 +546,47 @@ class AsyncDetail {
   explicit AsyncDetail(AsyncLog& async_log) : async_log_(async_log) {}
   AsyncLog& async_log() { return async_log_; }
 
+#if USE_NEW_LOGGING_FORMAT
+  template <typename T>
+  AsyncLog& Log(const std::string& key, const T& value,
+                const std::string file_name, const unsigned int line_no) {
+    async_log_.LogDetail(key, value, file_name, line_no);
+    return async_log_;
+  }
+
+  template <typename T>
+  AsyncLog& LogError(const std::string& key, const T& value,
+                     const std::string file_name, const unsigned int line_no) {
+    async_log_.FlagError();
+    async_log_.LogDetail(key, value, file_name, line_no);
+    return async_log_;
+  }
+
+  template <typename T>
+  AsyncLog& LogWarning(const std::string& key, const T& value,
+                       const std::string file_name,
+                       const unsigned int line_no) {
+    async_log_.FlagWarning();
+    async_log_.LogDetail(key, value, file_name, line_no);
+    return async_log_;
+  }
+
+  template <typename T>
+  AsyncLog& LogIntervalStart(const std::string& key, const T& value,
+                             const std::string file_name,
+                             const unsigned int line_no) {
+    async_log_.LogDetail(key, value, file_name, line_no);
+    return async_log_;
+  }
+
+  template <typename T>
+  AsyncLog& LogIntervalEnd(const std::string& key, const T& value,
+                           const std::string file_name,
+                           const unsigned int line_no) {
+    async_log_.LogDetail(key, value, file_name, line_no);
+    return async_log_;
+  }
+#else
   template <typename... Args>
   AsyncLog& operator()(Args&&... args) {
     async_log_.LogDetail(std::forward<Args>(args)...);
@@ -495,6 +606,7 @@ class AsyncDetail {
     async_log_.LogDetail(std::forward<Args>(args)...);
     return async_log_;
   }
+#endif
 
  private:
   AsyncLog& async_log_;
@@ -503,8 +615,8 @@ class AsyncDetail {
 /// \brief A helper to simplify adding a detail log entry.
 template <typename LambdaT>
 void LogDetail(LambdaT&& lambda) {
-  Log([lambda = std::forward<LambdaT>(lambda),
-       timestamp = PerfClock::now()](AsyncLog& log) mutable {
+  Log([ lambda = std::forward<LambdaT>(lambda),
+        timestamp = PerfClock::now() ](AsyncLog & log) mutable {
     log.SetLogDetailTime(timestamp);
     AsyncDetail async_detail(log);
     lambda(async_detail);
@@ -537,8 +649,8 @@ class ScopedTracer {
       : start_(PerfClock::now()), lambda_(std::forward<LambdaT>(lambda)) {}
 
   ~ScopedTracer() {
-    Log([start = start_, lambda = std::move(lambda_),
-         end = PerfClock::now()](AsyncLog& log) {
+    Log([ start = start_, lambda = std::move(lambda_),
+          end = PerfClock::now() ](AsyncLog & log) {
       log.SetScopedTraceTimes(start, end);
       AsyncTrace async_trace(log);
       lambda(async_trace);
@@ -581,6 +693,47 @@ void AsyncLog::LogSummary(const std::string& message, const Args... args) {
   }
 }
 
+#if USE_NEW_LOGGING_FORMAT
+template <typename T>
+void AsyncLog::LogDetail(const std::string& key, const T& value,
+                         const std::string file_name,
+                         const unsigned int line_no) {
+  auto tracer = MakeScopedTracer([key](AsyncTrace& trace) {
+    std::string sanitized_key = key;
+    std::replace(sanitized_key.begin(), sanitized_key.end(), '"', '\'');
+    std::replace(sanitized_key.begin(), sanitized_key.end(), '\n', ';');
+    trace("LogDetail", "key", "\"" + sanitized_key + "\"");
+  });
+  std::unique_lock<std::mutex> lock(log_mutex_);
+  std::vector<std::ostream*> detail_streams{detail_out_, &std::cout};
+  if (!copy_detail_to_stdout_) {
+    detail_streams.pop_back();
+  }
+  auto time_ns = (log_detail_time_ - log_origin_).count();
+  for (auto os : detail_streams) {
+    *os << ":::MLLOG {"
+        << "\"key\": " << ArgValueTransform(key) << ", "
+        << "\"value\": " << ArgValueTransform(value) << ", "
+        << "\"time_ms\": " << ArgValueTransform(time_ns / 1000000ULL) << "."
+        << std::setfill('0') << std::setw(6)
+        << ArgValueTransform(time_ns % 1000000ULL) << ", "
+        << "\"namespace\": \"mlperf::logging\", "
+        << "\"event_type\": \"POINT_IN_TIME\", "
+        << "\"metadata\": {"
+        << "\"is_error\": " << ArgValueTransform(error_flagged_) << ", "
+        << "\"is_warning\": " << ArgValueTransform(warning_flagged_) << ", "
+        << "\"file\": \"" << file_name << "\", "
+        << "\"line_no\": " << ArgValueTransform(line_no) << ", "
+        << "\"pid\": " << ArgValueTransform(current_pid_) << ", "
+        << "\"tid\": " << ArgValueTransform(current_tid_) << "}}\n";
+    if (error_flagged_) {
+      os->flush();
+    }
+  }
+  error_flagged_ = false;
+  warning_flagged_ = false;
+}
+#else
 template <typename... Args>
 void AsyncLog::LogDetail(const std::string& message, const Args... args) {
   auto tracer = MakeScopedTracer([message](AsyncTrace& trace) {
@@ -613,6 +766,7 @@ void AsyncLog::LogDetail(const std::string& message, const Args... args) {
   error_flagged_ = false;
   warning_flagged_ = false;
 }
+#endif
 
 }  // namespace logging
 

@@ -109,7 +109,13 @@ TestSettingsInternal MidOfBoundaries(
         lower_bound_settings.target_qps +
         (upper_bound_settings.target_qps - lower_bound_settings.target_qps) / 2;
   } else {
-    LogDetail([](AsyncDetail &detail) { detail(kNotSupportedMsg); });
+    LogDetail([](AsyncDetail &detail) {
+#if USE_NEW_LOGGING_FORMAT
+      MLPERF_LOG_ERROR(detail, "error_invalid_test_settings", kNotSupportedMsg);
+#else
+      detail(kNotSupportedMsg);
+#endif
+    });
   }
   return mid_settings;
 }
@@ -130,8 +136,13 @@ bool IsFinished(const TestSettingsInternal &lower_bound_settings,
         std::floor(upper_bound_settings.target_qps * std::pow(10, precision));
     return l + 1 >= u;
   } else {
-    LogDetail([](AsyncDetail &detail) { detail(kNotSupportedMsg); });
-    return true;
+    LogDetail([](AsyncDetail &detail) {
+#if USE_NEW_LOGGING_FORMAT
+      MLPERF_LOG_ERROR(detail, "error_invalid_test_settings", kNotSupportedMsg);
+#else
+      detail(kNotSupportedMsg);
+#endif
+    });
   }
 }
 
@@ -143,7 +154,13 @@ std::string ToStringPerformanceField(const TestSettingsInternal &settings) {
   } else if (scenario == TestScenario::Server) {
     return std::to_string(settings.target_qps);
   } else {
-    LogDetail([](AsyncDetail &detail) { detail(kNotSupportedMsg); });
+    LogDetail([](AsyncDetail &detail) {
+#if USE_NEW_LOGGING_FORMAT
+      MLPERF_LOG_ERROR(detail, "error_invalid_test_settings", kNotSupportedMsg);
+#else
+      detail(kNotSupportedMsg);
+#endif
+    });
     return ToString(settings.scenario);
   }
 }
@@ -158,7 +175,13 @@ void WidenPerformanceField(TestSettingsInternal *settings) {
         settings->target_qps *
         (1 + settings->requested.server_find_peak_qps_boundary_step_size);
   } else {
-    LogDetail([](AsyncDetail &detail) { detail(kNotSupportedMsg); });
+    LogDetail([](AsyncDetail &detail) {
+#if USE_NEW_LOGGING_FORMAT
+      MLPERF_LOG_ERROR(detail, "error_invalid_test_settings", kNotSupportedMsg);
+#else
+      detail(kNotSupportedMsg);
+#endif
+    });
   }
 }
 

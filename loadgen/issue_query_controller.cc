@@ -16,6 +16,8 @@ limitations under the License.
 
 #include "issue_query_controller.h"
 
+#include <sstream>
+
 namespace mlperf {
 
 void RegisterIssueQueryThread() {
@@ -281,9 +283,16 @@ void IssueQueryController::RegisterThread() {
   }
 
   LogDetail([thread_id, thread_idx](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+    std::stringstream ss;
+    ss << "Registered IssueQueryThread[" << thread_idx
+       << "]. thread ID : " << std::hash<std::thread::id>()(thread_id);
+    MLPERF_LOG(detail, "generic_message", ss.str());
+#else
     detail("Registered IssueQueryThread[" + std::to_string(thread_idx) +
                "]. thread ID : ",
            std::to_string(std::hash<std::thread::id>()(thread_id)));
+#endif
   });
 
   // Start test.
@@ -327,10 +336,19 @@ void IssueQueryController::SetNumThreads(size_t n) {
   // error.
   if (num_threads != thread_ids.size()) {
     LogDetail([this](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+      std::stringstream ss;
+      ss << "Mismatch between settings and number of registered "
+         << "IssueQueryThreads! settings.server_num_issue_query_threads = "
+         << num_threads << " but " << thread_ids.size()
+         << " threads registered.";
+      MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
+#else
       detail.Error(
           "Mismatch between settings and number of registered ",
           "IssueQueryThreads! settings.server_num_issue_query_threads = ",
           num_threads, " but ", thread_ids.size(), " threads registered.");
+#endif
     });
   }
 }
@@ -443,8 +461,7 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
       for (; queries_idx + query_stride < queries_count;
            queries_idx += query_stride) {
         auto next_scheduled_time =
-            start +
-            queries[queries_idx + query_stride].scheduled_delta;
+            start + queries[queries_idx + query_stride].scheduled_delta;
         // If current time hasn't reached the next query's scheduled time yet,
         // don't include next query.
         if (last_now < next_scheduled_time) {
@@ -506,10 +523,19 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
         if (queries_outstanding > settings.max_async_queries) {
           LogDetail([thread_idx, queries_issued_total,
                      queries_outstanding](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+            std::stringstream ss;
+            ss << "IssueQueryThread " << thread_idx
+               << " Ending early: Too many outstanding queries."
+               << " issued " << queries_issued_total << " outstanding "
+               << queries_outstanding;
+            MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
+#else
             detail.Error("IssueQueryThread ", std::to_string(thread_idx),
                          " Ending early: Too many outstanding queries.",
                          "issued", std::to_string(queries_issued_total),
                          "outstanding", std::to_string(queries_outstanding));
+#endif
           });
           break;
         }
@@ -519,8 +545,14 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
       if (queries_issued >= min_query_count_for_thread &&
           duration >= settings.target_duration) {
         LogDetail([thread_idx](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+          MLPERF_LOG(
+              detail, "generic_message",
+              "Ending naturally: Minimum query count and test duration met.");
+#else
           detail(
               " Ending naturally: Minimum query count and test duration met.");
+#endif
         });
         ran_out_of_generated_queries = false;
         break;
@@ -531,9 +563,17 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
     if (settings.max_query_count != 0 &&
         queries_issued >= max_query_count_for_thread) {
       LogDetail([thread_idx, queries_issued](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+        std::stringstream ss;
+        ss << "IssueQueryThread " << thread_idx
+           << " Ending early: Max query count reached."
+           << " query_count " << queries_issued;
+        MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
+#else
         detail.Error("IssueQueryThread ", std::to_string(thread_idx),
                      " Ending early: Max query count reached.", "query_count",
                      std::to_string(queries_issued));
+#endif
       });
       ran_out_of_generated_queries = false;
       break;
@@ -543,9 +583,17 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
     if (settings.max_duration.count() != 0 &&
         duration > settings.max_duration) {
       LogDetail([thread_idx, duration](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+        std::stringstream ss;
+        ss << "IssueQueryThread " << thread_idx
+           << " Ending early: Max test duration reached."
+           << " duration_ns " << duration.count();
+        MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
+#else
         detail.Error("IssueQueryThread ", std::to_string(thread_idx),
                      " Ending early: Max test duration reached.", "duration_ns",
                      std::to_string(duration.count()));
+#endif
       });
       ran_out_of_generated_queries = false;
       break;

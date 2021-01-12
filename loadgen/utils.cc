@@ -15,6 +15,7 @@ limitations under the License.
 #include <chrono>
 #include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 
 #include "logging.h"
@@ -54,8 +55,15 @@ std::string DateTimeString(const char* format,
                 .count();
   if (ms < 0 || ms >= 1000) {
     LogDetail([ms](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+      std::stringstream ss;
+      ss << "WARNING: Unexpected milliseconds getting date and time."
+         << " ms: " << ms;
+      MLPERF_LOG_WARNING(detail, "warning_generic_message", ss.str());
+#else
       detail("WARNING: Unexpected milliseconds getting date and time.", "ms",
              ms);
+#endif
     });
   }
   std::string ms_string = std::to_string(ms);
@@ -72,6 +80,43 @@ std::string CurrentDateTimeISO8601() {
 
 std::string DateTimeStringForPower(std::chrono::system_clock::time_point tp) {
   return DateTimeString("%m-%d-%Y %T", tp, true);
+}
+
+std::string EscapeStringJson(const std::string& in) {
+  std::stringstream ss;
+  for (auto c = in.cbegin(); c != in.cend(); c++) {
+    int c_val = static_cast<int>(*c);
+    switch (*c) {
+      case '"':
+        ss << "\\\"";
+        break;
+      case '\\':
+        ss << "\\\\";
+        break;
+      case '\b':
+        ss << "\\b";
+        break;
+      case '\f':
+        ss << "\\f";
+        break;
+      case '\n':
+        ss << "\\n";
+        break;
+      case '\r':
+        ss << "\\r";
+        break;
+      case '\t':
+        ss << "\\t";
+        break;
+      default:
+        if (c_val >= 0x00 && c_val < 0x20) {
+          ss << "\\u" << std::hex << std::setw(4) << std::setfill('0') << c_val;
+        } else {
+          ss << *c;
+        }
+    }
+  }
+  return ss.str();
 }
 
 }  // namespace mlperf

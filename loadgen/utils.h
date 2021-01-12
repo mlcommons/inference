@@ -61,6 +61,10 @@ std::string DoubleToString(double value, int precision = 2);
 
 bool FileExists(const std::string filename);
 
+// \brief Escape special characters in a string for JSON.
+// Don't use this in performance critical path.
+std::string EscapeStringJson(const std::string& in);
+
 }  // namespace mlperf
 
 #endif  // MLPERF_LOADGEN_UTILS_H

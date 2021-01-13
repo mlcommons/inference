@@ -1,6 +1,0 @@
-Cython
-numpy
-Pillow
-matplotlib
-pycocotools
-IPython

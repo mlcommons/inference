@@ -1,7 +1,0 @@
-torch
-torchvision
-pathlib
-spacy==2.0.12
-tqdm==4.10
-sklearn
-h5py

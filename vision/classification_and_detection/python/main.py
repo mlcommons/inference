@@ -469,7 +469,7 @@ def main():
         lg.TestScenario.SingleStream: RunnerBase,
         lg.TestScenario.MultiStream: QueueRunner,
         lg.TestScenario.Server: QueueRunner,
-        lg.TestScenario.Offline: QueueRunner
+        lg.TestScenario.Offline: QueueRunner,
     }
     runner = runner_map[scenario](model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize)
 
@@ -543,4 +543,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

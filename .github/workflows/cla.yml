@@ -18,7 +18,7 @@ jobs:
           # the below token should have repo scope and must be manually added by you in the repository's secret
           PERSONAL_ACCESS_TOKEN : ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
-          path-to-signatures: 'signatures/version1/cla.json'
+          path-to-signatures: 'cla-bot/v1/cla.json'
           path-to-document: 'https://github.com/mlcommons/systems/blob/main/mlcommons_cla.txt' # e.g. a CLA or a DCO document
           # branch should not be protected
           branch: 'main'

@@ -31,7 +31,7 @@ This test is not applicable for the following benchmarks whose performance is de
 
 ## Scenarios
 
- - This test is applicable for scenarios Offline, Server and Single Stream always.
+ - This test is applicable for scenarios Offline, Server and SingleStream always.
  - This test is not applicable for Multi-Stream scenario if samples_per_query >= Performance Sample Count
 
 ## Pass Criteria

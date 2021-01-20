@@ -1,4 +1,4 @@
-name: "mlcommons-bot"
+name: "cla-bot"
 on:
   issue_comment:
     types: [created]
@@ -9,7 +9,7 @@ jobs:
   cla-check:
     runs-on: ubuntu-latest
     steps:
-      - name: "MLCommons CLA bot"
+      - name: "MLCommons CLA bot check"
         if: (github.event.comment.body == 'recheck') || github.event_name == 'pull_request_target'
         # Alpha Release
         uses: sub-mod/github-action@v3

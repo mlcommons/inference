@@ -32,12 +32,16 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version
 
 # Add source files.
 set(SOURCE
-  ${CMAKE_CURRENT_SOURCE_DIR}/bindings/c_api.h
   ${CMAKE_CURRENT_SOURCE_DIR}/bindings/c_api.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/bindings/c_api.h
   ${CMAKE_CURRENT_SOURCE_DIR}/issue_query_controller.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/issue_query_controller.h
   ${CMAKE_CURRENT_SOURCE_DIR}/loadgen.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/loadgen.h
   ${CMAKE_CURRENT_SOURCE_DIR}/logging.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/logging.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/system_details.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/system_details.h
   ${CMAKE_CURRENT_SOURCE_DIR}/test_settings_internal.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/test_settings_internal.h
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.cc

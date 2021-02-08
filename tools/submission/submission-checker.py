@@ -285,7 +285,8 @@ REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 TO_MS = 1000 * 1000
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
 OFFLINE_MIN_SPQ = 24576
-TEST_DURATION_MS = 60000
+TEST_DURATION_MS_PRE_1_0 = 60000
+TEST_DURATION_MS = 600000
 REQUIRED_COMP_PER_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 REQUIRED_TEST01_ACC_FILES_1 = ["mlperf_log_accuracy.json", "accuracy.txt"]
 REQUIRED_TEST01_ACC_FILES = REQUIRED_TEST01_ACC_FILES_1 + ["baseline_accuracy.txt", "compliance_accuracy.txt"]
@@ -636,10 +637,11 @@ def check_performance_dir(config, model, path):
             log.error("%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
                         fname, OFFLINE_MIN_SPQ, samples_per_query)
 
-        # Test duration of 60s is met
-        if min_duration < TEST_DURATION_MS:
-            log.error("%s Test duration lesser than 60s in user config. expected=%s, found=%s",
-                        fname, TEST_DURATION_MS, min_duration)
+        # Test duration of 600s is met
+        required_min_duration = TEST_DURATION_MS_PRE_1_0 if config.version in ["v0.5", "v0.7"] else TEST_DURATION_MS
+        if min_duration < required_min_duration:
+            log.error("%s Test duration lesser than 600s in user config. expected=%s, found=%s",
+                        fname, required_min_duration, min_duration)
 
     return is_valid, res, rt
 
@@ -845,7 +847,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 log.error("%s, accuracy not valid", acc_path)
 
                         infered = 0
-                        if scenario in ["Server"]:
+                        if scenario in ["Server"] and config.version in ["v0.5", "v0.7"]:
                             n = ["run_1", "run_2", "run_3", "run_4", "run_5"]
                         else:
                             n = ["run_1"]

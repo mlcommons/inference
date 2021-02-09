@@ -36,7 +36,7 @@ The reference implementation includes all required pre-processing of datasets.
 It also includes a ```--accuracy``` option to validate accuracy as required by mlperf.
 If you are not using the reference implementation, a few scripts will help:
 ### Prepare the coco dataset 
-The tool is [here](../tools/upscale_coco).
+The tool is [here](../../tools/upscale_coco).
 You can run it for ssd-mobilenet like:
 ```
 python upscale_coco.py --inputs /data/coco/ --outputs /data/coco-300 --size 300 300 --format png

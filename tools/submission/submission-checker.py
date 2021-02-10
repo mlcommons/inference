@@ -554,7 +554,7 @@ def check_accuracy_dir(config, model, path, verbose):
     return is_valid, acc
 
 
-def check_performance_dir(config, model, path):
+def check_performance_dir(config, model, path, scenario_fixed):
     is_valid = False
     rt = {}
 
@@ -576,6 +576,8 @@ def check_performance_dir(config, model, path):
         min_query_count = mlperf_log["effective_min_query_count"]
         samples_per_query = mlperf_log["effective_samples_per_query"]
         min_duration = mlperf_log["effective_min_duration_ms"]
+        if scenario == "SingleStream":
+            qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
     else:
         fname = os.path.join(path, "mlperf_log_summary.txt")
         with open(fname, "r") as f:
@@ -596,6 +598,8 @@ def check_performance_dir(config, model, path):
         min_query_count = int(rt['min_query_count'])
         samples_per_query = int(rt['samples_per_query'])
         min_duration = int(rt["min_duration (ms)"])
+        if scenario == "SingleStream":
+            qps_wo_loadgen_overhead = float(rt["QPS w/o loadgen overhead"])
 
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
@@ -643,7 +647,13 @@ def check_performance_dir(config, model, path):
             log.error("%s Test duration lesser than 600s in user config. expected=%s, found=%s",
                         fname, required_min_duration, min_duration)
 
-    return is_valid, res, rt
+    inferred = False
+    # special case for Offline results inferred from SingleStream
+    if scenario_fixed in ["Offline"] and scenario != scenario_fixed:
+        inferred = True
+        res = qps_wo_loadgen_overhead
+
+    return is_valid, res, inferred
 
 
 def files_diff(list1, list2, optional=None):
@@ -861,11 +871,9 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             if diff:
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
                             try:
-                                is_valid, r, rt = check_performance_dir(config, mlperf_model, perf_path)
-                                if scenario_fixed in ["Offline"] and rt["Scenario"] != scenario_fixed:
-                                    # special case for Offline results infered from SingleStream
+                                is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed)
+                                if is_inferred:
                                     infered = 1
-                                    r = rt.get("QPS w/o loadgen overhead")
                                     log.info("%s has infered resuls, qps=%s", perf_path, r)
                             except Exception as e:
                                 log.error("%s caused exception in check_performance_dir: %s", perf_path, e)

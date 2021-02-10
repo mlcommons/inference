@@ -576,6 +576,8 @@ def check_performance_dir(config, model, path):
         min_query_count = mlperf_log["effective_min_query_count"]
         samples_per_query = mlperf_log["effective_samples_per_query"]
         min_duration = mlperf_log["effective_min_duration_ms"]
+        rt["Scenario"] = scenario
+        rt["QPS w/o loadgen overhead"] = mlperf_log.get("QPS w/o loadgen overhead")
     else:
         fname = os.path.join(path, "mlperf_log_summary.txt")
         with open(fname, "r") as f:

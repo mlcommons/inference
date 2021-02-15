@@ -171,7 +171,7 @@ void ChromeTracer::WriteTraceEventFooter() {
         << "\"displayTimeUnit\":\"ns\",\n"
         << "\"otherData\":{\n"
         << "\"ts\":" << Micros(origin_.time_since_epoch()).count() << ",\n"
-        << "\"version\":\"MLPerf LoadGen v0.5a0\"\n"
+        << "\"version\":\"MLPerf LoadGen v1.0\"\n"
         << "}\n"
         << "}\n";
 }

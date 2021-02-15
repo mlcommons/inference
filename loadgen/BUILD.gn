@@ -22,6 +22,8 @@ lib_sources = [
   "loadgen.cc",
   "logging.cc",
   "logging.h",
+  "system_details.cc",
+  "system_details.h",
   "test_settings_internal.cc",
   "test_settings_internal.h",
   "utils.cc",

@@ -35,6 +35,7 @@ limitations under the License.
 #include "logging.h"
 #include "query_sample.h"
 #include "query_sample_library.h"
+#include "system_details.h"
 #include "system_under_test.h"
 #include "test_settings.h"
 #include "test_settings_internal.h"
@@ -1529,6 +1530,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   }
 
   LogLoadgenVersion();
+  LogSystemDetails();
   LogDetail([sut, qsl, test_date_time](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT
     MLPERF_LOG(detail, "test_datetime", test_date_time);

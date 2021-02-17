@@ -219,13 +219,21 @@ MODEL_CONFIG = {
             "ssd-large": ["SingleStream", "Offline"],
             "rnnt": ["SingleStream", "Offline"],
             "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["Offline"],
+            "dlrm-99": ["Offline"],
+            "dlrm-99.9": ["Offline"],
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
         },
         "optional-scenarios-datacenter-edge": {
             "resnet": ["MultiStream", "Server"],
-            "ssd-small": ["MultiStream", "Server"],
+            "ssd-small": ["MultiStream"],
             "ssd-large": ["MultiStream", "Server"],
+            "rnnt": ["Server"],
+            "bert-99": ["Server"],
+            "bert-99.9": ["Server"],
+            "dlrm-99": ["Server"],
+            "dlrm-99.9": ["Server"],
         },
         "accuracy-target": {
             "resnet": ("acc", 76.46 * 0.99),
@@ -378,7 +386,7 @@ class Config():
             for mapping in extra_model_benchmark_map.split(';'):
                 model_name, mlperf_model = mapping.split(':')
                 self.base['model_mapping'][model_name] = mlperf_model
-              
+
     def set_type(self, submission_type):
         if submission_type is None and self.version in ["v0.5"]:
             return
@@ -787,10 +795,14 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         results[name] = None
                         continue
                     system_type = system_json.get("system_type")
-                    if config.version == "v0.7" and system_type not in ["datacenter", "edge"]:
-                        log.error("%s has invalid system type (%s)", system_id_json, system_type)
-                        results[name] = None
-                        continue
+                    if config.version not in ["v0.5"]:
+                        valid_system_types = ["datacenter", "edge"]
+                        if config.version not in ["v0.7"]:
+                            valid_system_types += ["datacenter,edge", "edge,datacenter"]
+                        if system_type not in valid_system_types:
+                            log.error("%s has invalid system type (%s)", system_id_json, system_type)
+                            results[name] = None
+                            continue
                     config.set_type(system_type)
                     if not check_system_desc_id(name, system_json, submitter, division):
                         results[name] = None

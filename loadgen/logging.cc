@@ -27,9 +27,11 @@ limitations under the License.
 #include "logging.h"
 
 #include <cassert>
+#include <cmath>
 #include <future>
 #include <iomanip>
 #include <iostream>
+#include <limits>
 #include <sstream>
 
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
@@ -121,9 +123,11 @@ const std::string ArgValueTransform(const LogBinaryAsHexString& value) {
 const std::string ArgValueTransform(const std::string& value) {
   return std::string("\"") + value + std::string("\"");
 }
+
 const std::string ArgValueTransform(const char* value) {
   return std::string("\"") + std::string(value) + std::string("\"");
 }
+
 const std::string ArgValueTransform(const std::vector<uint64_t>& value) {
   std::string s("[");
   for (auto i : value) {
@@ -133,6 +137,7 @@ const std::string ArgValueTransform(const std::vector<uint64_t>& value) {
   s += "]";
   return s;
 }
+
 const std::string ArgValueTransform(
     const std::map<std::string, std::string>& value) {
   std::string s("{");
@@ -146,6 +151,32 @@ const std::string ArgValueTransform(
   s.resize(s.size() - 1);
   s += "}";
   return s;
+}
+
+const std::string ArgValueTransform(const float value) {
+  if (value == std::numeric_limits<float>::infinity()) {
+    return "Infinity";
+  }
+  else if (value == -std::numeric_limits<float>::infinity()) {
+    return "-Infinity";
+  }
+  else if (std::isnan(value)) {
+    return "NaN";
+  }
+  return std::to_string(value);
+}
+
+const std::string ArgValueTransform(const double value) {
+  if (value == std::numeric_limits<double>::infinity()) {
+    return "Infinity";
+  }
+  else if (value == -std::numeric_limits<double>::infinity()) {
+    return "-Infinity";
+  }
+  else if (std::isnan(value)) {
+    return "NaN";
+  }
+  return std::to_string(value);
 }
 #endif
 

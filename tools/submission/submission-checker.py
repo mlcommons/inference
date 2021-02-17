@@ -213,6 +213,20 @@ MODEL_CONFIG = {
             "ssd-small": ["MultiStream"],
             "ssd-large": ["MultiStream"],
         },
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "Offline"],
+            "ssd-small": ["SingleStream", "Offline"],
+            "ssd-large": ["SingleStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-datacenter-edge": {
+            "resnet": ["MultiStream", "Server"],
+            "ssd-small": ["MultiStream", "Server"],
+            "ssd-large": ["MultiStream", "Server"],
+        },
         "accuracy-target": {
             "resnet": ("acc", 76.46 * 0.99),
             "ssd-small": ("mAP", 22 * 0.99),
@@ -374,6 +388,9 @@ class Config():
         elif submission_type == "edge":
             self.required = self.base["required-scenarios-edge"]
             self.optional = self.base["optional-scenarios-edge"]
+        elif submission_type == "datacenter,edge" or submission_type == "edge,datacenter":
+            self.required = self.base["required-scenarios-datacenter-edge"]
+            self.optional = self.base["optional-scenarios-datacenter-edge"]
         else:
             raise ValueError("invalid system type")
 

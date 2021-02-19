@@ -143,6 +143,7 @@ bool IsFinished(const TestSettingsInternal &lower_bound_settings,
       detail(kNotSupportedMsg);
 #endif
     });
+    return true;
   }
 }
 

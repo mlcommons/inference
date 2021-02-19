@@ -89,7 +89,7 @@ with the reference models.
 
 ## Responsibilities of a LoadGen User
 
-### Implement the Iterfaces
+### Implement the Interfaces
 * Implement the SystemUnderTest and QuerySampleLibrary interfaces and pass
   them to the StartTest function.
 * Call QuerySampleComplete for every sample received by

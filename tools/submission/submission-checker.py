@@ -213,6 +213,28 @@ MODEL_CONFIG = {
             "ssd-small": ["MultiStream"],
             "ssd-large": ["MultiStream"],
         },
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "Offline"],
+            "ssd-small": ["SingleStream", "Offline"],
+            "ssd-large": ["SingleStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["Offline"],
+            "dlrm-99": ["Offline"],
+            "dlrm-99.9": ["Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-datacenter-edge": {
+            "resnet": ["MultiStream", "Server"],
+            "ssd-small": ["MultiStream"],
+            "ssd-large": ["MultiStream", "Server"],
+            "rnnt": ["Server"],
+            "bert-99": ["Server"],
+            "bert-99.9": ["Server"],
+            "dlrm-99": ["Server"],
+            "dlrm-99.9": ["Server"],
+        },
         "accuracy-target": {
             "resnet": ("acc", 76.46 * 0.99),
             "ssd-small": ("mAP", 22 * 0.99),
@@ -285,7 +307,8 @@ REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 TO_MS = 1000 * 1000
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
 OFFLINE_MIN_SPQ = 24576
-TEST_DURATION_MS = 60000
+TEST_DURATION_MS_PRE_1_0 = 60000
+TEST_DURATION_MS = 600000
 REQUIRED_COMP_PER_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 REQUIRED_TEST01_ACC_FILES_1 = ["mlperf_log_accuracy.json", "accuracy.txt"]
 REQUIRED_TEST01_ACC_FILES = REQUIRED_TEST01_ACC_FILES_1 + ["baseline_accuracy.txt", "compliance_accuracy.txt"]
@@ -363,7 +386,7 @@ class Config():
             for mapping in extra_model_benchmark_map.split(';'):
                 model_name, mlperf_model = mapping.split(':')
                 self.base['model_mapping'][model_name] = mlperf_model
-              
+
     def set_type(self, submission_type):
         if submission_type is None and self.version in ["v0.5"]:
             return
@@ -373,6 +396,9 @@ class Config():
         elif submission_type == "edge":
             self.required = self.base["required-scenarios-edge"]
             self.optional = self.base["optional-scenarios-edge"]
+        elif submission_type == "datacenter,edge" or submission_type == "edge,datacenter":
+            self.required = self.base["required-scenarios-datacenter-edge"]
+            self.optional = self.base["optional-scenarios-datacenter-edge"]
         else:
             raise ValueError("invalid system type")
 
@@ -553,7 +579,7 @@ def check_accuracy_dir(config, model, path, verbose):
     return is_valid, acc
 
 
-def check_performance_dir(config, model, path):
+def check_performance_dir(config, model, path, scenario_fixed):
     is_valid = False
     rt = {}
 
@@ -575,6 +601,8 @@ def check_performance_dir(config, model, path):
         min_query_count = mlperf_log["effective_min_query_count"]
         samples_per_query = mlperf_log["effective_samples_per_query"]
         min_duration = mlperf_log["effective_min_duration_ms"]
+        if scenario == "SingleStream":
+            qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
     else:
         fname = os.path.join(path, "mlperf_log_summary.txt")
         with open(fname, "r") as f:
@@ -595,6 +623,8 @@ def check_performance_dir(config, model, path):
         min_query_count = int(rt['min_query_count'])
         samples_per_query = int(rt['samples_per_query'])
         min_duration = int(rt["min_duration (ms)"])
+        if scenario == "SingleStream":
+            qps_wo_loadgen_overhead = float(rt["QPS w/o loadgen overhead"])
 
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
@@ -636,12 +666,19 @@ def check_performance_dir(config, model, path):
             log.error("%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
                         fname, OFFLINE_MIN_SPQ, samples_per_query)
 
-        # Test duration of 60s is met
-        if min_duration < TEST_DURATION_MS:
-            log.error("%s Test duration lesser than 60s in user config. expected=%s, found=%s",
-                        fname, TEST_DURATION_MS, min_duration)
+        # Test duration of 600s is met
+        required_min_duration = TEST_DURATION_MS_PRE_1_0 if config.version in ["v0.5", "v0.7"] else TEST_DURATION_MS
+        if min_duration < required_min_duration:
+            log.error("%s Test duration lesser than 600s in user config. expected=%s, found=%s",
+                        fname, required_min_duration, min_duration)
 
-    return is_valid, res, rt
+    inferred = False
+    # special case for Offline results inferred from SingleStream
+    if scenario_fixed in ["Offline"] and scenario != scenario_fixed:
+        inferred = True
+        res = qps_wo_loadgen_overhead
+
+    return is_valid, res, inferred
 
 
 def files_diff(list1, list2, optional=None):
@@ -758,10 +795,14 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         results[name] = None
                         continue
                     system_type = system_json.get("system_type")
-                    if config.version == "v0.7" and system_type not in ["datacenter", "edge"]:
-                        log.error("%s has invalid system type (%s)", system_id_json, system_type)
-                        results[name] = None
-                        continue
+                    if config.version not in ["v0.5"]:
+                        valid_system_types = ["datacenter", "edge"]
+                        if config.version not in ["v0.7"]:
+                            valid_system_types += ["datacenter,edge", "edge,datacenter"]
+                        if system_type not in valid_system_types:
+                            log.error("%s has invalid system type (%s)", system_id_json, system_type)
+                            results[name] = None
+                            continue
                     config.set_type(system_type)
                     if not check_system_desc_id(name, system_json, submitter, division):
                         results[name] = None
@@ -845,7 +886,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 log.error("%s, accuracy not valid", acc_path)
 
                         infered = 0
-                        if scenario in ["Server"]:
+                        if scenario in ["Server"] and config.version in ["v0.5", "v0.7"]:
                             n = ["run_1", "run_2", "run_3", "run_4", "run_5"]
                         else:
                             n = ["run_1"]
@@ -859,11 +900,9 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             if diff:
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
                             try:
-                                is_valid, r, rt = check_performance_dir(config, mlperf_model, perf_path)
-                                if scenario_fixed in ["Offline"] and rt["Scenario"] != scenario_fixed:
-                                    # special case for Offline results infered from SingleStream
+                                is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed)
+                                if is_inferred:
                                     infered = 1
-                                    r = rt.get("QPS w/o loadgen overhead")
                                     log.info("%s has infered resuls, qps=%s", perf_path, r)
                             except Exception as e:
                                 log.error("%s caused exception in check_performance_dir: %s", perf_path, e)

@@ -21,6 +21,7 @@ limitations under the License.
 #include <cstring>
 #include <ctime>
 #include <fstream>
+#include <sstream>
 #include <future>
 #include <iomanip>
 #include <iostream>

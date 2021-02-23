@@ -181,7 +181,7 @@ def get_args():
                         help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
     parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--model", required=True, help="model file")
-    parser.add_argument("--output", help="test results")
+    parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--inputs", help="model inputs")
     parser.add_argument("--outputs", help="model outputs")
     parser.add_argument("--backend", help="runtime to use")
@@ -191,6 +191,7 @@ def get_args():
     parser.add_argument("--cache", type=int, default=0, help="use cache")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
+    parser.add_argument("--debug", action="store_true", help="debug, turn traces on")
 
     # file to use mlperf rules compliant parameters
     parser.add_argument("--mlperf_conf", default="../../mlperf.conf", help="mlperf rules config")
@@ -484,6 +485,13 @@ def main():
         global last_timeing
         last_timeing = [t / NANO_SEC for t in latencies_ns]
 
+    log_output_settings = lg.LogOutputSettings()
+    log_output_settings.outdir = output_dir
+    log_output_settings.copy_summary_to_stdout = False
+    log_settings = lg.LogSettings()
+    log_settings.enable_trace = args.debug
+    log_settings.log_output = log_output_settings
+
     settings = lg.TestSettings()
     settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
     settings.FromConfig(user_conf, args.model_name, args.scenario)
@@ -520,12 +528,14 @@ def main():
     log.info("starting {}".format(scenario))
     result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
     runner.start_run(result_dict, args.accuracy)
-    lg.StartTest(sut, qsl, settings)
+
+    lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
 
     if not last_timeing:
         last_timeing = runner.result_timing
     if args.accuracy:
         post_proc.finalize(result_dict, ds, output_dir=args.output)
+
     add_results(final_results, "{}".format(scenario),
                 result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
 

@@ -953,7 +953,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 required_perf_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
                             else:
                                 required_perf_files = REQUIRED_PERF_FILES
-                            diff = files_diff(list_files(perf_path), REQUIRED_PERF_FILES, OPTIONAL_PERF_FILES)
+                            diff = files_diff(list_files(perf_path), required_perf_files, OPTIONAL_PERF_FILES)
                             if diff:
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
 

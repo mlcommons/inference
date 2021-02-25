@@ -354,13 +354,21 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "framework", "operating_system"
 ]
 
-SYSTEM_DESC_OPTIONAL_FIELDS = [
+SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1 = [
     "system_type", "other_software_stack", "host_processor_frequency", "host_processor_caches",
     "host_memory_configuration", "host_processor_interconnect", "host_networking", "host_networking_topology",
     "accelerator_frequency", "accelerator_host_interconnect", "accelerator_interconnect",
     "accelerator_interconnect_topology", "accelerator_memory_configuration",
     "accelerator_on-chip_memories", "cooling", "hw_notes", "sw_notes"
 ]
+
+SYSTEM_DESC_REQUIED_FIELDS_POWER = [
+    "power_management", "filesystem", "boot_firmware_version", "management_firmware_version", "other_hardware",
+    "number_of_type_nics_installed", "nics_enabled_firmware", "nics_enabled_os", "nics_enabled_connected",
+    "network_speed_mbit", "power_supply_quantity_and_rating_watts", "power_supply_details", "disk_drives",
+    "disk_controllers"
+]
+
 
 SYSTEM_IMP_REQUIRED_FILES = [
     "input_data_types", "retraining", "starting_weights_filename", "weight_data_types",
@@ -851,7 +859,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             results[name] = None
                             continue
                     config.set_type(system_type)
-                    if not check_system_desc_id(name, system_json, submitter, division):
+                    if not check_system_desc_id(name, system_json, submitter, division, config.version):
                         results[name] = None
                         continue
 
@@ -1019,15 +1027,24 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
     return results
 
 
-def check_system_desc_id(fname, systems_json, submitter, division):
+def check_system_desc_id(fname, systems_json, submitter, division, version):
     is_valid = True
     # check all required fields
-    for k in SYSTEM_DESC_REQUIRED_FIELDS:
+    if version in ["v0.5", "v0.7"]:
+        required_fields = SYSTEM_DESC_REQUIRED_FIELDS
+    else:
+        required_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1
+    for k in required_fields:
         if k not in systems_json:
             is_valid = False
             log.error("%s, field %s is missing", fname, k)
 
-    all_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_OPTIONAL_FIELDS
+    if version in ["v0.5", "v0.7"]:
+        all_fields = required_fields + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1
+    else:
+        # TODO: SYSTEM_DESC_REQUIED_FIELDS_POWER should be mandatory when a submission has power logs, but since we
+        # check power submission in check_results_dir, the information is not available yet at this stage.
+        all_fields = required_fields + SYSTEM_DESC_REQUIED_FIELDS_POWER
     for k in systems_json.keys():
         if k not in all_fields:
             log.warning("%s, field %s is unknown", fname, k)

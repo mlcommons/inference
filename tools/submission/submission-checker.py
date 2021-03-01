@@ -649,11 +649,11 @@ def check_performance_dir(config, model, path, scenario_fixed):
         is_valid = False
 
     if qsl_rng_seed != config.seeds["qsl_rng_seed"]:
-        log.error("%s qsl_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], qsl_rng_seed)
+        log.error("%s qsl_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["qsl_rng_seed"], qsl_rng_seed)
     if sample_index_rng_seed != config.seeds["sample_index_rng_seed"]:
-        log.error("%s sample_index_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], sample_index_rng_seed)
+        log.error("%s sample_index_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["sample_index_rng_seed"], sample_index_rng_seed)
     if schedule_rng_seed != config.seeds["schedule_rng_seed"]:
-        log.error("%s schedule_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], schedule_rng_seed)
+        log.error("%s schedule_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["schedule_rng_seed"], schedule_rng_seed)
 
     if scenario in ["SingleStream"]:
         res /= TO_MS

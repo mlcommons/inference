@@ -92,7 +92,7 @@ def main():
     lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
 
     if args.accuracy:
-        cmd = "python3 {:}/accuracy-squad.py {}".format(os.path.dirname(__file__), '--max_examples={}'.format(args.max_examples) if args.max_examples else '')
+        cmd = "python3 {:}/accuracy-squad.py {}".format(os.path.dirname(os.path.abspath(__file__)), '--max_examples={}'.format(args.max_examples) if args.max_examples else '')
         subprocess.check_call(cmd, shell=True)
 
     print("Done!")

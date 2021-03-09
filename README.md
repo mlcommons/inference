@@ -32,7 +32,7 @@ See the individual Readme files in the reference app for details.
 | 3d-unet | [vision/medical_imageing/3d-unet](vision/medical_imaging/3d-unet) | pytorch, tensorflow(?), onnx(?) | BraTS 2019 |
 | rnnt | [speech_recognition/rnnt](speech_recognition/rnnt) | pytorch | OpenSLR LibriSpeech Corpus |
 
-## MLPerf Inference v1.0 (submission 03/12/2020)
+## MLPerf Inference v1.0 (submission 03/19/2020)
 Use the r1.0 branch (```git checkout r1.0```) if you want to submit or reproduce v1.0 results.
 
 See the individual Readme files in the reference app for details.

@@ -644,8 +644,8 @@ def check_performance_dir(config, model, path, scenario_fixed):
 
     required_performance_sample_count = config.get_performance_sample_count(model)
     if performance_sample_count < required_performance_sample_count:
-        log.error("%s performance_sample_count, found %d, needs to be > %s",
-                  fname, required_performance_sample_count, performance_sample_count)
+        log.error("%s performance_sample_count, found %d, needs to be >= %d",
+                  fname, performance_sample_count, required_performance_sample_count)
         is_valid = False
 
     if qsl_rng_seed != config.seeds["qsl_rng_seed"]:

@@ -22,6 +22,7 @@ from log_parser import MLPerfLog
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
+submission_checker_dir = os.path.dirname(os.path.realpath(__file__))
 
 MODEL_CONFIG = {
     "v0.5": {
@@ -378,7 +379,7 @@ SYSTEM_IMP_REQUIRED_FILES = [
 
 class Config():
     """Select config value by mlperf version and submission type."""
-    def __init__(self, version, extra_model_benchmark_map, ignore_uncommited=False):
+    def __init__(self, version, extra_model_benchmark_map, ignore_uncommited=False, more_power_check=False):
         self.base = MODEL_CONFIG.get(version)
         self.set_extra_model_benchmark_map(extra_model_benchmark_map)
         self.version = version
@@ -391,6 +392,7 @@ class Config():
         self.required = None
         self.optional = None
         self.ignore_uncommited = ignore_uncommited
+        self.more_power_check = more_power_check
 
     def set_extra_model_benchmark_map(self, extra_model_benchmark_map):
         if extra_model_benchmark_map:
@@ -493,6 +495,7 @@ def get_args():
     parser.add_argument("--extra-model-benchmark-map", help="extra model name to benchmark mapping")
     parser.add_argument("--debug", action="store_true", help="extra debug output")
     parser.add_argument("--submission-exceptions", action="store_true", help="ignore certain errors for submission")
+    parser.add_argument("--more-power-check", action="store_true", help="apply Power WG's check.py script on each power submission. Requires Python 3.7+")
     args = parser.parse_args()
     return args
 
@@ -692,7 +695,7 @@ def check_performance_dir(config, model, path, scenario_fixed):
     return is_valid, res, inferred
 
 
-def check_power_dir(power_path, ranging_path, testing_path):
+def check_power_dir(power_path, ranging_path, testing_path, more_power_check=False):
 
     is_valid = True
     power = 0
@@ -730,6 +733,22 @@ def check_power_dir(power_path, ranging_path, testing_path):
         is_valid = False
     else:
         power = sum(power_list) / len(power_list)
+
+    if more_power_check:
+        python_version_major = int(sys.version.split(" ")[0].split(".")[0])
+        python_version_minor = int(sys.version.split(" ")[0].split(".")[1])
+        assert python_version_major == 3 and python_version_minor >= 7, "The --more-power-check only supports Python 3.7+"
+        assert os.path.exists(os.path.join(submission_checker_dir, "power-dev", "compliance", "check.py")), \
+            "Please run 'git submodule update --init tools/submission/power-dev' to get Power WG's check.py."
+        sys.path.insert(0, os.path.join(submission_checker_dir, "power-dev"))
+        from compliance.check import check as check_power_more
+        perf_path = os.path.dirname(power_path)
+        check_power_result = check_power_more(perf_path)
+        sys.stdout.flush()
+        sys.stderr.flush()
+        if check_power_result != 0:
+            log.error("Power WG check.py did not pass for: %s", perf_path)
+            is_valid = False
 
     return is_valid, power
 
@@ -978,7 +997,8 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             if has_power:
                                 try:
                                     ranging_path = os.path.join(name, "performance", "ranging")
-                                    power_is_valid, power = check_power_dir(power_path, ranging_path, perf_path)
+                                    power_is_valid, power = check_power_dir(power_path, ranging_path, perf_path,
+                                        more_power_check=config.more_power_check)
                                     if not power_is_valid:
                                         is_valid = False
                                         power = 0
@@ -1187,7 +1207,8 @@ def check_compliance_dir(compliance_dir, model, scenario):
 def main():
     args = get_args()
 
-    config = Config(args.version, args.extra_model_benchmark_map, ignore_uncommited=args.submission_exceptions)
+    config = Config(args.version, args.extra_model_benchmark_map, ignore_uncommited=args.submission_exceptions,
+        more_power_check=args.more_power_check)
 
     with open(args.csv, "w") as csv:
         os.chdir(args.input)
@@ -1197,12 +1218,12 @@ def main():
     # log results
     log.info("---")
     with_results = 0
-    for k, v in results.items():
+    for k, v in sorted(results.items()):
         if v:
             log.info("Results %s %s", k, v)
             with_results += 1
     log.info("---")
-    for k, v in results.items():
+    for k, v in sorted(results.items()):
         if v is None:
             log.error("NoResults %s", k)
 

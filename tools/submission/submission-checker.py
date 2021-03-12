@@ -7,6 +7,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import datetime
 import json
 import logging
 import os
@@ -302,6 +303,8 @@ VALID_DIVISIONS = ["open", "closed"]
 VALID_AVAILABILITIES = ["available", "preview", "rdi"]
 REQUIRED_PERF_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 OPTIONAL_PERF_FILES = ["mlperf_log_accuracy.json"]
+REQUIRED_PERF_POWER_FILES = ["spl.txt"]
+REQUIRED_POWER_FILES = ["client.json", "client.log", "ptd_logs.txt", "server.json", "server.log"]
 REQUIRED_ACC_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt", "accuracy.txt", "mlperf_log_accuracy.json"]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 TO_MS = 1000 * 1000
@@ -351,13 +354,21 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "framework", "operating_system"
 ]
 
-SYSTEM_DESC_OPTIONAL_FIELDS = [
+SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1 = [
     "system_type", "other_software_stack", "host_processor_frequency", "host_processor_caches",
     "host_memory_configuration", "host_processor_interconnect", "host_networking", "host_networking_topology",
     "accelerator_frequency", "accelerator_host_interconnect", "accelerator_interconnect",
     "accelerator_interconnect_topology", "accelerator_memory_configuration",
     "accelerator_on-chip_memories", "cooling", "hw_notes", "sw_notes"
 ]
+
+SYSTEM_DESC_REQUIED_FIELDS_POWER = [
+    "power_management", "filesystem", "boot_firmware_version", "management_firmware_version", "other_hardware",
+    "number_of_type_nics_installed", "nics_enabled_firmware", "nics_enabled_os", "nics_enabled_connected",
+    "network_speed_mbit", "power_supply_quantity_and_rating_watts", "power_supply_details", "disk_drives",
+    "disk_controllers"
+]
+
 
 SYSTEM_IMP_REQUIRED_FILES = [
     "input_data_types", "retraining", "starting_weights_filename", "weight_data_types",
@@ -633,16 +644,16 @@ def check_performance_dir(config, model, path, scenario_fixed):
 
     required_performance_sample_count = config.get_performance_sample_count(model)
     if performance_sample_count < required_performance_sample_count:
-        log.error("%s performance_sample_count, found %d, needs to be > %s",
-                  fname, required_performance_sample_count, performance_sample_count)
+        log.error("%s performance_sample_count, found %d, needs to be >= %d",
+                  fname, performance_sample_count, required_performance_sample_count)
         is_valid = False
 
     if qsl_rng_seed != config.seeds["qsl_rng_seed"]:
-        log.error("%s qsl_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], qsl_rng_seed)
+        log.error("%s qsl_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["qsl_rng_seed"], qsl_rng_seed)
     if sample_index_rng_seed != config.seeds["sample_index_rng_seed"]:
-        log.error("%s sample_index_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], sample_index_rng_seed)
+        log.error("%s sample_index_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["sample_index_rng_seed"], sample_index_rng_seed)
     if schedule_rng_seed != config.seeds["schedule_rng_seed"]:
-        log.error("%s schedule_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], schedule_rng_seed)
+        log.error("%s schedule_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["schedule_rng_seed"], schedule_rng_seed)
 
     if scenario in ["SingleStream"]:
         res /= TO_MS
@@ -679,6 +690,49 @@ def check_performance_dir(config, model, path, scenario_fixed):
         res = qps_wo_loadgen_overhead
 
     return is_valid, res, inferred
+
+
+def check_power_dir(power_path, ranging_path, testing_path):
+
+    is_valid = True
+    power = 0
+
+    # check if all the required files are present
+    required_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
+    diff = files_diff(list_files(testing_path), required_files, OPTIONAL_PERF_FILES)
+    if diff:
+        log.error("%s has file list mismatch (%s)", testing_path, diff)
+        is_valid = False
+    diff = files_diff(list_files(ranging_path), required_files, OPTIONAL_PERF_FILES)
+    if diff:
+        log.error("%s has file list mismatch (%s)", ranging_path, diff)
+        is_valid = False
+    diff = files_diff(list_files(power_path), REQUIRED_POWER_FILES)
+    if diff:
+        log.error("%s has file list mismatch (%s)", power_path, diff)
+        is_valid = False
+
+    # parse the power logs
+    detail_log_fname = os.path.join(testing_path, "mlperf_log_detail.txt")
+    mlperf_log = MLPerfLog(detail_log_fname)
+    datetime_format = '%m-%d-%Y %H:%M:%S.%f'
+    power_begin = datetime.datetime.strptime(mlperf_log["power_begin"], datetime_format)
+    power_end = datetime.datetime.strptime(mlperf_log["power_end"], datetime_format)
+    spl_fname = os.path.join(testing_path, "spl.txt")
+    power_list = []
+    with open(spl_fname) as f:
+        for line in f:
+            timestamp = datetime.datetime.strptime(line.split(",")[1], datetime_format)
+            if timestamp > power_begin and timestamp < power_end:
+                power_list.append(float(line.split(",")[3]))
+    if len(power_list) == 0:
+        log.error("%s has no power samples falling in power range: %s - %s", spl_fname, power_begin, power_end)
+        is_valid = False
+    else:
+        power = sum(power_list) / len(power_list)
+
+    return is_valid, power
+
 
 
 def files_diff(list1, list2, optional=None):
@@ -726,14 +780,14 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
         "Organization", "Availability", "Division", "SystemType", "SystemName", "Platform", "Model",
         "MlperfModel", "Scenario", "Result", "Accuracy", "number_of_nodes", "host_processor_model_name",
         "host_processors_per_node", "host_processor_core_count", "accelerator_model_name", "accelerators_per_node",
-        "Location", "framework", "operating_system", "notes", "compilance", "errors", "version", "infered"
+        "Location", "framework", "operating_system", "notes", "compilance", "errors", "version", "infered", "power"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
     results = {}
 
     def log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
-                   scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=0):
+                   scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=0, power=0):
 
         notes = system_json.get("hw_notes", "")
         if system_json.get("sw_notes"):
@@ -755,7 +809,8 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
             compilance,
             errors,
             config.version,
-            infered))
+            infered,
+            power))
 
     # we are at the top of the submission directory
     for division in list_dir("."):
@@ -804,7 +859,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             results[name] = None
                             continue
                     config.set_type(system_type)
-                    if not check_system_desc_id(name, system_json, submitter, division):
+                    if not check_system_desc_id(name, system_json, submitter, division, config.version):
                         results[name] = None
                         continue
 
@@ -891,14 +946,25 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         else:
                             n = ["run_1"]
 
+                        # check if this submission has power logs
+                        power_path = os.path.join(name, "performance", "power")
+                        has_power = os.path.exists(power_path)
+                        if has_power:
+                            log.info("Detected power logs for %s", name)
+
                         for i in n:
                             perf_path = os.path.join(name, "performance", i)
                             if not os.path.exists(perf_path):
                                 log.error("%s is missing", perf_path)
                                 continue
-                            diff = files_diff(list_files(perf_path), REQUIRED_PERF_FILES, OPTIONAL_PERF_FILES)
+                            if has_power:
+                                required_perf_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
+                            else:
+                                required_perf_files = REQUIRED_PERF_FILES
+                            diff = files_diff(list_files(perf_path), required_perf_files, OPTIONAL_PERF_FILES)
                             if diff:
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
+
                             try:
                                 is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed)
                                 if is_inferred:
@@ -908,8 +974,20 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 log.error("%s caused exception in check_performance_dir: %s", perf_path, e)
                                 is_valid, r = False, None
 
+                            power = 0
+                            if has_power:
+                                try:
+                                    ranging_path = os.path.join(name, "performance", "ranging")
+                                    power_is_valid, power = check_power_dir(power_path, ranging_path, perf_path)
+                                    if not power_is_valid:
+                                        is_valid = False
+                                        power = 0
+                                except Exception as e:
+                                    log.error("%s caused exception in check_power_dir: %s", perf_path, e)
+                                    is_valid, r, power = False, None, 0
+
                             if is_valid:
-                                results[name] = r
+                                results[name] = r if r is None or power == 0 else "{:f} with power = {:f}".format(r, power)
                                 required_scenarios.discard(scenario_fixed)
                             else:
                                 log.error("%s has issues", perf_path)
@@ -933,7 +1011,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         if results.get(name):
                             if accuracy_is_valid:
                                 log_result(submitter, available, division, system_type, system_json.get("system_name"), system_desc, model_name, mlperf_model,
-                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered)
+                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered, power=power)
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)
@@ -949,15 +1027,24 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
     return results
 
 
-def check_system_desc_id(fname, systems_json, submitter, division):
+def check_system_desc_id(fname, systems_json, submitter, division, version):
     is_valid = True
     # check all required fields
-    for k in SYSTEM_DESC_REQUIRED_FIELDS:
+    if version in ["v0.5", "v0.7"]:
+        required_fields = SYSTEM_DESC_REQUIRED_FIELDS
+    else:
+        required_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1
+    for k in required_fields:
         if k not in systems_json:
             is_valid = False
             log.error("%s, field %s is missing", fname, k)
 
-    all_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_OPTIONAL_FIELDS
+    if version in ["v0.5", "v0.7"]:
+        all_fields = required_fields + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1
+    else:
+        # TODO: SYSTEM_DESC_REQUIED_FIELDS_POWER should be mandatory when a submission has power logs, but since we
+        # check power submission in check_results_dir, the information is not available yet at this stage.
+        all_fields = required_fields + SYSTEM_DESC_REQUIED_FIELDS_POWER
     for k in systems_json.keys():
         if k not in all_fields:
             log.warning("%s, field %s is unknown", fname, k)

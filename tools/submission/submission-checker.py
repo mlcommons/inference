@@ -332,7 +332,7 @@ RESULT_FIELD = {
 
 RESULT_FIELD_NEW = {
     "Offline": "result_samples_per_second",
-    "SingleStream": "result_99.00_percentile_latency_ns",
+    "SingleStream": "result_90.00_percentile_latency_ns",
     "MultiStream": "effective_samples_per_query",
     "Server": "result_scheduled_samples_per_sec"
 }

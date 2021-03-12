@@ -79,7 +79,7 @@ std::string CurrentDateTimeISO8601() {
 }
 
 std::string DateTimeStringForPower(std::chrono::system_clock::time_point tp) {
-  return DateTimeString("%m-%d-%Y %T", tp, true);
+  return DateTimeString("%Y-%m-%d %T", tp, true);
 }
 
 std::string EscapeStringJson(const std::string& in) {

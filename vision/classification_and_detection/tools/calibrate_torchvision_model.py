@@ -1,6 +1,5 @@
 import argparse
 import os
-import random
 from tqdm import tqdm
 from PIL import Image
 

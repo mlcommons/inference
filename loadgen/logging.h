@@ -372,7 +372,7 @@ class AsyncLog {
   std::condition_variable all_latencies_recorded_;
   uint64_t latencies_first_sample_sequence_id_ = 0;
   std::vector<QuerySampleLatency> latencies_;
-  QuerySampleLatency max_latency_;
+  QuerySampleLatency max_latency_ = 0;
   PerfClock::time_point max_completion_timstamp_;
   size_t latencies_recorded_ = 0;
   size_t latencies_expected_ = 0;

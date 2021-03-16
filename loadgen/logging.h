@@ -372,7 +372,7 @@ class AsyncLog {
   std::condition_variable all_latencies_recorded_;
   uint64_t latencies_first_sample_sequence_id_ = 0;
   std::vector<QuerySampleLatency> latencies_;
-  std::atomic<QuerySampleLatency> max_latency_{0};
+  QuerySampleLatency max_latency_;
   PerfClock::time_point max_completion_timstamp_;
   size_t latencies_recorded_ = 0;
   size_t latencies_expected_ = 0;
@@ -533,7 +533,7 @@ class AsyncSummary {
 /// \brief A helper to simplify adding a summary log entry.
 template <typename LambdaT>
 void LogSummary(LambdaT&& lambda) {
-  Log([lambda = std::forward<LambdaT>(lambda)](AsyncLog & log) mutable {
+  Log([lambda = std::forward<LambdaT>(lambda)](AsyncLog& log) mutable {
     AsyncSummary async_summary(log);
     lambda(async_summary);
   });
@@ -615,8 +615,8 @@ class AsyncDetail {
 /// \brief A helper to simplify adding a detail log entry.
 template <typename LambdaT>
 void LogDetail(LambdaT&& lambda) {
-  Log([ lambda = std::forward<LambdaT>(lambda),
-        timestamp = PerfClock::now() ](AsyncLog & log) mutable {
+  Log([lambda = std::forward<LambdaT>(lambda),
+       timestamp = PerfClock::now()](AsyncLog& log) mutable {
     log.SetLogDetailTime(timestamp);
     AsyncDetail async_detail(log);
     lambda(async_detail);
@@ -649,8 +649,8 @@ class ScopedTracer {
       : start_(PerfClock::now()), lambda_(std::forward<LambdaT>(lambda)) {}
 
   ~ScopedTracer() {
-    Log([ start = start_, lambda = std::move(lambda_),
-          end = PerfClock::now() ](AsyncLog & log) {
+    Log([start = start_, lambda = std::move(lambda_),
+         end = PerfClock::now()](AsyncLog& log) {
       log.SetScopedTraceTimes(start, end);
       AsyncTrace async_trace(log);
       lambda(async_trace);

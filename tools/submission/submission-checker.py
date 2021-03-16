@@ -835,7 +835,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
     for division in list_dir("."):
         # we are looking at ./$division, ie ./closed
         if division not in VALID_DIVISIONS:
-            if division != ".git":
+            if division not in [".git", ".github"]:
                 log.error("invalid division in input dir %s", division)
             continue
         is_closed = division == "closed"

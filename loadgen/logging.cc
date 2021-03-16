@@ -308,13 +308,9 @@ void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id,
 void AsyncLog::RecordSampleCompletion(uint64_t sample_sequence_id,
                                       PerfClock::time_point completion_time,
                                       QuerySampleLatency latency) {
-  // Relaxed memory order since the early-out checks are inherently racy.
-  // The final check will be ordered by locks on the latencies_mutex.
-  max_latency_.store(
-      std::max(max_latency_.load(std::memory_order_relaxed), latency),
-      std::memory_order_relaxed);
-
   std::unique_lock<std::mutex> lock(latencies_mutex_);
+
+  max_latency_ = std::max(max_latency_, latency);
 
   max_completion_timstamp_ =
       std::max(max_completion_timstamp_, completion_time);
@@ -421,7 +417,8 @@ PerfClock::time_point AsyncLog::GetMaxCompletionTime() {
 }
 
 QuerySampleLatency AsyncLog::GetMaxLatencySoFar() {
-  return max_latency_.load(std::memory_order_release);
+  std::unique_lock<std::mutex> lock(latencies_mutex_);
+  return max_latency_;
 }
 
 /// \brief Records a single thread using thread-local storage and submits

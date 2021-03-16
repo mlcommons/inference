@@ -202,6 +202,22 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
     return img
 
 
+def pre_process_imagenet_pytorch(img, dims=None, need_transpose=False):
+    from PIL import Image
+    import torchvision.transforms.functional as F
+
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = Image.fromarray(img)
+    img = F.resize(img, 256, Image.BILINEAR)
+    img = F.center_crop(img, 224)
+    img = F.to_tensor(img)
+    img = F.normalize(img, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], inplace=False)
+    if not need_transpose:
+        img = img.permute(1, 2, 0) # NHWC
+    img = np.asarray(img, dtype='float32')
+    return img
+
+
 def maybe_resize(img, dims):
     img = np.array(img, dtype=np.float32)
     if len(img.shape) < 3 or img.shape[2] != 3:

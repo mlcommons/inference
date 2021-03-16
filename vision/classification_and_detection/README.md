@@ -57,7 +57,7 @@ python tools/accuracy-imagenet.py --mlperf-accuracy-file mlperf_log_accuracy.jso
 ### Validate accuracy for ssd-mobilenet and ssd-resnet34 benchmarks
 The tool is [here](tools/accuracy-coco.py). You can run it like:
 ```
-python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --coco-dir /data/coco
+python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --coco-dir /data/coco --use-inv-map
 ```
 
 ## Datasets
@@ -65,6 +65,7 @@ python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --
 | ---- | ---- | 
 | imagenet2012 (validation) | http://image-net.org/challenges/LSVRC/2012/ | 
 | coco (validation) | http://images.cocodataset.org/zips/val2017.zip | 
+| coco (annotations) | http://images.cocodataset.org/annotations/annotations_trainval2017.zip |
 
 ### Using Collective Knowledge (CK)
 

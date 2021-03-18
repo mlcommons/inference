@@ -25,10 +25,10 @@ import onnx_tf
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--onnx_model",
-                        default="build/model/224_224_160.onnx",
+                        default="build/model/224_224_160_dynamic_bs.onnx",
                         help="Path to the ONNX model")
     parser.add_argument("--output_name",
-                        default="224_224_160.pb",
+                        default="224_224_160",
                         help="Name of output model")
     parser.add_argument("--output_dir",
                         default="build/model",

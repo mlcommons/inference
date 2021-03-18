@@ -23,7 +23,6 @@ sys.path.insert(0, os.getcwd())
 import mlperf_loadgen as lg
 import numpy as np
 import tensorflow as tf
-from tensorflow.core.framework import graph_pb2
 
 from brats_QSL import get_brats_QSL
 
@@ -31,15 +30,10 @@ from brats_QSL import get_brats_QSL
 class _3DUNET_TF_SUT():
     def __init__(self, model_path, preprocessed_data_dir, performance_count):
         print("Loading TF model...")
-        graph_def = graph_pb2.GraphDef()
         print(model_path)
-        with open(model_path, "rb") as f:
-            graph_def.ParseFromString(f.read())
-        with tf.Graph().as_default() as g:
-            tf.compat.v1.import_graph_def(graph_def)
-        self.sess = tf.compat.v1.Session(graph=g)
-        self.input = g.get_tensor_by_name("import/input:0")
-        self.output = g.get_tensor_by_name("import/output:0")
+
+        loaded_model = tf.saved_model.load(model_path)
+        self.infer = loaded_model.signatures["serving_default"]
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries,
@@ -54,7 +48,8 @@ class _3DUNET_TF_SUT():
             print("Processing sample id {:d} with shape = {:}".format(
                 query_samples[i].index, data.shape))
 
-            output = self.sess.run(self.output, feed_dict={self.input: data[np.newaxis, ...]})[0].astype(np.float16)
+            output = self.infer(tf.constant(data[np.newaxis, ...]))['output_0']
+            output = np.array(output).astype(np.float16)
 
             response_array = array.array("B", output.tobytes())
             bi = response_array.buffer_info()

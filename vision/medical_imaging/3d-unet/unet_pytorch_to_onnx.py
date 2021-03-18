@@ -34,7 +34,7 @@ def get_args():
                         default="224_224_160.onnx",
                         help="Name of output model")
     parser.add_argument("--dynamic_bs_output_name",
-                        default="224_224_160_dyanmic_bs.onnx",
+                        default="224_224_160_dynamic_bs.onnx",
                         help="Name of output model")
     parser.add_argument("--output_dir",
                         default="build/model",

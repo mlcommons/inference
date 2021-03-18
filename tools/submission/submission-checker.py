@@ -954,7 +954,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         measurement_dir = os.path.join(division, submitter, "measurements",
                                                        system_desc, model_name, scenario)
                         if not os.path.exists(measurement_dir):
-                            log.error("no measurement_dir for %s", name)
+                            log.error("no measurement_dir for %s", measurement_dir)
                             results[measurement_dir] = None
                             errors += 1
                         else:

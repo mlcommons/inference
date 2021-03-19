@@ -695,7 +695,7 @@ def check_performance_dir(config, model, path, scenario_fixed):
     return is_valid, res, inferred
 
 
-def check_power_dir(power_path, ranging_path, testing_path, more_power_check=False):
+def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more_power_check=False):
 
     is_valid = True
     power = 0
@@ -732,7 +732,15 @@ def check_power_dir(power_path, ranging_path, testing_path, more_power_check=Fal
         log.error("%s has no power samples falling in power range: %s - %s", spl_fname, power_begin, power_end)
         is_valid = False
     else:
-        power = sum(power_list) / len(power_list)
+        avg_power = sum(power_list) / len(power_list)
+        if scenario_fixed in ["Offline", "Server"]:
+            # In Offline and Server scenarios, the power metric is in W.
+            power = avg_power
+        elif scenario_fixed in ["SingleStream", "MultiStream"]:
+            # In SingleStream and MultiStream scenarios, the power metric is in J/sample.
+            power_duration = (power_end - power_begin).total_seconds()
+            num_samples = mlperf_log["generated_query_count"] * mlperf_log["generated_samples_per_query"]
+            power = avg_power * power_duration / num_samples
 
     if more_power_check:
         python_version_major = int(sys.version.split(" ")[0].split(".")[0])
@@ -988,7 +996,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed)
                                 if is_inferred:
                                     infered = 1
-                                    log.info("%s has infered resuls, qps=%s", perf_path, r)
+                                    log.info("%s has inferfed results, qps=%s", perf_path, r)
                             except Exception as e:
                                 log.error("%s caused exception in check_performance_dir: %s", perf_path, e)
                                 is_valid, r = False, None
@@ -997,7 +1005,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             if has_power:
                                 try:
                                     ranging_path = os.path.join(name, "performance", "ranging")
-                                    power_is_valid, power = check_power_dir(power_path, ranging_path, perf_path,
+                                    power_is_valid, power = check_power_dir(power_path, ranging_path, perf_path, scenario_fixed,
                                         more_power_check=config.more_power_check)
                                     if not power_is_valid:
                                         is_valid = False

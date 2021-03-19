@@ -996,7 +996,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed)
                                 if is_inferred:
                                     infered = 1
-                                    log.info("%s has inferfed results, qps=%s", perf_path, r)
+                                    log.info("%s has inferred results, qps=%s", perf_path, r)
                             except Exception as e:
                                 log.error("%s caused exception in check_performance_dir: %s", perf_path, e)
                                 is_valid, r = False, None

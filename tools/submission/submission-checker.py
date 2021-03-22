@@ -747,7 +747,7 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more
             # the actual number of queries. For now, we will make use of "result_qps_with_loadgen_overhead", which is
             # defined as: (sample_count - 1) / pr.final_query_issued_time, where final_query_issued_time can be
             # approximated by power_duration (off by one query worth of latency, which is in general negligible compared
-            # to 600-sec total runtime and can be offsetted by removing the "+1" when reconstructed the sample_count).
+            # to 600-sec total runtime and can be offsetted by removing the "+1" when reconstructing the sample_count).
             # Not an ideal approach, but probably the best we can do in v1.0.
             # As for MultiStream, it always runs for 270336 queries, so using "generated_query_count" as above is fine.
             # In v1.1, we should make LoadGen print out the actual number of queries and use it to compute the J/sample 

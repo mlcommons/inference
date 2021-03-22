@@ -698,7 +698,7 @@ def check_performance_dir(config, model, path, scenario_fixed):
 def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more_power_check=False):
 
     is_valid = True
-    power = 0
+    power_metric = 0
 
     # check if all the required files are present
     required_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
@@ -735,12 +735,26 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more
         avg_power = sum(power_list) / len(power_list)
         if scenario_fixed in ["Offline", "Server"]:
             # In Offline and Server scenarios, the power metric is in W.
-            power = avg_power
-        elif scenario_fixed in ["SingleStream", "MultiStream"]:
+            power_metric = avg_power
+        elif scenario_fixed in ["MultiStream"]:
             # In SingleStream and MultiStream scenarios, the power metric is in J/sample.
             power_duration = (power_end - power_begin).total_seconds()
             num_samples = mlperf_log["generated_query_count"] * mlperf_log["generated_samples_per_query"]
-            power = avg_power * power_duration / num_samples
+            power_metric = avg_power * power_duration / num_samples
+        elif scenario_fixed in ["SingleStream"]:
+            # TODO: Currently, LoadGen does NOT print out the actual number of queries in detail logs. There is a
+            # "generated_query_count", but LoadGen exits early when the min_duration has been met, so it is not equal to
+            # the actual number of queries. For now, we will make use of "result_qps_with_loadgen_overhead", which is
+            # defined as: (sample_count - 1) / pr.final_query_issued_time, where final_query_issued_time can be
+            # approximated by power_duration (off by one query worth of latency, which is in general negligible compared
+            # to 600-sec total runtime and can be offsetted by removing the "+1" when reconstructed the sample_count).
+            # Not an ideal approach, but probably the best we can do in v1.0.
+            # As for MultiStream, it always runs for 270336 queries, so using "generated_query_count" as above is fine.
+            # In v1.1, we should make LoadGen print out the actual number of queries and use it to compute the J/sample 
+            # for SingleStream and MultiStream power metrics.
+            power_duration = (power_end - power_begin).total_seconds()
+            num_samples = mlperf_log["result_qps_with_loadgen_overhead"] * power_duration
+            power_metric = avg_power * power_duration / num_samples
 
     if more_power_check:
         python_version_major = int(sys.version.split(" ")[0].split(".")[0])
@@ -758,7 +772,7 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more
             log.error("Power WG check.py did not pass for: %s", perf_path)
             is_valid = False
 
-    return is_valid, power
+    return is_valid, power_metric
 
 
 
@@ -814,7 +828,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
     results = {}
 
     def log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
-                   scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=0, power=0):
+                   scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=0, power_metric=0):
 
         notes = system_json.get("hw_notes", "")
         if system_json.get("sw_notes"):
@@ -837,7 +851,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
             errors,
             config.version,
             infered,
-            power))
+            power_metric))
 
     # we are at the top of the submission directory
     for division in list_dir("."):
@@ -1001,21 +1015,21 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 log.error("%s caused exception in check_performance_dir: %s", perf_path, e)
                                 is_valid, r = False, None
 
-                            power = 0
+                            power_metric = 0
                             if has_power:
                                 try:
                                     ranging_path = os.path.join(name, "performance", "ranging")
-                                    power_is_valid, power = check_power_dir(power_path, ranging_path, perf_path, scenario_fixed,
+                                    power_is_valid, power_metric = check_power_dir(power_path, ranging_path, perf_path, scenario_fixed,
                                         more_power_check=config.more_power_check)
                                     if not power_is_valid:
                                         is_valid = False
-                                        power = 0
+                                        power_metric = 0
                                 except Exception as e:
                                     log.error("%s caused exception in check_power_dir: %s", perf_path, e)
-                                    is_valid, r, power = False, None, 0
+                                    is_valid, r, power_metric = False, None, 0
 
                             if is_valid:
-                                results[name] = r if r is None or power == 0 else "{:f} with power = {:f}".format(r, power)
+                                results[name] = r if r is None or power_metric == 0 else "{:f} with power_metric = {:f}".format(r, power_metric)
                                 required_scenarios.discard(scenario_fixed)
                             else:
                                 log.error("%s has issues", perf_path)
@@ -1039,7 +1053,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         if results.get(name):
                             if accuracy_is_valid:
                                 log_result(submitter, available, division, system_type, system_json.get("system_name"), system_desc, model_name, mlperf_model,
-                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered, power=power)
+                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered, power_metric=power_metric)
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)

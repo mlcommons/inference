@@ -85,7 +85,16 @@ const std::string ArgValueTransform(const LogBinaryAsHexString& value);
 const std::string ArgValueTransform(const std::string& value);
 const std::string ArgValueTransform(const char* value);
 /// \brief Prints a list of int in JSON format.
-const std::string ArgValueTransform(const std::vector<uint64_t>& value);
+template <typename T>
+const std::string ArgValueTransform(const std::vector<T>& value) {
+  std::string s("[");
+  for (auto i : value) {
+    s += std::to_string(i) + ",";
+  }
+  s.resize(s.size() - 1);
+  s += "]";
+  return s;
+}
 /// \brief Prints a dict in JSON format.
 const std::string ArgValueTransform(
     const std::map<std::string, std::string>& value);

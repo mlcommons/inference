@@ -46,7 +46,7 @@ def main():
     df['Accelerator'] = df['Accelerator'].apply(lambda x: x if x != "-" else "")
     df['a#'] = df['a#'].apply(lambda x: int(x) if x != "" else 0)
     df['a#'] = df['a#'].apply(lambda x: x if x > 0 else "")
-    df['p#'] = df.apply(lambda x: int(x['host_processor_core_count']) * int(x['host_processors_per_node']), axis=1)
+    df['p#'] = df.apply(lambda x: int(x['host_processors_per_node']), axis=1)
 
     # details url
     base_url = "https://github.com/mlcommons/submissions_inference_1_0/tree/master"

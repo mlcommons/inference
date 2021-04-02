@@ -840,8 +840,14 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
         if system_json.get("sw_notes"):
             notes = notes + ". " + system_json.get("sw_notes")
 
+        # allow for system_type to be both datacenter and edge
+        if system_type == "datacenter,edge" or system_type == "edge,datacenter":
+            log_system_type = "datacenter/edge"
+        else:
+            log_system_type = system_type
+
         csv.write(fmt.format(
-            submitter, available, division, system_type, '\"' + system_name + '\"', system_desc, model_name,
+            submitter, available, division, log_system_type, '\"' + system_name + '\"', system_desc, model_name,
             mlperf_model, scenario_fixed, r, acc,
             system_json.get("number_of_nodes"),
             '"'+system_json.get("host_processor_model_name")+ '"',

@@ -102,6 +102,9 @@ TestSettingsInternal::TestSettingsInternal(
       max_async_queries = requested.server_max_async_queries;
       break;
     case TestScenario::Offline:
+      // target_latency_percentile is not used in Offline, but set it to
+      // 0.99 anyway to avoid garbage value.
+      target_latency_percentile = 0.99;
       if (requested.offline_expected_qps >= 0.0) {
         target_qps = requested.offline_expected_qps;
       } else {

@@ -267,9 +267,9 @@ MODEL_CONFIG = {
             "resnet50": "resnet",
         },
         "seeds": {
-            "qsl_rng_seed": 12786827339337101903,
-            "sample_index_rng_seed": 12640797754436136668,
-            "schedule_rng_seed": 3135815929913719677,
+            "qsl_rng_seed": 7322528924094909334,
+            "sample_index_rng_seed": 1570999273408051088,
+            "schedule_rng_seed": 3507442325620259414,
         },
         "ignore_errors": [
         ],
@@ -852,7 +852,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         measurement_dir = os.path.join(division, submitter, "measurements",
                                                        system_desc, model_name, scenario)
                         if not os.path.exists(measurement_dir):
-                            log.error("no measurement_dir for %s", name)
+                            log.error("no measurement_dir for %s", measurement_dir)
                             results[measurement_dir] = None
                             errors += 1
                         else:

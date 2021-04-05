@@ -716,16 +716,22 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more
         is_valid = False
 
     # parse the power logs
+    server_json_fname = os.path.join(power_path, "server.json")
+    with open(server_json_fname) as f:
+        server_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
+    client_json_fname = os.path.join(power_path, "client.json")
+    with open(client_json_fname) as f:
+        client_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
     detail_log_fname = os.path.join(testing_path, "mlperf_log_detail.txt")
     mlperf_log = MLPerfLog(detail_log_fname)
     datetime_format = '%m-%d-%Y %H:%M:%S.%f'
-    power_begin = datetime.datetime.strptime(mlperf_log["power_begin"], datetime_format)
-    power_end = datetime.datetime.strptime(mlperf_log["power_end"], datetime_format)
+    power_begin = datetime.datetime.strptime(mlperf_log["power_begin"], datetime_format) + client_timezone
+    power_end = datetime.datetime.strptime(mlperf_log["power_end"], datetime_format) + client_timezone
     spl_fname = os.path.join(testing_path, "spl.txt")
     power_list = []
     with open(spl_fname) as f:
         for line in f:
-            timestamp = datetime.datetime.strptime(line.split(",")[1], datetime_format)
+            timestamp = datetime.datetime.strptime(line.split(",")[1], datetime_format) + server_timezone
             if timestamp > power_begin and timestamp < power_end:
                 power_list.append(float(line.split(",")[3]))
     if len(power_list) == 0:

@@ -46,10 +46,10 @@ def main():
     df['Accelerator'] = df['Accelerator'].apply(lambda x: x if x != "-" else "")
     df['a#'] = df['a#'].apply(lambda x: int(x) if x != "" else 0)
     df['a#'] = df['a#'].apply(lambda x: x if x > 0 else "")
-    df['p#'] = df.apply(lambda x: int(x['host_processor_core_count']) * int(x['host_processors_per_node']), axis=1)
+    df['p#'] = df.apply(lambda x: int(x['host_processors_per_node']) * int(x['number_of_nodes']), axis=1)
 
     # details url
-    base_url = "https://github.com/mlperf/submissions_inference_0_7/tree/master"
+    base_url = "https://github.com/mlcommons/submissions_inference_1_0/tree/master"
     df['Details'] = df.apply(
         lambda x: '=HYPERLINK("{}","details")'.format("/".join([base_url, x['Category'], x['Submitter'], "results", x['Platform']])), axis=1)
 

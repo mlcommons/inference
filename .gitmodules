@@ -17,3 +17,6 @@
 [submodule "vision/medical_imaging/3d-unet/nnUnet"]
 	path = vision/medical_imaging/3d-unet/nnUnet
 	url = https://github.com/MIC-DKFZ/nnUNet.git
+[submodule "tools/submission/power-dev"]
+	path = tools/submission/power-dev
+	url = ../power-dev

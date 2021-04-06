@@ -7,6 +7,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import datetime
 import json
 import logging
 import os
@@ -21,6 +22,7 @@ from log_parser import MLPerfLog
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
 
+submission_checker_dir = os.path.dirname(os.path.realpath(__file__))
 
 MODEL_CONFIG = {
     "v0.5": {
@@ -302,6 +304,8 @@ VALID_DIVISIONS = ["open", "closed"]
 VALID_AVAILABILITIES = ["available", "preview", "rdi"]
 REQUIRED_PERF_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 OPTIONAL_PERF_FILES = ["mlperf_log_accuracy.json"]
+REQUIRED_PERF_POWER_FILES = ["spl.txt"]
+REQUIRED_POWER_FILES = ["client.json", "client.log", "ptd_logs.txt", "server.json", "server.log"]
 REQUIRED_ACC_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt", "accuracy.txt", "mlperf_log_accuracy.json"]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 TO_MS = 1000 * 1000
@@ -329,7 +333,7 @@ RESULT_FIELD = {
 
 RESULT_FIELD_NEW = {
     "Offline": "result_samples_per_second",
-    "SingleStream": "result_99.00_percentile_latency_ns",
+    "SingleStream": "result_90.00_percentile_latency_ns",
     "MultiStream": "effective_samples_per_query",
     "Server": "result_scheduled_samples_per_sec"
 }
@@ -351,13 +355,21 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "framework", "operating_system"
 ]
 
-SYSTEM_DESC_OPTIONAL_FIELDS = [
+SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1 = [
     "system_type", "other_software_stack", "host_processor_frequency", "host_processor_caches",
     "host_memory_configuration", "host_processor_interconnect", "host_networking", "host_networking_topology",
     "accelerator_frequency", "accelerator_host_interconnect", "accelerator_interconnect",
     "accelerator_interconnect_topology", "accelerator_memory_configuration",
     "accelerator_on-chip_memories", "cooling", "hw_notes", "sw_notes"
 ]
+
+SYSTEM_DESC_REQUIED_FIELDS_POWER = [
+    "power_management", "filesystem", "boot_firmware_version", "management_firmware_version", "other_hardware",
+    "number_of_type_nics_installed", "nics_enabled_firmware", "nics_enabled_os", "nics_enabled_connected",
+    "network_speed_mbit", "power_supply_quantity_and_rating_watts", "power_supply_details", "disk_drives",
+    "disk_controllers"
+]
+
 
 SYSTEM_IMP_REQUIRED_FILES = [
     "input_data_types", "retraining", "starting_weights_filename", "weight_data_types",
@@ -367,7 +379,7 @@ SYSTEM_IMP_REQUIRED_FILES = [
 
 class Config():
     """Select config value by mlperf version and submission type."""
-    def __init__(self, version, extra_model_benchmark_map, ignore_uncommited=False):
+    def __init__(self, version, extra_model_benchmark_map, ignore_uncommited=False, more_power_check=False):
         self.base = MODEL_CONFIG.get(version)
         self.set_extra_model_benchmark_map(extra_model_benchmark_map)
         self.version = version
@@ -380,6 +392,7 @@ class Config():
         self.required = None
         self.optional = None
         self.ignore_uncommited = ignore_uncommited
+        self.more_power_check = more_power_check
 
     def set_extra_model_benchmark_map(self, extra_model_benchmark_map):
         if extra_model_benchmark_map:
@@ -482,6 +495,7 @@ def get_args():
     parser.add_argument("--extra-model-benchmark-map", help="extra model name to benchmark mapping")
     parser.add_argument("--debug", action="store_true", help="extra debug output")
     parser.add_argument("--submission-exceptions", action="store_true", help="ignore certain errors for submission")
+    parser.add_argument("--more-power-check", action="store_true", help="apply Power WG's check.py script on each power submission. Requires Python 3.7+")
     args = parser.parse_args()
     return args
 
@@ -633,16 +647,16 @@ def check_performance_dir(config, model, path, scenario_fixed):
 
     required_performance_sample_count = config.get_performance_sample_count(model)
     if performance_sample_count < required_performance_sample_count:
-        log.error("%s performance_sample_count, found %d, needs to be > %s",
-                  fname, required_performance_sample_count, performance_sample_count)
+        log.error("%s performance_sample_count, found %d, needs to be >= %d",
+                  fname, performance_sample_count, required_performance_sample_count)
         is_valid = False
 
     if qsl_rng_seed != config.seeds["qsl_rng_seed"]:
-        log.error("%s qsl_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], qsl_rng_seed)
+        log.error("%s qsl_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["qsl_rng_seed"], qsl_rng_seed)
     if sample_index_rng_seed != config.seeds["sample_index_rng_seed"]:
-        log.error("%s sample_index_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], sample_index_rng_seed)
+        log.error("%s sample_index_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["sample_index_rng_seed"], sample_index_rng_seed)
     if schedule_rng_seed != config.seeds["schedule_rng_seed"]:
-        log.error("%s schedule_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds[seed], schedule_rng_seed)
+        log.error("%s schedule_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["schedule_rng_seed"], schedule_rng_seed)
 
     if scenario in ["SingleStream"]:
         res /= TO_MS
@@ -679,6 +693,93 @@ def check_performance_dir(config, model, path, scenario_fixed):
         res = qps_wo_loadgen_overhead
 
     return is_valid, res, inferred
+
+
+def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more_power_check=False):
+
+    is_valid = True
+    power_metric = 0
+
+    # check if all the required files are present
+    required_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
+    diff = files_diff(list_files(testing_path), required_files, OPTIONAL_PERF_FILES)
+    if diff:
+        log.error("%s has file list mismatch (%s)", testing_path, diff)
+        is_valid = False
+    diff = files_diff(list_files(ranging_path), required_files, OPTIONAL_PERF_FILES)
+    if diff:
+        log.error("%s has file list mismatch (%s)", ranging_path, diff)
+        is_valid = False
+    diff = files_diff(list_files(power_path), REQUIRED_POWER_FILES)
+    if diff:
+        log.error("%s has file list mismatch (%s)", power_path, diff)
+        is_valid = False
+
+    # parse the power logs
+    server_json_fname = os.path.join(power_path, "server.json")
+    with open(server_json_fname) as f:
+        server_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
+    client_json_fname = os.path.join(power_path, "client.json")
+    with open(client_json_fname) as f:
+        client_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
+    detail_log_fname = os.path.join(testing_path, "mlperf_log_detail.txt")
+    mlperf_log = MLPerfLog(detail_log_fname)
+    datetime_format = '%m-%d-%Y %H:%M:%S.%f'
+    power_begin = datetime.datetime.strptime(mlperf_log["power_begin"], datetime_format) + client_timezone
+    power_end = datetime.datetime.strptime(mlperf_log["power_end"], datetime_format) + client_timezone
+    spl_fname = os.path.join(testing_path, "spl.txt")
+    power_list = []
+    with open(spl_fname) as f:
+        for line in f:
+            timestamp = datetime.datetime.strptime(line.split(",")[1], datetime_format) + server_timezone
+            if timestamp > power_begin and timestamp < power_end:
+                power_list.append(float(line.split(",")[3]))
+    if len(power_list) == 0:
+        log.error("%s has no power samples falling in power range: %s - %s", spl_fname, power_begin, power_end)
+        is_valid = False
+    else:
+        avg_power = sum(power_list) / len(power_list)
+        if scenario_fixed in ["Offline", "Server"]:
+            # In Offline and Server scenarios, the power metric is in W.
+            power_metric = avg_power
+        elif scenario_fixed in ["MultiStream"]:
+            # In SingleStream and MultiStream scenarios, the power metric is in J/sample.
+            power_duration = (power_end - power_begin).total_seconds()
+            num_samples = mlperf_log["generated_query_count"] * mlperf_log["generated_samples_per_query"]
+            power_metric = avg_power * power_duration / num_samples
+        elif scenario_fixed in ["SingleStream"]:
+            # TODO: Currently, LoadGen does NOT print out the actual number of queries in detail logs. There is a
+            # "generated_query_count", but LoadGen exits early when the min_duration has been met, so it is not equal to
+            # the actual number of queries. For now, we will make use of "result_qps_with_loadgen_overhead", which is
+            # defined as: (sample_count - 1) / pr.final_query_issued_time, where final_query_issued_time can be
+            # approximated by power_duration (off by one query worth of latency, which is in general negligible compared
+            # to 600-sec total runtime and can be offsetted by removing the "+1" when reconstructing the sample_count).
+            # Not an ideal approach, but probably the best we can do in v1.0.
+            # As for MultiStream, it always runs for 270336 queries, so using "generated_query_count" as above is fine.
+            # In v1.1, we should make LoadGen print out the actual number of queries and use it to compute the J/sample 
+            # for SingleStream and MultiStream power metrics.
+            power_duration = (power_end - power_begin).total_seconds()
+            num_samples = mlperf_log["result_qps_with_loadgen_overhead"] * power_duration
+            power_metric = avg_power * power_duration / num_samples
+
+    if more_power_check:
+        python_version_major = int(sys.version.split(" ")[0].split(".")[0])
+        python_version_minor = int(sys.version.split(" ")[0].split(".")[1])
+        assert python_version_major == 3 and python_version_minor >= 7, "The --more-power-check only supports Python 3.7+"
+        assert os.path.exists(os.path.join(submission_checker_dir, "power-dev", "compliance", "check.py")), \
+            "Please run 'git submodule update --init tools/submission/power-dev' to get Power WG's check.py."
+        sys.path.insert(0, os.path.join(submission_checker_dir, "power-dev"))
+        from compliance.check import check as check_power_more
+        perf_path = os.path.dirname(power_path)
+        check_power_result = check_power_more(perf_path)
+        sys.stdout.flush()
+        sys.stderr.flush()
+        if check_power_result != 0:
+            log.error("Power WG check.py did not pass for: %s", perf_path)
+            is_valid = False
+
+    return is_valid, power_metric
+
 
 
 def files_diff(list1, list2, optional=None):
@@ -726,14 +827,14 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
         "Organization", "Availability", "Division", "SystemType", "SystemName", "Platform", "Model",
         "MlperfModel", "Scenario", "Result", "Accuracy", "number_of_nodes", "host_processor_model_name",
         "host_processors_per_node", "host_processor_core_count", "accelerator_model_name", "accelerators_per_node",
-        "Location", "framework", "operating_system", "notes", "compilance", "errors", "version", "infered"
+        "Location", "framework", "operating_system", "notes", "compilance", "errors", "version", "infered", "power"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
     results = {}
 
     def log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
-                   scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=0):
+                   scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=0, power_metric=0):
 
         notes = system_json.get("hw_notes", "")
         if system_json.get("sw_notes"):
@@ -755,13 +856,14 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
             compilance,
             errors,
             config.version,
-            infered))
+            infered,
+            power_metric))
 
     # we are at the top of the submission directory
     for division in list_dir("."):
         # we are looking at ./$division, ie ./closed
         if division not in VALID_DIVISIONS:
-            if division != ".git":
+            if division not in [".git", ".github"]:
                 log.error("invalid division in input dir %s", division)
             continue
         is_closed = division == "closed"
@@ -804,7 +906,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             results[name] = None
                             continue
                     config.set_type(system_type)
-                    if not check_system_desc_id(name, system_json, submitter, division):
+                    if not check_system_desc_id(name, system_json, submitter, division, config.version):
                         results[name] = None
                         continue
 
@@ -891,25 +993,49 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         else:
                             n = ["run_1"]
 
+                        # check if this submission has power logs
+                        power_path = os.path.join(name, "performance", "power")
+                        has_power = os.path.exists(power_path)
+                        if has_power:
+                            log.info("Detected power logs for %s", name)
+
                         for i in n:
                             perf_path = os.path.join(name, "performance", i)
                             if not os.path.exists(perf_path):
                                 log.error("%s is missing", perf_path)
                                 continue
-                            diff = files_diff(list_files(perf_path), REQUIRED_PERF_FILES, OPTIONAL_PERF_FILES)
+                            if has_power:
+                                required_perf_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
+                            else:
+                                required_perf_files = REQUIRED_PERF_FILES
+                            diff = files_diff(list_files(perf_path), required_perf_files, OPTIONAL_PERF_FILES)
                             if diff:
                                 log.error("%s has file list mismatch (%s)", perf_path, diff)
+
                             try:
                                 is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed)
                                 if is_inferred:
                                     infered = 1
-                                    log.info("%s has infered resuls, qps=%s", perf_path, r)
+                                    log.info("%s has inferred results, qps=%s", perf_path, r)
                             except Exception as e:
                                 log.error("%s caused exception in check_performance_dir: %s", perf_path, e)
                                 is_valid, r = False, None
 
+                            power_metric = 0
+                            if has_power:
+                                try:
+                                    ranging_path = os.path.join(name, "performance", "ranging")
+                                    power_is_valid, power_metric = check_power_dir(power_path, ranging_path, perf_path, scenario_fixed,
+                                        more_power_check=config.more_power_check)
+                                    if not power_is_valid:
+                                        is_valid = False
+                                        power_metric = 0
+                                except Exception as e:
+                                    log.error("%s caused exception in check_power_dir: %s", perf_path, e)
+                                    is_valid, r, power_metric = False, None, 0
+
                             if is_valid:
-                                results[name] = r
+                                results[name] = r if r is None or power_metric == 0 else "{:f} with power_metric = {:f}".format(r, power_metric)
                                 required_scenarios.discard(scenario_fixed)
                             else:
                                 log.error("%s has issues", perf_path)
@@ -933,7 +1059,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         if results.get(name):
                             if accuracy_is_valid:
                                 log_result(submitter, available, division, system_type, system_json.get("system_name"), system_desc, model_name, mlperf_model,
-                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered)
+                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered, power_metric=power_metric)
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)
@@ -949,15 +1075,24 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
     return results
 
 
-def check_system_desc_id(fname, systems_json, submitter, division):
+def check_system_desc_id(fname, systems_json, submitter, division, version):
     is_valid = True
     # check all required fields
-    for k in SYSTEM_DESC_REQUIRED_FIELDS:
+    if version in ["v0.5", "v0.7"]:
+        required_fields = SYSTEM_DESC_REQUIRED_FIELDS
+    else:
+        required_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1
+    for k in required_fields:
         if k not in systems_json:
             is_valid = False
             log.error("%s, field %s is missing", fname, k)
 
-    all_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_OPTIONAL_FIELDS
+    if version in ["v0.5", "v0.7"]:
+        all_fields = required_fields + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1
+    else:
+        # TODO: SYSTEM_DESC_REQUIED_FIELDS_POWER should be mandatory when a submission has power logs, but since we
+        # check power submission in check_results_dir, the information is not available yet at this stage.
+        all_fields = required_fields + SYSTEM_DESC_REQUIED_FIELDS_POWER
     for k in systems_json.keys():
         if k not in all_fields:
             log.warning("%s, field %s is unknown", fname, k)
@@ -1100,7 +1235,8 @@ def check_compliance_dir(compliance_dir, model, scenario):
 def main():
     args = get_args()
 
-    config = Config(args.version, args.extra_model_benchmark_map, ignore_uncommited=args.submission_exceptions)
+    config = Config(args.version, args.extra_model_benchmark_map, ignore_uncommited=args.submission_exceptions,
+        more_power_check=args.more_power_check)
 
     with open(args.csv, "w") as csv:
         os.chdir(args.input)
@@ -1110,12 +1246,12 @@ def main():
     # log results
     log.info("---")
     with_results = 0
-    for k, v in results.items():
+    for k, v in sorted(results.items()):
         if v:
             log.info("Results %s %s", k, v)
             with_results += 1
     log.info("---")
-    for k, v in results.items():
+    for k, v in sorted(results.items()):
         if v is None:
             log.error("NoResults %s", k)
 

@@ -1,0 +1,109 @@
+{
+    "division": "closed",
+    "submitter": "Intel",
+    "status": "preview",
+    "system_type":"datacenter",
+    "system_name": "1-node-2S-ICX-OpenVINO-INT8",
+
+    "number_of_nodes": "1",
+    "host_processor_model_name": "TBD",
+    "host_processors_per_node": "2",
+    "host_processor_core_count": "40",
+    "host_processor_frequency": "",
+    "host_processor_caches": "",
+    "host_memory_configuration": "8 slots / 32GB each / 3200 MT/s per socket",
+    "host_memory_capacity": "??GB",
+    "host_storage_capacity": "",
+    "host_storage_type": "",
+    "host_processor_interconnect": "",
+    "host_networking": "",
+    "host_networking_topology": "",
+
+    "accelerators_per_node": "0",
+    "accelerator_model_name": "N/A",
+    "accelerator_frequency": "",
+    "accelerator_host_interconnect": "",
+    "accelerator_interconnect": "",
+    "accelerator_interconnect_topology": "",
+    "accelerator_memory_capacity": "N/A",
+    "accelerator_memory_configuration": "",
+    "accelerator_on-chip_memories": "",
+    "cooling": "",
+    "hw_notes": "",
+
+    "framework": "OpenVINO",
+    "operating_system": "Ubuntu 20.04.1 LTS",
+    "other_software_stack": "5.4.0-45-generic",
+    "sw_notes": "",
+
+    "config": {
+        "logs_dir": "/home/sdp/mlperf_logs",
+        "dtype": "int8",
+        "accuracy": "99.9",
+        "scenario": "Offline",
+        "system": "1-node-2S-ICX",
+        "topology": "3d-unet",
+
+        "exec": [
+            {
+                "name": "Performace benchmark",
+                "cmd": "$EXEC -m $DATA/model/3d_unet_model_i8.xml -data $DATA/preprocessed_data/preprocessed_files.pkl -mlperf_conf $DATA/mlperf.conf -user_conf $DATA/user.conf -scenario Offline -streams 8",
+                "dir": "$PERFORMANCE/RUN_1_DIR",
+                "skip": "True"
+            },
+            
+            {
+                "name": "Accuracy benchmark",
+                "cmd": "$EXEC -m $DATA/model/3d_unet_model_i8.xml -data $DATA/preprocessed_data/preprocessed_files.pkl -mlperf_conf $DATA/mlperf.conf -user_conf $DATA/user.conf -scenario Offline -streams 8 -mode Accuracy",
+                "dir": "$ACCURACY_DIR",
+                "skip": "True"
+            },
+
+            {
+                "name": "Accuracy check",
+                "cmd": "/usr/bin/python3 /home/sdp/git/inference/vision/medical_imaging/3d-unet/accuracy-brats.py --log_file $ACCURACY_DIR/mlperf_log_accuracy.json --preprocessed_data_dir $DATA/preprocessed_data --postprocessed_data_dir $DATA/postprocessed_data --label_data_dir $DATA/nnUNet_raw_data/Task043_BraTS2019/labelsTr --output_dtype float32",
+                "dir": "$ACCURACY_DIR",
+                "save_output": "accuracy.txt",
+                "skip": "True"
+            },
+            
+            {
+                "name": "Compliance TEST01",
+                "dir": "$TEST01_DIR",
+                "cmd": "$EXEC -m $DATA/model/3d_unet_model_i8.xml -data $DATA/preprocessed_data/preprocessed_files.pkl -mlperf_conf $DATA/mlperf.conf -user_conf $DATA/user.conf -scenario Offline -streams 8"
+            },
+
+            {
+                "name": "Compliance TEST04-A",
+                "dir": "$TEST04-A_DIR",
+                "cmd": "$EXEC -m $DATA/model/3d_unet_model_i8.xml -data $DATA/preprocessed_data/preprocessed_files.pkl -mlperf_conf $DATA/mlperf.conf -user_conf $DATA/user.conf -scenario Offline -streams 8",
+                "skip": "True"
+            },
+
+            {
+                "name": "Compliance TEST04-B",
+                "dir": "$TEST04-B_DIR",
+                "cmd": "$EXEC -m $DATA/model/3d_unet_model_i8.xml -data $DATA/preprocessed_data/preprocessed_files.pkl -mlperf_conf $DATA/mlperf.conf -user_conf $DATA/user.conf -scenario Offline -streams 8",
+                "skip": "True"
+            },
+
+            {
+                "name": "Compliance TEST05",
+                "dir": "$TEST05_DIR",
+                "cmd": "$EXEC -m $DATA/model/3d_unet_model_i8.xml -data $DATA/preprocessed_data/preprocessed_files.pkl -mlperf_conf $DATA/mlperf.conf -user_conf $DATA/user.conf -scenario Offline -streams 8",
+                "skip": "True"
+            },
+
+            {
+                "name": "Validate TEST01",
+                "dir": "$TEST01_DIR",
+                "cmd": "$EXEC -m $DATA/model/3d_unet_model_i8.xml -data $DATA/preprocessed_data/preprocessed_files.pkl -mlperf_conf $DATA/mlperf.conf -user_conf $DATA/user.conf -scenario Offline -streams 8"
+            }
+        ],
+
+        "aliases": {
+            "$EXEC": "/home/sdp/git/mlperf_ext_ov_cpp_v1.0/Release/ov_mlperf_3d_unet",
+            "$DATA": "/home/sdp/data/3d-unet"
+        }
+    }
+}

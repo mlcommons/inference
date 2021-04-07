@@ -68,18 +68,22 @@ def main():
     # closed
     df['Unique ID (e.g. for Audit)'] = df.apply(
         lambda x: "/".join([x['Suite'], x['Category'], x['Submitter'], x['Platform']]), axis=1)
-    df1 = df[(df['Category'] == "closed") & (df['Suite'] == "datacenter")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
-    df1.to_excel(writer, sheet_name="closed,datacenter")
-    df1 = df[(df['Category'] == "closed") & (df['Suite'] == "edge")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
-    df1.to_excel(writer, sheet_name="closed,edge")
+    df1 = df[(df['Category'] == "closed") & (df['Suite'].str.contains("datacenter"))].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
+    if not df1.empty:
+        df1.to_excel(writer, sheet_name="closed,datacenter")
+    df1 = df[(df['Category'] == "closed") & (df['Suite'].str.contains("edge"))].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
+    if not df1.empty:
+        df1.to_excel(writer, sheet_name="closed,edge")
 
     # open
     df['Unique ID (e.g. for Audit)'] = df.apply(
         lambda x: "/".join([x['Suite'], x['Category'], x['Submitter'], x['Platform'], x['UsedModel']]), axis=1)
-    df1 = df[(df['Category'] == "open") & (df['Suite'] == "datacenter")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
-    df1.to_excel(writer, sheet_name="open,datacenter")
-    df1 = df[(df['Category'] == "open") & (df['Suite'] == "edge")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
-    df1.to_excel(writer, sheet_name="open,edge")
+    df1 = df[(df['Category'] == "open") & (df['Suite'].str.contains("datacenter"))].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
+    if not df1.empty:
+        df1.to_excel(writer, sheet_name="open,datacenter")
+    df1 = df[(df['Category'] == "open") & (df['Suite'].str.contains("edge"))].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
+    if not df1.empty:
+        df1.to_excel(writer, sheet_name="open,edge")
     
     writer.save()
     

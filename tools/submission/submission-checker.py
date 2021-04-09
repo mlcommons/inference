@@ -896,11 +896,12 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         log.error("%s has invalid status (%s)", system_id_json, available)
                         results[name] = None
                         continue
-                    system_type = system_json.get("system_type")
+
+                system_types = system_json.get("system_type")
+                for system_type in system_types.split(","):
+
                     if config.version not in ["v0.5"]:
                         valid_system_types = ["datacenter", "edge"]
-                        if config.version not in ["v0.7"]:
-                            valid_system_types += ["datacenter,edge", "edge,datacenter"]
                         if system_type not in valid_system_types:
                             log.error("%s has invalid system type (%s)", system_id_json, system_type)
                             results[name] = None
@@ -910,167 +911,167 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                         results[name] = None
                         continue
 
-                #
-                # Look at each model
-                #
-                for model_name in list_dir(results_path, system_desc):
-
-                    # we are looking at ./$division/$submitter/results/$system_desc/$model,
-                    #   ie ./closed/mlperf_org/results/t4-ort/bert
-                    name = os.path.join(results_path, system_desc, model_name)
-                    mlperf_model = config.get_mlperf_model(model_name)
-
-                    if is_closed and mlperf_model not in config.models:
-                        # for closed division we want the model name to match.
-                        # for open division the model_name might be different than the task
-                        log.error("%s has a invalid model %s for closed division", name, model_name)
-                        results[name] = None
-                        continue
-
                     #
-                    # Look at each scenario
+                    # Look at each model
                     #
-                    required_scenarios = config.get_required(mlperf_model)
-                    if required_scenarios is None:
-                        log.error("%s has a invalid model %s, system_type=%s", name, mlperf_model, system_type)
-                        results[name] = None
-                        continue
+                    for model_name in list_dir(results_path, system_desc):
 
-                    errors = 0
-                    all_scenarios = set(list(required_scenarios) + list(config.get_optional(mlperf_model)))
-                    for scenario in list_dir(results_path, system_desc, model_name):
-                        # some submissions in v0.5 use lower case scenarios - map them for now
-                        scenario_fixed = SCENARIO_MAPPING.get(scenario, scenario)
+                        # we are looking at ./$division/$submitter/results/$system_desc/$model,
+                        #   ie ./closed/mlperf_org/results/t4-ort/bert
+                        name = os.path.join(results_path, system_desc, model_name)
+                        mlperf_model = config.get_mlperf_model(model_name)
 
-                        # we are looking at ./$division/$submitter/results/$system_desc/$model/$scenario,
-                        #   ie ./closed/mlperf_org/results/t4-ort/bert/Offline
-                        name = os.path.join(results_path, system_desc, model_name, scenario)
-                        results[name] = None
-                        if is_closed and scenario_fixed not in all_scenarios:
-                            log.warning("%s ignoring scenario %s (neither required nor optional)", name, scenario)
+                        if is_closed and mlperf_model not in config.models:
+                            # for closed division we want the model name to match.
+                            # for open division the model_name might be different than the task
+                            log.error("%s has a invalid model %s for closed division", name, model_name)
+                            results[name] = None
                             continue
 
-                        # check if measurement_dir is good.
-                        measurement_dir = os.path.join(division, submitter, "measurements",
-                                                       system_desc, model_name, scenario)
-                        if not os.path.exists(measurement_dir):
-                            log.error("no measurement_dir for %s", name)
-                            results[measurement_dir] = None
-                            errors += 1
-                        else:
-                            if not check_measurement_dir(measurement_dir, name, system_desc,
-                                                         os.path.join(division, submitter), model_name, scenario):
-                                log.error("%s measurement_dir has issues", measurement_dir)
-                                # results[measurement_dir] = None
-                                errors += 1
-                                # FIXME: we should not accept this submission
-                                # continue
+                        #
+                        # Look at each scenario
+                        #
+                        required_scenarios = config.get_required(mlperf_model)
+                        if required_scenarios is None:
+                            log.error("%s has a invalid model %s, system_type=%s", name, mlperf_model, system_type)
+                            results[name] = None
+                            continue
 
-                        # check accuracy
-                        accuracy_is_valid = False
-                        acc_path = os.path.join(name, "accuracy")
-                        if not os.path.exists(os.path.join(acc_path, "accuracy.txt")):
-                            log.error(
-                                "%s has no accuracy.txt. Generate it with accuracy-imagenet.py or accuracy-coco.py or "
-                                "process_accuracy.py", acc_path)
-                        else:
-                            diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
-                            if diff:
-                                log.error("%s has file list mismatch (%s)", acc_path, diff)
-                            accuracy_is_valid, acc = check_accuracy_dir(config, mlperf_model, acc_path, debug or is_closed)
-                            if not accuracy_is_valid and not is_closed:
-                                if debug:
-                                    log.warning("%s, accuracy not valid but taken for open", acc_path)
-                                accuracy_is_valid = True
-                            if not accuracy_is_valid:
-                                # a little below we'll not copy this into the results csv
-                                errors += 1
-                                log.error("%s, accuracy not valid", acc_path)
+                        errors = 0
+                        all_scenarios = set(list(required_scenarios) + list(config.get_optional(mlperf_model)))
+                        for scenario in list_dir(results_path, system_desc, model_name):
+                            # some submissions in v0.5 use lower case scenarios - map them for now
+                            scenario_fixed = SCENARIO_MAPPING.get(scenario, scenario)
 
-                        infered = 0
-                        if scenario in ["Server"] and config.version in ["v0.5", "v0.7"]:
-                            n = ["run_1", "run_2", "run_3", "run_4", "run_5"]
-                        else:
-                            n = ["run_1"]
-
-                        # check if this submission has power logs
-                        power_path = os.path.join(name, "performance", "power")
-                        has_power = os.path.exists(power_path)
-                        if has_power:
-                            log.info("Detected power logs for %s", name)
-
-                        for i in n:
-                            perf_path = os.path.join(name, "performance", i)
-                            if not os.path.exists(perf_path):
-                                log.error("%s is missing", perf_path)
+                            # we are looking at ./$division/$submitter/results/$system_desc/$model/$scenario,
+                            #   ie ./closed/mlperf_org/results/t4-ort/bert/Offline
+                            name = os.path.join(results_path, system_desc, model_name, scenario)
+                            results[name] = None
+                            if is_closed and scenario_fixed not in all_scenarios:
+                                log.warning("%s ignoring scenario %s (neither required nor optional)", name, scenario)
                                 continue
-                            if has_power:
-                                required_perf_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
-                            else:
-                                required_perf_files = REQUIRED_PERF_FILES
-                            diff = files_diff(list_files(perf_path), required_perf_files, OPTIONAL_PERF_FILES)
-                            if diff:
-                                log.error("%s has file list mismatch (%s)", perf_path, diff)
 
-                            try:
-                                is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed)
-                                if is_inferred:
-                                    infered = 1
-                                    log.info("%s has inferred results, qps=%s", perf_path, r)
-                            except Exception as e:
-                                log.error("%s caused exception in check_performance_dir: %s", perf_path, e)
-                                is_valid, r = False, None
-
-                            power_metric = 0
-                            if has_power:
-                                try:
-                                    ranging_path = os.path.join(name, "performance", "ranging")
-                                    power_is_valid, power_metric = check_power_dir(power_path, ranging_path, perf_path, scenario_fixed,
-                                        more_power_check=config.more_power_check)
-                                    if not power_is_valid:
-                                        is_valid = False
-                                        power_metric = 0
-                                except Exception as e:
-                                    log.error("%s caused exception in check_power_dir: %s", perf_path, e)
-                                    is_valid, r, power_metric = False, None, 0
-
-                            if is_valid:
-                                results[name] = r if r is None or power_metric == 0 else "{:f} with power_metric = {:f}".format(r, power_metric)
-                                required_scenarios.discard(scenario_fixed)
-                            else:
-                                log.error("%s has issues", perf_path)
+                            # check if measurement_dir is good.
+                            measurement_dir = os.path.join(division, submitter, "measurements",
+                                                        system_desc, model_name, scenario)
+                            if not os.path.exists(measurement_dir):
+                                log.error("no measurement_dir for %s", name)
+                                results[measurement_dir] = None
                                 errors += 1
-
-                        # check if compliance dir is good for CLOSED division
-                        compilance = 0 if is_closed else 1
-                        if is_closed and not skip_compliance:
-                            compliance_dir = os.path.join(division, submitter, "compliance",
-                                                          system_desc, model_name, scenario)
-                            if not os.path.exists(compliance_dir):
-                                log.error("no compliance dir for %s", name)
-                                # results[name] = None
                             else:
-                                if not check_compliance_dir(compliance_dir, mlperf_model, scenario):
-                                    log.error("compliance dir %s has issues", compliance_dir)
+                                if not check_measurement_dir(measurement_dir, name, system_desc,
+                                                            os.path.join(division, submitter), model_name, scenario):
+                                    log.error("%s measurement_dir has issues", measurement_dir)
+                                    # results[measurement_dir] = None
+                                    errors += 1
+                                    # FIXME: we should not accept this submission
+                                    # continue
+
+                            # check accuracy
+                            accuracy_is_valid = False
+                            acc_path = os.path.join(name, "accuracy")
+                            if not os.path.exists(os.path.join(acc_path, "accuracy.txt")):
+                                log.error(
+                                    "%s has no accuracy.txt. Generate it with accuracy-imagenet.py or accuracy-coco.py or "
+                                    "process_accuracy.py", acc_path)
+                            else:
+                                diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
+                                if diff:
+                                    log.error("%s has file list mismatch (%s)", acc_path, diff)
+                                accuracy_is_valid, acc = check_accuracy_dir(config, mlperf_model, acc_path, debug or is_closed)
+                                if not accuracy_is_valid and not is_closed:
+                                    if debug:
+                                        log.warning("%s, accuracy not valid but taken for open", acc_path)
+                                    accuracy_is_valid = True
+                                if not accuracy_is_valid:
+                                    # a little below we'll not copy this into the results csv
+                                    errors += 1
+                                    log.error("%s, accuracy not valid", acc_path)
+
+                            infered = 0
+                            if scenario in ["Server"] and config.version in ["v0.5", "v0.7"]:
+                                n = ["run_1", "run_2", "run_3", "run_4", "run_5"]
+                            else:
+                                n = ["run_1"]
+
+                            # check if this submission has power logs
+                            power_path = os.path.join(name, "performance", "power")
+                            has_power = os.path.exists(power_path)
+                            if has_power:
+                                log.info("Detected power logs for %s", name)
+
+                            for i in n:
+                                perf_path = os.path.join(name, "performance", i)
+                                if not os.path.exists(perf_path):
+                                    log.error("%s is missing", perf_path)
+                                    continue
+                                if has_power:
+                                    required_perf_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
+                                else:
+                                    required_perf_files = REQUIRED_PERF_FILES
+                                diff = files_diff(list_files(perf_path), required_perf_files, OPTIONAL_PERF_FILES)
+                                if diff:
+                                    log.error("%s has file list mismatch (%s)", perf_path, diff)
+
+                                try:
+                                    is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed)
+                                    if is_inferred:
+                                        infered = 1
+                                        log.info("%s has inferred results, qps=%s", perf_path, r)
+                                except Exception as e:
+                                    log.error("%s caused exception in check_performance_dir: %s", perf_path, e)
+                                    is_valid, r = False, None
+
+                                power_metric = 0
+                                if has_power:
+                                    try:
+                                        ranging_path = os.path.join(name, "performance", "ranging")
+                                        power_is_valid, power_metric = check_power_dir(power_path, ranging_path, perf_path, scenario_fixed,
+                                            more_power_check=config.more_power_check)
+                                        if not power_is_valid:
+                                            is_valid = False
+                                            power_metric = 0
+                                    except Exception as e:
+                                        log.error("%s caused exception in check_power_dir: %s", perf_path, e)
+                                        is_valid, r, power_metric = False, None, 0
+
+                                if is_valid:
+                                    results[name] = r if r is None or power_metric == 0 else "{:f} with power_metric = {:f}".format(r, power_metric)
+                                    required_scenarios.discard(scenario_fixed)
+                                else:
+                                    log.error("%s has issues", perf_path)
+                                    errors += 1
+
+                            # check if compliance dir is good for CLOSED division
+                            compilance = 0 if is_closed else 1
+                            if is_closed and not skip_compliance:
+                                compliance_dir = os.path.join(division, submitter, "compliance",
+                                                            system_desc, model_name, scenario)
+                                if not os.path.exists(compliance_dir):
+                                    log.error("no compliance dir for %s", name)
                                     # results[name] = None
                                 else:
-                                    compilance = 1
+                                    if not check_compliance_dir(compliance_dir, mlperf_model, scenario):
+                                        log.error("compliance dir %s has issues", compliance_dir)
+                                        # results[name] = None
+                                    else:
+                                        compilance = 1
 
-                        if results.get(name):
-                            if accuracy_is_valid:
-                                log_result(submitter, available, division, system_type, system_json.get("system_name"), system_desc, model_name, mlperf_model,
-                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered, power_metric=power_metric)
-                            else:
+                            if results.get(name):
+                                if accuracy_is_valid:
+                                    log_result(submitter, available, division, system_type, system_json.get("system_name"), system_desc, model_name, mlperf_model,
+                                            scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered, power_metric=power_metric)
+                                else:
+                                    results[name] = None
+                                    log.error("%s is OK but accuracy has issues", name)
+
+                        if required_scenarios:
+                            name = os.path.join(results_path, system_desc, model_name)
+                            if is_closed:
                                 results[name] = None
-                                log.error("%s is OK but accuracy has issues", name)
-
-                    if required_scenarios:
-                        name = os.path.join(results_path, system_desc, model_name)
-                        if is_closed:
-                            results[name] = None
-                            log.error("%s does not have all required scenarios, missing %s", name, required_scenarios)
-                        elif debug:
-                            log.warning("%s ignoring missing scenarios in open division (%s)", name, required_scenarios)
+                                log.error("%s does not have all required scenarios, missing %s", name, required_scenarios)
+                            elif debug:
+                                log.warning("%s ignoring missing scenarios in open division (%s)", name, required_scenarios)
 
     return results
 

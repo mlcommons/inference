@@ -9,7 +9,7 @@
 ## Quick Start
 
     pip install absl-py numpy
-    git clone --recurse-submodules https://github.com/mlperf/inference.git mlperf_inference
+    git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf_inference
     cd mlperf_inference/loadgen
     CFLAGS="-std=c++14 -O3" python setup.py bdist_wheel
     pip install --force-reinstall dist/mlperf_loadgen-0.5a0-cp36-cp36m-linux_x86_64.whl
@@ -25,14 +25,14 @@ For a timeline visualization of what happened during the test, open the *"mlperf
 
 To build the loadgen as a C++ library, rather than a python module:
 
-    git clone --recurse-submodules https://github.com/mlperf/inference.git mlperf_inference
+    git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf_inference
     cd mlperf_inference
     make mlperf_loadgen
     cp out/MakefileGnProj/obj/loadgen/libmlperf_loadgen.a .
 
 Alternatively:
 
-    git clone https://github.com/mlperf/inference.git mlperf_inference
+    git clone https://github.com/mlcommons/inference.git mlperf_inference
     cd mlperf_inference
     mkdir loadgen/build/ && cd loadgen/build/
     cmake .. && cmake --build .
@@ -58,7 +58,7 @@ Patches to support other build environments welcome.
 
 Download the mlperf inference repository and its submodules.
 
-    git clone --recurse-submodules https://github.com/mlperf/inference.git
+    git clone --recurse-submodules https://github.com/mlcommons/inference.git
 
 ### Build from source
 

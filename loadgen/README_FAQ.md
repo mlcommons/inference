@@ -7,7 +7,7 @@ Please file a LoadGen bug so it may be resolved.
 
 ## Q: How can I file a bug?
 **A:**
-On GitHub: https://github.com/mlperf/inference/issues/new
+On GitHub: https://github.com/mlcommons/inference/issues/new
 
 ## Q: Can I make local modifications to the LoadGen for submission?
 **A:**

@@ -234,20 +234,38 @@ export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 Ensure you have a working docker setup on your machine.
 
 #### CPU
+Note that mlperf directory is changed to mlcommons in this section
 
-Build Dockerfile configuration
+
+Build Dockerfile configuration using the script provided
 ```
-cd $HOME/mlperf/inference/v0.5/recommendation
-docker build -t dlrm-cpu docker_cpu/.
+cd $HOME/mlcommons/inference/recommendation/dlrm/pytorch/docker_cpu
+./build_docker_cpu.sh
+
 ```
+
+The container will have loadgen binary and all other tools needed to run the experiments. DLRM code, Inference code, 
+Model, and Data are located on the host machine and can be shared between multiple containers
+
+
+Edit run_docker.sh to set directories, the defaults are:
+HOST_MLCOMMONS_ROOT_DIR=$HOME/mlcommons/inference	# path to mlcommons/inference
+DLRM_DIR=$HOME/mlcommons/dlrm				# path to DLRM			
+MODEL_DIR=$HOME/mlcommons/model			# path to model folder
+DATA_DIR=$HOME/mlcommons/data				# path to data folder
+
 
 Run Docker container in interactive mode and enter the docker console
+
 ```
-docker run -it dlrm-cpu
+cd $HOME/mlcommons/inference/recommendation/dlrm/pytorch/docker_cpu
+./run_docker.sh
 ```
-Inside container kickstart default setup (environment, git checkout, fake dataset and model download)
+
+Example of running terabyte test in docker console
 ```
-source kickstart.sh
+cd mlcommons/recommendation/dlrm/pytorch
+./run_local.sh terabyte cpu --max-ind-range=10000000
 ```
 
 #### GPU

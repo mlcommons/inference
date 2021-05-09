@@ -50,14 +50,14 @@ export DLRM_DIR=$HOME/mlcommons/training/recommendation/dlrm
 ```
 2. Download pre-trained model weights (see links available above)
 ```
-cd $HOME/mlcommons/inference/v0.5/recommendation
+cd $HOME/mlcommons/inference/recommendation
 mkdir ./model && cd ./model
 mv <downloaded_file> dlrm_terabyte.pytorch
 export MODEL_DIR=./model
 ```
 3. Download corresponding Criteo dataset (see links available above)
 ```
-cd $HOME/mlcommons/inference/v0.5/recommendation
+cd $HOME/mlcommons/inference/recommendation
 mkdir ./criteo && cd ./criteo
 mv <downloaded_file(s)> ./
 export DATA_DIR=./criteo

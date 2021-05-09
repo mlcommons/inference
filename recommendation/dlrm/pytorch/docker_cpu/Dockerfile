@@ -31,7 +31,6 @@ RUN cd /opt && \
     echo "conda activate base" >> ~/.bashrc && \
     conda config --set always_yes yes --set changeps1 no
 
-#RUN conda install pytorch-cpu torchvision-cpu -c pytorch
 RUN conda install pytorch torchvision cpuonly -c pytorch
 RUN pip install future pillow onnx opencv-python-headless tensorflow onnxruntime
 RUN pip install Cython && pip install pycocotools

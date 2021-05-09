@@ -1,6 +1,6 @@
-FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu16.04
+FROM nvidia/cuda:11.0-cudnn8-devel-ubuntu18.04
 
-ENV PYTHON_VERSION=3.7
+ENV PYTHON_VERSION=3.8
 ENV LANG C.UTF-8
 ENV LC_ALL C.UTF-8
 ENV PATH /opt/anaconda3/bin:$PATH
@@ -38,28 +38,20 @@ RUN pip install --upgrade pip && \
     ldconfig
 
 RUN conda install pytorch torchvision -c pytorch
-RUN pip install tensorflow-gpu==1.14 onnxruntime-gpu
+RUN pip install tensorflow-gpu==2.4 onnxruntime-gpu
+RUN pip install tensorboard
 RUN pip install Cython && pip install pycocotools
-RUN pip install scikit-learn
-RUN pip install numpy
-RUN pip install pydot
-RUN pip install torchviz
-RUN pip install protobuf
-RUN pip install tqdm
-RUN pip install pybind11
-
-COPY ./kickstart.sh $HOME/.
-RUN chmod +x ./kickstart.sh
+RUN pip install -U scikit-learn
 
 
 RUN cd /tmp && \
-    git clone https://github.com/mlperf/inference && \
+    git clone --recurse-submodules https://github.com/mlcommons/inference && \
     cd inference/loadgen && \
-    pip install pybind11 && \
     CFLAGS="-std=c++14" python setup.py install && \
-    rm -rf mlperf
-
-#RUN  echo "/usr/local/cuda/compat" >> /etc/ld.so.conf.d/cuda-10-0.conf && \
-#    ldconfig
+    cd ../../ && \
+    rm -rf inference
+    
+RUN  echo "/usr/local/cuda/compat" >> /etc/ld.so.conf.d/cuda-10-0.conf && \
+    ldconfig
 
 ENTRYPOINT ["/bin/bash"]

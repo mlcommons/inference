@@ -1,6 +1,5 @@
-This script helps to generate all the files and directories needed for submission.
+# mlperf_runner
 
-Usage:
+Tools to automate  MLPerf logs collection for submission. Please check config.json for info.
 
-	python run_mlperf.py -c config.json
-
+Tested only for Offline scenario.

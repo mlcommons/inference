@@ -47,8 +47,19 @@ set(SOURCE
   ${CMAKE_BINARY_DIR}/version_generated.cc
 )
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 add_library(mlperf_loadgen STATIC ${SOURCE})
 target_link_libraries(mlperf_loadgen)
+
+if(WIN32)
+set (LIBS "")
+else()
+set (LIBS pthread)
+endif()
+
+add_executable(benchmark benchmark/repro.cpp)
+target_link_libraries(benchmark PUBLIC mlperf_loadgen ${LIBS})
 
 # Install library and headers.
 install(TARGETS mlperf_loadgen

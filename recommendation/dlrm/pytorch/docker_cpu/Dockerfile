@@ -32,7 +32,8 @@ RUN cd /opt && \
     conda config --set always_yes yes --set changeps1 no
 
 RUN conda install pytorch torchvision cpuonly -c pytorch
-RUN pip install future pillow onnx opencv-python-headless tensorflow onnxruntime
+RUN pip install future pillow onnx opencv-python-headless tensorflow==2.4 onnxruntime
+RUN pip install tensorboard
 RUN pip install Cython && pip install pycocotools
 RUN pip install scikit-learn
 RUN pip install numpy

@@ -6,7 +6,7 @@ This is the reference implementation for MLCommons Inference benchmarks.
 
 | name | framework | acc. | AUC | dataset | weights  | size | prec. | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| dlrm (debugging) | PyTorch | 78.82% | N/A | [Criteo KaggleDAC](https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/)       | N/A                                                                     | ~1GB | fp32 |                          |
+| dlrm (debugging) | PyTorch | 78.82% | N/A | [Criteo KaggleDAC (not active)](https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/)       | N/A                                                                     | ~1GB | fp32 |                          |
 | dlrm (debugging) | PyTorch | 81.07% | N/A | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) | [pytorch](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt), [onnx](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.onnx.tar) | ~10GB | fp32 | --max-ind-range=10000000 --data-sub-sample-rate=0.875 |
 | dlrm (official) | PyTorch | N/A | 80.25% | [Criteo Terabyte](https://labs.criteo.com/2013/12/download-terabyte-click-logs/) | [pytorch](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt), [onnx](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.onnx.tar) | ~100GB | fp32 | --max-ind-range=40000000 |
 
@@ -37,6 +37,7 @@ pip install pydot
 pip install torchviz
 pip install protobuf
 pip install tqdm
+pip install onnxruntime
 ```
 
 ### Prepare the code and dataset
@@ -78,7 +79,7 @@ File name | framework | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
 ### More information about the datasets
 | dataset | download link |
 | ---- | ---- |
-| Criteo Kaggle DAC | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
+| Criteo Kaggle DAC (not active) | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
 | Criteo Terabyte   | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
 1. The Criteo Kaggle DAC dataset is composed of 7 days, which are stored in file: `train.txt`. This file is expected by the code.
@@ -248,7 +249,7 @@ Edit run_docker.sh to set directories, the defaults are:
 HOST_MLCOMMONS_ROOT_DIR=$HOME/mlcommons/inference	# path to mlcommons/inference
 DLRM_DIR=$HOME/mlcommons/dlrm				# path to DLRM			
 MODEL_DIR=$HOME/mlcommons/model-terabyte		# path to model folder
-DATA_DIR=$HOME/mlcommons/data-terabyte		# path to data folder
+DATA_DIR=$HOME/mlcommons/data-terabyte			# path to data folder
 
 Run Docker container in interactive mode and enter the docker console
 ```
@@ -275,7 +276,7 @@ Model, and Data are located on the host machine and can be shared between multip
 Edit run_docker.sh to set directories, the defaults are:
 HOST_MLCOMMONS_ROOT_DIR=$HOME/mlcommons/inference	# path to mlcommons/inference
 DLRM_DIR=$HOME/mlcommons/dlrm				# path to DLRM			
-MODEL_DIR=$HOME/mlcommons/model-kaggle		# path to model folder
+MODEL_DIR=$HOME/mlcommons/model-kaggle			# path to model folder
 DATA_DIR=$HOME/mlcommons/data-kaggle			# path to data folder
 CUDA_VISIBLE_DEVICES=0					# CUDA devices
 

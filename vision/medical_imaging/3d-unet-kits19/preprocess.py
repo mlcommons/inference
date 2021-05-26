@@ -520,7 +520,7 @@ def generate_hash_from_dataset(args):
         checksum[vol] = md5
 
     with open(CHECKSUM_FILE, 'w') as f:
-        json.dump(dict(sorted(checksum.items())), f)
+        json.dump(dict(sorted(checksum.items())), f, indent=4, sort_keys=True)
     f.close()
 
     p.join()

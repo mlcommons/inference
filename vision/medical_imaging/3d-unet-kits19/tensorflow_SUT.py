@@ -15,12 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import array
-import numpy as np
 from pathlib import Path
-
-import mlperf_loadgen as lg
-import inference_utils as infu
 
 from base_SUT import BASE_3DUNET_SUT
 

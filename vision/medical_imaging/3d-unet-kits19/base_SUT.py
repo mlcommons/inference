@@ -17,10 +17,7 @@
 
 
 import array
-import json
 import numpy as np
-
-from pathlib import Path
 
 import mlperf_loadgen as lg
 import inference_utils as infu

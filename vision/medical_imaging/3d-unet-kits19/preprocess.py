@@ -25,7 +25,7 @@ from multiprocessing import Process, Pool
 
 import nibabel
 import numpy as np
-import torch
+
 from scipy.ndimage.interpolation import zoom
 from pathlib import Path
 
@@ -520,7 +520,7 @@ def generate_hash_from_dataset(args):
         checksum[vol] = md5
 
     with open(CHECKSUM_FILE, 'w') as f:
-        source = json.dump(dict(sorted(checksum.items())), f)
+        json.dump(dict(sorted(checksum.items())), f)
     f.close()
 
     p.join()

@@ -76,8 +76,6 @@ def apply_argmax(image):
     Output shape is (bs=1, channel=1, (ROI_SHAPE)), integer -- segmentation result
     """
     channel_axis = 1
-    reduce_axis = list(range(2, len(image.shape)))
-    num_pred_ch = image.shape[channel_axis]
     image = np.argmax(image, axis=channel_axis).astype(np.uint8)
     image = np.expand_dims(image, axis=0)
 
@@ -109,7 +107,6 @@ def prepare_arrays(image, roi_shape=ROI_SHAPE):
         f"Need proper ROI shape: {roi_shape}"
 
     image_shape = list(image.shape[2:])
-    dim = len(image_shape)
 
     result = np.zeros(shape=(1, 3, *image_shape), dtype=image.dtype)
     norm_map = np.zeros_like(result)

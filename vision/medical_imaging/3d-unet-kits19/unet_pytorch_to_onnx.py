@@ -16,15 +16,17 @@
 # limitations under the License.
 
 
-from global_vars import *
-from pathlib import Path
-import torch
-import onnx
-import json
-import argparse
 import os
 import sys
 sys.path.insert(0, os.getcwd())
+
+import argparse
+import torch
+
+from pathlib import Path
+
+from global_vars import *
+
 
 
 __doc__ = """
@@ -99,9 +101,9 @@ def main():
     depth, height, width = ROI_SHAPE
 
     dummy_input = torch.rand(
-        [1, input_channels, height, width, depth]).float().to(device)
+        [batchsize, input_channels, height, width, depth]).float().to(device)
     dummy_output = torch.rand(
-        [1, output_channels, height, width, depth]).float().to(device)
+        [batchsize, output_channels, height, width, depth]).float().to(device)
 
     # using opset version 12
     torch.onnx.export(model, dummy_input, output_path, opset_version=12,

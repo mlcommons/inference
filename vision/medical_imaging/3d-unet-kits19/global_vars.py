@@ -23,6 +23,21 @@ __doc__ = """
 Define global variables used throughout the 3D UNet reference model.
 """
 
+__all__ = [
+    'CHECKSUM_INFER_FILE',
+    'CHECKSUM_CALIB_FILE',
+    'TARGET_CASES',
+    'CALIB_CASES',
+    'MEAN_VAL',
+    'STDDEV_VAL',
+    'MIN_CLIP_VAL',
+    'MAX_CLIP_VAL',
+    'PADDING_VAL',
+    'TARGET_SPACING',
+    'ROI_SHAPE',
+    'SLIDE_OVERLAP_FACTOR',
+]
+
 # file pointers and sanity checks
 INFERENCE_CASE_FILE = Path(
     Path.cwd(), 'meta', 'inference_cases.json').absolute()

@@ -18,9 +18,7 @@
 
 import argparse
 import json
-import os
 import pickle
-import sys
 import numpy as np
 import nibabel as nib
 import pandas as pd
@@ -154,7 +152,6 @@ def evaluate(target_files, preprocessed_data_dir, postprocessed_data_dir, num_pr
     Collects and summarizes DICE scores of all the predicted files using multi-processes
     """
     bundle = list()
-    total_cases = len(target_files)
 
     for case in target_files:
         groundtruth_path = Path(preprocessed_data_dir,
@@ -231,19 +228,16 @@ def save_predictions(predictions, output_dir, preprocessed_data_dir,
     """
     print("Saving predictions...")
     bundle = list()
-    total_cases = len(predictions)
     for case, case_d in predictions.items():
         pred_file_path = Path(output_dir, case, "prediction.nii.gz")
         bundle.append((case_d['prediction'], aux[case]
                        ['reshaped_affine'], pred_file_path))
 
     with Pool(num_proc) as p:
-        pool_out = p.map(save_nifti, bundle)
+        p.map(save_nifti, bundle)
 
     p.join()
     p.close()
-
-    del predictions
 
 
 def load_loadgen_log(log_file, result_dtype, file_list, aux):

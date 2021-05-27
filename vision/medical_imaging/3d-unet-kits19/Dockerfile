@@ -13,10 +13,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# BASE IMAGE using 21.02-py3 b/c 21.04-py3 uses pytorch on numpy 1.20.x
-# numpy 1.20.x is not supported by TF 2.4 or 2.5 yet
-# ARG BASE_IMAGE=nvcr.io/nvidia/pytorch:21.02-py3 
-
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}
 

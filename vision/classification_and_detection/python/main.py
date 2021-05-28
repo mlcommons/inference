@@ -276,6 +276,9 @@ def get_backend(backend):
     elif backend == "onnxruntime":
         from backend_onnxruntime import BackendOnnxruntime
         backend = BackendOnnxruntime()
+    elif backend == "tvm":
+        from backend_tvm import BackendTVM
+        backend = BackendTVM()
     elif backend == "null":
         from backend_null import BackendNull
         backend = BackendNull()

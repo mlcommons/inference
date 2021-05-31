@@ -26,41 +26,86 @@ class BackendTVM(backend.Backend):
         """image_format."""
         return "NCHW"
 
-    def load(self, model_path, inputs=None, outputs=None):
+    def load(self, model_path, inputs=None, outputs=None, max_batchsize=None):
         """Load model and find input/outputs from the model file."""
 
+        # First attempt to detect input and output names via ONNX run time.
+        # See backend_onnxruntime.py
+        #
+        # Even if inputs/outputs can be defined by MLPerf
+        # TVM will need extra info about shapes to be properly initialized!
+
+        self.inputs = inputs
+        self.outputs = outputs
+
+        opt = rt.SessionOptions()
+        tmp_sess = rt.InferenceSession(model_path, opt)
+
+        if not inputs:
+            self.inputs = [meta.name for meta in tmp_sess.get_inputs()]
+        if not outputs:
+            self.outputs = [meta.name for meta in tmp_sess.get_outputs()]
+
+        # Detect shapes and set batch size.
+        # Shape will be for the batch size 1 and for the max batch size (can be 1 too).
+        # This is needed to set up static batch size in TVM.
+        # We will add support for dynamic batch sizes later.
+        shape_dict = {1:{}}
+        dtype_dict = {}
+
+        for meta in tmp_sess.get_inputs():
+            input_name = meta.name
+            input_type = meta.type
+            input_shape = meta.shape
+
+            if input_type == 'tensor(float)':
+                dtype_dict[input_name] = 'float32'
+
+            if len(input_shape)>0:
+                input_shape[0]=1
+                shape_dict[1][input_name] = tuple(input_shape)
+                if max_batchsize and max_batchsize>1:
+                    input_shape[0] = max_batchsize
+                    shape_dict[max_batchsize]={input_name: tuple(input_shape)}
+
+        print ('Input shape: '+str(shape_dict))
+        print ('Input type: '+str(dtype_dict))
+
+        # We do not need ONNX runtime anymore
+        del tmp_sess
+
+        # Load model via ONNX to be used with TVM
         onnx_model = onnx.load(model_path)
 
-        # TBD
-        shape_dict = {'input_tensor:0': (1, 3, 224, 224)}
 
-        mod, params = relay.frontend.from_onnx(onnx_model, shape_dict, freeze_params=True)
-
-        mod = relay.transform.DynamicToStatic()(mod)
-
-        dtype_dict = {'input_tensor:0': 'float32'}
-        mod_layout = 'NCHW'
+        # Init model for different batch sizes
+        m={}
 
         ctx = tvm.cpu(0)
 
-        inputs = [k for k in shape_dict]
-        outputs=['ArgMax:0'] # TBD
-
+        mod_layout = 'NCHW'
         build_conf={'relay.backend.use_auto_scheduler': False}
         opt_lvl = 3
-
         target='llvm -mcpu=znver3'
         target_host=None
         params={}
 
-        with tvm.transform.PassContext(opt_level=opt_lvl, config=build_conf):
-            graph_module = relay.build(mod,
-                                       target=target,
-                                       target_host=target_host,
-                                       params=params)
-        lib = graph_module
+        for batch_size in shape_dict:
 
-        m = graph_executor.GraphModule(lib['default'](ctx))
+            shape=shape_dict[batch_size]
+
+            mod, params = relay.frontend.from_onnx(onnx_model, shape, freeze_params=True)
+
+            mod = relay.transform.DynamicToStatic()(mod)
+
+            with tvm.transform.PassContext(opt_level=opt_lvl, config=build_conf):
+                graph_module = relay.build(mod,
+                                           target=target,
+                                           target_host=target_host,
+                                           params=params)
+            lib = graph_module
+
+            m[batch_size] = graph_executor.GraphModule(lib['default'](ctx))
 
         self.sess = m
 
@@ -76,34 +121,21 @@ class BackendTVM(backend.Backend):
 #        m.run()
 #
 #        tvm_output = []
-#        print (m.get_output(0))
-#        print (m.get_output(1))
-#        input('xyz9999')
 
-
-#        opt = rt.SessionOptions()
-        # enable level 3 optimizations
-        # FIXME: enable below once onnxruntime 0.5 is released
-        # opt.set_graph_optimization_level(3)
-#        self.sess = rt.InferenceSession(model_path, opt)
-        # get input and output names
-        if not inputs:
-            # From ONNX: TBD
-            self.inputs = [meta.name for meta in self.sess.get_inputs()]
-        else:
-            self.inputs = inputs
-        if not outputs:
-            # From ONNX: TBD
-            self.outputs = [meta.name for meta in self.sess.get_outputs()]
-        else:
-            self.outputs = outputs
         return self
 
     def predict(self, feed):
         """Run the prediction."""
 
+        batch_size = len(feed['input_tensor:0'])
+
+        if batch_size not in self.sess:
+            raise ValueError("TBD: TVM was not initialized with the dynamic batch size ("+str(batch_size)+')')
+
+        sess = self.sess[batch_size]
+
         for iname, data in feed.items():
-            self.sess.set_input(iname, tvm.nd.array(data))
+            sess.set_input(iname, tvm.nd.array(data))
 
 
 #        import numpy as np
@@ -115,16 +147,11 @@ class BackendTVM(backend.Backend):
 #            np_data = (100 * np.random.uniform(size=ishape)).astype(dtype_dict[iname])
 #            self.sess.set_input(iname, tvm.nd.array(np_data))
 
-        self.sess.run()
+        sess.run()
 
         tvm_output = []
-#        print (self.sess.get_num_outputs())
-#        input('xyz999')
-        for i in range(self.sess.get_num_outputs()):
-#            print (i, self.sess.get_output(i))
-            tvm_output.append(self.sess.get_output(i).asnumpy())
-
-        #[array([66], dtype=int64)]
+        for i in range(sess.get_num_outputs()):
+            tvm_output.append(sess.get_output(i).asnumpy())
 
 
         return tvm_output

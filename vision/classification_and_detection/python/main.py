@@ -476,7 +476,7 @@ def main():
                         use_cache=args.cache,
                         count=count, **kwargs)
     # load model to backend
-    model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
+    model = backend.load(args.model,inputs=args.inputs, outputs=args.outputs, max_batchsize=args.max_batchsize)
     final_results = {
         "runtime": model.name(),
         "version": model.version(),

@@ -26,7 +26,7 @@ See the individual Readme files in the reference app for details.
 | resnet50-v1.5 | [vision/classification_and_detection](https://github.com/mlperf/inference/tree/r1.0/vision/classification_and_detection) | tensorflow, pytorch, onnx | imagenet2012 |
 | ssd-mobilenet 300x300 | [vision/classification_and_detection](https://github.com/mlperf/inference/tree/r1.0/vision/classification_and_detection) | tensorflow, pytorch, onnx| coco resized to 300x300 | 
 | ssd-resnet34 1200x1200 | [vision/classification_and_detection](https://github.com/mlperf/inference/tree/r1.0/vision/classification_and_detection) | tensorflow, pytorch, onnx | coco resized to 1200x1200|
-| bert | [language/bert](https://github.com/mlperf/inference/tree/r1.0/language/bert) | tensorflow, pytorch, onnx | squad-1.1 |
+| bert-large max_seq_length 384 | [language/bert](https://github.com/mlperf/inference/tree/r1.0/language/bert) | tensorflow, pytorch, onnx | squad-1.1 |
 | dlrm | [recommendation/dlrm](https://github.com/mlperf/inference/tree/r1.0/recommendation/dlrm/pytorch) | pytorch, tensorflow(?), onnx(?) | Criteo Terabyte |
 | 3d-unet | [vision/medical_imageing/3d-unet](https://github.com/mlperf/inference/tree/r1.0/vision/medical_imaging/3d-unet) | pytorch, tensorflow(?), onnx(?) | BraTS 2019 |
 | rnnt | [speech_recognition/rnnt](https://github.com/mlperf/inference/tree/r1.0/speech_recognition/rnnt) | pytorch | OpenSLR LibriSpeech Corpus |
@@ -42,7 +42,7 @@ See the individual Readme files in the reference app for details.
 | resnet50-v1.5 | [vision/classification_and_detection](https://github.com/mlperf/inference/tree/r0.7/vision/classification_and_detection) | tensorflow, pytorch, onnx | imagenet2012 |
 | ssd-mobilenet 300x300 | [vision/classification_and_detection](https://github.com/mlperf/inference/tree/r0.7/vision/classification_and_detection) | tensorflow, pytorch, onnx| coco resized to 300x300 | 
 | ssd-resnet34 1200x1200 | [vision/classification_and_detection](https://github.com/mlperf/inference/tree/r0.7/vision/classification_and_detection) | tensorflow, pytorch, onnx | coco resized to 1200x1200|
-| bert | [language/bert](https://github.com/mlperf/inference/tree/r0.7/language/bert) | tensorflow, pytorch, onnx | squad-1.1 |
+| bert-large max_seq_length 384 | [language/bert](https://github.com/mlperf/inference/tree/r0.7/language/bert) | tensorflow, pytorch, onnx | squad-1.1 |
 | dlrm | [recommendation/dlrm](https://github.com/mlperf/inference/tree/r0.7/recommendation/dlrm/pytorch) | pytorch, tensorflow(?), onnx(?) | Criteo Terabyte |
 | 3d-unet | [vision/medical_imageing/3d-unet](https://github.com/mlperf/inference/tree/r0.7/vision/medical_imaging/3d-unet) | pytorch, tensorflow(?), onnx(?) | BraTS 2019 |
 | rnnt | [speech_recognition/rnnt](https://github.com/mlperf/inference/tree/r0.7/speech_recognition/rnnt) | pytorch | OpenSLR LibriSpeech Corpus |

@@ -13,22 +13,27 @@ from tvm.contrib import graph_executor
 
 import numpy as np
 
+from threading import Lock
+
 class BackendTVM(backend.Backend):
     def __init__(self):
         super(BackendTVM, self).__init__()
+        self.sess = None
+        self.lock = Lock()
 
     def version(self):
         return rt.__version__
 
     def name(self):
         """Name of the runtime."""
-        return "TVM"
+        return "tvm"
 
     def image_format(self):
         """image_format."""
+        # We use ONNX format, which is always NCHW.
         return "NCHW"
 
-    def load(self, model_path, inputs=None, outputs=None, max_batchsize=None):
+    def load(self, model_path, inputs=None, outputs=None):
         """Load model and find input/outputs from the model file."""
 
         # First attempt to detect input and output names via ONNX run time.
@@ -51,6 +56,10 @@ class BackendTVM(backend.Backend):
         # Detect shapes and set max batch size.
         # If batch size is < max batch size, fill in with empty ones
         # In the future, we should support dynamic batch sizes in TVM
+
+        # Max batch size should be passed from main function
+        max_batchsize = self.max_batchsize
+
         shape_dict = {}
         bsize_dict = {}
         dtype_dict = {}
@@ -122,8 +131,11 @@ class BackendTVM(backend.Backend):
     def predict(self, feed):
         """Run the prediction."""
 
+        self.lock.acquire()
+
         sess = self.sess
 
+        # Prepare TVM inputs
         for iname, data in feed.items():
             max_batchsize = self.input_batch_sizes[iname]
             batch_size = len(data)
@@ -136,11 +148,15 @@ class BackendTVM(backend.Backend):
 
             sess.set_input(iname, tvm.nd.array(data))
 
+        # Run TVM inference
         sess.run()
 
+        # Process TVM outputs
         tvm_output = []
         for i in range(sess.get_num_outputs()):
             # Take only the output of batch size for dynamic batches
             tvm_output.append(sess.get_output(i).asnumpy()[:batch_size])
+
+        self.lock.release()
 
         return tvm_output

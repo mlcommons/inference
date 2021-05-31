@@ -46,6 +46,7 @@ class BackendOnnxruntime(backend.Backend):
             self.outputs = [meta.name for meta in self.sess.get_outputs()]
         else:
             self.outputs = outputs
+
         return self
 
     def predict(self, feed):

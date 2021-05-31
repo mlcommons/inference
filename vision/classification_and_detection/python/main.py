@@ -456,6 +456,10 @@ def main():
     # find backend
     backend = get_backend(args.backend)
 
+    # If TVM add max_batchsize
+    if args.backend == "tvm":
+        backend.max_batchsize = args.max_batchsize
+
     # override image format if given
     image_format = args.data_format if args.data_format else backend.image_format()
 
@@ -476,7 +480,7 @@ def main():
                         use_cache=args.cache,
                         count=count, **kwargs)
     # load model to backend
-    model = backend.load(args.model,inputs=args.inputs, outputs=args.outputs, max_batchsize=args.max_batchsize)
+    model = backend.load(args.model,inputs=args.inputs, outputs=args.outputs)
     final_results = {
         "runtime": model.name(),
         "version": model.version(),

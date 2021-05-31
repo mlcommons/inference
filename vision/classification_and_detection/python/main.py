@@ -485,6 +485,7 @@ def main():
         "runtime": model.name(),
         "version": model.version(),
         "time": int(time.time()),
+        "args": vars(args),
         "cmdline": str(args),
     }
 

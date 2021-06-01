@@ -1,16 +1,6 @@
-[submodule "build"]
-	path = build
-	url = https://chromium.googlesource.com/chromium/src/build
-	branch = master
-[submodule "third_party/ninja"]
-	path = third_party/ninja
-	url = https://github.com/ninja-build/ninja.git
 [submodule "third_party/pybind"]
 	path = third_party/pybind
 	url = https://github.com/pybind/pybind11.git
-[submodule "third_party/gn"]
-	path = third_party/gn
-	url = https://gn.googlesource.com/gn
 [submodule "language/bert/DeepLearningExamples"]
 	path = language/bert/DeepLearningExamples
 	url = https://github.com/NVIDIA/DeepLearningExamples.git

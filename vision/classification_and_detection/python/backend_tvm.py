@@ -210,7 +210,6 @@ class BackendTVM(backend.Backend):
                 input_list.append(tvm.nd.array(data, device=self.tvm_ctx))
 
             sess.invoke_stateful("main", *input_list)
-            self.lock.release()
 
             tvm_output = sess.get_outputs()
             tvm_output = [x.asnumpy() for x in tvm_output]
@@ -239,5 +238,6 @@ class BackendTVM(backend.Backend):
                 # Take only the output of batch size for dynamic batches
                 tvm_output.append(sess.get_output(i).asnumpy()[:batch_size])
 
+        self.lock.release()
 
         return tvm_output

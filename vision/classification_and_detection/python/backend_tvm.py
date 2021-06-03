@@ -199,12 +199,9 @@ class BackendTVM(backend.Backend):
         """Run the prediction."""
 
         executor=self.tvm_executor
-
-        self.lock.acquire()
-
         sess = self.sess
 
-        input_list = []
+        self.lock.acquire()
 
         if executor=='vm':
             # Currently do not check batch size (if dynamic)

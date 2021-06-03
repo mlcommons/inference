@@ -277,8 +277,12 @@ def get_backend(backend):
         from backend_onnxruntime import BackendOnnxruntime
         backend = BackendOnnxruntime()
     elif backend == "tvm":
-        from backend_tvm import BackendTVM
-        backend = BackendTVM()
+        if os.environ.get('CK_USE_OCTOMIZER','').lower()!='yes':
+           from backend_tvm import BackendTVM
+           backend = BackendTVM()
+        else:
+           from backend_octomizer import BackendOctomizer
+           backend = BackendOctomizer()
     elif backend == "null":
         from backend_null import BackendNull
         backend = BackendNull()

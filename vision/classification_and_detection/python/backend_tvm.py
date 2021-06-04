@@ -110,13 +110,16 @@ class BackendTVM(backend.Backend):
 
         onnx_model = onnx.load(model_path)
 
-        # Init model for different batch sizes
+        # Init TVM
+        # TBD: add tvm platform selector
         ctx = tvm.cpu(0)
         self.tvm_ctx = ctx
 
-        build_conf={'relay.backend.use_auto_scheduler': False}
-        opt_lvl = 3
-        target='llvm -mcpu=znver2'
+        build_conf = {'relay.backend.use_auto_scheduler': False}
+        opt_lvl = int(os.environ.get('MLPERF_TVM_OPT_LEVEL', 3))
+
+        target = os.environ.get('MLPERF_TVM_TARGET', 'llvm -mcpu=znver2')
+
         target_host=None
         params={}
 
@@ -153,7 +156,7 @@ class BackendTVM(backend.Backend):
         print ('TVM: build model ...')
         print ('')
 
-        executor=os.environ.get('TVM_EXECUTOR','graph')
+        executor=os.environ.get('MLPERF_TVM_EXECUTOR','graph')
 
         # Needed for prediction
         self.tvm_executor=executor

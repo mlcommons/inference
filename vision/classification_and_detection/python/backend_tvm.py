@@ -199,6 +199,7 @@ class BackendTVM(backend.Backend):
         """Run the prediction."""
 
         executor=self.tvm_executor
+
         sess = self.sess
 
         self.lock.acquire()

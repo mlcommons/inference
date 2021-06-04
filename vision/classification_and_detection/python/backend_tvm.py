@@ -82,11 +82,9 @@ class BackendTVM(backend.Backend):
 
             dtype_dict[input_name] = input_type
 
-            # We expect that input_shape[0] == batch_size
-            # Sometimes we can't detect input shape on some models
-            input_shape[0] = max_batchsize
-#            input_shape[2]=1200
-#            input_shape[3]=1200
+            # For now, we expect that input_shape[0] == batch_size
+            # We force it to 1
+            input_shape[0] = 1
             shape_dict[input_name] = tuple(input_shape)
 
             bsize_dict[input_name] = max_batchsize
@@ -201,14 +199,13 @@ class BackendTVM(backend.Backend):
     def predict(self, feed):
         """Run the prediction."""
 
-        executor=self.tvm_executor
+        executor = self.tvm_executor
 
         sess = self.sess
 
         self.lock.acquire()
 
         if executor=='vm':
-            # Currently do not check batch size (if dynamic)
             input_list = []
             for iname, data in feed.items():
                 input_list.append(tvm.nd.array(data, device=self.tvm_ctx))
@@ -220,27 +217,21 @@ class BackendTVM(backend.Backend):
 
         else:
             # Prepare TVM inputs
-            for iname, data in feed.items():
-                max_batchsize = self.input_batch_sizes[iname]
-                batch_size = len(data)
-
-                # Fill in batch if less than max batch size (emulate dynamic batching)
-                if batch_size <  max_batchsize:
-                    data_extra = np.stack([data[0]] * (max_batchsize-batch_size))
-                    data = np.vstack((data, data_extra))
-                elif batch_size > max_batchsize:
-                    raise ValueError("Internal MLPerf error: dynamic batch size > max batch size")
-
-                sess.set_input(iname, tvm.nd.array(data))
-
-            # Run TVM inference
-            sess.run()
-
-            # Process TVM outputs
             tvm_output = []
-            for i in range(sess.get_num_outputs()):
-                # Take only the output of batch size for dynamic batches
-                tvm_output.append(sess.get_output(i).asnumpy()[:batch_size])
+
+            for iname, data in feed.items():
+                for d in data:
+                    sess.set_input(iname, tvm.nd.array([d]))
+
+                    # Run TVM inference
+                    sess.run()
+
+                    # Process TVM outputs
+                    for i in range(sess.get_num_outputs()):
+                        # Take only the output of batch size for dynamic batches
+                        if len(tvm_output)<(i+1):
+                            tvm_output.append([])
+                        tvm_output[i].append(sess.get_output(i).asnumpy()[0])
 
         self.lock.release()
 

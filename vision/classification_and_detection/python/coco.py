@@ -274,6 +274,8 @@ class PostProcessCocoOnnx(PostProcessCoco):
     """
     def __init__(self):
         super().__init__()
+        # Grigori added on 20210609
+        self.use_inv_map = True
 
     def __call__(self, results, ids, expected=None, result_dict=None):
         # results come as:

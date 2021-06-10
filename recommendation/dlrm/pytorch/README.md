@@ -41,7 +41,7 @@ pip install onnxruntime
 ```
 
 ### Prepare the code and dataset
-1. Download or clone the MLCommons [inference](https://github.com/mlcommons/inference) and [trainining](https://github.com/mlcommons/training) code
+1. Download or clone the MLCommons [inference](https://github.com/mlcommons/inference) and [training](https://github.com/mlcommons/training) code
 ```
 cd $HOME
 mkdir ./mlcommons && cd ./mlcommons

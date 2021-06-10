@@ -44,6 +44,15 @@ class BackendTVM(backend.Backend):
         # Even if inputs/outputs can be defined by MLPerf
         # TVM will need extra info about shapes to be properly initialized!
 
+        # Grigori have noticed that TVM VM produces output on SSD models
+        # that is not in an order expected by MLPerf. Hence we provide
+        # this variable to provide a correct output order for MLPerf
+        self.output_order=None
+        tmp=os.environ.get('MLPERF_TVM_OUTPUT_ORDER','')
+        if tmp!='':
+            import json
+            self.output_order=json.loads('['+tmp+']')
+
         self.inputs = inputs
         self.outputs = outputs
 
@@ -213,7 +222,10 @@ class BackendTVM(backend.Backend):
             sess.invoke_stateful("main", *input_list)
 
             tvm_output = sess.get_outputs()
-            tvm_output = [x.asnumpy() for x in tvm_output]
+            if not self.output_order:
+               tvm_output = [x.asnumpy() for x in tvm_output]
+            else:
+               tvm_output = [tvm_output[x].asnumpy() for x in self.output_order]
 
         else:
             # Prepare TVM inputs

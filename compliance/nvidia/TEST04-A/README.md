@@ -31,11 +31,11 @@ This test is not applicable for the following benchmarks whose performance is de
 
 ## Scenarios
 
- - This test is applicable for scenarios Offline, Server and Single Stream always.
+ - This test is applicable for scenarios Offline, Server and SingleStream always.
  - This test is not applicable for Multi-Stream scenario if samples_per_query >= Performance Sample Count
 
 ## Pass Criteria
-Performance of TEST04-B should be slower than performance of TEST04-A. To account for noise, TEST04-A can be upto 5% slower than TEST04-B.
+Performance of TEST04-B should be slower than performance of TEST04-A. To account for noise, TEST04-A can be upto 20% slower than TEST04-B for SingleStream scenario with very short latencies (<200us) & upto 10% slower otherwise.
 
 ## Instructions
 
@@ -68,3 +68,7 @@ Alternatively, the below script can be run which runs the above verification scr
  - TEST04B_RUNDIR: Specifies path to the directory containing logs from compliance test run with TEST04-B config
  - OUTPUT_DIR: Specifies the path to the output directory where compliance logs will be uploaded from, i.e. `inference_results_v0.7/closed/NVIDIA/compliance/GPU/resnet/Offline`
 
+## Help
+
+TEST04-B is designed to stress SUT by repeatedly issuing the same sample to detect caching.
+If the SUT strictly requires contiguous memory locations to be read and your TEST04-B run is hanging, an example of the approved work-around for classification & detection task (main_vision_test04b_war.py) is provided in TEST04-B folder for optional use.

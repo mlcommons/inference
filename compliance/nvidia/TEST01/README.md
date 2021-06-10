@@ -40,7 +40,7 @@ The submitter can then run the reference accuracy script on `mlperf_log_accuracy
 ## Instructions
 
 ### Part I
-Run test with the provided audit.config in the corresponding benchmark subdirectory. Note that audit.config must be copied to the directory where the benchmark is being run from. Verification that udit.config was properly read can be done by checking that loadgen has found audit.config in lperf_log_detail.txt 
+Run test with the provided audit.config in the corresponding benchmark subdirectory. Note that audit.config must be copied to the directory where the benchmark is being run from. Verification that audit.config was properly read can be done by checking that loadgen has found audit.config in mlperf_log_detail.txt 
 
 ### Part II
 Run the verification script:

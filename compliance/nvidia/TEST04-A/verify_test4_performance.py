@@ -38,12 +38,12 @@ def main():
             ref_mode = line.split(": ",1)[1].strip()
             continue
 
-        if ref_mode == "Single Stream":
+        if ref_mode == "SingleStream":
             if re.match("90th percentile latency", line):
                 ref_score = line.split(": ",1)[1].strip()
                 continue
 
-        if ref_mode == "Multi Stream":
+        if ref_mode == "MultiStream":
             if re.match("Samples per query", line):
                 ref_score = line.split(": ",1)[1].strip()
                 continue
@@ -74,12 +74,12 @@ def main():
             test_mode = line.split(": ",1)[1].strip()
             continue
 
-        if test_mode == "Single Stream":
+        if test_mode == "SingleStream":
             if re.match("90th percentile latency", line):
                 test_score = line.split(": ",1)[1].strip()
                 continue
 
-        if test_mode == "Multi Stream":
+        if test_mode == "MultiStream":
             if re.match("Samples per query", line):
                 test_score = line.split(": ",1)[1].strip()
                 continue
@@ -116,15 +116,15 @@ def main():
     # and run-to-run variation due to external disturbances (OS) can be significant.
     # In this case we relax pass threshold to 20%
 
-    if ref_mode == "Single Stream" and float(ref_score) <= 200000:
+    if ref_mode == "SingleStream" and float(ref_score) <= 200000:
         threshold = 0.20
 
     if float(test_score) < float(ref_score) * (1 + threshold) and float(test_score) > float(ref_score) * (1 - threshold):
         print("TEST PASS")
-    elif (float(test_score) > float(ref_score) and test_mode == "Single Stream"):
+    elif (float(test_score) > float(ref_score) and test_mode == "SingleStream"):
         print("TEST PASS")
         print("Note: TEST04-B is significantly slower than TEST04-A")
-    elif (float(test_score) < float(ref_score) and test_mode != "Single Stream"):
+    elif (float(test_score) < float(ref_score) and test_mode != "SingleStream"):
         print("TEST PASS")
         print("Note: TEST04-B is significantly slower than TEST04-A")
     else:

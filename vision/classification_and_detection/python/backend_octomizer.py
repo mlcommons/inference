@@ -50,9 +50,15 @@ class BackendOctomizer(backend.Backend):
         print ('')
         print (octomizer_prefix + 'importing Octomizer model ...')
 
-        ck_octomizer_model=importlib.import_module(model_package_name)
+        ck_octomized_model_module = importlib.import_module(model_package_name)
 
-        self.sess=ck_octomizer_model.model()
+        # Check if downloaded from Octomizer or created from CMD
+        self.octomizer_cmd = False
+        if hasattr(ck_octomized_model_module, "model"):
+            self.sess = ck_octomized_model_module.model()
+            self.octomizer_cmd = True
+        else:
+            self.sess = ck_octomized_model_module.OctomizedModel()
 
         print ('')
         print (octomizer_prefix + 'model ready ...')
@@ -93,7 +99,12 @@ class BackendOctomizer(backend.Backend):
             break
 
         # Run TVM inference
-        tvm_output = [sess(input_data)[:batch_size]]
+        if self.octomizer_cmd:
+            tvm_output = [sess(input_data)[:batch_size]]
+        else:
+            tvm_out = sess.run(input_data)[:batch_size]
+            tvm_output = [x.asnumpy() for x in tvm_out]
+
 
         self.lock.release()
 

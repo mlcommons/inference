@@ -144,13 +144,6 @@ class BackendTVM(backend.Backend):
         print ('')
         mod = relay.transform.DynamicToStatic()(mod)
 
-#        print ('')
-#        print ('TVM: process SSD model ...')
-#        print ('')
-#        Only for mlperf_ssd_mobilenet_onnx (ssd_mobilenet_v1_coco_2018_01_28.onnx)
-#        from backend_tvm_ssd_pattern import unroll_loop
-#        mod["main"] = unroll_loop(mod["main"])
-
         print ('')
         print ('TVM: apply extra optimizations ...')
         print ('')

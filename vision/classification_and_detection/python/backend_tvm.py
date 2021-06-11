@@ -219,6 +219,17 @@ class BackendTVM(backend.Backend):
             for iname, data in feed.items():
                 input_list.append(tvm.nd.array(data, device=self.tvm_ctx))
 
+            tvm_output = sess.invoke("main", *input_list)
+            if not self.output_order:
+               tvm_output = [x.asnumpy() for x in tvm_output]
+            else:
+               tvm_output = [tvm_output[x].asnumpy() for x in self.output_order]
+
+        elif executor=='vm-stateful':
+            input_list = []
+            for iname, data in feed.items():
+                input_list.append(tvm.nd.array(data, device=self.tvm_ctx))
+
             sess.invoke_stateful("main", *input_list)
 
             tvm_output = sess.get_outputs()
@@ -226,7 +237,6 @@ class BackendTVM(backend.Backend):
                tvm_output = [x.asnumpy() for x in tvm_output]
             else:
                tvm_output = [tvm_output[x].asnumpy() for x in self.output_order]
-
         else:
             # Prepare TVM inputs
             tvm_output = []

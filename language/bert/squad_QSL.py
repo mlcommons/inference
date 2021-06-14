@@ -1,4 +1,5 @@
 # coding=utf-8
+# Copyright 2021 Arm Limited and affiliates.
 # Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
 # Copyright 2018 The Google AI Language Team Authors.
 #
@@ -17,7 +18,6 @@
 import os
 import sys
 sys.path.insert(0, os.getcwd())
-sys.path.insert(0, os.path.join(os.getcwd(), "DeepLearningExamples", "TensorFlow", "LanguageModeling", "BERT"))
 
 from transformers import BertTokenizer
 from create_squad_data import read_squad_examples, convert_examples_to_features

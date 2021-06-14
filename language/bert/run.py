@@ -1,4 +1,5 @@
 # coding=utf-8
+# Copyright 2021 Arm Limited and affiliates.
 # Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
 # Copyright 2018 The Google AI Language Team Authors.
 #
@@ -22,7 +23,6 @@ import argparse
 import mlperf_loadgen as lg
 import subprocess
 
-from squad_QSL import get_squad_QSL
 
 def get_args():
     parser = argparse.ArgumentParser()

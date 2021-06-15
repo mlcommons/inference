@@ -87,13 +87,13 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
       ClientData client_data, std::string name, size_t total_sample_count,
       size_t performance_sample_count,
       LoadSamplesToRamCallback load_samples_to_ram_cb,
-      UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
+      UnloadSamplesFromRamCallback unload_samples_from_ram_cb)
       : client_data_(client_data),
         name_(std::move(name)),
         total_sample_count_(total_sample_count),
         performance_sample_count_(performance_sample_count),
         load_samples_to_ram_cb_(load_samples_to_ram_cb),
-        unload_samlpes_from_ram_cb_(unload_samlpes_from_ram_cb) {}
+        unload_samples_from_ram_cb_(unload_samples_from_ram_cb) {}
   ~QuerySampleLibraryTrampoline() override = default;
 
   const std::string& Name() const override { return name_; }
@@ -105,7 +105,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   }
   void UnloadSamplesFromRam(
       const std::vector<QuerySampleIndex>& samples) override {
-    (*unload_samlpes_from_ram_cb_)(client_data_, samples.data(),
+    (*unload_samples_from_ram_cb_)(client_data_, samples.data(),
                                    samples.size());
   }
 
@@ -115,7 +115,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   size_t total_sample_count_;
   size_t performance_sample_count_;
   LoadSamplesToRamCallback load_samples_to_ram_cb_;
-  UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb_;
+  UnloadSamplesFromRamCallback unload_samples_from_ram_cb_;
 };
 
 }  // namespace
@@ -123,11 +123,11 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 void* ConstructQSL(ClientData client_data, const char* name, size_t name_length,
                    size_t total_sample_count, size_t performance_sample_count,
                    LoadSamplesToRamCallback load_samples_to_ram_cb,
-                   UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
+                   UnloadSamplesFromRamCallback unload_samples_from_ram_cb) {
   QuerySampleLibraryTrampoline* qsl = new QuerySampleLibraryTrampoline(
       client_data, std::string(name, name_length), total_sample_count,
       performance_sample_count, load_samples_to_ram_cb,
-      unload_samlpes_from_ram_cb);
+      unload_samples_from_ram_cb);
   return reinterpret_cast<void*>(qsl);
 }
 

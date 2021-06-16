@@ -111,12 +111,12 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
       std::string name, size_t total_sample_count,
       size_t performance_sample_count,
       LoadSamplesToRamCallback load_samples_to_ram_cb,
-      UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
+      UnloadSamplesFromRamCallback unload_samples_from_ram_cb)
       : name_(std::move(name)),
         total_sample_count_(total_sample_count),
         performance_sample_count_(performance_sample_count),
         load_samples_to_ram_cb_(load_samples_to_ram_cb),
-        unload_samlpes_from_ram_cb_(unload_samlpes_from_ram_cb) {}
+        unload_samples_from_ram_cb_(unload_samples_from_ram_cb) {}
   ~QuerySampleLibraryTrampoline() override = default;
 
   const std::string& Name() const override { return name_; }
@@ -130,7 +130,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   void UnloadSamplesFromRam(
       const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    unload_samlpes_from_ram_cb_(samples);
+    unload_samples_from_ram_cb_(samples);
   }
 
  private:
@@ -138,7 +138,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   size_t total_sample_count_;
   size_t performance_sample_count_;
   LoadSamplesToRamCallback load_samples_to_ram_cb_;
-  UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb_;
+  UnloadSamplesFromRamCallback unload_samples_from_ram_cb_;
 };
 
 }  // namespace
@@ -179,10 +179,10 @@ void DestroyFastSUT(uintptr_t sut) {
 uintptr_t ConstructQSL(
     size_t total_sample_count, size_t performance_sample_count,
     LoadSamplesToRamCallback load_samples_to_ram_cb,
-    UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
+    UnloadSamplesFromRamCallback unload_samples_from_ram_cb) {
   QuerySampleLibraryTrampoline* qsl = new QuerySampleLibraryTrampoline(
       "PyQSL", total_sample_count, performance_sample_count,
-      load_samples_to_ram_cb, unload_samlpes_from_ram_cb);
+      load_samples_to_ram_cb, unload_samples_from_ram_cb);
   return reinterpret_cast<uintptr_t>(qsl);
 }
 

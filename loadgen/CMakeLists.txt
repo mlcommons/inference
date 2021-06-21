@@ -3,8 +3,8 @@ cmake_minimum_required(VERSION 3.1)
 project(mlperf_loadgen)
 
 # The mlperf_loadgen version.
-set(mlperf_loadgen_VERSION_MAJOR 0)
-set(mlperf_loadgen_VERSION_MINOR 5)
+set(mlperf_loadgen_VERSION_MAJOR 1)
+set(mlperf_loadgen_VERSION_MINOR 1)
 message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}")
 
 # Set build options. NB: CXX_STANDARD is supported since CMake 3.1.
@@ -47,8 +47,19 @@ set(SOURCE
   ${CMAKE_BINARY_DIR}/version_generated.cc
 )
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 add_library(mlperf_loadgen STATIC ${SOURCE})
 target_link_libraries(mlperf_loadgen)
+
+if(WIN32)
+set (LIBS "")
+else()
+set (LIBS pthread)
+endif()
+
+add_executable(benchmark benchmark/repro.cpp)
+target_link_libraries(benchmark PUBLIC mlperf_loadgen ${LIBS})
 
 # Install library and headers.
 install(TARGETS mlperf_loadgen

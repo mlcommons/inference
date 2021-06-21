@@ -36,9 +36,9 @@ implemented.
 * [LoadGen API](@ref LoadgenAPI)
 * [Test Settings](@ref LoadgenAPITestSettings) -
   A good description of available scenarios, modes, and knobs.
-* [MLPerf Inference Code](https://github.com/mlperf/inference) -
+* [MLPerf Inference Code](https://github.com/mlcommons/inference) -
   Includes source for the LoadGen and reference models that use the LoadGen.
-* [MLPerf Inference Rules](https://github.com/mlperf/inference_policies) -
+* [MLPerf Inference Rules](https://github.com/mlcommons/inference_policies) -
   Any mismatch with this is a bug in the LoadGen.
 * [MLPerf Website](www.mlperf.org)
 

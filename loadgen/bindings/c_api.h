@@ -62,7 +62,7 @@ typedef void (*UnloadSamplesFromRamCallback)(ClientData,
 void* ConstructQSL(ClientData client_data, const char* name, size_t name_length,
                    size_t total_sample_count, size_t performance_sample_count,
                    LoadSamplesToRamCallback load_samples_to_ram_cb,
-                   UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb);
+                   UnloadSamplesFromRamCallback unload_samples_from_ram_cb);
 /// \brief Destroys the QSL created by ConsructQSL.
 void DestroyQSL(void* qsl);
 

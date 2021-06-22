@@ -214,10 +214,12 @@ void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
   mlperf::StartTest(sut_cast, qsl_cast, test_settings, log_settings);
 }
 
+using ResponseCallback = std::function<void(QuerySampleResponse*)>;
+
 /// TODO: Get rid of copies.
-void QuerySamplesComplete(std::vector<QuerySampleResponse> responses) {
+void QuerySamplesComplete(std::vector<QuerySampleResponse> responses, ResponseCallback response_cb = {}) {
   pybind11::gil_scoped_release gil_releaser;
-  mlperf::QuerySamplesComplete(responses.data(), responses.size());
+  mlperf::QuerySamplesComplete(responses.data(), responses.size(), response_cb);
 }
 
 PYBIND11_MODULE(mlperf_loadgen, m) {
@@ -357,7 +359,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         "Accepts custom log settings.");
   m.def("QuerySamplesComplete", &py::QuerySamplesComplete,
         "Called by the SUT to indicate that samples from some combination of"
-        "IssueQuery calls have finished.");
+        "IssueQuery calls have finished.", pybind11::arg("responses"), pybind11::arg("response_cb") = ResponseCallback{});
 }
 
 }  // namespace py

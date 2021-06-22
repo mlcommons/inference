@@ -40,10 +40,16 @@ typedef void (*IssueQueryCallback)(ClientData, const QuerySample*, size_t);
 typedef void (*FlushQueriesCallback)();
 typedef void (*ReportLatencyResultsCallback)(ClientData, const int64_t*,
                                              size_t);
+typedef void (*ResponseCallback)(ClientData, QuerySampleResponse*);
 
 /// \brief SUT calls this function to report query result back to loadgen
 void QuerySamplesComplete(QuerySampleResponse* responses,
                           size_t response_count);
+
+void QuerySamplesCompleteResponseCb(QuerySampleResponse* responses,
+                                    size_t response_count,
+                                    ResponseCallback response_cb,
+                                    ClientData client_data);
 
 /// \brief Create an opaque SUT pointer based on C callbacks.
 void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,

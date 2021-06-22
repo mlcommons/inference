@@ -29,8 +29,7 @@ from setuptools import setup
 from version_generator import generate_loadgen_version_definitions
 
 generated_version_source_filename = "generated/version_generated.cc"
-generate_loadgen_version_definitions(generated_version_source_filename,
-                                     ".")
+generate_loadgen_version_definitions(generated_version_source_filename, ".")
 
 public_headers = [
     "loadgen.h",
@@ -68,13 +67,13 @@ mlperf_loadgen_sources = (mlperf_loadgen_sources_no_gen +
 
 mlperf_loadgen_module = Extension(
         "mlperf_loadgen",
-        define_macros=[("MAJOR_VERSION", "0"), ("MINOR_VERSION", "5")],
+        define_macros=[("MAJOR_VERSION", "1"), ("MINOR_VERSION", "1")],
         include_dirs=[".", "../third_party/pybind/include"],
         sources=mlperf_loadgen_sources,
         depends=mlperf_loadgen_headers)
 
 setup(name="mlperf_loadgen",
-      version="0.5a0",
+      version="1.1",
       description="MLPerf Inference LoadGen python bindings",
       url="https://mlperf.org",
       ext_modules=[mlperf_loadgen_module])

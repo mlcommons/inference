@@ -6,8 +6,19 @@ tflite backend (https://github.com/tensorflow/tensorflow/lite)
 
 from threading import Lock
 
-import tensorflow as tf
-from tensorflow.lite.python import interpreter as interpreter_wrapper
+try:
+    # try dedicated tflite package first
+    import tflite_runtime
+    import tflite_runtime.interpreter as tflite
+    _version = tflite_runtime.__version__
+    _git_version = tflite_runtime.__git_version__
+except:
+    # fall back to tflite bundled in tensorflow
+    import tensorflow as tf
+    from tensorflow.lite.python import interpreter as tflite
+    _version = tf.__version__
+    _git_version = tf.__git_version__
+
 
 import backend
 
@@ -19,7 +30,7 @@ class BackendTflite(backend.Backend):
         self.lock = Lock()
 
     def version(self):
-        return tf.__version__ + "/" + tf.__git_version__
+        return _version + "/" + _git_version
 
     def name(self):
         return "tflite"
@@ -29,7 +40,7 @@ class BackendTflite(backend.Backend):
         return "NHWC"
 
     def load(self, model_path, inputs=None, outputs=None):
-        self.sess = interpreter_wrapper.Interpreter(model_path=model_path)
+        self.sess = tflite.Interpreter(model_path=model_path)
         self.sess.allocate_tensors()
         # keep input/output name to index mapping
         self.input2index = {i["name"]: i["index"] for i in self.sess.get_input_details()}

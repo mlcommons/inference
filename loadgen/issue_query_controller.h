@@ -68,7 +68,7 @@ struct SequenceGen {
 struct ResponseDelegate {
   virtual ~ResponseDelegate() = default;
   virtual void SampleComplete(SampleMetadata*, QuerySampleResponse*,
-                              PerfClock::time_point) = 0;
+                              PerfClock::time_point, const ResponseCallback&) = 0;
   virtual void QueryComplete() = 0;
   std::atomic<size_t> queries_completed{0};
 };

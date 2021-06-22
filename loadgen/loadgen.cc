@@ -70,7 +70,7 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
   double accuracy_log_prob = 0.0f;
 
   void SampleComplete(SampleMetadata* sample, QuerySampleResponse* response,
-                      PerfClock::time_point complete_begin_time) override {
+                      PerfClock::time_point complete_begin_time, const ResponseCallback& response_cb) override {
     // Using a raw pointer here should help us hit the std::function
     // small buffer optimization code path when we aren't copying data.
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
@@ -82,6 +82,11 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
             : sample->accuracy_log_val + accuracy_log_offset - 1.0;
     if (mode == TestMode::AccuracyOnly ||
         accuracy_log_val <= accuracy_log_prob) {
+      // if a response_cb callback is provided, data only needs to reside on the host *after* calling it
+      // note that the callback is blocking and will likely involve a memcpy from accelerator to host
+      if (response_cb) {
+        response_cb(response);
+      }
       // TODO: Verify accuracy with the data copied here.
       uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
       uint8_t* src_end = src_begin + response->size;
@@ -1611,7 +1616,7 @@ void AbortTest() {
 }
 
 void QuerySamplesComplete(QuerySampleResponse* responses,
-                          size_t response_count) {
+                          size_t response_count, const ResponseCallback& response_cb) {
   PerfClock::time_point timestamp = PerfClock::now();
 
   auto tracer = MakeScopedTracer(
@@ -1632,7 +1637,7 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
     loadgen::SampleMetadata* sample =
         reinterpret_cast<loadgen::SampleMetadata*>(response->id);
     loadgen::QueryMetadata* query = sample->query_metadata;
-    query->response_delegate->SampleComplete(sample, response, timestamp);
+    query->response_delegate->SampleComplete(sample, response, timestamp, response_cb);
   }
 }
 

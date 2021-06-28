@@ -73,8 +73,7 @@ def get_args():
                         default="pytorch",
                         help="Backend")
     parser.add_argument("--scenario",
-                        choices=["SingleStream", "Offline",
-                                 "Server", "MultiStream"],
+                        choices=["SingleStream", "Offline"],
                         default="Offline",
                         help="Scenario")
     parser.add_argument("--accuracy",

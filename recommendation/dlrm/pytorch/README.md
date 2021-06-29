@@ -1,6 +1,6 @@
-# MLPerf Inference Benchmarks for Recommendation Task
+# MLCommons (MLPerf) Inference Benchmarks for Recommendation Task
 
-This is the reference implementation for MLPerf Inference benchmarks.
+This is the reference implementation for MLCommons Inference benchmarks.
 
 ### Supported Models
 
@@ -37,34 +37,35 @@ pip install pydot
 pip install torchviz
 pip install protobuf
 pip install tqdm
+pip install onnxruntime
 ```
 
 ### Prepare the code and dataset
-1. Download or clone the MLPerf [inference](https://github.com/mlperf/inference) and [trainining](https://github.com/mlperf/training) code
+1. Download or clone the MLCommons [inference](https://github.com/mlcommons/inference) and [training](https://github.com/mlcommons/training) code
 ```
 cd $HOME
-mkdir ./mlperf && cd ./mlperf
-git clone --recurse-submodules https://github.com/mlperf/training.git
-git clone --recurse-submodules https://github.com/mlperf/inference.git
-export DLRM_DIR=$HOME/mlperf/training/recommendation/dlrm
+mkdir ./mlcommons && cd ./mlcommons
+git clone --recurse-submodules https://github.com/mlcommons/training.git
+git clone --recurse-submodules https://github.com/mlcommons/inference.git
+export DLRM_DIR=$HOME/mlcommons/training/recommendation/dlrm
 ```
 2. Download pre-trained model weights (see links available above)
 ```
-cd $HOME/mlperf/inference/v0.5/recommendation
+cd $HOME/mlcommons/inference/recommendation
 mkdir ./model && cd ./model
 mv <downloaded_file> dlrm_terabyte.pytorch
 export MODEL_DIR=./model
 ```
 3. Download corresponding Criteo dataset (see links available above)
 ```
-cd $HOME/mlperf/inference/v0.5/recommendation
+cd $HOME/mlcommons/inference/recommendation
 mkdir ./criteo && cd ./criteo
 mv <downloaded_file(s)> ./
 export DATA_DIR=./criteo
 ```
 4. Build and install the loadgen
 ```
-cd $HOME/mlperf/inference/loadgen
+cd $HOME/mlcommons/inference/loadgen
 CFLAGS="-std=c++14" python setup.py develop --user
 ```
 
@@ -78,7 +79,7 @@ File name | framework | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
 ### More information about the datasets
 | dataset | download link |
 | ---- | ---- |
-| Criteo Kaggle DAC | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
+| Criteo Kaggle DAC (not active) | https://labs.criteo.com/2014/02/kaggle-display-advertising-challenge-dataset/ |
 | Criteo Terabyte   | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
 1. The Criteo Kaggle DAC dataset is composed of 7 days, which are stored in file: `train.txt`. This file is expected by the code.
@@ -148,7 +149,7 @@ File name | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
 `day_23` |  44152268  |  08e251af4f3d1e8771ea15e405f39600
 
 
-3. The Criteo fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlperf binary loaders. Please use the following script in `./tools` to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory.
+3. The Criteo fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with both original and mlcommons binary loaders. Please use the following script in `./tools` to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory.
 ```
 ./make_fake_criteo.sh [kaggle|terabyte0875|terabyte]
 mv ./fake_criteo .. && cd ..
@@ -235,42 +236,65 @@ Ensure you have a working docker setup on your machine.
 
 #### CPU
 
-Build Dockerfile configuration
+Build Dockerfile configuration using the script provided
 ```
-cd $HOME/mlperf/inference/v0.5/recommendation
-docker build -t dlrm-cpu docker_cpu/.
+cd $HOME/mlcommons/inference/recommendation/dlrm/pytorch/docker_cpu
+./build_docker_cpu.sh
+
 ```
+The container will have loadgen binary and all other tools needed to run the experiments. DLRM code, Inference code, 
+Model, and Data are located on the host machine and can be shared between multiple containers
+
+Edit run_docker.sh to set directories, the defaults are:
+HOST_MLCOMMONS_ROOT_DIR=$HOME/mlcommons/inference	# path to mlcommons/inference
+DLRM_DIR=$HOME/mlcommons/dlrm				# path to DLRM			
+MODEL_DIR=$HOME/mlcommons/model-terabyte		# path to model folder
+DATA_DIR=$HOME/mlcommons/data-terabyte			# path to data folder
 
 Run Docker container in interactive mode and enter the docker console
 ```
-docker run -it dlrm-cpu
+cd $HOME/mlcommons/inference/recommendation/dlrm/pytorch/docker_cpu
+./run_docker_cpu.sh
 ```
-Inside container kickstart default setup (environment, git checkout, fake dataset and model download)
+
+Example of running terabyte test on CPU in docker console:
 ```
-source kickstart.sh
+cd mlcommons/recommendation/dlrm/pytorch
+./run_local.sh terabyte cpu --max-ind-range=10000000
 ```
 
 #### GPU
 
-Build Dockerfile configuration
+Build Dockerfile configuration using the script provided
 ```
-cd $HOME/mlperf/inference/v0.5/recommendation
-docker build -t dlrm-gpu docker_gpu/.
+cd $HOME/mlcommons/inference/recommendation/dlrm/pytorch/docker_gpu
+./build_docker_gpu.sh
 ```
+The container will have loadgen binary and all other tools needed to run the experiments. DLRM code, Inference code, 
+Model, and Data are located on the host machine and can be shared between multiple containers
 
-Run Docker container in interactive mode and enter the docker console
+Edit run_docker.sh to set directories, the defaults are:
+HOST_MLCOMMONS_ROOT_DIR=$HOME/mlcommons/inference	# path to mlcommons/inference
+DLRM_DIR=$HOME/mlcommons/dlrm				# path to DLRM			
+MODEL_DIR=$HOME/mlcommons/model-kaggle			# path to model folder
+DATA_DIR=$HOME/mlcommons/data-kaggle			# path to data folder
+CUDA_VISIBLE_DEVICES=0					# CUDA devices
+
 ```
-docker run --gpus all -it dlrm-gpu
+cd $HOME/mlcommons/inference/recommendation/dlrm/pytorch/docker_gpu
+./run_docker_gpu.sh
 ```
 
 Ensure you have a working docker setup with CUDA support (Should return True); If false ensure you have a functioning Docker installation with CUDA and GPU support.
 ```
 python -c "exec(\"import torch\nprint(torch.cuda.is_available())\")"
 ```
+Nvidia docker support is avalable at https://docs.nvidia.com/cuda/wsl-user-guide/index.html#installing-docker
 
-Inside container kickstart default setup (environment, git checkout, fake dataset, model download and default to single GPU). See above for changing `CUDA_VISIBLE_DEVICES`.
+Example of running terabyte test on GPU in docker console:
 ```
-source kickstart.sh
+cd mlcommons/recommendation/dlrm/pytorch
+./run_local.sh kaggle gpu
 ```
 
 ### Examples for testing

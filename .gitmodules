@@ -7,8 +7,8 @@
 [submodule "language/bert/DeepLearningExamples"]
 	path = language/bert/DeepLearningExamples
 	url = https://github.com/NVIDIA/DeepLearningExamples.git
-[submodule "vision/medical_imaging/3d-unet/nnUnet"]
-	path = vision/medical_imaging/3d-unet/nnUnet
+[submodule "vision/medical_imaging/3d-unet-brats19/nnUnet"]
+	path = vision/medical_imaging/3d-unet-brats19/nnUnet
 	url = https://github.com/MIC-DKFZ/nnUNet.git
 [submodule "tools/submission/power-dev"]
 	path = tools/submission/power-dev

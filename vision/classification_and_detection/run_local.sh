@@ -9,5 +9,11 @@ if [ ! -d $OUTPUT_DIR ]; then
     mkdir -p $OUTPUT_DIR
 fi
 
-python python/main.py --profile $profile $common_opt --model $model_path $dataset \
+PYTHON=python
+
+if [ "x${CK_ENV_COMPILER_PYTHON_FILE}" != "x" ] ; then
+  PYTHON=${CK_ENV_COMPILER_PYTHON_FILE}
+fi
+
+${PYTHON} python/main.py --profile $profile $common_opt --model $model_path $dataset \
     --output $OUTPUT_DIR $EXTRA_OPS $@

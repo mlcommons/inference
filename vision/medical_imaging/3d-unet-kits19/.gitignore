@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+.Python
+build/
+kits19_raw_data_dir/
+downloads/
+tmp/
+

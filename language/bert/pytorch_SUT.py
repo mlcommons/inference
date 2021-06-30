@@ -1,4 +1,5 @@
 # coding=utf-8
+# Copyright 2021 Arm Limited and affiliates.
 # Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
 # Copyright 2018 The Google AI Language Team Authors.
 #
@@ -18,6 +19,7 @@ import array
 import json
 import os
 import sys
+sys.path.insert(0, os.path.join(os.getcwd(), "DeepLearningExamples", "PyTorch", "LanguageModeling", "BERT"))
 sys.path.insert(0, os.getcwd())
 
 import mlperf_loadgen as lg
@@ -27,7 +29,7 @@ from transformers import BertConfig, BertForQuestionAnswering
 from squad_QSL import get_squad_QSL
 
 class BERT_PyTorch_SUT():
-    def __init__(self):
+    def __init__(self, args):
         print("Loading BERT configs...")
         with open("bert_config.json") as f:
             config_json = json.load(f)
@@ -45,25 +47,28 @@ class BERT_PyTorch_SUT():
             type_vocab_size=config_json["type_vocab_size"],
             vocab_size=config_json["vocab_size"])
 
+        self.dev = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+
         print("Loading PyTorch model...")
         self.model = BertForQuestionAnswering(config)
-        self.model.eval()
-        self.model.cuda()
-        self.model.load_state_dict(torch.load("build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch"))
+        self.model.to(self.dev)
+        self.model.load_state_dict(torch.load("build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch"), strict=False)
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
         print("Finished constructing SUT.")
 
-        self.qsl = get_squad_QSL()
+        self.qsl = get_squad_QSL(args.max_examples)
 
     def issue_queries(self, query_samples):
         with torch.no_grad():
             for i in range(len(query_samples)):
                 eval_features = self.qsl.get_features(query_samples[i].index)
-                start_scores, end_scores = self.model.forward(input_ids=torch.LongTensor(eval_features.input_ids).unsqueeze(0).cuda(),
-                    attention_mask=torch.LongTensor(eval_features.input_mask).unsqueeze(0).cuda(),
-                    token_type_ids=torch.LongTensor(eval_features.segment_ids).unsqueeze(0).cuda())
+                model_output = self.model.forward(input_ids=torch.LongTensor(eval_features.input_ids).unsqueeze(0).to(self.dev),
+                    attention_mask=torch.LongTensor(eval_features.input_mask).unsqueeze(0).to(self.dev),
+                    token_type_ids=torch.LongTensor(eval_features.segment_ids).unsqueeze(0).to(self.dev))
+                start_scores = model_output.start_logits
+                end_scores = model_output.end_logits
                 output = torch.stack([start_scores, end_scores], axis=-1).squeeze(0).cpu().numpy()
 
                 response_array = array.array("B", output.tobytes())
@@ -80,5 +85,5 @@ class BERT_PyTorch_SUT():
     def __del__(self):
         print("Finished destroying SUT.")
 
-def get_pytorch_sut():
-    return BERT_PyTorch_SUT()
+def get_pytorch_sut(args):
+    return BERT_PyTorch_SUT(args)

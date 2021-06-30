@@ -1,3 +1,4 @@
+# Copyright 2021 Arm Limited and affiliates.
 # Copyright (c) 2019 NVIDIA CORPORATION. All rights reserved.
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,69 +21,8 @@ from __future__ import print_function
 
 import collections
 import json
-import math
-import os
-import random
-# import modeling
-# import optimization
 import tokenization
 import six
-import tensorflow as tf
-# import horovod.tensorflow as hvd
-import time
-
-flags = tf.flags
-FLAGS = None
-
-def extract_flags():
-    flags.DEFINE_integer(
-        "max_seq_length", 384,
-        "The maximum total input sequence length after WordPiece tokenization. "
-        "Sequences longer than this will be truncated, and sequences shorter "
-        "than this will be padded.")
-
-    flags.DEFINE_integer(
-        "doc_stride", 128,
-        "When splitting up a long document into chunks, how much stride to "
-        "take between chunks.")
-
-    flags.DEFINE_integer(
-        "max_query_length", 64,
-        "The maximum number of tokens for the question. Questions longer than "
-        "this will be truncated to this length.")
-
-    flags.DEFINE_bool(
-        "version_2_with_negative", False,
-        "If true, the SQuAD examples contain some that do not have an answer.")
-
-    flags.DEFINE_string("train_file", None,
-                        "SQuAD json for training. E.g., train-v1.1.json")
-
-    flags.DEFINE_string(
-        "predict_file", None,
-        "SQuAD json for predictions. E.g., dev-v1.1.json or test-v1.1.json")
-
-    flags.DEFINE_string(
-        "squad_dir", None,
-        "The output directory where the model checkpoints will be written.")
-
-    flags.DEFINE_string("vocab_file", None,
-                        "The vocabulary file that the BERT model was trained on.")
-
-    flags.DEFINE_bool(
-        "do_lower_case", True,
-        "Whether to lower case the input text. Should be True for uncased "
-        "models and False for cased models.")
-
-    flags.DEFINE_bool(
-        "verbose_logging", False,
-        "If true, all of the warnings related to data processing will be printed. "
-        "A number of warnings are expected for a normal SQuAD evaluation.")
-    flags.mark_flag_as_required("train_file")
-    flags.mark_flag_as_required("predict_file")
-    flags.mark_flag_as_required("squad_dir")
-    flags.mark_flag_as_required("vocab_file")
-    return flags.FLAGS
 
 class SquadExample(object):
   """A single training/test example for simple sequence classification.
@@ -154,7 +94,7 @@ class InputFeatures(object):
 
 def read_squad_examples(input_file, is_training, version_2_with_negative=False):
   """Read a SQuAD json file into a list of SquadExample."""
-  with tf.gfile.Open(input_file, "r") as reader:
+  with open(input_file) as reader:
     input_data = json.load(reader)["data"]
 
   def is_whitespace(c):
@@ -213,7 +153,7 @@ def read_squad_examples(input_file, is_training, version_2_with_negative=False):
             cleaned_answer_text = " ".join(
                 tokenization.whitespace_tokenize(orig_answer_text))
             if actual_text.find(cleaned_answer_text) == -1:
-              tf.logging.warning("Could not find answer: '%s' vs. '%s'",
+              print("Could not find answer: '%s' vs. '%s'",
                                  actual_text, cleaned_answer_text)
               continue
           else:
@@ -428,29 +368,29 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
         end_position = 0
 
       if verbose_logging and example_index < 20:
-        tf.compat.v1.logging.info("*** Example ***")
-        tf.compat.v1.logging.info("unique_id: %s" % (unique_id))
-        tf.compat.v1.logging.info("example_index: %s" % (example_index))
-        tf.compat.v1.logging.info("doc_span_index: %s" % (doc_span_index))
-        tf.compat.v1.logging.info("tokens: %s" % " ".join(
+        print("*** Example ***")
+        print("unique_id: %s" % (unique_id))
+        print("example_index: %s" % (example_index))
+        print("doc_span_index: %s" % (doc_span_index))
+        print("tokens: %s" % " ".join(
             [tokenization.printable_text(x) for x in tokens]))
-        tf.compat.v1.logging.info("token_to_orig_map: %s" % " ".join(
+        print("token_to_orig_map: %s" % " ".join(
             ["%d:%d" % (x, y) for (x, y) in six.iteritems(token_to_orig_map)]))
-        tf.compat.v1.logging.info("token_is_max_context: %s" % " ".join([
+        print("token_is_max_context: %s" % " ".join([
             "%d:%s" % (x, y) for (x, y) in six.iteritems(token_is_max_context)
         ]))
-        tf.compat.v1.logging.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
-        tf.compat.v1.logging.info(
+        print("input_ids: %s" % " ".join([str(x) for x in input_ids]))
+        print(
             "input_mask: %s" % " ".join([str(x) for x in input_mask]))
-        tf.compat.v1.logging.info(
+        print(
             "segment_ids: %s" % " ".join([str(x) for x in segment_ids]))
         if is_training and example.is_impossible:
-          tf.compat.v1.logging.info("impossible example")
+          print("impossible example")
         if is_training and not example.is_impossible:
           answer_text = " ".join(tokens[start_position:(end_position + 1)])
-          tf.compat.v1.logging.info("start_position: %d" % (start_position))
-          tf.compat.v1.logging.info("end_position: %d" % (end_position))
-          tf.compat.v1.logging.info(
+          print("start_position: %d" % (start_position))
+          print("end_position: %d" % (end_position))
+          print(
               "answer: %s" % (tokenization.printable_text(answer_text)))
 
       feature = InputFeatures(
@@ -471,94 +411,3 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length,
       output_fn(feature)
 
       unique_id += 1
-
-class FeatureWriter(object):
-  """Writes InputFeature to TF example file."""
-
-  def __init__(self, filename, is_training):
-    self.filename = filename
-    self.is_training = is_training
-    self.num_features = 0
-    self._writer = tf.python_io.TFRecordWriter(filename)
-
-  def process_feature(self, feature):
-    """Write a InputFeature to the TFRecordWriter as a tf.train.Example."""
-    self.num_features += 1
-
-    def create_int_feature(values):
-      feature = tf.train.Feature(
-          int64_list=tf.train.Int64List(value=list(values)))
-      return feature
-
-    features = collections.OrderedDict()
-    features["unique_ids"] = create_int_feature([feature.unique_id])
-    features["input_ids"] = create_int_feature(feature.input_ids)
-    features["input_mask"] = create_int_feature(feature.input_mask)
-    features["segment_ids"] = create_int_feature(feature.segment_ids)
-
-    if self.is_training:
-      features["start_positions"] = create_int_feature([feature.start_position])
-      features["end_positions"] = create_int_feature([feature.end_position])
-      impossible = 0
-      if feature.is_impossible:
-        impossible = 1
-      features["is_impossible"] = create_int_feature([impossible])
-
-    tf_example = tf.train.Example(features=tf.train.Features(feature=features))
-    self._writer.write(tf_example.SerializeToString())
-
-  def close(self):
-    self._writer.close()
-
-def main():
-
-    FLAGS = extract_flags()
-    tokenizer = tokenization.FullTokenizer(
-        vocab_file=FLAGS.vocab_file, do_lower_case=FLAGS.do_lower_case)
-    tf.gfile.MakeDirs(FLAGS.squad_dir + "/final_tfrecords_sharded")
-    # We write to a temporary file to avoid storing very large constant tensors
-    # in memory.
-    train_examples = read_squad_examples(
-        input_file=FLAGS.train_file, is_training=True,
-        version_2_with_negative=FLAGS.version_2_with_negative)
-    train_writer = FeatureWriter(
-        filename=os.path.join(FLAGS.squad_dir, "final_tfrecords_sharded/train.tf_record"),
-        is_training=True)
-    convert_examples_to_features(
-        examples=train_examples,
-        tokenizer=tokenizer,
-        max_seq_length=FLAGS.max_seq_length,
-        doc_stride=FLAGS.doc_stride,
-        max_query_length=FLAGS.max_query_length,
-        is_training=True,
-        output_fn=train_writer.process_feature,
-        verbose_logging=FLAGS.verbose_logging)
-    train_writer.close()
-
-
-    eval_examples = read_squad_examples(
-        input_file=FLAGS.predict_file, is_training=False,
-        version_2_with_negative=FLAGS.version_2_with_negative)
-
-    eval_writer = FeatureWriter(
-        filename=os.path.join(FLAGS.squad_dir, "final_tfrecords_sharded/eval.tf_record"),
-        is_training=False)
-    eval_features = []
-
-    def append_feature(feature):
-      eval_features.append(feature)
-      eval_writer.process_feature(feature)
-
-    convert_examples_to_features(
-        examples=eval_examples,
-        tokenizer=tokenizer,
-        max_seq_length=FLAGS.max_seq_length,
-        doc_stride=FLAGS.doc_stride,
-        max_query_length=FLAGS.max_query_length,
-        is_training=False,
-        output_fn=append_feature,
-        verbose_logging=FLAGS.verbose_logging)
-    eval_writer.close()
-
-if __name__ == "__main__":
-  main()

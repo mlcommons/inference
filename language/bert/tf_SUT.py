@@ -27,11 +27,11 @@ from tensorflow.python.platform import gfile
 from squad_QSL import get_squad_QSL
 
 class BERT_TF_SUT():
-    def __init__(self):
+    def __init__(self, args):
         print("Loading TF model...")
-        self.sess = tf.Session()
+        self.sess = tf.compat.v1.Session()
         with gfile.FastGFile('build/data/bert_tf_v1_1_large_fp32_384_v2/model.pb', 'rb') as f:
-            graph_def = tf.GraphDef()
+            graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f.read())
             self.sess.graph.as_default()
             tf.import_graph_def(graph_def, name='')
@@ -40,7 +40,7 @@ class BERT_TF_SUT():
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
         print("Finished constructing SUT.")
 
-        self.qsl = get_squad_QSL()
+        self.qsl = get_squad_QSL(args.max_examples)
 
     def issue_queries(self, query_samples):
         for i in range(len(query_samples)):
@@ -70,5 +70,5 @@ class BERT_TF_SUT():
     def __del__(self):
         print("Finished destroying SUT.")
 
-def get_tf_sut():
-    return BERT_TF_SUT()
+def get_tf_sut(args):
+    return BERT_TF_SUT(args)

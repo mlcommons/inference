@@ -1,4 +1,5 @@
 # coding=utf-8
+# Copyright 2021 Arm Limited and affiliates.
 # Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
 # Copyright 2018 The Google AI Language Team Authors.
 #
@@ -16,11 +17,10 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.join(os.getcwd(), "DeepLearningExamples", "TensorFlow", "LanguageModeling", "BERT"))
 sys.path.insert(0, os.getcwd())
 
 from transformers import BertTokenizer
-from utils.create_squad_data import read_squad_examples, convert_examples_to_features
+from create_squad_data import read_squad_examples, convert_examples_to_features
 
 import mlperf_loadgen as lg
 
@@ -32,7 +32,7 @@ max_query_length = 64
 doc_stride = 128
 
 class SQuAD_v1_QSL():
-    def __init__(self, perf_count=None, cache_path='eval_features.pickle'):
+    def __init__(self, total_count_override=None, perf_count_override=None, cache_path='eval_features.pickle'):
         print("Constructing QSL...")
         eval_features = []
         # Load features if cached, convert from examples otherwise.
@@ -69,8 +69,8 @@ class SQuAD_v1_QSL():
                 pickle.dump(eval_features, cache_file)
 
         self.eval_features = eval_features
-        self.count = len(self.eval_features)
-        self.perf_count = perf_count if perf_count is not None else self.count
+        self.count = total_count_override or len(self.eval_features)
+        self.perf_count = perf_count_override or self.count
         self.qsl = lg.ConstructQSL(self.count, self.perf_count, self.load_query_samples, self.unload_query_samples)
         print("Finished constructing QSL.")
 
@@ -86,5 +86,5 @@ class SQuAD_v1_QSL():
     def __del__(self):
         print("Finished destroying QSL.")
 
-def get_squad_QSL():
-    return SQuAD_v1_QSL()
+def get_squad_QSL(total_count_override=None, perf_count_override=None):
+    return SQuAD_v1_QSL(total_count_override, perf_count_override)

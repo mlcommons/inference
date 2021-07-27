@@ -60,9 +60,9 @@ MODEL_CONFIG = {
             "resnet50": "resnet",
         },
         "seeds": {
-            "qsl_rng_seed": 3133965575612453542,
-            "sample_index_rng_seed": 665484352860916858,
-            "schedule_rng_seed": 3622009729038561421,
+            "qsl_rng_seed": 1624344308455410291,
+            "sample_index_rng_seed": 517984244576520566,
+            "schedule_rng_seed": 10051496985653635065,
         },
         "ignore_errors": [
             "check for ERROR in detailed",

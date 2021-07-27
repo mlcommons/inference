@@ -596,12 +596,17 @@ def main():
     runner.start_run(result_dict, args.accuracy)
     lg.StartTest(sut, qsl, settings)
 
+    result_dict["good"] = runner.post_process.good
+    result_dict["total"] = runner.post_process.total
+
     if not last_timeing:
         last_timeing = runner.result_timing
     if args.accuracy:
         post_proc.finalize(result_dict, ds, output_dir=args.output)
+
     add_results(final_results, "{}".format(scenario),
                 result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
+
 
     runner.finish()
     lg.DestroyQSL(qsl)

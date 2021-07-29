@@ -60,9 +60,9 @@ MODEL_CONFIG = {
             "resnet50": "resnet",
         },
         "seeds": {
-            "qsl_rng_seed": 1624344308455410291,
-            "sample_index_rng_seed": 517984244576520566,
-            "schedule_rng_seed": 10051496985653635065,
+            "qsl_rng_seed": 3133965575612453542,
+            "sample_index_rng_seed": 665484352860916858,
+            "schedule_rng_seed": 3622009729038561421,
         },
         "ignore_errors": [
             "check for ERROR in detailed",
@@ -298,6 +298,124 @@ MODEL_CONFIG = {
             "3d-unet-99.9": {"SingleStream":1024, "Offline": 1},
         },
     },
+    "v1.1": {
+        "models": [
+            "ssd-small", "ssd-large", "resnet", "rnnt",
+            "bert-99", "bert-99.9",
+            "dlrm-99", "dlrm-99.9",
+            "3d-unet-99", "3d-unet-99.9",
+        ],
+        "required-scenarios-datacenter": {
+            "resnet": ["Offline"],
+            "ssd-large": ["Offline"],
+            "rnnt": ["Offline"],
+            "bert-99": ["Offline"],
+            "bert-99.9": ["Offline"],
+            "dlrm-99": ["Offline"],
+            "dlrm-99.9": ["Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+        },
+        "optional-scenarios-datacenter": {
+            "resnet": ["Server"],
+            "ssd-large": ["Server"],
+            "rnnt": ["Server"],
+            "bert-99": ["Server"],
+            "bert-99.9": ["Server"],
+            "dlrm-99": ["Server"],
+            "dlrm-99.9": ["Server"],
+        },
+        "required-scenarios-edge": {
+            "resnet": ["SingleStream", "Offline"],
+            "ssd-small": ["SingleStream", "Offline"],
+            "ssd-large": ["SingleStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "Offline"],
+            "ssd-small": ["SingleStream", "Offline"],
+            "ssd-large": ["SingleStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["Offline"],
+            "dlrm-99": ["Offline"],
+            "dlrm-99.9": ["Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-datacenter-edge": {
+            "resnet": ["Server"],
+            "ssd-large": ["Server"],
+            "rnnt": ["Server"],
+            "bert-99": ["Server"],
+            "bert-99.9": ["Server"],
+            "dlrm-99": ["Server"],
+            "dlrm-99.9": ["Server"],
+        },
+        "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
+            "ssd-small": ("mAP", 22 * 0.99),
+            "ssd-large": ("mAP", 20 * 0.99),
+            "rnnt": ("WER", (100 - 7.452) * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "dlrm-99": ("AUC", 80.25 * 0.99),
+            "dlrm-99.9": ("AUC", 80.25 * 0.999),
+            "3d-unet-99": ("DICE", 0.853 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.853 * 0.999),
+        },
+        "performance-sample-count": {
+            "ssd-small": 256,
+            "ssd-large": 64,
+            "resnet": 1024,
+            "rnnt": 2513,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-99": 204800,
+            "dlrm-99.9": 204800,
+            "3d-unet-99": 16,
+            "3d-unet-99.9": 16,
+        },
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-mobilenet": "ssd-small",
+            "ssd-resnet34": "ssd-large",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
+        },
+        "seeds": {
+            "qsl_rng_seed": 1624344308455410291,
+            "sample_index_rng_seed": 517984244576520566,
+            "schedule_rng_seed": 10051496985653635065,
+        },
+        "ignore_errors": [
+        ],
+        "latency-constraint": {
+            "resnet": {"Server": 15000000, "MultiStream": 50000000},
+            "ssd-small": {"MultiStream": 50000000},
+            "ssd-large": {"Server": 100000000, "MultiStream": 66000000},
+            "rnnt": {"Server": 1000000000},
+            "bert-99": {"Server": 130000000},
+            "bert-99.9": {"Server": 130000000},
+            "dlrm-99": {"Server": 30000000},
+            "dlrm-99.9": {"Server": 30000000},
+        },
+        "min-queries": {
+            "resnet": {"SingleStream":1024, "Server": 270336, "Offline": 1},
+            "ssd-small": {"SingleStream":1024, "Offline": 1},
+            "ssd-large": {"SingleStream":1024, "Server": 270336, "Offline": 1},
+            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-99": {"Server": 270336, "Offline": 1},
+            "dlrm-99.9": {"Server": 270336, "Offline": 1},
+            "3d-unet-99": {"SingleStream":1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream":1024, "Offline": 1},
+        },
+    },
 }
 
 VALID_DIVISIONS = ["open", "closed"]
@@ -488,7 +606,7 @@ def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="submission directory")
-    parser.add_argument("--version", default="v1.0", choices=list(MODEL_CONFIG.keys()), help="mlperf version")
+    parser.add_argument("--version", default="v1.1", choices=list(MODEL_CONFIG.keys()), help="mlperf version")
     parser.add_argument("--submitter", help="filter to submitter")
     parser.add_argument("--csv", default="summary.csv", help="csv file with results")
     parser.add_argument("--skip_compliance", action="store_true", help="Pass this cmdline option to skip checking compliance/ dir")

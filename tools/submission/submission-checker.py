@@ -334,6 +334,9 @@ MODEL_CONFIG = {
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
         },
+        "optional-scenarios-edge": {
+            # None
+        },
         "required-scenarios-datacenter-edge": {
             "resnet": ["SingleStream", "Offline"],
             "ssd-small": ["SingleStream", "Offline"],

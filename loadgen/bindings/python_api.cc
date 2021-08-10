@@ -323,14 +323,43 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def(pybind11::init<>())
       .def(pybind11::init<ResponseId, QuerySampleIndex>())
       .def_readwrite("id", &QuerySample::id)
-      .def_readwrite("index", &QuerySample::index);
+      .def_readwrite("index", &QuerySample::index)
+      .def(pybind11::pickle(
+          [] (const QuerySample &qs) { // __getstate__
+         /*Return a tuple that fully encodes state of object*/
+         return pybind11::make_tuple(qs.id, qs.index);
+         },
+         [] (pybind11::tuple t) { // __setstate__
+         if (t.size() != 2)
+           throw std::runtime_error("Invalid state for QuerySample");
+         /* Create a new C++ instance*/
+         QuerySample q;
+         q.id = t[0].cast<uintptr_t>();
+         q.index = t[1].cast<size_t>();
+         return q;
+         }));
 
   pybind11::class_<QuerySampleResponse>(m, "QuerySampleResponse")
       .def(pybind11::init<>())
       .def(pybind11::init<ResponseId, uintptr_t, size_t>())
       .def_readwrite("id", &QuerySampleResponse::id)
       .def_readwrite("data", &QuerySampleResponse::data)
-      .def_readwrite("size", &QuerySampleResponse::size);
+      .def_readwrite("size", &QuerySampleResponse::size)
+      .def(pybind11::pickle(
+       [] (const QuerySampleResponse &qsr) { // __getstate__
+        /* Return a tuple that fully encodes state of object*/
+        return pybind11::make_tuple(qsr.id, qsr.data, qsr.size);
+        },
+       [] (pybind11::tuple t) { // __setstate__
+       if (t.size() != 3)
+        throw std::runtime_error("Invalid state for QuerySampleResponse");
+       /* Create a new C++ instance*/
+       QuerySampleResponse q;
+       q.id   = t[0].cast<uintptr_t>();
+       q.data = t[1].cast<uintptr_t>();
+       q.size = t[2].cast<size_t>();
+       return q;
+       }));
 
   // TODO: Use PYBIND11_MAKE_OPAQUE for the following vector types.
   pybind11::bind_vector<std::vector<QuerySample>>(m, "VectorQuerySample");

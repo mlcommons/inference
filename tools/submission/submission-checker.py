@@ -816,7 +816,7 @@ def check_performance_dir(config, model, path, scenario_fixed):
     return is_valid, res, inferred
 
 
-def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more_power_check=False):
+def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, version, more_power_check=False):
 
     is_valid = True
     power_metric = 0
@@ -837,12 +837,18 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more
         is_valid = False
 
     # parse the power logs
-    server_json_fname = os.path.join(power_path, "server.json")
-    with open(server_json_fname) as f:
-        server_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
-    client_json_fname = os.path.join(power_path, "client.json")
-    with open(client_json_fname) as f:
-        client_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
+    if version in ["v1.0"]:
+        server_json_fname = os.path.join(power_path, "server.json")
+        with open(server_json_fname) as f:
+            server_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
+        client_json_fname = os.path.join(power_path, "client.json")
+        with open(client_json_fname) as f:
+            client_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
+    else:
+        # Starting from v1.1, power timestamps are always in UTC, so timezone shift is no longer needed.
+        server_timezone = datetime.timedelta(seconds=0)
+        client_timezone = datetime.timedelta(seconds=0)
+
     detail_log_fname = os.path.join(testing_path, "mlperf_log_detail.txt")
     mlperf_log = MLPerfLog(detail_log_fname)
     datetime_format = '%m-%d-%Y %H:%M:%S.%f'
@@ -1146,7 +1152,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             if has_power:
                                 try:
                                     ranging_path = os.path.join(name, "performance", "ranging")
-                                    power_is_valid, power_metric = check_power_dir(power_path, ranging_path, perf_path, scenario_fixed,
+                                    power_is_valid, power_metric = check_power_dir(power_path, ranging_path, perf_path, scenario_fixed, config.version,
                                         more_power_check=config.more_power_check)
                                     if not power_is_valid:
                                         is_valid = False

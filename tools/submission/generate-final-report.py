@@ -49,7 +49,7 @@ def main():
     df['p#'] = df.apply(lambda x: int(x['host_processors_per_node']) * int(x['number_of_nodes']), axis=1)
 
     # details url
-    base_url = "https://github.com/mlcommons/submissions_inference_1_0/tree/master"
+    base_url = "https://github.com/mlcommons/submissions_inference_1_1/tree/master"
     df['Details'] = df.apply(
         lambda x: '=HYPERLINK("{}","details")'.format("/".join([base_url, x['Category'], x['Submitter'], "results", x['Platform']])), axis=1)
 

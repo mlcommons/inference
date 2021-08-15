@@ -69,17 +69,21 @@ def main():
     df['Unique ID (e.g. for Audit)'] = df.apply(
         lambda x: "/".join([x['Suite'], x['Category'], x['Submitter'], x['Platform']]), axis=1)
     df1 = df[(df['Category'] == "closed") & (df['Suite'] == "datacenter")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
-    df1.to_excel(writer, sheet_name="closed,datacenter")
+    if df1.size > 0:
+        df1.to_excel(writer, sheet_name="closed,datacenter")
     df1 = df[(df['Category'] == "closed") & (df['Suite'] == "edge")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
-    df1.to_excel(writer, sheet_name="closed,edge")
+    if df1.size > 0:
+        df1.to_excel(writer, sheet_name="closed,edge")
 
     # open
     df['Unique ID (e.g. for Audit)'] = df.apply(
         lambda x: "/".join([x['Suite'], x['Category'], x['Submitter'], x['Platform'], x['UsedModel']]), axis=1)
     df1 = df[(df['Category'] == "open") & (df['Suite'] == "datacenter")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
-    df1.to_excel(writer, sheet_name="open,datacenter")
+    if df1.size > 0:
+        df1.to_excel(writer, sheet_name="open,datacenter")
     df1 = df[(df['Category'] == "open") & (df['Suite'] == "edge")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
-    df1.to_excel(writer, sheet_name="open,edge")
+    if df1.size > 0:
+        df1.to_excel(writer, sheet_name="open,edge")
     
     writer.save()
     

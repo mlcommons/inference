@@ -80,6 +80,10 @@ def main():
     df1.to_excel(writer, sheet_name="open,datacenter")
     df1 = df[(df['Category'] == "open") & (df['Suite'] == "edge")].pivot_table(index=index, columns=columns, values=['Result']).fillna("")
     df1.to_excel(writer, sheet_name="open,edge")
+
+    format = writer.book.add_format({"num_format": "#,##0.00"})
+    for ws in writer.book.worksheets():
+        ws.set_column(len(index), 100, None, format)
     
     writer.save()
     

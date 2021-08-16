@@ -963,6 +963,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
     notes = system_json.get("hw_notes", "")
     if system_json.get("sw_notes"):
       notes = notes + ". " + system_json.get("sw_notes")
+    unit = "QPS" if scenario_fixed != "SingleStream" else "Latency (ms)"
 
     csv.write(
         fmt.format(submitter, available, division, system_type,
@@ -978,7 +979,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                    '"' + system_json.get("framework", "") + '"',
                    '"' + system_json.get("operating_system", "") + '"',
                    '"' + notes + '"', compilance, errors, config.version,
-                   infered, power_metric > 0, "QPS"))
+                   infered, power_metric > 0, unit))
 
     if power_metric > 0:
       csv.write(

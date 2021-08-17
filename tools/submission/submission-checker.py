@@ -963,7 +963,12 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
     notes = system_json.get("hw_notes", "")
     if system_json.get("sw_notes"):
       notes = notes + ". " + system_json.get("sw_notes")
-    unit = "QPS" if scenario_fixed != "SingleStream" else "Latency (ms)"
+    unit_dict = {
+        "SingleStream": "QPS",
+        "Offline": "Samples/s",
+        "Server": "Queries/s",
+    }
+    unit = unit_dict[scenario_fixed]
 
     csv.write(
         fmt.format(submitter, available, division, system_type,

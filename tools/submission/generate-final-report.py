@@ -57,81 +57,80 @@ def main():
   writer = pd.ExcelWriter(output + '.xlsx', engine='xlsxwriter')
 
   index = [
-      'Unique ID (e.g. for Audit)', 'Submitter',
-      'Availability', 'System', 'Processor', "p#", 'Accelerator', "a#",
-      "Notes", "Details",
+      'ID',
+      'Unique ID (e.g. for Audit)',
+      'Submitter',
+      'Availability',
+      'System',
+      'Processor',
+      'p#',
+      'Accelerator',
+      'a#',
+      'Notes',
+      'Details',
   ]
   columns = [
-      'Model', 'Scenario',
-  ]
-  power_columns = [
       'Model',
       'Scenario',
       'Units',
   ]
 
+  def MakeWorksheet(df, filter_dict, sheet_name):
+    for key, value in filter_dict.items():
+      df = df[value(df[key])]
+    df = df.pivot_table(index=index, columns=columns, values=['Result'])
+    df = df.fillna('')
+    if df.size == 0:
+      return
+    df.to_excel(writer, sheet_name=sheet_name)
 
-  # closed
-  df['Unique ID (e.g. for Audit)'] = df.apply(
-      lambda x: "/".join([x['Suite'], x['Category'], x['Submitter'], x['Platform']]), axis=1)
+  def Equal(x):
+    return lambda y: y == x
 
-  df1 = df[(df['Category'] == 'closed') & (df['Suite'] == 'datacenter') &
-           (df['Units'] == 'QPS')].pivot_table(
-               index=index, columns=columns, values=['Result']).fillna('')
-  if df1.size > 0:
-    df1.to_excel(writer, sheet_name="closed,datacenter")
+  def NotEqual(x):
+    return lambda y: y != x
 
-  df1 = df[(df['Category'] == 'closed') & (df['Suite'] == 'datacenter') &
-           (df['has_power'])].pivot_table(
-               index=index, columns=power_columns, values=['Result']).fillna('')
-  if df1.size > 0:
-    df1.to_excel(writer, sheet_name="closed,datacenter,power")
+  def MakeUniqueID(x):
+    key_list = ['Suite', 'Category', 'Submitter', 'Platform']
+    if x['Category'] == 'open':
+      key_list.append('UsedModel')
+    return '/'.join(x[key_list])
 
-  df1 = df[(df['Category'] == 'closed') & (df['Suite'] == 'edge') &
-           (df['Units'] == 'QPS')].pivot_table(
-               index=index, columns=columns, values=['Result']).fillna('')
-  if df1.size > 0:
-    df1.to_excel(writer, sheet_name="closed,edge")
-
-  df1 = df[(df['Category'] == 'closed') & (df['Suite'] == 'edge') &
-           (df['has_power'])].pivot_table(
-               index=index, columns=power_columns, values=['Result']).fillna('')
-  if df1.size > 0:
-    df1.to_excel(writer, sheet_name='closed,edge,power')
-
-  # open
-  df['Unique ID (e.g. for Audit)'] = df.apply(
-      lambda x: '/'.join([
-          x['Suite'], x['Category'], x['Submitter'], x['Platform'], x[
-              'UsedModel']
-      ]),
+  df['Unique ID (e.g. for Audit)'] = df.apply(MakeUniqueID, axis=1)
+  df.sort_values(
+      by=[
+          'Category', 'Suite', 'Availability', 'Submitter',
+          'Unique ID (e.g. for Audit)'
+      ],
+      inplace=True)
+  id_dict = {
+      key: 1 + value
+      for (value,
+           key) in enumerate(pd.unique(df['Unique ID (e.g. for Audit)']))
+  }
+  df['ID'] = df.apply(
+      lambda x: '1.1-{:03}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
       axis=1)
-  df1 = df[(df['Category'] == 'open') & (df['Suite'] == 'datacenter') &
-           (df['Units'] == 'QPS')].pivot_table(
-               index=index, columns=columns, values=['Result']).fillna('')
-  if df1.size > 0:
-    df1.to_excel(writer, sheet_name='open,datacenter')
 
-  df1 = df[(df['Category'] == 'open') & (df['Suite'] == 'datacenter') &
-           (df['has_power'])].pivot_table(
-               index=index, columns=power_columns, values=['Result']).fillna('')
-  if df1.size > 0:
-    df1.to_excel(writer, sheet_name='open,datacenter,power')
+  for suite in ['closed', 'open']:
+    for scenario in ['datacenter', 'edge']:
+      MakeWorksheet(
+          df, {
+              'Category': Equal(suite),
+              'Suite': Equal(scenario),
+              'Units': NotEqual('Watts')
+          }, suite + ',' + scenario)
 
-  df1 = df[(df['Category'] == 'open') & (df['Suite'] == 'edge') &
-           (df['Units'] == 'QPS')].pivot_table(
-               index=index, columns=columns, values=['Result']).fillna('')
-  if df1.size > 0:
-    df1.to_excel(writer, sheet_name='open,edge')
-
-  df1 = df[(df['Category'] == 'open') & (df['Suite'] == 'edge') &
-           (df['has_power'])].pivot_table(
-               index=index, columns=power_columns, values=['Result']).fillna('')
-  if df1.size > 0:
-    df1.to_excel(writer, sheet_name='open,edge,power')
+      MakeWorksheet(
+          df, {
+              'Category': Equal(suite),
+              'Suite': Equal(scenario),
+              'has_power': Equal(True)
+          }, suite + ',' + scenario + ',power')
 
   format = writer.book.add_format({'num_format': '#,##0.00'})
   for ws in writer.book.worksheets():
+    ws.set_column(1, 1, None, None, {'hidden': 1})
     ws.set_column(len(index), 100, None, format)
 
   writer.save()

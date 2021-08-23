@@ -30,9 +30,9 @@ This script works best with Python 3.3 or later. For `--unixmode`,  the accuracy
 This script also assumes that the submission runs have already been run and that results comply with the submission directory structure as described in [https://github.com/mlperf/policies/blob/master/submission_rules.adoc#562-inference](https://github.com/mlperf/policies/blob/master/submission_rules.adoc#562-inference)
 ## Non-determinism
 Under MLPerf inference rules, certain forms of non-determinism is acceptable, which can cause inference results to differ across runs. It is foreseeable that the results obtained during the accuracy run can be different from that obtained during the performance run, which will cause the accuracy checking script to report failure. Test failure will automatically result in an objection, but the objection can be overruled by providing proof of the quality of inference results. 
-`create_accuracy_baseline.sh` is provided for this purpose. By running:
+`create_accuracy_baseline.py` is provided for this purpose. By running:
 
-    bash ./create_accuracy_baseline.sh <path to mlperf_log_accuracy.json from the accuracy run> <path to mlperf_log_accuracy.json from the compliance test run>
+    `python3 ./create_accuracy_baseline.py <path to mlperf_log_accuracy.json from the accuracy run> <path to mlperf_log_accuracy.json from the compliance test run>`
 
  this script creates a baseline accuracy log called `mlperf_log_accuracy_baseline.json` using only a subset of the results from `mlperf_log_accuracy.json` from the accuracy run that corresponds to the QSL indices contained in `mlperf_log_accuracy.json` in the compliance test run. This provides an apples-to-apples accuracy log comparison between the accuracy run and compliance run.
 The submitter can then run the reference accuracy script on `mlperf_log_accuracy_baseline.json` and the compliance test run's `mlperf_log_accuracy.json` and report the F1/mAP/DICE/WER/Top1%/AUC score. 
@@ -68,7 +68,7 @@ Expected outcome:
 
 1. Create the baseline accuracy log for comparison to the compliance accuracy log, which will be named mlperf_log_accuracy_baseline.json:
 
- `bash ./create_accuracy_baseline.sh <path to mlperf_log_accuracy.json from the accuracy run> <path to mlperf_log_accuracy.json from the compliance test run>`
+ `python3 ./create_accuracy_baseline.py <path to mlperf_log_accuracy.json from the accuracy run> <path to mlperf_log_accuracy.json from the compliance test run>`
 
 2. Run the reference accuracy script (i.e. the script that produces the F1/mAP/DICE/WER/Top1%/AUC score) on mlperf_log_accuracy_baseline.json, capture output and save to `<submitting_organization>/compliance/<system_desc_id>/<benchmark>/<scenario>/TEST01/accuracy/baseline_accuracy.txt` for upload.
 3. Run accuracy script on mlperf_log_accuracy.json from the compliance run, capture output and save to `<submitting_organization>/compliance/<system_desc_id>/<benchmark>/<scenario>/TEST01/accuracy/compliance_accuracy.txt` for upload.

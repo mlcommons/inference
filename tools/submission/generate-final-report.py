@@ -128,10 +128,21 @@ def main():
               'has_power': Equal(True)
           }, suite + ',' + scenario + ',power')
 
-  format = writer.book.add_format({'num_format': '#,##0.00'})
+  score_format = writer.book.add_format({'num_format': '#,##0.00'})
+  bg_format = writer.book.add_format({'bg_color': '#efefef'})
   for ws in writer.book.worksheets():
     ws.set_column(1, 1, None, None, {'hidden': 1})
-    ws.set_column(len(index), 100, None, format)
+    ws.set_column(len(index), 100, None, score_format)
+    ws.conditional_format(
+        2 + len(columns), 0, 200, 100, {
+            'type':
+                'formula',
+            'criteria':
+                '=mod(countunique($c$' + str(len(columns) + 3) + ':$c' +
+                str(len(columns) + 3) + '), 2) = 0',
+            'format':
+                bg_format,
+        })
 
   writer.save()
 

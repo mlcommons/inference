@@ -72,5 +72,8 @@ Expected outcome:
 
 2. Run the reference accuracy script (i.e. the script that produces the F1/mAP/DICE/WER/Top1%/AUC score) on mlperf_log_accuracy_baseline.json, capture output and save to `<submitting_organization>/compliance/<system_desc_id>/<benchmark>/<scenario>/TEST01/accuracy/baseline_accuracy.txt` for upload.
 3. Run accuracy script on mlperf_log_accuracy.json from the compliance run, capture output and save to `<submitting_organization>/compliance/<system_desc_id>/<benchmark>/<scenario>/TEST01/accuracy/compliance_accuracy.txt` for upload.
+4. Run the baseline accuracy checker script from within the test directory. The compliance test accuracy is compared with the baseline accuracy and verify_accuracy.txt updated with the result.
+
+  `python3 ./verify_accuracy_baseline.py <compliance test root dir> <benchmark name> <target accuracy>`
 
 **The delta between the two accuracy metrics should be within 1% for the 99% target accuracy category and within 0.1% for the 99.9% target accuracy category.**

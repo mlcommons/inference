@@ -964,11 +964,17 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
     if system_json.get("sw_notes"):
       notes = notes + ". " + system_json.get("sw_notes")
     unit_dict = {
-        "SingleStream": "QPS",
+        "SingleStream": "Latency (ms)",
         "Offline": "Samples/s",
         "Server": "Queries/s",
     }
+    power_unit_dict = {
+        "SingleStream": "Joules",
+        "Offline": "Watts",
+        "Server": "Watts",
+    }
     unit = unit_dict[scenario_fixed]
+    power_unit = power_unit_dict[scenario_fixed]
 
     csv.write(
         fmt.format(submitter, available, division, system_type,
@@ -1001,7 +1007,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                      '"' + system_json.get("framework", "") + '"',
                      '"' + system_json.get("operating_system", "") + '"',
                      '"' + notes + '"', compilance, errors, config.version,
-                     infered, power_metric > 0, "Watts"))
+                     infered, power_metric > 0, power_unit))
 
   # we are at the top of the submission directory
   for division in list_dir("."):

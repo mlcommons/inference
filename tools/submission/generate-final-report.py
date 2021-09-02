@@ -90,6 +90,9 @@ def main():
   def NotEqual(x):
     return lambda y: y != x
 
+  def And(x, y):
+    return lambda z: x(z) & y(z)
+
   def MakeUniqueID(x):
     key_list = ['Suite', 'Category', 'Submitter', 'Platform']
     if x['Category'] == 'open':
@@ -118,7 +121,7 @@ def main():
           df, {
               'Category': Equal(suite),
               'Suite': Equal(scenario),
-              'Units': NotEqual('Watts')
+              'Units': And(NotEqual('Watts'), NotEqual('Joules'))
           }, suite + ',' + scenario)
 
       MakeWorksheet(

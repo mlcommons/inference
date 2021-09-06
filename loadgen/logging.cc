@@ -128,7 +128,7 @@ const std::string ArgValueTransform(const char* value) {
   return std::string("\"") + std::string(value) + std::string("\"");
 }
 
-const std::string ArgValueTransform(const std::vector<uint64_t>& value) {
+const std::string ArgValueTransform(const std::vector<size_t>& value) {
   std::string s("[");
   for (auto i : value) {
     s += std::to_string(i) + ",";

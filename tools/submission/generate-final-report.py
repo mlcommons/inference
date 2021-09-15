@@ -121,7 +121,7 @@ def main():
           df, {
               'Category': Equal(suite),
               'Suite': Equal(scenario),
-              'Units': And(NotEqual('Watts'), NotEqual('Joules'))
+              'Units': And(And(NotEqual('Watts'), NotEqual('Joules')), NotEqual('Joules/Stream'))
           }, suite + ',' + scenario)
 
       MakeWorksheet(

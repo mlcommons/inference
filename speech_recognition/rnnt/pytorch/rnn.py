@@ -99,7 +99,7 @@ class StackTime(torch.nn.Module):
         r = torch.transpose(x, 0, 1)
         s = r.shape
         zeros = torch.zeros(
-			s[0], (-s[1]) % self.factor, s[2], dtype=r.dtype, device=r.device)
+            s[0], (-s[1]) % self.factor, s[2], dtype=r.dtype, device=r.device)
         r = torch.cat([r, zeros], 1)
         s = r.shape
         rs = [s[0], s[1] // self.factor, s[2] * self.factor]

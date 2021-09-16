@@ -25,16 +25,19 @@ def main():
   df = pd.read_csv(args.input).fillna("")
 
   # rename some fields
-  df.rename(columns={
-      "Organization": "Submitter",
-      "Division": "Category",
-      "SystemType": "Suite",
-      "SystemName": "System",
-      "host_processor_model_name": "Processor",
-      "accelerator_model_name": "Accelerator",
-      "accelerators_per_node": "a#",
-      "notes": "Notes",
-  }, inplace=True)
+  df.rename(
+      columns={
+          "Organization": "Submitter",
+          "Division": "Category",
+          "SystemType": "Suite",
+          "SystemName": "System",
+          "host_processor_model_name": "Processor",
+          "accelerator_model_name": "Accelerator",
+          "accelerators_per_node": "a#",
+          "notes": "Notes",
+          'framework': 'Software',
+      },
+      inplace=True)
   df.rename(columns={"Model": "UsedModel"}, inplace=True)
   df.rename(columns={"MlperfModel": "Model"}, inplace=True)
 
@@ -66,6 +69,7 @@ def main():
       'p#',
       'Accelerator',
       'a#',
+      'Software',
       'Notes',
       'Details',
   ]

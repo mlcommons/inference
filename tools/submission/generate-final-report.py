@@ -78,6 +78,41 @@ def main():
       'Scenario',
       'Units',
   ]
+  columns_order = [
+    [
+      'Result'
+    ],
+
+    [
+      'resnet',
+      'ssd-small',
+      'ssd-large',
+      '3d-unet-99',
+      '3d-unet-99.9',
+      'rnnt',
+      'bert-99',
+      'bert-99.9',
+      'dlrm-99',
+      'dlrm-99.9'
+    ],
+
+    [
+      'SingleStream',
+      'MultiStream',
+      'Server',
+      'Offline'
+    ],
+    
+    [
+      'Latency (ms)',
+      'Streams',
+      'Samples/s',
+      'Queries/s',
+      'Joules',
+      'Joules/Stream',
+      'Watts',
+    ]
+  ]
 
   def MakeWorksheet(df, filter_dict, sheet_name):
     for key, value in filter_dict.items():
@@ -86,6 +121,8 @@ def main():
     df = df.fillna('')
     if df.size == 0:
       return
+    for i, order in enumerate(columns_order):
+      df = df.reindex(columns = order, level = i)
     df.to_excel(writer, sheet_name=sheet_name)
 
   def Equal(x):

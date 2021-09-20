@@ -104,7 +104,6 @@ class StackTime(torch.nn.Module):
         s = r.shape
         rs = [s[0], s[1] // self.factor, s[2] * self.factor]
         r = torch.reshape(r, rs)
-        numer = x_lens + (self.factor * 2 - 1)
-        x_lens = torch.div(numer, self.factor, rounding_mode="trunc") - 1
         rt = torch.transpose(r, 0, 1)
+        x_lens = torch.ceil(x_lens.float() / self.factor).int()
         return rt, x_lens

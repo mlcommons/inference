@@ -59,7 +59,8 @@ def main():
   output = args.input[:-4]
   writer = pd.ExcelWriter(output + '.xlsx', engine='xlsxwriter')
 
-  index = [
+  indices = {}
+  indices['closed'] = [
       'ID',
       'Unique ID (e.g. for Audit)',
       'Submitter',
@@ -71,8 +72,11 @@ def main():
       'a#',
       'Software',
       'Notes',
-      'Details',
   ]
+  indices['open'] = indices['closed'].copy()
+  indices['closed'].append('Details')
+  indices['open'].append('UsedModel')
+  indices['open'].append('Details')
   columns = [
       'Model',
       'Scenario',
@@ -102,7 +106,7 @@ def main():
       'Server',
       'Offline'
     ],
-    
+
     [
       'Latency (ms)',
       'Streams',
@@ -114,7 +118,7 @@ def main():
     ]
   ]
 
-  def MakeWorksheet(df, filter_dict, sheet_name):
+  def MakeWorksheet(df, index, filter_dict, sheet_name):
     for key, value in filter_dict.items():
       df = df[value(df[key])]
     df = df.pivot_table(index=index, columns=columns, values=['Result'])
@@ -156,27 +160,32 @@ def main():
       lambda x: '1.1-{:03}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
       axis=1)
 
-  for suite in ['closed', 'open']:
-    for scenario in ['datacenter', 'edge']:
+  for category in ['closed', 'open']:
+    for suite in ['datacenter', 'edge']:
       MakeWorksheet(
-          df, {
-              'Category': Equal(suite),
-              'Suite': Equal(scenario),
-              'Units': And(And(NotEqual('Watts'), NotEqual('Joules')), NotEqual('Joules/Stream'))
-          }, suite + ',' + scenario)
+          df, indices[category], {
+              'Category':
+                  Equal(category),
+              'Suite':
+                  Equal(suite),
+              'Units':
+                  And(
+                      And(NotEqual('Watts'), NotEqual('Joules')),
+                      NotEqual('Joules/Stream'))
+          }, category + ',' + suite)
 
       MakeWorksheet(
-          df, {
-              'Category': Equal(suite),
-              'Suite': Equal(scenario),
+          df, indices[category], {
+              'Category': Equal(category),
+              'Suite': Equal(suite),
               'has_power': Equal(True)
-          }, suite + ',' + scenario + ',power')
+          }, category + ',' + suite + ',power')
 
   score_format = writer.book.add_format({'num_format': '#,##0.00'})
   bg_format = writer.book.add_format({'bg_color': '#efefef'})
   for ws in writer.book.worksheets():
     ws.set_column(1, 1, None, None, {'hidden': 1})
-    ws.set_column(len(index), 100, None, score_format)
+    ws.set_column(len(indices['closed']), 100, None, score_format)
     ws.conditional_format(
         2 + len(columns), 0, 200, 100, {
             'type':

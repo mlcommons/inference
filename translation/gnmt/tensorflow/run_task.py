@@ -33,30 +33,42 @@ parser.add_argument('--num_intra_threads', type=str, default='0',
                         help="Specify inference num_intra_threads"
 )
 
+parser.add_argument('--dataset_path', type=str, default=os.getcwd(),
+                        help="Specify dataset directory path"
+)
+
+parser.add_argument('--model_path', type=str, default=os.getcwd(),
+                        help="Specify model directory path"
+)
+
+parser.add_argument('--output_path', type=str, default=os.getcwd(),
+                        help="Specify output directory path"
+)
+
 
 
 args = parser.parse_args()
 
-cpk_path = os.path.join(os.getcwd(), 'ende_gnmt_model_4_layer',
+cpk_path = os.path.join(args.model_path, 'ende_gnmt_model_4_layer',
                         'translate.ckpt')
 
-haparams_path = os.path.join(os.getcwd(), 'nmt', 'standard_hparams',
+haparams_path = os.path.join(args.dataset_path, 'nmt', 'standard_hparams',
                              'wmt16_gnmt_4_layer.json')
 
-vocab_prefix = os.path.join(os.getcwd(), 'nmt', 'data', 'vocab.bpe.32000')
+vocab_prefix = os.path.join(args.dataset_path, 'nmt', 'data', 'vocab.bpe.32000')
 
-inference_ref_file = os.path.join(os.getcwd(), 'nmt', 'data',
+inference_ref_file = os.path.join(args.dataset_path, 'nmt', 'data',
                                    'newstest2014.tok.bpe.32000.de')
 
-inference_input_file = os.path.join(os.getcwd(), 'nmt', 'data',
+inference_input_file = os.path.join(args.dataset_path, 'nmt', 'data',
                                      'newstest2014.tok.bpe.32000.en')
 
-out_dir = os.path.join(os.getcwd(), 'nmt', 'data', 'result', 'output')
+out_dir = os.path.join(args.output_path, 'nmt', 'data', 'result', 'output')
 
-inference_output_file = os.path.join(os.getcwd(), 'nmt', 'data', 'output',
+inference_output_file = os.path.join(args.output_path, 'nmt', 'data', 'output',
                                      'g_nmt-out')
 
-outpath = os.path.join(os.getcwd(), 'nmt', 'data', "output",
+outpath = os.path.join(args.output_path, 'nmt', 'data', "output",
                        "console_out_gnmt.txt")
 
 cmd = "python -m nmt.nmt \

@@ -21,7 +21,11 @@ tasks:
   download_model:
     parameters:
       outputs: {model_dir: model/}
-  run_inference:
+  run_performance:
+    parameters:
+      inputs: {data_dir: data/, model_dir: model/, parameters_file: {type: file, default: parameters.yaml}}
+      outputs: {output_dir: output/}
+  run_accuracy:
     parameters:
       inputs: {data_dir: data/, model_dir: model/, parameters_file: {type: file, default: parameters.yaml}}
       outputs: {output_dir: output/}

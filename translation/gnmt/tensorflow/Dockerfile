@@ -9,6 +9,6 @@ COPY requirements.txt /requirements.txt
 RUN pip install --no-cache-dir -r /requirements.txt
 
 COPY . .
-RUN chmod +x ./download_dataset.sh ./verify_dataset.sh  ./download_trained_model.sh
+RUN chmod +x ./download_dataset.sh ./verify_dataset.sh  ./download_trained_model.sh ./run.sh
 
 ENTRYPOINT ["python", "mlcube.py"]

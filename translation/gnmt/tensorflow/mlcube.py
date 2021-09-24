@@ -66,21 +66,15 @@ class RunPerformanceTask(object):
         
         env = os.environ.copy()
         env.update({
-            'DATA_DIR': data_dir,
-            'MODEL_DIR': model_dir,
+            'DATA_DIR': os.path.join(data_dir, 'nmt', 'data'),
+            'MODEL_DIR': os.path.join(model_dir, 'ende_gnmt_model_4_layer'),
             'OUTPUT_DIR': output_dir,
+            'TASK': "performance"
         })
 
         env.update(parameters)
 
-        """process = subprocess.Popen("./run.sh", cwd=".", env=env)
-        process.wait()"""
-
-        data_dir = os.path.join(data_dir, 'nmt', 'data')
-        model_dir = os.path.join(model_dir, 'ende_gnmt_model_4_layer')
-        command = f"python run_task.py --run=performance --batch_size={parameters['batch_size']} --dataset_path={data_dir} --model_path={model_dir} --output_path={output_dir}"
-        splitted_command = command.split()
-        process = subprocess.Popen(splitted_command, cwd=".")
+        process = subprocess.Popen("./run.sh", cwd=".", env=env)
         process.wait()
 
 
@@ -101,18 +95,15 @@ class RunAccuracyTask(object):
         
         env = os.environ.copy()
         env.update({
-            'DATA_DIR': data_dir,
-            'MODEL_DIR': model_dir,
+            'DATA_DIR': os.path.join(data_dir, 'nmt', 'data'),
+            'MODEL_DIR': os.path.join(model_dir, 'ende_gnmt_model_4_layer'),
             'OUTPUT_DIR': output_dir,
+            'TASK': "accuracy"
         })
 
         env.update(parameters)
 
-        data_dir = os.path.join(data_dir, 'nmt', 'data')
-        model_dir = os.path.join(model_dir, 'ende_gnmt_model_4_layer')
-        command = f"python run_task.py --run=accuracy --dataset_path={data_dir} --model_path={model_dir} --output_path={output_dir}"
-        splitted_command = command.split()
-        process = subprocess.Popen(splitted_command, cwd=".")
+        process = subprocess.Popen("./run.sh", cwd=".", env=env)
         process.wait()
 
 

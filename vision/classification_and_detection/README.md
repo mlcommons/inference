@@ -69,41 +69,6 @@ python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --
 | coco (validation) | http://images.cocodataset.org/zips/val2017.zip | 
 | coco (annotations) | http://images.cocodataset.org/annotations/annotations_trainval2017.zip |
 
-### Using Collective Knowledge (CK)
-
-Alternatively, you can download the datasets using the [Collective Knowledge](http://cknowledge.org)
-framework (CK) for collaborative and reproducible research.
-
-First, install CK and pull its repositories containing dataset packages:
-```bash
-$ python -m pip install ck --user
-$ ck version
-V1.9.8.1
-$ ck pull repo:ck-env
-```
-
-#### ImageNet 2012 validation dataset
-Download the original dataset and auxiliaries:
-```bash
-$ ck install package --tags=image-classification,dataset,imagenet,val,original,full
-$ ck install package --tags=image-classification,dataset,imagenet,aux
-```
-Copy the labels next to the images:
-```bash
-$ ck locate env --tags=image-classification,dataset,imagenet,val,original,full
-/home/dvdt/CK-TOOLS/dataset-imagenet-ilsvrc2012-val
-$ ck locate env --tags=image-classification,dataset,imagenet,aux
-/home/dvdt/CK-TOOLS/dataset-imagenet-ilsvrc2012-aux
-$ cp `ck locate env --tags=aux`/val.txt `ck locate env --tags=val`/val_map.txt
-```
-
-#### COCO 2017 validation dataset
-```bash
-$ ck install package --tags=object-detection,dataset,coco,2017,val,original
-$ ck locate env --tags=object-detection,dataset,coco,2017,val,original
-/home/dvdt/CK-TOOLS/dataset-coco-2017-val
-```
-
 ## Prerequisites and Installation
 We support [tensorfow+tflite](https://github.com/tensorflow/tensorflow), [onnxruntime](https://github.com/Microsoft/onnxruntime)  and [pytoch](http://pytorch.org) backend's with the same benchmark tool.
 Support for other backends can be easily added.
@@ -262,6 +227,12 @@ comma separated list of which latencies (in seconds) we try to reach in the 99 p
 
 ```--max-batchsize MAX_BATCHSIZE```
 maximum batchsize we generate to backend (default: 128).
+
+
+## Optional harness: Collective Knowledge
+
+Alternatively, you can try the [MLCommons Collective Knowledge framework](https://github.com/mlcommons/ck/blob/master/docs/mlperf-automation/README.md) 
+to automatically install MLPerf models, data sets and frameworks, run some MLPerf inference benchmarks, and visualize results.
 
 
 ## License

@@ -96,12 +96,14 @@ class StackTime(torch.nn.Module):
 
     def forward(self, x, x_lens):
         # T, B, U
-        seq = [x]
-        for i in range(1, self.factor):
-            # This doesn't seem to make much sense...
-            tmp = torch.zeros_like(x)
-            tmp[:-i, :, :] = x[i:, :, :]
-            seq.append(tmp)
+        r = torch.transpose(x, 0, 1)
+        s = r.shape
+        zeros = torch.zeros(
+            s[0], (-s[1]) % self.factor, s[2], dtype=r.dtype, device=r.device)
+        r = torch.cat([r, zeros], 1)
+        s = r.shape
+        rs = [s[0], s[1] // self.factor, s[2] * self.factor]
+        r = torch.reshape(r, rs)
+        rt = torch.transpose(r, 0, 1)
         x_lens = torch.ceil(x_lens.float() / self.factor).int()
-        # Gross, this is horrible. What a waste of memory...
-        return torch.cat(seq, dim=2)[::self.factor, :, :], x_lens
+        return rt, x_lens

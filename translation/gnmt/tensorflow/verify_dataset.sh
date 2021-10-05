@@ -2,6 +2,8 @@
 
 set -e
 
+data_dir=${DATA_DIR:-./}
+pushd $data_dir
 ACTUAL_SRC_TEST=`cat nmt/data/newstest2014.tok.bpe.32000.en |md5sum`
 EXPECTED_SRC_TEST='cb014e2509f86cd81d5a87c240c07464  -'
 if [[ $ACTUAL_SRC_TEST = $EXPECTED_SRC_TEST ]]; then
@@ -43,3 +45,4 @@ else
   echo "ERROR: expected $EXPECTED_VOCAB_EN"
   echo "ERROR: found $ACTUAL_VOCAB_EN"
 fi
+popd

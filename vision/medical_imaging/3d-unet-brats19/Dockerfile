@@ -33,8 +33,10 @@ RUN python3 -m pip install onnx numpy==1.18.0 Pillow==7.0.0 tensorflow
 RUN python3 -m pip install tensorflow-addons https://github.com/onnx/onnx-tensorflow/archive/master.zip
 
 # Install onnxruntime
-# TODO: Switch to release version with 3D TransposedConvolution support.
-RUN python3 -m pip install -i https://test.pypi.org/simple/ ort-nightly
+RUN python3 -m pip install onnxruntime>=1.7.0
+
+# Install batchgenerators to be compatible with nnUnet
+RUN python3 -m pip install batchgenerators<=0.21
 
 # Install nnUnet
 COPY nnUnet /workspace/nnUnet

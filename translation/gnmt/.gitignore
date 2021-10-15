@@ -1,3 +1,2 @@
-mlcube/workspace/data
-mlcube/workspace/model
-mlcube/workspace/output
+mlcube/workspace/*
+!mlcube/workspace/parameters.yaml

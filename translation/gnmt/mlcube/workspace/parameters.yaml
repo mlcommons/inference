@@ -1,1 +1,5 @@
-batch_size: "32"
+batch_size: "32" # Default -> 32
+mode: "performance" # performance or accuracy
+scenario: "Offline" # Default -> SingleStream, other options: Offline, MultiStream, Server
+debug_settings: "--debug_settings" # Default -> Empty string: False, --debug_settings: True
+store_translation: "" # Default -> Empty string: False, --store_translation: True

@@ -2,7 +2,7 @@
 FROM tensorflow/tensorflow:1.14.0-gpu-py3
 
 RUN apt-get update
-RUN apt-get update && apt-get install -y --no-install-recommends wget \
+RUN apt-get update && apt-get install -y --no-install-recommends wget git\
     unzip
 
 COPY requirements.txt /requirements.txt

@@ -21,11 +21,11 @@ tasks:
   download_model:
     parameters:
       outputs: {model_dir: model/}
-  run_performance:
+  run_inference:
     parameters:
       inputs: {data_dir: data/, model_dir: model/, parameters_file: {type: file, default: parameters.yaml}}
       outputs: {output_dir: output/}
-  run_accuracy:
+  run_loadgen:
     parameters:
       inputs: {data_dir: data/, model_dir: model/, parameters_file: {type: file, default: parameters.yaml}}
-      outputs: {output_dir: output/}
+      outputs: {output_dir: mlperf-submission/}

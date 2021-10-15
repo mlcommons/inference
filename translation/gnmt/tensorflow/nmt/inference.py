@@ -104,7 +104,7 @@ def start_sess_and_load_model(infer_model, ckpt_path, hparams):
          num_intra_threads=hparams.num_intra_threads,
          num_inter_threads=hparams.num_inter_threads)
          )
-  with infer_model.graph.as_default():
+  with infer_model.graph.as_default(): #hereñ
     loaded_infer_model = model_helper.load_model(
         infer_model.model, ckpt_path, sess, "infer")
   return sess, loaded_infer_model

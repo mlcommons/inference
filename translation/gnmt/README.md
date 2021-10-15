@@ -2,22 +2,26 @@
 
 ## Project setup
 
-```Python
+```bash
 # Create Python environment 
 virtualenv -p python3 ./env && source ./env/bin/activate
 
-# Install MLCube and MLCube docker runner from GitHub repository (normally, users will just run `pip install mlcube mlcube_docker`)
-git clone https://github.com/mlcommons/mlcube && cd mlcube/mlcube
-python setup.py bdist_wheel  && pip install --force-reinstall ./dist/mlcube-* && cd ..
-cd ./runners/mlcube_docker && python setup.py bdist_wheel  && pip install --force-reinstall --no-deps ./dist/mlcube_docker-* && cd ../../..
+# Install MLCube and MLCube docker runner from PyPI
+pip install mlcube==0.0.4 mlcube-docker==0.0.4
 
 # Fetch the translation workload
 git clone https://github.com/mlcommons/inference && cd ./inference
-git fetch origin pull/1022/head:feature/mlcube_translation && git checkout feature/mlcube_translation
+git fetch origin pull/1025/head:feature/mlcube_translation && git checkout feature/mlcube_translation
 cd ./translation/gnmt/mlcube
 ```
 
 ## Tasks execution
+
+**Important:** We are targeting pull-type installation, so MLCubes should be available on docker hub. If not, try this:
+
+```bash
+mlcube run ... -Pdocker.build_strategy=auto # or =always
+```
 
 ```bash
 # Download dataset. Default path = /workspace/data
@@ -30,17 +34,11 @@ mlcube run --task download_model
 
 # Evaluate performance. Default ouptut path = ./workspace/output
 # Parameters to override: data_dir=DATA_DIR, model_dir=MODEL_DIR, parameters_file=PATH_TO_FILE, output_dir=OUTPUT_DIR
-mlcube run --task run_performance
+mlcube run --task run_inference
 
 # Evaluate accuracy. Default ouptut path = ./workspace/output
 # Parameters to override: data_dir=DATA_DIR, model_dir=MODEL_DIR, parameters_file=PATH_TO_FILE, output_dir=OUTPUT_DIR
-mlcube run --task run_accuracy
-```
-
-**Important:** We are targeting pull-type installation, so MLCubes should be available on docker hub. If not, try this:
-
-```bash
-mlcube run ... -Pdocker.build_strategy=auto
+mlcube run --task run_loadgen
 ```
 
 Also, users can override the workspace directory by using:

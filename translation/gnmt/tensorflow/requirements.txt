@@ -1,2 +1,3 @@
 PyYAML==5.4.1
 typer==0.3.2
+git+https://github.com/mlcommons/inference.git@master#egg=mlperf-loadgen&subdirectory=loadgen

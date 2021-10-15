@@ -49,62 +49,37 @@ class DownloadModelTask(object):
         process.wait()
 
 
-class RunPerformanceTask(object):
-    """Run performance task Class
+class RunInferenceTask(object):
+    """Run inference (performance or accuracy) task Class
     It defines the environment variables:
         DATA_DIR: Dataset directory path
         MODEL_DIR: Model directory path
         OUTPUT_DIR: Directory path where model will be saved
+        mode: performance or accuracy
+        loadgen: Use loadgen
         All other parameters defined in parameters_file
     Then executes the benchmark script"""
 
     @staticmethod
-    def run(data_dir: str, model_dir: str, output_dir: str, parameters_file: str) -> None:
+    def run(data_dir: str, model_dir: str, output_dir: str, parameters_file: str, loadgen: bool) -> None:
         with open(parameters_file, "r") as stream:
             parameters = yaml.safe_load(stream)
-
         
         env = os.environ.copy()
         env.update({
             'DATA_DIR': os.path.join(data_dir, 'nmt', 'data'),
             'MODEL_DIR': os.path.join(model_dir, 'ende_gnmt_model_4_layer'),
-            'OUTPUT_DIR': output_dir,
-            'TASK': "performance"
+            'OUTPUT_DIR': output_dir
         })
 
         env.update(parameters)
 
-        process = subprocess.Popen("./run.sh", cwd=".", env=env)
-        process.wait()
-
-
-class RunAccuracyTask(object):
-    """Run performance task Class
-    It defines the environment variables:
-        DATA_DIR: Dataset directory path
-        MODEL_DIR: Model directory path
-        OUTPUT_DIR: Directory path where model will be saved
-        All other parameters defined in parameters_file
-    Then executes the benchmark script"""
-
-    @staticmethod
-    def run(data_dir: str, model_dir: str, output_dir: str, parameters_file: str) -> None:
-        with open(parameters_file, "r") as stream:
-            parameters = yaml.safe_load(stream)
-
-        
-        env = os.environ.copy()
-        env.update({
-            'DATA_DIR': os.path.join(data_dir, 'nmt', 'data'),
-            'MODEL_DIR': os.path.join(model_dir, 'ende_gnmt_model_4_layer'),
-            'OUTPUT_DIR': output_dir,
-            'TASK': "accuracy"
-        })
-
-        env.update(parameters)
-
-        process = subprocess.Popen("./run.sh", cwd=".", env=env)
-        process.wait()
+        if loadgen:
+            process = subprocess.Popen("./run_loadgen.sh", cwd=".", env=env)
+            process.wait()
+        else:
+            process = subprocess.Popen("./run.sh", cwd=".", env=env)
+            process.wait()
 
 
 @app.command("download_data")
@@ -116,24 +91,23 @@ def download_data(data_dir: str = typer.Option(..., "--data_dir")):
 def download_model(model_dir: str = typer.Option(..., "--model_dir")):
     DownloadModelTask.run(model_dir)
 
-
-@app.command("run_performance")
-def run_performance(
-    data_dir: str = typer.Option(..., "--data_dir"),
-    model_dir: str = typer.Option(..., "--model_dir"),
-    output_dir: str = typer.Option(..., "--output_dir"),
-    parameters_file: str = typer.Option(..., "--parameters_file"),
-):
-    RunPerformanceTask.run(data_dir, model_dir, output_dir, parameters_file)
-
-@app.command("run_accuracy")
+@app.command("run_inference")
 def run_accuracy(
     data_dir: str = typer.Option(..., "--data_dir"),
     model_dir: str = typer.Option(..., "--model_dir"),
     output_dir: str = typer.Option(..., "--output_dir"),
     parameters_file: str = typer.Option(..., "--parameters_file"),
 ):
-    RunAccuracyTask.run(data_dir, model_dir, output_dir, parameters_file)
+    RunInferenceTask.run(data_dir, model_dir, output_dir, parameters_file, loadgen=False)
+
+@app.command("run_loadgen")
+def run_loadgen_performance(
+    data_dir: str = typer.Option(..., "--data_dir"),
+    model_dir: str = typer.Option(..., "--model_dir"),
+    output_dir: str = typer.Option(..., "--output_dir"),
+    parameters_file: str = typer.Option(..., "--parameters_file"),
+):
+    RunInferenceTask.run(data_dir, model_dir, output_dir, parameters_file, loadgen=True)
 
 
 if __name__ == "__main__":

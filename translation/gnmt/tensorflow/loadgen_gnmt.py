@@ -29,7 +29,7 @@ import array
 NANO_SEC = 1e9
 
 def process_latencies_gnmt(latencies_ns):
-    print("Please consult loadgen log (./mlperf_log_summary.txt) for performance results.")
+    print("Please consult loadgen logs for performance results.")
 
 ##
 # @brief Translation task that contains 1 sentence ID.
@@ -148,7 +148,7 @@ class GNMTWrapper:
         infer_model = model_helper.create_infer_model(model_creator, hparams, scope=None)
         sess, loaded_infer_model = start_sess_and_load_model(infer_model, flags.ckpt,
                                                        hparams)
-
+        print("SALIÑ")
         # Parameters needed by TF GNMT
         self.hparams = hparams
 
@@ -449,14 +449,18 @@ if __name__ == "__main__":
 
     parser.add_argument("--max-latency", type=str, default="0.100", help="mlperf max latency in 99pct tile")
 
+    parser.add_argument('--output_path', type=str,
+                    default=os.path.join(os.getcwd(), 'lg_output'),
+                    help="Specify output directory path")
+
     args = parser.parse_args()
 
-    outdir = os.path.join(os.getcwd(), 'lg_output')
+    outdir = args.output_path
 
     # Create loadGen settings
     settings = mlperf_loadgen.TestSettings()
     try:
-        settings.mode = MODE_MAP[args.mode]
+        settings.mode = MODE_MAP[(args.mode).capitalize()]
         settings.scenario = SCENARIO_MAP[args.scenario]
     except KeyError as e:
         print("Unknown mode or scenario: {}".format(e.args[0]))

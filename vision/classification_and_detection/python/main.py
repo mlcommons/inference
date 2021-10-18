@@ -533,9 +533,9 @@ def main():
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
         settings.multi_stream_target_latency_ns = int(args.max_latency * NANO_SEC)
 
-    performance_sample_count = args.performance_sample_count if args.performance_sample_count else count
+    performance_sample_count = args.performance_sample_count if args.performance_sample_count else min(count, 500)
     sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
-    qsl = lg.ConstructQSL(performance_sample_count, min(performance_sample_count, 200), ds.load_query_samples, ds.unload_query_samples)
+    qsl = lg.ConstructQSL(count, performance_sample_count, ds.load_query_samples, ds.unload_query_samples)
 
     log.info("starting {}".format(scenario))
     result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}

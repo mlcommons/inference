@@ -1,0 +1,3 @@
+mode: "performance" # performance or accuracy
+scenario: "Offline" # Default -> SingleStream, other options: Offline, MultiStream, Server
+debug_settings: "--debug_settings" # Default -> Empty string: False, --debug_settings: True

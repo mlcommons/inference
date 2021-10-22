@@ -1,4 +1,4 @@
-# Current implementation
+# MLCube implementation
 
 ## Project setup
 
@@ -6,18 +6,18 @@
 # Create Python environment 
 virtualenv -p python3 ./env && source ./env/bin/activate
 
-# Install MLCube and MLCube docker runner from PyPI
-pip install mlcube==0.0.4 mlcube-docker==0.0.4
+# Install MLCube docker runner from PyPI
+pip install mlcube-docker
 
 # Fetch the translation workload
 git clone https://github.com/mlcommons/inference && cd ./inference
-git fetch origin pull/1025/head:feature/mlcube_translation && git checkout feature/mlcube_translation
-cd ./translation/gnmt/mlcube
+git fetch origin pull/1030/head:feature/mlcube_vision && git checkout feature/mlcube_vision
+cd ./vision/classification_and_detection/mlcube
 ```
 
 ## Tasks execution
 
-**Important:** We are targeting pull-type installation, so MLCubes should be available on docker hub. If not, try this:
+**Important:** We are targeting pull-type installation, so MLCubes should be available on Docker Hub. If not, try this:
 
 ```bash
 mlcube run ... -Pdocker.build_strategy=auto # or =always

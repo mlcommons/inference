@@ -34,6 +34,7 @@ CALIBRATION_DATA_DIR := $(BUILD_DIR)/calibration_data
 MODEL_DIR := $(BUILD_DIR)/model
 MLPERF_CONF := $(BUILD_DIR)/mlperf.conf
 PYTORCH_MODEL := $(MODEL_DIR)/3dunet_kits19_pytorch.ptc
+PYTORCH_CHECKPOINT_MODEL := $(MODEL_DIR)/3dunet_kits19_pytorch_checkpoint.pth
 ONNX_MODEL := $(MODEL_DIR)/3dunet_kits19_128x128x128.onnx
 ONNX_DYNAMIC_BS_MODEL := $(MODEL_DIR)/3dunet_kits19_128x128x128_dynbatch.onnx
 TENSORFLOW_MODEL := $(MODEL_DIR)/3dunet_kits19_128x128x128.tf
@@ -41,10 +42,11 @@ TENSORFLOW_ZIPFILE := 3dunet_kits19_128x128x128.tf.zip
 TENSORFLOW_ZIP := $(MODEL_DIR)/$(TENSORFLOW_ZIPFILE)
 
 # ZENODO links
-ZENODO_PYTORCH := https://zenodo.org/record/4771141/files/3dunet_kits19_pytorch.ptc?download=1
-ZENODO_ONNX := https://zenodo.org/record/4771141/files/3dunet_kits19_128x128x128.onnx?download=1
-ZENODO_ONNX_DYNBS := https://zenodo.org/record/4771141/files/3dunet_kits19_128x128x128_dynbatch.onnx?download=1
-ZENODO_TENSORFLOW := https://zenodo.org/record/4771141/files/3dunet_kits19_128x128x128.tf.zip?download=1
+ZENODO_PYTORCH := https://zenodo.org/record/5597155/files/3dunet_kits19_pytorch.ptc?download=1
+ZENODO_PYTORCH_CHECKPOINT := https://zenodo.org/record/5597155/files/3dunet_kits19_pytorch_checkpoint.pth?download=1
+ZENODO_ONNX := https://zenodo.org/record/5597155/files/3dunet_kits19_128x128x128.onnx?download=1
+ZENODO_ONNX_DYNBS := https://zenodo.org/record/5597155/files/3dunet_kits19_128x128x128_dynbatch.onnx?download=1
+ZENODO_TENSORFLOW := https://zenodo.org/record/5597155/files/3dunet_kits19_128x128x128.tf.zip?download=1
 
 # other special ENV
 HAS_GPU := $(shell command -v nvidia-smi 2> /dev/null)
@@ -104,6 +106,7 @@ create_directories:
 download_models:
 	@echo "Download models..."
 	@$(MAKE) -f $(MAKEFILE_NAME) download_pytorch_model
+	@$(MAKE) -f $(MAKEFILE_NAME) download_pytorch_checkpoint_model
 	@$(MAKE) -f $(MAKEFILE_NAME) download_onnx_model
 	@$(MAKE) -f $(MAKEFILE_NAME) download_tensorflow_model
 
@@ -112,6 +115,13 @@ download_pytorch_model: create_directories
 	@echo "Downloading PyTorch model from Zenodo..."
 	@if [ ! -e $(PYTORCH_MODEL) ]; then \
 		wget -O $(PYTORCH_MODEL) $(ZENODO_PYTORCH); \
+	fi
+
+.PHONY: download_pytorch_checkpoint_model
+download_pytorch_checkpoint_model: create_directories
+	@echo "Downloading PyTorch checkpoint model from Zenodo..."
+	@if [ ! -e $(PYTORCH_CHECKPOINT_MODEL) ]; then \
+		wget -O $(PYTORCH_CHECKPOINT_MODEL) $(ZENODO_PYTORCH_CHECKPOINT); \
 	fi
 
 .PHONY: download_onnx_model
@@ -205,6 +215,14 @@ run_pytorch_performance:
 .PHONY: run_pytorch_accuracy
 run_pytorch_accuracy: mkdir_postprocessed_data
 	@python3 run.py --backend=pytorch --model=$(PYTORCH_MODEL) --accuracy
+
+.PHONY: run_pytorch_checkpoint_performance
+run_pytorch_checkpoint_performance:
+	@python3 run.py --backend=pytorch_checkpoint --model=$(PYTORCH_CHECKPOINT_MODEL)
+
+.PHONY: run_pytorch_checkpoint_accuracy
+run_pytorch_checkpoint_accuracy: mkdir_postprocessed_data
+	@python3 run.py --backend=pytorch_checkpoint --model=$(PYTORCH_CHECKPOINT_MODEL) --accuracy
 
 .PHONY: run_onnxruntime_performance
 run_onnxruntime_performance:

@@ -47,7 +47,8 @@ TestSettingsInternal::TestSettingsInternal(
       performance_issue_unique(requested.performance_issue_unique),
       performance_issue_same(requested.performance_issue_same),
       performance_issue_same_index(requested.performance_issue_same_index),
-      performance_sample_count(0) {
+      performance_sample_count(0),
+      sample_concatenate_permutation(false) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -128,6 +129,12 @@ TestSettingsInternal::TestSettingsInternal(
   performance_sample_count = (requested.performance_sample_count_override == 0)
                                  ? qsl_performance_sample_count
                                  : requested.performance_sample_count_override;
+
+  // Sample by concatentating several permutations of the dataset
+  // sample_concatenate_permutation
+  sample_concatenate_permutation = (requested.sample_concatenate_permutation == 0)
+                                    ? false
+                                    : requested.sample_concatenate_permutation;
 
   // Samples per query.
   if (requested.scenario == TestScenario::MultiStream ||
@@ -696,6 +703,9 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
 
   // keys that apply to Offline
   lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);
+  if (lookupkv(model, "Offline", "sample_concatenate_permutation", &val, nullptr))
+    sample_concatenate_permutation = (val == 0) ? false : true;
+  
 
   return 0;
 }

@@ -283,10 +283,20 @@ std::vector<QueryMetadata> GenerateQueries(
         for (size_t i = 0; i < num_full_repeats; ++i) {
           std::copy(loaded_samples.begin(), loaded_samples.end(),
                     samples.begin() + i * num_loaded_samples);
+
+          if (settings.sample_concatenate_permutation){
+            std::shuffle(samples.begin() + i * num_loaded_samples,
+                        samples.begin() + (i+1) * num_loaded_samples, sample_rng);
+          }
         }
 
         std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder,
                   samples.begin() + num_full_repeats * num_loaded_samples);
+
+        if (settings.sample_concatenate_permutation){
+          std::shuffle(samples.begin() + num_full_repeats * num_loaded_samples,
+                      samples.end(), sample_rng);
+        }
       }
     } else {
       for (auto& s : samples) {

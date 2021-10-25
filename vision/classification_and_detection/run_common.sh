@@ -82,8 +82,8 @@ fi
 # pytorch
 #
 if [ $name == "resnet50-pytorch" ] ; then
-    model_path="$MODEL_DIR/resnet50_v1.onnx"
-    profile=resnet50-onnxruntime
+    model_path="$MODEL_DIR/resnet50-19c8e357.pth"
+    profile=resnet50-pytorch
     extra_args="$extra_args --backend pytorch"
 fi
 if [ $name == "mobilenet-pytorch" ] ; then

@@ -1,3 +1,6 @@
+[submodule "third_party/gn"]
+        path = third_party/gn
+        url = https://gn.googlesource.com/gn
 [submodule "third_party/pybind"]
 	path = third_party/pybind
 	url = https://github.com/pybind/pybind11.git

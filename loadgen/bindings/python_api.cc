@@ -111,12 +111,12 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
       std::string name, size_t total_sample_count,
       size_t performance_sample_count,
       LoadSamplesToRamCallback load_samples_to_ram_cb,
-      UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb)
+      UnloadSamplesFromRamCallback unload_samples_from_ram_cb)
       : name_(std::move(name)),
         total_sample_count_(total_sample_count),
         performance_sample_count_(performance_sample_count),
         load_samples_to_ram_cb_(load_samples_to_ram_cb),
-        unload_samlpes_from_ram_cb_(unload_samlpes_from_ram_cb) {}
+        unload_samples_from_ram_cb_(unload_samples_from_ram_cb) {}
   ~QuerySampleLibraryTrampoline() override = default;
 
   const std::string& Name() const override { return name_; }
@@ -130,7 +130,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   void UnloadSamplesFromRam(
       const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
-    unload_samlpes_from_ram_cb_(samples);
+    unload_samples_from_ram_cb_(samples);
   }
 
  private:
@@ -138,7 +138,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   size_t total_sample_count_;
   size_t performance_sample_count_;
   LoadSamplesToRamCallback load_samples_to_ram_cb_;
-  UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb_;
+  UnloadSamplesFromRamCallback unload_samples_from_ram_cb_;
 };
 
 }  // namespace
@@ -179,10 +179,10 @@ void DestroyFastSUT(uintptr_t sut) {
 uintptr_t ConstructQSL(
     size_t total_sample_count, size_t performance_sample_count,
     LoadSamplesToRamCallback load_samples_to_ram_cb,
-    UnloadSamplesFromRamCallback unload_samlpes_from_ram_cb) {
+    UnloadSamplesFromRamCallback unload_samples_from_ram_cb) {
   QuerySampleLibraryTrampoline* qsl = new QuerySampleLibraryTrampoline(
       "PyQSL", total_sample_count, performance_sample_count,
-      load_samples_to_ram_cb, unload_samlpes_from_ram_cb);
+      load_samples_to_ram_cb, unload_samples_from_ram_cb);
   return reinterpret_cast<uintptr_t>(qsl);
 }
 
@@ -214,10 +214,12 @@ void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
   mlperf::StartTest(sut_cast, qsl_cast, test_settings, log_settings);
 }
 
+using ResponseCallback = std::function<void(QuerySampleResponse*)>;
+
 /// TODO: Get rid of copies.
-void QuerySamplesComplete(std::vector<QuerySampleResponse> responses) {
+void QuerySamplesComplete(std::vector<QuerySampleResponse> responses, ResponseCallback response_cb = {}) {
   pybind11::gil_scoped_release gil_releaser;
-  mlperf::QuerySamplesComplete(responses.data(), responses.size());
+  mlperf::QuerySamplesComplete(responses.data(), responses.size(), response_cb);
 }
 
 PYBIND11_MODULE(mlperf_loadgen, m) {
@@ -321,14 +323,43 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def(pybind11::init<>())
       .def(pybind11::init<ResponseId, QuerySampleIndex>())
       .def_readwrite("id", &QuerySample::id)
-      .def_readwrite("index", &QuerySample::index);
+      .def_readwrite("index", &QuerySample::index)
+      .def(pybind11::pickle(
+          [] (const QuerySample &qs) { // __getstate__
+         /*Return a tuple that fully encodes state of object*/
+         return pybind11::make_tuple(qs.id, qs.index);
+         },
+         [] (pybind11::tuple t) { // __setstate__
+         if (t.size() != 2)
+           throw std::runtime_error("Invalid state for QuerySample");
+         /* Create a new C++ instance*/
+         QuerySample q;
+         q.id = t[0].cast<uintptr_t>();
+         q.index = t[1].cast<size_t>();
+         return q;
+         }));
 
   pybind11::class_<QuerySampleResponse>(m, "QuerySampleResponse")
       .def(pybind11::init<>())
       .def(pybind11::init<ResponseId, uintptr_t, size_t>())
       .def_readwrite("id", &QuerySampleResponse::id)
       .def_readwrite("data", &QuerySampleResponse::data)
-      .def_readwrite("size", &QuerySampleResponse::size);
+      .def_readwrite("size", &QuerySampleResponse::size)
+      .def(pybind11::pickle(
+       [] (const QuerySampleResponse &qsr) { // __getstate__
+        /* Return a tuple that fully encodes state of object*/
+        return pybind11::make_tuple(qsr.id, qsr.data, qsr.size);
+        },
+       [] (pybind11::tuple t) { // __setstate__
+       if (t.size() != 3)
+        throw std::runtime_error("Invalid state for QuerySampleResponse");
+       /* Create a new C++ instance*/
+       QuerySampleResponse q;
+       q.id   = t[0].cast<uintptr_t>();
+       q.data = t[1].cast<uintptr_t>();
+       q.size = t[2].cast<size_t>();
+       return q;
+       }));
 
   // TODO: Use PYBIND11_MAKE_OPAQUE for the following vector types.
   pybind11::bind_vector<std::vector<QuerySample>>(m, "VectorQuerySample");
@@ -357,7 +388,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         "Accepts custom log settings.");
   m.def("QuerySamplesComplete", &py::QuerySamplesComplete,
         "Called by the SUT to indicate that samples from some combination of"
-        "IssueQuery calls have finished.");
+        "IssueQuery calls have finished.", pybind11::arg("responses"), pybind11::arg("response_cb") = ResponseCallback{});
 }
 
 }  // namespace py

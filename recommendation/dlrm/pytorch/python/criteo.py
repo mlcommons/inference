@@ -128,7 +128,7 @@ class Criteo(Dataset):
                 batch_size=self.samples_to_aggregate,
                 shuffle=False,
                 num_workers=test_num_workers,
-                collate_fn=dp.collate_wrapper_criteo,
+                collate_fn=dp.collate_wrapper_criteo_offset,
                 pin_memory=False,
                 drop_last=False,
             )

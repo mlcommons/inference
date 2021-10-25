@@ -49,7 +49,6 @@ ZENODO_ONNX_DYNBS := https://zenodo.org/record/5597155/files/3dunet_kits19_128x1
 ZENODO_TENSORFLOW := https://zenodo.org/record/5597155/files/3dunet_kits19_128x128x128.tf.zip?download=1
 
 # other special ENV
-HAS_GPU := $(shell command -v nvidia-smi 2> /dev/null)
 ifeq ($(HAS_GPU),)
 	DOCKER_RUN_CMD := docker run
 else

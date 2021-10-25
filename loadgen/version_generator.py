@@ -21,8 +21,8 @@ import datetime
 import errno
 import hashlib
 import os
+import sys
 
-from absl import app
 
 # Creates a C++ raw string literal using a delimiter that is very
 # unlikely to show up in a git stats.
@@ -116,11 +116,11 @@ def generate_loadgen_version_definitions(cc_filename, loadgen_root):
     ofile.close()
 
 
-def main(argv):
-    if len(argv) != 3:
-        raise app.UsageError("Incorrect command-line arguments.")
-    generate_loadgen_version_definitions(argv[1], argv[2])
+def main():
+    if len(sys.argv) != 3:
+        raise ValueError("Incorrect command-line arguments.")
+    generate_loadgen_version_definitions(sys.argv[1], sys.argv[2])
 
 
 if __name__ == "__main__":
-  app.run(main)
+    main()

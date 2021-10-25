@@ -15,7 +15,7 @@ import os
 import sys
 import threading
 import time
-from queue import Queue
+from multiprocessing import JoinableQueue
 
 import mlperf_loadgen as lg
 import numpy as np
@@ -226,7 +226,7 @@ def get_backend(backend, dataset, max_ind_range, data_sub_sample_rate, use_gpu):
                     use_gpu=use_gpu
                 )
             else:
-                raise ValueError("only --max-in-range 10M or 40M is supported")
+                raise ValueError("only --max-ind-range 10M or 40M is supported")
         else:
             raise ValueError("only kaggle|terabyte dataset options are supported")
 
@@ -391,7 +391,7 @@ class QueueRunner(RunnerBase):
     def __init__(self, model, ds, threads, post_proc=None, max_batchsize=128):
         super().__init__(model, ds, threads, post_proc, max_batchsize)
         queue_size_multiplier = 4 #(args.samples_per_query_offline + max_batchsize - 1) // max_batchsize)
-        self.tasks = Queue(maxsize=threads * queue_size_multiplier)
+        self.tasks = JoinableQueue(maxsize=threads * queue_size_multiplier)
         self.workers = []
         self.result_dict = {}
 
@@ -596,12 +596,17 @@ def main():
     runner.start_run(result_dict, args.accuracy)
     lg.StartTest(sut, qsl, settings)
 
+    result_dict["good"] = runner.post_process.good
+    result_dict["total"] = runner.post_process.total
+
     if not last_timeing:
         last_timeing = runner.result_timing
     if args.accuracy:
         post_proc.finalize(result_dict, ds, output_dir=args.output)
+
     add_results(final_results, "{}".format(scenario),
                 result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
+
 
     runner.finish()
     lg.DestroyQSL(qsl)

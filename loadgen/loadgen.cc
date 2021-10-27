@@ -246,6 +246,12 @@ std::vector<QueryMetadata> GenerateQueries(
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
+  // When sample_concatenate_permutation is turned on, pad to a multiple of the 
+  // complete dataset to ensure complete fairness.
+  if (settings.sample_concatenate_permutation && (samples_per_query%loaded_samples.size() != 0)){
+    size_t pad_size = (loaded_samples.size() - samples_per_query%loaded_samples.size());
+    samples_per_query += pad_size;
+  }
   std::vector<QuerySampleIndex> samples(samples_per_query);
   std::chrono::nanoseconds timestamp(0);
   std::chrono::nanoseconds prev_timestamp(0);

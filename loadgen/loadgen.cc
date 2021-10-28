@@ -246,10 +246,12 @@ std::vector<QueryMetadata> GenerateQueries(
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
-  // When sample_concatenate_permutation is turned on, pad to a multiple of the 
+  // When sample_concatenate_permutation is turned on, pad to a multiple of the
   // complete dataset to ensure complete fairness.
-  if (settings.sample_concatenate_permutation && (samples_per_query%loaded_samples.size() != 0)){
-    size_t pad_size = (loaded_samples.size() - samples_per_query%loaded_samples.size());
+  if (settings.sample_concatenate_permutation &&
+      samples_per_query % loaded_samples.size() != 0) {
+    size_t pad_size =
+        (loaded_samples.size() - samples_per_query % loaded_samples.size());
     samples_per_query += pad_size;
   }
   std::vector<QuerySampleIndex> samples(samples_per_query);
@@ -290,18 +292,18 @@ std::vector<QueryMetadata> GenerateQueries(
           std::copy(loaded_samples.begin(), loaded_samples.end(),
                     samples.begin() + i * num_loaded_samples);
 
-          if (settings.sample_concatenate_permutation){
+          if (settings.sample_concatenate_permutation) {
             std::shuffle(samples.begin() + i * num_loaded_samples,
-                        samples.begin() + (i+1) * num_loaded_samples, sample_rng);
+                         samples.begin() + (i + 1) * num_loaded_samples,
+                         sample_rng);
           }
         }
 
         std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder,
                   samples.begin() + num_full_repeats * num_loaded_samples);
 
-        if (settings.sample_concatenate_permutation){
-          std::shuffle(samples.begin() + num_full_repeats * num_loaded_samples,
-                      samples.end(), sample_rng);
+        if (settings.sample_concatenate_permutation) {
+          assert(remainder == 0);
         }
       }
     } else {

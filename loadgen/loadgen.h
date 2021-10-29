@@ -50,8 +50,8 @@ using ResponseCallback = std::function<void(QuerySampleResponse*)>;
 ///     loadgen copies the response data. The response callback enables the
 ///     loadgen to simulate response data being stored in accelerator DRAM.
 ///     After the response callback is called, response data must reside on the
-///     host so that the loadgen can copy it. Submitters must seek prior approval
-///     to use this feature of loadgen (refer to
+///     host so that the loadgen can copy it. Submitters must seek prior
+///     approval to use this feature of loadgen (refer to
 ///     https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#5-load-generator).
 /// * All calls to QuerySampleComplete are thread-safe and wait-free bounded.
 ///   + Any number of threads can call QuerySampleComplete simultaneously.
@@ -59,8 +59,8 @@ using ResponseCallback = std::function<void(QuerySampleResponse*)>;
 ///     finish QuerySampleComplete in a bounded number of cycles.
 ///   + Note: If a callback is provided, the SUT must ensure that the callback
 ///     is also thread-safe and wait-free bounded for the above to hold.
-void QuerySamplesComplete(QuerySampleResponse* responses,
-                          size_t response_count, const ResponseCallback& response_cb = {});
+void QuerySamplesComplete(QuerySampleResponse* responses, size_t response_count,
+                          const ResponseCallback& response_cb = {});
 
 ///
 /// \brief Starts the test against SUT with the specified settings.

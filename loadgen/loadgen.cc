@@ -21,12 +21,12 @@ limitations under the License.
 #include <cstring>
 #include <ctime>
 #include <fstream>
-#include <sstream>
 #include <future>
 #include <iomanip>
 #include <iostream>
 #include <queue>
 #include <random>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -70,7 +70,8 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
   double accuracy_log_prob = 0.0f;
 
   void SampleComplete(SampleMetadata* sample, QuerySampleResponse* response,
-                      PerfClock::time_point complete_begin_time, const ResponseCallback& response_cb) override {
+                      PerfClock::time_point complete_begin_time,
+                      const ResponseCallback& response_cb) override {
     // Using a raw pointer here should help us hit the std::function
     // small buffer optimization code path when we aren't copying data.
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
@@ -82,8 +83,9 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
             : sample->accuracy_log_val + accuracy_log_offset - 1.0;
     if (mode == TestMode::AccuracyOnly ||
         accuracy_log_val <= accuracy_log_prob) {
-      // if a response_cb callback is provided, data only needs to reside on the host *after* calling it
-      // note that the callback is blocking and will likely involve a memcpy from accelerator to host
+      // if a response_cb callback is provided, data only needs to reside on the
+      // host *after* calling it note that the callback is blocking and will
+      // likely involve a memcpy from accelerator to host
       if (response_cb) {
         response_cb(response);
       }
@@ -254,9 +256,9 @@ std::vector<QueryMetadata> GenerateQueries(
     if (kIsMultiStream) {
       QuerySampleIndex sample_i = settings.performance_issue_unique
                                       ? sample_distribution_unique(sample_rng)
-                                      : settings.performance_issue_same
-                                            ? same_sample
-                                            : sample_distribution(sample_rng);
+                                  : settings.performance_issue_same
+                                      ? same_sample
+                                      : sample_distribution(sample_rng);
       for (auto& s : samples) {
         // Select contiguous samples in the MultiStream scenario.
         // This will not overflow, since GenerateLoadableSets adds padding at
@@ -290,9 +292,9 @@ std::vector<QueryMetadata> GenerateQueries(
       for (auto& s : samples) {
         s = loaded_samples[settings.performance_issue_unique
                                ? sample_distribution_unique(sample_rng)
-                               : settings.performance_issue_same
-                                     ? same_sample
-                                     : sample_distribution(sample_rng)];
+                           : settings.performance_issue_same
+                               ? same_sample
+                               : sample_distribution(sample_rng)];
       }
     }
     queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
@@ -883,13 +885,13 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
   auto reportPerQueryLatencies = [&]() {
     for (auto& lp : latency_percentiles) {
       std::string percentile = DoubleToString(lp.percentile * 100);
+      MLPERF_LOG(
+          detail,
+          "result_" + percentile + "_percentile_num_intervals_between_queries",
+          lp.query_intervals);
       MLPERF_LOG(detail,
-                  "result_" + percentile +
-                      "_percentile_num_intervals_between_queries",
-                  lp.query_intervals);
-      MLPERF_LOG(detail,
-                  "result_" + percentile + "_percentile_per_query_latency_ns",
-                  lp.query_latency);
+                 "result_" + percentile + "_percentile_per_query_latency_ns",
+                 lp.query_latency);
     }
   };
 
@@ -1615,8 +1617,8 @@ void AbortTest() {
   GlobalLogger().StopIOThread();
 }
 
-void QuerySamplesComplete(QuerySampleResponse* responses,
-                          size_t response_count, const ResponseCallback& response_cb) {
+void QuerySamplesComplete(QuerySampleResponse* responses, size_t response_count,
+                          const ResponseCallback& response_cb) {
   PerfClock::time_point timestamp = PerfClock::now();
 
   auto tracer = MakeScopedTracer(
@@ -1637,7 +1639,8 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
     loadgen::SampleMetadata* sample =
         reinterpret_cast<loadgen::SampleMetadata*>(response->id);
     loadgen::QueryMetadata* query = sample->query_metadata;
-    query->response_delegate->SampleComplete(sample, response, timestamp, response_cb);
+    query->response_delegate->SampleComplete(sample, response, timestamp,
+                                             response_cb);
   }
 }
 

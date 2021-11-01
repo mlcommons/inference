@@ -40,6 +40,7 @@ limitations under the License.
 #include "test_settings_internal.h"
 #include "utils.h"
 #include "version.h"
+#include "early_stopping.h"
 
 namespace mlperf {
 
@@ -548,6 +549,7 @@ struct PerformanceSummary {
   void ProcessLatencies();
 
   bool MinDurationMet(std::string* recommendation);
+  void EarlyStopping(std::string* recommendation);
   bool MinQueriesMet();
   bool MinSamplesMet();
   bool HasPerfConstraints();
@@ -600,6 +602,53 @@ void PerformanceSummary::ProcessLatencies() {
   for (auto& lp : latency_percentiles) {
     lp.query_latency = pr.query_latencies[query_count * lp.percentile];
     lp.query_intervals = pr.query_intervals[query_count * lp.percentile];
+  }
+}
+
+
+void PerformanceSummary::EarlyStopping(std::string* recommendation) {
+  recommendation->clear();
+
+  // TODO(ckstanton): Clean these up.
+  int64_t overlatency_queries_bound = (1 << 10);
+  int64_t queries_issued = pr.queries_issued;
+  MinPassingQueriesFinder find_min_passing;
+  double percentile = 0.90;
+  double confidence = 0.99;
+  double tolerance = 0.0;
+
+  switch (settings.scenario) {
+    case TestScenario::SingleStream:
+      {
+      int64_t t = 1;
+      int64_t h_min = find_min_passing(1, percentile, tolerance, confidence);
+      int64_t h = h_min;
+      if (queries_issued < h_min + 1) {
+         *recommendation = "Need to process at least " + std::to_string(h_min + 1) + " queries for early stopping.";
+         break;
+      } else {
+         for (int64_t i = 2; i <= overlatency_queries_bound; ++i) {
+         h = find_min_passing(i, percentile, tolerance, confidence);
+         if (queries_issued < h + i) {
+           t = i - 1;
+           break;
+         }
+         }
+       }
+       std::sort(pr.sample_latencies.begin(), pr.sample_latencies.end());
+       QuerySampleLatency percentile_estimate = pr.sample_latencies[queries_issued - t];
+       *recommendation = "* Processed at least " + std::to_string(h_min + 1) + " queries (" + std::to_string(queries_issued) +  ").\n" +
+                         "* Would discard " + std::to_string(t - 1) + " highest latency queries.\n" +
+                         "* Early stopping " + DoubleToString(percentile * 100, 0) + "th percentile estimate: " +
+                         std::to_string(percentile_estimate);
+      }
+      break;
+    // TODO: implement server scenario
+    case TestScenario::Server:
+    case TestScenario::Offline:
+    case TestScenario::MultiStream:
+    case TestScenario::MultiStreamFree:
+      break;
   }
 }
 
@@ -754,9 +803,11 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
 
   std::string min_duration_recommendation;
   std::string perf_constraints_recommendation;
+  std::string early_stopping_recommendation;
 
   bool min_duration_met = MinDurationMet(&min_duration_recommendation);
   bool min_queries_met = MinQueriesMet() && MinSamplesMet();
+  EarlyStopping(&early_stopping_recommendation);
   bool perf_constraints_met =
       PerfConstraintsMet(&perf_constraints_recommendation);
   bool all_constraints_met =
@@ -783,6 +834,13 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
           "   See the detailed log for why this may have occurred.");
     }
   }
+  // Early stopping results
+  if (settings.scenario == TestScenario::SingleStream ||
+      settings.scenario == TestScenario::Server) {
+      summary("Early Stopping Result:");
+      summary(early_stopping_recommendation);
+  }
+
 
   summary(
       "\n"

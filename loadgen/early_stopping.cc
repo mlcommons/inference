@@ -8,7 +8,6 @@
 #include <numeric>
 #include <string>
 
-
 namespace mlperf {
 
 namespace loadgen {
@@ -41,9 +40,8 @@ double hypergeometric_2F1_A1(int64_t b, int64_t c, double x) {
 // (http://dlmf.nist.gov/15.8.E1.)
 // x^a/a (1-x)^(b-1) Hypergeometric2F1[1, 1-b, 1+a, x/(x-1)]/Beta[a, b]
 double beta_regularized(double x, int64_t a, int64_t b) {
-  return std::exp(a * std::log(x) + (b - 1) * std::log(1 - x)
-                   - lbeta(a, b)) / a *
-          hypergeometric_2F1_A1(1 - b, 1 + a, x / (x - 1));
+  return std::exp(a * std::log(x) + (b - 1) * std::log(1 - x) - lbeta(a, b)) /
+         a * hypergeometric_2F1_A1(1 - b, 1 + a, x / (x - 1));
 }
 
 // Compute the odds of t or fewer overlatency queries in h + t total queries.
@@ -61,7 +59,8 @@ double odds(int64_t h, int64_t t, double p, double d) {
 
 // Binary search to find the minimum value h such that:
 // odds(h, t, p, d) <= 1 - c on the range [min_h, max_h] given t, p, d, and c.
-int64_t find_min_passing(int64_t min_h, int64_t max_h, int64_t t, double p, double d, double c) {
+int64_t find_min_passing(int64_t min_h, int64_t max_h, int64_t t, double p,
+                         double d, double c) {
   int64_t count = max_h - min_h;
   while (count > 0) {
     int64_t step = count / 2;
@@ -77,9 +76,10 @@ int64_t find_min_passing(int64_t min_h, int64_t max_h, int64_t t, double p, doub
   return min_h;
 }
 
-
-int64_t MinPassingQueriesFinder::operator()(int64_t t, double p, double d, double c) {
-  // Given t, p, d, and c, return the minimum h such that odds(h, t, p, d) <= 1 - c
+int64_t MinPassingQueriesFinder::operator()(int64_t t, double p, double d,
+                                            double c) {
+  // Given t, p, d, and c, return the minimum h such that odds(h, t, p, d) <= 1
+  // - c
 
   auto &cache = caches_[std::make_tuple(p, d, c)];
   auto it = cache.lower_bound(t);
@@ -113,5 +113,5 @@ int64_t MinPassingQueriesFinder::operator()(int64_t t, double p, double d, doubl
   return h;
 }
 
-} // namespace loadgen
-} // namespace mlperf
+}  // namespace loadgen
+}  // namespace mlperf

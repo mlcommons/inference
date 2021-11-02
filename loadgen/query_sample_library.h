@@ -17,8 +17,8 @@ limitations under the License.
 #define MLPERF_LOADGEN_QUERY_SAMPLE_LIBRARY_H
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "query_sample.h"
 

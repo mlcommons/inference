@@ -79,8 +79,8 @@ void StartTest(void* sut, void* qsl, const TestSettings& settings);
 
 ///
 /// \brief Register a thread for query issuing in Server scenario.
-/// \details This is the C entry point. See mlperf::RegisterIssueQueryThread for the C++ entry
-/// point.
+/// \details This is the C entry point. See mlperf::RegisterIssueQueryThread for
+/// the C++ entry point.
 ///
 void RegisterIssueQueryThread();
 

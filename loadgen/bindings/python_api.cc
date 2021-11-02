@@ -95,8 +95,8 @@ class FastSystemUnderTestTrampoline : public SystemUnderTestTrampoline {
     fast_issue_cb_(responseIds, querySampleIndices);
   }
 
-  private:
-   FastIssueQueriesCallback fast_issue_cb_;
+ private:
+  FastIssueQueriesCallback fast_issue_cb_;
 };
 
 using LoadSamplesToRamCallback =
@@ -175,7 +175,6 @@ void DestroyFastSUT(uintptr_t sut) {
   delete sut_cast;
 }
 
-
 uintptr_t ConstructQSL(
     size_t total_sample_count, size_t performance_sample_count,
     LoadSamplesToRamCallback load_samples_to_ram_cb,
@@ -217,7 +216,8 @@ void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
 using ResponseCallback = std::function<void(QuerySampleResponse*)>;
 
 /// TODO: Get rid of copies.
-void QuerySamplesComplete(std::vector<QuerySampleResponse> responses, ResponseCallback response_cb = {}) {
+void QuerySamplesComplete(std::vector<QuerySampleResponse> responses,
+                          ResponseCallback response_cb = {}) {
   pybind11::gil_scoped_release gil_releaser;
   mlperf::QuerySamplesComplete(responses.data(), responses.size(), response_cb);
 }
@@ -325,19 +325,19 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("id", &QuerySample::id)
       .def_readwrite("index", &QuerySample::index)
       .def(pybind11::pickle(
-          [] (const QuerySample &qs) { // __getstate__
-         /*Return a tuple that fully encodes state of object*/
-         return pybind11::make_tuple(qs.id, qs.index);
-         },
-         [] (pybind11::tuple t) { // __setstate__
-         if (t.size() != 2)
-           throw std::runtime_error("Invalid state for QuerySample");
-         /* Create a new C++ instance*/
-         QuerySample q;
-         q.id = t[0].cast<uintptr_t>();
-         q.index = t[1].cast<size_t>();
-         return q;
-         }));
+          [](const QuerySample& qs) {  // __getstate__
+            /*Return a tuple that fully encodes state of object*/
+            return pybind11::make_tuple(qs.id, qs.index);
+          },
+          [](pybind11::tuple t) {  // __setstate__
+            if (t.size() != 2)
+              throw std::runtime_error("Invalid state for QuerySample");
+            /* Create a new C++ instance*/
+            QuerySample q;
+            q.id = t[0].cast<uintptr_t>();
+            q.index = t[1].cast<size_t>();
+            return q;
+          }));
 
   pybind11::class_<QuerySampleResponse>(m, "QuerySampleResponse")
       .def(pybind11::init<>())
@@ -346,20 +346,20 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("data", &QuerySampleResponse::data)
       .def_readwrite("size", &QuerySampleResponse::size)
       .def(pybind11::pickle(
-       [] (const QuerySampleResponse &qsr) { // __getstate__
-        /* Return a tuple that fully encodes state of object*/
-        return pybind11::make_tuple(qsr.id, qsr.data, qsr.size);
-        },
-       [] (pybind11::tuple t) { // __setstate__
-       if (t.size() != 3)
-        throw std::runtime_error("Invalid state for QuerySampleResponse");
-       /* Create a new C++ instance*/
-       QuerySampleResponse q;
-       q.id   = t[0].cast<uintptr_t>();
-       q.data = t[1].cast<uintptr_t>();
-       q.size = t[2].cast<size_t>();
-       return q;
-       }));
+          [](const QuerySampleResponse& qsr) {  // __getstate__
+            /* Return a tuple that fully encodes state of object*/
+            return pybind11::make_tuple(qsr.id, qsr.data, qsr.size);
+          },
+          [](pybind11::tuple t) {  // __setstate__
+            if (t.size() != 3)
+              throw std::runtime_error("Invalid state for QuerySampleResponse");
+            /* Create a new C++ instance*/
+            QuerySampleResponse q;
+            q.id = t[0].cast<uintptr_t>();
+            q.data = t[1].cast<uintptr_t>();
+            q.size = t[2].cast<size_t>();
+            return q;
+          }));
 
   // TODO: Use PYBIND11_MAKE_OPAQUE for the following vector types.
   pybind11::bind_vector<std::vector<QuerySample>>(m, "VectorQuerySample");
@@ -388,7 +388,9 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         "Accepts custom log settings.");
   m.def("QuerySamplesComplete", &py::QuerySamplesComplete,
         "Called by the SUT to indicate that samples from some combination of"
-        "IssueQuery calls have finished.", pybind11::arg("responses"), pybind11::arg("response_cb") = ResponseCallback{});
+        "IssueQuery calls have finished.",
+        pybind11::arg("responses"),
+        pybind11::arg("response_cb") = ResponseCallback{});
 }
 
 }  // namespace py

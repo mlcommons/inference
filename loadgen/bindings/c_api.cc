@@ -154,10 +154,12 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 }
 
 void QuerySamplesCompleteResponseCb(QuerySampleResponse* responses,
-                                    size_t response_count, ResponseCallback response_cb,
+                                    size_t response_count,
+                                    ResponseCallback response_cb,
                                     ClientData client_data) {
-  mlperf::QuerySamplesComplete(responses, response_count,
-      [client_data, response_cb] (QuerySampleResponse* response) {
+  mlperf::QuerySamplesComplete(
+      responses, response_count,
+      [client_data, response_cb](QuerySampleResponse* response) {
         response_cb(client_data, response);
       });
 }

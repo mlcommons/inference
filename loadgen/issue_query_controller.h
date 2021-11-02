@@ -17,13 +17,6 @@ limitations under the License.
 #ifndef MLPERF_LOADGEN_ISSUE_QUERY_CONTROLLER_H_
 #define MLPERF_LOADGEN_ISSUE_QUERY_CONTROLLER_H_
 
-#include "loadgen.h"
-#include "logging.h"
-#include "query_sample.h"
-#include "system_under_test.h"
-#include "test_settings_internal.h"
-#include "utils.h"
-
 #include <stdint.h>
 
 #include <atomic>
@@ -35,6 +28,13 @@ limitations under the License.
 #include <random>
 #include <thread>
 #include <vector>
+
+#include "loadgen.h"
+#include "logging.h"
+#include "query_sample.h"
+#include "system_under_test.h"
+#include "test_settings_internal.h"
+#include "utils.h"
 
 namespace mlperf {
 
@@ -68,7 +68,8 @@ struct SequenceGen {
 struct ResponseDelegate {
   virtual ~ResponseDelegate() = default;
   virtual void SampleComplete(SampleMetadata*, QuerySampleResponse*,
-                              PerfClock::time_point, const ResponseCallback&) = 0;
+                              PerfClock::time_point,
+                              const ResponseCallback&) = 0;
   virtual void QueryComplete() = 0;
   std::atomic<size_t> queries_completed{0};
 };

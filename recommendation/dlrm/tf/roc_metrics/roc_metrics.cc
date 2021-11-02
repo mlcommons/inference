@@ -1,12 +1,12 @@
-#include "third_party/tensorflow_models/mlperf/models/rough/util/roc_metrics/roc_metrics.h"  //NOLINT
+#include "third_party/tensorflow_models/mlperf/models/rough/util/roc_metrics/roc_metrics.h" //NOLINT
 
 #include <Python.h>
 
 #include <vector>
 
-#include "base/logging.h"
 #include "absl/types/span.h"
-#include "boost/boost/boost/sort/block_indirect_sort/block_indirect_sort.hpp"  //NOLINT
+#include "base/logging.h"
+#include "boost/boost/boost/sort/block_indirect_sort/block_indirect_sort.hpp" //NOLINT
 #include "numpy/core/include/numpy/ndarrayobject.h"
 #include "numpy/core/include/numpy/ndarraytypes.h"
 #include "numpy/core/include/numpy/npy_common.h"
@@ -15,7 +15,7 @@ namespace rocmetrics {
 namespace {
 
 template <typename T, typename Compare>
-void ParallelSort(absl::Span<T> elements, const Compare& comp) {
+void ParallelSort(absl::Span<T> elements, const Compare &comp) {
   // As of 2020-May, boost's block_indirect_sort library is not allowed in
   // repo.  If using this library in a non-third_party project, this will
   // need to be replaced.
@@ -24,7 +24,7 @@ void ParallelSort(absl::Span<T> elements, const Compare& comp) {
 
 // Integrates the y vector along the x vector using the trapezoidal rule.
 // Performance of this function can be improved via parallelization.
-double Trapz(const std::vector<float>& y, const std::vector<float>& x) {
+double Trapz(const std::vector<float> &y, const std::vector<float> &x) {
   // Performance can be improved via parallelization.
   double ret = 0.0;
   float x_prev = x[0];
@@ -48,13 +48,13 @@ double Trapz(const std::vector<float>& y, const std::vector<float>& x) {
   return ret;
 }
 
-}  // namespace
+} // namespace
 
-RocMetrics::RocMetrics(PyObject* py_scores, PyObject* py_targets) {
+RocMetrics::RocMetrics(PyObject *py_scores, PyObject *py_targets) {
   CHECK(PyArray_Check(py_scores)) << "scores object is not a PyArrayObject.";
   CHECK(PyArray_Check(py_targets)) << "targets object is not a PyArrayObject.";
-  PyArrayObject* p_scores = reinterpret_cast<PyArrayObject*>(py_scores);
-  PyArrayObject* p_targets = reinterpret_cast<PyArrayObject*>(py_targets);
+  PyArrayObject *p_scores = reinterpret_cast<PyArrayObject *>(py_scores);
+  PyArrayObject *p_targets = reinterpret_cast<PyArrayObject *>(py_targets);
   int p_data_len = PyArray_SHAPE(p_scores)[0];
   int t_data_len = PyArray_SHAPE(p_targets)[0];
   CHECK(p_data_len > 1) << "Scores array must be of length greater than 1.";
@@ -62,8 +62,8 @@ RocMetrics::RocMetrics(PyObject* py_scores, PyObject* py_targets) {
   CHECK(p_data_len == t_data_len)
       << "Scores and targets must be of same length.";
   full_data_.reserve(p_data_len);
-  auto scores_ptr = static_cast<const float*>(PyArray_GETPTR1(p_scores, 0));
-  auto tgts_ptr = static_cast<const int*>(PyArray_GETPTR1(p_targets, 0));
+  auto scores_ptr = static_cast<const float *>(PyArray_GETPTR1(p_scores, 0));
+  auto tgts_ptr = static_cast<const int *>(PyArray_GETPTR1(p_targets, 0));
   for (int i = 0; i < p_data_len; ++i) {
     if (tgts_ptr[i] >= 0) {
       full_data_.push_back({scores_ptr[i], tgts_ptr[i]});
@@ -81,7 +81,7 @@ RocData RocMetrics::BinaryRoc() const {
   float prev_score = full_data_[0].score;
   int accum = 0, thresh_idx = 0;
 
-  for (const PredictElem& d : full_data_) {
+  for (const PredictElem &d : full_data_) {
     float cur_score = d.score;
     if (cur_score != prev_score) {
       tps.push_back(accum);
@@ -99,7 +99,7 @@ RocData RocMetrics::BinaryRoc() const {
 
 float RocMetrics::ComputeRocAuc() {
   ParallelSort(absl::MakeSpan(full_data_),
-               [](const PredictElem& t1, const PredictElem& t2) {
+               [](const PredictElem &t1, const PredictElem &t2) {
                  return t1.score > t2.score;
                });
 
@@ -120,4 +120,4 @@ float RocMetrics::ComputeRocAuc() {
   return static_cast<float>(auc);
 }
 
-}  // namespace rocmetrics
+} // namespace rocmetrics

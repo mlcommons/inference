@@ -207,6 +207,8 @@ def get_args():
     parser.add_argument("--mlperf_conf", default="../../mlperf.conf", help="mlperf rules config")
     # file for user LoadGen settings such as target QPS
     parser.add_argument("--user_conf", default="user.conf", help="user config for user LoadGen settings such as target QPS")
+    # file for LoadGen audit settings
+    parser.add_argument("--audit_conf", default="audit.config", help="config for LoadGen audit settings")
 
     # below will override mlperf rules compliant settings - don't use for official submission
     parser.add_argument("--time", type=int, help="time to scan in seconds")
@@ -459,6 +461,8 @@ def main():
         log.error("{} not found".format(user_conf))
         sys.exit(1)
 
+    audit_config = os.path.abspath(args.audit_conf)
+
     if args.output:
         output_dir = os.path.abspath(args.output)
         os.makedirs(output_dir, exist_ok=True)
@@ -541,7 +545,7 @@ def main():
     result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
     runner.start_run(result_dict, args.accuracy)
 
-    lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
+    lg.StartTestWithLogSettings(sut, qsl, settings, log_settings, audit_config)
 
     if not last_timeing:
         last_timeing = runner.result_timing

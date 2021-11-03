@@ -1516,7 +1516,8 @@ struct RunFunctions {
 
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,
-               const LogSettings& log_settings) {
+               const LogSettings& log_settings,
+               const std::string& audit_config_filename) {
   GlobalLogger().StartIOThread();
 
   const std::string test_date_time = CurrentDateTimeISO8601();
@@ -1557,7 +1558,6 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   TestSettings test_settings = requested_settings;
   // Look for Audit Config file to override TestSettings during audit
-  const std::string audit_config_filename = "audit.config";
   if (FileExists(audit_config_filename)) {
     LogDetail([](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT

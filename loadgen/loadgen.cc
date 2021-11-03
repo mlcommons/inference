@@ -610,20 +610,18 @@ void PerformanceSummary::ProcessLatencies() {
 void PerformanceSummary::EarlyStopping(std::string* recommendation) {
   recommendation->clear();
 
-  // TODO(ckstanton): Clean these up.
   int64_t overlatency_queries_bound = (1 << 10);
   int64_t queries_issued = pr.queries_issued;
   MinPassingQueriesFinder find_min_passing;
-  double percentile;
+  // TODO: add these to test settings
   double confidence = 0.99;
   double tolerance = 0.0;
-  int64_t server_latency_bound = 100000000;
 
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
-      percentile = 0.90;
       int64_t t = 1;
-      int64_t h_min = find_min_passing(1, percentile, tolerance, confidence);
+      int64_t h_min = find_min_passing(1, target_latency_percentile.percentile,
+                                       tolerance, confidence);
       int64_t h = h_min;
       if (queries_issued < h_min + 1) {
         *recommendation = "Need to process at least " +
@@ -632,7 +630,8 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
         break;
       } else {
         for (int64_t i = 2; i <= overlatency_queries_bound; ++i) {
-          h = find_min_passing(i, percentile, tolerance, confidence);
+          h = find_min_passing(i, target_latency_percentile.percentile,
+                               tolerance, confidence);
           if (queries_issued < h + i) {
             t = i - 1;
             break;
@@ -646,15 +645,19 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
           "* Processed at least " + std::to_string(h_min + 1) + " queries (" +
           std::to_string(queries_issued) + ").\n" + "* Would discard " +
           std::to_string(t - 1) + " highest latency queries.\n" +
-          "* Early stopping " + DoubleToString(percentile * 100, 0) +
+          "* Early stopping " +
+          DoubleToString(target_latency_percentile.percentile * 100, 0) +
           "th percentile estimate: " + std::to_string(percentile_estimate);
+      break;
     }
     case TestScenario::Server: {
-      percentile = 0.99;
-      int64_t t = std::count_if(
-          pr.sample_latencies.begin(), pr.sample_latencies.end(),
-          [=](auto const& latency) { return latency > server_latency_bound; });
-      int64_t h = find_min_passing(t, percentile, tolerance, confidence);
+      int64_t t =
+          std::count_if(pr.sample_latencies.begin(), pr.sample_latencies.end(),
+                        [=](auto const& latency) {
+                          return latency > settings.target_latency.count();
+                        });
+      int64_t h = find_min_passing(t, target_latency_percentile.percentile,
+                                   tolerance, confidence);
       if (queries_issued >= h + t) {
         *recommendation = "* Run successful.";
       } else {
@@ -663,6 +666,7 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
                           " queries.  Would need to run at least " +
                           std::to_string(h + t - queries_issued) + " more.";
       }
+      break;
     }
     case TestScenario::Offline:
     case TestScenario::MultiStream:

@@ -69,7 +69,8 @@ void QuerySamplesComplete(QuerySampleResponse* responses, size_t response_count,
 ///
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,
-               const LogSettings& log_settings);
+               const LogSettings& log_settings,
+               const std::string& audit_config_filename);
 
 ///
 /// \brief Aborts the running test.

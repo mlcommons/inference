@@ -139,13 +139,15 @@ void DestroyQSL(void* qsl) {
 
 // mlperf::c::StartTest just forwards to mlperf::StartTest after doing the
 // proper cast.
-void StartTest(void* sut, void* qsl, const TestSettings& settings) {
+void StartTest(void* sut, void* qsl, const TestSettings& settings,
+               const std::string& audit_config_filename = "audit.config") {
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   QuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
   LogSettings default_log_settings;
-  mlperf::StartTest(sut_cast, qsl_cast, settings, default_log_settings);
+  mlperf::StartTest(sut_cast, qsl_cast, settings, default_log_settings,
+                    audit_config_filename);
 }
 
 void QuerySamplesComplete(QuerySampleResponse* responses,
@@ -154,10 +156,12 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 }
 
 void QuerySamplesCompleteResponseCb(QuerySampleResponse* responses,
-                                    size_t response_count, ResponseCallback response_cb,
+                                    size_t response_count,
+                                    ResponseCallback response_cb,
                                     ClientData client_data) {
-  mlperf::QuerySamplesComplete(responses, response_count,
-      [client_data, response_cb] (QuerySampleResponse* response) {
+  mlperf::QuerySamplesComplete(
+      responses, response_count,
+      [client_data, response_cb](QuerySampleResponse* response) {
         response_cb(client_data, response);
       });
 }

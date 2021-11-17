@@ -225,6 +225,14 @@ struct TestSettings {
   /// The loadgen generates 10% more queries than it thinks it needs to meet
   /// the minimum test duration.
   double offline_expected_qps = 1;
+  /// \brief Affects the order in which the samples of the dataset are chosen.
+  /// If false it concatenates a single permutation of the dataset (or part
+  /// of it depending on QSL->PerformanceSampleCount()) several times up to the 
+  /// number of samples requested.
+  /// If true it concatenates a multiple permutation of the dataset (or a 
+  /// part of it depending on QSL->PerformanceSampleCount()) several times  
+  /// up to the number of samples requested.
+  bool sample_concatenate_permutation = false;
   /**@}*/
 
   // ==================================

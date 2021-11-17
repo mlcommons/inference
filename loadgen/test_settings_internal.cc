@@ -47,7 +47,8 @@ TestSettingsInternal::TestSettingsInternal(
       performance_issue_unique(requested.performance_issue_unique),
       performance_issue_same(requested.performance_issue_same),
       performance_issue_same_index(requested.performance_issue_same_index),
-      performance_sample_count(0) {
+      performance_sample_count(0),
+      sample_concatenate_permutation(false) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -80,15 +81,12 @@ TestSettingsInternal::TestSettingsInternal(
       if (requested.server_target_qps >= 0.0) {
         target_qps = requested.server_target_qps;
       } else {
-        LogDetail([
-          server_target_qps = requested.server_target_qps,
-          target_qps = target_qps
-        ](AsyncDetail & detail) {
+        LogDetail([server_target_qps = requested.server_target_qps,
+                   target_qps = target_qps](AsyncDetail &detail) {
 #if USE_NEW_LOGGING_FORMAT
           std::stringstream ss;
           ss << "Invalid value for server_target_qps requested."
-             << " requested: " << server_target_qps
-             << " using: " << target_qps;
+             << " requested: " << server_target_qps << " using: " << target_qps;
           MLPERF_LOG_ERROR(detail, "error_invalid_test_settings", ss.str());
 #else
           detail.Error("Invalid value for server_target_qps requested.",
@@ -108,10 +106,8 @@ TestSettingsInternal::TestSettingsInternal(
       if (requested.offline_expected_qps >= 0.0) {
         target_qps = requested.offline_expected_qps;
       } else {
-        LogDetail([
-          offline_expected_qps = requested.offline_expected_qps,
-          target_qps = target_qps
-        ](AsyncDetail & detail) {
+        LogDetail([offline_expected_qps = requested.offline_expected_qps,
+                   target_qps = target_qps](AsyncDetail &detail) {
 #if USE_NEW_LOGGING_FORMAT
           std::stringstream ss;
           ss << "Invalid value for offline_expected_qps requested."
@@ -133,6 +129,12 @@ TestSettingsInternal::TestSettingsInternal(
   performance_sample_count = (requested.performance_sample_count_override == 0)
                                  ? qsl_performance_sample_count
                                  : requested.performance_sample_count_override;
+
+  // Sample by concatentating several permutations of the dataset
+  // sample_concatenate_permutation
+  sample_concatenate_permutation = (requested.sample_concatenate_permutation == 0)
+                                    ? false
+                                    : requested.sample_concatenate_permutation;
 
   // Samples per query.
   if (requested.scenario == TestScenario::MultiStream ||
@@ -162,19 +164,17 @@ TestSettingsInternal::TestSettingsInternal(
   // Validate TestSettings
   if (requested.performance_issue_same &&
       (requested.performance_issue_same_index >= performance_sample_count)) {
-    LogDetail([
-      performance_issue_same_index = requested.performance_issue_same_index,
-      performance_sample_count = performance_sample_count
-    ](AsyncDetail & detail) {
+    LogDetail([performance_issue_same_index =
+                   requested.performance_issue_same_index,
+               performance_sample_count =
+                   performance_sample_count](AsyncDetail &detail) {
 #if USE_NEW_LOGGING_FORMAT
-          std::stringstream ss;
-          ss << "Sample Idx to be repeated in performance_issue_same mode"
-             << " cannot be greater than loaded performance_sample_count."
-             << " performance_issue_same_index: "
-             << performance_issue_same_index
-             << " performance_sample_count: "
-             << performance_sample_count;
-          MLPERF_LOG_ERROR(detail, "error_invalid_test_settings", ss.str());
+      std::stringstream ss;
+      ss << "Sample Idx to be repeated in performance_issue_same mode"
+         << " cannot be greater than loaded performance_sample_count."
+         << " performance_issue_same_index: " << performance_issue_same_index
+         << " performance_sample_count: " << performance_sample_count;
+      MLPERF_LOG_ERROR(detail, "error_invalid_test_settings", ss.str());
 #else
       detail.Error(
           "Sample Idx to be repeated in performance_issue_same mode"
@@ -186,19 +186,16 @@ TestSettingsInternal::TestSettingsInternal(
   }
 
   if (requested.performance_issue_unique && requested.performance_issue_same) {
-    LogDetail([
-      performance_issue_unique = requested.performance_issue_unique,
-      performance_issue_same = requested.performance_issue_same
-    ](AsyncDetail & detail) {
+    LogDetail([performance_issue_unique = requested.performance_issue_unique,
+               performance_issue_same =
+                   requested.performance_issue_same](AsyncDetail &detail) {
 #if USE_NEW_LOGGING_FORMAT
-          std::stringstream ss;
-          ss << "Performance_issue_unique and performance_issue_same, both"
-             << " cannot be true at the same time."
-             << " performance_issue_unique: "
-             << performance_issue_unique
-             << " performance_issue_same: "
-             << performance_issue_same;
-          MLPERF_LOG_ERROR(detail, "error_invalid_test_settings", ss.str());
+      std::stringstream ss;
+      ss << "Performance_issue_unique and performance_issue_same, both"
+         << " cannot be true at the same time."
+         << " performance_issue_unique: " << performance_issue_unique
+         << " performance_issue_same: " << performance_issue_same;
+      MLPERF_LOG_ERROR(detail, "error_invalid_test_settings", ss.str());
 #else
       detail.Error(
           "Performance_issue_unique and performance_issue_same, both"
@@ -271,29 +268,45 @@ void LogRequestedTestSettings(const TestSettings &s) {
     // Scenario-specific
     switch (s.scenario) {
       case TestScenario::SingleStream:
-        MLPERF_LOG(detail, "requested_single_stream_expected_latency_ns", s.single_stream_expected_latency_ns);
-        MLPERF_LOG(detail, "requested_single_stream_target_latency_percentile", s.single_stream_target_latency_percentile);
+        MLPERF_LOG(detail, "requested_single_stream_expected_latency_ns",
+                   s.single_stream_expected_latency_ns);
+        MLPERF_LOG(detail, "requested_single_stream_target_latency_percentile",
+                   s.single_stream_target_latency_percentile);
         break;
       case TestScenario::MultiStream:
       case TestScenario::MultiStreamFree:
-        MLPERF_LOG(detail, "requested_multi_stream_target_qps", s.multi_stream_target_qps);
-        MLPERF_LOG(detail, "requested_multi_stream_target_latency_ns", s.multi_stream_target_latency_ns);
-        MLPERF_LOG(detail, "requested_multi_stream_target_latency_percentile", s.multi_stream_target_latency_percentile);
-        MLPERF_LOG(detail, "requested_multi_stream_samples_per_query", s.multi_stream_samples_per_query);
-        MLPERF_LOG(detail, "requested_multi_stream_max_async_queries", s.multi_stream_max_async_queries);
+        MLPERF_LOG(detail, "requested_multi_stream_target_qps",
+                   s.multi_stream_target_qps);
+        MLPERF_LOG(detail, "requested_multi_stream_target_latency_ns",
+                   s.multi_stream_target_latency_ns);
+        MLPERF_LOG(detail, "requested_multi_stream_target_latency_percentile",
+                   s.multi_stream_target_latency_percentile);
+        MLPERF_LOG(detail, "requested_multi_stream_samples_per_query",
+                   s.multi_stream_samples_per_query);
+        MLPERF_LOG(detail, "requested_multi_stream_max_async_queries",
+                   s.multi_stream_max_async_queries);
         break;
       case TestScenario::Server:
         MLPERF_LOG(detail, "requested_server_target_qps", s.server_target_qps);
-        MLPERF_LOG(detail, "requested_server_target_latency_ns", s.server_target_latency_ns);
-        MLPERF_LOG(detail, "requested_server_target_latency_percentile", s.server_target_latency_percentile);
-        MLPERF_LOG(detail, "requested_server_coalesce_queries", s.server_coalesce_queries);
-        MLPERF_LOG(detail, "requested_server_find_peak_qps_decimals_of_precision", s.server_find_peak_qps_decimals_of_precision);
-        MLPERF_LOG(detail, "requested_server_find_peak_qps_boundary_step_size", s.server_find_peak_qps_boundary_step_size);
-        MLPERF_LOG(detail, "requested_server_max_async_queries", s.server_max_async_queries);
-        MLPERF_LOG(detail, "requested_server_num_issue_query_threads", s.server_num_issue_query_threads);
+        MLPERF_LOG(detail, "requested_server_target_latency_ns",
+                   s.server_target_latency_ns);
+        MLPERF_LOG(detail, "requested_server_target_latency_percentile",
+                   s.server_target_latency_percentile);
+        MLPERF_LOG(detail, "requested_server_coalesce_queries",
+                   s.server_coalesce_queries);
+        MLPERF_LOG(detail,
+                   "requested_server_find_peak_qps_decimals_of_precision",
+                   s.server_find_peak_qps_decimals_of_precision);
+        MLPERF_LOG(detail, "requested_server_find_peak_qps_boundary_step_size",
+                   s.server_find_peak_qps_boundary_step_size);
+        MLPERF_LOG(detail, "requested_server_max_async_queries",
+                   s.server_max_async_queries);
+        MLPERF_LOG(detail, "requested_server_num_issue_query_threads",
+                   s.server_num_issue_query_threads);
         break;
       case TestScenario::Offline:
-        MLPERF_LOG(detail, "requested_offline_expected_qps", s.offline_expected_qps);
+        MLPERF_LOG(detail, "requested_offline_expected_qps",
+                   s.offline_expected_qps);
         break;
     }
 
@@ -303,16 +316,24 @@ void LogRequestedTestSettings(const TestSettings &s) {
     MLPERF_LOG(detail, "requested_min_query_count", s.min_query_count);
     MLPERF_LOG(detail, "requested_max_query_count", s.max_query_count);
     MLPERF_LOG(detail, "requested_qsl_rng_seed", s.qsl_rng_seed);
-    MLPERF_LOG(detail, "requested_sample_index_rng_seed", s.sample_index_rng_seed);
+    MLPERF_LOG(detail, "requested_sample_index_rng_seed",
+               s.sample_index_rng_seed);
     MLPERF_LOG(detail, "requested_schedule_rng_seed", s.schedule_rng_seed);
-    MLPERF_LOG(detail, "requested_accuracy_log_rng_seed", s.accuracy_log_rng_seed);
-    MLPERF_LOG(detail, "requested_accuracy_log_probability", s.accuracy_log_probability);
-    MLPERF_LOG(detail, "requested_accuracy_log_sampling_target", s.accuracy_log_sampling_target);
+    MLPERF_LOG(detail, "requested_accuracy_log_rng_seed",
+               s.accuracy_log_rng_seed);
+    MLPERF_LOG(detail, "requested_accuracy_log_probability",
+               s.accuracy_log_probability);
+    MLPERF_LOG(detail, "requested_accuracy_log_sampling_target",
+               s.accuracy_log_sampling_target);
     MLPERF_LOG(detail, "requested_print_timestamps", s.print_timestamps);
-    MLPERF_LOG(detail, "requested_performance_issue_unique", s.performance_issue_unique);
-    MLPERF_LOG(detail, "requested_performance_issue_same", s.performance_issue_same);
-    MLPERF_LOG(detail, "requested_performance_issue_same_index", s.performance_issue_same_index);
-    MLPERF_LOG(detail, "requested_performance_sample_count_override", s.performance_sample_count_override);
+    MLPERF_LOG(detail, "requested_performance_issue_unique",
+               s.performance_issue_unique);
+    MLPERF_LOG(detail, "requested_performance_issue_same",
+               s.performance_issue_same);
+    MLPERF_LOG(detail, "requested_performance_issue_same_index",
+               s.performance_issue_same_index);
+    MLPERF_LOG(detail, "requested_performance_sample_count_override",
+               s.performance_sample_count_override);
 #else
     detail("");
     detail("Requested Settings:");
@@ -381,7 +402,7 @@ void LogRequestedTestSettings(const TestSettings &s) {
 }
 
 void TestSettingsInternal::LogEffectiveSettings() const {
-  LogDetail([s = *this](AsyncDetail & detail) {
+  LogDetail([s = *this](AsyncDetail &detail) {
 #if USE_NEW_LOGGING_FORMAT
     MLPERF_LOG(detail, "effective_scenario", ToString(s.scenario));
     MLPERF_LOG(detail, "effective_test_mode", ToString(s.mode));
@@ -389,25 +410,35 @@ void TestSettingsInternal::LogEffectiveSettings() const {
     MLPERF_LOG(detail, "effective_samples_per_query", s.samples_per_query);
     MLPERF_LOG(detail, "effective_target_qps", s.target_qps);
     MLPERF_LOG(detail, "effective_target_latency_ns", s.target_latency.count());
-    MLPERF_LOG(detail, "effective_target_latency_percentile", s.target_latency_percentile);
+    MLPERF_LOG(detail, "effective_target_latency_percentile",
+               s.target_latency_percentile);
     MLPERF_LOG(detail, "effective_max_async_queries", s.max_async_queries);
-    MLPERF_LOG(detail, "effective_target_duration_ms", s.target_duration.count());
+    MLPERF_LOG(detail, "effective_target_duration_ms",
+               s.target_duration.count());
     MLPERF_LOG(detail, "effective_min_duration_ms", s.min_duration.count());
     MLPERF_LOG(detail, "effective_max_duration_ms", s.max_duration.count());
     MLPERF_LOG(detail, "effective_min_query_count", s.min_query_count);
     MLPERF_LOG(detail, "effective_max_query_count", s.max_query_count);
     MLPERF_LOG(detail, "effective_min_sample_count", s.min_sample_count);
     MLPERF_LOG(detail, "effective_qsl_rng_seed", s.qsl_rng_seed);
-    MLPERF_LOG(detail, "effective_sample_index_rng_seed", s.sample_index_rng_seed);
+    MLPERF_LOG(detail, "effective_sample_index_rng_seed",
+               s.sample_index_rng_seed);
     MLPERF_LOG(detail, "effective_schedule_rng_seed", s.schedule_rng_seed);
-    MLPERF_LOG(detail, "effective_accuracy_log_rng_seed", s.accuracy_log_rng_seed);
-    MLPERF_LOG(detail, "effective_accuracy_log_probability", s.accuracy_log_probability);
-    MLPERF_LOG(detail, "effective_accuracy_log_sampling_target", s.accuracy_log_sampling_target);
+    MLPERF_LOG(detail, "effective_accuracy_log_rng_seed",
+               s.accuracy_log_rng_seed);
+    MLPERF_LOG(detail, "effective_accuracy_log_probability",
+               s.accuracy_log_probability);
+    MLPERF_LOG(detail, "effective_accuracy_log_sampling_target",
+               s.accuracy_log_sampling_target);
     MLPERF_LOG(detail, "effective_print_timestamps", s.print_timestamps);
-    MLPERF_LOG(detail, "effective_performance_issue_unique", s.performance_issue_unique);
-    MLPERF_LOG(detail, "effective_performance_issue_same", s.performance_issue_same);
-    MLPERF_LOG(detail, "effective_performance_issue_same_index", s.performance_issue_same_index);
-    MLPERF_LOG(detail, "effective_performance_sample_count", s.performance_sample_count);
+    MLPERF_LOG(detail, "effective_performance_issue_unique",
+               s.performance_issue_unique);
+    MLPERF_LOG(detail, "effective_performance_issue_same",
+               s.performance_issue_same);
+    MLPERF_LOG(detail, "effective_performance_issue_same_index",
+               s.performance_issue_same_index);
+    MLPERF_LOG(detail, "effective_performance_sample_count",
+               s.performance_sample_count);
 #else
     detail("");
     detail("Effective Settings:");
@@ -522,7 +553,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   int line_nr = 0;
   int errors = 0;
   if (!fss.is_open()) {
-    LogDetail([p = path](AsyncDetail & detail) {
+    LogDetail([p = path](AsyncDetail &detail) {
 #if USE_NEW_LOGGING_FORMAT
       std::stringstream ss;
       ss << "can't open file " << p;
@@ -558,7 +589,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
           continue;
         }
         errors++;
-        LogDetail([l = line_nr](AsyncDetail & detail) {
+        LogDetail([l = line_nr](AsyncDetail &detail) {
 #if USE_NEW_LOGGING_FORMAT
           std::stringstream ss;
           ss << "value needs to be integer or double, line=" << l;
@@ -571,7 +602,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
       }
       if (looking_for == 1 && s != "=") {
         errors++;
-        LogDetail([l = line_nr](AsyncDetail & detail) {
+        LogDetail([l = line_nr](AsyncDetail &detail) {
 #if USE_NEW_LOGGING_FORMAT
           std::stringstream ss;
           ss << "expected 'key=value', line=" << l;
@@ -672,6 +703,9 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
 
   // keys that apply to Offline
   lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);
+  if (lookupkv(model, "Offline", "sample_concatenate_permutation", &val, nullptr))
+    sample_concatenate_permutation = (val == 0) ? false : true;
+  
 
   return 0;
 }

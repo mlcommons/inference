@@ -23,13 +23,13 @@ struct RocData {
 };
 
 class RocMetrics {
- public:
+public:
   // Create an RocMetrics object with predictions py_scores and targets
   // py_objects are numpy array objects.
-  explicit RocMetrics(PyObject* py_scores, PyObject* py_targets);
+  explicit RocMetrics(PyObject *py_scores, PyObject *py_targets);
   // RocMetrics is designed to be used in a roughly singleton fashion.
-  RocMetrics(const RocMetrics& other) = delete;
-  RocMetrics& operator=(const RocMetrics& other) = delete;
+  RocMetrics(const RocMetrics &other) = delete;
+  RocMetrics &operator=(const RocMetrics &other) = delete;
 
   // Computes the area under the ROC curve.
   float ComputeRocAuc();
@@ -40,11 +40,11 @@ class RocMetrics {
   // filtering operation, and an averaging of duplicated score contributions.
   RocData BinaryRoc() const;
 
- private:
+private:
   // Container for the full set of predictions and targets.
   std::vector<PredictElem> full_data_;
 };
 
-}  // namespace rocmetrics
+} // namespace rocmetrics
 
-#endif  // _THIRD_PARTY_TENSORFLOW_MODELS_MLPERF_MODELS_ROUGH_UTIL_ROC_METRICS_ROC_METRICS_H_
+#endif // _THIRD_PARTY_TENSORFLOW_MODELS_MLPERF_MODELS_ROUGH_UTIL_ROC_METRICS_ROC_METRICS_H_

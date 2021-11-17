@@ -156,11 +156,9 @@ const std::string ArgValueTransform(
 const std::string ArgValueTransform(const float value) {
   if (value == std::numeric_limits<float>::infinity()) {
     return "Infinity";
-  }
-  else if (value == -std::numeric_limits<float>::infinity()) {
+  } else if (value == -std::numeric_limits<float>::infinity()) {
     return "-Infinity";
-  }
-  else if (std::isnan(value)) {
+  } else if (std::isnan(value)) {
     return "NaN";
   }
   return std::to_string(value);
@@ -169,11 +167,9 @@ const std::string ArgValueTransform(const float value) {
 const std::string ArgValueTransform(const double value) {
   if (value == std::numeric_limits<double>::infinity()) {
     return "Infinity";
-  }
-  else if (value == -std::numeric_limits<double>::infinity()) {
+  } else if (value == -std::numeric_limits<double>::infinity()) {
     return "-Infinity";
-  }
-  else if (std::isnan(value)) {
+  } else if (std::isnan(value)) {
     return "NaN";
   }
   return std::to_string(value);

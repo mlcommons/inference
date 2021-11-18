@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34] [cpu|gpu]"
+    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnext50] [cpu|gpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -21,7 +21,7 @@ for i in $* ; do
        tf|onnxruntime|tflite|pytorch) backend=$i; shift;;
        cpu|gpu) device=$i; shift;;
        gpu) device=gpu; shift;;
-       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf) model=$i; shift;;
+       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf|ssd-resnext50) model=$i; shift;;
     esac
 done
 
@@ -50,6 +50,10 @@ fi
 if [ $name == "ssd-resnet34-tf" ] ; then
     model_path="$MODEL_DIR/resnet34_tf.22.1.pb"
     profile=ssd-resnet34-tf
+fi
+if [ $name == "ssd-resnext50-onnxruntime" ] ; then
+    model_path="$MODEL_DIR/retinanet_resnext50_32x4d_fpn.onnx"
+    profile=ssd-resnext50-onnxruntime
 fi
 
 #
@@ -94,6 +98,10 @@ fi
 if [ $name == "ssd-resnet34-pytorch" ] ; then
     model_path="$MODEL_DIR/resnet34-ssd1200.pytorch"
     profile=ssd-resnet34-pytorch
+fi
+if [ $name == "ssd-resnext50-pytorch" ] ; then
+    model_path="$MODEL_DIR/retinanet_resnext50_32x4d_fpn.pth"
+    profile=ssd-resnext50-pytorch
 fi
 
 

@@ -51,10 +51,6 @@ if [ $name == "ssd-resnet34-tf" ] ; then
     model_path="$MODEL_DIR/resnet34_tf.22.1.pb"
     profile=ssd-resnet34-tf
 fi
-if [ $name == "ssd-resnext50-onnxruntime" ] ; then
-    model_path="$MODEL_DIR/retinanet_resnext50_32x4d_fpn.onnx"
-    profile=ssd-resnext50-onnxruntime
-fi
 
 #
 # onnxruntime
@@ -81,6 +77,10 @@ if [ $name == "ssd-resnet34-tf-onnxruntime" ] ; then
     model_path="$MODEL_DIR/ssd_resnet34_mAP_20.2.onnx"
     profile=ssd-resnet34-onnxruntime-tf
 fi
+if [ $name == "ssd-resnext50-onnxruntime" ] ; then
+    model_path="$MODEL_DIR/resnext50_32x4d_fpn.onnx"
+    profile=ssd-resnext50-onnxruntime
+fi
 
 #
 # pytorch
@@ -100,7 +100,7 @@ if [ $name == "ssd-resnet34-pytorch" ] ; then
     profile=ssd-resnet34-pytorch
 fi
 if [ $name == "ssd-resnext50-pytorch" ] ; then
-    model_path="$MODEL_DIR/retinanet_resnext50_32x4d_fpn.pth"
+    model_path="$MODEL_DIR/resnext50_32x4d_fpn.pth"
     profile=ssd-resnext50-pytorch
 fi
 

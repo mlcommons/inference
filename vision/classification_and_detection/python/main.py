@@ -268,7 +268,7 @@ def get_args():
     return args
 
 
-def get_backend(backend, model_name = ""):
+def get_backend(backend):
     if backend == "tensorflow":
         from backend_tf import BackendTensorflow
         backend = BackendTensorflow()
@@ -283,7 +283,7 @@ def get_backend(backend, model_name = ""):
         backend = BackendPytorch()
     elif backend == "pytorch-native":
         from backend_pytorch_native import BackendPytorchNative
-        backend = BackendPytorchNative(model_name)      
+        backend = BackendPytorchNative()      
     elif backend == "tflite":
         from backend_tflite import BackendTflite
         backend = BackendTflite()
@@ -450,7 +450,7 @@ def main():
     log.info(args)
 
     # find backend
-    backend = get_backend(args.backend, args.model_name)
+    backend = get_backend(args.backend)
 
     # override image format if given
     image_format = args.data_format if args.data_format else backend.image_format()

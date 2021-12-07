@@ -247,6 +247,14 @@ std::vector<QueryMetadata> GenerateQueries(
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
+  // When sample_concatenate_permutation is turned on, pad to a multiple of the
+  // complete dataset to ensure complete fairness.
+  if (settings.sample_concatenate_permutation &&
+      samples_per_query % loaded_samples.size() != 0) {
+    size_t pad_size =
+        (loaded_samples.size() - samples_per_query % loaded_samples.size());
+    samples_per_query += pad_size;
+  }
   std::vector<QuerySampleIndex> samples(samples_per_query);
   std::chrono::nanoseconds timestamp(0);
   std::chrono::nanoseconds prev_timestamp(0);
@@ -284,10 +292,20 @@ std::vector<QueryMetadata> GenerateQueries(
         for (size_t i = 0; i < num_full_repeats; ++i) {
           std::copy(loaded_samples.begin(), loaded_samples.end(),
                     samples.begin() + i * num_loaded_samples);
+
+          if (settings.sample_concatenate_permutation) {
+            std::shuffle(samples.begin() + i * num_loaded_samples,
+                         samples.begin() + (i + 1) * num_loaded_samples,
+                         sample_rng);
+          }
         }
 
         std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder,
                   samples.begin() + num_full_repeats * num_loaded_samples);
+
+        if (settings.sample_concatenate_permutation) {
+          assert(remainder == 0);
+        }
       }
     } else {
       for (auto& s : samples) {
@@ -1594,7 +1612,8 @@ struct RunFunctions {
 
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,
-               const LogSettings& log_settings) {
+               const LogSettings& log_settings,
+               const std::string audit_config_filename) {
   GlobalLogger().StartIOThread();
 
   const std::string test_date_time = CurrentDateTimeISO8601();
@@ -1635,7 +1654,6 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   TestSettings test_settings = requested_settings;
   // Look for Audit Config file to override TestSettings during audit
-  const std::string audit_config_filename = "audit.config";
   if (FileExists(audit_config_filename)) {
     LogDetail([](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT

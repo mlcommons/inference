@@ -19,6 +19,7 @@ limitations under the License.
 
 #include <cstddef>
 #include <functional>
+#include <string>
 
 /// \brief Contains the loadgen API.
 namespace mlperf {
@@ -69,7 +70,8 @@ void QuerySamplesComplete(QuerySampleResponse* responses, size_t response_count,
 ///
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,
-               const LogSettings& log_settings);
+               const LogSettings& log_settings,
+               const std::string audit_config_filename = "audit.config");
 
 ///
 /// \brief Aborts the running test.

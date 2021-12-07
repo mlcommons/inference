@@ -80,6 +80,8 @@ struct TestSettingsInternal {
   bool performance_issue_same;
   uint64_t performance_issue_same_index;
   uint64_t performance_sample_count;
+
+  bool sample_concatenate_permutation;
 };
 
 /// \brief A namespace of collections of FindPeakPerformance helper functions,

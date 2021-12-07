@@ -15,27 +15,35 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import subprocess
+import mlperf_loadgen as lg
+import argparse
 import os
 import sys
 sys.path.insert(0, os.getcwd())
 
-import argparse
-import mlperf_loadgen as lg
-import subprocess
-
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--backend", choices=["tf","pytorch","onnxruntime","tf_estimator"], default="tf", help="Backend")
-    parser.add_argument("--scenario", choices=["SingleStream", "Offline", "Server", "MultiStream"], default="Offline", help="Scenario")
-    parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
-    parser.add_argument("--quantized", action="store_true", help="use quantized model (only valid for onnxruntime backend)")
-    parser.add_argument("--profile", action="store_true", help="enable profiling (only valid for onnxruntime backend)")
-    parser.add_argument("--mlperf_conf", default="build/mlperf.conf", help="mlperf rules config")
-    parser.add_argument("--user_conf", default="user.conf", help="user config for user LoadGen settings such as target QPS")
-    parser.add_argument("--max_examples", type=int, help="Maximum number of examples to consider (not limited by default)")
+    parser.add_argument(
+        "--backend", choices=["tf", "pytorch", "onnxruntime", "tf_estimator"], default="tf", help="Backend")
+    parser.add_argument("--scenario", choices=["SingleStream", "Offline",
+                        "Server", "MultiStream"], default="Offline", help="Scenario")
+    parser.add_argument("--accuracy", action="store_true",
+                        help="enable accuracy pass")
+    parser.add_argument("--quantized", action="store_true",
+                        help="use quantized model (only valid for onnxruntime backend)")
+    parser.add_argument("--profile", action="store_true",
+                        help="enable profiling (only valid for onnxruntime backend)")
+    parser.add_argument(
+        "--mlperf_conf", default="build/mlperf.conf", help="mlperf rules config")
+    parser.add_argument("--user_conf", default="user.conf",
+                        help="user config for user LoadGen settings such as target QPS")
+    parser.add_argument("--max_examples", type=int,
+                        help="Maximum number of examples to consider (not limited by default)")
     args = parser.parse_args()
     return args
+
 
 scenario_map = {
     "SingleStream": lg.TestScenario.SingleStream,
@@ -43,6 +51,7 @@ scenario_map = {
     "Server": lg.TestScenario.Server,
     "MultiStream": lg.TestScenario.MultiStream
 }
+
 
 def main():
     args = get_args()
@@ -92,7 +101,10 @@ def main():
     lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
 
     if args.accuracy:
-        cmd = "python3 {:}/accuracy-squad.py {}".format(os.path.dirname(os.path.abspath(__file__)), '--max_examples={}'.format(args.max_examples) if args.max_examples else '')
+        cmd = "python3 {:}/accuracy-squad.py {}".format(
+            os.path.dirname(os.path.abspath(__file__)),
+            '--max_examples {}'.format(
+                args.max_examples) if args.max_examples else '')
         subprocess.check_call(cmd, shell=True)
 
     print("Done!")
@@ -102,6 +114,7 @@ def main():
 
     print("Destroying QSL...")
     lg.DestroyQSL(sut.qsl.qsl)
+
 
 if __name__ == "__main__":
     main()

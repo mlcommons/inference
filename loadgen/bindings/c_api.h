@@ -75,7 +75,8 @@ void DestroyQSL(void* qsl);
 /// \brief Run tests on a SUT created by ConstructSUT().
 /// \details This is the C entry point. See mlperf::StartTest for the C++ entry
 /// point.
-void StartTest(void* sut, void* qsl, const TestSettings& settings);
+void StartTest(void* sut, void* qsl, const TestSettings& settings,
+               const std::string& audit_config_filename);
 
 ///
 /// \brief Register a thread for query issuing in Server scenario.

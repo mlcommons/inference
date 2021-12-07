@@ -191,26 +191,29 @@ void DestroyQSL(uintptr_t qsl) {
   delete qsl_cast;
 }
 
-void StartTest(uintptr_t sut, uintptr_t qsl,
-               mlperf::TestSettings test_settings) {
+void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings,
+               const std::string& audit_config_filename) {
   pybind11::gil_scoped_release gil_releaser;
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   QuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
   LogSettings default_log_settings;
-  mlperf::StartTest(sut_cast, qsl_cast, test_settings, default_log_settings);
+  mlperf::StartTest(sut_cast, qsl_cast, test_settings, default_log_settings,
+                    audit_config_filename);
 }
 
 void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
                               mlperf::TestSettings test_settings,
-                              mlperf::LogSettings log_settings) {
+                              mlperf::LogSettings log_settings,
+                              const std::string& audit_config_filename) {
   pybind11::gil_scoped_release gil_releaser;
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   QuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
-  mlperf::StartTest(sut_cast, qsl_cast, test_settings, log_settings);
+  mlperf::StartTest(sut_cast, qsl_cast, test_settings, log_settings,
+                    audit_config_filename);
 }
 
 using ResponseCallback = std::function<void(QuerySampleResponse*)>;
@@ -382,10 +385,16 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
 
   m.def("StartTest", &py::StartTest,
         "Run tests on a SUT created by ConstructSUT() with the provided QSL. "
-        "Uses default log settings.");
+        "Uses default log settings.",
+        pybind11::arg("sut"), pybind11::arg("qsl"),
+        pybind11::arg("test_settings"),
+        pybind11::arg("audit_config_filename") = "audit.config");
   m.def("StartTestWithLogSettings", &py::StartTestWithLogSettings,
         "Run tests on a SUT created by ConstructSUT() with the provided QSL. "
-        "Accepts custom log settings.");
+        "Accepts custom log settings.",
+        pybind11::arg("sut"), pybind11::arg("qsl"),
+        pybind11::arg("test_settings"), pybind11::arg("log_settings"),
+        pybind11::arg("audit_config_filename") = "audit.config");
   m.def("QuerySamplesComplete", &py::QuerySamplesComplete,
         "Called by the SUT to indicate that samples from some combination of"
         "IssueQuery calls have finished.",

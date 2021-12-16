@@ -215,7 +215,7 @@ def get_args():
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--performance-sample-count", type=int, help="performance sample count")
     parser.add_argument("--max-latency", type=float, help="mlperf max latency in pct tile")
-    parser.add_argument("--samples-per-query", type=int, help="mlperf multi-stream sample per query")
+    parser.add_argument("--samples-per-query", default=8, type=int, help="mlperf multi-stream sample per query")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
@@ -535,7 +535,7 @@ def main():
         settings.multi_stream_samples_per_query = args.samples_per_query
     if args.max_latency:
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
-        settings.multi_stream_target_latency_ns = int(args.max_latency * NANO_SEC)
+        settings.multi_stream_expected_latency_ns = int(args.max_latency * NANO_SEC)
 
     performance_sample_count = args.performance_sample_count if args.performance_sample_count else min(count, 500)
     sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)

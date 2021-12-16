@@ -18,12 +18,15 @@
 
 from __future__ import print_function
 
+import array
 import threading
 import time
 
 from absl import app
 import mlperf_loadgen
 import numpy
+
+from datetime import datetime
 
 
 def load_samples_to_ram(query_samples):
@@ -36,23 +39,20 @@ def unload_samples_from_ram(query_samples):
     return
 
 
-# Processes queries in 3 slices that complete at different times.
+# Processes queries in 8 slices that complete at different times.
 def process_query_async(query_samples, i_slice):
     time.sleep(.001 * (i_slice + 1))
     responses = []
-    samples_to_complete = query_samples[i_slice:len(query_samples):3]
-    for s in samples_to_complete:
+    samples_to_complete = query_samples[i_slice:len(query_samples):8]
+    for j, s in enumerate(samples_to_complete):
         responses.append(mlperf_loadgen.QuerySampleResponse(s.id, 0, 0))
     mlperf_loadgen.QuerySamplesComplete(responses)
 
 
 def issue_query(query_samples):
-    threading.Thread(target=process_query_async,
-                     args=(query_samples, 0)).start()
-    threading.Thread(target=process_query_async,
-                     args=(query_samples, 1)).start()
-    threading.Thread(target=process_query_async,
-                     args=(query_samples, 2)).start()
+    for i in range(8):
+        threading.Thread(target=process_query_async,
+                         args=(query_samples, i)).start()
 
 
 def flush_queries():
@@ -66,6 +66,8 @@ def process_latencies(latencies_ns):
     print(numpy.percentile(latencies_ns, 50))
     print("90 percentile latency: ")
     print(numpy.percentile(latencies_ns, 90))
+    print("99 percentile latency: ")
+    print(numpy.percentile(latencies_ns, 99))
 
 
 def main(argv):
@@ -73,9 +75,8 @@ def main(argv):
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.MultiStream
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
-    settings.multi_stream_target_latency_ns = 100000000
-    settings.multi_stream_samples_per_query = 4
-    settings.multi_stream_max_async_queries = 2
+    settings.multi_stream_expected_latency_ns = 8000000
+    settings.multi_stream_samples_per_query = 8
     settings.min_query_count = 100
     settings.min_duration_ms = 10000
 

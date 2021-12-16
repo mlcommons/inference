@@ -139,88 +139,23 @@ struct QueryScheduler<TestScenario::SingleStream> {
 /// \brief Schedules queries for issuance in the multi stream scenario.
 template <>
 struct QueryScheduler<TestScenario::MultiStream> {
-  QueryScheduler(const TestSettingsInternal& settings,
-                 const PerfClock::time_point start)
-      : qps(settings.target_qps),
-        max_async_queries(settings.max_async_queries),
-        start_time(start) {}
+  QueryScheduler(const TestSettingsInternal& /*settings*/,
+                 const PerfClock::time_point) {}
 
   PerfClock::time_point Wait(QueryMetadata* next_query) {
-    {
-      prev_queries.push(next_query);
-      auto tracer =
-          MakeScopedTracer([](AsyncTrace& trace) { trace("Waiting"); });
-      if (prev_queries.size() > max_async_queries) {
-        prev_queries.front()->WaitForAllSamplesCompleted();
-        prev_queries.pop();
-      }
+    auto tracer = MakeScopedTracer([](AsyncTrace& trace) { trace("Waiting"); });
+    if (prev_query != nullptr) {
+      prev_query->WaitForAllSamplesCompleted();
     }
-
-    {
-      auto tracer =
-          MakeScopedTracer([](AsyncTrace& trace) { trace("Scheduling"); });
-      // TODO(brianderson): Skip ticks based on the query complete time,
-      //     before the query synchronization + notification thread hop,
-      //     rather than after.
-      PerfClock::time_point now = PerfClock::now();
-      auto i_period_old = i_period;
-      PerfClock::time_point tick_time;
-      do {
-        i_period++;
-        tick_time =
-            start_time + SecondsToDuration<PerfClock::duration>(i_period / qps);
-        Log([tick_time](AsyncLog& log) {
-          log.TraceAsyncInstant("QueryInterval", 0, tick_time);
-        });
-      } while (tick_time < now);
-      next_query->scheduled_intervals = i_period - i_period_old;
-      next_query->scheduled_time = tick_time;
-      std::this_thread::sleep_until(tick_time);
-    }
+    prev_query = next_query;
 
     auto now = PerfClock::now();
+    next_query->scheduled_time = now;
     next_query->issued_start_time = now;
     return now;
   }
 
-  size_t i_period = 0;
-  double qps;
-  const size_t max_async_queries;
-  PerfClock::time_point start_time;
-  std::queue<QueryMetadata*> prev_queries;
-};
-
-/// \brief Schedules queries for issuance in the single stream free scenario.
-template <>
-struct QueryScheduler<TestScenario::MultiStreamFree> {
-  QueryScheduler(const TestSettingsInternal& settings,
-                 const PerfClock::time_point /*start*/)
-      : max_async_queries(settings.max_async_queries) {}
-
-  PerfClock::time_point Wait(QueryMetadata* next_query) {
-    bool schedule_time_needed = true;
-    {
-      prev_queries.push(next_query);
-      auto tracer =
-          MakeScopedTracer([](AsyncTrace& trace) { trace("Waiting"); });
-      if (prev_queries.size() > max_async_queries) {
-        next_query->scheduled_time =
-            prev_queries.front()->WaitForAllSamplesCompletedWithTimestamp();
-        schedule_time_needed = false;
-        prev_queries.pop();
-      }
-    }
-
-    auto now = PerfClock::now();
-    if (schedule_time_needed) {
-      next_query->scheduled_time = now;
-    }
-    next_query->issued_start_time = now;
-    return now;
-  }
-
-  const size_t max_async_queries;
-  std::queue<QueryMetadata*> prev_queries;
+  QueryMetadata* prev_query = nullptr;
 };
 
 /// \brief Schedules queries for issuance in the server scenario.
@@ -389,11 +324,9 @@ void IssueQueryController::StartIssueQueries(IssueQueryState* s) {
 template void IssueQueryController::StartIssueQueries<
     TestScenario::MultiStream>(IssueQueryState* s);
 template void IssueQueryController::StartIssueQueries<
-    TestScenario::MultiStreamFree>(IssueQueryState* s);
-template void IssueQueryController::StartIssueQueries<TestScenario::Offline>(
-    IssueQueryState* s);
-template void IssueQueryController::StartIssueQueries<TestScenario::Server>(
-    IssueQueryState* s);
+    TestScenario::Offline>(IssueQueryState* s);
+template void IssueQueryController::StartIssueQueries<
+    TestScenario::Server>(IssueQueryState* s);
 template void IssueQueryController::StartIssueQueries<
     TestScenario::SingleStream>(IssueQueryState* s);
 

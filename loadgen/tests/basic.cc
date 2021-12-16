@@ -137,7 +137,6 @@ struct SystemUnderTestAccuracy : public SystemUnderTestBasic {
 
     double qps = 1e3;
     test_settings_.server_target_qps = qps;
-    test_settings_.multi_stream_target_qps = qps;
   }
 };
 
@@ -167,16 +166,7 @@ struct TestAccuracyIncludesAllSamples : public SystemUnderTestAccuracy {
     }
 
     FAIL_IF(discontinuities != 0) && FAIL_EXP(discontinuities);
-    if (test_settings_.scenario == mlperf::TestScenario::MultiStream ||
-        test_settings_.scenario == mlperf::TestScenario::MultiStreamFree) {
-      const size_t expected_sets =
-          total_sample_count_ / performance_sample_count_;
-      FAIL_IF(dupes >=
-              test_settings_.multi_stream_samples_per_query * expected_sets) &&
-          FAIL_EXP(dupes);
-    } else {
-      FAIL_IF(dupes != 0) && FAIL_EXP(dupes);
-    }
+    FAIL_IF(dupes != 0) && FAIL_EXP(dupes);
   }
 };
 
@@ -211,11 +201,7 @@ struct TestAccuracyDupesAreLimitted : public SystemUnderTestAccuracy {
       issue_counts.at(s)++;
     }
 
-    const bool multistream =
-        test_settings_.scenario == mlperf::TestScenario::MultiStream ||
-        test_settings_.scenario == mlperf::TestScenario::MultiStreamFree;
-    const size_t max_count = multistream ? 2 : 1;
-
+    const size_t max_count = 1;
     for (size_t i = 0; i < issue_counts.size(); i++) {
       FAIL_IF(issue_counts[i] > max_count) && FAIL_EXP(i) &&
           FAIL_EXP(max_count) && FAIL_EXP(issue_counts[i]);
@@ -286,7 +272,7 @@ struct TestMultiStreamContiguousRemainderQuery
         FAIL_MSG("Contiguous sample order is likely ambiguous.");
     for (size_t i = 0; i < samples.size(); i++) {
       auto& offset = first_qsl_offsets_.at(samples.at(i));
-      // Samples may be loaded into multiple slots for paddign purposes,
+      // Samples may be loaded into multiple slots for padding purposes,
       // so make sure to only index the first time a sample appears in a
       // loaded set.
       if (offset == kBadQslOffset) {
@@ -328,8 +314,4 @@ constexpr size_t TestMultiStreamContiguousRemainderQuery::kBadQslOffset =
 REGISTER_TEST(MultiStream_RemainderQueryContiguous,
               TestProxy<TestMultiStreamContiguousRemainderQuery>(),
               mlperf::TestScenario::MultiStream);
-REGISTER_TEST(MultiStreamFree_RemainderQueryContiguous,
-              TestProxy<TestMultiStreamContiguousRemainderQuery>(),
-              mlperf::TestScenario::MultiStreamFree);
-
 }  // namespace unit_tests

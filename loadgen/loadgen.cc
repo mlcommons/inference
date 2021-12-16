@@ -680,9 +680,11 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
         *recommendation = "* Run successful.";
       } else {
         *recommendation = "* Run unsuccessful.\n* Processed " +
-                          std::to_string(queries_issued) +
-                          " queries.  Would need to run at least " +
-                          std::to_string(h + t - queries_issued) + " more.";
+                          std::to_string(queries_issued) + " queries.\n" +
+                          "* Would need to run at least " +
+                          std::to_string(h + t - queries_issued) +
+                          " more queries,\n with the run being successful if "
+                          "every additional\n query were under latency.";
       }
       break;
     }

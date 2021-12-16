@@ -637,12 +637,14 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
 
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
+      // TODO: Grab multistream percentile from settings, instead of hardcoding.
+      double multi_stream_percentile = 0.99;
       int64_t t = 1;
       int64_t h_min = find_min_passing(1, target_latency_percentile.percentile,
                                        tolerance, confidence);
       int64_t h = h_min;
       if (queries_issued < h_min + 1) {
-        *recommendation = "Need to process at least " +
+        *recommendation = "* Need to process at least " +
                           std::to_string(h_min + 1) +
                           " queries for early stopping.";
         break;
@@ -666,6 +668,37 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
           "* Early stopping " +
           DoubleToString(target_latency_percentile.percentile * 100, 0) +
           "th percentile estimate: " + std::to_string(percentile_estimate);
+
+      // Early stopping estimate for 99%ile (used for infering multi-stream from
+      // single-stream)
+      t = 1;
+      h_min =
+          find_min_passing(1, multi_stream_percentile, tolerance, confidence);
+      h = h_min;
+      if (queries_issued < h_min + 1) {
+        *recommendation +=
+            "\n* Not enough queries processed for " +
+            DoubleToString(multi_stream_percentile * 100, 0) +
+            "th percentile\n" +
+            " early stopping estimate (would need to process at\n least " +
+            std::to_string(h_min + 1) + " total queries).";
+        break;
+      } else {
+        for (int64_t i = 2; i <= overlatency_queries_bound; ++i) {
+          h = find_min_passing(i, multi_stream_percentile, tolerance,
+                               confidence);
+          if (queries_issued < h + i) {
+            t = i - 1;
+            break;
+          }
+        }
+      }
+      percentile_estimate = pr.sample_latencies[queries_issued - t];
+      *recommendation +=
+          "\n* Early stopping " +
+          DoubleToString(multi_stream_percentile * 100, 0) +
+          "th percentile estimate: " + std::to_string(percentile_estimate);
+
       break;
     }
     case TestScenario::Server: {

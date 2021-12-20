@@ -41,7 +41,7 @@ def unload_samples_from_ram(query_samples):
     return
 
 
-# Processes queries in 8 slices that complete at different times.
+# Processes queries in NUM_AGENTS slices that complete at different times.
 def process_query_async(query_samples, i_slice):
     time.sleep(LOOPBACK_LATENCY_S * (i_slice + 1))
     responses = []

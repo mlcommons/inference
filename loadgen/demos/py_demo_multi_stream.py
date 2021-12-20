@@ -27,6 +27,9 @@ import numpy
 
 from datetime import datetime
 
+# Global var
+NUM_AGENTS = 8
+LOOPBACK_LATENCY_S = .001
 
 def load_samples_to_ram(query_samples):
     del query_samples
@@ -40,9 +43,9 @@ def unload_samples_from_ram(query_samples):
 
 # Processes queries in 8 slices that complete at different times.
 def process_query_async(query_samples, i_slice):
-    time.sleep(.001 * (i_slice + 1))
+    time.sleep(LOOPBACK_LATENCY_S * (i_slice + 1))
     responses = []
-    samples_to_complete = query_samples[i_slice:len(query_samples):8]
+    samples_to_complete = query_samples[i_slice:len(query_samples):NUM_AGENTS]
     for j, s in enumerate(samples_to_complete):
         responses.append(mlperf_loadgen.QuerySampleResponse(s.id, 0, 0))
     mlperf_loadgen.QuerySamplesComplete(responses)

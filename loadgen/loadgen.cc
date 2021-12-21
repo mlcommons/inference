@@ -621,7 +621,7 @@ bool PerformanceSummary::MinDurationMet(std::string* recommendation) {
       break;
     case TestScenario::SingleStream:
     case TestScenario::MultiStream:
-          min_duration_met = pr.final_query_issued_time >= min_duration;
+      min_duration_met = pr.final_query_issued_time >= min_duration;
       break;
   }
   if (min_duration_met) {

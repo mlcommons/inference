@@ -658,7 +658,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, "MultiStream", "target_latency_percentile", nullptr,
            &multi_stream_target_latency_percentile, 0.01);
   lookupkv(model, "MultiStream", "target_latency",
-           &multi_stream_expected_latency_ns, nullptr, 8 * 1000 * 1000);
+           &multi_stream_expected_latency_ns, nullptr, 1000 * 1000);
   lookupkv(model, "MultiStream", "samples_per_query",
            &multi_stream_samples_per_query, nullptr, 8);
 

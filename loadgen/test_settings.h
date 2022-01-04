@@ -115,7 +115,7 @@ struct TestSettings {
   /**@{*/
   /// \brief A hint used by the loadgen to pre-generate enough samples to
   ///        meet the minimum test duration.
-  uint64_t single_stream_expected_latency_ns = 1000000;
+  double single_stream_expected_latency_ns = 1000000;
   /// \brief The latency percentile reported as the final result.
   double single_stream_target_latency_percentile = 0.90;
   /**@}*/

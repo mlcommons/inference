@@ -201,7 +201,7 @@ def get_args():
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--max-latency", type=float, help="mlperf max latency in pct tile")
-    parser.add_argument("--samples-per-query", default=8, type=int, help="mlperf multi-stream sample per query")
+    parser.add_argument("--samples-per-query", default=8, type=int, help="mlperf multi-stream samples per query")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile

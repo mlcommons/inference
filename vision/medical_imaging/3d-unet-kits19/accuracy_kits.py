@@ -306,19 +306,13 @@ def main():
 
     # Finalize evaluation from evaluation summary
     print("Processing evaluation summary...")
-    with open(Path(postprocessed_data_dir, "summary.csv")) as f:
-        for line in f:
-            if not line.startswith("mean"):
-                continue
-            words = line.split(",")
-            if words[0] == "mean":
-                composite = float(words[1])
-                kidney = float(words[2])
-                tumor = float(words[3])
-                print("Accuracy: mean = {:.5f}, kidney = {:.4f}, tumor = {:.4f}".format(
-                    composite, kidney, tumor))
-                break
-
+    df = pd.read_csv(Path(postprocessed_data_dir, "summary.csv"))
+    final = df.loc[df['case'] == 'mean']
+    composite = float(final['composite'])
+    kidney = float(final['kidney'])
+    tumor = float(final['tumor'])
+    print("Accuracy: mean = {:.5f}, kidney = {:.4f}, tumor = {:.4f}".format(
+          composite, kidney, tumor))
     print("Done!")
 
 

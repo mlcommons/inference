@@ -89,23 +89,14 @@ struct TestSettingsInternal {
 namespace find_peak_performance {
 
 constexpr char const *kNotSupportedMsg =
-    "Finding peak performance is only supported in MultiStream, "
-    "MultiStreamFree, and Server scenarios.";
+    "Finding peak performance is only supported in Server scenarios.";
 
 template <TestScenario scenario>
 TestSettingsInternal MidOfBoundaries(
     const TestSettingsInternal &lower_bound_settings,
     const TestSettingsInternal &upper_bound_settings) {
   TestSettingsInternal mid_settings = lower_bound_settings;
-  if (scenario == TestScenario::MultiStream ||
-      scenario == TestScenario::MultiStreamFree) {
-    assert(lower_bound_settings.samples_per_query <
-           upper_bound_settings.samples_per_query);
-    mid_settings.samples_per_query = lower_bound_settings.samples_per_query +
-                                     (upper_bound_settings.samples_per_query -
-                                      lower_bound_settings.samples_per_query) /
-                                         2;
-  } else if (scenario == TestScenario::Server) {
+if (scenario == TestScenario::Server) {
     assert(lower_bound_settings.target_qps < upper_bound_settings.target_qps);
     mid_settings.target_qps =
         lower_bound_settings.target_qps +
@@ -125,11 +116,7 @@ TestSettingsInternal MidOfBoundaries(
 template <TestScenario scenario>
 bool IsFinished(const TestSettingsInternal &lower_bound_settings,
                 const TestSettingsInternal &upper_bound_settings) {
-  if (scenario == TestScenario::MultiStream ||
-      scenario == TestScenario::MultiStreamFree) {
-    return lower_bound_settings.samples_per_query + 1 >=
-           upper_bound_settings.samples_per_query;
-  } else if (scenario == TestScenario::Server) {
+if (scenario == TestScenario::Server) {
     uint8_t precision = lower_bound_settings.requested
                             .server_find_peak_qps_decimals_of_precision;
     double l =
@@ -151,10 +138,7 @@ bool IsFinished(const TestSettingsInternal &lower_bound_settings,
 
 template <TestScenario scenario>
 std::string ToStringPerformanceField(const TestSettingsInternal &settings) {
-  if (scenario == TestScenario::MultiStream ||
-      scenario == TestScenario::MultiStreamFree) {
-    return std::to_string(settings.samples_per_query);
-  } else if (scenario == TestScenario::Server) {
+  if (scenario == TestScenario::Server) {
     return std::to_string(settings.target_qps);
   } else {
     LogDetail([](AsyncDetail &detail) {
@@ -170,10 +154,7 @@ std::string ToStringPerformanceField(const TestSettingsInternal &settings) {
 
 template <TestScenario scenario>
 void WidenPerformanceField(TestSettingsInternal *settings) {
-  if (scenario == TestScenario::MultiStream ||
-      scenario == TestScenario::MultiStreamFree) {
-    settings->samples_per_query = settings->samples_per_query * 2;
-  } else if (scenario == TestScenario::Server) {
+  if (scenario == TestScenario::Server) {
     settings->target_qps =
         settings->target_qps *
         (1 + settings->requested.server_find_peak_qps_boundary_step_size);

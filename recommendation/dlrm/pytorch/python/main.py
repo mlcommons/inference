@@ -157,7 +157,7 @@ def get_args():
     parser.add_argument("--max-latency", type=float, help="mlperf max latency in pct tile")
     parser.add_argument("--count-samples", type=int, help="dataset items to use")
     parser.add_argument("--count-queries", type=int, help="number of queries to use")
-    parser.add_argument("--samples-per-query-multistream", type=int, help="query length for multi-stream scenario (in terms of aggregated samples)")
+    parser.add_argument("--samples-per-query-multistream", default=8, type=int, help="query length for multi-stream scenario (in terms of aggregated samples)")
     # --samples-per-query-offline is equivalent to perf_sample_count
     parser.add_argument("--samples-per-query-offline", type=int, default=2048, help="query length for offline scenario (in terms of aggregated samples)")
     parser.add_argument("--samples-to-aggregate-fix", type=int, help="number of samples to be treated as one")
@@ -586,7 +586,7 @@ def main():
 
     if args.max_latency:
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
-        settings.multi_stream_target_latency_ns = int(args.max_latency * NANO_SEC)
+        settings.multi_stream_expected_latency_ns = int(args.max_latency * NANO_SEC)
 
     sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
     qsl = lg.ConstructQSL(count, min(count, args.samples_per_query_offline), ds.load_query_samples, ds.unload_query_samples)

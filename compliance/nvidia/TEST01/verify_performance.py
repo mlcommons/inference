@@ -56,7 +56,7 @@ def main():
                 continue
 
         if ref_mode == "MultiStream":
-            if re.match("Samples per query", line):
+            if re.match("99th percentile latency", line):
                 ref_score = line.split(": ",1)[1].strip()
                 continue
 
@@ -91,7 +91,7 @@ def main():
                 continue
 
         if test_mode == "MultiStream":
-            if re.match("Samples per query", line):
+            if re.match("99th percentile latency", line):
                 test_score = line.split(": ",1)[1].strip()
                 continue
 
@@ -123,14 +123,15 @@ def main():
  
     threshold = 0.10
 
-    # In single stream mode, latencies can be very short for high performance systems
+    # In single-/multi-stream mode, latencies can be very short for high performance systems
     # and run-to-run variation due to external disturbances (OS) can be significant.
     # In this case we relax pass threshold to 20%
-
-    if ref_mode == "SingleStream" and float(ref_score) <= 200000:
+    if (ref_mode == "SingleStream" and float(ref_score) <= 200000) or\
+       (ref_mode == "MultiStream" and float(ref_score) <= 1600000):
         threshold = 0.20
         
-    if float(test_score) < float(ref_score) * (1 + threshold) and float(test_score) > float(ref_score) * (1 - threshold):
+    if float(test_score) < float(ref_score) * (1 + threshold) and\
+       float(test_score) > float(ref_score) * (1 - threshold):
         print("TEST PASS")
     else:
         print("TEST FAIL: Test score invalid")

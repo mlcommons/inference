@@ -411,7 +411,7 @@ usage: main.py [-h]
 
 `--max-latency MAX_LATENCY` comma separated list of which latencies (in seconds) we try to reach in the 99 percentile (default: 0.01,0.05,0.100).
 
-`--samples-per-query-multistream` maximum number of (aggregated) samples per query in MultiStream scenario.
+`--samples-per-query-multistream` number of (aggregated) samples per query in MultiStream scenario (default: 8).
 
 `--samples-per-query-offline` maximum number of (aggregated) samples per query in Offline scenario.
 
@@ -427,7 +427,7 @@ usage: main.py [-h]
 
 `--accuracy` perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 
-`--find-peak-performance` determine the maximum QPS for the Server and samples per query for the MultiStream, while not applicable to other scenarios.
+`--find-peak-performance` determine the maximum QPS for the Server, while not applicable to other scenarios.
 
 ## License
 

@@ -416,6 +416,112 @@ MODEL_CONFIG = {
             "3d-unet-99.9": {"SingleStream":1024, "Offline": 1},
         },
     },
+    "v2.0": {
+        "models": [
+            "ssd-small", "ssd-large", "resnet", "rnnt",
+            "bert-99", "bert-99.9",
+            "dlrm-99", "dlrm-99.9",
+            "3d-unet-99", "3d-unet-99.9",
+        ],
+        # FIXME: required/optional scenarios for v2.0 needs to be filled up correctly; below lists are temporary
+        "required-scenarios-datacenter": {
+            "resnet": ["Server", "Offline"],
+            "ssd-large": ["Server", "Offline"],
+            "rnnt": ["Server", "Offline"],
+            "bert-99": ["Server", "Offline"],
+            "bert-99.9": ["Server", "Offline"],
+            "dlrm-99": ["Server", "Offline"],
+            "dlrm-99.9": ["Server", "Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+        },
+        "optional-scenarios-datacenter": {
+        },
+        "required-scenarios-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline"],
+            "ssd-small": ["SingleStream", "MultiStream", "Offline"],
+            "ssd-large": ["SingleStream", "MultiStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-edge": {
+        },
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "Offline"],
+            "ssd-small": ["SingleStream", "Offline"],
+            "ssd-large": ["SingleStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["Offline"],
+            "dlrm-99": ["Offline"],
+            "dlrm-99.9": ["Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-datacenter-edge": {
+        },
+        "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
+            "ssd-small": ("mAP", 22 * 0.99),
+            "ssd-large": ("mAP", 20 * 0.99),
+            "rnnt": ("WER", (100 - 7.452) * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "dlrm-99": ("AUC", 80.25 * 0.99),
+            "dlrm-99.9": ("AUC", 80.25 * 0.999),
+            "3d-unet-99": ("DICE", 0.86331 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.86331 * 0.999),
+        },
+        "performance-sample-count": {
+            "ssd-small": 256,
+            "ssd-large": 64,
+            "resnet": 1024,
+            "rnnt": 2513,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-99": 204800,
+            "dlrm-99.9": 204800,
+            "3d-unet-99": 42,
+            "3d-unet-99.9": 42,
+        },
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-mobilenet": "ssd-small",
+            "ssd-resnet34": "ssd-large",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
+        },
+        "seeds": {
+            "qsl_rng_seed": 1624344308455410291,
+            "sample_index_rng_seed": 517984244576520566,
+            "schedule_rng_seed": 10051496985653635065,
+        },
+        "ignore_errors": [
+        ],
+        "latency-constraint": {
+            "resnet": {"Server": 15000000},
+            "ssd-large": {"Server": 100000000},
+            "rnnt": {"Server": 1000000000},
+            "bert-99": {"Server": 130000000},
+            "bert-99.9": {"Server": 130000000},
+            "dlrm-99": {"Server": 30000000},
+            "dlrm-99.9": {"Server": 30000000},
+        },
+        "min-queries": {
+            "resnet": {"SingleStream":1024, "MultiStream": 270336, "Server": 270336, "Offline": 1},
+            "ssd-small": {"SingleStream":1024, "MultiStream": 270336, "Offline": 1},
+            "ssd-large": {"SingleStream":1024, "MultiStream": 270336, "Server": 270336, "Offline": 1},
+            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-99": {"Server": 270336, "Offline": 1},
+            "dlrm-99.9": {"Server": 270336, "Offline": 1},
+            "3d-unet-99": {"SingleStream":1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream":1024, "Offline": 1},
+        },
+    },
 }
 
 VALID_DIVISIONS = ["open", "closed"]
@@ -426,7 +532,8 @@ REQUIRED_PERF_POWER_FILES = ["spl.txt"]
 REQUIRED_POWER_FILES = ["client.json", "client.log", "ptd_logs.txt", "server.json", "server.log"]
 REQUIRED_ACC_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt", "accuracy.txt", "mlperf_log_accuracy.json"]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
-TO_MS = 1000 * 1000
+MS_TO_NS = 1000 * 1000
+S_TO_MS = 1000
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
 OFFLINE_MIN_SPQ = 24576
 TEST_DURATION_MS_PRE_1_0 = 60000
@@ -452,7 +559,8 @@ RESULT_FIELD = {
 RESULT_FIELD_NEW = {
     "Offline": "result_samples_per_second",
     "SingleStream": "result_90.00_percentile_latency_ns",
-    "MultiStream": "effective_samples_per_query",
+    "MultiStreamLegacy": "effective_samples_per_query",
+    "MultiStream": "result_99.00_percentile_per_query_latency_ns",
     "Server": "result_scheduled_samples_per_sec"
 }
 
@@ -601,6 +709,9 @@ class Config():
     def has_new_logging_format(self):
         return self.version not in ["v0.5", "v0.7"]
 
+    def uses_legacy_multistream(self):
+        return self.version in ["v0.5", "v0.7", "v1.0", "v1.1"]
+
 
 def get_args():
     """Parse commandline."""
@@ -726,14 +837,19 @@ def check_performance_dir(config, model, path, scenario_fixed):
         sample_index_rng_seed = mlperf_log["effective_sample_index_rng_seed"]
         schedule_rng_seed = mlperf_log["effective_schedule_rng_seed"]
         scenario = mlperf_log["effective_scenario"]
-        res = float(mlperf_log[RESULT_FIELD_NEW[scenario]])
+        scenario_for_res = "MultiStreamLegacy" if scenario == "MultiStream" and config.uses_legacy_multistream() else\
+                           scenario
+        res = float(mlperf_log[RESULT_FIELD_NEW[scenario_for_res]])
         latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
+        latency_mean = mlperf_log["result_mean_latency_ns"]
         if scenario in ["MultiStream"]:
             latency_99_percentile = mlperf_log["result_99.00_percentile_per_query_latency_ns"]
+            latency_mean = mlperf_log["result_mean_query_latency_ns"]
         min_query_count = mlperf_log["effective_min_query_count"]
         samples_per_query = mlperf_log["effective_samples_per_query"]
         min_duration = mlperf_log["effective_min_duration_ms"]
         if scenario == "SingleStream":
+            # qps_wo_loadgen_overhead is only used for inferring Offline from SingleStream; only for old submissions
             qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
     else:
         fname = os.path.join(path, "mlperf_log_summary.txt")
@@ -752,6 +868,7 @@ def check_performance_dir(config, model, path, scenario_fixed):
         scenario = rt["Scenario"].replace(" ","")
         res = float(rt[RESULT_FIELD[scenario]])
         latency_99_percentile = int(rt['99.00 percentile latency (ns)'])
+        latency_mean = int(rt['Mean latency (ns)'])
         min_query_count = int(rt['min_query_count'])
         samples_per_query = int(rt['samples_per_query'])
         min_duration = int(rt["min_duration (ms)"])
@@ -776,8 +893,8 @@ def check_performance_dir(config, model, path, scenario_fixed):
     if schedule_rng_seed != config.seeds["schedule_rng_seed"]:
         log.error("%s schedule_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["schedule_rng_seed"], schedule_rng_seed)
 
-    if scenario in ["SingleStream"]:
-        res /= TO_MS
+    if scenario == "SingleStream" or (scenario == "MultiStream" and not config.uses_legacy_multistream()):
+        res /= MS_TO_NS
 
     if config.version != "v0.5":
         # FIXME: for open we script this because open can submit in all scenarios
@@ -805,10 +922,18 @@ def check_performance_dir(config, model, path, scenario_fixed):
                         fname, required_min_duration, min_duration)
 
     inferred = False
-    # special case for Offline results inferred from SingleStream
-    if scenario_fixed in ["Offline"] and scenario != scenario_fixed:
+    # special case for results inferred from different scenario
+    if scenario_fixed in ["Offline"] and scenario in ["SingleStream"]:
         inferred = True
         res = qps_wo_loadgen_overhead
+    
+    if (scenario_fixed in ["Offline"] and not config.uses_legacy_multistream()) and scenario in ["MultiStream"]:
+        inferred = True
+        res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
+
+    if (scenario_fixed in ["MultiStream"] and not config.uses_legacy_multistream()) and scenario in ["SingleStream"]:
+        inferred = True
+        res = (latency_99_percentile * samples_per_query) / MS_TO_NS
 
     return is_valid, res, inferred
 
@@ -945,14 +1070,14 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
         "Organization", "Availability", "Division", "SystemType", "SystemName", "Platform", "Model",
         "MlperfModel", "Scenario", "Result", "Accuracy", "number_of_nodes", "host_processor_model_name",
         "host_processors_per_node", "host_processor_core_count", "accelerator_model_name", "accelerators_per_node",
-        "Location", "framework", "operating_system", "notes", "compilance", "errors", "version", "infered", "power"
+        "Location", "framework", "operating_system", "notes", "compliance", "errors", "version", "inferred", "power"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
     results = {}
 
     def log_result(submitter, available, division, system_type, system_name, system_desc, model_name, mlperf_model,
-                   scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=0, power_metric=0):
+                   scenario_fixed, r, acc, system_json, name, compliance, errors, config, inferred=0, power_metric=0):
 
         notes = system_json.get("hw_notes", "")
         if system_json.get("sw_notes"):
@@ -971,10 +1096,10 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
             '"'+system_json.get("framework", "")+'"',
             '"'+system_json.get("operating_system", "")+'"',
             '"'+notes +'"',
-            compilance,
+            compliance,
             errors,
             config.version,
-            infered,
+            inferred,
             power_metric))
 
     # we are at the top of the submission directory
@@ -1105,7 +1230,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 errors += 1
                                 log.error("%s, accuracy not valid", acc_path)
 
-                        infered = 0
+                        inferred = 0
                         if scenario in ["Server"] and config.version in ["v0.5", "v0.7"]:
                             n = ["run_1", "run_2", "run_3", "run_4", "run_5"]
                         else:
@@ -1133,7 +1258,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                             try:
                                 is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed)
                                 if is_inferred:
-                                    infered = 1
+                                    inferred = 1
                                     log.info("%s has inferred results, qps=%s", perf_path, r)
                             except Exception as e:
                                 log.error("%s caused exception in check_performance_dir: %s", perf_path, e)
@@ -1160,7 +1285,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 errors += 1
 
                         # check if compliance dir is good for CLOSED division
-                        compilance = 0 if is_closed else 1
+                        compliance = 0 if is_closed else 1
                         if is_closed and not skip_compliance:
                             compliance_dir = os.path.join(division, submitter, "compliance",
                                                           system_desc, model_name, scenario)
@@ -1172,12 +1297,12 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                     log.error("compliance dir %s has issues", compliance_dir)
                                     # results[name] = None
                                 else:
-                                    compilance = 1
+                                    compliance = 1
 
                         if results.get(name):
                             if accuracy_is_valid:
                                 log_result(submitter, available, division, system_type, system_json.get("system_name"), system_desc, model_name, mlperf_model,
-                                           scenario_fixed, r, acc, system_json, name, compilance, errors, config, infered=infered, power_metric=power_metric)
+                                           scenario_fixed, r, acc, system_json, name, compliance, errors, config, inferred=inferred, power_metric=power_metric)
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)

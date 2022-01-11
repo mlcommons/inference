@@ -524,6 +524,8 @@ struct PerformanceSummary {
 
   // Set by ProcessLatencies.
   size_t sample_count = 0;
+  size_t query_count = 0;
+  size_t overlatency_query_count = 0;
   QuerySampleLatency sample_latency_min = 0;
   QuerySampleLatency sample_latency_max = 0;
   QuerySampleLatency sample_latency_mean = 0;
@@ -591,6 +593,19 @@ void PerformanceSummary::ProcessLatencies() {
     lp.sample_latency = pr.sample_latencies[sample_count * lp.percentile];
   }
 
+  query_count = pr.queries_issued;
+
+  // Count the number of overlatency queries. Only for Server scenario. Since in
+  // this scenario the number of samples per query is 1, sample_latencies are
+  // used.
+  if (settings.scenario == TestScenario::Server) {
+    QuerySampleLatency max_latency = settings.target_latency.count() + 1;
+    overlatency_query_count =
+        pr.sample_latencies.end() -
+        std::lower_bound(pr.sample_latencies.begin(), pr.sample_latencies.end(),
+                         max_latency);
+  }
+
   // MultiStream only after this point.
   if (settings.scenario != TestScenario::MultiStream) {
     return;
@@ -598,6 +613,8 @@ void PerformanceSummary::ProcessLatencies() {
 
   // Calculate per-query stats.
   size_t query_count = pr.queries_issued;
+  assert(pr.query_latencies.size() == query_count);
+  assert(pr.query_intervals.size() == query_count);
   std::sort(pr.query_latencies.begin(), pr.query_latencies.end());
   QuerySampleLatency accumulated_query_latency = 0;
   for (auto latency : pr.query_latencies) {
@@ -998,6 +1015,13 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
     MLPERF_LOG(detail, "result_invalid_reason", recommendation);
   }
   MLPERF_LOG(detail, "early_stopping_result", early_stopping_recommendation);
+
+  // Report number of queries
+  MLPERF_LOG(detail, "query_count", std::to_string(query_count));
+  if (settings.scenario == TestScenario::Server) {
+    MLPERF_LOG(detail, "overlatency_query_count",
+               std::to_string(overlatency_query_count));
+  }
 
   auto reportPerQueryLatencies = [&]() {
     MLPERF_LOG(detail, "result_min_query_latency_ns", query_latency_min);

@@ -117,7 +117,7 @@ class QueryMetadata {
 
   size_t scheduled_intervals = 0;  // Number of intervals between queries, as
                                    // actually scheduled during the run.
-                                   // For the multi-stream scenario only.
+                                   // For the MultiStream scenario only.
   PerfClock::time_point scheduled_time;
   PerfClock::time_point issued_start_time;
   PerfClock::time_point all_samples_done_time;

@@ -42,7 +42,7 @@ def main():
                 continue
 
         if ref_mode == "MultiStream":
-            if re.match("Samples per query", line):
+            if re.match("99th percentile latency", line):
                 ref_score = line.split(": ",1)[1].strip()
                 continue
 
@@ -77,7 +77,7 @@ def main():
                 continue
 
         if test_mode == "MultiStream":
-            if re.match("Samples per query", line):
+            if re.match("99th percentile latency", line):
                 test_score = line.split(": ",1)[1].strip()
                 continue
 

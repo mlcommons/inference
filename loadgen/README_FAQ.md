@@ -58,16 +58,6 @@ This file zips well and you can drag the zip file directly into
 [chrome://tracing](chrome://tracing) too.
 Please include zipped traces (and the other logs) when filing bug reports.
 
-## Q: What is the difference between the MultiStream and MultiStreamFree scenarios?
-**A:**
-MultiStream corresponds to the official MLPerf scenario for submissions;
-it has a fixed query rate and allows only one outstanding query at a time.
-MultiStreamFree is implemented for evaluation purposes only; it sends queries
-as fast as possible and allows up to N outstanding queries at a time. You may
-want to use MultiStreamFree for development purposes since small improvements
-in performance will always be reflected in the results, whereas MultiStream's
-results will be quantized.
-
 ## Q: Why is the code littered with so many lambdas? My eyes hurt.
 **A:**
 Lambdas are a convenient and efficient way to ship arbitrary data + deferred

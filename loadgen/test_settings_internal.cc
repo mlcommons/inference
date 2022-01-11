@@ -58,22 +58,10 @@ TestSettingsInternal::TestSettingsInternal(
       target_latency_percentile =
           requested.single_stream_target_latency_percentile;
       break;
-    case TestScenario::MultiStream: {
-      max_async_queries = requested.multi_stream_max_async_queries;
-      target_qps = requested.multi_stream_target_qps;
-      double target_latency_seconds =
-          max_async_queries / requested.multi_stream_target_qps;
-      target_latency =
-          SecondsToDuration<std::chrono::nanoseconds>(target_latency_seconds);
-      target_latency_percentile =
-          requested.multi_stream_target_latency_percentile;
-      break;
-    }
-    case TestScenario::MultiStreamFree:
-      max_async_queries = requested.multi_stream_max_async_queries;
-      target_qps = requested.multi_stream_target_qps;
-      target_latency =
-          std::chrono::nanoseconds(requested.multi_stream_target_latency_ns);
+    case TestScenario::MultiStream:
+      target_qps = static_cast<double>(std::nano::den) /
+                   requested.multi_stream_expected_latency_ns;
+      max_async_queries = 1;
       target_latency_percentile =
           requested.multi_stream_target_latency_percentile;
       break;
@@ -137,8 +125,7 @@ TestSettingsInternal::TestSettingsInternal(
                                     : requested.sample_concatenate_permutation;
 
   // Samples per query.
-  if (requested.scenario == TestScenario::MultiStream ||
-      requested.scenario == TestScenario::MultiStreamFree) {
+  if (requested.scenario == TestScenario::MultiStream) {
     samples_per_query = requested.multi_stream_samples_per_query;
   }
 
@@ -214,15 +201,11 @@ std::string ToString(TestScenario scenario) {
       return "SingleStream";
     case TestScenario::MultiStream:
       return "MultiStream";
-    case TestScenario::MultiStreamFree:
-      return "MultiStreamFree";
 #else
     case TestScenario::SingleStream:
       return "Single Stream";
     case TestScenario::MultiStream:
       return "Multi Stream";
-    case TestScenario::MultiStreamFree:
-      return "Multi Stream Free";
 #endif
     case TestScenario::Server:
       return "Server";
@@ -274,17 +257,12 @@ void LogRequestedTestSettings(const TestSettings &s) {
                    s.single_stream_target_latency_percentile);
         break;
       case TestScenario::MultiStream:
-      case TestScenario::MultiStreamFree:
-        MLPERF_LOG(detail, "requested_multi_stream_target_qps",
-                   s.multi_stream_target_qps);
-        MLPERF_LOG(detail, "requested_multi_stream_target_latency_ns",
-                   s.multi_stream_target_latency_ns);
+        MLPERF_LOG(detail, "requested_multi_stream_expected_latency_ns",
+                   s.multi_stream_expected_latency_ns);
         MLPERF_LOG(detail, "requested_multi_stream_target_latency_percentile",
                    s.multi_stream_target_latency_percentile);
         MLPERF_LOG(detail, "requested_multi_stream_samples_per_query",
                    s.multi_stream_samples_per_query);
-        MLPERF_LOG(detail, "requested_multi_stream_max_async_queries",
-                   s.multi_stream_max_async_queries);
         break;
       case TestScenario::Server:
         MLPERF_LOG(detail, "requested_server_target_qps", s.server_target_qps);
@@ -349,16 +327,12 @@ void LogRequestedTestSettings(const TestSettings &s) {
                s.single_stream_target_latency_percentile);
         break;
       case TestScenario::MultiStream:
-      case TestScenario::MultiStreamFree:
-        detail("multi_stream_target_qps : ", s.multi_stream_target_qps);
-        detail("multi_stream_target_latency_ns : ",
-               s.multi_stream_target_latency_ns);
+        detail("multi_stream_expected_latency_ns : ",
+               s.multi_stream_expected_latency_ns);
         detail("multi_stream_target_latency_percentile : ",
                s.multi_stream_target_latency_percentile);
         detail("multi_stream_samples_per_query : ",
                s.multi_stream_samples_per_query);
-        detail("multi_stream_max_async_queries : ",
-               s.multi_stream_max_async_queries);
         break;
       case TestScenario::Server:
         detail("server_target_qps : ", s.server_target_qps);
@@ -677,18 +651,16 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
            &single_stream_target_latency_percentile, 0.01);
-  lookupkv(model, "SingleStream", "target_latency",
-           &single_stream_expected_latency_ns, nullptr, 1000 * 1000);
+  lookupkv(model, "SingleStream", "target_latency", nullptr,
+           &single_stream_expected_latency_ns, 1000 * 1000);
 
   // keys that apply to MultiStream
   lookupkv(model, "MultiStream", "target_latency_percentile", nullptr,
            &multi_stream_target_latency_percentile, 0.01);
-  lookupkv(model, "MultiStream", "target_qps", nullptr,
-           &multi_stream_target_qps);
-  if (lookupkv(model, "MultiStream", "samples_per_query", &val, nullptr))
-    multi_stream_samples_per_query = static_cast<int>(val);
-  if (lookupkv(model, "MultiStream", "max_async_queries", &val, nullptr))
-    multi_stream_max_async_queries = static_cast<int>(val);
+  lookupkv(model, "MultiStream", "target_latency", nullptr,
+           &multi_stream_expected_latency_ns, 1000 * 1000);
+  lookupkv(model, "MultiStream", "samples_per_query",
+           &multi_stream_samples_per_query, nullptr, 1);
 
   // keys that apply to Server
   lookupkv(model, "Server", "target_latency_percentile", nullptr,

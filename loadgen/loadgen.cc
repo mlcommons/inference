@@ -531,7 +531,6 @@ struct PerformanceSummary {
   QuerySampleLatency query_latency_max = 0;
   QuerySampleLatency query_latency_mean = 0;
 
-
   /// \brief The latency at a given percentile.
   struct PercentileEntry {
     const double percentile;
@@ -542,6 +541,10 @@ struct PerformanceSummary {
   PercentileEntry target_latency_percentile{settings.target_latency_percentile};
   PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
                                             {.97}, {.99}, {.999}};
+
+  // Early stopping percentile estimates for SingleStream and MultiStream
+  QuerySampleLatency early_stopping_latency_ss = 0;
+  QuerySampleLatency early_stopping_latency_ms = 0;
 
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
   // MSVC complains if there is no explicit constructor.
@@ -554,7 +557,7 @@ struct PerformanceSummary {
   void ProcessLatencies();
 
   bool MinDurationMet(std::string* recommendation);
-  void EarlyStopping(std::string* recommendation);
+  bool EarlyStopping(std::string* recommendation);
   bool MinQueriesMet();
   bool MinSamplesMet();
   bool HasPerfConstraints();
@@ -610,16 +613,16 @@ void PerformanceSummary::ProcessLatencies() {
   }
 }
 
-void PerformanceSummary::EarlyStopping(std::string* recommendation) {
+bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
   recommendation->clear();
 
   int64_t overlatency_queries_bound = (1 << 10);
   int64_t queries_issued = pr.queries_issued;
   MinPassingQueriesFinder find_min_passing;
-  // TODO: add these to test settings
   double confidence = 0.99;
   double tolerance = 0.0;
 
+  ProcessLatencies();
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
       // TODO: Grab multistream percentile from settings, instead of hardcoding.
@@ -629,10 +632,11 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
                                        tolerance, confidence);
       int64_t h = h_min;
       if (queries_issued < h_min + 1) {
-        *recommendation = "* Need to process at least " +
-                          std::to_string(h_min + 1) +
-                          " queries for early stopping.";
-        break;
+        *recommendation =
+            " * Only processed " + std::to_string(queries_issued) +
+            " queries.\n * Need to process at least " +
+            std::to_string(h_min + 1) + " queries for early stopping.";
+        return false;
       } else {
         for (int64_t i = 2; i <= overlatency_queries_bound; ++i) {
           h = find_min_passing(i, target_latency_percentile.percentile,
@@ -643,16 +647,16 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
           }
         }
       }
-      std::sort(pr.sample_latencies.begin(), pr.sample_latencies.end());
       QuerySampleLatency percentile_estimate =
           pr.sample_latencies[queries_issued - t];
       *recommendation =
-          "* Processed at least " + std::to_string(h_min + 1) + " queries (" +
-          std::to_string(queries_issued) + ").\n" + "* Would discard " +
+          " * Processed at least " + std::to_string(h_min + 1) + " queries (" +
+          std::to_string(queries_issued) + ").\n" + " * Would discard " +
           std::to_string(t - 1) + " highest latency queries.\n" +
-          "* Early stopping " +
+          " * Early stopping " +
           DoubleToString(target_latency_percentile.percentile * 100, 0) +
           "th percentile estimate: " + std::to_string(percentile_estimate);
+      early_stopping_latency_ss = percentile_estimate;
 
       // Early stopping estimate for 99%ile (used for infering multi-stream from
       // single-stream)
@@ -662,12 +666,11 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
       h = h_min;
       if (queries_issued < h_min + 1) {
         *recommendation +=
-            "\n* Not enough queries processed for " +
+            "\n * Not enough queries processed for " +
             DoubleToString(multi_stream_percentile * 100, 0) +
             "th percentile\n" +
             " early stopping estimate (would need to process at\n least " +
             std::to_string(h_min + 1) + " total queries).";
-        break;
       } else {
         for (int64_t i = 2; i <= overlatency_queries_bound; ++i) {
           h = find_min_passing(i, multi_stream_percentile, tolerance,
@@ -677,13 +680,13 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
             break;
           }
         }
+        percentile_estimate = pr.sample_latencies[queries_issued - t];
+        *recommendation +=
+            "\n * Early stopping " +
+            DoubleToString(multi_stream_percentile * 100, 0) +
+            "th percentile estimate: " + std::to_string(percentile_estimate);
+        early_stopping_latency_ms = percentile_estimate;
       }
-      percentile_estimate = pr.sample_latencies[queries_issued - t];
-      *recommendation +=
-          "\n* Early stopping " +
-          DoubleToString(multi_stream_percentile * 100, 0) +
-          "th percentile estimate: " + std::to_string(percentile_estimate);
-
       break;
     }
     case TestScenario::Server: {
@@ -695,22 +698,55 @@ void PerformanceSummary::EarlyStopping(std::string* recommendation) {
       int64_t h = find_min_passing(t, target_latency_percentile.percentile,
                                    tolerance, confidence);
       if (queries_issued >= h + t) {
-        *recommendation = "* Run successful.";
+        *recommendation = " * Run successful.";
       } else {
-        *recommendation = "* Run unsuccessful.\n* Processed " +
+        *recommendation = " * Run unsuccessful.\n * Processed " +
                           std::to_string(queries_issued) + " queries.\n" +
-                          "* Would need to run at least " +
+                          " * Would need to run at least " +
                           std::to_string(h + t - queries_issued) +
                           " more queries,\n with the run being successful if "
                           "every additional\n query were under latency.";
+        return false;
       }
       break;
     }
+    case TestScenario::MultiStream: {
+      int64_t t = 1;
+      int64_t h_min = find_min_passing(1, target_latency_percentile.percentile,
+                                       tolerance, confidence);
+      int64_t h = h_min;
+      if (queries_issued < h_min + 1) {
+        *recommendation =
+            " * Only processed " + std::to_string(queries_issued) +
+            " queries.\n * Need to process at least " +
+            std::to_string(h_min + 1) + " queries for early stopping.";
+        return false;
+      } else {
+        for (int64_t i = 2; i <= overlatency_queries_bound; ++i) {
+          h = find_min_passing(i, target_latency_percentile.percentile,
+                               tolerance, confidence);
+          if (queries_issued < h + i) {
+            t = i - 1;
+            break;
+          }
+        }
+      }
+      QuerySampleLatency percentile_estimate =
+          pr.query_latencies[queries_issued - t];
+      *recommendation =
+          " * Processed at least " + std::to_string(h_min + 1) + " queries (" +
+          std::to_string(queries_issued) + ").\n" + " * Would discard " +
+          std::to_string(t - 1) + " highest latency queries.\n" +
+          " * Early stopping " +
+          DoubleToString(target_latency_percentile.percentile * 100, 0) +
+          "th percentile estimate: " + std::to_string(percentile_estimate);
+      early_stopping_latency_ms = percentile_estimate;
+      break;
+    }
     case TestScenario::Offline:
-    case TestScenario::MultiStream:
-    case TestScenario::MultiStreamFree:
       break;
   }
+  return true;
 }
 
 bool PerformanceSummary::MinDurationMet(std::string* recommendation) {
@@ -838,11 +874,11 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
 
   bool min_duration_met = MinDurationMet(&min_duration_recommendation);
   bool min_queries_met = MinQueriesMet() && MinSamplesMet();
-  EarlyStopping(&early_stopping_recommendation);
+  bool early_stopping_met = EarlyStopping(&early_stopping_recommendation);
   bool perf_constraints_met =
       PerfConstraintsMet(&perf_constraints_recommendation);
-  bool all_constraints_met =
-      min_duration_met && min_queries_met && perf_constraints_met;
+  bool all_constraints_met = min_duration_met && min_queries_met &&
+                             perf_constraints_met && early_stopping_met;
   summary("Result is : ", all_constraints_met ? "VALID" : "INVALID");
   if (HasPerfConstraints()) {
     summary("  Performance constraints satisfied : ",
@@ -850,6 +886,7 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
   }
   summary("  Min duration satisfied : ", min_duration_met ? "Yes" : "NO");
   summary("  Min queries satisfied : ", min_queries_met ? "Yes" : "NO");
+  summary("  Early stopping satisfied: ", early_stopping_met ? "Yes" : "NO");
 
   if (!all_constraints_met) {
     summary("Recommendations:");
@@ -867,7 +904,8 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
   }
   // Early stopping results
   if (settings.scenario == TestScenario::SingleStream ||
-      settings.scenario == TestScenario::Server) {
+      settings.scenario == TestScenario::Server ||
+      settings.scenario == TestScenario::MultiStream) {
     summary("Early Stopping Result:");
     summary(early_stopping_recommendation);
   }
@@ -928,12 +966,14 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
   // General validity checking
   std::string min_duration_recommendation;
   std::string perf_constraints_recommendation;
+  std::string early_stopping_recommendation;
   bool min_duration_met = MinDurationMet(&min_duration_recommendation);
   bool min_queries_met = MinQueriesMet() && MinSamplesMet();
   bool perf_constraints_met =
       PerfConstraintsMet(&perf_constraints_recommendation);
-  bool all_constraints_met =
-      min_duration_met && min_queries_met && perf_constraints_met;
+  bool early_stopping_met = EarlyStopping(&early_stopping_recommendation);
+  bool all_constraints_met = min_duration_met && min_queries_met &&
+                             perf_constraints_met && early_stopping_met;
 
   MLPERF_LOG(detail, "result_validity",
              all_constraints_met ? "VALID" : "INVALID");
@@ -942,6 +982,7 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
   }
   MLPERF_LOG(detail, "result_min_duration_met", min_duration_met);
   MLPERF_LOG(detail, "result_min_queries_met", min_queries_met);
+  MLPERF_LOG(detail, "early_stopping_met", early_stopping_met);
   if (!all_constraints_met) {
     std::string recommendation;
     if (!perf_constraints_met) {
@@ -956,6 +997,7 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
     }
     MLPERF_LOG(detail, "result_invalid_reason", recommendation);
   }
+  MLPERF_LOG(detail, "early_stopping_result", early_stopping_recommendation);
 
   auto reportPerQueryLatencies = [&]() {
     MLPERF_LOG(detail, "result_min_query_latency_ns", query_latency_min);
@@ -976,10 +1018,16 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
       double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(sample_latency_mean);
       MLPERF_LOG(detail, "result_qps_with_loadgen_overhead", qps_w_lg);
       MLPERF_LOG(detail, "result_qps_without_loadgen_overhead", qps_wo_lg);
+      MLPERF_LOG(detail, "early_stopping_latency_ss",
+                 early_stopping_latency_ss);
+      MLPERF_LOG(detail, "early_stopping_latency_ms",
+                 early_stopping_latency_ms);
       break;
     }
     case TestScenario::MultiStream: {
       reportPerQueryLatencies();
+      MLPERF_LOG(detail, "early_stopping_latency_ms",
+                 early_stopping_latency_ms);
       break;
     }
     case TestScenario::Server: {
@@ -1012,9 +1060,9 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
   MLPERF_LOG(detail, "result_mean_latency_ns", sample_latency_mean);
   for (auto& lp : latency_percentiles) {
     MLPERF_LOG(detail,
-              "result_" + DoubleToString(lp.percentile * 100) +
-                  "_percentile_latency_ns",
-              lp.sample_latency);
+               "result_" + DoubleToString(lp.percentile * 100) +
+                   "_percentile_latency_ns",
+               lp.sample_latency);
   }
 #endif
 }
@@ -1059,10 +1107,9 @@ std::vector<LoadableSampleSet> GenerateLoadableSets(
 
   // Partition the samples into loadable sets.
   const size_t set_size = settings.performance_sample_count;
-  const size_t set_padding =
-      (settings.scenario == TestScenario::MultiStream)
-          ? settings.samples_per_query - 1
-          : 0;
+  const size_t set_padding = (settings.scenario == TestScenario::MultiStream)
+                                 ? settings.samples_per_query - 1
+                                 : 0;
   std::vector<QuerySampleIndex> loadable_set;
   loadable_set.reserve(set_size + set_padding);
 

@@ -48,6 +48,7 @@ lib_headers = [
 ]
 
 lib_sources = [
+    "early_stopping.cc",
     "issue_query_controller.cc",
     "loadgen.cc",
     "logging.cc",

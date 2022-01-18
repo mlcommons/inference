@@ -34,6 +34,7 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version
 set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/bindings/c_api.h
   ${CMAKE_CURRENT_SOURCE_DIR}/bindings/c_api.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/early_stopping.cc  
   ${CMAKE_CURRENT_SOURCE_DIR}/issue_query_controller.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/loadgen.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/logging.cc

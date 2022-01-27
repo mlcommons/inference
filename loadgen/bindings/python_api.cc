@@ -36,6 +36,7 @@ using IssueQueryCallback = std::function<void(std::vector<QuerySample>)>;
 using FastIssueQueriesCallback =
     std::function<void(std::vector<ResponseId>, std::vector<QuerySampleIndex>)>;
 using FlushQueriesCallback = std::function<void()>;
+using UserConstraintsMetCallback = std::function<bool()>;
 using ReportLatencyResultsCallback = std::function<void(std::vector<int64_t>)>;
 
 // Forwards SystemUnderTest calls to relevant callbacks.
@@ -44,10 +45,12 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
   SystemUnderTestTrampoline(
       std::string name, IssueQueryCallback issue_cb,
       FlushQueriesCallback flush_queries_cb,
+      UserConstraintsMetCallback user_constraints_met_cb,
       ReportLatencyResultsCallback report_latency_results_cb)
       : name_(std::move(name)),
         issue_cb_(issue_cb),
         flush_queries_cb_(flush_queries_cb),
+        user_constraints_met_cb_(user_constraints_met_cb),
         report_latency_results_cb_(report_latency_results_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
@@ -60,6 +63,8 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
   void FlushQueries() override { flush_queries_cb_(); }
 
+  bool UserConstraintsMet() override { return user_constraints_met_cb_(); }
+
   void ReportLatencyResults(
       const std::vector<QuerySampleLatency>& latencies_ns) override {
     pybind11::gil_scoped_acquire gil_acquirer;
@@ -70,6 +75,7 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
   std::string name_;
   IssueQueryCallback issue_cb_;
   FlushQueriesCallback flush_queries_cb_;
+  UserConstraintsMetCallback user_constraints_met_cb_;
   ReportLatencyResultsCallback report_latency_results_cb_;
 };
 
@@ -78,8 +84,10 @@ class FastSystemUnderTestTrampoline : public SystemUnderTestTrampoline {
   FastSystemUnderTestTrampoline(
       std::string name, FastIssueQueriesCallback fast_issue_cb,
       FlushQueriesCallback flush_queries_cb,
+      UserConstraintsMetCallback user_constraints_met_cb,
       ReportLatencyResultsCallback report_latency_results_cb)
-      : SystemUnderTestTrampoline(name, nullptr, flush_queries_cb,
+      : SystemUnderTestTrampoline(name, nullptr, flush_queries_cb, 
+                                  user_constraints_met_cb,
                                   report_latency_results_cb),
         fast_issue_cb_(fast_issue_cb) {}
   ~FastSystemUnderTestTrampoline() override = default;
@@ -148,9 +156,10 @@ namespace py {
 
 uintptr_t ConstructSUT(IssueQueryCallback issue_cb,
                        FlushQueriesCallback flush_queries_cb,
+                       UserConstraintsMetCallback user_constraints_met_cb,
                        ReportLatencyResultsCallback report_latency_results_cb) {
   SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
-      "PySUT", issue_cb, flush_queries_cb, report_latency_results_cb);
+      "PySUT", issue_cb, flush_queries_cb, user_constraints_met_cb, report_latency_results_cb);
   return reinterpret_cast<uintptr_t>(sut);
 }
 
@@ -163,9 +172,10 @@ void DestroySUT(uintptr_t sut) {
 uintptr_t ConstructFastSUT(
     FastIssueQueriesCallback fast_issue_cb,
     FlushQueriesCallback flush_queries_cb,
+    UserConstraintsMetCallback user_constraints_met_cb,
     ReportLatencyResultsCallback report_latency_results_cb) {
   FastSystemUnderTestTrampoline* sut = new FastSystemUnderTestTrampoline(
-      "PyFastSUT", fast_issue_cb, flush_queries_cb, report_latency_results_cb);
+      "PyFastSUT", fast_issue_cb, flush_queries_cb, user_constraints_met_cb, report_latency_results_cb);
   return reinterpret_cast<uintptr_t>(sut);
 }
 
@@ -231,6 +241,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
   pybind11::enum_<TestScenario>(m, "TestScenario")
       .value("SingleStream", TestScenario::SingleStream)
       .value("MultiStream", TestScenario::MultiStream)
+      .value("MultiStreamFree", TestScenario::MultiStreamFree)
       .value("Server", TestScenario::Server)
       .value("Offline", TestScenario::Offline);
 
@@ -248,12 +259,16 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::single_stream_expected_latency_ns)
       .def_readwrite("single_stream_target_latency_percentile",
                      &TestSettings::single_stream_target_latency_percentile)
-      .def_readwrite("multi_stream_expected_latency_ns",
-                     &TestSettings::multi_stream_expected_latency_ns)
+      .def_readwrite("multi_stream_target_qps",
+                     &TestSettings::multi_stream_target_qps)
+      .def_readwrite("multi_stream_target_latency_ns",
+                     &TestSettings::multi_stream_target_latency_ns)
       .def_readwrite("multi_stream_target_latency_percentile",
                      &TestSettings::multi_stream_target_latency_percentile)
       .def_readwrite("multi_stream_samples_per_query",
                      &TestSettings::multi_stream_samples_per_query)
+      .def_readwrite("multi_stream_max_async_queries",
+                     &TestSettings::multi_stream_max_async_queries)
       .def_readwrite("server_target_qps", &TestSettings::server_target_qps)
       .def_readwrite("server_target_latency_ns",
                      &TestSettings::server_target_latency_ns)

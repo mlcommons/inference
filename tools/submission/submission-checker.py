@@ -557,11 +557,41 @@ RESULT_FIELD = {
 }
 
 RESULT_FIELD_NEW = {
-    "Offline": "result_samples_per_second",
-    "SingleStream": "result_90.00_percentile_latency_ns",
-    "MultiStreamLegacy": "effective_samples_per_query",
-    "MultiStream": "result_99.00_percentile_per_query_latency_ns",
-    "Server": "result_scheduled_samples_per_sec"
+    "v0.5":{
+        "Offline": "result_samples_per_second",
+        "SingleStream": "result_90.00_percentile_latency_ns",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "result_99.00_percentile_per_query_latency_ns",
+        "Server": "result_scheduled_samples_per_sec"
+    },
+    "v0.7":{
+        "Offline": "result_samples_per_second",
+        "SingleStream": "result_90.00_percentile_latency_ns",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "result_99.00_percentile_per_query_latency_ns",
+        "Server": "result_scheduled_samples_per_sec"
+    },
+    "v1.0":{
+        "Offline": "result_samples_per_second",
+        "SingleStream": "result_90.00_percentile_latency_ns",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "result_99.00_percentile_per_query_latency_ns",
+        "Server": "result_scheduled_samples_per_sec"
+    },
+    "v1.1":{
+        "Offline": "result_samples_per_second",
+        "SingleStream": "result_90.00_percentile_latency_ns",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "result_99.00_percentile_per_query_latency_ns",
+        "Server": "result_scheduled_samples_per_sec"
+    },
+    "v2.0":{
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_scheduled_samples_per_sec"
+    }
 }
 
 ACC_PATTERN = {
@@ -712,6 +742,10 @@ class Config():
     def uses_legacy_multistream(self):
         return self.version in ["v0.5", "v0.7", "v1.0", "v1.1"]
 
+    def uses_early_stopping(self, scenario):
+        return (self.version not in ["v0.5", "v0.7", "v1.0", "v1.1"]) and (
+            scenario in ["Server", "SingleStream", "MultiStream"]
+        )
 
 def get_args():
     """Parse commandline."""
@@ -839,7 +873,7 @@ def check_performance_dir(config, model, path, scenario_fixed):
         scenario = mlperf_log["effective_scenario"]
         scenario_for_res = "MultiStreamLegacy" if scenario == "MultiStream" and config.uses_legacy_multistream() else\
                            scenario
-        res = float(mlperf_log[RESULT_FIELD_NEW[scenario_for_res]])
+        res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
         latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
         latency_mean = mlperf_log["result_mean_latency_ns"]
         if scenario in ["MultiStream"]:
@@ -896,18 +930,47 @@ def check_performance_dir(config, model, path, scenario_fixed):
     if scenario == "SingleStream" or (scenario == "MultiStream" and not config.uses_legacy_multistream()):
         res /= MS_TO_NS
 
+    # Check if current scenario (and version) uses early stopping
+    uses_early_stopping = config.uses_early_stopping(scenario)
+
     if config.version != "v0.5":
         # FIXME: for open we script this because open can submit in all scenarios
         # not supported for v0.5
-        # check if the benchmark meets latency constraint
-        target_latency = config.latency_constraint.get(model, dict()).get(scenario)
-        if target_latency:
-            if latency_99_percentile > target_latency:
-                log.error("%s Latency constraint not met, expected=%s, found=%s",
-                            fname, target_latency, latency_99_percentile)
+        
+        if uses_early_stopping:
+            # check if early_stopping condition was met
+            if not mlperf_log["early_stopping_met"]:
+                early_stopping_result = mlperf_log["early_stopping_result"]
+                log.error("Early stopping condition was not met, msg=%s", early_stopping_result)
+
+            # If the scenario has a target latency (Server scenario), check
+            # that the target latency that was passed to the early stopping 
+            # is less than the target latency.
+            target_latency = config.latency_constraint.get(model, dict()).get(scenario)
+            if target_latency:
+                early_stopping_latency_ns = mlperf_log["effective_target_latency_ns"]
+                if early_stopping_latency_ns > target_latency:
+                    log.error("%s Latency constraint with early stopping not met, expected=%s, found=%s",
+                                fname, target_latency, early_stopping_latency_ns)
+
+        else:
+            # check if the benchmark meets latency constraint
+            target_latency = config.latency_constraint.get(model, dict()).get(scenario)
+            log.info("Target latency: %s, Latency: %s, Scenario: %s", target_latency, latency_99_percentile, scenario)
+            if target_latency:
+                if latency_99_percentile > target_latency:
+                    log.error("%s Latency constraint not met, expected=%s, found=%s",
+                                fname, target_latency, latency_99_percentile)
 
         # Check Minimum queries were issued to meet test duration
-        required_min_query_count = config.get_min_query_count(model, scenario)
+        # Check if this run uses early stopping. If it does, get the
+        # min_queries from the detail log, otherwise get this value
+        # from the config
+        if uses_early_stopping:
+            required_min_query_count = int(mlperf_log["result_query_count"])
+        else:
+            required_min_query_count = config.get_min_query_count(model, scenario)
+            
         if required_min_query_count and min_query_count < required_min_query_count:
             log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
                         fname, required_min_query_count, min_query_count)
@@ -933,7 +996,14 @@ def check_performance_dir(config, model, path, scenario_fixed):
 
     if (scenario_fixed in ["MultiStream"] and not config.uses_legacy_multistream()) and scenario in ["SingleStream"]:
         inferred = True
-        res = (latency_99_percentile * samples_per_query) / MS_TO_NS
+        if uses_early_stopping:
+            early_stopping_latency_ms = mlperf_log["early_stopping_latency_ms"]
+            if early_stopping_latency_ms == 0:
+                log.error("Not enough samples were processed for early stopping to make an estimate")
+                is_valid = False
+            res = (early_stopping_latency_ms * samples_per_query) / MS_TO_NS
+        else:
+            res = (latency_99_percentile * samples_per_query) / MS_TO_NS
 
     return is_valid, res, inferred
 

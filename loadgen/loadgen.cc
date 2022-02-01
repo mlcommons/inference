@@ -1013,6 +1013,8 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
     }
     MLPERF_LOG(detail, "result_invalid_reason", recommendation);
   }
+  std::replace(early_stopping_recommendation.begin(),
+               early_stopping_recommendation.end(), '\n', ' ');
   MLPERF_LOG(detail, "early_stopping_result", early_stopping_recommendation);
 
   // Report number of queries

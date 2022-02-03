@@ -494,9 +494,9 @@ MODEL_CONFIG = {
             "resnet50": "resnet",
         },
         "seeds": {
-            "qsl_rng_seed": 1624344308455410291,
-            "sample_index_rng_seed": 517984244576520566,
-            "schedule_rng_seed": 10051496985653635065,
+            "qsl_rng_seed": 6655344265603136530,
+            "sample_index_rng_seed": 15863379492028895792,
+            "schedule_rng_seed": 12662793979680847247,
         },
         "ignore_errors": [
         ],

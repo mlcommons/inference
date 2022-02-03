@@ -677,7 +677,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);
   if (lookupkv(model, scenario, "sample_concatenate_permutation", &val, nullptr))
     sample_concatenate_permutation = 
-      (val == 1) && scenario == "Offline" ? true : false;
+      (val == 1) && (scenario == "Offline") ? true : false;
 
   return 0;
 }

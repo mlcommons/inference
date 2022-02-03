@@ -494,9 +494,9 @@ MODEL_CONFIG = {
             "resnet50": "resnet",
         },
         "seeds": {
-            "qsl_rng_seed": 1624344308455410291,
-            "sample_index_rng_seed": 517984244576520566,
-            "schedule_rng_seed": 10051496985653635065,
+            "qsl_rng_seed": 6655344265603136530,
+            "sample_index_rng_seed": 15863379492028895792,
+            "schedule_rng_seed": 12662793979680847247,
         },
         "ignore_errors": [
         ],
@@ -742,16 +742,22 @@ class Config():
     def uses_legacy_multistream(self):
         return self.version in ["v0.5", "v0.7", "v1.0", "v1.1"]
 
+
     def uses_early_stopping(self, scenario):
         return (self.version not in ["v0.5", "v0.7", "v1.0", "v1.1"]) and (
             scenario in ["Server", "SingleStream", "MultiStream"]
         )
 
+    def has_query_count_in_log(self):
+        return self.version not in ["v0.5", "v0.7", "v1.0", "v1.1"]
+
+
+
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="submission directory")
-    parser.add_argument("--version", default="v1.1", choices=list(MODEL_CONFIG.keys()), help="mlperf version")
+    parser.add_argument("--version", default="v2.0", choices=list(MODEL_CONFIG.keys()), help="mlperf version")
     parser.add_argument("--submitter", help="filter to submitter")
     parser.add_argument("--csv", default="summary.csv", help="csv file with results")
     parser.add_argument("--skip_compliance", action="store_true", help="Pass this cmdline option to skip checking compliance/ dir")
@@ -1008,7 +1014,9 @@ def check_performance_dir(config, model, path, scenario_fixed):
     return is_valid, res, inferred
 
 
-def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more_power_check=False):
+def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, config):
+
+    more_power_check = config.more_power_check
 
     is_valid = True
     power_metric = 0
@@ -1052,28 +1060,29 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, more
         is_valid = False
     else:
         avg_power = sum(power_list) / len(power_list)
+        power_duration = (power_end - power_begin).total_seconds()
         if scenario_fixed in ["Offline", "Server"]:
             # In Offline and Server scenarios, the power metric is in W.
             power_metric = avg_power
-        elif scenario_fixed in ["MultiStream"]:
-            # In SingleStream and MultiStream scenarios, the power metric is in J/sample.
-            power_duration = (power_end - power_begin).total_seconds()
-            num_samples = mlperf_log["generated_query_count"] * mlperf_log["generated_samples_per_query"]
-            power_metric = avg_power * power_duration / num_samples
-        elif scenario_fixed in ["SingleStream"]:
-            # TODO: Currently, LoadGen does NOT print out the actual number of queries in detail logs. There is a
-            # "generated_query_count", but LoadGen exits early when the min_duration has been met, so it is not equal to
-            # the actual number of queries. For now, we will make use of "result_qps_with_loadgen_overhead", which is
-            # defined as: (sample_count - 1) / pr.final_query_issued_time, where final_query_issued_time can be
-            # approximated by power_duration (off by one query worth of latency, which is in general negligible compared
-            # to 600-sec total runtime and can be offsetted by removing the "+1" when reconstructing the sample_count).
-            # Not an ideal approach, but probably the best we can do in v1.0.
-            # As for MultiStream, it always runs for 270336 queries, so using "generated_query_count" as above is fine.
-            # In v1.1, we should make LoadGen print out the actual number of queries and use it to compute the J/sample 
-            # for SingleStream and MultiStream power metrics.
-            power_duration = (power_end - power_begin).total_seconds()
-            num_samples = mlperf_log["result_qps_with_loadgen_overhead"] * power_duration
-            power_metric = avg_power * power_duration / num_samples
+        else:
+            # In SingleStream and MultiStream scenarios, the power metric is in J/query.
+            assert scenario_fixed in ["MultiStream", "SingleStream"], "Unknown scenario: {:}".format(scenario_fixed)
+            if not config.has_query_count_in_log():
+                # Before v2.0, LoadGen does NOT print out the actual number of queries in detail logs. There is a
+                # "generated_query_count", but LoadGen exits early when the min_duration has been met, so it is not equal to
+                # the actual number of queries. To work around it, make use of "result_qps_with_loadgen_overhead", which is
+                # defined as: (sample_count - 1) / pr.final_query_issued_time, where final_query_issued_time can be
+                # approximated by power_duration (off by one query worth of latency, which is in general negligible compared
+                # to 600-sec total runtime and can be offsetted by removing the "+1" when reconstructing the sample_count).
+                # As for MultiStream, it always runs for 270336 queries, so using "generated_query_count" as above is fine.
+                if scenario_fixed in ["MultiStream"]:
+                    num_queries = mlperf_log["generated_query_count"] * mlperf_log["generated_samples_per_query"]
+                elif scenario_fixed in ["SingleStream"]:
+                    num_queries = mlperf_log["result_qps_with_loadgen_overhead"] * power_duration
+            else:
+                # Starting from v2.0, LoadGen logs the actual number of issued queries.
+                num_queries = mlperf_log["result_query_count"]
+            power_metric = avg_power * power_duration / num_queries
 
     if more_power_check:
         python_version_major = int(sys.version.split(" ")[0].split(".")[0])
@@ -1339,7 +1348,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                                 try:
                                     ranging_path = os.path.join(name, "performance", "ranging")
                                     power_is_valid, power_metric = check_power_dir(power_path, ranging_path, perf_path, scenario_fixed,
-                                        more_power_check=config.more_power_check)
+                                        config)
                                     if not power_is_valid:
                                         is_valid = False
                                         power_metric = 0

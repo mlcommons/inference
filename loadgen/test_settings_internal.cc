@@ -120,9 +120,10 @@ TestSettingsInternal::TestSettingsInternal(
 
   // Sample by concatentating several permutations of the dataset
   // sample_concatenate_permutation
-  sample_concatenate_permutation = (requested.sample_concatenate_permutation == 0)
-                                    ? false
-                                    : requested.sample_concatenate_permutation;
+  sample_concatenate_permutation =
+      (requested.sample_concatenate_permutation == 0)
+          ? false
+          : requested.sample_concatenate_permutation;
 
   // Samples per query.
   if (requested.scenario == TestScenario::MultiStream) {
@@ -675,9 +676,10 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
 
   // keys that apply to Offline
   lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);
-  if (lookupkv(model, "Offline", "sample_concatenate_permutation", &val, nullptr))
-    sample_concatenate_permutation = (val == 0) ? false : true;
-  
+  if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
+               nullptr))
+    sample_concatenate_permutation =
+        (val == 1) && (scenario == "Offline") ? true : false;
 
   return 0;
 }

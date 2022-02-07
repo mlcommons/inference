@@ -1018,10 +1018,10 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
   MLPERF_LOG(detail, "early_stopping_result", early_stopping_recommendation);
 
   // Report number of queries
-  MLPERF_LOG(detail, "result_query_count", std::to_string(query_count));
+  MLPERF_LOG(detail, "result_query_count", query_count);
   if (settings.scenario == TestScenario::Server) {
     MLPERF_LOG(detail, "result_overlatency_query_count",
-               std::to_string(overlatency_query_count));
+               overlatency_query_count);
   }
 
   auto reportPerQueryLatencies = [&]() {

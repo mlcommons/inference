@@ -973,7 +973,7 @@ def check_performance_dir(config, model, path, scenario_fixed):
         # min_queries from the detail log, otherwise get this value
         # from the config
         if uses_early_stopping:
-            required_min_query_count = int(mlperf_log["result_query_count"])
+            required_min_query_count = mlperf_log["result_query_count"]
         else:
             required_min_query_count = config.get_min_query_count(model, scenario)
             

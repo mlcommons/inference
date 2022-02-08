@@ -972,14 +972,12 @@ def check_performance_dir(config, model, path, scenario_fixed):
         # Check if this run uses early stopping. If it does, get the
         # min_queries from the detail log, otherwise get this value
         # from the config
-        if uses_early_stopping:
-            required_min_query_count = int(mlperf_log["result_query_count"])
-        else:
+        if not uses_early_stopping:
             required_min_query_count = config.get_min_query_count(model, scenario)
-            
-        if required_min_query_count and min_query_count < required_min_query_count:
-            log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
-                        fname, required_min_query_count, min_query_count)
+            if required_min_query_count and min_query_count < required_min_query_count:
+                log.error("%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
+                            fname, required_min_query_count, min_query_count)
+                            
         if scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ):
             log.error("%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
                         fname, OFFLINE_MIN_SPQ, samples_per_query)

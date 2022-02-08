@@ -973,7 +973,7 @@ def check_performance_dir(config, model, path, scenario_fixed):
         # min_queries from the detail log, otherwise get this value
         # from the config
         if uses_early_stopping:
-            required_min_query_count = mlperf_log["result_query_count"]
+            required_min_query_count = int(mlperf_log["result_query_count"])
         else:
             required_min_query_count = config.get_min_query_count(model, scenario)
             
@@ -1081,7 +1081,7 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, conf
                     num_queries = mlperf_log["result_qps_with_loadgen_overhead"] * power_duration
             else:
                 # Starting from v2.0, LoadGen logs the actual number of issued queries.
-                num_queries = mlperf_log["result_query_count"]
+                num_queries = int(mlperf_log["result_query_count"])
             power_metric = avg_power * power_duration / num_queries
 
     if more_power_check:

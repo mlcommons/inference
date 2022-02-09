@@ -633,7 +633,6 @@ void PerformanceSummary::ProcessLatencies() {
 bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
   recommendation->clear();
 
-  int64_t overlatency_queries_bound = (1 << 10);
   int64_t queries_issued = pr.queries_issued;
   MinPassingQueriesFinder find_min_passing;
   double confidence = 0.99;
@@ -655,7 +654,8 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
             std::to_string(h_min + 1) + " queries for early stopping.";
         return false;
       } else {
-        for (int64_t i = 2; i <= overlatency_queries_bound; ++i) {
+        // TODO: use a binary search instead.
+        for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, target_latency_percentile.percentile,
                                tolerance, confidence);
           if (queries_issued < h + i) {
@@ -689,7 +689,8 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
             " early stopping estimate (would need to process at\n least " +
             std::to_string(h_min + 1) + " total queries).";
       } else {
-        for (int64_t i = 2; i <= overlatency_queries_bound; ++i) {
+        // TODO: do a binary search instead.
+        for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, multi_stream_percentile, tolerance,
                                confidence);
           if (queries_issued < h + i) {
@@ -739,7 +740,8 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
             std::to_string(h_min + 1) + " queries for early stopping.";
         return false;
       } else {
-        for (int64_t i = 2; i <= overlatency_queries_bound; ++i) {
+        // TODO: do a binary search instead
+        for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, target_latency_percentile.percentile,
                                tolerance, confidence);
           if (queries_issued < h + i) {

@@ -1000,6 +1000,9 @@ def check_performance_dir(config, model, path, scenario_fixed):
 
     if (scenario_fixed in ["MultiStream"] and not config.uses_legacy_multistream()) and scenario in ["SingleStream"]:
         inferred = True
+        # samples_per_query does not match with the one reported in the logs 
+        # when inferring MultiStream from SingleStream
+        samples_per_query = 8
         if uses_early_stopping:
             early_stopping_latency_ms = mlperf_log["early_stopping_latency_ms"]
             if early_stopping_latency_ms == 0:

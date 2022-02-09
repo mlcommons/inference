@@ -182,6 +182,25 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
              auto& gen) mutable { return dist(gen); };
 }
 
+/// \brief SampleDistribution for 3D-UNet SingleStream, for v2.0
+// FIXME: meant for 3D UNet SingleStream only at the moment but the logic should work for others
+// TODO: consolidate the distribution generator after v2.0 
+auto SampleDistributionEqualIssue(size_t sample_count, size_t set_size, std::mt19937* rng) {
+  std::vector<size_t> indices;
+  std::vector<size_t> shuffle_indices;
+  for (size_t i = 0; i < set_size; ++i) {
+    shuffle_indices.push_back(i);
+  }
+  for (size_t j = 0; j < sample_count; j += set_size) {
+    std::shuffle(shuffle_indices.begin(), shuffle_indices.end(), *rng);
+    indices.insert(indices.end(), shuffle_indices.begin(), shuffle_indices.end());
+  }
+  return [indices = std::move(indices), i = size_t(0)](auto& /*gen*/) mutable {
+    return indices.at((i++)%indices.size());
+  };
+}
+
+
 /// \brief Generates queries for the requested settings, templated by
 /// scenario and mode.
 /// \todo Make GenerateQueries faster.
@@ -243,17 +262,27 @@ std::vector<QueryMetadata> GenerateQueries(
   auto sample_distribution_unique = SampleDistribution<TestMode::AccuracyOnly>(
       loaded_sample_set.sample_distribution_end, sample_stride, &sample_rng);
 
+  // FIXME: Only used for v2.0 3D-UNet KiTS19 SingleStream
+  // TODO: Need to consolidate the code for any generic usage after v2.0
+  auto sample_distribution_equal_issue =
+      SampleDistributionEqualIssue(min_queries,
+                                   loaded_samples.size(),
+                                   &sample_rng);
+
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
   // When sample_concatenate_permutation is turned on, pad to a multiple of the
   // complete dataset to ensure complete fairness.
+  // FIXME: Only override this for Offline; fix after v2.0
   if (settings.sample_concatenate_permutation &&
+      scenario == TestScenario::Offline &&
       samples_per_query % loaded_samples.size() != 0) {
     size_t pad_size =
         (loaded_samples.size() - samples_per_query % loaded_samples.size());
     samples_per_query += pad_size;
   }
+
   std::vector<QuerySampleIndex> samples(samples_per_query);
   std::chrono::nanoseconds timestamp(0);
   std::chrono::nanoseconds prev_timestamp(0);
@@ -307,12 +336,18 @@ std::vector<QueryMetadata> GenerateQueries(
         }
       }
     } else {
+      // FIXME: only used for v2.0 3D-UNet KiTS19 SingleStream
+      // TODO: consolidate after v2.0
+      auto equal_issue = settings.sample_concatenate_permutation &&
+                         scenario == TestScenario::SingleStream;
       for (auto& s : samples) {
         s = loaded_samples[settings.performance_issue_unique
-                               ? sample_distribution_unique(sample_rng)
+                           ? sample_distribution_unique(sample_rng)
                            : settings.performance_issue_same
-                               ? same_sample
-                               : sample_distribution(sample_rng)];
+                            ? same_sample
+                            : equal_issue
+                              ? sample_distribution_equal_issue(sample_rng)
+                              : sample_distribution(sample_rng)];
       }
     }
     queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
@@ -390,6 +425,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       settings.target_qps * settings.min_duration.count() / 1000;
   uint64_t minimum_queries =
       settings.min_query_count * settings.samples_per_query;
+
   if (scenario != TestScenario::Offline) {
     expected_queries *= settings.samples_per_query;
   } else {

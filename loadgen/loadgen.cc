@@ -655,7 +655,7 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
         return false;
       } else {
         // TODO: use a binary search instead.
-        for (int64_t i = 2;; ++i) {
+        for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, target_latency_percentile.percentile,
                                tolerance, confidence);
           if (queries_issued < h + i) {
@@ -690,7 +690,7 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
             std::to_string(h_min + 1) + " total queries).";
       } else {
         // TODO: do a binary search instead.
-        for (int64_t i = 2;; ++i) {
+        for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, multi_stream_percentile, tolerance,
                                confidence);
           if (queries_issued < h + i) {
@@ -741,7 +741,7 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
         return false;
       } else {
         // TODO: do a binary search instead
-        for (int64_t i = 2;; ++i) {
+        for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, target_latency_percentile.percentile,
                                tolerance, confidence);
           if (queries_issued < h + i) {

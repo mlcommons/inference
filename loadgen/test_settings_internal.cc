@@ -147,6 +147,22 @@ TestSettingsInternal::TestSettingsInternal(
     target_duration = std::chrono::milliseconds(0);
   }
 
+  // FIXME: Only do this for 3D-UNet SingleStream, for v2.0
+  // TODO: consolidate after v2.0
+  // make min_queries to be multiple of performance_sample_count
+  // performance_sample_count == 0 makes it to be equal to loaded_samples.size()
+  if (sample_concatenate_permutation &&
+      requested.scenario == TestScenario::SingleStream) {
+    // set slack larger for 3D-UNet KiTS19 distribution, i.e. 50% latency << 90% latency
+    constexpr double kSlack = 2.0;
+    uint64_t expected_queries = kSlack * DurationToSeconds(target_duration) * target_qps;
+    min_query_count = min_query_count > expected_queries 
+                      ? min_query_count
+                      : expected_queries;
+    min_query_count += 
+        qsl_performance_sample_count - (min_query_count  % qsl_performance_sample_count);
+  }
+
   min_sample_count = min_query_count * samples_per_query;
 
   // Validate TestSettings
@@ -648,6 +664,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
            &performance_issue_same_index, nullptr);
   lookupkv(model, scenario, "performance_sample_count_override",
            &performance_sample_count_override, nullptr);
+  if (lookupkv(model, scenario, "sample_concatenate_permutation", &val, nullptr))
+    sample_concatenate_permutation = (val == 1) ? true : false;
 
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
@@ -676,10 +694,6 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
 
   // keys that apply to Offline
   lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);
-  if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
-               nullptr))
-    sample_concatenate_permutation =
-        (val == 1) && (scenario == "Offline") ? true : false;
 
   return 0;
 }

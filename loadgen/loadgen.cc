@@ -187,7 +187,8 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
 // TODO: consolidate the distribution generator after v2.0 
 auto SampleDistributionEqualIssue(size_t sample_count, size_t set_size, std::mt19937* rng) {
   std::vector<size_t> indices;
-  std::vector<size_t> shuffle_indices;
+  std::vector<size_t> shuffle_indices(set_size);
+  std::iota(shuffle_indices.begin(), shuffle_indices.end(), 0);
   for (size_t i = 0; i < set_size; ++i) {
     shuffle_indices.push_back(i);
   }

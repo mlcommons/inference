@@ -20,6 +20,8 @@ limitations under the License.
 #include <cstddef>
 #include <functional>
 #include <string>
+#include <numeric>
+
 
 /// \brief Contains the loadgen API.
 namespace mlperf {

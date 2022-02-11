@@ -1049,6 +1049,21 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, conf
     datetime_format = '%m-%d-%Y %H:%M:%S.%f'
     power_begin = datetime.datetime.strptime(mlperf_log["power_begin"], datetime_format) + client_timezone
     power_end = datetime.datetime.strptime(mlperf_log["power_end"], datetime_format) + client_timezone
+    # Obtain the scenario also from logs to check if power is inferred
+    if config.has_new_logging_format():
+        scenario = mlperf_log["effective_scenario"]
+    else:
+        rt = {}
+        fname = os.path.join(testing_path, "mlperf_log_summary.txt")
+        with open(fname, "r") as f:
+            for line in f:
+                m = re.match(r"^Result\s+is\s*\:\s+VALID", line)
+                if m:
+                    is_valid = True
+                m = re.match(r"^\s*([\w\s.\(\)\/]+)\s*\:\s*([\w\+\.][\w\+\.\s]*)", line)
+                if m:
+                    rt[m.group(1).strip()] = m.group(2).strip()
+        scenario = rt["Scenario"].replace(" ","")
     spl_fname = os.path.join(testing_path, "spl.txt")
     power_list = []
     with open(spl_fname) as f:
@@ -1084,6 +1099,10 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, conf
                 # Starting from v2.0, LoadGen logs the actual number of issued queries.
                 num_queries = int(mlperf_log["result_query_count"])
             power_metric = avg_power * power_duration / num_queries
+
+            if (scenario_fixed in ["MultiStream"] and not config.uses_legacy_multistream()) and scenario in ["SingleStream"]:
+                samples_per_query = 8
+                power_metric = avg_power * power_duration * samples_per_query / num_queries
 
     if more_power_check:
         python_version_major = int(sys.version.split(" ")[0].split(".")[0])

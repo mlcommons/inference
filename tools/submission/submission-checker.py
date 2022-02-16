@@ -1554,7 +1554,7 @@ def check_compliance_dir(compliance_dir, model, scenario):
     compliance_acc_pass = True
     test_list = ["TEST01", "TEST04-A", "TEST04-B", "TEST05"]
 
-    if model in ["rnnt", "bert-99", "bert-99.9", "dlrm-99", "dlrm-99.9"] or scenario in ["MultiStream"]:
+    if model in ["rnnt", "bert-99", "bert-99.9", "dlrm-99", "dlrm-99.9", "3d-unet-99", "3d-unet-99.9"]:
        test_list.remove("TEST04-A")
        test_list.remove("TEST04-B")
 

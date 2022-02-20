@@ -752,6 +752,10 @@ class Config():
         return self.version not in ["v0.5", "v0.7", "v1.0", "v1.1"]
 
 
+    def has_power_utc_timestamps(self):
+        return self.version not in ["v0.5", "v0.7", "v1.0"]
+
+
 
 def get_args():
     """Parse commandline."""
@@ -1038,12 +1042,16 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed, conf
         is_valid = False
 
     # parse the power logs
-    server_json_fname = os.path.join(power_path, "server.json")
-    with open(server_json_fname) as f:
-        server_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
-    client_json_fname = os.path.join(power_path, "client.json")
-    with open(client_json_fname) as f:
-        client_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
+    if config.has_power_utc_timestamps():
+        server_timezone = datetime.timedelta(0)
+        client_timezone = datetime.timedelta(0)
+    else:
+        server_json_fname = os.path.join(power_path, "server.json")
+        with open(server_json_fname) as f:
+            server_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
+        client_json_fname = os.path.join(power_path, "client.json")
+        with open(client_json_fname) as f:
+            client_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
     detail_log_fname = os.path.join(testing_path, "mlperf_log_detail.txt")
     mlperf_log = MLPerfLog(detail_log_fname)
     datetime_format = '%m-%d-%Y %H:%M:%S.%f'

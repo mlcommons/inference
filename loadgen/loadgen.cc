@@ -189,9 +189,6 @@ auto SampleDistributionEqualIssue(size_t sample_count, size_t set_size, std::mt1
   std::vector<size_t> indices;
   std::vector<size_t> shuffle_indices(set_size);
   std::iota(shuffle_indices.begin(), shuffle_indices.end(), 0);
-  for (size_t i = 0; i < set_size; ++i) {
-    shuffle_indices.push_back(i);
-  }
   for (size_t j = 0; j < sample_count; j += set_size) {
     std::shuffle(shuffle_indices.begin(), shuffle_indices.end(), *rng);
     indices.insert(indices.end(), shuffle_indices.begin(), shuffle_indices.end());

@@ -67,7 +67,7 @@ Other useful commands:
 
 ## Calibration Set
 
-The calibration set is tentatively determined to have 20 images listed in [Calibration set](meta/calibration_cases.json). They are randomly selected from the training set used in [MLPerf-Training 3D-UNet](https://github.com/mlcommons/training/blob/master/image_segmentation/pytorch). None of the image in the calibration set is included in the inference set.
+The calibration set is determined to have 20 images listed in [Calibration set](meta/calibration_cases.json). They are randomly selected from the training set used in [MLPerf-Training 3D-UNet](https://github.com/mlcommons/training/blob/master/image_segmentation/pytorch). None of the image in the calibration set is included in the inference set.
 
 ## License
 

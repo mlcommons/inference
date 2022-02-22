@@ -687,7 +687,7 @@ class Config():
             model = "ssd-small"
         elif "mobilenet" in model:
             model = "mobilenet"
-        elif "efficientnet" in model:
+        elif "efficientnet" in model or "resnet50" in model:
             model = "resnet"
         elif "rcnn" in model:
             model = "ssd-small"

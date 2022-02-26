@@ -503,7 +503,6 @@ MODEL_CONFIG = {
             "rcnn-nas-lowproposals-coco": "ssd-large",
             "rcnn-resnet101-lowproposals-coco": "ssd-large",
             "ssd_mobilenet_v1_coco": "ssd-small",
-            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
             "ssd_mobilenet_v1_quantized_coco": "ssd-small",
             "ssd_mobilenet_v2_320x320": "ssd-small",
             "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",

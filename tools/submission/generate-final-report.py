@@ -95,7 +95,6 @@ def main():
                    ], ['SingleStream', 'MultiStream', 'Server', 'Offline'],
                    [
                        'Latency (ms)',
-                       'Streams',
                        'Samples/s',
                        'Queries/s',
                        'Joules',
@@ -119,6 +118,9 @@ def main():
 
   def NotEqual(x):
     return lambda y: y != x
+
+  def Contain(x):
+    return lambda y: y.str.find(x) != -1
 
   def And(x, y):
     return lambda z: x(z) & y(z)
@@ -152,7 +154,7 @@ def main():
               'Category':
                   Equal(category),
               'Suite':
-                  Equal(suite),
+                  Contain(suite),
               'Units':
                   And(
                       And(NotEqual('Watts'), NotEqual('Joules')),
@@ -162,7 +164,7 @@ def main():
       MakeWorksheet(
           df, indices[category], {
               'Category': Equal(category),
-              'Suite': Equal(suite),
+              'Suite': Contain(suite),
               'has_power': Equal(True)
           }, category + ',' + suite + ',power')
 

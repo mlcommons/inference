@@ -1211,7 +1211,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
       notes = notes + ". " + system_json.get("sw_notes")
     unit_dict = {
         "SingleStream": "Latency (ms)",
-        "MultiStream": "Streams",
+        "MultiStream": "Queries/s",
         "Offline": "Samples/s",
         "Server": "Queries/s",
     }
@@ -1225,7 +1225,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
     power_unit = power_unit_dict[scenario_fixed]
 
     csv.write(
-        fmt.format(submitter, available, division, system_type,
+        fmt.format(submitter, available, division, '\"' + system_type + '\"',
                    '\"' + system_name + '\"', system_desc, model_name,
                    mlperf_model, scenario_fixed, r, acc,
                    system_json.get("number_of_nodes"),
@@ -1242,7 +1242,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
 
     if power_metric > 0:
       csv.write(
-          fmt.format(submitter, available, division, system_type,
+          fmt.format(submitter, available, division, '\"' + system_type + '\"',
                      '\"' + system_name + '\"', system_desc, model_name,
                      mlperf_model, scenario_fixed, power_metric, acc,
                      system_json.get("number_of_nodes"),

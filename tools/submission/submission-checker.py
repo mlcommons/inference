@@ -496,7 +496,6 @@ MODEL_CONFIG = {
             "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
             "ssd_resnet152_v1_fpn_640x640": "ssd-small",
             "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
-            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
             "rcnn-resnet50-lowproposals-coco": "ssd-large",
             "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
             "rcnn-inception-v2-coco": "ssd-large",

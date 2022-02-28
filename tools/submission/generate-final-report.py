@@ -144,7 +144,7 @@ def main():
            key) in enumerate(pd.unique(df['Unique ID (e.g. for Audit)']))
   }
   df['ID'] = df.apply(
-      lambda x: '1.1-{:03}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
+      lambda x: '2.0-{:03}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
       axis=1)
 
   for category in ['closed', 'open']:

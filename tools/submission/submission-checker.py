@@ -1321,7 +1321,8 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
           if is_closed and mlperf_model not in config.models:
             # for closed division we want the model name to match.
             # for open division the model_name might be different than the task
-            log.error("%s has a invalid model %s for closed division", name, model_name)
+            log.error("%s has an invalid model %s for closed division", name,
+                      model_name)
             results[name] = None
             continue
 
@@ -1330,7 +1331,8 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
           #
           required_scenarios = config.get_required(mlperf_model)
           if required_scenarios is None:
-            log.error("%s has a invalid model %s, system_type=%s", name, mlperf_model, system_type)
+            log.error("%s has an invalid model %s, system_type=%s", name,
+                      mlperf_model, system_type)
             results[name] = None
             continue
 

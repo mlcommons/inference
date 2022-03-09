@@ -55,7 +55,7 @@ def main():
       axis=1)
 
   # details url
-  base_url = 'https://github.com/mlcommons/submissions_inference_1_1/tree/master'
+  base_url = 'https://github.com/mlcommons/submissions_inference_2_0/tree/master'
   df['Details'] = df.apply(
       lambda x: '=HYPERLINK("{}","details")'.format('/'.join(
           [base_url, x['Category'], x['Submitter'], 'results', x['Platform']])),
@@ -115,7 +115,7 @@ def main():
       "3d-unet-99": ["Offline"],
       "3d-unet-99.9": ["Offline"],
     },
-    "edge":{
+    "edge": {
       "resnet": ["SingleStream", "MultiStream", "Offline"],
       "ssd-small": ["SingleStream", "MultiStream", "Offline"],
       "ssd-large": ["SingleStream", "MultiStream", "Offline"],
@@ -123,7 +123,7 @@ def main():
       "bert-99": ["SingleStream", "Offline"],
       "bert-99.9": [],
       "dlrm-99": [],
-      "dlrm-99.9":[],
+      "dlrm-99.9": [],
       "3d-unet-99": ["SingleStream", "Offline"],
       "3d-unet-99.9": ["SingleStream", "Offline"],
     }
@@ -194,7 +194,7 @@ def main():
                   And(
                       And(NotEqual('Watts'), NotEqual('Joules')),
                       NotEqual('Joules/Stream')),
-              ('Scenario', 'Model'): 
+              ('Scenario', 'Model'):
                   Apply(FilterScenario, suite)
           }, category + ',' + suite)
 

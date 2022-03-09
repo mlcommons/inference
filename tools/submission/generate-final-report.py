@@ -102,8 +102,37 @@ def main():
                        'Watts',
                    ]]
 
+  filter_scenarios = {
+    "datacenter": {
+      "resnet": ["Server", "Offline"],
+      "ssd-large": ["Server", "Offline"],
+      "ssd-small": [],
+      "rnnt": ["Server", "Offline"],
+      "bert-99": ["Server", "Offline"],
+      "bert-99.9": ["Server", "Offline"],
+      "dlrm-99": ["Server", "Offline"],
+      "dlrm-99.9": ["Server", "Offline"],
+      "3d-unet-99": ["Offline"],
+      "3d-unet-99.9": ["Offline"],
+    },
+    "edge":{
+      "resnet": ["SingleStream", "MultiStream", "Offline"],
+      "ssd-small": ["SingleStream", "MultiStream", "Offline"],
+      "ssd-large": ["SingleStream", "MultiStream", "Offline"],
+      "rnnt": ["SingleStream", "Offline"],
+      "bert-99": ["SingleStream", "Offline"],
+      "bert-99.9": [],
+      "dlrm-99": [],
+      "dlrm-99.9":[],
+      "3d-unet-99": ["SingleStream", "Offline"],
+      "3d-unet-99.9": ["SingleStream", "Offline"],
+    }
+  }
+
   def MakeWorksheet(df, index, filter_dict, sheet_name):
     for key, value in filter_dict.items():
+      if type(key) == tuple:
+        key = list(key)
       df = df[value(df[key])]
     df = df.pivot_table(index=index, columns=columns, values=['Result'])
     df = df.fillna('')
@@ -124,6 +153,12 @@ def main():
 
   def And(x, y):
     return lambda z: x(z) & y(z)
+
+  def Apply(f, *args):
+    return lambda x: f(x, *args)
+
+  def FilterScenario(x, suite):
+    return x.apply(lambda y: y["Scenario"] in filter_scenarios[suite][y["Model"]], axis = 1)
 
   def MakeUniqueID(x):
     key_list = ['Suite', 'Category', 'Submitter', 'Platform']
@@ -158,7 +193,9 @@ def main():
               'Units':
                   And(
                       And(NotEqual('Watts'), NotEqual('Joules')),
-                      NotEqual('Joules/Stream'))
+                      NotEqual('Joules/Stream')),
+              ('Scenario', 'Model'): 
+                  Apply(FilterScenario, suite)
           }, category + ',' + suite)
 
       MakeWorksheet(

@@ -1227,7 +1227,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
       notes = notes + ". " + system_json.get("sw_notes")
     unit_dict = {
         "SingleStream": "Latency (ms)",
-        "MultiStream": "Queries/s",
+        "MultiStream": "Latency (ms)",
         "Offline": "Samples/s",
         "Server": "Queries/s",
     }

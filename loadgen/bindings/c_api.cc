@@ -31,12 +31,14 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
       ClientData client_data, std::string name, IssueQueryCallback issue_cb,
       FlushQueriesCallback flush_queries_cb,
       UserConstraintsMetCallback user_constraints_met_cb,
+      ReportTargetQPSCallback report_target_qps_cb,
       ReportLatencyResultsCallback report_latency_results_cb)
       : client_data_(client_data),
         name_(std::move(name)),
         issue_cb_(issue_cb),
         flush_queries_cb_(flush_queries_cb),
         user_constraints_met_cb_(user_constraints_met_cb),
+        report_target_qps_cb_(report_target_qps_cb),
         report_latency_results_cb_(report_latency_results_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
@@ -50,6 +52,8 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
   bool UserConstraintsMet() override { (*user_constraints_met_cb_)(); }
 
+  void ReportTargetQPS(const double target_qps) override { (*report_target_qps_cb_)(target_qps); }
+
   void ReportLatencyResults(
       const std::vector<QuerySampleLatency>& latencies_ns) override {
     (*report_latency_results_cb_)(client_data_, latencies_ns.data(),
@@ -62,6 +66,7 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
   IssueQueryCallback issue_cb_;
   FlushQueriesCallback flush_queries_cb_;
   UserConstraintsMetCallback user_constraints_met_cb_;
+  ReportTargetQPSCallback report_target_qps_cb_;
   ReportLatencyResultsCallback report_latency_results_cb_;
 };
 
@@ -71,9 +76,10 @@ void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,
                    IssueQueryCallback issue_cb,
                    FlushQueriesCallback flush_queries_cb,
                    UserConstraintsMetCallback user_constraints_met_cb,
+                   ReportTargetQPSCallback report_target_qps_cb,
                    ReportLatencyResultsCallback report_latency_results_cb) {
   SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
-      client_data, std::string(name, name_length), issue_cb, flush_queries_cb, user_constraints_met_cb, report_latency_results_cb);
+      client_data, std::string(name, name_length), issue_cb, flush_queries_cb, user_constraints_met_cb, report_target_qps_cb, report_latency_results_cb);
   return reinterpret_cast<void*>(sut);
 }
 

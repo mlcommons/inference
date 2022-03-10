@@ -39,6 +39,7 @@ typedef uintptr_t ClientData;
 typedef void (*IssueQueryCallback)(ClientData, const QuerySample*, size_t);
 typedef void (*FlushQueriesCallback)();
 typedef bool (*UserConstraintsMetCallback)();
+typedef void (*ReportTargetQPSCallback)(const double target_qps);
 typedef void (*ReportLatencyResultsCallback)(ClientData, const int64_t*,
                                              size_t);
 typedef void (*ResponseCallback)(ClientData, QuerySampleResponse*);
@@ -55,8 +56,9 @@ void QuerySamplesCompleteResponseCb(QuerySampleResponse* responses,
 /// \brief Create an opaque SUT pointer based on C callbacks.
 void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,
                    IssueQueryCallback issue_cb,
-                   UserConstraintsMetCallback user_constraints_met_cb,
                    FlushQueriesCallback flush_queries_cb,
+                   UserConstraintsMetCallback user_constraints_met_cb,
+                   ReportTargetQPSCallback report_target_qps_cb,
                    ReportLatencyResultsCallback report_latency_results_cb);
 /// \brief Destroys the SUT created by ConstructSUT.
 void DestroySUT(void* sut);

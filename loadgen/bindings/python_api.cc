@@ -37,6 +37,7 @@ using FastIssueQueriesCallback =
     std::function<void(std::vector<ResponseId>, std::vector<QuerySampleIndex>)>;
 using FlushQueriesCallback = std::function<void()>;
 using UserConstraintsMetCallback = std::function<bool()>;
+using ReportTargetQPSCallback = std::function<void(double)>;
 using ReportLatencyResultsCallback = std::function<void(std::vector<int64_t>)>;
 
 // Forwards SystemUnderTest calls to relevant callbacks.
@@ -46,11 +47,13 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
       std::string name, IssueQueryCallback issue_cb,
       FlushQueriesCallback flush_queries_cb,
       UserConstraintsMetCallback user_constraints_met_cb,
+      ReportTargetQPSCallback report_target_qps_cb,
       ReportLatencyResultsCallback report_latency_results_cb)
       : name_(std::move(name)),
         issue_cb_(issue_cb),
         flush_queries_cb_(flush_queries_cb),
         user_constraints_met_cb_(user_constraints_met_cb),
+        report_target_qps_cb_(report_target_qps_cb),
         report_latency_results_cb_(report_latency_results_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
@@ -65,6 +68,11 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
   bool UserConstraintsMet() override { return user_constraints_met_cb_(); }
 
+  void ReportTargetQPS(const double target_qps) override { 
+    pybind11::gil_scoped_acquire gil_acquirer;
+    report_target_qps_cb_(target_qps);
+  }
+
   void ReportLatencyResults(
       const std::vector<QuerySampleLatency>& latencies_ns) override {
     pybind11::gil_scoped_acquire gil_acquirer;
@@ -76,6 +84,7 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
   IssueQueryCallback issue_cb_;
   FlushQueriesCallback flush_queries_cb_;
   UserConstraintsMetCallback user_constraints_met_cb_;
+  ReportTargetQPSCallback report_target_qps_cb_;
   ReportLatencyResultsCallback report_latency_results_cb_;
 };
 
@@ -85,9 +94,11 @@ class FastSystemUnderTestTrampoline : public SystemUnderTestTrampoline {
       std::string name, FastIssueQueriesCallback fast_issue_cb,
       FlushQueriesCallback flush_queries_cb,
       UserConstraintsMetCallback user_constraints_met_cb,
+      ReportTargetQPSCallback report_target_qps_cb,
       ReportLatencyResultsCallback report_latency_results_cb)
       : SystemUnderTestTrampoline(name, nullptr, flush_queries_cb, 
                                   user_constraints_met_cb,
+                                  report_target_qps_cb,
                                   report_latency_results_cb),
         fast_issue_cb_(fast_issue_cb) {}
   ~FastSystemUnderTestTrampoline() override = default;
@@ -157,9 +168,10 @@ namespace py {
 uintptr_t ConstructSUT(IssueQueryCallback issue_cb,
                        FlushQueriesCallback flush_queries_cb,
                        UserConstraintsMetCallback user_constraints_met_cb,
+                       ReportTargetQPSCallback report_target_qps_cb,
                        ReportLatencyResultsCallback report_latency_results_cb) {
   SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
-      "PySUT", issue_cb, flush_queries_cb, user_constraints_met_cb, report_latency_results_cb);
+      "PySUT", issue_cb, flush_queries_cb, user_constraints_met_cb, report_target_qps_cb, report_latency_results_cb);
   return reinterpret_cast<uintptr_t>(sut);
 }
 
@@ -173,9 +185,10 @@ uintptr_t ConstructFastSUT(
     FastIssueQueriesCallback fast_issue_cb,
     FlushQueriesCallback flush_queries_cb,
     UserConstraintsMetCallback user_constraints_met_cb,
+    ReportTargetQPSCallback report_target_qps_cb,
     ReportLatencyResultsCallback report_latency_results_cb) {
   FastSystemUnderTestTrampoline* sut = new FastSystemUnderTestTrampoline(
-      "PyFastSUT", fast_issue_cb, flush_queries_cb, user_constraints_met_cb, report_latency_results_cb);
+      "PyFastSUT", fast_issue_cb, flush_queries_cb, user_constraints_met_cb, report_target_qps_cb, report_latency_results_cb);
   return reinterpret_cast<uintptr_t>(sut);
 }
 

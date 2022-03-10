@@ -66,6 +66,10 @@ class SystemUnderTest {
   /// on both the user constraints and performance constraints
   virtual bool UserConstraintsMet() = 0;
 
+  /// \brief Reports the target qps to the SUT
+  /// recorded by the load generator.
+  virtual void ReportTargetQPS(const double target_qps) = 0;
+
   /// \brief Reports the raw latency results to the SUT of each sample issued as
   /// recorded by the load generator. Units are nanoseconds.
   virtual void ReportLatencyResults(

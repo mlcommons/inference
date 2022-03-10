@@ -372,6 +372,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                const TestSettingsInternal& settings,
                                const LoadableSampleSet& loaded_sample_set,
                                SequenceGen* sequence_gen) {
+  // report target qps
+  sut->ReportTargetQPS(settings.target_qps);
+  
   // Create reponse handler.
   ResponseDelegateDetailed<scenario, mode> response_logger;
   std::uniform_real_distribution<double> accuracy_log_offset_dist =

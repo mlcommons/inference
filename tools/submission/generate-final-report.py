@@ -55,7 +55,7 @@ def main():
       axis=1)
 
   # details url
-  base_url = 'https://github.com/mlcommons/submissions_inference_2_0/tree/master'
+  base_url = 'https://github.com/mlcommons/submissions_inference_2.0/tree/master'
   df['Details'] = df.apply(
       lambda x: '=HYPERLINK("{}","details")'.format('/'.join(
           [base_url, x['Category'], x['Submitter'], 'results', x['Platform']])),

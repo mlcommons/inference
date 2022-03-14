@@ -30,7 +30,13 @@ class BackendOnnxruntime(backend.Backend):
         # enable level 3 optimizations
         # FIXME: enable below once onnxruntime 0.5 is released
         # opt.set_graph_optimization_level(3)
-        self.sess = rt.InferenceSession(model_path, opt)
+        # self.sess = rt.InferenceSession(model_path, opt)
+        import torch
+        if torch.cuda.is_available():
+            self.sess = rt.InferenceSession(model_path, opt, providers=["CUDAExecutionProvider"])
+        else:
+            self.sess = rt.InferenceSession(model_path, opt)
+            
         # get input and output names
         if not inputs:
             self.inputs = [meta.name for meta in self.sess.get_inputs()]

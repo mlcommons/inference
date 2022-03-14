@@ -492,6 +492,22 @@ MODEL_CONFIG = {
             "ssd-resnet34": "ssd-large",
             "mobilenet": "resnet",
             "resnet50": "resnet",
+            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
+            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
+            "rcnn-resnet50-lowproposals-coco": "ssd-large",
+            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
+            "rcnn-inception-v2-coco": "ssd-large",
+            "rcnn-nas-lowproposals-coco": "ssd-large",
+            "rcnn-resnet101-lowproposals-coco": "ssd-large",
+            "ssd_mobilenet_v1_coco": "ssd-small",
+            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
+            "ssd_mobilenet_v2_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
         },
         "seeds": {
             "qsl_rng_seed": 6655344265603136530,
@@ -1213,7 +1229,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
       notes = notes + ". " + system_json.get("sw_notes")
     unit_dict = {
         "SingleStream": "Latency (ms)",
-        "MultiStream": "Queries/s",
+        "MultiStream": "Latency (ms)",
         "Offline": "Samples/s",
         "Server": "Queries/s",
     }

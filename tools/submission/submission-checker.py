@@ -975,6 +975,8 @@ def check_performance_dir(config, model, path, scenario_fixed):
       target_latency = config.latency_constraint.get(model, dict()).get(scenario)
       if target_latency:
         early_stopping_latency_ns = mlperf_log["effective_target_latency_ns"]
+        log.info("Target latency: %s, Early Stopping Latency: %s, Scenario: %s",
+                  target_latency, early_stopping_latency_ns, scenario)
         if early_stopping_latency_ns > target_latency:
           log.error("%s Latency constraint with early stopping not met, expected=%s, found=%s",
                       fname, target_latency, early_stopping_latency_ns)

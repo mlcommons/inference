@@ -612,13 +612,20 @@ RESULT_FIELD_NEW = {
 }
 
 ACC_PATTERN = {
-    "acc": r"^accuracy=([\d\.]+).*",
-    "AUC": r"^AUC=([\d\.]+).*",
-    "mAP": r"^mAP=([\d\.]+).*",
-    "bleu": r"^BLEU\:\s*([\d\.]+).*",
-    "F1": r"^{\"exact_match\"\:\s*[\d\.]+,\s*\"f1\"\:\s*([\d\.]+)}",
-    "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
-    "DICE": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
+    "acc":
+        r"^accuracy=([\d\.]+).*",
+    "AUC":
+        r"^AUC=([\d\.]+).*",
+    "mAP":
+        r"^mAP=([\d\.]+).*",
+    "bleu":
+        r"^BLEU\:\s*([\d\.]+).*",
+    "F1":
+        r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
+    "WER":
+        r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
+    "DICE":
+        r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [

@@ -25,6 +25,7 @@ sys.path.insert(0, os.getcwd())
 import mlperf_loadgen as lg
 import numpy as np
 import torch
+import transformers
 from transformers import BertConfig, BertForQuestionAnswering
 from squad_QSL import get_squad_QSL
 
@@ -48,11 +49,13 @@ class BERT_PyTorch_SUT():
             vocab_size=config_json["vocab_size"])
 
         self.dev = torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
+        self.version = transformers.__version__
 
         print("Loading PyTorch model...")
         self.model = BertForQuestionAnswering(config)
         self.model.to(self.dev)
-        self.model.load_state_dict(torch.load("build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch"), strict=False)
+        self.model.eval()
+        self.model.load_state_dict(torch.load("build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch"), strict=True)
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
@@ -67,8 +70,11 @@ class BERT_PyTorch_SUT():
                 model_output = self.model.forward(input_ids=torch.LongTensor(eval_features.input_ids).unsqueeze(0).to(self.dev),
                     attention_mask=torch.LongTensor(eval_features.input_mask).unsqueeze(0).to(self.dev),
                     token_type_ids=torch.LongTensor(eval_features.segment_ids).unsqueeze(0).to(self.dev))
-                start_scores = model_output.start_logits
-                end_scores = model_output.end_logits
+                if self.version >= '4.0.0':
+                    start_scores = model_output.start_logits
+                    end_scores = model_output.end_logits
+                else:
+                    start_scores, end_scores = model_output
                 output = torch.stack([start_scores, end_scores], axis=-1).squeeze(0).cpu().numpy()
 
                 response_array = array.array("B", output.tobytes())

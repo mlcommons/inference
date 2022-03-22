@@ -81,6 +81,7 @@ def main():
   indices['open'] = indices['closed'].copy()
   indices['closed'].append('Details')
   indices['open'].append('UsedModel')
+  indices['open'].append('Accuracy')
   indices['open'].append('Details')
   columns = [
       'Model',

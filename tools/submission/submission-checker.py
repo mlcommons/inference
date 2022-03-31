@@ -1243,7 +1243,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
     }
     power_unit_dict = {
         "SingleStream": "Joules",
-        "MultiStream": "Joules/Stream",
+        "MultiStream": "Joules",
         "Offline": "Watts",
         "Server": "Watts",
     }

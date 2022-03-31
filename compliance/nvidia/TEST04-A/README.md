@@ -24,18 +24,20 @@ This test requires measuring & comparing performance of SUT (PerformanceOnly, mo
 Test script works best with Python 3.3 or later.
 
 ## Exempt Benchmarks
-This test is not applicable for the following benchmarks whose performance is dependent on variably sized input samples:
- 1. RNNT
- 2. BERT
- 3. DLRM
+This test is not applicable for the following benchmarks whose performance is dependent on variably sized input samples
+ 1. rnnt
+ 2. bert
+ 3. dlrm
+ 4. 3d-unet
 
 ## Scenarios
 
- - This test is applicable for scenarios Offline, Server and SingleStream always.
- - This test is not applicable for Multi-Stream scenario if samples_per_query >= Performance Sample Count
+ - As of v2.0, this test is applicable for all valid scenarios of non-exempt benchmarks.
 
 ## Pass Criteria
 Performance of TEST04-B should be slower than performance of TEST04-A. To account for noise, TEST04-A can be upto 20% slower than TEST04-B for SingleStream scenario with very short latencies (<200us) & upto 10% slower otherwise.
+Significant run-to-run variation can result due to the small number of samples in this test. 
+To compensate, the performance sample count may be increased to increase the number of samples in the test, up to the size of the dataset or the size that still fits in the SUT's memory, whichever is reached first.
 
 ## Instructions
 

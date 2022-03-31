@@ -68,6 +68,7 @@ def main():
   indices['closed'] = [
       'ID',
       'Unique ID (e.g. for Audit)',
+      'ColorKey',
       'Submitter',
       'Availability',
       'System',
@@ -99,7 +100,6 @@ def main():
                        'Samples/s',
                        'Queries/s',
                        'Joules',
-                       'Joules/Stream',
                        'Watts',
                    ]]
 
@@ -168,6 +168,8 @@ def main():
     return '/'.join(x[key_list])
 
   df['Unique ID (e.g. for Audit)'] = df.apply(MakeUniqueID, axis=1)
+  df['ColorKey'] = df.apply(
+      lambda x: ''.join(x[['Availability', 'Submitter']]), axis=1)
   df.sort_values(
       by=[
           'Category', 'Availability', 'Submitter', 'Unique ID (e.g. for Audit)'
@@ -209,6 +211,7 @@ def main():
   bg_format = writer.book.add_format({'bg_color': '#efefef'})
   for ws in writer.book.worksheets():
     ws.set_column(1, 1, None, None, {'hidden': 1})
+    ws.set_column(2, 2, None, None, {'hidden': 1})
     ws.set_column(len(indices['closed']), 100, None, score_format)
     ws.conditional_format(
         2 + len(columns), 0, 200, 100, {

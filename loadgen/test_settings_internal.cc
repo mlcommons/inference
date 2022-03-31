@@ -120,9 +120,10 @@ TestSettingsInternal::TestSettingsInternal(
 
   // Sample by concatentating several permutations of the dataset
   // sample_concatenate_permutation
-  sample_concatenate_permutation = (requested.sample_concatenate_permutation == 0)
-                                    ? false
-                                    : requested.sample_concatenate_permutation;
+  sample_concatenate_permutation =
+      (requested.sample_concatenate_permutation == 0)
+          ? false
+          : requested.sample_concatenate_permutation;
 
   // Samples per query.
   if (requested.scenario == TestScenario::MultiStream) {

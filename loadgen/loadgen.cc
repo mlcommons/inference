@@ -647,7 +647,6 @@ void PerformanceSummary::ProcessLatencies() {
   // Calculate per-query stats.
   size_t query_count = pr.queries_issued;
   assert(pr.query_latencies.size() == query_count);
-  assert(pr.query_intervals.size() == query_count);
   std::sort(pr.query_latencies.begin(), pr.query_latencies.end());
   QuerySampleLatency accumulated_query_latency = 0;
   for (auto latency : pr.query_latencies) {

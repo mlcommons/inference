@@ -183,23 +183,23 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
 }
 
 /// \brief SampleDistribution for 3D-UNet SingleStream, for v2.0
-// FIXME: meant for 3D UNet SingleStream only at the moment but the logic should work for others
-// TODO: consolidate the distribution generator after v2.0 
-auto SampleDistributionEqualIssue(size_t sample_count, size_t set_size, std::mt19937* rng) {
+// FIXME: meant for 3D UNet SingleStream only at the moment but the logic should
+// work for others
+// TODO: consolidate the distribution generator after v2.0
+auto SampleDistributionEqualIssue(size_t sample_count, size_t set_size,
+                                  std::mt19937* rng) {
   std::vector<size_t> indices;
-  std::vector<size_t> shuffle_indices;
-  for (size_t i = 0; i < set_size; ++i) {
-    shuffle_indices.push_back(i);
-  }
+  std::vector<size_t> shuffle_indices(set_size);
+  std::iota(shuffle_indices.begin(), shuffle_indices.end(), 0);
   for (size_t j = 0; j < sample_count; j += set_size) {
     std::shuffle(shuffle_indices.begin(), shuffle_indices.end(), *rng);
-    indices.insert(indices.end(), shuffle_indices.begin(), shuffle_indices.end());
+    indices.insert(indices.end(), shuffle_indices.begin(),
+                   shuffle_indices.end());
   }
   return [indices = std::move(indices), i = size_t(0)](auto& /*gen*/) mutable {
-    return indices.at((i++)%indices.size());
+    return indices.at((i++) % indices.size());
   };
 }
-
 
 /// \brief Generates queries for the requested settings, templated by
 /// scenario and mode.
@@ -264,10 +264,8 @@ std::vector<QueryMetadata> GenerateQueries(
 
   // FIXME: Only used for v2.0 3D-UNet KiTS19 SingleStream
   // TODO: Need to consolidate the code for any generic usage after v2.0
-  auto sample_distribution_equal_issue =
-      SampleDistributionEqualIssue(min_queries,
-                                   loaded_samples.size(),
-                                   &sample_rng);
+  auto sample_distribution_equal_issue = SampleDistributionEqualIssue(
+      min_queries, loaded_samples.size(), &sample_rng);
 
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
@@ -342,12 +340,11 @@ std::vector<QueryMetadata> GenerateQueries(
                          scenario == TestScenario::SingleStream;
       for (auto& s : samples) {
         s = loaded_samples[settings.performance_issue_unique
-                           ? sample_distribution_unique(sample_rng)
-                           : settings.performance_issue_same
-                            ? same_sample
-                            : equal_issue
-                              ? sample_distribution_equal_issue(sample_rng)
-                              : sample_distribution(sample_rng)];
+                               ? sample_distribution_unique(sample_rng)
+                           : settings.performance_issue_same ? same_sample
+                           : equal_issue
+                               ? sample_distribution_equal_issue(sample_rng)
+                               : sample_distribution(sample_rng)];
       }
     }
     queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
@@ -650,6 +647,7 @@ void PerformanceSummary::ProcessLatencies() {
   // Calculate per-query stats.
   size_t query_count = pr.queries_issued;
   assert(pr.query_latencies.size() == query_count);
+  assert(pr.query_intervals.size() == query_count);
   std::sort(pr.query_latencies.begin(), pr.query_latencies.end());
   QuerySampleLatency accumulated_query_latency = 0;
   for (auto latency : pr.query_latencies) {
@@ -689,6 +687,7 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
             std::to_string(h_min + 1) + " queries for early stopping.";
         return false;
       } else {
+        // TODO: use a binary search instead.
         for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, target_latency_percentile.percentile,
                                tolerance, confidence);
@@ -723,6 +722,7 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
             " early stopping estimate (would need to process at\n least " +
             std::to_string(h_min + 1) + " total queries).";
       } else {
+        // TODO: do a binary search instead.
         for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, multi_stream_percentile, tolerance,
                                confidence);
@@ -773,6 +773,7 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
             std::to_string(h_min + 1) + " queries for early stopping.";
         return false;
       } else {
+        // TODO: do a binary search instead
         for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, target_latency_percentile.percentile,
                                tolerance, confidence);

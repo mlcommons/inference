@@ -392,6 +392,7 @@ struct PerformanceResult {
   double final_query_scheduled_time;         // seconds from start.
   double final_query_issued_time;            // seconds from start.
   double final_query_all_samples_done_time;  // seconds from start.
+  bool user_constraints_met; // indicator of whether user defined constraints are met
 };
 
 /// \brief Issues a series of pre-generated queries.
@@ -403,6 +404,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                                const TestSettingsInternal& settings,
                                const LoadableSampleSet& loaded_sample_set,
                                SequenceGen* sequence_gen) {
+  // report target qps
+  sut->ReportTargetQPS(settings.target_qps);
+  
   // Create reponse handler.
   ResponseDelegateDetailed<scenario, mode> response_logger;
   std::uniform_real_distribution<double> accuracy_log_offset_dist =
@@ -495,6 +499,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   // Log contention counters after every test as a sanity check.
   GlobalLogger().LogContentionAndAllocations();
 
+  // Find out if user defined constrains are met
+  bool user_constraints_met = sut->UserConstraintsMet();
+
   // This properly accounts for the fact that the max completion time may not
   // belong to the final query. It also excludes any time spent postprocessing
   // in the loadgen itself after final completion, which may be significant
@@ -503,10 +510,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       GlobalLogger().GetMaxCompletionTime();
   auto sut_active_duration = max_completion_time - start;
   LogDetail([start_for_power, sut_active_duration](AsyncDetail& detail) {
-    auto end_for_power =
-        start_for_power +
-        std::chrono::duration_cast<std::chrono::system_clock::duration>(
-            sut_active_duration);
+    auto end_for_power = start_for_power + std::chrono::duration_cast<std::chrono::system_clock::duration>(sut_active_duration);
 #if USE_NEW_LOGGING_FORMAT
     MLPERF_LOG_INTERVAL_START(detail, "power_begin",
                               DateTimeStringForPower(start_for_power));
@@ -544,7 +548,8 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                            max_latency,
                            final_query_scheduled_time,
                            final_query_issued_time,
-                           final_query_all_samples_done_time};
+                           final_query_all_samples_done_time,
+                           user_constraints_met};
 }
 
 /// \brief Wraps PerformanceResult with relevant context to change how
@@ -861,7 +866,10 @@ bool PerformanceSummary::PerfConstraintsMet(std::string* recommendation) {
       break;
     case TestScenario::Server:
       ProcessLatencies();
-      if (target_latency_percentile.sample_latency >
+      if (!pr.user_constraints_met) {
+        *recommendation = "User constraints not met. Recommend to reduce target QPS.";
+        perf_constraints_met = false;
+      } else if (target_latency_percentile.sample_latency >
           settings.target_latency.count()) {
         *recommendation = "Reduce target QPS to improve latency.";
         perf_constraints_met = false;

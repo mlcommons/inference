@@ -16,7 +16,7 @@ def conv_bn(inp, oup, stride):
     return nn.Sequential(
         OrderedDict(
             [
-                ("0", Conv2d_tf(inp, oup, 3, stride, padding="SAME", bias=False)),
+                ("0", Conv2d_tf(inp, oup, 3, stride, padding="same", bias=False)),
                 ("0/BatchNorm", BiasAdd(oup)),
                 ("0/ReLU", nn.ReLU6(inplace=True)),
             ]
@@ -31,7 +31,7 @@ def conv_dw(inp, oup, stride):
                 (
                     "depthwise",
                     Conv2d_tf(
-                        inp, inp, 3, stride, padding="SAME", groups=inp, bias=False
+                        inp, inp, 3, stride, padding="same", groups=inp, bias=False
                     ),
                 ),
                 ("depthwise/BatchNorm", BatchNorm2d(inp)),
@@ -105,7 +105,7 @@ class Block(nn.Sequential):
             nn.Conv2d(in_channels, out_channels=mid_channels, kernel_size=1),
             nn.ReLU6(),
             Conv2d_tf(
-                mid_channels, out_channels, kernel_size=3, stride=2, padding="SAME"
+                mid_channels, out_channels, kernel_size=3, stride=2, padding="same"
             ),
             nn.ReLU6(),
         )

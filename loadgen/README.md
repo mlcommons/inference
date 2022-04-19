@@ -1,14 +1,11 @@
 # Overview {#mainpage}
 
-*Note:* A compiled html version of this document is hosted online
-[here](https://mlperf.github.io/inference/loadgen/index.html).
-
 ## Introduction
 
 * The LoadGen is a *reusable* module that *efficiently* and *fairly* measures
   the performance of inference systems.
 * It generates traffic for scenarios as formulated by a diverse set of experts
-  in the [MLPerf working group](https://mlperf.org/about).
+  in the [MLCommons working group](https://mlcommons.org/).
 * The scenarios emulate the workloads seen in mobile devices,
   autonomous vehicles, robotics, and cloud-based setups.
 * Although the LoadGen is not model or dataset aware, its strength is in its
@@ -31,16 +28,15 @@ implemented.
 </div>
 
 ## Useful Links
-* [FAQ](@ref ReadmeFAQ)
-* [LoadGen Build Instructions](@ref ReadmeBuild)
-* [LoadGen API](@ref LoadgenAPI)
-* [Test Settings](@ref LoadgenAPITestSettings) -
+* [FAQ](README_FAQ.md)
+* [LoadGen Build Instructions](README_BUILD.md)
+* [LoadGen API](loadgen.h)
+* [Test Settings](test_settings.h) -
   A good description of available scenarios, modes, and knobs.
 * [MLPerf Inference Code](https://github.com/mlcommons/inference) -
   Includes source for the LoadGen and reference models that use the LoadGen.
 * [MLPerf Inference Rules](https://github.com/mlcommons/inference_policies) -
   Any mismatch with this is a bug in the LoadGen.
-* [MLPerf Website](www.mlperf.org)
 
 ## Scope of the LoadGen's Responsibilities
 

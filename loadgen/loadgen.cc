@@ -1436,8 +1436,6 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     });
   }
 
-  sut->ReportLatencyResults(pr.sample_latencies);
-
   PerformanceSummary perf_summary{sut->Name(), settings, std::move(pr)};
   LogSummary([perf_summary](AsyncSummary& summary) mutable {
     perf_summary.LogSummary(summary);
@@ -1530,8 +1528,6 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 #endif
     });
 
-    sut->ReportLatencyResults(base_perf_summary.pr.sample_latencies);
-
     PerformanceSummary perf_summary{sut->Name(), base_settings,
                                     std::move(base_perf_summary.pr)};
     LogSummary([perf_summary](AsyncSummary& summary) mutable {
@@ -1592,8 +1588,6 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     detail("FindPeakPerformance: Found peak performance field: " + field);
 #endif
   });
-
-  sut->ReportLatencyResults(perf_summary.pr.sample_latencies);
 
   LogSummary([perf_summary](AsyncSummary& summary) mutable {
     perf_summary.LogSummary(summary);

@@ -103,8 +103,9 @@ class Prediction(torch.nn.Module):
             forget_gate_bias=forget_gate_bias,
             dropout=dropout,
         )
+        self._SOS = -1
 
-    def forward(self, y: Optional[torch.Tensor],
+    def forward(self, y: torch.Tensor,
                 state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         B - batch size
@@ -123,15 +124,15 @@ class Prediction(torch.nn.Module):
                         h (tensor), shape (L, B, H)
                         c (tensor), shape (L, B, H)
         """
-        if y is None:
-            # This is gross. I should really just pass in an SOS token
-            # instead. Is there no SOS token?
-            assert state is None
-            # Hacky, no way to determine this right now!
-            B = 1
-            y = torch.zeros((B, 1, self.n_hidden), dtype=torch.float32)
-        else:
-            y = self.embed(y)
+        # SOS hack, there is no SOS, and SOS should as if embedding give 0.0
+        # So identify SOS and fill lookup result with 0.0
+        # If embedding table contains SOS token this would save a lot of
+        # trouble
+
+        y_mask = y.eq(self._SOS)
+        y.masked_fill_(y_mask, 0)
+        y = self.embed(y)
+        y.masked_fill_(y_mask.unsqueeze(2), 0.0)
 
         # if state is None:
         #    batch = y.size(0)

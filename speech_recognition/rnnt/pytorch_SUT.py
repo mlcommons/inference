@@ -99,7 +99,7 @@ class PytorchSUT:
                 assert feature_length.ndim == 1
                 feature = feature.permute(2, 0, 1)
 
-                _, _, transcript = self.greedy_decoder.forward(feature, feature_length)
+                transcript = self.greedy_decoder.forward(feature, feature_length)
 
             assert len(transcript) == 1
             response_array = array.array('q', transcript[0])

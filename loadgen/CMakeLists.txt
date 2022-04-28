@@ -11,6 +11,10 @@ message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSIO
 if (NOT MSVC)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -W -Wall")
 endif()
+# Extra build options can be specified by setting the MLPERF_LOADGEN_CXX_FLAGS variable
+if (MLPERF_LOADGEN_CXX_FLAGS)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MLPERF_LOADGEN_CXX_FLAGS}")
+endif()
 message(STATUS "Using C++ compiler flags: ${CMAKE_CXX_FLAGS}")
 set(CMAKE_CXX_STANDARD "14")
 message(STATUS "Using C++ standard: ${CMAKE_CXX_STANDARD}")

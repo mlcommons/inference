@@ -650,6 +650,14 @@ SYSTEM_DESC_REQUIED_FIELDS_POWER = [
     "disk_controllers"
 ]
 
+SYSTEM_DESC_IS_NETWORK_MODE = "is_network"
+SYSTEM_DESC_REQUIRED_FIELDS_NETWORK_MODE = [             # TODO define exact fields
+    SYSTEM_DESC_IS_NETWORK_MODE, "network_type", "network_rate", "nic_loadgen", "number_nic_loadgen",
+    "net_software_stack_loadgen", "network_protocol", "number_connections", "nic_sut", "number_nic_sut",
+    "net_software_stack_sut", "network_setup"
+]
+NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME = "Over the Network SUT"
+NETWORK_MODE_MIN_VALID_GET_SUT_NAME_LATENCY_MS = 1 # TODO define min valid latency
 
 SYSTEM_IMP_REQUIRED_FILES = [
     "input_data_types", "retraining", "starting_weights_filename", "weight_data_types",
@@ -890,7 +898,7 @@ def check_accuracy_dir(config, model, path, verbose):
   return is_valid, acc
 
 
-def check_performance_dir(config, model, path, scenario_fixed):
+def check_performance_dir(config, model, path, scenario_fixed, is_network_mode):
   is_valid = False
   rt = {}
 
@@ -919,6 +927,9 @@ def check_performance_dir(config, model, path, scenario_fixed):
     if scenario == "SingleStream":
       # qps_wo_loadgen_overhead is only used for inferring Offline from SingleStream; only for old submissions
       qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
+    if is_network_mode:
+      sut_name = mlperf_log["sut_name"]
+      sut_get_name_latency_ns = int(mlperf_log["get_sut_name_duration_ns"])
   else:
     fname = os.path.join(path, "mlperf_log_summary.txt")
     with open(fname, "r") as f:
@@ -942,6 +953,9 @@ def check_performance_dir(config, model, path, scenario_fixed):
     min_duration = int(rt["min_duration (ms)"])
     if scenario == "SingleStream":
       qps_wo_loadgen_overhead = float(rt["QPS w/o loadgen overhead"])
+    if is_network_mode:
+      sut_name = str(rt['System Under Test (SUT) name: '])
+      sut_get_name_latency_ns = int(rt['Get SUT name time [ns]: '])
 
   # check if there are any errors in the detailed log
   fname = os.path.join(path, "mlperf_log_detail.txt")
@@ -1041,6 +1055,17 @@ def check_performance_dir(config, model, path, scenario_fixed):
       res = (early_stopping_latency_ms * samples_per_query) / MS_TO_NS
     else:
       res = (latency_99_percentile * samples_per_query) / MS_TO_NS
+
+  if is_network_mode:
+    # for network mode verify the SUT name and the latency of sut->Name() exceeds min threshold
+    if NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME not in sut_name:
+      log.error(
+        f"{fname} invalid sut name for network mode. expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}' got '{sut_name}'")
+      is_valid = False
+    if (not sut_get_name_latency_ns) or (sut_get_name_latency_ns < NETWORK_MODE_MIN_VALID_GET_SUT_NAME_LATENCY_MS*MS_TO_NS):
+      log.error(
+        f"{fname} invalid sut->Name() latency for network mode. expecting at least {NETWORK_MODE_MIN_VALID_GET_SUT_NAME_LATENCY_MS}[ms] got {sut_get_name_latency_ns/MS_TO_NS}[ms]")
+      is_valid = False
 
   return is_valid, res, inferred
 
@@ -1174,6 +1199,9 @@ def files_diff(list1, list2, optional=None):
       return list(set(list2) - set(list1))
   return []
 
+def is_over_network(system_json):
+  is_network_mode_str = system_json.get(SYSTEM_DESC_IS_NETWORK_MODE)
+  return is_network_mode_str.lower()=="true" if is_network_mode_str is not None else False
 
 def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=False):
   """
@@ -1206,12 +1234,11 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
       "host_processors_per_node", "host_processor_core_count",
       "accelerator_model_name", "accelerators_per_node", "Location",
       "framework", "operating_system", "notes", "compilance", "errors",
-      "version", "inferred", "has_power", "Units"
+      "version", "inferred", "has_power", "Units", "network_mode"
   ]
   fmt = ",".join(["{}"] * len(head)) + "\n"
   csv.write(",".join(head) + "\n")
   results = {}
-
 
   def log_result(submitter,
                  available,
@@ -1230,7 +1257,8 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                  errors,
                  config,
                  inferred=0,
-                 power_metric=0):
+                 power_metric=0,
+                 is_network_mode=False):
 
     notes = system_json.get("hw_notes", "")
     if system_json.get("sw_notes"):
@@ -1264,7 +1292,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                    '"' + system_json.get("framework", "") + '"',
                    '"' + system_json.get("operating_system", "") + '"',
                    '"' + notes + '"', compilance, errors, config.version,
-                   inferred, power_metric > 0, unit))
+                   inferred, power_metric > 0, unit, is_network_mode))
 
     if power_metric > 0:
       csv.write(
@@ -1281,7 +1309,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                      '"' + system_json.get("framework", "") + '"',
                      '"' + system_json.get("operating_system", "") + '"',
                      '"' + notes + '"', compilance, errors, config.version,
-                     inferred, power_metric > 0, power_unit))
+                     inferred, power_metric > 0, power_unit, is_network_mode))
 
   # we are at the top of the submission directory
   for division in list_dir("."):
@@ -1439,7 +1467,8 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                 log.error("%s has file list mismatch (%s)", perf_path, diff)
 
               try:
-                is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed)
+                is_network_mode = is_over_network(system_json)
+                is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed, is_network_mode)
                 if is_inferred:
                   inferred = 1
                   log.info("%s has inferred results, qps=%s", perf_path, r)
@@ -1485,7 +1514,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
             if results.get(name):
               if accuracy_is_valid:
                 log_result(submitter, available, division, system_type, system_json.get("system_name"), system_desc, model_name, mlperf_model,
-                           scenario_fixed, r, acc, system_json, name, compliance, errors, config, inferred=inferred, power_metric=power_metric)
+                           scenario_fixed, r, acc, system_json, name, compliance, errors, config, inferred=inferred, power_metric=power_metric, is_network_mode=is_network_mode)
               else:
                 results[name] = None
                 log.error("%s is OK but accuracy has issues", name)
@@ -1508,6 +1537,10 @@ def check_system_desc_id(fname, systems_json, submitter, division, version):
     required_fields = SYSTEM_DESC_REQUIRED_FIELDS
   else:
     required_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1
+  is_network_mode = is_over_network(systems_json)
+  if is_network_mode:
+    required_fields += SYSTEM_DESC_REQUIRED_FIELDS_NETWORK_MODE
+
   for k in required_fields:
     if k not in systems_json:
       is_valid = False

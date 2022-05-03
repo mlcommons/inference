@@ -1704,18 +1704,31 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     GlobalLogger().StartNewTrace(&log_outputs.trace_out, PerfClock::now());
   }
 
+  // measure sut->Name() response time
+  PerfClock::time_point pre_get_sut_name_ts = PerfClock::now();
+  const std::string& sut_name = sut->Name();
+  PerfClock::time_point post_get_sut_name_ts = PerfClock::now();
+
+  auto get_sut_name_duration_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          post_get_sut_name_ts - pre_get_sut_name_ts)
+          .count();
+
   LogLoadgenVersion();
-  LogDetail([sut, qsl, test_date_time](AsyncDetail& detail) {
+  LogDetail([sut, qsl, test_date_time, &sut_name,
+             &get_sut_name_duration_ns](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT
     MLPERF_LOG(detail, "test_datetime", test_date_time);
-    MLPERF_LOG(detail, "sut_name", sut->Name());
+    MLPERF_LOG(detail, "sut_name", sut_name);
+    MLPERF_LOG(detail, "get_sut_name_duration_ns", get_sut_name_duration_ns);
     MLPERF_LOG(detail, "qsl_name", qsl->Name());
     MLPERF_LOG(detail, "qsl_reported_total_count", qsl->TotalSampleCount());
     MLPERF_LOG(detail, "qsl_reported_performance_count",
                qsl->PerformanceSampleCount());
 #else
     detail("Date + time of test: ", test_date_time);
-    detail("System Under Test (SUT) name: ", sut->Name());
+    detail("System Under Test (SUT) name: ", sut_name);
+    detail("Get SUT name time [ns]: ", get_sut_name_duration_ns);
     detail("Query Sample Library (QSL) name: ", qsl->Name());
     detail("QSL total size: ", qsl->TotalSampleCount());
     detail("QSL performance size*: ", qsl->PerformanceSampleCount());

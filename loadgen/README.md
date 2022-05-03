@@ -101,7 +101,7 @@ For templates of how to do the above in detail, refer to code for the demos,
 tests, and reference models.
 
 
-## Submissions over the network
+## LoadGen over the Network
 
 For reference, on a high level a submission looks like this:
 

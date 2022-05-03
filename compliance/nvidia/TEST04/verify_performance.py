@@ -1,4 +1,18 @@
 #! /usr/bin/env python3
+# Copyright 2022 The MLPerf Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# =============================================================================
 import os
 import sys
 import re
@@ -12,26 +26,24 @@ def main():
     #   the accuracy and performance runs
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--unique_sample", "-u",
-        help="Specifies the path to the summary log for TEST04-A.",
+        "--reference_summary", "-r",
+        help="Specifies the path to the summary log for the performance run.",
         default=""
     )
     parser.add_argument(
-        "--same_sample", "-s",
-        help="Specifies the path to the summary log for TEST04-B.",
+        "--test_summary", "-t",
+        help="Specifies the path to the summary log for this test.",
         default=""
     )
     args = parser.parse_args()
 
     print("Verifying performance.")
-    ref_file = open(args.unique_sample, "r")
-    test_file = open(args.same_sample, "r")
+    ref_file = open(args.reference_summary, "r")
+    test_file = open(args.test_summary, "r")
     ref_score = 0
     test_score = 0
     ref_mode = ''
     test_mode = ''
-    performance_issue_unqiue = ''
-    performance_issue_same = ''
 
     for line in ref_file:
         if re.match("Scenario", line):
@@ -41,15 +53,17 @@ def main():
         if ref_mode == "SingleStream":
             if re.match("90th percentile latency", line):
                 ref_score = line.split(": ",1)[1].strip()
+                ref_score = 1e9 / ref_score
                 continue
 
         if ref_mode == "MultiStream":
             if re.match("99th percentile latency", line):
                 ref_score = line.split(": ",1)[1].strip()
+                ref_score = 1e9 / ref_score
                 continue
 
         if ref_mode == "Server":
-            if re.match("Scheduled samples per second", line):
+            if re.match("Completed samples per second", line):
                 ref_score = line.split(": ",1)[1].strip()
                 continue
 
@@ -58,16 +72,15 @@ def main():
                 ref_score = line.split(": ",1)[1].strip()
                 continue
 
+        if re.match("Result is", line):
+            valid = line.split(": ",1)[1].strip()
+            if valid == 'INVALID':
+                sys.exit("TEST FAIL: Reference results are invalid")
 
         if re.match("\d+ ERROR", line):
             error = line.split(" ",1)[0].strip()
-            print("WARNING: " + error + " ERROR reported in TEST04-A results")
+            print("WARNING: " + error + " ERROR reported in reference results")
 
-        if re.match("performance_issue_unique",  line):
-            performance_issue_unique = line.split(": ",1)[1].strip()
-            if performance_issue_unique == 'false':
-                sys.exit("TEST FAIL: Invalid test settings in TEST04-A summary.")
-            break
 
     for line in test_file:
         if re.match("Scenario", line):
@@ -77,15 +90,17 @@ def main():
         if test_mode == "SingleStream":
             if re.match("90th percentile latency", line):
                 test_score = line.split(": ",1)[1].strip()
+                test_score = 1e9 / test_score
                 continue
 
         if test_mode == "MultiStream":
             if re.match("99th percentile latency", line):
                 test_score = line.split(": ",1)[1].strip()
+                test_score = 1e9 / test_score
                 continue
 
         if test_mode == "Server":
-            if re.match("Scheduled samples per second", line):
+            if re.match("Completed samples per second", line):
                 test_score = line.split(": ",1)[1].strip()
                 continue
 
@@ -94,39 +109,33 @@ def main():
                 test_score = line.split(": ",1)[1].strip()
                 continue
 
+        if re.match("Result is", line):
+            valid = line.split(": ",1)[1].strip()
+            if valid == 'INVALID':
+                sys.exit("TEST FAIL: Test results are invalid")
+            
         if re.match("\d+ ERROR", line):
             error = line.split(" ",1)[0].strip()
-            print("WARNING: " + error + " ERROR reported in TEST04-B results")
-
-        if re.match("performance_issue_same",  line):
-            performance_issue_same = line.split(": ",1)[1].strip()
-            if performance_issue_same == 'false':
-                sys.exit("TEST FAIL: Invalid test settings in TEST04-B summary.")
-            break
+            print("WARNING: " + error + " ERROR reported in test results")
 
     if test_mode != ref_mode:
         sys.exit("Test and reference scenarios do not match!")
 
-    print("TEST04-A score = {}".format(ref_score))
-    print("TEST04-B score = {}".format(test_score))
+    print("reference score = {}".format(ref_score))
+    print("test score = {}".format(test_score))
 
+ 
     threshold = 0.10
 
-    # In single stream mode, latencies can be very short for high performance systems
+    # In single-/multi-stream mode, latencies can be very short for high performance systems
     # and run-to-run variation due to external disturbances (OS) can be significant.
     # In this case we relax pass threshold to 20%
-
-    if ref_mode == "SingleStream" and float(ref_score) <= 200000:
+    if (ref_mode == "SingleStream" and float(ref_score) <= 200000) or\
+       (ref_mode == "MultiStream" and float(ref_score) <= 1600000):
         threshold = 0.20
-
-    if float(test_score) < float(ref_score) * (1 + threshold) and float(test_score) > float(ref_score) * (1 - threshold):
+        
+    if float(test_score) < float(ref_score) * (1 + threshold):
         print("TEST PASS")
-    elif (float(test_score) > float(ref_score) and test_mode == "SingleStream"):
-        print("TEST PASS")
-        print("Note: TEST04-B is significantly slower than TEST04-A")
-    elif (float(test_score) < float(ref_score) and test_mode != "SingleStream"):
-        print("TEST PASS")
-        print("Note: TEST04-B is significantly slower than TEST04-A")
     else:
         print("TEST FAIL: Test score invalid")
 

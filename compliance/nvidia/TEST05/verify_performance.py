@@ -1,4 +1,18 @@
 #! /usr/bin/env python3
+# Copyright 2018 The MLPerf Authors. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# =============================================================================
 import os
 import sys
 import re
@@ -13,7 +27,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--reference_summary", "-r",
-        help="Specifies the path to the summary log for TEST00.",
+        help="Specifies the path to the summary log for the performance run.",
         default=""
     )
     parser.add_argument(
@@ -47,7 +61,7 @@ def main():
                 continue
 
         if ref_mode == "Server":
-            if re.match("Scheduled samples per second", line):
+            if re.match("Completed samples per second", line):
                 ref_score = line.split(": ",1)[1].strip()
                 continue
 
@@ -82,7 +96,7 @@ def main():
                 continue
 
         if test_mode == "Server":
-            if re.match("Scheduled samples per second", line):
+            if re.match("Completed samples per second", line):
                 test_score = line.split(": ",1)[1].strip()
                 continue
 
@@ -109,14 +123,15 @@ def main():
  
     threshold = 0.05
 
-    # In single stream mode, latencies can be very short for high performance systems
+    # In single-/multi-stream mode, latencies can be very short for high performance systems
     # and run-to-run variation due to external disturbances (OS) can be significant.
     # In this case we relax pass threshold to 20%
-
-    if ref_mode == "SingleStream" and float(ref_score) <= 200000:
+    if (ref_mode == "SingleStream" and float(ref_score) <= 200000) or\
+       (ref_mode == "MultiStream" and float(ref_score) <= 1600000):
         threshold = 0.20
         
-    if float(test_score) < float(ref_score) * (1 + threshold) and float(test_score) > float(ref_score) * (1 - threshold):
+    if float(test_score) < float(ref_score) * (1 + threshold) and\
+       float(test_score) > float(ref_score) * (1 - threshold):
         print("TEST PASS")
     else:
         print("TEST FAIL: Test score invalid")

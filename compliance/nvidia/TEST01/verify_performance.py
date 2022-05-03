@@ -27,7 +27,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--reference_summary", "-r",
-        help="Specifies the path to the summary log for TEST00.",
+        help="Specifies the path to the summary log for the performance run.",
         default=""
     )
     parser.add_argument(
@@ -61,7 +61,7 @@ def main():
                 continue
 
         if ref_mode == "Server":
-            if re.match("Scheduled samples per second", line):
+            if re.match("Completed samples per second", line):
                 ref_score = line.split(": ",1)[1].strip()
                 continue
 
@@ -96,7 +96,7 @@ def main():
                 continue
 
         if test_mode == "Server":
-            if re.match("Scheduled samples per second", line):
+            if re.match("Completed samples per second", line):
                 test_score = line.split(": ",1)[1].strip()
                 continue
 

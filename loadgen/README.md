@@ -109,37 +109,37 @@ For reference, on a high level a submission looks like this:
 <img src="diagram_submission.png" width="300px" style="padding: 20px">
 </div>
 
-The loadgen implementation is common to all submissions, while the QSL (“Query Sample Library”) and SUT (“System Under Test”) are implemented by submitters. QSL is responsible for loading the data and includes untimed preprocessing.
+The LoadGen implementation is common to all submissions, while the QSL (“Query Sample Library”) and SUT (“System Under Test”) are implemented by submitters. QSL is responsible for loading the data and includes untimed preprocessing.
 
-A submission over the network introduces a new component “QDL” (query dispatch library) and a it would look like this:
+A submission over the network introduces a new component “QDL” (query dispatch library) that is added to the system as presented in the following diagram:
 
 <div align="center" style="display:flex; flex-flow:row wrap; justify-content: space-evenly;">
 <img src="diagram_network_submission.png" width="300px" style="padding: 20px">
 </div>
 
-QDL is a proxy for a load-balancer, that dispatches queries to SUT over a physical network, receives the responses and passes them back to loadgen.  It is implemented by the submitter. The interface of the QDL is the same as the API to SUT. 
+QDL is a proxy for a load-balancer, that dispatches queries to SUT over a physical network, receives the responses and passes them back to LoadGen.  It is implemented by the submitter. The interface of the QDL is the same as the API to SUT. 
 
-In scenarios using QDL, data in QSL may be compressed at the choice of the submitter in order to reduce network transmission time. Decompression is part of the timed processing in SUT. A set of approved standard compression schemes will be specified for each benchmark; additional compression schemes must be approved in advance by the Working Group.
+In scenarios using QDL, data may be compressed in QSL at the choice of the submitter in order to reduce network transmission time. Decompression is part of the timed processing in SUT. A set of approved standard compression schemes will be specified for each benchmark; additional compression schemes must be approved in advance by the Working Group.
 
-All communication between loadgen/QSL and SUT is via QDL, and all communication between QDL and SUT must pass over a physical network.
+All communication between LoadGen/QSL and SUT is via QDL, and all communication between QDL and SUT must pass over a physical network.
 
-Query batching can be implemented either in QDL or SUT, or split between the two components, at the submitter’s option.  Current Plan of record is no batching in QDL. QDL batching would be considered for future releases. Aside from batching, QDL implements only the protocol to transmit queries over the network and receive responses. Performing any part of the timed preprocessing or inference in QDL is specifically disallowed.
+QDL implements the protocol to transmit queries over the network and receive responses. It also implements decompression of any response returned by the SUT, where compression of responses is allowed. Performing any part of the timed preprocessing or inference in QDL is specifically disallowed. Currently no batching is allowed in QDL, although this may be revisited in future.
 
-The MLperf over the Network will run in Server mode and Offline mode. All loadgen modes are expected to work as is with insignificant changes. These include running the test in performance mode, accuracy mode, find peak performance Search mode and compliance mode. The same applies for power measurements.
+The MLperf over the Network will run in Server mode and Offline mode. All LoadGen modes are expected to work as is with insignificant changes. These include running the test in performance mode, accuracy mode, find peak performance mode and compliance mode. The same applies for power measurements.
 
 ### QDL details
-The Query Dispatch Library is a library implemented by the submitter and provides the Loadgen the same SUT API. All MLPerf Inference SUTs implement the `mlperf::SystemUnderTest` class which is defined in system_under_test.h. The QDL should follow the same API, support all existing `mlperf::SystemUnderTest` methods and use the same h file.
+The Query Dispatch Library is implemented by the submitter and interfaces with LoadGen using the same SUT API. All MLPerf Inference SUTs implement the `mlperf::SystemUnderTest` class which is defined in system_under_test.h. The QDL should follow the same API, support all existing `mlperf::SystemUnderTest` methods and use the same header file.
 
 #### QDL Query issue and response over the network
 
-The QDL gets the queries from the loadgen through 
+The QDL gets the queries from the LoadGen through 
 ```CPP
 void IssueQuery(const std::vector<QuerySample>& samples)
 ```
 
 The QDL should dispatch the queries to the SUT over the physical media. The exact method and implementation for it are submitter specific and would not be specified at MLCommons. Submitter implementation should include all methods required to serialize the query, load balance, drive it to the Operating system and network interface card and send to the SUT.
 
-The QDL receives the query responses over the network from the SUT. The exact method and implementation for it are submitter specific and would not be specified at MLCommons. The submitter implementation should include all methods required to receive the network data from the Network Interface card, go through the Operating system, deserialize the query response, and provide it back to the loadgen through query completion by:
+The QDL receives the query responses over the network from the SUT. The exact method and implementation for it are submitter specific and would not be specified at MLCommons. The submitter implementation should include all methods required to receive the network data from the Network Interface card, go through the Operating system, deserialize the query response, and provide it back to the LoadGen through query completion by:
 
 ```CPP
 struct QuerySampleResponse {
@@ -154,7 +154,7 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 
 #### QDL Additional Methods
 
-In addition to that the QDL needs to implement the following methods that are provided by the SUT interface to the loadgen:
+In addition to that the QDL needs to implement the following methods that are provided by the SUT interface to the LoadGen:
 ```CPP
 const std::string& Name() const;
 ```

@@ -128,7 +128,7 @@ QDL implements the protocol to transmit queries over the network and receive res
 The MLperf over the Network will run in Server mode and Offline mode. All LoadGen modes are expected to work as is with insignificant changes. These include running the test in performance mode, accuracy mode, find peak performance mode and compliance mode. The same applies for power measurements.
 
 ### QDL details
-The Query Dispatch Library is implemented by the submitter and interfaces with LoadGen using the same SUT API. All MLPerf Inference SUTs implement the `mlperf::SystemUnderTest` class which is defined in system_under_test.h. The QDL should follow the same API, support all existing `mlperf::SystemUnderTest` methods and use the same header file.
+The Query Dispatch Library is implemented by the submitter and interfaces with LoadGen using the same SUT API. All MLPerf Inference SUTs implement the `mlperf::SystemUnderTest` class which is defined in system_under_test.h. The QDL follows the same API, support all existing `mlperf::SystemUnderTest` methods and use the same header file.
 
 #### QDL Query issue and response over the network
 
@@ -137,9 +137,9 @@ The QDL gets the queries from the LoadGen through
 void IssueQuery(const std::vector<QuerySample>& samples)
 ```
 
-The QDL should dispatch the queries to the SUT over the physical media. The exact method and implementation for it are submitter specific and would not be specified at MLCommons. Submitter implementation should include all methods required to serialize the query, load balance, drive it to the Operating system and network interface card and send to the SUT.
+The QDL dispatches the queries to the SUT over the physical media. The exact method and implementation for it are submitter specific and would not be specified at MLCommons. Submitter implementation includes all methods required to serialize the query, load balance, drive it to the Operating system and network interface card and send to the SUT.
 
-The QDL receives the query responses over the network from the SUT. The exact method and implementation for it are submitter specific and would not be specified at MLCommons. The submitter implementation should include all methods required to receive the network data from the Network Interface card, go through the Operating system, deserialize the query response, and provide it back to the LoadGen through query completion by:
+The QDL receives the query responses over the network from the SUT. The exact method and implementation for it are submitter specific and would not be specified at MLCommons. The submitter implementation includes all methods required to receive the network data from the Network Interface card, go through the Operating system, deserialize the query response, and provide it back to the LoadGen through query completion by:
 
 ```CPP
 struct QuerySampleResponse {
@@ -158,8 +158,8 @@ In addition to that the QDL needs to implement the following methods that are pr
 ```CPP
 const std::string& Name() const;
 ```
-Name should return a known string for over the Network SUTs to identify it as over the network benchmark.
+The `Name` function returns a known string for over the Network SUTs to identify it as over the network benchmark.
 ```CPP
 void FlushQueries();
 ```
-It is not specified here how the QDL should query and configure the SUT to execute the above methods. The QDL should provide the response to the loadgen after the SUT is ready.
+It is not specified here how the QDL would query and configure the SUT to execute the above methods. The QDL provides the response to the loadgen after the SUT is ready.

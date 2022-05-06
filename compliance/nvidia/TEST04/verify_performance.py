@@ -53,13 +53,13 @@ def main():
         if ref_mode == "SingleStream":
             if re.match("90th percentile latency", line):
                 ref_score = line.split(": ",1)[1].strip()
-                ref_score = 1e9 / ref_score
+                ref_score = 1e9 / float(ref_score)
                 continue
 
         if ref_mode == "MultiStream":
             if re.match("99th percentile latency", line):
                 ref_score = line.split(": ",1)[1].strip()
-                ref_score = 1e9 / ref_score
+                ref_score = 1e9 / float(ref_score)
                 continue
 
         if ref_mode == "Server":
@@ -90,13 +90,13 @@ def main():
         if test_mode == "SingleStream":
             if re.match("90th percentile latency", line):
                 test_score = line.split(": ",1)[1].strip()
-                test_score = 1e9 / test_score
+                test_score = 1e9 / float(test_score)
                 continue
 
         if test_mode == "MultiStream":
             if re.match("99th percentile latency", line):
                 test_score = line.split(": ",1)[1].strip()
-                test_score = 1e9 / test_score
+                test_score = 1e9 / float(test_score)
                 continue
 
         if test_mode == "Server":

@@ -63,7 +63,10 @@ def main():
 
     # check if verify performance script passes
     performance_pass_command = "grep PASS verify_performance.txt"
-    performance_pass = "TEST PASS" in subprocess.check_output(performance_pass_command, shell=True).decode("utf-8")
+    try:
+        performance_pass = "TEST PASS" in subprocess.check_output(performance_pass_command, shell=True).decode("utf-8")
+    except:
+        performance_pass = False
     
     # setup output compliance directory structure
     output_performance_dir = os.path.join(output_dir, "performance", "run_1")

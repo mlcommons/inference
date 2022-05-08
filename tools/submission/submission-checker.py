@@ -541,7 +541,7 @@ MODEL_CONFIG = {
     },
 }
 
-VALID_DIVISIONS = ["open", "closed"]
+VALID_DIVISIONS = ["open", "closed", "network"]
 VALID_AVAILABILITIES = ["available", "preview", "rdi"]
 REQUIRED_PERF_FILES = ["mlperf_log_summary.txt", "mlperf_log_detail.txt"]
 OPTIONAL_PERF_FILES = ["mlperf_log_accuracy.json"]
@@ -651,13 +651,12 @@ SYSTEM_DESC_REQUIED_FIELDS_POWER = [
 ]
 
 SYSTEM_DESC_IS_NETWORK_MODE = "is_network"
-SYSTEM_DESC_REQUIRED_FIELDS_NETWORK_MODE = [             # TODO define exact fields
+SYSTEM_DESC_REQUIRED_FIELDS_NETWORK_MODE = [
     SYSTEM_DESC_IS_NETWORK_MODE, "network_type", "network_rate", "nic_loadgen", "number_nic_loadgen",
     "net_software_stack_loadgen", "network_protocol", "number_connections", "nic_sut", "number_nic_sut",
     "net_software_stack_sut", "network_setup"
 ]
-NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME = "Over the Network SUT"
-NETWORK_MODE_MIN_VALID_GET_SUT_NAME_LATENCY_MS = 1 # TODO define min valid latency
+NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME = "Network SUT"
 
 SYSTEM_IMP_REQUIRED_FILES = [
     "input_data_types", "retraining", "starting_weights_filename", "weight_data_types",
@@ -898,7 +897,7 @@ def check_accuracy_dir(config, model, path, verbose):
   return is_valid, acc
 
 
-def check_performance_dir(config, model, path, scenario_fixed, is_network_mode):
+def check_performance_dir(config, model, path, scenario_fixed, division, system_json):
   is_valid = False
   rt = {}
 
@@ -927,9 +926,7 @@ def check_performance_dir(config, model, path, scenario_fixed, is_network_mode):
     if scenario == "SingleStream":
       # qps_wo_loadgen_overhead is only used for inferring Offline from SingleStream; only for old submissions
       qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
-    if is_network_mode:
-      sut_name = mlperf_log["sut_name"]
-      sut_get_name_latency_ns = int(mlperf_log["get_sut_name_duration_ns"])
+    sut_name = mlperf_log["sut_name"]
   else:
     fname = os.path.join(path, "mlperf_log_summary.txt")
     with open(fname, "r") as f:
@@ -953,9 +950,7 @@ def check_performance_dir(config, model, path, scenario_fixed, is_network_mode):
     min_duration = int(rt["min_duration (ms)"])
     if scenario == "SingleStream":
       qps_wo_loadgen_overhead = float(rt["QPS w/o loadgen overhead"])
-    if is_network_mode:
-      sut_name = str(rt['System Under Test (SUT) name: '])
-      sut_get_name_latency_ns = int(rt['Get SUT name time [ns]: '])
+    sut_name = str(rt['System Under Test (SUT) name: '])
 
   # check if there are any errors in the detailed log
   fname = os.path.join(path, "mlperf_log_detail.txt")
@@ -1056,15 +1051,13 @@ def check_performance_dir(config, model, path, scenario_fixed, is_network_mode):
     else:
       res = (latency_99_percentile * samples_per_query) / MS_TO_NS
 
-  if is_network_mode:
-    # for network mode verify the SUT name and the latency of sut->Name() exceeds min threshold
+  is_network_system, is_network_mode_valid = is_system_over_network(division, system_json, path)
+  is_valid &= is_network_mode_valid
+  if is_network_system:
+    # for network mode verify the SUT name is valid, accodring to the rules (must include "Network SUT" in name)
     if NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME not in sut_name:
       log.error(
         f"{fname} invalid sut name for network mode. expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}' got '{sut_name}'")
-      is_valid = False
-    if (not sut_get_name_latency_ns) or (sut_get_name_latency_ns < NETWORK_MODE_MIN_VALID_GET_SUT_NAME_LATENCY_MS*MS_TO_NS):
-      log.error(
-        f"{fname} invalid sut->Name() latency for network mode. expecting at least {NETWORK_MODE_MIN_VALID_GET_SUT_NAME_LATENCY_MS}[ms] got {sut_get_name_latency_ns/MS_TO_NS}[ms]")
       is_valid = False
 
   return is_valid, res, inferred
@@ -1199,16 +1192,32 @@ def files_diff(list1, list2, optional=None):
       return list(set(list2) - set(list1))
   return []
 
-def is_over_network(system_json):
-  is_network_mode_str = system_json.get(SYSTEM_DESC_IS_NETWORK_MODE)
-  return is_network_mode_str.lower()=="true" if is_network_mode_str is not None else False
+def is_system_over_network(division, system_json, path):
+  """
+    Verify whether the submitted system is over network and whether it is valid for the division
+
+    for 'network' division, it is mandatory that the system is over-network
+    for 'closed' division, the system must not be over-network
+    for 'open' division, the system may be either local or over-network
+  """
+  # note that the 'is_network' system field is required for 'open' division
+  is_network_mode_sys_spec_str = system_json.get(SYSTEM_DESC_IS_NETWORK_MODE)
+  is_network_system = is_network_mode_sys_spec_str.lower()=="true" if is_network_mode_sys_spec_str is not None else False
+  # verify that the system corresponds the division
+  is_valid = True
+  expected_state_by_division = {"network": True, "closed": False}
+  if division in expected_state_by_division:
+    is_valid = expected_state_by_division[division] is is_network_system
+  if not is_valid:
+    log.error(f"{path} incorrect network mode (={is_network_system}) for division '{division}'")
+  return is_network_system, is_valid
 
 def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=False):
   """
     Walk the results directory and do the checking.
 
     We are called with the cdw at the root of the submission directory.
-    level1 division - closed|open
+    level1 division - closed|open|network
     level2 submitter - for example mlperf_org
     level3 - results, systems, measurements, code
 
@@ -1234,7 +1243,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
       "host_processors_per_node", "host_processor_core_count",
       "accelerator_model_name", "accelerators_per_node", "Location",
       "framework", "operating_system", "notes", "compilance", "errors",
-      "version", "inferred", "has_power", "Units", "network_mode"
+      "version", "inferred", "has_power", "Units"
   ]
   fmt = ",".join(["{}"] * len(head)) + "\n"
   csv.write(",".join(head) + "\n")
@@ -1257,8 +1266,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                  errors,
                  config,
                  inferred=0,
-                 power_metric=0,
-                 is_network_mode=False):
+                 power_metric=0):
 
     notes = system_json.get("hw_notes", "")
     if system_json.get("sw_notes"):
@@ -1292,7 +1300,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                    '"' + system_json.get("framework", "") + '"',
                    '"' + system_json.get("operating_system", "") + '"',
                    '"' + notes + '"', compilance, errors, config.version,
-                   inferred, power_metric > 0, unit, is_network_mode))
+                   inferred, power_metric > 0, unit))
 
     if power_metric > 0:
       csv.write(
@@ -1309,7 +1317,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                      '"' + system_json.get("framework", "") + '"',
                      '"' + system_json.get("operating_system", "") + '"',
                      '"' + notes + '"', compilance, errors, config.version,
-                     inferred, power_metric > 0, power_unit, is_network_mode))
+                     inferred, power_metric > 0, power_unit))
 
   # we are at the top of the submission directory
   for division in list_dir("."):
@@ -1318,7 +1326,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
       if division not in [".git", ".github", "assets"]:
         log.error("invalid division in input dir %s", division)
       continue
-    is_closed = division == "closed"
+    is_closed_or_network = division in ["closed", "network"]
 
     for submitter in list_dir(division):
       # we are looking at ./$division/$submitter, ie ./closed/mlperf_org
@@ -1372,10 +1380,10 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
           name = os.path.join(results_path, system_desc, model_name)
           mlperf_model = config.get_mlperf_model(model_name)
 
-          if is_closed and mlperf_model not in config.models:
-            # for closed division we want the model name to match.
+          if is_closed_or_network and mlperf_model not in config.models:
+            # for closed/network divisions we want the model name to match.
             # for open division the model_name might be different than the task
-            log.error("%s has an invalid model %s for closed division", name,
+            log.error("%s has an invalid model %s for closed/network division", name,
                       model_name)
             results[name] = None
             continue
@@ -1400,7 +1408,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
             #   ie ./closed/mlperf_org/results/t4-ort/bert/Offline
             name = os.path.join(results_path, system_desc, model_name, scenario)
             results[name] = None
-            if is_closed and scenario_fixed not in all_scenarios:
+            if is_closed_or_network and scenario_fixed not in all_scenarios:
               log.warning("%s ignoring scenario %s (neither required nor optional)", name, scenario)
               continue
 
@@ -1431,8 +1439,8 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
               diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
               if diff:
                 log.error("%s has file list mismatch (%s)", acc_path, diff)
-              accuracy_is_valid, acc = check_accuracy_dir(config, mlperf_model, acc_path, debug or is_closed)
-              if not accuracy_is_valid and not is_closed:
+              accuracy_is_valid, acc = check_accuracy_dir(config, mlperf_model, acc_path, debug or is_closed_or_network)
+              if not accuracy_is_valid and not is_closed_or_network:
                 if debug:
                   log.warning("%s, accuracy not valid but taken for open", acc_path)
                 accuracy_is_valid = True
@@ -1467,8 +1475,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                 log.error("%s has file list mismatch (%s)", perf_path, diff)
 
               try:
-                is_network_mode = is_over_network(system_json)
-                is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed, is_network_mode)
+                is_valid, r, is_inferred = check_performance_dir(config, mlperf_model, perf_path, scenario_fixed, division, system_json)
                 if is_inferred:
                   inferred = 1
                   log.info("%s has inferred results, qps=%s", perf_path, r)
@@ -1497,8 +1504,8 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                 errors += 1
 
             # check if compliance dir is good for CLOSED division
-            compliance = 0 if is_closed else 1
-            if is_closed and not skip_compliance:
+            compliance = 0 if is_closed_or_network else 1
+            if is_closed_or_network and not skip_compliance:
               compliance_dir = os.path.join(division, submitter, "compliance",
                                             system_desc, model_name, scenario)
               if not os.path.exists(compliance_dir):
@@ -1514,14 +1521,14 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
             if results.get(name):
               if accuracy_is_valid:
                 log_result(submitter, available, division, system_type, system_json.get("system_name"), system_desc, model_name, mlperf_model,
-                           scenario_fixed, r, acc, system_json, name, compliance, errors, config, inferred=inferred, power_metric=power_metric, is_network_mode=is_network_mode)
+                           scenario_fixed, r, acc, system_json, name, compliance, errors, config, inferred=inferred, power_metric=power_metric)
               else:
                 results[name] = None
                 log.error("%s is OK but accuracy has issues", name)
 
           if required_scenarios:
             name = os.path.join(results_path, system_desc, model_name)
-            if is_closed:
+            if is_closed_or_network:
               results[name] = None
               log.error("%s does not have all required scenarios, missing %s", name, required_scenarios)
             elif debug:
@@ -1537,8 +1544,10 @@ def check_system_desc_id(fname, systems_json, submitter, division, version):
     required_fields = SYSTEM_DESC_REQUIRED_FIELDS
   else:
     required_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1
-  is_network_mode = is_over_network(systems_json)
-  if is_network_mode:
+
+  is_network_system, is_network_mode_valid = is_system_over_network(division, systems_json, fname)
+  is_valid &= is_network_mode_valid
+  if is_network_system:
     required_fields += SYSTEM_DESC_REQUIRED_FIELDS_NETWORK_MODE
 
   for k in required_fields:

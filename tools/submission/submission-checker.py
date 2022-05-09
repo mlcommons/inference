@@ -1200,7 +1200,6 @@ def is_system_over_network(division, system_json, path):
     for 'closed' division, the system must not be over-network
     for 'open' division, the system may be either local or over-network
   """
-  # note that the 'is_network' system field is required for 'open' division
   is_network_mode_sys_spec_str = system_json.get(SYSTEM_DESC_IS_NETWORK_MODE)
   is_network_system = is_network_mode_sys_spec_str.lower()=="true" if is_network_mode_sys_spec_str is not None else False
   # verify that the system corresponds the division

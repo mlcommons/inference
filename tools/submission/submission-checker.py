@@ -1686,7 +1686,6 @@ def check_compliance_dir(compliance_dir, model, scenario, config):
         compliance_perf_dir = os.path.join(compliance_dir, test, "performance","run_1")
         compliance_perf_valid, r, is_inferred = check_performance_dir(config, model, compliance_perf_dir, scenario)
         if is_inferred:
-          inferred = 1
           log.info("%s has inferred results, qps=%s", compliance_perf_dir, r)
       except Exception as e:
         log.error("%s caused exception in check_performance_dir: %s", compliance_perf_dir, e)

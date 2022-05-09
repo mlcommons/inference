@@ -19,7 +19,6 @@ import re
 sys.path.append(os.getcwd())
 
 import argparse
-import json
 
 def main():
     # Parse arguments to identify the path to the accuracy logs from

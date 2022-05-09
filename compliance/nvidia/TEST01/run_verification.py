@@ -83,7 +83,7 @@ def main():
     verify_accuracy_command = "python3 " + verify_accuracy_binary + " --dtype " + args.dtype + unixmode + " -r " + results_dir + "/accuracy/mlperf_log_accuracy.json" + " -t " + compliance_dir + "/mlperf_log_accuracy.json | tee verify_accuracy.txt"
     try:
         os.system(verify_accuracy_command)
-    except:
+    except Exception:
         print("Exception occurred trying to execute:\n  " + verify_accuracy_command)
     # check if verify accuracy script passes
 
@@ -95,14 +95,14 @@ def main():
     verify_performance_command = "python3 " + verify_performance_binary + " -r " + results_dir + "/performance/run_1/mlperf_log_summary.txt" + " -t " + compliance_dir + "/mlperf_log_summary.txt | tee verify_performance.txt"
     try:
         os.system(verify_performance_command)
-    except:
+    except Exception:
         print("Exception occurred trying to execute:\n  " + verify_performance_command)
 
     # check if verify performance script passes
     performance_pass_command = "grep PASS verify_performance.txt"
     try:
         performance_pass = "TEST PASS" in subprocess.check_output(performance_pass_command, shell=True).decode("utf-8")
-    except:
+    except Exception:
         performance_pass = False
     
     # setup output compliance directory structure
@@ -111,12 +111,12 @@ def main():
     try:
         if not os.path.isdir(output_accuracy_dir):
             os.makedirs(output_accuracy_dir)
-    except:
+    except Exception:
         print("Exception occurred trying to create " + output_accuracy_dir)
     try:
         if not os.path.isdir(output_performance_dir):
             os.makedirs(output_performance_dir)
-    except:
+    except Exception:
         print("Exception occurred trying to create " + output_performance_dir)
 
     # copy compliance logs to output compliance directory
@@ -128,15 +128,15 @@ def main():
 
     try:
         shutil.copy2(accuracy_file,output_accuracy_dir)
-    except:
+    except Exception:
         print("Exception occured trying to copy " + accuracy_file + " to " + output_accuracy_dir)
     try:
         shutil.copy2(summary_file,output_performance_dir)
-    except:
+    except Exception:
         print("Exception occured trying to copy " + summary_file + " to " + output_performance_dir)
     try:
         shutil.copy2(detail_file,output_performance_dir)
-    except:
+    except Exception:
         print("Exception occured trying to copy " + detail_file + " to " + output_performance_dir)
 
     print("Accuracy check pass: {:}".format(accuracy_pass))

@@ -63,12 +63,14 @@ endif
 
 
 .PHONY: setup
-setup: create_directories download_kits19_raw_data download_models
+setup: create_directories download_kits19_and_duplicate download_models
 	@if [ ! -e $(MLPERF_CONF) ]; then \
 		cp ../../../mlperf.conf $(MLPERF_CONF); \
 	fi
 	@echo "Done basic setup (prepare directories, setup mlperf.conf, download KiTS19 dataset and models)..."
 
+.PHONY: download_kits19_and_duplicate
+download_kits19_and_duplicate: download_kits19_raw_data duplicate_kits19_case_00185
 
 .PHONY: download_kits19_raw_data
 download_kits19_raw_data:
@@ -84,6 +86,15 @@ download_kits19_raw_data:
 			export DOWNLOAD_DATA_DIR=$(PWD)/kits19_raw_data_dir/kits19/data; \
 	else \
 		echo "Valid KITS RAW data likely found in $(DOWNLOAD_DATA_DIR), skipping download..."; \
+	fi
+
+.PHONY: duplicate_kits19_case_00185
+duplicate_kits19_case_00185:
+	@if [ -s $(DOWNLOAD_DATA_DIR)/case_00185/imaging.nii.gz ]; then \
+		echo "Duplicating KITS19 case_00185 as case_00400..." \
+			&& cp -Rf $(DOWNLOAD_DATA_DIR)/case_00185 $(DOWNLOAD_DATA_DIR)/case_00400; \
+	else \
+		echo "KITS19 case_00185 not found! please download the dataset first..."; \
 	fi
 
 .PHONY: check_download_data_dir

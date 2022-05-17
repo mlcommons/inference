@@ -652,9 +652,9 @@ SYSTEM_DESC_REQUIED_FIELDS_POWER = [
 
 SYSTEM_DESC_IS_NETWORK_MODE = "is_network"
 SYSTEM_DESC_REQUIRED_FIELDS_NETWORK_MODE = [
-    SYSTEM_DESC_IS_NETWORK_MODE, "network_type", "network_rate", "nic_loadgen", "number_nic_loadgen",
-    "net_software_stack_loadgen", "network_protocol", "number_connections", "nic_sut", "number_nic_sut",
-    "net_software_stack_sut", "network_setup"
+    SYSTEM_DESC_IS_NETWORK_MODE, "network_type", "network_media", "network_rate", "nic_loadgen",
+    "number_nic_loadgen", "net_software_stack_loadgen", "network_protocol", "number_connections", "nic_sut",
+    "number_nic_sut", "net_software_stack_sut", "network_topology"
 ]
 NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME = "Network SUT"
 

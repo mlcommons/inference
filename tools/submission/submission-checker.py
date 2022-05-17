@@ -1671,9 +1671,8 @@ def check_compliance_dir(compliance_dir, model, scenario, config):
   compliance_acc_pass = True
   test_list = ["TEST01", "TEST04", "TEST05"]
 
-#  if model in ["rnnt", "bert-99", "bert-99.9", "dlrm-99", "dlrm-99.9", "3d-unet-99", "3d-unet-99.9"]:
-#    test_list.remove("TEST04")
-  test_list.remove("TEST04")
+  if model in ["rnnt", "bert-99", "bert-99.9", "dlrm-99", "dlrm-99.9", "3d-unet-99", "3d-unet-99.9"]:
+    test_list.remove("TEST04")
 
   #Check performance of all Tests
   for test in test_list:

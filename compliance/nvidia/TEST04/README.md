@@ -36,7 +36,7 @@ Performance of TEST04 should not be faster than the standard performance run in 
  - Copy provided [audit.config](https://github.com/mlperf/inference/blob/master/v0.7/compliance/nvidia/TEST04/audit.config) file in TEST04 folder to the corresponding benchmark directory from where the test is run
  - Run the benchmark
  - Verification that audit.config was properly read can be done by checking that loadgen has found audit.config in `mlperf_log_detail.txt`
- - `mlperf_log_detail.txt` and `mlperf_log_summary.txt` files from this run are required to be submitted under TEST04-B
+ - `mlperf_log_detail.txt` and `mlperf_log_summary.txt` files from this run are required to be submitted under TEST04
 
 ### Part III : Compare performance of TEST04 with the standard performance run
 

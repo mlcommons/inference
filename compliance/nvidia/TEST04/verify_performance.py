@@ -50,13 +50,13 @@ def main():
             continue
 
         if ref_mode == "SingleStream":
-            if re.match("90th percentile latency", line):
+            if re.match("Early stopping 90th percentile estimate", line):
                 ref_score = line.split(": ",1)[1].strip()
                 ref_score = 1e9 / float(ref_score)
                 continue
 
         if ref_mode == "MultiStream":
-            if re.match("99th percentile latency", line):
+            if re.match("Early stopping 99th percentile estimate", line):
                 ref_score = line.split(": ",1)[1].strip()
                 ref_score = 1e9 / float(ref_score)
                 continue
@@ -64,6 +64,9 @@ def main():
         if ref_mode == "Server":
             if re.match("Completed samples per second", line):
                 ref_score = line.split(": ",1)[1].strip()
+                continue
+            if re.match("target_latency (ns)", line):
+                ref_target_latency = line.split(": ",1)[1].strip()
                 continue
 
         if ref_mode == "Offline":
@@ -87,13 +90,13 @@ def main():
             continue
 
         if test_mode == "SingleStream":
-            if re.match("90th percentile latency", line):
+            if re.match("Early stopping 90th percentile estimate", line):
                 test_score = line.split(": ",1)[1].strip()
                 test_score = 1e9 / float(test_score)
                 continue
 
         if test_mode == "MultiStream":
-            if re.match("99th percentile latency", line):
+            if re.match("Early stopping 99th percentile estimate", line):
                 test_score = line.split(": ",1)[1].strip()
                 test_score = 1e9 / float(test_score)
                 continue
@@ -101,6 +104,12 @@ def main():
         if test_mode == "Server":
             if re.match("Completed samples per second", line):
                 test_score = line.split(": ",1)[1].strip()
+                continue
+            if re.match("target_latency (ns)", line):
+                test_target_latency = line.split(": ",1)[1].strip()
+                if test_target_latency != ref_target_latency:
+                    print("TEST FAIL: Server target latency mismatch")
+                    sys.exit()
                 continue
 
         if test_mode == "Offline":

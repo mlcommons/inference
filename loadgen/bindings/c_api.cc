@@ -27,15 +27,13 @@ namespace {
 // Forwards SystemUnderTest calls to relevant callbacks.
 class SystemUnderTestTrampoline : public SystemUnderTest {
  public:
-  SystemUnderTestTrampoline(
-      ClientData client_data, std::string name, IssueQueryCallback issue_cb,
-      FlushQueriesCallback flush_queries_cb,
-      ReportLatencyResultsCallback report_latency_results_cb)
+  SystemUnderTestTrampoline(ClientData client_data, std::string name,
+                            IssueQueryCallback issue_cb,
+                            FlushQueriesCallback flush_queries_cb)
       : client_data_(client_data),
         name_(std::move(name)),
         issue_cb_(issue_cb),
-        flush_queries_cb_(flush_queries_cb),
-        report_latency_results_cb_(report_latency_results_cb) {}
+        flush_queries_cb_(flush_queries_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
   const std::string& Name() const override { return name_; }
@@ -46,29 +44,20 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
   void FlushQueries() override { (*flush_queries_cb_)(); }
 
-  void ReportLatencyResults(
-      const std::vector<QuerySampleLatency>& latencies_ns) override {
-    (*report_latency_results_cb_)(client_data_, latencies_ns.data(),
-                                  latencies_ns.size());
-  }
-
  private:
   ClientData client_data_;
   std::string name_;
   IssueQueryCallback issue_cb_;
   FlushQueriesCallback flush_queries_cb_;
-  ReportLatencyResultsCallback report_latency_results_cb_;
 };
 
 }  // namespace
 
 void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,
                    IssueQueryCallback issue_cb,
-                   FlushQueriesCallback flush_queries_cb,
-                   ReportLatencyResultsCallback report_latency_results_cb) {
+                   FlushQueriesCallback flush_queries_cb) {
   SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
-      client_data, std::string(name, name_length), issue_cb, flush_queries_cb,
-      report_latency_results_cb);
+      client_data, std::string(name, name_length), issue_cb, flush_queries_cb);
   return reinterpret_cast<void*>(sut);
 }
 

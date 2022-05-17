@@ -58,11 +58,6 @@ class SystemUnderTest {
   /// than waiting for some timeout.
   /// This is especially useful in the server scenario.
   virtual void FlushQueries() = 0;
-
-  /// \brief Reports the raw latency results to the SUT of each sample issued as
-  /// recorded by the load generator. Units are nanoseconds.
-  virtual void ReportLatencyResults(
-      const std::vector<QuerySampleLatency>& latencies_ns) = 0;
 };
 
 /// @}

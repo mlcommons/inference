@@ -91,9 +91,6 @@ struct SystemUnderTestBasic : public mlperf::QuerySampleLibrary,
   }
   virtual void FlushQueriesExt() {}
 
-  void ReportLatencyResults(
-      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override {}
-
   virtual void RunTest() {
     samples_load_count_.resize(total_sample_count_, 0);
     samples_issue_count_.resize(total_sample_count_, 0);

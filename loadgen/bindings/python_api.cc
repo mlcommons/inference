@@ -36,19 +36,15 @@ using IssueQueryCallback = std::function<void(std::vector<QuerySample>)>;
 using FastIssueQueriesCallback =
     std::function<void(std::vector<ResponseId>, std::vector<QuerySampleIndex>)>;
 using FlushQueriesCallback = std::function<void()>;
-using ReportLatencyResultsCallback = std::function<void(std::vector<int64_t>)>;
 
 // Forwards SystemUnderTest calls to relevant callbacks.
 class SystemUnderTestTrampoline : public SystemUnderTest {
  public:
-  SystemUnderTestTrampoline(
-      std::string name, IssueQueryCallback issue_cb,
-      FlushQueriesCallback flush_queries_cb,
-      ReportLatencyResultsCallback report_latency_results_cb)
+  SystemUnderTestTrampoline(std::string name, IssueQueryCallback issue_cb,
+                            FlushQueriesCallback flush_queries_cb)
       : name_(std::move(name)),
         issue_cb_(issue_cb),
-        flush_queries_cb_(flush_queries_cb),
-        report_latency_results_cb_(report_latency_results_cb) {}
+        flush_queries_cb_(flush_queries_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
   const std::string& Name() const override { return name_; }
@@ -60,27 +56,18 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
   void FlushQueries() override { flush_queries_cb_(); }
 
-  void ReportLatencyResults(
-      const std::vector<QuerySampleLatency>& latencies_ns) override {
-    pybind11::gil_scoped_acquire gil_acquirer;
-    report_latency_results_cb_(latencies_ns);
-  }
-
  protected:
   std::string name_;
   IssueQueryCallback issue_cb_;
   FlushQueriesCallback flush_queries_cb_;
-  ReportLatencyResultsCallback report_latency_results_cb_;
 };
 
 class FastSystemUnderTestTrampoline : public SystemUnderTestTrampoline {
  public:
-  FastSystemUnderTestTrampoline(
-      std::string name, FastIssueQueriesCallback fast_issue_cb,
-      FlushQueriesCallback flush_queries_cb,
-      ReportLatencyResultsCallback report_latency_results_cb)
-      : SystemUnderTestTrampoline(name, nullptr, flush_queries_cb,
-                                  report_latency_results_cb),
+  FastSystemUnderTestTrampoline(std::string name,
+                                FastIssueQueriesCallback fast_issue_cb,
+                                FlushQueriesCallback flush_queries_cb)
+      : SystemUnderTestTrampoline(name, nullptr, flush_queries_cb),
         fast_issue_cb_(fast_issue_cb) {}
   ~FastSystemUnderTestTrampoline() override = default;
 
@@ -147,10 +134,9 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 namespace py {
 
 uintptr_t ConstructSUT(IssueQueryCallback issue_cb,
-                       FlushQueriesCallback flush_queries_cb,
-                       ReportLatencyResultsCallback report_latency_results_cb) {
-  SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
-      "PySUT", issue_cb, flush_queries_cb, report_latency_results_cb);
+                       FlushQueriesCallback flush_queries_cb) {
+  SystemUnderTestTrampoline* sut =
+      new SystemUnderTestTrampoline("PySUT", issue_cb, flush_queries_cb);
   return reinterpret_cast<uintptr_t>(sut);
 }
 
@@ -160,12 +146,10 @@ void DestroySUT(uintptr_t sut) {
   delete sut_cast;
 }
 
-uintptr_t ConstructFastSUT(
-    FastIssueQueriesCallback fast_issue_cb,
-    FlushQueriesCallback flush_queries_cb,
-    ReportLatencyResultsCallback report_latency_results_cb) {
+uintptr_t ConstructFastSUT(FastIssueQueriesCallback fast_issue_cb,
+                           FlushQueriesCallback flush_queries_cb) {
   FastSystemUnderTestTrampoline* sut = new FastSystemUnderTestTrampoline(
-      "PyFastSUT", fast_issue_cb, flush_queries_cb, report_latency_results_cb);
+      "PyFastSUT", fast_issue_cb, flush_queries_cb);
   return reinterpret_cast<uintptr_t>(sut);
 }
 

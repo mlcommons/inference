@@ -42,8 +42,6 @@ class SystemUnderTestNull : public mlperf::SystemUnderTest {
   }
 
   void FlushQueries() override {}
-  void ReportLatencyResults(
-      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override {}
 
  private:
   std::string name_{"NullSUT"};
@@ -107,8 +105,6 @@ class SystemUnderTestNullStdAsync : public mlperf::SystemUnderTest {
   }
 
   void FlushQueries() override {}
-  void ReportLatencyResults(
-      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override {}
 
  private:
   std::string name_{"NullStdAsync"};
@@ -164,8 +160,6 @@ class SystemUnderTestNullPool : public mlperf::SystemUnderTest {
   }
 
   void FlushQueries() override {}
-  void ReportLatencyResults(
-      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override {}
 
  private:
   void WorkerThread() {

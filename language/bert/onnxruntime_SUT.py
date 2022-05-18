@@ -41,7 +41,7 @@ class BERT_ONNXRuntime_SUT():
         self.sess = onnxruntime.InferenceSession(model_path, self.options)
 
         print("Constructing SUT...")
-        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
+        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("Finished constructing SUT.")
 
         self.qsl = get_squad_QSL(args.max_examples)
@@ -70,9 +70,6 @@ class BERT_ONNXRuntime_SUT():
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):
-        pass
-
-    def process_latencies(self, latencies_ns):
         pass
 
     def __del__(self):

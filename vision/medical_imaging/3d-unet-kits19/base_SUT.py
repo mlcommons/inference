@@ -76,7 +76,12 @@ class BASE_3DUNET_SUT:
                 number of query samples guaranteed to fit in memory
         """
         print("Constructing SUT...")
+<<<<<<< jsuh_3dunet_es_hack
+        self.sut = lg.ConstructSUT(
+            self.issue_queries, self.flush_queries)
+=======
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
+>>>>>>> master
         print("Finished constructing SUT.")
         self.qsl = get_kits_QSL(preprocessed_data_dir, performance_count)
 

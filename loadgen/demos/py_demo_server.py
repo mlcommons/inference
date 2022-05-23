@@ -23,7 +23,6 @@ import time
 
 from absl import app
 import mlperf_loadgen
-import numpy
 
 
 def load_samples_to_ram(query_samples):
@@ -53,15 +52,6 @@ def flush_queries():
     pass
 
 
-def process_latencies(latencies_ns):
-    print("Average latency: ")
-    print(numpy.mean(latencies_ns))
-    print("Median latency: ")
-    print(numpy.percentile(latencies_ns, 50))
-    print("99 percentile latency: ")
-    print(numpy.percentile(latencies_ns, 99))
-
-
 def main(argv):
     del argv
     settings = mlperf_loadgen.TestSettings()
@@ -72,8 +62,7 @@ def main(argv):
     settings.min_query_count = 100
     settings.min_duration_ms = 10000
 
-    sut = mlperf_loadgen.ConstructSUT(
-        issue_query, flush_queries, process_latencies)
+    sut = mlperf_loadgen.ConstructSUT(issue_query, flush_queries)
     qsl = mlperf_loadgen.ConstructQSL(
         1024, 128, load_samples_to_ram, unload_samples_from_ram)
     mlperf_loadgen.StartTest(sut, qsl, settings)

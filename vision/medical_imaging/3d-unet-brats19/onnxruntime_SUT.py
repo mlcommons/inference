@@ -32,7 +32,7 @@ class _3DUNET_ONNXRuntime_SUT():
         self.sess = onnxruntime.InferenceSession(model_path)
 
         print("Constructing SUT...")
-        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
+        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         self.qsl = get_brats_QSL(preprocessed_data_dir, performance_count)
         print("Finished constructing SUT.")
 
@@ -52,9 +52,6 @@ class _3DUNET_ONNXRuntime_SUT():
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):
-        pass
-
-    def process_latencies(self, latencies_ns):
         pass
 
 def get_onnxruntime_sut(model_path, preprocessed_data_dir, performance_count):

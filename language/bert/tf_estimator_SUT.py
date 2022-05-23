@@ -45,7 +45,7 @@ class BERT_TF_ESTIMATOR_SUT():
         self.batch_size = batch_size
 
         print("Constructing SUT...")
-        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
+        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("Finished constructing SUT.")
 
         self.qsl = get_squad_QSL()
@@ -76,9 +76,6 @@ class BERT_TF_ESTIMATOR_SUT():
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):
-        pass
-
-    def process_latencies(self, latencies_ns):
         pass
 
     def __del__(self):

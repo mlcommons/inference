@@ -1538,7 +1538,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
                 log.error("no compliance dir for %s", name)
                 results[name] = None
               else:
-                if not check_compliance_dir(compliance_dir, mlperf_model, scenario_fixed, config):
+                if not check_compliance_dir(compliance_dir, mlperf_model, scenario_fixed, config, division, system_json):
                   log.error("compliance dir %s has issues", compliance_dir)
                   results[name] = None
                 else:
@@ -1706,7 +1706,7 @@ def check_compliance_acc_dir(test_dir):
 
   return is_valid
 
-def check_compliance_dir(compliance_dir, model, scenario, config):
+def check_compliance_dir(compliance_dir, model, scenario, config, division, system_json):
   compliance_perf_pass = True
   compliance_perf_dir_pass = True
   compliance_acc_pass = True
@@ -1724,7 +1724,7 @@ def check_compliance_dir(compliance_dir, model, scenario, config):
     else:
       try:
         compliance_perf_dir = os.path.join(compliance_dir, test, "performance","run_1")
-        compliance_perf_valid, r, is_inferred = check_performance_dir(config, model, compliance_perf_dir, scenario)
+        compliance_perf_valid, r, is_inferred = check_performance_dir(config, model, compliance_perf_dir, scenario, division, system_json)
         if is_inferred:
           log.info("%s has inferred results, qps=%s", compliance_perf_dir, r)
       except Exception as e:

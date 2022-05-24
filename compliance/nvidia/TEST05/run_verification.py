@@ -1,5 +1,5 @@
-#! /usr/bin/env python3
-# Copyright 2018 The MLPerf Authors. All Rights Reserved.
+#!/usr/bin/env python3
+# Copyright 2018-2022 The MLPerf Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,19 +58,22 @@ def main():
     verify_performance_command = "python3 " + verify_performance_binary + " -r " + results_dir + "/performance/run_1/mlperf_log_summary.txt" + " -t " + compliance_dir + "/mlperf_log_summary.txt | tee verify_performance.txt"
     try:
         os.system(verify_performance_command)
-    except:
+    except Exception:
         print("Exception occurred trying to execute:\n  " + verify_performance_command)
 
     # check if verify performance script passes
     performance_pass_command = "grep PASS verify_performance.txt"
-    performance_pass = "TEST PASS" in subprocess.check_output(performance_pass_command, shell=True).decode("utf-8")
+    try:
+        performance_pass = "TEST PASS" in subprocess.check_output(performance_pass_command, shell=True).decode("utf-8")
+    except Exception:
+        performance_pass = False
     
     # setup output compliance directory structure
     output_performance_dir = os.path.join(output_dir, "performance", "run_1")
     try:
         if not os.path.isdir(output_performance_dir):
             os.makedirs(output_performance_dir)
-    except:
+    except Exception:
         print("Exception occurred trying to create " + output_performance_dir)
 
     # copy compliance logs to output compliance directory
@@ -80,11 +83,11 @@ def main():
 
     try:
         shutil.copy2(summary_file,output_performance_dir)
-    except:
+    except Exception:
         print("Exception occured trying to copy " + summary_file + " to " + output_performance_dir)
     try:
         shutil.copy2(detail_file,output_performance_dir)
-    except:
+    except Exception:
         print("Exception occured trying to copy " + detail_file + " to " + output_performance_dir)
 
     print("Performance check pass: {:}".format(performance_pass))

@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# Copyright 2018 The MLPerf Authors. All Rights Reserved.
+# Copyright 2018-2022 The MLPerf Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--reference_summary", "-r",
-        help="Specifies the path to the summary log for TEST00.",
+        help="Specifies the path to the summary log for the performance run.",
         default=""
     )
     parser.add_argument(
@@ -51,18 +51,21 @@ def main():
             continue
 
         if ref_mode == "SingleStream":
-            if re.match("90th percentile latency", line):
+            if re.match("Early stopping 90th percentile estimate", line):
                 ref_score = line.split(": ",1)[1].strip()
                 continue
 
         if ref_mode == "MultiStream":
-            if re.match("99th percentile latency", line):
+            if re.match("Early stopping 99th percentile estimate", line):
                 ref_score = line.split(": ",1)[1].strip()
                 continue
 
         if ref_mode == "Server":
-            if re.match("Scheduled samples per second", line):
+            if re.match("Completed samples per second", line):
                 ref_score = line.split(": ",1)[1].strip()
+                continue
+            if re.match("target_latency (ns)", line):
+                ref_target_latency = line.split(": ",1)[1].strip()
                 continue
 
         if ref_mode == "Offline":
@@ -86,18 +89,24 @@ def main():
             continue
 
         if test_mode == "SingleStream":
-            if re.match("90th percentile latency", line):
+            if re.match("Early stopping 90th percentile estimate", line):
                 test_score = line.split(": ",1)[1].strip()
                 continue
 
         if test_mode == "MultiStream":
-            if re.match("99th percentile latency", line):
+            if re.match("Early stopping 99th percentile estimate", line):
                 test_score = line.split(": ",1)[1].strip()
                 continue
 
         if test_mode == "Server":
-            if re.match("Scheduled samples per second", line):
+            if re.match("Completed samples per second", line):
                 test_score = line.split(": ",1)[1].strip()
+                continue
+            if re.match("target_latency (ns)", line):
+                test_target_latency = line.split(": ",1)[1].strip()
+                if test_target_latency != ref_target_latency:
+                    print("TEST FAIL: Server target latency mismatch")
+                    sys.exit()
                 continue
 
         if test_mode == "Offline":

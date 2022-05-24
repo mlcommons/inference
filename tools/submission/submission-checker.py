@@ -64,6 +64,11 @@ MODEL_CONFIG = {
             "sample_index_rng_seed": 665484352860916858,
             "schedule_rng_seed": 3622009729038561421,
         },
+        "test05_seeds": {
+            "qsl_rng_seed" : 195,
+            "sample_index_rng_seed" : 235,
+            "schedule_rng_seed" : 634,
+        },
         "ignore_errors": [
             "check for ERROR in detailed",
             "Loadgen built with uncommitted changes",
@@ -147,6 +152,11 @@ MODEL_CONFIG = {
             "qsl_rng_seed": 12786827339337101903,
             "sample_index_rng_seed": 12640797754436136668,
             "schedule_rng_seed": 3135815929913719677,
+        },
+        "test05_seeds": {
+            "qsl_rng_seed" : 313588358309856706,
+            "sample_index_rng_seed" : 471397156132239067,
+            "schedule_rng_seed" : 413914573387865862,
         },
         "ignore_errors": [
             "CAS failed",
@@ -273,6 +283,11 @@ MODEL_CONFIG = {
             "sample_index_rng_seed": 1570999273408051088,
             "schedule_rng_seed": 3507442325620259414,
         },
+        "test05_seeds": {
+            "qsl_rng_seed" : 313588358309856706,
+            "sample_index_rng_seed" : 471397156132239067,
+            "schedule_rng_seed" : 413914573387865862,
+        },
         "ignore_errors": [
         ],
         "latency-constraint": {
@@ -390,6 +405,11 @@ MODEL_CONFIG = {
             "qsl_rng_seed": 1624344308455410291,
             "sample_index_rng_seed": 517984244576520566,
             "schedule_rng_seed": 10051496985653635065,
+        },
+        "test05_seeds": {
+            "qsl_rng_seed" : 313588358309856706,
+            "sample_index_rng_seed" : 471397156132239067,
+            "schedule_rng_seed" : 413914573387865862,
         },
         "ignore_errors": [
         ],
@@ -514,6 +534,11 @@ MODEL_CONFIG = {
             "qsl_rng_seed": 6655344265603136530,
             "sample_index_rng_seed": 15863379492028895792,
             "schedule_rng_seed": 12662793979680847247,
+        },
+        "test05_seeds": {
+            "qsl_rng_seed" : 313588358309856706,
+            "sample_index_rng_seed" : 471397156132239067,
+            "schedule_rng_seed" : 413914573387865862,
         },
         "ignore_errors": [
         ],
@@ -672,6 +697,7 @@ class Config():
     self.version = version
     self.models = self.base["models"]
     self.seeds = self.base["seeds"]
+    self.test05_seeds = self.base["test05_seeds"]
     self.accuracy_target = self.base["accuracy-target"]
     self.performance_sample_count = self.base["performance-sample-count"]
     self.latency_constraint = self.base.get("latency-constraint", {})
@@ -963,12 +989,13 @@ def check_performance_dir(config, model, path, scenario_fixed, division, system_
               fname, performance_sample_count, required_performance_sample_count)
     is_valid = False
 
-  if qsl_rng_seed != config.seeds["qsl_rng_seed"]:
-    log.error("%s qsl_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["qsl_rng_seed"], qsl_rng_seed)
-  if sample_index_rng_seed != config.seeds["sample_index_rng_seed"]:
-    log.error("%s sample_index_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["sample_index_rng_seed"], sample_index_rng_seed)
-  if schedule_rng_seed != config.seeds["schedule_rng_seed"]:
-    log.error("%s schedule_rng_seed is wrong, expected=%s, found=%s", fname, config.seeds["schedule_rng_seed"], schedule_rng_seed)
+  config_seeds = config.seeds if "TEST05" not in fname else config.test05_seeds
+  if qsl_rng_seed != config_seeds["qsl_rng_seed"]:
+    log.error("%s qsl_rng_seed is wrong, expected=%s, found=%s", fname, config_seeds["qsl_rng_seed"], qsl_rng_seed)
+  if sample_index_rng_seed != config_seeds["sample_index_rng_seed"]:
+    log.error("%s sample_index_rng_seed is wrong, expected=%s, found=%s", fname, config_seeds["sample_index_rng_seed"], sample_index_rng_seed)
+  if schedule_rng_seed != config_seeds["schedule_rng_seed"]:
+    log.error("%s schedule_rng_seed is wrong, expected=%s, found=%s", fname, config_seeds["schedule_rng_seed"], schedule_rng_seed)
 
   if scenario == "SingleStream" or (scenario == "MultiStream" and not config.uses_legacy_multistream()):
     res /= MS_TO_NS
@@ -1506,14 +1533,14 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
             compliance = 0 if is_closed_or_network else 1
             if is_closed_or_network and not skip_compliance:
               compliance_dir = os.path.join(division, submitter, "compliance",
-                                            system_desc, model_name, scenario)
+                                            system_desc, model_name, scenario_fixed)
               if not os.path.exists(compliance_dir):
                 log.error("no compliance dir for %s", name)
-                # results[name] = None
+                results[name] = None
               else:
-                if not check_compliance_dir(compliance_dir, mlperf_model, scenario):
+                if not check_compliance_dir(compliance_dir, mlperf_model, scenario_fixed, config):
                   log.error("compliance dir %s has issues", compliance_dir)
-                  # results[name] = None
+                  results[name] = None
                 else:
                   compliance = 1
 
@@ -1618,21 +1645,23 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model, scen
 
   return is_valid
 
-def check_compliance_perf_dir(test_dir, require_verify_perf=True):
+def check_compliance_perf_dir(test_dir):
   is_valid = False
 
   fname = os.path.join(test_dir, "verify_performance.txt")
-  if require_verify_perf and not os.path.exists(fname):
+  if not os.path.exists(fname):
     log.error("%s is missing in %s", fname, test_dir)
     is_valid = False
   else:
-    if require_verify_perf:
-      with open(fname, "r") as f:
-        for line in f:
-          # look for: TEST PASS
-          if "TEST PASS" in line:
-            is_valid = True
-            break
+    with open(fname, "r") as f:
+      for line in f:
+        # look for: TEST PASS
+        if "TEST PASS" in line:
+          is_valid = True
+          break
+    if is_valid == False:
+      log.error("Compliance test performance check in %s failed", test_dir)
+
     # Check performance dir
     test_perf_path = os.path.join(test_dir, "performance", "run_1")
     if not os.path.exists(test_perf_path):
@@ -1652,7 +1681,6 @@ def check_compliance_acc_dir(test_dir):
   fname = os.path.join(test_dir, "verify_accuracy.txt")
   if not os.path.exists(fname):
     log.error("%s is missing in %s", fname, test_dir)
-    is_valid = False
   else:
     # Accuracy can fail for TEST01
     is_valid = True
@@ -1662,6 +1690,9 @@ def check_compliance_acc_dir(test_dir):
         if "TEST PASS" in line:
           acc_passed = True
           break
+    if acc_passed == False:
+      log.info("Compliance test accuracy check in %s failed", test_dir)
+
     # Check Accuracy dir
     test_acc_path = os.path.join(test_dir, "accuracy")
     if not os.path.exists(test_acc_path):
@@ -1671,33 +1702,42 @@ def check_compliance_acc_dir(test_dir):
       diff = files_diff(list_files(test_acc_path), REQUIRED_TEST01_ACC_FILES_1 if acc_passed else REQUIRED_TEST01_ACC_FILES)
       if diff:
         log.info("%s has file list mismatch (%s)", test_acc_path, diff)
+        is_valid = False
 
   return is_valid
 
-def check_compliance_dir(compliance_dir, model, scenario):
+def check_compliance_dir(compliance_dir, model, scenario, config):
   compliance_perf_pass = True
+  compliance_perf_dir_pass = True
   compliance_acc_pass = True
-  test_list = ["TEST01", "TEST04-A", "TEST04-B", "TEST05"]
+  test_list = ["TEST01", "TEST04", "TEST05"]
 
   if model in ["rnnt", "bert-99", "bert-99.9", "dlrm-99", "dlrm-99.9", "3d-unet-99", "3d-unet-99.9"]:
-    test_list.remove("TEST04-A")
-    test_list.remove("TEST04-B")
+    test_list.remove("TEST04")
 
   #Check performance of all Tests
   for test in test_list:
     test_dir = os.path.join(compliance_dir, test)
     if not os.path.exists(test_dir):
       log.error("Missing %s in compliance dir %s", test, compliance_dir)
-      compliance_perf_pass = False
+      compliance_perf_dir_pass = False
     else:
-      compliance_perf_pass = check_compliance_perf_dir(test_dir, test != "TEST04-B")
+      try:
+        compliance_perf_dir = os.path.join(compliance_dir, test, "performance","run_1")
+        compliance_perf_valid, r, is_inferred = check_performance_dir(config, model, compliance_perf_dir, scenario)
+        if is_inferred:
+          log.info("%s has inferred results, qps=%s", compliance_perf_dir, r)
+      except Exception as e:
+        log.error("%s caused exception in check_performance_dir: %s", compliance_perf_dir, e)
+        is_valid, r = False, None
+      compliance_perf_pass = compliance_perf_pass and check_compliance_perf_dir(test_dir) and compliance_perf_valid
 
 
 
   #Check accuracy for TEST01
   compliance_acc_pass = check_compliance_acc_dir(os.path.join(compliance_dir, "TEST01"))
 
-  return compliance_perf_pass and compliance_acc_pass
+  return compliance_perf_pass and compliance_acc_pass and compliance_perf_dir_pass
 
 def main():
   args = get_args()

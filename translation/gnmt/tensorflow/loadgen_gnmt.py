@@ -28,9 +28,6 @@ import array
 
 NANO_SEC = 1e9
 
-def process_latencies_gnmt(latencies_ns):
-    print("Please consult loadgen log (./mlperf_log_summary.txt) for performance results.")
-
 ##
 # @brief Translation task that contains 1 sentence ID.
 class TranslationTask:
@@ -525,7 +522,7 @@ if __name__ == "__main__":
     total_queries = runner.getTotalNumSentences() # Maximum sample ID + 1
     perf_queries = min(total_queries, 3003)   # Select the same subset of $perf_queries samples
 
-    sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries, process_latencies_gnmt)
+    sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries)
     qsl = mlperf_loadgen.ConstructQSL(
         total_queries, perf_queries, runner.load_samples_to_ram, runner.unload_samples_from_ram)
 

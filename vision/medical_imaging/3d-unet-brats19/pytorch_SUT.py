@@ -40,7 +40,7 @@ class _3DUNET_PyTorch_SUT():
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         print("Constructing SUT...")
-        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
+        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("Finished constructing SUT.")
         self.qsl = get_brats_QSL(preprocessed_data_dir, performance_count)
 
@@ -65,9 +65,6 @@ class _3DUNET_PyTorch_SUT():
                 lg.QuerySamplesComplete([response])
 
     def flush_queries(self):
-        pass
-
-    def process_latencies(self, latencies_ns):
         pass
 
 def get_pytorch_sut(model_dir, preprocessed_data_dir, performance_count, folds=1, checkpoint_name="model_final_checkpoint"):

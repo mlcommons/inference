@@ -18,7 +18,6 @@ from queue import Queue
 import threading
 import time
 import mlperf_loadgen
-import numpy
 import array
 
 class ImplementationException (Exception):
@@ -30,18 +29,6 @@ class ImplementationException (Exception):
 
 def flush_queries(): pass
 
-##
-# @brief Simple way to process and display latencies
-# @param latencies_ns is an array of durations (in ns) it took per sample to finish
-# @note that the duration is measured from query submission time to query finish time,
-# hence the samples themselves could actually have been finished earlier
-def process_latencies(latencies_ns):
-    print("Average latency (ms) per query:")
-    print(numpy.mean(latencies_ns)/1000000.0)
-    print("Median latency (ms): ")
-    print(numpy.percentile(latencies_ns, 50)/1000000.0)
-    print("90 percentile latency (ms): ")
-    print(numpy.percentile(latencies_ns, 90)/1000000.0)
 
 class Task:
     def __init__(self, query_id, sample_id):
@@ -152,7 +139,7 @@ if __name__ == "__main__":
     total_queries = 256 # Maximum sample ID + 1
     perf_queries = 8   # TBD: Doesn't seem to have an effect
 
-    sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries, process_latencies)
+    sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries)
     qsl = mlperf_loadgen.ConstructQSL(
         total_queries, perf_queries, runner.load_samples_to_ram, runner.unload_samples_from_ram)
     mlperf_loadgen.StartTest(sut, qsl, settings)

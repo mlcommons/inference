@@ -302,7 +302,7 @@ class RunnerBase:
             processed_results = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
-                self.result_timing.append(time.time() - qitem.start)
+            self.result_timing.append(time.time() - qitem.start)
         except Exception as ex:  # pylint: disable=broad-except
             src = [self.ds.get_item_loc(i) for i in qitem.content_id]
             log.error("thread: failed on contentid=%s, %s", src, ex)
@@ -495,11 +495,6 @@ def main():
     def flush_queries():
         pass
 
-    def process_latencies(latencies_ns):
-        # called by loadgen to show us the recorded latencies
-        global last_timeing
-        last_timeing = [t / NANO_SEC for t in latencies_ns]
-
     log_output_settings = lg.LogOutputSettings()
     log_output_settings.outdir = output_dir
     log_output_settings.copy_summary_to_stdout = False
@@ -538,7 +533,7 @@ def main():
         settings.multi_stream_expected_latency_ns = int(args.max_latency * NANO_SEC)
 
     performance_sample_count = args.performance_sample_count if args.performance_sample_count else min(count, 500)
-    sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
+    sut = lg.ConstructSUT(issue_queries, flush_queries)
     qsl = lg.ConstructQSL(count, performance_sample_count, ds.load_query_samples, ds.unload_query_samples)
 
     log.info("starting {}".format(scenario))

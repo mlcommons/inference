@@ -64,8 +64,6 @@ class BasicSUT : public mlperf::SystemUnderTest {
     mlperf::QuerySamplesComplete(mResponses.data(), n);
   }
   void FlushQueries() override {}
-  void ReportLatencyResults(
-      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override{};
 
  private:
   void initResponse(int size) {
@@ -108,8 +106,6 @@ class QueueSUT : public mlperf::SystemUnderTest {
     mCondVar.notify_one();
   }
   void FlushQueries() override {}
-  void ReportLatencyResults(
-      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override{};
 
  private:
   void CompleteThread(int threadIdx) {
@@ -185,8 +181,6 @@ class MultiBasicSUT : public mlperf::SystemUnderTest {
     mlperf::QuerySamplesComplete(reponses.data(), n);
   }
   void FlushQueries() override {}
-  void ReportLatencyResults(
-      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override{};
 
  private:
   void initResponse(int size) {

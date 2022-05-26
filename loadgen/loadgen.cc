@@ -235,8 +235,7 @@ std::vector<QueryMetadata> GenerateQueries(
   }
 
   // We should not exit early in accuracy mode.
-  if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique ||
-      settings.performance_issue_same) {
+  if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique) {
     gen_duration = std::chrono::microseconds(0);
     // Integer truncation here is intentional.
     // For MultiStream, loaded samples is properly padded.
@@ -264,8 +263,10 @@ std::vector<QueryMetadata> GenerateQueries(
 
   // FIXME: Only used for v2.0 3D-UNet KiTS19 SingleStream
   // TODO: Need to consolidate the code for any generic usage after v2.0
-  auto sample_distribution_equal_issue = SampleDistributionEqualIssue(
-      min_queries, loaded_samples.size(), &sample_rng);
+  auto sample_distribution_equal_issue =
+      SampleDistributionEqualIssue(min_queries,
+                                   loaded_samples.size(),
+                                   &sample_rng);
 
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
@@ -312,7 +313,7 @@ std::vector<QueryMetadata> GenerateQueries(
       size_t num_full_repeats = samples_per_query / num_loaded_samples;
       uint64_t remainder = samples_per_query % (num_loaded_samples);
       if (settings.performance_issue_same) {
-        std::fill(samples.begin(), samples.begin() + num_loaded_samples,
+        std::fill(samples.begin(), samples.begin() + samples_per_query,
                   loaded_samples[same_sample]);
       } else {
         for (size_t i = 0; i < num_full_repeats; ++i) {
@@ -340,9 +341,10 @@ std::vector<QueryMetadata> GenerateQueries(
                          scenario == TestScenario::SingleStream;
       for (auto& s : samples) {
         s = loaded_samples[settings.performance_issue_unique
-                               ? sample_distribution_unique(sample_rng)
-                           : settings.performance_issue_same ? same_sample
-                           : equal_issue
+                           ? sample_distribution_unique(sample_rng)
+                           : settings.performance_issue_same
+                             ? same_sample
+                             : equal_issue
                                ? sample_distribution_equal_issue(sample_rng)
                                : sample_distribution(sample_rng)];
       }
@@ -686,7 +688,6 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
             std::to_string(h_min + 1) + " queries for early stopping.";
         return false;
       } else {
-        // TODO: use a binary search instead.
         for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, target_latency_percentile.percentile,
                                tolerance, confidence);
@@ -721,7 +722,6 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
             " early stopping estimate (would need to process at\n least " +
             std::to_string(h_min + 1) + " total queries).";
       } else {
-        // TODO: do a binary search instead.
         for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, multi_stream_percentile, tolerance,
                                confidence);
@@ -772,7 +772,6 @@ bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
             std::to_string(h_min + 1) + " queries for early stopping.";
         return false;
       } else {
-        // TODO: do a binary search instead
         for (int64_t i = 2; i < queries_issued + 1; ++i) {
           h = find_min_passing(i, target_latency_percentile.percentile,
                                tolerance, confidence);

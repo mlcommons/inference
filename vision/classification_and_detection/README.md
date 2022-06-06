@@ -28,8 +28,8 @@ You can find a short tutorial how to use this benchmark [here](https://github.co
 | ssd-resnet34 1200x1200 | pytorch | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3236545/files/resnet34-ssd1200.pytorch) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector/pytorch) | fp32 | NCHW |
 | ssd-resnet34 1200x1200 | onnx | mAP 0.20 | coco resized to 1200x1200 | from zenodo [opset-8](https://zenodo.org/record/3228411/files/resnet34-ssd1200.onnx) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector) converted using the these [instructions](https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch#6-onnx) | fp32 | Converted from pytorch model. |
 | ssd-resnet34 1200x1200 | onnx | mAP 0.20 | coco resized to 1200x1200 | from zenodo [opset-11](https://zenodo.org/record/4735664/files/ssd_resnet34_mAP_20.2.onnx) | [from zenodo](https://zenodo.org/record/3345892/files/tf_ssd_resnet34_22.1.zip) converted using [this script](https://github.com/mlcommons/inference/blob/master/vision/classification_and_detection/tools/convert-to-onnx.sh) | fp32 | Converted from the tensorflow model and uses the same interface as the tensorflow model. |
-| ssd-resnext50 800x800 | pytorch | mAP 0.367 | coco resized to 800x800 | [from zenodo](https://zenodo.org/record/5727589/files/resnext50_32x4d_fpn.pth?download=1) | fp32 | NCHW |
-| ssd-resnext50 800x800 | onnx | mAP 0.367 | coco resized to 800x800 | [from zenodo](https://zenodo.org/record/5727677/files/resnext50_32x4d_fpn.onnx?download=1) | fp32 | NCHW |
+| ssd-resnext50 800x800 | pytorch | mAP 0.375 | OpenImages mlperf validation set resized to 800x800 | [from zenodo](https://zenodo.org/record/6617981/files/resnext50_32x4d_fpn.pth) | from mlperf. [Source Code](https://github.com/mlcommons/training/tree/master/single_stage_detector/ssd/model) and [Weights](https://zenodo.org/record/6605272) | fp32 | NCHW |
+| ssd-resnext50 800x800 | onnx | mAP 0.375 | OpenImages mlperf validation set resized to 800x800 | [from zenodo](https://zenodo.org/record/6617879/files/resnext50_32x4d_fpn.onnx) | from mlperf converted form the pytorch model. [Source Code](https://github.com/mlcommons/training/tree/master/single_stage_detector/ssd/model) and [Weights](https://zenodo.org/record/6605272) | fp32 | NCHW |
 
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
@@ -65,12 +65,19 @@ The tool is [here](tools/accuracy-coco.py). You can run it like:
 python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --coco-dir /data/coco --use-inv-map
 ```
 
+### Validate accuracy for ssd-resnext benchmarks
+The tool is [here](tools/accuracy-openimages.py). You can run it like:
+```
+python tools/accuracy-openimages.py --mlperf-accuracy-file mlperf_log_accuracy.json --coco-dir /data/coco --use-inv-map
+```
+
 ## Datasets
 | dataset | download link | 
 | ---- | ---- | 
 | imagenet2012 (validation) | http://image-net.org/challenges/LSVRC/2012/ | 
 | coco (validation) | http://images.cocodataset.org/zips/val2017.zip | 
 | coco (annotations) | http://images.cocodataset.org/annotations/annotations_trainval2017.zip |
+| openimages | We provide a [script](tools/openimages_mlperf.sh) to download the openimages mlperf validation set. You can download the dataset by going into the tools folder and running `./openimages_mlperf -d <DOWNLOAD_PATH>` |
 
 ### Using Collective Knowledge (CK)
 

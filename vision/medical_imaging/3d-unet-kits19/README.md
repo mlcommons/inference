@@ -44,7 +44,7 @@ Other useful commands:
 - `make preprocess_calibration_data`: preprocess calibration dataset
 - `make convert_onnx_model`: convert pytorch model to ONNX
 - `make convert_tensorflow_model`: convert ONNX model to TensorFlow
-- `make download_kits19_raw_data`: manually download KITS19 raw data
+- `make download_kits19_and_duplicate`: manually download KITS19 raw data and duplicate case_00185 as case_00400
 - `make download_models`: manually download all the models (pytorch, ONNX, tensorflow)
 - `python3 run.py --backend=[tensorflow|pytorch|pytorch_checkpoint|onnxruntime] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy] --model=[path/to/model]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console
 - `python3 accuracy_kits.py --log_file=<LOADGEN_LOG>`: compute accuracy from a LoadGen accuracy JSON log file

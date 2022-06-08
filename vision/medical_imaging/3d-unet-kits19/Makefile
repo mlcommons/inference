@@ -63,14 +63,18 @@ endif
 
 
 .PHONY: setup
-setup: create_directories download_kits19_and_duplicate download_models
+setup: create_directories
+	@$(MAKE) -f $(MAKEFILE_NAME) download_kits19_and_duplicate
+	@$(MAKE) -f $(MAKEFILE_NAME) download_models
 	@if [ ! -e $(MLPERF_CONF) ]; then \
 		cp ../../../mlperf.conf $(MLPERF_CONF); \
 	fi
 	@echo "Done basic setup (prepare directories, setup mlperf.conf, download KiTS19 dataset and models)..."
 
 .PHONY: download_kits19_and_duplicate
-download_kits19_and_duplicate: download_kits19_raw_data duplicate_kits19_case_00185
+download_kits19_and_duplicate:
+	@$(MAKE) -f $(MAKEFILE_NAME) download_kits19_raw_data
+	@$(MAKE) -f $(MAKEFILE_NAME) duplicate_kits19_case_00185
 
 .PHONY: download_kits19_raw_data
 download_kits19_raw_data:

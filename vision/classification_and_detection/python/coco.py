@@ -341,3 +341,4 @@ class PostProcessCocoTf(PostProcessCoco):
                                               float(detection_class)])
                 self.total += 1
         return processed_results
+

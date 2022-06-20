@@ -246,9 +246,9 @@ class PostProcessOpenImagesResnext(PostProcessOpenImages):
         if self.dict_format:
             # If the output of the model is in dictionary format. This happens
             # for the model ssd-resnext50-pytorch
-            bboxes_ = [e['boxes'] for e in results]
-            labels_ = [e['labels'] for e in results]
-            scores_ = [e['scores'] for e in results]
+            bboxes_ = [e['boxes'].cpu() for e in results]
+            labels_ = [e['labels'].cpu() for e in results]
+            scores_ = [e['scores'].cpu() for e in results]
             results = [bboxes_, labels_, scores_]
         else:
             bboxes_ = [results[0]]

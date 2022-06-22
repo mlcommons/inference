@@ -564,6 +564,132 @@ MODEL_CONFIG = {
             "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
         },
     },
+    "v2.1": {
+        "models": [
+            "resnet", "ssd-resnext50", "rnnt",
+            "bert-99", "bert-99.9",
+            "dlrm-99", "dlrm-99.9",
+            "3d-unet-99", "3d-unet-99.9",
+        ],
+        "required-scenarios-datacenter": {
+            "resnet": ["Server", "Offline"],
+            "ssd-resnext50": ["Server", "Offline"],
+            "rnnt": ["Server", "Offline"],
+            "bert-99": ["Server", "Offline"],
+            "bert-99.9": ["Server", "Offline"],
+            "dlrm-99": ["Server", "Offline"],
+            "dlrm-99.9": ["Server", "Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+        },
+        "optional-scenarios-datacenter": {
+        },
+        "required-scenarios-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline"],
+            "ssd-resnext50": ["SingleStream", "MultiStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-edge": {
+        },
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "ssd-resnext50": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "rnnt": ["SingleStream", "Offline", "Server"],
+            "bert-99": ["SingleStream", "Offline", "Server"],
+            "bert-99.9": ["Offline", "Server"],
+            "dlrm-99": ["Offline", "Server"],
+            "dlrm-99.9": ["Offline", "Server"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-datacenter-edge": {
+        },
+        "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
+            # TODO: Update accuracy target for ssd-resnext50
+            "ssd-resnext50": ("mAP", 37.5 * 0.99),
+            "rnnt": ("WER", (100 - 7.452) * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "dlrm-99": ("AUC", 80.25 * 0.99),
+            "dlrm-99.9": ("AUC", 80.25 * 0.999),
+            "3d-unet-99": ("DICE", 0.86170 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
+        },
+        "performance-sample-count": {
+            "resnet": 1024,
+            # TODO: Update perf sample count for ssd-resnext50
+            "ssd-resnext50": 64,
+            "rnnt": 2513,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-99": 204800,
+            "dlrm-99.9": 204800,
+            "3d-unet-99": 42,
+            "3d-unet-99.9": 42,
+        },
+        # TODO: Update this list.
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-mobilenet": "ssd-small",
+            "ssd-resnet34": "ssd-large",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
+            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
+            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
+            "rcnn-resnet50-lowproposals-coco": "ssd-large",
+            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
+            "rcnn-inception-v2-coco": "ssd-large",
+            "rcnn-nas-lowproposals-coco": "ssd-large",
+            "rcnn-resnet101-lowproposals-coco": "ssd-large",
+            "ssd_mobilenet_v1_coco": "ssd-small",
+            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
+            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
+            "ssd_mobilenet_v2_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
+        },
+        # TODO: Update with the real v2.1 seeds.
+        "seeds": {
+            "qsl_rng_seed": 6655344265603136530,
+            "sample_index_rng_seed": 15863379492028895792,
+            "schedule_rng_seed": 12662793979680847247,
+        },
+        "test05_seeds": {
+            "qsl_rng_seed" : 313588358309856706,
+            "sample_index_rng_seed" : 471397156132239067,
+            "schedule_rng_seed" : 413914573387865862,
+        },
+        "ignore_errors": [
+        ],
+        "latency-constraint": {
+            "resnet": {"Server": 15000000},
+            "ssd-resnext50": {"Server": 100000000},
+            "rnnt": {"Server": 1000000000},
+            "bert-99": {"Server": 130000000},
+            "bert-99.9": {"Server": 130000000},
+            "dlrm-99": {"Server": 30000000},
+            "dlrm-99.9": {"Server": 30000000},
+        },
+        "min-queries": {
+            "resnet": {"SingleStream": 1024, "MultiStream": 270336, "Server": 270336, "Offline": 1},
+            "ssd-resnext50": {"SingleStream": 1024, "MultiStream": 270336, "Server": 270336, "Offline": 1},
+            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-99": {"Server": 270336, "Offline": 1},
+            "dlrm-99.9": {"Server": 270336, "Offline": 1},
+            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
+        },
+    },
 }
 
 VALID_DIVISIONS = ["open", "closed", "network"]
@@ -633,7 +759,14 @@ RESULT_FIELD_NEW = {
         "MultiStreamLegacy": "effective_samples_per_query",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_scheduled_samples_per_sec"
-    }
+    },
+    "v2.1": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_scheduled_samples_per_sec"
+    },
 }
 
 ACC_PATTERN = {
@@ -818,7 +951,7 @@ def get_args():
   """Parse commandline."""
   parser = argparse.ArgumentParser()
   parser.add_argument("--input", required=True, help="submission directory")
-  parser.add_argument("--version", default="v2.0", choices=list(MODEL_CONFIG.keys()), help="mlperf version")
+  parser.add_argument("--version", default="v2.1", choices=list(MODEL_CONFIG.keys()), help="mlperf version")
   parser.add_argument("--submitter", help="filter to submitter")
   parser.add_argument("--csv", default="summary.csv", help="csv file with results")
   parser.add_argument("--skip_compliance", action="store_true", help="Pass this cmdline option to skip checking compliance/ dir")

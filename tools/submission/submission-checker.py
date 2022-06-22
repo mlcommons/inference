@@ -565,15 +565,15 @@ MODEL_CONFIG = {
         },
     },
     "v2.1": {
-        # TODO: Add the new SSD model.
         "models": [
-            "resnet", "rnnt",
+            "resnet", "ssd-resnext50", "rnnt",
             "bert-99", "bert-99.9",
             "dlrm-99", "dlrm-99.9",
             "3d-unet-99", "3d-unet-99.9",
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
+            "ssd-resnext50": ["Server", "Offline"],
             "rnnt": ["Server", "Offline"],
             "bert-99": ["Server", "Offline"],
             "bert-99.9": ["Server", "Offline"],
@@ -586,6 +586,7 @@ MODEL_CONFIG = {
         },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
+            "ssd-resnext50": ["SingleStream", "MultiStream", "Offline"],
             "rnnt": ["SingleStream", "Offline"],
             "bert-99": ["SingleStream", "Offline"],
             "3d-unet-99": ["SingleStream", "Offline"],
@@ -595,6 +596,7 @@ MODEL_CONFIG = {
         },
         "required-scenarios-datacenter-edge": {
             "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "ssd-resnext50": ["SingleStream", "Offline", "MultiStream", "Server"],
             "rnnt": ["SingleStream", "Offline", "Server"],
             "bert-99": ["SingleStream", "Offline", "Server"],
             "bert-99.9": ["Offline", "Server"],
@@ -607,6 +609,8 @@ MODEL_CONFIG = {
         },
         "accuracy-target": {
             "resnet": ("acc", 76.46 * 0.99),
+            # TODO: Update accuracy target for ssd-resnext50
+            "ssd-resnext50": ("mAP", 37.5 * 0.99),
             "rnnt": ("WER", (100 - 7.452) * 0.99),
             "bert-99": ("F1", 90.874 * 0.99),
             "bert-99.9": ("F1", 90.874 * 0.999),
@@ -616,9 +620,9 @@ MODEL_CONFIG = {
             "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
         },
         "performance-sample-count": {
-            "ssd-small": 256,
-            "ssd-large": 64,
             "resnet": 1024,
+            # TODO: Update perf sample count for ssd-resnext50
+            "ssd-resnext50": 64,
             "rnnt": 2513,
             "bert-99": 10833,
             "bert-99.9": 10833,
@@ -667,6 +671,7 @@ MODEL_CONFIG = {
         ],
         "latency-constraint": {
             "resnet": {"Server": 15000000},
+            "ssd-resnext50": {"Server": 100000000},
             "rnnt": {"Server": 1000000000},
             "bert-99": {"Server": 130000000},
             "bert-99.9": {"Server": 130000000},
@@ -675,6 +680,7 @@ MODEL_CONFIG = {
         },
         "min-queries": {
             "resnet": {"SingleStream": 1024, "MultiStream": 270336, "Server": 270336, "Offline": 1},
+            "ssd-resnext50": {"SingleStream": 1024, "MultiStream": 270336, "Server": 270336, "Offline": 1},
             "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},

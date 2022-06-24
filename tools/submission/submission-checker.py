@@ -610,7 +610,7 @@ MODEL_CONFIG = {
         "accuracy-target": {
             "resnet": ("acc", 76.46 * 0.99),
             # TODO: Update accuracy target for ssd-resnext50
-            "ssd-resnext50": ("mAP", 37.5 * 0.99),
+            "ssd-resnext50": ("mAP", 37.55 * 0.99),
             "rnnt": ("WER", (100 - 7.452) * 0.99),
             "bert-99": ("F1", 90.874 * 0.99),
             "bert-99.9": ("F1", 90.874 * 0.999),

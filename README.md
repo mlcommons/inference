@@ -13,6 +13,20 @@ Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.025
     primaryClass={cs.LG}
 }
 ```
+## MLPerf Inference v2.1 (submission 08/05/2022)
+Use the r2.1 branch (```git checkout r2.1```) if you want to submit or reproduce v2.1 results.
+
+See the individual Readme files in the reference app for details.
+
+| model | reference app | framework | dataset |
+| ---- | ---- | ---- | ---- |
+| resnet50-v1.5 | [vision/classification_and_detection](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection) | tensorflow, pytorch, onnx | imagenet2012 |
+| ssd-resnext50 800x800 | [vision/classification_and_detection](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection) | pytorch, onnx | openimages resized to 800x800|
+| bert | [language/bert](https://github.com/mlcommons/inference/tree/master/language/bert) | tensorflow, pytorch, onnx | squad-1.1 |
+| dlrm | [recommendation/dlrm](https://github.com/mlcommons/inference/tree/master/recommendation/dlrm/pytorch) | pytorch, tensorflow(?), onnx(?) | Criteo Terabyte |
+| 3d-unet | [vision/medical_imaging/3d-unet-kits19](https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-kits19) | pytorch, tensorflow, onnx | KiTS19 |
+| rnnt | [speech_recognition/rnnt](https://github.com/mlcommons/inference/tree/master/speech_recognition/rnnt) | pytorch | OpenSLR LibriSpeech Corpus |
+
 
 ## MLPerf Inference v2.0 (submission 02/25/2022)
 Use the r2.0 branch (```git checkout r2.0```) if you want to submit or reproduce v2.0 results.

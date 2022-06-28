@@ -50,7 +50,7 @@ MLPERF_CLASSES=('Airplane' 'Antelope' 'Apple' 'Backpack' 'Balloon' 'Banana'
 'Whale' 'Wheel' 'Wheelchair' 'Whiteboard' 'Window' 'Wine' 'Wine glass' 'Woman'
 'Zebra' 'Zucchini')
 
-python openimages.py \
+python3 openimages.py \
     --dataset-dir=${DATASET_PATH} \
     --output-labels="openimages-mlperf.json" \
     --classes "${MLPERF_CLASSES[@]}"

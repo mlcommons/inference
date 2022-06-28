@@ -50,17 +50,17 @@ SUPPORTED_DATASETS = {
     "coco-300-pt":
         (coco.Coco, dataset.pre_process_coco_pt_mobilenet, coco.PostProcessCocoPt(False,0.3),
          {"image_size": [300, 300, 3]}),
-    "openimages-300-resnext":
-        (openimages.OpenImages, dataset.pre_process_openimages_resnext50, openimages.PostProcessOpenImagesResnext(False,0.05,300,300), 
+    "openimages-300-retinanet":
+        (openimages.OpenImages, dataset.pre_process_openimages_retinanet, openimages.PostProcessOpenImagesRetinanet(False,0.05,300,300), 
         {"image_size": [300, 300, 3]}),
-    "openimages-800-resnext":
-        (openimages.OpenImages, dataset.pre_process_openimages_resnext50, openimages.PostProcessOpenImagesResnext(False,0.05,800,800), 
+    "openimages-800-retinanet":
+        (openimages.OpenImages, dataset.pre_process_openimages_retinanet, openimages.PostProcessOpenImagesRetinanet(False,0.05,800,800), 
         {"image_size": [800, 800, 3]}),
-    "openimages-1200-resnext":
-        (openimages.OpenImages, dataset.pre_process_openimages_resnext50, openimages.PostProcessOpenImagesResnext(False,0.05,1200,1200), 
+    "openimages-1200-retinanet":
+        (openimages.OpenImages, dataset.pre_process_openimages_retinanet, openimages.PostProcessOpenImagesRetinanet(False,0.05,1200,1200), 
         {"image_size": [1200, 1200, 3]}),
-    "openimages-800-resnext-onnx":
-        (openimages.OpenImages, dataset.pre_process_openimages_resnext50, openimages.PostProcessOpenImagesResnext(False,0.05,800,800,False), 
+    "openimages-800-retinanet-onnx":
+        (openimages.OpenImages, dataset.pre_process_openimages_retinanet, openimages.PostProcessOpenImagesRetinanet(False,0.05,800,800,False), 
         {"image_size": [800, 800, 3]}),       
     "coco-1200":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCoco(),
@@ -181,20 +181,20 @@ SUPPORTED_PROFILES = {
         "model-name": "ssd-resnet34",
     },
 
-    # ssd-resnext50
-    "ssd-resnext50-pytorch": {
+    # retinanet
+    "retinanet-pytorch": {
         "inputs": "image",
         "outputs": "boxes,labels,scores",
-        "dataset": "openimages-800-resnext",
+        "dataset": "openimages-800-retinanet",
         "backend": "pytorch-native",
-        "model-name": "ssd-resnext50",
+        "model-name": "retinanet",
     },
-    "ssd-resnext50-onnxruntime": {
+    "retinanet-onnxruntime": {
         "inputs": "images",
         "outputs": "boxes,labels,scores",
-        "dataset": "openimages-800-resnext-onnx",
+        "dataset": "openimages-800-retinanet-onnx",
         "backend": "onnxruntime",
-        "model-name": "ssd-resnext50",
+        "model-name": "retinanet",
         "max-batchsize": 1
     },
 }

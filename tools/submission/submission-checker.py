@@ -655,11 +655,10 @@ MODEL_CONFIG = {
             "ssd_resnet50_v1_fpn_640x640": "ssd-small",
             "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
         },
-        # TODO: Update with the real v2.1 seeds.
         "seeds": {
-            "qsl_rng_seed": 6655344265603136530,
-            "sample_index_rng_seed": 15863379492028895792,
-            "schedule_rng_seed": 12662793979680847247,
+            "qsl_rng_seed": 14284205019438841327,
+            "sample_index_rng_seed": 4163916728725999944,
+            "schedule_rng_seed": 299063814864929621,
         },
         "test05_seeds": {
             "qsl_rng_seed" : 313588358309856706,

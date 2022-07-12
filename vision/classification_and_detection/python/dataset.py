@@ -273,7 +273,7 @@ def pre_process_coco_resnet34_tf(img, dims=None, need_transpose=False):
     return img
 
 
-def pre_process_openimages_resnext50(img, dims=None, need_transpose=False):
+def pre_process_openimages_retinanet(img, dims=None, need_transpose=False):
     img = maybe_resize(img, dims)
     img /= 255.
     # transpose if needed

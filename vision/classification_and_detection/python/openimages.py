@@ -223,9 +223,9 @@ class PostProcessOpenImages:
         result_dict["mAP"] = cocoEval.stats[0]
 
 
-class PostProcessOpenImagesResnext(PostProcessOpenImages):
+class PostProcessOpenImagesRetinanet(PostProcessOpenImages):
     """
-    Post processing required by ssd-resnext50 / pytorch & onnx
+    Post processing required by retinanet / pytorch & onnx
     """
     def __init__(self, use_inv_map, score_threshold, height, width, dict_format=True):
         """
@@ -245,7 +245,7 @@ class PostProcessOpenImagesResnext(PostProcessOpenImages):
     def __call__(self, results, ids, expected=None, result_dict=None):
         if self.dict_format:
             # If the output of the model is in dictionary format. This happens
-            # for the model ssd-resnext50-pytorch
+            # for the model retinanet-pytorch
             bboxes_ = [e['boxes'].cpu() for e in results]
             labels_ = [e['labels'].cpu() for e in results]
             scores_ = [e['scores'].cpu() for e in results]

@@ -96,7 +96,7 @@ class QueueSUT : public mlperf::SystemUnderTest {
       thread.join();
     }
   }
-  const std::string& Name() const override { return mName; }
+  const std::string& Name() override { return mName; }
   void IssueQuery(const std::vector<mlperf::QuerySample>& samples) override {
     std::unique_lock<std::mutex> lck(mMtx);
     for (const auto& sample : samples) {
@@ -163,7 +163,7 @@ class MultiBasicSUT : public mlperf::SystemUnderTest {
       thread.join();
     }
   }
-  const std::string& Name() const override { return mName; }
+  const std::string& Name() override { return mName; }
   void IssueQuery(const std::vector<mlperf::QuerySample>& samples) override {
     int thread_idx = mThreadMap[std::this_thread::get_id()];
     int n = samples.size();

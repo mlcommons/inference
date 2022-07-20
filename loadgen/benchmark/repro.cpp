@@ -49,7 +49,7 @@ class BasicSUT : public mlperf::SystemUnderTest {
     initResponse(10000);
   }
   ~BasicSUT() override {}
-  const std::string& Name() const override { return mName; }
+  const std::string& Name() override { return mName; }
   void IssueQuery(const std::vector<mlperf::QuerySample>& samples) override {
     int n = samples.size();
     if (n > mResponses.size()) {

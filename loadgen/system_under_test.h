@@ -38,7 +38,7 @@ class SystemUnderTest {
   virtual ~SystemUnderTest() {}
 
   /// \brief A human-readable string for logging purposes.
-  virtual const std::string& Name() const = 0;
+  virtual const std::string& Name() = 0;
 
   /// \brief Lets the loadgen issue N samples to the SUT.
   /// \details The SUT may either a) return immediately and signal completion

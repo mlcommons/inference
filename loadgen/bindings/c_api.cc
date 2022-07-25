@@ -36,7 +36,7 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
         flush_queries_cb_(flush_queries_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
-  const std::string& Name() const override { return name_; }
+  const std::string& Name() override { return name_; }
 
   void IssueQuery(const std::vector<QuerySample>& samples) override {
     (*issue_cb_)(client_data_, samples.data(), samples.size());

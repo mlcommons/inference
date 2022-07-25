@@ -47,6 +47,8 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/test_settings_internal.h
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/results.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/results.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.h
   ${CMAKE_BINARY_DIR}/version_generated.cc

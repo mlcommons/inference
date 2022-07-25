@@ -9,5 +9,5 @@ if [ ! -d $OUTPUT_DIR ]; then
     mkdir -p $OUTPUT_DIR
 fi
 
-python python/main.py --profile $profile $common_opt --model $model_path $dataset \
+python3 python/main.py --profile $profile $common_opt --model $model_path $dataset \
     --output $OUTPUT_DIR $EXTRA_OPS $@

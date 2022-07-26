@@ -47,7 +47,7 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
         flush_queries_cb_(flush_queries_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
-  const std::string& Name() const override { return name_; }
+  const std::string& Name() override { return name_; }
 
   void IssueQuery(const std::vector<QuerySample>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;

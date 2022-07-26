@@ -1664,7 +1664,7 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
             compliance = 0 if is_closed_or_network else 1
             if is_closed_or_network and not skip_compliance:
               compliance_dir = os.path.join(division, submitter, "compliance",
-                                            system_desc, model_name, scenario_fixed)
+                                            system_desc, model_name, scenario)
               if not os.path.exists(compliance_dir):
                 log.error("no compliance dir for %s", name)
                 results[name] = None

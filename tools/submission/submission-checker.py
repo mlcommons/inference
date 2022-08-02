@@ -879,6 +879,10 @@ class Config():
       model = "resnet"
     elif "rcnn" in model:
       model = "ssd-small"
+    elif "bert-99" in model:
+      model = "bert-99"
+    elif "bert-99.9" in model:
+      model = "bert-99.9"
     # map again, for example v0.7 does not have mobilenet so it needs to be mapped to resnet
     mlperf_model = self.base["model_mapping"].get(model, model)
     return mlperf_model

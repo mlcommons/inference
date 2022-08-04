@@ -91,7 +91,7 @@ def main():
   ]
   columns_order = [['Result'],
                    [
-                       'resnet', 'ssd-small', 'ssd-large', '3d-unet-99',
+                       'resnet', 'retinanet', '3d-unet-99',
                        '3d-unet-99.9', 'rnnt', 'bert-99', 'bert-99.9',
                        'dlrm-99', 'dlrm-99.9'
                    ], ['SingleStream', 'MultiStream', 'Server', 'Offline'],
@@ -106,8 +106,7 @@ def main():
   filter_scenarios = {
     'datacenter': {
       'resnet': ['Server', 'Offline'],
-      'ssd-large': ['Server', 'Offline'],
-      'ssd-small': [],
+      'retinanet': ['Server', 'Offline'],
       'rnnt': ['Server', 'Offline'],
       'bert-99': ['Server', 'Offline'],
       'bert-99.9': ['Server', 'Offline'],
@@ -118,8 +117,7 @@ def main():
     },
     'edge': {
       'resnet': ['SingleStream', 'MultiStream', 'Offline'],
-      'ssd-small': ['SingleStream', 'MultiStream', 'Offline'],
-      'ssd-large': ['SingleStream', 'MultiStream', 'Offline'],
+      'retinanet': ['SingleStream', 'MultiStream', 'Offline'],
       'rnnt': ['SingleStream', 'Offline'],
       'bert-99': ['SingleStream', 'Offline'],
       'bert-99.9': [],

@@ -30,6 +30,7 @@ def main():
           'Division': 'Category',
           'SystemType': 'Suite',
           'SystemName': 'System',
+          'number_of_nodes': 'Nodes',
           'host_processor_model_name': 'Processor',
           'accelerator_model_name': 'Accelerator',
           'accelerators_per_node': 'a#',
@@ -51,7 +52,7 @@ def main():
   df['a#'] = df['a#'].apply(lambda x: int(x) if x != '' else 0)
   df['a#'] = df['a#'].apply(lambda x: x if x > 0 else '')
   df['p#'] = df.apply(
-      lambda x: int(x['host_processors_per_node']) * int(x['number_of_nodes']),
+      lambda x: int(x['host_processors_per_node']), # * int(x['number_of_nodes']),
       axis=1)
 
   # details url
@@ -72,6 +73,7 @@ def main():
       'Submitter',
       'Availability',
       'System',
+      'Nodes',
       'Processor',
       'p#',
       'Accelerator',
@@ -81,6 +83,7 @@ def main():
   ]
   indices['open'] = indices['closed'].copy()
   indices['closed'].append('Details')
+  indices['network'] = indices['closed'].copy()
   indices['open'].append('UsedModel')
   indices['open'].append('Accuracy')
   indices['open'].append('Details')
@@ -184,7 +187,7 @@ def main():
       lambda x: '2.0-{:03}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
       axis=1)
 
-  for category in ['closed', 'open']:
+  for category in ['closed', 'open', 'network']:
     for suite in ['datacenter', 'edge']:
       MakeWorksheet(
           df, indices[category], {

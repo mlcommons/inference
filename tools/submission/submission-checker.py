@@ -1342,7 +1342,7 @@ def files_diff(list1, list2, optional=None):
   """returns a list of files that are missing or added."""
   if not optional:
     optional = []
-  optional = optional + ["mlperf_log_trace.json", "results.json"]
+  optional = optional + ["mlperf_log_trace.json", "results.json", ".gitkeep"]
   return set(list1).symmetric_difference(set(list2)) - set(optional)
 
 def is_system_over_network(division, system_json, path):

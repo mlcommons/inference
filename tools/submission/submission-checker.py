@@ -1342,17 +1342,8 @@ def files_diff(list1, list2, optional=None):
   """returns a list of files that are missing or added."""
   if not optional:
     optional = []
-  if list1 and list2:
-    for i in ["mlperf_log_trace.json", "results.json"] + optional:
-      try:
-        list1.remove(i)
-      except:
-        pass
-    if len(list1) > len(list2):
-      return list(set(list1) - set(list2))
-    else:
-      return list(set(list2) - set(list1))
-  return []
+  optional = optional + ["mlperf_log_trace.json", "results.json"]
+  return set(list1).symmetric_difference(set(list2)) - set(optional)
 
 def is_system_over_network(division, system_json, path):
   """
@@ -1803,9 +1794,12 @@ def check_compliance_perf_dir(test_dir):
       log.error("%s has no performance/run_1 directory", test_dir)
       is_valid = False
     else:
-      diff = files_diff(list_files(test_perf_path), REQUIRED_COMP_PER_FILES)
+      diff = files_diff(
+          list_files(test_perf_path), REQUIRED_COMP_PER_FILES,
+          ["mlperf_log_accuracy.json"])
       if diff:
-        log.info("%s has file list mismatch (%s)", test_perf_path, diff)
+        log.error("%s has file list mismatch (%s)", test_perf_path, diff)
+        is_valid = False
 
   return is_valid
 
@@ -1836,7 +1830,7 @@ def check_compliance_acc_dir(test_dir):
     else:
       diff = files_diff(list_files(test_acc_path), REQUIRED_TEST01_ACC_FILES_1 if acc_passed else REQUIRED_TEST01_ACC_FILES)
       if diff:
-        log.info("%s has file list mismatch (%s)", test_acc_path, diff)
+        log.error("%s has file list mismatch (%s)", test_acc_path, diff)
         is_valid = False
 
   return is_valid

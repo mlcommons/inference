@@ -634,7 +634,7 @@ MODEL_CONFIG = {
         "model_mapping": {
             # map model names to the official mlperf model class
             "ssd-mobilenet": "ssd-small",
-            "ssd-resnet34": "ssd-large",
+            "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
             "resnet50": "resnet",
             "ssd_resnet101_v1_fpn_640x640": "ssd-small",

@@ -1838,9 +1838,9 @@ def check_compliance_acc_dir(test_dir, model, config):
         pattern = ACC_PATTERN[acc_type]
         more_accurate = model.find("99.9")
         if more_accurate == -1:
-          required_delta_perc = 0.1
-        else:
           required_delta_perc = 1
+        else:
+          required_delta_perc = 0.1
         acc_baseline = acc_compliance = 0
         with open(os.path.join(test_acc_path, "baseline_accuracy.txt"), "r", encoding="utf-8") as f:
           for line in f:

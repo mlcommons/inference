@@ -1804,7 +1804,7 @@ def check_compliance_perf_dir(test_dir):
 
   return is_valid
 
-def check_compliance_acc_dir(test_dir):
+def check_compliance_acc_dir(test_dir, model, config):
   is_valid = False
   acc_passed = False
 
@@ -1833,6 +1833,33 @@ def check_compliance_acc_dir(test_dir):
       if diff:
         log.error("%s has file list mismatch (%s)", test_acc_path, diff)
         is_valid = False
+      elif not acc_passed:
+        acc_type, acc_target = config.get_accuracy_target(model)
+        pattern = ACC_PATTERN[acc_type]
+        more_accurate = model.find("99.9")
+        if more_accurate == -1:
+          required_delta_perc = 0.1
+        else:
+          required_delta_perc = 1
+        acc_baseline = acc_compliance = 0
+        with open(os.path.join(test_acc_path, "baseline_accuracy.txt"), "r", encoding="utf-8") as f:
+          for line in f:
+            m = re.match(pattern, line)
+            if m:
+              acc_baseline = float(m.group(1))
+        with open(os.path.join(test_acc_path, "compliance_accuracy.txt"), "r", encoding="utf-8") as f:
+          for line in f:
+            m = re.match(pattern, line)
+            if m:
+              acc_compliance = float(m.group(1))
+        if acc_baseline == 0 or acc_compliance == 0:
+          is_valid = False
+        else:
+          delta_perc = abs(acc_baseline - acc_compliance)/acc_baseline
+          if delta_perc <= required_delta_perc:
+            is_valid = True
+          else:
+            is_valid = False
 
   return is_valid
 
@@ -1865,7 +1892,7 @@ def check_compliance_dir(compliance_dir, model, scenario, config, division, syst
 
 
   #Check accuracy for TEST01
-  compliance_acc_pass = check_compliance_acc_dir(os.path.join(compliance_dir, "TEST01"))
+  compliance_acc_pass = check_compliance_acc_dir(os.path.join(compliance_dir, "TEST01"), model, config)
 
   return compliance_perf_pass and compliance_acc_pass and compliance_perf_dir_pass
 

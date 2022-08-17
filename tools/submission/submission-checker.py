@@ -1855,7 +1855,7 @@ def check_compliance_acc_dir(test_dir, model, config):
         if acc_baseline == 0 or acc_compliance == 0:
           is_valid = False
         else:
-          delta_perc = abs(acc_baseline - acc_compliance)/acc_baseline
+          delta_perc = abs(1 - acc_baseline / acc_compliance) * 100
           if delta_perc <= required_delta_perc:
             is_valid = True
           else:

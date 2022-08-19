@@ -30,6 +30,7 @@ def main():
           'Division': 'Category',
           'SystemType': 'Suite',
           'SystemName': 'System',
+          'number_of_nodes': 'Nodes',
           'host_processor_model_name': 'Processor',
           'accelerator_model_name': 'Accelerator',
           'accelerators_per_node': 'a#',
@@ -50,12 +51,10 @@ def main():
   df['Accelerator'] = df['Accelerator'].apply(lambda x: x if x != '-' else '')
   df['a#'] = df['a#'].apply(lambda x: int(x) if x != '' else 0)
   df['a#'] = df['a#'].apply(lambda x: x if x > 0 else '')
-  df['p#'] = df.apply(
-      lambda x: int(x['host_processors_per_node']) * int(x['number_of_nodes']),
-      axis=1)
+  df['p#'] = df.apply(lambda x: int(x['host_processors_per_node']), axis=1)
 
   # details url
-  base_url = 'https://github.com/mlcommons/submissions_inference_2.0/tree/master'
+  base_url = 'https://github.com/mlcommons/submissions_inference_2.1/tree/master'
   df['Details'] = df.apply(
       lambda x: '=HYPERLINK("{}","details")'.format('/'.join(
           [base_url, x['Category'], x['Submitter'], 'results', x['Platform']])),
@@ -72,6 +71,7 @@ def main():
       'Submitter',
       'Availability',
       'System',
+      'Nodes',
       'Processor',
       'p#',
       'Accelerator',
@@ -81,6 +81,7 @@ def main():
   ]
   indices['open'] = indices['closed'].copy()
   indices['closed'].append('Details')
+  indices['network'] = indices['closed'].copy()
   indices['open'].append('UsedModel')
   indices['open'].append('Accuracy')
   indices['open'].append('Details')
@@ -91,7 +92,7 @@ def main():
   ]
   columns_order = [['Result'],
                    [
-                       'resnet', 'ssd-small', 'ssd-large', '3d-unet-99',
+                       'resnet', 'retinanet', '3d-unet-99',
                        '3d-unet-99.9', 'rnnt', 'bert-99', 'bert-99.9',
                        'dlrm-99', 'dlrm-99.9'
                    ], ['SingleStream', 'MultiStream', 'Server', 'Offline'],
@@ -106,8 +107,7 @@ def main():
   filter_scenarios = {
     'datacenter': {
       'resnet': ['Server', 'Offline'],
-      'ssd-large': ['Server', 'Offline'],
-      'ssd-small': [],
+      'retinanet': ['Server', 'Offline'],
       'rnnt': ['Server', 'Offline'],
       'bert-99': ['Server', 'Offline'],
       'bert-99.9': ['Server', 'Offline'],
@@ -118,8 +118,7 @@ def main():
     },
     'edge': {
       'resnet': ['SingleStream', 'MultiStream', 'Offline'],
-      'ssd-small': ['SingleStream', 'MultiStream', 'Offline'],
-      'ssd-large': ['SingleStream', 'MultiStream', 'Offline'],
+      'retinanet': ['SingleStream', 'MultiStream', 'Offline'],
       'rnnt': ['SingleStream', 'Offline'],
       'bert-99': ['SingleStream', 'Offline'],
       'bert-99.9': [],
@@ -181,10 +180,10 @@ def main():
            key) in enumerate(pd.unique(df['Unique ID (e.g. for Audit)']))
   }
   df['ID'] = df.apply(
-      lambda x: '2.0-{:03}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
+      lambda x: '2.1-{:04}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
       axis=1)
 
-  for category in ['closed', 'open']:
+  for category in ['closed', 'open', 'network']:
     for suite in ['datacenter', 'edge']:
       MakeWorksheet(
           df, indices[category], {
@@ -204,7 +203,8 @@ def main():
           df, indices[category], {
               'Category': Equal(category),
               'Suite': Contain(suite),
-              'has_power': Equal(True)
+              'has_power': Equal(True),
+              ('Scenario', 'Model'): Apply(FilterScenario, suite)
           }, category + ',' + suite + ',power')
 
   score_format = writer.book.add_format({'num_format': '#,##0.00'})

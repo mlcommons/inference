@@ -1342,17 +1342,8 @@ def files_diff(list1, list2, optional=None):
   """returns a list of files that are missing or added."""
   if not optional:
     optional = []
-  if list1 and list2:
-    for i in ["mlperf_log_trace.json", "results.json"] + optional:
-      try:
-        list1.remove(i)
-      except:
-        pass
-    if len(list1) > len(list2):
-      return list(set(list1) - set(list2))
-    else:
-      return list(set(list2) - set(list1))
-  return []
+  optional = optional + ["mlperf_log_trace.json", "results.json", ".gitkeep"]
+  return set(list1).symmetric_difference(set(list2)) - set(optional)
 
 def is_system_over_network(division, system_json, path):
   """
@@ -1431,7 +1422,8 @@ def check_results_dir(config, filter_submitter,  skip_compliance, csv, debug=Fal
 
     notes = system_json.get("hw_notes", "")
     if system_json.get("sw_notes"):
-      notes = notes + ". " + system_json.get("sw_notes")
+      notes = notes + ". " if notes else ""
+      notes = notes + system_json.get("sw_notes")
     unit_dict = {
         "SingleStream": "Latency (ms)",
         "MultiStream": "Latency (ms)",
@@ -1803,13 +1795,16 @@ def check_compliance_perf_dir(test_dir):
       log.error("%s has no performance/run_1 directory", test_dir)
       is_valid = False
     else:
-      diff = files_diff(list_files(test_perf_path), REQUIRED_COMP_PER_FILES)
+      diff = files_diff(
+          list_files(test_perf_path), REQUIRED_COMP_PER_FILES,
+          ["mlperf_log_accuracy.json"])
       if diff:
-        log.info("%s has file list mismatch (%s)", test_perf_path, diff)
+        log.error("%s has file list mismatch (%s)", test_perf_path, diff)
+        is_valid = False
 
   return is_valid
 
-def check_compliance_acc_dir(test_dir):
+def check_compliance_acc_dir(test_dir, model, config):
   is_valid = False
   acc_passed = False
 
@@ -1836,8 +1831,35 @@ def check_compliance_acc_dir(test_dir):
     else:
       diff = files_diff(list_files(test_acc_path), REQUIRED_TEST01_ACC_FILES_1 if acc_passed else REQUIRED_TEST01_ACC_FILES)
       if diff:
-        log.info("%s has file list mismatch (%s)", test_acc_path, diff)
+        log.error("%s has file list mismatch (%s)", test_acc_path, diff)
         is_valid = False
+      elif not acc_passed:
+        acc_type, acc_target = config.get_accuracy_target(model)
+        pattern = ACC_PATTERN[acc_type]
+        more_accurate = model.find("99.9")
+        if more_accurate == -1:
+          required_delta_perc = 1
+        else:
+          required_delta_perc = 0.1
+        acc_baseline = acc_compliance = 0
+        with open(os.path.join(test_acc_path, "baseline_accuracy.txt"), "r", encoding="utf-8") as f:
+          for line in f:
+            m = re.match(pattern, line)
+            if m:
+              acc_baseline = float(m.group(1))
+        with open(os.path.join(test_acc_path, "compliance_accuracy.txt"), "r", encoding="utf-8") as f:
+          for line in f:
+            m = re.match(pattern, line)
+            if m:
+              acc_compliance = float(m.group(1))
+        if acc_baseline == 0 or acc_compliance == 0:
+          is_valid = False
+        else:
+          delta_perc = abs(1 - acc_baseline / acc_compliance) * 100
+          if delta_perc <= required_delta_perc:
+            is_valid = True
+          else:
+            is_valid = False
 
   return is_valid
 
@@ -1870,7 +1892,7 @@ def check_compliance_dir(compliance_dir, model, scenario, config, division, syst
 
 
   #Check accuracy for TEST01
-  compliance_acc_pass = check_compliance_acc_dir(os.path.join(compliance_dir, "TEST01"))
+  compliance_acc_pass = check_compliance_acc_dir(os.path.join(compliance_dir, "TEST01"), model, config)
 
   return compliance_perf_pass and compliance_acc_pass and compliance_perf_dir_pass
 

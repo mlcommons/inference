@@ -4,7 +4,7 @@ source ./run_common.sh
 
 common_opt="--mlperf_conf ../../mlperf.conf"
 dataset="--dataset-path $DATA_DIR"
-OUTPUT_DIR=`pwd`/output/$name
+OUTPUT_DIR=${OUTPUT_DIR:-`pwd`/output/$name}
 if [ ! -d $OUTPUT_DIR ]; then
     mkdir -p $OUTPUT_DIR
 fi

@@ -1821,7 +1821,7 @@ def check_compliance_acc_dir(test_dir, model, config):
           acc_passed = True
           break
     if acc_passed == False:
-      log.info("Compliance test accuracy check in %s failed", test_dir)
+      log.info("Compliance test accuracy check (deterministic mode) in %s failed", test_dir)
 
     # Check Accuracy dir
     test_acc_path = os.path.join(test_dir, "accuracy")
@@ -1858,8 +1858,10 @@ def check_compliance_acc_dir(test_dir, model, config):
           delta_perc = abs(1 - acc_baseline / acc_compliance) * 100
           if delta_perc <= required_delta_perc:
             is_valid = True
+            log.info("Compliance test accuracy check in %s passed in non-deterministic mode", test_dir)
           else:
             is_valid = False
+            log.error("Compliance test accuracy check in %s failed in non-deterministic mode also", test_dir)
 
   return is_valid
 

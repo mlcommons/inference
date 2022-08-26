@@ -49,8 +49,15 @@ def main():
 
   # cleanup counts
   df['Accelerator'] = df['Accelerator'].apply(lambda x: x if x != '-' else '')
-  df['a#'] = df['a#'].apply(lambda x: int(x) if x != '' else 0)
-  df['a#'] = df['a#'].apply(lambda x: x if x > 0 else '')
+
+  def process_accl_per_node(x):
+    if x != '' and not isinstance(x, int):
+        return x
+    x = int(x) if x != '' else 0
+    x = x if x > 0 else ''
+    return x
+
+  df['a#'] = df['a#'].apply(lambda x: process_accl_per_node(x)) 
   df['p#'] = df.apply(
       lambda x: int(x['host_processors_per_node']), # * int(x['number_of_nodes']),
       axis=1)

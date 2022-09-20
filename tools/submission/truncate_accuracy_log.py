@@ -93,7 +93,7 @@ def truncate_file(fname):
 
 def copy_submission_dir(src, dst, filter_submitter):
     for division in list_dir(src):
-        if division not in ["closed", "open"]:
+        if division not in ["closed", "open", "network"]:
             continue
         for submitter in list_dir(os.path.join(src, division)):
             if filter_submitter and submitter != filter_submitter:
@@ -110,7 +110,7 @@ def truncate_results_dir(filter_submitter, backup):
     """
     for division in list_dir("."):
         # we are looking at ./$division, ie ./closed
-        if division not in ["closed", "open"]:
+        if division not in ["closed", "open", "network"]:
             continue
 
         for submitter in list_dir(division):

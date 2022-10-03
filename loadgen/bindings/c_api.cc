@@ -85,7 +85,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
         unload_samples_from_ram_cb_(unload_samples_from_ram_cb) {}
   ~QuerySampleLibraryTrampoline() override = default;
 
-  const std::string& Name() const override { return name_; }
+  const std::string& Name() override { return name_; }
   size_t TotalSampleCount() override { return total_sample_count_; }
   size_t PerformanceSampleCount() override { return performance_sample_count_; }
 

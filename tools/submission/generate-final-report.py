@@ -49,14 +49,12 @@ def main():
 
   # cleanup counts
   df['Accelerator'] = df['Accelerator'].apply(lambda x: x if x != '-' else '')
-  df['a#'] = df['a#'].apply(lambda x: int(x) if x != '' else 0)
-  df['a#'] = df['a#'].apply(lambda x: x if x > 0 else '')
-  df['p#'] = df.apply(
-      lambda x: int(x['host_processors_per_node']), # * int(x['number_of_nodes']),
-      axis=1)
+  df['a#'] = df['a#'].apply(lambda x: int(x) if x.isnumeric() else x)
+  df['a#'] = df['a#'].apply(lambda x: x if x != 0 else '')
+  df['p#'] = df.apply(lambda x: int(x['host_processors_per_node']), axis=1)
 
   # details url
-  base_url = 'https://github.com/mlcommons/submissions_inference_2.0/tree/master'
+  base_url = 'https://github.com/mlcommons/submissions_inference_2.1/tree/master'
   df['Details'] = df.apply(
       lambda x: '=HYPERLINK("{}","details")'.format('/'.join(
           [base_url, x['Category'], x['Submitter'], 'results', x['Platform']])),
@@ -94,9 +92,8 @@ def main():
   ]
   columns_order = [['Result'],
                    [
-                       'resnet', 'ssd-small', 'ssd-large', '3d-unet-99',
-                       '3d-unet-99.9', 'rnnt', 'bert-99', 'bert-99.9',
-                       'dlrm-99', 'dlrm-99.9'
+                       'resnet', 'retinanet', '3d-unet-99', '3d-unet-99.9',
+                       'rnnt', 'bert-99', 'bert-99.9', 'dlrm-99', 'dlrm-99.9'
                    ], ['SingleStream', 'MultiStream', 'Server', 'Offline'],
                    [
                        'Latency (ms)',
@@ -107,30 +104,28 @@ def main():
                    ]]
 
   filter_scenarios = {
-    'datacenter': {
-      'resnet': ['Server', 'Offline'],
-      'ssd-large': ['Server', 'Offline'],
-      'ssd-small': [],
-      'rnnt': ['Server', 'Offline'],
-      'bert-99': ['Server', 'Offline'],
-      'bert-99.9': ['Server', 'Offline'],
-      'dlrm-99': ['Server', 'Offline'],
-      'dlrm-99.9': ['Server', 'Offline'],
-      '3d-unet-99': ['Offline'],
-      '3d-unet-99.9': ['Offline'],
-    },
-    'edge': {
-      'resnet': ['SingleStream', 'MultiStream', 'Offline'],
-      'ssd-small': ['SingleStream', 'MultiStream', 'Offline'],
-      'ssd-large': ['SingleStream', 'MultiStream', 'Offline'],
-      'rnnt': ['SingleStream', 'Offline'],
-      'bert-99': ['SingleStream', 'Offline'],
-      'bert-99.9': [],
-      'dlrm-99': [],
-      'dlrm-99.9': [],
-      '3d-unet-99': ['SingleStream', 'Offline'],
-      '3d-unet-99.9': ['SingleStream', 'Offline'],
-    }
+      'datacenter': {
+          'resnet': ['Server', 'Offline'],
+          'retinanet': ['Server', 'Offline'],
+          'rnnt': ['Server', 'Offline'],
+          'bert-99': ['Server', 'Offline'],
+          'bert-99.9': ['Server', 'Offline'],
+          'dlrm-99': ['Server', 'Offline'],
+          'dlrm-99.9': ['Server', 'Offline'],
+          '3d-unet-99': ['Offline'],
+          '3d-unet-99.9': ['Offline'],
+      },
+      'edge': {
+          'resnet': ['SingleStream', 'MultiStream', 'Offline'],
+          'retinanet': ['SingleStream', 'MultiStream', 'Offline'],
+          'rnnt': ['SingleStream', 'Offline'],
+          'bert-99': ['SingleStream', 'Offline'],
+          'bert-99.9': [],
+          'dlrm-99': [],
+          'dlrm-99.9': [],
+          '3d-unet-99': ['SingleStream', 'Offline'],
+          '3d-unet-99.9': ['SingleStream', 'Offline'],
+      }
   }
 
   def MakeWorksheet(df, index, filter_dict, sheet_name):
@@ -162,7 +157,8 @@ def main():
     return lambda x: f(x, *args)
 
   def FilterScenario(x, suite):
-    return x.apply(lambda y: y['Scenario'] in filter_scenarios[suite][y['Model']], axis = 1)
+    return x.apply(
+        lambda y: y['Scenario'] in filter_scenarios[suite][y['Model']], axis=1)
 
   def MakeUniqueID(x):
     key_list = ['Suite', 'Category', 'Submitter', 'Platform']
@@ -184,7 +180,7 @@ def main():
            key) in enumerate(pd.unique(df['Unique ID (e.g. for Audit)']))
   }
   df['ID'] = df.apply(
-      lambda x: '2.0-{:03}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
+      lambda x: '2.1-{:04}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
       axis=1)
 
   for category in ['closed', 'open', 'network']:
@@ -207,7 +203,8 @@ def main():
           df, indices[category], {
               'Category': Equal(category),
               'Suite': Contain(suite),
-              'has_power': Equal(True)
+              'has_power': Equal(True),
+              ('Scenario', 'Model'): Apply(FilterScenario, suite)
           }, category + ',' + suite + ',power')
 
   score_format = writer.book.add_format({'num_format': '#,##0.00'})

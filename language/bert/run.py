@@ -99,8 +99,7 @@ def main():
 
     print("Running LoadGen test...")
     lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
-
-    if args.accuracy:
+    if args.accuracy and not os.environ.get("SKIP_VERIFY_ACCURACY"):
         cmd = "python3 {:}/accuracy-squad.py {}".format(
             os.path.dirname(os.path.abspath(__file__)),
             '--max_examples {}'.format(

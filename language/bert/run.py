@@ -86,8 +86,9 @@ def main():
         settings.mode = lg.TestMode.AccuracyOnly
     else:
         settings.mode = lg.TestMode.PerformanceOnly
-
-    log_path = "build/logs"
+    log_path = os.environ.get("LOG_PATH")
+    if not log_path:
+        log_path = "build/logs"
     if not os.path.exists(log_path):
         os.makedirs(log_path)
     log_output_settings = lg.LogOutputSettings()

@@ -49,8 +49,8 @@ def main():
 
   # cleanup counts
   df['Accelerator'] = df['Accelerator'].apply(lambda x: x if x != '-' else '')
-  df['a#'] = df['a#'].apply(lambda x: int(x) if x != '' else 0)
-  df['a#'] = df['a#'].apply(lambda x: x if x > 0 else '')
+  df['a#'] = df['a#'].apply(lambda x: int(x) if x.isnumeric() else x)
+  df['a#'] = df['a#'].apply(lambda x: x if x != 0 else '')
   df['p#'] = df.apply(lambda x: int(x['host_processors_per_node']), axis=1)
 
   # details url
@@ -92,9 +92,8 @@ def main():
   ]
   columns_order = [['Result'],
                    [
-                       'resnet', 'retinanet', '3d-unet-99',
-                       '3d-unet-99.9', 'rnnt', 'bert-99', 'bert-99.9',
-                       'dlrm-99', 'dlrm-99.9'
+                       'resnet', 'retinanet', '3d-unet-99', '3d-unet-99.9',
+                       'rnnt', 'bert-99', 'bert-99.9', 'dlrm-99', 'dlrm-99.9'
                    ], ['SingleStream', 'MultiStream', 'Server', 'Offline'],
                    [
                        'Latency (ms)',
@@ -105,28 +104,28 @@ def main():
                    ]]
 
   filter_scenarios = {
-    'datacenter': {
-      'resnet': ['Server', 'Offline'],
-      'retinanet': ['Server', 'Offline'],
-      'rnnt': ['Server', 'Offline'],
-      'bert-99': ['Server', 'Offline'],
-      'bert-99.9': ['Server', 'Offline'],
-      'dlrm-99': ['Server', 'Offline'],
-      'dlrm-99.9': ['Server', 'Offline'],
-      '3d-unet-99': ['Offline'],
-      '3d-unet-99.9': ['Offline'],
-    },
-    'edge': {
-      'resnet': ['SingleStream', 'MultiStream', 'Offline'],
-      'retinanet': ['SingleStream', 'MultiStream', 'Offline'],
-      'rnnt': ['SingleStream', 'Offline'],
-      'bert-99': ['SingleStream', 'Offline'],
-      'bert-99.9': [],
-      'dlrm-99': [],
-      'dlrm-99.9': [],
-      '3d-unet-99': ['SingleStream', 'Offline'],
-      '3d-unet-99.9': ['SingleStream', 'Offline'],
-    }
+      'datacenter': {
+          'resnet': ['Server', 'Offline'],
+          'retinanet': ['Server', 'Offline'],
+          'rnnt': ['Server', 'Offline'],
+          'bert-99': ['Server', 'Offline'],
+          'bert-99.9': ['Server', 'Offline'],
+          'dlrm-99': ['Server', 'Offline'],
+          'dlrm-99.9': ['Server', 'Offline'],
+          '3d-unet-99': ['Offline'],
+          '3d-unet-99.9': ['Offline'],
+      },
+      'edge': {
+          'resnet': ['SingleStream', 'MultiStream', 'Offline'],
+          'retinanet': ['SingleStream', 'MultiStream', 'Offline'],
+          'rnnt': ['SingleStream', 'Offline'],
+          'bert-99': ['SingleStream', 'Offline'],
+          'bert-99.9': [],
+          'dlrm-99': [],
+          'dlrm-99.9': [],
+          '3d-unet-99': ['SingleStream', 'Offline'],
+          '3d-unet-99.9': ['SingleStream', 'Offline'],
+      }
   }
 
   def MakeWorksheet(df, index, filter_dict, sheet_name):
@@ -158,7 +157,8 @@ def main():
     return lambda x: f(x, *args)
 
   def FilterScenario(x, suite):
-    return x.apply(lambda y: y['Scenario'] in filter_scenarios[suite][y['Model']], axis = 1)
+    return x.apply(
+        lambda y: y['Scenario'] in filter_scenarios[suite][y['Model']], axis=1)
 
   def MakeUniqueID(x):
     key_list = ['Suite', 'Category', 'Submitter', 'Platform']

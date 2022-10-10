@@ -44,10 +44,16 @@ class SQuAD_v1_QSL():
             print("No cached features at '%s'... converting from examples..." % cache_path)
 
             print("Creating tokenizer...")
-            tokenizer = BertTokenizer("build/data/bert_tf_v1_1_large_fp32_384_v2/vocab.txt")
+            vocab_file = os.environ.get("VOCAB_FILE")
+            if not vocab_file:
+                vocab_file = "build/data/bert_tf_v1_1_large_fp32_384_v2/vocab.txt"
+            tokenizer = BertTokenizer(vocab_file)
 
             print("Reading examples...")
-            eval_examples = read_squad_examples(input_file="build/data/dev-v1.1.json",
+            dataset_file = os.environ.get("DATASET_FILE")
+            if not dataset_file:
+                dataset_file = "build/data/dev-v1.1.json"
+            eval_examples = read_squad_examples(input_file=dataset_file,
                 is_training=False, version_2_with_negative=False)
 
             print("Converting examples to features...")

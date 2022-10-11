@@ -45,7 +45,7 @@ class BERT_ONNXRuntime_SUT():
             #Currently considering only CUDAExecutionProvider
             self.sess = onnxruntime.InferenceSession(model_path, self.options, providers=['CUDAExecutionProvider'])
         else:
-            self.sess = onnxruntime.InferenceSession(model_path, self.options)
+            self.sess = onnxruntime.InferenceSession(model_path, self.options, providers=["CPUExecutionProvider"])
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)

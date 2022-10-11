@@ -5,7 +5,7 @@ onnxruntime backend (https://github.com/microsoft/onnxruntime)
 # pylint: disable=unused-argument,missing-docstring,useless-super-delegation
 
 import onnxruntime as rt
-
+import onnxruntime
 import backend
 
 
@@ -29,13 +29,17 @@ class BackendOnnxruntime(backend.Backend):
         opt = rt.SessionOptions()
         # enable level 3 optimizations
         # FIXME: enable below once onnxruntime 0.5 is released
-        # opt.set_graph_optimization_level(3)
+        #opt.set_graph_optimization_level(3)
         # self.sess = rt.InferenceSession(model_path, opt)
-        import torch
-        if torch.cuda.is_available():
-            self.sess = rt.InferenceSession(model_path, opt, providers=["CUDAExecutionProvider"])
-        else:
-            self.sess = rt.InferenceSession(model_path, opt)
+        #model_path = "/media/arjun/T7_Touch/hp-envy/CM/repos/local/cache/91146aa1c31f4512/model.onnx"
+        print(opt)
+        print(model_path)
+        options = onnxruntime.SessionOptions()
+        print(model_path)
+        self.sess = onnxruntime.InferenceSession(model_path, options, providers=['CUDAExecutionProvider'])
+
+
+        self.sess = rt.InferenceSession(model_path, opt, providers=["CUDAExecutionProvider"])
             
         # get input and output names
         if not inputs:

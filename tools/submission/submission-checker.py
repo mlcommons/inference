@@ -986,6 +986,8 @@ REQUIRED_ACC_FILES = [
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 MS_TO_NS = 1000 * 1000
 S_TO_MS = 1000
+FILE_SIZE_LIMIT_MB = 50
+MB_TO_BYTES = 1024*1024
 MAX_ACCURACY_LOG_SIZE = 10 * 1024
 OFFLINE_MIN_SPQ = 24576
 TEST_DURATION_MS_PRE_1_0 = 60000
@@ -1291,6 +1293,21 @@ def list_dir(*path):
 def list_files(*path):
   path = os.path.join(*path)
   return [f for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+
+
+def list_empty_dirs_recursively(*path):
+  path = os.path.join(*path)
+  return [dirpath for dirpath, dirs, files in os.walk(path) if not dirs and not files]
+
+
+def list_dirs_recursively(*path):
+  path = os.path.join(*path)
+  return [dirpath for dirpath, dirs, files in os.walk(path)]
+
+
+def list_files_recursively(*path):
+  path = os.path.join(*path)
+  return [os.path.join(dirpath, file) for dirpath, dirs, files in os.walk(path) for file in files]
 
 
 def split_path(m):
@@ -1711,7 +1728,6 @@ def is_system_over_network(division, system_json, path):
   """
     Verify whether the submitted system is over network and whether it is valid
     for the division
-
     for 'network' division, it is mandatory that the system is over-network
     for 'closed' division, the system must not be over-network
     for 'open' division, the system may be either local or over-network
@@ -1738,17 +1754,14 @@ def check_results_dir(config,
                       debug=False):
   """
     Walk the results directory and do the checking.
-
     We are called with the cdw at the root of the submission directory.
     level1 division - closed|open|network
     level2 submitter - for example mlperf_org
     level3 - results, systems, measurements, code
-
     For results the structure from here is:
     results/$system_desc/$benchmark_model/$scenario/performance/run_n
     and
     results/$system_desc/$benchmark_model/$scenario/accuracy
-
     We first walk into results/$system_desc
         make sure there is a system_desc.json and its good
     Next we walk into the model
@@ -1859,6 +1872,84 @@ def check_results_dir(config,
         continue
       results_path = os.path.join(division, submitter, "results")
       if not os.path.exists(results_path):
+        continue
+
+      ## Apply folder checks
+      dirs = list_dirs_recursively(division, submitter)
+      files = list_files_recursively(division, submitter)
+
+      # Check symbolic links
+      symbolic_links = [f for f in files if os.path.islink(f)]
+      if len(symbolic_links) > 0:
+        log.error(
+          "%s/%s contains symbolic links: %s",
+          division,
+          submitter,
+          symbolic_links,
+        )
+        results[f"{division}/{submitter}"] = None
+        continue
+
+      # Check for files over 50 MB
+      files_over_size_limit = [f for f in files if os.path.getsize(f) > FILE_SIZE_LIMIT_MB * MB_TO_BYTES]
+      if len(files_over_size_limit) > 0:
+        log.error(
+          "%s/%s contains files with size greater than 50 MB: %s",
+          division,
+          submitter,
+          files_over_size_limit,
+        )
+        results[f"{division}/{submitter}"] = None
+        continue
+
+      # Check files and folders with git unfriendly names
+      dir_names = [(dir_, dir_.split("/")[-1]) for dir_ in dirs]
+      file_names = [(file_, file_.split("/")[-1]) for file_ in files]
+      git_error_names = [name[0] for name in dir_names if name[1].startswith(".")] + [
+        name[0] for name in file_names if name[1].startswith(".")
+      ]
+      if len(git_error_names) > 0:
+        log.error(
+          "%s/%s contains files with git unfriendly name: %s",
+          division,
+          submitter,
+          git_error_names,
+        )
+        results[f"{division}/{submitter}"] = None
+        continue
+
+      # Check files and folders with spaces names
+      space_error_names = [name[0] for name in dir_names if " " in name[1]] + [
+        name[0] for name in file_names if " " in name[1]
+      ]
+      if len(space_error_names) > 0:
+        log.error(
+          "%s/%s contains files with spaces in their names: %s",
+          division,
+          submitter,
+          space_error_names,
+        )
+        results[f"{division}/{submitter}"] = None
+        continue
+
+      # Check for pycache folders
+      pycache_dirs = [dir for dir in dirs if dir.endswith("__pycache__")]
+      if len(pycache_dirs) > 0:
+        log.error(
+          "%s has the following __pycache__ directories: %s",
+          name,
+          pycache_dirs,
+        )
+        results[f"{division}/{submitter}"] = None
+        continue
+
+      # Check for empty folders
+      empty_dirs = list_empty_dirs_recursively(division, submitter)
+      if len(empty_dirs) > 0:
+        log.error(
+          "%s has the following empty directories: %s", name, empty_dirs
+        )
+        results[f"{division}/{submitter}"] = None
         continue
 
       for system_desc in list_dir(results_path):

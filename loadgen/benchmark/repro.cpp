@@ -30,7 +30,7 @@
 class QSL : public mlperf::QuerySampleLibrary {
  public:
   ~QSL() override{};
-  const std::string& Name() const override { return mName; }
+  const std::string& Name() override { return mName; }
   size_t TotalSampleCount() override { return 1000000; }
   size_t PerformanceSampleCount() override { return TotalSampleCount(); }
   void LoadSamplesToRam(

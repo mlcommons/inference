@@ -86,8 +86,9 @@ def main():
         settings.mode = lg.TestMode.AccuracyOnly
     else:
         settings.mode = lg.TestMode.PerformanceOnly
-
-    log_path = "build/logs"
+    log_path = os.environ.get("LOG_PATH")
+    if not log_path:
+        log_path = "build/logs"
     if not os.path.exists(log_path):
         os.makedirs(log_path)
     log_output_settings = lg.LogOutputSettings()
@@ -99,8 +100,7 @@ def main():
 
     print("Running LoadGen test...")
     lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
-
-    if args.accuracy:
+    if args.accuracy and not os.environ.get("SKIP_VERIFY_ACCURACY"):
         cmd = "python3 {:}/accuracy-squad.py {}".format(
             os.path.dirname(os.path.abspath(__file__)),
             '--max_examples {}'.format(

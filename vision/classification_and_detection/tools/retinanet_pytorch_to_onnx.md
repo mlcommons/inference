@@ -8,11 +8,11 @@ Download the weights of the desired model in pytorch format. The weights used fo
 ```
 wget https://zenodo.org/record/6605272/files/retinanet_model_10.zip
 ```
-Copy the script `resnext_pytorch_to_onnx.py` into the training repository in the folder `training/single_stage_detector/ssd`. From a folder that contains both repositories you will run the following command:
+Copy the script `retinanet_pytorch_to_onnx.py` into the training repository in the folder `training/single_stage_detector/ssd`. From a folder that contains both repositories you can run the following command:
 ```
-cp inference/vision/classification_and_detection/tools/resnext_pytorch_to_onnx.py training/single_stage_detector/ssd
+cp inference/vision/classification_and_detection/tools/retinanet_pytorch_to_onnx.py training/single_stage_detector/ssd
 ```
 Run the python script:
 ```
-python3 resnext_pytorch_to_onnx --weights <PATH_TO_WEIGHTS>
+python3 retinanet_pytorch_to_onnx --weights <PATH_TO_WEIGHTS>
 ```

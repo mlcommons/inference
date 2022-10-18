@@ -45,6 +45,7 @@ lib_headers = [
     "trace_generator.h",
     "utils.h",
     "version.h",
+    "results.h",
 ]
 
 lib_sources = [
@@ -55,6 +56,7 @@ lib_sources = [
     "test_settings_internal.cc",
     "utils.cc",
     "version.cc",
+    "results.cc",
 ]
 
 lib_bindings = [

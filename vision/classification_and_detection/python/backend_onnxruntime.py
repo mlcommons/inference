@@ -28,7 +28,6 @@ class BackendOnnxruntime(backend.Backend):
         """Load model and find input/outputs from the model file."""
         opt = rt.SessionOptions()
         # enable level 3 optimizations
-        # Disable for onnxruntime < 0.5
         #opt.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
         # self.sess = rt.InferenceSession(model_path, opt)
         if len(rt.get_all_providers()) > 1 and os.environ.get("USE_GPU", "yes").lower() not in [ "0", "false", "off", "no" ]:

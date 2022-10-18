@@ -1,16 +1,16 @@
 # Tools to check Submissions
 
-## `filter-errors.py` (Deprecated)
+## `filter_errors.py` (Deprecated)
 ### Summary
 Tool to remove manually verified ERRORs from the log file in the v0.7 submission.
 
-## `generate-final-report.py`
+## `generate_final_report.py`
 ### Inputs
 **input**: Path to .csv output file of the [submission checker](#submissioncheckerpy)
 ### Summary
 Generates the spreadsheet with the format in which the final results will be published. This script can be used by running the following command:
 ```
-python3 generate-final-report.py --input <path-to-csv>
+python3 generate_final_report.py --input <path-to-csv>
 ```
 ### Outputs
 Spreadsheet with the results.
@@ -48,7 +48,7 @@ Logs in console the errors that could cause problem uploading the submission to 
 ### Summary
 Checks a directory that contains one or several submission. This script can be used by running the following command:
 ```
-python3 submission-checker.py --input <path-to-folder> 
+python3 submission_checker.py --input <path-to-folder> 
     [--version <version>]
     [--submitter <submitter-name>]
     [--csv <path-to-output>]

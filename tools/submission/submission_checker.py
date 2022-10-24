@@ -2334,7 +2334,7 @@ def check_compliance_acc_dir(test_dir, model, config):
           acc_passed = True
           break
     if acc_passed == False:
-      log.info("Compliance test accuracy check in %s failed", test_dir)
+      log.info("Compliance test accuracy check (deterministic mode) in %s failed", test_dir)
 
     # Check Accuracy dir
     test_acc_path = os.path.join(test_dir, "accuracy")

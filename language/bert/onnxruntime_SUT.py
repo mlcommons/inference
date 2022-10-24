@@ -41,7 +41,11 @@ class BERT_ONNXRuntime_SUT():
                 model_path = "build/data/bert_tf_v1_1_large_fp32_384_v2/bert_large_v1_1_fake_quant.onnx"
             else:
                 model_path = "build/data/bert_tf_v1_1_large_fp32_384_v2/model.onnx"
-        self.sess = onnxruntime.InferenceSession(model_path, self.options)
+        if len(onnxruntime.get_all_providers()) > 1 and os.environ.get("USE_GPU", "yes").lower() not in [ "0", "false", "off", "no" ]:
+            #Currently considering only CUDAExecutionProvider
+            self.sess = onnxruntime.InferenceSession(model_path, self.options, providers=['CUDAExecutionProvider'])
+        else:
+            self.sess = onnxruntime.InferenceSession(model_path, self.options, providers=["CPUExecutionProvider"])
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)

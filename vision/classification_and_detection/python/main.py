@@ -229,6 +229,7 @@ def get_args():
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--qps", type=int, help="target qps")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
+    parser.add_argument("--cache_dir", type=str, default=None, help="dir path for caching")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
     parser.add_argument("--debug", action="store_true", help="debug, turn traces on")
@@ -471,7 +472,10 @@ def main():
                         image_format=image_format,
                         pre_process=pre_proc,
                         use_cache=args.cache,
-                        count=count, **kwargs)
+                        count=count,
+                        cache_dir=args.cache_dir,
+                        threads=args.threads,
+                        **kwargs)
     # load model to backend
     model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
     final_results = {

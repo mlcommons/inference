@@ -15,14 +15,13 @@
 
 """Python demo showing how to use the MLPerf Inference load generator bindings.
 This part of the demo runs the `client side` of the test.
-A corresponding `server side` dummy implemented in flask_app.py.
+A corresponding `server side` dummy is implemented in lon_flask_app_sut.py.
 """
 
 from __future__ import print_function
 
 import threading
 import requests
-import json
 import array
 
 from absl import app
@@ -31,11 +30,13 @@ import mlperf_loadgen
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('sut_server', 'http://localhost:8000', 'Address of the server under test.')
+flags.DEFINE_string('sut_server', 'http://localhost:8000',
+                    'Address of the server under test.')
 
 
 class QSL:
     """Dummy QuerySampleLibrary with dummy features."""
+
     def __init__(self, total_sample_count, performance_sample_count):
         self.eval_features = {
             i: f"what_is_my_dummy_feature_{i}?" for i in range(total_sample_count)}
@@ -48,7 +49,7 @@ class QSL:
 
     def load_samples_to_ram(self, query_samples):
         """Loads the features for the given query samples into RAM. Dummy implementation."""
-        del query_samples 
+        del query_samples
         return
 
     def unload_samples_from_ram(self, query_samples):
@@ -67,6 +68,7 @@ class QDL:
     - /predict/ : Send a query to the SUT and get a response.
     - /getname/ : Get the name of the SUT.
     """
+
     def __init__(self, qsl: QSL, sut_server_addr: str):
         """
         Constructor for the QDL.
@@ -99,13 +101,12 @@ class QDL:
     def process_query_async(self, query_samples):
         """
         This function is called by the Loadgen in a separate thread.
-        It is responsible for:
-        
-        1. Creating a query for the SUT, by reading the features from the QSL.
-        2. Sending the query to the SUT.
-        3. Waiting for the response from the SUT.
-        4. Deserializing the response.
-        5. Calling mlperf_loadgen.QuerySamplesComplete(query_samples, response)
+        It is responsible for
+            1. Creating a query for the SUT, by reading the features from the QSL.
+            2. Sending the query to the SUT.
+            3. Waiting for the response from the SUT.
+            4. Deserializing the response.
+            5. Calling mlperf_loadgen.QuerySamplesComplete(query_samples, response)
         Args:
             query_samples: A list of QuerySample objects.
         """
@@ -120,14 +121,14 @@ class QDL:
             sut_result = self.client_predict(features)
             response_array = array.array('B', sut_result.encode('utf-8'))
             bi = response_array.buffer_info()
-            responses.append(mlperf_loadgen.QuerySampleResponse(s.id, bi[0] , bi[1]))  # dummy response
+            responses.append(mlperf_loadgen.QuerySampleResponse(
+                s.id, bi[0], bi[1]))  # dummy response
         mlperf_loadgen.QuerySamplesComplete(responses)
 
     def client_predict(self, query):
         """Serialize the query, send it to the SUT, and return the deserialized response."""
         url = '{}/predict/'.format(self.sut_server_addr)
-        response = requests.post(url, json={'query':query})
-        print(response.json())
+        response = requests.post(url, json={'query': query})
         return response.json()['result']
 
     def client_get_name(self):

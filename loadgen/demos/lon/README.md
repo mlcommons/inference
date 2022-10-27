@@ -4,10 +4,16 @@
 
 ### Overview
 
-In this mode, the client is a separate node running LoadGen, QSL, and QDL instances.
-The SUT is another node which runs the server.
 
-The demo brings up a dummy SUT server and one client that send queries to the server.
+This folder provides a demo implementation for LoadGen over the network.\
+Two sides are implemented:
+
+1. The SUT side which is implemented in [sut_over_network_demo.py](sut_over_network_demo.py)
+2. The LoadGen node running the LoadGen, QSL and QDL instances, implemented in [py_demo_server_lon.py](py_demo_server_lon.py)
+
+The demo SUT is implemented with a Flask server. the LON node implements a Flask client for network operation.
+
+The test runs in MLPerf Server mode. the SUT is not implementing a benchmark but contains dummy interface to preprocessing, postprocessing and  model calling functions.
 
 ### Setup
 
@@ -33,13 +39,13 @@ cd ..; pip install --force-reinstall loadgen/dist/`ls -r loadgen/dist/ | head -n
 
 ### Run the demo (single machine)
 
-Start a dummy SUT server (run this at a separate terminal):
+Start the demo SUT server (run this at a separate terminal):
 
 ```sh
-python demos/lon/lon_flask_app_sut.py --port 8000
+python demos/lon/sut_over_network_demo.py --port 8000
 ```
 
-Start the test - client:
+Start the test:
 
 ```sh
 python demos/lon/py_demo_server_lon.py --sut_server http://localhost:8000
@@ -47,5 +53,5 @@ python demos/lon/py_demo_server_lon.py --sut_server http://localhost:8000
 
 ### Run the demo (over the network)
 
-To run over a network - simply run the flask app (i.e., the dummy SUT) over on a different machine. \
+To run over a network - simply run the demo SUT over on a different machine. \
 Then, when running the client, replace `localhost` with the correct IP.

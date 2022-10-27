@@ -15,7 +15,7 @@
 
 """Python demo showing how to use the MLPerf Inference load generator bindings.
 This part of the demo runs the `client side` of the test.
-A corresponding `server side` dummy is implemented in lon_flask_app_sut.py.
+A corresponding `server side` dummy is implemented in sut_over_network_demo.py.
 """
 
 from __future__ import print_function
@@ -77,7 +77,6 @@ class QDL:
             sut_server_addr: The address of the SUT.
         """
         self.qsl = qsl
-        # QDL acting as a proxy to the SUT.
         self.sut_server_addr = sut_server_addr
 
         # Check that the SUT name contains the substring 'Network SUT' as required
@@ -86,11 +85,13 @@ class QDL:
             raise Exception(
                 'The SUT name must contain the substring "Network SUT". Got: {}'.format(name))
 
+        # Construct QDL from the python binding
         self.qdl = mlperf_loadgen.ConstructQDL(
             self.issue_query, self.flush_queries, self.client_get_name)
         self.sut_server_addr = sut_server_addr
 
     def issue_query(self, query_samples):
+        """Process the query to send to the SUT"""
         threading.Thread(target=self.process_query_async,
                          args=[query_samples]).start()
 
@@ -151,9 +152,7 @@ def main(argv):
     settings.min_query_count = 100
     settings.min_duration_ms = 10000
 
-    # Change the settings to accommodate for multiple ranks writing.
     log_output_settings = mlperf_loadgen.LogOutputSettings()
-
     log_settings = mlperf_loadgen.LogSettings()
     log_settings.log_output = log_output_settings
 

@@ -140,11 +140,12 @@ class QueryDistributionLibraryTrampoline : public SystemUnderTest {
           flush_queries_callback_(flush_queries_callback),
           name_callback_(name_callback) {}
 
-    // Name returns the name of the SUT, and shall be called over the network
+    // Returns the name of the SUT. Name shall be returned over the network
+    // TODO: other bindings should also be fixed eventually to be used over the network 
     const std::string& Name() override {
       static std::string name; // HACK: avoid returning a reference to temporary.
       pybind11::gil_scoped_acquire gil_acquirer; 
-      name = name_callback_();
+      name = name_callback_(); // name_callback_() shall returned name over the network.
       return name;
     }
 

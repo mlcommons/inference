@@ -861,8 +861,8 @@ MODEL_CONFIG = {
             "bert-99.9": 10833,
             "dlrm-99": 204800,
             "dlrm-99.9": 204800,
-            "3d-unet-99": 42,
-            "3d-unet-99.9": 42,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
         },
         # TODO: Update this list.
         "model_mapping": {

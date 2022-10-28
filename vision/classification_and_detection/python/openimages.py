@@ -15,7 +15,7 @@ log = logging.getLogger("coco")
 
 class OpenImages(dataset.Dataset):
     def __init__(self, data_path, image_list, name, use_cache=0, image_size=None,
-                 image_format="NHWC", pre_process=None, count=None, cache_dir=None,use_label_map=False):
+                 image_format="NHWC", pre_process=None, count=None, cache_dir=None,use_label_map=False,threads=os.cpu_count()):
         super().__init__()
         self.image_size = image_size
         self.image_list = []

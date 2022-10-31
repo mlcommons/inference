@@ -53,7 +53,10 @@ class Imagenet(dataset.Dataset):
             for count, line in enumerate(fp):
                 pass
         count = count + 1
-        CNT = count if count <= self.count else self.count
+        if self.count is not None:
+            CNT = count if count <= self.count else self.count
+        else:
+            CNT = count
         if N > CNT:
             N = CNT
         log.info("Preprocessing {} images using {} threads".format(CNT, N))

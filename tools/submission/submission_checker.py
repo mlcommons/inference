@@ -1129,7 +1129,7 @@ class Config():
                ignore_uncommited=False,
                more_power_check=False):
     self.base = MODEL_CONFIG.get(version)
-    self.set_extra_model_benchmark_map(extra_model_benchmark_map)
+    self.extra_model_benchmark_map = extra_model_benchmark_map
     self.version = version
     self.models = self.base["models"]
     self.seeds = self.base["seeds"]
@@ -1142,12 +1142,6 @@ class Config():
     self.optional = None
     self.ignore_uncommited = ignore_uncommited
     self.more_power_check = more_power_check
-
-  def set_extra_model_benchmark_map(self, extra_model_benchmark_map):
-    if extra_model_benchmark_map:
-      for mapping in extra_model_benchmark_map.split(";"):
-        model_name, mlperf_model = mapping.split(":")
-        self.base["model_mapping"][model_name] = mlperf_model
 
   def set_type(self, submission_type):
     if submission_type is None and self.version in ["v0.5"]:
@@ -1164,17 +1158,24 @@ class Config():
     else:
       raise ValueError("invalid system type")
 
-  def get_mlperf_model(self, model):
+  def get_mlperf_model(self, model, extra_model_mapping = None):
     # preferred - user is already using the official name
     if model in self.models:
       return model
 
-    # simple mapping, ie resnet50->resnet ?
+    # simple mapping, ie resnet50->resnet
     mlperf_model = self.base["model_mapping"].get(model)
     if mlperf_model:
       return mlperf_model
 
-    # try to guess
+    # Custom mapping provided by the submitter
+    if extra_model_mapping is not None:
+      mlperf_model = extra_model_mapping.get(model)
+      if mlperf_model:
+        return mlperf_model
+
+    # try to guess, keep this for backwards compatibility
+    # TODO: Generalize this guess or remove it completely?
     if "ssdlite" in model or "ssd-inception" in model or "yolo" in model or \
         "ssd-mobilenet" in model or "ssd-resnet50" in model:
       model = "ssd-small"
@@ -1270,7 +1271,8 @@ def get_args():
       help="Pass this cmdline option to skip checking compliance/ dir")
   parser.add_argument(
       "--extra-model-benchmark-map",
-      help="extra model name to benchmark mapping")
+      help="File containing extra custom model mapping. It is assumed to be inside the folder open/<submitter>",
+      default="model_mapping.json")
   parser.add_argument("--debug", action="store_true", help="extra debug output")
   parser.add_argument(
       "--submission-exceptions",
@@ -1952,6 +1954,14 @@ def check_results_dir(config,
         results[f"{division}/{submitter}"] = None
         continue
 
+      # Check for extra model mapping
+      extra_model_mapping = None
+      if division == "open":
+        model_mapping_path = f"{division}/{submitter}/{config.extra_model_benchmark_map}"
+        if os.path.exists(model_mapping_path):
+          with open(model_mapping_path) as fp:
+            extra_model_mapping = json.load(fp)
+
       for system_desc in list_dir(results_path):
         # we are looking at ./$division/$submitter/results/$system_desc, ie ./closed/mlperf_org/results/t4-ort
 
@@ -1998,7 +2008,7 @@ def check_results_dir(config,
           # we are looking at ./$division/$submitter/results/$system_desc/$model,
           #   ie ./closed/mlperf_org/results/t4-ort/bert
           name = os.path.join(results_path, system_desc, model_name)
-          mlperf_model = config.get_mlperf_model(model_name)
+          mlperf_model = config.get_mlperf_model(model_name, extra_model_mapping)
 
           if is_closed_or_network and mlperf_model not in config.models:
             # for closed/network divisions we want the model name to match.

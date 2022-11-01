@@ -53,7 +53,10 @@ class Imagenet(dataset.Dataset):
             for count, line in enumerate(fp):
                 pass
         count = count + 1
-        CNT = count if count <= self.count else self.count
+        if not self.count:
+            CNT = count
+        else:
+            CNT = count if count <= self.count else self.count
         if N > CNT:
             N = CNT
         log.info("Preprocessing {} images using {} threads".format(CNT, N))
@@ -82,7 +85,7 @@ class Imagenet(dataset.Dataset):
             log.error("no images in image list found")
             raise ValueError("no images in image list found")
         if self.not_found > 0:
-            log.info("reduced image list, %d images not found", not_found)
+            log.info("reduced image list, %d images not found", self.not_found)
 
         log.info("loaded {} images, cache={}, took={:.1f}sec".format(
             len(self.image_list), use_cache, time_taken))

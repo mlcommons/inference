@@ -13,12 +13,13 @@
 # limitations under the License.
 # =============================================================================
 
-"""Python demo showing how to use the MLPerf Inference load generator bindings.
-This part of the demo runs the `client side` of the test.
-A corresponding `server side` dummy is implemented in sut_over_network_demo.py.
 """
-
-from __future__ import print_function
+Python demo showing how to use the MLPerf Inference LoadGen over the Network bindings.
+This programs runs in the LON Node side.
+It runs the demo in MLPerf server mode over the network.
+It communicates over the network with a Network SUT node,
+which is running the Network SUT demo based on a flask server, implemented in SUT_over_network.py
+"""
 
 import threading
 import requests
@@ -35,7 +36,7 @@ flags.DEFINE_string('sut_server', 'http://localhost:8000',
 
 
 class QSL:
-    """Dummy QuerySampleLibrary with dummy features."""
+    """Demo QuerySampleLibrary with dummy features."""
 
     def __init__(self, total_sample_count, performance_sample_count):
         self.eval_features = {
@@ -48,12 +49,14 @@ class QSL:
         return self.eval_features[sample_id]
 
     def load_samples_to_ram(self, query_samples):
-        """Loads the features for the given query samples into RAM. Dummy implementation."""
+        """Loads the features for the given query samples into RAM. """
+        # This implementation is a Dummy implementation, which does nothing.
         del query_samples
         return
 
     def unload_samples_from_ram(self, query_samples):
-        """Unloads the features for the given query samples from RAM. Dummy implementation."""
+        """Unloads the features for the given query samples from RAM."""
+        # This implementation is a Dummy implementation, which does nothing.
         del query_samples
         return
 
@@ -66,7 +69,7 @@ class QDL:
     This QDL communicates with the SUT via HTTP.
     It uses two endpoints to communicate with the SUT:
     - /predict/ : Send a query to the SUT and get a response.
-    - /getname/ : Get the name of the SUT.
+    - /getname/ : Get the name of the SUT. Send a getname to the SUT and get a response.
     """
 
     def __init__(self, qsl: QSL, sut_server_addr: str):
@@ -78,12 +81,6 @@ class QDL:
         """
         self.qsl = qsl
         self.sut_server_addr = sut_server_addr
-
-        # Check that the SUT name contains the substring 'Network SUT' as required
-        name = self.client_get_name()
-        if not 'Network SUT' in name:
-            raise Exception(
-                'The SUT name must contain the substring "Network SUT". Got: {}'.format(name))
 
         # Construct QDL from the python binding
         self.qdl = mlperf_loadgen.ConstructQDL(

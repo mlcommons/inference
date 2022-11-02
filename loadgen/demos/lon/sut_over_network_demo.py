@@ -14,12 +14,13 @@
 # =============================================================================
 
 
-"""Python demo showing how to use the MLPerf Inference load generator bindings over the network.
-This part of the demo runs the `server side` of the test.
-A corresponding `client side` dummy implemented in py_demo_server_lon.py.
+"""
+Python demo showing how to use the MLPerf Inference load generator bindings over the network.
+This part of the demo runs the "demo SUT" which is connected over the network to the LON node.
+A corresponding "demo LON node" with the demo test is implemented in py_demo_server_lon.py.
 
-The server side is implemented using Flask.
-The SUT server supports two endpoints:
+The SUT is implemented using a Flask server, with dummy implementation of the inference processing.
+Two endpoints are exposed:
 - /predict/ : Receives a query (e.g., a text) runs inference, and returns a prediction.
 - /getname/ : Get the name of the SUT.
 
@@ -37,28 +38,34 @@ app = Flask(__name__)
 
 
 def preprocess(query):
-    # A dummy preprocessing function.
+    """A dummy preprocess."""
     # Here may come for example batching, tokenization, resizing, normalization, etc.
-    return query
+    response = query
+    return response
 
 
 def dnn_model(query):
-    # A dummy dnn model call.
+    """A dummy DNN model."""
     # Here may come for example a call to a dnn model such as resnet, bert, etc.
-    return query
+    response = query
+    return response
 
 
 def postprocess(query):
-    # A dummy postprocess.
+    """A dummy postprocess."""
     # Here may come for example a postprocessing call, e.g., NMS, detokenization, etc.
 
-    # This current dummy implementation just returns part of the input query as a response:
-    # what_is_my_dummy_feature_{i}? --> dummy_feature_{i}
-    return query.replace("what_is_my_", "").replace("?", "")
+    # In this demo, the implementation is specific to the demo QSL:
+    # it simply returns part of the input query as a response:
+    # QSL features:     "what_is_my_dummy_feature_{i}?" 
+    # expected result:  "dummy_feature_{i}"
+    response = query.replace("what_is_my_", "").replace("?", "")
+    return response
 
 
 @app.route('/predict/', methods=['POST'])
 def predict():
+    """Receives a query (e.g., a text) runs inference, and returns a prediction."""
     query = request.get_json(force=True)['query']
     result = postprocess(dnn_model(preprocess(query)))
     return jsonify(result=result)
@@ -66,7 +73,8 @@ def predict():
 
 @app.route('/getname/', methods=['POST', 'GET'])
 def getname():
-    return jsonify(name='Dummy SUT (Network SUT)')
+    """Returns the name of the SUT."""
+    return jsonify(name='Demo SUT (Network SUT)')
 
 
 if __name__ == '__main__':

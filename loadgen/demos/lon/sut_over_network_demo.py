@@ -54,12 +54,7 @@ def dnn_model(query):
 def postprocess(query):
     """A dummy postprocess."""
     # Here may come for example a postprocessing call, e.g., NMS, detokenization, etc.
-
-    # In this demo, the implementation is specific to the demo QSL:
-    # it simply returns part of the input query as a response:
-    # QSL features:     "what_is_my_dummy_feature_{i}?" 
-    # expected result:  "dummy_feature_{i}"
-    response = query.replace("what_is_my_", "").replace("?", "")
+    response = query
     return response
 
 

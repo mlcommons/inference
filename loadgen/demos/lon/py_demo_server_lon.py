@@ -24,6 +24,7 @@ which is running the Network SUT demo based on a flask server, implemented in SU
 import threading
 import requests
 import array
+import time
 
 from absl import app
 from absl import flags
@@ -49,14 +50,14 @@ class QSL:
         return self.eval_features[sample_id]
 
     def load_samples_to_ram(self, query_samples):
-        """Loads the features for the given query samples into RAM. """
-        # This implementation is a Dummy implementation, which does nothing.
+        """Loads the features for the given query samples into RAM."""
+        # Current implementation is not using this functionality.
         del query_samples
         return
 
     def unload_samples_from_ram(self, query_samples):
         """Unloads the features for the given query samples from RAM."""
-        # This implementation is a Dummy implementation, which does nothing.
+        # Current implementation is not using this functionality.
         del query_samples
         return
 
@@ -114,6 +115,9 @@ class QDL:
             # QDL builds a real-world query and sends to SUT --> SUT processes --> SUT sends back to QDL
             # Read features from the QSL
             features = self.qsl.get_features(s.index)
+
+            time.sleep(.001)  # Ensure a maximal rate of queries to the SUT
+
             # Send the query to SUT
             # Wait for a response
             sut_result = self.client_predict(features)
@@ -149,16 +153,11 @@ def main(argv):
     settings.min_query_count = 100
     settings.min_duration_ms = 10000
 
-    log_output_settings = mlperf_loadgen.LogOutputSettings()
-    log_settings = mlperf_loadgen.LogSettings()
-    log_settings.log_output = log_output_settings
-
     # QDL and QSL
     qsl = QSL(1024, 128)
     qdl = QDL(qsl, sut_server_addr=FLAGS.sut_server)
 
-    mlperf_loadgen.StartTestWithLogSettings(
-        qdl.qdl, qsl.qsl, settings, log_settings)
+    mlperf_loadgen.StartTest(qdl.qdl, qsl.qsl, settings)
 
 
 if __name__ == "__main__":

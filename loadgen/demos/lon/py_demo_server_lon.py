@@ -120,17 +120,17 @@ class QDL:
 
             # Send the query to SUT
             # Wait for a response
-            sut_result = self.client_predict(features)
+            sut_result = self.client_predict(features, s.index)
             response_array = array.array('B', sut_result.encode('utf-8'))
             bi = response_array.buffer_info()
             responses.append(mlperf_loadgen.QuerySampleResponse(
-                s.id, bi[0], bi[1]))  # dummy response
+                s.id, bi[0], bi[1]))
         mlperf_loadgen.QuerySamplesComplete(responses)
 
-    def client_predict(self, query):
+    def client_predict(self, query, id):
         """Serialize the query, send it to the SUT, and return the deserialized response."""
         url = '{}/predict/'.format(self.sut_server_addr)
-        response = requests.post(url, json={'query': query})
+        response = requests.post(url, json={'query': query, id: id})
         return response.json()['result']
 
     def client_get_name(self):

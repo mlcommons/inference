@@ -438,7 +438,7 @@ def main():
                       20, 30, True, args.out_file, args.max_examples)
 
     print("Evaluating predictions...")
-    cmd = "python3 {:}/evaluate-v1.1.py {:} {:} {}".format(
+    cmd = "python3 {:}/evaluate_v1.1.py {:} {:} {}".format(
         os.path.dirname(os.path.abspath(__file__)), args.val_data,
         args.out_file, '--max_examples {}'.format(
             args.max_examples) if args.max_examples else '')

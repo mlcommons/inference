@@ -35,7 +35,7 @@ class BERT_ONNXRuntime_SUT():
         print("Loading ONNX model...")
         self.quantized = args.quantized
 
-        model_path = os.environ.get("MODEL_FILE")
+        model_path = os.environ.get("ML_MODEL_FILE_WITH_PATH")
         if not model_path:
             if self.quantized:
                 model_path = "build/data/bert_tf_v1_1_large_fp32_384_v2/bert_large_v1_1_fake_quant.onnx"

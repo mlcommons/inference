@@ -45,9 +45,9 @@ pip install onnxruntime
 ```
 cd $HOME
 mkdir ./mlcommons && cd ./mlcommons
-git clone --recurse-submodules https://github.com/mlcommons/training.git
 git clone --recurse-submodules https://github.com/mlcommons/inference.git
-export DLRM_DIR=$HOME/mlcommons/training/recommendation/dlrm
+git clone https://github.com/facebookresearch/dlrm
+export DLRM_DIR=$HOME/dlrm
 ```
 2. Download pre-trained model weights (see links available above)
 ```

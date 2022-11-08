@@ -1,6 +1,6 @@
 #!/bin/bash
 
-: "${DATASET_PATH:=../open-calibration-images-v6-mlperf}"
+: "${DATASET_PATH:=../open-images-v6-mlperf}"
 
 while [ "$1" != "" ]; do
     case $1 in
@@ -52,5 +52,5 @@ MLPERF_CLASSES=('Airplane' 'Antelope' 'Apple' 'Backpack' 'Balloon' 'Banana'
 
 python3 openimages_calibration.py \
     --dataset-dir=${DATASET_PATH} \
-    --output-labels="openimages-mlperf.json" \
+    --output-labels="openimages-calibration-mlperf.json" \
     --classes "${MLPERF_CLASSES[@]}"

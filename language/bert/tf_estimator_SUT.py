@@ -39,7 +39,7 @@ class BERT_TF_ESTIMATOR_SUT():
 
         model_fn = self.model_fn_builder(
             bert_config=bert_config,
-            init_checkpoint="build/data/bert_tf_v1_1_large_fp32_384_v2/model.ckpt-5474")
+            init_checkpoint=os.environ.get("ML_MODEL_FILE_WITH_PATH", "build/data/bert_tf_v1_1_large_fp32_384_v2/model.ckpt-5474"))
 
         self.estimator = tf.estimator.Estimator(model_fn=model_fn)
         self.batch_size = batch_size

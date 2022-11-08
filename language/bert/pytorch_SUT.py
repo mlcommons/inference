@@ -55,7 +55,8 @@ class BERT_PyTorch_SUT():
         self.model = BertForQuestionAnswering(config)
         self.model.to(self.dev)
         self.model.eval()
-        self.model.load_state_dict(torch.load("build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch"), strict=True)
+        model_file = os.environ.get("ML_MODEL_FILE_WITH_PATH", "build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch")
+        self.model.load_state_dict(torch.load(model_file), strict=True)
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)

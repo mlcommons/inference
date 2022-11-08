@@ -37,8 +37,8 @@ class BERT_TF_SUT():
                 if 'TF_INTER_OP_PARALLELISM_THREADS' in os.environ else os.cpu_count()
         infer_config.use_per_session_threads = 1
         self.sess = tf.compat.v1.Session(config=infer_config)
-
-        with gfile.FastGFile('build/data/bert_tf_v1_1_large_fp32_384_v2/model.pb', 'rb') as f:
+        model_file = os.environ.get('ML_MODEL_FILE_WITH_PATH', 'build/data/bert_tf_v1_1_large_fp32_384_v2/model.pb')
+        with gfile.FastGFile(model_file, 'rb') as f:
             graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f.read())
             self.sess.graph.as_default()

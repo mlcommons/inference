@@ -131,9 +131,9 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 
 // A QDL that allows defining callbacks for
 // IssueQuery, FlushQueries, and Name methods.
-class QueryDistributionLibraryTrampoline : public SystemUnderTest {
+class QueryDispatchLibraryTrampoline : public SystemUnderTest {
   public:
-    QueryDistributionLibraryTrampoline(IssueQueryCallback issue_query_callback,
+    QueryDispatchLibraryTrampoline(IssueQueryCallback issue_query_callback,
                                  FlushQueriesCallback flush_queries_callback,
                                  NameCallback name_callback)
         : issue_query_callback_(issue_query_callback),
@@ -212,14 +212,14 @@ void DestroyQSL(uintptr_t qsl) {
 uintptr_t ConstructQDL(IssueQueryCallback issue_cb,
                        FlushQueriesCallback flush_queries_cb,
                        NameCallback name_callback) {
-  QueryDistributionLibraryTrampoline* qdl =
-      new QueryDistributionLibraryTrampoline(issue_cb, flush_queries_cb, name_callback);
+  QueryDispatchLibraryTrampoline* qdl =
+      new QueryDispatchLibraryTrampoline(issue_cb, flush_queries_cb, name_callback);
   return reinterpret_cast<uintptr_t>(qdl);
 }
 
 void DestroyQDL(uintptr_t qdl) {
-  QueryDistributionLibraryTrampoline* qdl_cast =
-      reinterpret_cast<QueryDistributionLibraryTrampoline*>(qdl);
+  QueryDispatchLibraryTrampoline* qdl_cast =
+      reinterpret_cast<QueryDispatchLibraryTrampoline*>(qdl);
   delete qdl_cast;
 }
  

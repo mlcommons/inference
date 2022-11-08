@@ -71,7 +71,7 @@ python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --
 | imagenet2012 (validation) | http://image-net.org/challenges/LSVRC/2012/ |
 | coco (validation) | http://images.cocodataset.org/zips/val2017.zip |
 | coco (annotations) | http://images.cocodataset.org/annotations/annotations_trainval2017.zip |
-| openimages | We provide a [script](tools/openimages_mlperf.sh) to download the openimages mlperf validation set. You can download the dataset by going into the tools folder and running `./openimages_mlperf -d <DOWNLOAD_PATH>` |
+| openimages | We provide a [script](tools/openimages_mlperf.sh) to download the openimages mlperf validation set. You can download the dataset by going into the tools folder and running `./openimages_mlperf -d <DOWNLOAD_PATH>  -m <MAX_IMAGES>` |
 | openimages (calibration) | We also provide a [script](tools/openimages_calibration_mlperf.sh) to download the openimages mlperf validation set. You can download the dataset by going into the tools folder and running `./openimages_calibration_mlperf -d <DOWNLOAD_PATH>`. This requires you to have [calibration list](../../calibration/openimages/openimages_cal_images_list.txt) |
 
 ### Using Collective Knowledge (CK)

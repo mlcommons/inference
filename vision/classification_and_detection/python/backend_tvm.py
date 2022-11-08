@@ -11,7 +11,6 @@ from tvm.contrib import graph_executor
 
 import numpy as np
 
-import re
 import os
 import multiprocessing
 
@@ -299,7 +298,7 @@ class BackendTVM(backend.Backend):
 
             # Process TVM outputs
             tvm_output = []
-            output_order = range(self.graph.get_num_outputs()) if self.output_order == None else self.output_order
+            output_order = range(self.graph.get_num_outputs()) if not self.output_order else self.output_order
             for i in output_order:
                 # Take only the output of batch size for dynamic batches
                 tvm_output.append(self.graph.get_output(i).asnumpy()[:batch_size])

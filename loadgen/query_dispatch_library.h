@@ -25,14 +25,15 @@ namespace mlperf {
 /// \addtogroup LoadgenAPI
 /// @{
 
-/// \brief The interface a client implements for the loadgen over the network to test. The API inherits the System_under_test.h API
+/// \brief The interface a client implements for the LoadGen over the network to test. The API inherits the System_under_test.h API
+/// When working in LON mode the QueryDispatchLibrary class is used and natively Upcasted to the QueryDispatchLibrary class.
 
 class QueryDispatchLibrary : public SystemUnderTest {
  public:
-  virtual ~QueryDispatchLibrary() {}
+  virtual ~QueryDispatchLibrary() = default;
 
   /// \brief A human-readable string for logging purposes. 
-  ///        localName should return from LON node name.
+  ///        localName should return from LON node name. It is not used for now.
   virtual const std::string& LocalName() = 0;
 
 };

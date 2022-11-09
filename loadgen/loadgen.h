@@ -69,8 +69,6 @@ void QuerySamplesComplete(QuerySampleResponse* responses, size_t response_count,
 /// \brief Starts the test against SUT with the specified settings.
 /// \details This is the C++ entry point. See mlperf::c::StartTest for the
 /// C entry point.
-/// When working in LON mode the QueryDispatchLibrary class is used and 
-/// natively Upcasted to the sut entry.
 ///
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,

@@ -38,21 +38,21 @@ app = Flask(__name__)
 
 
 def preprocess(query):
-    """A dummy preprocess."""
+    """[SUT Node] A dummy preprocess."""
     # Here may come for example batching, tokenization, resizing, normalization, etc.
     response = query
     return response
 
 
 def dnn_model(query):
-    """A dummy DNN model."""
+    """[SUT Node] A dummy DNN model."""
     # Here may come for example a call to a dnn model such as resnet, bert, etc.
     response = query
     return response
 
 
 def postprocess(query):
-    """A dummy postprocess."""
+    """[SUT Node] A dummy postprocess."""
     # Here may come for example a postprocessing call, e.g., NMS, detokenization, etc.
     response = query
     return response

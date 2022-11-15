@@ -156,10 +156,14 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 
 In addition to that the QDL needs to implement the following methods that are provided by the SUT interface to the LoadGen:
 ```CPP
-const std::string& Name() const;
+const std::string& Name();
 ```
 The `Name` function returns a known string for over the Network SUTs to identify it as over the network benchmark.
 ```CPP
 void FlushQueries();
 ```
 It is not specified here how the QDL would query and configure the SUT to execute the above methods. The QDL provides the response to the loadgen after the SUT is ready.
+
+### Example
+
+Refer to [LON demo](demos/lon) for a reference example illustrating usage of Loadgen over the network.

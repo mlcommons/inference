@@ -30,3 +30,7 @@ To build the loadgen as a C++ library, rather than a python module:
     mkdir loadgen/build/ && cd loadgen/build/
     cmake .. && cmake --build .
     cp libmlperf_loadgen.a ..
+
+## Quick start: Loadgen Over the Network
+
+Refer to [LON demo](demos/lon/README.md) for a basic example.

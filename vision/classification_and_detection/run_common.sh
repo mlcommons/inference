@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|retinanet] [cpu|gpu]"
+    echo "usage: $0 tf|onnxruntime|pytorch|tflite|tvm-onnx|tvm-pytorch [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|retinanet] [cpu|gpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -18,7 +18,7 @@ device="cpu"
 
 for i in $* ; do
     case $i in
-       tf|onnxruntime|tflite|pytorch) backend=$i; shift;;
+       tf|onnxruntime|tflite|pytorch|tvm-onnx|tvm-pytorch) backend=$i; shift;;
        cpu|gpu) device=$i; shift;;
        gpu) device=gpu; shift;;
        resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf|retinanet) model=$i; shift;;
@@ -117,6 +117,24 @@ if [ $name == "mobilenet-tflite" ] ; then
     model_path="$MODEL_DIR/mobilenet_v1_1.0_224.tflite"
     profile=mobilenet-tf
     extra_args="$extra_args --backend tflite"
+fi
+
+#
+# TVM with ONNX models
+#
+if [ $name == "resnet50-tvm-onnx" ] ; then
+    model_path="$MODEL_DIR/resnet50_v1.onnx"
+    profile=resnet50-onnxruntime
+    extra_args="$extra_args --backend tvm"
+fi
+
+#
+# TVM with PyTorch models
+#
+if [ $name == "resnet50-tvm-pytorch" ] ; then
+    model_path="$MODEL_DIR/resnet50_INT8bit_quantized.pt"
+    profile=resnet50-onnxruntime
+    extra_args="$extra_args --backend tvm"
 fi
 
 name="$backend-$device/$model"

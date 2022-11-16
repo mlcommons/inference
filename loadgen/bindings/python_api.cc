@@ -410,10 +410,10 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
   m.def("DestroyQSL", &py::DestroyQSL,
         "Destroy the object created by ConstructQSL.");
 
-    m.def("ConstructQDL", &py::ConstructQDL, 
-        "Construct the query sample library, communicating with the SUT over the network.");
-    m.def("DestroyQDL", &py::DestroyQSL,
-        "Destroy the object created by ConstructQDL.");
+  m.def("ConstructQDL", &py::ConstructQDL, 
+      "Construct the query sample library, communicating with the SUT over the network.");
+  m.def("DestroyQDL", &py::DestroyQDL,
+      "Destroy the object created by ConstructQDL.");
 
   m.def("StartTest", &py::StartTest,
         "Run tests on a SUT created by ConstructSUT() with the provided QSL. "

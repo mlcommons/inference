@@ -3,6 +3,7 @@
 This is the reference implementation for MLPerf Inference Classification and Object Detection benchmarks
 
 You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
+
 This [CK2/CM script](https://github.com/mlcommons/ck/blob/master/cm-mlops/script/run-mlperf-inference-app/README.md) provides commands to do an end to end MLPerf Inference submission generation (downloading the dataset, preprocessing the dataset, downloading the model, configuring the SUT, running the benchmark, generating the submission folder and running the submission checker) for this benchmark and also a [C++ implementation of it](https://github.com/mlcommons/ck/tree/master/cm-mlops/script/app-mlperf-inference-cpp). 
 
 ## Supported Models

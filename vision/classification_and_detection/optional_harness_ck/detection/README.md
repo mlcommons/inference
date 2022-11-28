@@ -1,3 +1,6 @@
+**NB** This page is outdated. Please follow [here](https://github.com/mlcommons/ck/issues/536) for the latest update on automation of MLPerf inference benchmarks using
+MLCommons CK2/CM framework.
+
 [![compatibility](https://github.com/ctuning/ck-guide-images/blob/master/ck-compatible.svg)](https://github.com/ctuning/ck)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 

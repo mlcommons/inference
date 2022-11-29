@@ -8,6 +8,11 @@ while [ "$1" != "" ]; do
                                       DATASET_PATH=$1
                                       ;;
     esac
+    case $1 in
+        -m | --max-images  )        shift
+                                      MAX_IMAGES=$1
+                                      ;;
+    esac
     shift
 done
 
@@ -50,7 +55,17 @@ MLPERF_CLASSES=('Airplane' 'Antelope' 'Apple' 'Backpack' 'Balloon' 'Banana'
 'Whale' 'Wheel' 'Wheelchair' 'Whiteboard' 'Window' 'Wine' 'Wine glass' 'Woman'
 'Zebra' 'Zucchini')
 
-python3 openimages.py \
-    --dataset-dir=${DATASET_PATH} \
-    --output-labels="openimages-mlperf.json" \
-    --classes "${MLPERF_CLASSES[@]}"
+if [ -z ${MAX_IMAGES} ];
+then
+    python3 openimages.py \
+        --dataset-dir=${DATASET_PATH} \
+        --output-labels="openimages-mlperf.json" \
+        --classes "${MLPERF_CLASSES[@]}"
+else
+    python3 openimages.py \
+        --dataset-dir=${DATASET_PATH} \
+        --output-labels="openimages-mlperf.json" \
+        --classes "${MLPERF_CLASSES[@]}" \
+        --max-images ${MAX_IMAGES} \
+        --seed 42
+fi

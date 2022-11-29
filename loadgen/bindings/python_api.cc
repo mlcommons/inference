@@ -36,6 +36,7 @@ using IssueQueryCallback = std::function<void(std::vector<QuerySample>)>;
 using FastIssueQueriesCallback =
     std::function<void(std::vector<ResponseId>, std::vector<QuerySampleIndex>)>;
 using FlushQueriesCallback = std::function<void()>;
+using NameCallback = std::function<std::string()>;
 
 // Forwards SystemUnderTest calls to relevant callbacks.
 class SystemUnderTestTrampoline : public SystemUnderTest {
@@ -128,6 +129,39 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   UnloadSamplesFromRamCallback unload_samples_from_ram_cb_;
 };
 
+// A QDL that allows defining callbacks for
+// IssueQuery, FlushQueries, and Name methods.
+class QueryDispatchLibraryTrampoline : public SystemUnderTest {
+  public:
+    QueryDispatchLibraryTrampoline(IssueQueryCallback issue_query_callback,
+                                 FlushQueriesCallback flush_queries_callback,
+                                 NameCallback name_callback)
+        : issue_query_callback_(issue_query_callback),
+          flush_queries_callback_(flush_queries_callback),
+          name_callback_(name_callback) {}
+
+    // Returns the name of the SUT. Name shall be returned over the network
+    // TODO: other bindings should also be fixed eventually to be used over the network 
+    const std::string& Name() override {
+      static std::string name; // HACK: avoid returning a reference to temporary.
+      pybind11::gil_scoped_acquire gil_acquirer; 
+      name = name_callback_(); // name_callback_() shall returned name over the network.
+      return name;
+    }
+
+    void IssueQuery(const std::vector<QuerySample>& samples) override {
+        pybind11::gil_scoped_acquire gil_acquirer;
+        issue_query_callback_(samples);
+    }
+
+    void FlushQueries() override { flush_queries_callback_(); }
+
+    protected:
+      IssueQueryCallback issue_query_callback_;
+      FlushQueriesCallback flush_queries_callback_;
+      NameCallback name_callback_;
+};
+
 }  // namespace
 
 /// \brief Python bindings.
@@ -175,6 +209,20 @@ void DestroyQSL(uintptr_t qsl) {
   delete qsl_cast;
 }
 
+uintptr_t ConstructQDL(IssueQueryCallback issue_cb,
+                       FlushQueriesCallback flush_queries_cb,
+                       NameCallback name_callback) {
+  QueryDispatchLibraryTrampoline* qdl =
+      new QueryDispatchLibraryTrampoline(issue_cb, flush_queries_cb, name_callback);
+  return reinterpret_cast<uintptr_t>(qdl);
+}
+
+void DestroyQDL(uintptr_t qdl) {
+  QueryDispatchLibraryTrampoline* qdl_cast =
+      reinterpret_cast<QueryDispatchLibraryTrampoline*>(qdl);
+  delete qdl_cast;
+}
+ 
 void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings,
                const std::string& audit_config_filename) {
   pybind11::gil_scoped_release gil_releaser;
@@ -361,6 +409,11 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         "Construct the query sample library.");
   m.def("DestroyQSL", &py::DestroyQSL,
         "Destroy the object created by ConstructQSL.");
+
+  m.def("ConstructQDL", &py::ConstructQDL, 
+      "Construct the query sample library, communicating with the SUT over the network.");
+  m.def("DestroyQDL", &py::DestroyQDL,
+      "Destroy the object created by ConstructQDL.");
 
   m.def("StartTest", &py::StartTest,
         "Run tests on a SUT created by ConstructSUT() with the provided QSL. "

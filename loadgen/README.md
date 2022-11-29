@@ -128,7 +128,7 @@ QDL implements the protocol to transmit queries over the network and receive res
 The MLperf over the Network will run in Server mode and Offline mode. All LoadGen modes are expected to work as is with insignificant changes. These include running the test in performance mode, accuracy mode, find peak performance mode and compliance mode. The same applies for power measurements.
 
 ### QDL details
-The Query Dispatch Library is implemented by the submitter and interfaces with LoadGen using the same SUT API. All MLPerf Inference SUTs implement the `mlperf::SystemUnderTest` class which is defined in system_under_test.h. The QDL follows the same API, support all existing `mlperf::SystemUnderTest` methods and use the same header file.
+The Query Dispatch Library is implemented by the submitter and interfaces with LoadGen using the same SUT API. All MLPerf Inference SUTs implement the `mlperf::SystemUnderTest` class which is defined in system_under_test.h. The QDL implements `mlperf::QueryDispatchLibrary` class which inherits the `mlperf::SystemUnderTest` class and has the same API and support all existing `mlperf::SystemUnderTest` methods. It has a separate header file query_dispatch_library.h. Using sut with `mlperf::SystemUnderTest` class in LoadGen StartTest is natively upcasting `mlperf::QueryDispatchLibrary` class.
 
 #### QDL Query issue and response over the network
 
@@ -156,10 +156,15 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 
 In addition to that the QDL needs to implement the following methods that are provided by the SUT interface to the LoadGen:
 ```CPP
-const std::string& Name() const;
+const std::string& Name();
 ```
 The `Name` function returns a known string for over the Network SUTs to identify it as over the network benchmark.
 ```CPP
 void FlushQueries();
 ```
-It is not specified here how the QDL would query and configure the SUT to execute the above methods. The QDL provides the response to the loadgen after the SUT is ready.
+
+It is not specified here how the QDL would query and configure the SUT to execute the above methods. The QDL responds to the LoadGen after receiving its own response from the SUT.
+
+### Example
+
+Refer to [LON demo](demos/lon) for a reference example illustrating usage of Loadgen over the network.

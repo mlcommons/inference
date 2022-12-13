@@ -230,6 +230,8 @@ def get_args():
     parser.add_argument("--qps", type=int, help="target qps")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
     parser.add_argument("--cache_dir", type=str, default=None, help="dir path for caching")
+    parser.add_argument("--preprocessed_dir", type=str, default=None, help="dir path for storing preprocessed images (overrides cache_dir)")
+    parser.add_argument("--use_preprocessed_dataset", action="store_true", help="use preprocessed dataset instead of the original")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
     parser.add_argument("--debug", action="store_true", help="debug, turn traces on")
@@ -475,6 +477,8 @@ def main():
 
     # dataset to use
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
+    if args.use_preprocessed_dataset:
+        pre_proc=None
     ds = wanted_dataset(data_path=args.dataset_path,
                         image_list=args.dataset_list,
                         name=args.dataset,
@@ -483,6 +487,7 @@ def main():
                         use_cache=args.cache,
                         count=count,
                         cache_dir=args.cache_dir,
+                        preprocessed_dir=args.preprocessed_dir,
                         threads=args.threads,
                         **kwargs)
     # load model to backend

@@ -31,11 +31,6 @@ namespace mlperf {
 class QueryDispatchLibrary : public SystemUnderTest {
  public:
   virtual ~QueryDispatchLibrary() = default;
-
-  /// \brief A human-readable string for logging purposes. 
-  ///        localName should return from LON node name. It is not used for now.
-  virtual const std::string& LocalName() = 0;
-
 };
 
 /// @}

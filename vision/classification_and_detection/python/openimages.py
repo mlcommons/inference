@@ -15,7 +15,7 @@ log = logging.getLogger("coco")
 
 class OpenImages(dataset.Dataset):
     def __init__(self, data_path, image_list, name, use_cache=0, image_size=None,
-                 image_format="NHWC", pre_process=None, count=None, cache_dir=None,use_label_map=False,threads=os.cpu_count()):
+                 image_format="NHWC", pre_process=None, count=None, cache_dir=None, preprocessed_dir=None, use_label_map=False, threads=os.cpu_count()):
         super().__init__()
         self.image_size = image_size
         self.image_list = []
@@ -29,7 +29,13 @@ class OpenImages(dataset.Dataset):
         self.use_label_map=use_label_map
         if not cache_dir:
             cache_dir = os.getcwd()
-        self.cache_dir = os.path.join(cache_dir, "preprocessed", name, image_format)
+        if pre_process:
+            if preprocessed_dir:
+                self.cache_dir = preprocessed_dir
+            else:
+                self.cache_dir = os.path.join(cache_dir, "preprocessed", name, image_format)
+        else:
+            self.cache_dir = cache_dir
         # input images are in HWC
         self.need_transpose = True if image_format == "NCHW" else False
         not_found = 0 
@@ -67,23 +73,29 @@ class OpenImages(dataset.Dataset):
 
         for image_id, img in images.items():
             image_name = os.path.join("validation", "data", img["file_name"])
-            src = os.path.join(data_path, image_name)
-            if not os.path.exists(src):
-                # if the image does not exists ignore it
-                not_found += 1
-                continue
             if len(img["category"])==0 and self.use_label_map: 
                 #if an image doesn't have any of the 81 categories in it    
                 empty_80catageories += 1 #should be 48 images - thus the validation sert has 4952 images
                 continue 
 
-            os.makedirs(os.path.dirname(os.path.join(self.cache_dir, image_name)), exist_ok=True)
-            dst = os.path.join(self.cache_dir, image_name)
-            if not os.path.exists(dst + ".npy"):
-                # cache a preprocessed version of the image
-                img_org = cv2.imread(src)
-                processed = self.pre_process(img_org, need_transpose=self.need_transpose, dims=self.image_size)
-                np.save(dst, processed)
+            if not self.pre_process:
+                if not os.path.exists(os.path.join(data_path, image_name) + ".npy"):
+                    # if the image does not exists ignore it
+                    self.not_found += 1
+                    continue
+            else:
+                src = os.path.join(data_path, image_name)
+                if not os.path.exists(src):
+                    # if the image does not exists ignore it
+                    not_found += 1
+                    continue
+                os.makedirs(os.path.dirname(os.path.join(self.cache_dir, image_name)), exist_ok=True)
+                dst = os.path.join(self.cache_dir, image_name)
+                if not os.path.exists(dst + ".npy"):
+                    # cache a preprocessed version of the image
+                    img_org = cv2.imread(src)
+                    processed = self.pre_process(img_org, need_transpose=self.need_transpose, dims=self.image_size)
+                    np.save(dst, processed)
 
             self.image_ids.append(image_id)
             self.image_list.append(image_name)
@@ -103,8 +115,8 @@ class OpenImages(dataset.Dataset):
         if empty_80catageories > 0:
             log.info("reduced image list, %d images without any of the 80 categories", empty_80catageories)
 
-        log.info("loaded {} images, cache={}, took={:.1f}sec".format(
-            len(self.image_list), use_cache, time_taken))
+        log.info("loaded {} images, cache={}, already_preprocessed={}, took={:.1f}sec".format(
+            len(self.image_list), use_cache, pre_process is None, time_taken))
 
         self.label_list = np.array(self.label_list)
 

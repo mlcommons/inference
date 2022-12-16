@@ -33,8 +33,10 @@ def get_args():
 
 def main():
     args = get_args()
-
-    cocoGt = COCO(os.path.join(args.openimages_dir, "annotations/openimages-mlperf.json"))
+    annotations_file = os.environ.get('DATASET_ANNOTATIONS_FILE')
+    if not annotations_file:
+        annotations_file = os.path.join(args.openimages_dir, "annotations/openimages-mlperf.json")
+    cocoGt = COCO(annotations_file)
 
     if args.use_inv_map:
         inv_map = [0] + cocoGt.getCatIds() # First label in inv_map is not used

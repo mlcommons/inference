@@ -72,7 +72,6 @@ class OpenImages(dataset.Dataset):
             i["bbox"].append(a.get("bbox"))
 
         for image_id, img in images.items():
-            if pre_pr
             image_name = img["file_name"]
             if len(img["category"])==0 and self.use_label_map: 
                 #if an image doesn't have any of the 81 categories in it    

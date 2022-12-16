@@ -27,6 +27,7 @@ class OpenImages(dataset.Dataset):
         self.data_path = data_path
         self.pre_process = pre_process
         self.use_label_map=use_label_map
+
         if not cache_dir:
             cache_dir = os.path.join(os.getcwd(), "validation", "data")
         if pre_process:

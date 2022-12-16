@@ -33,7 +33,7 @@ def get_args():
 
 def main():
     args = get_args()
-    annotations_file = os.environ.get('DATASET_ANNOTATIONS_FILE')
+    annotations_file = os.environ.get('DATASET_ANNOTATIONS_FILE_PATH')
     if not annotations_file:
         annotations_file = os.path.join(args.openimages_dir, "annotations/openimages-mlperf.json")
     cocoGt = COCO(annotations_file)

@@ -28,7 +28,7 @@ class OpenImages(dataset.Dataset):
         self.pre_process = pre_process
         self.use_label_map=use_label_map
         if not cache_dir:
-            cache_dir = os.getcwd()
+            cache_dir = os.path.join(os.getcwd(), "validation", "data")
         if pre_process:
             if preprocessed_dir:
                 self.cache_dir = preprocessed_dir
@@ -72,7 +72,8 @@ class OpenImages(dataset.Dataset):
             i["bbox"].append(a.get("bbox"))
 
         for image_id, img in images.items():
-            image_name = os.path.join("validation", "data", img["file_name"])
+            if pre_pr
+            image_name = img["file_name"]
             if len(img["category"])==0 and self.use_label_map: 
                 #if an image doesn't have any of the 81 categories in it    
                 empty_80catageories += 1 #should be 48 images - thus the validation sert has 4952 images

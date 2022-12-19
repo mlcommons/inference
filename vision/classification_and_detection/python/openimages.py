@@ -29,10 +29,7 @@ class OpenImages(dataset.Dataset):
         self.use_label_map=use_label_map
 
         if not cache_dir:
-            if pre_process:
-                cache_dir = os.getcwd()
-            else:
-                cache_dir = os.path.join(os.getcwd(), "validation", "data")
+            cache_dir = os.getcwd()
         if pre_process:
             if preprocessed_dir:
                 self.cache_dir = preprocessed_dir

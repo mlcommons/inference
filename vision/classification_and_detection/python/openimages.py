@@ -82,7 +82,7 @@ class OpenImages(dataset.Dataset):
             if not self.pre_process:
                 if not os.path.exists(os.path.join(data_path, image_name) + ".npy"):
                     # if the image does not exists ignore it
-                    self.not_found += 1
+                    not_found += 1
                     continue
             else:
                 src = os.path.join(data_path, image_name)

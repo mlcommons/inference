@@ -1938,8 +1938,9 @@ def check_results_dir(config,
       pycache_dirs = [dir for dir in dirs if dir.endswith("__pycache__")]
       if len(pycache_dirs) > 0:
         log.error(
-          "%s has the following __pycache__ directories: %s",
-          name,
+          "%s/%s has the following __pycache__ directories: %s",
+          division,
+          submitter,
           pycache_dirs,
         )
         results[f"{division}/{submitter}"] = None
@@ -1949,7 +1950,10 @@ def check_results_dir(config,
       empty_dirs = list_empty_dirs_recursively(division, submitter)
       if len(empty_dirs) > 0:
         log.error(
-          "%s has the following empty directories: %s", name, empty_dirs
+          "%s/%s has the following empty directories: %s", 
+          division,
+          submitter, 
+          empty_dirs
         )
         results[f"{division}/{submitter}"] = None
         continue

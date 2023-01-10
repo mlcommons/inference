@@ -21,7 +21,7 @@ from pathlib import Path
 from base_SUT import BASE_3DUNET_SUT
 
 import onnxruntime
-
+import os
 
 class _3DUNET_ONNXRuntime_SUT(BASE_3DUNET_SUT):
     """
@@ -62,7 +62,11 @@ class _3DUNET_ONNXRuntime_SUT(BASE_3DUNET_SUT):
         print("Loading ONNX model...")
         assert Path(model_path).is_file(
         ), "Cannot find the model file {:}!".format(model_path)
-        self.sess = onnxruntime.InferenceSession(model_path)
+        opt = onnxruntime.SessionOptions()
+        if len(onnxruntime.get_all_providers()) > 1 and os.environ.get("USE_GPU", "yes").lower() not in [ "0", "false", "off", "no" ]:
+            self.sess = onnxruntime.InferenceSession(model_path, opt, providers=["CUDAExecutionProvider"])
+        else:
+            self.sess = onnxruntime.InferenceSession(model_path, opt, providers=["CPUExecutionProvider"])
 
     def do_infer(self, input_tensor):
         """

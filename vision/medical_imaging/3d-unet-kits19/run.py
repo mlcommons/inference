@@ -145,7 +145,7 @@ def main():
         settings.mode = lg.TestMode.PerformanceOnly
 
     # set up mlperf logger
-    log_path = Path("build", "logs").absolute()
+    log_path = Path(os.environ.get("LOG_PATH", os.path.join("build", "logs"))).absolute()
     log_path.mkdir(parents=True, exist_ok=True)
     log_output_settings = lg.LogOutputSettings()
     log_output_settings.outdir = str(log_path)
@@ -158,9 +158,9 @@ def main():
     lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
 
     # if needed check accuracy
-    if args.accuracy:
+    if args.accuracy and not os.environ.get('SKIP_VERIFY_ACCURACY', False):
         print("Checking accuracy...")
-        cmd = "python3 accuracy_kits.py"
+        cmd = f"python3 accuracy_kits.py --preprocessed_data_dir={args.preprocessed_data_dir} --log_file={os.path.join(log_path, 'mlperf_log_accuracy.json')}"
         subprocess.check_call(cmd, shell=True)
 
     # all done

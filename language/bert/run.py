@@ -26,13 +26,13 @@ sys.path.insert(0, os.getcwd())
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--backend", choices=["tf", "pytorch", "onnxruntime", "tf_estimator"], default="tf", help="Backend")
+        "--backend", choices=["tf", "pytorch", "onnxruntime", "tf_estimator", "deepsparse"], default="tf", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline",
                         "Server", "MultiStream"], default="Offline", help="Scenario")
     parser.add_argument("--accuracy", action="store_true",
                         help="enable accuracy pass")
     parser.add_argument("--quantized", action="store_true",
-                        help="use quantized model (only valid for onnxruntime backend)")
+                        help="use quantized model (only valid for onnxruntime and deepsparse backends)")
     parser.add_argument("--profile", action="store_true",
                         help="enable profiling (only valid for onnxruntime backend)")
     parser.add_argument(
@@ -41,6 +41,10 @@ def get_args():
                         help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--max_examples", type=int,
                         help="Maximum number of examples to consider (not limited by default)")
+    parser.add_argument("--batch_size", type=int, default=1,
+                        help="batch_size")
+    parser.add_argument("--model_path", type=str, default="zoo:nlp/question_answering/bert-large/pytorch/huggingface/squad/pruned80_quant-none-vnni",
+                        help="path to model")
     args = parser.parse_args()
     return args
 
@@ -74,6 +78,9 @@ def main():
     elif args.backend == "onnxruntime":
         from onnxruntime_SUT import get_onnxruntime_sut
         sut = get_onnxruntime_sut(args)
+    elif args.backend == "deepsparse":
+        from deepsparse_SUT import get_deepsparse_sut
+        sut = get_deepsparse_sut(args)
     else:
         raise ValueError("Unknown backend: {:}".format(args.backend))
 
@@ -86,9 +93,11 @@ def main():
         settings.mode = lg.TestMode.AccuracyOnly
     else:
         settings.mode = lg.TestMode.PerformanceOnly
+
     log_path = os.environ.get("LOG_PATH")
     if not log_path:
         log_path = "build/logs"
+
     if not os.path.exists(log_path):
         os.makedirs(log_path)
     log_output_settings = lg.LogOutputSettings()
@@ -100,6 +109,7 @@ def main():
 
     print("Running LoadGen test...")
     lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
+
     if args.accuracy and not os.environ.get("SKIP_VERIFY_ACCURACY"):
         cmd = "python3 {:}/accuracy-squad.py {}".format(
             os.path.dirname(os.path.abspath(__file__)),

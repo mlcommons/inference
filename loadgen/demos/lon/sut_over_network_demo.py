@@ -37,6 +37,7 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 
+node = ""
 def preprocess(query):
     """[SUT Node] A dummy preprocess."""
     # Here may come for example batching, tokenization, resizing, normalization, etc.
@@ -69,11 +70,13 @@ def predict():
 @app.route('/getname/', methods=['POST', 'GET'])
 def getname():
     """Returns the name of the SUT."""
-    return jsonify(name='Demo SUT (Network SUT)')
+    return jsonify(name=f'Demo SUT (Network SUT) node' + (' ' + node) if node else '')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8000)
+    parser.add_argument('--node', type=str, default="")
     args = parser.parse_args()
+    node = args.node
     app.run(debug=False, port=args.port)

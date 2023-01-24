@@ -21,6 +21,7 @@ limitations under the License.
 #include "../loadgen.h"
 #include "../query_sample.h"
 #include "../query_sample_library.h"
+#include "../query_dispatch_library.h"
 #include "../system_under_test.h"
 #include "../test_settings.h"
 #include "pybind11/functional.h"
@@ -131,7 +132,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 
 // A QDL that allows defining callbacks for
 // IssueQuery, FlushQueries, and Name methods.
-class QueryDispatchLibraryTrampoline : public SystemUnderTest {
+class QueryDispatchLibraryTrampoline : public QueryDispatchLibrary {
   public:
     QueryDispatchLibraryTrampoline(IssueQueryCallback issue_query_callback,
                                  FlushQueriesCallback flush_queries_callback,

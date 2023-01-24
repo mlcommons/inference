@@ -32,8 +32,8 @@ import mlperf_loadgen
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('sut_server', 'http://localhost:8000',
-                    'Address of the server under test.')
+flags.DEFINE_list('sut_server', 'http://localhost:8000',
+                    'Address of the server(s) under test.')
 
 
 class QSL:
@@ -73,20 +73,24 @@ class QDL:
     - /getname/ : Get the name of the SUT. Send a getname to the SUT and get a response.
     """
 
-    def __init__(self, qsl: QSL, sut_server_addr: str):
+    def __init__(self, qsl: QSL, sut_server_addr: list):
         """
         Constructor for the QDL.
         Args:
             qsl: The QSL to use.
-            sut_server_addr: The address of the SUT.
+            sut_server_addr: A list of addresses of the SUT.
         """
         self.qsl = qsl
-        self.sut_server_addr = sut_server_addr
-
+ 
         # Construct QDL from the python binding
         self.qdl = mlperf_loadgen.ConstructQDL(
             self.issue_query, self.flush_queries, self.client_get_name)
         self.sut_server_addr = sut_server_addr
+        self.num_nodes = len(sut_server_addr)
+
+        # For round robin between the SUTs:
+        self.next_sut_id = 0
+        self.lock = threading.Lock()
 
     def issue_query(self, query_samples):
         """Process the query to send to the SUT"""
@@ -118,7 +122,7 @@ class QDL:
 
             time.sleep(.001)  # Ensure a maximal rate of queries to the SUT
 
-            # Send the query to SUT
+            # Send the query to SUT in round robin
             # Wait for a response
             sut_result = self.client_predict(features, s.index)
             response_array = array.array('B', sut_result.encode('utf-8'))
@@ -127,17 +131,26 @@ class QDL:
                 s.id, bi[0], bi[1]))
         mlperf_loadgen.QuerySamplesComplete(responses)
 
+    def get_sut_id_round_robin(self):
+        """Get the SUT id in round robin."""
+        with self.lock:
+            res = self.next_sut_id
+            self.next_sut_id = (self.next_sut_id + 1) % self.num_nodes
+        return res
+
     def client_predict(self, query, id):
-        """Serialize the query, send it to the SUT, and return the deserialized response."""
-        url = '{}/predict/'.format(self.sut_server_addr)
+        """Serialize the query, send it to the SUT in round robin, and return the deserialized response."""
+        url = '{}/predict/'.format(self.sut_server_addr[self.get_sut_id_round_robin()])
         response = requests.post(url, json={'query': query, id: id})
         return response.json()['result']
 
     def client_get_name(self):
-        """Get the name of the SUT from the SUT."""
-        url = '{}/getname/'.format(self.sut_server_addr)
-        response = requests.post(url)
-        return response.json()['name']
+        """Get the name of the SUT from ALL the SUTS."""
+        if len(self.sut_server_addr) == 1:
+            return requests.post(f'{self.sut_server_addr[0]}/getname/').json()['name']
+    
+        sut_names = [requests.post(f'{addr}/getname/').json()['name'] for addr in self.sut_server_addr]
+        return "Multi-node SUT: " + ', '.join(sut_names)
 
     def __del__(self):
         mlperf_loadgen.DestroyQDL(self.qdl)

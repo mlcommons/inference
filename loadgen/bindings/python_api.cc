@@ -323,6 +323,12 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::performance_issue_same_index)
       .def_readwrite("performance_sample_count_override",
                      &TestSettings::performance_sample_count_override)
+      .def_readwrite("test05",
+                     &TestSettings::test05)
+      .def_readwrite("test05_qsl_rng_seed", &TestSettings::qsl_rng_seed)
+      .def_readwrite("test05_sample_index_rng_seed",
+                     &TestSettings::sample_index_rng_seed)
+      .def_readwrite("test05_schedule_rng_seed", &TestSettings::schedule_rng_seed)
       .def("FromConfig", &TestSettings::FromConfig, "FromConfig.");
 
   pybind11::enum_<LoggingMode>(m, "LoggingMode")

@@ -1684,14 +1684,14 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
       else:
         # Starting from v2.0, LoadGen logs the actual number of issued queries.
         num_queries = int(mlperf_log["result_query_count"])
-      power_metric = avg_power * power_duration / num_queries
+      power_metric = avg_power * power_duration * 1000 / num_queries
 
       if (scenario_fixed in ["MultiStream"] and
           not config.uses_legacy_multistream()) and scenario in [
               "SingleStream"
           ]:
         samples_per_query = 8
-        power_metric = avg_power * power_duration * samples_per_query / num_queries
+        power_metric = avg_power * power_duration * samples_per_query * 1000 / num_queries
 
   if more_power_check:
     python_version_major = int(sys.version.split(" ")[0].split(".")[0])
@@ -1818,8 +1818,8 @@ def check_results_dir(config,
         "Server": "Queries/s",
     }
     power_unit_dict = {
-        "SingleStream": "Joules",
-        "MultiStream": "Joules",
+        "SingleStream": "millijoules",
+        "MultiStream": "millijoules",
         "Offline": "Watts",
         "Server": "Watts",
     }

@@ -48,7 +48,7 @@ TestSettingsInternal::TestSettingsInternal(
       performance_issue_same(requested.performance_issue_same),
       performance_issue_same_index(requested.performance_issue_same_index),
       performance_sample_count(0),
-      sample_concatenate_permutation(false) {
+      sample_concatenate_permutation(false){
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -666,6 +666,12 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
            &performance_sample_count_override, nullptr);
   if (lookupkv(model, scenario, "sample_concatenate_permutation", &val, nullptr))
     sample_concatenate_permutation = (val == 1) ? true : false;
+  if (lookupkv(model, scenario, "test05", &val, nullptr))
+    test05 = (val == 1) ? true : false;
+  lookupkv(model, scenario, "test05_qsl_rng_seed", &test05_qsl_rng_seed, nullptr);
+  lookupkv(model, scenario, "test05_sample_index_rng_seed", &test05_sample_index_rng_seed,
+           nullptr);
+  lookupkv(model, scenario, "test05_schedule_rng_seed", &test05_schedule_rng_seed, nullptr);
 
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,

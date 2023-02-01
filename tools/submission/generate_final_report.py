@@ -99,7 +99,7 @@ def main():
                        'Latency (ms)',
                        'Samples/s',
                        'Queries/s',
-                       'Joules',
+                       'millijoules',
                        'Watts',
                    ]]
 
@@ -193,8 +193,8 @@ def main():
                   Contain(suite),
               'Units':
                   And(
-                      And(NotEqual('Watts'), NotEqual('Joules')),
-                      NotEqual('Joules/Stream')),
+                      And(NotEqual('Watts'), NotEqual('millijoules')),
+                      NotEqual('millijoules/Stream')),
               ('Scenario', 'Model'):
                   Apply(FilterScenario, suite)
           }, category + ',' + suite)

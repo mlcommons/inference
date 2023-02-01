@@ -70,13 +70,13 @@ mlperf_loadgen_sources = (mlperf_loadgen_sources_no_gen +
 
 mlperf_loadgen_module = Extension(
         "mlperf_loadgen",
-        define_macros=[("MAJOR_VERSION", "2"), ("MINOR_VERSION", "1")],
+        define_macros=[("MAJOR_VERSION", "3"), ("MINOR_VERSION", "0")],
         include_dirs=[".", "../third_party/pybind/include"],
         sources=mlperf_loadgen_sources,
         depends=mlperf_loadgen_headers)
 
 setup(name="mlperf_loadgen",
-      version="2.1",
+      version="3.0",
       description="MLPerf Inference LoadGen python bindings",
       url="https://mlperf.org",
       ext_modules=[mlperf_loadgen_module])

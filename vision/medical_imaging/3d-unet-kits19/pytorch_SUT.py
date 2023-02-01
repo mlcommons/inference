@@ -91,7 +91,7 @@ class _3DUNET_PyTorch_SUT(BASE_3DUNET_SUT):
         """
         Transform Torch tensor into numpy array
         """
-        return my_tensor.cpu().numpy().astype(np.float)
+        return my_tensor.cpu().numpy().astype(float)
 
 
 def get_sut(model_path, preprocessed_data_dir, performance_count):

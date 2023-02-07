@@ -969,6 +969,179 @@ MODEL_CONFIG = {
             },
         },
     },
+    "v3.0": {
+        "models": [
+            "resnet",
+            "retinanet",
+            "rnnt",
+            "bert-99",
+            "bert-99.9",
+            "dlrm-99",
+            "dlrm-99.9",
+            "3d-unet-99",
+            "3d-unet-99.9",
+        ],
+        "required-scenarios-datacenter": {
+            "resnet": ["Server", "Offline"],
+            "retinanet": ["Server", "Offline"],
+            "rnnt": ["Server", "Offline"],
+            "bert-99": ["Server", "Offline"],
+            "bert-99.9": ["Server", "Offline"],
+            "dlrm-99": ["Server", "Offline"],
+            "dlrm-99.9": ["Server", "Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+        },
+        "optional-scenarios-datacenter": {},
+        "required-scenarios-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline"],
+            "retinanet": ["SingleStream", "MultiStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-edge": {},
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "rnnt": ["SingleStream", "Offline", "Server"],
+            "bert-99": ["SingleStream", "Offline", "Server"],
+            "bert-99.9": ["Offline", "Server"],
+            "dlrm-99": ["Offline", "Server"],
+            "dlrm-99.9": ["Offline", "Server"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-datacenter-edge": {},
+        "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
+            "retinanet": ("mAP", 37.55 * 0.99),
+            "rnnt": ("WER", (100 - 7.452) * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "dlrm-99": ("AUC", 80.25 * 0.99),
+            "dlrm-99.9": ("AUC", 80.25 * 0.999),
+            "3d-unet-99": ("DICE", 0.86170 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
+        },
+        "performance-sample-count": {
+            "resnet": 1024,
+            # TODO: Update perf sample count for retinanet
+            "retinanet": 64,
+            "rnnt": 2513,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-99": 204800,
+            "dlrm-99.9": 204800,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+        },
+        # TODO: Update this list.
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-mobilenet": "ssd-small",
+            "ssd-resnet34": "retinanet",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
+            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
+            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
+            "rcnn-resnet50-lowproposals-coco": "ssd-large",
+            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
+            "rcnn-inception-v2-coco": "ssd-large",
+            "rcnn-nas-lowproposals-coco": "ssd-large",
+            "rcnn-resnet101-lowproposals-coco": "ssd-large",
+            "ssd_mobilenet_v1_coco": "ssd-small",
+            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
+            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
+            "ssd_mobilenet_v2_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
+        },
+        "seeds": {
+            "qsl_rng_seed": 10003631887983097364,
+            "sample_index_rng_seed": 17183018601990103738,
+            "schedule_rng_seed": 12134888396634371638,
+        },
+        "test05_seeds": {
+            "qsl_rng_seed": 14646058500348515648,
+            "sample_index_rng_seed": 1207248993894122914,
+            "schedule_rng_seed": 11879132697760422006,
+        },
+        "ignore_errors": [],
+        "latency-constraint": {
+            "resnet": {
+                "Server": 15000000
+            },
+            "retinanet": {
+                "Server": 100000000
+            },
+            "rnnt": {
+                "Server": 1000000000
+            },
+            "bert-99": {
+                "Server": 130000000
+            },
+            "bert-99.9": {
+                "Server": 130000000
+            },
+            "dlrm-99": {
+                "Server": 30000000
+            },
+            "dlrm-99.9": {
+                "Server": 30000000
+            },
+        },
+        "min-queries": {
+            "resnet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1
+            },
+            "retinanet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1
+            },
+            "rnnt": {
+                "SingleStream": 1024,
+                "Server": 270336,
+                "Offline": 1
+            },
+            "bert-99": {
+                "SingleStream": 1024,
+                "Server": 270336,
+                "Offline": 1
+            },
+            "bert-99.9": {
+                "SingleStream": 1024,
+                "Server": 270336,
+                "Offline": 1
+            },
+            "dlrm-99": {
+                "Server": 270336,
+                "Offline": 1
+            },
+            "dlrm-99.9": {
+                "Server": 270336,
+                "Offline": 1
+            },
+            "3d-unet-99": {
+                "SingleStream": 1024,
+                "Offline": 1
+            },
+            "3d-unet-99.9": {
+                "SingleStream": 1024,
+                "Offline": 1
+            },
+        },
+    },
 }
 
 VALID_DIVISIONS = ["open", "closed", "network"]
@@ -1049,6 +1222,13 @@ RESULT_FIELD_NEW = {
         "Server": "result_scheduled_samples_per_sec"
     },
     "v2.1": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_scheduled_samples_per_sec"
+    },
+    "v3.0": {
         "Offline": "result_samples_per_second",
         "SingleStream": "early_stopping_latency_ss",
         "MultiStreamLegacy": "effective_samples_per_query",
@@ -1259,7 +1439,7 @@ def get_args():
   parser.add_argument("--input", required=True, help="submission directory")
   parser.add_argument(
       "--version",
-      default="v2.1",
+      default="v3.0",
       choices=list(MODEL_CONFIG.keys()),
       help="mlperf version")
   parser.add_argument("--submitter", help="filter to submitter")
@@ -1684,14 +1864,14 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
       else:
         # Starting from v2.0, LoadGen logs the actual number of issued queries.
         num_queries = int(mlperf_log["result_query_count"])
-      power_metric = avg_power * power_duration / num_queries
+      power_metric = avg_power * power_duration * 1000 / num_queries
 
       if (scenario_fixed in ["MultiStream"] and
           not config.uses_legacy_multistream()) and scenario in [
               "SingleStream"
           ]:
         samples_per_query = 8
-        power_metric = avg_power * power_duration * samples_per_query / num_queries
+        power_metric = avg_power * power_duration * samples_per_query * 1000 / num_queries
 
   if more_power_check:
     python_version_major = int(sys.version.split(" ")[0].split(".")[0])
@@ -1818,8 +1998,8 @@ def check_results_dir(config,
         "Server": "Queries/s",
     }
     power_unit_dict = {
-        "SingleStream": "Joules",
-        "MultiStream": "Joules",
+        "SingleStream": "millijoules",
+        "MultiStream": "millijoules",
         "Offline": "Watts",
         "Server": "Watts",
     }

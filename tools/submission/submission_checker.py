@@ -1961,7 +1961,7 @@ def check_results_dir(config,
       "number_of_nodes", "host_processor_model_name",
       "host_processors_per_node", "host_processor_core_count",
       "accelerator_model_name", "accelerators_per_node", "Location",
-      "framework", "operating_system", "notes", "compilance", "errors",
+      "framework", "operating_system", "notes", "compliance", "errors",
       "version", "inferred", "has_power", "Units"
   ]
   fmt = ",".join(["{}"] * len(head)) + "\n"
@@ -1981,7 +1981,7 @@ def check_results_dir(config,
                  acc,
                  system_json,
                  name,
-                 compilance,
+                 compliance,
                  errors,
                  config,
                  inferred=0,
@@ -2019,7 +2019,7 @@ def check_results_dir(config,
                    name.replace("\\", "/"),
                    '"' + system_json.get("framework", "") + '"',
                    '"' + system_json.get("operating_system", "") + '"',
-                   '"' + notes + '"', compilance, errors, config.version,
+                   '"' + notes + '"', compliance, errors, config.version,
                    inferred, power_metric > 0, unit))
 
     if power_metric > 0:
@@ -2036,7 +2036,7 @@ def check_results_dir(config,
                      name.replace("\\", "/"),
                      '"' + system_json.get("framework", "") + '"',
                      '"' + system_json.get("operating_system", "") + '"',
-                     '"' + notes + '"', compilance, errors, config.version,
+                     '"' + notes + '"', compliance, errors, config.version,
                      inferred, power_metric > 0, power_unit))
 
   # we are at the top of the submission directory

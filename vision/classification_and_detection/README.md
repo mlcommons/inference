@@ -1,4 +1,4 @@
-# MLPerf Inference Benchmarks for Image Classification and Object Detection Tasks
+# MLPerf™ Inference Benchmarks for Image Classification and Object Detection Tasks
 
 This is the reference implementation for MLPerf Inference Classification and Object Detection benchmarks
 

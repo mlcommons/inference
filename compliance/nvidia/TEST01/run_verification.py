@@ -88,7 +88,10 @@ def main():
     # check if verify accuracy script passes
 
     accuracy_pass_command = "grep PASS verify_accuracy.txt"
-    accuracy_pass = "TEST PASS" in subprocess.check_output(accuracy_pass_command, shell=True).decode("utf-8")
+    try:
+        accuracy_pass = "TEST PASS" in subprocess.check_output(accuracy_pass_command, shell=True).decode("utf-8")
+    except Exception:
+        accuracy_pass = False
 
     # run verify performance
     verify_performance_binary = os.path.join(os.path.dirname(__file__),"verify_performance.py")

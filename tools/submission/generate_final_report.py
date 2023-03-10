@@ -1,4 +1,4 @@
-"""Tool to generate the final results speadsheet from the checker csv output.
+"""Tool to generate the final results speadsheet from the submission checker csv output.
 
 The resulting excel files can be imported into google sheets.
 """

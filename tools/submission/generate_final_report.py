@@ -1,4 +1,4 @@
-"""Tool to generate the final results speadsheet from the checker csv output.
+"""Tool to generate the final results speadsheet from the submission checker csv output.
 
 The resulting excel files can be imported into google sheets.
 """
@@ -54,7 +54,7 @@ def main():
   df['p#'] = df.apply(lambda x: int(x['host_processors_per_node']), axis=1)
 
   # details url
-  base_url = 'https://github.com/mlcommons/submissions_inference_2.1/tree/master'
+  base_url = 'https://github.com/mlcommons/submissions_inference_3.0/tree/master'
   df['Details'] = df.apply(
       lambda x: '=HYPERLINK("{}","details")'.format('/'.join(
           [base_url, x['Category'], x['Submitter'], 'results', x['Platform']])),
@@ -180,7 +180,7 @@ def main():
            key) in enumerate(pd.unique(df['Unique ID (e.g. for Audit)']))
   }
   df['ID'] = df.apply(
-      lambda x: '2.1-{:04}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
+      lambda x: '3.0-{:04}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
       axis=1)
 
   for category in ['closed', 'open', 'network']:

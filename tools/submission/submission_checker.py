@@ -1882,17 +1882,14 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
                                                                      "supports "
                                                                      "Python "
                                                                      "3.7+")
-    assert os.path.exists(os.path.join(submission_checker_dir, "power-dev", "compliance", "check.py")), \
-        ("Please run 'git submodule update --init tools/submission/power-dev' "
-         "to get Power WG's check.py.")
-    sys.path.insert(0, os.path.join(submission_checker_dir, "power-dev"))
-    from compliance.check import check as check_power_more
+    sys.path.insert(0, os.path.join(submission_checker_dir, "power"))
+    from power.power_checker import check as check_power_more
     perf_path = os.path.dirname(power_path)
     check_power_result = check_power_more(perf_path)
     sys.stdout.flush()
     sys.stderr.flush()
     if check_power_result != 0:
-      log.error("Power WG check.py did not pass for: %s", perf_path)
+      log.error("Power WG power_checker.py did not pass for: %s", perf_path)
       is_valid = False
 
   return is_valid, power_metric
@@ -2449,6 +2446,15 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model,
       system_file = i
       end = len(".json")
       break
+
+  if not system_file and os.environ.get("INFER_SYSTEM_FILE","") == "yes":
+    for i in files:
+      if i.endswith(".json"):
+        system_file = system_desc+".json"
+        os.rename(os.path.join(measurement_dir, i), os.path.join(measurement_dir, system_file))
+        end = len(".json")
+        break
+
   if system_file:
     with open(os.path.join(measurement_dir, system_file), "r") as f:
       j = json.load(f)

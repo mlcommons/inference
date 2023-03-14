@@ -2449,6 +2449,15 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model,
       system_file = i
       end = len(".json")
       break
+
+  if not system_file and os.environ.get("INFER_SYSTEM_FILE","") == "yes":
+    for i in files:
+      if i.endswith(".json"):
+        system_file = system_desc+".json"
+        os.rename(os.path.join(measurement_dir, i), os.path.join(measurement_dir, system_file))
+        end = len(".json")
+        break
+
   if system_file:
     with open(os.path.join(measurement_dir, system_file), "r") as f:
       j = json.load(f)

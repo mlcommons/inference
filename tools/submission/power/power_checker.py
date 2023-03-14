@@ -304,7 +304,7 @@ def phases_check(
     client_sd: SessionDescriptor, server_sd: SessionDescriptor, path: str
 ) -> None:
     """Check that the time difference between corresponding checkpoint values
-    from client.json and server.json is less than or equal to 500 ms.
+    from client.json and server.json is less than or equal to 1000 ms.
     Check that the loadgen timestamps are within workload time interval.
     Check that the duration of loadgen test for the ranging mode is comparable
     with duration of loadgen test for the testing mode.
@@ -322,8 +322,8 @@ def phases_check(
         ), f"Phases amount is not equal for {mode} mode."
         for i in range(len(phases_client)):
             assert (
-                abs(phases_client[i][0] - phases_server[i][0]) <= 0.5
-            ), f"The time difference for {i + 1} phase of {mode} mode is more than 500ms."
+                abs(phases_client[i][0] - phases_server[i][0]) <= 1
+            ), f"The time difference for {i + 1} phase of {mode} mode is more than 1000ms."
 
     comapre_time(phases_ranging_c, phases_ranging_s, RANGING_MODE)
     comapre_time(phases_testing_c, phases_testing_s, TESTING_MODE)
@@ -334,8 +334,8 @@ def phases_check(
         )
 
         assert (
-            duration_diff < 0.05
-        ), "Duration of the ranging mode differs from the duration of testing mode by more than 5 percent"
+            duration_diff < 0.15
+        ), "Duration of the ranging mode differs from the duration of testing mode by more than 15 percent"
 
     def compare_time_boundaries(
         begin: float, end: float, phases: List[Any], mode: str

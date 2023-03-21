@@ -16,7 +16,7 @@ The following is an diagram of how the LoadGen can be integrated into an
 inference system, resembling how some of the MLPerf reference models are
 implemented.
 <div style="display:flex; flex-flow:row wrap; justify-content: space-evenly;">
-<img src="loadgen_integration_diagram.svg" width="500px" style="padding: 20px">
+<img src="https://raw.githubusercontent.com/mlcommons/inference/master/loadgen/loadgen_integration_diagram.svg" width="500px" style="padding: 20px">
 <ol style="padding: 20px">
 <li>Benchmark knows the model, dataset, and preprocessing.</li>
 <li>Benchmark hands dataset sample IDs to LoadGen.</li>
@@ -106,7 +106,7 @@ tests, and reference models.
 For reference, on a high level a submission looks like this:
 
 <div align="center" style="display:flex; flex-flow:row wrap; justify-content: space-evenly;">
-<img src="diagram_submission.png" width="300px" style="padding: 20px">
+<img src="https://raw.githubusercontent.com/mlcommons/inference/master/loadgen/diagram_submission.png" width="300px" style="padding: 20px">
 </div>
 
 The LoadGen implementation is common to all submissions, while the QSL (“Query Sample Library”) and SUT (“System Under Test”) are implemented by submitters. QSL is responsible for loading the data and includes untimed preprocessing.
@@ -114,7 +114,7 @@ The LoadGen implementation is common to all submissions, while the QSL (“Query
 A submission over the network introduces a new component “QDL” (query dispatch library) that is added to the system as presented in the following diagram:
 
 <div align="center" style="display:flex; flex-flow:row wrap; justify-content: space-evenly;">
-<img src="diagram_network_submission.png" width="300px" style="padding: 20px">
+<img src="https://raw.githubusercontent.com/mlcommons/inference/master/loadgen/diagram_network_submission.png" width="300px" style="padding: 20px">
 </div>
 
 QDL is a proxy for a load-balancer, that dispatches queries to SUT over a physical network, receives the responses and passes them back to LoadGen.  It is implemented by the submitter. The interface of the QDL is the same as the API to SUT. 

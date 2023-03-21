@@ -1,0 +1,39 @@
+name: Build loadgen wheels and release them into PYPI
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v3
+
+      - name: Install requirements
+        run: python -m pip install cibuildwheel==2.11.4 twine==4.0.2
+
+      - name: Init pybind11 submodule
+        run: |
+          git submodule init third_party/pybind
+          git submodule update third_party/pybind
+
+      - name: Build wheels
+        run: python -m cibuildwheel loadgen/ --output-dir wheels
+        env:
+          CIBW_ENVIRONMENT: "CFLAGS='-std=c++14'"
+          CIBW_BUILD: 'cp3{6,7,8,9,10}-*'
+
+      - uses: actions/upload-artifact@v3
+        with:
+          path: ./wheels/*.whl 
+
+      - name: Publish package to PyPI
+        run: python -m twine upload wheels/* -u __token__ -p ${{ secrets.PYPI_API_TOKEN }}

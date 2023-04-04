@@ -224,7 +224,7 @@ def main():
                 bg_format,
         })
 
-  writer.save()
+  writer.close()
 
   return 0
 

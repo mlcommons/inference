@@ -1263,10 +1263,23 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "operating_system"
 ]
 
+SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
+    "division", "submitter", "system_type", "status", "system_name", "number_of_nodes",
+    "host_processor_model_name", "host_processors_per_node",
+    "host_processor_core_count", "host_memory_capacity", "host_memory_configuration",
+    "host_storage_capacity", "host_storage_type", "host_networking",
+    "host_networking_card_count", "host_networking_topology", "accelerators_per_node",
+    "accelerator_model_name", "accelerator_memory_capacity", "accelerator_host_interconnect",
+    "accelerator_memory_configuration", "accelerator_interconnect", "cooling", "framework",
+    "operating_system", "other_software_stack"
+]
+
+
 SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1 = [
     "system_type", "other_software_stack", "host_processor_frequency",
     "host_processor_caches", "host_memory_configuration",
     "host_processor_interconnect", "host_networking",
+    "host_networking_card_count",
     "host_networking_topology", "accelerator_frequency",
     "accelerator_host_interconnect", "accelerator_interconnect",
     "accelerator_interconnect_topology", "accelerator_memory_configuration",
@@ -2432,9 +2445,9 @@ def check_system_desc_id(fname, systems_json, submitter, division, version):
     if k not in systems_json:
       is_valid = False
       log.error("%s, field %s is missing", fname, k)
-    elif not systems_json[k]:
+    elif k in SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS and not systems_json[k]:
       is_valid = False
-      log.error("%s, field %s is empty", fname, k)
+      log.error("%s, field %s requires a meaningful response but is empty", fname, k)
 
   if version in ["v0.5", "v0.7"]:
     all_fields = required_fields + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1

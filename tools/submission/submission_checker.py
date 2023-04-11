@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import sys
+from glob import glob
 
 from log_parser import MLPerfLog
 
@@ -1157,6 +1158,7 @@ REQUIRED_ACC_FILES = [
     "mlperf_log_accuracy.json"
 ]
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
+REQUIRED_POWER_MEASURE_FILES = ["analyzer_table.*", "power_settings.*"]
 MS_TO_NS = 1000 * 1000
 S_TO_MS = 1000
 FILE_SIZE_LIMIT_MB = 50
@@ -1274,25 +1276,30 @@ SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
     "operating_system", "other_software_stack"
 ]
 
-
-SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1 = [
+SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1 = [
     "system_type", "other_software_stack", "host_processor_frequency",
     "host_processor_caches", "host_memory_configuration",
     "host_processor_interconnect", "host_networking",
-    "host_networking_card_count",
     "host_networking_topology", "accelerator_frequency",
     "accelerator_host_interconnect", "accelerator_interconnect",
     "accelerator_interconnect_topology", "accelerator_memory_configuration",
     "accelerator_on-chip_memories", "cooling", "hw_notes", "sw_notes"
 ]
 
-SYSTEM_DESC_REQUIED_FIELDS_POWER = [
+SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1 = [
+    "host_networking_card_count"
+]
+
+SYSTEM_DESC_REQUIRED_FIELDS_POWER = [
     "power_management", "filesystem", "boot_firmware_version",
     "management_firmware_version", "other_hardware",
     "number_of_type_nics_installed", "nics_enabled_firmware", "nics_enabled_os",
     "nics_enabled_connected", "network_speed_mbit",
     "power_supply_quantity_and_rating_watts", "power_supply_details",
     "disk_drives", "disk_controllers"
+]
+
+SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS_POWER = [
 ]
 
 SYSTEM_DESC_IS_NETWORK_MODE = "is_network"
@@ -1320,7 +1327,7 @@ class Config():
                version,
                extra_model_benchmark_map,
                ignore_uncommited=False,
-               more_power_check=False):
+               skip_power_check=False):
     self.base = MODEL_CONFIG.get(version)
     self.extra_model_benchmark_map = extra_model_benchmark_map
     self.version = version
@@ -1334,7 +1341,7 @@ class Config():
     self.required = None
     self.optional = None
     self.ignore_uncommited = ignore_uncommited
-    self.more_power_check = more_power_check
+    self.skip_power_check = skip_power_check
 
   def set_type(self, submission_type):
     if submission_type is None and self.version in ["v0.5"]:
@@ -1472,10 +1479,21 @@ def get_args():
       action="store_true",
       help="ignore certain errors for submission")
   parser.add_argument(
-      "--more-power-check",
+      "--skip-power-check",
       action="store_true",
-      help="apply Power WG's check.py script on each power submission. Requires Python 3.7+"
-  )
+      help="skips Power WG's check.py script on each power submission.")
+  parser.add_argument(
+      "--skip-meaningful-fields-empty-check",
+      action="store_true",
+      help="skips the check of empty values in required measurement field values")
+  parser.add_argument(
+      "--skip-check-power-measure-files",
+      action="store_true",
+      help="skips the check of required measure files for power runs")
+  parser.add_argument(
+      "--skip-empty-files-check",
+      action="store_true",
+      help="skips the check of empty required files")
   args = parser.parse_args()
   return args
 
@@ -1783,7 +1801,7 @@ def check_performance_dir(config, model, path, scenario_fixed, division,
 def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
                     config):
 
-  more_power_check = config.more_power_check
+  skip_power_check = config.skip_power_check
 
   is_valid = True
   power_metric = 0
@@ -1886,11 +1904,10 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
         samples_per_query = 8
         power_metric = avg_power * power_duration * samples_per_query * 1000 / num_queries
 
-  if more_power_check:
+  if not skip_power_check:
     python_version_major = int(sys.version.split(" ")[0].split(".")[0])
     python_version_minor = int(sys.version.split(" ")[0].split(".")[1])
-    assert python_version_major == 3 and python_version_minor >= 7, ("The "
-                                                                     "--more-power-check"
+    assert python_version_major == 3 and python_version_minor >= 7, ("Power check "
                                                                      " only "
                                                                      "supports "
                                                                      "Python "
@@ -1943,7 +1960,10 @@ def check_results_dir(config,
                       filter_submitter,
                       skip_compliance,
                       csv,
-                      debug=False):
+                      debug=False,
+                      skip_meaningful_fields_empty_check=False,
+                      skip_empty_files_check=False,
+                      skip_check_power_measure_files=False):
   """
     Walk the results directory and do the checking.
     We are called with the cdw at the root of the submission directory.
@@ -2216,7 +2236,7 @@ def check_results_dir(config,
               continue
           config.set_type(system_type)
           if not check_system_desc_id(name, system_json, submitter, division,
-                                      config.version):
+                config.version, skip_meaningful_fields_empty_check):
             results[name] = None
             continue
 
@@ -2261,10 +2281,26 @@ def check_results_dir(config,
             name = os.path.join(results_path, system_desc, model_name, scenario)
             results[name] = None
             if is_closed_or_network and scenario_fixed not in all_scenarios:
-              log.warning(
+              log.error(
                   "%s ignoring scenario %s (neither required nor optional)",
                   name, scenario)
+              results[name] = None
+              errors += 1
               continue
+
+            # check if this submission has power logs
+            power_path = os.path.join(name, "performance", "power")
+            has_power = os.path.exists(power_path)
+
+            if has_power:
+              log.info("Detected power logs for %s", name)
+              if config.version in ["v1.0", "v1.1", "v2.0", "v2.1", "v3.0"]:
+                pass # Submission checker was not enforcing this
+              elif not check_system_desc_id_power(name, system_json, submitter, division,
+                config.version, skip_meaningful_fields_empty_check):
+                results[name] = None
+                errors += 1
+                continue
 
             # check if measurement_dir is good.
             measurement_dir = os.path.join(division, submitter, "measurements",
@@ -2273,15 +2309,16 @@ def check_results_dir(config,
               log.error("no measurement_dir for %s", measurement_dir)
               results[measurement_dir] = None
               errors += 1
+              continue
             else:
               if not check_measurement_dir(measurement_dir, name, system_desc,
-                                           os.path.join(division, submitter),
-                                           model_name, scenario):
+                    os.path.join(division, submitter), model_name, scenario,
+                    has_power, skip_meaningful_fields_empty_check, skip_empty_files_check,
+                    skip_check_power_measure_files):
                 log.error("%s measurement_dir has issues", measurement_dir)
-                # results[measurement_dir] = None
+                results[measurement_dir] = None
                 errors += 1
-                # FIXME: we should not accept this submission
-                # continue
+                continue
 
             # check accuracy
             accuracy_is_valid = False
@@ -2311,12 +2348,6 @@ def check_results_dir(config,
               n = ["run_1", "run_2", "run_3", "run_4", "run_5"]
             else:
               n = ["run_1"]
-
-            # check if this submission has power logs
-            power_path = os.path.join(name, "performance", "power")
-            has_power = os.path.exists(power_path)
-            if has_power:
-              log.info("Detected power logs for %s", name)
 
             for i in n:
               perf_path = os.path.join(name, "performance", i)
@@ -2362,7 +2393,7 @@ def check_results_dir(config,
 
               if is_valid:
                 results[
-                    name] = r if r is None or power_metric == 0 else ("{:f} "
+                    name] = r if r is None or not has_power else ("{:f} "
                                                                       "with "
                                                                       "power_metric"
                                                                       " = {:f}").format(
@@ -2371,6 +2402,7 @@ def check_results_dir(config,
               else:
                 log.error("%s has issues", perf_path)
                 errors += 1
+                results[name] = None
 
             # check if compliance dir is good for CLOSED division
             compliance = 0 if is_closed_or_network else 1
@@ -2427,13 +2459,15 @@ def check_results_dir(config,
   return results
 
 
-def check_system_desc_id(fname, systems_json, submitter, division, version):
+def check_system_desc_id(fname, systems_json, submitter, division, version, skip_meaningful_fields_empty_check):
   is_valid = True
   # check all required fields
   if version in ["v0.5", "v0.7"]:
     required_fields = SYSTEM_DESC_REQUIRED_FIELDS
+  elif version in ["v1.0", "v1.1", "v2.0", "v2.1", "v3.0"]:
+    required_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1
   else:
-    required_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1
+    required_fields = SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1 + SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1
 
   is_network_system, is_network_mode_valid = is_system_over_network(
       division, systems_json, fname)
@@ -2441,20 +2475,23 @@ def check_system_desc_id(fname, systems_json, submitter, division, version):
   if is_network_system:
     required_fields += SYSTEM_DESC_REQUIRED_FIELDS_NETWORK_MODE
 
+  check_empty_fields = False if skip_meaningful_fields_empty_check else True
+
   for k in required_fields:
     if k not in systems_json:
       is_valid = False
       log.error("%s, field %s is missing", fname, k)
-    elif k in SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS and not systems_json[k]:
+    elif check_empty_fields and k in SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS and not systems_json[k]:
       is_valid = False
       log.error("%s, field %s requires a meaningful response but is empty", fname, k)
 
   if version in ["v0.5", "v0.7"]:
-    all_fields = required_fields + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1
+    all_fields = required_fields + SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1
   else:
-    # TODO: SYSTEM_DESC_REQUIED_FIELDS_POWER should be mandatory when a submission has power logs, but since we
-    # check power submission in check_results_dir, the information is not available yet at this stage.
-    all_fields = required_fields + SYSTEM_DESC_REQUIED_FIELDS_POWER
+    # SYSTEM_DESC_REQUIRED_FIELDS_POWER should be mandatory when a submission has power logs, but since we
+    # check power submission in check_results_dir, the information is not available yet at this stage and we do
+    # this check later
+    all_fields = required_fields + SYSTEM_DESC_REQUIRED_FIELDS_POWER
   for k in systems_json.keys():
     if k not in all_fields:
       log.warning("%s, field %s is unknown", fname, k)
@@ -2469,16 +2506,50 @@ def check_system_desc_id(fname, systems_json, submitter, division, version):
     is_valid = False
   return is_valid
 
+def check_system_desc_id_power(fname, systems_json, submitter, division, version, skip_meaningful_fields_empty_check):
+  is_valid = True
 
-def check_measurement_dir(measurement_dir, fname, system_desc, root, model,
-                          scenario):
+  check_empty_fields = False if skip_meaningful_fields_empty_check else True
+
+  for k in SYSTEM_DESC_REQUIRED_FIELDS_POWER:
+    if k not in systems_json:
+      is_valid = False
+      log.error("%s, field %s is missing", fname, k)
+    elif check_empty_fields and k in SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS_POWER and not systems_json[k]:
+      is_valid = False
+      log.error("%s, field %s requires a meaningful response but is empty", fname, k)
+
+  return is_valid
+
+
+def check_measurement_dir(measurement_dir, fname, system_desc, root, model, scenario,
+        has_power, skip_meaningful_fields_empty_check, skip_empty_files_check,
+        skip_check_power_measure_files):
+
   files = list_files(measurement_dir)
   system_file = None
   is_valid = True
+  check_empty_fields = False if skip_meaningful_fields_empty_check else True
+
   for i in REQUIRED_MEASURE_FILES:
     if i not in files:
       log.error("%s is missing %s", measurement_dir, i)
       is_valid = False
+    elif not skip_empty_files_check and (os.stat(os.path.join(measurement_dir,i)).st_size == 0):
+      log.error("%s is having empty %s", measurement_dir, i)
+      is_valid = False
+
+  if has_power and not skip_check_power_measure_files:
+    for i in REQUIRED_POWER_MEASURE_FILES:
+        file_re = measurement_dir + "/../../../**/" + i
+        file_path = glob(file_re, recursive=True)
+        if not file_path:
+            log.error("%s is missing %s", measurement_dir, i)
+            is_valid = False
+        elif not skip_empty_files_check and (os.stat(file_path).st_size == 0):
+            log.error("%s is having empty %s", measurement_dir, i)
+            is_valid = False
+
   for i in files:
     if i.startswith(system_desc) and i.endswith("_" + scenario + ".json"):
       system_file = i
@@ -2504,6 +2575,9 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model,
         if k not in j:
           is_valid = False
           log.error("%s, field %s is missing", fname, k)
+        elif check_empty_fields and not j[k]:
+          is_valid = False
+          log.error("%s, field %s is missing meaningful value", fname, k)
 
     impl = system_file[len(system_desc) + 1:-end]
     code_dir = os.path.join(root, "code", model)
@@ -2675,13 +2749,15 @@ def main():
       args.version,
       args.extra_model_benchmark_map,
       ignore_uncommited=args.submission_exceptions,
-      more_power_check=args.more_power_check)
+      skip_power_check=args.skip_power_check)
 
   with open(args.csv, "w") as csv:
     os.chdir(args.input)
     # check results directory
     results = check_results_dir(config, args.submitter, args.skip_compliance,
-                                csv, args.debug)
+                                csv, args.debug, args.skip_meaningful_fields_empty_check,
+                                args.skip_empty_files_check,
+                                args.skip_check_power_measure_files)
 
   # log results
   log.info("---")

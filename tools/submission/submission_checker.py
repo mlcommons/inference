@@ -2432,6 +2432,9 @@ def check_system_desc_id(fname, systems_json, submitter, division, version):
     if k not in systems_json:
       is_valid = False
       log.error("%s, field %s is missing", fname, k)
+    elif not systems_json[k]:
+      is_valid = False
+      log.error("%s, field %s is empty", fname, k)
 
   if version in ["v0.5", "v0.7"]:
     all_fields = required_fields + SYSTEM_DESC_REQUIED_FIELDS_SINCE_V1

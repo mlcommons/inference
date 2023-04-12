@@ -2296,7 +2296,9 @@ def check_results_dir(config,
               log.info("Detected power logs for %s", name)
               if config.version in ["v1.0", "v1.1", "v2.0", "v2.1", "v3.0"]:
                 pass # Submission checker was not enforcing this
-              elif not check_system_desc_id_power(name, system_json, submitter, division,
+              # The power related system_desc_fields are not used by submitters currently.
+              # Turning this check off for now
+              elif False and not check_system_desc_id_power(name, system_json, submitter, division,
                 config.version, skip_meaningful_fields_empty_check):
                 results[name] = None
                 errors += 1

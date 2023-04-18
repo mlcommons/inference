@@ -38,6 +38,8 @@ pip install torchviz
 pip install protobuf
 pip install tqdm
 pip install onnxruntime
+pip install onnx
+pip install "git+https://github.com/mlperf/logging.git"
 ```
 
 ### Prepare the code and dataset
@@ -48,6 +50,9 @@ mkdir ./mlcommons && cd ./mlcommons
 git clone --recurse-submodules https://github.com/mlcommons/training.git
 git clone --recurse-submodules https://github.com/mlcommons/inference.git
 export DLRM_DIR=$HOME/mlcommons/training/recommendation/dlrm
+cd $HOME/mlcommons/training/recommendation/dlrm
+git checkout -b dlrm f06d3deed5a15710fb28e0ede0af31ebd53789cb
+cd $HOME
 ```
 2. Download pre-trained model weights (see links available above)
 ```

@@ -24,7 +24,10 @@ import os
 import re
 import traceback
 import uuid
+import logging
 
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("main")
 
 class LineWithoutTimeStamp(Exception):
     pass
@@ -646,20 +649,20 @@ def check_with_logging(check_name: str, check: Callable[[], None]) -> Tuple[bool
     try:
         check()
     except AssertionError as e:
-        print(f"[ ] {check_name}")
-        print(f"\t{e}\n")
+        log.error(f"[ ] {check_name}")
+        log.error(f"\t{e}\n")
         return False, False
     except CheckerWarning as e:
-        print(f"[x] {check_name}")
-        print(f"\t{e}\n")
+        log.warning(f"[x] {check_name}")
+        log.warning(f"\t{e}\n")
         return True, True
     except Exception:
-        print(f"[ ] {check_name}")
-        print("Unhandled exeception:")
+        log.exception(f"[ ] {check_name}")
+        log.exception("Unhandled exeception:")
         traceback.print_exc()
         return False, False
     else:
-        print(f"[x] {check_name}")
+        log.info(f"[x] {check_name}")
     return True, False
 
 
@@ -693,10 +696,12 @@ def check(path: str) -> int:
         result &= check_result
         warnings |= check_warnings
 
-    print(
-        f"\n{'All' if result else 'ERROR: Not all'} checks passed"
-        f"{'. Warnings encountered, check for audit!' if warnings else ''}"
-    )
+    if result:
+        log.info('\nAll checks passed'
+                f"{'. Warnings encountered, check for audit!' if warnings else ''}")
+    else:
+        log.error(f"\nERROR: Not all checks passed"
+                f"{'. Warnings encountered, check for audit!' if warnings else ''}")
 
     return 0 if result else 1
 

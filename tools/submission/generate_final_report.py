@@ -14,6 +14,8 @@ def get_args():
   """Parse commandline."""
   parser = argparse.ArgumentParser()
   parser.add_argument('--input', required=True, help='results csv from checker')
+  parser.add_argument('--version', default='3.0', help='mlperf version')
+  parser.add_argument('--repository', default='submissions_inference_3.0', help='mlperf repository')
   args = parser.parse_args()
   return args
 
@@ -54,10 +56,16 @@ def main():
   df['p#'] = df.apply(lambda x: int(x['host_processors_per_node']), axis=1)
 
   # details url
-  base_url = 'https://github.com/mlcommons/submissions_inference_3.0/tree/master'
+  base_url = f'https://github.com/mlcommons/{args.repository}/tree/main'
   df['Details'] = df.apply(
       lambda x: '=HYPERLINK("{}","details")'.format('/'.join(
           [base_url, x['Category'], x['Submitter'], 'results', x['Platform']])),
+      axis=1)
+  
+  # code url
+  df['Code'] = df.apply(
+      lambda x: '=HYPERLINK("{}","details")'.format('/'.join(
+          [base_url, x['Category'], x['Submitter'], 'code'])),
       axis=1)
 
   output = args.input[:-4]
@@ -81,10 +89,12 @@ def main():
   ]
   indices['open'] = indices['closed'].copy()
   indices['closed'].append('Details')
+  indices['closed'].append('Code')
   indices['network'] = indices['closed'].copy()
   indices['open'].append('UsedModel')
   indices['open'].append('Accuracy')
   indices['open'].append('Details')
+  indices['open'].append('Code')
   columns = [
       'Model',
       'Scenario',
@@ -180,7 +190,7 @@ def main():
            key) in enumerate(pd.unique(df['Unique ID (e.g. for Audit)']))
   }
   df['ID'] = df.apply(
-      lambda x: '3.0-{:04}'.format(id_dict[x['Unique ID (e.g. for Audit)']]),
+      lambda x: '{}-{:04}'.format(args.version, id_dict[x['Unique ID (e.g. for Audit)']]),
       axis=1)
 
   for category in ['closed', 'open', 'network']:
@@ -197,7 +207,7 @@ def main():
                       NotEqual('millijoules/Stream')),
               ('Scenario', 'Model'):
                   Apply(FilterScenario, suite)
-          }, category + ',' + suite)
+          }, suite + ' - ' + category)
 
       MakeWorksheet(
           df, indices[category], {
@@ -205,7 +215,7 @@ def main():
               'Suite': Contain(suite),
               'has_power': Equal(True),
               ('Scenario', 'Model'): Apply(FilterScenario, suite)
-          }, category + ',' + suite + ',power')
+          }, suite + ' - ' + category + ' - power')
 
   score_format = writer.book.add_format({'num_format': '#,##0.00'})
   bg_format = writer.book.add_format({'bg_color': '#efefef'})

@@ -7,7 +7,7 @@
     pip3 install absl-py numpy
 
 ## Quick Start
-### Instalation - Python
+### Installation - Python
 
     pip install absl-py numpy
     git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf_inference
@@ -22,7 +22,7 @@ Alternatively, we provide wheels for several python versions and operating syste
 
 **NOTE:** Take into account that we only update the published wheels after an official release, they may not include the latest changes.
 
-### Testing your Instalation
+### Testing your Installation
 The following command will run a simple end-to-end demo:
 
     python mlperf_inference/loadgen/demos/py_demo_single_stream.py
@@ -33,7 +33,7 @@ For a timeline visualization of what happened during the test, open the *"mlperf
 * Type “chrome://tracing” in the address bar, then drag-n-drop the json.
 * This may be useful for SUT performance tuning and understanding + debugging the loadgen.
 
-### Instalation - C++
+### Installation - C++
 To build the loadgen as a C++ library, rather than a python module:
 
     git clone https://github.com/mlcommons/inference.git mlperf_inference

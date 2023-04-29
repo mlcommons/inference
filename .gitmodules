@@ -12,4 +12,4 @@
 	url = https://github.com/MIC-DKFZ/nnUNet.git
 [submodule "tools/submission/power-dev"]
 	path = tools/submission/power-dev
-	url = ../power-dev
+	url = https://github.com/mlcommons/power-dev

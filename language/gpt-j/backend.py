@@ -19,7 +19,7 @@ gen_kwargs = {
 
 
 class SUT_base():
-    def __init__(self, model_path,dtype,dataset_path):
+    def __init__(self, model_path,dtype,dataset_path,max_examples):
         # TODO : Pass model file name to init instead of args
         print("Loading PyTorch model...")
         self.model_name = "EleutherAI/gpt-j-6B"
@@ -49,7 +49,7 @@ class SUT_base():
             use_fast=False,)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        self.data_object = Dataset(self.dataset_path)
+        self.data_object = Dataset(self.dataset_path,total_count_override=max_examples)
         self.qsl = lg.ConstructQSL( self.data_object.count,  self.data_object.perf_count,  self.data_object.LoadSamplesToRam ,  self.data_object.UnloadSamplesFromRam)
 
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
@@ -89,11 +89,8 @@ class SUT_base():
             input_batch = dict()
             input_batch['input_ids'] = input_ids_tensor
             input_batch['attention_mask'] = input_masks_tensor
-            # tic = time.time()
+           
             output_batch = self.model.generate(**input_batch, **gen_kwargs,pad_token_id=self.tokenizer.eos_token_id)
-            # toc = time.time()
-
-      
 
             input_batch_lengths = [x.shape[0] for x in input_batch["input_ids"]]
 
@@ -102,9 +99,6 @@ class SUT_base():
             output_batch_truncated=[]
             for data, source_len in zip(output_batch, input_batch_lengths):
                 output_batch_truncated.append(data[source_len:])
-            # print("Input token size : ",input_ids_tensor.shape[1])
-            # print("Output tokens size : ",output_batch_lengths[0]-input_ids_tensor.shape[1])
-            # print("Time taken for model.generate()  : ",toc-tic)
 
 
 
@@ -121,14 +115,14 @@ class SUT_base():
 
 
 class SUT_Offline(SUT_base):
-    def __init__(self,model_path,dtype,dataset_path):
-        SUT_base.__init__(self,model_path,dtype,dataset_path)
+    def __init__(self,model_path,dtype,dataset_path,max_examples):
+        SUT_base.__init__(self,model_path,dtype,dataset_path,max_examples)
     '''IssueQuery and inference methods implemented in Base class'''
 
 class SUT_Server(SUT_base):
-    def __init__(self,model_path,dtype,dataset_path):
+    def __init__(self,model_path,dtype,dataset_path,max_examples):
         
-        SUT_base.__init__(self,model_path,dtype,dataset_path)
+        SUT_base.__init__(self,model_path,dtype,dataset_path,max_examples)
         self.total_samples_done = 0
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("SUT Server")
@@ -149,8 +143,8 @@ class SUT_Server(SUT_base):
         print("Completed : ",self.total_samples_done)
 
 class SUT_SingleStream(SUT_base):
-    def __init__(self,model_path,dtype,dataset_path):
-        SUT_base.__init__(self,model_path,dtype,dataset_path)
+    def __init__(self,model_path,dtype,dataset_path,max_examples):
+        SUT_base.__init__(self,model_path,dtype,dataset_path,max_examples)
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         self.total_samples_done = 0
     def issue_queries(self,query_samples):
@@ -171,21 +165,21 @@ class SUT_SingleStream(SUT_base):
 
     
 
-def get_SUT_Offline(model_path,dtype,dataset_path):
-    return SUT_Offline(model_path,dtype,dataset_path)
+def get_SUT_Offline(model_path,dtype,dataset_path,max_examples):
+    return SUT_Offline(model_path,dtype,dataset_path,max_examples)
 
-def get_SUT_Server(model_path,dtype,dataset_path):
-    return SUT_Server(model_path,dtype,dataset_path)
+def get_SUT_Server(model_path,dtype,dataset_path,max_examples):
+    return SUT_Server(model_path,dtype,dataset_path,max_examples)
 
-def get_SUT_SingleStream(model_path,dtype,dataset_path):
-    return SUT_SingleStream(model_path,dtype,dataset_path)
+def get_SUT_SingleStream(model_path,dtype,dataset_path,max_examples):
+    return SUT_SingleStream(model_path,dtype,dataset_path,max_examples)
 
-def get_SUT(model_path,scenario,dtype,dataset_path):
+def get_SUT(model_path,scenario,dtype,dataset_path,max_examples):
     if scenario=="Offline":
-        return get_SUT_Offline(model_path,dtype,dataset_path)
+        return get_SUT_Offline(model_path,dtype,dataset_path,max_examples)
     elif scenario == "Server":
-        return get_SUT_Server(model_path,dtype,dataset_path)
+        return get_SUT_Server(model_path,dtype,dataset_path,max_examples)
     elif scenario == "SingleStream":
-        return get_SUT_SingleStream(model_path,dtype,dataset_path)
+        return get_SUT_SingleStream(model_path,dtype,dataset_path,max_examples)
 
 

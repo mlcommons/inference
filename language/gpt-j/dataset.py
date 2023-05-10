@@ -56,7 +56,6 @@ class Dataset():
        
         self.count = total_count_override or len(self.sources)
         self.perf_count = perf_count_override or self.count
-        print("Counts : ",self.count,self.perf_count)
 
 
       

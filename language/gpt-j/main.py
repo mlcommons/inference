@@ -41,7 +41,7 @@ scenario_map = {
 def main():
     args = get_args()
 
-    sut = get_SUT(model_path=args.model_path,scenario=args.scenario,dtype=args.dtype,dataset_path=args.dataset_path)
+    sut = get_SUT(model_path=args.model_path,scenario=args.scenario,dtype=args.dtype,dataset_path=args.dataset_path,max_examples=args.max_examples)
 
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]

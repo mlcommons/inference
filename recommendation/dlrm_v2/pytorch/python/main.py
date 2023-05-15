@@ -23,13 +23,6 @@ import numpy as np
 import dataset
 import multihot_criteo
 
-# add dlrm code path
-try:
-    dlrm_dir_path = os.environ['DLRM_DIR']
-    sys.path.append(dlrm_dir_path)
-except KeyError:
-    print("ERROR: Please set DLRM_DIR environment variable to the dlrm code location")
-    sys.exit(0)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")

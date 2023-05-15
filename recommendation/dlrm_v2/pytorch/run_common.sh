@@ -10,9 +10,6 @@ fi
 if [ "x$MODEL_DIR" == "x" ]; then
     echo "MODEL_DIR not set" && exit 1
 fi
-if [ "x$DLRM_DIR" == "x" ]; then
-    echo "DLRM_DIR not set" && exit 1
-fi
 
 
 # defaults

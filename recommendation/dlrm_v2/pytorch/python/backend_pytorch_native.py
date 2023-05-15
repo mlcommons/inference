@@ -2,7 +2,7 @@
 pytoch native backend for dlrm
 """
 import os
-import torch 
+import torch
 import backend
 import numpy as np
 
@@ -15,7 +15,10 @@ from torchrec.datasets.random import RandomRecDataset
 # Modules for distributed running
 from torch import distributed as dist
 from torchrec.distributed.planner import EmbeddingShardingPlanner, Topology
-from torchrec.distributed.model_parallel import DistributedModelParallel, get_default_sharders
+from torchrec.distributed.model_parallel import (
+    DistributedModelParallel,
+    get_default_sharders,
+)
 from torchrec.distributed.comm import get_local_size
 from torchrec.distributed.planner.storage_reservations import (
     HeuristicalStorageReservation,
@@ -58,16 +61,16 @@ class BackendPytorchNative(backend.Backend):
             self.device = "cuda:0" if self.use_gpu else "cpu"
             self.device = torch.device(self.device)
         else:
-            #assert ngpus == 8, "Reference implementation only supports ngpus = 8"
+            # assert ngpus == 8, "Reference implementation only supports ngpus = 8"
             os.environ["RANK"] = "0"
             os.environ["WORLD_SIZE"] = str(ngpus)
             os.environ["MASTER_ADDR"] = "localhost"
             os.environ["MASTER_PORT"] = "29500"
             rank = int(os.environ["RANK"])
             if self.use_gpu:
-                self.device: torch.device = torch.device(f"cuda:{rank}")
+                self.device: torch.device = torch.device(f"cuda")
                 self.dist_backend = "nccl"
-                torch.cuda.set_device(self.device)
+                # torch.cuda.set_device(self.device)
             else:
                 self.device: torch.device = torch.device("cpu")
                 self.dist_backend = "gloo"
@@ -94,7 +97,9 @@ class BackendPytorchNative(backend.Backend):
             ]
 
             dlrm_model = DLRM_DCN(
-                embedding_bag_collection=EmbeddingBagCollection(tables=eb_configs, device=self.device),
+                embedding_bag_collection=EmbeddingBagCollection(
+                    tables=eb_configs, device=self.device
+                ),
                 dense_in_features=len(DEFAULT_INT_NAMES),
                 dense_arch_layer_sizes=self.dense_arch_layer_sizes,
                 over_arch_layer_sizes=self.over_arch_layer_sizes,
@@ -119,7 +124,9 @@ class BackendPytorchNative(backend.Backend):
             ]
 
             dlrm_model = DLRM_DCN(
-                embedding_bag_collection=EmbeddingBagCollection(tables=eb_configs, device=torch.device("meta")),
+                embedding_bag_collection=EmbeddingBagCollection(
+                    tables=eb_configs, device=torch.device("meta")
+                ),
                 dense_in_features=len(DEFAULT_INT_NAMES),
                 dense_arch_layer_sizes=self.dense_arch_layer_sizes,
                 over_arch_layer_sizes=self.over_arch_layer_sizes,
@@ -139,69 +146,44 @@ class BackendPytorchNative(backend.Backend):
                 dlrm_model, get_default_sharders(), dist.GroupMember.WORLD
             )
             self.model = DistributedModelParallel(
-                module=dlrm_model,
-                device=self.device,
-                plan=plan,
+                module=dlrm_model, device=self.device, plan=plan,
             )
             # path_to_sharded_weights should have 2 subdirectories - batched and sharded
-            # If we need to load the weights on different device or world size, we would need to change the process 
-            #group accordingly. If we would want to load on 8 GPUs, the process group created above should be fine
-            # to understand sharding, --print_sharding_plan flag should be used while running dlrm_main.py in 
-            #torcherec implementation
-            
-            
-            from torchsnapshot import Snapshot
-            snapshot = Snapshot(path="<path_to_sharded_weights>")
-            snapshot.restore(app_state= {
-             "model": self.model
-        })
-        
-        ### To understand the keys in snapshot, you can look at following code snippet. 
-        d = snapshot.get_manifest()
-        for k, v in d.items():
-             print(k, v)
-            return self
-            
-        """
-        if self.use_gpu:
-            dlrm = dlrm.to(self.device)  # .cuda()
-            if dlrm.ndevices > 1:
-                dlrm.emb_l = dlrm.create_emb(self.m_spa, self.ln_emb)
+            # If we need to load the weights on different device or world size, we would need to change the process
+            # group accordingly. If we would want to load on 8 GPUs, the process group created above should be fine
+            # to understand sharding, --print_sharding_plan flag should be used while running dlrm_main.py in
+            # torcherec implementation
+            print("Loading model...")
 
-        if self.use_gpu:
-            if dlrm.ndevices > 1:
-                # NOTE: when targeting inference on multiple GPUs,
-                # load the model as is on CPU or GPU, with the move
-                # to multiple GPUs to be done in parallel_forward
-                ld_model = torch.load(model_path)
-            else:
-                # NOTE: when targeting inference on single GPU,
-                # note that the call to .to(device) has already happened
-                ld_model = torch.load(
-                    model_path,
-                    map_location=torch.device("cuda")
-                    # map_location=lambda storage, loc: storage.cuda(0)
-                )
-        else:
-            # when targeting inference on CPU
-            ld_model = torch.load(model_path, map_location=torch.device("cpu"))
-        """
-        
+            from torchsnapshot import Snapshot
+
+            snapshot = Snapshot(path=model_path)
+            snapshot.restore(app_state={"model": self.model})
+
+            ### To understand the keys in snapshot, you can look at following code snippet.
+            d = snapshot.get_manifest()
+            for k, v in d.items():
+                print(k, v)
+            return self
 
     def predict(self, samples):
         outputs = []
         for batch in samples:
+            self.i += 1
+            print(self.i)
             sparse_features = batch.sparse_features.to(self.device)
             dense_features = batch.dense_features.to(self.device)
             with torch.no_grad():
-                out = self.model(dense_features=dense_features, sparse_features=sparse_features)
+                out = self.model(
+                    dense_features=dense_features, sparse_features=sparse_features
+                )
                 out = torch.reshape(out, (-1,))
                 outputs.append(out)
         return outputs
 
 
 if __name__ == "__main__":
-    num_enum_embeddings_per_feature=[
+    num_enum_embeddings_per_feature = [
         5,
         5,
         5,
@@ -229,16 +211,16 @@ if __name__ == "__main__":
         5,
         5,
     ]
-    #num_enum_embeddings_per_feature = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36]
+    # num_enum_embeddings_per_feature = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36]
     backend = BackendPytorchNative(
-        num_embeddings_per_feature = num_enum_embeddings_per_feature,
+        num_embeddings_per_feature=num_enum_embeddings_per_feature,
         embedding_dim=128,
         dcn_num_layers=3,
         dcn_low_rank_dim=512,
         dense_arch_layer_sizes=[512, 256, 128],
         over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
         use_gpu=True,
-        debug=False
+        debug=False,
     )
     backend.load("")
 
@@ -253,4 +235,3 @@ if __name__ == "__main__":
     print(sample)
     prediction = backend.predict(sample)
     print(prediction)
-    

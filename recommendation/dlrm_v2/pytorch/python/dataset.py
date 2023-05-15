@@ -54,22 +54,13 @@ class Dataset():
         raise NotImplementedError("Dataset:get_list")
 
     def load_query_samples(self, sample_list):
-        self.image_list_inmemory = {}
-        for sample in sample_list:
-            self.image_list_inmemory[sample], _ = self.get_item(sample)
-        self.last_loaded = time.time()
+        raise NotImplementedError("Dataset:load_query_samples")
 
     def unload_query_samples(self, sample_list):
-        if sample_list:
-            for sample in sample_list:
-                if sample in self.image_list_inmemory :
-                    del self.image_list_inmemory[sample]
-        else:
-            self.image_list_inmemory = {}
+        raise NotImplementedError("Dataset:unload_query_samples")
 
     def get_samples(self, id_list):
-        data = np.array([self.image_list_inmemory[id] for id in id_list])
-        return data, self.label_list[id_list]
+        raise NotImplementedError("Dataset:get_samples")
 
     def get_item_loc(self, id):
         raise NotImplementedError("Dataset:get_item_loc")
@@ -136,122 +127,3 @@ class PostProcessArgMax:
         results["good"] = self.good
         results["total"] = self.total
 
-
-#
-# pre-processing
-#
-
-def center_crop(img, out_height, out_width):
-    height, width, _ = img.shape
-    left = int((width - out_width) / 2)
-    right = int((width + out_width) / 2)
-    top = int((height - out_height) / 2)
-    bottom = int((height + out_height) / 2)
-    img = img[top:bottom, left:right]
-    return img
-
-
-def resize_with_aspectratio(img, out_height, out_width, scale=87.5, inter_pol=cv2.INTER_LINEAR):
-    height, width, _ = img.shape
-    new_height = int(100. * out_height / scale)
-    new_width = int(100. * out_width / scale)
-    if height > width:
-        w = new_width
-        h = int(new_height * height / width)
-    else:
-        h = new_height
-        w = int(new_width * width / height)
-    img = cv2.resize(img, (w, h), interpolation=inter_pol)
-    return img
-
-
-def pre_process_vgg(img, dims=None, need_transpose=False):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    output_height, output_width, _ = dims
-    cv2_interpol = cv2.INTER_AREA
-    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2_interpol)
-    img = center_crop(img, output_height, output_width)
-    img = np.asarray(img, dtype='float32')
-
-    # normalize image
-    means = np.array([123.68, 116.78, 103.94], dtype=np.float32)
-    img -= means
-
-    # transpose if needed
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-    return img
-
-
-def pre_process_mobilenet(img, dims=None, need_transpose=False):
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    output_height, output_width, _ = dims
-    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2.INTER_LINEAR)
-    img = center_crop(img, output_height, output_width)
-    img = np.asarray(img, dtype='float32')
-
-    img /= 255.0
-    img -= 0.5
-    img *= 2
-
-    # transpose if needed
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-    return img
-
-
-def maybe_resize(img, dims):
-    img = np.array(img, dtype=np.float32)
-    if len(img.shape) < 3 or img.shape[2] != 3:
-        # some images might be grayscale
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    if dims != None:
-        im_height, im_width, _ = dims
-        img = cv2.resize(img, (im_width, im_height), interpolation=cv2.INTER_LINEAR)
-    return img
-
-
-def pre_process_coco_mobilenet(img, dims=None, need_transpose=False):
-    img = maybe_resize(img, dims)
-    img = np.asarray(img, dtype=np.uint8)
-    # transpose if needed
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-    return img
-
-
-def pre_process_coco_pt_mobilenet(img, dims=None, need_transpose=False):
-    img = maybe_resize(img, dims)
-    img -= 127.5
-    img /= 127.5
-    # transpose if needed
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-    return img
-
-
-def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
-    img = maybe_resize(img, dims)
-    mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
-    std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
-
-    img = img / 255. - mean
-    img = img / std
-
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-
-    return img
-
-
-def pre_process_coco_resnet34_tf(img, dims=None, need_transpose=False):
-    img = maybe_resize(img, dims)
-    mean = np.array([123.68, 116.78, 103.94], dtype=np.float32)
-    img = img - mean
-    if need_transpose:
-        img = img.transpose([2, 0, 1])
-
-    return img

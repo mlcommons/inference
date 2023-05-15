@@ -22,6 +22,6 @@ opts="--config ./mlperf.conf --profile $profile $common_opt --model $model \
     --output $OUTPUT_DIR $EXTRA_OPS $@"
 
 docker run $runtime -e opts="$opts" \
-    -v $DATA_DIR:$DATA_DIR -v $MODEL_DIR:$MODEL_DIR $DLRM_DIR:$DLRM_DIR -v `pwd`:/mlperf \
+    -v $DATA_DIR:$DATA_DIR -v $MODEL_DIR:$MODEL_DIR -v `pwd`:/mlperf \
     -v $OUTPUT_DIR:/output -v /proc:/host_proc \
     -t $image:latest /mlperf/run_helper.sh 2>&1 | tee $OUTPUT_DIR/output.txt

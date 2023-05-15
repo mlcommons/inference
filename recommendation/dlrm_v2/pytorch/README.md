@@ -104,7 +104,6 @@ Download and install all the pre-requisites. Both local and docker environment n
 ```
 export DATA_DIR=YourCriteoMultihotLocation
 export MODEL_DIR=YourModelFileLocation
-export DLRM_DIR=YourDLRMSourceLocation
 ```
 
 ### Run local
@@ -184,8 +183,7 @@ The container will have loadgen binary and all other tools needed to run the exp
 Model, and Data are located on the host machine and can be shared between multiple containers
 
 Edit run_docker.sh to set directories, the defaults are:
-HOST_MLCOMMONS_ROOT_DIR=$HOME/mlcommons/inference	# path to mlcommons/inference
-DLRM_DIR=$HOME/mlcommons/dlrm				# path to DLRM			
+HOST_MLCOMMONS_ROOT_DIR=$HOME/mlcommons/inference	# path to mlcommons/inference		
 MODEL_DIR=$HOME/mlcommons/model-multihot-criteo		# path to model folder
 DATA_DIR=$HOME/mlcommons/data-multihot-criteo			# path to data folder
 
@@ -212,8 +210,7 @@ The container will have loadgen binary and all other tools needed to run the exp
 Model, and Data are located on the host machine and can be shared between multiple containers
 
 Edit run_docker.sh to set directories, the defaults are:
-HOST_MLCOMMONS_ROOT_DIR=$HOME/mlcommons/inference	# path to mlcommons/inference
-DLRM_DIR=$HOME/mlcommons/dlrm				# path to DLRM			
+HOST_MLCOMMONS_ROOT_DIR=$HOME/mlcommons/inference	# path to mlcommons/inference	
 MODEL_DIR=$HOME/mlcommons/model-kaggle			# path to model folder
 DATA_DIR=$HOME/mlcommons/data-kaggle			# path to data folder
 CUDA_VISIBLE_DEVICES=0					# CUDA devices

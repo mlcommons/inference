@@ -143,7 +143,23 @@ class BackendPytorchNative(backend.Backend):
                 device=self.device,
                 plan=plan,
             )
-            # TODO: Load model
+            # path_to_sharded_weights should have 2 subdirectories - batched and sharded
+            # If we need to load the weights on different device or world size, we would need to change the process 
+            #group accordingly. If we would want to load on 8 GPUs, the process group created above should be fine
+            # to understand sharding, --print_sharding_plan flag should be used while running dlrm_main.py in 
+            #torcherec implementation
+            
+            
+            from torchsnapshot import Snapshot
+            snapshot = Snapshot(path="<path_to_sharded_weights>")
+            snapshot.restore(app_state= {
+             "model": self.model
+        })
+        
+        ### To understand the keys in snapshot, you can look at following code snippet. 
+        d = snapshot.get_manifest()
+        for k, v in d.items():
+             print(k, v)
             return self
             
         """

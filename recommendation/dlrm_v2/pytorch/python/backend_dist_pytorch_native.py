@@ -5,9 +5,10 @@ import os
 import torch
 import backend
 import numpy as np
+import threading
 
 from torchrec import EmbeddingBagCollection
-from torchrec.models.dlrm import DLRM, DLRM_DCN, DLRMTrain
+from torchrec.models.dlrm import DLRMTrain, DLRM_DCN
 from torchrec.datasets.criteo import DEFAULT_CAT_NAMES, DEFAULT_INT_NAMES
 from torchrec.modules.embedding_configs import EmbeddingBagConfig
 from torchrec.datasets.random import RandomRecDataset
@@ -20,14 +21,14 @@ from torchrec.distributed.model_parallel import (
     DistributedModelParallel,
     get_default_sharders,
 )
+from torchrec.distributed.types import ShardingEnv
 from torchrec.distributed.comm import get_local_size
 from torchrec.distributed.planner.storage_reservations import (
     HeuristicalStorageReservation,
 )
-import torchrec.distributed as trec_dist
 
 
-class BackendPytorchNative(backend.Backend):
+class BackendDistPytorchNative(backend.Backend):
     def __init__(
         self,
         num_embeddings_per_feature,
@@ -39,7 +40,7 @@ class BackendPytorchNative(backend.Backend):
         use_gpu=False,
         debug=False,
     ):
-        super(BackendPytorchNative, self).__init__()
+        super(BackendDistPytorchNative, self).__init__()
         self.i = 0
         self.sess = None
         self.model = None
@@ -60,33 +61,62 @@ class BackendPytorchNative(backend.Backend):
             print("Using CPU...")
 
         
+        # assert ngpus == 8, "Reference implementation only supports ngpus = 8"
         os.environ["RANK"] = "0"
         os.environ["MASTER_ADDR"] = "localhost"
         os.environ["MASTER_PORT"] = "29500"
-        rank = int(os.environ["RANK"])
         if self.use_gpu:
-            os.environ["WORLD_SIZE"] = 1
-            self.device: torch.device = torch.device(f"cuda:0")
+            os.environ["WORLD_SIZE"] = str(ngpus)
+            self.device = "cuda"
             self.dist_backend = "nccl"
-            # torch.cuda.set_device(self.device)
         else:
-            #os.environ["WORLD_SIZE"] = "8"
             self.device: torch.device = torch.device("cpu")
             self.dist_backend = "gloo"
+        self.world_size = int(os.environ["WORLD_SIZE"])
 
     def version(self):
         return torch.__version__
 
     def name(self):
         return "pytorch-native-dlrm"
-
+    
     def load(self, model_path, inputs=None, outputs=None):
         # debug prints
         # print(model_path, inputs, outputs)
         print(f"Loading model from {model_path}")
+        world_size = int(os.environ["WORLD_SIZE"])
+
+        # Set multiprocessing variables
+        manager = mp.Manager()
+        self.samples_q = [manager.Queue() for _ in range(world_size)]
+        self.dataset_cache = manager.dict()
+        self.predictions_cache = [manager.dict() for _ in range(world_size)]
+        self.main_lock = manager.Event()
         
+
+        # Create processes to load model
+        ctx = mp.get_context("spawn")
+        processes = []
+        for rank in range(world_size):
+            p = ctx.Process(
+                target=self.distributed_setup,
+                args=(
+                    rank, world_size, model_path,
+                ),
+            )
+            p.start()
+            processes.append(p)
+        self.main_lock.wait()
+
+        return self
+        
+    def distributed_setup(self, rank, world_size, model_path):
+        print("Initializing process...")
+        if self.use_gpu:
+            torch.cuda.set_device(f"cuda:{rank}")
+        dist.init_process_group(backend=self.dist_backend, rank=rank, world_size=world_size)
+        pg = dist.group.WORLD
         print("Initializing embeddings...")
-        dist.init_process_group(backend=self.dist_backend, rank=0, world_size=1)
         eb_configs = [
             EmbeddingBagConfig(
                 name=f"t_{feature_name}",
@@ -122,17 +152,10 @@ class BackendPytorchNative(backend.Backend):
         plan = planner.collective_plan(
             model, get_default_sharders(), dist.GroupMember.WORLD
         )
-        world_size = 1
-        self.model = DistributedModelParallel(
-            module=model,
-            device=self.device,
-            plan=plan
+        dist_model = DistributedModelParallel(
+            module=model, device=self.device, plan=plan, env=ShardingEnv.from_process_group(pg),
         )
-        # path_to_sharded_weights should have 2 subdirectories - batched and sharded
-        # If we need to load the weights on different device or world size, we would need to change the process
-        # group accordingly. If we would want to load on 8 GPUs, the process group created above should be fine
-        # to understand sharding, --print_sharding_plan flag should be used while running dlrm_main.py in
-        # torcherec implementation
+        self.model = dist_model
         if not self.debug:
             print("Loading model weights...")
             from torchsnapshot import Snapshot
@@ -144,18 +167,43 @@ class BackendPytorchNative(backend.Backend):
             # for k, v in d.items():
             #     print(k, v)
         self.model.eval()
-        return self
 
-    def predict(self, samples, ids = None):
-        outputs = []
-        for batch in samples:
-            batch_in = batch.to(self.device)
+        self.main_lock.set()
+
+        # Main prediction loop
+        while(True):
+            item = self.samples_q[rank].get()
             with torch.no_grad():
-                _, (_, out, _) = self.model(
-                    batch_in
-                )
+                batch_in = self.dataset_cache[item][rank].to(self.device)
+                _, (_, out, _) = self.model(batch_in)
                 out = torch.sigmoid(out)
-                out = torch.reshape(out, (-1,))
-                outputs.append(out)
-        return outputs
+                self.predictions_cache[rank][item] = out.detach()
 
+    def capture_output(self, id):
+        out = []
+        rank = 0
+        while rank < self.world_size:
+            e = self.predictions_cache[rank].get(id, None)
+            if e is not None:
+                out.append(self.predictions_cache[rank][id])
+                rank += 1
+        out = torch.cat(out)
+        out = torch.reshape(out, (-1,))
+        return out
+
+
+    def predict(self, samples, ids):
+        outputs = []
+        self.main_lock.wait()
+        self.main_lock.clear()
+        for id, batch in zip(ids, samples):
+            # Enqueue samples into the multiprocessing queue
+            self.dataset_cache[id] = batch
+            for rank in range(self.world_size):
+                self.samples_q[rank].put(id)
+
+            # Wait for output capture it
+            out = self.capture_output(id)
+            outputs.append(out)
+        self.main_lock.set()
+        return outputs

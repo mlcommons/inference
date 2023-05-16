@@ -13,7 +13,7 @@ import random
 
 import numpy as np
 import sklearn.metrics
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 import zipfile
 
 # pytorch
@@ -40,16 +40,13 @@ class MultihotCriteo(Dataset):
         name,
         num_embeddings_per_feature,
         pre_process,
-        use_cache,
         count=None,
         samples_to_aggregate_fix=None,
         samples_to_aggregate_min=None,
         samples_to_aggregate_max=None,
         samples_to_aggregate_quantile_file=None,
         samples_to_aggregate_trace_file=None,
-        test_num_workers=0,
         max_ind_range=-1,
-        sub_sample_rate=0.0,
         randomize="total",
         memory_map=False,
     ):
@@ -105,7 +102,7 @@ class MultihotCriteo(Dataset):
             *stage_files,  # pyre-ignore[6]
             batch_size=self.samples_to_aggregate,
             rank=0,
-            world_size=1,
+            world_size=int(os.environ.get("WORLD_SIZE", 1)),
             mmap_mode=memory_map,
         )
         self.num_individual_samples = len(self.test_data.labels_arrs[0])
@@ -265,6 +262,14 @@ class MultihotCriteo(Dataset):
 
     def get_samples(self, id_list):
         return [self.items_in_memory[item] for item in id_list]
+    
+    def get_labels(self, sample):
+        if isinstance(sample, list):
+            labels = [s.labels for s in sample]
+            labels = torch.cat(labels)
+            return labels
+        else:
+            return sample.labels
 
 
 class MultihotCriteoPipe:
@@ -287,6 +292,7 @@ class MultihotCriteoPipe:
         self.batch_size = batch_size
         self.rank = rank
         self.world_size = world_size
+        self.split = (self.world_size > 1)
 
         # Load arrays
         m = "r" if mmap_mode else None
@@ -397,11 +403,22 @@ class MultihotCriteoPipe:
             labels=torch.from_numpy(labels.reshape(-1).copy()),
         )
 
-    def load_batch(self, sample_list) -> Batch:
-        dense = self.dense_arrs[0][sample_list, :]
-        sparse = [arr[sample_list, :] for arr in self.sparse_arrs[0]]
-        labels = self.labels_arrs[0][sample_list, :]
-        return self._np_arrays_to_batch(dense, sparse, labels)
+    def load_batch(self, sample_list) -> Union[Batch, List[Batch]]:
+        if self.split:
+            batch = []
+            n_samples = len(sample_list)
+            limits = [i*n_samples//self.world_size for i in range(self.world_size + 1)]
+            for i in range(self.world_size):
+                dense = self.dense_arrs[0][sample_list[limits[i]:limits[i+1]], :]
+                sparse = [arr[sample_list[limits[i]:limits[i+1]], :] for arr in self.sparse_arrs[0]]
+                labels = self.labels_arrs[0][sample_list[limits[i]:limits[i+1]], :]
+                batch.append(self._np_arrays_to_batch(dense, sparse, labels))
+            return batch
+        else:
+            dense = self.dense_arrs[0][sample_list, :]
+            sparse = [arr[sample_list, :] for arr in self.sparse_arrs[0]]
+            labels = self.labels_arrs[0][sample_list, :]
+            return self._np_arrays_to_batch(dense, sparse, labels)
 
 
 # Pre  processing

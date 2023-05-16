@@ -70,8 +70,8 @@ CFLAGS="-std=c++14" python setup.py develop --user
 
 File name | framework | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
 -|-|-|-
-[tb0875_10M.pt](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | pytorch | 12GB | b7cacffcf75f767faa9cb2af397723aa
-[tb00_40M.pt](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | pytorch | 90GB | 2d49a5288cddb37c3c64860a06d79bb9
+[debug weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | pytorch | <2GB | -
+[weight_sharded](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | pytorch | 97.31GB | -
 
 ### More information about the datasets
 | dataset | download link |
@@ -102,6 +102,7 @@ For MLPerf Inference, we use the first 128000 rows (user-item pairs) of the seco
 
 Download and install all the pre-requisites. Both local and docker environment need to set 3 environment variables:
 ```
+export WORLD_SIZE=<number_of_nodes>
 export DATA_DIR=YourCriteoMultihotLocation
 export MODEL_DIR=YourModelFileLocation
 ```

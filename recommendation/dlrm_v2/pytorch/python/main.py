@@ -103,9 +103,7 @@ def get_args():
     parser.add_argument("--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles")
     parser.add_argument("--scenario", default="SingleStream",
                         help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
-    parser.add_argument("--test-num-workers", type=int, default=0, help='# of workers reading the data')
     parser.add_argument("--max-ind-range", type=int, default=-1)
-    parser.add_argument("--data-sub-sample-rate", type=float, default=0.0)
     parser.add_argument("--max-batchsize", type=int, help="max batch size in a single inference")
     parser.add_argument("--output", help="test results")
     parser.add_argument("--inputs", help="model inputs (currently not used)")
@@ -113,7 +111,6 @@ def get_args():
     parser.add_argument("--backend", help="runtime to use")
     parser.add_argument("--use-gpu", action="store_true", default=False)
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
-    parser.add_argument("--cache", type=int, default=0, help="use cache (currently not used)")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
 
@@ -137,6 +134,7 @@ def get_args():
     parser.add_argument("--samples-to-aggregate-quantile-file", type=str, help="distribution quantile used to generate number of samples to be treated as one in random query size")
     parser.add_argument("--samples-to-aggregate-trace-file", type=str, default="dlrm_trace_of_aggregated_samples.txt")
     parser.add_argument("--numpy-rand-seed", type=int, default=123)
+    parser.add_argument("--debug", action="store_true", default=False)
     args = parser.parse_args()
 
     # set random seed
@@ -163,45 +161,90 @@ def get_args():
     return args
 
 
-def get_backend(backend, dataset, use_gpu):
+def get_backend(backend, dataset, use_gpu, debug):
     if backend == "pytorch-native":
         from backend_pytorch_native import BackendPytorchNative
-        if dataset == "debug":
-            # 1. Syntetic debug dataset
-            backend = BackendPytorchNative(
-                num_embeddings_per_feature = [2 for _ in range(26)],
-                embedding_dim=128,
-                dcn_num_layers=3,
-                dcn_low_rank_dim=512,
-                dense_arch_layer_sizes=[512, 256, 128],
-                over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
-                use_gpu=use_gpu,
-                debug=True
-            )
-        elif dataset == "multihot-criteo-sample":
-            # 2. Syntetic multihot criteo sample
-            backend = BackendPytorchNative(
-                num_embeddings_per_feature = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36],
-                embedding_dim=128,
-                dcn_num_layers=3,
-                dcn_low_rank_dim=512,
-                dense_arch_layer_sizes=[512, 256, 128],
-                over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
-                use_gpu=use_gpu
-            )
-        elif dataset == "multihot-criteo":
-            # 3. Syntetic multihot criteo
-            backend = BackendPytorchNative(
-                num_embeddings_per_feature = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36],
-                embedding_dim=128,
-                dcn_num_layers=3,
-                dcn_low_rank_dim=512,
-                dense_arch_layer_sizes=[512, 256, 128],
-                over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
-                use_gpu=use_gpu
-            )
+        from backend_dist_pytorch_native import BackendDistPytorchNative
+        n_cores = int(os.environ.get("WORLD_SIZE", 1))
+        if n_cores > 1:
+            if dataset == "debug":
+                # 1. Syntetic debug dataset
+                backend = BackendDistPytorchNative(
+                    num_embeddings_per_feature = [2 for _ in range(26)],
+                    embedding_dim=128,
+                    dcn_num_layers=3,
+                    dcn_low_rank_dim=512,
+                    dense_arch_layer_sizes=[512, 256, 128],
+                    over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
+                    use_gpu=use_gpu,
+                    debug=True
+                )
+            elif dataset == "multihot-criteo-sample":
+                # 2. Syntetic multihot criteo sample
+                backend = BackendDistPytorchNative(
+                    num_embeddings_per_feature = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36],
+                    embedding_dim=128,
+                    dcn_num_layers=3,
+                    dcn_low_rank_dim=512,
+                    dense_arch_layer_sizes=[512, 256, 128],
+                    over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
+                    use_gpu=use_gpu,
+                    debug=debug
+                )
+            elif dataset == "multihot-criteo":
+                # 3. Syntetic multihot criteo
+                backend = BackendDistPytorchNative(
+                    num_embeddings_per_feature = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36],
+                    embedding_dim=128,
+                    dcn_num_layers=3,
+                    dcn_low_rank_dim=512,
+                    dense_arch_layer_sizes=[512, 256, 128],
+                    over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
+                    use_gpu=use_gpu,
+                    debug=debug
+                )
+            else:
+                raise ValueError("only debug|multihot-criteo-sample|multihot-criteo dataset options are supported")
         else:
-            raise ValueError("only debug|multihot-criteo-sample|multihot-criteo dataset options are supported")
+            if dataset == "debug":
+                # 1. Syntetic debug dataset
+                backend = BackendPytorchNative(
+                    num_embeddings_per_feature = [2 for _ in range(26)],
+                    embedding_dim=128,
+                    dcn_num_layers=3,
+                    dcn_low_rank_dim=512,
+                    dense_arch_layer_sizes=[512, 256, 128],
+                    over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
+                    use_gpu=use_gpu,
+                    debug=True
+                )
+            elif dataset == "multihot-criteo-sample":
+                # 2. Syntetic multihot criteo sample
+                backend = BackendPytorchNative(
+                    num_embeddings_per_feature = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36],
+                    embedding_dim=128,
+                    dcn_num_layers=3,
+                    dcn_low_rank_dim=512,
+                    dense_arch_layer_sizes=[512, 256, 128],
+                    over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
+                    use_gpu=use_gpu,
+                    debug=debug
+                )
+            elif dataset == "multihot-criteo":
+                # 3. Syntetic multihot criteo
+                backend = BackendPytorchNative(
+                    num_embeddings_per_feature = [40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36],
+                    embedding_dim=128,
+                    dcn_num_layers=3,
+                    dcn_low_rank_dim=512,
+                    dense_arch_layer_sizes=[512, 256, 128],
+                    over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
+                    use_gpu=use_gpu,
+                    debug=debug
+                )
+            else:
+                raise ValueError("only debug|multihot-criteo-sample|multihot-criteo dataset options are supported")
+
     else:
         raise ValueError("unknown backend: " + backend)
     return backend
@@ -240,7 +283,7 @@ class RunnerBase:
         # run the prediction
         processed_results = []
         try:
-            results = self.model.predict(qitem.features)
+            results = self.model.predict(qitem.features, qitem.content_id)
             processed_results = self.post_process(results, qitem.batch_T, self.result_dict)
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
@@ -268,18 +311,19 @@ class RunnerBase:
     def enqueue(self, query_samples):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
+        #print(idx)
         query_len = len(query_samples)
 
         if query_len < self.max_batchsize:
             samples = self.ds.get_samples(idx)
-            batch_T = [sample.labels for sample in samples]
+            batch_T = [self.ds.get_labels(sample) for sample in samples]
             self.run_one_item(Item(query_id, idx, samples, batch_T))
         else:
             bs = self.max_batchsize
             for i in range(0, query_len, bs):
                 ie = min(i + bs, query_len)
                 samples = self.ds.get_samples(idx[i:ie])
-                batch_T = [sample.labels for sample in samples]
+                batch_T = [self.ds.get_labels(sample) for sample in samples]
                 self.run_one_item(Item(query_id[i:ie], idx[i:ie], samples, batch_T))
 
     def finish(self):
@@ -315,17 +359,17 @@ class QueueRunner(RunnerBase):
         idx = [q.index for q in query_samples]
         query_id = [q.id for q in query_samples]
         query_len = len(query_samples)
-
+        #print(idx)
         if query_len < self.max_batchsize:
             samples = self.ds.get_samples(idx)
-            batch_T = [sample.labels for sample in samples]
+            batch_T = [self.ds.get_labels(sample) for sample in samples]
             self.tasks.put(Item(query_id, idx, samples, batch_T))
         else:
             bs = self.max_batchsize
             for i in range(0, query_len, bs):
                 ie = min(i + bs, query_len)
                 samples = self.ds.get_samples(idx)
-                batch_T = [sample.labels for sample in samples]
+                batch_T = [self.ds.get_labels(sample) for sample in samples]
                 self.tasks.put(Item(query_id[i:ie], idx[i:ie], samples, batch_T))
 
     def finish(self):
@@ -379,7 +423,7 @@ def main():
     log.info(args)
 
     # find backend
-    backend = get_backend(args.backend, args.dataset, args.use_gpu)
+    backend = get_backend(args.backend, args.dataset, args.use_gpu, debug=args.debug)
 
     # dataset to use
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
@@ -389,16 +433,13 @@ def main():
                         data_path=args.dataset_path,
                         name=args.dataset,
                         pre_process=pre_proc,  # currently an identity function
-                        use_cache=args.cache,  # currently not used
                         count=args.count_samples,
                         samples_to_aggregate_fix=args.samples_to_aggregate_fix,
                         samples_to_aggregate_min=args.samples_to_aggregate_min,
                         samples_to_aggregate_max=args.samples_to_aggregate_max,
                         samples_to_aggregate_quantile_file=args.samples_to_aggregate_quantile_file,
                         samples_to_aggregate_trace_file=args.samples_to_aggregate_trace_file,
-                        test_num_workers=args.test_num_workers,
                         max_ind_range=args.max_ind_range,
-                        sub_sample_rate=args.data_sub_sample_rate,
                         **kwargs)
     # load model to backend
     model = backend.load(args.model_path, inputs=args.inputs, outputs=args.outputs)
@@ -433,7 +474,7 @@ def main():
 
     for _ in range(5):
         sample = ds.get_samples([0])
-        _ = backend.predict(sample)
+        _ = backend.predict(sample, [0])
 
     ds.unload_query_samples(None)
 

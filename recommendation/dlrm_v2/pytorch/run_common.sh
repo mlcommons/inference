@@ -54,11 +54,11 @@ if [ $name == "dlrm-debug-pytorch" ] ; then
     profile=dlrm-debug-pytorch
 fi
 if [ $name == "dlrm-multihot-criteo-sample-pytorch" ] ; then
-    model_path="$MODEL_DIR/dlrm_multihot-sample.pytorch"
+    model_path="$MODEL_DIR"
     profile=dlrm-multihot-sample-pytorch
 fi
 if [ $name == "dlrm-multihot-criteo-pytorch" ] ; then
-    model_path="$MODEL_DIR/dlrm_multihot.pytorch"
+    model_path="$MODEL_DIR"
     profile=dlrm-multihot-pytorch
 fi
 

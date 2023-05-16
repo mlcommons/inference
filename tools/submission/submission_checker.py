@@ -1997,6 +1997,7 @@ def check_results_dir(config,
   fmt = ",".join(["{}"] * len(head)) + "\n"
   csv.write(",".join(head) + "\n")
   results = {}
+  systems = {}
 
   def log_result(submitter,
                  available,
@@ -2099,6 +2100,11 @@ def check_results_dir(config,
       )
       results[f"{division}"] = None
       continue
+
+    if division not in systems:
+        systems[division] = {}
+        systems[division]['power'] = {}
+        systems[division]['non_power'] = {}
 
     for submitter in list_dir(division):
       # we are looking at ./$division/$submitter, ie ./closed/mlperf_org
@@ -2400,6 +2406,15 @@ def check_results_dir(config,
                                                                       "power_metric"
                                                                       " = {:f}").format(
                         r, power_metric)
+
+                system_id = submitter + "_" + system_desc
+
+                key = "power" if power_metric > 0 else "non_power"
+                if system_id not in systems[division][key]:
+                    systems[division][key][system_id] = 1
+                else:
+                    systems[division][key][system_id] += 1
+
                 required_scenarios.discard(scenario_fixed)
               else:
                 log.error("%s has issues", perf_path)
@@ -2458,7 +2473,7 @@ def check_results_dir(config,
               log.warning("%s ignoring missing scenarios in open division (%s)",
                           name, required_scenarios)
 
-  return results
+  return results, systems
 
 
 def check_system_desc_id(fname, systems_json, submitter, division, version, skip_meaningful_fields_empty_check):
@@ -2756,10 +2771,7 @@ def main():
   with open(args.csv, "w") as csv:
     os.chdir(args.input)
     # check results directory
-    results = check_results_dir(config, args.submitter, args.skip_compliance,
-                                csv, args.debug, args.skip_meaningful_fields_empty_check,
-                                args.skip_empty_files_check,
-                                args.skip_check_power_measure_files)
+    results, systems = check_results_dir(config, args.submitter, args.skip_compliance, csv, args.debug)
 
   # log results
   log.info("---")
@@ -2773,10 +2785,87 @@ def main():
     if v is None:
       log.error("NoResults %s", k)
 
+  closed_systems = systems.get('closed', {})
+  open_systems = systems.get('open', {})
+  network_systems = systems.get('network', {})
+  closed_power_systems = closed_systems.get('power', {})
+  closed_non_power_systems = closed_systems.get('non_power', {})
+  open_power_systems = open_systems.get('power', {})
+  open_non_power_systems = open_systems.get('non_power', {})
+  network_power_systems = network_systems.get('power', {})
+  network_non_power_systems = network_systems.get('non_power', {})
+
+  number_closed_power_systems = len(closed_power_systems)
+  number_closed_non_power_systems = len(closed_non_power_systems)
+  number_closed_systems = number_closed_power_systems + number_closed_non_power_systems
+  number_open_power_systems = len(open_power_systems)
+  number_open_non_power_systems = len(open_non_power_systems)
+  number_open_systems = number_open_power_systems + number_open_non_power_systems
+  number_network_power_systems = len(network_power_systems)
+  number_network_non_power_systems = len(network_non_power_systems)
+  number_network_systems = number_network_power_systems + number_network_non_power_systems
+
+  def merge_two_dict(x,y):
+      z = x.copy()
+      for key in y:
+        if key not in z:
+            z[key] = y[key]
+        else:
+            z[key] += y[key]
+      return z
+
+  #systems can be repeating in open, closed and network
+  unique_closed_systems = merge_two_dict(closed_power_systems, closed_non_power_systems)
+  unique_open_systems = merge_two_dict(open_power_systems, open_non_power_systems)
+  unique_network_systems = merge_two_dict(network_power_systems, network_non_power_systems)
+
+  unique_systems = merge_two_dict(unique_closed_systems, unique_open_systems)
+  unique_systems = merge_two_dict(unique_systems, unique_network_systems)
+
+  #power systems can be repeating in open, closed and network
+  unique_power_systems = merge_two_dict(closed_power_systems, open_power_systems)
+  unique_power_systems = merge_two_dict(unique_power_systems, network_power_systems)
+
+  number_systems = len(unique_systems)
+  number_power_systems = len(unique_power_systems)
+
+  # Counting the number of closed,open and network results
+  def sum_dict_values(x):
+      count = 0
+      for key in x:
+          count += x[key]
+      return count
+
+  count_closed_power_results = sum_dict_values(closed_power_systems)
+  count_closed_non_power_results = sum_dict_values(closed_non_power_systems)
+  count_closed_results = count_closed_power_results + count_closed_non_power_results
+
+  count_open_power_results = sum_dict_values(open_power_systems)
+  count_open_non_power_results = sum_dict_values(open_non_power_systems)
+  count_open_results = count_open_power_results + count_open_non_power_results
+
+  count_network_power_results = sum_dict_values(network_power_systems)
+  count_network_non_power_results = sum_dict_values(network_non_power_systems)
+  count_network_results = count_network_power_results + count_network_non_power_results
+
+  count_power_results = count_closed_power_results + count_open_power_results + count_network_power_results
+
   # print summary
   log.info("---")
-  log.info("Results=%d, NoResults=%d", with_results,
-           len(results) - with_results)
+  log.info("Results=%d, NoResults=%d, Power Results=%d", with_results,
+           len(results) - with_results, count_power_results)
+
+  log.info("---")
+  log.info("Closed Results=%d, Closed Power Results=%d\n", count_closed_results, count_closed_power_results)
+  log.info("Open Results=%d, Open Power Results=%d\n", count_open_results, count_open_power_results)
+  log.info("Network Results=%d, Network Power Results=%d\n", count_network_results, count_network_power_results)
+  log.info("---")
+
+  log.info("Systems=%d, Power Systems=%d", number_systems, number_power_systems)
+  log.info("Closed Systems=%d, Closed Power Systems=%d", number_closed_systems, number_closed_power_systems)
+  log.info("Open Systems=%d, Open Power Systems=%d", number_open_systems, number_open_power_systems)
+  log.info("Network Systems=%d, Network Power Systems=%d", number_network_systems, number_network_power_systems)
+  log.info("---")
   if len(results) != with_results:
     log.error("SUMMARY: submission has errors")
     return 1

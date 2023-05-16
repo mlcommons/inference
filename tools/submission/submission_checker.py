@@ -2078,6 +2078,28 @@ def check_results_dir(config,
         log.error("invalid division in input dir %s", division)
       continue
     is_closed_or_network = division in ["closed", "network"]
+    # Look at files outside the division folder
+    files_outside_division = [
+        f for f in list_files(".") if not (f.endswith(".md") or f.endswith(".pdf"))
+    ]
+    if len(files_outside_division) > 0:
+        log.error(
+              "Root contains files outside division folder %s",
+              division,
+              files_outside_division,
+          )
+        results[f"root"] = None
+        break
+    # Look at files outside the submitter folder
+    files_outside_submitter = list_files(division)
+    if len(files_outside_submitter) > 0:
+      log.error(
+          "%s contains files outside submitter folder %s",
+          division,
+          files_outside_submitter,
+      )
+      results[f"{division}"] = None
+      continue
 
     if division not in systems:
         systems[division] = {}
@@ -2097,16 +2119,20 @@ def check_results_dir(config,
       files = list_files_recursively(division, submitter)
 
       # Check symbolic links
-      symbolic_links = [f for f in files if os.path.islink(f)]
-      if len(symbolic_links) > 0:
-        log.error(
-          "%s/%s contains symbolic links: %s",
-          division,
-          submitter,
-          symbolic_links,
-        )
-        results[f"{division}/{submitter}"] = None
-        continue
+      broken_symbolic_links = [
+          f
+          for f in files
+          if os.path.islink(f) and not os.path.exists(os.readlink(f))
+      ]
+      if len(broken_symbolic_links) > 0:
+          log.error(
+              "%s/%s contains broken symbolic links: %s",
+              division,
+              submitter,
+              broken_symbolic_links,
+          )
+          results[f"{division}/{submitter}"] = None
+          continue
 
       # Check for files over 50 MB
       files_over_size_limit = [f for f in files if os.path.getsize(f) > FILE_SIZE_LIMIT_MB * MB_TO_BYTES]

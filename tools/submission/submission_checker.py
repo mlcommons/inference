@@ -2771,7 +2771,8 @@ def main():
   with open(args.csv, "w") as csv:
     os.chdir(args.input)
     # check results directory
-    results, systems = check_results_dir(config, args.submitter, args.skip_compliance, csv, args.debug)
+    results, systems = check_results_dir(config, args.submitter, args.skip_compliance, csv, args.debug,
+            args.skip_meaningful_fields_empty_check, args.skip_empty_files_check, args.skip_check_power_measure_files)
 
   # log results
   log.info("---")

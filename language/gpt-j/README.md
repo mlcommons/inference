@@ -54,6 +54,12 @@ Downloads the raw data, processes and saves it as json file inside data/
 ```
 python download_cnndm.py
 ```
+### Calibration
+Downloads the data and performs post-training quantization
+```
+pip install datasets
+python prepare-calibration.py --calibration-list-file calibration-list.txt --output-dir </path/to/output-folder>
+```
 ### Download GPT-J model
 Downloads the model and saves it in model/ directory. If you have access to fine-tuned model, you can use that instead by naming the directory as model/.
 ```

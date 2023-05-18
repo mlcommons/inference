@@ -37,7 +37,7 @@ class SUT_base():
             self.amp_enabled = False
             self.amp_dtype = torch.float32
 
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_path,low_cpu_mem_usage=True, torch_dtype=self.amp_dtype)
+        self.model = AutoModelForCausalLM.from_pretrained(self.model_path,device_map="auto",low_cpu_mem_usage=True, torch_dtype=self.amp_dtype)
 
         self.model.eval()
         self.model = self.model.to(memory_format=torch.channels_last)

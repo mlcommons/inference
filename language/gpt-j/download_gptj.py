@@ -21,7 +21,7 @@ if not os.path.exists(os.path.dirname(model_path)):
     os.mkdir(model_path)
 
 model_name = "EleutherAI/gpt-j-6B"
-model = AutoModelForCausalLM.from_pretrained(model_name,torchscript=True)  # torchscript will force `return_dict=False` to avoid jit errors
+model = AutoModelForCausalLM.from_pretrained(model_name,device_map="auto",torchscript=True)  # torchscript will force `return_dict=False` to avoid jit errors
 print("Loaded model")
 
 model.save_pretrained(model_path)

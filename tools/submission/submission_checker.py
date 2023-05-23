@@ -2559,11 +2559,11 @@ def check_measurement_dir(measurement_dir, fname, system_desc, root, model, scen
   if has_power and not skip_check_power_measure_files:
     for i in REQUIRED_POWER_MEASURE_FILES:
         file_re = measurement_dir + "/../../../**/" + i
-        file_path = glob(file_re, recursive=True)
-        if not file_path:
+        file_paths = glob(file_re, recursive=True)
+        if not file_paths:
             log.error("%s is missing %s", measurement_dir, i)
             is_valid = False
-        elif not skip_empty_files_check and (os.stat(file_path).st_size == 0):
+        elif not skip_empty_files_check and all((os.stat(file_path).st_size == 0) for file_path in file_paths):
             log.error("%s is having empty %s", measurement_dir, i)
             is_valid = False
 

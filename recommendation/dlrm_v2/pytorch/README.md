@@ -4,6 +4,7 @@ This is the reference implementation for MLCommons Inference benchmarks.
 
 ### Supported Models
 
+**TODO: Decide benchmark name, compute metring with 2 decimal precision in the whole dataset**
 | name | framework | acc. | AUC | dataset | weights  | size | prec. | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | dlrm_dcn (debugging) | PyTorch | N/A | N/A | Fake multihot criteo dataset generated with [make_fake_criteo.sh](tools/make_fake_criteo.sh)       | N/A                                                                     | ~1GB | fp32 |                          |
@@ -68,10 +69,11 @@ CFLAGS="-std=c++14" python setup.py develop --user
 
 ### More information about the model weights
 
+**TODO: share model checkpoint, get link to weights**
 File name | framework | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
 -|-|-|-
-[debug weights](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | pytorch | <2GB | -
-[weight_sharded](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | pytorch | 97.31GB | -
+[debug weights]() | pytorch | <2GB | -
+[weight_sharded]() | pytorch | 97.31GB | -
 
 ### More information about the datasets
 | dataset | download link |
@@ -87,6 +89,7 @@ export DATA_DIR=./fake_criteo
 ```
 
 2. The Multihot Criteo dataset is stored in several files corresponding to 24 days: `day_0.gz`, `day_1.gz`, ..., `day_23.gz` (~343GB). For this benchmark, we only use the validation dataset, which corresponds to `day_23.gz`. The dataset can be downloaded from this [bucket]()
+**TODO: share link to dataset, or give instructions to build it**
 ```
 cd $HOME/mlcommons/inference/recommendation/dlrm_v2/pytorch/dataset/
 gsutil cp gs://dlrmv2-data/day_23_sparse_multi_hot.npz .
@@ -106,6 +109,7 @@ export WORLD_SIZE=<number_of_nodes>
 export DATA_DIR=YourCriteoMultihotLocation
 export MODEL_DIR=YourModelFileLocation
 ```
+For running the benchmark in cpu, we suggest to run `WORLD_SIZE=1'
 
 ### Run local
 ```
@@ -162,7 +166,7 @@ Server scenario perf and accuracy modes
 
 Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.
 
-In order to use GPU(s), select the number of GPUs with the environment variable `CUDA_VISIBLE_DEVICES`, and run
+In order to use GPU(s), you might need to select the number of GPUs with the environment variable `CUDA_VISIBLE_DEVICES`, and run
 ```
 export CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 ./run_local.sh pytorch dlrm multihot-criteo gpu --accuracy

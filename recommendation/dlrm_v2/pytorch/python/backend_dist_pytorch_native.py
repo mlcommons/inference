@@ -185,10 +185,12 @@ class BackendDistPytorchNative(backend.Backend):
         while rank < self.world_size:
             e = self.predictions_cache[rank].get(id, None)
             if e is not None:
-                out.append(self.predictions_cache[rank][id])
+                out.append(e)
                 rank += 1
         out = torch.cat(out)
         out = torch.reshape(out, (-1,))
+        for rank in range(self.world_size):
+            self.predictions_cache[rank].pop(id)
         return out
 
 

@@ -1762,16 +1762,20 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 num_queries = int(mlperf_log["result_query_count"])
             power_metric = avg_power * power_duration * 1000 / num_queries
 
+            if scenario_fixed in ["SingleStream"]:
+                samples_per_query = 1
+            elif scenario_fixed in ["MultiStream"]:
+                samples_per_query = 8
+
             if (
                 scenario_fixed in ["MultiStream"]
                 and not config.uses_legacy_multistream()
             ) and scenario in ["SingleStream"]:
-                samples_per_query = 8
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
 
-            avg_power_efficiency = 1000 / power_metric
+            avg_power_efficiency = (samples_per_query * 1000)  / power_metric
 
     return is_valid, power_metric, scenario, avg_power_efficiency
 

@@ -1608,7 +1608,7 @@ def check_accuracy_dir(config, model, path, verbose):
 
 
 def check_performance_dir(config, model, path, scenario_fixed, division,
-                          system_json):
+                          system_json, has_power=False):
   is_valid = False
   rt = {}
 
@@ -1753,7 +1753,7 @@ def check_performance_dir(config, model, path, scenario_fixed, division,
     ] else TEST_DURATION_MS
     if min_duration < required_min_duration:
       log.error(
-          "%s Test duration lesser than 600s in user config. expected=%s, found=%s",
+          "%s Test duration less than 600s in user config. expected=%s, found=%s",
           fname, required_min_duration, min_duration)
 
   inferred = False
@@ -1797,32 +1797,7 @@ def check_performance_dir(config, model, path, scenario_fixed, division,
 
   return is_valid, res, inferred
 
-
-def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
-                    config):
-
-  skip_power_check = config.skip_power_check
-
-  is_valid = True
-  power_metric = 0
-
-  # check if all the required files are present
-  required_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
-  diff = files_diff(
-      list_files(testing_path), required_files, OPTIONAL_PERF_FILES)
-  if diff:
-    log.error("%s has file list mismatch (%s)", testing_path, diff)
-    is_valid = False
-  diff = files_diff(
-      list_files(ranging_path), required_files, OPTIONAL_PERF_FILES)
-  if diff:
-    log.error("%s has file list mismatch (%s)", ranging_path, diff)
-    is_valid = False
-  diff = files_diff(list_files(power_path), REQUIRED_POWER_FILES)
-  if diff:
-    log.error("%s has file list mismatch (%s)", power_path, diff)
-    is_valid = False
-
+def get_power_metric(config,scenario_fixed, log_path, is_valid, res):
   # parse the power logs
   if config.has_power_utc_timestamps():
     server_timezone = datetime.timedelta(0)
@@ -1834,7 +1809,7 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
     client_json_fname = os.path.join(power_path, "client.json")
     with open(client_json_fname) as f:
       client_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
-  detail_log_fname = os.path.join(testing_path, "mlperf_log_detail.txt")
+  detail_log_fname = os.path.join(log_path, "mlperf_log_detail.txt")
   mlperf_log = MLPerfLog(detail_log_fname)
   datetime_format = "%m-%d-%Y %H:%M:%S.%f"
   power_begin = datetime.datetime.strptime(mlperf_log["power_begin"],
@@ -1846,7 +1821,7 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
     scenario = mlperf_log["effective_scenario"]
   else:
     rt = {}
-    fname = os.path.join(testing_path, "mlperf_log_summary.txt")
+    fname = os.path.join(log_path, "mlperf_log_summary.txt")
     with open(fname, "r") as f:
       for line in f:
         m = re.match(r"^Result\s+is\s*\:\s+VALID", line)
@@ -1856,14 +1831,16 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
         if m:
           rt[m.group(1).strip()] = m.group(2).strip()
     scenario = rt["Scenario"].replace(" ", "")
-  spl_fname = os.path.join(testing_path, "spl.txt")
+  spl_fname = os.path.join(log_path, "spl.txt")
   power_list = []
   with open(spl_fname) as f:
     for line in f:
       timestamp = datetime.datetime.strptime(
           line.split(",")[1], datetime_format) + server_timezone
       if timestamp > power_begin and timestamp < power_end:
-        power_list.append(float(line.split(",")[3]))
+        value = float(line.split(",")[3])
+        if value > 0:
+            power_list.append(float(line.split(",")[3]))
   if len(power_list) == 0:
     log.error("%s has no power samples falling in power range: %s - %s",
               spl_fname, power_begin, power_end)
@@ -1874,8 +1851,10 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
     if scenario_fixed in ["Offline", "Server"]:
       # In Offline and Server scenarios, the power metric is in W.
       power_metric = avg_power
+      avg_power_efficiency = res/avg_power
+
     else:
-      # In SingleStream and MultiStream scenarios, the power metric is in J/query.
+      # In SingleStream and MultiStream scenarios, the power metric is in mJ/query.
       assert scenario_fixed in ["MultiStream", "SingleStream"
                                ], "Unknown scenario: {:}".format(scenario_fixed)
       if not config.has_query_count_in_log():
@@ -1904,6 +1883,40 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
         samples_per_query = 8
         power_metric = avg_power * power_duration * samples_per_query * 1000 / num_queries
 
+      avg_power_efficiency = 1000/power_metric
+
+  return is_valid, power_metric, scenario, avg_power_efficiency
+
+
+def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
+                    power_res_ranging, power_res_testing, config):
+
+  skip_power_check = config.skip_power_check
+
+  is_valid = True
+  power_metric = 0
+
+  # check if all the required files are present
+  required_files = REQUIRED_PERF_FILES + REQUIRED_PERF_POWER_FILES
+  diff = files_diff(
+      list_files(testing_path), required_files, OPTIONAL_PERF_FILES)
+  if diff:
+    log.error("%s has file list mismatch (%s)", testing_path, diff)
+    is_valid = False
+  diff = files_diff(
+      list_files(ranging_path), required_files, OPTIONAL_PERF_FILES)
+  if diff:
+    log.error("%s has file list mismatch (%s)", ranging_path, diff)
+    is_valid = False
+  diff = files_diff(list_files(power_path), REQUIRED_POWER_FILES)
+  if diff:
+    log.error("%s has file list mismatch (%s)", power_path, diff)
+    is_valid = False
+
+
+  is_valid,power_metric_ranging,scenario,power_efficiency_ranging = get_power_metric(config, scenario_fixed, ranging_path, is_valid, power_res_ranging)
+  is_valid,power_metric,scenario,power_efficiency_testing = get_power_metric(config,scenario_fixed, testing_path, is_valid, power_res_testing)
+
   if not skip_power_check:
     python_version_major = int(sys.version.split(" ")[0].split(".")[0])
     python_version_minor = int(sys.version.split(" ")[0].split(".")[1])
@@ -1922,7 +1935,7 @@ def check_power_dir(power_path, ranging_path, testing_path, scenario_fixed,
       log.error("Power WG power_checker.py did not pass for: %s", perf_path)
       is_valid = False
 
-  return is_valid, power_metric
+  return is_valid, power_metric, power_efficiency_testing
 
 
 def files_diff(list1, list2, optional=None):
@@ -2375,7 +2388,7 @@ def check_results_dir(config,
               try:
                 is_valid, r, is_inferred = check_performance_dir(
                     config, mlperf_model, perf_path, scenario_fixed, division,
-                    system_json)
+                    system_json,has_power)
                 if is_inferred:
                   inferred = 1
                   log.info("%s has inferred results, qps=%s", perf_path, r)
@@ -2388,8 +2401,17 @@ def check_results_dir(config,
               if has_power:
                 try:
                   ranging_path = os.path.join(name, "performance", "ranging")
-                  power_is_valid, power_metric = check_power_dir(
-                      power_path, ranging_path, perf_path, scenario_fixed,
+                  is_valid, ranging_r, is_inferred = check_performance_dir(
+                        config, mlperf_model, ranging_path, scenario_fixed, division,
+                        system_json, has_power)
+                except Exception as e:
+                  log.error("%s caused exception in check_ranging_dir: %s",
+                          ranging_path, e)
+                  is_valid, r = False, None
+
+                try:
+                  power_is_valid, power_metric, power_efficiency = check_power_dir(
+                      power_path, ranging_path, perf_path, scenario_fixed, r, ranging_r,
                       config)
                   if not power_is_valid:
                     is_valid = False
@@ -2404,8 +2426,8 @@ def check_results_dir(config,
                     name] = r if r is None or not has_power else ("{:f} "
                                                                       "with "
                                                                       "power_metric"
-                                                                      " = {:f}").format(
-                        r, power_metric)
+                                                                      " = {:f} and power_efficiency (inf/J) = {:f}").format(
+                        r, power_metric, power_efficiency)
 
                 system_id = submitter + "_" + system_desc
 

@@ -2,7 +2,6 @@
 model_id = "EleutherAI/gpt-j-6b"
 dataset_id = "cnn_dailymail"
 dataset_config = "3.0.0"
-save_dataset_path = "data"
 text_column = "article"
 summary_column = "highlights"
 
@@ -12,6 +11,8 @@ import numpy as np
 import os
 import simplejson as json
 import sys
+
+save_dataset_path = os.environ.get('DATASET_CNNDM_PATH', "data")
 
 # Check whether the specified path exists or not
 isExist = os.path.exists(save_dataset_path)

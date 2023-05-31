@@ -24,8 +24,9 @@ PROMPT_DICT = {
     ),
 }
 
+
 class Dataset():
-    def __init__(self, dataset_path, batch_size=1, pad_val=1, pad_max=196,total_count_override=None, perf_count_override=None):
+    def __init__(self, dataset_path, batch_size=1, pad_val=1, pad_max=196, total_count_override=None, perf_count_override=None):
         print("Constructing QSL")
 
         self.dataset = "cnn_dailymail"
@@ -42,48 +43,35 @@ class Dataset():
             use_fast=False,)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        
-        self.list_data_dict  = utils.jload(self.dataset_path)
-        
-        
+        self.list_data_dict = utils.jload(self.dataset_path)
+
         prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
-        self.sources = [prompt_input.format_map(example) for example in self.list_data_dict]
-        self.targets = [f"{example['output']}" for example in self.list_data_dict]
+        self.sources = [prompt_input.format_map(
+            example) for example in self.list_data_dict]
+        self.targets = [
+            f"{example['output']}" for example in self.list_data_dict]
 
-        self.source_encoded_input_ids,self.source_encoded_attn_masks = self.encode_samples()
+        self.source_encoded_input_ids, self.source_encoded_attn_masks = self.encode_samples()
 
-      
-       
         self.count = total_count_override or len(self.sources)
         self.perf_count = perf_count_override or self.count
-
-
-      
 
     def encode_samples(self):
         print("Encoding Samples")
 
         total_samples = len(self.sources)
-        
 
         source_encoded_input_ids = []
         source_encoded_attn_masks = []
 
         for i in range(total_samples):
-            source_encoded = self.tokenizer(self.sources[i], return_tensors="pt", 
-                                                padding=True, truncation=True, 
-                                                max_length=1919)   
+            source_encoded = self.tokenizer(self.sources[i], return_tensors="pt",
+                                            padding=True, truncation=True,
+                                            max_length=1919)
             source_encoded_input_ids.append(source_encoded.input_ids)
             source_encoded_attn_masks.append(source_encoded.attention_mask)
 
-
- 
-
-        return source_encoded_input_ids,source_encoded_attn_masks
-
-
-
-
+        return source_encoded_input_ids, source_encoded_attn_masks
 
     def LoadSamplesToRam(self, sample_list):
         pass
@@ -91,7 +79,5 @@ class Dataset():
     def UnloadSamplesFromRam(self, sample_list):
         pass
 
-
     def __del__(self):
         print("Finished destroying QSL.")
-

@@ -12,7 +12,7 @@
     pip install absl-py numpy
     git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf_inference
     cd mlperf_inference/loadgen
-    CFLAGS="-std=c++14 -O3" python setup.py install
+    CFLAGS="-std=c++14 -O3" python -m pip install .
 
 This will fetch the loadgen source, build and install the loadgen as a python module, and run a simple end-to-end demo.
 

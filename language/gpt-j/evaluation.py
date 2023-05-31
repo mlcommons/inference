@@ -35,7 +35,7 @@ def postprocess_text(preds, targets):
 
 
 def main():
-
+    np.random.seed(0)
     args = get_args()
     model_name = "EleutherAI/gpt-j-6B"
     dataset_path = args.dataset_file

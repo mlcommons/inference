@@ -193,6 +193,7 @@ class BackendDistPytorchNative(backend.Backend):
         out = torch.reshape(out, (-1,))
         for rank in range(self.world_size):
             self.predictions_cache[rank].pop(id)
+        self.dataset_cache.pop(id)
         return out
 
 

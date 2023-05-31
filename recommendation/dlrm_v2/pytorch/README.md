@@ -4,12 +4,12 @@ This is the reference implementation for MLCommons Inference benchmarks.
 
 ### Supported Models
 
-**TODO: Decide benchmark name, compute metring with 2 decimal precision in the whole dataset**
+**TODO: Decide benchmark name**
 | name | framework | acc. | AUC | dataset | weights  | size | prec. | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | dlrm_dcn (debugging) | PyTorch | N/A | N/A | Fake multihot criteo dataset generated with [make_fake_criteo.sh](tools/make_fake_criteo.sh)       | N/A                                                                     | ~1GB | fp32 |                          |
-| dlrm_dcn (debugging) | PyTorch | 81.07% | N/A | [Multihot Criteo Sample](https://ailab.criteo.com/ressources/criteo-1tb-click-logs-dataset-for-mlperf/) | [pytorch](https://dlrm.s3-us-west-1.amazonaws.com/models/tb0875_10M.pt) | ~100GB | fp32 |  |
-| dlrm_dcn (official) | PyTorch | N/A | 80.25% | [Multihot Criteo](https://ailab.criteo.com/ressources/criteo-1tb-click-logs-dataset-for-mlperf/) | [pytorch](https://dlrm.s3-us-west-1.amazonaws.com/models/tb00_40M.pt) | ~100GB | fp32 |  |
+| dlrm_dcn (debugging) | PyTorch | 81.07% | N/A | [Multihot Criteo Sample](https://ailab.criteo.com/ressources/criteo-1tb-click-logs-dataset-for-mlperf/) | [pytorch](#downloading-model-weights) | ~100GB | fp32 |  |
+| dlrm_dcn (official) | PyTorch | N/A | 80.31% | [Multihot Criteo](https://ailab.criteo.com/ressources/criteo-1tb-click-logs-dataset-for-mlperf/) | [pytorch](#downloading-model-weights) | ~100GB | fp32 |  |
 
 ### Disclaimer
 This is a reference implementation of the benchmark that is not meant to be the fastest implementation possible.
@@ -29,9 +29,9 @@ The following steps are **only** needed if you run the benchmark **without Docke
 
 Python 3.5, 3.6 or 3.7 is supported and we recommend to use Anaconda.
 
-Install the desired backend. For pytoch:
+Install the desired backend. For pytorch:
 ```
-pip install torch torchvision torchrec
+pip install torch torchvision torchrec torchsnapshot
 pip install scikit-learn
 pip install numpy
 pip install pydot
@@ -67,18 +67,29 @@ cd $HOME/mlcommons/inference/loadgen
 CFLAGS="-std=c++14" python setup.py develop --user
 ```
 
-### More information about the model weights
+### Downloading model weights
 
-**TODO: share model checkpoint, get link to weights**
 File name | framework | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
 -|-|-|-
-[debug weights]() | pytorch | <2GB | -
-[weight_sharded]() | pytorch | 97.31GB | -
+N/A | pytorch | <2GB | -
+[weight_sharded](https://cloud.mlcommons.org/index.php/s/XzfSeLgW8FYfR3S/download) | pytorch | 97.31GB | -
 
-### More information about the datasets
-| dataset | download link |
+You can download the weights by running:
+```
+wget https://cloud.mlcommons.org/index.php/s/XzfSeLgW8FYfR3S/download -O weigths.zip
+unzip weights.zip
+```
+(optional) To speed future downloads, we recommend you to save the weights in a bucket (E.g GCP, AWS). For example, after saving the checkpoint in a GCP bucket, you can download the weights faster by running:
+```
+export BUCKET_NAME=<BUCKET_CONTAINING_MODEL>
+cd $HOME/mlcommons/inference/recommendation/dlrm_v2/pytorch/model/
+gsutil -m cp -r "gs://$BUCKET_NAME/model_weights/*" .
+```
+
+### Downloading dataset
+| Original dataset | download link |
 | ---- | ---- |
-| Multihot Criteo Terabyte (day 23) | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
+| Criteo Terabyte (day 23) | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
 
 1. The Criteo fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with the original dataset. Please use the following script in `./tools` to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory
@@ -88,14 +99,10 @@ mv ./fake_criteo .. && cd ..
 export DATA_DIR=./fake_criteo
 ```
 
-2. The Multihot Criteo dataset is stored in several files corresponding to 24 days: `day_0.gz`, `day_1.gz`, ..., `day_23.gz` (~343GB). For this benchmark, we only use the validation dataset, which corresponds to `day_23.gz`. The dataset can be downloaded from this [bucket]()
-**TODO: share link to dataset, or give instructions to build it**
-```
-cd $HOME/mlcommons/inference/recommendation/dlrm_v2/pytorch/dataset/
-gsutil cp gs://dlrmv2-data/day_23_sparse_multi_hot.npz .
-gsutil cp gs://dlrmv2-data/numpy_contiguous/day_23_dense.npy .
-gsutil cp gs://dlrmv2-data/numpy_contiguous/day_23_labels.npy .
-```
+
+2. The Multihot Criteo dataset is stored in several files corresponding to 24 days: `day_0.gz`, `day_1.gz`, ..., `day_23.gz` (~343GB). For this benchmark, we only use the validation dataset, which corresponds to first half of `day_23.gz`.
+    - The dataset can be constructed from the criteo terabyte dataset. You can find the instructions for constructing the dataset [here](https://github.com/mlcommons/training/tree/master/recommendation_v2/torchrec_dlrm#create-the-synthetic-multi-hot-dataset)
+
 
 ### Calibration set
 

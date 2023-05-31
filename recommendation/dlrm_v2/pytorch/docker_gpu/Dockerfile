@@ -38,7 +38,7 @@ RUN pip install --upgrade pip && \
     ldconfig
 
 RUN conda install pytorch torchvision -c pytorch
-RUN pip install torchrec
+RUN pip install fbgemm-gpu==0.3.2 tqdm torchmetrics==0.11.0 torchrec==0.3.2 torchsnapshot pyre-extensions scikit-learn --user
 RUN pip install tensorflow-gpu==2.4 onnxruntime-gpu
 RUN pip install tensorboard
 RUN pip install Cython && pip install pycocotools

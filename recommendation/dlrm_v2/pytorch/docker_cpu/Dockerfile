@@ -32,7 +32,8 @@ RUN cd /opt && \
     conda config --set always_yes yes --set changeps1 no
 
 RUN conda install pytorch torchvision cpuonly -c pytorch
-RUN pip install torchrec
+RUN pip install fbgemm-gpu==0.3.2 tqdm torchmetrics==0.11.0 torchrec==0.3.2 torchsnapshot pyre-extensions scikit-learn --user
+RUN pip install fbgemm-gpu-cpu==0.3.2
 RUN pip install future pillow onnx opencv-python-headless tensorflow==2.4 onnxruntime
 RUN pip install tensorboard
 RUN pip install Cython && pip install pycocotools

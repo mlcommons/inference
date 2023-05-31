@@ -41,6 +41,7 @@ class BackendDistPytorchNative(backend.Backend):
         debug=False,
     ):
         super(BackendDistPytorchNative, self).__init__()
+        mp.set_start_method("spawn")
         self.i = 0
         self.sess = None
         self.model = None
@@ -113,6 +114,7 @@ class BackendDistPytorchNative(backend.Backend):
     def distributed_setup(self, rank, world_size, model_path):
         print("Initializing process...")
         if self.use_gpu:
+            self.device = torch.device(f"cuda:{rank}")
             torch.cuda.set_device(f"cuda:{rank}")
         dist.init_process_group(backend=self.dist_backend, rank=rank, world_size=world_size)
         pg = dist.group.WORLD
@@ -177,7 +179,7 @@ class BackendDistPytorchNative(backend.Backend):
                 batch_in = self.dataset_cache[item][rank].to(self.device)
                 _, (_, out, _) = self.model(batch_in)
                 out = torch.sigmoid(out)
-                self.predictions_cache[rank][item] = out.detach()
+                self.predictions_cache[rank][item] = out.detach().cpu()
 
     def capture_output(self, id):
         out = []

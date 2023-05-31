@@ -228,11 +228,13 @@ class MultihotCriteo(Dataset):
 
     def unload_query_samples(self, sample_list):
         self.items_in_memory = {}
+        self.item_sizes = {}
 
     """ lg compatibilty routine """
 
     def load_query_samples(self, sample_list):
         self.items_in_memory = {}
+        self.item_sizes = {}
 
         # WARNING: notice that while DataLoader is iterable-style, the Dataset
         # can be iterable- or map-style, and Criteo[Bin]Dataset are the latter
@@ -255,13 +257,17 @@ class MultihotCriteo(Dataset):
 
             ls = [i for i in range(s, e)]
             self.items_in_memory[l] = self.test_data.load_batch(ls)
+            self.item_sizes[l] = len(ls)
 
         self.last_loaded = time.time()
 
     """ lg compatibilty routine """
 
     def get_samples(self, id_list):
-        return [self.items_in_memory[item] for item in id_list]
+        idx_offsets = [0]
+        for item in id_list:
+            idx_offsets.append(idx_offsets[-1] + self.item_sizes[item])
+        return [self.items_in_memory[item] for item in id_list], idx_offsets
     
     def get_labels(self, sample):
         if isinstance(sample, list):

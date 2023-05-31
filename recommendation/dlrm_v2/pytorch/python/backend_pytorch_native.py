@@ -59,13 +59,11 @@ class BackendPytorchNative(backend.Backend):
         else:
             print("Using CPU...")
 
-        
+        os.environ["WORLD_SIZE"] = "1"
         os.environ["RANK"] = "0"
         os.environ["MASTER_ADDR"] = "localhost"
         os.environ["MASTER_PORT"] = "29500"
-        rank = int(os.environ["RANK"])
         if self.use_gpu:
-            os.environ["WORLD_SIZE"] = 1
             self.device: torch.device = torch.device(f"cuda:0")
             self.dist_backend = "nccl"
             # torch.cuda.set_device(self.device)
@@ -122,7 +120,6 @@ class BackendPytorchNative(backend.Backend):
         plan = planner.collective_plan(
             model, get_default_sharders(), dist.GroupMember.WORLD
         )
-        world_size = 1
         self.model = DistributedModelParallel(
             module=model,
             device=self.device,

@@ -253,11 +253,12 @@ def get_backend(backend, dataset, use_gpu, debug):
 class Item:
     """An item that we queue for processing by the thread pool."""
 
-    def __init__(self, query_id, content_id, features, batch_T=None):
+    def __init__(self, query_id, content_id, features, batch_T=None, idx_offsets = None):
         self.query_id = query_id
         self.content_id = content_id
         self.features = features
         self.batch_T = batch_T
+        self.idx_offsets = idx_offsets
         self.start = time.time()
 
 class RunnerBase:
@@ -302,7 +303,9 @@ class RunnerBase:
                 # depending on the --samples-to-aggregate* arguments.
                 # debug prints
                 # print("s,e:",s_idx,e_idx, len(processed_results))
-                response_array = array.array("B", np.array(processed_results, np.float32).tobytes())
+                s_idx = qitem.idx_offsets[idx]
+                e_idx = qitem.idx_offsets[idx + 1]
+                response_array = array.array("B", np.array(processed_results[s_idx:e_idx], np.float32).tobytes())
                 response_array_refs.append(response_array)
                 bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
@@ -315,16 +318,16 @@ class RunnerBase:
         query_len = len(query_samples)
 
         if query_len < self.max_batchsize:
-            samples = self.ds.get_samples(idx)
+            samples, idx_offsets = self.ds.get_samples(idx)
             batch_T = [self.ds.get_labels(sample) for sample in samples]
-            self.run_one_item(Item(query_id, idx, samples, batch_T))
+            self.run_one_item(Item(query_id, idx, samples, batch_T, idx_offsets))
         else:
             bs = self.max_batchsize
             for i in range(0, query_len, bs):
                 ie = min(i + bs, query_len)
-                samples = self.ds.get_samples(idx[i:ie])
+                samples, idx_offsets = self.ds.get_samples(idx[i:ie])
                 batch_T = [self.ds.get_labels(sample) for sample in samples]
-                self.run_one_item(Item(query_id[i:ie], idx[i:ie], samples, batch_T))
+                self.run_one_item(Item(query_id[i:ie], idx[i:ie], samples, batch_T, idx_offsets))
 
     def finish(self):
         pass
@@ -361,16 +364,16 @@ class QueueRunner(RunnerBase):
         query_len = len(query_samples)
         #print(idx)
         if query_len < self.max_batchsize:
-            samples = self.ds.get_samples(idx)
+            samples, idx_offsets = self.ds.get_samples(idx)
             batch_T = [self.ds.get_labels(sample) for sample in samples]
-            self.tasks.put(Item(query_id, idx, samples, batch_T))
+            self.tasks.put(Item(query_id, idx, samples, batch_T, idx_offsets))
         else:
             bs = self.max_batchsize
             for i in range(0, query_len, bs):
                 ie = min(i + bs, query_len)
-                samples = self.ds.get_samples(idx)
+                samples, idx_offsets = self.ds.get_samples(idx)
                 batch_T = [self.ds.get_labels(sample) for sample in samples]
-                self.tasks.put(Item(query_id[i:ie], idx[i:ie], samples, batch_T))
+                self.tasks.put(Item(query_id[i:ie], idx[i:ie], samples, batch_T, idx_offsets))
 
     def finish(self):
         # exit all threads
@@ -473,7 +476,7 @@ def main():
     ds.load_query_samples([0])
 
     for _ in range(5):
-        sample = ds.get_samples([0])
+        sample, _ = ds.get_samples([0])
         _ = backend.predict(sample, [0])
 
     ds.unload_query_samples(None)

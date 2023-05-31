@@ -35,22 +35,6 @@ prompt_length = len(tokenizer(instruction_template)["input_ids"])
 max_sample_length = tokenizer.model_max_length - prompt_length
 
 
-# The maximum total input sequence length after tokenization.
-# Sequences longer than this will be truncated, sequences shorter will be padded.
-tokenized_inputs = concatenate_datasets([dataset["train"], dataset["validation"]]).map(lambda x: tokenizer(x[text_column], truncation=True), batched=True, remove_columns=[text_column, summary_column])
-max_source_length = max([len(x) for x in tokenized_inputs["input_ids"]])
-max_source_length = min(max_source_length, max_sample_length)
-
-
-# The maximum total sequence length for target text after tokenization.
-# Sequences longer than this will be truncated, sequences shorter will be padded."
-tokenized_targets = concatenate_datasets([dataset["train"], dataset["validation"]]).map(lambda x: tokenizer(x[summary_column], truncation=True), batched=True, remove_columns=[text_column, summary_column])
-target_lenghts = [len(x) for x in tokenized_targets["input_ids"]]
-# use 95th percentile as max target length
-max_target_length = int(np.percentile(target_lenghts, 95))
-
-
-
 def preprocess_function(sample, padding="max_length"):
     # create list of samples
     inputs = []

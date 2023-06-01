@@ -43,8 +43,7 @@ cd ../..
 ### Clone 
 ```sh
 git clone https://github.com/mlcommons/inference.git
-cd inference/
-git checkout master
+cd inferenc
 cd language/gpt-j/
 ```
 

@@ -74,13 +74,13 @@ python evaluation.py --mlperf-accuracy-file ./build/logs/mlperf_log_accuracy.jso
 ```
 
 ### Reference Model - ROUGE scores
-The following are the rouge scores obtained when evaluating the fp32 model on the entire test set using greedy search (11490 samples)
+The following are the rouge scores obtained when evaluating the GPT-J fp32 model on the entire validation set (using greedy search)
 
-ROUGE 1 - 42.39  
+ROUGE 1 - 41.5945  
 
-ROUGE 2 - 18.45  
+ROUGE 2 - 18.4929  
 
-ROUGE L - 28.62  
+ROUGE L - 28.3975  
 
 ### License:
 Apache License Version 2.0.

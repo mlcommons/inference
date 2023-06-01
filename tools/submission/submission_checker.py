@@ -2517,7 +2517,7 @@ def check_system_desc_id(fname, systems_json, submitter, division, version, skip
     log.error("%s has submitter %s, directory has %s", fname,
               systems_json.get("submitter"), submitter)
     is_valid = False
-  if systems_json.get("division") != division:
+  if systems_json.get("division") != division  and (systems_json.get("division") != "network" or division != "open"):
     log.error("%s has division %s, division has %s", fname,
               systems_json.get("division"), division)
     is_valid = False

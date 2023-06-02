@@ -67,7 +67,7 @@ class BackendDistPytorchNative(backend.Backend):
         os.environ["MASTER_ADDR"] = "localhost"
         os.environ["MASTER_PORT"] = "29500"
         if self.use_gpu:
-            os.environ["WORLD_SIZE"] = str(ngpus)
+            os.environ["WORLD_SIZE"] = os.environ.get("WORLD_SIZE", str(ngpus))
             self.device = "cuda"
             self.dist_backend = "nccl"
         else:

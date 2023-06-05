@@ -547,10 +547,12 @@ def main():
     add_results(final_results, "{}".format(scenario),
                 result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
 
-
     runner.finish()
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)
+    # If multiple subprocesses are running the model send a signal to stop them
+    if (int(os.environ.get("WORLD_SIZE", 1)) > 1):
+        backend.predict(None, None)
 
     #
     # write final results

@@ -175,6 +175,9 @@ class BackendDistPytorchNative(backend.Backend):
         # Main prediction loop
         while(True):
             item = self.samples_q[rank].get()
+            # If -1 is received terminate all subprocesses
+            if item == -1:
+                break
             with torch.no_grad():
                 batch_in = self.dataset_cache[item][rank].to(self.device)
                 _, (_, out, _) = self.model(batch_in)
@@ -199,6 +202,11 @@ class BackendDistPytorchNative(backend.Backend):
 
     def predict(self, samples, ids):
         outputs = []
+        # If none is received terminate all subprocesses
+        if samples is None:
+            for rank in range(self.world_size):
+                self.samples_q[rank].put(-1)
+            return -1
         self.main_lock.wait()
         self.main_lock.clear()
         for id, batch in zip(ids, samples):

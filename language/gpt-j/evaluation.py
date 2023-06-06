@@ -75,8 +75,8 @@ def main():
     preds, targets = postprocess_text(preds_decoded_text, target_required)
 
 
-    result = metric.compute(predictions=preds, references=targets, use_stemmer=True)
-    result = {k: round(v * 100, 4) for k, v in result.items()}
+    result = metric.compute(predictions=preds, references=targets, use_stemmer=True,use_aggregator=False)
+    result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
     prediction_lens = [len(pred) for pred in preds]
     result["gen_len"] = np.sum(prediction_lens)
     result["gen_num"] = len(preds)

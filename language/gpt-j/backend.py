@@ -14,7 +14,7 @@ gen_kwargs = {
     "early_stopping": True,
     "max_new_tokens": 128,
     "min_new_tokens": 30,
-    "num_beams": 1,
+    "num_beams": 4,
 }
 
 

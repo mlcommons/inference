@@ -101,8 +101,46 @@ export DATA_DIR=./fake_criteo
 
 
 2. The Multihot Criteo dataset is stored in several files corresponding to 24 days: `day_0.gz`, `day_1.gz`, ..., `day_23.gz` (~343GB). For this benchmark, we only use the validation dataset, which corresponds to first half of `day_23.gz`.
-    - The dataset can be constructed from the criteo terabyte dataset. You can find the instructions for constructing the dataset [here](https://github.com/mlcommons/training/tree/master/recommendation_v2/torchrec_dlrm#create-the-synthetic-multi-hot-dataset)
+    - We provide some scripts for preprocessing the dataset. Those are `process_Criteo_1TB_Click_Logs_dataset.sh`, `npy_preproc_criteo.py`, `contiguous_preproc_criteo.py`, `multi_hot.py` and `materialize_synthetic_multihot_dataset.py`
 
+### Step 1: Download and uncompressing the [Criteo 1TB Click Logs dataset](https://ailab.criteo.com/ressources/criteo-1tb-click-logs-dataset-for-mlperf/)
+Follow the instructions to download day_23.gz in https://labs.criteo.com/2013/12/download-terabyte-click-logs/
+
+### Step 2: Run the 1TB Criteo Preprocess script.
+```
+cd <inference_repo_path>/recommendation/dlrm_v2/pytorch/tools
+bash ./process_Criteo_1TB_Click_Logs_dataset.sh \
+<path_to_raw_dataset> \
+<path_to_intermediate_temp_files> \
+<path_to_numpy_contiguous_output_dataset_dir>
+```
+For example:
+```
+cd $HOME/inference/recommendation/dlrm_v2/pytorch/tools
+bash ./process_Criteo_1TB_Click_Logs_dataset.sh \
+$HOME/inference/recommendation/dlrm_v2/pytorch/dataset/raw_input_dataset_dir \
+$HOME/inference/recommendation/dlrm_v2/pytorch/dataset/temp_intermediate_files_dir \
+$HOME/inference/recommendation/dlrm_v2/pytorch/dataset/numpy_contiguous_output_dataset_dir
+```
+The script requires 700GB of RAM. MD5 checksums for the output dataset files are in md5sums_preprocessed_criteo_click_logs_dataset.txt.
+
+
+### Step 3: Run the `materialize_synthetic_multihot_dataset.py` script
+```
+cd <inference_repo_path>/recommendation/dlrm_v2/pytorch/tools
+python materialize_synthetic_multihot_dataset.py \
+    --in_memory_binary_criteo_path $PREPROCESSED_CRITEO_1TB_CLICK_LOGS_DATASET_PATH \
+    --output_path $MATERIALIZED_DATASET_PATH \
+    --num_embeddings_per_feature 40000000,39060,17295,7424,20265,3,7122,1543,63,40000000,3067956,405282,10,2209,11938,155,4,976,14,40000000,40000000,40000000,590152,12973,108,36 \
+    --multi_hot_sizes 3,2,1,2,6,1,1,1,1,7,3,8,1,6,9,5,1,1,1,12,100,27,10,3,1,1 \
+    --multi_hot_distribution_type uniform
+```
+### Step 4: Move files to same folder
+Make sure the files `day_23_labels.npy`,`day_23_dense.npy`,`day_23_sparse_multi_hot.npz` are in the same folder
+For example:
+```
+mv $HOME/inference/recommendation/dlrm_v2/pytorch/dataset/numpy_contiguous_output_dataset_dir/* $HOME/inference/recommendation/dlrm_v2/pytorch/dataset/
+```
 
 ### Calibration set
 

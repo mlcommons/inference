@@ -11,6 +11,8 @@ from megatron.model import GPTModel, ModelType
 import mlperf_loadgen as lg
 from dataset import Dataset
 
+from megatron.model.text_generation import generate_tokens_probs_and_return_on_first_stage
+
 
 
 
@@ -35,7 +37,7 @@ class SUT_base():
             self.amp_enabled = False
             self.amp_dtype = torch.float32
 
-        initialize_megatron(args_default = args)
+        initialize_megatron(args_defaults = args)
         set_jit_fusion_options()
         self.data_object = Dataset(
             self.dataset_path, total_count_override=max_examples, args = args)
@@ -62,14 +64,11 @@ class SUT_base():
     def issue_queries(self, query_samples):
         print("Number of Samples in query_samples : ", len(query_samples))
 
-        total_samples_done = 0
-        list_prompts_tokens = []
-        list_prompts_attn_masks = []
-
         for i in range(len(query_samples)):
             index = query_samples[i].index
             input_ids_tensor = self.data_object.source_encoded_input_ids[index]
             input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
+            input_length_tensor = self.data_object.source_encoded_input_id_leghts[index]
 
             # Cast to GPU
             if self.use_gpu:
@@ -77,7 +76,7 @@ class SUT_base():
                 input_masks_tensor = input_masks_tensor.to(self.device)
 
             pred_output_batch = self.inference_call(
-                input_ids_tensor, input_masks_tensor).cpu().numpy()
+                input_ids_tensor, input_masks_tensor, input_length_tensor).cpu().numpy()
 
             response_array = array.array("B", pred_output_batch[0].tobytes())
             bi = response_array.buffer_info()
@@ -87,7 +86,7 @@ class SUT_base():
             if i % 5 == 0:
                 print("Completed : ", i)
 
-    def inference_call(self, input_ids_tensor, input_masks_tensor):
+    def inference_call(self, input_ids_tensor, input_masks_tensor, input_length_tensor):
         ''' Common for all scenarios '''
         torch_device_type = 'cuda' if self.use_gpu else 'cpu'
 
@@ -96,16 +95,15 @@ class SUT_base():
             input_batch['input_ids'] = input_ids_tensor
             input_batch['attention_mask'] = input_masks_tensor
 
-            output_batch = self.model.generate(
-                **input_batch, **self.gen_kwargs, pad_token_id=self.tokenizer.eos_token_id)
+            output_tokens, _, _ = generate_tokens_probs_and_return_on_first_stage(self.model, input_ids_tensor, input_length_tensor, top_k = self.gen_kwargs.get())
 
             input_batch_lengths = [x.shape[0]
                                    for x in input_batch["input_ids"]]
 
-            output_batch_lengths = [x.shape[0] for x in output_batch]
+            output_batch_lengths = [x.shape[0] for x in output_tokens]
 
             output_batch_truncated = []
-            for data, source_len in zip(output_batch, input_batch_lengths):
+            for data, source_len in zip(output_tokens, input_batch_lengths):
                 output_batch_truncated.append(data[source_len:])
 
             output_batch_truncated = torch.stack(output_batch_truncated)
@@ -120,15 +118,15 @@ class SUT_base():
 
 
 class SUT_Offline(SUT_base):
-    def __init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args):
-        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args)
+    def __init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_kwargs):
+        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_kwargs)
     '''IssueQuery and inference methods implemented in Base class'''
 
 
 class SUT_Server(SUT_base):
-    def __init__(self, model_path, dtype, dataset_path, max_examples, args, use_gpu, gen_args):
+    def __init__(self, model_path, dtype, dataset_path, max_examples, args, use_gpu, gen_kwargs):
 
-        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args)
+        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_kwargs)
         self.total_samples_done = 0
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("SUT Server")
@@ -138,13 +136,14 @@ class SUT_Server(SUT_base):
         index = query_samples[0].index
         input_ids_tensor = self.data_object.source_encoded_input_ids[index]
         input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
+        input_length_tensor = self.data_object.source_encoded_input_id_leghts[index]
 
         if self.use_gpu:
             input_ids_tensor = input_ids_tensor.to(self.device)
             input_masks_tensor = input_masks_tensor.to(self.device)
 
         pred_output_batch = self.inference_call(
-            input_ids_tensor, input_masks_tensor).cpu().numpy()
+            input_ids_tensor, input_masks_tensor, input_length_tensor).cpu().numpy()
 
         response_array = array.array("B", pred_output_batch.tobytes())
         bi = response_array.buffer_info()
@@ -156,8 +155,8 @@ class SUT_Server(SUT_base):
 
 
 class SUT_SingleStream(SUT_base):
-    def __init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args):
-        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args)
+    def __init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_kwargs):
+        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_kwargs)
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         self.total_samples_done = 0
 
@@ -166,13 +165,14 @@ class SUT_SingleStream(SUT_base):
         index = query_samples[0].index
         input_ids_tensor = self.data_object.source_encoded_input_ids[index]
         input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
+        input_length_tensor = self.data_object.source_encoded_input_id_leghts[index]
 
         if self.use_gpu:
             input_ids_tensor = input_ids_tensor.to(self.device)
             input_masks_tensor = input_masks_tensor.to(self.device)
 
         pred_output_batch = self.inference_call(
-            input_ids_tensor, input_masks_tensor).cpu().numpy()
+            input_ids_tensor, input_masks_tensor, input_length_tensor).cpu().numpy()
 
         response_array = array.array("B", pred_output_batch.tobytes())
         bi = response_array.buffer_info()
@@ -183,10 +183,10 @@ class SUT_SingleStream(SUT_base):
             print("Completed : ", self.total_samples_done)
 
 
-def get_SUT(model_path, scenario, dtype, dataset_path, max_examples, args, use_gpu=False, gen_args = {}):
+def get_SUT(model_path, scenario, dtype, dataset_path, max_examples, args, use_gpu=False, gen_kwargs = {}):
     if scenario == "Offline":
-        return SUT_Offline(model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args = {})
+        return SUT_Offline(model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_kwargs = gen_kwargs)
     elif scenario == "Server":
-        return SUT_Server(model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args = {})
+        return SUT_Server(model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_kwargs = gen_kwargs)
     elif scenario == "SingleStream":
-        return SUT_SingleStream(model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args = {})
+        return SUT_SingleStream(model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_kwargs = gen_kwargs)

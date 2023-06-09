@@ -43,7 +43,7 @@ class Dataset():
         self.targets = [
             f"{example['output']}" for example in self.list_data_dict]
 
-        self.source_encoded_input_ids, self.source_encoded_attn_masks = self.encode_samples()
+        self.source_encoded_input_ids, self.source_encoded_attn_masks, self.source_encoded_input_id_leghts = self.encode_samples()
         self.count = total_count_override or len(self.sources)
         self.perf_count = perf_count_override or self.count
     
@@ -139,6 +139,7 @@ class Dataset():
         total_samples = len(self.sources)
 
         source_encoded_input_ids = []
+        source_encoded_input_id_leghts = []
         source_encoded_attn_masks = []
 
         for i in range(total_samples):
@@ -146,16 +147,17 @@ class Dataset():
                 print("Sentence:")
                 print(self.sources[i])
                 print("--------------------------------------------------------------------------------")
-            tokens = self.tokenize_prompts([self.sources[i]])
+            tokens, length = self.tokenize_prompts([self.sources[i]], 128)
             attn_mask = self._build_attention_mask(tokens)
             source_encoded_input_ids.append(tokens)
             source_encoded_attn_masks.append(attn_mask)
+            source_encoded_input_id_leghts.append(length)
             if (i%100 == 0 and self.debug):
                 print(f"Tokens: {tokens}")
                 print(f"Attention mask: {attn_mask}")
                 input("...")
 
-        return source_encoded_input_ids, source_encoded_attn_masks
+        return source_encoded_input_ids, source_encoded_attn_masks, source_encoded_input_id_leghts
 
     def LoadSamplesToRam(self, sample_list):
         pass
@@ -174,6 +176,7 @@ def get_args():
     parser.add_argument("--merge-file", default="/content/drive/MyDrive/MLCommons/notebook_data/GPT3/merges.txt")
     parser.add_argument("--make-vocab-size-divisible-by", default=128)
     parser.add_argument("--tensor-model-parallel-size", default=1)
+    parser.add_argument("--rank", default="0")
     parser.add_argument('--distributed-backend', default='nccl')
     args = parser.parse_args()
     return args

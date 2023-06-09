@@ -35,13 +35,14 @@ def get_args():
                         help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--max_examples", type=int, default=13368,
                         help="Maximum number of examples to consider (not limited by default)")
-    
+    parser.add_argument("--rank", default=0)
+    global_names = set(vars(parser.parse_known_args()[0]).keys())
     # Add megatron arguments
     megatron_parser = parser.add_argument_group('megatron')
     megatron_parser.add_argument("--tensor-model-parallel-size", default=1) # TODO change to 8
     megatron_parser.add_argument("--pipeline-model-parallel-size", default=1) # TODO change to 8
     megatron_parser.add_argument("--sequence-parallel", action="store_true")
-    megatron_parser.add_argument("--recompute-activations", action="store_true")
+    #megatron_parser.add_argument("--recompute-activations", action="store_true")
     megatron_parser.add_argument("--num-layers", default=1) # TODO change to 96
     megatron_parser.add_argument("--hidden-size", default=128) # TODO change to 12288
     megatron_parser.add_argument("--num-attention-heads", default=2) # TODO change to 96
@@ -80,17 +81,17 @@ def get_args():
     megatron_parser.add_argument("--log-validation-ppl-to-tensorboard", action="store_true")
     megatron_parser.add_argument("--DDP-impl", default="local")
     megatron_parser.add_argument("--tensorboard-dir", default="")
-    megatron_parser.add_argument("--no-query-key-layer-scaling", action="store_true")
-    megatron_parser.add_argument("--no-seq-len-plus-one-tokens", action="store_true")
+    #megatron_parser.add_argument("--no-query-key-layer-scaling", action="store_true")
+    #megatron_parser.add_argument("--no-seq-len-plus-one-tokens", action="store_true")
     megatron_parser.add_argument("--seed", default=0)
     megatron_parser.add_argument("--use-checkpoint-args", action="store_true")
     megatron_parser.add_argument("--load", default=None)
-
     # Tokenizer args
     megatron_parser.add_argument("--tokenizer-type", default="GPT2BPETokenizer")
     megatron_parser.add_argument("--make-vocab-size-divisible-by", default=128)
+    megatron_names = set(vars(parser.parse_known_args()[0]).keys()) - global_names
     args = parser.parse_args()
-    megatron_args = dict((k, v) for k, v in vars(args).items() if k in megatron_parser)
+    megatron_args = dict((k, v) for k, v in vars(args).items() if k in megatron_names)
     return args, megatron_args
 
 
@@ -109,6 +110,15 @@ gen_args = {
 
 def main():
     args, megatron_args = get_args()
+    os.environ["RANK"] = "0"
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "29500"
+    gen_kwargs = {
+        "early_stopping": True,
+        "max_new_tokens": 128,
+        "min_new_tokens": 30,
+        "top_k": 4,
+    }
 
     sut = get_SUT(
         model_path=args.model_path,
@@ -118,7 +128,7 @@ def main():
         max_examples=args.max_examples,
         args=megatron_args,
         use_gpu=args.gpu,
-        gen_args=gen_args
+        gen_kwargs=gen_kwargs
     )
 
     settings = lg.TestSettings()

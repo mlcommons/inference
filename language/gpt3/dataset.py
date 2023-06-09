@@ -24,12 +24,14 @@ PROMPT_DICT = {
 
 
 class Dataset():
-    def __init__(self, dataset_path, batch_size=1, args = None):
+    def __init__(self, dataset_path, batch_size=1, args = None, gen_kwards = {}, total_count_override=None, perf_count_override=None, debug = False):
         print("Constructing QSL")
 
         self.dataset = "cnn_dailymail"
         self.dataset_path = dataset_path
         self.batch_size = batch_size
+        self.debug = debug
+        self.gen_kwards = {}
 
         self.tokenizer = build_tokenizer(args)
 
@@ -42,6 +44,8 @@ class Dataset():
             f"{example['output']}" for example in self.list_data_dict]
 
         self.source_encoded_input_ids, self.source_encoded_attn_masks = self.encode_samples()
+        self.count = total_count_override or len(self.sources)
+        self.perf_count = perf_count_override or self.count
     
     def _build_attention_mask(self, tokens):
         """Build the attention mask and postition ids for the input tokens."""
@@ -138,16 +142,18 @@ class Dataset():
         source_encoded_attn_masks = []
 
         for i in range(total_samples):
-            print("Sentence:")
-            print(self.sources[i])
-            print("--------------------------------------------------------------------------------")
+            if (i%100 == 0 and self.debug):
+                print("Sentence:")
+                print(self.sources[i])
+                print("--------------------------------------------------------------------------------")
             tokens = self.tokenize_prompts([self.sources[i]])
             attn_mask = self._build_attention_mask(tokens)
             source_encoded_input_ids.append(tokens)
             source_encoded_attn_masks.append(attn_mask)
-            print(f"Tokens: {tokens}")
-            print(f"Attention mask: {attn_mask}")
-            input("...")
+            if (i%100 == 0 and self.debug):
+                print(f"Tokens: {tokens}")
+                print(f"Attention mask: {attn_mask}")
+                input("...")
 
         return source_encoded_input_ids, source_encoded_attn_masks
 
@@ -166,7 +172,6 @@ def get_args():
     parser.add_argument("--tokenizer-type", default="GPT2BPETokenizer")
     parser.add_argument("--vocab-file", default="/content/drive/MyDrive/MLCommons/notebook_data/GPT3/vocab.json")
     parser.add_argument("--merge-file", default="/content/drive/MyDrive/MLCommons/notebook_data/GPT3/merges.txt")
-    parser.add_argument("--rank", default=0)
     parser.add_argument("--make-vocab-size-divisible-by", default=128)
     parser.add_argument("--tensor-model-parallel-size", default=1)
     parser.add_argument('--distributed-backend', default='nccl')
@@ -176,5 +181,8 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    torch.torch.distributed.init_process_group(backend = args.distributed_backend)
-    d = Dataset("data/cnn_eval.json")
+    os.environ["RANK"] = "0"
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "29500"
+    torch.torch.distributed.init_process_group(backend = args.distributed_backend, rank = 0, world_size =1)
+    d = Dataset("data/cnn_eval.json", args = args)

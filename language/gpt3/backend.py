@@ -1,28 +1,28 @@
 import array
 import torch
-from megatron.initialize import initialize_megatron
+import os
+import sys
+sys.path.append(os.environ["MEGATRON_PATH"])
+from megatron import print_rank_0
+
+from megatron.initialize import initialize_megatron, set_jit_fusion_options
 from megatron.training import setup_model_and_optimizer
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from megatron.model import GPTModel, ModelType
 import mlperf_loadgen as lg
 from dataset import Dataset
 
 
-gen_kwargs = {
-    "early_stopping": True,
-    "max_new_tokens": 128,
-    "min_new_tokens": 30,
-    "num_beams": 4,
-}
 
 
 class SUT_base():
-    def __init__(self, model_path, dtype, dataset_path, max_examples, use_gpu=False):
+    def __init__(self, model_path, dtype, dataset_path, max_examples, args, use_gpu=False, gen_kwargs = {}):
         # TODO : Pass model file name to init instead of args
         print("Loading PyTorch model...")
-        self.model_name = "EleutherAI/gpt-j-6B"
+        self.model_name = "Megatron-LM"
         self.dataset_path = dataset_path
         self.model_path = model_path
         self.use_gpu = use_gpu
+        self.gen_kwargs = gen_kwargs
         # dtype
         if dtype == 'bfloat16':
             self.amp_enabled = True
@@ -35,32 +35,25 @@ class SUT_base():
             self.amp_enabled = False
             self.amp_dtype = torch.float32
 
-        self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_path,
-            device_map="auto" if not self.use_gpu else None,
-            low_cpu_mem_usage=True if not self.use_gpu else False,
-            torch_dtype=self.amp_dtype
-        )
-
-        # Cast the model to GPU if the flag is set.
-        if self.use_gpu:
-            print(f"Casting models to GPU...")
-            assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
-            self.device = torch.device("cuda:0")
-            self.model.to(self.device)
-
-        self.model.eval()
-        self.model = self.model.to(memory_format=torch.channels_last)
-
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_name,
-            model_max_length=1919,
-            padding_side="left",
-            use_fast=False,)
-        self.tokenizer.pad_token = self.tokenizer.eos_token
-
+        initialize_megatron(args_default = args)
+        set_jit_fusion_options()
         self.data_object = Dataset(
-            self.dataset_path, total_count_override=max_examples)
+            self.dataset_path, total_count_override=max_examples, args = args)
+        
+        def model_provider(pre_process=True, post_process=True):
+            """Build the model."""
+            print_rank_0('building GPT model ...')
+            model = GPTModel(
+                num_tokentypes=0,
+                parallel_output=True,
+                pre_process=pre_process,
+                post_process=post_process
+            )
+            return model
+        
+        self.model, opt_param_scheduler = setup_model_and_optimizer(model_provider, ModelType.encoder_or_decoder)
+
+
         self.qsl = lg.ConstructQSL(self.data_object.count, self.data_object.perf_count,
                                    self.data_object.LoadSamplesToRam, self.data_object.UnloadSamplesFromRam)
 
@@ -104,7 +97,7 @@ class SUT_base():
             input_batch['attention_mask'] = input_masks_tensor
 
             output_batch = self.model.generate(
-                **input_batch, **gen_kwargs, pad_token_id=self.tokenizer.eos_token_id)
+                **input_batch, **self.gen_kwargs, pad_token_id=self.tokenizer.eos_token_id)
 
             input_batch_lengths = [x.shape[0]
                                    for x in input_batch["input_ids"]]
@@ -127,15 +120,15 @@ class SUT_base():
 
 
 class SUT_Offline(SUT_base):
-    def __init__(self, model_path, dtype, dataset_path, max_examples, use_gpu):
-        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples, use_gpu)
+    def __init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args):
+        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args)
     '''IssueQuery and inference methods implemented in Base class'''
 
 
 class SUT_Server(SUT_base):
-    def __init__(self, model_path, dtype, dataset_path, max_examples, use_gpu):
+    def __init__(self, model_path, dtype, dataset_path, max_examples, args, use_gpu, gen_args):
 
-        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples, use_gpu)
+        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args)
         self.total_samples_done = 0
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("SUT Server")
@@ -163,8 +156,8 @@ class SUT_Server(SUT_base):
 
 
 class SUT_SingleStream(SUT_base):
-    def __init__(self, model_path, dtype, dataset_path, max_examples, use_gpu):
-        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples, use_gpu)
+    def __init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args):
+        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args)
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         self.total_samples_done = 0
 
@@ -190,10 +183,10 @@ class SUT_SingleStream(SUT_base):
             print("Completed : ", self.total_samples_done)
 
 
-def get_SUT(model_path, scenario, dtype, dataset_path, max_examples, use_gpu=False):
+def get_SUT(model_path, scenario, dtype, dataset_path, max_examples, args, use_gpu=False, gen_args = {}):
     if scenario == "Offline":
-        return SUT_Offline(model_path, dtype, dataset_path, max_examples, use_gpu)
+        return SUT_Offline(model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args = {})
     elif scenario == "Server":
-        return SUT_Server(model_path, dtype, dataset_path, max_examples, use_gpu)
+        return SUT_Server(model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args = {})
     elif scenario == "SingleStream":
-        return SUT_SingleStream(model_path, dtype, dataset_path, max_examples, use_gpu)
+        return SUT_SingleStream(model_path, dtype, dataset_path, max_examples,args, use_gpu, gen_args = {})

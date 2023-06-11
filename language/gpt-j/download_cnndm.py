@@ -2,7 +2,6 @@
 model_id = "EleutherAI/gpt-j-6b"
 dataset_id = "cnn_dailymail"
 dataset_config = "3.0.0"
-save_dataset_path = "data"
 text_column = "article"
 summary_column = "highlights"
 
@@ -12,6 +11,8 @@ import numpy as np
 import os
 import simplejson as json
 import sys
+
+save_dataset_path = os.environ.get('DATASET_CNNDM_PATH', "data")
 
 # Check whether the specified path exists or not
 isExist = os.path.exists(save_dataset_path)
@@ -33,22 +34,6 @@ instruction_template = "Summarize the following news article:"
 
 prompt_length = len(tokenizer(instruction_template)["input_ids"])
 max_sample_length = tokenizer.model_max_length - prompt_length
-
-
-# The maximum total input sequence length after tokenization.
-# Sequences longer than this will be truncated, sequences shorter will be padded.
-tokenized_inputs = concatenate_datasets([dataset["train"], dataset["validation"]]).map(lambda x: tokenizer(x[text_column], truncation=True), batched=True, remove_columns=[text_column, summary_column])
-max_source_length = max([len(x) for x in tokenized_inputs["input_ids"]])
-max_source_length = min(max_source_length, max_sample_length)
-
-
-# The maximum total sequence length for target text after tokenization.
-# Sequences longer than this will be truncated, sequences shorter will be padded."
-tokenized_targets = concatenate_datasets([dataset["train"], dataset["validation"]]).map(lambda x: tokenizer(x[summary_column], truncation=True), batched=True, remove_columns=[text_column, summary_column])
-target_lenghts = [len(x) for x in tokenized_targets["input_ids"]]
-# use 95th percentile as max target length
-max_target_length = int(np.percentile(target_lenghts, 95))
-
 
 
 def preprocess_function(sample, padding="max_length"):

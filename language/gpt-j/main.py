@@ -7,6 +7,7 @@ import sys
 from backend import get_SUT
 sys.path.insert(0, os.getcwd())
 
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -14,22 +15,26 @@ def get_args():
     parser.add_argument("--scenario", choices=["SingleStream", "Offline",
                         "Server", "MultiStream"], default="Offline", help="Scenario")
     parser.add_argument("--model-path", default="EleutherAI/gpt-j-6B", help="")
-    parser.add_argument("--dataset-path", default="./data/cnn_eval.json", help="")
+    parser.add_argument(
+        "--dataset-path", default="./data/cnn_eval.json", help="")
     parser.add_argument("--accuracy", action="store_true",
                         help="enable accuracy pass")
-    parser.add_argument("--dtype",default="float32",help="")
+    parser.add_argument("--dtype", default="float32", help="data type of the model, choose from float16, bfloat16 and float32")
     parser.add_argument("--quantized", action="store_true",
                         help="use quantized model (only valid for onnxruntime backend)")
     parser.add_argument("--profile", action="store_true",
                         help="enable profiling (only valid for onnxruntime backend)")
+    parser.add_argument("--gpu", action="store_true",
+                        help="use GPU instead of CPU for the inference")
     parser.add_argument(
         "--mlperf_conf", default="mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf",
                         help="user config for user LoadGen settings such as target QPS")
-    parser.add_argument("--max_examples", type=int, default=4869,
+    parser.add_argument("--max_examples", type=int, default=13368,
                         help="Maximum number of examples to consider (not limited by default)")
     args = parser.parse_args()
     return args
+
 
 scenario_map = {
     "SingleStream": lg.TestScenario.SingleStream,
@@ -38,10 +43,18 @@ scenario_map = {
     "MultiStream": lg.TestScenario.MultiStream
 }
 
+
 def main():
     args = get_args()
 
-    sut = get_SUT(model_path=args.model_path,scenario=args.scenario,dtype=args.dtype,dataset_path=args.dataset_path,max_examples=args.max_examples)
+    sut = get_SUT(
+        model_path=args.model_path,
+        scenario=args.scenario,
+        dtype=args.dtype,
+        dataset_path=args.dataset_path,
+        max_examples=args.max_examples,
+        use_gpu=args.gpu,
+    )
 
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
@@ -65,7 +78,6 @@ def main():
     log_settings.log_output = log_output_settings
     log_settings.enable_trace = True
 
-
     lg.StartTestWithLogSettings(sut.sut, sut.qsl, settings, log_settings)
     print("Test Done!")
 
@@ -74,6 +86,7 @@ def main():
 
     print("Destroying QSL...")
     lg.DestroyQSL(sut.qsl)
+
 
 if __name__ == "__main__":
     main()

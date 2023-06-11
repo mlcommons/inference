@@ -42,9 +42,8 @@ cd ../..
 ```
 ### Clone 
 ```sh
-git clone https://github.com/badhri-intel/inference.git
-cd inference/
-git checkout gpt-j/ref_implementation
+git clone https://github.com/mlcommons/inference.git
+cd inference
 cd language/gpt-j/
 ```
 
@@ -61,10 +60,8 @@ pip install datasets
 python prepare-calibration.py --calibration-list-file calibration-list.txt --output-dir </path/to/output-folder>
 ```
 ### Download GPT-J model
-Downloads the model and saves it in model/ directory. If you have access to fine-tuned model, you can use that instead by naming the directory as model/.
-```
-python download_gptj.py
-```
+Please download the internal fine-tuned GPT-J checkpoint and rename it as model/. The download_gptj.py only downloads the default huggingface model which is not fine-tuned on CNN-Daily mail dataset.
+
 ### Running the Benchmark
 Replace the model and dataset path arguments with your corresponding paths. For evaluating the ROUGE score after the run, include --accuracy as shown below. For user specific target qps, please include user.conf.
 ```
@@ -75,6 +72,16 @@ Evaluates the ROGUE scores from the accuracy logs. Only applicable when specifiy
 ```
 python evaluation.py --mlperf-accuracy-file ./build/logs/mlperf_log_accuracy.json --dataset-file ./data/cnn_eval.json
 ```
+
+### Reference Model - ROUGE scores
+The following are the rouge scores obtained when evaluating the GPT-J fp32 model on the entire validation set (using greedy search)
+
+ROUGE 1 - 41.5945  
+
+ROUGE 2 - 18.4929  
+
+ROUGE L - 28.3975  
+
 ### License:
 Apache License Version 2.0.
 

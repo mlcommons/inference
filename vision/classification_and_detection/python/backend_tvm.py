@@ -164,7 +164,7 @@ class BackendTVM(backend.Backend):
         self.load_impl(model_path, inputs, outputs, self.max_batchsize)
 
         if self.arena_num > 1:
-            multiprocessing.set_start_method('spawn')
+            multiprocessing.set_start_method(os.getenv("PYTHON_MP_START_METHOD", "fork"))
             self.pool = multiprocessing.Pool(self.arena_num,
                                              initializer=self._worker_initializer,
                                              initargs=(model_path, inputs, outputs, self.max_batchsize,

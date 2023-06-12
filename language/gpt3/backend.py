@@ -15,6 +15,10 @@ from dataset import Dataset
 from megatron.text_generation.generation import (
     generate_tokens_probs_and_return_on_first_stage,
 )
+from megatron.utils import unwrap_model
+from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
+from megatron.model import DistributedDataParallel as LocalDDP
+from megatron.model import Float16Module
 
 
 class SUT_base:
@@ -65,9 +69,12 @@ class SUT_base:
             )
             return model
 
-        self.model, opt_param_scheduler = setup_model_and_optimizer(
+        # TODO: Modify function to not load optimizer
+        self.model, _, _ = setup_model_and_optimizer(
             model_provider, ModelType.encoder_or_decoder
         )
+        self.unwrapped_model = unwrap_model(self.model, (torchDDP, LocalDDP, Float16Module))
+        self.rank = args.rank
 
         self.qsl = lg.ConstructQSL(
             self.data_object.count,
@@ -121,10 +128,10 @@ class SUT_base:
             input_batch["attention_mask"] = input_masks_tensor
 
             output_tokens, _, _ = generate_tokens_probs_and_return_on_first_stage(
-                self.model,
+                self.unwrapped_model[self.rank],
                 input_ids_tensor,
                 input_length_tensor,
-                top_k=self.gen_kwargs.get(),
+                top_k=self.gen_kwargs.get("top_k", 4),
             )
 
             input_batch_lengths = [x.shape[0] for x in input_batch["input_ids"]]

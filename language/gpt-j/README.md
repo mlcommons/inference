@@ -76,11 +76,11 @@ python evaluation.py --mlperf-accuracy-file ./build/logs/mlperf_log_accuracy.jso
 ### Reference Model - ROUGE scores
 The following are the rouge scores obtained when evaluating the GPT-J fp32 model on the entire validation set (13368 samples) using beam search, beam_size=4
 
-ROUGE 1 - 42.9829
+ROUGE 1 - 42.9865
 
-ROUGE 2 - 20.129
+ROUGE 2 - 20.1235
 
-ROUGE L - 29.9891
+ROUGE L - 29.9881
 
 ### License:
 Apache License Version 2.0.

@@ -1775,7 +1775,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
 
-            avg_power_efficiency = (samples_per_query * 1000)  / power_metric
+            avg_power_efficiency = (samples_per_query * 1000) / power_metric
 
     return is_valid, power_metric, scenario, avg_power_efficiency
 
@@ -1789,7 +1789,6 @@ def check_power_dir(
     power_res_testing,
     config,
 ):
-
     skip_power_check = config.skip_power_check
 
     is_valid = True
@@ -1961,7 +1960,6 @@ def check_results_dir(
         inferred=0,
         power_metric=0,
     ):
-
         notes = system_json.get("hw_notes", "")
         if system_json.get("sw_notes"):
             notes = notes + ". " if notes else ""
@@ -2245,7 +2243,6 @@ def check_results_dir(
                 # Look at each model
                 #
                 for model_name in list_dir(results_path, system_desc):
-
                     # we are looking at ./$division/$submitter/results/$system_desc/$model,
                     #   ie ./closed/mlperf_org/results/t4-ort/bert
                     name = os.path.join(results_path, system_desc, model_name)
@@ -2721,7 +2718,6 @@ def check_measurement_dir(
     skip_empty_files_check,
     skip_check_power_measure_files,
 ):
-
     files = list_files(measurement_dir)
     system_file = None
     is_valid = True
@@ -2740,11 +2736,11 @@ def check_measurement_dir(
     if has_power and not skip_check_power_measure_files:
         for i in REQUIRED_POWER_MEASURE_FILES:
             file_re = measurement_dir + "/../../../**/" + i
-            file_path = glob(file_re, recursive=True)
-            if not file_path:
+            file_paths = glob(file_re, recursive=True)
+            if not file_paths:
                 log.error("%s is missing %s", measurement_dir, i)
                 is_valid = False
-            elif not skip_empty_files_check and (os.stat(file_path).st_size == 0):
+            elif not skip_empty_files_check and all((os.stat(file_path).st_size == 0) for file_path in file_paths):
                 log.error("%s is having empty %s", measurement_dir, i)
                 is_valid = False
 

@@ -145,6 +145,7 @@ def export_to_coco(
     )
     annotations = pd.merge(annotations, image_list_df, how="inner", left_on="ImageID", right_on="image_list")
     annotations = annotations.merge(class_map, on="LabelName", how="inner")
+    annotations = annotations.sort_values(by=["ImageID"])
     annotations["image_id"] = pd.factorize(annotations["ImageID"].tolist())[0]
     # Images
     images_ = []

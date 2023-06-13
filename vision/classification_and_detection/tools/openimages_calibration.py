@@ -141,22 +141,20 @@ def export_to_coco(
     # Annotations
     annotations_ = []
     for i, row in annotations.iterrows():
+        bbox = [
+            row["XMin"] * row["width"],
+            row["YMin"] * row["height"],
+            (row["XMax"] - row["XMin"]) * row["width"],
+            (row["YMax"] - row["YMin"]) * row["height"],
+        ]
         annotations_.append(
             {
                 "id": int(i) + 1,
                 "image_id": int(row["image_id"] + 1),
                 "category_id": int(row["category_id"]),
-                "bbox": [
-                    row["XMin"] * row["width"],
-                    row["YMin"] * row["height"],
-                    (row["XMax"] - row["XMin"]) * row["width"],
-                    (row["YMax"] - row["YMin"]) * row["height"],
-                ],
-                "area": (row["XMax"] - row["XMin"])
-                * row["width"]
-                * (row["YMax"] - row["YMin"])
-                * row["height"],
-                "iscrowd": 0,
+                "bbox": bbox,
+                "area": bbox[2] * bbox[3],
+                "iscrowd": row["IsGroupOf"],
                 "IsOccluded": row["IsOccluded"],
                 "IsInside": row["IsInside"],
                 "IsDepiction": row["IsDepiction"],

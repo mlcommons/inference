@@ -1289,7 +1289,7 @@ def get_args():
         help="skips Power WG's check.py script on each power submission.",
     )
     parser.add_argument(
-        "--skip-meaningful-fields-empty-check",
+        "--skip-meaningful-fields-emptiness-check",
         action="store_true",
         help="skips the check of empty values in required measurement field values",
     )
@@ -1513,6 +1513,7 @@ def check_performance_dir(
             config_seeds["qsl_rng_seed"],
             qsl_rng_seed,
         )
+        is_valid = False
     if sample_index_rng_seed != config_seeds["sample_index_rng_seed"]:
         log.error(
             "%s sample_index_rng_seed is wrong, expected=%s, found=%s",
@@ -1520,6 +1521,7 @@ def check_performance_dir(
             config_seeds["sample_index_rng_seed"],
             sample_index_rng_seed,
         )
+        is_valid = False
     if schedule_rng_seed != config_seeds["schedule_rng_seed"]:
         log.error(
             "%s schedule_rng_seed is wrong, expected=%s, found=%s",
@@ -1527,6 +1529,7 @@ def check_performance_dir(
             config_seeds["schedule_rng_seed"],
             schedule_rng_seed,
         )
+        is_valid = False
 
     if scenario == "SingleStream" or (
         scenario == "MultiStream" and not config.uses_legacy_multistream()
@@ -1568,6 +1571,7 @@ def check_performance_dir(
                         target_latency,
                         early_stopping_latency_ns,
                     )
+                    is_valid = False
 
         else:
             # check if the benchmark meets latency constraint
@@ -1600,6 +1604,7 @@ def check_performance_dir(
                     required_min_query_count,
                     min_query_count,
                 )
+                is_valid = False
 
         if scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ):
             log.error(
@@ -1608,6 +1613,7 @@ def check_performance_dir(
                 OFFLINE_MIN_SPQ,
                 samples_per_query,
             )
+            is_valid = False
 
         # Test duration of 600s is met
         required_min_duration = (
@@ -1881,7 +1887,7 @@ def check_results_dir(
     skip_compliance,
     csv,
     debug=False,
-    skip_meaningful_fields_empty_check=False,
+    skip_meaningful_fields_emptiness_check=False,
     skip_empty_files_check=False,
     skip_check_power_measure_files=False,
 ):
@@ -2234,7 +2240,7 @@ def check_results_dir(
                         submitter,
                         division,
                         config.version,
-                        skip_meaningful_fields_empty_check,
+                        skip_meaningful_fields_emptiness_check,
                     ):
                         results[name] = None
                         continue
@@ -2322,7 +2328,7 @@ def check_results_dir(
                                 submitter,
                                 division,
                                 config.version,
-                                skip_meaningful_fields_empty_check,
+                                skip_meaningful_fields_emptiness_check,
                             ):
                                 results[name] = None
                                 errors += 1
@@ -2351,7 +2357,7 @@ def check_results_dir(
                                 model_name,
                                 scenario,
                                 has_power,
-                                skip_meaningful_fields_empty_check,
+                                skip_meaningful_fields_emptiness_check,
                                 skip_empty_files_check,
                                 skip_check_power_measure_files,
                             ):
@@ -2607,7 +2613,7 @@ def check_system_desc_id(
     submitter,
     division,
     version,
-    skip_meaningful_fields_empty_check,
+    skip_meaningful_fields_emptiness_check,
 ):
     is_valid = True
     # check all required fields
@@ -2631,7 +2637,7 @@ def check_system_desc_id(
     if is_network_system:
         required_fields += SYSTEM_DESC_REQUIRED_FIELDS_NETWORK_MODE
 
-    check_empty_fields = False if skip_meaningful_fields_empty_check else True
+    check_empty_fields = False if skip_meaningful_fields_emptiness_check else True
 
     for k in required_fields:
         if k not in systems_json:
@@ -2683,11 +2689,11 @@ def check_system_desc_id_power(
     submitter,
     division,
     version,
-    skip_meaningful_fields_empty_check,
+    skip_meaningful_fields_emptiness_check,
 ):
     is_valid = True
 
-    check_empty_fields = False if skip_meaningful_fields_empty_check else True
+    check_empty_fields = False if skip_meaningful_fields_emptiness_check else True
 
     for k in SYSTEM_DESC_REQUIRED_FIELDS_POWER:
         if k not in systems_json:
@@ -2714,14 +2720,14 @@ def check_measurement_dir(
     model,
     scenario,
     has_power,
-    skip_meaningful_fields_empty_check,
+    skip_meaningful_fields_emptiness_check,
     skip_empty_files_check,
     skip_check_power_measure_files,
 ):
     files = list_files(measurement_dir)
     system_file = None
     is_valid = True
-    check_empty_fields = False if skip_meaningful_fields_empty_check else True
+    check_empty_fields = False if skip_meaningful_fields_emptiness_check else True
 
     for i in REQUIRED_MEASURE_FILES:
         if i not in files:
@@ -2975,6 +2981,11 @@ def main():
         skip_power_check=args.skip_power_check,
     )
 
+    if args.version in [ "v0.5", "v0.7", "v1.0", "v1.1", "v2.0", "v2.1", "v3.0" ]:
+        args.skip_meaningful_fields_emptiness_check = True
+        args.skip_empty_files_check = True
+        args.skip_check_power_measure_files = True
+
     with open(args.csv, "w") as csv:
         os.chdir(args.input)
         # check results directory
@@ -2984,7 +2995,7 @@ def main():
             args.skip_compliance,
             csv,
             args.debug,
-            args.skip_meaningful_fields_empty_check,
+            args.skip_meaningful_fields_emptiness_check,
             args.skip_empty_files_check,
             args.skip_check_power_measure_files,
         )

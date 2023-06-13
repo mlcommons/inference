@@ -7,7 +7,8 @@ sys.path.append(os.environ["MEGATRON_PATH"])
 from megatron import print_rank_0
 
 from megatron.initialize import initialize_megatron, set_jit_fusion_options
-from megatron.training import setup_model_and_optimizer
+from megatron.training import get_model
+from megatron.checkpointing import load_checkpoint
 from megatron.model import GPTModel, ModelType
 import mlperf_loadgen as lg
 from dataset import Dataset
@@ -69,10 +70,10 @@ class SUT_base:
             )
             return model
 
-        # TODO: Modify function to not load optimizer
-        self.model, _, _ = setup_model_and_optimizer(
-            model_provider, ModelType.encoder_or_decoder
-        )
+        model = get_model(model_provider, wrap_with_ddp=False)
+        if args.load is not None:
+            _ = load_checkpoint(model, None, None)
+        
         self.unwrapped_model = unwrap_model(self.model, (torchDDP, LocalDDP, Float16Module))
         self.rank = args.rank
 

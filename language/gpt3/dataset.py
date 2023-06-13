@@ -41,7 +41,7 @@ class Dataset:
         self.dataset_path = dataset_path
         self.batch_size = batch_size
         self.debug = debug
-        self.gen_kwards = {}
+        self.gen_kwards = gen_kwards
 
         self.tokenizer = build_tokenizer(args)
 
@@ -173,7 +173,7 @@ class Dataset:
                 print(
                     "--------------------------------------------------------------------------------"
                 )
-            tokens, length = self.tokenize_prompts([self.sources[i]], 128)
+            tokens, length = self.tokenize_prompts([self.sources[i]], self.gen_kwards.get("max_new_tokens", 128))
             attn_mask = self._build_attention_mask(tokens)
             source_encoded_input_ids.append(tokens)
             source_encoded_attn_masks.append(attn_mask)

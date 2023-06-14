@@ -73,8 +73,10 @@ class SUT_base:
         model = get_model(model_provider, wrap_with_ddp=False)
         if args.load is not None:
             _ = load_checkpoint(model, None, None)
-        
-        self.unwrapped_model = unwrap_model(self.model, (torchDDP, LocalDDP, Float16Module))
+
+        self.unwrapped_model = unwrap_model(
+            self.model, (torchDDP, LocalDDP, Float16Module)
+        )
         self.rank = args.rank
 
         self.qsl = lg.ConstructQSL(
@@ -116,7 +118,7 @@ class SUT_base:
                 print("Completed : ", i)
 
     def inference_call(self, input_ids_tensor, input_masks_tensor, input_length_tensor):
-        """ Common for all scenarios """
+        """Common for all scenarios"""
         torch_device_type = "cuda" if self.use_gpu else "cpu"
 
         with torch.inference_mode(), torch.autocast(
@@ -135,12 +137,8 @@ class SUT_base:
                 top_k=self.gen_kwargs.get("top_k", 4),
             )
 
-            input_batch_lengths = [x.shape[0] for x in input_batch["input_ids"]]
-
-            output_batch_lengths = [x.shape[0] for x in output_tokens]
-
             output_batch_truncated = []
-            for data, source_len in zip(output_tokens, input_batch_lengths):
+            for data, source_len in zip(output_tokens, input_length_tensor):
                 output_batch_truncated.append(data[source_len:])
 
             output_batch_truncated = torch.stack(output_batch_truncated)

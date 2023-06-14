@@ -59,7 +59,7 @@ class Dataset:
         (
             self.source_encoded_input_ids,
             self.source_encoded_attn_masks,
-            self.source_encoded_input_id_leghts,
+            self.source_encoded_input_id_lengths,
         ) = self.encode_samples()
         self.count = total_count_override or len(self.sources)
         self.perf_count = perf_count_override or self.count
@@ -120,11 +120,11 @@ class Dataset:
 
     def _tokenize_prompts_and_batch(self, prompts, tokens_to_generate, add_BOS):
         """Given a set of prompts and number of tokens to generate:
-            - tokenize prompts
-            - set the sequence length to be the max of length of prompts
-            plus the number of tokens we would like to generate
-            - pad all the sequences to this length so we can convert them
-            into a 2D tensor.
+        - tokenize prompts
+        - set the sequence length to be the max of length of prompts
+        plus the number of tokens we would like to generate
+        - pad all the sequences to this length so we can convert them
+        into a 2D tensor.
         """
 
         # Tokenize all the prompts.
@@ -173,7 +173,9 @@ class Dataset:
                 print(
                     "--------------------------------------------------------------------------------"
                 )
-            tokens, length = self.tokenize_prompts([self.sources[i]], self.gen_kwards.get("max_new_tokens", 128))
+            tokens, length = self.tokenize_prompts(
+                [self.sources[i]], self.gen_kwards.get("max_new_tokens", 128)
+            )
             attn_mask = self._build_attention_mask(tokens)
             source_encoded_input_ids.append(tokens)
             source_encoded_attn_masks.append(attn_mask)

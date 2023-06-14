@@ -1,25 +1,13 @@
 import array
 import torch
+import requests
+import json
 import os
 import sys
 
-sys.path.append(os.environ["MEGATRON_PATH"])
-from megatron import print_rank_0
-
-from megatron.initialize import initialize_megatron, set_jit_fusion_options
-from megatron.training import get_model
-from megatron.checkpointing import load_checkpoint
-from megatron.model import GPTModel, ModelType
 import mlperf_loadgen as lg
 from dataset import Dataset
 
-from megatron.text_generation.generation import (
-    generate_tokens_probs_and_return_on_first_stage,
-)
-from megatron.utils import unwrap_model
-from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
-from megatron.model import DistributedDataParallel as LocalDDP
-from megatron.model import Float16Module
 
 
 class SUT_base:
@@ -38,6 +26,8 @@ class SUT_base:
         print("Loading PyTorch model...")
         self.model_name = "Megatron-LM"
         self.dataset_path = dataset_path
+        self.url = 'http://localhost:5000/api'
+        self.headers = {'Content-Type': 'application/json'}
         self.model_path = model_path
         self.use_gpu = use_gpu
         self.gen_kwargs = gen_kwargs
@@ -53,31 +43,9 @@ class SUT_base:
             self.amp_enabled = False
             self.amp_dtype = torch.float32
 
-        initialize_megatron(args_defaults=megatron_args)
-        set_jit_fusion_options()
         self.data_object = Dataset(
             self.dataset_path, total_count_override=max_examples, args=args
         )
-
-        def model_provider(pre_process=True, post_process=True):
-            """Build the model."""
-            print_rank_0("building GPT model ...")
-            model = GPTModel(
-                num_tokentypes=0,
-                parallel_output=True,
-                pre_process=pre_process,
-                post_process=post_process,
-            )
-            return model
-
-        model = get_model(model_provider, wrap_with_ddp=False)
-        if args.load is not None:
-            _ = load_checkpoint(model, None, None)
-
-        self.unwrapped_model = unwrap_model(
-            self.model, (torchDDP, LocalDDP, Float16Module)
-        )
-        self.rank = args.rank
 
         self.qsl = lg.ConstructQSL(
             self.data_object.count,
@@ -97,11 +65,6 @@ class SUT_base:
             input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
             input_length_tensor = self.data_object.source_encoded_input_id_lengths[index]
 
-            # Cast to GPU
-            if self.use_gpu:
-                input_ids_tensor = input_ids_tensor.to(self.device)
-                input_masks_tensor = input_masks_tensor.to(self.device)
-
             pred_output_batch = (
                 self.inference_call(
                     input_ids_tensor, input_masks_tensor, input_length_tensor
@@ -119,30 +82,18 @@ class SUT_base:
 
     def inference_call(self, input_ids_tensor, input_masks_tensor, input_length_tensor):
         """Common for all scenarios"""
-        torch_device_type = "cuda" if self.use_gpu else "cpu"
-
-        with torch.inference_mode(), torch.autocast(
-            device_type=torch_device_type,
-            enabled=self.amp_enabled,
-            dtype=self.amp_dtype if self.amp_enabled else None,
-        ):
-            input_batch = dict()
-            input_batch["input_ids"] = input_ids_tensor
-            input_batch["attention_mask"] = input_masks_tensor
-
-            output_tokens, _, _ = generate_tokens_probs_and_return_on_first_stage(
-                self.unwrapped_model[self.rank],
-                input_ids_tensor,
-                input_length_tensor,
-                top_k=self.gen_kwargs.get("top_k", 4),
-            )
-
+        # TODO: Encode the tensors
+        data = {"input_ids_tensor": input_ids_tensor, "input_length_tensor": input_length_tensor}
+        response = requests.put(self.url, data=json.dumps(data), headers=self.headers)
+        if response.status_code != 200:
+            # TODO: Manage exeption
+            return None
+        else:
             output_batch_truncated = []
-            for data, source_len in zip(output_tokens, input_length_tensor):
-                output_batch_truncated.append(data[source_len:])
-
-            output_batch_truncated = torch.stack(output_batch_truncated)
-
+            for t in response.json()['output'][0]:
+                # TODO: Decode the tensors
+                output_batch_truncated.append(t)
+        output_batch_truncated = torch.stack(output_batch_truncated)
         return output_batch_truncated
 
     def flush_queries(self):

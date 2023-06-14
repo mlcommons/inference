@@ -4,7 +4,6 @@ import sys
 sys.path.append(os.environ["MEGATRON_PATH"])
 from megatron.tokenizer import build_tokenizer
 from megatron.utils import get_ltor_masks_and_position_ids
-from megatron.text_generation.communication import broadcast_int_list, broadcast_tensor
 import torch
 import argparse
 import utils
@@ -78,47 +77,7 @@ class Dataset:
         )
         return attention_mask
 
-    def tokenize_prompts(
-        self, prompts=None, tokens_to_generate=None, add_BOS=None, rank=0
-    ):
-        """Tokenize prompts and make them avaiable on all ranks."""
-
-        # On all ranks set to None so we can pass them to functions
-        sizes_list = None
-        prompts_tokens_cuda_long_tensor = None
-        prompts_length_cuda_long_tensor = None
-
-        # On the specified rank, build the above.
-        if torch.distributed.get_rank() == rank:
-            assert prompts is not None
-            assert tokens_to_generate is not None
-            # Tensor of tokens padded and their unpadded length.
-            (
-                prompts_tokens_cuda_long_tensor,
-                prompts_length_cuda_long_tensor,
-            ) = self._tokenize_prompts_and_batch(prompts, tokens_to_generate, add_BOS)
-            # We need the sizes of these tensors for the boradcast
-            sizes_list = [
-                prompts_tokens_cuda_long_tensor.size(0),  # Batch size
-                prompts_tokens_cuda_long_tensor.size(1),
-            ]  # Sequence lenght
-
-        # First, broadcast the sizes.
-        sizes_tensor = broadcast_int_list(2, int_list=sizes_list, rank=rank)
-
-        # Now that we have the sizes, we can boradcast the tokens
-        # and length tensors.
-        sizes = sizes_tensor.tolist()
-        prompts_tokens_cuda_long_tensor = broadcast_tensor(
-            sizes, torch.int64, tensor=prompts_tokens_cuda_long_tensor, rank=rank
-        )
-        prompts_length_cuda_long_tensor = broadcast_tensor(
-            sizes[0], torch.int64, tensor=prompts_length_cuda_long_tensor, rank=rank
-        )
-
-        return prompts_tokens_cuda_long_tensor, prompts_length_cuda_long_tensor
-
-    def _tokenize_prompts_and_batch(self, prompts, tokens_to_generate, add_BOS):
+    def tokenize_prompts(self, prompts, tokens_to_generate, add_BOS):
         """Given a set of prompts and number of tokens to generate:
         - tokenize prompts
         - set the sequence length to be the max of length of prompts
@@ -152,8 +111,8 @@ class Dataset:
             prompt_tokens.extend([self.tokenizer.eod] * padding_size)
 
         # Now we are in a structured format, we can convert to tensors.
-        prompts_tokens_tensor = torch.cuda.LongTensor(prompts_tokens)
-        prompts_length_tensor = torch.cuda.LongTensor(prompts_length)
+        prompts_tokens_tensor = torch.LongTensor(prompts_tokens)
+        prompts_length_tensor = torch.LongTensor(prompts_length)
 
         return prompts_tokens_tensor, prompts_length_tensor
 
@@ -174,7 +133,7 @@ class Dataset:
                     "--------------------------------------------------------------------------------"
                 )
             tokens, length = self.tokenize_prompts(
-                [self.sources[i]], self.gen_kwards.get("max_new_tokens", 128)
+                [self.sources[i]], self.gen_kwards.get("max_new_tokens", 128), None
             )
             attn_mask = self._build_attention_mask(tokens)
             source_encoded_input_ids.append(tokens)
@@ -228,4 +187,4 @@ if __name__ == "__main__":
     torch.torch.distributed.init_process_group(
         backend=args.distributed_backend, rank=0, world_size=1
     )
-    d = Dataset("data/cnn_eval.json", args=args)
+    d = Dataset("/content/drive/MyDrive/MLCommons/notebook_data/GPT3/cnn_eval.json", args=args, gen_kwards={"max_new_tokens":128})

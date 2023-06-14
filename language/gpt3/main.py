@@ -98,11 +98,11 @@ def get_args():
     megatron_parser.add_argument("--valid-data-path", default="")
     megatron_parser.add_argument(
         "--vocab-file",
-        default="/content/drive/MyDrive/MLCommons/notebook_data/GPT3/vocab.json",
+        default="./data/vocab.json",
     )
     megatron_parser.add_argument(
         "--merge-file",
-        default="/content/drive/MyDrive/MLCommons/notebook_data/GPT3/merges.txt",
+        default="./data/merges.txt",
     )
     megatron_parser.add_argument("--save-interval", default=500)
     megatron_parser.add_argument("--save", default=None)

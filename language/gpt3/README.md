@@ -41,10 +41,12 @@ cd ..; pip install --force-reinstall loadgen/dist/`ls -r loadgen/dist/ | head -n
 cd ../..
 ```
 ### Clone 
+You need to download the inference and training repositories
 ```sh
 git clone https://github.com/mlcommons/inference.git
+git clone https://github.com/mlcommons/training.git
 cd inference
-cd language/gpt-j/
+cd language/gpt3/
 ```
 
 
@@ -59,11 +61,15 @@ Downloads CNN-Daily Mail dataset and creates the calibration dataset (JSON) for 
 pip install datasets
 python prepare-calibration.py --calibration-list-file calibration-list.txt --output-dir </path/to/output-folder>
 ```
-### Download GPT-J model
-Please download the internal fine-tuned GPT-J checkpoint and rename it as model/. The download_gptj.py only downloads the default huggingface model which is not fine-tuned on CNN-Daily mail dataset.
+### Download GPT-3 model
+TODO: Share checkpoint link
 
-### Running the Benchmark
-Replace the model and dataset path arguments with your corresponding paths. For evaluating the ROUGE score after the run, include --accuracy as shown below. For user specific target qps, please include user.conf.
+### Running the Benchmark - Megatron
+Set the `MEGATRON_PATH` environment variable:
+```
+export MEGATRON_PATH = $HOME/training/large_language_model/megatron-lm
+```
+Replace the model and dataset path arguments with your corresponding paths. For evaluating the ROUGE score after the run, include --accuracy as shown below. For user specific target qps, please include user.conf
 ```
 python main.py --scenario=[Offline | Server | SingleStream] --model-path=./model/ --dataset-path=./data/cnn_eval.json [--accuracy] --max_examples=[Maximum number of examples to consider]
 ```

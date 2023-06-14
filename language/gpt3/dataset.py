@@ -163,7 +163,7 @@ class Dataset:
         total_samples = len(self.sources)
 
         source_encoded_input_ids = []
-        source_encoded_input_id_leghts = []
+        source_encoded_input_id_lengths = []
         source_encoded_attn_masks = []
 
         for i in range(total_samples):
@@ -179,16 +179,16 @@ class Dataset:
             attn_mask = self._build_attention_mask(tokens)
             source_encoded_input_ids.append(tokens)
             source_encoded_attn_masks.append(attn_mask)
-            source_encoded_input_id_leghts.append(length)
+            source_encoded_input_id_lengths.append(length)
             if i % 100 == 0 and self.debug:
                 print(f"Tokens: {tokens}")
                 print(f"Attention mask: {attn_mask}")
-                input("...")
+                #input("...")
 
         return (
             source_encoded_input_ids,
             source_encoded_attn_masks,
-            source_encoded_input_id_leghts,
+            source_encoded_input_id_lengths,
         )
 
     def LoadSamplesToRam(self, sample_list):

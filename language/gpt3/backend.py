@@ -95,7 +95,7 @@ class SUT_base:
             index = query_samples[i].index
             input_ids_tensor = self.data_object.source_encoded_input_ids[index]
             input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
-            input_length_tensor = self.data_object.source_encoded_input_id_leghts[index]
+            input_length_tensor = self.data_object.source_encoded_input_id_lengths[index]
 
             # Cast to GPU
             if self.use_gpu:

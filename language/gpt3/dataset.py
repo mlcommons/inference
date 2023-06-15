@@ -57,7 +57,7 @@ class Dataset:
 
         (
             self.source_encoded_input_ids,
-            self.source_encoded_attn_masks,
+            # self.source_encoded_attn_masks,
             self.source_encoded_input_id_lengths,
         ) = self.encode_samples()
         self.count = total_count_override or len(self.sources)
@@ -111,10 +111,10 @@ class Dataset:
             prompt_tokens.extend([self.tokenizer.eod] * padding_size)
 
         # Now we are in a structured format, we can convert to tensors.
-        prompts_tokens_tensor = torch.LongTensor(prompts_tokens)
-        prompts_length_tensor = torch.LongTensor(prompts_length)
+        # prompts_tokens_tensor = torch.LongTensor(prompts_tokens)
+        # prompts_length_tensor = torch.LongTensor(prompts_length)
 
-        return prompts_tokens_tensor, prompts_length_tensor
+        return prompts_tokens, prompts_length
 
     def encode_samples(self):
         print("Encoding Samples")
@@ -123,7 +123,7 @@ class Dataset:
 
         source_encoded_input_ids = []
         source_encoded_input_id_lengths = []
-        source_encoded_attn_masks = []
+        # source_encoded_attn_masks = []
 
         for i in range(total_samples):
             if i % 100 == 0 and self.debug:
@@ -135,18 +135,18 @@ class Dataset:
             tokens, length = self.tokenize_prompts(
                 [self.sources[i]], self.gen_kwards.get("max_new_tokens", 128), None
             )
-            attn_mask = self._build_attention_mask(tokens)
+            # attn_mask = self._build_attention_mask(tokens)
             source_encoded_input_ids.append(tokens)
-            source_encoded_attn_masks.append(attn_mask)
+            # source_encoded_attn_masks.append(attn_mask)
             source_encoded_input_id_lengths.append(length)
             if i % 100 == 0 and self.debug:
                 print(f"Tokens: {tokens}")
-                print(f"Attention mask: {attn_mask}")
-                #input("...")
+                print(f"Original length: {length}")
+                # input("...")
 
         return (
             source_encoded_input_ids,
-            source_encoded_attn_masks,
+            # source_encoded_attn_masks,
             source_encoded_input_id_lengths,
         )
 
@@ -187,4 +187,8 @@ if __name__ == "__main__":
     torch.torch.distributed.init_process_group(
         backend=args.distributed_backend, rank=0, world_size=1
     )
-    d = Dataset("/content/drive/MyDrive/MLCommons/notebook_data/GPT3/cnn_eval.json", args=args, gen_kwards={"max_new_tokens":128})
+    d = Dataset(
+        "/content/drive/MyDrive/MLCommons/notebook_data/GPT3/cnn_eval.json",
+        args=args,
+        gen_kwards={"max_new_tokens": 128},
+    )

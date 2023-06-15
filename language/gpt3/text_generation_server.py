@@ -1,5 +1,6 @@
 import os
 import sys
+
 sys.path.append(os.environ["MEGATRON_PATH"])
 
 import datetime
@@ -31,47 +32,49 @@ GENERATE_NUM = 0
 BEAM_NUM = 1
 lock = threading.Lock()
 
+
 class MegatronGenerate(Resource):
-    def __init__(self, model, log):
+    def __init__(self, model, gen_kwargs, log=None):
         self.model = model
         self.log = log
-        self.gen_kwargs = {
-            "early_stopping": True,
-            "max_new_tokens": 128,
-            "min_new_tokens": 30,
-            "top_k": 4,
-        }
+        self.gen_kwargs = gen_kwargs
         self.beam_width = self.gen_kwargs.get("beam_width", None)
 
     @staticmethod
     def send_do_generate():
         choice = torch.cuda.LongTensor([GENERATE_NUM])
         torch.distributed.broadcast(choice, 0)
-     
+
     @staticmethod
     def send_do_beam_search():
         choice = torch.cuda.LongTensor([BEAM_NUM])
         torch.distributed.broadcast(choice, 0)
-    
+
+    @staticmethod
+    def sync_input(input_ids, input_length):
+        input_length_tensor = torch.cuda.LongTensor(input_length)
+        torch.distributed.broadcast(input_length_tensor, 0)
+        input_ids_tensor = torch.cuda.LongTensor(input_ids)
+        torch.distributed.broadcast(input_ids_tensor, 0)
+        return input_ids_tensor, input_length_tensor
+
     def put(self):
         args = get_args()
-        if not "input_ids_tensor" in request.get_json():
-            return "input_ids_tensor argument required", 400
-        
-        
-        if not "input_length_tensor" in request.get_json():
-            return "input_length_tensor is required", 400
-        
-        # TODO: decode input tensors
-        input_ids_tensor = request.get_json()["input_ids_tensor"]
-        input_length_tensor = request.get_json()["input_length_tensor"]
-        
+        if not "input_ids" in request.get_json():
+            return "input_ids argument required", 400
+
+        if not "input_length" in request.get_json():
+            return "input_length is required", 400
+
+        input_ids = request.get_json()["input_ids"]
+        input_length = request.get_json()["input_length"]
+
         with lock:  # Need to get lock to keep multiple threads from hitting code
-            
+
             if self.log:
                 print("request IP: " + str(request.remote_addr))
                 print("start time: ", datetime.datetime.now())
-            
+
             try:
                 if self.beam_width is not None:
                     MegatronGenerate.send_do_beam_search()  # Tell other ranks we're doing beam_search
@@ -79,12 +82,19 @@ class MegatronGenerate(Resource):
                     return jsonify({})
                 else:
                     MegatronGenerate.send_do_generate()  # Tell other ranks we're doing generate
-                    output_tokens, _, _ = \
-                        generate_tokens_probs_and_return_on_first_stage(
-                        self.unwrapped_model[self.rank],
+                    input_ids_tensor, input_length_tensor = MegatronGenerate.sync_input(
+                        input_ids, input_length
+                    )
+                    (
+                        output_tokens,
+                        _,
+                        _,
+                    ) = generate_tokens_probs_and_return_on_first_stage(
+                        self.model,
                         input_ids_tensor,
                         input_length_tensor,
-                        top_k=self.gen_kwargs.get("top_k", 4)
+                        top_k=self.gen_kwargs.get("top_k", 4),
+                        temperature=self.gen_kwargs.get("temperature", 0.0),
                     )
                     output_batch_truncated = []
                     for data, source_len in zip(output_tokens, input_length_tensor):
@@ -92,50 +102,55 @@ class MegatronGenerate(Resource):
                     # TODO: encode output
                     if self.log:
                         print("end time: ", datetime.datetime.now())
-                    return jsonify({"output": output_batch_truncated})
+                    return jsonify({"output": output_batch_truncated.cpu().numpy().tolist()})
 
             except ValueError as ve:
                 return ve.args[0]
-        
+
 
 class MegatronServer(object):
-    def __init__(self, model):
-        self.app = Flask(__name__, static_url_path='')
+    def __init__(self, model, gen_kwargs):
+        self.app = Flask(__name__, static_url_path="")
         api = Api(self.app)
-        api.add_resource(MegatronGenerate, '/api', resource_class_args=[model])
-        
-    def run(self, url): 
+        api.add_resource(
+            MegatronGenerate, "/api", resource_class_args=[model, gen_kwargs]
+        )
+
+    def run(self, url):
         self.app.run(url, threaded=True, debug=False)
-
-
 
 
 def model_provider(pre_process=True, post_process=True):
     """Build the model."""
 
-    print_rank_0('building GPT model ...')
-    model = GPTModel(num_tokentypes=0, parallel_output=False, pre_process=pre_process, post_process=post_process)
+    print_rank_0("building GPT model ...")
+    model = GPTModel(
+        num_tokentypes=0,
+        parallel_output=False,
+        pre_process=pre_process,
+        post_process=post_process,
+    )
 
     return model
 
-def add_text_generate_args(parser):
-    group = parser.add_argument_group(title='text generation')
-    group.add_argument("--temperature", type=float, default=0.0,
-                       help='Sampling temperature.')
-    group.add_argument("--top_k", type=int, default=4,
-                       help='Top k sampling.')
-    group.add_argument("--out-seq-length", type=int, default=1024,
-                       help='Size of the output generated text.')
-    return parser
-
 
 if __name__ == "__main__":
-    initialize_megatron(extra_args_provider=add_text_generate_args,
-                        args_defaults={'tokenizer_type': 'GPT2BPETokenizer',
-                                       'no_load_rng': True,
-                                       'no_load_optim': True})
+    initialize_megatron(
+        args_defaults={
+            "tokenizer_type": "GPT2BPETokenizer",
+            "no_load_rng": True,
+            "no_load_optim": True,
+        }
+    )
 
     args = get_args()
+    gen_kwargs = {
+        "early_stopping": True,
+        "max_new_tokens": 128,
+        "min_new_tokens": 30,
+        "top_k": 4,
+        "temperature": 0.0,
+    }
     if args.num_layers_per_virtual_pipeline_stage is not None:
         print("Interleaved pipeline schedule is not yet supported for text generation.")
         exit()
@@ -153,14 +168,33 @@ if __name__ == "__main__":
 
     while True:
         choice = torch.cuda.LongTensor(0)
+        input_length_tensor = torch.cuda.LongTensor([0])
+        input_ids_tensor = torch.cuda.LongTensor(0)
         torch.distributed.broadcast(choice, 0)
         if choice[0].item() == 0:
             try:
-                generate_and_post_process(model)
+                torch.distributed.broadcast(input_length_tensor, 0)
+                input_ids_tensor = torch.cuda.LongTensor(
+                    [
+                        0
+                        for _ in range(
+                            input_length_tensor[0].item()
+                            + gen_kwargs.get("max_new_tokens")
+                        )
+                    ]
+                )
+                torch.distributed.broadcast(input_ids_tensor, 0)
+                generate_tokens_probs_and_return_on_first_stage(
+                    input_ids_tensor,
+                    input_length_tensor,
+                    top_k=gen_kwargs.get("top_k", 4),
+                    temperature=gen_kwargs.get("temperature", 0.0),
+                )
             except ValueError as ve:
                 pass
         elif choice[0].item() == 1:
             try:
-                beam_search_and_post_process(model)
+                # TODO: implement beam search
+                pass
             except ValueError as ve:
                 pass

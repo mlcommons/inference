@@ -9,7 +9,6 @@ import mlperf_loadgen as lg
 from dataset import Dataset
 
 
-
 class SUT_base:
     def __init__(
         self,
@@ -18,7 +17,6 @@ class SUT_base:
         dataset_path,
         max_examples,
         args,
-        megatron_args,
         use_gpu=False,
         gen_kwargs={},
     ):
@@ -26,8 +24,8 @@ class SUT_base:
         print("Loading PyTorch model...")
         self.model_name = "Megatron-LM"
         self.dataset_path = dataset_path
-        self.url = 'http://localhost:5000/api'
-        self.headers = {'Content-Type': 'application/json'}
+        self.url = "http://localhost:5000/api"
+        self.headers = {"Content-Type": "application/json"}
         self.model_path = model_path
         self.use_gpu = use_gpu
         self.gen_kwargs = gen_kwargs
@@ -62,15 +60,13 @@ class SUT_base:
         for i in range(len(query_samples)):
             index = query_samples[i].index
             input_ids_tensor = self.data_object.source_encoded_input_ids[index]
-            input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
-            input_length_tensor = self.data_object.source_encoded_input_id_lengths[index]
+            # input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
+            input_length_tensor = self.data_object.source_encoded_input_id_lengths[
+                index
+            ]
 
             pred_output_batch = (
-                self.inference_call(
-                    input_ids_tensor, input_masks_tensor, input_length_tensor
-                )
-                .cpu()
-                .numpy()
+                self.inference_call(input_ids_tensor, input_length_tensor).cpu().numpy()
             )
 
             response_array = array.array("B", pred_output_batch[0].tobytes())
@@ -80,17 +76,17 @@ class SUT_base:
             if i % 5 == 0:
                 print("Completed : ", i)
 
-    def inference_call(self, input_ids_tensor, input_masks_tensor, input_length_tensor):
+    def inference_call(self, input_ids_tensor, input_length_tensor):
         """Common for all scenarios"""
         # TODO: Encode the tensors
-        data = {"input_ids_tensor": input_ids_tensor, "input_length_tensor": input_length_tensor}
+        data = {"input_ids": input_ids_tensor, "input_length": input_length_tensor}
         response = requests.put(self.url, data=json.dumps(data), headers=self.headers)
         if response.status_code != 200:
             # TODO: Manage exeption
             return None
         else:
             output_batch_truncated = []
-            for t in response.json()['output'][0]:
+            for t in response.json()["output"][0]:
                 # TODO: Decode the tensors
                 output_batch_truncated.append(t)
         output_batch_truncated = torch.stack(output_batch_truncated)
@@ -162,19 +158,11 @@ class SUT_Server(SUT_base):
 
         index = query_samples[0].index
         input_ids_tensor = self.data_object.source_encoded_input_ids[index]
-        input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
-        input_length_tensor = self.data_object.source_encoded_input_id_leghts[index]
-
-        if self.use_gpu:
-            input_ids_tensor = input_ids_tensor.to(self.device)
-            input_masks_tensor = input_masks_tensor.to(self.device)
+        # input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
+        input_length_tensor = self.data_object.source_encoded_input_id_lengths[index]
 
         pred_output_batch = (
-            self.inference_call(
-                input_ids_tensor, input_masks_tensor, input_length_tensor
-            )
-            .cpu()
-            .numpy()
+            self.inference_call(input_ids_tensor, input_length_tensor).cpu().numpy()
         )
 
         response_array = array.array("B", pred_output_batch.tobytes())
@@ -216,19 +204,11 @@ class SUT_SingleStream(SUT_base):
 
         index = query_samples[0].index
         input_ids_tensor = self.data_object.source_encoded_input_ids[index]
-        input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
-        input_length_tensor = self.data_object.source_encoded_input_id_leghts[index]
-
-        if self.use_gpu:
-            input_ids_tensor = input_ids_tensor.to(self.device)
-            input_masks_tensor = input_masks_tensor.to(self.device)
+        # input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
+        input_length_tensor = self.data_object.source_encoded_input_id_lengths[index]
 
         pred_output_batch = (
-            self.inference_call(
-                input_ids_tensor, input_masks_tensor, input_length_tensor
-            )
-            .cpu()
-            .numpy()
+            self.inference_call(input_ids_tensor, input_length_tensor).cpu().numpy()
         )
 
         response_array = array.array("B", pred_output_batch.tobytes())

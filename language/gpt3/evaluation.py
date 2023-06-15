@@ -1,17 +1,10 @@
 from dataset import Dataset 
-import os
-import time
 import numpy as np
 import json
 import nltk
-import array
-import torch
-from torch.nn.functional import pad
-from torch.utils.data import DataLoader
+
 import evaluate
 import argparse
-import nltk
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 
 def get_args():
@@ -37,24 +30,14 @@ def postprocess_text(preds, targets):
 def main():
 
     args = get_args()
-    model_name = "EleutherAI/gpt-j-6B"
     dataset_path = args.dataset_file
     metric = evaluate.load("rouge")
     nltk.download('punkt')
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name,
-        model_max_length=2048,
-        padding_side="left",
-        use_fast=False,)
-    tokenizer.pad_token = tokenizer.eos_token
 
     data_object = Dataset(dataset_path)
 
     targets = data_object.targets
-
-
-
 
     with open(args.mlperf_accuracy_file, "r") as f:
         results = json.load(f)
@@ -69,8 +52,7 @@ def main():
         target_required.append(target)
         preds_token_ids.append(np.frombuffer(bytes.fromhex(pred['data']), np.int64))
 
-
-    preds_decoded_text = tokenizer.batch_decode(preds_token_ids, skip_special_tokens=True)
+    preds_decoded_text = [data_object.tokenizer.detokenize(ids) for ids in preds_token_ids]
 
     preds, targets = postprocess_text(preds_decoded_text, target_required)
 

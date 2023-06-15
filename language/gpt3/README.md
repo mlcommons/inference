@@ -1,58 +1,56 @@
 # GPT-J Reference Implementation
 
-### Setup Instructions
+## Setup Instructions
 
 ```bash
 WORK_DIR=$PWD
 # Create Environment (conda)
 conda create -n llm python=3.9 -y
 conda activate llm
-conda install mkl mkl-include -y
-conda install gperftools jemalloc==5.2.1 -c conda-forge -y
-
-# install pytorch
-# you can find other nightly version in https://download.pytorch.org/whl/nightly/
-pip install https://download.pytorch.org/whl/nightly/cpu-cxx11-abi/torch-2.0.0.dev20230228%2Bcpu.cxx11.abi-cp39-cp39-linux_x86_64.whl
-
-
-# installation
-pip install transformers datasets evaluate accelerate simplejson nltk rouge_score
-
-# Setup Environment Variables
-export KMP_BLOCKTIME=1
-export KMP_SETTINGS=1
-export KMP_AFFINITY=granularity=fine,compact,1,0
-# IOMP
-export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libiomp5.so
-# Tcmalloc is a recommended malloc implementation that emphasizes fragmentation avoidance and scalable concurrency support.
-export LD_PRELOAD=${LD_PRELOAD}:${CONDA_PREFIX}/lib/libtcmalloc.so
 ```
+
+### Download repositories
+```bash
+cd $HOME
+git clone --recurse-submodules https://github.com/mlcommons/inference.git --depth 1
+git clone https://github.com/NVIDIA/apex.git
+git clone https://github.com/NVIDIA/Megatron-LM.git
+cd $HOME/apex
+git checkout -b language 2d8302a6c12e202f7b40b13a43daa95f326fd0ea
+cd $HOME/Megatron-LM
+git checkout -b language 060415572f4365a2e895f8036c4e37dad0efbdf5
+```
+
+
+### install requirements
+```bash
+pip install torch==1.13.0 torchvision==0.14.0 datasets evaluate accelerate simplejson nltk rouge_score pybind11 Ninja
+```
+
+#### install apex
+For `pip >= 23.1`
+```bash
+cd $HOME/apex
+pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./
+```
+Otherwise
+```bash
+cd $HOME/apex
+pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+```
+**Warning:** Make sure the Nvidia driver version and the pytorch's version of cuda match
+
+
 ### Build Loadgen
 ```sh
-git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf_inference
-```
-
-Build:
-
-```sh
-cd mlperf_inference/loadgen
-CFLAGS="-std=c++14 -O3" python setup.py bdist_wheel
-cd ..; pip install --force-reinstall loadgen/dist/`ls -r loadgen/dist/ | head -n1` ; cd -
-cd ../..
-```
-### Clone 
-You need to download the inference and training repositories
-```sh
-git clone https://github.com/mlcommons/inference.git
-git clone https://github.com/mlcommons/training.git
-cd inference
-cd language/gpt3/
+cd $HOME/inference/loadgen
+CFLAGS="-std=c++14 -O3" python setup.py develop
 ```
 
 
 ### Download & Process Dataset
 Downloads the raw data, processes and saves it as json file inside data/
-```
+```python
 python download_cnndm.py
 ```
 ### Calibration
@@ -65,12 +63,24 @@ python prepare-calibration.py --calibration-list-file calibration-list.txt --out
 TODO: Share checkpoint link
 
 ### Running the Benchmark - Megatron
-Set the `MEGATRON_PATH` environment variable:
+In one terminal, run the text generation server. First set the `MEGATRON_PATH` environment variable:
+```bash
+export MEGATRON_PATH = $HOME/Megatron-LM
 ```
-export MEGATRON_PATH = $HOME/training/large_language_model/megatron-lm
+Then run the generation server. For this 8 gpus are necessary:
+```bash
+cd $HOME/language/gpt3/
+./run_generation_server.sh
 ```
-Replace the model and dataset path arguments with your corresponding paths. For evaluating the ROUGE score after the run, include --accuracy as shown below. For user specific target qps, please include user.conf
+You can make a debug run with one gpu:
+```bash
+cd $HOME/language/gpt3/
+./run_generation_server_debug.sh
 ```
+
+In another terminal run the benchmark. This will query the server each time a query for the SUT is generated
+```bash
+cd $HOME/language/gpt3/
 python main.py --scenario=[Offline | Server | SingleStream] --model-path=./model/ --dataset-path=./data/cnn_eval.json [--accuracy] --max_examples=[Maximum number of examples to consider]
 ```
 ### Evaluate accuracy run 

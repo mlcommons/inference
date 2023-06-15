@@ -62,80 +62,8 @@ def get_args():
         default=13368,
         help="Maximum number of examples to consider (not limited by default)",
     )
-    parser.add_argument("--rank", default=0)
-    global_names = set(vars(parser.parse_known_args()[0]).keys())
-    # Add megatron arguments
-    megatron_parser = parser.add_argument_group("megatron")
-    megatron_parser.add_argument(
-        "--tensor-model-parallel-size", default=1
-    )  # TODO change to 8
-    megatron_parser.add_argument(
-        "--pipeline-model-parallel-size", default=1
-    )  # TODO change to 8
-    megatron_parser.add_argument("--sequence-parallel", action="store_true")
-    # megatron_parser.add_argument("--recompute-activations", action="store_true")
-    megatron_parser.add_argument("--num-layers", default=1)  # TODO change to 96
-    megatron_parser.add_argument("--hidden-size", default=128)  # TODO change to 12288
-    megatron_parser.add_argument(
-        "--num-attention-heads", default=2
-    )  # TODO change to 96
-    megatron_parser.add_argument("--seq-length", default=2048)
-    megatron_parser.add_argument("--max-position-embeddings", default=2048)
-    megatron_parser.add_argument("--micro-batch-size", default=1)
-    megatron_parser.add_argument("--global-batch-size", default=1)
-    megatron_parser.add_argument("--train-samples", default=20000000)
-    megatron_parser.add_argument("--lr-warmup-samples", default=407040)
-    megatron_parser.add_argument("--lr-decay-samples", default=166809600)
-    megatron_parser.add_argument("--lr", default=1.0)
-    megatron_parser.add_argument("--min-lr", default=1.0)
-    megatron_parser.add_argument("--lr-decay-style", default="cosine")
-    megatron_parser.add_argument("--log-interval", default=1)
-    megatron_parser.add_argument("--eval-iters", default=-1)
-    megatron_parser.add_argument("--eval-interval", default=1)
-    megatron_parser.add_argument("--attention-dropout", default=0.0)
-    megatron_parser.add_argument("--hidden-dropout", default=0.0)
-    megatron_parser.add_argument("--train-data-path", default="")
-    megatron_parser.add_argument("--valid-data-path", default="")
-    megatron_parser.add_argument(
-        "--vocab-file",
-        default="./data/vocab.json",
-    )
-    megatron_parser.add_argument(
-        "--merge-file",
-        default="./data/merges.txt",
-    )
-    megatron_parser.add_argument("--save-interval", default=500)
-    megatron_parser.add_argument("--save", default=None)
-    megatron_parser.add_argument(
-        "--do-layernorm-bias-weight-decay", action="store_true"
-    )
-    megatron_parser.add_argument("--no-scaled-init", action="store_true")
-    megatron_parser.add_argument("--loss-scale", default=-1)
-    megatron_parser.add_argument("--split", default="100,0,0")
-    megatron_parser.add_argument("--clip-grad", default=-1)
-    megatron_parser.add_argument("--weight-decay", default=0.1)
-    megatron_parser.add_argument("--adam-beta1", default=0.9)
-    megatron_parser.add_argument("--adam-beta2", default=0.95)
-    megatron_parser.add_argument("--init-method-std", default=0.006)
-    megatron_parser.add_argument("--log-params-norm", action="store_true")
-    megatron_parser.add_argument("--log-num-zeros-in-grad", action="store_true")
-    megatron_parser.add_argument(
-        "--log-validation-ppl-to-tensorboard", action="store_true"
-    )
-    megatron_parser.add_argument("--DDP-impl", default="local")
-    megatron_parser.add_argument("--tensorboard-dir", default="")
-    # megatron_parser.add_argument("--no-query-key-layer-scaling", action="store_true")
-    # megatron_parser.add_argument("--no-seq-len-plus-one-tokens", action="store_true")
-    megatron_parser.add_argument("--seed", default=0)
-    megatron_parser.add_argument("--use-checkpoint-args", action="store_true")
-    megatron_parser.add_argument("--load", default=None)
-    # Tokenizer args
-    megatron_parser.add_argument("--tokenizer-type", default="GPT2BPETokenizer")
-    megatron_parser.add_argument("--make-vocab-size-divisible-by", default=128)
-    megatron_names = set(vars(parser.parse_known_args()[0]).keys()) - global_names
     args = parser.parse_args()
-    megatron_args = dict((k, v) for k, v in vars(args).items() if k in megatron_names)
-    return args, megatron_args
+    return args
 
 
 scenario_map = {
@@ -152,7 +80,7 @@ gen_args = {
 
 
 def main():
-    args, megatron_args = get_args()
+    args = get_args()
     os.environ["RANK"] = "0"
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "29500"
@@ -170,7 +98,6 @@ def main():
         dataset_path=args.dataset_path,
         max_examples=args.max_examples,
         args=args,
-        megatron_args=megatron_args,
         use_gpu=args.gpu,
         gen_kwargs=gen_kwargs,
     )

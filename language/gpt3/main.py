@@ -4,9 +4,6 @@ import argparse
 import os
 import sys
 
-sys.path.append(os.environ["MEGATRON_PATH"])
-from megatron.global_vars import set_args
-
 import sys
 from backend import get_SUT
 

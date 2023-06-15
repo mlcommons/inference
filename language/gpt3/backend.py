@@ -4,6 +4,7 @@ import requests
 import json
 import os
 import sys
+import numpy as np
 
 import mlperf_loadgen as lg
 from dataset import Dataset
@@ -65,8 +66,8 @@ class SUT_base:
                 index
             ]
 
-            pred_output_batch = (
-                self.inference_call(input_ids_tensor, input_length_tensor).cpu().numpy()
+            pred_output_batch = self.inference_call(
+                input_ids_tensor, input_length_tensor
             )
 
             response_array = array.array("B", pred_output_batch[0].tobytes())
@@ -85,12 +86,9 @@ class SUT_base:
             # TODO: Manage exeption
             return None
         else:
-            output_batch_truncated = []
-            for t in response.json()["output"][0]:
-                # TODO: Decode the tensors
-                output_batch_truncated.append(t)
-        output_batch_truncated = torch.stack(output_batch_truncated)
-        return output_batch_truncated
+            output = response.json()["output"]
+        output = np.asarray(output)
+        return output
 
     def flush_queries(self):
         pass
@@ -101,15 +99,7 @@ class SUT_base:
 
 class SUT_Offline(SUT_base):
     def __init__(
-        self,
-        model_path,
-        dtype,
-        dataset_path,
-        max_examples,
-        args,
-        megatron_args,
-        use_gpu,
-        gen_kwargs,
+        self, model_path, dtype, dataset_path, max_examples, args, use_gpu, gen_kwargs,
     ):
         SUT_base.__init__(
             self,
@@ -118,7 +108,6 @@ class SUT_Offline(SUT_base):
             dataset_path,
             max_examples,
             args,
-            megatron_args,
             use_gpu,
             gen_kwargs,
         )
@@ -128,15 +117,7 @@ class SUT_Offline(SUT_base):
 
 class SUT_Server(SUT_base):
     def __init__(
-        self,
-        model_path,
-        dtype,
-        dataset_path,
-        max_examples,
-        args,
-        megatron_args,
-        use_gpu,
-        gen_kwargs,
+        self, model_path, dtype, dataset_path, max_examples, args, use_gpu, gen_kwargs,
     ):
 
         SUT_base.__init__(
@@ -146,7 +127,6 @@ class SUT_Server(SUT_base):
             dataset_path,
             max_examples,
             args,
-            megatron_args,
             use_gpu,
             gen_kwargs,
         )
@@ -176,15 +156,7 @@ class SUT_Server(SUT_base):
 
 class SUT_SingleStream(SUT_base):
     def __init__(
-        self,
-        model_path,
-        dtype,
-        dataset_path,
-        max_examples,
-        args,
-        megatron_args,
-        use_gpu,
-        gen_kwargs,
+        self, model_path, dtype, dataset_path, max_examples, args, use_gpu, gen_kwargs,
     ):
         SUT_base.__init__(
             self,
@@ -193,7 +165,6 @@ class SUT_SingleStream(SUT_base):
             dataset_path,
             max_examples,
             args,
-            megatron_args,
             use_gpu,
             gen_kwargs,
         )
@@ -227,7 +198,6 @@ def get_SUT(
     dataset_path,
     max_examples,
     args,
-    megatron_args,
     use_gpu=False,
     gen_kwargs={},
 ):
@@ -238,7 +208,6 @@ def get_SUT(
             dataset_path,
             max_examples,
             args,
-            megatron_args,
             use_gpu,
             gen_kwargs=gen_kwargs,
         )
@@ -250,7 +219,6 @@ def get_SUT(
             max_examples,
             args,
             use_gpu,
-            megatron_args,
             gen_kwargs=gen_kwargs,
         )
     elif scenario == "SingleStream":
@@ -260,7 +228,6 @@ def get_SUT(
             dataset_path,
             max_examples,
             args,
-            megatron_args,
             use_gpu,
             gen_kwargs=gen_kwargs,
         )

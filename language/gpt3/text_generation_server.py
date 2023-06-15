@@ -94,15 +94,17 @@ class MegatronGenerate(Resource):
                         input_ids_tensor,
                         input_length_tensor,
                         top_k=self.gen_kwargs.get("top_k", 4),
+                        # top_p = self.gen_kwargs.get("top_p", 0.9),
                         temperature=self.gen_kwargs.get("temperature", 0.0),
                     )
                     output_batch_truncated = []
                     for data, source_len in zip(output_tokens, input_length_tensor):
-                        output_batch_truncated.append(data[source_len:])
-                    # TODO: encode output
+                        output_batch_truncated.append(
+                            data[source_len:].cpu().numpy().tolist()
+                        )
                     if self.log:
                         print("end time: ", datetime.datetime.now())
-                    return jsonify({"output": output_batch_truncated.cpu().numpy().tolist()})
+                    return jsonify({"output": output_batch_truncated})
 
             except ValueError as ve:
                 return ve.args[0]
@@ -149,6 +151,7 @@ if __name__ == "__main__":
         "max_new_tokens": 128,
         "min_new_tokens": 30,
         "top_k": 4,
+        "top_p": 0.9,
         "temperature": 0.0,
     }
     if args.num_layers_per_virtual_pipeline_stage is not None:
@@ -163,31 +166,34 @@ if __name__ == "__main__":
     assert len(model) == 1, "Above condition should have caught this"
     model = model[0]
     if mpu.is_pipeline_first_stage() and mpu.get_tensor_model_parallel_rank() == 0:
-        server = MegatronServer(model)
+        server = MegatronServer(model, gen_kwargs)
         server.run("0.0.0.0")
 
     while True:
-        choice = torch.cuda.LongTensor(0)
-        input_length_tensor = torch.cuda.LongTensor([0])
-        input_ids_tensor = torch.cuda.LongTensor(0)
+        choice = torch.cuda.LongTensor(1)
+        input_length_tensor = torch.cuda.LongTensor(1)
         torch.distributed.broadcast(choice, 0)
         if choice[0].item() == 0:
             try:
                 torch.distributed.broadcast(input_length_tensor, 0)
                 input_ids_tensor = torch.cuda.LongTensor(
                     [
-                        0
-                        for _ in range(
-                            input_length_tensor[0].item()
-                            + gen_kwargs.get("max_new_tokens")
-                        )
+                        [
+                            0
+                            for _ in range(
+                                input_length_tensor[0].item()
+                                + gen_kwargs.get("max_new_tokens")
+                            )
+                        ]
                     ]
                 )
                 torch.distributed.broadcast(input_ids_tensor, 0)
                 generate_tokens_probs_and_return_on_first_stage(
+                    model,
                     input_ids_tensor,
                     input_length_tensor,
                     top_k=gen_kwargs.get("top_k", 4),
+                    # top_p = gen_kwargs.get("top_p", 0.9),
                     temperature=gen_kwargs.get("temperature", 0.0),
                 )
             except ValueError as ve:

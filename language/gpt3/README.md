@@ -1,4 +1,4 @@
-# GPT-J Reference Implementation
+# GPT-3 Reference Implementation
 
 ## Setup Instructions
 
@@ -59,6 +59,8 @@ Downloads CNN-Daily Mail dataset and creates the calibration dataset (JSON) for 
 pip install datasets
 python prepare-calibration.py --calibration-list-file calibration-list.txt --output-dir </path/to/output-folder>
 ```
+### Download tokenizer files
+Download the file [vocab.json](https://huggingface.co/gpt2/resolve/main/vocab.json) and [merges.txt](https://huggingface.co/gpt2/resolve/main/merges.txt) and place them in the `$HOME/infernece/language/gpt3/data` folder
 ### Download GPT-3 model
 TODO: Share checkpoint link
 
@@ -69,18 +71,18 @@ export MEGATRON_PATH = $HOME/Megatron-LM
 ```
 Then run the generation server. For this 8 gpus are necessary:
 ```bash
-cd $HOME/language/gpt3/
+cd $HOME/inference/language/gpt3/
 ./run_generation_server.sh
 ```
 You can make a debug run with one gpu:
 ```bash
-cd $HOME/language/gpt3/
+cd $HOME/inference/language/gpt3/
 ./run_generation_server_debug.sh
 ```
 
 In another terminal run the benchmark. This will query the server each time a query for the SUT is generated
 ```bash
-cd $HOME/language/gpt3/
+cd $HOME/inference/language/gpt3/
 python main.py --scenario=[Offline | Server | SingleStream] --model-path=./model/ --dataset-path=./data/cnn_eval.json [--accuracy] --max_examples=[Maximum number of examples to consider]
 ```
 ### Evaluate accuracy run 

@@ -165,36 +165,3 @@ class Dataset:
     def __del__(self):
         print("Finished destroying QSL.")
 
-
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--tokenizer-type", default="GPT2BPETokenizer")
-    parser.add_argument(
-        "--vocab-file",
-        default="/content/drive/MyDrive/MLCommons/notebook_data/GPT3/vocab.json",
-    )
-    parser.add_argument(
-        "--merge-file",
-        default="/content/drive/MyDrive/MLCommons/notebook_data/GPT3/merges.txt",
-    )
-    parser.add_argument("--make-vocab-size-divisible-by", default=128)
-    parser.add_argument("--tensor-model-parallel-size", default=1)
-    parser.add_argument("--rank", default="0")
-    parser.add_argument("--distributed-backend", default="nccl")
-    args = parser.parse_args()
-    return args
-
-
-if __name__ == "__main__":
-    args = get_args()
-    os.environ["RANK"] = "0"
-    os.environ["MASTER_ADDR"] = "localhost"
-    os.environ["MASTER_PORT"] = "29500"
-    torch.torch.distributed.init_process_group(
-        backend=args.distributed_backend, rank=0, world_size=1
-    )
-    d = Dataset(
-        "/content/drive/MyDrive/MLCommons/notebook_data/GPT3/cnn_eval.json",
-        args=args,
-        gen_kwards={"max_new_tokens": 128},
-    )

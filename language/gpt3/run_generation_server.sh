@@ -7,8 +7,7 @@ DISTRIBUTED_ARGS="--nproc_per_node 8 \
                   --master_port 6000"
 
 CHECKPOINT=<Path to checkpoint>
-VOCAB_FILE=$HOME/inference/language/gpt3/data/vocab.json
-MERGE_FILE=$HOME/inference/language/gpt3/data/merges.txt
+TOKENIZER_MODEL_FILE=$HOME/inference/language/gpt3/data/c4_en_301_5Mexp2_spm.model
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 
@@ -21,11 +20,9 @@ torchrun $DISTRIBUTED_ARGS text_generation_server.py   \
        --hidden-size 12288  \
        --num-attention-heads 96  \
        --max-position-embeddings 2048  \
-       --tokenizer-type GPT2BPETokenizer  \
-       --fp16  \
+       --tokenizer-type SentencePieceTokenizer  \
        --micro-batch-size 1  \
        --seq-length 2048  \
-       --vocab-file $VOCAB_FILE  \
-       --merge-file $MERGE_FILE  \
-       --seed 42
-       --load ${CHECKPOINT}  \
+       --tokenizer-model $TOKENIZER_MODEL_FILE \
+       --seed 42  \
+       --load ${CHECKPOINT}

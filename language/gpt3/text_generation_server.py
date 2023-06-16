@@ -139,7 +139,7 @@ def model_provider(pre_process=True, post_process=True):
 if __name__ == "__main__":
     initialize_megatron(
         args_defaults={
-            "tokenizer_type": "GPT2BPETokenizer",
+            "tokenizer_type": "SentencePieceTokenizer",
             "no_load_rng": True,
             "no_load_optim": True,
         }

@@ -43,11 +43,10 @@ class Dataset:
         self.gen_kwards = gen_kwards
 
         args.rank = 0
-        args.tokenizer_type = "GPT2BPETokenizer"
-        args.vocab_file = "data/vocab.json"
-        args.merge_file = "data/merges.txt"
+        args.tokenizer_type = "SentencePieceTokenizer"
         args.make_vocab_size_divisible_by = 128
         args.tensor_model_parallel_size = 1
+        args.tokenizer_model = "./data/c4_en_301_5Mexp2_spm.model"
         self.tokenizer = build_tokenizer(args)
 
         self.list_data_dict = utils.jload(self.dataset_path)

@@ -14,11 +14,9 @@ conda activate llm
 cd $HOME
 git clone --recurse-submodules https://github.com/mlcommons/inference.git --depth 1
 git clone https://github.com/NVIDIA/apex.git
-git clone https://github.com/mlcommons/training.git
+git clone https://github.com/mlcommons/training.git --branch inference-megatron
 cd $HOME/apex
 git checkout -b language 2d8302a6c12e202f7b40b13a43daa95f326fd0ea
-cd $HOME/training
-git checkout -b language 8df390bc7e9090959c2b265ab9529e144aafd33a
 ```
 
 
@@ -63,7 +61,8 @@ pip install datasets
 python prepare-calibration.py --calibration-list-file calibration-list.txt --output-dir </path/to/output-folder>
 ```
 ### Download tokenizer files
-Download the file [vocab.json](https://huggingface.co/gpt2/resolve/main/vocab.json) and [merges.txt](https://huggingface.co/gpt2/resolve/main/merges.txt) and place them in the `$HOME/infernece/language/gpt3/data` folder
+TODO: Share tokenizer links
+
 ### Download GPT-3 model
 TODO: Share checkpoint link
 
@@ -95,13 +94,7 @@ python evaluation.py --mlperf-accuracy-file ./build/logs/mlperf_log_accuracy.jso
 ```
 
 ### Reference Model - ROUGE scores
-The following are the rouge scores obtained when evaluating the GPT-J fp32 model on the entire validation set (using greedy search)
-
-ROUGE 1 - 41.5945  
-
-ROUGE 2 - 18.4929  
-
-ROUGE L - 28.3975  
+TODO: Compute rouge scores
 
 ### License:
 Apache License Version 2.0.

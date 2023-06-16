@@ -81,30 +81,34 @@ class MegatronGenerate(Resource):
                     # TODO: implement beam_search
                     return jsonify({})
                 else:
-                    MegatronGenerate.send_do_generate()  # Tell other ranks we're doing generate
-                    input_ids_tensor, input_length_tensor = MegatronGenerate.sync_input(
-                        input_ids, input_length
-                    )
-                    (
-                        output_tokens,
-                        _,
-                        _,
-                    ) = generate_tokens_probs_and_return_on_first_stage(
-                        self.model,
-                        input_ids_tensor,
-                        input_length_tensor,
-                        top_k=self.gen_kwargs.get("top_k", 4),
-                        # top_p = self.gen_kwargs.get("top_p", 0.9),
-                        temperature=self.gen_kwargs.get("temperature", 0.0),
-                    )
-                    output_batch_truncated = []
-                    for data, source_len in zip(output_tokens, input_length_tensor):
-                        output_batch_truncated.append(
-                            data[source_len:].cpu().numpy().tolist()
+                    try:
+                        MegatronGenerate.send_do_generate()  # Tell other ranks we're doing generate
+                        input_ids_tensor, input_length_tensor = MegatronGenerate.sync_input(
+                            input_ids, input_length
                         )
-                    if self.log:
-                        print("end time: ", datetime.datetime.now())
-                    return jsonify({"output": output_batch_truncated})
+                        (
+                            output_tokens,
+                            _,
+                            _,
+                        ) = generate_tokens_probs_and_return_on_first_stage(
+                            self.model,
+                            input_ids_tensor,
+                            input_length_tensor,
+                            top_k=self.gen_kwargs.get("top_k", 4),
+                            # top_p = self.gen_kwargs.get("top_p", 0.9),
+                            temperature=self.gen_kwargs.get("temperature", 0.0),
+                        )
+                        output_batch_truncated = []
+                        for data, source_len in zip(output_tokens, input_length_tensor):
+                            output_batch_truncated.append(
+                                data[source_len:].cpu().numpy().tolist()
+                            )
+                        if self.log:
+                            print("end time: ", datetime.datetime.now())
+                        return jsonify({"output": output_batch_truncated})
+                    except:
+                        print("ERROR")
+                        return jsonify({"output": [[]], "is_error": True})
 
             except ValueError as ve:
                 return ve.args[0]

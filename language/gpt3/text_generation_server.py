@@ -18,7 +18,7 @@ from megatron.text_generation import beam_search_and_post_process
 
 from megatron import get_args
 from megatron import print_rank_0
-from megatron.core import mpu
+from megatron import mpu
 from megatron.checkpointing import load_checkpoint
 from megatron.initialize import initialize_megatron
 from megatron.model import GPTModel

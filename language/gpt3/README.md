@@ -14,17 +14,20 @@ conda activate llm
 cd $HOME
 git clone --recurse-submodules https://github.com/mlcommons/inference.git --depth 1
 git clone https://github.com/NVIDIA/apex.git
-git clone https://github.com/NVIDIA/Megatron-LM.git
+git clone https://github.com/mlcommons/training.git
 cd $HOME/apex
 git checkout -b language 2d8302a6c12e202f7b40b13a43daa95f326fd0ea
-cd $HOME/Megatron-LM
-git checkout -b language 060415572f4365a2e895f8036c4e37dad0efbdf5
+cd $HOME/training
+git checkout -b language 8df390bc7e9090959c2b265ab9529e144aafd33a
 ```
 
 
 ### install requirements
 ```bash
-pip install torch==1.13.0 torchvision==0.14.0 datasets evaluate accelerate simplejson nltk rouge_score pybind11 Ninja
+pip install torch==1.13.0 torchvision==0.14.0 datasets evaluate accelerate simplejson nltk rouge_score pybind11 Ninja numpy==1.19.5
+pip install git+https://github.com/NVIDIA/mlperf-common.git
+pip install git+https://github.com/mlperf/logging.git
+
 ```
 
 #### install apex
@@ -65,11 +68,11 @@ Download the file [vocab.json](https://huggingface.co/gpt2/resolve/main/vocab.js
 TODO: Share checkpoint link
 
 ### Running the Benchmark - Megatron
-In one terminal, run the text generation server. First set the `MEGATRON_PATH` environment variable:
+First set the `MEGATRON_PATH` environment variable:
 ```bash
-export MEGATRON_PATH = $HOME/Megatron-LM
+export MEGATRON_PATH=$HOME/training/large_language_model/megatron-lm
 ```
-Then run the generation server. For this 8 gpus are necessary:
+In one terminal, run the text generation server. For this 8 gpus are necessary:
 ```bash
 cd $HOME/inference/language/gpt3/
 ./run_generation_server.sh

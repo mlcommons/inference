@@ -1,5 +1,5 @@
 #!/bin/bash
-# This example will start serving the 345M model.
+# This example will start serving the 175B model.
 DISTRIBUTED_ARGS="--nproc_per_node 8 \
                   --nnodes 1 \
                   --node_rank 0 \

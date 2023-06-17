@@ -65,7 +65,7 @@ Please download the internal fine-tuned GPT-J checkpoint and rename it as model/
 ### Running the Benchmark
 Replace the model and dataset path arguments with your corresponding paths. For evaluating the ROUGE score after the run, include --accuracy as shown below. For user specific target qps, please include user.conf.
 ```
-python main.py --scenario=[Offline | Server | SingleStream] --model-path=./model/ --dataset-path=./data/cnn_eval.json [--accuracy] --max_examples=[Maximum number of examples to consider]
+python main.py --scenario=[Offline | Server | SingleStream] --model-path=./model/ --dataset-path=./data/cnn_eval.json [--accuracy] --max_examples=[Maximum number of examples to consider] [--gpu]
 ```
 ### Evaluate accuracy run 
 Evaluates the ROGUE scores from the accuracy logs. Only applicable when specifiying [--accuracy] while running main.py
@@ -74,13 +74,13 @@ python evaluation.py --mlperf-accuracy-file ./build/logs/mlperf_log_accuracy.jso
 ```
 
 ### Reference Model - ROUGE scores
-The following are the rouge scores obtained when evaluating the GPT-J fp32 model on the entire validation set (using greedy search)
+The following are the rouge scores obtained when evaluating the GPT-J fp32 model on the entire validation set (13368 samples) using beam search, beam_size=4
 
-ROUGE 1 - 41.5945  
+ROUGE 1 - 42.9865
 
-ROUGE 2 - 18.4929  
+ROUGE 2 - 20.1235
 
-ROUGE L - 28.3975  
+ROUGE L - 29.9881
 
 ### License:
 Apache License Version 2.0.

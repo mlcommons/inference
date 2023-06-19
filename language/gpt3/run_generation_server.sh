@@ -25,4 +25,6 @@ torchrun $DISTRIBUTED_ARGS text_generation_server.py   \
        --seq-length 2048  \
        --tokenizer-model $TOKENIZER_MODEL_FILE \
        --seed 42  \
+       --use-ext-ckpt  \
+       --no-load-rng  \
        --load ${CHECKPOINT}

@@ -14,7 +14,7 @@ gen_kwargs = {
     "early_stopping": True,
     "max_new_tokens": 128,
     "min_new_tokens": 30,
-    "num_beams": 4,
+    "num_beams": int(os.environ.get("GPTJ_BEAM_SIZE", "4")),
 }
 
 
@@ -200,3 +200,5 @@ def get_SUT(model_path, scenario, dtype, dataset_path, max_examples, use_gpu=Fal
         return SUT_Server(model_path, dtype, dataset_path, max_examples, use_gpu)
     elif scenario == "SingleStream":
         return SUT_SingleStream(model_path, dtype, dataset_path, max_examples, use_gpu)
+    elif scenario == "MultiStream":
+        return SUT_Offline(model_path, dtype, dataset_path, max_examples, use_gpu)

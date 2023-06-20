@@ -22,6 +22,7 @@ Alternatively, you can find a short tutorial on how to use this benchmark [here]
 
 <details>
 <summary>Click here to see deprecated models.</summary> 
+    
 | model | framework | accuracy | dataset | model link | model source | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | mobilenet-v1 (removed since mlperf-v0.7)| tensorflow | 71.676% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | fp32 | NHWC |

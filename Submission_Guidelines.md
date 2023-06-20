@@ -1,6 +1,6 @@
 ## Submission Rules
 
-The MLPerf inference submission rules are spread between the [MLCommons policies](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc) and the [MLCommons Inference policies](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc) documents. Further, the rules related to power submissions are given [here](https://github.com/mlcommons/inference_policies/blob/master/power_measurement.adoc). The below points are a summary taken from the official rules.
+The MLPerf inference submission rules are spread between the [MLCommons policies](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc) and the [MLCommons Inference policies](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc) documents. Further, the rules related to power submissions are given [here](https://github.com/mlcommons/inference_policies/blob/master/power_measurement.adoc). The below points are a summary taken from the official rules to act as a checklist for the submitters.
 
 
 ## Hardware requirements
@@ -19,13 +19,14 @@ The MLPerf inference submission rules are spread between the [MLCommons policies
 
 MLPerf inference submissions are expected on different hardware and related software stacks. For this reason, only reference implementations are provided by MLCommons and they can guide submitters to make their own optimal implementations for their software/hardware stack. Also, all the previous implementations are made available in the MLCommons Inference results repositories and they can also guide submitters in doing their own implementations.
 
-[The MLCommons taskforce on automation and reproducibility](https://github.com/mlcommons/ck/blob/master/docs/taskforce.md) has automated all the MLCommons inference tasks using the [MLCommons CM language](https://github.com/mlcommons/ck/blob/master/cm) and [this readme](https://github.com/mlcommons/ck/tree/master/docs/mlperf/inference) can guide you in running the reference implementations with very minimal effort. Currently, this automation supports MLCommons reference implementations and C++ implementations for Onnxruntime and TFLite. Feel free to join the [taskforce Discord channel](https://discord.gg/8jbEM4J6Ff) for any queries.
+[The MLCommons taskforce on automation and reproducibility](https://github.com/mlcommons/ck/blob/master/docs/taskforce.md) has automated all the MLCommons inference tasks using the [MLCommons CM language](https://github.com/mlcommons/ck/blob/master/cm) and [this readme](https://github.com/mlcommons/ck/tree/master/docs/mlperf/inference) can guide you in running the reference implementations with very minimal effort. Currently, this automation supports MLCommons reference implementations, Nvidia implementations, and C++ implementations for Onnxruntime and TFLite. Feel free to join the [taskforce Discord channel](https://discord.gg/8jbEM4J6Ff) if you have any questions.
 
+The previous MLPerf inference results are aggregated in [Collective Knowledge platform (MLCommons CK playground)](platform) as [reproducible experiments](https://access.cknowledge.org/playground/?action=experiments)  and can be used by submitters to compare their results with the previous ones while adding various derived metrics (such as performance/watt) and constraints.
 
 ### Expected time to do benchmark runs
 1. Closed submission under data enter needs offline and server scenario runs with a minimum of ten minutes needed for both. 
 2. Closed submission under edge category needs single stream, multi-stream (only for R50 and retinanet), and offline scenarios. A minimum of ten minutes are needed for each scenario. 
-3. Further two (three for ResNet50) compliance runs are needed each taking a minimum of 10 minutes for each scenario.
+3. Further two (three for ResNet50) compliance runs are needed, each taking at least 10 minutes for each scenario.
 4. SingleStream, MultiStream and Server scenarios use early stopping and so can always finish around 10 minutes
 5. Offline scenario needs a minimum of 24756 input queries to be processed -- can take hours for low-performing models like 3dunet, LLMs, etc.
 6. Power submission needs an extra ranging mode to determine the peak current usage and this often doubles the overall experiment run time.

@@ -9,11 +9,13 @@ cm pull repo mlcommons@ck
 
 # Retinanet
 
-On edge category Retinanet has Offline, SingleStream and MultiStream scenarios and in datacenter category it has Offline and Server scenarios. The below commands are assuming an edge category system. 
+In the edge category Retinanet has Offline, SingleStream, and MultiStream scenarios and in the datacenter category, it has Offline and Server scenarios. The below commands are assuming an edge category system. 
 
 ## Run Command
 
-### One liner to do an end to end submission using the reference implementation
+### One liner to do an end-to-end submission using the reference implementation
+
+The below command will automatically preprocess the dataset for a given backend, builds the loadgen, runs the inference for all the required scenarios and modes, and generate a submission folder out of the produced results. 
 
 ** Please adjust the `target_qps` value as per your system performance to get a valid submission
 
@@ -23,6 +25,12 @@ cm run script --tags=run,mlperf,inference,generate-run-cmds,_submission \
 --backend=onnxruntime --device=cpu --scenario=Offline --adr.compiler.tags=gcc  --target_qps=1 \
 --category=edge --division=open
 ```
+
+* Use `--device=cuda` to run the inference on Nvidia GPU
+* Use `--division=closed` to run all scenarios for the closed division (compliance tests are skipped for `_find-performance` mode)
+* Use `--category=datacenter` to run datacenter scenarios
+* Use `--backend=pytorch` to use pytorch backend
+
 
 More details and commands to run different implementations like NVIDIA implementation can be seen [here](https://github.com/ctuning/mlcommons-ck/tree/master/docs/mlperf/retinanet).
 

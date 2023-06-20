@@ -20,7 +20,7 @@ The MLPerf inference submission rules are spread between the [MLCommons policies
 
 MLPerf inference submissions are expected on different hardware and related software stacks. For this reason, only reference implementations are provided by MLCommons and they can guide submitters to make their own optimal implementations for their software/hardware stack. Also, all the previous implementations are made available in the MLCommons Inference results repositories and they can also guide submitters in doing their own implementations.
 
-[The MLCommons taskforce on automation and reproducibility](https://github.com/mlcommons/ck/blob/master/docs/taskforce.md) has automated all the MLCommons inference tasks using the [MLCommons CM language](https://github.com/mlcommons/ck/blob/master/cm) and [this readme](https://github.com/mlcommons/ck/tree/master/docs/mlperf/inference) can guide you in running the reference implementations with very minimal effort. Currently, this automation supports MLCommons reference implementations and C++ implementations for Onnxruntime and TFLite. 
+[The MLCommons taskforce on automation and reproducibility](https://github.com/mlcommons/ck/blob/master/docs/taskforce.md) has automated all the MLCommons inference tasks using the [MLCommons CM language](https://github.com/mlcommons/ck/blob/master/cm) and [this readme](https://github.com/mlcommons/ck/tree/master/docs/mlperf/inference) can guide you in running the reference implementations with very minimal effort. Currently, this automation supports MLCommons reference implementations and C++ implementations for Onnxruntime and TFLite. Feel free to join the [taskforce Discord channel](https://discord.gg/8jbEM4J6Ff) for any queries.
 
 
 ### Expected time to do benchmark runs

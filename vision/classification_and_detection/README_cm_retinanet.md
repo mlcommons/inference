@@ -10,7 +10,7 @@ cm pull repo mlcommons@ck
 
 # Retinanet
 
-In the edge category Retinanet has Offline, SingleStream, and MultiStream scenarios and in the datacenter category, it has Offline and Server scenarios. The below commands are assuming an edge category system. 
+In the edge category, Retinanet has Offline, SingleStream, and MultiStream scenarios and in the datacenter category, it has Offline and Server scenarios. The below commands are assuming an edge category system. 
 
 ## Run Command
 

@@ -2,9 +2,12 @@
 
 This is the reference implementation for MLPerf Inference Classification and Object Detection benchmarks
 
-You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
+Please see the below readme files for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
+1. [Resnet50](README_cm_resnet50.md)
+2. [Retinanet](README_cm_retinanet.md)
 
-This [MLCommons CK2/CM script](https://github.com/mlcommons/ck/blob/master/cm-mlops/script/run-mlperf-inference-app/README.md) provides commands to do an end to end MLPerf Inference submission generation (downloading the dataset, preprocessing the dataset, downloading the model, configuring the SUT, running the benchmark, generating the submission folder and running the submission checker) for this benchmark and also a [C++ implementation of it](https://github.com/mlcommons/ck/tree/master/cm-mlops/script/app-mlperf-inference-cpp). 
+Alternatively, you can find a short tutorial on how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
+
 
 ## Supported Models
 
@@ -16,6 +19,12 @@ This [MLCommons CK2/CM script](https://github.com/mlcommons/ck/blob/master/cm-ml
 | resnet50-v1.5 | pytorch | 75.790% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/4589637/files/resnet50_INT8bit_quantized.pt) | Edgecortix [quantization script](tools/calibrate_torchvision_model.py) | A: int8, W: uint8 | NCHW |
 | retinanet 800x800 | pytorch | mAP 0.3755 | OpenImages mlperf validation set resized to 800x800 | [from zenodo](https://zenodo.org/record/6617981/files/resnext50_32x4d_fpn.pth) | from mlperf. [Source Code](https://github.com/mlcommons/training/tree/master/single_stage_detector/ssd/model) and [Weights](https://zenodo.org/record/6605272) | fp32 | NCHW |
 | retinanet 800x800 | onnx | mAP 0.3757 | OpenImages mlperf validation set resized to 800x800 | [from zenodo](https://zenodo.org/record/6617879/files/resnext50_32x4d_fpn.onnx) | from mlperf converted from the pytorch model. [Source Code](https://github.com/mlcommons/training/tree/master/single_stage_detector/ssd/model) and [Weights](https://zenodo.org/record/6605272) | fp32 | NCHW |
+
+<details>
+<summary>Click here to see deprecated models.</summary> 
+    
+| model | framework | accuracy | dataset | model link | model source | precision | notes |
+| ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | mobilenet-v1 (removed since mlperf-v0.7)| tensorflow | 71.676% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | fp32 | NHWC |
 | mobilenet-v1 quantized (removed since mlperf-v0.7)| tensorflow | 70.694% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224_quant.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224_quant.tgz) | int8 | NHWC |
 | mobilenet-v1 (removed since mlperf-v0.7)| tflite | 71.676% | imagenet2012 validation | [from zenodo](https://zenodo.org/record/2269307/files/mobilenet_v1_1.0_224.tgz) | [from tensorflow](http://download.tensorflow.org/models/mobilenet_v1_2018_08_02/mobilenet_v1_1.0_224.tgz) | fp32 | NHWC |
@@ -32,6 +41,8 @@ This [MLCommons CK2/CM script](https://github.com/mlcommons/ck/blob/master/cm-ml
 | ssd-resnet34 1200x1200 (removed since mlperf-v2.1)| pytorch | mAP 0.20 | coco resized to 1200x1200 | [from zenodo](https://zenodo.org/record/3236545/files/resnet34-ssd1200.pytorch) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector/pytorch) | fp32 | NCHW |
 | ssd-resnet34 1200x1200 (removed since mlperf-v2.1) | onnx | mAP 0.20 | coco resized to 1200x1200 | from zenodo [opset-8](https://zenodo.org/record/3228411/files/resnet34-ssd1200.onnx) | [from mlperf](https://github.com/mlperf/inference/tree/master/others/cloud/single_stage_detector) converted using the these [instructions](https://github.com/BowenBao/inference/tree/master/cloud/single_stage_detector/pytorch#6-onnx) | fp32 | Converted from pytorch model. |
 | ssd-resnet34 1200x1200 (removed since mlperf-v2.1) | onnx | mAP 0.20 | coco resized to 1200x1200 | from zenodo [opset-11](https://zenodo.org/record/4735664/files/ssd_resnet34_mAP_20.2.onnx) | [from zenodo](https://zenodo.org/record/3345892/files/tf_ssd_resnet34_22.1.zip) converted using [this script](https://github.com/mlcommons/inference/blob/master/vision/classification_and_detection/tools/convert-to-onnx.sh) | fp32 | Converted from the tensorflow model and uses the same interface as the tensorflow model. |
+</details>
+
 
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
@@ -74,9 +85,15 @@ python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --
 | imagenet2012 (validation) | http://image-net.org/challenges/LSVRC/2012/ |
 | openimages | We provide a [script](tools/openimages_mlperf.sh) to download the openimages mlperf validation set. You can download the dataset by going into the tools folder and running `./openimages_mlperf -d <DOWNLOAD_PATH>  -m <MAX_IMAGES>` |
 | openimages (calibration) | We also provide a [script](tools/openimages_calibration_mlperf.sh) to download the openimages mlperf validation set. You can download the dataset by going into the tools folder and running `./openimages_calibration_mlperf -d <DOWNLOAD_PATH>`. This requires you to have [calibration list](../../calibration/openimages/openimages_cal_images_list.txt) |
+<details>
+<summary>Click here to see deprecated models.</summary> 
+
+## Datasets
+| dataset | download link |
+| ---- | ---- |
 | coco (validation) (not needed since mlperf-v2.1) | http://images.cocodataset.org/zips/val2017.zip |
 | coco (annotations) (not needed since mlperf-v2.1)| http://images.cocodataset.org/annotations/annotations_trainval2017.zip |
-
+</details>
 
 ## Prerequisites and Installation
 We support [tensorfow+tflite](https://github.com/tensorflow/tensorflow), [onnxruntime](https://github.com/Microsoft/onnxruntime)  and [pytoch](http://pytorch.org) backend's with the same benchmark tool.

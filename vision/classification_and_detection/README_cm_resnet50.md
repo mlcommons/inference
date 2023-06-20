@@ -36,6 +36,6 @@ cmr "run mlperf inference generate-run-cmds _submission" \
 * Use `--backend=tf` or `--backend=tvm-onnx` to use tensorflow and tvm-onnx backends respectively
 
 
-More details and commands to run different implementations like NVIDIA implementation can be seen [here](https://github.com/ctuning/mlcommons-ck/tree/master/docs/mlperf/inference/resnet50).
+More details and commands to run different implementations like NVIDIA implementation can be seen [here](https://github.com/mlcommons/ck/tree/master/docs/mlperf/inference/resnet50).
 
 

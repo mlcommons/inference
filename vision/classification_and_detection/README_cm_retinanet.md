@@ -32,6 +32,6 @@ cmr "run mlperf inference generate-run-cmds _submission" \
 * Use `--backend=pytorch` to use pytorch backend
 
 
-More details and commands to run different implementations like NVIDIA implementation can be seen [here](https://github.com/ctuning/mlcommons-ck/tree/master/docs/mlperf/retinanet).
+More details and commands to run different implementations like NVIDIA implementation can be seen [here](https://github.com/ctuning/mlcommons-ck/tree/master/docs/mlperf/inference/retinanet).
 
 

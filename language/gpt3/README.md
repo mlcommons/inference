@@ -22,7 +22,7 @@ git checkout -b language 2d8302a6c12e202f7b40b13a43daa95f326fd0ea
 
 ### install requirements
 ```bash
-pip install torch==1.13.0 torchvision==0.14.0 datasets evaluate accelerate simplejson nltk rouge_score pybind11 Ninja numpy==1.19.5
+pip install torch==1.13.0 torchvision==0.14.0 datasets evaluate accelerate simplejson nltk rouge_score pybind11 Ninja numpy==1.19.5 sentencepiece
 pip install git+https://github.com/NVIDIA/mlperf-common.git
 pip install git+https://github.com/mlperf/logging.git
 
@@ -63,9 +63,23 @@ python prepare-calibration.py --calibration-list-file calibration-list.txt --out
 ### Download tokenizer files
 TODO: Share tokenizer links
 
+Temporary private link:
+```bash
+cd $HOME/inference/language/gpt3/data/
+gsutil cp gs://mlperf-llm-public2/vocab/c4_en_301_5Mexp2_spm.model .
+```
 ### Download GPT-3 model
 TODO: Share checkpoint link
 
+Temporary private link:
+```bash
+cd $HOME/inference/language/gpt3/
+mkdir model
+gcloud auth login
+gcloud storage cp "gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/language_model*" .
+gsutil -m cp -r "gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/language_model*" .
+gsutil cp gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/metadata.json .
+```
 ### Running the Benchmark - Megatron
 First set the `MEGATRON_PATH` environment variable:
 ```bash

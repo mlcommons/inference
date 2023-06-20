@@ -13,13 +13,16 @@ cm pull repo mlcommons@ck
 
 We need to get imagenet full dataset to make image-classification submissions for MLPerf inference. Since this dataset is not publicly available via a URL please follow the instructions given [here](https://github.com/mlcommons/ck/blob/master/cm-mlops/script/get-dataset-imagenet-val/README-extra.md) to download the dataset and register in CM.
 
-On the edge category, ResNet50 has Offline, SingleStream, and MultiStream scenarios and in the datacenter category, it has Offline and Server scenarios. The below commands are assuming an edge category system. 
+In the edge category, ResNet50 has Offline, SingleStream, and MultiStream scenarios and in the datacenter category, it has Offline and Server scenarios. The below commands are assuming an edge category system. 
 
 ## Run Command
 
 ### One liner to do an end-to-end submission using the reference implementation
 
 The below command will automatically preprocess the dataset for a given backend, builds the loadgen, runs the inference for all the required scenarios and modes, and generate a submission folder out of the produced results. 
+
+** Please adjust the `target_qps` value as per your system performance to get a valid submission
+
 
 ```
 cm run script --tags=run,mlperf,inference,generate-run-cmds,_submission \

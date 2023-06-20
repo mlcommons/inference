@@ -42,10 +42,12 @@ class Dataset:
         self.debug = debug
         self.gen_kwards = gen_kwards
 
+        ## TODO: provide arguments in command line
         args.rank = 0
         args.tokenizer_type = "SentencePieceTokenizer"
         args.make_vocab_size_divisible_by = 128
-        args.tensor_model_parallel_size = 1
+        args.tensor_model_parallel_size = 8
+        args.vocab_extra_ids = 0
         args.tokenizer_model = "./data/c4_en_301_5Mexp2_spm.model"
         self.tokenizer = build_tokenizer(args)
 

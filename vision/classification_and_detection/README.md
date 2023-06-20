@@ -2,13 +2,12 @@
 
 This is the reference implementation for MLPerf Inference Classification and Object Detection benchmarks
 
-Please see the below readme files for an automated way to run this benchmark and do an end to end submission.
+Please see the below readme files for an automated way to run this benchmark and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
 1. [Resnet50](README_cm_resnet50.md)
 2. [Retinanet](README_cm_retinanet.md)
 
 You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
 
-This [MLCommons CK2/CM script](https://github.com/mlcommons/ck/blob/master/cm-mlops/script/run-mlperf-inference-app/README.md) provides commands to do an end to end MLPerf Inference submission generation (downloading the dataset, preprocessing the dataset, downloading the model, configuring the SUT, running the benchmark, generating the submission folder and running the submission checker) for this benchmark and also a [C++ implementation of it](https://github.com/mlcommons/ck/tree/master/cm-mlops/script/app-mlperf-inference-cpp). 
 
 ## Supported Models
 

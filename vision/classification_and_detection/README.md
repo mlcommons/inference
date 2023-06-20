@@ -6,7 +6,7 @@ Please see the below readme files for an automated way to run this benchmark out
 1. [Resnet50](README_cm_resnet50.md)
 2. [Retinanet](README_cm_retinanet.md)
 
-You can find a short tutorial how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
+Alternatively, you can find a short tutorial on how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
 
 
 ## Supported Models

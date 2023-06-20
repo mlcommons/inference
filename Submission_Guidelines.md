@@ -33,12 +33,6 @@ The previous MLPerf inference results are aggregated in [Collective Knowledge pl
 6. Open division has no accuracy constraints, no compliance runs required, and can be submitted for any single scenario as well. There is no constraint on the model used also except that the model must be trained on the dataset used in the corresponding MLPerf inference task.
 7. Power submission needs an extra ranging mode to determine the peak current usage and this often doubles the overall experiment run time.
 
-## Changes from MLCommons Inference 3.0
-
-1. Two new benchmarks GPT-J and GPT-3 and DLRMv2 replacing DLRM
-2. Submission checker is now checking for non-empty README files and mandatory system description and power-related fields
-3. New script is provided which can be used to infer scenario results and low-accuracy results from a high-accuracy result
-4. `min_query_count` is removed for all scenarios except offline due to early stopping. SingleStream now needs a minimum of 64 queries and MultiStream needs 662 queries as mandated by the early stopping criteria.
 
 ## Validity of the submission
 
@@ -52,5 +46,12 @@ The previous MLPerf inference results are aggregated in [Collective Knowledge pl
 3. README files in the submission directory must be checked to make sure that the instructions are reproducible.
 4. For closed datacenter submissions, [ECC RAM and Networking requirements](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#constraints-for-the-closed-division) must be ensured.
 5. Submission checker might be reporting warnings and some of these warnings can warrant an answer from the submitter.
+
+## Changes from MLCommons Inference 3.0
+
+1. Two new benchmarks GPT-J and GPT-3 and DLRMv2 replacing DLRM
+2. Submission checker is now checking for non-empty README files and mandatory system description and power-related fields
+3. New script is provided which can be used to infer scenario results and low-accuracy results from a high-accuracy result
+4. `min_query_count` is removed for all scenarios except offline due to early stopping. SingleStream now needs a minimum of 64 queries and MultiStream needs 662 queries as mandated by the early stopping criteria.
 
 

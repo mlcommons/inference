@@ -85,9 +85,15 @@ python tools/accuracy-coco.py --mlperf-accuracy-file mlperf_log_accuracy.json --
 | imagenet2012 (validation) | http://image-net.org/challenges/LSVRC/2012/ |
 | openimages | We provide a [script](tools/openimages_mlperf.sh) to download the openimages mlperf validation set. You can download the dataset by going into the tools folder and running `./openimages_mlperf -d <DOWNLOAD_PATH>  -m <MAX_IMAGES>` |
 | openimages (calibration) | We also provide a [script](tools/openimages_calibration_mlperf.sh) to download the openimages mlperf validation set. You can download the dataset by going into the tools folder and running `./openimages_calibration_mlperf -d <DOWNLOAD_PATH>`. This requires you to have [calibration list](../../calibration/openimages/openimages_cal_images_list.txt) |
+<details>
+<summary>Click here to see deprecated models.</summary> 
+
+## Datasets
+| dataset | download link |
+| ---- | ---- |
 | coco (validation) (not needed since mlperf-v2.1) | http://images.cocodataset.org/zips/val2017.zip |
 | coco (annotations) (not needed since mlperf-v2.1)| http://images.cocodataset.org/annotations/annotations_trainval2017.zip |
-
+</details>
 
 ## Prerequisites and Installation
 We support [tensorfow+tflite](https://github.com/tensorflow/tensorflow), [onnxruntime](https://github.com/Microsoft/onnxruntime)  and [pytoch](http://pytorch.org) backend's with the same benchmark tool.

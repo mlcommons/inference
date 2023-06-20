@@ -1,7 +1,8 @@
 ## Setup
 
 Please follow the MLCommons CK [installation guide](https://github.com/mlcommons/ck/blob/master/docs/installation.md) to install CM.
-Download the ck repo to get the CM script for MLPerf submission
+
+Install MLCommons CK repository with automation workflows for MLPerf.
 
 ```
 cm pull repo mlcommons@ck

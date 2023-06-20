@@ -2,7 +2,7 @@
 
 This is the reference implementation for MLPerf Inference Classification and Object Detection benchmarks
 
-Please see the below readme files for an automated way to run this benchmark and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
+Please see the below readme files for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
 1. [Resnet50](README_cm_resnet50.md)
 2. [Retinanet](README_cm_retinanet.md)
 

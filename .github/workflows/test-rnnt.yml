@@ -1,15 +1,15 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Test for MLPerf inference resnet50 submission generation using CM script automation
+name: Test for MLPerf inference rnnt submission generation using CM script automation
 
 on:
   pull_request:
     branches: [ "master", "dev" ]
     paths:
-      - vision/classification_and_detection/**
+      - speech_recognition/rnnt/**
       - tools/submission/**
-      - .github/workflows/test-resnet50.yml
+      - .github/workflows/test-rnnt.yml
       - '!**.md'
 
 jobs:
@@ -20,7 +20,8 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [ "3.9" ]
-        backend: [ "onnxruntime", "tf" ]
+        backend: [ "pytorch" ]
+        precision: [ "fp32" ]
 
     steps:
     - uses: actions/checkout@v3
@@ -35,4 +36,4 @@ jobs:
         cm run script --quiet --tags=get,sys-utils-cm
     - name: Test Resnet50 and end to end submission generation
       run: |
-        cm run script --tags=run,mlperf,inference,generate-run-cmds,_submission,_short --quiet --submitter="MLCommons" --hw_name=default --model=resnet50 --implementation=reference --backend=${{ matrix.backend }} --device=cpu --scenario=Offline --test_query_count=500 --adr.compiler.tags=gcc --adr.inference-src.env.CM_GIT_CHECKOUT=${{ github.event.pull_request.head.ref }} --adr.inference-src.env.CM_GIT_URL=${{ github.event.pull_request.head.repo.html_url }}
+        cm run script --tags=run,mlperf,inference,generate-run-cmds,_performance-only --quiet --submitter="MLCommons" --hw_name=default --model=rnnt --implementation=reference --backend=${{ matrix.backend }} --device=cpu --scenario=Offline --precision=${{ matrix.precision }} --adr.compiler.tags=gcc --adr.inference-src.env.CM_GIT_CHECKOUT=${{ github.event.pull_request.head.ref }} --adr.inference-src.env.CM_GIT_URL=${{ github.event.pull_request.head.repo.html_url }} --adr.ml-engine-pytorch.version=1.13.0 --adr.ml-engine-torchvision.version=0.14.1 --adr.librosa.version_max=0.9.1

@@ -14,6 +14,7 @@ The MLPerf inference submission rules are spread between the [MLCommons policies
 2. Reference models are mostly fp32 and reference implementations are just for reference and not meant to be directly used by submitters as they are not optimized for performance.
 3. Calibration document due **one week** before the submission deadline
 4. Power submission needs a power analyzer (approved by SPEC Power) and EULA signature to get access to SPEC PTDaemon
+5. To submit under the `available` category your submission system must be available (in whole or in parts and either publicly or to customers) and the software used must be either open source or an **official or beta release** as on the submission deadline. Submissions using nightly release for example cannot be submitted under the available category. 
 
 ### Is there an automatic way to run the MLPerf inference benchmarks?
 
@@ -26,10 +27,11 @@ The previous MLPerf inference results are aggregated in [Collective Knowledge pl
 ### Expected time to do benchmark runs
 1. Closed submission under data enter needs offline and server scenario runs with a minimum of ten minutes needed for both. 
 2. Closed submission under edge category needs single stream, multi-stream (only for R50 and retinanet), and offline scenarios. A minimum of ten minutes are needed for each scenario. 
-3. Further two (three for ResNet50) compliance runs are needed, each taking at least 10 minutes for each scenario.
+3. Further two (three for ResNet50) compliance runs are needed for closed division, each taking at least 10 minutes for each scenario.
 4. SingleStream, MultiStream and Server scenarios use early stopping and so can always finish around 10 minutes
 5. Offline scenario needs a minimum of 24756 input queries to be processed -- can take hours for low-performing models like 3dunet, LLMs, etc.
-6. Power submission needs an extra ranging mode to determine the peak current usage and this often doubles the overall experiment run time.
+6. Open division has no accuracy constraints, no compliance runs required, and can be submitted for any single scenario as well. There is no constraint on the model used also except that the model must be trained on the dataset used in the corresponding MLPerf inference task.
+7. Power submission needs an extra ranging mode to determine the peak current usage and this often doubles the overall experiment run time.
 
 ## Changes from MLCommons Inference 3.0
 
@@ -37,5 +39,18 @@ The previous MLPerf inference results are aggregated in [Collective Knowledge pl
 2. Submission checker is now checking for non-empty README files and mandatory system description and power-related fields
 3. New script is provided which can be used to infer scenario results and low-accuracy results from a high-accuracy result
 4. `min_query_count` is removed for all scenarios except offline due to early stopping. SingleStream now needs a minimum of 64 queries and MultiStream needs 662 queries as mandated by the early stopping criteria.
+
+## Validity of the submission
+
+1. [MLCommons Inference submission checker](https://github.com/mlcommons/inference/blob/master/tools/submission/submission_checker.py) is provided to ensure that all submissions are passing the required checks.
+2. In the unlikely event that there is an error on the submission checker for your submission, please raise a Github issue [here](https://github.com/mlcommons/inference/issues)
+3. Any submission passing the submission checker is valid to go to the review discussions but submitters are still required to answer any queries and fix any issues being reported by other submitters.
+
+### Reviewing other submissions
+1. Ensure that the `system_desc_id.json` file is having meaningful responses - submission_checker only checks for the existence of the fields.
+2. For power submissions, `power settings` and `analyzer table` files are to be submitted, and even though the submission checker checks for the existence of these files, the content of [these files](https://github.com/mlcommons/inference_policies/blob/master/power_measurement.adoc#64-power-management-settings) must be checked manually for validity.
+3. README files in the submission directory must be checked to make sure that the instructions are reproducible.
+4. For closed datacenter submissions, [ECC RAM and Networking requirements](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#constraints-for-the-closed-division) must be ensured.
+5. Submission checker might be reporting warnings and some of these warnings can warrant an answer from the submitter.
 
 

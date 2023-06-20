@@ -20,7 +20,7 @@ The below command will automatically preprocess the dataset for a given backend,
 ** Please adjust the `target_qps` value as per your system performance to get a valid submission
 
 ```
-cm run script --tags=run,mlperf,inference,generate-run-cmds,_submission \
+cmr run "run mlperf inference generate-run-cmds _submission" \
 --quiet --submitter="MLCommons" --hw_name=default --model=retinanet --implementation=reference \
 --backend=onnxruntime --device=cpu --scenario=Offline --adr.compiler.tags=gcc  --target_qps=1 \
 --category=edge --division=open

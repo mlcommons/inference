@@ -25,7 +25,7 @@ The below command will automatically preprocess the dataset for a given backend,
 
 
 ```
-cm run script --tags=run,mlperf,inference,generate-run-cmds,_submission \
+cmr "run mlperf inference generate-run-cmds _submission" \
 --quiet --submitter="MLCommons" --hw_name=default --model=resnet50 --implementation=reference \
 --backend=onnxruntime --device=cpu --scenario=Offline --adr.compiler.tags=gcc  --target_qps=1 \
 --category=edge --division=open

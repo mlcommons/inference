@@ -51,12 +51,14 @@ CFLAGS="-std=c++14 -O3" python setup.py develop
 
 ### Download & Process Dataset
 Downloads the raw data, processes and saves it as json file inside data/
-```python
+```bash
+cd $HOME/inference/language/gpt3/megatron
 python download_cnndm.py
 ```
 ### Calibration
 Downloads CNN-Daily Mail dataset and creates the calibration dataset (JSON) for post-training quantization
-```
+```bash
+cd $HOME/inference/language/gpt3/megatron
 pip install datasets
 python prepare-calibration.py --calibration-list-file calibration-list.txt --output-dir </path/to/output-folder>
 ```
@@ -65,7 +67,7 @@ TODO: Share tokenizer links
 
 Temporary private link:
 ```bash
-cd $HOME/inference/language/gpt3/data/
+cd $HOME/inference/language/gpt3/megatron/data/
 gsutil cp gs://mlperf-llm-public2/vocab/c4_en_301_5Mexp2_spm.model .
 ```
 ### Download GPT-3 model
@@ -73,10 +75,11 @@ TODO: Share checkpoint link
 
 Temporary private link:
 ```bash
-cd $HOME/inference/language/gpt3/
+cd $HOME/inference/language/gpt3/megatron/
 mkdir model
+cd $HOME/inference/language/gpt3/megatron/model/
 gcloud auth login
-gcloud storage cp "gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/language_model*" .
+# gcloud storage cp "gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/language_model*" .
 gsutil -m cp -r "gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/language_model*" .
 gsutil cp gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/metadata.json .
 ```
@@ -87,18 +90,18 @@ export MEGATRON_PATH=$HOME/training/large_language_model/megatron-lm
 ```
 In one terminal, run the text generation server. For this 8 gpus are necessary:
 ```bash
-cd $HOME/inference/language/gpt3/
+cd $HOME/inference/language/gpt3/megatron/
 ./run_generation_server.sh
 ```
 You can make a debug run with one gpu:
 ```bash
-cd $HOME/inference/language/gpt3/
+cd $HOME/inference/language/gpt3/megatron/
 ./run_generation_server_debug.sh
 ```
 
 In another terminal run the benchmark. This will query the server each time a query for the SUT is generated
 ```bash
-cd $HOME/inference/language/gpt3/
+cd $HOME/inference/language/gpt3/megatron/
 python main.py --scenario=[Offline | Server | SingleStream] --model-path=./model/ --dataset-path=./data/cnn_eval.json [--accuracy] --max_examples=[Maximum number of examples to consider]
 ```
 ### Evaluate accuracy run 

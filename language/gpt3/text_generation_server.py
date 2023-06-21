@@ -154,9 +154,9 @@ if __name__ == "__main__":
         "early_stopping": True,
         "max_new_tokens": 128,
         "min_new_tokens": 30,
-        "top_k": 4,
+        "top_k": 40,
         "top_p": 0.9,
-        "temperature": 0.0,
+        "temperature": 0.5,
     }
     if args.num_layers_per_virtual_pipeline_stage is not None:
         print("Interleaved pipeline schedule is not yet supported for text generation.")

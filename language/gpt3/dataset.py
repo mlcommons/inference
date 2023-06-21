@@ -7,6 +7,9 @@ from megatron.utils import get_ltor_masks_and_position_ids
 import torch
 import argparse
 import utils
+import json
+
+from argparse import Namespace
 
 
 PROMPT_DICT = {
@@ -28,7 +31,7 @@ class Dataset:
         self,
         dataset_path,
         batch_size=1,
-        args=None,
+        args=Namespace(),
         gen_kwards={},
         total_count_override=None,
         perf_count_override=None,

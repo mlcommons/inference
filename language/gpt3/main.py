@@ -85,7 +85,9 @@ def main():
         "early_stopping": True,
         "max_new_tokens": 128,
         "min_new_tokens": 30,
-        "top_k": 4,
+        "top_k": 40,
+        "top_p": 0.9,
+        "temperature": 0.5,
     }
 
     sut = get_SUT(
@@ -102,8 +104,8 @@ def main():
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
     # Need to update the conf
-    settings.FromConfig(args.mlperf_conf, "gptj", args.scenario)
-    settings.FromConfig(args.user_conf, "gptj", args.scenario)
+    settings.FromConfig(args.mlperf_conf, "gpt3", args.scenario)
+    settings.FromConfig(args.user_conf, "gpt3", args.scenario)
 
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly

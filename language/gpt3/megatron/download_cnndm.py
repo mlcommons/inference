@@ -22,7 +22,7 @@ if not isExist:
 # Load dataset from the hub
 dataset = load_dataset(dataset_id, name=dataset_config)
 
-instruction_template = "Summarize the following news article:"
+instruction_template = "summarize: "
 
 
 def preprocess_function(sample, padding="max_length"):

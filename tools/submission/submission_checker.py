@@ -2436,6 +2436,7 @@ def check_results_dir(
                             perf_path = os.path.join(name, "performance", i)
                             if not os.path.exists(perf_path):
                                 log.error("%s is missing", perf_path)
+                                is_valid, r = False, None
                                 continue
                             if has_power:
                                 required_perf_files = (
@@ -2452,7 +2453,7 @@ def check_results_dir(
                                 log.error(
                                     "%s has file list mismatch (%s)", perf_path, diff
                                 )
-                                is_valid = False
+                                is_valid, r = False, None
                                 continue
 
                             try:

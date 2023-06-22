@@ -13,38 +13,13 @@ sys.path.insert(0, os.getcwd())
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--backend",
-        choices=["tf", "pytorch", "onnxruntime", "tf_estimator"],
-        default="pytorch",
-        help="Backend",
-    )
-    parser.add_argument(
         "--scenario",
         choices=["SingleStream", "Offline", "Server", "MultiStream"],
         default="Offline",
         help="Scenario",
     )
-    parser.add_argument("--model-path", default="EleutherAI/gpt-j-6B", help="")
     parser.add_argument("--dataset-path", default="./data/cnn_eval.json", help="")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
-    parser.add_argument(
-        "--dtype",
-        default="float32",
-        help="data type of the model, choose from float16, bfloat16 and float32",
-    )
-    parser.add_argument(
-        "--quantized",
-        action="store_true",
-        help="use quantized model (only valid for onnxruntime backend)",
-    )
-    parser.add_argument(
-        "--profile",
-        action="store_true",
-        help="enable profiling (only valid for onnxruntime backend)",
-    )
-    parser.add_argument(
-        "--gpu", action="store_true", help="use GPU instead of CPU for the inference"
-    )
     parser.add_argument(
         "--mlperf_conf", default="mlperf.conf", help="mlperf rules config"
     )
@@ -59,6 +34,23 @@ def get_args():
         default=13368,
         help="Maximum number of examples to consider (not limited by default)",
     )
+    parser.add_argument(
+        "--make-vocab-size-divisible-by",
+        type=int,
+        default=128,
+        help="Make the vocab size divisible by",
+    )
+    parser.add_argument(
+        "--tensor-model-parallel-size",
+        type=int,
+        default=8,
+        help="Degree of tensor model parallelism.",
+    )
+    parser.add_argument(
+        "--tokenizer-model",
+        default="./data/c4_en_301_5Mexp2_spm.model",
+        help="Path to tokenizer model",
+    )
     args = parser.parse_args()
     return args
 
@@ -70,35 +62,18 @@ scenario_map = {
     "MultiStream": lg.TestScenario.MultiStream,
 }
 
-gen_args = {
-    "max_new_tokens": 128,
-    "min_new_tokens": 30,
-}
-
 
 def main():
     args = get_args()
     os.environ["RANK"] = "0"
     os.environ["MASTER_ADDR"] = "localhost"
     os.environ["MASTER_PORT"] = "29500"
-    gen_kwargs = {
-        "early_stopping": True,
-        "max_new_tokens": 128,
-        "min_new_tokens": 30,
-        "top_k": 40,
-        "top_p": 0.9,
-        "temperature": 0.5,
-    }
 
     sut = get_SUT(
-        model_path=args.model_path,
         scenario=args.scenario,
-        dtype=args.dtype,
         dataset_path=args.dataset_path,
         max_examples=args.max_examples,
         args=args,
-        use_gpu=args.gpu,
-        gen_kwargs=gen_kwargs,
     )
 
     settings = lg.TestSettings()

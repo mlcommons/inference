@@ -13,13 +13,9 @@ from dataset import Dataset
 class SUT_base:
     def __init__(
         self,
-        model_path,
-        dtype,
         dataset_path,
         max_examples,
         args,
-        use_gpu=False,
-        gen_kwargs={},
     ):
         # TODO : Pass model file name to init instead of args
         print("Loading PyTorch model...")
@@ -27,20 +23,6 @@ class SUT_base:
         self.dataset_path = dataset_path
         self.url = "http://localhost:5000/api"
         self.headers = {"Content-Type": "application/json"}
-        self.model_path = model_path
-        self.use_gpu = use_gpu
-        self.gen_kwargs = gen_kwargs
-        # dtype
-        if dtype == "bfloat16":
-            self.amp_enabled = True
-            self.amp_dtype = torch.bfloat16
-            print("BF16 autocast")
-        elif dtype == "float16":
-            self.amp_enabled = True
-            self.amp_dtype = torch.float16
-        else:
-            self.amp_enabled = False
-            self.amp_dtype = torch.float32
 
         self.data_object = Dataset(
             self.dataset_path, total_count_override=max_examples, args=args
@@ -99,17 +81,13 @@ class SUT_base:
 
 class SUT_Offline(SUT_base):
     def __init__(
-        self, model_path, dtype, dataset_path, max_examples, args, use_gpu, gen_kwargs,
+        self, dataset_path, max_examples, args,
     ):
         SUT_base.__init__(
             self,
-            model_path,
-            dtype,
             dataset_path,
             max_examples,
             args,
-            use_gpu,
-            gen_kwargs,
         )
 
     """IssueQuery and inference methods implemented in Base class"""
@@ -117,18 +95,14 @@ class SUT_Offline(SUT_base):
 
 class SUT_Server(SUT_base):
     def __init__(
-        self, model_path, dtype, dataset_path, max_examples, args, use_gpu, gen_kwargs,
+        self, dataset_path, max_examples, args,
     ):
 
         SUT_base.__init__(
             self,
-            model_path,
-            dtype,
             dataset_path,
             max_examples,
             args,
-            use_gpu,
-            gen_kwargs,
         )
         self.total_samples_done = 0
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
@@ -142,7 +116,7 @@ class SUT_Server(SUT_base):
         input_length_tensor = self.data_object.source_encoded_input_id_lengths[index]
 
         pred_output_batch = (
-            self.inference_call(input_ids_tensor, input_length_tensor).cpu().numpy()
+            self.inference_call(input_ids_tensor, input_length_tensor)
         )
 
         response_array = array.array("B", pred_output_batch.tobytes())
@@ -156,17 +130,13 @@ class SUT_Server(SUT_base):
 
 class SUT_SingleStream(SUT_base):
     def __init__(
-        self, model_path, dtype, dataset_path, max_examples, args, use_gpu, gen_kwargs,
+        self, dataset_path, max_examples, args,
     ):
         SUT_base.__init__(
             self,
-            model_path,
-            dtype,
             dataset_path,
             max_examples,
             args,
-            use_gpu,
-            gen_kwargs,
         )
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         self.total_samples_done = 0
@@ -179,7 +149,7 @@ class SUT_SingleStream(SUT_base):
         input_length_tensor = self.data_object.source_encoded_input_id_lengths[index]
 
         pred_output_batch = (
-            self.inference_call(input_ids_tensor, input_length_tensor).cpu().numpy()
+            self.inference_call(input_ids_tensor, input_length_tensor)
         )
 
         response_array = array.array("B", pred_output_batch.tobytes())
@@ -192,42 +162,26 @@ class SUT_SingleStream(SUT_base):
 
 
 def get_SUT(
-    model_path,
     scenario,
-    dtype,
     dataset_path,
     max_examples,
     args,
-    use_gpu=False,
-    gen_kwargs={},
 ):
     if scenario == "Offline":
         return SUT_Offline(
-            model_path,
-            dtype,
             dataset_path,
             max_examples,
             args,
-            use_gpu,
-            gen_kwargs=gen_kwargs,
         )
     elif scenario == "Server":
         return SUT_Server(
-            model_path,
-            dtype,
             dataset_path,
             max_examples,
             args,
-            use_gpu,
-            gen_kwargs=gen_kwargs,
         )
     elif scenario == "SingleStream":
         return SUT_SingleStream(
-            model_path,
-            dtype,
             dataset_path,
             max_examples,
             args,
-            use_gpu,
-            gen_kwargs=gen_kwargs,
         )

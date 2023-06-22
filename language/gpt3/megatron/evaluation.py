@@ -5,6 +5,7 @@ import nltk
 
 import evaluate
 import argparse
+from argparse import Namespace
 
 
 def get_args():
@@ -12,6 +13,11 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json")
     parser.add_argument("--dataset-file", required=True, help="path to cnn_eval.json")
+    parser.add_argument(
+        "--tokenizer-model",
+        default="./data/c4_en_301_5Mexp2_spm.model",
+        help="Path to tokenizer model",
+    )
     parser.add_argument("--verbose", action="store_true", help="verbose messages")
     args = parser.parse_args()
     return args
@@ -28,14 +34,13 @@ def postprocess_text(preds, targets):
 
 
 def main():
-
     args = get_args()
     dataset_path = args.dataset_file
     metric = evaluate.load("rouge")
     nltk.download('punkt')
-
-
-    data_object = Dataset(dataset_path)
+    
+    dataset_args = Namespace(tokenizer_model = args.tokenizer_model)
+    data_object = Dataset(dataset_path, args=dataset_args)
 
     targets = data_object.targets
 

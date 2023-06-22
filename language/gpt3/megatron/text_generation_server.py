@@ -95,7 +95,6 @@ class MegatronGenerate(Resource):
                             input_ids_tensor,
                             input_length_tensor,
                             top_k=self.gen_kwargs.get("top_k", 4),
-                            # top_p = self.gen_kwargs.get("top_p", 0.9),
                             temperature=self.gen_kwargs.get("temperature", 0.0),
                         )
                         output_batch_truncated = []
@@ -155,7 +154,6 @@ if __name__ == "__main__":
         "max_new_tokens": 128,
         "min_new_tokens": 30,
         "top_k": 40,
-        "top_p": 0.9,
         "temperature": 0.5,
     }
     if args.num_layers_per_virtual_pipeline_stage is not None:
@@ -171,7 +169,7 @@ if __name__ == "__main__":
     model = model[0]
     if mpu.is_pipeline_first_stage() and mpu.get_tensor_model_parallel_rank() == 0:
         server = MegatronServer(model, gen_kwargs)
-        server.run("0.0.0.0")
+        server.run("127.0.0.1")
 
     while True:
         choice = torch.cuda.LongTensor(1)
@@ -197,8 +195,7 @@ if __name__ == "__main__":
                     input_ids_tensor,
                     input_length_tensor,
                     top_k=gen_kwargs.get("top_k", 4),
-                    # top_p = gen_kwargs.get("top_p", 0.9),
-                    temperature=gen_kwargs.get("temperature", 0.0),
+                    temperature=gen_kwargs.get("temperature", 1.0),
                 )
             except ValueError as ve:
                 pass

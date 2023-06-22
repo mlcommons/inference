@@ -50,10 +50,12 @@ def main():
         qsl_idx = pred['qsl_idx']
         target = targets[qsl_idx]
         target_required.append(target)
-        preds_token_ids.append(np.frombuffer(bytes.fromhex(pred['data']), np.int64))
+        preds = np.frombuffer(bytes.fromhex(pred['data']), np.int64).tolist()
+        preds = [int(p) for p in preds]
+        preds_token_ids.append(preds)
+        
 
     preds_decoded_text = [data_object.tokenizer.detokenize(ids) for ids in preds_token_ids]
-
     preds, targets = postprocess_text(preds_decoded_text, target_required)
 
 

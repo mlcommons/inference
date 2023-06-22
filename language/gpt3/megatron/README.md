@@ -121,7 +121,8 @@ python main.py --scenario=[Offline | Server | SingleStream] --model-path=./model
 ```
 ### Evaluate accuracy run 
 Evaluates the ROGUE scores from the accuracy logs. Only applicable when specifiying [--accuracy] while running main.py
-```
+```bash
+pip install rouge_score
 python evaluation.py --mlperf-accuracy-file ./build/logs/mlperf_log_accuracy.json --dataset-file ./data/cnn_eval.json
 ```
 

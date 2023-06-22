@@ -22,10 +22,10 @@ git checkout -b language 2d8302a6c12e202f7b40b13a43daa95f326fd0ea
 
 ### install requirements
 ```bash
-pip install torch==1.13.0 torchvision==0.14.0 datasets evaluate accelerate simplejson nltk rouge_score pybind11 Ninja numpy==1.19.5 sentencepiece
+pip install torch==1.13.0 torchvision==0.14.0 datasets evaluate accelerate simplejson nltk rouge_score pybind11 Ninja numpy==1.19.5 sentencepiece  zarr tensorstore
 pip install git+https://github.com/NVIDIA/mlperf-common.git
 pip install git+https://github.com/mlperf/logging.git
-
+sudo apt install pybind11-dev
 ```
 
 #### install apex
@@ -41,6 +41,21 @@ pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation -
 ```
 **Warning:** Make sure the Nvidia driver version and the pytorch's version of cuda match
 
+This step takes a several minutes. You can cache this step by running:
+For `pip >= 23.1`
+```bash
+cd $HOME/apex
+pip wheel -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./
+```
+Otherwise
+```bash
+cd $HOME/apex
+pip wheel -v --disable-pip-version-check --no-cache-dir --no-build-isolation --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+```
+Afterthat, you can store the whl file and simply run
+```bash
+pip install <wheel_output_file>.whl
+```
 
 ### Build Loadgen
 ```sh
@@ -80,7 +95,7 @@ mkdir model
 cd $HOME/inference/language/gpt3/megatron/model/
 gcloud auth login
 # gcloud storage cp "gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/language_model*" .
-gsutil -m cp -r "gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/language_model*" .
+gsutil -m rsync -r "gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/" .
 gsutil cp gs://mlperf-llm-public2/nv_gpt3ckpt_00011000_megatron_06162023/metadata.json .
 ```
 ### Running the Benchmark - Megatron

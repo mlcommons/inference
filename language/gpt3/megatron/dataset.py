@@ -14,15 +14,8 @@ from argparse import Namespace
 
 PROMPT_DICT = {
     "prompt_input": (
-        "Below is an instruction that describes a task, paired with an input that provides further context. "
-        "Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n\n### Input:\n{input}\n\n### Response:"
-    ),
-    "prompt_no_input": (
-        "Below is an instruction that describes a task. "
-        "Write a response that appropriately completes the request.\n\n"
-        "### Instruction:\n{instruction}\n\n### Response:"
-    ),
+        "{instruction}{input}"
+    )
 }
 
 
@@ -55,11 +48,9 @@ class Dataset:
         self.tokenizer = build_tokenizer(args)
 
         self.list_data_dict = utils.jload(self.dataset_path)
+        self.max_input_tokens = 2048 - self.gen_kwards.get("max_new_tokens", 128)
 
-        prompt_input, prompt_no_input = (
-            PROMPT_DICT["prompt_input"],
-            PROMPT_DICT["prompt_no_input"],
-        )
+        prompt_input = PROMPT_DICT["prompt_input"]
         self.sources = [
             prompt_input.format_map(example) for example in self.list_data_dict
         ]
@@ -103,7 +94,7 @@ class Dataset:
                 for prompt in prompts
             ]
         else:
-            prompts_tokens = [self.tokenizer.tokenize(prompt) for prompt in prompts]
+            prompts_tokens = [self.tokenizer.tokenize(prompt)[:self.max_input_tokens] for prompt in prompts]
 
         # Now we have a list of list of tokens which each list has a different
         # size. We want to extend this list to:

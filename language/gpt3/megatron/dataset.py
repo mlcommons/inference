@@ -41,14 +41,18 @@ class Dataset:
         ## TODO: provide arguments in command line
         args.rank = 0
         args.tokenizer_type = "SentencePieceTokenizer"
-        args.make_vocab_size_divisible_by = 128
-        args.tensor_model_parallel_size = 8
-        args.vocab_extra_ids = 0
-        args.tokenizer_model = "./data/c4_en_301_5Mexp2_spm.model"
+        if 'make_vocab_size_divisible_by' not in vars(args):
+            args.make_vocab_size_divisible_by = 128
+        if 'make_vocab_size_divisible_by' not in vars(args):
+            args.tensor_model_parallel_size = 8
+        if 'tokenizer_model' not in vars(args):
+            args.tokenizer_model = "./data/c4_en_301_5Mexp2_spm.model"
+        
+        
         self.tokenizer = build_tokenizer(args)
 
         self.list_data_dict = utils.jload(self.dataset_path)
-        self.max_input_tokens = 2048 - self.gen_kwards.get("max_new_tokens", 128)
+        self.max_input_tokens = 2048
 
         prompt_input = PROMPT_DICT["prompt_input"]
         self.sources = [

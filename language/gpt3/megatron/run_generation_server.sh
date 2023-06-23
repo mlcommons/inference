@@ -7,7 +7,7 @@ DISTRIBUTED_ARGS="--nproc_per_node 8 \
                   --master_port 6000"
 
 CHECKPOINT=$HOME/inference/language/gpt3/megatron/model/
-TOKENIZER_MODEL_FILE=$HOME/inference/language/gpt3/data/c4_en_301_5Mexp2_spm.model
+TOKENIZER_MODEL_FILE=$HOME/inference/language/gpt3/megatron/data/c4_en_301_5Mexp2_spm.model
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 

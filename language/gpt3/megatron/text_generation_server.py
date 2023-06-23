@@ -74,7 +74,7 @@ class MegatronGenerate(Resource):
                 print("start time: ", datetime.datetime.now())
 
             try:
-                if self.use_beam_search is not None:
+                if self.use_beam_search:
                     try:
                         MegatronGenerate.send_do_beam_search()  # Tell other ranks we're doing beam_search
                         input_ids_tensor, input_length_tensor = MegatronGenerate.sync_input(
@@ -82,7 +82,6 @@ class MegatronGenerate(Resource):
                         )
                         (
                             output_tokens,
-                            _,
                             _,
                         ) = beam_search_and_return_on_first_stage(
                             self.model,
@@ -101,7 +100,8 @@ class MegatronGenerate(Resource):
                         if self.log:
                             print("end time: ", datetime.datetime.now())
                         return jsonify({"output": output_batch_truncated})
-                    except:
+                    except Exception as e:
+                        print(str(e))
                         print("ERROR")
                         return jsonify({"output": [[]], "is_error": True})
                 else:
@@ -129,7 +129,8 @@ class MegatronGenerate(Resource):
                         if self.log:
                             print("end time: ", datetime.datetime.now())
                         return jsonify({"output": output_batch_truncated})
-                    except:
+                    except Exception as e:
+                        print(str(e))
                         print("ERROR")
                         return jsonify({"output": [[]], "is_error": True})
 

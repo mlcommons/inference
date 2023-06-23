@@ -41,6 +41,7 @@ class Dataset:
         ## TODO: provide arguments in command line
         args.rank = 0
         args.tokenizer_type = "SentencePieceTokenizer"
+        args.vocab_extra_ids = 0
         if 'make_vocab_size_divisible_by' not in vars(args):
             args.make_vocab_size_divisible_by = 128
         if 'make_vocab_size_divisible_by' not in vars(args):

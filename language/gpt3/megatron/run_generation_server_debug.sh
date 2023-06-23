@@ -6,7 +6,7 @@ DISTRIBUTED_ARGS="--nproc_per_node 1 \
                   --master_addr localhost \
                   --master_port 6000"
 
-TOKENIZER_MODEL_FILE=$HOME/inference/language/gpt3/data/c4_en_301_5Mexp2_spm.model
+TOKENIZER_MODEL_FILE=$HOME/inference/language/gpt3/megatron/data/c4_en_301_5Mexp2_spm.model
 
 export CUDA_DEVICE_MAX_CONNECTIONS=1
 

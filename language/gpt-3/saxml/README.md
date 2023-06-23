@@ -2,7 +2,6 @@
 
 git clone https://github.com/mlcommons/inference.git
 cd inference
-cd language/gpt-3/saxml
 
 CWD=$(pwd)
 
@@ -20,13 +19,41 @@ This benchmark uses the cnn_dailymail/3.0.0 dataset from TensorFlow Dataset.
 
 #### TPU
 
-cd tpu
+```
+nano ./language/gpt-3/saxml/tpu/setup_tpu.sh
+```
 
-setup_sax_servers.sh
+edit:
+```
+run_setup_sax_servers="yes"
+```
 
-python publish_sax_models.py --model_name=""
+```
+./language/gpt-3/saxml/tpu/setup_tpu.sh
+```
 
-python publish_sax_models.py --checkpoint_path="gs://jwyang-cloud-tpu-tutorial/gpt3-cnndm/checkpoint_00011000"
+```
+docker exec \
+    --privileged \
+    -it sax-gpt3-admin-server-tpu \
+    ls /mlperf_inference/language/gpt-3/saxml
+```
+
+##### Test Mode
+```
+docker exec \
+    --privileged \
+    -it sax-gpt3-admin-server-tpu \
+    /bin/bash
+```
+```
+python /mlperf_inference/language/gpt-3/saxml/publish_sax_model.py --model_name lmcloudspmd175b64test --wait 180 --unpublish True
+```
+##### Checkpoint Mode
+```
+CHECKPOINT_PATH="gs://mlperf-llm-public2/gpt3-cnndm/checkpoint_00011000"
+python /mlperf_inference/language/gpt-3/saxml/publish_sax_model.py --model_name gpt3175b64 --checkpoint_path=${CHECKPOINT_PATH} --wait 1200
+```
 
 #### GPU
 
@@ -206,8 +233,13 @@ docker exec \
 docker exec \
     --privileged \
     -it sax-admin-server-mlperf-gpt3 \
-    python /mlperf_inference/language/gpt-3/saxml/publish_sax_model.py --model_name lmcloudspmd175b64test
+    python /mlperf_inference/language/gpt-3/saxml/publish_sax_model.py --model_name lmcloudspmd2b4test
 
+
+docker exec \
+    --privileged \
+    -it sax-admin-server-mlperf-gpt3 \
+    python /mlperf_inference/language/gpt-3/saxml/publish_sax_model.py --model_name lmcloudspmd175b64test
 
 ###### publish model
 

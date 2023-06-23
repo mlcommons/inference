@@ -14,19 +14,15 @@
 
 ARG SAXML_BUILD_SOURCE=github
 
-ARG BASE_IMAGE=ubuntu:20.04
+ARG BASE_IMAGE=ubuntu:22.04
 FROM ${BASE_IMAGE} AS base-build-image
 
 ARG SAXML_VERSION_GIT_BRANCH=main
 ARG SAXML_GIT_COMMIT=HEAD
 
-ARG PYTHON_VERSION=3.8
+ARG PYTHON_VERSION=3.10
 ARG DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED TRUE
-
-LABEL maintainer=morgandu@google.com
-LABEL saxml_github_branchtag=${SAXML_VERSION_GIT_BRANCH}
-LABEL saxml_github_commit=${SAXML_GIT_COMMIT}
 
 RUN apt-get -qq update && \
     apt-get -qq install -y --no-install-recommends \
@@ -153,7 +149,6 @@ WORKDIR /saxml
 
 COPY patch/requirements.txt requirements.txt
 COPY patch/saxml/server/pax/lm/params/BUILD saxml/server/pax/lm/params/BUILD
-COPY patch/saxml/server/pax/lm/params/c4.py saxml/server/pax/lm/params/c4.py
 COPY patch/saxml/server/tf/BUILD saxml/server/tf/BUILD
 COPY patch/saxml/server/pax/lm/params/template.py saxml/server/pax/lm/params/template.py
 COPY patch/saxml/server/pax/lm/params/lm_cloud.py saxml/server/pax/lm/params/lm_cloud.py

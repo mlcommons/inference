@@ -47,26 +47,8 @@ pytype_strict_library(
         ":template",
         "//saxml/server:servable_model_registry",
         "//saxml/server/pax:quantization",
-        "//saxml/server/pax/lm:layers",
-        "//third_party/py/jax",
-        "//third_party/py/paxml:base_experiment",
         "//third_party/py/paxml:tasks_lib",
-        "//third_party/py/paxml/tasks/lm/params:lm_cloud",
-        "//third_party/py/praxis:base_input",
-        "//third_party/py/praxis:optimizers",
-        "//third_party/py/praxis:pax_fiddle",
-        "//third_party/py/praxis:schedules",
-        "//third_party/py/praxis/layers",
-        "//third_party/py/praxis/layers:activations",
-    ],
-)
-
-pytype_strict_library(
-    name = "c4",
-    srcs = ["c4.py"],
-    deps = [
-        ":template",
-        "//saxml/server:servable_model_registry",
         "//third_party/py/paxml/tasks/lm/params",
+        "//third_party/py/praxis:pax_fiddle",
     ],
 )

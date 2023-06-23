@@ -1,5 +1,5 @@
 
-# ./language/gpt-3/saxml/tpu/setup.sh
+# ./language/gpt-3/saxml/tpu/setup_tpu.sh
 set -e;
 
 _LOCAL_WORK_DIR="/usr/local/google/home/morgandu/projects/mlcommons-inference/language/gpt-3/saxml"
@@ -9,16 +9,26 @@ _TEST_DIR="tests"
 
 IMAGE_PROJECT_ID="tpu-prod-env-one-vm"
 
-_TPU_USER="root@"
-_TPU_NAME="morgandu-tpu-vm-4"
 RUNTIME_VERSION="v2-alpha-tpuv5-lite"
-PLATFORM_CHIP=tpuv4
+PLATFORM_CHIP=tpuv4 # No need to change across v4 and vlp
 
+# "v4-4" # test mode pass, checkpoint loading memory issue
+# "v4-8" # test mode pass, checkpoint loading memory issue
+# "v4-16" # testing now
+# "vlp-1-2" # build succeeded, single host test mode pass (mainly for build)
+# "vlp-8" # can not access all workers, firewall issue
+# "vlp-16" # can not access all workers, firewall issue
 
-HOST="v4-4"
-# HOST="1-2" # tested
-# HOST="8" not available
-# HOST="16" not available
+HOST_TYPE="v4"
+HOST_COUNT="16"
+
+# HOST_TYPE="vlp"
+# HOST_COUNT="1-2"
+
+HOST=${HOST_TYPE}-${HOST_COUNT}
+echo "HOST: ${HOST}"
+
+_TPU_USER="root@"
 
 run_create_tpu="no"
 run_delete_queued_resource="no"
@@ -47,15 +57,34 @@ if [ ${HOST} == v4-4 ]; then
   ZONE="us-central2-b"
   PLATFORM_TOPOLOGY="2x2x4"
 
-elif [ ${HOST} == 1-2 ]; then
+elif [ ${HOST} == v4-8 ]; then
+
+  PROJECT_ID="tpu-prod-env-one-vm"
+  _SERVICE_ACCOUNT="630405687483-compute@developer.gserviceaccount.com"
+  ACCELERATOR_TYPE="v4-64"
+  ZONE="us-central2-b"
+  PLATFORM_TOPOLOGY="2x4x4"
+
+elif [ ${HOST} == v4-16 ]; then
+
+  PROJECT_ID="tpu-prod-env-one-vm"
+  _SERVICE_ACCOUNT="630405687483-compute@developer.gserviceaccount.com"
+  ACCELERATOR_TYPE="v4-128"
+  ZONE="us-central2-b"
+  PLATFORM_TOPOLOGY="4x4x4"
+  _TPU_NAME="morgandu-tpu-vm-4"
+
+
+elif [ ${HOST} == vlp-1-2 ]; then
 
   PROJECT_ID="tpu-prod-env-small"
   _SERVICE_ACCOUNT="463402977885-compute@developer.gserviceaccount.com"
   ACCELERATOR_TYPE="v5litepod-4"
   ZONE="us-west4-a"
   PLATFORM_TOPOLOGY="2x2"
+  _TPU_NAME="morgandu-tpu-vm-4"
 
-elif [ ${HOST} == 8 ]; then
+elif [ ${HOST} == vlp-8 ]; then
 
   PROJECT_ID="tpu-prod-env-large-cont"
   _SERVICE_ACCOUNT="641569443805-compute@developer.gserviceaccount.com"
@@ -63,7 +92,7 @@ elif [ ${HOST} == 8 ]; then
   ACCELERATOR_TYPE="v5litepod-32"
   PLATFORM_TOPOLOGY="4x8"
 
-elif [ ${HOST} == 16 ]; then
+elif [ ${HOST} == vlp-16 ]; then
 
   PROJECT_ID="tpu-prod-env-large-cont"
   _SERVICE_ACCOUNT="641569443805-compute@developer.gserviceaccount.com"
@@ -71,7 +100,7 @@ elif [ ${HOST} == 16 ]; then
   ACCELERATOR_TYPE="v5litepod-64"
   PLATFORM_TOPOLOGY="8x8"
 
-elif [ ${HOST} == 32 ]; then
+elif [ ${HOST} == vlp-32 ]; then
 
   PROJECT_ID="tpu-prod-env-large-cont"
   _SERVICE_ACCOUNT="641569443805-compute@developer.gserviceaccount.com"
@@ -92,8 +121,8 @@ echo "PLATFORM_TOPOLOGY=${PLATFORM_TOPOLOGY}"
 
 
 # sax
-_SAX_ADMIN_SERVER_IMAGE_NAME="sax-admin-server-mlperf-gpt3"
-_SAX_MODEL_SERVER_IMAGE_NAME="sax-model-server-mlperf-gpt3"
+_SAX_ADMIN_SERVER_IMAGE_NAME="sax-gpt3-admin-server-tpu"
+_SAX_MODEL_SERVER_IMAGE_NAME="sax-gpt3-model-server-tpu"
 echo "_SAX_ADMIN_SERVER_IMAGE_NAME: ${_SAX_ADMIN_SERVER_IMAGE_NAME}"
 echo "_SAX_MODEL_SERVER_IMAGE_NAME: ${_SAX_MODEL_SERVER_IMAGE_NAME}"
 
@@ -117,7 +146,7 @@ echo "CLOUD_TPU_SAX_TEST_TAG: ${CLOUD_TPU_SAX_TEST_TAG}"
 
 if [ ${run_create_tpu} == "yes" ]; then
 
-  if [ ${HOST} == v4-4 ]; then
+  if [ ${HOST_TYPE} == v4 ]; then
 
     echo "Creating a TPU VM ${_TPU_NAME} ...";
     gcloud alpha compute tpus tpu-vm create ${_TPU_NAME} \
@@ -132,7 +161,9 @@ if [ ${run_create_tpu} == "yes" ]; then
         --zone=${ZONE} \
         --command="echo ready" 2>&1);
 
-  else
+  fi
+
+  if [ ${HOST_TYPE} == vlp ]; then
 
     if [ ${run_delete_queued_resource} == "yes" ]; then
       echo "Deleting a previously queued resource ${_TPU_NAME} ...";
@@ -278,9 +309,6 @@ if [ ${run_build_image} == "yes" ]; then
     --command="
       set -ex;
       gcloud auth configure-docker --quiet;
-      cd ~/${_WORK_DIR};
-      cp -r patch ~/${_WORK_DIR}/${_BUILD_DIR}/;
-      ls ~/${_WORK_DIR}/${_BUILD_DIR}/patch;
       cd ~/${_WORK_DIR}/${_BUILD_DIR};
       SAX_ADMIN_SERVER_IMAGE_NAME=${_SAX_ADMIN_SERVER_IMAGE_NAME} \
         SAX_MODEL_SERVER_IMAGE_NAME=${_SAX_MODEL_SERVER_IMAGE_NAME} \

@@ -1063,7 +1063,10 @@ SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1 = [
     "sw_notes",
 ]
 
-SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1 = ["host_networking_card_count"]
+SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1 = [
+    "host_networking_card_count",
+    "system_type_detail"
+]
 
 SYSTEM_DESC_REQUIRED_FIELDS_POWER = [
     "power_management",

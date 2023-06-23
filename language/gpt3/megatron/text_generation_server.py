@@ -12,8 +12,8 @@ from flask_restful import Resource, Api
 from megatron import get_args
 from megatron.text_generation.generation import (
     generate_tokens_probs_and_return_on_first_stage,
+    beam_search_and_return_on_first_stage
 )
-from megatron.text_generation import beam_search_and_post_process
 
 
 from megatron import get_args
@@ -23,8 +23,6 @@ from megatron.checkpointing import load_checkpoint
 from megatron.initialize import initialize_megatron
 from megatron.model import GPTModel
 from megatron.training import get_model
-from megatron.text_generation import generate_and_post_process
-from megatron.text_generation import beam_search_and_post_process
 import torch
 
 
@@ -38,7 +36,7 @@ class MegatronGenerate(Resource):
         self.model = model
         self.log = log
         self.gen_kwargs = gen_kwargs
-        self.beam_width = self.gen_kwargs.get("beam_width", None)
+        self.use_beam_search = self.gen_kwargs.get("use_beam_search", None)
 
     @staticmethod
     def send_do_generate():
@@ -76,10 +74,36 @@ class MegatronGenerate(Resource):
                 print("start time: ", datetime.datetime.now())
 
             try:
-                if self.beam_width is not None:
-                    MegatronGenerate.send_do_beam_search()  # Tell other ranks we're doing beam_search
-                    # TODO: implement beam_search
-                    return jsonify({})
+                if self.use_beam_search is not None:
+                    try:
+                        MegatronGenerate.send_do_beam_search()  # Tell other ranks we're doing beam_search
+                        input_ids_tensor, input_length_tensor = MegatronGenerate.sync_input(
+                            input_ids, input_length
+                        )
+                        (
+                            output_tokens,
+                            _,
+                            _,
+                        ) = beam_search_and_return_on_first_stage(
+                            self.model,
+                            input_ids_tensor,
+                            input_length_tensor,
+                            beam_size=self.gen_kwargs.get("beam_size", 4),
+                            stop_token = self.gen_kwargs.get("beam_stop_token", 50256),
+                            num_return_gen = self.gen_kwargs.get("beam_num_return_gen", 1),
+                            length_penalty = self.gen_kwargs.get("beam_length_penalty", 1),
+                        )
+                        output_batch_truncated = []
+                        for data, source_len in zip(output_tokens, input_length_tensor):
+                            output_batch_truncated.append(
+                                data[source_len:].cpu().numpy().tolist()
+                            )
+                        if self.log:
+                            print("end time: ", datetime.datetime.now())
+                        return jsonify({"output": output_batch_truncated})
+                    except:
+                        print("ERROR")
+                        return jsonify({"output": [[]], "is_error": True})
                 else:
                     try:
                         MegatronGenerate.send_do_generate()  # Tell other ranks we're doing generate
@@ -139,8 +163,15 @@ def model_provider(pre_process=True, post_process=True):
     return model
 
 
+def add_text_generate_args(parser):
+    group = parser.add_argument_group(title='text generation')
+    group.add_argument("--use-beam-search", action = "store_true")
+    return parser
+
+
 if __name__ == "__main__":
     initialize_megatron(
+        extra_args_provider=add_text_generate_args,
         args_defaults={
             "tokenizer_type": "SentencePieceTokenizer",
             "no_load_rng": True,
@@ -155,6 +186,11 @@ if __name__ == "__main__":
         "min_new_tokens": 30,
         "top_k": 40,
         "temperature": 0.5,
+        "use_beam_search": args.use_beam_search,
+        "beam_size": 4,
+        "beam_stop_token": 50256,
+        "beam_num_return_gen": 1,
+        "beam_length_penalty": 1
     }
     if args.num_layers_per_virtual_pipeline_stage is not None:
         print("Interleaved pipeline schedule is not yet supported for text generation.")
@@ -176,6 +212,7 @@ if __name__ == "__main__":
         input_length_tensor = torch.cuda.LongTensor(1)
         torch.distributed.broadcast(choice, 0)
         if choice[0].item() == 0:
+            # Greedy or top-k
             try:
                 torch.distributed.broadcast(input_length_tensor, 0)
                 input_ids_tensor = torch.cuda.LongTensor(
@@ -200,8 +237,29 @@ if __name__ == "__main__":
             except ValueError as ve:
                 pass
         elif choice[0].item() == 1:
+            # Beam search
             try:
-                # TODO: implement beam search
-                pass
+                torch.distributed.broadcast(input_length_tensor, 0)
+                input_ids_tensor = torch.cuda.LongTensor(
+                    [
+                        [
+                            0
+                            for _ in range(
+                                input_length_tensor[0].item()
+                                + gen_kwargs.get("max_new_tokens")
+                            )
+                        ]
+                    ]
+                )
+                torch.distributed.broadcast(input_ids_tensor, 0)
+                beam_search_and_return_on_first_stage(
+                    model,
+                    input_ids_tensor,
+                    input_length_tensor,
+                    beam_size=gen_kwargs.get("beam_size", 4),
+                    stop_token = gen_kwargs.get("beam_stop_token", 50256),
+                    num_return_gen = gen_kwargs.get("beam_num_return_gen", 1),
+                    length_penalty = gen_kwargs.get("beam_length_penalty", 1),
+                )
             except ValueError as ve:
                 pass

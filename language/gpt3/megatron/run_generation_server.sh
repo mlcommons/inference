@@ -27,4 +27,6 @@ torchrun $DISTRIBUTED_ARGS text_generation_server.py   \
        --seed 42  \
        --use-ext-ckpt  \
        --no-load-rng  \
+       --fp16  \
+       --use-beam-search  \
        --load ${CHECKPOINT}

@@ -47,10 +47,10 @@ def main():
         settings.mode = lg.TestMode.AccuracyOnly
     else:
         settings.mode = lg.TestMode.PerformanceOnly
-    if not os.path.exists(log_path):
-        os.makedirs(log_path)
+    if not os.path.exists(args.log_path):
+        os.makedirs(args.log_path)
     log_output_settings = lg.LogOutputSettings()
-    log_output_settings.outdir = log_path
+    log_output_settings.outdir = args.log_path
     log_output_settings.copy_summary_to_stdout = True
     log_settings = lg.LogSettings()
     log_settings.log_output = log_output_settings

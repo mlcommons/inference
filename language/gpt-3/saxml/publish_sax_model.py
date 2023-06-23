@@ -1,8 +1,10 @@
+from absl import app
+from absl import flags
+from absl import logging
+
 import status
 import sax
 import time
-import logging
-
 
 _SAX_CELL = flags.DEFINE_string(
     'sax_cell',
@@ -72,5 +74,5 @@ def main():
   else:
     logging.info("Published models in {}: {}".format(sax_cell, published_models_result))
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+  app.run(main)

@@ -206,7 +206,7 @@ docker exec \
 docker exec \
     --privileged \
     -it sax-admin-server-mlperf-gpt3 \
-    python /mlperf_inference/language/gpt-3/saxml/publish_sax_model.py
+    python /mlperf_inference/language/gpt-3/saxml/publish_sax_model.py --model_name lmcloudspmd175b64test
 
 
 ###### publish model

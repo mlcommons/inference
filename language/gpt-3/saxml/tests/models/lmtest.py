@@ -5,7 +5,6 @@ from absl import logging
 import status
 import sax
 import time
-import logging
 
 _SAX_CELL = flags.DEFINE_string(
     'sax_cell',

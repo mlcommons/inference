@@ -80,11 +80,8 @@ class LMTokenizer(base_hyperparams.FiddleBaseParameterizable):
     batch = tf.shape(strs)[0]
     # labels is a ragged Tensor.
     if p.tokenized:
-      print('strs:', str)
       labels_in_str = tf.strings.split(strs, sep=',', maxsplit=-1)
-      print('labels_in_str:', labels_in_str)
       labels = tf.strings.to_number(labels_in_str, out_type=tf.int32)
-      print('labels:', labels)
     else:
       labels = self._vocab.tf_tokenizer.tokenize(strs)
     if p.slice_left:

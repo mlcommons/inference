@@ -1,6 +1,8 @@
 import abc
 import os
 import time
+import array
+import random
 
 import numpy as np
 import sax
@@ -81,7 +83,7 @@ class SUT_Offline(SUT_base):
 
             pred_output = self.inference_call(input_sample)
 
-            response_array = array.array("B", pred_output)
+            response_array = array.array("B", pred_output.tobytes())
             buffer_info = response_array.buffer_info()
             response = [lg.QuerySampleResponse(
                 query_samples[i].id, buffer_info[0], buffer_info[1])]
@@ -107,10 +109,10 @@ class SUT_Server(SUT_base):
 
         pred_output = self.inference_call(input_sample)
 
-        response_array = array.array("B", pred_output)
+        response_array = array.array("B", pred_output.tobytes())
         buffer_info = response_array.buffer_info()
         response = [lg.QuerySampleResponse(
-            query_samples[i].id, buffer_info[0], buffer_info[1])]
+            query_samples[0].id, buffer_info[0], buffer_info[1])]
         lg.QuerySamplesComplete(response)
 
     def inference_call(self, input_sample):

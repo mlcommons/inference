@@ -15,11 +15,10 @@ RUNTIME_VERSION="v2-alpha-tpuv5-lite"
 PLATFORM_CHIP=tpuv4
 
 
-# HOST="v4-4"
-# HOST="1-2"
-# HOST="8"
-# HOST="16"
-HOST="1-2"
+HOST="v4-4"
+# HOST="1-2" # tested
+# HOST="8" not available
+# HOST="16" not available
 
 run_create_tpu="no"
 run_delete_queued_resource="no"
@@ -37,7 +36,7 @@ run_docker_push_for_test="no"
 run_pull_for_test="no"
 
 run_setup_sax_servers="yes"
-run_test="yes"
+run_test="no"
 
 
 if [ ${HOST} == v4-4 ]; then

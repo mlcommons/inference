@@ -15,15 +15,15 @@ This benchmark uses the cnn_dailymail/3.0.0 dataset from TensorFlow Dataset.
 
 ## Benchmark
 
-### Setup
+### TPU
 
-#### TPU
+#### Setup
 
 ```
 nano ./language/gpt-3/saxml/tpu/setup_tpu.sh
 ```
 
-edit:
+set
 ```
 run_setup_sax_servers="yes"
 ```
@@ -36,26 +36,86 @@ run_setup_sax_servers="yes"
 docker exec \
     --privileged \
     -it sax-gpt3-admin-server-tpu \
-    ls /mlperf_inference/language/gpt-3/saxml
+    /bin/bash
+
+cd /mlperf_inference/language/gpt-3/saxml/
+
 ```
 
-##### Test Mode
+#### Test
 ```
-docker exec \
-    --privileged \
-    -it sax-gpt3-admin-server-tpu \
-    /bin/bash
+python publish_sax_model.py \
+  --model_name lmcloudspmd2b4test \
+  --wait 60 \
+  --unpublish True
+
+python publish_sax_model.py \
+  --model_name lmcloudspmd175b64test \
+  --wait 180 \
+  --unpublish True
 ```
-```
-python /mlperf_inference/language/gpt-3/saxml/publish_sax_model.py --model_name lmcloudspmd175b64test --wait 180 --unpublish True
-```
-##### Checkpoint Mode
+
+#### Load Checkpoint
+
 ```
 CHECKPOINT_PATH="gs://mlperf-llm-public2/gpt3-cnndm/checkpoint_00011000"
-python /mlperf_inference/language/gpt-3/saxml/publish_sax_model.py --model_name gpt3175b64 --checkpoint_path=${CHECKPOINT_PATH} --wait 1200
+
+python publish_sax_model.py \
+  --model_name gpt3175b64 \
+  --checkpoint_path=${CHECKPOINT_PATH} \
+  --wait 1200
 ```
 
-#### GPU
+#### Run Loadgen
+```
+pip install seqio
+pip install rouge_score
+export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+
+
+# MODEL_PATH=/sax/test/lmcloudspmd2b4test
+# MODEL_PATH=/sax/test/lmcloudspmd175b64test
+# MODEL_PATH=/sax/test/gpt3175b64
+
+python main.py \
+  --scenario Server \
+  --model-path ${MODEL_PATH} \
+  --accuracy \
+  --max-examples 10 \
+  --perf-examples 10
+
+python main.py \
+  --scenario Offline \
+  --model-path ${MODEL_PATH} \
+  --batch-size 10 \
+  --accuracy \
+  --max-examples 50 \
+  --perf-examples 10
+
+gsutil cp -r /mlperf_inference/language/gpt-3/saxml/loadgen_logs gs://cnn_dailymail_public/mlperf/loadgen_logs
+
+```
+#### Run Eval
+
+```
+SPM_PATH=gs://mlperf-llm-public2/vocab/c4_en_301_5Mexp2_spm.model
+
+SPM_PATH=gs://cnn_dailymail_public/mlperf/vocab/test_model.model
+
+python evaluation.py \
+  --mlperf-accuracy-file /mlperf_inference/language/gpt-3/saxml/loadgen_logs/Server/accuracy/mlperf_log_accuracy.json \
+  --spm-path ${SPM_PATH}
+
+python evaluation.py \
+  --mlperf-accuracy-file /mlperf_inference/language/gpt-3/saxml/loadgen_logs/Offline/accuracy/mlperf_log_accuracy.json \
+  --spm-path ${SPM_PATH}
+
+
+gsutil cp -r /mlperf_inference/language/gpt-3/saxml/evaluation_logs gs://cnn_dailymail_public/mlperf/evaluation_logs
+
+```
+
+### GPU
 
 GPU_NAME=morgandu-a100
 PROJECT_ID=tpu-prod-env-one-vm

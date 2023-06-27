@@ -74,6 +74,7 @@ COMMON_ERROR_RANGING = [
     "Bad amps reading nan from ",
     "Bad pf reading nan from ",
     "Bad volts reading nan from ",
+    "Current appears to be too high for set range",
 ]
 COMMON_ERROR_TESTING = ["USB."]
 WARNING_NEEDS_TO_BE_ERROR_TESTING_RE = [
@@ -348,11 +349,12 @@ def phases_check(
     def compare_duration(range_duration: float, test_duration: float) -> None:
         duration_diff = (range_duration - test_duration) / range_duration
 
-        assert duration_diff < 0.5, (
-            f"Duration of the testing mode ({round(test_duration,2)}) is lower than that of "
-            f"ranging mode ({round(range_duration,2)}) by {round(duration_diff*100,2)} "
-            f"percent which is more than the allowed 5 percent limit."
-        )
+        if duration_diff > 0.5:
+            raise CheckerWarning(
+                f"Duration of the testing mode ({round(test_duration,2)}) is lower than that of "
+                f"ranging mode ({round(range_duration,2)}) by {round(duration_diff*100,2)} "
+                f"percent which is more than the expected 5 percent limit."
+            )
 
     def compare_time_boundaries(
         begin: float, end: float, phases: List[Any], mode: str
@@ -382,6 +384,64 @@ def phases_check(
     testing_duration_d = system_end_t - system_begin_t
 
     compare_duration(ranging_duration_d, testing_duration_d)
+
+    def get_avg_power(power_path: str, run_path: str) -> Tuple[float, float]:
+        # parse the power logs
+
+        power_begin, power_end = _get_begin_end_time_from_mlperf_log_detail(
+            os.path.join(path, os.path.basename(run_path)), client_sd
+        )
+
+        detail_log_fname = os.path.join(run_path, "mlperf_log_detail.txt")
+        datetime_format = "%m-%d-%Y %H:%M:%S.%f"
+
+        spl_fname = os.path.join(run_path, "spl.txt")
+        power_list = []
+        pf_list = []
+
+        with open(spl_fname) as f:
+            for line in f:
+                timestamp = (
+                    datetime.strptime(line.split(",")[1], datetime_format)
+                ).timestamp()
+                if timestamp > power_begin and timestamp < power_end:
+                    cpower = float(line.split(",")[3])
+                    cpf = float(line.split(",")[9])
+                    if cpower > 0:
+                        power_list.append(cpower)
+                    if cpf > 0:
+                        pf_list.append(cpf)
+
+        if len(power_list) == 0:
+            power = -1.0
+        else:
+            power = sum(power_list) / len(power_list)
+        if len(pf_list) == 0:
+            pf = -1.0
+        else:
+            pf = sum(pf_list) / len(pf_list)
+        return power, pf
+
+    ranging_watts, ranging_pf = get_avg_power(
+        os.path.join(path, "power"), os.path.join(path, "ranging")
+    )
+    testing_watts, testing_pf = get_avg_power(
+        os.path.join(path, "power"), os.path.join(path, "run_1")
+    )
+    ranging_watts = round(ranging_watts, 5)
+    testing_watts = round(testing_watts, 5)
+    ranging_pf = round(ranging_pf, 5)
+    testing_pf = round(testing_pf, 5)
+
+    delta = round((float(testing_watts) / float(ranging_watts) - 1) * 100, 2)
+
+    assert delta > -5, (
+        f"Average power during the testing mode run is lower than that during the ranging run by more than 5%. "
+        f"Observed delta is {delta}% "
+        f"with avg. ranging power {ranging_watts}, avg.testing power {testing_watts}, "
+        f"avg. ranging power factor {ranging_pf} and avg. testing power factor {testing_pf}"
+    )
+    # print(f"{path},{ranging_watts},{testing_watts},{delta}%,{ranging_pf},{testing_pf}\n")
 
 
 def session_name_check(

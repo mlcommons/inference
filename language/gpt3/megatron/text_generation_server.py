@@ -91,6 +91,7 @@ class MegatronGenerate(Resource):
                             stop_token = self.gen_kwargs.get("beam_stop_token", 50256),
                             num_return_gen = self.gen_kwargs.get("beam_num_return_gen", 1),
                             length_penalty = self.gen_kwargs.get("beam_length_penalty", 1),
+                            min_length = self.gen_kwargs.get("min_new_tokens", 30),
                         )
                         output_batch_truncated = []
                         for data, source_len in zip(output_tokens, input_length_tensor):
@@ -120,6 +121,7 @@ class MegatronGenerate(Resource):
                             input_length_tensor,
                             top_k=self.gen_kwargs.get("top_k", 4),
                             temperature=self.gen_kwargs.get("temperature", 0.0),
+                            min_length = gen_kwargs.get("min_new_tokens", 30),
                         )
                         output_batch_truncated = []
                         for data, source_len in zip(output_tokens, input_length_tensor):
@@ -234,6 +236,7 @@ if __name__ == "__main__":
                     input_length_tensor,
                     top_k=gen_kwargs.get("top_k", 4),
                     temperature=gen_kwargs.get("temperature", 1.0),
+                    min_length = gen_kwargs.get("min_new_tokens", 30),
                 )
             except ValueError as ve:
                 pass
@@ -261,6 +264,7 @@ if __name__ == "__main__":
                     stop_token = gen_kwargs.get("beam_stop_token", 50256),
                     num_return_gen = gen_kwargs.get("beam_num_return_gen", 1),
                     length_penalty = gen_kwargs.get("beam_length_penalty", 1),
+                    min_length = gen_kwargs.get("min_new_tokens", 30),
                 )
             except ValueError as ve:
                 pass

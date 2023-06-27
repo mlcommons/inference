@@ -1,5 +1,7 @@
 # GPT-J Reference Implementation
 
+Please see [this readme](README_cm.md) file for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
+
 ### Setup Instructions
 
 ```bash
@@ -73,7 +75,7 @@ Replace the model and dataset path arguments with your corresponding paths. For 
 python main.py --scenario=[Offline | Server | SingleStream] --model-path=./model/ --dataset-path=./data/cnn_eval.json [--accuracy] --max_examples=[Maximum number of examples to consider] [--gpu]
 ```
 ### Evaluate accuracy run 
-Evaluates the ROGUE scores from the accuracy logs. Only applicable when specifiying [--accuracy] while running main.py
+Evaluates the ROGUE scores from the accuracy logs. Only applicable when specifying [--accuracy] while running main.py
 ```
 python evaluation.py --mlperf-accuracy-file ./build/logs/mlperf_log_accuracy.json --dataset-file ./data/cnn_eval.json
 ```

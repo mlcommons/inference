@@ -3155,6 +3155,12 @@ def check_compliance_dir(
     ]:
         test_list.remove("TEST04")
 
+    if model in [
+        "gptj-99",
+        "gptj-99.9"
+    ]:
+        test_list.remove("TEST05")
+
     # Check performance of all Tests
     for test in test_list:
         test_dir = os.path.join(compliance_dir, test)

@@ -61,7 +61,6 @@ class SUT_base:
 
     def inference_call(self, input_ids_tensor, input_length_tensor):
         """Common for all scenarios"""
-        # TODO: Encode the tensors
         data = {"input_ids": input_ids_tensor, "input_length": input_length_tensor}
         response = requests.put(self.url, data=json.dumps(data), headers=self.headers)
         if response.status_code != 200:
@@ -119,7 +118,7 @@ class SUT_Server(SUT_base):
             self.inference_call(input_ids_tensor, input_length_tensor)
         )
 
-        response_array = array.array("B", pred_output_batch.tobytes())
+        response_array = array.array("B", pred_output_batch[0].tobytes())
         bi = response_array.buffer_info()
         responses = [lg.QuerySampleResponse(query_samples[0].id, bi[0], bi[1])]
         lg.QuerySamplesComplete(responses)
@@ -152,7 +151,7 @@ class SUT_SingleStream(SUT_base):
             self.inference_call(input_ids_tensor, input_length_tensor)
         )
 
-        response_array = array.array("B", pred_output_batch.tobytes())
+        response_array = array.array("B", pred_output_batch[0].tobytes())
         bi = response_array.buffer_info()
         responses = [lg.QuerySampleResponse(query_samples[0].id, bi[0], bi[1])]
         lg.QuerySamplesComplete(responses)

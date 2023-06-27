@@ -44,7 +44,7 @@ class Dataset:
         args.vocab_extra_ids = 0
         if 'make_vocab_size_divisible_by' not in vars(args):
             args.make_vocab_size_divisible_by = 128
-        if 'make_vocab_size_divisible_by' not in vars(args):
+        if 'tensor_model_parallel_size' not in vars(args):
             args.tensor_model_parallel_size = 8
         if 'tokenizer_model' not in vars(args):
             args.tokenizer_model = "./data/c4_en_301_5Mexp2_spm.model"

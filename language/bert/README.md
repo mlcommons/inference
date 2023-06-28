@@ -4,6 +4,8 @@ This is the reference implementation for MLPerf Inference benchmarks for Natural
 
 The chosen model is BERT-Large performing SQuAD v1.1 question answering task.
 
+Please see [this readme](README_cm.md) file for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
+
 ## Prerequisites
 
 - [nvidia-docker](https://github.com/NVIDIA/nvidia-docker)

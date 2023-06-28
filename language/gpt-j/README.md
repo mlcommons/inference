@@ -1,5 +1,7 @@
 # GPT-J Reference Implementation
 
+Please see [this readme](README_cm.md) file for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
+
 ### Setup Instructions
 
 ```bash
@@ -53,6 +55,11 @@ Downloads the raw data, processes and saves it as json file inside data/
 ```
 python download_cnndm.py
 ```
+
+_To the extent that any public datasets are referenced by Intel or accessed using tools or code provided by Intel those datasets are provided by the third party indicated as the data source. Intel does not create the data, or datasets, and does not warrant their accuracy or quality. By accessing the public dataset(s) you agree to the terms associated with those datasets and that your use complies with the applicable license._
+
+_Intel expressly disclaims the accuracy, adequacy, or completeness of any public datasets, and is not liable for any errors, omissions, or defects in the data, or for any reliance on the data.  Intel is not liable for any liability or damages relating to your use of public datasets._
+
 ### Calibration
 Downloads CNN-Daily Mail dataset and creates the calibration dataset (JSON) for post-training quantization
 ```
@@ -68,7 +75,7 @@ Replace the model and dataset path arguments with your corresponding paths. For 
 python main.py --scenario=[Offline | Server | SingleStream] --model-path=./model/ --dataset-path=./data/cnn_eval.json [--accuracy] --max_examples=[Maximum number of examples to consider] [--gpu]
 ```
 ### Evaluate accuracy run 
-Evaluates the ROGUE scores from the accuracy logs. Only applicable when specifiying [--accuracy] while running main.py
+Evaluates the ROGUE scores from the accuracy logs. Only applicable when specifying [--accuracy] while running main.py
 ```
 python evaluation.py --mlperf-accuracy-file ./build/logs/mlperf_log_accuracy.json --dataset-file ./data/cnn_eval.json
 ```

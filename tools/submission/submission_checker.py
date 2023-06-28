@@ -894,7 +894,9 @@ MODEL_CONFIG = {
             "3d-unet-99",
             "3d-unet-99.9",
             "gptj-99",
-            "gptj-99.9"
+            "gptj-99.9",
+            "gpt3-99",
+            "gpt3-99.9"
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
@@ -908,6 +910,8 @@ MODEL_CONFIG = {
             "3d-unet-99.9": ["Offline"],
             "gptj-99": ["Server", "Offline"],
             "gptj-99.9": ["Server", "Offline"],
+            "gpt3-99": ["Server", "Offline"],
+            "gpt3-99.9": ["Server", "Offline"],
         },
         "optional-scenarios-datacenter": {},
         "required-scenarios-edge": {
@@ -932,6 +936,8 @@ MODEL_CONFIG = {
             "3d-unet-99.9": ["SingleStream", "Offline"],
             "gptj-99": ["SingleStream", "Offline", "Server"],
             "gptj-99.9": ["Server", "Offline"],
+            "gpt3-99": ["Server", "Offline"],
+            "gpt3-99.9": ["Server", "Offline"],
         },
         "optional-scenarios-datacenter-edge": {},
         "accuracy-target": {
@@ -946,6 +952,9 @@ MODEL_CONFIG = {
             "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
             "gptj-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
             "gptj-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
+            # TODO: Replace with metrics for GPT3
+            "gpt3-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
+            "gpt3-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
         },
         "performance-sample-count": {
             "resnet": 1024,
@@ -959,6 +968,8 @@ MODEL_CONFIG = {
             "3d-unet-99.9": 43,
             "gptj-99": 13368,
             "gptj-99.9": 13368,
+            "gpt3-99": 13368,
+            "gpt3-99.9": 13368,
         },
         # TODO: Update this list.
         "model_mapping": {
@@ -1008,6 +1019,8 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": {"Server": 60000000},
             "gptj-99": {"Server": 20000000000},
             "gptj-99.9": {"Server": 20000000000},
+            "gpt3-99": {"Server": 20000000000},
+            "gpt3-99.9": {"Server": 20000000000},
         },
         "min-queries": {
             "resnet": {
@@ -1031,6 +1044,8 @@ MODEL_CONFIG = {
             "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
             "gptj-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "gpt3-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "gpt3-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
         },
     },
 }
@@ -3151,13 +3166,17 @@ def check_compliance_dir(
         "3d-unet-99.9",
         "retinanet",
         "gptj-99",
-        "gptj-99.9"
+        "gptj-99.9",
+        "gpt3-99",
+        "gpt3-99.9",
     ]:
         test_list.remove("TEST04")
 
     if model in [
         "gptj-99",
-        "gptj-99.9"
+        "gptj-99.9",
+        "gpt3-99",
+        "gpt3-99.9",
     ]:
         test_list.remove("TEST05")
 

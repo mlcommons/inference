@@ -46,7 +46,7 @@ class Dataset():
           inputs_str.append(feature_value_str)
         if key == "targets":
           feature_value = feature.int64_list.value
-          inputs.append(feature_value)
+          targets.append(feature_value)
         if key == "inputs_pretokenized":
           feature_value = feature.bytes_list.value[0].decode("utf-8")
           inputs_pretokenized.append(feature_value)

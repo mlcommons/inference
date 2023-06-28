@@ -1,5 +1,5 @@
 
-# ./language/gpt-3/saxml/tpu/setup_tpu.sh
+# ./language/gpt-3/saxml/tpu-2.0/setup_tpu.sh
 set -e;
 
 _LOCAL_WORK_DIR="/usr/local/google/home/morgandu/projects/mlcommons-inference/language/gpt-3/saxml"
@@ -9,26 +9,12 @@ _TEST_DIR="tests"
 
 IMAGE_PROJECT_ID="tpu-prod-env-one-vm"
 
-RUNTIME_VERSION="v2-alpha-tpuv5-lite"
 PLATFORM_CHIP=tpuv4 # No need to change across v4 and vlp
 
-# "v4-4" # test mode pass, checkpoint loading memory issue
-# "v4-8" # test mode pass, checkpoint loading memory issue
-# "v4-16" # testing now
-# "vlp-1-2" # build succeeded, single host test mode pass (mainly for build)
-# "vlp-8" # can not access all workers, firewall issue
-# "vlp-16" # can not access all workers, firewall issue
 
+# HOST_TYPE="build"
 HOST_TYPE="v4"
-HOST_COUNT="16"
-
 # HOST_TYPE="vlp"
-# HOST_COUNT="1-2"
-
-HOST=${HOST_TYPE}-${HOST_COUNT}
-echo "HOST: ${HOST}"
-
-_TPU_USER="root@"
 
 run_create_tpu="no"
 run_delete_queued_resource="no"
@@ -49,67 +35,45 @@ run_setup_sax_servers="yes"
 run_test="no"
 
 
-if [ ${HOST} == v4-4 ]; then
+_TPU_USER="root@"
+_TPU_NAME="morgandu-tpu-vm-4"
 
-  PROJECT_ID="tpu-prod-env-one-vm"
-  _SERVICE_ACCOUNT="630405687483-compute@developer.gserviceaccount.com"
-  ACCELERATOR_TYPE="v4-32"
-  ZONE="us-central2-b"
-  PLATFORM_TOPOLOGY="2x2x4"
+if [ ${HOST_TYPE} == v4 ]; then
 
-elif [ ${HOST} == v4-8 ]; then
-
-  PROJECT_ID="tpu-prod-env-one-vm"
-  _SERVICE_ACCOUNT="630405687483-compute@developer.gserviceaccount.com"
-  ACCELERATOR_TYPE="v4-64"
-  ZONE="us-central2-b"
-  PLATFORM_TOPOLOGY="2x4x4"
-
-elif [ ${HOST} == v4-16 ]; then
-
+  HOST="v4-16"
   PROJECT_ID="tpu-prod-env-one-vm"
   _SERVICE_ACCOUNT="630405687483-compute@developer.gserviceaccount.com"
   ACCELERATOR_TYPE="v4-128"
   ZONE="us-central2-b"
   PLATFORM_TOPOLOGY="4x4x4"
-  _TPU_NAME="morgandu-tpu-vm-4"
+  RUNTIME_VERSION="tpu-vm-v4-base"
 
+elif [ ${HOST_TYPE} == build ]; then
 
-elif [ ${HOST} == vlp-1-2 ]; then
-
+  HOST="vlp-1-2"
   PROJECT_ID="tpu-prod-env-small"
   _SERVICE_ACCOUNT="463402977885-compute@developer.gserviceaccount.com"
   ACCELERATOR_TYPE="v5litepod-4"
   ZONE="us-east1-c"
   PLATFORM_TOPOLOGY="2x2"
-  _TPU_NAME="morgandu-tpu-vm-4"
+  RUNTIME_VERSION="v2-alpha-tpuv5-lite"
 
-elif [ ${HOST} == vlp-8 ]; then
+elif [ ${HOST_TYPE} == vlp ]; then
 
-  PROJECT_ID="tpu-prod-env-large-cont"
-  _SERVICE_ACCOUNT="641569443805-compute@developer.gserviceaccount.com"
-  ZONE="us-east1-c"
-  ACCELERATOR_TYPE="v5litepod-32"
-  PLATFORM_TOPOLOGY="4x8"
-
-elif [ ${HOST} == vlp-16 ]; then
-
-  PROJECT_ID="tpu-prod-env-large-cont"
-  _SERVICE_ACCOUNT="641569443805-compute@developer.gserviceaccount.com"
-  ZONE="us-east1-c"
-  ACCELERATOR_TYPE="v5litepod-64"
-  PLATFORM_TOPOLOGY="8x8"
-
-elif [ ${HOST} == vlp-32 ]; then
-
+  HOST="vlp-32"
   PROJECT_ID="tpu-prod-env-large-cont"
   _SERVICE_ACCOUNT="641569443805-compute@developer.gserviceaccount.com"
   ZONE="us-east1-c"
   ACCELERATOR_TYPE="v5litepod-128"
   PLATFORM_TOPOLOGY="8x16"
+  RUNTIME_VERSION="v2-alpha-tpuv5-lite"
 
 fi
 
+echo "HOST_TYPE: ${HOST_TYPE}"
+echo "HOST: ${HOST}"
+
+echo "_TPU_USER: ${_TPU_USER}"
 echo "_TPU_NAME: ${_TPU_NAME}"
 
 echo "PROJECT_ID=${PROJECT_ID}"
@@ -138,7 +102,7 @@ echo "_SAX_ADMIN_STORAGE_BUCKET: ${_SAX_ADMIN_STORAGE_BUCKET}"
 
 _CLOUD_TPU_SAX_ADMIN_SERVER_IMAGE_NAME="gcr.io/${IMAGE_PROJECT_ID}/${_SAX_ADMIN_SERVER_IMAGE_NAME}"
 _CLOUD_TPU_SAX_MODEL_SERVER_IMAGE_NAME="gcr.io/${IMAGE_PROJECT_ID}/${_SAX_MODEL_SERVER_IMAGE_NAME}"
-CLOUD_TPU_SAX_TEST_TAG="latest"
+CLOUD_TPU_SAX_TEST_TAG="2.0"
 echo "_CLOUD_TPU_SAX_ADMIN_SERVER_IMAGE_NAME: ${_CLOUD_TPU_SAX_ADMIN_SERVER_IMAGE_NAME}"
 echo "_CLOUD_TPU_SAX_MODEL_SERVER_IMAGE_NAME: ${_CLOUD_TPU_SAX_MODEL_SERVER_IMAGE_NAME}"
 echo "CLOUD_TPU_SAX_TEST_TAG: ${CLOUD_TPU_SAX_TEST_TAG}"

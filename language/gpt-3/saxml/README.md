@@ -32,6 +32,23 @@ run_setup_sax_servers="yes"
 ./language/gpt-3/saxml/tpu/setup_tpu.sh
 ```
 
+#### SSH to TPUVM
+
+```
+gcloud compute tpus tpu-vm ssh ${_TPU_USER}${_TPU_NAME} \
+        --project=${PROJECT_ID} \
+        --zone=${ZONE}
+```
+#### Get logs from the container
+```
+docker logs -f sax-gpt3-model-server-tpu
+```
+```
+docker logs -f sax-gpt3-admin-server-tpu
+```
+
+#### Execute Inside `sax-gpt3-admin-server-tpu` Container
+
 ```
 docker exec \
     --privileged \
@@ -41,8 +58,17 @@ docker exec \
 cd /mlperf_inference/language/gpt-3/saxml/
 
 ```
+#### Some Paths
+```
+CNN_TOKENIZED_DATASET_PATH=gs://cnn_dailymail_public/mlperf/tokenized_cnn_dailymail_3.0.0/cnn_dailymail-validation.tfrecord-00000-of-00001
+GPT3_SPM_PATH=gs://mlperf-llm-public2/vocab/c4_en_301_5Mexp2_spm.model
+GPT3_CHECKPOINT_PATH=gs://mlperf-llm-public2/gpt3-cnndm/checkpoint_00011000
 
-#### Test
+GPT3_MODEL_PATH=/sax/test/gpt3175b64
+```
+#### Publish
+
+##### Publish Model in TestMode
 ```
 python publish_sax_model.py \
   --model_name lmcloudspmd2b4test \
@@ -51,14 +77,14 @@ python publish_sax_model.py \
 
 python publish_sax_model.py \
   --model_name lmcloudspmd175b64test \
-  --wait 180 \
+  --wait 360 \
   --unpublish True
 ```
 
-#### Load Checkpoint
+##### Publish Model with GPT3 Checkpoint
 
 ```
-CHECKPOINT_PATH="gs://mlperf-llm-public2/gpt3-cnndm/checkpoint_00011000"
+CHECKPOINT_PATH=${GPT3_CHECKPOINT_PATH}
 
 python publish_sax_model.py \
   --model_name gpt3175b64 \
@@ -66,51 +92,142 @@ python publish_sax_model.py \
   --wait 1200
 ```
 
-#### Run Loadgen
+#### Loadgen
+
+##### TODO: Added inside the container
 ```
 pip install seqio
 pip install rouge_score
 export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
+```
+
+##### Test Loadgen
+
+```
+# with TestMode Models
+MODEL_PATH=/sax/test/lmcloudspmd2b4test
+MODEL_PATH=/sax/test/lmcloudspmd175b64test
+
+# with GPT3 Model
+MODEL_PATH=${GPT3_MODEL_PATH}
+
+```
 
 
-# MODEL_PATH=/sax/test/lmcloudspmd2b4test
-# MODEL_PATH=/sax/test/lmcloudspmd175b64test
-# MODEL_PATH=/sax/test/gpt3175b64
+###### Server
 
+```
 python main.py \
   --scenario Server \
   --model-path ${MODEL_PATH} \
+  --dataset-path ${CNN_TOKENIZED_DATASET_PATH} \
   --accuracy \
   --max-examples 10 \
-  --perf-examples 10
+  --perf-examples 10 \
+  --log-interval 2 \
+  --log-path /mlperf_inference/language/gpt-3/saxml/test_loadgen_logs
 
+```
+###### Offline
+
+```
 python main.py \
   --scenario Offline \
   --model-path ${MODEL_PATH} \
-  --batch-size 10 \
+  --dataset-path ${CNN_TOKENIZED_DATASET_PATH} \
+  --batch-size 2 \
   --accuracy \
-  --max-examples 50 \
-  --perf-examples 10
-
-gsutil cp -r /mlperf_inference/language/gpt-3/saxml/loadgen_logs gs://cnn_dailymail_public/mlperf/loadgen_logs
-
-```
-#### Run Eval
+  --max-examples 10 \
+  --perf-examples 10 \
+  --log-interval 2 \
+  --log-path /mlperf_inference/language/gpt-3/saxml/test_loadgen_logs
 
 ```
-SPM_PATH=gs://mlperf-llm-public2/vocab/c4_en_301_5Mexp2_spm.model
+##### Run Loadgen with GPT3 Model
 
+```
+MODEL_PATH=${GPT3_MODEL_PATH}
+```
+
+###### Server
+```
+python main.py \
+  --scenario Server \
+  --model-path ${MODEL_PATH} \
+  --dataset-path ${CNN_TOKENIZED_DATASET_PATH} \
+  --accuracy
+```
+
+###### Offline
+```
+BATCH_SIZE=4
+python main.py \
+  --scenario Offline \
+  --model-path ${MODEL_PATH} \
+  --dataset-path ${CNN_TOKENIZED_DATASET_PATH} \
+  --batch-size ${BATCH_SIZE} \
+  --accuracy
+```
+
+```
+ls /mlperf_inference/language/gpt-3/saxml/loadgen_logs
+```
+#### Evaluation
+
+
+##### Test Evaluation
+```
+# with TestMode Models
 SPM_PATH=gs://cnn_dailymail_public/mlperf/vocab/test_model.model
 
+# with TestMode Models
+SPM_PATH=${GPT3_SPM_PATH}
+
+```
+
+###### Server
+
+```
 python evaluation.py \
+  --mlperf-accuracy-file /mlperf_inference/language/gpt-3/saxml/test_loadgen_logs/Server/accuracy/mlperf_log_accuracy.json \
+  --spm-path ${SPM_PATH} \
+  --dataset-path ${CNN_TOKENIZED_DATASET_PATH} \
+  --log-dir /mlperf_inference/language/gpt-3/saxml/test_evaluation_logs/Server
+
+```
+###### Offline
+
+```
+python evaluation.py \
+  --mlperf-accuracy-file /mlperf_inference/language/gpt-3/saxml/test_loadgen_logs/Offline/accuracy/mlperf_log_accuracy.json \
+  --spm-path ${SPM_PATH} \
+  --dataset-path ${CNN_TOKENIZED_DATASET_PATH} \
+  --log-dir /mlperf_inference/language/gpt-3/saxml/test_evaluation_logs/Offline
+
+```
+##### Run Evaluation with GPT3 Model
+
+###### Server
+
+```
+python evaluation.py \
+  --spm-path ${GPT3_SPM_PATH} \
   --mlperf-accuracy-file /mlperf_inference/language/gpt-3/saxml/loadgen_logs/Server/accuracy/mlperf_log_accuracy.json \
-  --spm-path ${SPM_PATH}
+  --dataset-path ${CNN_TOKENIZED_DATASET_PATH} \
+  --log-dir /mlperf_inference/language/gpt-3/saxml/evaluation_logs/Server
 
+```
+###### Offline
+
+```
 python evaluation.py \
+  --spm-path ${SPM_PATH} \
   --mlperf-accuracy-file /mlperf_inference/language/gpt-3/saxml/loadgen_logs/Offline/accuracy/mlperf_log_accuracy.json \
-  --spm-path ${SPM_PATH}
+  --dataset-path ${CNN_TOKENIZED_DATASET_PATH} \
+  --log-dir /mlperf_inference/language/gpt-3/saxml/evaluation_logs/Offline
+```
 
-
+```
 gsutil cp -r /mlperf_inference/language/gpt-3/saxml/evaluation_logs gs://cnn_dailymail_public/mlperf/evaluation_logs
 
 ```

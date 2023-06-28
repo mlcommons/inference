@@ -11,7 +11,7 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", choices=["Offline", "Server"], default="Offline", help="Scenario")
     parser.add_argument("--model-path", default="/sax/test/gpt3175b64", help="")
-    parser.add_argument("--dataset-path", default="gs://cnn_dailymail_public/mlperf/tokenized_cnn_dailymail_3.0.0/cnn_dailymail-validation.tfrecord-00000-of-00001", help="")
+    parser.add_argument("--dataset-path", required=True, help="The dataset path")
     parser.add_argument("--batch-size", type=int, default=1, help="Batch size for offline SUT")
     parser.add_argument("--max-examples", type=int, default=13368, help="Maximum number of examples to consider (not limited by default)")
     parser.add_argument("--perf-examples", type=int, default=13368, help="Number of examples to consider for performance")
@@ -19,6 +19,7 @@ def get_args():
     parser.add_argument("--mlperf-conf", default="mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user-conf", default="user.conf", help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--log-path", default="/mlperf_inference/language/gpt-3/saxml/loadgen_logs/", help="log path")
+    parser.add_argument("--log-interval", type=int, default=100, help="log interval")
     args = parser.parse_args()
     return args
 
@@ -40,6 +41,7 @@ def main():
         batch_size=args.batch_size,
         max_examples=args.max_examples,
         perf_examples=args.perf_examples,
+        log_interval=args.log_interval,
     )
 
     settings = lg.TestSettings()

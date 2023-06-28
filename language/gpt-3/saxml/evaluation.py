@@ -3,7 +3,7 @@ import numpy as np
 import json
 from rouge_score import rouge_scorer
 import os
-
+from typing import List
 import argparse
 import seqio
 
@@ -11,21 +11,21 @@ import seqio
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--spm-path", default="gs://cnn_dailymail_public/mlperf/vocab/c4_en_301_5Mexp2_spm.model", help="spm path")
-    parser.add_argument("--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json")
-    parser.add_argument("--dataset-path", default="gs://cnn_dailymail_public/mlperf/tokenized_cnn_dailymail_3.0.0/cnn_dailymail-validation.tfrecord-00000-of-00001", help="")
-    parser.add_argument("--log-dir", default="/mlperf_inference/language/gpt-3/saxml/evaluation_logs", help="log path")
+    parser.add_argument("--spm-path", required=True, help="The spm path")
+    parser.add_argument("--mlperf-accuracy-file", required=True, help="The mlperf_log_accuracy.json path")
+    parser.add_argument("--dataset-path", required=True, help="The dataset path")
+    parser.add_argument("--log-dir", required=True, help="The evaluation log dir")
     args = parser.parse_args()
     return args
 
 
-def compute_rogue(targets, predictions):
+def compute_rogue_scores(targets: List[str], predictions: List[str]):
 
     assert len(targets) == len(predictions)
     scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL', 'rougeLsum'], use_stemmer=True)
     print("Compute rouge for {} samples".format(len(targets)))
 
-    r1, r2, rl, rlsum = [], [], [], []
+    rogue_scores, r1, r2, rl, rlsum = dict(), list(), list(), list(), list()
     for target, prediction in zip(targets, predictions):
         scores = scorer.score(target, prediction)
         r1.append(scores['rouge1'])
@@ -33,23 +33,15 @@ def compute_rogue(targets, predictions):
         rl.append(scores['rougeL'])
         rlsum.append(scores['rougeLsum'])
 
-    r1_mean = np.mean(r1)
-    r2_mean = np.mean(r2)
-    rl_mean = np.mean(rl)
-    rlsum_mean = np.mean(rlsum)
+    rogue_scores['r1_mean'] = np.mean(r1)
+    rogue_scores['r2_mean'] = np.mean(r2)
+    rogue_scores['rl_mean'] = np.mean(rl)
+    rogue_scores['rlsum_mean'] = np.mean(rlsum)
 
-    return r1_mean, r2_mean, rl_mean, rlsum_mean
+    rogue_scores['gen_len'] = sum([len(prediction) for prediction in predictions])
+    rogue_scores['gen_num'] = len(predictions)
 
-
-def log_output(targets, predictions, output_file):
-    output = dict()
-    r1, r2, r, rlsum = compute_rogue(targets, predictions)
-    output['rouge1'] = r1
-    output['rouge2'] = r2
-    output['rouge'] = r
-    output['rougeLsum'] = rlsum
-    output["gen_num"] = len(predictions)
-    json.dump(output, open(output_file, 'w'), indent=4)
+    return rogue_scores
 
 
 def main():
@@ -66,24 +58,46 @@ def main():
         results = json.load(f)
 
     targets_pretokenized = []
-    preds_token_ids = []
-    preds_text = []
+    pred_texts = []
 
+    output_results = list()
     for result in results:
+
+        output_result = dict()
+
         qsl_idx = result['qsl_idx']
-        target_pretokenized = dataset.targets_pretokenized[qsl_idx]
-        targets_pretokenized.append(target_pretokenized)
-        pred_token_ids = np.frombuffer(bytes.fromhex(result['data']), np.int64)
-        print('pred_token_ids: ', pred_token_ids)
-        pred_token_ids = pred_token_ids.astype(np.int32).tolist()
-        preds_token_ids.append(pred_token_ids)
+
+        pred_token_ids = np.frombuffer(bytes.fromhex(result['data']), np.int64).astype(np.int32).tolist()
+        pred_token_ids_str = ','.join([str(i) for i in pred_token_ids])
         pred_text = vocabulary.tokenizer.detokenize(pred_token_ids)
-        preds_text.append(pred_text)
+        target_str = ','.join([str(i) for i in list(dataset.targets[qsl_idx])])
+        target_pretokenized = dataset.targets_pretokenized[qsl_idx]
+
+        targets_pretokenized.append(dataset.targets_pretokenized[qsl_idx])
+        pred_texts.append(pred_text)
+
+        output_result['qsl_idx'] = qsl_idx
+        output_result['input_pretokenized'] = dataset.inputs_pretokenized[qsl_idx]
+        output_result['target_pretokenized'] = target_pretokenized
+        output_result['pred_text'] = pred_text
+        output_result['input_str'] = dataset.inputs_str[qsl_idx]
+        output_result['target_str'] = target_str
+        output_result['pred_token_ids_str'] = pred_token_ids_str
+        output_results.append(output_result)
+
+    rogue_scores = compute_rogue_scores(targets=targets_pretokenized, predictions=pred_texts)
+
     if not os.path.exists(args.log_dir):
         os.makedirs(args.log_dir)
 
-    log_file_path = os.path.join(args.log_dir, 'evaluation.json')
-    log_output(targets_pretokenized, preds_text, log_file_path)
+    results_file_path = os.path.join(args.log_dir, 'results.json')
+    output_results_json = json.dumps(output_results, indent=4)
+    with open(results_file_path, "w") as f:
+        json.dump(output_results_json, f)
+
+    scores_file_path = os.path.join(args.log_dir, 'scores.json')
+    with open(scores_file_path, "w") as f:
+        json.dump(rogue_scores, f, indent=4)
 
 
 if __name__ == "__main__":

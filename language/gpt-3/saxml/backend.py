@@ -23,17 +23,20 @@ class SUT_base(abc.ABC):
         batch_size: int = 1,
         max_examples: int = None,
         perf_examples: int = None,
+        log_interval: int = 100,
     ):
 
         self._model_path = model_path
         self._dataset_path = dataset_path
-        assert batch_size >= 1
         self._batch_size = batch_size
         self._max_examples = max_examples
         self._perf_examples = perf_examples
+        self._log_interval = log_interval
+
         self._batch_pred_outputs = []
-        self._completed_queries = 0
-        self._completed_batches = 0
+
+        self._completed_issue_queries = 0
+        self._completed_query_samples = 0
 
         print("Loading Dataset ... ")
         self.dataset = Dataset(
@@ -72,7 +75,7 @@ class SUT_base(abc.ABC):
 
         try:
             pred_output_response = self._language_model.Generate(input_sample)
-            pred_output_str = pred_output_response[-1][0]
+            pred_output_str = pred_output_response[0][0]
             pred_output = np.fromstring(pred_output_str, dtype=int, sep=',')
             return pred_output
 
@@ -87,7 +90,6 @@ class SUT_Offline(SUT_base):
         sample = batch_query_samples[i]
         input_sample = self.dataset.inputs_str[sample.index]
         pred_output = self.inference_call(input_sample)
-        print('pred_output: ', pred_output)
 
         self._batch_pred_outputs.append((sample.id, pred_output))
 
@@ -104,11 +106,11 @@ class SUT_Offline(SUT_base):
 
     def issue_queries(self, query_samples):
 
-        num_queries = len(query_samples)
+        num_issue_queries = self._completed_issue_queries + 1
+        num_query_samples = len(query_samples)
+        print(f"The issued query {num_issue_queries} has {num_query_samples} query samples.")
 
-        print("Number of Samples in query_samples : ", num_queries)
-
-        for i_batch in range(0, num_queries, self._batch_size):
+        for i_batch in range(0, num_query_samples, self._batch_size):
 
             batch_query_samples = query_samples[i_batch:i_batch+self._batch_size]
             self._batch_pred_outputs = []
@@ -120,25 +122,25 @@ class SUT_Offline(SUT_base):
                     sample_id, buffer_info[0], buffer_info[1])
                 lg.QuerySamplesComplete([response])
 
-            if i_batch % 10 == 0:
-                print("Completed batch: ", i_batch)
+        self._completed_issue_queries = num_issue_queries
+        self._completed_query_samples += num_query_samples
 
-            self._completed_batches += 1
-            if self._completed_batches % 10 == 0:
-                print("Total completed batches: ", self._completed_batches)
-
+        if self._completed_query_samples % self._log_interval == 0:
+            print(f"Total completed {self._completed_issue_queries} issue queries and {self._completed_query_samples} query samples.")
 
 
 class SUT_Server(SUT_base):
 
     def issue_queries(self, query_samples):
 
+        num_issue_queries = self._completed_issue_queries + 1
+        num_query_samples = len(query_samples)
+
         sample = query_samples[0]
 
         index = sample.index
         input_sample = self.dataset.inputs_str[index]
         pred_output = self.inference_call(input_sample)
-        print('pred_output: ', pred_output)
         pred_output_bytes = pred_output.tobytes()
         response_array = array.array("B", pred_output_bytes)
         buffer_info = response_array.buffer_info()
@@ -147,14 +149,36 @@ class SUT_Server(SUT_base):
 
         lg.QuerySamplesComplete([response])
 
-        self._completed_queries += 1
-        if self._completed_queries % 10 == 0:
-            print("Total completed queries: ", self._completed_queries)
+        self._completed_issue_queries = num_issue_queries
+        self._completed_query_samples += num_query_samples
+
+        if self._completed_query_samples % self._log_interval == 0:
+            print(f"Total completed {self._completed_issue_queries} issue queries and {self._completed_query_samples} query samples.")
 
 
-
-def get_SUT(scenario, model_path, dataset_path, batch_size, max_examples, perf_examples):
+def get_SUT(
+    scenario: str,
+    model_path: str,
+    dataset_path: str,
+    batch_size: int,
+    max_examples: int,
+    perf_examples: int,
+    log_interval: int
+):
     if scenario == "Offline":
-        return SUT_Offline(model_path, dataset_path, batch_size, max_examples, perf_examples)
+        return SUT_Offline(
+            model_path=model_path,
+            dataset_path=dataset_path,
+            batch_size=batch_size,
+            max_examples=max_examples,
+            perf_examples=perf_examples,
+            log_interval=log_interval,
+        )
     elif scenario == "Server":
-        return SUT_Server(model_path, dataset_path, max_examples, perf_examples)
+        return SUT_Server(
+            model_path=model_path,
+            dataset_path=dataset_path,
+            max_examples=max_examples,
+            perf_examples=perf_examples,
+            log_interval=log_interval,
+        )

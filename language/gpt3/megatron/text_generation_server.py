@@ -88,7 +88,7 @@ class MegatronGenerate(Resource):
                             input_ids_tensor,
                             input_length_tensor,
                             beam_size=self.gen_kwargs.get("beam_size", 4),
-                            stop_token = self.gen_kwargs.get("beam_stop_token", 50256),
+                            stop_token = self.gen_kwargs.get("beam_stop_token", 50259),
                             num_return_gen = self.gen_kwargs.get("beam_num_return_gen", 1),
                             length_penalty = self.gen_kwargs.get("beam_length_penalty", 1),
                             min_length = self.gen_kwargs.get("min_new_tokens", 30),
@@ -191,7 +191,7 @@ if __name__ == "__main__":
         "temperature": 0.5,
         "use_beam_search": args.use_beam_search,
         "beam_size": 4,
-        "beam_stop_token": 50256,
+        "beam_stop_token": 50259,
         "beam_num_return_gen": 1,
         "beam_length_penalty": 1
     }
@@ -261,7 +261,7 @@ if __name__ == "__main__":
                     input_ids_tensor,
                     input_length_tensor,
                     beam_size=gen_kwargs.get("beam_size", 4),
-                    stop_token = gen_kwargs.get("beam_stop_token", 50256),
+                    stop_token = gen_kwargs.get("beam_stop_token", 50259),
                     num_return_gen = gen_kwargs.get("beam_num_return_gen", 1),
                     length_penalty = gen_kwargs.get("beam_length_penalty", 1),
                     min_length = gen_kwargs.get("min_new_tokens", 30),

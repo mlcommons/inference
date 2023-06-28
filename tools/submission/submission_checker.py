@@ -2817,7 +2817,7 @@ def check_system_desc_id(
     # check all required fields
     if version in ["v0.5", "v0.7"]:
         required_fields = SYSTEM_DESC_REQUIRED_FIELDS
-    elif version in ["v1.0", "v1.1", "v2.0", "v2.1", "v3.0", "v3.1"]:
+    elif version in ["v1.0", "v1.1", "v2.0", "v2.1", "v3.0"]:
         required_fields = (
             SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1
         )
@@ -3208,7 +3208,7 @@ def main():
         skip_power_check=args.skip_power_check,
     )
 
-    if args.version in [ "v0.5", "v0.7", "v1.0", "v1.1", "v2.0", "v2.1", "v3.0", "v3.1"]:
+    if args.version in [ "v0.5", "v0.7", "v1.0", "v1.1", "v2.0", "v2.1", "v3.0"]:
         args.skip_meaningful_fields_emptiness_check = True
         args.skip_empty_files_check = True
         args.skip_check_power_measure_files = True

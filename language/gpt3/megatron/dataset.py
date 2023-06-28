@@ -114,7 +114,7 @@ class Dataset:
         # Now update the list of list to be of the same size: samples_length.
         for prompt_tokens, prompt_length in zip(prompts_tokens, prompts_length):
             padding_size = samples_length - prompt_length
-            prompt_tokens.extend([self.tokenizer.eod] * padding_size)
+            prompt_tokens.extend([self.tokenizer.pad] * padding_size)
 
         # Now we are in a structured format, we can convert to tensors.
         # prompts_tokens_tensor = torch.LongTensor(prompts_tokens)

@@ -1063,7 +1063,10 @@ SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1 = [
     "sw_notes",
 ]
 
-SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1 = ["host_networking_card_count"]
+SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1 = [
+    "host_networking_card_count",
+    "system_type_detail"
+]
 
 SYSTEM_DESC_REQUIRED_FIELDS_POWER = [
     "power_management",
@@ -1425,6 +1428,27 @@ def check_accuracy_dir(config, model, path, verbose):
     return is_valid, acc
 
 
+def get_performance_metric(
+    config, model, path, scenario_fixed, division, system_json, has_power=False
+):
+    #Assumes new logging format
+
+    fname = os.path.join(path, "mlperf_log_detail.txt")
+    mlperf_log = MLPerfLog(fname)
+    if (
+        "result_validity" in mlperf_log.get_keys()
+        and mlperf_log["result_validity"] == "VALID"
+    ):
+        is_valid = True
+    scenario = mlperf_log["effective_scenario"]
+    scenario_for_res = (
+        "MultiStreamLegacy"
+        if scenario == "MultiStream" and config.uses_legacy_multistream()
+        else scenario
+    )
+    res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+    return res
+
 def check_performance_dir(
     config, model, path, scenario_fixed, division, system_json, has_power=False
 ):
@@ -1724,6 +1748,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 value = float(line.split(",")[3])
                 if value > 0:
                     power_list.append(float(line.split(",")[3]))
+
     if len(power_list) == 0:
         log.error(
             "%s has no power samples falling in power range: %s - %s",
@@ -2414,6 +2439,7 @@ def check_results_dir(
                             perf_path = os.path.join(name, "performance", i)
                             if not os.path.exists(perf_path):
                                 log.error("%s is missing", perf_path)
+                                is_valid, r = False, None
                                 continue
                             if has_power:
                                 required_perf_files = (
@@ -2430,6 +2456,8 @@ def check_results_dir(
                                 log.error(
                                     "%s has file list mismatch (%s)", perf_path, diff
                                 )
+                                is_valid, r = False, None
+                                continue
 
                             try:
                                 is_valid, r, is_inferred = check_performance_dir(
@@ -2461,10 +2489,8 @@ def check_results_dir(
                                         name, "performance", "ranging"
                                     )
                                     (
-                                        is_valid,
-                                        ranging_r,
-                                        is_inferred,
-                                    ) = check_performance_dir(
+                                        ranging_r
+                                    ) = get_performance_metric(
                                         config,
                                         mlperf_model,
                                         ranging_path,

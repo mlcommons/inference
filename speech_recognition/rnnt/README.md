@@ -2,6 +2,8 @@
 Speech recognition accepts raw audio samples and produces a corresponding
 character transcription, without an external language model.
 
+Please see [this readme](README_cm.md) file for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
+
 # 2. Directions
 
 Open `run.sh`. Set the stage variable to "-1". Set "work_dir" to a

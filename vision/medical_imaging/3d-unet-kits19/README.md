@@ -6,6 +6,8 @@ This model performing KiTS19 dataset for kidney tumor segmentation task is propo
 
 [3D-UNet BraTS19 model](https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-brats19), which has been used for MLPerf-Inference v0.7 and v1.0, is the valid model for the submissions until the end of year 2021. Please use BraTS19 model for v.1.1 submission.
 
+Please see [this readme](README_cm.md) file for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
+
 ## Prerequisites
 
 If you would like to run on NVIDIA GPU, you will need:

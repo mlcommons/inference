@@ -4,13 +4,13 @@ set -e;
 
 _LOCAL_WORK_DIR="/usr/local/google/home/morgandu/projects/mlcommons-inference/language/gpt-3/saxml"
 _WORK_DIR="gpt-3/saxml"
-_BUILD_DIR="tpu"
+_BUILD_DIR="tpu-2.0"
 _TEST_DIR="tests"
 
 IMAGE_PROJECT_ID="tpu-prod-env-one-vm"
 
 PLATFORM_CHIP=tpuv4 # No need to change across v4 and vlp
-
+WAIT_FOR_SETUP_SERVERS=60
 
 # HOST_TYPE="build"
 HOST_TYPE="v4"
@@ -36,7 +36,6 @@ run_test="no"
 
 
 _TPU_USER="root@"
-_TPU_NAME="morgandu-tpu-vm-4"
 
 if [ ${HOST_TYPE} == v4 ]; then
 
@@ -47,6 +46,10 @@ if [ ${HOST_TYPE} == v4 ]; then
   ZONE="us-central2-b"
   PLATFORM_TOPOLOGY="4x4x4"
   RUNTIME_VERSION="tpu-vm-v4-base"
+  # Beam Search
+  # _TPU_NAME="morgandu-tpu-vm-4"
+  # Greedy
+  _TPU_NAME="morgandu-tpu-vm-1"
 
 elif [ ${HOST_TYPE} == build ]; then
 
@@ -57,6 +60,7 @@ elif [ ${HOST_TYPE} == build ]; then
   ZONE="us-east1-c"
   PLATFORM_TOPOLOGY="2x2"
   RUNTIME_VERSION="v2-alpha-tpuv5-lite"
+  _TPU_NAME="morgandu-tpu-vm-4"
 
 elif [ ${HOST_TYPE} == vlp ]; then
 
@@ -127,7 +131,7 @@ if [ ${run_create_tpu} == "yes" ]; then
 
   fi
 
-  if [ ${HOST_TYPE} == vlp ]; then
+  if [ ${HOST_TYPE} == build ]; then
 
     if [ ${run_delete_queued_resource} == "yes" ]; then
       echo "Deleting a previously queued resource ${_TPU_NAME} ...";
@@ -377,6 +381,8 @@ if [ ${run_setup_sax_servers} == "yes" ]; then
         PLATFORM_CHIP=${PLATFORM_CHIP} \
         PLATFORM_TOPOLOGY=${PLATFORM_TOPOLOGY} \
         ./setup_sax_servers.sh;";
+
+  sleep ${WAIT_FOR_SETUP_SERVERS};
 
 else
 

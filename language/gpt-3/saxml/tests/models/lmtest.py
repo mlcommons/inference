@@ -96,6 +96,7 @@ def main(argv):
     test_text = "1112,444,555"
   else:
     test_text = "Q: Who is Harry Porter's mother? A: "
+  print('test_text: ', test_text)
 
   model = sax.Model(model_path)
   language_model = model.LM()

@@ -58,25 +58,31 @@ docker exec \
 cd /mlperf_inference/language/gpt-3/saxml/
 
 ```
+
 #### Some Paths
 ```
 CNN_TOKENIZED_DATASET_PATH=gs://cnn_dailymail_public/mlperf/tokenized_cnn_dailymail_3.0.0/cnn_dailymail-validation.tfrecord-00000-of-00001
 GPT3_SPM_PATH=gs://mlperf-llm-public2/vocab/c4_en_301_5Mexp2_spm.model
 GPT3_CHECKPOINT_PATH=gs://mlperf-llm-public2/gpt3-cnndm/checkpoint_00011000
 
-GPT3_MODEL_PATH=/sax/test/gpt3175b64
+GPT3_MODEL_PATH=/sax/test/gpt3175b64tokenized
+GPT3_MODEL_PATH=/sax/test/gpt3175b64tokenizedgreedy
+
+GPT3_MODEL_NAME=gpt3175b64tokenized
+GPT3_MODEL_NAME=gpt3175b64tokenizedgreedy
+
 ```
 #### Publish
 
 ##### Publish Model in TestMode
 ```
 python publish_sax_model.py \
-  --model_name lmcloudspmd2b4test \
+  --model_name lmcloudspmd2b4testtokenized \
   --wait 60 \
   --unpublish True
 
 python publish_sax_model.py \
-  --model_name lmcloudspmd175b64test \
+  --model_name lmcloudspmd175b64testtokenized \
   --wait 360 \
   --unpublish True
 ```
@@ -85,21 +91,15 @@ python publish_sax_model.py \
 
 ```
 CHECKPOINT_PATH=${GPT3_CHECKPOINT_PATH}
+MODEL_NAME=${GPT3_MODEL_NAME}
 
 python publish_sax_model.py \
-  --model_name gpt3175b64 \
+  --model_name ${MODEL_NAME} \
   --checkpoint_path=${CHECKPOINT_PATH} \
-  --wait 1200
+  --wait 1000
 ```
 
 #### Loadgen
-
-##### TODO: Added inside the container
-```
-pip install seqio
-pip install rouge_score
-export PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
-```
 
 ##### Test Loadgen
 
@@ -122,9 +122,9 @@ python main.py \
   --model-path ${MODEL_PATH} \
   --dataset-path ${CNN_TOKENIZED_DATASET_PATH} \
   --accuracy \
-  --max-examples 10 \
-  --perf-examples 10 \
-  --log-interval 2 \
+  --max-examples 20 \
+  --perf-examples 20 \
+  --log-interval 5 \
   --log-path /mlperf_inference/language/gpt-3/saxml/test_loadgen_logs
 
 ```
@@ -180,7 +180,7 @@ ls /mlperf_inference/language/gpt-3/saxml/loadgen_logs
 # with TestMode Models
 SPM_PATH=gs://cnn_dailymail_public/mlperf/vocab/test_model.model
 
-# with TestMode Models
+# with GPT3 Model
 SPM_PATH=${GPT3_SPM_PATH}
 
 ```

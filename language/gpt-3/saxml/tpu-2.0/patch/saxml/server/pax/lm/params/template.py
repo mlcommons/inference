@@ -75,6 +75,7 @@ class CommonServingTemplate:
   EMB_LOOKUP_STYLE = 'index'
   FETCH_PREFIX_LENGTHS_FROM_INPUTS = False
   POLYMORPHIC_SEQ_LEN_EXCLUSION = None
+  TOKENIZED = False
 
   def input_for_model_init(self) -> py_utils.NestedMap:
     batch_size = self.BATCH_SIZE

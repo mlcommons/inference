@@ -14,13 +14,13 @@
 
 ARG SAXML_BUILD_SOURCE=github
 
-ARG BASE_IMAGE=ubuntu:22.04
+ARG BASE_IMAGE=ubuntu:20.04
 FROM ${BASE_IMAGE} AS base-build-image
 
 ARG SAXML_VERSION_GIT_BRANCH=main
 ARG SAXML_GIT_COMMIT=HEAD
 
-ARG PYTHON_VERSION=3.10
+ARG PYTHON_VERSION=3.8
 ARG DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED TRUE
 
@@ -152,6 +152,7 @@ COPY patch/saxml/server/tf/BUILD saxml/server/tf/BUILD
 COPY patch/saxml/server/pax/lm/params/template.py saxml/server/pax/lm/params/template.py
 COPY patch/saxml/server/pax/lm/params/lm_cloud.py saxml/server/pax/lm/params/lm_cloud.py
 COPY patch/saxml/server/pax/lm/lm_tokenizer.py saxml/server/pax/lm/lm_tokenizer.py
+COPY patch/saxml/server/pax/lm/servable_lm_model.py saxml/server/pax/lm/servable_lm_model.py
 
 RUN mkdir -p /model-server && \
     bazel --output_base=/tmp/bazel/output/server build \
@@ -182,6 +183,9 @@ RUN pip install --force-reinstall loadgen/dist/`ls -r loadgen/dist/ | head -n1` 
 WORKDIR /
 
 RUN pip install --no-cache-dir --no-deps absl-py
+
+RUN pip install --no-cache-dir seqio rouge_score
+ENV PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 
 COPY docker_entrypoint.sh /usr/bin/docker_entrypoint.sh
 RUN chmod +x /usr/bin/docker_entrypoint.sh

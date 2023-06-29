@@ -10,7 +10,7 @@ sys.path.insert(0, os.getcwd())
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", choices=["Offline", "Server"], default="Offline", help="Scenario")
-    parser.add_argument("--model-path", default="/sax/test/gpt3175b64", help="")
+    parser.add_argument("--model-path", default="/sax/test/gpt3175b64tokenized", help="")
     parser.add_argument("--dataset-path", required=True, help="The dataset path")
     parser.add_argument("--batch-size", type=int, default=1, help="Batch size for offline SUT")
     parser.add_argument("--max-examples", type=int, default=13368, help="Maximum number of examples to consider (not limited by default)")

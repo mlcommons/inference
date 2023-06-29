@@ -11,24 +11,9 @@ _SAX_CELL = flags.DEFINE_string(
     '/sax/test',
     'SAX cell of the admin server.',
 )
-_MODEL_NAME = flags.DEFINE_enum(
+_MODEL_NAME = flags.DEFINE_string(
   'model_name',
-  'lmcloudspmd2b4test',
-  [
-    'gpt3175b8',
-    'gpt3175b16',
-    'gpt3175b32',
-    'gpt3175b64',
-    'gpt3175b128',
-    'gpt3175b256',
-    'lmcloudspmd2b4test',
-    'lmcloudspmd175b8test',
-    'lmcloudspmd175b16test',
-    'lmcloudspmd175b32test',
-    'lmcloudspmd175b64test',
-    'lmcloudspmd175b128test',
-    'lmcloudspmd175b256test',
-  ],
+  'lmcloudspmd2b4testtokenized',
   'model name to publish.'
 )
 _CHECKPOINT_PATH = flags.DEFINE_string(
@@ -61,45 +46,45 @@ def main(argv):
   num_replicas = _REPLICA.value
   checkpoint_path = _CHECKPOINT_PATH.value
 
-  if model_name == 'gpt3175b8':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP8"
+  if model_name == 'gpt3175b8tokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP8Tokenized"
     assert (checkpoint_path != 'None')
-  if model_name == 'gpt3175b16':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP16"
+  if model_name == 'gpt3175b16tokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP16Tokenized"
     assert (checkpoint_path != 'None')
-  elif model_name == 'gpt3175b32':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP32"
+  elif model_name == 'gpt3175b64tokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP64Tokenized"
     assert (checkpoint_path != 'None')
-  elif model_name == 'gpt3175b64':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP64"
+  elif model_name == 'gpt3175b64tokenizedgreedy':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP64TokenizedGreedy"
     assert (checkpoint_path != 'None')
-  elif model_name == 'gpt3175b128':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP128"
+  elif model_name == 'gpt3175b128tokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP128Tokenized"
     assert (checkpoint_path != 'None')
-  elif model_name == 'gpt3175b256':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP256"
+  elif model_name == 'gpt3175b256tokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP256Tokenized"
     assert (checkpoint_path != 'None')
 
-  elif model_name == 'lmcloudspmd2b4test':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B4Test"
+  elif model_name == 'lmcloudspmd2b4testtokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B4TestTokenized"
     assert (checkpoint_path == 'None')
-  elif model_name == 'lmcloudspmd175b8test':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B8Test"
+  elif model_name == 'lmcloudspmd175b8testtokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B8TestTokenized"
     assert (checkpoint_path == 'None')
-  elif model_name == 'lmcloudspmd175b16test':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B16Test"
+  elif model_name == 'lmcloudspmd175b16testtokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B16TestTokenized"
     assert (checkpoint_path == 'None')
-  elif model_name == 'lmcloudspmd175b32test':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B32Test"
+  elif model_name == 'lmcloudspmd175b32testtokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B32TestTokenized"
     assert (checkpoint_path == 'None')
-  elif model_name == 'lmcloudspmd175b64test':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B64Test"
+  elif model_name == 'lmcloudspmd175b64testtokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B64TestTokenized"
     assert (checkpoint_path == 'None')
-  elif model_name == 'lmcloudspmd175b128test':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B128Test"
+  elif model_name == 'lmcloudspmd175b128testtokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B128TestTokenized"
     assert (checkpoint_path == 'None')
-  elif model_name == 'lmcloudspmd175b256test':
-    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B256Test"
+  elif model_name == 'lmcloudspmd175b256testtokenized':
+    model_config_path = "saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B256TestTokenized"
     assert (checkpoint_path == 'None')
 
   logging.info("Publishing models to {} ... ".format(model_path))
@@ -124,7 +109,8 @@ def main(argv):
   option = sax.ModelOptions()
   option.SetTimeout(_WAIT.value)
 
-  test_text = "1112,444,555"
+  test_text = '1112,444,555'
+  print('test_text: ', test_text)
   try:
     logging.info("Generating testing inferencing result ... ")
     inference_result = language_model.Generate(test_text, option)

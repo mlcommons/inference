@@ -34,20 +34,13 @@ class LmCloudSpmd2B(lm_cloud.LmCloudSpmd2B):
   """
   # pylint: enable=line-too-long
 
-  SPM_MODEL = os.path.join(os.path.dirname(__file__), 'test_model.model')
+  SPM_MODEL = "gs://mlperf-llm-public2/vocab/c4_en_301_5Mexp2_spm.model"
   ICI_MESH_SHAPE = [1, 1, 4]
   FPROP_FOR_PREFIX = True
   BATCH_SIZE = 1
   TRAINING_OPTIMIZED_SHARDING = False
   USE_REPEATED_LAYER = True
-
-  def task(self) -> pax_fiddle.Config[tasks_lib.SingleTask]:
-    task_p = super().task()
-    task_p = template.set_decoding_sharding_hparams(
-        task_p,
-        mesh_shape=self.ICI_MESH_SHAPE,
-    )
-    return task_p
+  TOKENIZED = False
 
 
 @servable_model_registry.register
@@ -55,7 +48,6 @@ class LmCloudSpmd2BTest(LmCloudSpmd2B):
   """2B Servable config on 1x1x1 in test mode."""
 
   ICI_MESH_SHAPE = [1, 1, 1]
-  TOKENIZED = True
 
   @property
   def test_mode(self) -> bool:
@@ -70,10 +62,24 @@ class LmCloudSpmd2B4Test(LmCloudSpmd2BTest):
 
 
 @servable_model_registry.register
+class LmCloudSpmd2B4TestTokenized(LmCloudSpmd2B4Test):
+  """2B Servable config on 1x1x4 in test mode."""
+
+  TOKENIZED = True
+
+
+@servable_model_registry.register
 class LmCloudSpmd2B8Test(LmCloudSpmd2BTest):
   """2B Servable config on 1x1x8 in test mode."""
 
   ICI_MESH_SHAPE = [1, 1, 8]
+
+
+@servable_model_registry.register
+class LmCloudSpmd2B8TestTokenized(LmCloudSpmd2B8Test):
+  """2B Servable config on 1x1x8 in test mode."""
+
+  TOKENIZED = True
 
 
 @servable_model_registry.register
@@ -84,6 +90,13 @@ class LmCloudSpmd2B16Test(LmCloudSpmd2BTest):
 
 
 @servable_model_registry.register
+class LmCloudSpmd2B16TestTokenized(LmCloudSpmd2B16Test):
+  """2B Servable config on 1x1x16 in test mode."""
+
+  TOKENIZED = True
+
+
+@servable_model_registry.register
 class LmCloudSpmd2B32Test(LmCloudSpmd2BTest):
   """2B Servable config on 1x1x32 in test mode."""
 
@@ -91,7 +104,13 @@ class LmCloudSpmd2B32Test(LmCloudSpmd2BTest):
 
 
 @servable_model_registry.register
-@quantization.for_transformer(quantize_on_the_fly=False)
+class LmCloudSpmd2B32TestTokenized(LmCloudSpmd2B32Test):
+  """2B Servable config on 1x1x32 in test mode."""
+
+  TOKENIZED = True
+
+
+@servable_model_registry.register
 class LmCloudSpmd175B(LmCloudSpmd2B):
   """175B on TPU v4-32.
 
@@ -118,13 +137,11 @@ class LmCloudSpmd175B(LmCloudSpmd2B):
       'per_example_top_k': 200,
       'per_example_top_p': 0.95,
   }
-
+  TOKENIZED = False
 
 @servable_model_registry.register
 class LmCloudSpmd175BTest(LmCloudSpmd175B):
   """175B in test mode."""
-
-  TOKENIZED = True
 
   @property
   def test_mode(self) -> bool:
@@ -139,10 +156,24 @@ class LmCloudSpmd175B8Test(LmCloudSpmd175BTest):
 
 
 @servable_model_registry.register
+class LmCloudSpmd175B8TestTokenized(LmCloudSpmd175B8Test):
+  """175B Servable config on 1x1x8 in test mode."""
+
+  TOKENIZED = True
+
+
+@servable_model_registry.register
 class LmCloudSpmd175B16Test(LmCloudSpmd175BTest):
   """175B Servable config on 1x1x16 in test mode."""
 
   ICI_MESH_SHAPE = [1, 1, 16]
+
+
+@servable_model_registry.register
+class LmCloudSpmd175B16TestTokenized(LmCloudSpmd175B16Test):
+  """175B Servable config on 1x1x16 in test mode."""
+
+  TOKENIZED = True
 
 
 @servable_model_registry.register
@@ -153,10 +184,24 @@ class LmCloudSpmd175B32Test(LmCloudSpmd175BTest):
 
 
 @servable_model_registry.register
+class LmCloudSpmd175B32TestTokenized(LmCloudSpmd175B32Test):
+  """175B Servable config on 1x1x32 in test mode."""
+
+  TOKENIZED = True
+
+
+@servable_model_registry.register
 class LmCloudSpmd175B64Test(LmCloudSpmd175BTest):
   """175B Servable config on 1x1x64 in test mode."""
 
   ICI_MESH_SHAPE = [1, 1, 64]
+
+
+@servable_model_registry.register
+class LmCloudSpmd175B64TestTokenized(LmCloudSpmd175B64Test):
+  """175B Servable config on 1x1x64 in test mode."""
+
+  TOKENIZED = True
 
 
 @servable_model_registry.register
@@ -167,10 +212,24 @@ class LmCloudSpmd175B128Test(LmCloudSpmd175BTest):
 
 
 @servable_model_registry.register
+class LmCloudSpmd175B128TestTokenized(LmCloudSpmd175B128Test):
+  """175B Servable config on 1x1x128 in test mode."""
+
+  TOKENIZED = True
+
+
+@servable_model_registry.register
 class LmCloudSpmd175B256Test(LmCloudSpmd175BTest):
   """175B Servable config on 1x1x256 in test mode."""
 
   ICI_MESH_SHAPE = [1, 1, 256]
+
+
+@servable_model_registry.register
+class LmCloudSpmd175B256TestTokenized(LmCloudSpmd175B256Test):
+  """175B Servable config on 1x1x256 in test mode."""
+
+  TOKENIZED = True
 
 
 @template.make_servable()
@@ -193,6 +252,7 @@ class C4SpmdGpt3AdamOrgHP(c4.C4SpmdGpt3AdamOrgHP):
   NUM_SAMPLES = 1
   USE_BEAM_SEARCH = True
   BEAM_SIZE = 4
+  TOKENIZED = False
 
 
 @servable_model_registry.register
@@ -225,13 +285,6 @@ class C4SpmdGpt3AdamOrgHP16Tokenized(C4SpmdGpt3AdamOrgHP16):
 
 
 @servable_model_registry.register
-class C4SpmdGpt3AdamOrgHP32(C4SpmdGpt3AdamOrgHP):
-  """175B GPT-3 Servable config on 1x1x32."""
-
-  ICI_MESH_SHAPE = [1, 1, 32]
-
-
-@servable_model_registry.register
 class C4SpmdGpt3AdamOrgHP64(C4SpmdGpt3AdamOrgHP):
   """175B GPT-3 Servable config on 1x1x64."""
 
@@ -243,6 +296,16 @@ class C4SpmdGpt3AdamOrgHP64Tokenized(C4SpmdGpt3AdamOrgHP64):
   """175B GPT-3 Tokenized Servable config on 1x1x64."""
 
   TOKENIZED = True
+
+
+@servable_model_registry.register
+class C4SpmdGpt3AdamOrgHP64TokenizedGreedy(C4SpmdGpt3AdamOrgHP64):
+  """175B GPT-3 Tokenized Servable config on 1x1x64."""
+
+  TOKENIZED = True
+  USE_BEAM_SEARCH = False
+  NUM_SAMPLES = 1
+  TOP_K = 1
 
 
 @servable_model_registry.register

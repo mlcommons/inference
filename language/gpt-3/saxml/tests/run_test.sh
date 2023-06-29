@@ -41,75 +41,70 @@ function run_lmtest {
   model_name=$1
   model_config_path=$2
   wait_time=$3
+  tokenized=$4
 
   docker exec \
     --privileged \
     ${SAX_ADMIN_SERVER_DOCKER_NAME} \
-    python ${TEST_FILE_PATH} --model_name=${model_name} --model_config_path=${model_config_path} --wait=${wait_time};
+    python ${TEST_FILE_PATH} --model_name=${model_name} --model_config_path=${model_config_path} --wait=${wait_time} --tokenized=${tokenized};
 
 }
 
-function run_gpt3 {
-
-  model_name=$1
-  model_config_path=$2
-  wait_time=$3
-
-  checkpoint_path=${GPT3_CHECKPOINT_PATH}
-
-  docker exec \
-    --privileged \
-    ${SAX_ADMIN_SERVER_DOCKER_NAME} \
-    python ${TEST_FILE_PATH} --model_name=${model_name} --model_config_path=${model_config_path} --checkpoint_path=${checkpoint_path} --wait=${wait_time};
-
-}
 
 find_docker ${SAX_ADMIN_SERVER_DOCKER_NAME}
 
 
 if [ ${HOST} == vlp-1-2 ]; then
-  run_lmtest lmcloudspmd2b4test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B4Test 60
+  run_lmtest lmcloudspmd2b4test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B4Test 45 False
+  run_lmtest lmcloudspmd2b4testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B4TestTokenized 45 True
 fi
 
 if [ ${HOST} == a100-1-8 ]; then
-  run_lmtest lmcloudspmd2b8test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B8Test 120
-  run_gpt3 gpt3175b8 saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP8 120
+  run_lmtest lmcloudspmd2b8test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B8Test 120 False
+  run_lmtest lmcloudspmd2b8testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B8TestTokenized 120 True
 fi
 
 if [ ${HOST} == a100-1-16 ]; then
-  run_lmtest lmcloudspmd2b16test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B16Test 120
-  run_gpt3 gpt3175b16 saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP16 120
+  run_lmtest lmcloudspmd2b16test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B16Test 120 False
+  run_lmtest lmcloudspmd2b16testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B16TestTokenized 120 True
+fi
+
+if [ ${HOST} == v4-1 ]; then
+  run_lmtest lmcloudspmd2b4test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B4Test 45 False
+  run_lmtest lmcloudspmd2b4testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd2B4TestTokenized 45 True
 fi
 
 if [ ${HOST} == v4-4 ]; then
-  run_lmtest lmcloudspmd175b16test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B16Test 120
+  run_lmtest lmcloudspmd175b16test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B16Test 120 False
+  run_lmtest lmcloudspmd175b16testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B16TestTokenized 120 True
 fi
 
 if [ ${HOST} == v4-8 ]; then
-  run_lmtest lmcloudspmd175b32test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B32Test 120
+  run_lmtest lmcloudspmd175b32test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B32Test 120 False
+  run_lmtest lmcloudspmd175b32testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B32TestTokenized 120 True
 fi
 
 if [ ${HOST} == v4-16 ]; then
-  run_lmtest lmcloudspmd175b64test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B64Test 120
-  # run_gpt3 gpt3175b64 saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP64 120
+  run_lmtest lmcloudspmd175b64test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B64Test 120 False
+  run_lmtest lmcloudspmd175b64testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B64TestTokenized 120 True
 fi
 
 if [ ${HOST} == vlp-8 ]; then
-  run_lmtest lmcloudspmd175b32test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B32Test 120
-  # run_gpt3 gpt3175b32 saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP32 120
+  run_lmtest lmcloudspmd175b32test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B32Test 120 False
+  run_lmtest lmcloudspmd175b32testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B32TestTokenized 120 True
 fi
 
 if [ ${HOST} == vlp-16 ]; then
-  run_lmtest lmcloudspmd175b64test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B64Test 120
-  # run_gpt3 gpt3175b64 saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP64 120
+  run_lmtest lmcloudspmd175b64test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B64Test 120 False
+  run_lmtest lmcloudspmd175b64testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B64TestTokenized 120 True
 fi
 
 if [ ${HOST} == vlp-32 ]; then
-  run_lmtest lmcloudspmd175b128test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B128Test 120
-  # run_gpt3 gpt3175b128 saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP128 120
+  run_lmtest lmcloudspmd175b128test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B128Test 120 False
+  run_lmtest lmcloudspmd175b128testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B128TestTokenized 120 True
 fi
 
 if [ ${HOST} == vlp-64 ]; then
-  run_lmtest lmcloudspmd175b256test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B256Test 120
-  run_gpt3 gpt3175b256 saxml.server.pax.lm.params.lm_cloud.C4SpmdGpt3AdamOrgHP256 120
+  run_lmtest lmcloudspmd175b256test saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B256Test 120 False
+  run_lmtest lmcloudspmd175b256testtokenized saxml.server.pax.lm.params.lm_cloud.LmCloudSpmd175B256TestTokenized 120 True
 fi

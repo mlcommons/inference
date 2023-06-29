@@ -9,26 +9,12 @@ _TEST_DIR="tests"
 
 IMAGE_PROJECT_ID="tpu-prod-env-one-vm"
 
-RUNTIME_VERSION="v2-alpha-tpuv5-lite"
 PLATFORM_CHIP=tpuv4 # No need to change across v4 and vlp
+WAIT_FOR_SETUP_SERVERS=90
 
-# "v4-4" # test mode pass, checkpoint loading memory issue
-# "v4-8" # test mode pass, checkpoint loading memory issue
-# "v4-16" # testing now
-# "vlp-1-2" # build succeeded, single host test mode pass (mainly for build)
-# "vlp-8" # can not access all workers, firewall issue
-# "vlp-16" # can not access all workers, firewall issue
-
-HOST_TYPE="v4"
-HOST_COUNT="16"
-
+HOST_TYPE="build"
+# HOST_TYPE="v4"
 # HOST_TYPE="vlp"
-# HOST_COUNT="1-2"
-
-HOST=${HOST_TYPE}-${HOST_COUNT}
-echo "HOST: ${HOST}"
-
-_TPU_USER="root@"
 
 run_create_tpu="no"
 run_delete_queued_resource="no"
@@ -41,75 +27,57 @@ run_delete_bucket="no"
 
 run_scp="yes"
 
-run_build_image="no"
+run_build_image="yes"
 run_docker_push_for_test="no"
 run_pull_for_test="no"
 
 run_setup_sax_servers="yes"
-run_test="no"
+run_test="yes"
 
 
-if [ ${HOST} == v4-4 ]; then
+_TPU_USER="root@"
 
-  PROJECT_ID="tpu-prod-env-one-vm"
-  _SERVICE_ACCOUNT="630405687483-compute@developer.gserviceaccount.com"
-  ACCELERATOR_TYPE="v4-32"
-  ZONE="us-central2-b"
-  PLATFORM_TOPOLOGY="2x2x4"
+if [ ${HOST_TYPE} == v4 ]; then
 
-elif [ ${HOST} == v4-8 ]; then
-
-  PROJECT_ID="tpu-prod-env-one-vm"
-  _SERVICE_ACCOUNT="630405687483-compute@developer.gserviceaccount.com"
-  ACCELERATOR_TYPE="v4-64"
-  ZONE="us-central2-b"
-  PLATFORM_TOPOLOGY="2x4x4"
-
-elif [ ${HOST} == v4-16 ]; then
-
+  HOST="v4-16"
   PROJECT_ID="tpu-prod-env-one-vm"
   _SERVICE_ACCOUNT="630405687483-compute@developer.gserviceaccount.com"
   ACCELERATOR_TYPE="v4-128"
   ZONE="us-central2-b"
   PLATFORM_TOPOLOGY="4x4x4"
-  _TPU_NAME="morgandu-tpu-vm-4"
+  RUNTIME_VERSION="tpu-vm-v4-base"
+  # Beam Search
+  # _TPU_NAME="morgandu-tpu-vm-4"
+  # Greedy
+  _TPU_NAME="morgandu-tpu-vm-1"
 
+elif [ ${HOST_TYPE} == build ]; then
 
-elif [ ${HOST} == vlp-1-2 ]; then
-
+  HOST="vlp-1-2"
   PROJECT_ID="tpu-prod-env-small"
   _SERVICE_ACCOUNT="463402977885-compute@developer.gserviceaccount.com"
   ACCELERATOR_TYPE="v5litepod-4"
   ZONE="us-east1-c"
   PLATFORM_TOPOLOGY="2x2"
+  RUNTIME_VERSION="v2-alpha-tpuv5-lite"
   _TPU_NAME="morgandu-tpu-vm-4"
 
-elif [ ${HOST} == vlp-8 ]; then
+elif [ ${HOST_TYPE} == vlp ]; then
 
-  PROJECT_ID="tpu-prod-env-large-cont"
-  _SERVICE_ACCOUNT="641569443805-compute@developer.gserviceaccount.com"
-  ZONE="us-east1-c"
-  ACCELERATOR_TYPE="v5litepod-32"
-  PLATFORM_TOPOLOGY="4x8"
-
-elif [ ${HOST} == vlp-16 ]; then
-
-  PROJECT_ID="tpu-prod-env-large-cont"
-  _SERVICE_ACCOUNT="641569443805-compute@developer.gserviceaccount.com"
-  ZONE="us-east1-c"
-  ACCELERATOR_TYPE="v5litepod-64"
-  PLATFORM_TOPOLOGY="8x8"
-
-elif [ ${HOST} == vlp-32 ]; then
-
+  HOST="vlp-32"
   PROJECT_ID="tpu-prod-env-large-cont"
   _SERVICE_ACCOUNT="641569443805-compute@developer.gserviceaccount.com"
   ZONE="us-east1-c"
   ACCELERATOR_TYPE="v5litepod-128"
   PLATFORM_TOPOLOGY="8x16"
+  RUNTIME_VERSION="v2-alpha-tpuv5-lite"
 
 fi
 
+echo "HOST_TYPE: ${HOST_TYPE}"
+echo "HOST: ${HOST}"
+
+echo "_TPU_USER: ${_TPU_USER}"
 echo "_TPU_NAME: ${_TPU_NAME}"
 
 echo "PROJECT_ID=${PROJECT_ID}"
@@ -138,7 +106,7 @@ echo "_SAX_ADMIN_STORAGE_BUCKET: ${_SAX_ADMIN_STORAGE_BUCKET}"
 
 _CLOUD_TPU_SAX_ADMIN_SERVER_IMAGE_NAME="gcr.io/${IMAGE_PROJECT_ID}/${_SAX_ADMIN_SERVER_IMAGE_NAME}"
 _CLOUD_TPU_SAX_MODEL_SERVER_IMAGE_NAME="gcr.io/${IMAGE_PROJECT_ID}/${_SAX_MODEL_SERVER_IMAGE_NAME}"
-CLOUD_TPU_SAX_TEST_TAG="latest"
+CLOUD_TPU_SAX_TEST_TAG="2.0"
 echo "_CLOUD_TPU_SAX_ADMIN_SERVER_IMAGE_NAME: ${_CLOUD_TPU_SAX_ADMIN_SERVER_IMAGE_NAME}"
 echo "_CLOUD_TPU_SAX_MODEL_SERVER_IMAGE_NAME: ${_CLOUD_TPU_SAX_MODEL_SERVER_IMAGE_NAME}"
 echo "CLOUD_TPU_SAX_TEST_TAG: ${CLOUD_TPU_SAX_TEST_TAG}"
@@ -163,7 +131,7 @@ if [ ${run_create_tpu} == "yes" ]; then
 
   fi
 
-  if [ ${HOST_TYPE} == vlp ]; then
+  if [ ${HOST_TYPE} == build ]; then
 
     if [ ${run_delete_queued_resource} == "yes" ]; then
       echo "Deleting a previously queued resource ${_TPU_NAME} ...";
@@ -413,6 +381,8 @@ if [ ${run_setup_sax_servers} == "yes" ]; then
         PLATFORM_CHIP=${PLATFORM_CHIP} \
         PLATFORM_TOPOLOGY=${PLATFORM_TOPOLOGY} \
         ./setup_sax_servers.sh;";
+
+  sleep ${WAIT_FOR_SETUP_SERVERS};
 
 else
 

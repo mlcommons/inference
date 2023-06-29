@@ -6,22 +6,15 @@ load("//saxml:saxml.bzl", "pytype_strict_library")
 licenses(["notice"])
 
 package(
-    # unused internal package attribute
     default_visibility = [
         "//saxml:internal",
         "//saxml/server:users",
     ],
 )
 
-filegroup(
-    name = "test_model",
-    srcs = ["test_model.model"],
-)
-
 pytype_strict_library(
     name = "template",
     srcs = ["template.py"],
-    data = [":test_model"],
     srcs_version = "PY3",
     deps = [
         "//saxml/server:servable_model_registry",
@@ -47,8 +40,8 @@ pytype_strict_library(
     deps = [
         ":template",
         "//saxml/server:servable_model_registry",
-        "//third_party/py/paxml/tasks/lm/params",
         "//third_party/py/paxml:tasks_lib",
+        "//third_party/py/paxml/tasks/lm/params",
         "//third_party/py/praxis:pax_fiddle",
     ],
 )

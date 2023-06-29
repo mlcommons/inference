@@ -88,11 +88,16 @@ class LMTokenizer(base_hyperparams.BaseParameterizable):
       # which tf.strings.to_number cannot handle. Convert [b''] to [] to be
       # consistent with the not p.tokenized path.
       labels_in_str = tf.strings.split(strs, sep=',', maxsplit=-1)
+      print('labels_in_str1: ', labels_in_str)
       empty_str_tensor = tf.constant([], dtype=tf.string)
       labels_in_str = tf.map_fn(
-          lambda x: empty_str_tensor if x.shape == [1] and x[0] == b'' else x,  # pylint: disable=g-explicit-bool-comparison
+          lambda x: empty_str_tensor
+            if (x.shape == [1] and x[0] == b'')
+              or (x.shape == [] and x == b'')
+            else x,  # pylint: disable=g-explicit-bool-comparison
           labels_in_str,
       )
+      print('labels_in_str2: ', labels_in_str)
       labels = tf.strings.to_number(labels_in_str, out_type=tf.int32)
     else:
       labels = self._vocab.tf_tokenizer.tokenize(strs)

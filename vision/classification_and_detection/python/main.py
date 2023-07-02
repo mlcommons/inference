@@ -109,7 +109,7 @@ SUPPORTED_PROFILES = {
         "model-name": "resnet50",
     },
     "resnet50-ncnn": {
-        "dataset": "imagenet",
+        "dataset": "imagenet_pytorch",
         "outputs": "out0",
         "backend": "ncnn",
         "model-name": "resnet50",

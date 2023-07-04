@@ -1,7 +1,7 @@
 import ncnn
 import numpy as np
 import backend
-from python.ncnn_models import *
+from ncnn_models import *
 
 class BackendNCNN(backend.Backend):
     def __init__(self):

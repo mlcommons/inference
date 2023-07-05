@@ -882,6 +882,172 @@ MODEL_CONFIG = {
             "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
         },
     },
+    "v3.1": {
+        "models": [
+            "resnet",
+            "retinanet",
+            "rnnt",
+            "bert-99",
+            "bert-99.9",
+            "dlrm-v2-99",
+            "dlrm-v2-99.9",
+            "3d-unet-99",
+            "3d-unet-99.9",
+            "gptj-99",
+            "gptj-99.9",
+            "gpt3-99",
+            "gpt3-99.9"
+        ],
+        "required-scenarios-datacenter": {
+            "resnet": ["Server", "Offline"],
+            "retinanet": ["Server", "Offline"],
+            "rnnt": ["Server", "Offline"],
+            "bert-99": ["Server", "Offline"],
+            "bert-99.9": ["Server", "Offline"],
+            "dlrm-v2-99": ["Server", "Offline"],
+            "dlrm-v2-99.9": ["Server", "Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+            "gptj-99": ["Server", "Offline"],
+            "gptj-99.9": ["Server", "Offline"],
+            "gpt3-99": ["Server", "Offline"],
+            "gpt3-99.9": ["Server", "Offline"],
+        },
+        "optional-scenarios-datacenter": {},
+        "required-scenarios-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline"],
+            "retinanet": ["SingleStream", "MultiStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "gptj-99": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-edge": {},
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "rnnt": ["SingleStream", "Offline", "Server"],
+            "bert-99": ["SingleStream", "Offline", "Server"],
+            "bert-99.9": ["Offline", "Server"],
+            "dlrm-v2-99": ["Offline", "Server"],
+            "dlrm-v2-99.9": ["Offline", "Server"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "gptj-99": ["SingleStream", "Offline", "Server"],
+            "gptj-99.9": ["Server", "Offline"],
+            "gpt3-99": ["Server", "Offline"],
+            "gpt3-99.9": ["Server", "Offline"],
+        },
+        "optional-scenarios-datacenter-edge": {},
+        "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
+            "retinanet": ("mAP", 37.55 * 0.99),
+            "rnnt": ("WER", (100 - 7.452) * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "dlrm-v2-99": ("AUC", 80.31 * 0.99),
+            "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
+            "3d-unet-99": ("DICE", 0.86170 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
+            "gptj-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
+            "gptj-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
+            # TODO: Replace with metrics for GPT3
+            "gpt3-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
+            "gpt3-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
+        },
+        "performance-sample-count": {
+            "resnet": 1024,
+            "retinanet": 64,
+            "rnnt": 2513,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-v2-99": 204800,
+            "dlrm-v2-99.9": 204800,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+            "gptj-99": 13368,
+            "gptj-99.9": 13368,
+            "gpt3-99": 13368,
+            "gpt3-99.9": 13368,
+        },
+        # TODO: Update this list.
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-mobilenet": "ssd-small",
+            "ssd-resnet34": "retinanet",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
+            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
+            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
+            "rcnn-resnet50-lowproposals-coco": "ssd-large",
+            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
+            "rcnn-inception-v2-coco": "ssd-large",
+            "rcnn-nas-lowproposals-coco": "ssd-large",
+            "rcnn-resnet101-lowproposals-coco": "ssd-large",
+            "ssd_mobilenet_v1_coco": "ssd-small",
+            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
+            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
+            "ssd_mobilenet_v2_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
+        },
+        "seeds": {
+            # TODO: Update random seeds
+            "qsl_rng_seed": 148687905518835231,
+            "sample_index_rng_seed": 520418551913322573,
+            "schedule_rng_seed": 811580660758947900,
+        },
+        "test05_seeds": {
+            # TODO: Update random seeds
+            "qsl_rng_seed": 793197339507417767,
+            "sample_index_rng_seed": 255610748586851044,
+            "schedule_rng_seed": 352213341366340113,
+        },
+        "ignore_errors": [],
+        "latency-constraint": {
+            "resnet": {"Server": 15000000},
+            "retinanet": {"Server": 100000000},
+            "rnnt": {"Server": 1000000000},
+            "bert-99": {"Server": 130000000},
+            "bert-99.9": {"Server": 130000000},
+            "dlrm-v2-99": {"Server": 60000000},
+            "dlrm-v2-99.9": {"Server": 60000000},
+            "gptj-99": {"Server": 20000000000},
+            "gptj-99.9": {"Server": 20000000000},
+            "gpt3-99": {"Server": 20000000000},
+            "gpt3-99.9": {"Server": 20000000000},
+        },
+        "min-queries": {
+            "resnet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "retinanet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-v2-99": {"Server": 270336, "Offline": 1},
+            "dlrm-v2-99.9": {"Server": 270336, "Offline": 1},
+            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
+            "gptj-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "gpt3-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "gpt3-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+        },
+    },
 }
 
 VALID_DIVISIONS = ["open", "closed", "network"]
@@ -983,6 +1149,13 @@ RESULT_FIELD_NEW = {
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_scheduled_samples_per_sec",
     },
+    "v3.1": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_scheduled_samples_per_sec",
+    }
 }
 
 ACC_PATTERN = {
@@ -993,6 +1166,10 @@ ACC_PATTERN = {
     "F1": r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
     "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
     "DICE": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
+    "ROUGE1": r"^ROUGE1=([\d\.]+).*",
+    "ROUGE2": r"^ROUGE2=([\d\.]+).*",
+    "ROUGEL": r"^ROUGEL=([\d\.]+).*",
+    "GEN_LEN": r"^GEN_LEN=([\d\.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -1264,7 +1441,7 @@ def get_args():
     parser.add_argument("--input", required=True, help="submission directory")
     parser.add_argument(
         "--version",
-        default="v3.0",
+        default="v3.1",
         choices=list(MODEL_CONFIG.keys()),
         help="mlperf version",
     )
@@ -1386,25 +1563,35 @@ def find_error_in_detail_log(config, fname):
 
 def check_accuracy_dir(config, model, path, verbose):
     is_valid = False
+    all_accuracy_valid = True
     acc = None
     hash_val = None
-    acc_type, acc_target = config.get_accuracy_target(model)
-    pattern = ACC_PATTERN[acc_type]
+    target = config.get_accuracy_target(model)
+    patterns = []
+    acc_targets = []
+    for i in range(0, len(target), 2):
+        acc_type, acc_target = target[i:i+2]
+        patterns.append(ACC_PATTERN[acc_type])
+        acc_targets.append(acc_target)
+    acc_seen = [False for _ in acc_targets]
     with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
-            m = re.match(pattern, line)
-            if m:
-                acc = m.group(1)
-            m = re.match(r"^hash=([\w\d]+)$", line)
-            if m:
-                hash_val = m.group(1)
-            if hash_val and acc:
-                break
-
-    if acc and float(acc) >= acc_target:
-        is_valid = True
-    elif verbose:
-        log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
+            for i, (pattern, acc_target) in enumerate(zip(patterns, acc_targets)):
+                m = re.match(pattern, line)
+                if m:
+                    acc = m.group(1)
+                m = re.match(r"^hash=([\w\d]+)$", line)
+                if m:
+                    hash_val = m.group(1)
+                if acc is not None and float(acc) >= acc_target:
+                    all_accuracy_valid &= True
+                    acc_seen[i] = True
+                elif acc is not None:
+                    all_accuracy_valid = False
+                    log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
+            if all(acc_seen) and hash_val:
+                break;
+        is_valid = all_accuracy_valid & all(acc_seen)
 
     if not hash_val:
         log.error("%s not hash value for mlperf_log_accuracy.json", path)
@@ -2343,6 +2530,7 @@ def check_results_dir(
                                 "v2.0",
                                 "v2.1",
                                 "v3.0",
+                                "v3.1"
                             ]:
                                 pass  # Submission checker was not enforcing this
                             # The power related system_desc_fields are not used by submitters currently.
@@ -2902,40 +3090,61 @@ def check_compliance_acc_dir(test_dir, model, config):
                 log.error("%s has file list mismatch (%s)", test_acc_path, diff)
                 is_valid = False
             elif not acc_passed:
-                acc_type, acc_target = config.get_accuracy_target(model)
-                pattern = ACC_PATTERN[acc_type]
+                target = config.get_accuracy_target(model)
+                patterns = []
+                acc_types = []
+                for i in range(0, len(target), 2):
+                    acc_type = target[i:i+2]
+                    acc_types.append(acc_type)
+                    patterns.append(ACC_PATTERN[acc_type])
+                acc_seen = [False for _ in acc_type]
+
+
+
                 more_accurate = model.find("99.9")
                 if more_accurate == -1:
                     required_delta_perc = 1
                 else:
                     required_delta_perc = 0.1
-                acc_baseline = acc_compliance = 0
+                
+                acc_baseline = {
+                    acc_type: 0 for acc_type in acc_types
+                }
+                acc_compliance = {
+                    acc_type: 0 for acc_type in acc_types
+                }
                 with open(
                     os.path.join(test_acc_path, "baseline_accuracy.txt"),
                     "r",
                     encoding="utf-8",
                 ) as f:
                     for line in f:
-                        m = re.match(pattern, line)
-                        if m:
-                            acc_baseline = float(m.group(1))
+                        for acc_type, pattern in zip(acc_types, patterns):
+                            m = re.match(pattern, line)
+                            if m:
+                                acc_baseline[acc_type] = float(m.group(1))
+                                break
                 with open(
                     os.path.join(test_acc_path, "compliance_accuracy.txt"),
                     "r",
                     encoding="utf-8",
                 ) as f:
                     for line in f:
-                        m = re.match(pattern, line)
-                        if m:
-                            acc_compliance = float(m.group(1))
-                if acc_baseline == 0 or acc_compliance == 0:
-                    is_valid = False
-                else:
-                    delta_perc = abs(1 - acc_baseline / acc_compliance) * 100
-                    if delta_perc <= required_delta_perc:
-                        is_valid = True
-                    else:
+                        for acc_type, pattern in zip(acc_types, patterns):
+                            m = re.match(pattern, line)
+                            if m:
+                                acc_compliance[acc_type] = float(m.group(1))
+                for acc_type in acc_types:
+                    if acc_baseline[acc_type] == 0 or acc_compliance[acc_type] == 0:
                         is_valid = False
+                        break
+                    else:
+                        delta_perc = abs(1 - acc_baseline / acc_compliance) * 100
+                        if delta_perc <= required_delta_perc:
+                            is_valid = True
+                        else:
+                            is_valid = False
+                            break
 
     return is_valid
 
@@ -2957,8 +3166,20 @@ def check_compliance_dir(
         "3d-unet-99",
         "3d-unet-99.9",
         "retinanet",
+        "gptj-99",
+        "gptj-99.9",
+        "gpt3-99",
+        "gpt3-99.9",
     ]:
         test_list.remove("TEST04")
+
+    if model in [
+        "gptj-99",
+        "gptj-99.9",
+        "gpt3-99",
+        "gpt3-99.9",
+    ]:
+        test_list.remove("TEST05")
 
     # Check performance of all Tests
     for test in test_list:
@@ -3007,7 +3228,7 @@ def main():
         skip_power_check=args.skip_power_check,
     )
 
-    if args.version in [ "v0.5", "v0.7", "v1.0", "v1.1", "v2.0", "v2.1", "v3.0" ]:
+    if args.version in [ "v0.5", "v0.7", "v1.0", "v1.1", "v2.0", "v2.1", "v3.0"]:
         args.skip_meaningful_fields_emptiness_check = True
         args.skip_empty_files_check = True
         args.skip_check_power_measure_files = True

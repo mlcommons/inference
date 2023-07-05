@@ -67,7 +67,13 @@ pip install datasets
 python prepare-calibration.py --calibration-list-file calibration-list.txt --output-dir </path/to/output-folder>
 ```
 ### Download GPT-J model
-Please download the internal fine-tuned GPT-J checkpoint and rename it as model/. The download_gptj.py only downloads the default huggingface model which is not fine-tuned on CNN-Daily mail dataset.
+Please download the fine-tuned GPT-J checkpoint from [here](https://cloud.mlcommons.org/index.php/s/QAZ2oM94MkFtbQx) and extract it as model/. The download_gptj.py only downloads the default huggingface model which is not fine-tuned on CNN-Daily mail dataset. 
+
+MD5 hash of the zip file is `e677e28aaf03da84584bb3073b7ee315`. 
+
+```
+wget https://cloud.mlcommons.org/index.php/s/QAZ2oM94MkFtbQx/download --output-document checkpoint.zip
+```
 
 ### Running the Benchmark
 Replace the model and dataset path arguments with your corresponding paths. For evaluating the ROUGE score after the run, include --accuracy as shown below. For user specific target qps, please include user.conf.

@@ -14,15 +14,15 @@ Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.025
 }
 ```
 ## MLPerf Inference v3.1 (submission August 4, 2023)
-Please use the master branch for v3.1 submission. You can use the latest commit or any commit since `f7df3acb6880b6b3a92cd5a444d173137aa5d8ca` for doing the submission. v3.1 tag will be released once submissions are over for reproducibility. 
+Please use the master branch for v3.1 submission. You can use the latest commit or any commit since `[f7df3acb6880b6b3a92cd5a444d173137aa5d8ca](https://github.com/mlcommons/inference/tree/f7df3acb6880b6b3a92cd5a444d173137aa5d8ca)` for doing the submission. v3.1 tag will be released once submissions are over for reproducibility. 
 
-Those doing power submissions must use the `master` branch of the [MLCommons power-dev](https://github.com/mlcommons/power-dev) repository. 
+Those doing power submissions must use the `master` branch of the [MLCommons power-dev](https://github.com/mlcommons/power-dev) repository and checkout to [e9e16b1299ef61a2a5d8b9abf5d759309293c440](https://github.com/mlcommons/power-dev/tree/e9e16b1299ef61a2a5d8b9abf5d759309293c440). 
 
 You can see the individual Readme files in the reference app for more details.
 
 | model | reference app | framework | dataset |
 | ---- | ---- | ---- | ---- |
-| resnet50-v1.5 | [vision/classification_and_detection](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection) | tensorflow, pytorch, onnx, tvm, ncnn | imagenet2012 |
+| resnet50-v1.5 | [vision/classification_and_detection](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection) | tensorflow, onnx, tvm, ncnn | imagenet2012 |
 | retinanet 800x800 | [vision/classification_and_detection](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection) | pytorch, onnx | openimages resized to 800x800|
 | bert | [language/bert](https://github.com/mlcommons/inference/tree/master/language/bert) | tensorflow, pytorch, onnx | squad-1.1 |
 | dlrm-v2 | [recommendation/dlrm_v2](https://github.com/mlcommons/inference/tree/master/recommendation/dlrm_v2/pytorch) | pytorch | Multihot Criteo Terabyte |

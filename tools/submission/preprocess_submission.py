@@ -207,8 +207,8 @@ def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results,
                                     '''
                                     pass
 
-                                offline_scenario_path =  os.path.join(log_path, system_desc, \
                             elif scenario.lower() == "multistream":
+                                offline_scenario_path =  os.path.join(log_path, system_desc, \
                                         model, "offline")
                                 '''Need to check if MS is indeed a measured result and not infeered.\
                                 But if MS is indeed inferred from SS, offline scenario will also be \

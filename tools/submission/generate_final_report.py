@@ -14,8 +14,8 @@ def get_args():
   """Parse commandline."""
   parser = argparse.ArgumentParser()
   parser.add_argument('--input', required=True, help='results csv from checker')
-  parser.add_argument('--version', default='3.0', help='mlperf version')
-  parser.add_argument('--repository', default='submissions_inference_3.0', help='mlperf repository')
+  parser.add_argument('--version', default='3.1', help='mlperf version')
+  parser.add_argument('--repository', default='submissions_inference_3.1', help='mlperf repository')
   args = parser.parse_args()
   return args
 

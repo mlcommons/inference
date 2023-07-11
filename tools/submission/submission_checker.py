@@ -1483,6 +1483,11 @@ def get_args():
         action="store_true",
         help="skips the check of empty required files",
     )
+    parser.add_argument(
+        "--skip-extra-files-in-root-check",
+        action="store_true",
+        help="skips the check of extra files inside the root submission dir",
+    )
     args = parser.parse_args()
     return args
 
@@ -2102,6 +2107,7 @@ def check_results_dir(
     skip_meaningful_fields_emptiness_check=False,
     skip_empty_files_check=False,
     skip_check_power_measure_files=False,
+    skip_extra_files_in_root_check=False,
 ):
     """
     Walk the results directory and do the checking.
@@ -2274,7 +2280,7 @@ def check_results_dir(
         files_outside_division = [
             f for f in list_files(".") if not (f.endswith(".md") or f.endswith(".pdf"))
         ]
-        if len(files_outside_division) > 0:
+        if len(files_outside_division) > 0 and not skip_extra_files_in_root_check:
             log.error(
                 "Root contains files outside division folder %s",
                 division,
@@ -3245,6 +3251,7 @@ def main():
             args.skip_meaningful_fields_emptiness_check,
             args.skip_empty_files_check,
             args.skip_check_power_measure_files,
+            args.skip_extra_files_in_root_check
         )
 
     # log results

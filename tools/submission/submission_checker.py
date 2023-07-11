@@ -1063,14 +1063,14 @@ MODEL_CONFIG = {
             "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
         },
         "seeds": {
-            "qsl_rng_seed": 10003631887983097364,
-            "sample_index_rng_seed": 17183018601990103738,
-            "schedule_rng_seed": 12134888396634371638,
+            "qsl_rng_seed": 148687905518835231,
+            "sample_index_rng_seed": 520418551913322573,
+            "schedule_rng_seed": 811580660758947900,
         },
         "test05_seeds": {
-            "qsl_rng_seed": 14646058500348515648,
-            "sample_index_rng_seed": 1207248993894122914,
-            "schedule_rng_seed": 11879132697760422006,
+            "qsl_rng_seed": 793197339507417767,
+            "sample_index_rng_seed": 255610748586851044,
+            "schedule_rng_seed": 352213341366340113,
         },
         "ignore_errors": [],
         "latency-constraint": {

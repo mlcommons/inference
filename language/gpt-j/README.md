@@ -69,8 +69,6 @@ python prepare-calibration.py --calibration-list-file calibration-list.txt --out
 ### Download GPT-J model
 Please download the fine-tuned GPT-J checkpoint from [here](https://cloud.mlcommons.org/index.php/s/QAZ2oM94MkFtbQx) and extract it as model/. The download_gptj.py only downloads the default huggingface model which is not fine-tuned on CNN-Daily mail dataset. 
 
-MD5 hash of the zip file is `e677e28aaf03da84584bb3073b7ee315`. 
-
 ```
 wget https://cloud.mlcommons.org/index.php/s/QAZ2oM94MkFtbQx/download --output-document checkpoint.zip
 ```

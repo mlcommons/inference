@@ -4,7 +4,7 @@ project(mlperf_loadgen)
 
 # The mlperf_loadgen version.
 set(mlperf_loadgen_VERSION_MAJOR 3)
-set(mlperf_loadgen_VERSION_MINOR 0)
+set(mlperf_loadgen_VERSION_MINOR 1)
 message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}")
 
 # Set build options. NB: CXX_STANDARD is supported since CMake 3.1.

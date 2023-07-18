@@ -11,9 +11,9 @@ sys.path.insert(0, os.getcwd())
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--backend", choices=["tf", "pytorch", "onnxruntime", "tf_estimator"], default="pytorch", help="Backend")
+        "--backend", choices=["pytorch"], default="pytorch", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline",
-                        "Server", "MultiStream"], default="Offline", help="Scenario")
+                        "Server"], default="Offline", help="Scenario")
     parser.add_argument("--model-path", default="EleutherAI/gpt-j-6B", help="")
     parser.add_argument(
         "--dataset-path", default="./data/cnn_eval.json", help="")

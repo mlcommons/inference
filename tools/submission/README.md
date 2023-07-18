@@ -37,13 +37,18 @@ Logs in console the errors that could cause problem uploading the submission to 
 ## `submission_checker.py`
 ### Inputs
 **input**: Path to directory containing one or several submissions.<br>
-**version**: Checker version. E.g v1.1, v2.0, v2.1. <br>
+**version**: Checker version. E.g v1.1, v2.0, v2.1, v3.0, v3.1. <br>
 **submitter**: Filter submitters and only run the checks for some specific submitter. <br>
 **csv**: Output path where the csv with the results will be stored. E.g `results/summary.csv`. <br>
 **skip_compliance**: Flag to skip compliance checks. <br>
 **extra-model-benchmark-map**: Extra mapping for model name to benchmarks. E.g `retinanet:ssd-large;efficientnet:ssd-small`<br>
 **submission-exceptions**: Flag to ignore errors in submissions<br>
-**more-power-check**: Flag to run the check for power submissions <br>
+
+The below input fields are off by default since v3.1 and are mandatory but can be turned on for debugging purposes
+**skip-power-check**: Flag to skip the extra power checks. This flag has no effect on non-power submissions <br>
+**skip-meaningful-fields-emptiness-check**: Flag to avoid checking if mandatory system description fields are empty
+**skip-empty-files-check**: Flag to avoid checking if mandatory measurement files are empty
+**skip-check-power-measure-files**: Flag to avoid checking is the requirement power measurement files are present
 
 ### Summary
 Checks a directory that contains one or several submission. This script can be used by running the following command:

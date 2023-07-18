@@ -1166,10 +1166,10 @@ ACC_PATTERN = {
     "F1": r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
     "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
     "DICE": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
-    "ROUGE1": r"'rouge1':\s([\d.]+).*",
-    "ROUGE2": r"'rouge2':\s([\d.]+).*",
-    "ROUGEL": r"'rougeLsum':\s([\d.]+).*",
-    "GEN_LEN": r"'gen_len':\s([\d.]+).*",
+    "ROUGE1": r".*'rouge1':\s([\d.]+).*",
+    "ROUGE2": r".*'rouge2':\s([\d.]+).*",
+    "ROUGEL": r".*'rougeLsum':\s([\d.]+).*",
+    "GEN_LEN": r".*'gen_len':\s([\d.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [

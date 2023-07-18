@@ -97,8 +97,7 @@ def copy_submission_dir(src, dst, filter_submitter):
                             os.path.join(dst, division, submitter))
 
 
-def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results,
-        extra_model_mapping, config):
+def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results, config):
     """Walk result dir and check for singlestream (SS) folders and \
                corresponding offline and multistream (MS) ones.
        If SS exists and offline and MS are not existing, \
@@ -145,6 +144,15 @@ def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results,
                     config.set_type(system_type)
 
                     for model in list_dir(log_path, system_desc):
+                        extra_model_mapping = None
+                        if division == "open":
+                            model_mapping_path = (
+                                f"{division}/{submitter}/{config.extra_model_benchmark_map}"
+                            )
+                            if os.path.exists(model_mapping_path):
+                                with open(model_mapping_path) as fp:
+                                    extra_model_mapping = json.load(fp)
+
                         mlperf_model = config.get_mlperf_model(model, extra_model_mapping)
                         if not mlperf_model:
                             log.error("Division %s, submitter %s, system %s has "\
@@ -266,8 +274,7 @@ def main():
 
     os.chdir(src_dir)
 
-    infer_scenario_results(args.submitter, args.noinfer_low_accuracy_results, \
-            args.extra_model_benchmark_map, config)
+    infer_scenario_results(args.submitter, args.noinfer_low_accuracy_results, config)
 
     return 0
 

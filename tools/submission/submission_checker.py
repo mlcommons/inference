@@ -1166,10 +1166,10 @@ ACC_PATTERN = {
     "F1": r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
     "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
     "DICE": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
-    "ROUGE1": r"^ROUGE1=([\d\.]+).*",
-    "ROUGE2": r"^ROUGE2=([\d\.]+).*",
-    "ROUGEL": r"^ROUGEL=([\d\.]+).*",
-    "GEN_LEN": r"^GEN_LEN=([\d\.]+).*",
+    "ROUGE1": r"'rouge1':\s([\d.]+).*",
+    "ROUGE2": r".*'rouge2':\s([\d.]+).*",
+    "ROUGEL": r".*'rougeLsum':\s([\d.]+).*",
+    "GEN_LEN": r".*'gen_len':\s([\d.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -3102,7 +3102,7 @@ def check_compliance_acc_dir(test_dir, model, config):
                 for i in range(0, len(target), 2):
                     acc_type = target[i:i+2]
                     acc_types.append(acc_type)
-                    patterns.append(ACC_PATTERN[acc_type])
+                    patterns.append(ACC_PATTERN[acc_type[0]])
                 acc_seen = [False for _ in acc_type]
 
 
@@ -3145,7 +3145,7 @@ def check_compliance_acc_dir(test_dir, model, config):
                         is_valid = False
                         break
                     else:
-                        delta_perc = abs(1 - acc_baseline / acc_compliance) * 100
+                        delta_perc = abs(1 - acc_baseline[acc_type] / acc_compliance[acc_type]) * 100
                         if delta_perc <= required_delta_perc:
                             is_valid = True
                         else:

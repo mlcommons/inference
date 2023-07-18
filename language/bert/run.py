@@ -39,6 +39,8 @@ def get_args():
         "--mlperf_conf", default="build/mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf",
                         help="user config for user LoadGen settings such as target QPS")
+    parser.add_argument("--audit_conf", default="audit.conf",
+                        help="audit config for LoadGen settings during compliance runs")
     parser.add_argument("--max_examples", type=int,
                         help="Maximum number of examples to consider (not limited by default)")
     args = parser.parse_args()
@@ -99,7 +101,7 @@ def main():
     log_settings.enable_trace = True
 
     print("Running LoadGen test...")
-    lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
+    lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings, args.audit_conf)
     if args.accuracy and not os.environ.get("SKIP_VERIFY_ACCURACY"):
         cmd = "python3 {:}/accuracy-squad.py {}".format(
             os.path.dirname(os.path.abspath(__file__)),

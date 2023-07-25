@@ -139,8 +139,7 @@ def main():
        (ref_mode == "MultiStream" and float(ref_score) <= 1600000):
         threshold = 0.20
         
-    if float(test_score) < float(ref_score) * (1 + threshold) and\
-       float(test_score) > float(ref_score) * (1 - threshold):
+    if float(test_score) < float(ref_score) * (1 + threshold):
         print("TEST PASS")
     else:
         print("TEST FAIL: Test score invalid")

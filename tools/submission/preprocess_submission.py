@@ -44,7 +44,7 @@ def get_args():
         default=False, action="store_true")
     parser.add_argument(
         "--version",
-        default="v3.0",
+        default="v3.1",
         choices=list(checker.MODEL_CONFIG.keys()),
         help="mlperf version")
     parser.add_argument("--submitter", help="filter to submitter")
@@ -97,8 +97,7 @@ def copy_submission_dir(src, dst, filter_submitter):
                             os.path.join(dst, division, submitter))
 
 
-def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results,
-        extra_model_mapping, config):
+def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results, config):
     """Walk result dir and check for singlestream (SS) folders and \
                corresponding offline and multistream (MS) ones.
        If SS exists and offline and MS are not existing, \
@@ -145,6 +144,15 @@ def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results,
                     config.set_type(system_type)
 
                     for model in list_dir(log_path, system_desc):
+                        extra_model_mapping = None
+                        if division == "open":
+                            model_mapping_path = (
+                                f"{division}/{submitter}/{config.extra_model_benchmark_map}"
+                            )
+                            if os.path.exists(model_mapping_path):
+                                with open(model_mapping_path) as fp:
+                                    extra_model_mapping = json.load(fp)
+
                         mlperf_model = config.get_mlperf_model(model, extra_model_mapping)
                         if not mlperf_model:
                             log.error("Division %s, submitter %s, system %s has "\
@@ -170,6 +178,7 @@ def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results,
                         for scenario in list_dir(log_path, system_desc, model):
 
                             scenario_path = os.path.join(log_path, system_desc, model, scenario)
+
                             if scenario.lower() == "singlestream":
                                 tobeinferredpaths = []
                                 offline_scenario_path =  os.path.join(log_path, system_desc, \
@@ -180,7 +189,7 @@ def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results,
                                         not os.path.exists(offline_scenario_path):
                                     #infer both the scenarios from SS
                                     tobeinferredpaths = [ offline_scenario_path ]
-                                    if "multistream" in all_scenarios:
+                                    if "MultiStream" in all_scenarios:
                                         tobeinferredpaths.append(multistream_scenario_path)
 
                                     for tobeinferredpath in tobeinferredpaths:
@@ -193,9 +202,9 @@ def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results,
                                         shutil.copytree(scenario_path, tobeinferredpath)
 
                                 elif not os.path.exists(multistream_scenario_path) and \
-                                        "multistream" in all_scenarios:
+                                        "MultiStream" in all_scenarios:
                                     #infer MS from SS
-                                    for tobeinferredpath in [multistream_scenario_path]:
+                                    for tobeinferredpath in [ multistream_scenario_path ]:
                                         log.info("Division %s, submitter %s, system %s, model %s: \
                                             inferring %s results from %s", division, submitter, \
                                             system_desc, model, "multistream", "singlestream")
@@ -206,13 +215,13 @@ def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results,
                                     '''
                                     pass
 
-                            '''Need to check if MS is indeed a measured result and not infeered.\
-                               But if MS is indeed inferred from SS, offline scenario will also be \
-                               inferred already by the inferring code above \
-                            '''
-                            if scenario.lower() == "multistream":
+                            elif scenario.lower() == "multistream":
                                 offline_scenario_path =  os.path.join(log_path, system_desc, \
                                         model, "offline")
+                                '''Need to check if MS is indeed a measured result and not infeered.\
+                                But if MS is indeed inferred from SS, offline scenario will also be \
+                                inferred already by the inferring code above \
+                                '''
                                 for tobeinferredpath in [offline_scenario_path]:
                                     if not os.path.exists(tobeinferredpath):
                                         log.info("Division %s, submitter %s, system %s, model %s: \
@@ -265,8 +274,7 @@ def main():
 
     os.chdir(src_dir)
 
-    infer_scenario_results(args.submitter, args.noinfer_low_accuracy_results, \
-            args.extra_model_benchmark_map, config)
+    infer_scenario_results(args.submitter, args.noinfer_low_accuracy_results, config)
 
     return 0
 

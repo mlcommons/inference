@@ -40,6 +40,7 @@ Build:
 cd mlperf_inference/loadgen
 CFLAGS="-std=c++14 -O3" python setup.py bdist_wheel
 cd ..; pip install --force-reinstall loadgen/dist/`ls -r loadgen/dist/ | head -n1` ; cd -
+cp ../mlperf.conf ../../
 cd ../..
 ```
 ### Clone 

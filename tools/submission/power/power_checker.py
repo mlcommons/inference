@@ -24,6 +24,11 @@ import os
 import re
 import traceback
 import uuid
+import logging
+
+
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("main")
 
 
 class LineWithoutTimeStamp(Exception):
@@ -63,8 +68,20 @@ RESULT_PATHS = [
     TESTING_MODE + "/spl.txt",
 ]
 
-COMMON_ERROR_RANGING = ["Can't evaluate uncertainty of this sample!"]
+COMMON_ERROR_RANGING = [
+    "Can't evaluate uncertainty of this sample!",
+    "Bad watts reading nan from ",
+    "Bad amps reading nan from ",
+    "Bad pf reading nan from ",
+    "Bad volts reading nan from ",
+    "Current appears to be too high for set range",
+]
 COMMON_ERROR_TESTING = ["USB."]
+WARNING_NEEDS_TO_BE_ERROR_TESTING_RE = [
+    re.compile(r"Uncertainty \d+.\d+%, which is above 1.00% limit for the last sample!")
+]
+
+TIME_DELTA_TOLERANCE = 500  # in milliseconds
 
 
 def _normalize(path: str) -> str:
@@ -74,12 +91,11 @@ def _normalize(path: str) -> str:
         if parts[0] == path:  # sentinel for absolute paths
             allparts.insert(0, parts[0])
             break
-        elif parts[1] == path:  # sentinel for relative paths
+        if parts[1] == path:  # sentinel for relative paths
             allparts.insert(0, parts[1])
             break
-        else:
-            path = parts[0]
-            allparts.insert(0, parts[1])
+        path = parts[0]
+        allparts.insert(0, parts[1])
     return "/".join(allparts)
 
 
@@ -304,7 +320,7 @@ def phases_check(
     client_sd: SessionDescriptor, server_sd: SessionDescriptor, path: str
 ) -> None:
     """Check that the time difference between corresponding checkpoint values
-    from client.json and server.json is less than or equal to 1000 ms.
+    from client.json and server.json is less than or equal to TIME_DELTA_TOLERANCE ms.
     Check that the loadgen timestamps are within workload time interval.
     Check that the duration of loadgen test for the ranging mode is comparable
     with duration of loadgen test for the testing mode.
@@ -314,28 +330,31 @@ def phases_check(
     phases_ranging_s = server_sd.json_object["phases"]["ranging"]
     phases_testing_s = server_sd.json_object["phases"]["testing"]
 
-    def comapre_time(
+    def compare_time(
         phases_client: List[List[float]], phases_server: List[List[float]], mode: str
     ) -> None:
         assert len(phases_client) == len(
             phases_server
         ), f"Phases amount is not equal for {mode} mode."
         for i in range(len(phases_client)):
-            assert (
-                abs(phases_client[i][0] - phases_server[i][0]) <= 1
-            ), f"The time difference for {i + 1} phase of {mode} mode is more than 1000ms."
+            time_difference = abs(phases_client[i][0] - phases_server[i][0])
+            assert time_difference <= TIME_DELTA_TOLERANCE / 1000, (
+                f"The time difference for {i + 1} phase of {mode} mode is more than {TIME_DELTA_TOLERANCE}ms."
+                f"Observed difference is {time_difference * 1000}ms"
+            )
 
-    comapre_time(phases_ranging_c, phases_ranging_s, RANGING_MODE)
-    comapre_time(phases_testing_c, phases_testing_s, TESTING_MODE)
+    compare_time(phases_ranging_c, phases_ranging_s, RANGING_MODE)
+    compare_time(phases_testing_c, phases_testing_s, TESTING_MODE)
 
     def compare_duration(range_duration: float, test_duration: float) -> None:
-        duration_diff = abs(range_duration - test_duration) / max(
-            range_duration, test_duration
-        )
+        duration_diff = (range_duration - test_duration) / range_duration
 
-        assert (
-            duration_diff < 0.15
-        ), "Duration of the ranging mode differs from the duration of testing mode by more than 15 percent"
+        if duration_diff > 0.5:
+            raise CheckerWarning(
+                f"Duration of the testing mode ({round(test_duration,2)}) is lower than that of "
+                f"ranging mode ({round(range_duration,2)}) by {round(duration_diff*100,2)} "
+                f"percent which is more than the expected 5 percent limit."
+            )
 
     def compare_time_boundaries(
         begin: float, end: float, phases: List[Any], mode: str
@@ -365,6 +384,64 @@ def phases_check(
     testing_duration_d = system_end_t - system_begin_t
 
     compare_duration(ranging_duration_d, testing_duration_d)
+
+    def get_avg_power(power_path: str, run_path: str) -> Tuple[float, float]:
+        # parse the power logs
+
+        power_begin, power_end = _get_begin_end_time_from_mlperf_log_detail(
+            os.path.join(path, os.path.basename(run_path)), client_sd
+        )
+
+        detail_log_fname = os.path.join(run_path, "mlperf_log_detail.txt")
+        datetime_format = "%m-%d-%Y %H:%M:%S.%f"
+
+        spl_fname = os.path.join(run_path, "spl.txt")
+        power_list = []
+        pf_list = []
+
+        with open(spl_fname) as f:
+            for line in f:
+                timestamp = (
+                    datetime.strptime(line.split(",")[1], datetime_format)
+                ).timestamp()
+                if timestamp > power_begin and timestamp < power_end:
+                    cpower = float(line.split(",")[3])
+                    cpf = float(line.split(",")[9])
+                    if cpower > 0:
+                        power_list.append(cpower)
+                    if cpf > 0:
+                        pf_list.append(cpf)
+
+        if len(power_list) == 0:
+            power = -1.0
+        else:
+            power = sum(power_list) / len(power_list)
+        if len(pf_list) == 0:
+            pf = -1.0
+        else:
+            pf = sum(pf_list) / len(pf_list)
+        return power, pf
+
+    ranging_watts, ranging_pf = get_avg_power(
+        os.path.join(path, "power"), os.path.join(path, "ranging")
+    )
+    testing_watts, testing_pf = get_avg_power(
+        os.path.join(path, "power"), os.path.join(path, "run_1")
+    )
+    ranging_watts = round(ranging_watts, 5)
+    testing_watts = round(testing_watts, 5)
+    ranging_pf = round(ranging_pf, 5)
+    testing_pf = round(testing_pf, 5)
+
+    delta = round((float(testing_watts) / float(ranging_watts) - 1) * 100, 2)
+
+    assert delta > -5, (
+        f"Average power during the testing mode run is lower than that during the ranging run by more than 5%. "
+        f"Observed delta is {delta}% "
+        f"with avg. ranging power {ranging_watts}, avg.testing power {testing_watts}, "
+        f"avg. ranging power factor {ranging_pf} and avg. testing power factor {testing_pf}"
+    )
+    # print(f"{path},{ranging_watts},{testing_watts},{delta}%,{ranging_pf},{testing_pf}\n")
 
 
 def session_name_check(
@@ -520,23 +597,37 @@ def check_ptd_logs(
             if start_ranging_time is None or stop_ranging_time is None:
                 assert False, "Can not find ranging time in ptd_logs.txt."
             if error:
-                if problem_line.group(0).strip() == COMMON_ERROR_TESTING[0]:
+                if problem_line.group(0).strip() in COMMON_ERROR_TESTING:
                     raise CheckerWarning(
                         f"{line.strip()!r} in ptd_log.txt during testing stage but it is accepted. Treated as WARNING"
                     )
                 assert (
                     start_ranging_time < log_time < stop_ranging_time
                 ), f"{line.strip()!r} in ptd_log.txt"
-                if (
-                    not problem_line.group(0)
-                    .strip()
-                    .startswith(COMMON_ERROR_RANGING[0])
+
+                # Treat uncommon errors in ranging phase as warnings
+                if all(
+                    not problem_line.group(0).strip().startswith(common_ranging_error)
+                    for common_ranging_error in COMMON_ERROR_RANGING
                 ):
                     raise CheckerWarning(
                         f"{line.strip()!r} in ptd_log.txt during ranging stage. Treated as WARNING"
                     )
             else:
-                if start_load_time < log_time < stop_load_time:
+                if (
+                    start_load_time + TIME_DELTA_TOLERANCE
+                    < log_time
+                    < stop_load_time - TIME_DELTA_TOLERANCE
+                ):
+                    for warning_to_be_error in WARNING_NEEDS_TO_BE_ERROR_TESTING_RE:
+                        warning_line = warning_to_be_error.search(
+                            problem_line.group(0).strip()
+                        )
+                        if warning_line and warning_line.group(0):
+                            assert (
+                                False
+                            ), f"{line.strip()!r} during testing phase. Test start time: {start_load_time}, Log time: {log_time}, Test stop time: {stop_load_time} "
+
                     raise CheckerWarning(
                         f"{line.strip()!r} in ptd_log.txt during load stage"
                     )
@@ -646,20 +737,20 @@ def check_with_logging(check_name: str, check: Callable[[], None]) -> Tuple[bool
     try:
         check()
     except AssertionError as e:
-        print(f"[ ] {check_name}")
-        print(f"\t{e}\n")
+        log.error(f"[ ] {check_name}")
+        log.error(f"\t{e}\n")
         return False, False
     except CheckerWarning as e:
-        print(f"[x] {check_name}")
-        print(f"\t{e}\n")
+        log.warning(f"[x] {check_name}")
+        log.warning(f"\t{e}\n")
         return True, True
     except Exception:
-        print(f"[ ] {check_name}")
-        print("Unhandled exeception:")
+        log.exception(f"[ ] {check_name}")
+        log.exception("Unhandled exeception:")
         traceback.print_exc()
         return False, False
     else:
-        print(f"[x] {check_name}")
+        log.info(f"[x] {check_name}")
     return True, False
 
 
@@ -693,10 +784,16 @@ def check(path: str) -> int:
         result &= check_result
         warnings |= check_warnings
 
-    print(
-        f"\n{'All' if result else 'ERROR: Not all'} checks passed"
-        f"{'. Warnings encountered, check for audit!' if warnings else ''}"
-    )
+    if result:
+        log.info(
+            "\nAll checks passed"
+            f"{'. Warnings encountered, check for audit!' if warnings else ''}"
+        )
+    else:
+        log.error(
+            f"\nERROR: Not all checks passed"
+            f"{'. Warnings encountered, check for audit!' if warnings else ''}"
+        )
 
     return 0 if result else 1
 

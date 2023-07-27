@@ -401,9 +401,10 @@ def phases_check(
 
         with open(spl_fname) as f:
             for line in f:
+                timezone_offset = int(server_sd.json_object["timezone"])
                 timestamp = (
                     datetime.strptime(line.split(",")[1], datetime_format)
-                ).timestamp()
+                ).timestamp() + timezone_offset
                 if timestamp > power_begin and timestamp < power_end:
                     cpower = float(line.split(",")[3])
                     cpf = float(line.split(",")[9])

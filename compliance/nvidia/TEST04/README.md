@@ -23,6 +23,7 @@ This test is not applicable for the following benchmarks whose performance is de
  3. dlrm
  4. 3d-unet
  5. retinanet (while retinanet input images are not variable, computation cost varies significantly due to the variance in qualified detections from the detector heads, which affect the NMS runtime)
+ 6. gpt-j
 
 ## Scenarios
 

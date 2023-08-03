@@ -42,11 +42,8 @@ class BackendTflite(backend.Backend):
     def load(self, model_path, inputs=None, outputs=None, use_tpu=False):
         self.use_tpu = use_tpu
         if use_tpu:
-            from tflite_runtime.interpreter import load_delegate
-            self.sess = tflite.Interpreter(
-                model_path=model_path,
-                experimental_delegates=[load_delegate('libedgetpu.so.1')]
-            )
+            from pycoral.utils.edgetpu import make_interpreter
+            self.sess = make_interpreter(model_path)
         else:
             self.sess = tflite.Interpreter(model_path=model_path)
         self.sess.allocate_tensors()

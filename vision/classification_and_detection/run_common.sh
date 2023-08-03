@@ -109,7 +109,7 @@ fi
 # tflite
 #
 if [ $name == "resnet50-tflite" ] && [ $device == "tpu" ]; then
-    model_path="$MODEL_DIR/resnet50_quant_edgetpu.tflite"
+    model_path="$MODEL_DIR/resnet50_quant_full_mlperf_edgetpu.tflite"
     profile=resnet50-tflite
     extra_args="$extra_args --backend tflite --device tpu"
 else

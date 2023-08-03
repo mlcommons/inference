@@ -62,6 +62,16 @@ def main():
     with open(args.mlperf_accuracy_file, "r") as f:
         results = json.load(f)
 
+    # Deduplicate the results loaded from the json
+    dedup_results = []
+    seen = set()
+    for result in results:
+        item = result['qsl_idx']
+        if item not in seen:
+            seen.add(item)
+            dedup_results.append(result)
+    results = dedup_results      
+
     target_required = []
     preds_token_ids = []
 

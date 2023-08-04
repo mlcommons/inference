@@ -1572,36 +1572,29 @@ def check_accuracy_dir(config, model, path, verbose):
     acc = None
     hash_val = None
     target = config.get_accuracy_target(model)
-    keys = []
     patterns = []
     acc_targets = []
     for i in range(0, len(target), 2):
         acc_type, acc_target = target[i:i+2]
-        keys.append(acc_type)
         patterns.append(ACC_PATTERN[acc_type])
         acc_targets.append(acc_target)
     acc_seen = [False for _ in acc_targets]
     with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
-            for i, (key, pattern, acc_target) in enumerate(zip(keys, patterns, acc_targets)):
+            for i, (pattern, acc_target) in enumerate(zip(patterns, acc_targets)):
                 m = re.match(pattern, line)
                 if m:
                     acc = m.group(1)
                 m = re.match(r"^hash=([\w\d]+)$", line)
                 if m:
                     hash_val = m.group(1)
-                # If metric of interest is in the line, then record it as seen.
-                # Otherwise, skip
-                if key.lower() in line.lower():
-                    acc_seen[i] = True
-                else:
-                    continue
-                # Now we're able to compare the correct acc_target against acc
                 if acc is not None and float(acc) >= acc_target:
                     all_accuracy_valid &= True
+                    acc_seen[i] = True
                 elif acc is not None:
                     all_accuracy_valid = False
                     log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
+                acc = None
             if all(acc_seen) and hash_val:
                 break;
         is_valid = all_accuracy_valid & all(acc_seen)

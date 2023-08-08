@@ -3216,10 +3216,13 @@ def check_compliance_dir(
                 and compliance_perf_valid
             )
 
-    # Check accuracy for TEST01
-    compliance_acc_pass = check_compliance_acc_dir(
-        os.path.join(compliance_dir, "TEST01"), model, config
-    )
+    if "TEST01" in test_list:
+        # Check accuracy for TEST01
+        compliance_acc_pass = check_compliance_acc_dir(
+            os.path.join(compliance_dir, "TEST01"), model, config
+        )
+    else:
+        compliance_acc_pass= True
 
     return compliance_perf_pass and compliance_acc_pass and compliance_perf_dir_pass
 

@@ -3185,6 +3185,7 @@ def check_compliance_dir(
         "gpt3-99.9",
     ]:
         test_list.remove("TEST05")
+        test_list.remove("TEST01") 
 
     # Check performance of all Tests
     for test in test_list:

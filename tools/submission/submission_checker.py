@@ -1570,6 +1570,7 @@ def check_accuracy_dir(config, model, path, verbose):
     is_valid = False
     all_accuracy_valid = True
     acc = None
+    result_acc = None
     hash_val = None
     target = config.get_accuracy_target(model)
     patterns = []
@@ -1591,6 +1592,8 @@ def check_accuracy_dir(config, model, path, verbose):
                 if acc is not None and float(acc) >= acc_target:
                     all_accuracy_valid &= True
                     acc_seen[i] = True
+                    if i == 0:
+                        result_acc = acc
                 elif acc is not None:
                     all_accuracy_valid = False
                     log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
@@ -1618,7 +1621,7 @@ def check_accuracy_dir(config, model, path, verbose):
     if not find_error_in_detail_log(config, fname):
         is_valid = False
 
-    return is_valid, acc
+    return is_valid, result_acc
 
 
 def get_performance_metric(

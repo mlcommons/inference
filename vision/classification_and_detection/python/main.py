@@ -42,7 +42,7 @@ SUPPORTED_DATASETS = {
         (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.PostProcessArgMax(offset=-1),
          {"image_size": [224, 224, 3]}),
     "imagenet_tflite_tpu":
-        (imagenet.Imagenet, dataset.pre_process_resnet, dataset.PostProcessArgMax(offset=0),
+        (imagenet.Imagenet, dataset.pre_process_imagenet_tflite_tpu, dataset.PostProcessArgMax(offset=0),
          {"image_size": [224, 224, 3]}),
     "imagenet_pytorch":
         (imagenet.Imagenet, dataset.pre_process_imagenet_pytorch, dataset.PostProcessArgMax(offset=0),

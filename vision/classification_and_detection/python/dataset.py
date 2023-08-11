@@ -202,7 +202,7 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
     return img
 
 
-def pre_process_resnet(img, dims=None, need_transpose=False):
+def pre_process_imagenet_tflite_tpu(img, dims=None, need_transpose=False):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     img = resize_with_aspectratio(img, 224, 224, inter_pol=cv2.INTER_LINEAR)
     img = center_crop(img, 224, 224)

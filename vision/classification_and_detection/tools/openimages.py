@@ -134,16 +134,19 @@ def export_to_coco(
         how="inner",
     )
     image_list = [i[1] for i in image_list]
-    annotations = annotations[np.isin(annotations["ImageID"], image_list)]
-    annotations = annotations.merge(class_map, on="LabelName", how="inner")
-    annotations["image_id"] = pd.factorize(annotations["ImageID"].tolist())[0]
-    annotations[["height", "width"]] = annotations.apply(
+    image_list_df = pd.DataFrame([image_list]).T
+    image_list_df.columns = ["image_list"]
+    image_list_df[["height", "width"]] = image_list_df.apply(
         lambda x: extract_dims(
-            os.path.join(dataset_path, f"{x['ImageID']}.jpg")
+            os.path.join(dataset_path, f"{x['image_list']}.jpg")
         ),
         axis=1,
         result_type="expand",
     )
+    annotations = pd.merge(annotations, image_list_df, how="inner", left_on="ImageID", right_on="image_list")
+    annotations = annotations.merge(class_map, on="LabelName", how="inner")
+    annotations = annotations.sort_values(by=["ImageID"])
+    annotations["image_id"] = pd.factorize(annotations["ImageID"].tolist())[0]
     # Images
     images_ = []
     for i, row in (
@@ -164,22 +167,20 @@ def export_to_coco(
     # Annotations
     annotations_ = []
     for i, row in annotations.iterrows():
+        bbox = [
+            row["XMin"] * row["width"],
+            row["YMin"] * row["height"],
+            (row["XMax"] - row["XMin"]) * row["width"],
+            (row["YMax"] - row["YMin"]) * row["height"],
+        ]
         annotations_.append(
             {
                 "id": int(i) + 1,
                 "image_id": int(row["image_id"] + 1),
                 "category_id": int(row["category_id"]),
-                "bbox": [
-                    row["XMin"] * row["width"],
-                    row["YMin"] * row["height"],
-                    (row["XMax"] - row["XMin"]) * row["width"],
-                    (row["YMax"] - row["YMin"]) * row["height"],
-                ],
-                "area": (row["XMax"] - row["XMin"])
-                * row["width"]
-                * (row["YMax"] - row["YMin"])
-                * row["height"],
-                "iscrowd": 0,
+                "bbox": bbox,
+                "area": bbox[2] * bbox[3],
+                "iscrowd": row["IsGroupOf"],
                 "IsOccluded": row["IsOccluded"],
                 "IsInside": row["IsInside"],
                 "IsDepiction": row["IsDepiction"],

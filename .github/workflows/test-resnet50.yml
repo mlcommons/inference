@@ -35,4 +35,4 @@ jobs:
         cm run script --quiet --tags=get,sys-utils-cm
     - name: Test Resnet50 and end to end submission generation
       run: |
-        cm run script --tags=run,mlperf,inference,generate-run-cmds,_submission,_short --quiet --submitter="MLCommons" --hw_name=default --model=resnet50 --lang=python --backend=${{ matrix.backend }} --device=cpu --scenario=Offline --test_query_count=500 --adr.compiler.tags=gcc --adr.inference-src.env.CM_GIT_CHECKOUT=${{ github.event.pull_request.head.ref }} --adr.inference-src.env.CM_GIT_URL=${{ github.event.pull_request.head.repo.html_url }}
+        cm run script --tags=run,mlperf,inference,generate-run-cmds,_submission,_short --quiet --submitter="MLCommons" --hw_name=default --model=resnet50 --implementation=reference --backend=${{ matrix.backend }} --device=cpu --scenario=Offline --test_query_count=500 --adr.compiler.tags=gcc --adr.inference-src.env.CM_GIT_CHECKOUT=${{ github.event.pull_request.head.ref }} --adr.inference-src.version=custom --adr.inference-src.env.CM_GIT_URL=${{ github.event.pull_request.head.repo.html_url }}

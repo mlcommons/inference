@@ -1,0 +1,39 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Test for MLPerf inference rnnt submission generation using CM script automation
+
+on:
+  pull_request:
+    branches: [ "master", "dev" ]
+    paths:
+      - speech_recognition/rnnt/**
+      - tools/submission/**
+      - .github/workflows/test-rnnt.yml
+      - '!**.md'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9" ]
+        backend: [ "pytorch" ]
+        precision: [ "fp32" ]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python3 -m pip install cmind
+        cm pull repo mlcommons@ck
+        cm run script --quiet --tags=get,sys-utils-cm
+    - name: Test RNNT and end to end submission generation
+      run: |
+        cm run script --tags=run,mlperf,inference,generate-run-cmds,_performance-only --quiet --submitter="MLCommons" --hw_name=default --model=rnnt --implementation=reference --backend=${{ matrix.backend }} --device=cpu --scenario=Offline --precision=${{ matrix.precision }} --adr.compiler.tags=gcc  --adr.inference-src.version=custom --adr.inference-src.env.CM_GIT_CHECKOUT=${{ github.event.pull_request.head.ref }} --adr.inference-src.env.CM_GIT_URL=${{ github.event.pull_request.head.repo.html_url }} --adr.ml-engine-pytorch.version=1.13.0 --adr.ml-engine-torchvision.version=0.14.1 --adr.librosa.version_max=0.9.1

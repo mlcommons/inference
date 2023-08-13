@@ -7,15 +7,25 @@
     pip3 install absl-py numpy
 
 ## Quick Start
+### Installation - Python
 
     pip install absl-py numpy
     git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf_inference
     cd mlperf_inference/loadgen
-    CFLAGS="-std=c++14 -O3" python setup.py bdist_wheel
-    pip install --force-reinstall dist/mlperf_loadgen-0.5a0-cp36-cp36m-linux_x86_64.whl
-    python demos/py_demo_single_stream.py
+    CFLAGS="-std=c++14 -O3" python -m pip install .
 
-This will fetch the loadgen source, build and install the loadgen as a python module, and run a simple end-to-end demo. The exact *.whl filename may differ on your system, but there should only be one resulting whl file for you to use.
+This will fetch the loadgen source, build and install the loadgen as a python module, and run a simple end-to-end demo.
+
+Alternatively, we provide wheels for several python versions and operating system that can be installed using pip directly.
+
+    pip install mlperf-loadgen
+
+**NOTE:** Take into account that we only update the published wheels after an official release, they may not include the latest changes.
+
+### Testing your Installation
+The following command will run a simple end-to-end demo:
+
+    python mlperf_inference/loadgen/demos/py_demo_single_stream.py
 
 A summary of the test results can be found in the *"mlperf_log_summary.txt"* logfile.
 
@@ -23,6 +33,7 @@ For a timeline visualization of what happened during the test, open the *"mlperf
 * Type “chrome://tracing” in the address bar, then drag-n-drop the json.
 * This may be useful for SUT performance tuning and understanding + debugging the loadgen.
 
+### Installation - C++
 To build the loadgen as a C++ library, rather than a python module:
 
     git clone https://github.com/mlcommons/inference.git mlperf_inference

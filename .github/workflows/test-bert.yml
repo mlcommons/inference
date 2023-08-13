@@ -1,0 +1,38 @@
+# This workflow will install Python dependencies, run tests and lint with a variety of Python versions
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Test for MLPerf inference bert submission generation using CM script automation
+
+on:
+  pull_request:
+    branches: [ "master", "dev" ]
+    paths:
+      - language/bert/**
+      - tools/submission/**
+      - .github/workflows/test-bert.yml
+      - '!**.md'
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9" ]
+        backend: [ "deepsparse" ]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python3 -m pip install cmind
+        cm pull repo mlcommons@ck
+        cm run script --quiet --tags=get,sys-utils-cm
+    - name: Test BERT and end to end submission generation
+      run: |
+        cm run script --tags=run,mlperf,inference,generate-run-cmds,_submission,_short --quiet --submitter="MLCommons" --hw_name=default --model=bert-99 --implementation=reference --backend=${{ matrix.backend }} --device=cpu --scenario=Offline --adr.compiler.tags=gcc  --adr.inference-src.version=custom --adr.inference-src.env.CM_GIT_CHECKOUT=${{ github.event.pull_request.head.ref }} --adr.inference-src.env.CM_GIT_URL=${{ github.event.pull_request.head.repo.html_url }} --target_qps=1

@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 import evaluate
 import argparse
 import nltk
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, GPT2Tokenizer
 
 
 def get_args():
@@ -48,11 +48,12 @@ def main():
     metric = evaluate.load("rouge")
     nltk.download('punkt')
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name,
-        model_max_length=2048,
-        padding_side="left",
-        use_fast=False,)
+    #tokenizer = AutoTokenizer.from_pretrained(
+    #    model_name,
+    #    model_max_length=2048,
+    #    padding_side="left",
+    #    use_fast=False,)
+    tokenizer = GPT2Tokenizer.from_pretrained('./tokenizer/')
     tokenizer.pad_token = tokenizer.eos_token
 
     data_object = Dataset(dataset_path)

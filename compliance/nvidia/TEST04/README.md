@@ -20,9 +20,10 @@ Test script works best with Python 3.3 or later.
 This test is not applicable for the following benchmarks whose performance is dependent on variably sized input samples:
  1. rnnt
  2. bert
- 3. dlrm
+ 3. dlrm-v2
  4. 3d-unet
  5. retinanet (while retinanet input images are not variable, computation cost varies significantly due to the variance in qualified detections from the detector heads, which affect the NMS runtime)
+ 6. gpt-j
 
 ## Scenarios
 

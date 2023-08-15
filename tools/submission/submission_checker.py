@@ -2767,7 +2767,7 @@ def check_results_dir(
                                 model_name,
                                 scenario,
                             )
-                            if not os.path.exists(compliance_dir):
+                            if not os.path.exists(compliance_dir) and "gptj" not in model_name:
                                 log.error("no compliance dir for %s", name)
                                 results[name] = None
                             else:

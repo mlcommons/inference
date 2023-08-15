@@ -1592,11 +1592,11 @@ def check_accuracy_dir(config, model, path, verbose):
                 if acc is not None and float(acc) >= acc_target:
                     all_accuracy_valid &= True
                     acc_seen[i] = True
-                    if i == 0:
-                        result_acc = acc
                 elif acc is not None:
                     all_accuracy_valid = False
                     log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
+                if i == 0 and acc:
+                    result_acc = acc
                 acc = None
             if all(acc_seen) and hash_val:
                 break;

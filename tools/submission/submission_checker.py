@@ -922,6 +922,7 @@ MODEL_CONFIG = {
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
             "gptj-99": ["SingleStream", "Offline"],
+            "gptj-99.9": ["SingleStream", "Offline"],
         },
         "optional-scenarios-edge": {},
         "required-scenarios-datacenter-edge": {

@@ -134,11 +134,12 @@ def main():
           'rnnt': ['SingleStream', 'Offline'],
           'bert-99': ['SingleStream', 'Offline'],
           'bert-99.9': [],
-          'dlrm-99': [],
-          'dlrm-99.9': [],
+          'dlrm-v2-99': [],
+          'dlrm-v2-99.9': [],
           '3d-unet-99': ['SingleStream', 'Offline'],
           '3d-unet-99.9': ['SingleStream', 'Offline'],
           'gptj-99': ['SingleStream', 'Offline'],
+          'gptj-99.9': ['SingleStream', 'Offline'],
       }
   }
 

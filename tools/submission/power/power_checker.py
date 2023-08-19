@@ -597,7 +597,7 @@ def check_ptd_logs(
         problem_line = re.search(reg_exp, line)
 
         if problem_line and problem_line.group(0):
-            log_time = get_time_from_line(line, date_regexp, file_path, timezone_offset)
+            log_time = get_time_from_line(line, date_regexp, file_path, 0)
             if start_ranging_time is None or stop_ranging_time is None:
                 assert False, "Can not find ranging time in ptd_logs.txt."
             if error:
@@ -654,12 +654,12 @@ def check_ptd_logs(
             continue
         if (not start_ranging_time) and (start_ranging_line == msg):
             start_ranging_time = get_time_from_line(
-                line, date_regexp, file_path, timezone_offset
+                line, date_regexp, file_path, 0 #timezone_offset
             )
         if (not stop_ranging_time) and bool(start_ranging_time):
             if ": Completed test" == msg:
                 stop_ranging_time = get_time_from_line(
-                    line, date_regexp, file_path, timezone_offset
+                    line, date_regexp, file_path, 0 #timezone_offset
                 )
                 break
 
@@ -674,7 +674,7 @@ def check_ptd_logs(
             try:
                 log_time = None
                 log_time = get_time_from_line(
-                    line, date_regexp, file_path, timezone_offset
+                    line, date_regexp, file_path, 0 #timezone_offset
                 )
             except LineWithoutTimeStamp:
                 assert (

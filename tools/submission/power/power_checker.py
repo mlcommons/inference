@@ -15,7 +15,7 @@
 # =============================================================================
 
 from collections import OrderedDict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Tuple, Any, Optional, Callable
 import argparse
 import hashlib
@@ -392,6 +392,10 @@ def phases_check(
             os.path.join(path, os.path.basename(run_path)), client_sd
         )
 
+        # convert to UTC
+        power_begin = datetime.fromtimestamp(power_begin, tz = timezone.utc)
+        power_end = datetime.fromtimestamp(power_end, tz = timezone.utc)
+
         detail_log_fname = os.path.join(run_path, "mlperf_log_detail.txt")
         datetime_format = "%m-%d-%Y %H:%M:%S.%f"
 
@@ -403,7 +407,7 @@ def phases_check(
             for line in f:
                 timestamp = (
                     datetime.strptime(line.split(",")[1], datetime_format)
-                ).timestamp()
+                ).replace(tzinfo=timezone.utc)
                 if timestamp > power_begin and timestamp < power_end:
                     cpower = float(line.split(",")[3])
                     cpf = float(line.split(",")[9])

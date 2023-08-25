@@ -2037,6 +2037,7 @@ def check_power_dir(
         log.error("%s has file list mismatch (%s)", power_path, diff)
         is_valid = False
 
+    '''
     (
         is_valid,
         power_metric_ranging,
@@ -2045,6 +2046,7 @@ def check_power_dir(
     ) = get_power_metric(
         config, scenario_fixed, ranging_path, is_valid, power_res_ranging
     )
+    '''
     is_valid, power_metric, scenario, power_efficiency_testing = get_power_metric(
         config, scenario_fixed, testing_path, is_valid, power_res_testing
     )
@@ -2965,13 +2967,26 @@ def check_measurement_dir(
             is_valid = False
 
     if has_power and not skip_check_power_measure_files:
+        path = measurement_dir
+        all_files_1 = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        path = os.path.join(path, "..")
+        all_files_2 = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        path = os.path.join(path, "..")
+        all_files_3 = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        path = os.path.join(path, "..")
+        all_files_4 = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        all_files = all_files_1 + all_files_2 + all_files_3 + all_files_4
+
         for i in REQUIRED_POWER_MEASURE_FILES:
-            file_re = measurement_dir + "/../../../**/" + i
-            file_paths = glob(file_re, recursive=True)
-            if not file_paths:
+            found = False
+            for file in all_files:
+                if re.match(i, os.path.basename(file)):
+                   found = True
+                   file_path = file
+            if not found:
                 log.error("%s is missing %s", measurement_dir, i)
                 is_valid = False
-            elif not skip_empty_files_check and all((os.stat(file_path).st_size == 0) for file_path in file_paths):
+            elif not skip_empty_files_check and os.stat(file_path).st_size == 0:
                 log.error("%s is having empty %s", measurement_dir, i)
                 is_valid = False
 

@@ -103,7 +103,8 @@ def main():
   columns_order = [['Result'],
                    [
                        'resnet', 'retinanet', '3d-unet-99', '3d-unet-99.9',
-                       'rnnt', 'bert-99', 'bert-99.9', 'dlrm-99', 'dlrm-99.9'
+                       'rnnt', 'bert-99', 'bert-99.9', 'dlrm-v2-99', 'dlrm-v2-99.9',
+                       'gptj-99', 'gptj-99.9'
                    ], ['SingleStream', 'MultiStream', 'Server', 'Offline'],
                    [
                        'Latency (ms)',
@@ -120,8 +121,8 @@ def main():
           'rnnt': ['Server', 'Offline'],
           'bert-99': ['Server', 'Offline'],
           'bert-99.9': ['Server', 'Offline'],
-          'dlrm-99': ['Server', 'Offline'],
-          'dlrm-99.9': ['Server', 'Offline'],
+          'dlrm-v2-99': ['Server', 'Offline'],
+          'dlrm-v2-99.9': ['Server', 'Offline'],
           '3d-unet-99': ['Offline'],
           '3d-unet-99.9': ['Offline'],
           'gptj-99': ['Server', 'Offline'],
@@ -133,11 +134,12 @@ def main():
           'rnnt': ['SingleStream', 'Offline'],
           'bert-99': ['SingleStream', 'Offline'],
           'bert-99.9': [],
-          'dlrm-99': [],
-          'dlrm-99.9': [],
+          'dlrm-v2-99': [],
+          'dlrm-v2-99.9': [],
           '3d-unet-99': ['SingleStream', 'Offline'],
           '3d-unet-99.9': ['SingleStream', 'Offline'],
           'gptj-99': ['SingleStream', 'Offline'],
+          'gptj-99.9': ['SingleStream', 'Offline'],
       }
   }
 

@@ -1207,7 +1207,7 @@ SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
     "host_storage_capacity",
     "host_storage_type",
     "host_networking",
-    "host_networking_card_count",
+    "host_network_card_count",
     "host_networking_topology",
     "accelerators_per_node",
     "accelerator_model_name",
@@ -1242,7 +1242,7 @@ SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1 = [
 ]
 
 SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1 = [
-    "host_networking_card_count",
+    "host_network_card_count",
     "system_type_detail"
 ]
 

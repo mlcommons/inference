@@ -52,13 +52,11 @@ def main():
         if ref_mode == "SingleStream":
             if re.match(".*Early stopping 90th percentile estimate", line):
                 ref_score = line.split(": ",1)[1].strip()
-                ref_score = 1e9 / float(ref_score)
                 continue
 
         if ref_mode == "MultiStream":
             if re.match(".*Early stopping 99th percentile estimate", line):
                 ref_score = line.split(": ",1)[1].strip()
-                ref_score = 1e9 / float(ref_score)
                 continue
 
         if ref_mode == "Server":
@@ -92,13 +90,11 @@ def main():
         if test_mode == "SingleStream":
             if re.match(".*Early stopping 90th percentile estimate", line):
                 test_score = line.split(": ",1)[1].strip()
-                test_score = 1e9 / float(test_score)
                 continue
 
         if test_mode == "MultiStream":
             if re.match(".*Early stopping 99th percentile estimate", line):
                 test_score = line.split(": ",1)[1].strip()
-                test_score = 1e9 / float(test_score)
                 continue
 
         if test_mode == "Server":

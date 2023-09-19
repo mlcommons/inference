@@ -15,7 +15,7 @@
 # =============================================================================
 
 from collections import OrderedDict
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Dict, List, Tuple, Any, Optional, Callable
 import argparse
 import hashlib
@@ -392,6 +392,10 @@ def phases_check(
             os.path.join(path, os.path.basename(run_path)), client_sd
         )
 
+        # convert to UTC
+        power_begin = datetime.fromtimestamp(power_begin, tz = timezone.utc)
+        power_end = datetime.fromtimestamp(power_end, tz = timezone.utc)
+
         detail_log_fname = os.path.join(run_path, "mlperf_log_detail.txt")
         datetime_format = "%m-%d-%Y %H:%M:%S.%f"
 
@@ -403,7 +407,7 @@ def phases_check(
             for line in f:
                 timestamp = (
                     datetime.strptime(line.split(",")[1], datetime_format)
-                ).timestamp()
+                ).replace(tzinfo=timezone.utc)
                 if timestamp > power_begin and timestamp < power_end:
                     cpower = float(line.split(",")[3])
                     cpf = float(line.split(",")[9])
@@ -593,13 +597,13 @@ def check_ptd_logs(
         problem_line = re.search(reg_exp, line)
 
         if problem_line and problem_line.group(0):
-            log_time = get_time_from_line(line, date_regexp, file_path, timezone_offset)
+            log_time = get_time_from_line(line, date_regexp, file_path, 0)
             if start_ranging_time is None or stop_ranging_time is None:
                 assert False, "Can not find ranging time in ptd_logs.txt."
             if error:
                 if problem_line.group(0).strip() in COMMON_ERROR_TESTING:
                     raise CheckerWarning(
-                        f"{line.strip()!r} in ptd_log.txt during testing stage but it is accepted. Treated as WARNING"
+                        f"{line.strip().replace('ERROR', 'Warning')!r} in ptd_log.txt during testing stage but it is accepted. Treated as WARNING"
                     )
                 assert (
                     start_ranging_time < log_time < stop_ranging_time
@@ -611,7 +615,7 @@ def check_ptd_logs(
                     for common_ranging_error in COMMON_ERROR_RANGING
                 ):
                     raise CheckerWarning(
-                        f"{line.strip()!r} in ptd_log.txt during ranging stage. Treated as WARNING"
+                        f"{line.strip().replace('ERROR', 'Warning')!r} in ptd_log.txt during ranging stage. Treated as WARNING"
                     )
             else:
                 if (
@@ -650,12 +654,12 @@ def check_ptd_logs(
             continue
         if (not start_ranging_time) and (start_ranging_line == msg):
             start_ranging_time = get_time_from_line(
-                line, date_regexp, file_path, timezone_offset
+                line, date_regexp, file_path, 0 #timezone_offset
             )
         if (not stop_ranging_time) and bool(start_ranging_time):
             if ": Completed test" == msg:
                 stop_ranging_time = get_time_from_line(
-                    line, date_regexp, file_path, timezone_offset
+                    line, date_regexp, file_path, 0 #timezone_offset
                 )
                 break
 
@@ -670,7 +674,7 @@ def check_ptd_logs(
             try:
                 log_time = None
                 log_time = get_time_from_line(
-                    line, date_regexp, file_path, timezone_offset
+                    line, date_regexp, file_path, 0 #timezone_offset
                 )
             except LineWithoutTimeStamp:
                 assert (

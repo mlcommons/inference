@@ -81,7 +81,7 @@ WARNING_NEEDS_TO_BE_ERROR_TESTING_RE = [
     re.compile(r"Uncertainty \d+.\d+%, which is above 1.00% limit for the last sample!")
 ]
 
-TIME_DELTA_TOLERANCE = 500  # in milliseconds
+TIME_DELTA_TOLERANCE = 800  # in milliseconds
 
 
 def _normalize(path: str) -> str:

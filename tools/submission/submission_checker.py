@@ -1643,7 +1643,43 @@ def get_performance_metric(
         if scenario == "MultiStream" and config.uses_legacy_multistream()
         else scenario
     )
+    samples_per_query = mlperf_log["effective_samples_per_query"]
+    if scenario == "SingleStream":
+        # qps_wo_loadgen_overhead is only used for inferring Offline from SingleStream; only for old submissions
+        qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
+
     res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+
+    inferred = False
+    # special case for results inferred from different scenario
+    if scenario_fixed in ["Offline"] and scenario in ["SingleStream"]:
+        inferred = True
+        res = qps_wo_loadgen_overhead
+
+    if (
+        scenario_fixed in ["Offline"] and not config.uses_legacy_multistream()
+    ) and scenario in ["MultiStream"]:
+        inferred = True
+        res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
+
+    if (
+        scenario_fixed in ["MultiStream"] and not config.uses_legacy_multistream()
+    ) and scenario in ["SingleStream"]:
+        inferred = True
+        # samples_per_query does not match with the one reported in the logs
+        # when inferring MultiStream from SingleStream
+        samples_per_query = 8
+        if uses_early_stopping:
+            early_stopping_latency_ms = mlperf_log["early_stopping_latency_ms"]
+            if early_stopping_latency_ms == 0:
+                log.error(
+                    "Not enough samples were processed for early stopping to make an estimate"
+                )
+                is_valid = False
+            res = (early_stopping_latency_ms * samples_per_query) / MS_TO_NS
+        else:
+            res = (latency_99_percentile * samples_per_query) / MS_TO_NS
+
     return res
 
 def check_performance_dir(
@@ -2718,8 +2754,8 @@ def check_results_dir(
                                         ranging_path,
                                         perf_path,
                                         scenario_fixed,
-                                        r,
                                         ranging_r,
+                                        r,
                                         config,
                                     )
                                     if not power_is_valid:
@@ -2741,7 +2777,7 @@ def check_results_dir(
                                         "{:f} "
                                         "with "
                                         "power_metric"
-                                        " = {:f} and power_efficiency (inf/J) = {:f}"
+                                        " = {:f} and power_efficiency (samples/J) = {:f}"
                                     ).format(r, power_metric, power_efficiency)
                                 )
 

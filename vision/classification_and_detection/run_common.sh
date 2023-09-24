@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime|pytorch|tflite|tvm-onnx|tvm-pytorch [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|retinanet] [cpu|gpu]"
+    echo "usage: $0 tf|onnxruntime|pytorch|tflite|tvm-onnx|tvm-pytorch|tvm-tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|retinanet] [cpu|gpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -134,6 +134,15 @@ fi
 if [ $name == "resnet50-tvm-pytorch" ] ; then
     model_path="$MODEL_DIR/resnet50_INT8bit_quantized.pt"
     profile=resnet50-onnxruntime
+    extra_args="$extra_args --backend tvm"
+fi
+
+#
+# TVM with TFLite models
+#
+if [ $name == "resnet50-tvm-tflite" ] ; then
+    model_path="$MODEL_DIR/resnet50_v1.tflite"
+    profile=resnet50-tf
     extra_args="$extra_args --backend tvm"
 fi
 

@@ -1643,7 +1643,13 @@ def get_performance_metric(
         if scenario == "MultiStream" and config.uses_legacy_multistream()
         else scenario
     )
+
     res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+
+    inferred = False
+    if scenario_fixed != scenario:
+        inferred, res =  get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, False)
+
     return res
 
 def check_performance_dir(
@@ -1682,9 +1688,6 @@ def check_performance_dir(
         min_query_count = mlperf_log["effective_min_query_count"]
         samples_per_query = mlperf_log["effective_samples_per_query"]
         min_duration = mlperf_log["effective_min_duration_ms"]
-        if scenario == "SingleStream":
-            # qps_wo_loadgen_overhead is only used for inferring Offline from SingleStream; only for old submissions
-            qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
         sut_name = mlperf_log["sut_name"]
     else:
         fname = os.path.join(path, "mlperf_log_summary.txt")
@@ -1851,6 +1854,40 @@ def check_performance_dir(
             )
 
     inferred = False
+    if scenario_fixed != scenario:
+        inferred, res =  get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, True)
+
+    is_network_system, is_network_mode_valid = is_system_over_network(
+        division, system_json, path
+    )
+    is_valid &= is_network_mode_valid
+    if is_network_system:
+        # for network mode verify the SUT name is valid, accodring to the rules (must include "Network SUT" in name)
+        if NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME not in sut_name:
+            log.error(
+                f"{fname} invalid sut name for network mode. expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}' got '{sut_name}'"
+            )
+            is_valid = False
+
+    return is_valid, res, inferred
+
+def get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, log_error=False):
+
+    inferred = False
+    # Check if current scenario (and version) uses early stopping
+    uses_early_stopping = config.uses_early_stopping(scenario)
+
+    latency_mean = mlperf_log["result_mean_latency_ns"]
+    if scenario in ["MultiStream"]:
+        latency_99_percentile = mlperf_log[
+            "result_99.00_percentile_per_query_latency_ns"
+        ]
+        latency_mean = mlperf_log["result_mean_query_latency_ns"]
+    samples_per_query = mlperf_log["effective_samples_per_query"]
+    if scenario == "SingleStream":
+        # qps_wo_loadgen_overhead is only used for inferring Offline from SingleStream; only for old submissions
+        qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
+
     # special case for results inferred from different scenario
     if scenario_fixed in ["Offline"] and scenario in ["SingleStream"]:
         inferred = True
@@ -1871,7 +1908,7 @@ def check_performance_dir(
         samples_per_query = 8
         if uses_early_stopping:
             early_stopping_latency_ms = mlperf_log["early_stopping_latency_ms"]
-            if early_stopping_latency_ms == 0:
+            if early_stopping_latency_ms == 0 and log_error:
                 log.error(
                     "Not enough samples were processed for early stopping to make an estimate"
                 )
@@ -1879,21 +1916,7 @@ def check_performance_dir(
             res = (early_stopping_latency_ms * samples_per_query) / MS_TO_NS
         else:
             res = (latency_99_percentile * samples_per_query) / MS_TO_NS
-
-    is_network_system, is_network_mode_valid = is_system_over_network(
-        division, system_json, path
-    )
-    is_valid &= is_network_mode_valid
-    if is_network_system:
-        # for network mode verify the SUT name is valid, accodring to the rules (must include "Network SUT" in name)
-        if NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME not in sut_name:
-            log.error(
-                f"{fname} invalid sut name for network mode. expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}' got '{sut_name}'"
-            )
-            is_valid = False
-
-    return is_valid, res, inferred
-
+    return inferred, res
 
 def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
     # parse the power logs
@@ -2718,8 +2741,8 @@ def check_results_dir(
                                         ranging_path,
                                         perf_path,
                                         scenario_fixed,
-                                        r,
                                         ranging_r,
+                                        r,
                                         config,
                                     )
                                     if not power_is_valid:
@@ -2741,7 +2764,7 @@ def check_results_dir(
                                         "{:f} "
                                         "with "
                                         "power_metric"
-                                        " = {:f} and power_efficiency (inf/J) = {:f}"
+                                        " = {:f} and power_efficiency (samples/J) = {:f}"
                                     ).format(r, power_metric, power_efficiency)
                                 )
 

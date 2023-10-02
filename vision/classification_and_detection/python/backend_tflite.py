@@ -19,7 +19,7 @@ except:
     _version = tf.__version__
     _git_version = tf.__git_version__
 
-
+import numpy as np
 import backend
 
 
@@ -39,8 +39,13 @@ class BackendTflite(backend.Backend):
         # tflite is always NHWC
         return "NHWC"
 
-    def load(self, model_path, inputs=None, outputs=None):
-        self.sess = tflite.Interpreter(model_path=model_path)
+    def load(self, model_path, inputs=None, outputs=None, use_tpu=False):
+        self.use_tpu = use_tpu
+        if use_tpu:
+            from pycoral.utils.edgetpu import make_interpreter
+            self.sess = make_interpreter(model_path)
+        else:
+            self.sess = tflite.Interpreter(model_path=model_path)
         self.sess.allocate_tensors()
         # keep input/output name to index mapping
         self.input2index = {i["name"]: i["index"] for i in self.sess.get_input_details()}
@@ -54,6 +59,10 @@ class BackendTflite(backend.Backend):
         self.lock.acquire()
         # set inputs
         for k, v in self.input2index.items():
+            if self.use_tpu and self.sess.get_input_details()[v]['dtype'] == np.uint8:
+                input_scale, input_zero_point = self.sess.get_input_details()[v]["quantization"]
+                feed[k] = feed[k] / input_scale + input_zero_point
+                feed[k] = feed[k].astype(np.uint8)
             self.sess.set_tensor(v, feed[k])
         self.sess.invoke()
         # get results

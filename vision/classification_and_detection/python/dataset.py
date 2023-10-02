@@ -202,6 +202,18 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
     return img
 
 
+def pre_process_imagenet_tflite_tpu(img, dims=None, need_transpose=False):
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    img = resize_with_aspectratio(img, 224, 224, inter_pol=cv2.INTER_LINEAR)
+    img = center_crop(img, 224, 224)
+    img = np.asarray(img, dtype='float32')
+   
+    img = img[..., ::-1]
+    means = np.array([103.939, 116.779, 123.68], dtype=np.float32)
+    img -= means
+    return img
+    
+
 def pre_process_imagenet_pytorch(img, dims=None, need_transpose=False):
     from PIL import Image
     import torchvision.transforms.functional as F

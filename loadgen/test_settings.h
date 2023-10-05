@@ -196,6 +196,7 @@ struct TestSettings {
   /**@{*/
   uint64_t min_duration_ms = 10000;
   uint64_t max_duration_ms = 0;  ///< 0: Infinity.
+  bool enforce_max_duration = true;
   uint64_t min_query_count = 100;
   uint64_t max_query_count = 0;  ///< 0: Infinity.
   /**@}*/

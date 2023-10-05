@@ -2004,6 +2004,8 @@ def check_performance_dir(
         min_query_count = mlperf_log["effective_min_query_count"]
         samples_per_query = mlperf_log["effective_samples_per_query"]
         min_duration = mlperf_log["effective_min_duration_ms"]
+        enforce_max_duration = mlperf_log.get("effective_enforce_max_duration", True)
+        min_queries_met = mlperf_log["result_min_queries_met"]
         sut_name = mlperf_log["sut_name"]
     else:
         fname = os.path.join(path, "mlperf_log_summary.txt")
@@ -2026,6 +2028,7 @@ def check_performance_dir(
         min_query_count = int(rt["min_query_count"])
         samples_per_query = int(rt["samples_per_query"])
         min_duration = int(rt["min_duration (ms)"])
+        enforce_max_duration = bool(rt.get("effective_enforce_max_duration", True))
         if scenario == "SingleStream":
             qps_wo_loadgen_overhead = float(rt["QPS w/o loadgen overhead"])
         sut_name = str(rt["System Under Test (SUT) name: "])
@@ -2168,6 +2171,13 @@ def check_performance_dir(
                 fname,
                 required_min_duration,
                 min_duration,
+            )
+
+        if not min_queries_met and not enforce_max_duration:
+            log.error(
+                "%s Loadgen needs to enforce max duration for official submissions. Enforced %s",
+                fname,
+                enforce_max_duration,
             )
 
     inferred = False

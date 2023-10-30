@@ -16,7 +16,7 @@
 from typing import List, Optional, Tuple
 
 import torch
-
+import os
 import torch.nn.functional as F
 from model_separable_rnnt import label_collate
 
@@ -42,6 +42,7 @@ class ScriptGreedyDecoder(torch.nn.Module):
         self._model = model
         self._blank_id = blank_index
         self._SOS = -1
+        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
         assert max_symbols_per_step > 0
         self._max_symbols_per_step = max_symbols_per_step
 
@@ -64,7 +65,7 @@ class ScriptGreedyDecoder(torch.nn.Module):
 
         output: List[List[int]] = []
         for batch_idx in range(logits.size(0)):
-            inseq = logits[batch_idx, :, :].unsqueeze(1)
+            inseq = logits[batch_idx, :, :].unsqueeze(1).to(self.dev)
             # inseq: TxBxF
             logitlen = logits_lens[batch_idx]
             sentence = self._greedy_decode(inseq, logitlen)
@@ -76,7 +77,7 @@ class ScriptGreedyDecoder(torch.nn.Module):
         hidden: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
         label: List[int] = []
         for time_idx in range(int(out_len.item())):
-            f = x[time_idx, :, :].unsqueeze(0)
+            f = x[time_idx, :, :].unsqueeze(0).to(self.dev)
 
             not_blank = True
             symbols_added = 0

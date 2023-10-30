@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import torch
-
+import os
 from typing import Optional, Tuple
 
 
@@ -55,6 +55,7 @@ class LstmDrop(torch.nn.Module):
             A `torch.nn.LSTM`.
         """
         super(LstmDrop, self).__init__()
+        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
 
         self.lstm = torch.nn.LSTM(
             input_size=input_size,
@@ -93,10 +94,12 @@ class StackTime(torch.nn.Module):
     def __init__(self, factor):
         super().__init__()
         self.factor = int(factor)
+        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+
 
     def forward(self, x, x_lens):
         # T, B, U
-        r = torch.transpose(x, 0, 1)
+        r = torch.transpose(x, 0, 1).to(self.dev)
         s = r.shape
         zeros = torch.zeros(
             s[0], (-s[1]) % self.factor, s[2], dtype=r.dtype, device=r.device)

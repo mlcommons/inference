@@ -50,6 +50,8 @@ class PytorchSUT:
         rnnt_vocab = add_blank_label(dataset_vocab)
         featurizer_config = config['input_eval']
 
+        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         self.qsl = AudioQSLInMemory(dataset_dir,
                                     manifest_filepath,
@@ -69,6 +71,7 @@ class PytorchSUT:
         )
         model.load_state_dict(load_and_migrate_checkpoint(checkpoint_path),
                               strict=True)
+        model.to(self.dev)
         model.eval()
         model.encoder = torch.jit.script(model.encoder)
         model.encoder = torch.jit._recursive.wrap_cpp_module(

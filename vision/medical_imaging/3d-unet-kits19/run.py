@@ -85,6 +85,9 @@ def get_args():
     parser.add_argument("--user_conf",
                         default="user.conf",
                         help="user config for user LoadGen settings such as target QPS")
+    parser.add_argument("--audit_conf",
+                        default="audit.conf",
+                        help="audit config for LoadGen settings during compliance runs")
     parser.add_argument("--model",
                         default="build/model/3dunet_kits19_pytorch.ptc",
                         help="Path to PyTorch, ONNX, or TF model")
@@ -155,7 +158,7 @@ def main():
 
     # start running test, from LoadGen
     print("Running Loadgen test...")
-    lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
+    lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings, args.audit_conf)
 
     # if needed check accuracy
     if args.accuracy and not os.environ.get('SKIP_VERIFY_ACCURACY', False):

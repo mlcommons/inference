@@ -98,7 +98,7 @@ SUPPORTED_PROFILES = {
     "resnet50-pytorch": {
         "inputs": "image",
         "outputs": "ArgMax:0",
-        "dataset": "imagenet",
+        "dataset": "imagenet_pytorch",
         "backend": "tensorflow",
         "model-name": "resnet50",
     },

@@ -26,6 +26,8 @@ def get_args():
                         help="enable profiling (only valid for onnxruntime backend)")
     parser.add_argument("--gpu", action="store_true",
                         help="use GPU instead of CPU for the inference")
+    parser.add_argument("--audit_conf", default="audit.conf",
+                        help="audit config for LoadGen settings during compliance runs")
     parser.add_argument(
         "--mlperf_conf", default="mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf",
@@ -78,7 +80,7 @@ def main():
     log_settings.log_output = log_output_settings
     log_settings.enable_trace = True
 
-    lg.StartTestWithLogSettings(sut.sut, sut.qsl, settings, log_settings)
+    lg.StartTestWithLogSettings(sut.sut, sut.qsl, settings, log_settings, args.audit_conf)
     print("Test Done!")
 
     print("Destroying SUT...")

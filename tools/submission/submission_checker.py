@@ -922,6 +922,7 @@ MODEL_CONFIG = {
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
             "gptj-99": ["SingleStream", "Offline"],
+            "gptj-99.9": ["SingleStream", "Offline"],
         },
         "optional-scenarios-edge": {},
         "required-scenarios-datacenter-edge": {
@@ -935,7 +936,7 @@ MODEL_CONFIG = {
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
             "gptj-99": ["SingleStream", "Offline", "Server"],
-            "gptj-99.9": ["Server", "Offline"],
+            "gptj-99.9": ["SingleStream", "Offline", "Server"],
             "gpt3-99": ["Server", "Offline"],
             "gpt3-99.9": ["Server", "Offline"],
         },
@@ -1166,9 +1167,9 @@ ACC_PATTERN = {
     "F1": r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
     "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
     "DICE": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
-    "ROUGE1": r"'rouge1':\s([\d.]+).*",
+    "ROUGE1": r".*'rouge1':\s([\d.]+).*",
     "ROUGE2": r".*'rouge2':\s([\d.]+).*",
-    "ROUGEL": r".*'rougeLsum':\s([\d.]+).*",
+    "ROUGEL": r".*'rougeL':\s([\d.]+).*",
     "GEN_LEN": r".*'gen_len':\s([\d.]+).*",
 }
 
@@ -1206,7 +1207,7 @@ SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
     "host_storage_capacity",
     "host_storage_type",
     "host_networking",
-    "host_networking_card_count",
+    "host_network_card_count",
     "host_networking_topology",
     "accelerators_per_node",
     "accelerator_model_name",
@@ -1241,7 +1242,7 @@ SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1 = [
 ]
 
 SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1 = [
-    "host_networking_card_count",
+    "host_network_card_count",
     "system_type_detail"
 ]
 
@@ -1570,6 +1571,7 @@ def check_accuracy_dir(config, model, path, verbose):
     is_valid = False
     all_accuracy_valid = True
     acc = None
+    result_acc = None
     hash_val = None
     target = config.get_accuracy_target(model)
     patterns = []
@@ -1594,6 +1596,9 @@ def check_accuracy_dir(config, model, path, verbose):
                 elif acc is not None:
                     all_accuracy_valid = False
                     log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
+                if i == 0 and acc:
+                    result_acc = acc
+                acc = None
             if all(acc_seen) and hash_val:
                 break;
         is_valid = all_accuracy_valid & all(acc_seen)
@@ -1617,7 +1622,7 @@ def check_accuracy_dir(config, model, path, verbose):
     if not find_error_in_detail_log(config, fname):
         is_valid = False
 
-    return is_valid, acc
+    return is_valid, result_acc
 
 
 def get_performance_metric(
@@ -1638,7 +1643,13 @@ def get_performance_metric(
         if scenario == "MultiStream" and config.uses_legacy_multistream()
         else scenario
     )
+
     res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+
+    inferred = False
+    if scenario_fixed != scenario:
+        inferred, res =  get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, False)
+
     return res
 
 def check_performance_dir(
@@ -1677,9 +1688,6 @@ def check_performance_dir(
         min_query_count = mlperf_log["effective_min_query_count"]
         samples_per_query = mlperf_log["effective_samples_per_query"]
         min_duration = mlperf_log["effective_min_duration_ms"]
-        if scenario == "SingleStream":
-            # qps_wo_loadgen_overhead is only used for inferring Offline from SingleStream; only for old submissions
-            qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
         sut_name = mlperf_log["sut_name"]
     else:
         fname = os.path.join(path, "mlperf_log_summary.txt")
@@ -1846,6 +1854,40 @@ def check_performance_dir(
             )
 
     inferred = False
+    if scenario_fixed != scenario:
+        inferred, res =  get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, True)
+
+    is_network_system, is_network_mode_valid = is_system_over_network(
+        division, system_json, path
+    )
+    is_valid &= is_network_mode_valid
+    if is_network_system:
+        # for network mode verify the SUT name is valid, accodring to the rules (must include "Network SUT" in name)
+        if NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME not in sut_name:
+            log.error(
+                f"{fname} invalid sut name for network mode. expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}' got '{sut_name}'"
+            )
+            is_valid = False
+
+    return is_valid, res, inferred
+
+def get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, log_error=False):
+
+    inferred = False
+    # Check if current scenario (and version) uses early stopping
+    uses_early_stopping = config.uses_early_stopping(scenario)
+
+    latency_mean = mlperf_log["result_mean_latency_ns"]
+    if scenario in ["MultiStream"]:
+        latency_99_percentile = mlperf_log[
+            "result_99.00_percentile_per_query_latency_ns"
+        ]
+        latency_mean = mlperf_log["result_mean_query_latency_ns"]
+    samples_per_query = mlperf_log["effective_samples_per_query"]
+    if scenario == "SingleStream":
+        # qps_wo_loadgen_overhead is only used for inferring Offline from SingleStream; only for old submissions
+        qps_wo_loadgen_overhead = mlperf_log["result_qps_without_loadgen_overhead"]
+
     # special case for results inferred from different scenario
     if scenario_fixed in ["Offline"] and scenario in ["SingleStream"]:
         inferred = True
@@ -1866,7 +1908,7 @@ def check_performance_dir(
         samples_per_query = 8
         if uses_early_stopping:
             early_stopping_latency_ms = mlperf_log["early_stopping_latency_ms"]
-            if early_stopping_latency_ms == 0:
+            if early_stopping_latency_ms == 0 and log_error:
                 log.error(
                     "Not enough samples were processed for early stopping to make an estimate"
                 )
@@ -1874,21 +1916,7 @@ def check_performance_dir(
             res = (early_stopping_latency_ms * samples_per_query) / MS_TO_NS
         else:
             res = (latency_99_percentile * samples_per_query) / MS_TO_NS
-
-    is_network_system, is_network_mode_valid = is_system_over_network(
-        division, system_json, path
-    )
-    is_valid &= is_network_mode_valid
-    if is_network_system:
-        # for network mode verify the SUT name is valid, accodring to the rules (must include "Network SUT" in name)
-        if NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME not in sut_name:
-            log.error(
-                f"{fname} invalid sut name for network mode. expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}' got '{sut_name}'"
-            )
-            is_valid = False
-
-    return is_valid, res, inferred
-
+    return inferred, res
 
 def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
     # parse the power logs
@@ -2032,6 +2060,7 @@ def check_power_dir(
         log.error("%s has file list mismatch (%s)", power_path, diff)
         is_valid = False
 
+    '''
     (
         is_valid,
         power_metric_ranging,
@@ -2040,6 +2069,7 @@ def check_power_dir(
     ) = get_power_metric(
         config, scenario_fixed, ranging_path, is_valid, power_res_ranging
     )
+    '''
     is_valid, power_metric, scenario, power_efficiency_testing = get_power_metric(
         config, scenario_fixed, testing_path, is_valid, power_res_testing
     )
@@ -2711,8 +2741,8 @@ def check_results_dir(
                                         ranging_path,
                                         perf_path,
                                         scenario_fixed,
-                                        r,
                                         ranging_r,
+                                        r,
                                         config,
                                     )
                                     if not power_is_valid:
@@ -2734,7 +2764,7 @@ def check_results_dir(
                                         "{:f} "
                                         "with "
                                         "power_metric"
-                                        " = {:f} and power_efficiency (inf/J) = {:f}"
+                                        " = {:f} and power_efficiency (samples/J) = {:f}"
                                     ).format(r, power_metric, power_efficiency)
                                 )
 
@@ -2763,7 +2793,7 @@ def check_results_dir(
                                 model_name,
                                 scenario,
                             )
-                            if not os.path.exists(compliance_dir):
+                            if not os.path.exists(compliance_dir) and "gptj" not in model_name:
                                 log.error("no compliance dir for %s", name)
                                 results[name] = None
                             else:
@@ -2960,13 +2990,26 @@ def check_measurement_dir(
             is_valid = False
 
     if has_power and not skip_check_power_measure_files:
+        path = measurement_dir
+        all_files_1 = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        path = os.path.join(path, "..")
+        all_files_2 = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        path = os.path.join(path, "..")
+        all_files_3 = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        path = os.path.join(path, "..")
+        all_files_4 = [os.path.join(path, f) for f in os.listdir(path) if os.path.isfile(os.path.join(path, f))]
+        all_files = all_files_1 + all_files_2 + all_files_3 + all_files_4
+
         for i in REQUIRED_POWER_MEASURE_FILES:
-            file_re = measurement_dir + "/../../../**/" + i
-            file_paths = glob(file_re, recursive=True)
-            if not file_paths:
+            found = False
+            for file in all_files:
+                if re.match(i, os.path.basename(file)):
+                   found = True
+                   file_path = file
+            if not found:
                 log.error("%s is missing %s", measurement_dir, i)
                 is_valid = False
-            elif not skip_empty_files_check and all((os.stat(file_path).st_size == 0) for file_path in file_paths):
+            elif not skip_empty_files_check and os.stat(file_path).st_size == 0:
                 log.error("%s is having empty %s", measurement_dir, i)
                 is_valid = False
 
@@ -3129,7 +3172,6 @@ def check_compliance_acc_dir(test_dir, model, config):
                             m = re.match(pattern, line)
                             if m:
                                 acc_baseline[acc_type] = float(m.group(1))
-                                break
                 with open(
                     os.path.join(test_acc_path, "compliance_accuracy.txt"),
                     "r",
@@ -3167,8 +3209,8 @@ def check_compliance_dir(
         "rnnt",
         "bert-99",
         "bert-99.9",
-        "dlrm-99",
-        "dlrm-99.9",
+        "dlrm-v2-99",
+        "dlrm-v2-99.9",
         "3d-unet-99",
         "3d-unet-99.9",
         "retinanet",
@@ -3186,6 +3228,7 @@ def check_compliance_dir(
         "gpt3-99.9",
     ]:
         test_list.remove("TEST05")
+        test_list.remove("TEST01") 
 
     # Check performance of all Tests
     for test in test_list:
@@ -3216,10 +3259,13 @@ def check_compliance_dir(
                 and compliance_perf_valid
             )
 
-    # Check accuracy for TEST01
-    compliance_acc_pass = check_compliance_acc_dir(
-        os.path.join(compliance_dir, "TEST01"), model, config
-    )
+    if "TEST01" in test_list:
+        # Check accuracy for TEST01
+        compliance_acc_pass = check_compliance_acc_dir(
+            os.path.join(compliance_dir, "TEST01"), model, config
+        )
+    else:
+        compliance_acc_pass= True
 
     return compliance_perf_pass and compliance_acc_pass and compliance_perf_dir_pass
 

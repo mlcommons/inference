@@ -42,8 +42,8 @@ class BERT_ONNXRuntime_SUT():
             else:
                 model_path = "build/data/bert_tf_v1_1_large_fp32_384_v2/model.onnx"
         if len(onnxruntime.get_all_providers()) > 1 and os.environ.get("USE_GPU", "yes").lower() not in [ "0", "false", "off", "no" ]:
-            #Currently considering only CUDAExecutionProvider
-            self.sess = onnxruntime.InferenceSession(model_path, self.options, providers=['CUDAExecutionProvider'])
+            preferred_execution_provider = os.environ.get("ONNXRUNTIME_PREFERRED_EXECUTION_PROVIDER", "CUDAExecutionProvider")
+            self.sess = onnxruntime.InferenceSession(model_path, self.options, providers=[ preferred_execution_provider ])
         else:
             self.sess = onnxruntime.InferenceSession(model_path, self.options, providers=["CPUExecutionProvider"])
 

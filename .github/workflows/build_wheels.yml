@@ -24,7 +24,7 @@ jobs:
         run: python -m cibuildwheel loadgen/ --output-dir wheels
         env:
           CIBW_ENVIRONMENT: "CFLAGS='-std=c++14'"
-          CIBW_BUILD: 'cp3{6,7,8,9,10,11}-*'
+          CIBW_BUILD: 'cp3{7,8,9,10,11}-*'
 
       - uses: actions/upload-artifact@v3
         with:
@@ -32,3 +32,4 @@ jobs:
 
       - name: Publish package to PyPI
         run: python -m twine upload wheels/* -u __token__ -p ${{ secrets.PYPI_API_TOKEN }}
+

@@ -93,8 +93,7 @@ class BERT_Ray_SUT():
         ray.init()
         batch_size = 1
         resources = ray.cluster_resources()
-        # num_gpus = int(resources.get('GPU', 0))
-        num_gpus = 1
+        num_gpus = int(resources.get('GPU', 0))
         self.actor_list = [TorchPredictor.remote(config_json, model_file, batch_size) for _ in range(num_gpus)]
         self.pool = ActorPool(self.actor_list)
 

@@ -25,6 +25,7 @@ sys.path.insert(0, os.getcwd())
 import mlperf_loadgen as lg
 import numpy as np
 import torch
+import torch_tensorrt
 import transformers
 from transformers import BertConfig, BertForQuestionAnswering
 from squad_QSL import get_squad_QSL
@@ -58,6 +59,19 @@ class TorchPredictor:
         self.model.to(self.dev)
         self.model.eval()
         self.model.load_state_dict(torch.load(model_file), strict=False)
+        # tensor rt
+        batch_input_ids = torch.LongTensor(np.zeros((batch_size, 384))).to(self.dev)
+        traced_mlm_model = torch.jit.trace(self.model, [batch_input_ids, batch_input_ids, batch_input_ids], strict=False)
+        self.trt_model = torch_tensorrt.compile(traced_mlm_model,
+            inputs=[
+                torch_tensorrt.Input(shape=[batch_size, 384], dtype=torch.int32),
+                torch_tensorrt.Input(shape=[batch_size, 384], dtype=torch.int32),
+                torch_tensorrt.Input(shape=[batch_size, 384], dtype=torch.int32),
+        ],
+        enabled_precisions= {torch.float32},
+        workspace_size=2000000000,
+        truncate_long_and_double=True)
+
         print("done loading")
 
     # Logic for inference on 1 batch of data.
@@ -66,11 +80,18 @@ class TorchPredictor:
         attention_mask=torch.from_numpy(batch["attention_mask"]).to(self.dev)
         token_type_ids=torch.from_numpy(batch["token_type_ids"]).to(self.dev)
         with torch.inference_mode():
-            model_output = self.model.forward(input_ids=input_ids,
-                attention_mask=attention_mask,
-                token_type_ids=token_type_ids)
-            start_scores = model_output.start_logits
-            end_scores = model_output.end_logits
+            # pytorch
+            # model_output = self.model.forward(input_ids=input_ids,
+            #     attention_mask=attention_mask,
+            #     token_type_ids=token_type_ids)
+            # start_scores = model_output.start_logits
+            # end_scores = model_output.end_logits
+            
+            # tensor rt
+            trt_output = self.trt_model(input_ids, attention_mask, token_type_ids)
+            start_scores = trt_output["start_logits"]
+            end_scores = trt_output["end_logits"]
+            
             batch_ret = torch.stack([start_scores, end_scores], axis=-1).cpu().numpy()
             return {
                 "output": batch_ret

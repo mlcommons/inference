@@ -91,32 +91,21 @@ class BERT_Ray_SUT():
         self.qsl = get_squad_QSL(args.max_examples)
 
         ray.init()
-        batch_size = 1
+        self.batch_size = 10
         resources = ray.cluster_resources()
         num_gpus = int(resources.get('GPU', 0))
-        self.actor_list = [TorchPredictor.remote(config_json, model_file, batch_size) for _ in range(num_gpus)]
+        self.actor_list = [TorchPredictor.remote(config_json, model_file, self.batch_size) for _ in range(num_gpus)]
         self.pool = ActorPool(self.actor_list)
 
         samples = []
-        for i in range(args.max_examples):
+        for i in range(self.qsl.count):
             sample = {}
             eval_features = self.qsl.get_features(i)
             sample["input_ids"] = np.array(eval_features.input_ids).astype(np.int32)
             sample["attention_mask"] = np.array(eval_features.input_mask).astype(np.int32)
             sample["token_type_ids"] = np.array(eval_features.segment_ids).astype(np.int32)
             samples.append(sample)
-        
-        batch_samples = []
-        i = 0
-        while i < len(samples):
-            batch_sample = {
-                "input_ids": np.array([sample["input_ids"] for sample in samples[i:i+batch_size]]),
-                "attention_mask": np.array([sample["attention_mask"] for sample in samples[i:i+batch_size]]),
-                "token_type_ids": np.array([sample["token_type_ids"] for sample in samples[i:i+batch_size]]),
-            }
-            batch_samples.append(batch_sample)
-            i = i + batch_size
-        self.batch_samples = batch_samples
+        self.samples = samples
         
         print("Waiting Actors init")
         for actor in self.actor_list:
@@ -124,8 +113,25 @@ class BERT_Ray_SUT():
         print("BERT_Ray_SUT construct complete")
 
     def issue_queries(self, query_samples):
-        # print("samples len", len(self.batch_samples))
-        batch_inference_results = list(self.pool.map_unordered(lambda a, v: a.forward.remote(v), self.batch_samples))
+        batch_samples = []
+        i = 0
+        while i < len(query_samples):
+            batch_sample = {
+                "input_ids": np.array([
+                    self.samples[query_sample.index]["input_ids"]
+                    for query_sample in query_samples[i:i+self.batch_size]]),
+                "attention_mask": np.array([
+                    self.samples[query_sample.index]["attention_mask"]
+                    for query_sample in query_samples[i:i+self.batch_size]]),
+                "token_type_ids": np.array([
+                    self.samples[query_sample.index]["token_type_ids"]
+                    for query_sample in query_samples[i:i+self.batch_size]]),
+            }
+            batch_samples.append(batch_sample)
+            i = i + self.batch_size
+
+        # print("samples len", len(batch_samples))
+        batch_inference_results = list(self.pool.map_unordered(lambda a, v: a.forward.remote(v), batch_samples))
 
         results = []
         for batch_inference_result in batch_inference_results:
@@ -140,7 +146,7 @@ class BERT_Ray_SUT():
         responses = []
         for i in range(len(query_samples)):
             # print(query_samples[i].index)
-            bi = results[query_samples[i].index]
+            bi = results[i]
             response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
             responses.append(response)
         lg.QuerySamplesComplete(responses)

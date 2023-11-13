@@ -61,7 +61,7 @@ class TorchPredictor:
         print("done loading")
 
     # Logic for inference on 1 batch of data.
-    def forward(self, batch: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    def forward(self, batch):
         input_ids=torch.from_numpy(batch["input_ids"]).to(self.dev)
         attention_mask=torch.from_numpy(batch["attention_mask"]).to(self.dev)
         token_type_ids=torch.from_numpy(batch["token_type_ids"]).to(self.dev)
@@ -75,6 +75,9 @@ class TorchPredictor:
             return {
                 "output": batch_ret
             }
+    
+    def ready(self):
+        pass
 
 class BERT_Ray_SUT():
     def __init__(self, args):
@@ -82,28 +85,66 @@ class BERT_Ray_SUT():
             config_json = json.load(f)
         model_file = os.environ.get("ML_MODEL_FILE_WITH_PATH", "build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch")
 
+        print("Constructing SUT...")
+        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
+        print("Finished constructing SUT.")
         self.qsl = get_squad_QSL(args.max_examples)
 
         ray.init()
         batch_size = 1
         resources = ray.cluster_resources()
-        num_gpus = int(resources.get('GPU', 0))
+        # num_gpus = int(resources.get('GPU', 0))
+        num_gpus = 1
         self.actor_list = [TorchPredictor.remote(config_json, model_file, batch_size) for _ in range(num_gpus)]
         self.pool = ActorPool(self.actor_list)
 
-    def issue_queries(self, query_samples):
-        with torch.no_grad():
-            for i in range(len(query_samples)):
-                batch_samples = self.qsl.get_features(query_samples[i].index)
-                batch_inference_results = list(self.pool.map_unordered(lambda a, v: a.forward.remote(v), batch_samples))
+        samples = []
+        for i in range(args.max_examples):
+            sample = {}
+            eval_features = self.qsl.get_features(i)
+            sample["input_ids"] = np.array(eval_features.input_ids).astype(np.int32)
+            sample["attention_mask"] = np.array(eval_features.input_mask).astype(np.int32)
+            sample["token_type_ids"] = np.array(eval_features.segment_ids).astype(np.int32)
+            samples.append(sample)
+        
+        batch_samples = []
+        i = 0
+        while i < len(samples):
+            batch_sample = {
+                "input_ids": np.array([sample["input_ids"] for sample in samples[i:i+batch_size]]),
+                "attention_mask": np.array([sample["attention_mask"] for sample in samples[i:i+batch_size]]),
+                "token_type_ids": np.array([sample["token_type_ids"] for sample in samples[i:i+batch_size]]),
+            }
+            batch_samples.append(batch_sample)
+            i = i + batch_size
+        self.batch_samples = batch_samples
+        
+        print("Waiting Actors init")
+        for actor in self.actor_list:
+            ray.get(actor.ready.remote())
+        print("BERT_Ray_SUT construct complete")
 
-                for batch_inference_result in batch_inference_results:
-                    batch_inference_result = batch_inference_result["output"]
-                    for inference_result in batch_inference_result:
-                        response_array = array.array("B", inference_result.tobytes())
-                        bi = response_array.buffer_info()
-                        response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
-                        lg.QuerySamplesComplete([response])
+    def issue_queries(self, query_samples):
+        # print("samples len", len(self.batch_samples))
+        batch_inference_results = list(self.pool.map_unordered(lambda a, v: a.forward.remote(v), self.batch_samples))
+
+        results = []
+        for batch_inference_result in batch_inference_results:
+            batch_inference_result = batch_inference_result["output"]
+            for inference_result in batch_inference_result:
+                response_array = array.array("B", inference_result.tobytes())
+                bi = response_array.buffer_info()
+                results.append(bi)
+        
+        # print("results len", len(results))
+        
+        responses = []
+        for i in range(len(query_samples)):
+            # print(query_samples[i].index)
+            bi = results[query_samples[i].index]
+            response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
+            responses.append(response)
+        lg.QuerySamplesComplete(responses)
 
     def flush_queries(self):
         pass

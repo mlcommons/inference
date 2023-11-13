@@ -76,6 +76,11 @@ def main():
     elif args.backend == "onnxruntime":
         from onnxruntime_SUT import get_onnxruntime_sut
         sut = get_onnxruntime_sut(args)
+    elif args.backend == "ray":
+        assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
+        assert not args.profile, "Profiling is only supported by onnxruntime backend!"
+        from ray_SUT import get_ray_sut
+        sut = get_ray_sut(args)
     else:
         raise ValueError("Unknown backend: {:}".format(args.backend))
 

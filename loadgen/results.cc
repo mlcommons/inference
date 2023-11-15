@@ -55,6 +55,10 @@ void PerformanceSummary::ProcessLatencies() {
                          max_latency);
   }
 
+  if (settings.use_token_latencies){
+    ProcessTokenLatencies();
+  }
+
   // MultiStream only after this point.
   if (settings.scenario != TestScenario::MultiStream) {
     return;
@@ -76,6 +80,42 @@ void PerformanceSummary::ProcessLatencies() {
   for (auto& lp : latency_percentiles) {
     lp.query_latency = pr.query_latencies[query_count * lp.percentile];
   }
+}
+
+void PerformanceSummary::ProcessTokenLatencies() {
+  if (pr.token_results.first_token_latencies.empty()) {
+    return;
+  }
+  for (auto n_tokens: pr.token_results.tokens_per_sample){
+    token_count += n_tokens;
+  }
+  QuerySampleLatency accumulated_first_token_latency = 0;
+  for (auto latency : pr.token_results.first_token_latencies) {
+    accumulated_first_token_latency += latency;
+  }
+  first_token_latency_mean = accumulated_first_token_latency / sample_count;
+  std::sort(pr.token_results.first_token_latencies.begin(), 
+    pr.token_results.first_token_latencies.end());
+  
+  token_target_latency_percentile.sample_latency =
+      pr.token_results.first_token_latencies[sample_count * token_target_latency_percentile.percentile];
+  first_token_latency_min = pr.token_results.first_token_latencies.front();
+  first_token_latency_max = pr.token_results.first_token_latencies.back();
+  for (auto& lp : token_latency_percentiles) {
+    assert(lp.percentile >= 0.0);
+    assert(lp.percentile < 1.0);
+    lp.sample_latency = pr.token_results.first_token_latencies[sample_count * lp.percentile];
+  }
+
+  if (settings.scenario == TestScenario::Server) {
+    // TODO: Maybe another target latency needs to be added?
+    QuerySampleLatency max_latency = settings.target_latency.count() + 1;
+    overlatency_first_token_count =
+        pr.token_results.first_token_latencies.end() -
+        std::lower_bound(pr.token_results.first_token_latencies.begin(), pr.token_results.first_token_latencies.end(),
+                         max_latency);
+  }
+
 }
 
 bool PerformanceSummary::EarlyStopping(std::string* recommendation) {
@@ -299,10 +339,10 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
 
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
-      summary(DoubleToString(target_latency_percentile.percentile * 100, 0) +
-                  "th percentile latency (ns) : ",
-              target_latency_percentile.sample_latency);
-      break;
+        summary(DoubleToString(target_latency_percentile.percentile * 100, 0) +
+                    "th percentile latency (ns) : ",
+                target_latency_percentile.sample_latency);
+        break;
     }
     case TestScenario::MultiStream: {
       summary(DoubleToString(target_latency_percentile.percentile * 100, 0) +
@@ -329,6 +369,43 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
       double samples_per_second = sample_count / pr.max_latency;
       summary("Samples per second: ", samples_per_second);
       break;
+    }
+  }
+
+  if (settings.use_token_latencies){
+    switch (settings.scenario) {
+      case TestScenario::SingleStream: {
+      summary(DoubleToString(token_target_latency_percentile.percentile * 100, 0) +
+                  "th first token percentile latency (ns) : ",
+              token_target_latency_percentile.sample_latency);
+      break;
+      }
+      case TestScenario::MultiStream: {
+        summary(DoubleToString(token_target_latency_percentile.percentile * 100, 0) +
+                    "th first token percentile latency (ns) : ",
+                token_target_latency_percentile.query_latency);
+        break;
+      }
+      case TestScenario::Server: {
+        // Subtract 1 from sample count since the start of the final sample
+        // represents the open end of the time range: i.e. [begin, end).
+        // This makes sense since:
+        // a) QPS doesn't apply if there's only one sample; it's pure latency.
+        // b) If you have precisely 1k QPS, there will be a sample exactly on
+        //    the 1 second time point; but that would be the 1001th sample in
+        //    the stream. Given the first 1001 queries, the QPS is
+        //    1000 queries / 1 second.
+        double tps_as_scheduled =
+            token_count / pr.final_query_scheduled_time;
+        summary("Scheduled tokens per second : ",
+                DoubleToString(tps_as_scheduled));
+        break;
+      }
+      case TestScenario::Offline: {
+        double tokens_per_second = token_count / pr.max_latency;
+        summary("Tokens per second: ", tokens_per_second);
+        break;
+      }
     }
   }
 
@@ -412,6 +489,32 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
       summary(
           DoubleToString(lp.percentile * 100) + " percentile latency (ns)   : ",
           lp.sample_latency);
+    }
+  }
+  if (settings.use_token_latencies){
+    summary("");
+    if (settings.scenario == TestScenario::SingleStream) {
+    double tps_w_lg = token_count / pr.final_query_issued_time;
+    double tps_wo_lg = ((double)token_count) / (QuerySampleLatencyToSeconds(sample_latency_mean) * sample_count);
+    summary("TPS w/ loadgen overhead         : " + DoubleToString(tps_w_lg));
+    summary("TPS w/o loadgen overhead        : " + DoubleToString(tps_wo_lg));
+    
+    } else if (settings.scenario == TestScenario::Server) {
+      double tps_as_completed =
+          token_count / pr.final_query_all_samples_done_time;
+      summary("Completed tokens per second    : ",
+              DoubleToString(tps_as_completed));
+    }
+
+    if (settings.scenario != TestScenario::MultiStream) {
+      summary("Min First Token latency (ns)    : ", first_token_latency_min);
+      summary("Max First Token latency (ns)    : ", first_token_latency_max);
+      summary("Mean First Token latency (ns)   : ", first_token_latency_mean);
+      for (auto& lp : token_latency_percentiles) {
+        summary(
+            DoubleToString(lp.percentile * 100) + " percentile latency (ns)   : ",
+            lp.sample_latency);
+      }
     }
   }
 
@@ -536,6 +639,28 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
                "result_" + DoubleToString(lp.percentile * 100) +
                    "_percentile_latency_ns",
                lp.sample_latency);
+  }
+  // Detailed first token latencies
+  if (settings.use_token_latencies){
+    MLPERF_LOG(detail, "result_first_token_min_latency_ns", first_token_latency_min);
+    MLPERF_LOG(detail, "result_first_token_max_latency_ns", first_token_latency_max);
+    MLPERF_LOG(detail, "result_first_token_mean_latency_ns", first_token_latency_mean);
+    for (auto& lp : token_latency_percentiles) {
+      MLPERF_LOG(detail,
+                  "result_" + DoubleToString(lp.percentile * 100) +
+                      "_percentile_latency_ns",
+                  lp.sample_latency);
+    }
+    double tps_w_lg = ((double)token_count) / pr.final_query_issued_time;
+    double tps_wo_lg= ((double)token_count) / (sample_latency_mean * sample_count);
+    MLPERF_LOG(detail, "result_token_throughput_with_loadgen_overhead", tps_w_lg);
+    MLPERF_LOG(detail, "result_token_throughput", tps_wo_lg);
+    double tpot = sample_count * (sample_latency_mean - first_token_latency_mean) / ((double)token_count);
+    MLPERF_LOG(detail, "result_time_to_output_token", tpot);
+    if (settings.scenario == TestScenario::Offline) {
+      double tokens_per_second = token_count / pr.max_latency;
+      MLPERF_LOG(detail, "result_tokens_per_second", tokens_per_second);
+    }
   }
 #endif
 }

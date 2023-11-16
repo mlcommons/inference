@@ -103,9 +103,8 @@ class SUT():
             torch_dtype=self.amp_dtype
         )
 
-        if 'cuda' in self.device:
-            self.device = torch.device(self.device)
-            self.model.to(self.device)
+        self.device = torch.device(self.device)
+        self.model.to(self.device)
 
         self.model.eval()
         self.model = self.model.to(memory_format=torch.channels_last)

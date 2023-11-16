@@ -1,4 +1,5 @@
 # Reference Implementation for Falcon-40B
+**Basic implementation for Falcon-40B. This is still WIP. It doesn't yet have functional support for First token and remainder output tokens generations. Features will be added over the next couple of weeks**
 
 ## Prepare environment
 ```
@@ -20,8 +21,38 @@ python -m pip install .
 ```
 
 ## Get Dataset
+TODO
+
 
 ## Get Model
++ Requires Git Large Files Storage
+```
+export CHECKPOINT_PATH=${PWD}/Falcon-40B
+git lfs install
+git clone https://huggingface.co/tiiuae/falcon-40b-instruct ${CHECKPOINT_PATH}
+```
 
 ## Run Benchmark
 
+### Offline
+```
+python -u main.py --scenario Offline \
+                --model-path ${CHECKPOINT_PATH} \
+                --mlperf-conf mlperf.conf \
+                --user-conf user.conf \
+                --total-sample-count 1024 \
+                --device cpu \
+                --output-log-dir offline-logs
+
+```
+
+### Server
+```
+python -u main.py --scenario Server \
+                --model-path ${CHECKPOINT_PATH} \
+                --mlperf-conf mlperf.conf \
+                --user-conf user.conf \
+                --total-sample-count 1024 \
+                --device cpu \
+                --output-log-dir server-logs
+```

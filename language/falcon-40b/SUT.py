@@ -72,7 +72,7 @@ class SUT():
         """Processor of the queued queries. User may choose to add batching logic """
 
         while True:
-            q_tem = self.query_queue.get()
+            qitem = self.query_queue.get()
             if qitem is None:
                 break
 

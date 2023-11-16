@@ -9,6 +9,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import mlperf_loadgen as lg
 from dataset import Dataset
 
+import threading
+import queue
 
 gen_kwargs = {
     "early_stopping": True,
@@ -16,15 +18,12 @@ gen_kwargs = {
     "min_new_tokens": 1,
     "num_beams": 4
 }
-#int(os.environ.get("GPTJ_BEAM_SIZE", "4")), # only beam_size 4 is allowed for official submission
-#}
 
 
 class SUT():
-    def __init__(self, model_path=None, dtype="bfloat16", device="cpu", total_sample_count=24576, dataset_path=None):
+    def __init__(self, model_path=None, dtype="bfloat16", device="cpu", total_sample_count=24576, dataset_path=None, workers=1):
         # TODO : dataset_path should be used when dataset is already available on disk
 
-        print("Loading PyTorch model...")
         self.model_path = model_path or "tiiuae/falcon-40b-instruct"
         self.device = device
 
@@ -39,6 +38,64 @@ class SUT():
             self.amp_enabled = False
             self.amp_dtype = torch.float32
 
+        if 'cuda' in self.device:
+            assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
+
+        self.dataset_path = dataset_path
+        self.data_object = Dataset(dataset_path=self.dataset_path, total_sample_count=total_sample_count)
+        self.qsl = lg.ConstructQSL(self.data_object.total_sample_count, self.data_object.perf_count,
+                                   self.data_object.LoadSamplesToRam, self.data_object.UnloadSamplesFromRam)
+
+        self.load_model()
+
+        self.num_workers = workers
+        self.worker_threads = [None] * self.num_workers
+        self.query_queue = queue.Queue()
+
+    def start(self):
+        for j in range(self.num_workers):
+            worker = threading.Thread(target=self.process_queries)
+            worker.start()
+            self.worker_threads[j] = worker
+
+        print("Worker threads created")
+
+    def stop(self):
+        for worker in self.worker_threads:
+            worker.join()
+
+        for _ in range(self.num_workers):
+            self.query_queue.put(None)
+
+
+    def process_queries(self):
+        """Processor of the queued queries. User may choose to add batching logic """
+
+        while True:
+            q_tem = self.query_queue.get()
+            if qitem is None:
+                break
+
+            input_ids_tensor = self.data_object.input_ids[qitem.index]
+            input_masks_tensor = self.data_object.attention_masks[qitem.index]
+
+            pred_output_tokens = self.model.generate(
+                                                input_ids=input_ids_tensor,
+                                                attention_mask=input_masks_tensor,
+                                                pad_token_id=self.tokenizer.pad_token_id,
+                                                **gen_kwargs
+                                                )
+
+            processed_output = self.data_object.postProcess(pred_output_tokens)
+
+            response_array = array.array("B", processed_output[0].tobytes())
+            bi = response_array.buffer_info()
+            response = [lg.QuerySampleResponse(
+                qitem.id, bi[0], bi[1])]
+            lg.QuerySamplesComplete(response)
+
+
+    def load_model(self):
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_path,
             device_map= "auto" if self.device=="cpu" else None,
@@ -46,10 +103,7 @@ class SUT():
             torch_dtype=self.amp_dtype
         )
 
-        # Cast the model to GPU if the flag is set.
         if 'cuda' in self.device:
-            print(f"Casting models to GPU...")
-            assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
             self.device = torch.device(self.device)
             self.model.to(self.device)
 
@@ -64,27 +118,57 @@ class SUT():
 
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        self.dataset_path = dataset_path
-        self.data_object = Dataset(dataset_path=self.dataset_path, total_sample_count=total_sample_count)
-        self.qsl = lg.ConstructQSL(self.data_object.total_sample_count, self.data_object.perf_count,
-                                   self.data_object.LoadSamplesToRam, self.data_object.UnloadSamplesFromRam)
-
+    def get_sut(self):
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
+        return self.sut
+
+    def get_qsl(self):
+        return self.qsl
+
 
     def predict(self,**kwargs):
         raise NotImplementedError
 
-    def issue_queries(self, query_samples):
 
-        total_samples_done = 0
+    def issue_queries(self, query_samples):
+        """ Receives samples from loadgen and adds them to queue. Users may choose to batch here"""
+
         list_prompts_tokens = []
         list_prompts_attn_masks = []
 
         for i in range(len(query_samples)):
-            index = query_samples[i].index
-            input_ids_tensor = self.data_object.input_ids[index]
-            input_masks_tensor = self.data_object.attention_masks[index]
+            self.query_queue.put(query_samples[i])
 
+
+    def flush_queries(self):
+        pass
+
+    def __del__(self):
+        for worker in self.worker_threads:
+            worker.join()
+
+        for _ in range(self.num_workers):
+            self.query_queue.put(None)
+
+class SUTServer(SUT):
+    def __init__(self, model_path=None, dtype="bfloat16", device="cpu", total_sample_count=24576, dataset_path=None, workers=1):
+
+        super().__init__(model_path=model_path, dtype=dtype, device=device, total_sample_count=total_sample_count, dataset_path=dataset_path, workers=workers)
+
+
+    def process_queries(self):
+        """Processor of the queued queries. User may choose to add batching logic """
+
+        while True:
+
+            qitem = self.query_queue.get()
+            if qitem is None:
+                break
+            
+            input_ids_tensor = self.data_object.input_ids[qitem.index]
+            input_masks_tensor = self.data_object.attention_masks[qitem.index]
+            
+            #TODO Generate and send 1st output token to loadgen, then generate remainder tokens
             pred_output_tokens = self.model.generate(
                                                 input_ids=input_ids_tensor,
                                                 attention_mask=input_masks_tensor,
@@ -97,45 +181,13 @@ class SUT():
             response_array = array.array("B", processed_output[0].tobytes())
             bi = response_array.buffer_info()
             response = [lg.QuerySampleResponse(
-                query_samples[i].id, bi[0], bi[1])]
+                qitem.id, bi[0], bi[1])]
             lg.QuerySamplesComplete(response)
 
-
-    def flush_queries(self):
-        pass
-
-    def __del__(self):
-        print("Finished destroying SUT.")
-
-
-class SUT_Server(SUT):
-    def __init__(self, model_path, dtype, dataset_path, max_examples, use_gpu):
-
-        SUT_base.__init__(self, model_path, dtype, dataset_path, max_examples, use_gpu)
-        self.total_samples_done = 0
-        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
-        print("SUT Server")
+    
 
     def issue_queries(self, query_samples):
 
-        index = query_samples[0].index
-        input_ids_tensor = self.data_object.source_encoded_input_ids[index]
-        input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
-
-        if self.use_gpu:
-            input_ids_tensor = input_ids_tensor.to(self.device)
-            input_masks_tensor = input_masks_tensor.to(self.device)
-
-        pred_output_batch = self.inference_call(
-            input_ids_tensor, input_masks_tensor).cpu().numpy()
-
-        response_array = array.array("B", pred_output_batch.tobytes())
-        bi = response_array.buffer_info()
-        responses = [lg.QuerySampleResponse(query_samples[0].id, bi[0], bi[1])]
-        lg.QuerySamplesComplete(responses)
-        self.total_samples_done += 1
-        if self.total_samples_done % 5 == 0:
-            print("Completed : ", self.total_samples_done)
-
+        self.query_queue.put(query_samples[0])
 
 

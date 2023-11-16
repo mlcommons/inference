@@ -14,14 +14,11 @@ import copy
 import random
 random.seed(9973)
 
-
+#TODO Prompt may have to be experimented with. 
 PROMPT_INPUT = "### System:\n{system_prompt}\n### Human:\n{question}\n### Assistant:\n"
 
 class Dataset():
     def __init__(self, total_sample_count=24576, perf_count_override=None, dataset_path=None, device="cpu"):
-        print("Constructing QSL")
-
-        #self.dataset = "Open-Orca/OpenOrca"
         self.model_name = "tiiuae/falcon-40b-instruct"
         self.dataset_path = dataset_path
         self.max_length = 1024
@@ -47,6 +44,8 @@ class Dataset():
 
 
     def load_dataset(self):
+        """ Loads dataset. This may change after we finish creating the validation set"""
+
         list_data_dict = load_dataset("Open-Orca/OpenOrca")['train']
         num_samples = min(len(list_data_dict), self.total_sample_count)
 
@@ -70,6 +69,7 @@ class Dataset():
         preds = []
         for i in range(out_tokens.shape[0]):
             pred = out_tokens[i].reshape(-1).cpu().numpy() # Slice up to original input length as below?
+
             #input_len = input_seq_lens[i]
             #pred = out_tokens[i, input_len:].reshape(-1).cpu().numpy()
             preds.append(pred)
@@ -88,4 +88,4 @@ class Dataset():
         pass
 
     def __del__(self):
-        print("Finished destroying QSL.")
+        pass

@@ -13,12 +13,16 @@ Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.025
     primaryClass={cs.LG}
 }
 ```
+## MLPerf Inference v4.0 (submission deadline February 23, 2024)
+
+Code freeze coming soon...
+
 ## MLPerf Inference v3.1 (submission August 18, 2023)
-Please use the master branch for v3.1 submission. You can use the latest commit or any commit since [f7df3acb6880b6b3a92cd5a444d173137aa5d8ca](https://github.com/mlcommons/inference/tree/f7df3acb6880b6b3a92cd5a444d173137aa5d8ca) for doing the submission. v3.1 tag will be released once submissions are over for reproducibility. 
+Please use [v3.1 tag](https://github.com/mlcommons/inference/releases/tag/v3.1) (```git checkout v3.1```) if you would like to reproduce the v3.1 results. 
 
-Those doing power submissions must use the `master` branch of the [MLCommons power-dev](https://github.com/mlcommons/power-dev) repository and checkout to [e9e16b1299ef61a2a5d8b9abf5d759309293c440](https://github.com/mlcommons/power-dev/tree/e9e16b1299ef61a2a5d8b9abf5d759309293c440). 
+For reproducing power submissions please use the `master` branch of the [MLCommons power-dev](https://github.com/mlcommons/power-dev) repository and checkout to [e9e16b1299ef61a2a5d8b9abf5d759309293c440](https://github.com/mlcommons/power-dev/tree/e9e16b1299ef61a2a5d8b9abf5d759309293c440). 
 
-You can see the individual Readme files in the reference app for more details.
+You can see the individual README files in the benchmark task folders for more details regarding the benchmarks. For reproducing the submitted results please see the README files under the respective submitter folders in the [inference v3.1 results repository](https://github.com/mlcommons/inference_results_v3.1).
 
 | model | reference app | framework | dataset | category
 | ---- | ---- | ---- | ---- | ---- |

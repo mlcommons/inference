@@ -97,12 +97,12 @@ class FilterbankFeatures(nn.Module):
 #        print("PADDING: {}".format(pad_to))
 
         torch_windows = {
-            'hann': torch.hann_window,
-            'hamming': torch.hamming_window,
-            'blackman': torch.blackman_window,
-            'bartlett': torch.bartlett_window,
-            'none': None,
-        }
+                'hann': torch.hann_window,
+                'hamming': torch.hamming_window,
+                'blackman': torch.blackman_window,
+                'bartlett': torch.bartlett_window,
+                'none': None,
+                }
 
         self.win_length = int(sample_rate * window_size)  # frame size
         self.hop_length = int(sample_rate * window_stride)
@@ -123,16 +123,16 @@ class FilterbankFeatures(nn.Module):
         window_tensor = window_fn(self.win_length,
                                   periodic=False) if window_fn else None
         filterbanks = torch.tensor(
-            librosa.filters.mel(sr=sample_rate, n_fft=self.n_fft, n_mels=nfilt, fmin=lowfreq,
-                                fmax=highfreq), dtype=torch.float).unsqueeze(0)
+                librosa.filters.mel(sr=sample_rate, n_fft=self.n_fft, n_mels=nfilt, fmin=lowfreq,
+                                    fmax=highfreq), dtype=torch.float).unsqueeze(0)
         # self.fb = filterbanks
         # self.window = window_tensor
         self.register_buffer("fb", filterbanks)
         self.register_buffer("window", window_tensor)
         # Calculate maximum sequence length (# frames)
         max_length = 1 + math.ceil(
-            (max_duration * sample_rate - self.win_length) / self.hop_length
-        )
+                (max_duration * sample_rate - self.win_length) / self.hop_length
+                )
         max_pad = 16 - (max_length % 16)
         self.max_length = max_length + max_pad
 
@@ -141,9 +141,9 @@ class FilterbankFeatures(nn.Module):
         seq_len = (seq_len + self.frame_splicing - 1) // self.frame_splicing
         return seq_len
 
-    @torch.no_grad()
     def forward(self, inp: Tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
-        x, seq_len = inp
+        with torch.no_grad():
+            x, seq_len = inp
 
         dtype = x.dtype
 
@@ -162,7 +162,8 @@ class FilterbankFeatures(nn.Module):
         # do stft
         x = torch.stft(x, n_fft=self.n_fft, hop_length=self.hop_length,
                        win_length=self.win_length,
-                       center=True, window=self.window.to(dtype=torch.float))
+                       center=True, window=self.window.to(dtype=torch.float), return_complex = True)
+        x = torch.view_as_real(x)
 
         # get power spectrum
         x = x.pow(2).sum(-1)
@@ -244,9 +245,9 @@ class FilterbankFeatures(nn.Module):
 
 class FeatureFactory(object):
     featurizers = {
-        "logfbank": FilterbankFeatures,
-        "fbank": FilterbankFeatures,
-    }
+            "logfbank": FilterbankFeatures,
+            "fbank": FilterbankFeatures,
+            }
 
     def __init__(self):
         pass

@@ -29,6 +29,7 @@ from squad_QSL import get_squad_QSL
 class BERT_ONNXRuntime_SUT():
     def __init__(self, args):
         self.profile = args.profile
+        self.network = args.network
         self.options = onnxruntime.SessionOptions()
         self.options.enable_profiling = args.profile
 
@@ -55,6 +56,7 @@ class BERT_ONNXRuntime_SUT():
 
     def issue_queries(self, query_samples):
         for i in range(len(query_samples)):
+
             eval_features = self.qsl.get_features(query_samples[i].index)
             if self.quantized:
                 fd = {
@@ -68,13 +70,31 @@ class BERT_ONNXRuntime_SUT():
                     "input_mask": np.array(eval_features.input_mask).astype(np.int64)[np.newaxis, :],
                     "segment_ids": np.array(eval_features.segment_ids).astype(np.int64)[np.newaxis, :]
                 }
+            if self.network == "sut":
+                for key in fd:
+                    fd[key] = fd[key].tolist()
+
             scores = self.sess.run([o.name for o in self.sess.get_outputs()], fd)
             output = np.stack(scores, axis=-1)[0]
+
+            if self.network == "sut":
+                return output.tolist()
 
             response_array = array.array("B", output.tobytes())
             bi = response_array.buffer_info()
             response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
             lg.QuerySamplesComplete([response])
+
+    def process_sample(self, sample_input):
+        '''For Loadgen over the network'''
+        sample_input["input_ids"] = np.array(sample_input["input_ids"])
+        sample_input["input_mask"] = np.array(sample_input["input_mask"])
+        sample_input["segment_ids"] = np.array(sample_input["segment_ids"])
+
+
+        scores = self.sess.run([o.name for o in self.sess.get_outputs()], sample_input)
+        output = np.stack(scores, axis=-1)[0]
+        return output.tolist()
 
     def flush_queries(self):
         pass

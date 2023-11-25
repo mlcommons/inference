@@ -116,14 +116,13 @@ def main():
 
     if args.network == "lon":
         from network_LON import app, set_args, main as app_main
-        set_args(args, settings, log_settings, args.audit_conf, args.sut_server, args.max_examples)
+        set_args(args, settings, log_settings, args.audit_conf, args.sut_server, args.backend, args.max_examples)
         app.run(app_main)
 
     elif args.network == "sut":
-        from network_SUT import app, node, get_backend, set_backend
+        from network_SUT import app, node, set_backend
         node = args.node
-        backend = get_backend(args)
-        set_backend(backend)
+        set_backend(sut)
         app.run(debug=False, port=args.port)
 
     else:

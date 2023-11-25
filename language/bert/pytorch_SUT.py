@@ -83,6 +83,21 @@ class BERT_PyTorch_SUT():
                 response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
                 lg.QuerySamplesComplete([response])
 
+    def process_sample(self, sample_input):
+        with torch.no_grad():
+            '''For Loadgen over the network'''
+            model_output = self.model.forward(input_ids=torch.LongTensor(sample_input['input_ids']).unsqueeze(0).to(self.dev),
+                attention_mask=torch.LongTensor(sample_input['input_mask']).unsqueeze(0).to(self.dev),
+                token_type_ids=torch.LongTensor(sample_input['segment_ids']).unsqueeze(0).to(self.dev))
+            if self.version >= '4.0.0':
+                start_scores = model_output.start_logits
+                end_scores = model_output.end_logits
+            else:
+                start_scores, end_scores = model_output
+            output = torch.stack([start_scores, end_scores], axis=-1).squeeze(0).cpu().numpy()
+
+            return output.tolist()
+
     def flush_queries(self):
         pass
 

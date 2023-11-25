@@ -39,14 +39,9 @@ max_seq_length = 384
 max_query_length = 64
 doc_stride = 128
 
+from bert_base_QDL import bert_base_QDL
 
-class bert_onnxruntime_QDL:
-    """QDL acting as a proxy to the SUT.
-    This QDL communicates with the SUT via HTTP.
-    It uses two endpoints to communicate with the SUT:
-    - /predict/ : Send a query to the SUT and get a response.
-    - /getname/ : Get the name of the SUT. Send a getname to the SUT and get a response.
-    """
+class bert_onnxruntime_QDL(bert_base_QDL):
 
     def __init__(self, qsl: squad_QSL.SQuAD_v1_QSL, sut_server_addr: list):
         """
@@ -55,27 +50,8 @@ class bert_onnxruntime_QDL:
             qsl: The QSL to use.
             sut_server_addr: A list of addresses of the SUT.
         """
-        self.qsl = qsl
-        self.quantized = False
- 
-        # Construct QDL from the python binding
-        self.qdl = lg.ConstructQDL(
-            self.issue_query, self.flush_queries, self.client_get_name)
-        self.sut_server_addr = sut_server_addr
-        self.num_nodes = len(sut_server_addr)
+        super().__init__(qsl, sut_server_addr)
 
-        # For round robin between the SUTs:
-        self.next_sut_id = 0
-        self.lock = threading.Lock()
-
-    def issue_query(self, query_samples):
-        """Process the query to send to the SUT"""
-        threading.Thread(target=self.process_query_async,
-                         args=[query_samples]).start()
-
-    def flush_queries(self):
-        """Flush the queries. Dummy implementation."""
-        pass
 
     def process_query_async(self, query_samples):
         """
@@ -114,30 +90,4 @@ class bert_onnxruntime_QDL:
 
             responses.append(lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1]))
         lg.QuerySamplesComplete(responses)
-
-    def get_sut_id_round_robin(self):
-        """Get the SUT id in round robin."""
-        with self.lock:
-            res = self.next_sut_id
-            self.next_sut_id = (self.next_sut_id + 1) % self.num_nodes
-        return res
-
-    def client_predict(self, query, id):
-        """Serialize the query, send it to the SUT in round robin, and return the deserialized response."""
-        url = '{}/predict/'.format(self.sut_server_addr[self.get_sut_id_round_robin()])
-        #print(query)
-        response = requests.post(url, json={'query': query, id: id})
-        return response.json()['result']
-
-    def client_get_name(self):
-        """Get the name of the SUT from ALL the SUTS."""
-        if len(self.sut_server_addr) == 1:
-            return requests.post(f'{self.sut_server_addr[0]}/getname/').json()['name']
-    
-        sut_names = [requests.post(f'{addr}/getname/').json()['name'] for addr in self.sut_server_addr]
-        return "Multi-node SUT: " + ', '.join(sut_names)
-
-    def __del__(self):
-        lg.DestroyQDL(self.qdl)
-
 

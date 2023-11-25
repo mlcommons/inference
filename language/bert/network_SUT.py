@@ -20,12 +20,6 @@ import os
 import sys
 sys.path.insert(0, os.getcwd())
 
-import mlperf_loadgen as lg
-import numpy as np
-import onnxruntime
-from transformers import BertConfig, BertForQuestionAnswering
-from squad_QSL import get_squad_QSL
-
 
 import argparse
 from flask import Flask, request, jsonify
@@ -72,7 +66,3 @@ def predict():
 def getname():
     """Returns the name of the SUT."""
     return jsonify(name=f'Demo SUT (Network SUT) node' + (' ' + node) if node else '')
-
-def get_backend(args):
-    from onnxruntime_SUT import BERT_ONNXRuntime_SUT
-    return BERT_ONNXRuntime_SUT(args)

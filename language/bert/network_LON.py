@@ -20,12 +20,11 @@ import os
 sys.path.insert(0, os.getcwd())
 from absl import app
 import squad_QSL
-import bert_onnxruntime_QDL
 import mlperf_loadgen as lg
 
-def set_args(argv, g_settings, g_log_settings, g_audit_conf, g_sut_server, g_total_count_override=None, g_perf_count_override=None):
+def set_args(argv, g_settings, g_log_settings, g_audit_conf, g_sut_server, g_backend, g_total_count_override=None, g_perf_count_override=None):
 
-    global settings, log_settings, audit_conf, sut_server, total_count_override, perf_count_override
+    global settings, log_settings, audit_conf, sut_server, total_count_override, perf_count_override, backend
     sys.argv = sys.argv[0:1]
     settings = g_settings
     log_settings = g_log_settings
@@ -33,10 +32,18 @@ def set_args(argv, g_settings, g_log_settings, g_audit_conf, g_sut_server, g_tot
     sut_server = g_sut_server
     total_count_override = g_total_count_override
     perf_count_override = g_perf_count_override
+    backend = g_backend
 
 def main(argv):
         qsl = squad_QSL.get_squad_QSL(total_count_override, perf_count_override)
-        qdl = bert_onnxruntime_QDL.bert_onnxruntime_QDL(qsl, sut_server_addr=sut_server)
+        if backend == "onnxruntime":
+            import bert_onnxruntime_QDL
+            qdl = bert_onnxruntime_QDL.bert_onnxruntime_QDL(qsl, sut_server_addr=sut_server)
+        elif backend == "pytorch":
+            import bert_pytorch_QDL
+            qdl = bert_pytorch_QDL.bert_pytorch_QDL(qsl, sut_server_addr=sut_server)
+        else:
+            raise ValueError('`backend` should be one of onnxruntime,pytorch for Loadgen over the network bert implementation')
 
         lg.StartTestWithLogSettings(qdl.qdl, qsl.qsl, settings, log_settings, audit_conf)
 

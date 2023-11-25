@@ -21,6 +21,7 @@ import argparse
 import os
 import sys
 sys.path.insert(0, os.getcwd())
+sys.path.insert(0, os.path.join(os.getcwd(), "..", "..", "lon"))
 from absl import app
 from absl import flags
 

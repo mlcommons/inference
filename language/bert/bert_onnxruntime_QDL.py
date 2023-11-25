@@ -1,4 +1,6 @@
 # coding=utf-8
+
+# Copyright 2023 MLCommmons.
 # Copyright 2021 Arm Limited and affiliates.
 # Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
 # Copyright 2018 The Google AI Language Team Authors.
@@ -23,21 +25,9 @@ import os
 import sys
 sys.path.insert(0, os.getcwd())
 import numpy as np
-from transformers import BertTokenizer
-from create_squad_data import read_squad_examples, convert_examples_to_features
-from absl import app
-from absl import flags
 
 import mlperf_loadgen as lg
 import squad_QSL
-
-
-# To support feature cache.
-import pickle
-
-max_seq_length = 384
-max_query_length = 64
-doc_stride = 128
 
 from bert_base_QDL import bert_base_QDL
 

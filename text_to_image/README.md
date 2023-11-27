@@ -11,6 +11,8 @@ This is the reference implementation for MLPerf Inference text to image
 ## Dataset
 TODO
 
+### Calibration Dataset
+
 
 ## Setup
 Set the following helper variables
@@ -48,12 +50,12 @@ CFLAGS="-std=c++14" python setup.py install
 ### Download dataset
 ```bash
 cd $SD_FOLDER/tools
-./dowload-coco-2014.sh
+./download-coco-2014.sh -n <number_of_workers>
 ```
 For debugging you can download only a part of all the images in the dataset
 ```bash
 cd $SD_FOLDER/tools
-./dowload-coco-2014.sh -m <max_number_of_images>
+./download-coco-2014.sh -m <max_number_of_images>
 ```
 
 ### Run the benchmark

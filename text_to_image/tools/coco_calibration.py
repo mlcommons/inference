@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 from multiprocessing import Pool
+import numpy as np
 import pandas as pd
 import os
 import tqdm
@@ -21,31 +22,16 @@ def get_args():
     parser.add_argument(
         "--tsv-path", default=None, help="Precomputed tsv file location"
     )
-    parser.add_argument(
-        "--max-images",
-        default=5000,
-        type=int,
-        help="Maximun number of images to download",
-    )
     parser.add_argument("--num-workers", default=1, type=int, help="Number of processes to download images")
     parser.add_argument(
-        "--allow-duplicate-images",
-        action="store_true",
-        help="Allow mulple captions per image"
+        "--calibration-dir", default=None, help="Calibration ids location"
     )
     parser.add_argument(
-        "--latents-path-torch", default="latents.pt", type=str, help="Path to pytorch latents"
+        "--keep-raw", action="store_true", help="Keep the raw dataset"
     )
     parser.add_argument(
-        "--latents-path-numpy", default="latents.npy", type=str, help="Path to numpy latents"
+        "--download-images", action="store_true", help="Download the calibration set"
     )
-    parser.add_argument(
-        "--seed", type=int, default=2023, help="Seed to choose the dataset"
-    )
-    parser.add_argument(
-        "--keep-raw", action="store_true", help="Keep raw folder"
-    )
-
     args = parser.parse_args()
     return args
 
@@ -61,20 +47,17 @@ def download_img(args):
 if __name__ == "__main__":
     args = get_args()
     dataset_dir = os.path.abspath(args.dataset_dir)
+    calibration_dir = args.calibration_dir if args.calibration_dir is not None else os.path.join(os.path.dirname(__file__), "..", "..", "calibration", "COCO-2014")
     # Check if the annotation dataframe is there
-    if os.path.exists(f"{dataset_dir}/captions/captions.tsv"):
-        df_annotations = pd.read_csv(f"{dataset_dir}/captions/captions.tsv", sep="\t")
-    elif os.path.exists(f"{dataset_dir}/../captions.tsv"):
-        os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
-        os.system(f"cp {dataset_dir}/../captions.tsv {dataset_dir}/captions/")
-        df_annotations = pd.read_csv(f"{dataset_dir}/captions/captions.tsv", sep="\t")
+    if os.path.exists(f"{dataset_dir}/calibration/captions.tsv"):
+        df_annotations = pd.read_csv(f"{dataset_dir}/calibration/captions.tsv", sep="\t")
     elif args.tsv_path is not None and os.path.exists(f"{args.tsv_path}"):
-        os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
-        os.system(f"cp {args.tsv_path} {dataset_dir}/captions/")
-        df_annotations = pd.read_csv(f"{dataset_dir}/captions/captions.tsv", sep="\t")
+        os.makedirs(f"{dataset_dir}/calibration/", exist_ok=True)
+        os.system(f"cp {args.tsv_path} {dataset_dir}/calibration/")
+        df_annotations = pd.read_csv(f"{dataset_dir}/calibration/captions.tsv", sep="\t")
     else:
         # Check if raw annotations file already exist
-        if not os.path.exists(f"{dataset_dir}/raw/annotations/captions_val2014.json"):
+        if not os.path.exists(f"{dataset_dir}/raw/annotations/captions_train2014.json"):
             # Download annotations
             os.makedirs(f"{dataset_dir}/raw/", exist_ok=True)
             os.makedirs(f"{dataset_dir}/download_aux/", exist_ok=True)
@@ -92,28 +75,27 @@ if __name__ == "__main__":
         # Move captions to target folder
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
         os.system(
-            f"mv {dataset_dir}/raw/annotations/captions_val2014.json {dataset_dir}/captions/"
+            f"mv {dataset_dir}/raw/annotations/captions_train2014.json {dataset_dir}/captions/"
         )
         if not args.keep_raw:
             os.system(f"rm -rf {dataset_dir}/raw")
         os.system(f"rm -rf {dataset_dir}/download_aux")
         # Convert to dataframe format and extract the relevant fields
-        with open(f"{dataset_dir}/captions/captions_val2014.json") as f:
+        with open(f"{dataset_dir}/captions/captions_train2014.json") as f:
             captions = json.load(f)
             annotations = captions["annotations"]
             images = captions["images"]
         df_annotations = pd.DataFrame(annotations)
         df_images = pd.DataFrame(images)
-        if not args.allow_duplicate_images:
-            df_annotations = df_annotations.drop_duplicates(
-                subset=["image_id"], keep="first"
-            )
-        # Sort, shuffle and choose the final dataset
+
+        # Calibration images 
+        with open(f"{calibration_dir}/coco_cal_images_list.txt") as f:
+            calibration_ids = f.readlines()
+            calibration_ids = [int(id.replace('\n', '')) for id in calibration_ids]
+            calibration_ids = calibration_ids
+
+        df_annotations = df_annotations[np.isin(df_annotations["id"], calibration_ids)]
         df_annotations = df_annotations.sort_values(by=["id"])
-        df_annotations = df_annotations.sample(
-            frac=1, random_state=args.seed
-        ).reset_index(drop=True)
-        df_annotations = df_annotations.iloc[: args.max_images]
         df_annotations['caption'] = df_annotations['caption'].apply(lambda x: x.replace('\n', '').strip())
         df_annotations = (
             df_annotations.merge(
@@ -125,22 +107,16 @@ if __name__ == "__main__":
             .reset_index(drop=True)
         )
     # Download images
-    os.makedirs(f"{dataset_dir}/validation/data/", exist_ok=True)
-    tasks = [
-        (row["coco_url"], f"{dataset_dir}/validation/data/", row["file_name"])
-        for i, row in df_annotations.iterrows()
-    ]
-    pool = Pool(processes=args.num_workers)
-    [_ for _ in tqdm.tqdm(pool.imap_unordered(download_img, tasks), total=len(tasks))]
+    os.makedirs(f"{dataset_dir}/calibration/", exist_ok=True)
+    if args.download_images:
+        os.makedirs(f"{dataset_dir}/calibration/data/", exist_ok=True)
+        tasks = [
+            (row["coco_url"], f"{dataset_dir}/calibration/data/", row["file_name"])
+            for i, row in df_annotations.iterrows()
+        ]
+        pool = Pool(processes=args.num_workers)
+        [_ for _ in tqdm.tqdm(pool.imap_unordered(download_img, tasks), total=len(tasks))]
     # Finalize annotations
     df_annotations[
         ["id", "image_id", "caption", "height", "width", "file_name"]
-    ].to_csv(f"{dataset_dir}/captions/captions.tsv", sep="\t", index=False)
-
-    if os.path.exists(args.latents_path_torch):
-        os.makedirs(f"{dataset_dir}/latents/", exist_ok=True)
-        os.system(f"cp {args.latents_path_torch} {dataset_dir}/latents/")
-
-    if os.path.exists(args.latents_path_numpy):
-        os.makedirs(f"{dataset_dir}/latents/", exist_ok=True)
-        os.system(f"cp {args.latents_path_numpy} {dataset_dir}/latents/")
+    ].to_csv(f"{dataset_dir}/calibration/captions.tsv", sep="\t", index=False)

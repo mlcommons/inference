@@ -21,6 +21,7 @@ cd <inference-repo-root>
 
 git submodule update --init --recursive third_party/pybind/
 
+
 cd loadgen
 python -m pip install .
 ```
@@ -36,6 +37,7 @@ python3 processorca.py --dataset_pq_path=1M-GPT4-Augmented.parquet --model_dir=L
 
 
 ## Get Model
++ For now, MLCommons is not hosting the checkpoing, so you must first go to [llama2-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to huggingface (if you don't have account, you'd need to create one). **Please note your authentication credentials** as you may be required to provide them when cloninng below
 + Requires Git Large Files Storage
 ```
 export CHECKPOINT_PATH=${PWD}/Llama-2-70b-chat-hf

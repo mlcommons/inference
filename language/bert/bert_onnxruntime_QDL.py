@@ -56,8 +56,8 @@ class bert_onnxruntime_QDL(bert_base_QDL):
             query_samples: A list of QuerySample objects.
         """
 
-        responses = []
         for i in range(len(query_samples)):
+            responses = []
             eval_features = self.qsl.get_features(query_samples[i].index)
             if self.quantized:
                 fd = {
@@ -79,5 +79,5 @@ class bert_onnxruntime_QDL(bert_base_QDL):
             bi = response_array.buffer_info()
 
             responses.append(lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1]))
-        lg.QuerySamplesComplete(responses)
+            lg.QuerySamplesComplete(responses)
 

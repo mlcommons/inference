@@ -26,15 +26,6 @@ git merge llm-server
 python -m pip install .
 ```
 
-## Get Dataset
-
-```
-export DATASET_PATH=</path/to/save/processed-data.pkl>
-
-# Process the dataset per Taskforce agreed criteria
-python3 processorca.py --dataset_pq_path=1M-GPT4-Augmented.parquet --model_dir=Llama-2-70b-chat-hf --seqlen_limit=2048 --export_dir=llama/filtered --num_total_samples=24576
-```
-
 
 ## Get Model
 + For now, MLCommons is not hosting the checkpoing, so you must first go to [llama2-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to huggingface (if you don't have account, you'd need to create one). **Please note your authentication credentials** as you may be required to provide them when cloninng below
@@ -45,6 +36,24 @@ git lfs install
 git clone https://huggingface.co/meta-llama/Llama-2-70b-chat-hf ${CHECKPOINT_PATH}
 
 ```
+
+## Get Dataset
+
+```
+# First get the `open-orca` parquet from huggingface
+export OPENORCA_DATASET=${PWD}/open-orca
+git clone https://huggingface.co/datasets/Open-Orca/OpenOrca ${OPENORCA_DATASET}
+
+export OPENORCA_PARQUET=${OPENORCA_DATASET}/1M-GPT4-Augmented.parquet
+EXPORT_DIR=${PWD}/processed-openorca
+export DATASET_PATH=${PWD}/processed-data.pkl
+
+# Process the dataset according the Taskforce's agreed criteria
+python3 processorca.py --dataset_pq_path=${OPENORCA_PARQUET} --model_dir=${CHECKPOINT_PATH} --seqlen_limit=2048 --export_dir=${EXPORT_DIR} --num_total_samples=24576
+
+mv ${EXPORT_DIR}/open_orca_gpt4_tokenized_llama.sampled_24576.pkl ${DATASET_PATH}
+```
+
 
 ## Run Performance Benchmarks
 

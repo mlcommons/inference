@@ -11,8 +11,12 @@ import io
 #import utils
 import copy
 
+import logging
+logging.basicConfig(level=logging.INFO)
+log = logging.getLogger("Llama-70B-Dataset")
+
 import random
-random.seed(9973)
+#random.seed(9973)
 
 #TODO Prompt may have to be experimented with. 
 PROMPT_INPUT = "### System:\n{system_prompt}\n### Human:\n{question}\n### Assistant:\n"
@@ -64,7 +68,7 @@ class Dataset():
         self.attention_masks = []
 
         for ids in input_tokens:
-            input_ids = torch.tensor(ids, dtype=torch.int32).to(self.device)
+            input_ids = torch.tensor(ids, dtype=torch.int32).view(1,-1).to(self.device)
             attn_mask = torch.ones_like(input_ids)
             self.input_ids.append(input_ids)
             self.attention_masks.append(attn_mask)

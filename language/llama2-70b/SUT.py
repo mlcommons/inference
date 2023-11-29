@@ -51,7 +51,7 @@ class FirstTokenStreamer(BaseStreamer):
         value = value[0].tolist()
 
         if self.is_first_token:
-            log.info("First token extracted.")
+            #log.info("First token extracted.")
 
             # Add generated first token together with its query response_id to first tokens queue
             self.first_token.put((value, self.response_ids[0]))
@@ -111,8 +111,6 @@ class SUT():
             worker = threading.Thread(target=self.process_queries)
             worker.start()
             self.worker_threads[j] = worker
-
-        print("Worker threads created")
 
     def stop(self):
         for _ in range(self.num_workers):
@@ -232,7 +230,7 @@ class SUTServer(SUT):
                 break
 
             first_tokens, response_id = first_token_item
-            log.info("Fetched first token for query {}".format(response_id))
+            #log.info("Fetched first token for query {}".format(response_id))
 
             response_data = array.array("B", np.array(first_tokens, np.float32).tobytes())
             bi = response_data.buffer_info()
@@ -265,7 +263,7 @@ class SUTServer(SUT):
 
             #processed_output = self.data_object.postProcess(pred_output_tokens)
             output_tokens = tokens_streamer.get_out_tokens()
-            log.info("Obtained remainder tokens for query {}".format(qitem.id))
+            #log.info("Obtained remainder tokens for query {}".format(qitem.id))
 
             response_array = array.array("B", np.array(output_tokens, np.float32).tobytes())
             bi = response_array.buffer_info()

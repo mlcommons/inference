@@ -27,7 +27,7 @@ import mlperf_loadgen as lg
 import squad_QSL
 
 
-class bert_base_QDL:
+class bert_QDL:
     """QDL acting as a proxy to the SUT.
     This QDL communicates with the SUT via HTTP.
     It uses two endpoints to communicate with the SUT:
@@ -77,10 +77,22 @@ class bert_base_QDL:
             query_samples: A list of QuerySample objects.
         """
 
-        responses = []
         for i in range(len(query_samples)):
+            responses = []
             eval_features = self.qsl.get_features(query_samples[i].index)
-            '''implement this'''
+            encoded_eval_features = {
+                    "input_ids": eval_features.input_ids,
+                    "input_mask": eval_features.input_mask,
+                    "segment_ids": eval_features.segment_ids
+                    }
+            output = self.client_predict(encoded_eval_features, query_samples[i].index)
+            output = np.array(output).astype(np.float32)
+            response_array = array.array("B", output.tobytes())
+            bi = response_array.buffer_info()
+
+            responses.append(lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1]))
+            lg.QuerySamplesComplete(responses)
+
 
     def get_sut_id_round_robin(self):
         """Get the SUT id in round robin."""

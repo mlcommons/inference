@@ -58,43 +58,43 @@ class BERT_ONNXRuntime_SUT():
         for i in range(len(query_samples)):
 
             eval_features = self.qsl.get_features(query_samples[i].index)
-            if self.quantized:
-                fd = {
-                    "input_ids": np.array(eval_features.input_ids).astype(np.int64)[np.newaxis, :],
-                    "attention_mask": np.array(eval_features.input_mask).astype(np.int64)[np.newaxis, :],
-                    "token_type_ids": np.array(eval_features.segment_ids).astype(np.int64)[np.newaxis, :]
-                }
-            else:
-                fd = {
-                    "input_ids": np.array(eval_features.input_ids).astype(np.int64)[np.newaxis, :],
-                    "input_mask": np.array(eval_features.input_mask).astype(np.int64)[np.newaxis, :],
-                    "segment_ids": np.array(eval_features.segment_ids).astype(np.int64)[np.newaxis, :]
-                }
-            if self.network == "sut":
-                for key in fd:
-                    fd[key] = fd[key].tolist()
+            self.process_sample(eval_features, query_samples[i].id)
 
-            scores = self.sess.run([o.name for o in self.sess.get_outputs()], fd)
-            output = np.stack(scores, axis=-1)[0]
+    def process_sample(self, eval_features, query_id):
 
-            if self.network == "sut":
-                return output.tolist()
-
-            response_array = array.array("B", output.tobytes())
-            bi = response_array.buffer_info()
-            response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
-            lg.QuerySamplesComplete([response])
-
-    def process_sample(self, sample_input):
         '''For Loadgen over the network'''
-        sample_input["input_ids"] = np.array(sample_input["input_ids"])
-        sample_input["input_mask"] = np.array(sample_input["input_mask"])
-        sample_input["segment_ids"] = np.array(sample_input["segment_ids"])
+        if self.network == "sut":
+            input_ids = eval_features['input_ids']
+            input_mask = eval_features['input_mask']
+            segment_ids = eval_features['segment_ids']
+        else:
+            input_ids = eval_features.input_ids
+            input_mask = eval_features.input_mask
+            segment_ids = eval_features.segment_ids
 
+        if self.quantized:
+            fd = {
+                "input_ids": np.array(input_ids).astype(np.int64)[np.newaxis, :],
+                "attention_mask": np.array(input_mask).astype(np.int64)[np.newaxis, :],
+                "token_type_ids": np.array(segment_ids).astype(np.int64)[np.newaxis, :]
+            }
+        else:
+            fd = {
+                "input_ids": np.array(input_ids).astype(np.int64)[np.newaxis, :],
+                "input_mask": np.array(input_mask).astype(np.int64)[np.newaxis, :],
+                "segment_ids": np.array(segment_ids).astype(np.int64)[np.newaxis, :]
+            }
 
-        scores = self.sess.run([o.name for o in self.sess.get_outputs()], sample_input)
+        scores = self.sess.run([o.name for o in self.sess.get_outputs()], fd)
         output = np.stack(scores, axis=-1)[0]
-        return output.tolist()
+
+        if self.network == "sut":
+            return output.tolist()
+
+        response_array = array.array("B", output.tobytes())
+        bi = response_array.buffer_info()
+        response = lg.QuerySampleResponse(query_id, bi[0], bi[1])
+        lg.QuerySamplesComplete([response])
 
     def flush_queries(self):
         pass

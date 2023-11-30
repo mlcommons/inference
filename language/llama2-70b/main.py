@@ -86,10 +86,10 @@ def main():
     log.info("Run Completed!")
 
     log.info("Destroying SUT...")
-    lg.DestroySUT(sut)
+    lg.DestroySUT(lgSUT)
 
     log.info("Destroying QSL...")
-    lg.DestroyQSL(qsl)
+    lg.DestroyQSL(sut.qsl)
 
 
 if __name__ == "__main__":

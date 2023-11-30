@@ -34,8 +34,6 @@ class Coco(dataset.Dataset):
         pre_process=None,
         pipe_tokenizer=None,
         pipe_tokenizer_2=None,
-        refiner_tokenizer=None,
-        refiner_tokenizer_2=None,
         latent_dtype=torch.float32,
         latent_device="cuda",
         latent_framework="torch",
@@ -55,12 +53,6 @@ class Coco(dataset.Dataset):
         )
         self.captions_df["input_tokens_2"] = self.captions_df["caption"].apply(
             lambda x: self.preprocess(x, pipe_tokenizer_2)
-        )
-        self.captions_df["refiner_input_tokens"] = self.captions_df["caption"].apply(
-            lambda x: self.preprocess(x, refiner_tokenizer)
-        )
-        self.captions_df["refiner_input_tokens_2"] = self.captions_df["caption"].apply(
-            lambda x: self.preprocess(x, refiner_tokenizer_2)
         )
         self.latent_dtype = latent_dtype
         self.latent_device = latent_device if torch.cuda.is_available() else "cpu"

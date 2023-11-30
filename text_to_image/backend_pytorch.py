@@ -45,10 +45,8 @@ class BackendPytorch(backend.Backend):
 
         self.guidance = guidance
         self.steps = steps
-        self.generator_seed = 42
         self.negative_prompt = negative_prompt
         self.max_length_neg_prompt = 77
-        self.max_length_refiner_neg_prompt = 77
 
     def version(self):
         return torch.__version__
@@ -77,14 +75,6 @@ class BackendPytorch(backend.Backend):
                 torch_dtype=self.dtype,
             )
             # self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
-            self.refiner_pipe = StableDiffusionXLImg2ImgPipeline.from_pretrained(
-                self.model_id,
-                scheduler=self.scheduler,
-                safety_checker=None,
-                add_watermarker=False,
-                variant="fp16" if (self.dtype == torch.float16) else None,
-                torch_dtype=self.dtype,
-            )
         else:
             self.scheduler = EulerDiscreteScheduler.from_pretrained(
                 os.path.join(self.model_path, "checkpoint_scheduler"),
@@ -99,20 +89,9 @@ class BackendPytorch(backend.Backend):
                 torch_dtype=self.dtype,
             )
             # self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
-            self.refiner_pipe = StableDiffusionXLImg2ImgPipeline.from_pretrained(
-                os.path.join(self.model_path, "checkpoint_refiner"),
-                scheduler=self.scheduler,
-                safety_checker=None,
-                add_watermarker=False,
-                variant="fp16" if (self.dtype == torch.float16) else None,
-                torch_dtype=self.dtype,
-            )
 
         self.pipe.to(self.device)
-        self.pipe.set_progress_bar_config(disable=True)
-        if self.refiner_pipe is not None:
-            self.refiner_pipe.to(self.device)
-            self.refiner_pipe.set_progress_bar_config(disable=True)
+        #self.pipe.set_progress_bar_config(disable=True)
 
         self.negative_prompt_tokens = self.pipe.tokenizer(
             self.convert_prompt(self.negative_prompt, self.pipe.tokenizer),
@@ -125,20 +104,6 @@ class BackendPytorch(backend.Backend):
             self.convert_prompt(self.negative_prompt, self.pipe.tokenizer_2),
             padding="max_length",
             max_length=self.max_length_neg_prompt,
-            truncation=True,
-            return_tensors="pt",
-        )
-        self.negative_prompt_tokens_refiner = self.refiner_pipe.tokenizer(
-            self.convert_prompt(self.negative_prompt, self.refiner_pipe.tokenizer),
-            padding="max_length",
-            max_length=self.max_length_refiner_neg_prompt,
-            truncation=True,
-            return_tensors="pt",
-        )
-        self.negative_prompt_tokens_refiner_2 = self.refiner_pipe.tokenizer_2(
-            self.convert_prompt(self.negative_prompt, self.refiner_pipe.tokenizer_2),
-            padding="max_length",
-            max_length=self.max_length_refiner_neg_prompt,
             truncation=True,
             return_tensors="pt",
         )
@@ -359,8 +324,6 @@ class BackendPytorch(backend.Backend):
                 assert isinstance(prompt, dict)
                 text_input = prompt["input_tokens"]
                 text_input_2 = prompt["input_tokens_2"]
-                refiner_text_input = prompt["refiner_input_tokens"]
-                refiner_text_input_2 = prompt["refiner_input_tokens_2"]
                 latents_input = prompt["latents"].to(self.dtype)
                 (
                     prompt_embeds,
@@ -381,35 +344,43 @@ class BackendPytorch(backend.Backend):
                     negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
                     guidance_scale=self.guidance,
                     num_inference_steps=self.steps,
-                    output_type="latent",
-                    generator=torch.Generator(device=self.device).manual_seed(
-                        self.generator_seed
-                    ),
+                    output_type="pil",
                     latents=latents_input,
                 ).images[0]
-                (
-                    prompt_embeds,
-                    negative_prompt_embeds,
-                    pooled_prompt_embeds,
-                    negative_pooled_prompt_embeds,
-                ) = self.encode_tokens(
-                    self.refiner_pipe,
-                    refiner_text_input,
-                    refiner_text_input_2,
-                    negative_prompt=self.negative_prompt_tokens_refiner,
-                    negative_prompt_2=self.negative_prompt_tokens_refiner_2,
-                )
-                if self.refiner_pipe is not None:
-                    image = self.refiner_pipe(
-                        prompt_embeds=prompt_embeds,
-                        negative_prompt_embeds=negative_prompt_embeds,
-                        pooled_prompt_embeds=pooled_prompt_embeds,
-                        negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
-                        image=image,
-                        generator=torch.Generator(device=self.device).manual_seed(
-                            self.generator_seed
-                        ),
-                        output_type="pt",
-                    ).images[0]
                 images.append(image)
         return images
+
+
+if __name__ == "__main__":
+    from coco import Coco
+
+    backend = BackendPytorch(precision="fp16")
+    backend = backend.load()
+    dataset = Coco(
+        "coco2014/",
+        name="coco-1024",
+        pipe_tokenizer=backend.pipe.tokenizer,
+        pipe_tokenizer_2=backend.pipe.tokenizer_2,
+    )
+    dataset.load_query_samples([0, 1, 2, 3, 4])
+    items, _ = dataset.get_samples([0, 1, 2, 3, 4])
+    captions = dataset.captions_df["caption"].iloc[[0, 1, 2, 3, 4]]
+    images_1 = backend.predict(items)
+    images_2 = []
+    for i in range(5):
+        image = backend.pipe(
+            captions[i],
+            negative_prompt = backend.negative_prompt,
+            output_type="pil",
+            latents=items[i]["latents"].to(backend.dtype),
+            guidance_scale=backend.guidance,
+            num_inference_steps=backend.steps,
+        ).images[0]
+        images_2.append(image)
+
+    os.makedirs("tmp/", exist_ok=True)
+    for i, image in enumerate(images_1):
+        image.save(f"tmp/image_{i}.png")
+
+    for i, image in enumerate(images_2):
+        image.save(f"tmp/image_{i+5}.png")

@@ -52,10 +52,6 @@ class Dataset:
             {
                 "input_tokens": self.items_inmemory[id]["input_tokens"],
                 "input_tokens_2": self.items_inmemory[id]["input_tokens_2"],
-                "refiner_input_tokens": self.items_inmemory[id]["refiner_input_tokens"],
-                "refiner_input_tokens_2": self.items_inmemory[id][
-                    "refiner_input_tokens_2"
-                ],
                 "latents": self.items_inmemory[id]["latents"],
             }
             for id in id_list

@@ -355,8 +355,6 @@ def main():
         threads=args.threads,
         pipe_tokenizer=model.pipe.tokenizer,
         pipe_tokenizer_2=model.pipe.tokenizer_2,
-        refiner_tokenizer=model.refiner_pipe.tokenizer,
-        refiner_tokenizer_2=model.refiner_pipe.tokenizer_2,
         latent_dtype=dtype,
         latent_device=args.device,
         latent_framework=args.latent_framework,

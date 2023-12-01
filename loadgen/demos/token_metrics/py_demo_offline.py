@@ -61,7 +61,7 @@ def process_query_async(query_samples, i_slice):
         response_token_size = response_token_info[1] * response_token.itemsize
         mlperf_loadgen.FirstTokenComplete([mlperf_loadgen.QuerySampleResponse(s.id, response_token_data, response_token_size)])
         time.sleep(.02)
-        n_tokens = len(response_token)
+        n_tokens = len(response_array)
         response_array = array.array("B", response_array.tobytes())
         response_info = response_array.buffer_info()
         response_data = response_info[0]
@@ -90,6 +90,7 @@ def main():
     settings.scenario = mlperf_loadgen.TestScenario.Offline
     settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
     settings.offline_expected_qps = 1000
+    settings.min_duration_ms = 30000
     settings.use_token_latencies = True
 
     sut = mlperf_loadgen.ConstructSUT(issue_query, flush_queries)

@@ -86,8 +86,11 @@ void PerformanceSummary::ProcessTokenLatencies() {
   if (pr.token_results.first_token_latencies.empty()) {
     return;
   }
+  constexpr auto nTokenInvalid = std::numeric_limits<int64_t>::min();
+  token_count = 0;
   for (auto n_tokens: pr.token_results.tokens_per_sample){
-    token_count += n_tokens;
+    if (n_tokens != nTokenInvalid)
+      token_count += n_tokens;
   }
   QuerySampleLatency accumulated_first_token_latency = 0;
   for (auto latency : pr.token_results.first_token_latencies) {
@@ -383,22 +386,7 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
       case TestScenario::MultiStream: {
         summary(DoubleToString(token_target_latency_percentile.percentile * 100, 0) +
                     "th first token percentile latency (ns) : ",
-                token_target_latency_percentile.query_latency);
-        break;
-      }
-      case TestScenario::Server: {
-        // Subtract 1 from sample count since the start of the final sample
-        // represents the open end of the time range: i.e. [begin, end).
-        // This makes sense since:
-        // a) QPS doesn't apply if there's only one sample; it's pure latency.
-        // b) If you have precisely 1k QPS, there will be a sample exactly on
-        //    the 1 second time point; but that would be the 1001th sample in
-        //    the stream. Given the first 1001 queries, the QPS is
-        //    1000 queries / 1 second.
-        double tps_as_scheduled =
-            token_count / pr.final_query_scheduled_time;
-        summary("Scheduled tokens per second : ",
-                DoubleToString(tps_as_scheduled));
+                token_target_latency_percentile.sample_latency);
         break;
       }
       case TestScenario::Offline: {
@@ -506,16 +494,16 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
               DoubleToString(tps_as_completed));
     }
 
-    if (settings.scenario != TestScenario::MultiStream) {
-      summary("Min First Token latency (ns)    : ", first_token_latency_min);
-      summary("Max First Token latency (ns)    : ", first_token_latency_max);
-      summary("Mean First Token latency (ns)   : ", first_token_latency_mean);
-      for (auto& lp : token_latency_percentiles) {
-        summary(
-            DoubleToString(lp.percentile * 100) + " percentile latency (ns)   : ",
-            lp.sample_latency);
-      }
+    
+    summary("Min First Token latency (ns)    : ", first_token_latency_min);
+    summary("Max First Token latency (ns)    : ", first_token_latency_max);
+    summary("Mean First Token latency (ns)   : ", first_token_latency_mean);
+    for (auto& lp : token_latency_percentiles) {
+      summary(
+          DoubleToString(lp.percentile * 100) + " percentile latency (ns)   : ",
+          lp.sample_latency);
     }
+    
   }
 
   summary(

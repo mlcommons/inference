@@ -96,10 +96,10 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
       uint8_t* src_end = src_begin + response->size;
       sample_data_copy = new std::vector<uint8_t>(src_begin, src_end);
     }
-    Log([sample, complete_begin_time, sample_data_copy, response](AsyncLog& log) {
+    int64_t n_tokens = response->n_tokens;
+    Log([sample, complete_begin_time, sample_data_copy, n_tokens](AsyncLog& log) {
       QueryMetadata* query = sample->query_metadata;
       DurationGeneratorNs sched{query->scheduled_time};
-
       if (scenario == TestScenario::Server) {
         // Trace the server scenario as a stacked graph via counter events.
         DurationGeneratorNs issued{query->issued_start_time};
@@ -128,7 +128,7 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
       // thread and potentially destroy the metadata being used above.
       QuerySampleLatency latency = sched.delta(complete_begin_time);
       log.RecordSampleCompletion(sample->sequence_id, complete_begin_time,
-                                 latency, response->n_tokens);
+                                 latency, n_tokens);
     });
   }
 

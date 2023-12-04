@@ -62,16 +62,20 @@ if __name__ == "__main__":
     args = get_args()
     dataset_dir = os.path.abspath(args.dataset_dir)
     # Check if the annotation dataframe is there
-    if os.path.exists(f"{dataset_dir}/captions/captions.tsv"):
-        df_annotations = pd.read_csv(f"{dataset_dir}/captions/captions.tsv", sep="\t")
-    elif os.path.exists(f"{dataset_dir}/../captions.tsv"):
+    if os.path.exists(f"{dataset_dir}/captions/captions_source.tsv"):
+        df_annotations = pd.read_csv(f"{dataset_dir}/captions/captions_source.tsv", sep="\t")
+        df_annotations = df_annotations.iloc[: args.max_images]
+    elif os.path.exists(f"{dataset_dir}/../captions_source.tsv"):
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
-        os.system(f"cp {dataset_dir}/../captions.tsv {dataset_dir}/captions/")
-        df_annotations = pd.read_csv(f"{dataset_dir}/captions/captions.tsv", sep="\t")
+        os.system(f"cp {dataset_dir}/../captions_source.tsv {dataset_dir}/captions/")
+        df_annotations = pd.read_csv(f"{dataset_dir}/captions/captions_source.tsv", sep="\t")
+        df_annotations = df_annotations.iloc[: args.max_images]
     elif args.tsv_path is not None and os.path.exists(f"{args.tsv_path}"):
+        file_name = args.tsv_path.split("/")[-1]
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
         os.system(f"cp {args.tsv_path} {dataset_dir}/captions/")
-        df_annotations = pd.read_csv(f"{dataset_dir}/captions/captions.tsv", sep="\t")
+        df_annotations = pd.read_csv(f"{dataset_dir}/captions/{file_name}", sep="\t")
+        df_annotations = df_annotations.iloc[: args.max_images]
     else:
         # Check if raw annotations file already exist
         if not os.path.exists(f"{dataset_dir}/raw/annotations/captions_val2014.json"):
@@ -134,7 +138,7 @@ if __name__ == "__main__":
     [_ for _ in tqdm.tqdm(pool.imap_unordered(download_img, tasks), total=len(tasks))]
     # Finalize annotations
     df_annotations[
-        ["id", "image_id", "caption", "height", "width", "file_name"]
+        ["id", "image_id", "caption", "height", "width", "file_name", "coco_url"]
     ].to_csv(f"{dataset_dir}/captions/captions.tsv", sep="\t", index=False)
 
     if os.path.exists(args.latents_path_torch):

@@ -89,7 +89,7 @@ def get_args():
         default=1,
         help="max batch size in a single inference",
     )
-    parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
+    parser.add_argument("--threads", default=1, type=int, help="threads")
     parser.add_argument(
         "--use_preprocessed_dataset",
         action="store_true",
@@ -146,7 +146,7 @@ def get_args():
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--debug", action="store_true", help="debug")
     parser.add_argument(
-        "--performance-sample-count", type=int, help="performance sample count"
+        "--performance-sample-count", type=int, help="performance sample count", default=5000
     )
     parser.add_argument(
         "--max-latency", type=float, help="mlperf max latency in pct tile"

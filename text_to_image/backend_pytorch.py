@@ -3,10 +3,7 @@ import os
 import torch
 import logging
 import backend
-from diffusers import (
-    StableDiffusionXLPipeline,
-    StableDiffusionXLImg2ImgPipeline,
-)
+from diffusers import StableDiffusionXLPipeline
 from diffusers import EulerDiscreteScheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -126,7 +123,7 @@ class BackendPytorch(backend.Backend):
 
     def encode_tokens(
         self,
-        pipe: Union[StableDiffusionXLPipeline, StableDiffusionXLImg2ImgPipeline],
+        pipe: StableDiffusionXLPipeline,
         text_input: torch.Tensor,
         text_input_2: Optional[torch.Tensor] = None,
         device: Optional[torch.device] = None,
@@ -344,7 +341,7 @@ class BackendPytorch(backend.Backend):
                     negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
                     guidance_scale=self.guidance,
                     num_inference_steps=self.steps,
-                    output_type="pil",
+                    output_type="pt",
                     latents=latents_input,
                 ).images[0]
                 images.append(image)

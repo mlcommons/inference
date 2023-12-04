@@ -4,14 +4,16 @@ This is the reference implementation for MLPerf Inference text to image
 
 ## Supported Models
 
-| model | framework | accuracy | dataset | model link | model source | precision | notes |
+| model | accuracy | dataset | model link | model source | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | StableDiffusion | Torch | - | Coco2014 | - | [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) | fp16 | NCHW||
 
 ## Dataset
-TODO
 
-### Calibration Dataset
+| Data | Description |
+| ---- | ---- | 
+| Coco-2014 | We use a subset of 5000 images and captions of the coco 2014 validation dataset, so that there is exaclty one caption per image. The model takes as input the caption of the image and generates an image from it. The original images and the generated images are used to compute FID score. The caption and the generated images are used to compute the CLIP score. We provide a [script](tools/coco.py) to automatically download the dataset |
+| Coco-2014 (calibration) | We use a subset of 100 images and captions of the coco 2014 training dataset, so that there is exaclty one caption per image. The subset was generated using this [script](tools/coco_generate_calibration.py). We provide the [caption ids](../calibration/COCO-2014/coco_cal_images_list.txt) and a [script](tools/coco_calibration.py) to download them. |
 
 
 ## Setup
@@ -57,6 +59,7 @@ For debugging you can download only a part of all the images in the dataset
 cd $SD_FOLDER/tools
 ./download-coco-2014.sh -m <max_number_of_images>
 ```
+If the file [captions.tsv](coco2014/captions/captions.tsv) can be found in the script, it will be used to download the target dataset subset, otherwise it will be generated. We recommend you to have this file for consistency.
 
 ### Run the benchmark
 #### Local run

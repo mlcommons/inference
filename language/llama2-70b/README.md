@@ -85,5 +85,47 @@ python -u main.py --scenario Server \
 
 ## Run Accuracy Benchmarks
 
-TODO
+### Offline
+```
+OUTPUT_LOG_DIR=offline-accuracy-logs
+
+python -u main.py --scenario Offline \
+                --model-path ${CHECKPOINT_PATH} \
+                --accuracy \
+                --mlperf-conf mlperf.conf \
+                --user-conf user.conf \
+                --total-sample-count 24576 \
+                --dataset-path ${DATASET_PATH} \
+                --output-log-dir ${OUTPUT_LOG_DIR} \
+                --device cpu
+
+
+ACCURACY_LOG_FILE=${OUTPUT_LOG_DIR}/mlperf_log_accuracy.json
+if [ -e ${ACCURACY_LOG_FILE} ]; then
+        python evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
+                --mlperf-accuracy-file ${ACCURACY_LOG_FILE} --dataset-file ${DATASET_PATH} --dtype int32
+fi
+```
+
+### Server
+```
+OUTPUT_LOG_DIR=server-accuracy-logs
+
+python -u main.py --scenario Server \
+                --model-path ${CHECKPOINT_PATH} \
+                --accuracy \
+                --mlperf-conf mlperf.conf \
+                --user-conf user.conf \
+                --total-sample-count 24576 \
+                --dataset-path ${DATASET_PATH} \
+                --output-log-dir ${OUTPUT_LOG_DIR} \
+                --device cpu
+
+
+ACCURACY_LOG_FILE=${OUTPUT_LOG_DIR}/mlperf_log_accuracy.json
+if [ -e ${ACCURACY_LOG_FILE} ]; then
+        python evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
+                --mlperf-accuracy-file ${ACCURACY_LOG_FILE} --dataset-file ${DATASET_PATH} --dtype int32
+fi
+```
 

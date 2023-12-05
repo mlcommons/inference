@@ -24,12 +24,12 @@ class Dataset():
         self.max_length = 1024
         self.device = device
 
-        self.total_sample_count = total_sample_count
+        #self.total_sample_count = total_sample_count
 
         self.load_tokenizer()
         self.load_processed_dataset()
 
-        self.total_sample_count = len(self.input_ids)
+        self.total_sample_count = min(len(self.input_ids), total_sample_count)
         self.perf_count = perf_count_override or self.total_sample_count
 
     def load_tokenizer(self):
@@ -63,16 +63,16 @@ class Dataset():
             self.input_lens.append(input_ids.shape[-1])
 
 
-    def postProcess(self, out_tokens, query_id_list=None, sample_index_list=None, input_seq_lens=None):
+    def postProcess(self, out_tokens, input_seq_lens=None, query_id_list=None, sample_index_list=None):
         """ Postprocesses output prediction """
 
         #TODO: Create response object in postProcess(?)
         preds = []
         for i in range(out_tokens.shape[0]):
-            pred = out_tokens[i].reshape(-1).cpu().numpy() # Slice up to original input length as below?
+            #pred = out_tokens[i].reshape(-1).cpu().numpy() # Slice up to original input length as below?
 
-            #input_len = input_seq_lens[i]
-            #pred = out_tokens[i, input_len:].reshape(-1).cpu().numpy()
+            input_len = input_seq_lens[i] if input_seq_lens else 0
+            pred = out_tokens[i, input_len:].reshape(-1).cpu().numpy()
             preds.append(pred)
         
         return preds

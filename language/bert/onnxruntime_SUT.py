@@ -60,7 +60,7 @@ class BERT_ONNXRuntime_SUT():
             eval_features = self.qsl.get_features(query_samples[i].index)
             self.process_sample(eval_features, query_samples[i].id)
 
-    def process_sample(self, eval_features, query_id):
+    def process_sample(self, eval_features, query_id=None):
 
         '''For Loadgen over the network'''
         if self.network == "sut":

@@ -18,6 +18,7 @@
 
 from __future__ import print_function
 
+import argparse
 import threading
 import time
 import numpy as np
@@ -87,14 +88,28 @@ def flush_queries():
     pass
 
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", choices=["performance", "accuracy"], default="performance")
+    parser.add_argument("--expected-latency", type=int, default=8000000)
+    parser.add_argument("--samples-per-query", type=int, default=8)
+    parser.add_argument("--min-query-count", type=int, default=100)
+    parser.add_argument("--min-duration-ms", type=int, default=30000)
+    return parser.parse_args()
+
+
 def main():
+    args = get_args()
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.MultiStream
-    settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
-    settings.multi_stream_expected_latency_ns = 8000000
-    settings.multi_stream_samples_per_query = 8
-    settings.min_query_count = 100
-    settings.min_duration_ms = 10000
+    if args.mode == "performance":
+        settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
+    else:
+        settings.mode = mlperf_loadgen.TestMode.AccuracyOnly
+    settings.multi_stream_expected_latency_ns = args.expected_latency
+    settings.multi_stream_samples_per_query = args.samples_per_query
+    settings.min_query_count = args.min_query_count
+    settings.min_duration_ms = args.min_duration_ms
     settings.use_token_latencies = True
 
     sut = mlperf_loadgen.ConstructSUT(issue_query, flush_queries)

@@ -285,10 +285,26 @@ void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
     return;
   }
   *accuracy_out_ << (accuracy_needs_comma_ ? ",\n{ " : "\n{ ");
-  LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
+  if (!use_tokens_){
+    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
           response);
+  } else {
+    const size_t i = seq_id - latencies_first_sample_sequence_id_;
+    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
+          response, "token_data", token_records_[i]);
+  }
+  
   *accuracy_out_ << " }";
   accuracy_needs_comma_ = true;
+}
+
+void AsyncLog::CacheToken(uint64_t seq_id, const LogBinaryAsHexString& response){
+  std::unique_lock<std::mutex> lock(token_record_mutex_);
+  const size_t i = seq_id - latencies_first_sample_sequence_id_;
+  if (token_records_.size() <= i) {
+    token_records_.resize(i + 1);
+  }
+  token_records_[i] = response;
 }
 
 void AsyncLog::Flush() {

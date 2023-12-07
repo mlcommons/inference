@@ -227,6 +227,7 @@ class AsyncLog {
 
   void LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
                    const LogBinaryAsHexString& response);
+  void CacheToken(uint64_t seq_id, const LogBinaryAsHexString& response);
 
   template <typename... Args>
   void LogSummary(const std::string& message, const Args... args);
@@ -378,10 +379,12 @@ class AsyncLog {
 
   std::mutex latencies_mutex_;
   std::mutex token_latencies_mutex_;
+  std::mutex token_record_mutex_;
   std::condition_variable all_latencies_recorded_;
   uint64_t latencies_first_sample_sequence_id_ = 0;
   std::vector<QuerySampleLatency> latencies_;
   std::vector<QuerySampleLatency> token_latencies_;
+  std::vector<LogBinaryAsHexString> token_records_;
   std::vector<int64_t> tokens_per_sample_;
   QuerySampleLatency max_latency_ = 0;
   PerfClock::time_point max_completion_timstamp_;

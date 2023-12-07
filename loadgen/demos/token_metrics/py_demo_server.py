@@ -18,6 +18,7 @@
 
 from __future__ import print_function
 
+import argparse
 import array
 import threading
 import time
@@ -79,15 +80,27 @@ def issue_query(query_samples):
 def flush_queries():
     pass
 
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--mode", choices=["performance", "accuracy"], default="performance")
+    parser.add_argument("--target-qps", type=int, default=100)
+    parser.add_argument("--target-latency-ns", type=int, default=100000000)
+    parser.add_argument("--min-query-count", type=int, default=100)
+    parser.add_argument("--min-duration-ms", type=int, default=30000)
+    return parser.parse_args()
 
 def main():
+    args = get_args()
     settings = mlperf_loadgen.TestSettings()
     settings.scenario = mlperf_loadgen.TestScenario.Server
-    settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
-    settings.server_target_qps = 100
-    settings.server_target_latency_ns = 100000000
-    settings.min_query_count = 100
-    settings.min_duration_ms = 30000
+    if args.mode == "performance":
+        settings.mode = mlperf_loadgen.TestMode.PerformanceOnly
+    else:
+        settings.mode = mlperf_loadgen.TestMode.AccuracyOnly
+    settings.server_target_qps = args.target_qps
+    settings.server_target_latency_ns = args.target_latency_ns
+    settings.min_query_count = args.min_query_count
+    settings.min_duration_ms = args.min_duration_ms
     settings.use_token_latencies = True
 
     sut = mlperf_loadgen.ConstructSUT(issue_query, flush_queries)

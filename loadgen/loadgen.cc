@@ -139,7 +139,13 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     // small buffer optimization code path when we aren't copying data.
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
     // into the lambda; even with C++14.
-    Log([sample, complete_begin_time](AsyncLog& log) {
+    std::vector<uint8_t>* token_data_copy = nullptr;
+    if (mode == TestMode::AccuracyOnly) {
+      uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
+      uint8_t* src_end = src_begin + response->size;
+      token_data_copy = new std::vector<uint8_t>(src_begin, src_end);
+    }
+    Log([sample, complete_begin_time, token_data_copy](AsyncLog& log) {
       QueryMetadata* query = sample->query_metadata;
       DurationGeneratorNs sched{query->scheduled_time};
       if (scenario == TestScenario::Server) {
@@ -155,6 +161,9 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
                       sample->sample_index, "issue_start_ns",
                       sched.delta(query->issued_start_time), "complete_ns",
                       sched.delta(complete_begin_time));
+      }
+      if (token_data_copy) {
+        log.CacheToken(sample->sequence_id, LogBinaryAsHexString{token_data_copy});
       }
       QuerySampleLatency latency = sched.delta(complete_begin_time);
       log.RecordTokenCompletion(sample->sequence_id, complete_begin_time,
@@ -518,8 +527,6 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   std::vector<int64_t> tokens_per_sample(
     GlobalLogger().GetTokensPerSample(expected_latencies));
 
-  // std::cout << "Loadgen samples overhead: " << mlperf::samples_overhead_acum << "\n";
-  // std::cout << "Loadgen tokens overhead: " << mlperf::tokens_overhead_acum << "\n";
 
   // Log contention counters after every test as a sanity check.
   GlobalLogger().LogContentionAndAllocations();

@@ -71,7 +71,7 @@ class TorchPredictor:
                 torch_tensorrt.Input(shape=[batch_size, 384], dtype=torch.int32),
                 torch_tensorrt.Input(shape=[batch_size, 384], dtype=torch.int32),
         ],
-        enabled_precisions= {torch.float32},
+        enabled_precisions= {torch.float32, torch.float16},
         workspace_size=2000000000,
         truncate_long_and_double=True)
 

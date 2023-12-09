@@ -114,10 +114,23 @@ class BERT_Ray_SUT():
         print("Finished constructing SUT.")
         self.qsl = get_squad_QSL(args.max_examples)
 
-        ray.init()
+        try:
+            ray.init(address="auto")
+        except:
+            print("WARN: Cannot connect to existing Ray cluster.")
+            print("We are going to start a new RAY cluster, but pay attention that")
+            print("the cluster contains only one node.")
+            print("If you want to use multiple nodes, please start the cluster manually via:")
+            print("\tOn the head node, run `ray start --head`")
+            print("\tOn other nodes, run `ray start --address=<head node IP>:6379`")
+            ray.init()
+            
         self.batch_size = BATCH_SIZE
         resources = ray.cluster_resources()
         num_gpus = int(resources.get('GPU', 0))
+        
+        print(f"The cluster has {num_gpus} GPUs.")
+        
         self.actor_list = [TorchPredictor.remote(config_json, model_file, self.batch_size) for _ in range(num_gpus)]
         self.pool = ActorPool(self.actor_list)
 

@@ -154,23 +154,15 @@ class BERT_Ray_SUT():
         # print("samples len", len(batch_samples))
         batch_inference_results = list(self.pool.map_unordered(lambda a, v: a.forward.remote(v), batch_samples))
 
-        results = []
+        cur_query_index = 0
         for batch_inference_result in batch_inference_results:
             batch_inference_result = batch_inference_result["output"]
             for inference_result in batch_inference_result:
                 response_array = array.array("B", inference_result.tobytes())
                 bi = response_array.buffer_info()
-                results.append(bi)
-        
-        # print("results len", len(results))
-        
-        responses = []
-        for i in range(len(query_samples)):
-            # print(query_samples[i].index)
-            bi = results[i]
-            response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
-            responses.append(response)
-        lg.QuerySamplesComplete(responses)
+                response = lg.QuerySampleResponse(query_samples[cur_query_index].id, bi[0], bi[1])
+                lg.QuerySamplesComplete([response])
+                cur_query_index += 1
 
     def flush_queries(self):
         pass

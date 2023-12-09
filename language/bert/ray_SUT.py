@@ -34,6 +34,9 @@ import ray
 from ray.util.actor_pool import ActorPool
 
 
+# Adjustable Parameters
+BATCH_SIZE = 16    # Note. num_samples (called "test_query_count" in CM) must be a multiple of batch_size
+
 @ray.remote(num_cpus=1,num_gpus=1)
 class TorchPredictor:
     def __init__(self, config_json, model_file, batch_size):
@@ -112,7 +115,7 @@ class BERT_Ray_SUT():
         self.qsl = get_squad_QSL(args.max_examples)
 
         ray.init()
-        self.batch_size = 10
+        self.batch_size = BATCH_SIZE
         resources = ray.cluster_resources()
         num_gpus = int(resources.get('GPU', 0))
         self.actor_list = [TorchPredictor.remote(config_json, model_file, self.batch_size) for _ in range(num_gpus)]
@@ -134,6 +137,10 @@ class BERT_Ray_SUT():
         print("BERT_Ray_SUT construct complete")
 
     def issue_queries(self, query_samples):
+        if len(query_samples) % self.batch_size != 0:
+            print("ERROR: batch size must be a multiple of the number of samples")
+            sys.exit(1)
+            
         batch_samples = []
         i = 0
         while i < len(query_samples):

@@ -70,9 +70,8 @@ class Coco(dataset.Dataset):
             )
         if self.use_preprocessed:
             os.makedirs(self.preprocessed_dir, exist_ok=True)
-            convert_tensor = transforms.ToTensor()
             self.captions_df["preprocessed_path"] = self.captions_df["file_name"].apply(
-                lambda x: self.preprocess_images(x, convert_tensor)
+                lambda x: self.preprocess_images(x)
             )
 
     def preprocess(self, prompt, tokenizer):
@@ -85,9 +84,14 @@ class Coco(dataset.Dataset):
             return_tensors="pt",
         )
 
-    def preprocess_images(self, file_name, convert_tensor):
+    def preprocess_images(self, file_name):
         img = Image.open(self.img_dir + "/" + file_name)
-        tensor = convert_tensor(img)
+        img = np.asarray(img)
+        if len(img.shape) == 2:
+            img = np.expand_dims(img, axis=-1)
+        tensor = torch.Tensor(img.transpose([2,0,1])).to(torch.uint8)
+        if tensor.shape[0] == 1:
+            tensor = tensor.repeat(3,1,1)
         target_name = file_name.split(".")[0]
         target_path = self.preprocessed_dir + "/" + target_name + ".pt"
         if not os.path.exists(target_path):
@@ -128,6 +132,9 @@ class Coco(dataset.Dataset):
                 img = Image.open(
                     self.img_dir + "/" + self.captions_df.loc[id]["file_name"]
                 )
+                tensor = convert_tensor(img)
+                if tensor.shape[0] == 1:
+                    tensor = tensor.repeat(3,1,1)
                 image_list.append(convert_tensor(img))
         return image_list
 
@@ -141,23 +148,20 @@ class Coco(dataset.Dataset):
             return self.img_dir + "/" + self.captions_df.loc[id]["file_name"]
 
 class PostProcessCoco:
-    """
-    Post processing for tensorflow ssd-mobilenet style models
-    """
-
-    def __init__(self, device="cpu"):
+    def __init__(self, device="cpu", dtype = torch.uint8):
         self.results = []
         self.good = 0
         self.total = 0
         self.content_ids = []
         self.device = device if torch.cuda.is_available() else "cpu"
+        self.dtype = dtype
 
     def add_results(self, results):
         self.results.extend(results)
 
     def __call__(self, results, ids, expected=None, result_dict=None):
         self.content_ids.extend(ids)
-        return [t.to(self.device) for t in results]
+        return [(t*255).round().to(self.dtype).to(self.device) for t in results]
 
     def start(self):
         self.results = []
@@ -172,11 +176,11 @@ class PostProcessCoco:
         for i in range(0, dataset_size):
             target = (
                 torch.stack(ds.get_imgs([self.content_ids[i]]))
-                .to(torch.uint8)
+                .to(self.dtype)
                 .to(self.device)
             )
             captions = ds.get_captions([self.content_ids[i]])
-            generated = torch.stack([self.results[i]]).to(torch.uint8).to(self.device)
+            generated = torch.stack([self.results[i]]).to(self.dtype).to(self.device)
             fid.update(target, real=True)
             fid.update(generated, real=False)
             clip.update(generated, captions)

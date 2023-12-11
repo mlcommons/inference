@@ -87,7 +87,6 @@ class Coco(dataset.Dataset):
 
     def preprocess_images(self, file_name, convert_tensor):
         img = Image.open(self.img_dir + "/" + file_name)
-        convert_tensor
         tensor = convert_tensor(img)
         target_name = file_name.split(".")[0]
         target_path = self.preprocessed_dir + "/" + target_name + ".pt"

@@ -25,7 +25,7 @@ import numpy as np
 
 import mlperf_loadgen as lg
 import squad_QSL
-
+from time import sleep
 
 class bert_QDL:
     """QDL acting as a proxy to the SUT.
@@ -77,21 +77,21 @@ class bert_QDL:
             query_samples: A list of QuerySample objects.
         """
 
+        max_num_threads = int(os.environ.get('CM_MAX_NUM_THREADS', 20))
+
         for i in range(len(query_samples)):
-            responses = []
             eval_features = self.qsl.get_features(query_samples[i].index)
             encoded_eval_features = {
                     "input_ids": eval_features.input_ids,
                     "input_mask": eval_features.input_mask,
                     "segment_ids": eval_features.segment_ids
                     }
-            output = self.client_predict(encoded_eval_features, query_samples[i].index)
-            output = np.array(output).astype(np.float32)
-            response_array = array.array("B", output.tobytes())
-            bi = response_array.buffer_info()
-
-            responses.append(lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1]))
-            lg.QuerySamplesComplete(responses)
+            n = threading.active_count()
+            while n >= max_num_threads:
+                sleep(0.01)
+                n = threading.active_count()
+            threading.Thread(target=self.client_predict_worker,
+                         args=[encoded_eval_features, query_samples[i].id]).start()
 
 
     def get_sut_id_round_robin(self):
@@ -101,12 +101,18 @@ class bert_QDL:
             self.next_sut_id = (self.next_sut_id + 1) % self.num_nodes
         return res
 
-    def client_predict(self, query, id):
+    def client_predict_worker(self, query, query_id):
         """Serialize the query, send it to the SUT in round robin, and return the deserialized response."""
         url = '{}/predict/'.format(self.sut_server_addr[self.get_sut_id_round_robin()])
-        #print(query)
-        response = requests.post(url, json={'query': query, id: id})
-        return response.json()['result']
+        responses = []
+        response = requests.post(url, json={'query': query})
+        output = response.json()['result']
+        output = np.array(output).astype(np.float32)
+        response_array = array.array("B", output.tobytes())
+        bi = response_array.buffer_info()
+
+        responses.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
+        lg.QuerySamplesComplete(responses)
 
     def client_get_name(self):
         """Get the name of the SUT from ALL the SUTS."""

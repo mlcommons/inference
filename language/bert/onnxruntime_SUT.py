@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
 import array
 import json
 import os
@@ -25,6 +26,7 @@ import numpy as np
 import onnxruntime
 from transformers import BertConfig, BertForQuestionAnswering
 from squad_QSL import get_squad_QSL
+from time import sleep
 
 class BERT_ONNXRuntime_SUT():
     def __init__(self, args):
@@ -55,10 +57,16 @@ class BERT_ONNXRuntime_SUT():
         self.qsl = get_squad_QSL(args.max_examples)
 
     def issue_queries(self, query_samples):
-        for i in range(len(query_samples)):
+        max_num_threads = int(os.environ.get('CM_MAX_NUM_THREADS', 20))
 
+        for i in range(len(query_samples)):
             eval_features = self.qsl.get_features(query_samples[i].index)
-            self.process_sample(eval_features, query_samples[i].id)
+            n = threading.active_count()
+            while n >= max_num_threads:
+                sleep(0.01)
+                n = threading.active_count()
+            threading.Thread(target=self.process_sample,
+                         args=[eval_features, query_samples[i].id]).start()
 
     def process_sample(self, eval_features, query_id=None):
 

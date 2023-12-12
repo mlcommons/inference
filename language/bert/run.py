@@ -48,7 +48,7 @@ def get_args():
     parser.add_argument("--network", choices=["sut","lon",None], default=None, help="Loadgen network mode")
     parser.add_argument('--node', type=str, default="")
     parser.add_argument('--port', type=int, default=8000)
-    parser.add_argument('--sut_server', default= ['http://localhost:8000'],
+    parser.add_argument('--sut_server', nargs="*", default= ['http://localhost:8000'],
                     help='Address of the server(s) under test.')
 
     args = parser.parse_args()

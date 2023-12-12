@@ -1,6 +1,6 @@
 ## Submission Rules
 
-The MLPerf inference submission rules are spread between the [MLCommons policies](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc) and the [MLCommons Inference policies](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc) documents. Further, the rules related to power submissions are given [here](https://github.com/mlcommons/inference_policies/blob/master/power_measurement.adoc). The below points are a summary taken from the official rules to act as a checklist for the submitters.
+The MLPerf inference submission rules are spread between the [MLCommons policies](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc) and the [MLCommons Inference policies](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc) documents. Further, the rules related to power submissions are given [here](https://github.com/mlcommons/inference_policies/blob/master/power_measurement.adoc). The below points are a summary taken from the official rules to act as a checklist for the submitter - please see the original rules for any clarification.
 
 
 ## Hardware requirements
@@ -26,11 +26,11 @@ The previous MLPerf inference results are aggregated in [Collective Knowledge pl
 
 ### Expected time to do benchmark runs
 1. Closed submission under data enter needs offline and server scenario runs with a minimum of ten minutes needed for both. 
-2. Closed submission under edge category needs single stream, multi-stream (only for R50 and retinanet), and offline scenarios. A minimum of ten minutes are needed for each scenario. 
+2. Closed submission under the edge category needs single stream, multi-stream (only for R50 and retinanet), and offline scenarios. A minimum of ten minutes is needed for each scenario. 
 3. Further two (three for ResNet50) compliance runs are needed for closed division, each taking at least 10 minutes for each scenario.
 4. SingleStream, MultiStream and Server scenarios use early stopping and so can always finish around 10 minutes
 5. Offline scenario needs a minimum of 24756 input queries to be processed -- can take hours for low-performing models like 3dunet, LLMs, etc.
-6. Open division has no accuracy constraints, no compliance runs required, and can be submitted for any single scenario as well. There is no constraint on the model used also except that the model must be trained on the dataset used in the corresponding MLPerf inference task.
+6. Open division has no accuracy constraints, no required compliance runs, and can be submitted for any single scenario. There is no constraint on the model used except that the model accuracy must be validated on the accuracy dataset used in the corresponding MLPerf inference task [or must be preapproved](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#412-relaxed-constraints-for-the-open-division).
 7. Power submission needs an extra ranging mode to determine the peak current usage and this often doubles the overall experiment run time.
 
 

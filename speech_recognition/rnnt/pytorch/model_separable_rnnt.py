@@ -2,7 +2,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 import torch
-
+import os
 from rnn import rnn
 from rnn import StackTime
 
@@ -58,6 +58,8 @@ class Encoder(torch.nn.Module):
                  forget_gate_bias, norm, rnn_type, encoder_stack_time_factor,
                  dropout):
         super().__init__()
+        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+
         self.pre_rnn = rnn(
             rnn=rnn_type,
             input_size=in_features,
@@ -80,7 +82,7 @@ class Encoder(torch.nn.Module):
         )
 
     def forward(self, x_padded: torch.Tensor, x_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        x_padded, _ = self.pre_rnn(x_padded, None)
+        x_padded, _ = self.pre_rnn(x_padded.to(self.dev), None)
         x_padded, x_lens = self.stack_time(x_padded, x_lens)
         # (T, B, H)
         x_padded, _ = self.post_rnn(x_padded, None)
@@ -92,6 +94,8 @@ class Prediction(torch.nn.Module):
     def __init__(self, vocab_size, n_hidden, pred_rnn_layers,
                  forget_gate_bias, norm, rnn_type, dropout):
         super().__init__()
+        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+
         self.embed = torch.nn.Embedding(vocab_size - 1, n_hidden)
         self.n_hidden = n_hidden
         self.dec_rnn = rnn(
@@ -129,9 +133,9 @@ class Prediction(torch.nn.Module):
             assert state is None
             # Hacky, no way to determine this right now!
             B = 1
-            y = torch.zeros((B, 1, self.n_hidden), dtype=torch.float32)
+            y = torch.zeros((B, 1, self.n_hidden), dtype=torch.float32).to(self.dev)
         else:
-            y = self.embed(y)
+            y = self.embed(y.to(self.dev)).to(self.dev)
 
         # if state is None:
         #    batch = y.size(0)
@@ -141,7 +145,7 @@ class Prediction(torch.nn.Module):
         #        for _ in range(self.pred_rnn_layers)
         #    ]
 
-        y = y.transpose(0, 1)  # .contiguous()   # (U + 1, B, H)
+        y = y.transpose(0, 1).to(self.dev)  # .contiguous()   # (U + 1, B, H)
         g, hid = self.dec_rnn(y, state)
         g = g.transpose(0, 1)  # .contiguous()   # (B, U + 1, H)
         # del y, state
@@ -151,6 +155,8 @@ class Joint(torch.nn.Module):
     def __init__(self, vocab_size, pred_n_hidden, enc_n_hidden,
                  joint_n_hidden, dropout):
         super().__init__()
+        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+
         layers = [
             torch.nn.Linear(pred_n_hidden + enc_n_hidden, joint_n_hidden),
             torch.nn.ReLU(),
@@ -173,10 +179,10 @@ class Joint(torch.nn.Module):
         B, T, H = f.shape
         B, U_, H2 = g.shape
 
-        f = f.unsqueeze(dim=2)   # (B, T, 1, H)
+        f = f.unsqueeze(dim=2).to(self.dev)   # (B, T, 1, H)
         f = f.expand((B, T, U_, H))
 
-        g = g.unsqueeze(dim=1)   # (B, 1, U + 1, H)
+        g = g.unsqueeze(dim=1).to(self.dev)   # (B, 1, U + 1, H)
         g = g.expand((B, T, U_, H2))
 
         inp = torch.cat([f, g], dim=3)   # (B, T, U, 2H)

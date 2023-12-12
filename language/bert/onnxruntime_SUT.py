@@ -57,13 +57,13 @@ class BERT_ONNXRuntime_SUT():
         self.qsl = get_squad_QSL(args.max_examples)
 
     def issue_queries(self, query_samples):
-        max_num_threads = int(os.environ.get('CM_MAX_NUM_THREADS', 20))
+        max_num_threads = int(os.environ.get('CM_MAX_NUM_THREADS', os.cpu_count()))
 
         for i in range(len(query_samples)):
             eval_features = self.qsl.get_features(query_samples[i].index)
             n = threading.active_count()
             while n >= max_num_threads:
-                sleep(0.01)
+                #sleep(0.01)
                 n = threading.active_count()
             threading.Thread(target=self.process_sample,
                          args=[eval_features, query_samples[i].id]).start()

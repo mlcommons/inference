@@ -77,7 +77,7 @@ class bert_QDL:
             query_samples: A list of QuerySample objects.
         """
 
-        max_num_threads = int(os.environ.get('CM_MAX_NUM_THREADS', 20))
+        max_num_threads = int(os.environ.get('CM_MAX_NUM_THREADS', os.cpu_count()))
 
         for i in range(len(query_samples)):
             eval_features = self.qsl.get_features(query_samples[i].index)
@@ -88,7 +88,7 @@ class bert_QDL:
                     }
             n = threading.active_count()
             while n >= max_num_threads:
-                sleep(0.01)
+                sleep(0.0001)
                 n = threading.active_count()
             threading.Thread(target=self.client_predict_worker,
                          args=[encoded_eval_features, query_samples[i].id]).start()

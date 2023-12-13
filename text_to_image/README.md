@@ -6,7 +6,7 @@ This is the reference implementation for MLPerf Inference text to image
 
 | model | accuracy | dataset | model link | model source | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| StableDiffusion | Torch | - | Coco2014 | - | [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) | fp16 | NCHW||
+| StableDiffusion | Torch | - | Coco2014 | - | [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) | fp32 | NCHW||
 
 ## Dataset
 
@@ -22,6 +22,7 @@ Set the following helper variables
 export ROOT=$PWD/inference
 export SD_FOLDER=$PWD/inference/text_to_image
 export LOADGEN_FOLDER=$PWD/inference/loadgen
+export MODEL_PATH=$PWD/inference/text_to_image/model/
 ```
 ### Clone the repository
 **TEMPORARLY:**
@@ -49,6 +50,21 @@ cd LOADGEN_FOLDER
 CFLAGS="-std=c++14" python setup.py install
 ```
 
+### Download model
+
+We host two checkpoints ([fp32](https://cloud.mlcommons.org/index.php/s/DjnCSGyNBkWA4Ro) and [f16](https://cloud.mlcommons.org/index.php/s/LCdW5RM6wgGWbxC)) that are a snapshot of the [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) pipeline at the time of the release of the benchmark. Download them and move them to your model path.
+
+```bash
+mkdir $MODEL_PATH
+cd $MODEL_PATH
+# For fp32
+mv <path_to_download>/stable_diffusion_fp32.zip .
+unzip stable_diffusion_fp32.zip
+# For fp16
+mv <path_to_download>/stable_diffusion_fp16.zip .
+unzip stable_diffusion_fp16.zip
+```
+
 ### Download dataset
 ```bash
 cd $SD_FOLDER/tools
@@ -64,19 +80,26 @@ If the file [captions.tsv](coco2014/captions/captions.tsv) can be found in the s
 ### Run the benchmark
 #### Local run
 ```bash
-python3 main.py --dataset "coco-1024" --dataset-path coco2014 --profile stable-diffusion-xl-pytorch [--model-path <TODO: provide model weights>] [--dtype <fp32, fp16 or bf16>] [--device <cuda or cpu>] [--time 600] [--scenario SingleStream]
+# Go to the benchmark folder
+cd $SD_FOLDER
+# Run the benchmark
+python3 main.py --dataset "coco-1024" --dataset-path coco2014 --profile stable-diffusion-xl-pytorch --model-path model/ [--dtype <fp32, fp16 or bf16>] [--device <cuda or cpu>] [--time <time>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
 #### Run using docker
 ```bash
+# Go to the benchmark folder
 cd $SD_FOLDER
 # Build the container
 docker build . -t sd_mlperf_inference
-#Run the container
+# Run the container
 docker run --rm -it --gpus=all -v $SD_FOLDER:/workspace sd_mlperf_inference bash
 ```
 Inside the container run the following:
 ```bash
-python3 main.py --dataset "coco-1024" --dataset-path coco2014 --profile stable-diffusion-xl-pytorch [--model-path <TODO: provide model weights>] [--dtype <fp32, fp16 or bf16>] [--device <cuda or cpu>] [--time 600] [--scenario SingleStream]
+python3 main.py --dataset "coco-1024" --dataset-path coco2014 --profile stable-diffusion-xl-pytorch --model-path model/ [--dtype <fp32, fp16 or bf16>] [--device <cuda or cpu>] [--time <time>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
-
-
+#### Accuracy run
+Add the `--accuracy` to the command to run the benchmark
+```bash
+python3 main.py --dataset "coco-1024" --dataset-path coco2014 --profile stable-diffusion-xl-pytorch --accuracy --model-path model/ [--dtype <fp32, fp16 or bf16>] [--device <cuda or cpu>] [--time <time>] [--scenario <SingleStream, MultiStream, Server or Offline>]
+```

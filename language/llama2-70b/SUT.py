@@ -8,7 +8,9 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaForCausalLM
 from transformers.generation.streamers import BaseStreamer
 
+import time
 import threading
+import tqdm
 import queue
 
 import logging
@@ -74,10 +76,24 @@ class FirstTokenStreamer(BaseStreamer):
 
 
 class SUT():
-    def __init__(self, model_path=None, dtype="bfloat16", device="cpu", total_sample_count=24576, dataset_path=None, workers=1):
+    def __init__(self,
+                 model_path=None,
+                 dtype="bfloat16",
+                 device="cpu",
+                 batch_size=None,
+                 total_sample_count=24576,
+                 dataset_path=None,
+                 workers=1):
 
         self.model_path = model_path or "meta-llama/Llama-2-70b-chat-hf"
         self.device = device
+
+        if not batch_size:
+            if device == "cpu":
+                batch_size = 1
+            else:
+                batch_size = 16  # Reduce to 8 if using 4 GPUs, 16 for 8.
+        self.batch_size = batch_size
 
         # dtype
         if dtype == 'bfloat16':
@@ -107,9 +123,11 @@ class SUT():
         self.worker_threads = [None] * self.num_workers
         self.query_queue = queue.Queue()
 
+        self.sample_counter = 0
+        self.sample_counter_lock = threading.Lock()
+
 
     def start(self):
-        
         # Create worker threads
         for j in range(self.num_workers):
             worker = threading.Thread(target=self.process_queries)
@@ -132,26 +150,56 @@ class SUT():
             if qitem is None:
                 break
 
-            # TODO: If batching, call collator to batch the inputs here
-            input_ids_tensor = self.data_object.input_ids[qitem.index]
-            input_masks_tensor = self.data_object.attention_masks[qitem.index]
-            input_len = [self.data_object.input_lens[qitem.index]]
+            # Construct / collate batch
+            max_seq_len = 1024
 
+            tik1 = time.time()
+
+            input_ids_tensor = []
+            input_masks_tensor = []
+            input_len = []
+            for q in qitem:
+                input_ids_tensor.append(pad(self.data_object.input_ids[q.index],
+                                            (0, max_seq_len - self.data_object.input_lens[q.index], 0, 0),
+                                            value=self.tokenizer.pad_token_id))
+                input_masks_tensor.append(pad(self.data_object.attention_masks[q.index],
+                                              (0, max_seq_len - self.data_object.input_lens[q.index], 0, 0),
+                                             value=0))
+                input_len.append(self.data_object.input_lens[q.index])
+            input_ids_tensor = torch.cat(input_ids_tensor)
+            input_masks_tensor = torch.cat(input_masks_tensor)
+
+            assert input_ids_tensor.shape == input_masks_tensor.shape
+            assert input_ids_tensor.shape[0] <= self.batch_size
+
+            tik2 = time.time()
 
             pred_output_tokens = self.model.generate(
-                                                input_ids=input_ids_tensor,
-                                                attention_mask=input_masks_tensor,
-                                                pad_token_id=self.tokenizer.pad_token_id,
-                                                **gen_kwargs
-                                                )
+                input_ids=input_ids_tensor,
+                attention_mask=input_masks_tensor,
+                pad_token_id=self.tokenizer.pad_token_id,
+                **gen_kwargs
+            )
+
+            tik3 = time.time()
 
             processed_output = self.data_object.postProcess(pred_output_tokens, input_len)
 
-            response_array = array.array("B", processed_output[0].tobytes())
-            bi = response_array.buffer_info()
-            response = [lg.QuerySampleResponse(
-                qitem.id, bi[0], bi[1])]
-            lg.QuerySamplesComplete(response)
+            for i in range(len(qitem)):
+                response_array = array.array("B", processed_output[i].tobytes())
+                bi = response_array.buffer_info()
+                response = [lg.QuerySampleResponse(qitem[i].id, bi[0], bi[1])]
+                lg.QuerySamplesComplete(response)
+
+            tok = time.time()
+
+            with self.sample_counter_lock:
+                self.sample_counter += len(qitem)
+                print(f"Samples run: {self.sample_counter}")
+                print(f"\tBatchMaker time: {tik2 - tik1}")
+                print(f"\tInference time: {tik3 - tik2}")
+                print(f"\tPostprocess time: {tok - tik3}")
+                print(f"\t==== Total time: {tok - tik1}")
 
 
     def load_model(self):
@@ -161,6 +209,7 @@ class SUT():
             low_cpu_mem_usage=True,
             torch_dtype=self.amp_dtype
         )
+        print("Loaded model")
 
         self.device = torch.device(self.device)
         # self.model.to(self.device)
@@ -175,6 +224,7 @@ class SUT():
             use_fast=False,)
 
         self.tokenizer.pad_token = self.tokenizer.eos_token
+        print("Loaded tokenizer")
 
     def get_sut(self):
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
@@ -194,8 +244,11 @@ class SUT():
         list_prompts_tokens = []
         list_prompts_attn_masks = []
 
-        for i in range(len(query_samples)):
-            self.query_queue.put(query_samples[i])
+        print(f"IssueQuery started with {len(query_samples)} samples")
+        while len(query_samples) > 0:
+            self.query_queue.put(query_samples[:self.batch_size])
+            query_samples = query_samples[self.batch_size:]
+        print(f"IssueQuery done")
 
 
     def flush_queries(self):

@@ -19,6 +19,7 @@ import argparse
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from transformers import LlamaTokenizerFast
 from typing import Dict
@@ -39,6 +40,18 @@ def is_english(s):
         if not allowed:
             return False
     return True
+
+
+def _tokenize_helper(x, llama_tokenizer=None, append_response_init_token=True):
+    if not isinstance(x, str):
+        return []
+
+    tokens = llama_tokenizer(x)["input_ids"]
+
+    if append_response_init_token:
+        # WAR to enable cheat checking for first token: Llama always outputs token 29871 first
+        tokens.append(29871)
+    return tokens
 
 
 @dataclass
@@ -67,8 +80,11 @@ class OpenOrcaDatasetGenerator:
         print(f"Tokenizing input")
         df.rename(columns={'response': 'output'}, inplace=True)
         df['input'] = df.apply(format_llama_input, axis=1)
-        df['tok_input'] = df['input'].apply(lambda x: llama_tokenizer(x)['input_ids'] if isinstance(x, str) else [])
-        df['tok_output'] = df['output'].apply(lambda x: llama_tokenizer(x)['input_ids'] if isinstance(x, str) else [])
+
+        input_tokenizer = partial(_tokenize_helper, llama_tokenizer=llama_tokenizer)
+        output_tokenizer = partial(_tokenize_helper, llama_tokenizer=llama_tokenizer, append_response_init_token=False)
+        df['tok_input'] = df['input'].apply(input_tokenizer)
+        df['tok_output'] = df['output'].apply(output_tokenizer)
         tok = time.time()
         print(f"Loaded parquet and tokenized in {tok-tik} sec.")
         return df
@@ -215,7 +231,7 @@ def parse_arguments():
                         default='/raid/data/mlperf-llm/OpenOrca/1M-GPT4-Augmented.parquet',
                         help="the path to the open_orca GPT4 parquet.")
     parser.add_argument('--model_dir', type=str, default='/raid/data/mlperf-llm/Llama-2-70b-chat-hf')
-    parser.add_argument('--seqlen_limit', type=int, default=2048, help="Upper limit of the input/output sequence lengths")
+    parser.add_argument('--seqlen_limit', type=int, default=1024, help="Upper limit of the input/output sequence lengths")
     parser.add_argument('--export_dir', type=str,
                         default="/raid/data/mlperf-llm/OpenOrca/llama/filtered",
                         help="Path to the output pkl file.")
@@ -236,4 +252,4 @@ if __name__ == "__main__":
     )
 
     # Sample command to run:
-    # python3 processorca.py --dataset_pq_path=/raid/data/mlperf-llm/OpenOrca/1M-GPT4-Augmented.parquet --model_dir=/raid/data/mlperf-llm/Llama-2-70b-chat-hf --seqlen_limit=2048 --export_dir=/raid/data/mlperf-llm/OpenOrca/llama/filtered --num_total_samples=24576
+    # python3 processorca.py --dataset_pq_path=/raid/data/mlperf-llm/OpenOrca/1M-GPT4-Augmented.parquet --model_dir=/raid/data/mlperf-llm/Llama-2-70b-chat-hf --seqlen_limit=1024 --export_dir=/raid/data/mlperf-llm/OpenOrca/llama/filtered --num_total_samples=24576

@@ -46,6 +46,7 @@ class Dataset():
         if not os.path.isfile(self.dataset_path):
             log.warn("Processed pickle file {} not found. Please check that the path is correct".format(self.dataset_path))
 
+        print("Loading dataset...")
         import pandas as pd
         processed_data = pd.read_pickle(self.dataset_path)
 
@@ -61,12 +62,14 @@ class Dataset():
             self.input_ids.append(input_ids)
             self.attention_masks.append(attn_mask)
             self.input_lens.append(input_ids.shape[-1])
+        print("Finished loading dataset.")
 
 
     def postProcess(self, out_tokens, input_seq_lens=None, query_id_list=None, sample_index_list=None):
         """ Postprocesses output prediction """
 
         #TODO: Create response object in postProcess(?)
+        """
         preds = []
         for i in range(out_tokens.shape[0]):
             #pred = out_tokens[i].reshape(-1).cpu().numpy() # Slice up to original input length as below?
@@ -74,8 +77,9 @@ class Dataset():
             input_len = input_seq_lens[i] if input_seq_lens else 0
             pred = out_tokens[i, input_len:].reshape(-1).cpu().numpy()
             preds.append(pred)
-        
-        return preds
+        """
+        # Everything is padded to max_len (1024), so prune the input and parse to numpy
+        return out_tokens[:, 1024:].cpu().numpy()
 
     def LoadSamplesToRam(self, sample_list):
         pass

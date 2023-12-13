@@ -94,7 +94,10 @@ class SUT():
             assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
 
         self.dataset_path = dataset_path
-        self.data_object = Dataset(self.model_path, dataset_path=self.dataset_path, total_sample_count=total_sample_count)
+        self.data_object = Dataset(self.model_path,
+                                   dataset_path=self.dataset_path,
+                                   total_sample_count=total_sample_count,
+                                   device=self.device)
         self.qsl = lg.ConstructQSL(self.data_object.total_sample_count, self.data_object.perf_count,
                                    self.data_object.LoadSamplesToRam, self.data_object.UnloadSamplesFromRam)
 
@@ -154,13 +157,13 @@ class SUT():
     def load_model(self):
         self.model = LlamaForCausalLM.from_pretrained(
             self.model_path,
-            device_map= "auto" if self.device=="cpu" else None,
-            low_cpu_mem_usage=True if self.device=="cpu" else False,
+            device_map="auto",
+            low_cpu_mem_usage=True,
             torch_dtype=self.amp_dtype
         )
 
         self.device = torch.device(self.device)
-        self.model.to(self.device)
+        # self.model.to(self.device)
 
         self.model.eval()
         self.model = self.model.to(memory_format=torch.channels_last)

@@ -90,11 +90,6 @@ def get_args():
         help="max batch size in a single inference",
     )
     parser.add_argument("--threads", default=1, type=int, help="threads")
-    parser.add_argument(
-        "--use_preprocessed_dataset",
-        action="store_true",
-        help="use preprocessed dataset instead of the original",
-    )
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument(
         "--find-peak-performance",
@@ -243,7 +238,7 @@ class RunnerBase:
             response = []
             for idx, query_id in enumerate(qitem.query_id):
                 response_array = array.array(
-                    "B", np.array(processed_results[idx], np.float32).tobytes()
+                    "B", np.array(processed_results[idx], np.uint8).tobytes()
                 )
                 response_array_refs.append(response_array)
                 bi = response_array.buffer_info()
@@ -344,13 +339,10 @@ def main():
 
     # dataset to use
     dataset_class, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
-    if args.use_preprocessed_dataset:
-        pre_proc = None
     ds = dataset_class(
         data_path=args.dataset_path,
         name=args.dataset,
         pre_process=pre_proc,
-        use_preprocessed=args.use_preprocessed_dataset,
         count=count,
         threads=args.threads,
         pipe_tokenizer=model.pipe.tokenizer,

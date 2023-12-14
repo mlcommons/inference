@@ -45,6 +45,9 @@ def get_args():
     parser.add_argument(
         "--keep-raw", action="store_true", help="Keep raw folder"
     )
+    parser.add_argument(
+        "--download-images", action="store_true", help="Download the calibration set"
+    )
 
     args = parser.parse_args()
     return args
@@ -129,13 +132,14 @@ if __name__ == "__main__":
             .reset_index(drop=True)
         )
     # Download images
-    os.makedirs(f"{dataset_dir}/validation/data/", exist_ok=True)
-    tasks = [
-        (row["coco_url"], f"{dataset_dir}/validation/data/", row["file_name"])
-        for i, row in df_annotations.iterrows()
-    ]
-    pool = Pool(processes=args.num_workers)
-    [_ for _ in tqdm.tqdm(pool.imap_unordered(download_img, tasks), total=len(tasks))]
+    if args.download_images:
+        os.makedirs(f"{dataset_dir}/validation/data/", exist_ok=True)
+        tasks = [
+            (row["coco_url"], f"{dataset_dir}/validation/data/", row["file_name"])
+            for i, row in df_annotations.iterrows()
+        ]
+        pool = Pool(processes=args.num_workers)
+        [_ for _ in tqdm.tqdm(pool.imap_unordered(download_img, tasks), total=len(tasks))]
     # Finalize annotations
     df_annotations[
         ["id", "image_id", "caption", "height", "width", "file_name", "coco_url"]

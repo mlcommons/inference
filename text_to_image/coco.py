@@ -15,9 +15,8 @@ import pandas as pd
 import dataset
 
 import torch
-from torchvision import transforms
-from torchmetrics.multimodal.clip_score import CLIPScore
-from torchmetrics.image.fid import FrechetInceptionDistance
+from tools.clip.clip_encoder import CLIPEncoder
+from tools.fid.fid_score import compute_fid
 
 
 logging.basicConfig(level=logging.INFO)
@@ -30,7 +29,6 @@ class Coco(dataset.Dataset):
         data_path,
         name=None,
         image_size=None,
-        use_preprocessed=False,
         pre_process=None,
         pipe_tokenizer=None,
         pipe_tokenizer_2=None,
@@ -42,7 +40,6 @@ class Coco(dataset.Dataset):
         super().__init__()
         self.captions_df = pd.read_csv(f"{data_path}/captions/captions.tsv", sep="\t")
         self.image_size = image_size
-        self.use_preprocessed = use_preprocessed
         self.preprocessed_dir = os.path.abspath(f"{data_path}/preprocessed/")
         self.img_dir = os.path.abspath(f"{data_path}/validation/data/")
         self.name = name
@@ -68,11 +65,6 @@ class Coco(dataset.Dataset):
                 .to(latent_dtype)
                 .to(latent_device)
             )
-        if self.use_preprocessed:
-            os.makedirs(self.preprocessed_dir, exist_ok=True)
-            self.captions_df["preprocessed_path"] = self.captions_df["file_name"].apply(
-                lambda x: self.preprocess_images(x)
-            )
 
     def preprocess(self, prompt, tokenizer):
         converted_prompt = self.convert_prompt(prompt, tokenizer)
@@ -84,14 +76,18 @@ class Coco(dataset.Dataset):
             return_tensors="pt",
         )
 
-    def preprocess_images(self, file_name):
-        img = Image.open(self.img_dir + "/" + file_name)
+    def image_to_tensor(self, img):
         img = np.asarray(img)
         if len(img.shape) == 2:
             img = np.expand_dims(img, axis=-1)
-        tensor = torch.Tensor(img.transpose([2,0,1])).to(torch.uint8)
+        tensor = torch.Tensor(img.transpose([2, 0, 1])).to(torch.uint8)
         if tensor.shape[0] == 1:
-            tensor = tensor.repeat(3,1,1)
+            tensor = tensor.repeat(3, 1, 1)
+        return tensor
+
+    def preprocess_images(self, file_name):
+        img = Image.open(self.img_dir + "/" + file_name)
+        tensor = self.image_to_tensor(img)
         target_name = file_name.split(".")[0]
         target_path = self.preprocessed_dir + "/" + target_name + ".pt"
         if not os.path.exists(target_path):
@@ -119,72 +115,70 @@ class Coco(dataset.Dataset):
     def get_item_count(self):
         return len(self.captions_df)
 
+    def get_img(self, id):
+        img = Image.open(self.img_dir + "/" + self.captions_df.loc[id]["file_name"])
+        return self.image_to_tensor(img)
+
     def get_imgs(self, id_list):
         image_list = []
-        if self.use_preprocessed:
-            for id in id_list:
-                image_list.append(
-                    torch.load(self.captions_df.loc[id]["preprocessed_path"])
-                )
-        else:
-            convert_tensor = transforms.ToTensor()
-            for id in id_list:
-                img = Image.open(
-                    self.img_dir + "/" + self.captions_df.loc[id]["file_name"]
-                )
-                tensor = convert_tensor(img)
-                if tensor.shape[0] == 1:
-                    tensor = tensor.repeat(3,1,1)
-                image_list.append(convert_tensor(img))
+        for id in id_list:
+            image_list.append(self.get_img(id))
         return image_list
 
+    def get_caption(self, i):
+        return self.get_item(i)["caption"]
+
     def get_captions(self, id_list):
-        return [self.get_item(id)["caption"] for id in id_list]
-    
+        return [self.get_caption(id) for id in id_list]
+
     def get_item_loc(self, id):
-        if self.use_preprocessed:
-            return self.captions_df.loc[id]["preprocessed_path"]
-        else:
-            return self.img_dir + "/" + self.captions_df.loc[id]["file_name"]
+        return self.img_dir + "/" + self.captions_df.loc[id]["file_name"]
+
 
 class PostProcessCoco:
-    def __init__(self, device="cpu", dtype = torch.uint8):
+    def __init__(
+        self, device="cpu", dtype="uint8", statistics_path=os.path.join(os.path.dirname(__file__), "tools", "val2014.npz")
+    ):
         self.results = []
         self.good = 0
         self.total = 0
         self.content_ids = []
+        self.clip_scores = []
+        self.fid_scores = []
         self.device = device if torch.cuda.is_available() else "cpu"
-        self.dtype = dtype
+        if dtype == "uint8":
+            self.dtype = torch.uint8
+            self.numpy_dtype = np.uint8
+        else:
+            raise ValueError(f"dtype must be one of: uint8")
+        self.statistics_path = statistics_path
 
     def add_results(self, results):
         self.results.extend(results)
 
     def __call__(self, results, ids, expected=None, result_dict=None):
         self.content_ids.extend(ids)
-        return [(t*255).round().to(self.dtype).to(self.device) for t in results]
+        return [
+            (t.cpu().permute(1, 2, 0).float().numpy() * 255).round().astype(self.numpy_dtype)
+            for t in results
+        ]
 
     def start(self):
         self.results = []
 
     def finalize(self, result_dict, ds=None, output_dir=None):
-        fid = FrechetInceptionDistance(feature=2048)
-        fid.to(self.device)
-        clip = CLIPScore(model_name_or_path="openai/clip-vit-base-patch32")
-        clip.to(self.device)
+        clip = CLIPEncoder(device=self.device)
         dataset_size = ds.get_item_count()
         log.info("Accumulating results")
         for i in range(0, dataset_size):
-            target = (
-                torch.stack(ds.get_imgs([self.content_ids[i]]))
-                .to(self.dtype)
-                .to(self.device)
+            caption = ds.get_caption(self.content_ids[i])
+            generated = Image.fromarray(self.results[i])
+            self.clip_scores.append(
+                100 * clip.get_clip_score(caption, generated).item()
             )
-            captions = ds.get_captions([self.content_ids[i]])
-            generated = torch.stack([self.results[i]]).to(self.dtype).to(self.device)
-            fid.update(target, real=True)
-            fid.update(generated, real=False)
-            clip.update(generated, captions)
-        result_dict["FID_SCORE"] = float(fid.compute().item())
-        result_dict["CLIP_SCORE"] = float(clip.compute().item())
+
+        fid_score = compute_fid(self.results, self.statistics_path, self.device)
+        result_dict["FID_SCORE"] = fid_score
+        result_dict["CLIP_SCORE"] = np.mean(self.clip_scores)
 
         return result_dict

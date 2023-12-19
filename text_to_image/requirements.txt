@@ -5,4 +5,4 @@ open-clip-torch==2.7.0
 opencv-python==4.8.1.78
 pycocotools==2.0.7
 torchmetrics[image]==1.2.0
-scipy==1.9.1
+scipy==1.10.0

@@ -20,6 +20,7 @@ class BackendPytorch(backend.Backend):
         device="cuda",
         precision="fp32",
         negative_prompt="normal quality, low quality, worst quality, low res, blurry, nsfw, nude",
+        seed=42
     ):
         super(BackendPytorch, self).__init__()
         self.model_path = model_path
@@ -44,6 +45,7 @@ class BackendPytorch(backend.Backend):
         self.steps = steps
         self.negative_prompt = negative_prompt
         self.max_length_neg_prompt = 77
+        self.seed = seed
 
     def version(self):
         return torch.__version__
@@ -343,41 +345,8 @@ class BackendPytorch(backend.Backend):
                     num_inference_steps=self.steps,
                     output_type="pt",
                     latents=latents_input,
+                    generator=torch.Generator(device=self.device).manual_seed(self.seed)
                 ).images[0]
                 images.append(image)
         return images
 
-
-if __name__ == "__main__":
-    from coco import Coco
-
-    backend = BackendPytorch(precision="fp16")
-    backend = backend.load()
-    dataset = Coco(
-        "coco2014/",
-        name="coco-1024",
-        pipe_tokenizer=backend.pipe.tokenizer,
-        pipe_tokenizer_2=backend.pipe.tokenizer_2,
-    )
-    dataset.load_query_samples([0, 1, 2, 3, 4])
-    items, _ = dataset.get_samples([0, 1, 2, 3, 4])
-    captions = dataset.captions_df["caption"].iloc[[0, 1, 2, 3, 4]]
-    images_1 = backend.predict(items)
-    images_2 = []
-    for i in range(5):
-        image = backend.pipe(
-            captions[i],
-            negative_prompt = backend.negative_prompt,
-            output_type="pil",
-            latents=items[i]["latents"].to(backend.dtype),
-            guidance_scale=backend.guidance,
-            num_inference_steps=backend.steps,
-        ).images[0]
-        images_2.append(image)
-
-    os.makedirs("tmp/", exist_ok=True)
-    for i, image in enumerate(images_1):
-        image.save(f"tmp/image_{i}.png")
-
-    for i, image in enumerate(images_2):
-        image.save(f"tmp/image_{i+5}.png")

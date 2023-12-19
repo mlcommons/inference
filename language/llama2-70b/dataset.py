@@ -10,6 +10,7 @@ from typing import Optional, Dict, Sequence
 import io
 #import utils
 import copy
+import pickle
 
 import logging
 logging.basicConfig(level=logging.INFO)
@@ -79,7 +80,19 @@ class Dataset():
             preds.append(pred)
         """
         # Everything is padded to max_len (1024), so prune the input and parse to numpy
-        return out_tokens[:, 1024:].cpu().numpy()
+        output_seq = out_tokens[:, 1024:].cpu().numpy()
+        assert len(query_id_list) == output_seq.shape[0]
+
+        # Save outputs
+        fname = "q" + "_".join([str(i) for i in query_id_list])
+        fname = f"run_outputs/{fname}.pkl"
+        with open(fname, mode='wb') as f:
+            d = {"query_ids": query_id_list,
+                 "outputs": output_seq}
+            print(f"Saving outputs to {fname}")
+            pickle.dump(d, f)
+
+        return output_seq
 
     def LoadSamplesToRam(self, sample_list):
         pass

@@ -65,6 +65,9 @@ using ResponseCallback = std::function<void(QuerySampleResponse*)>;
 void QuerySamplesComplete(QuerySampleResponse* responses, size_t response_count,
                           const ResponseCallback& response_cb = {});
 
+void FirstTokenComplete(QuerySampleResponse* responses, size_t response_count,
+                          const ResponseCallback& response_cb = {});
+
 ///
 /// \brief Starts the test against SUT with the specified settings.
 /// \details This is the C++ entry point. See mlperf::c::StartTest for the
@@ -92,7 +95,8 @@ void AbortTest();
 /// C entry point.
 ///
 void RegisterIssueQueryThread();
-
+// inline long long samples_overhead_acum;
+// inline long long tokens_overhead_acum;
 /// @}
 
 }  // namespace mlperf

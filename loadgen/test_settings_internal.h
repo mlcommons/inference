@@ -82,6 +82,7 @@ struct TestSettingsInternal {
   uint64_t performance_sample_count;
 
   bool sample_concatenate_permutation;
+  bool use_token_latencies = false;
 };
 
 /// \brief A namespace of collections of FindPeakPerformance helper functions,

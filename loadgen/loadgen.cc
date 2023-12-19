@@ -96,10 +96,10 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
       uint8_t* src_end = src_begin + response->size;
       sample_data_copy = new std::vector<uint8_t>(src_begin, src_end);
     }
-    Log([sample, complete_begin_time, sample_data_copy](AsyncLog& log) {
+    int64_t n_tokens = response->n_tokens;
+    Log([sample, complete_begin_time, sample_data_copy, n_tokens](AsyncLog& log) {
       QueryMetadata* query = sample->query_metadata;
       DurationGeneratorNs sched{query->scheduled_time};
-
       if (scenario == TestScenario::Server) {
         // Trace the server scenario as a stacked graph via counter events.
         DurationGeneratorNs issued{query->issued_start_time};
@@ -128,6 +128,45 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
       // thread and potentially destroy the metadata being used above.
       QuerySampleLatency latency = sched.delta(complete_begin_time);
       log.RecordSampleCompletion(sample->sequence_id, complete_begin_time,
+                                 latency, n_tokens);
+    });
+  }
+
+    void TokenComplete(SampleMetadata* sample, QuerySampleResponse* response,
+                      PerfClock::time_point complete_begin_time,
+                      const ResponseCallback& response_cb) override {
+    // Using a raw pointer here should help us hit the std::function
+    // small buffer optimization code path when we aren't copying data.
+    // For some reason, using std::unique_ptr<std::vector> wasn't moving
+    // into the lambda; even with C++14.
+    std::vector<uint8_t>* token_data_copy = nullptr;
+    if (mode == TestMode::AccuracyOnly) {
+      uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
+      uint8_t* src_end = src_begin + response->size;
+      token_data_copy = new std::vector<uint8_t>(src_begin, src_end);
+    }
+    Log([sample, complete_begin_time, token_data_copy](AsyncLog& log) {
+      QueryMetadata* query = sample->query_metadata;
+      DurationGeneratorNs sched{query->scheduled_time};
+      if (scenario == TestScenario::Server) {
+        DurationGeneratorNs issued{query->issued_start_time};
+        log.TraceCounterEvent("Token_Latency", query->scheduled_time, "issue_delay",
+                              sched.delta(query->issued_start_time),
+                              "issue_to_done",
+                              issued.delta(complete_begin_time));
+      }else{
+        log.TraceSample("Token", sample->sequence_id, query->scheduled_time,
+                      complete_begin_time, "sample_seq", sample->sequence_id,
+                      "query_seq", query->sequence_id, "sample_idx",
+                      sample->sample_index, "issue_start_ns",
+                      sched.delta(query->issued_start_time), "complete_ns",
+                      sched.delta(complete_begin_time));
+      }
+      if (token_data_copy) {
+        log.CacheToken(sample->sequence_id, LogBinaryAsHexString{token_data_copy});
+      }
+      QuerySampleLatency latency = sched.delta(complete_begin_time);
+      log.RecordTokenCompletion(sample->sequence_id, complete_begin_time,
                                  latency);
     });
   }
@@ -482,6 +521,13 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   std::vector<QuerySampleLatency> sample_latencies(
       GlobalLogger().GetLatenciesBlocking(expected_latencies));
 
+  std::vector<QuerySampleLatency> first_token_latencies(
+    GlobalLogger().GetTokenLatencies(expected_latencies));
+
+  std::vector<int64_t> tokens_per_sample(
+    GlobalLogger().GetTokensPerSample(expected_latencies));
+
+
   // Log contention counters after every test as a sanity check.
   GlobalLogger().LogContentionAndAllocations();
 
@@ -529,12 +575,17 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   }
 
   return PerformanceResult{std::move(sample_latencies),
-                           std::move(query_latencies),
-                           queries_issued,
-                           max_latency,
-                           final_query_scheduled_time,
-                           final_query_issued_time,
-                           final_query_all_samples_done_time};
+                          std::move(query_latencies),
+                          queries_issued,
+                          max_latency,
+                          final_query_scheduled_time,
+                          final_query_issued_time,
+                          final_query_all_samples_done_time,
+                          TokenPerformanceResults{
+                            first_token_latencies,
+                            tokens_per_sample
+                          }
+                        };
 }
 
 void LoadSamplesToRam(QuerySampleLibrary* qsl,
@@ -1103,6 +1154,8 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                               &log_outputs.accuracy_out,
                               log_settings.log_output.copy_detail_to_stdout,
                               log_settings.log_output.copy_summary_to_stdout);
+            
+  GlobalLogger().SetUseTokens(requested_settings.use_token_latencies);
 
   if (log_settings.enable_trace) {
     GlobalLogger().StartNewTrace(&log_outputs.trace_out, PerfClock::now());
@@ -1246,6 +1299,29 @@ void QuerySamplesComplete(QuerySampleResponse* responses, size_t response_count,
     query->response_delegate->SampleComplete(sample, response, timestamp,
                                              response_cb);
   }
+  // PerfClock::time_point end_timestamp = PerfClock::now();
+  // mlperf::samples_overhead_acum += (end_timestamp - timestamp).count();
+}
+
+void FirstTokenComplete(QuerySampleResponse* responses, size_t response_count,
+                          const ResponseCallback& response_cb) {
+  PerfClock::time_point timestamp = PerfClock::now();
+
+  auto tracer = MakeScopedTracer(
+      [](AsyncTrace& trace) { trace("FirstTokenComplete"); });
+
+  const QuerySampleResponse* end = responses + response_count;
+
+  // Log samples.
+  for (QuerySampleResponse* response = responses; response < end; response++) {
+    loadgen::SampleMetadata* sample =
+        reinterpret_cast<loadgen::SampleMetadata*>(response->id);
+    loadgen::QueryMetadata* query = sample->query_metadata;
+    query->response_delegate->TokenComplete(sample, response, timestamp,
+                                             response_cb);
+  }
+  // PerfClock::time_point end_timestamp = PerfClock::now();
+  // mlperf::tokens_overhead_acum += (end_timestamp - timestamp).count();
 }
 
 }  // namespace mlperf

@@ -20,7 +20,6 @@ class BackendPytorch(backend.Backend):
         device="cuda",
         precision="fp32",
         negative_prompt="normal quality, low quality, worst quality, low res, blurry, nsfw, nude",
-        seed=42
     ):
         super(BackendPytorch, self).__init__()
         self.model_path = model_path
@@ -45,7 +44,6 @@ class BackendPytorch(backend.Backend):
         self.steps = steps
         self.negative_prompt = negative_prompt
         self.max_length_neg_prompt = 77
-        self.seed = seed
 
     def version(self):
         return torch.__version__
@@ -345,7 +343,6 @@ class BackendPytorch(backend.Backend):
                     num_inference_steps=self.steps,
                     output_type="pt",
                     latents=latents_input,
-                    generator=torch.Generator(device=self.device).manual_seed(self.seed)
                 ).images[0]
                 images.append(image)
         return images

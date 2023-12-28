@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaForCausalLM
 from transformers.generation.streamers import BaseStreamer
 
+import pickle
 import time
 import threading
 import tqdm
@@ -15,6 +16,7 @@ import queue
 
 import logging
 from typing import TYPE_CHECKING, Optional, List
+from pathlib import Path
 
 import mlperf_loadgen as lg
 from dataset import Dataset
@@ -83,6 +85,7 @@ class SUT():
                  batch_size=None,
                  total_sample_count=24576,
                  dataset_path=None,
+                 use_cached_outputs=False,  # Set this to True *only for test runs* in case your prior session was killed partway through
                  workers=1):
 
         self.model_path = model_path or "meta-llama/Llama-2-70b-chat-hf"
@@ -92,7 +95,7 @@ class SUT():
             if device == "cpu":
                 batch_size = 1
             else:
-                batch_size = 16  # Reduce to 8 if using 4 GPUs, 16 for 8.
+                batch_size = 32  # Reduce to 8 if using 4 GPUs, 16 for 8.
         self.batch_size = batch_size
 
         # dtype
@@ -123,6 +126,7 @@ class SUT():
         self.worker_threads = [None] * self.num_workers
         self.query_queue = queue.Queue()
 
+        self.use_cached_outputs = use_cached_outputs
         self.sample_counter = 0
         self.sample_counter_lock = threading.Lock()
 
@@ -150,40 +154,57 @@ class SUT():
             if qitem is None:
                 break
 
-            # Construct / collate batch
-            max_seq_len = 1024
+            query_ids = [q.index for q in qitem]
 
-            tik1 = time.time()
+            fname = "q" + "_".join([str(i) for i in query_ids])
+            fname = f"run_outputs/{fname}.pkl"
+            _p = Path(fname)
+            if self.use_cached_outputs and _p.exists():
+                # Read cache
+                with _p.open(mode="rb") as f:
+                    d = pickle.load(f)
+                processed_output = d["outputs"]
+                tik1 = None
+                tik2 = None
+                tik3 = None
+                tok = None
+            else:
+                # Construct / collate batch
+                max_seq_len = 1024
 
-            input_ids_tensor = []
-            input_masks_tensor = []
-            input_len = []
-            for q in qitem:
-                input_ids_tensor.append(pad(self.data_object.input_ids[q.index],
-                                            (0, max_seq_len - self.data_object.input_lens[q.index], 0, 0),
-                                            value=self.tokenizer.pad_token_id))
-                input_masks_tensor.append(pad(self.data_object.attention_masks[q.index],
-                                              (0, max_seq_len - self.data_object.input_lens[q.index], 0, 0),
-                                             value=0))
-                input_len.append(self.data_object.input_lens[q.index])
-            input_ids_tensor = torch.cat(input_ids_tensor)
-            input_masks_tensor = torch.cat(input_masks_tensor)
+                tik1 = time.time()
 
-            assert input_ids_tensor.shape == input_masks_tensor.shape
-            assert input_ids_tensor.shape[0] <= self.batch_size
+                input_ids_tensor = []
+                input_masks_tensor = []
+                input_len = []
+                for q in qitem:
+                    input_ids_tensor.append(pad(self.data_object.input_ids[q.index],
+                                                (0, max_seq_len - self.data_object.input_lens[q.index], 0, 0),
+                                                value=self.tokenizer.pad_token_id))
+                    input_masks_tensor.append(pad(self.data_object.attention_masks[q.index],
+                                                  (0, max_seq_len - self.data_object.input_lens[q.index], 0, 0),
+                                                 value=0))
+                    input_len.append(self.data_object.input_lens[q.index])
+                input_ids_tensor = torch.cat(input_ids_tensor)
+                input_masks_tensor = torch.cat(input_masks_tensor)
 
-            tik2 = time.time()
+                assert input_ids_tensor.shape == input_masks_tensor.shape
+                assert input_ids_tensor.shape[0] <= self.batch_size
 
-            pred_output_tokens = self.model.generate(
-                input_ids=input_ids_tensor,
-                attention_mask=input_masks_tensor,
-                pad_token_id=self.tokenizer.pad_token_id,
-                **gen_kwargs
-            )
+                tik2 = time.time()
 
-            tik3 = time.time()
+                pred_output_tokens = self.model.generate(
+                    input_ids=input_ids_tensor,
+                    attention_mask=input_masks_tensor,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    **gen_kwargs
+                )
 
-            processed_output = self.data_object.postProcess(pred_output_tokens, input_len)
+                tik3 = time.time()
+
+                processed_output = self.data_object.postProcess(pred_output_tokens,
+                                                                input_seq_lens=input_len,
+                                                                query_id_list=query_ids)
 
             for i in range(len(qitem)):
                 response_array = array.array("B", processed_output[i].tobytes())
@@ -196,10 +217,13 @@ class SUT():
             with self.sample_counter_lock:
                 self.sample_counter += len(qitem)
                 print(f"Samples run: {self.sample_counter}")
-                print(f"\tBatchMaker time: {tik2 - tik1}")
-                print(f"\tInference time: {tik3 - tik2}")
-                print(f"\tPostprocess time: {tok - tik3}")
-                print(f"\t==== Total time: {tok - tik1}")
+                if tik1:
+                    print(f"\tBatchMaker time: {tik2 - tik1}")
+                    print(f"\tInference time: {tik3 - tik2}")
+                    print(f"\tPostprocess time: {tok - tik3}")
+                    print(f"\t==== Total time: {tok - tik1}")
+                else:
+                    print(f"\tLoaded from cache: {_p}")
 
 
     def load_model(self):
@@ -212,7 +236,8 @@ class SUT():
         print("Loaded model")
 
         self.device = torch.device(self.device)
-        # self.model.to(self.device)
+        if self.device == "cpu":
+            self.model = self.model.to(self.device)  # Force CPU if your system has GPU and you specifically want CPU-only run
 
         self.model.eval()
         self.model = self.model.to(memory_format=torch.channels_last)
@@ -301,7 +326,7 @@ class SUTServer(SUT):
             qitem = self.query_queue.get()
             if qitem is None:
                 break
-            
+
             input_ids_tensor = self.data_object.input_ids[qitem.index]
             input_masks_tensor = self.data_object.attention_masks[qitem.index]
 
@@ -323,7 +348,7 @@ class SUTServer(SUT):
             response = [lg.QuerySampleResponse(
                 qitem.id, bi[0], bi[1])]
             lg.QuerySamplesComplete(response)
-    
+
 
     def issue_queries(self, query_samples):
 

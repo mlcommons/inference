@@ -67,11 +67,13 @@ class OpenOrcaDatasetGenerator:
     def __init__(self,
                  pq_path: os.PathLike,
                  model_dir: os.PathLike,
-                 io_token_limit: int):
+                 io_token_limit: int,
+                 calibration_subset_size: int = 1000):
         self.pq_path = Path(pq_path)
         self.model_dir = Path(model_dir)
         self.io_token_limit = io_token_limit
         self.keyphrases = []
+        self.calibration_subset_size = calibration_subset_size
 
     def load_parquet(self) -> pd.DataFrame:
         llama_tokenizer = LlamaTokenizerFast.from_pretrained(self.model_dir)
@@ -225,6 +227,13 @@ class OpenOrcaDatasetGenerator:
         sampled_fpath = export_dir / f"open_orca_gpt4_tokenized_llama.sampled_{n_samples}.pkl"
         sampled_df.to_pickle(sampled_fpath)
 
+        # Calibration dataset
+        calib_ds = sampled_df.sample(n=self.calibration_subset_size,
+                                     random_state=12345)
+        calib_ds = calib_ds.reset_index(drop=True)
+        calib_fpath = export_dir / f"open_orca_gpt4_tokenized_llama.calibration_{self.calibration_subset_size}.pkl"
+        calib_ds.to_pickle(calib_fpath)
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -237,6 +246,7 @@ def parse_arguments():
                         default="/raid/data/mlperf-llm/OpenOrca/llama/filtered",
                         help="Path to the output pkl file.")
     parser.add_argument('--num_total_samples', type=int, default=24576, help="Number of samples to generate")
+    parser.add_argument('--calibration_subset_size', type=int, default=1000, help="Number of samples for calibration subset")
     return parser.parse_args()
 
 
@@ -246,6 +256,7 @@ if __name__ == "__main__":
         pq_path=args.dataset_pq_path,
         model_dir=args.model_dir,
         io_token_limit=args.seqlen_limit,
+        calibration_subset_size=args.calibration_subset_size,
     )
     ds_gen.generate(
         export_dir=args.export_dir,

@@ -49,7 +49,8 @@ def _tokenize_helper(x, llama_tokenizer=None, append_response_init_token=True):
     tokens = llama_tokenizer(x)["input_ids"]
 
     if append_response_init_token:
-        # WAR to enable cheat checking for first token: Llama always outputs token 29871 first
+        # Workaround to enable cheat checking for first token: Llama always outputs token 29871 first
+        # It is possible for submitters to just immediately output this token to achieve a very fast TTFT.
         tokens.append(29871)
     return tokens
 

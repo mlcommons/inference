@@ -1,5 +1,5 @@
-CHECKPOINT_PATH="${CHECKPOINT_PATH:-/raid/data/mlperf-llm/Llama-2-70b-chat-hf}"
-DATASET_PATH="${DATASET_PATH:-/raid/data/alicheng/OpenOrca/llama/first_token_hack/open_orca_gpt4_tokenized_llama.sampled_24576.pkl}"
+CHECKPOINT_PATH="${CHECKPOINT_PATH:-meta-llama/Llama-2-70b-chat-hf}"
+DATASET_PATH="${DATASET_PATH:-open-orca-val-set.pkl}"
 
 mkdir -p "run_outputs"
 

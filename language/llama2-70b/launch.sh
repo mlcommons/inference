@@ -6,7 +6,6 @@ MLCOMMONS_REPO_PATH="$(dirname "$(dirname "$PWD")")"
 # /path/to/src:/path/to/dir/in/container
 MOUNTS=(
     $MLCOMMONS_REPO_PATH:$MLCOMMONS_REPO_PATH
-    /raid/data:/raid/data
 )
 
 # Set up docker environment file for current user

@@ -85,7 +85,7 @@ class SUT():
                  batch_size=None,
                  total_sample_count=24576,
                  dataset_path=None,
-                 use_cached_outputs=False,  # Set this to True *only for test runs* in case your prior session was killed partway through
+                 use_cached_outputs=False,  # Set this to True *only for test accuracy runs* in case your prior session was killed partway through
                  workers=1):
 
         self.model_path = model_path or "meta-llama/Llama-2-70b-chat-hf"

@@ -124,7 +124,7 @@ python -u main.py --scenario Server \
                 --output-log-dir server-logs
 ```
 
-The ServerSUT was not tested for GPU runs. You can try setting `--device cuda:0`, but YMMV.
+The ServerSUT was not tested for GPU runs.
 
 
 ## Run Accuracy Benchmarks

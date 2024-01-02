@@ -186,7 +186,11 @@ class OpenOrcaDatasetGenerator:
         sampled_df = sampled_df.reset_index(drop=True)
         return sampled_df
 
-    def generate(self, export_dir: os.PathLike, n_samples: int = 24576, use_cached: bool = True):
+    def generate(self,
+                 export_dir: os.PathLike,
+                 n_samples: int = 24576,
+                 use_cached: bool = True,
+                 calib_rng_seed: int = 12345):
         export_dir = Path(export_dir)
         if not export_dir.exists():
             print(f"Creating {export_dir}")
@@ -229,7 +233,7 @@ class OpenOrcaDatasetGenerator:
 
         # Calibration dataset
         calib_ds = sampled_df.sample(n=self.calibration_subset_size,
-                                     random_state=12345)
+                                     random_state=calib_rng_seed)
         calib_ds = calib_ds.reset_index(drop=True)
         calib_fpath = export_dir / f"open_orca_gpt4_tokenized_llama.calibration_{self.calibration_subset_size}.pkl"
         calib_ds.to_pickle(calib_fpath)

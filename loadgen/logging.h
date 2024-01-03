@@ -326,6 +326,7 @@ class AsyncLog {
   PerfClock::time_point GetMaxCompletionTime();
   QuerySampleLatency GetMaxLatencySoFar();
   void SetUseTokens(bool use_tokens);
+  void SetNeedsFirstToken(bool needs_first_token);
 
  private:
   void WriteAccuracyHeaderLocked();
@@ -367,6 +368,7 @@ class AsyncLog {
   size_t log_warning_count_ = 0;
   bool warning_flagged_ = false;
   bool use_tokens_ = false;
+  bool needs_first_token_ = false;
 
   std::mutex trace_mutex_;
   std::unique_ptr<ChromeTracer> tracer_;
@@ -423,6 +425,7 @@ class Logger {
   PerfClock::time_point GetMaxCompletionTime();
   QuerySampleLatency GetMaxLatencySoFar();
   void SetUseTokens(bool use_tokens);
+  void SetNeedsFirstToken(bool needs_first_token);
 
  private:
   friend AsyncLog;

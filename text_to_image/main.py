@@ -135,6 +135,11 @@ def get_args():
     parser.add_argument(
         "--audit_conf", default="audit.config", help="config for LoadGen audit settings"
     )
+    # arguments to save images
+    # pass this argument for official submission
+    # parser.add_argument("--output-images", action="store_true", help="Store a subset of the generated images")
+    # do not modify this argument for official submission
+    parser.add_argument("--ids-path", help="Path to caption ids", default="tools/sample_ids.txt")
 
     # below will override mlperf rules compliant settings - don't use for official submission
     parser.add_argument("--time", type=int, help="time to scan in seconds")
@@ -371,6 +376,12 @@ def main():
         sys.exit(1)
 
     audit_config = os.path.abspath(args.audit_conf)
+    
+    if args.accuracy:
+        ids_path = os.path.abspath(args.ids_path)
+        with open(ids_path) as f:
+            saved_images_ids = [int(_) for _ in f.readlines()]
+
     if args.output:
         output_dir = os.path.abspath(args.output)
         os.makedirs(output_dir, exist_ok=True)
@@ -461,6 +472,7 @@ def main():
     if args.accuracy:
         post_proc.finalize(result_dict, ds, output_dir=args.output)
         final_results["accuracy_results"] = result_dict
+        post_proc.save_images(saved_images_ids, ds)
 
     runner.finish()
     lg.DestroyQSL(qsl)

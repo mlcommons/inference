@@ -324,6 +324,7 @@ def main():
         precision=args.dtype,
         device=args.device,
         model_path=args.model_path,
+        batch_size=args.max_batchsize
     )
     if args.dtype == "fp16":
         dtype = torch.float16

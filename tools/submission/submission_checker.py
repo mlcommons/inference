@@ -1175,15 +1175,15 @@ MODEL_CONFIG = {
         },
         "seeds": {
             # TODO: Update random seeds
-            "qsl_rng_seed": 148687905518835231,
-            "sample_index_rng_seed": 520418551913322573,
-            "schedule_rng_seed": 811580660758947900,
+            "qsl_rng_seed": 13281865557512327830,
+            "sample_index_rng_seed": 198141574272810017,
+            "schedule_rng_seed": 7575108116881280410,
         },
         "test05_seeds": {
             # TODO: Update random seeds
-            "qsl_rng_seed": 793197339507417767,
-            "sample_index_rng_seed": 255610748586851044,
-            "schedule_rng_seed": 352213341366340113,
+            "qsl_rng_seed": 2376919268182438552,
+            "sample_index_rng_seed": 11176391829184272374,
+            "schedule_rng_seed": 3911940905271271337,
         },
         "ignore_errors": [],
         "latency-constraint": {

@@ -1062,8 +1062,8 @@ MODEL_CONFIG = {
             "3d-unet-99.9",
             "gptj-99",
             "gptj-99.9",
-            "llama-v2-70b-99",
-            "llama-v2-70b-99.9",
+            "llama2-70b-99",
+            "llama2-70b-99.9",
             "stable-diffusion-xl",
         ],
         "required-scenarios-datacenter": {
@@ -1078,8 +1078,8 @@ MODEL_CONFIG = {
             "3d-unet-99.9": ["Offline"],
             "gptj-99": ["Server", "Offline"],
             "gptj-99.9": ["Server", "Offline"],
-            "llama-v2-70b-99": ["Server", "Offline"],
-            "llama-v2-70b-99.9": ["Server", "Offline"],
+            "llama2-70b-99": ["Server", "Offline"],
+            "llama2-70b-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["Server", "Offline"],
         },
         "optional-scenarios-datacenter": {},
@@ -1107,8 +1107,8 @@ MODEL_CONFIG = {
             "3d-unet-99.9": ["SingleStream", "Offline"],
             "gptj-99": ["SingleStream", "Offline", "Server"],
             "gptj-99.9": ["SingleStream", "Offline", "Server"],
-            "llama-v2-70b-99": ["Server", "Offline"],
-            "llama-v2-70b-99.9": ["Server", "Offline"],
+            "llama2-70b-99": ["Server", "Offline"],
+            "llama2-70b-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
         },
         "optional-scenarios-datacenter-edge": {},
@@ -1124,9 +1124,9 @@ MODEL_CONFIG = {
             "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
             "gptj-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
             "gptj-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
-            # TODO: Replace with metrics for llama-v2-70b
-            "llama-v2-70b-99" : ("ROUGE1", 43.88 * 0.99, "ROUGE2", 21.7108 * 0.99, "ROUGEL", 28.2502 * 0.99, "tokens_per_sample", 839.4*0.9),
-            "llama-v2-70b-99.9" : ("ROUGE1", 43.88 * 0.999, "ROUGE2", 21.7108 * 0.999, "ROUGEL", 28.2502 * 0.999, "tokens_per_sample", 839.4*0.9),
+            # TODO: Replace with metrics for llama2-70b
+            "llama2-70b-99" : ("ROUGE1", 43.88 * 0.99, "ROUGE2", 21.7108 * 0.99, "ROUGEL", 28.2502 * 0.99, "tokens_per_sample", 839.4*0.9),
+            "llama2-70b-99.9" : ("ROUGE1", 43.88 * 0.999, "ROUGE2", 21.7108 * 0.999, "ROUGEL", 28.2502 * 0.999, "tokens_per_sample", 839.4*0.9),
             "stable-diffusion-xl": ("CLIP_SCORE", 31.68631873, "FID_SCORE", 23.01085758)
         },
         "accuracy-upper-limit": {
@@ -1144,8 +1144,8 @@ MODEL_CONFIG = {
             "3d-unet-99.9": 43,
             "gptj-99": 13368,
             "gptj-99.9": 13368,
-            "llama-v2-70b-99": 24576,
-            "llama-v2-70b-99.9": 24576,
+            "llama2-70b-99": 24576,
+            "llama2-70b-99.9": 24576,
             "stable-diffusion-xl": 5000
         },
         # TODO: Update this list.
@@ -1196,8 +1196,8 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": {"Server": 60000000},
             "gptj-99": {"Server": 20000000000},
             "gptj-99.9": {"Server": 20000000000},
-            "llama-v2-70b-99": {"Server": 20000000000},
-            "llama-v2-70b-99.9": {"Server": 20000000000},
+            "llama2-70b-99": {"Server": 20000000000},
+            "llama2-70b-99.9": {"Server": 20000000000},
             "stable-diffusion-xl" : {"Server": 20000000000}
         },
         "min-queries": {
@@ -1222,8 +1222,8 @@ MODEL_CONFIG = {
             "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
             "gptj-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama-v2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama-v2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "stable-diffusion-xl": {"SingleStream": 1024, "Server": 270336, "Offline": 1}
         },
     },
@@ -1363,11 +1363,11 @@ RESULT_FIELD_NEW = {
 }
 
 RESULT_FIELD_BENCHMARK_OVERWRITE = {
-    "llama-v2-70b-99": {
+    "llama2-70b-99": {
         "Offline": "result_tokens_per_second",
         "Server": "result_scheduled_samples_per_sec",
     },
-    "llama-v2-70b-99.9": {
+    "llama2-70b-99.9": {
         "Offline": "result_tokens_per_second",
         "Server": "result_scheduled_samples_per_sec",
     }
@@ -3477,8 +3477,8 @@ def check_compliance_dir(
         "retinanet",
         "gptj-99",
         "gptj-99.9",
-        "llama-v2-70b-99",
-        "llama-v2-70b-99.9",
+        "llama2-70b-99",
+        "llama2-70b-99.9",
         "stable-diffusion-xl"
 
     ]:
@@ -3487,16 +3487,16 @@ def check_compliance_dir(
     if model in [
         "gptj-99",
         "gptj-99.9",
-        "llama-v2-70b-99",
-        "llama-v2-70b-99.9",
+        "llama2-70b-99",
+        "llama2-70b-99.9",
         "stable-diffusion-xl"
     ]:
         test_list.remove("TEST05")
         test_list.remove("TEST01") 
 
     if model in [
-        "llama-v2-70b-99",
-        "llama-v2-70b-99.9",
+        "llama2-70b-99",
+        "llama2-70b-99.9",
     ]:
         test_list.append("TEST06") 
 

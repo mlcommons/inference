@@ -1,6 +1,6 @@
-# Reference Implementation for Llama-v2-70B
+# Reference Implementation for llama2-70b
 
-**Basic implementation for Llama-v2-70B. Few noteworthy items:**
+**Basic implementation for llama2-70b. Few noteworthy items:**
 
 + Processing of Validation dataset is not finalized yet. Decision on input token lengths is pending
 + Streamer for communicating with loadgen has quite some overhead. This is only meant to provide functional implementation

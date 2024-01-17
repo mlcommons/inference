@@ -1049,6 +1049,184 @@ MODEL_CONFIG = {
             "gpt3-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
         },
     },
+    "v4.0": {
+        "models": [
+            "resnet",
+            "retinanet",
+            "rnnt",
+            "bert-99",
+            "bert-99.9",
+            "dlrm-v2-99",
+            "dlrm-v2-99.9",
+            "3d-unet-99",
+            "3d-unet-99.9",
+            "gptj-99",
+            "gptj-99.9",
+            "llama2-70b-99",
+            "llama2-70b-99.9",
+            "stable-diffusion-xl",
+        ],
+        "required-scenarios-datacenter": {
+            "resnet": ["Server", "Offline"],
+            "retinanet": ["Server", "Offline"],
+            "rnnt": ["Server", "Offline"],
+            "bert-99": ["Server", "Offline"],
+            "bert-99.9": ["Server", "Offline"],
+            "dlrm-v2-99": ["Server", "Offline"],
+            "dlrm-v2-99.9": ["Server", "Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+            "gptj-99": ["Server", "Offline"],
+            "gptj-99.9": ["Server", "Offline"],
+            "llama2-70b-99": ["Server", "Offline"],
+            "llama2-70b-99.9": ["Server", "Offline"],
+            "stable-diffusion-xl": ["Server", "Offline"],
+        },
+        "optional-scenarios-datacenter": {},
+        "required-scenarios-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline"],
+            "retinanet": ["SingleStream", "MultiStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "gptj-99": ["SingleStream", "Offline"],
+            "gptj-99.9": ["SingleStream", "Offline"],
+            "stable-diffusion-xl": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-edge": {},
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "rnnt": ["SingleStream", "Offline", "Server"],
+            "bert-99": ["SingleStream", "Offline", "Server"],
+            "bert-99.9": ["Offline", "Server"],
+            "dlrm-v2-99": ["Offline", "Server"],
+            "dlrm-v2-99.9": ["Offline", "Server"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "gptj-99": ["SingleStream", "Offline", "Server"],
+            "gptj-99.9": ["SingleStream", "Offline", "Server"],
+            "llama2-70b-99": ["Server", "Offline"],
+            "llama2-70b-99.9": ["Server", "Offline"],
+            "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
+        },
+        "optional-scenarios-datacenter-edge": {},
+        "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
+            "retinanet": ("mAP", 37.55 * 0.99),
+            "rnnt": ("WER", (100 - 7.452) * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "dlrm-v2-99": ("AUC", 80.31 * 0.99),
+            "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
+            "3d-unet-99": ("DICE", 0.86170 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
+            "gptj-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
+            "gptj-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
+            # TODO: Replace with metrics for llama2-70b
+            "llama2-70b-99" : ("ROUGE1", 43.88 * 0.99, "ROUGE2", 21.7108 * 0.99, "ROUGEL", 28.2502 * 0.99, "tokens_per_sample", 839.4*0.9),
+            "llama2-70b-99.9" : ("ROUGE1", 43.88 * 0.999, "ROUGE2", 21.7108 * 0.999, "ROUGEL", 28.2502 * 0.999, "tokens_per_sample", 839.4*0.9),
+            "stable-diffusion-xl": ("CLIP_SCORE", 31.68631873, "FID_SCORE", 23.01085758)
+        },
+        "accuracy-upper-limit": {
+            "stable-diffusion-xl": ("CLIP_SCORE", 31.81331801, "FID_SCORE", 23.95007626)
+        },
+        "performance-sample-count": {
+            "resnet": 1024,
+            "retinanet": 64,
+            "rnnt": 2513,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-v2-99": 204800,
+            "dlrm-v2-99.9": 204800,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+            "gptj-99": 13368,
+            "gptj-99.9": 13368,
+            "llama2-70b-99": 24576,
+            "llama2-70b-99.9": 24576,
+            "stable-diffusion-xl": 5000
+        },
+        # TODO: Update this list.
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-mobilenet": "ssd-small",
+            "ssd-resnet34": "retinanet",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
+            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
+            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
+            "rcnn-resnet50-lowproposals-coco": "ssd-large",
+            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
+            "rcnn-inception-v2-coco": "ssd-large",
+            "rcnn-nas-lowproposals-coco": "ssd-large",
+            "rcnn-resnet101-lowproposals-coco": "ssd-large",
+            "ssd_mobilenet_v1_coco": "ssd-small",
+            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
+            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
+            "ssd_mobilenet_v2_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
+        },
+        "seeds": {
+            # TODO: Update random seeds
+            "qsl_rng_seed": 13281865557512327830,
+            "sample_index_rng_seed": 198141574272810017,
+            "schedule_rng_seed": 7575108116881280410,
+        },
+        "test05_seeds": {
+            # TODO: Update random seeds
+            "qsl_rng_seed": 2376919268182438552,
+            "sample_index_rng_seed": 11176391829184272374,
+            "schedule_rng_seed": 3911940905271271337,
+        },
+        "ignore_errors": [],
+        "latency-constraint": {
+            "resnet": {"Server": 15000000},
+            "retinanet": {"Server": 100000000},
+            "rnnt": {"Server": 1000000000},
+            "bert-99": {"Server": 130000000},
+            "bert-99.9": {"Server": 130000000},
+            "dlrm-v2-99": {"Server": 60000000},
+            "dlrm-v2-99.9": {"Server": 60000000},
+            "gptj-99": {"Server": 20000000000},
+            "gptj-99.9": {"Server": 20000000000},
+            "llama2-70b-99": {"Server": 20000000000},
+            "llama2-70b-99.9": {"Server": 20000000000},
+            "stable-diffusion-xl" : {"Server": 20000000000}
+        },
+        "min-queries": {
+            "resnet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "retinanet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-v2-99": {"Server": 270336, "Offline": 1},
+            "dlrm-v2-99.9": {"Server": 270336, "Offline": 1},
+            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
+            "gptj-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "stable-diffusion-xl": {"SingleStream": 1024, "Server": 270336, "Offline": 1}
+        },
+    },
 }
 
 VALID_DIVISIONS = ["open", "closed", "network"]
@@ -1069,6 +1247,24 @@ REQUIRED_ACC_FILES = [
     "accuracy.txt",
     "mlperf_log_accuracy.json",
 ]
+REQUIRED_ACC_BENCHMARK = {
+    "stable-diffusion-xl": {
+        "v4.0": {
+            "images": [
+                "4459",
+                "4015",
+                "2705",
+                "1682",
+                "4048",
+                "4683",
+                "3757",
+                "1578",
+                "3319",
+                "95"
+            ]
+        }
+    }
+}
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 REQUIRED_POWER_MEASURE_FILES = ["analyzer_table.*", "power_settings.*"]
 MS_TO_NS = 1000 * 1000
@@ -1156,6 +1352,24 @@ RESULT_FIELD_NEW = {
         "MultiStreamLegacy": "effective_samples_per_query",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_scheduled_samples_per_sec",
+    },
+    "v4.0": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_scheduled_samples_per_sec",
+    }
+}
+
+RESULT_FIELD_BENCHMARK_OVERWRITE = {
+    "llama2-70b-99": {
+        "Offline": "result_tokens_per_second",
+        "Server": "result_scheduled_samples_per_sec",
+    },
+    "llama2-70b-99.9": {
+        "Offline": "result_tokens_per_second",
+        "Server": "result_scheduled_samples_per_sec",
     }
 }
 
@@ -1170,7 +1384,11 @@ ACC_PATTERN = {
     "ROUGE1": r".*'rouge1':\s([\d.]+).*",
     "ROUGE2": r".*'rouge2':\s([\d.]+).*",
     "ROUGEL": r".*'rougeL':\s([\d.]+).*",
+    "ROUGELSUM": r".*'rougeLsum':\s([\d.]+).*",
     "GEN_LEN": r".*'gen_len':\s([\d.]+).*",
+    "TOKENS_PER_SAMPLE": r".*'tokens_per_sample':\s([\d.]+).*",
+    "CLIP_SCORE": r".*'CLIP_SCORE':\s([\d.]+).*",
+    "FID_SCORE": r".*'FID_SCORE':\s([\d.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -1309,6 +1527,7 @@ class Config:
         self.seeds = self.base["seeds"]
         self.test05_seeds = self.base["test05_seeds"]
         self.accuracy_target = self.base["accuracy-target"]
+        self.accuracy_upper_limit = self.base["accuracy-upper-limit"]
         self.performance_sample_count = self.base["performance-sample-count"]
         self.latency_constraint = self.base.get("latency-constraint", {})
         self.min_queries = self.base.get("min-queries", {})
@@ -1394,6 +1613,9 @@ class Config:
         if model not in self.accuracy_target:
             raise ValueError("model not known: " + model)
         return self.accuracy_target[model]
+    
+    def get_accuracy_upper_limit(self, model):
+        return self.accuracy_upper_limit.get(model, None)
 
     def get_performance_sample_count(self, model):
         model = self.get_mlperf_model(model)
@@ -1442,7 +1664,7 @@ def get_args():
     parser.add_argument("--input", required=True, help="submission directory")
     parser.add_argument(
         "--version",
-        default="v3.1",
+        default="v4.0",
         choices=list(MODEL_CONFIG.keys()),
         help="mlperf version",
     )
@@ -1522,6 +1744,23 @@ def list_files_recursively(*path):
     ]
 
 
+def check_extra_files(path, target_files):
+    missing_files = []
+    check_pass = True
+    folders = list_dir(path)
+    for dir in target_files.keys():
+        if dir not in folders:
+            check_pass = False
+            missing_files.append(os.path.join(path, dir))
+        else:
+            files = [f.split(".")[0] for f in list_files(os.path.join(path, dir))]
+            for target_file in target_files[dir]:
+                if target_file not in files:
+                    check_pass = False
+                    missing_files.append(f"{os.path.join(path, dir, target_file)}.png")
+    return check_pass, missing_files
+
+
 def split_path(m):
     return m.replace("\\", "/").split("/")
 
@@ -1574,12 +1813,18 @@ def check_accuracy_dir(config, model, path, verbose):
     result_acc = None
     hash_val = None
     target = config.get_accuracy_target(model)
+    acc_upper_limit = config.get_accuracy_upper_limit(model)
     patterns = []
     acc_targets = []
+    if acc_upper_limit is not None:
+        acc_limits = []
+        acc_limit_check = True
     for i in range(0, len(target), 2):
         acc_type, acc_target = target[i:i+2]
         patterns.append(ACC_PATTERN[acc_type])
         acc_targets.append(acc_target)
+        if acc_upper_limit is not None:
+            acc_limits.append(acc_upper_limit[i+1])
     acc_seen = [False for _ in acc_targets]
     with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
@@ -1596,12 +1841,17 @@ def check_accuracy_dir(config, model, path, verbose):
                 elif acc is not None:
                     all_accuracy_valid = False
                     log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
+                if acc is not None and acc_upper_limit is not None and float(acc) > acc_limits[i]:
+                    acc_limit_check = False
+                    log.warning("%s accuracy not met: upper limit=%f, found=%s", path, acc_limits[i], acc)
                 if i == 0 and acc:
                     result_acc = acc
                 acc = None
             if all(acc_seen) and hash_val:
                 break;
         is_valid = all_accuracy_valid & all(acc_seen)
+        if acc_upper_limit is not None:
+            is_valid &= acc_limit_check
 
     if not hash_val:
         log.error("%s not hash value for mlperf_log_accuracy.json", path)
@@ -1678,6 +1928,9 @@ def check_performance_dir(
             else scenario
         )
         res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+        if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
+            res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario_for_res]])
+
         latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
         latency_mean = mlperf_log["result_mean_latency_ns"]
         if scenario in ["MultiStream"]:
@@ -2638,6 +2891,14 @@ def check_results_dir(
                                 acc_path,
                                 debug or is_closed_or_network,
                             )
+                            if mlperf_model in REQUIRED_ACC_BENCHMARK:
+                                if config.version in REQUIRED_ACC_BENCHMARK[mlperf_model]:
+                                    extra_files_pass, missing_files = check_extra_files(acc_path, REQUIRED_ACC_BENCHMARK[mlperf_model][config.version])
+                                    if not extra_files_pass:
+                                        log.error(
+                                            "%s expected to have the following extra files (%s)", acc_path, missing_files
+                                        )
+                                        accuracy_is_valid = False
                             if not accuracy_is_valid and not is_closed_or_network:
                                 if debug:
                                     log.warning(
@@ -3216,19 +3477,28 @@ def check_compliance_dir(
         "retinanet",
         "gptj-99",
         "gptj-99.9",
-        "gpt3-99",
-        "gpt3-99.9",
+        "llama2-70b-99",
+        "llama2-70b-99.9",
+        "stable-diffusion-xl"
+
     ]:
         test_list.remove("TEST04")
 
     if model in [
         "gptj-99",
         "gptj-99.9",
-        "gpt3-99",
-        "gpt3-99.9",
+        "llama2-70b-99",
+        "llama2-70b-99.9",
+        "stable-diffusion-xl"
     ]:
         test_list.remove("TEST05")
         test_list.remove("TEST01") 
+
+    if model in [
+        "llama2-70b-99",
+        "llama2-70b-99.9",
+    ]:
+        test_list.append("TEST06") 
 
     # Check performance of all Tests
     for test in test_list:

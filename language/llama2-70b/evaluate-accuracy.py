@@ -5,7 +5,6 @@ import evaluate
 import numpy as np
 import json
 
-ACC_TARGET = {"rouge1": 43.88, "rouge2": 21.7108, "rougeL": 28.2502}
 
 
 def get_args():
@@ -96,14 +95,12 @@ def main():
     result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
     prediction_lens = [len(pred) for pred in preds]
     gen_num = len(preds)
-    acc = [result[key] / ACC_TARGET[key] for key in ACC_TARGET]
 
     result = {**result,
               'gen_len': np.sum(prediction_lens),
               'gen_num': gen_num,
               'gen_tok_len': gen_tok_len,
-              'tokens_per_sample': round(gen_tok_len / gen_num, 1),
-              'accuracy': round(np.min(acc) * 100, 2)
+              'tokens_per_sample': round(gen_tok_len / gen_num, 1)
               }
 
     print("\nResults\n")

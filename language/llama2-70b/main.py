@@ -47,8 +47,8 @@ def main():
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
     # Need to update the conf
-    settings.FromConfig(args.mlperf_conf, "llama-v2-70b", args.scenario)
-    settings.FromConfig(args.user_conf, "llama-v2-70b", args.scenario)
+    settings.FromConfig(args.mlperf_conf, "llama2-70b", args.scenario)
+    settings.FromConfig(args.user_conf, "llama2-70b", args.scenario)
 
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly

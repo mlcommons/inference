@@ -285,7 +285,7 @@ void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
     return;
   }
   *accuracy_out_ << (accuracy_needs_comma_ ? ",\n{ " : "\n{ ");
-  if (!use_tokens_){
+  if (!use_tokens_ || !needs_first_token_){
     LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
           response);
   } else {
@@ -403,10 +403,10 @@ void AsyncLog::RecordSampleCompletion(uint64_t sample_sequence_id,
   }
   
   if (use_tokens_){
-    if(token_latencies_.size() <= i){
+    if(needs_first_token_ && (token_latencies_.size() <= i)){
       MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
                           "Attempted to record a sample latency before it's first token latency");
-    }else if (token_latencies_[i] == kInvalidLatency){
+    }else if (needs_first_token_ && (token_latencies_[i] == kInvalidLatency)){
       MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
                           "Attempted to record a sample latency before it's first token latency");
     }
@@ -430,7 +430,10 @@ void AsyncLog::RecordSampleCompletion(uint64_t sample_sequence_id,
       // If the SUT recorded the wrong sample, the test will hang and see
       // the error above.
       return;
-    } else if (n_tokens <= 0){
+    } else if (n_tokens == 0){
+      MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
+                            "n_tokens argument missing or attempted to record 0 as number of tokens");
+    } else if (n_tokens < 0){
       MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
                             "Attempted to record a negative number of tokens");
       n_tokens = 0;
@@ -586,6 +589,10 @@ QuerySampleLatency AsyncLog::GetMaxLatencySoFar() {
 
 void AsyncLog::SetUseTokens(bool use_tokens){
   use_tokens_ = use_tokens;
+}
+
+void AsyncLog::SetNeedsFirstToken(bool needs_first_token){
+  needs_first_token_ = needs_first_token;
 }
 
 /// \brief Records a single thread using thread-local storage and submits
@@ -916,6 +923,10 @@ QuerySampleLatency Logger::GetMaxLatencySoFar() {
 
 void Logger::SetUseTokens(bool use_tokens){
   async_logger_.SetUseTokens(use_tokens);
+}
+
+void Logger::SetNeedsFirstToken(bool needs_first_token){
+  async_logger_.SetNeedsFirstToken(needs_first_token);
 }
 
 TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {

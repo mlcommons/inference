@@ -1544,7 +1544,7 @@ class Config:
         self.seeds = self.base["seeds"]
         self.test05_seeds = self.base["test05_seeds"]
         self.accuracy_target = self.base["accuracy-target"]
-        self.accuracy_upper_limit = self.base.get("accuracy-upper-limit")
+        self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
         self.performance_sample_count = self.base["performance-sample-count"]
         self.latency_constraint = self.base.get("latency-constraint", {})
         self.min_queries = self.base.get("min-queries", {})

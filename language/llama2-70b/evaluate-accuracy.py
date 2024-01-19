@@ -71,6 +71,7 @@ def main():
         results = json.load(f)
 
     seen = set()
+    gen_tok_len = 0
     for pred in results:
         qsl_idx = pred['qsl_idx']
         if qsl_idx in seen:
@@ -81,6 +82,7 @@ def main():
         target_required.append(target)
         pred = np.frombuffer( bytes.fromhex(pred['data']), eval_dtype)
 
+        gen_tok_len += len(pred)
         preds_token_ids.append(pred)
 
     preds_decoded_text = tokenizer.batch_decode(
@@ -92,8 +94,15 @@ def main():
         predictions=preds, references=targets, use_stemmer=True, use_aggregator=False)
     result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
     prediction_lens = [len(pred) for pred in preds]
-    result["gen_len"] = np.sum(prediction_lens)
-    result["gen_num"] = len(preds)
+    gen_num = len(preds)
+
+    result = {**result,
+              'gen_len': np.sum(prediction_lens),
+              'gen_num': gen_num,
+              'gen_tok_len': gen_tok_len,
+              'tokens_per_sample': round(gen_tok_len / gen_num, 1)
+              }
+
     print("\nResults\n")
     print(result)
 

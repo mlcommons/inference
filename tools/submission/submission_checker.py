@@ -1124,9 +1124,8 @@ MODEL_CONFIG = {
             "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
             "gptj-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
             "gptj-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
-            # TODO: Replace with metrics for llama2-70b
-            "llama2-70b-99" : ("ROUGE1", 43.88 * 0.99, "ROUGE2", 21.7108 * 0.99, "ROUGEL", 28.2502 * 0.99, "tokens_per_sample", 839.4*0.9),
-            "llama2-70b-99.9" : ("ROUGE1", 43.88 * 0.999, "ROUGE2", 21.7108 * 0.999, "ROUGEL", 28.2502 * 0.999, "tokens_per_sample", 839.4*0.9),
+            "llama2-70b-99" : ("ROUGE1", 43.88 * 0.99, "ROUGE2", 21.7108 * 0.99, "ROUGEL", 28.2502 * 0.99, "TOKENS_PER_SAMPLE", 293.3*0.9),
+            "llama2-70b-99.9" : ("ROUGE1", 43.88 * 0.999, "ROUGE2", 21.7108 * 0.999, "ROUGEL", 28.2502 * 0.999, "TOKENS_PER_SAMPLE", 293.3*0.9),
             "stable-diffusion-xl": ("CLIP_SCORE", 31.68631873, "FID_SCORE", 23.01085758)
         },
         "accuracy-upper-limit": {

@@ -1156,6 +1156,8 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                               log_settings.log_output.copy_summary_to_stdout);
             
   GlobalLogger().SetUseTokens(requested_settings.use_token_latencies);
+  bool needs_first_token = (requested_settings.scenario != TestScenario::Offline);
+  GlobalLogger().SetNeedsFirstToken(needs_first_token);
 
   if (log_settings.enable_trace) {
     GlobalLogger().StartNewTrace(&log_outputs.trace_out, PerfClock::now());

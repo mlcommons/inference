@@ -83,14 +83,14 @@ void PerformanceSummary::ProcessLatencies() {
 }
 
 void PerformanceSummary::ProcessTokenLatencies() {
-  if (pr.token_results.first_token_latencies.empty()) {
-    return;
-  }
   constexpr auto nTokenInvalid = std::numeric_limits<int64_t>::min();
   token_count = 0;
   for (auto n_tokens: pr.token_results.tokens_per_sample){
     if (n_tokens != nTokenInvalid)
       token_count += n_tokens;
+  }
+  if (pr.token_results.first_token_latencies.empty()) {
+    return;
   }
   QuerySampleLatency accumulated_first_token_latency = 0;
   for (auto latency : pr.token_results.first_token_latencies) {
@@ -494,16 +494,16 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
               DoubleToString(tps_as_completed));
     }
 
-    
-    summary("Min First Token latency (ns)    : ", first_token_latency_min);
-    summary("Max First Token latency (ns)    : ", first_token_latency_max);
-    summary("Mean First Token latency (ns)   : ", first_token_latency_mean);
-    for (auto& lp : token_latency_percentiles) {
-      summary(
-          DoubleToString(lp.percentile * 100) + " percentile latency (ns)   : ",
-          lp.sample_latency);
+    if (settings.scenario != TestScenario::Offline) {
+      summary("Min First Token latency (ns)    : ", first_token_latency_min);
+      summary("Max First Token latency (ns)    : ", first_token_latency_max);
+      summary("Mean First Token latency (ns)   : ", first_token_latency_mean);
+      for (auto& lp : token_latency_percentiles) {
+        summary(
+            DoubleToString(lp.percentile * 100) + " percentile latency (ns)   : ",
+            lp.sample_latency);
+      }
     }
-    
   }
 
   summary(
@@ -630,22 +630,23 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
   }
   // Detailed first token latencies
   if (settings.use_token_latencies){
-    MLPERF_LOG(detail, "result_first_token_min_latency_ns", first_token_latency_min);
-    MLPERF_LOG(detail, "result_first_token_max_latency_ns", first_token_latency_max);
-    MLPERF_LOG(detail, "result_first_token_mean_latency_ns", first_token_latency_mean);
-    for (auto& lp : token_latency_percentiles) {
-      MLPERF_LOG(detail,
-                  "result_" + DoubleToString(lp.percentile * 100) +
-                      "_percentile_latency_ns",
-                  lp.sample_latency);
-    }
-    double tps_w_lg = ((double)token_count) / pr.final_query_issued_time;
-    double tps_wo_lg= ((double)token_count) / (sample_latency_mean * sample_count);
-    MLPERF_LOG(detail, "result_token_throughput_with_loadgen_overhead", tps_w_lg);
-    MLPERF_LOG(detail, "result_token_throughput", tps_wo_lg);
-    double tpot = sample_count * (sample_latency_mean - first_token_latency_mean) / ((double)token_count);
-    MLPERF_LOG(detail, "result_time_to_output_token", tpot);
-    if (settings.scenario == TestScenario::Offline) {
+    if (settings.scenario != TestScenario::Offline) {
+      MLPERF_LOG(detail, "result_first_token_min_latency_ns", first_token_latency_min);
+      MLPERF_LOG(detail, "result_first_token_max_latency_ns", first_token_latency_max);
+      MLPERF_LOG(detail, "result_first_token_mean_latency_ns", first_token_latency_mean);
+      for (auto& lp : token_latency_percentiles) {
+        MLPERF_LOG(detail,
+                    "result_" + DoubleToString(lp.percentile * 100) +
+                        "_percentile_latency_ns",
+                    lp.sample_latency);
+      }
+      double tps_w_lg = ((double)token_count) / pr.final_query_issued_time;
+      double tps_wo_lg= ((double)token_count) / (sample_latency_mean * sample_count);
+      MLPERF_LOG(detail, "result_token_throughput_with_loadgen_overhead", tps_w_lg);
+      MLPERF_LOG(detail, "result_token_throughput", tps_wo_lg);
+      double tpot = sample_count * (sample_latency_mean - first_token_latency_mean) / ((double)token_count);
+      MLPERF_LOG(detail, "result_time_to_output_token", tpot);
+    } else {
       double tokens_per_second = token_count / pr.max_latency;
       MLPERF_LOG(detail, "result_tokens_per_second", tokens_per_second);
     }

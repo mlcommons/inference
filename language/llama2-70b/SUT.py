@@ -179,10 +179,10 @@ class SUT():
                 input_len = []
                 for q in qitem:
                     input_ids_tensor.append(pad(self.data_object.input_ids[q.index],
-                                                (0, max_seq_len - self.data_object.input_lens[q.index], 0, 0),
+                                                (max_seq_len - self.data_object.input_lens[q.index], 0, 0, 0),
                                                 value=self.tokenizer.pad_token_id))
                     input_masks_tensor.append(pad(self.data_object.attention_masks[q.index],
-                                                  (0, max_seq_len - self.data_object.input_lens[q.index], 0, 0),
+                                                  (max_seq_len - self.data_object.input_lens[q.index], 0, 0, 0),
                                                  value=0))
                     input_len.append(self.data_object.input_lens[q.index])
                 input_ids_tensor = torch.cat(input_ids_tensor)

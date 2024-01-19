@@ -15,13 +15,16 @@ def get_args():
     parser.add_argument(
         "--n", type=int, default=10, help="Dataset download location"
     )
+    parser.add_argument(
+        "--seed", "-s", type=int, default=926019364, help="Dataset download location"
+    )
     args = parser.parse_args()
     return args
 
 
 if __name__ == "__main__":
     args = get_args()
-    np.random.seed(42)
+    np.random.seed(args.seed)
     df_annotations = pd.read_csv(f"{args.tsv_path}", sep="\t")
     sample_ids = list(np.random.choice(df_annotations.shape[0], args.n))
     with open(args.output_path, "w+") as f:

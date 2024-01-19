@@ -5,6 +5,7 @@ This repository provides the compliance tests that need to be run by the submitt
 1. [Introduction](#introduction)
 2. [Test Infrastructure](#Test-Infrastructure)
 3. [Test Methodology](#Test-Methodology)
+4. [Tests Required for each Benchmark](#tests-required-for-each-benchmark)
 
 ## Introduction
 The purpose of compliance testing is to ensure a basic level of compliance with a subset of the MLPerf rules. The tests are designed to be complementary to third-party auditing which will be introduced in future rounds of MLPerf. The tests are not meant to root-cause issues with the submission, but can help detect anomalies in the submission that need to be investigated further by the submitter.
@@ -25,5 +26,16 @@ Run the provided python-based verification script to ensure that the compliance 
 ## Test Submission
 The `run_verification.py` found in each test directory will copy the test files to be submitted to the directory specified. These files will follow the directory structure specified in [https://github.com/mlperf/policies/blob/master/submission_rules.adoc#562-inference](https://github.com/mlperf/policies/blob/master/submission_rules.adoc#562-inference) under `audit/` and are must be uploaded in order for the submission to be considered valid.
 
+## Tests Required for each Benchmark
 
-
+| model | Required Compliance Tests
+| ---- | ---- |
+| resnet50-v1.5 | [TEST01](./TEST01/), [TEST04](./TEST04/), [TEST05](./TEST05/) |
+| retinanet 800x800 | [TEST01](./TEST01/), [TEST05](./TEST05/) |
+| bert | [TEST01](./TEST01/), [TEST05](./TEST05/) |
+| dlrm-v2 | [TEST01](./TEST01/), [TEST05](./TEST05/) |
+| 3d-unet | [TEST01](./TEST01/), [TEST05](./TEST05/) |
+| rnnt | [TEST01](./TEST01/), [TEST05](./TEST05/) |
+| gpt-j | - |
+| stable-diffusion-xl | - |
+| Llama2-70b | [TEST06]() |

@@ -22,7 +22,7 @@ def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json")
-    parser.add_argument("--dataset-dir", required=True, help="coco directory")
+    parser.add_argument("--caption-path", default="coco2014/captions/captions_source.tsv", help="path to coco captions")
     parser.add_argument("--statistics-path", default=None, help="path to statistics")
     parser.add_argument("--verbose", action="store_true", help="verbose messages")
     parser.add_argument("--output-file", default="coco-results.json", help="path to output file")
@@ -43,14 +43,11 @@ def preprocess_image(img_dir, file_name):
 
 def main():
     args = get_args()
-    annotations_file = os.environ.get('DATASET_ANNOTATIONS_FILE_PATH')
-    if not annotations_file:
-        annotations_file = os.path.join(args.dataset_dir, "captions", "captions.tsv")
-    
+
     result_dict = {}
 
     # Load dataset annotations
-    df_captions = pd.read_csv(annotations_file, sep="\t")
+    df_captions = pd.read_csv(args.caption_path, sep="\t")
 
     # Load model outputs
     with open(args.mlperf_accuracy_file, "r") as f:
@@ -88,9 +85,10 @@ def main():
             100 * clip.get_clip_score(caption, generated_img).item()
         )
     fid_score = compute_fid(result_list, statistics_path, device)
-        
+
     result_dict["FID_SCORE"] = fid_score
     result_dict["CLIP_SCORE"] = np.mean(clip_scores)
+    print(f"Accuracy Results: {result_dict}")
 
     with open(args.output_file, "w") as fp:
         json.dump(result_dict, fp, sort_keys=True, indent=4)

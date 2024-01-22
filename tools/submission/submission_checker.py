@@ -1281,6 +1281,23 @@ REQUIRED_TEST01_ACC_FILES = REQUIRED_TEST01_ACC_FILES_1 + [
     "compliance_accuracy.txt",
 ]
 
+OFFLINE_MIN_SPQ_SINCE_V4 = {
+    "resnet": 24576,
+    "retinanet": 24576,
+    "bert-99": 10833,
+    "bert-99.9": 10833,
+    "dlrm-v2-99": 24576,
+    "dlrm-v2-99.9": 24576,
+    "3d-unet-99": 43,
+    "3d-unet-99.9": 43,
+    "rnnt": 2513,
+    "gptj-99": 13368,
+    "gptj-99.9": 13368,
+    "llama2-70b-99": 24576,
+    "llama2-70b-99.9": 24576,
+    "stable-diffusion-xl": 5000
+}
+
 SCENARIO_MAPPING = {
     "singlestream": "SingleStream",
     "multistream": "MultiStream",
@@ -1526,7 +1543,7 @@ class Config:
         self.seeds = self.base["seeds"]
         self.test05_seeds = self.base["test05_seeds"]
         self.accuracy_target = self.base["accuracy-target"]
-        self.accuracy_upper_limit = self.base["accuracy-upper-limit"]
+        self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
         self.performance_sample_count = self.base["performance-sample-count"]
         self.latency_constraint = self.base.get("latency-constraint", {})
         self.min_queries = self.base.get("min-queries", {})
@@ -2082,7 +2099,8 @@ def check_performance_dir(
                 )
                 is_valid = False
 
-        if scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ):
+        if config.version in ["v0.5", "v0.7", "v1.0", "v1.1", "v2.0", "v2.1", "v3.0", "v3.1"] and scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ) or \
+        scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ_SINCE_V4[model]):
             log.error(
                 "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
                 fname,

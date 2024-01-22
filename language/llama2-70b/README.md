@@ -8,6 +8,11 @@
 
 ## Prepare environment
 
+Copy the mlperf.conf file to this folder.
+```
+cp ../../mlperf.conf .
+```
+
 For a CPU-only run:
 
 ```

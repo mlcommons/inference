@@ -636,16 +636,28 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
       MLPERF_LOG(detail, "result_first_token_mean_latency_ns", first_token_latency_mean);
       for (auto& lp : token_latency_percentiles) {
         MLPERF_LOG(detail,
-                    "result_" + DoubleToString(lp.percentile * 100) +
+                    "result_first_token_" + DoubleToString(lp.percentile * 100) +
                         "_percentile_latency_ns",
                     lp.sample_latency);
+        if ((lp.percentile == .999) & (lp.sample_latency > settings.server_ttft_latency)){
+          MLPERF_LOG_WARNING(detail, "warning_generic_message", 
+            "Value for result_first_token_" + DoubleToString(lp.percentile * 100) +
+            "_percentile_latency_ns greater than target time_to_first_token"
+          );
+        }
       }
       double tps_w_lg = ((double)token_count) / pr.final_query_issued_time;
       double tps_wo_lg= ((double)token_count) / (sample_latency_mean * sample_count);
       MLPERF_LOG(detail, "result_token_throughput_with_loadgen_overhead", tps_w_lg);
       MLPERF_LOG(detail, "result_token_throughput", tps_wo_lg);
-      double tpot = sample_count * (sample_latency_mean - first_token_latency_mean) / ((double)token_count);
+      uint64_t tpot = sample_count * (sample_latency_mean - first_token_latency_mean) / (token_count);
       MLPERF_LOG(detail, "result_time_to_output_token", tpot);
+      if (tpot > settings.server_tpot_latency){
+        MLPERF_LOG_WARNING(detail, "warning_generic_message",
+          "Value for result_time_to_output_token "
+          "greater than target time_to_output_token"
+        );
+      }
     } else {
       double tokens_per_second = token_count / pr.max_latency;
       MLPERF_LOG(detail, "result_tokens_per_second", tokens_per_second);

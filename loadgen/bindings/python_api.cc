@@ -336,6 +336,8 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::test05_sample_index_rng_seed)
       .def_readwrite("test05_schedule_rng_seed", &TestSettings::test05_schedule_rng_seed)
       .def_readwrite("use_token_latencies", &TestSettings::use_token_latencies)
+      .def_readwrite("ttft_latency", &TestSettings::server_ttft_latency)
+      .def_readwrite("tpot_latency", &TestSettings::server_tpot_latency)
       .def("FromConfig", &TestSettings::FromConfig, "FromConfig.");
 
   pybind11::enum_<LoggingMode>(m, "LoggingMode")

@@ -1389,6 +1389,17 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
     }
 }
 
+LLAMA2_LATENCY_LIMITS = {
+    "interactive": {
+        "ttft": 500,
+        "tpot": 50
+    },
+    "conversational": {
+        "ttft": 2000,
+        "tpot": 200
+    }
+}
+
 ACC_PATTERN = {
     "acc": r"^accuracy=([\d\.]+).*",
     "AUC": r"^AUC=([\d\.]+).*",
@@ -1891,6 +1902,19 @@ def check_accuracy_dir(config, model, path, verbose):
     return is_valid, result_acc
 
 
+def extra_check_llama2(mlperf_log, scenario):
+    if (mlperf_log["use_token_latencies"]):
+        if scenario == "Offline":
+            # For offline no further checks are necessary
+            return None, True
+        else:
+            for constraint, limits in LLAMA2_LATENCY_LIMITS.items():
+                if mlperf_log["result_first_token_99.9_percentile_latency_ns"] < limits["ttft"] and mlperf_log["result_time_to_output_token"] < limits["tpot"]:
+                    return constraint, True
+    else:
+        return None, False
+            
+
 def get_performance_metric(
     config, model, path, scenario_fixed, division, system_json, has_power=False
 ):
@@ -1911,6 +1935,8 @@ def get_performance_metric(
     )
 
     res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+    if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
+        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario_for_res]])
 
     inferred = False
     if scenario_fixed != scenario:
@@ -1946,6 +1972,9 @@ def check_performance_dir(
         res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
         if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
             res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario_for_res]])
+        
+        if model in ["llama2-70b-99", "llama2-70b-99.9"]:
+            llama_constraint, is_valid = extra_check_llama2(mlperf_log, scenario_fixed)
 
         latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
         latency_mean = mlperf_log["result_mean_latency_ns"]

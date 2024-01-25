@@ -408,6 +408,7 @@ def phases_check(
 
         with open(spl_fname) as f:
             for line in f:
+                if not line.startswith("Time"): continue
                 timestamp = (
                     datetime.strptime(line.split(",")[1], datetime_format)
                 ).replace(tzinfo=timezone.utc)

@@ -44,7 +44,7 @@ def get_args():
         default=False, action="store_true")
     parser.add_argument(
         "--version",
-        default="v3.1",
+        default="v4.0",
         choices=list(checker.MODEL_CONFIG.keys()),
         help="mlperf version")
     parser.add_argument("--submitter", help="filter to submitter")

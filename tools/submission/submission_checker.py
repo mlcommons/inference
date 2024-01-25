@@ -3071,24 +3071,21 @@ def check_results_dir(
                                 model_name,
                                 scenario,
                             )
-                            if not os.path.exists(compliance_dir) and "gptj" not in model_name:
-                                log.error("no compliance dir for %s", name)
+                            if not check_compliance_dir(
+                                compliance_dir,
+                                mlperf_model,
+                                scenario_fixed,
+                                config,
+                                division,
+                                system_json,
+                                name
+                            ):
+                                log.error(
+                                    "compliance dir %s has issues", compliance_dir
+                                )
                                 results[name] = None
                             else:
-                                if not check_compliance_dir(
-                                    compliance_dir,
-                                    mlperf_model,
-                                    scenario_fixed,
-                                    config,
-                                    division,
-                                    system_json,
-                                ):
-                                    log.error(
-                                        "compliance dir %s has issues", compliance_dir
-                                    )
-                                    results[name] = None
-                                else:
-                                    compliance = 1
+                                compliance = 1
 
                         if results.get(name):
                             if accuracy_is_valid:
@@ -3476,7 +3473,7 @@ def check_compliance_acc_dir(test_dir, model, config):
 
 
 def check_compliance_dir(
-    compliance_dir, model, scenario, config, division, system_json
+    compliance_dir, model, scenario, config, division, system_json, name
 ):
     compliance_perf_pass = True
     compliance_perf_dir_pass = True
@@ -3516,6 +3513,10 @@ def check_compliance_dir(
         "llama2-70b-99.9",
     ]:
         test_list.append("TEST06") 
+
+    if test_list and not os.path.exists(compliance_dir):
+        log.error("no compliance dir for %s: %s", name, compliance_dir)
+        return False
 
     # Check performance of all Tests
     for test in test_list:

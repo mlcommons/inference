@@ -174,9 +174,9 @@ class PostProcessCoco:
         for id in ids:
             caption = ds.get_caption(id)
             generated = Image.fromarray(self.results[idx[id]])
-            image_path_tmp = f"images/{self.content_ids[id]}.png"
+            image_path_tmp = f"images/{self.content_ids[idx[id]]}.png"
             generated.save(image_path_tmp)
-            info.append((self.content_ids[id], caption))
+            info.append((self.content_ids[idx[id]], caption))
         with open("images/captions.txt", "w+") as f:
             for id, caption in info:
                 f.write(f"{id}  {caption}\n")

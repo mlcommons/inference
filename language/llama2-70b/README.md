@@ -195,15 +195,15 @@ if [ -e ${ACCURACY_LOG_FILE} ]; then
 fi
 ```
 
-The ServerSUT was not tested for GPU runs. You can try setting `--device cuda:0`, but YMMV.
+The ServerSUT was not tested for GPU runs.
 
 
 ## Accuracy Target
 Running the GPU implementation in FP32 precision resulted in the following FP32 accuracy targets (normalized to a 0-100
 scale from a 0.0-1.0 scale):
-- Rouge1: 43.88
-- Rouge2: 21.7108
-- RougeL: 28.2502
-- RougeLsum: 41.4821
+- Rouge1: 44.4312
+- Rouge2: 22.0352
+- RougeL: 28.6162
+- Tokens per sample: 294.45
 
-This was run an 8xH100 node. Total runtime was ~4.5 days.
+This was run on a DGX-H100 node. Total runtime was ~4.5 days.

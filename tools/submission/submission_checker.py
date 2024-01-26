@@ -1785,6 +1785,8 @@ def check_extra_files(path, target_files):
                 if target_file not in files:
                     check_pass = False
                     missing_files.append(f"{os.path.join(path, dir, target_file)}.png")
+            if "captions" not in files:
+                missing_files.append(f"{os.path.join(path, dir, 'captions.txt')}")
     return check_pass, missing_files
 
 

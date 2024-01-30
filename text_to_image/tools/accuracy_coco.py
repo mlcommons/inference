@@ -67,7 +67,7 @@ def main():
     dump_compliance_images = False
     if args.compliance_images_path:
         dump_compliance_images = True
-        compliance_images_idx_list = [0]
+        compliance_images_idx_list = []
         with open(os.path.join(os.path.dirname(__file__), "sample_ids.txt"), 'r') as file:
             for line in file:
                 idx = int(line.strip())

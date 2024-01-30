@@ -2261,6 +2261,8 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
     power_list = []
     with open(spl_fname) as f:
         for line in f:
+            if not line.startswith("Time"):
+                continue
             timestamp = (
                 datetime.datetime.strptime(line.split(",")[1], datetime_format)
                 + server_timezone

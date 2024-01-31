@@ -118,7 +118,7 @@ void PerformanceSummary::ProcessTokenLatencies() {
   }
 
   target_tpot_percentile.sample_latency =
-      pr.token_results.time_per_output_token_arr[sample_count * token_target_latency_percentile.percentile];
+      pr.token_results.time_per_output_token_arr[sample_count * target_tpot_percentile.percentile];
   time_per_output_token_min = pr.token_results.time_per_output_token_arr.front();
   time_per_output_token_max = pr.token_results.time_per_output_token_arr.back();
   for (auto& lp : tpot_percentiles) {
@@ -336,10 +336,28 @@ bool PerformanceSummary::PerfConstraintsMet(std::string* recommendation) {
       break;
     case TestScenario::Server:
       ProcessLatencies();
-      if (target_latency_percentile.sample_latency >
-          settings.target_latency.count()) {
-        *recommendation = "Reduce target QPS to improve latency.";
-        perf_constraints_met = false;
+      if (!settings.use_token_latencies){
+        if (target_latency_percentile.sample_latency >
+            settings.target_latency.count()) {
+          *recommendation = "Reduce target QPS to improve latency.";
+          perf_constraints_met = false;
+        }
+      } else {
+        if ( token_target_latency_percentile.sample_latency >
+            settings.server_ttft_latency) {
+          *recommendation = "TTFT constrain not met: Reduce target QPS to improve latency.";
+          perf_constraints_met = false;
+        }
+
+        if ( target_tpot_percentile.sample_latency >
+            settings.server_tpot_latency) {
+          if (recommendation->empty()){
+            *recommendation = "TPOT constrain not met: Reduce target QPS to improve latency.";
+          } else {
+            recommendation->append("\n * TPOT constrain not met: Reduce target QPS to improve latency.");
+          }
+          perf_constraints_met = false;
+        }
       }
       break;
     case TestScenario::Offline:

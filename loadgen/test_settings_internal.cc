@@ -482,7 +482,12 @@ void TestSettingsInternal::LogAllSettings() const {
 void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("samples_per_query : ", samples_per_query);
   summary("target_qps : ", target_qps);
-  summary("target_latency (ns): ", target_latency.count());
+  if (!use_token_latencies){
+    summary("target_latency (ns): ", target_latency.count());
+  } else {
+    summary("ttft_latency (ns): ", server_ttft_latency);
+    summary("tpot_latency (ns): ", server_tpot_latency);
+  }
   summary("max_async_queries : ", max_async_queries);
   summary("min_duration (ms): ", min_duration.count());
   summary("max_duration (ms): ", max_duration.count());

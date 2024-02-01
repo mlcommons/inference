@@ -26,6 +26,7 @@ def get_args():
     parser.add_argument("--statistics-path", default=None, help="path to statistics")
     parser.add_argument("--verbose", action="store_true", help="verbose messages")
     parser.add_argument("--output-file", default="coco-results.json", help="path to output file")
+    parser.add_argument("--compliance-images-path", required=False, help="path to dump 10 stable diffusion xl compliance images")
     parser.add_argument("--device", default="cpu", choices=["gpu", "cpu"])
     args = parser.parse_args()
     return args
@@ -43,7 +44,6 @@ def preprocess_image(img_dir, file_name):
 
 def main():
     args = get_args()
-
     result_dict = {}
 
     # Load dataset annotations
@@ -63,6 +63,22 @@ def main():
     if args.statistics_path is None:
         statistics_path = os.path.join(os.path.dirname(__file__), "val2014.npz")
 
+    # Set compliance images path
+    dump_compliance_images = False
+    if args.compliance_images_path:
+        if not os.path.exists(args.compliance_images_path):
+            os.makedirs(args.compliance_images_path)
+        dump_compliance_images = True
+        compliance_images_idx_list = []
+        with open(os.path.join(os.path.dirname(__file__), "sample_ids.txt"), 'r') as compliance_id_file:
+            for line in compliance_id_file:
+                idx = int(line.strip())
+                compliance_images_idx_list.append(idx)
+        # Dump caption.txt
+        with open(os.path.join(args.compliance_images_path, "captions.txt"), "w+") as caption_file:
+            for idx in compliance_images_idx_list:
+                caption_file.write(f"{idx}  {df_captions.iloc[idx]['caption']}\n")
+
     # Load torchmetrics modules
     clip = CLIPEncoder(device=device)
     clip_scores = []
@@ -78,6 +94,11 @@ def main():
         generated_img = np.frombuffer(bytes.fromhex(j['data']), np.uint8).reshape(1024, 1024, 3)
         result_list.append(generated_img)
         generated_img = Image.fromarray(generated_img)
+
+        # Dump compliance images
+        if dump_compliance_images and idx in compliance_images_idx_list:
+            generated_img.save(os.path.join(args.compliance_images_path, f"{idx}.png"))
+
         # generated_img = torch.Tensor(generated_img).to(torch.uint8).to(device)
         # Load Ground Truth
         caption = df_captions.iloc[idx]["caption"]

@@ -140,7 +140,12 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
     // into the lambda; even with C++14.
     std::vector<uint8_t>* token_data_copy = nullptr;
-    if (mode == TestMode::AccuracyOnly) {
+    double accuracy_log_val =
+        sample->accuracy_log_val + accuracy_log_offset < 1.0
+            ? sample->accuracy_log_val + accuracy_log_offset
+            : sample->accuracy_log_val + accuracy_log_offset - 1.0;
+    if (mode == TestMode::AccuracyOnly ||
+        accuracy_log_val <= accuracy_log_prob) {
       uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
       uint8_t* src_end = src_begin + response->size;
       token_data_copy = new std::vector<uint8_t>(src_begin, src_end);

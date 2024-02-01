@@ -61,7 +61,6 @@ def first_token_check(acc_data, dtype):
     for sample in acc_data:
         data = np.frombuffer(bytes.fromhex(sample["data"]), dtype=dtype)
         token_data = np.frombuffer(bytes.fromhex(sample["token_data"]), dtype=dtype)
-        print(token_data)
         for t1, t2 in zip(data, token_data):
             if t1 != t2:
                 return False

@@ -66,12 +66,18 @@ def main():
     # Set compliance images path
     dump_compliance_images = False
     if args.compliance_images_path:
+        if not os.path.exists(args.compliance_images_path):
+            os.makedirs(args.compliance_images_path)
         dump_compliance_images = True
         compliance_images_idx_list = []
-        with open(os.path.join(os.path.dirname(__file__), "sample_ids.txt"), 'r') as file:
-            for line in file:
+        with open(os.path.join(os.path.dirname(__file__), "sample_ids.txt"), 'r') as compliance_id_file:
+            for line in compliance_id_file:
                 idx = int(line.strip())
                 compliance_images_idx_list.append(idx)
+        # Dump caption.txt
+        with open(os.path.join(args.compliance_images_path, "captions.txt"), "w+") as caption_file:
+            for idx in compliance_images_idx_list:
+                caption_file.write(f"{idx}  {df_captions.iloc[idx]['caption']}\n")
 
     # Load torchmetrics modules
     clip = CLIPEncoder(device=device)

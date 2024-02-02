@@ -529,6 +529,9 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   std::vector<QuerySampleLatency> first_token_latencies(
     GlobalLogger().GetTokenLatencies(expected_latencies));
 
+  std::vector<QuerySampleLatency> time_per_output_token_arr(
+    GlobalLogger().GetTimePerOutputToken(expected_latencies));
+
   std::vector<int64_t> tokens_per_sample(
     GlobalLogger().GetTokensPerSample(expected_latencies));
 
@@ -588,6 +591,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
                           final_query_all_samples_done_time,
                           TokenPerformanceResults{
                             first_token_latencies,
+                            time_per_output_token_arr,
                             tokens_per_sample
                           }
                         };

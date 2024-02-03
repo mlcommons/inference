@@ -8,6 +8,14 @@ This is the reference implementation for MLPerf Inference text to image
 | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
 | StableDiffusion | - | Coco2014 | [fp32](https://cloud.mlcommons.org/index.php/s/DjnCSGyNBkWA4Ro) and [f16](https://cloud.mlcommons.org/index.php/s/LCdW5RM6wgGWbxC) | [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) | fp32 | NCHW |
 
+The following MLCommons CM commands can be used to programmatically download the model checkpoints. 
+
+```
+pip install cmind
+cm pull repo mlcommons@ck
+cm run script --tags=get,ml-model,sdxl,_fp16,_rclone -j
+cm run script --tags=get,ml-model,sdxl,_fp32,_rclone -j
+```
 ## Dataset
 
 | Data | Description |

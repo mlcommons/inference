@@ -285,13 +285,19 @@ void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
     return;
   }
   *accuracy_out_ << (accuracy_needs_comma_ ? ",\n{ " : "\n{ ");
-  if (!use_tokens_ || !needs_first_token_){
+  if (!use_tokens_){
     LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
           response);
-  } else {
+  } else if (!needs_first_token_)
+  {
     const size_t i = seq_id - latencies_first_sample_sequence_id_;
     LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
-          response, "token_data", token_records_[i]);
+          response, "token_count", tokens_per_sample_[i]);
+  }
+  else {
+    const size_t i = seq_id - latencies_first_sample_sequence_id_;
+    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
+          response, "token_data", token_records_[i], "token_count", tokens_per_sample_[i]);
   }
   
   *accuracy_out_ << " }";

@@ -279,7 +279,8 @@ void AsyncLog::StopTrace() {
 }
 
 void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
-                           const LogBinaryAsHexString& response) {
+                           const LogBinaryAsHexString& response,
+                           int64_t n_tokens = 0) {
   std::unique_lock<std::mutex> lock(log_mutex_);
   if (!accuracy_out_) {
     return;
@@ -290,14 +291,13 @@ void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
           response);
   } else if (!needs_first_token_)
   {
-    const size_t i = seq_id - latencies_first_sample_sequence_id_;
     LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
-          response, "token_count", tokens_per_sample_[i]);
+          response, "token_count", n_tokens);
   }
   else {
     const size_t i = seq_id - latencies_first_sample_sequence_id_;
     LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
-          response, "token_data", token_records_[i], "token_count", tokens_per_sample_[i]);
+          response, "token_data", token_records_[i], "token_count", n_tokens);
   }
   
   *accuracy_out_ << " }";

@@ -318,9 +318,7 @@ std::vector<QueryMetadata> GenerateQueries(
 
   // When sample_concatenate_permutation is turned on, pad to a multiple of the
   // complete dataset to ensure complete fairness.
-  // FIXME: Only override this for Offline; fix after v2.0
   if (settings.sample_concatenate_permutation &&
-      scenario == TestScenario::Offline &&
       samples_per_query % loaded_samples.size() != 0) {
     size_t pad_size =
         (loaded_samples.size() - samples_per_query % loaded_samples.size());
@@ -380,10 +378,7 @@ std::vector<QueryMetadata> GenerateQueries(
         }
       }
     } else {
-      // FIXME: only used for v2.0 3D-UNet KiTS19 SingleStream
-      // TODO: consolidate after v2.0
-      auto equal_issue = settings.sample_concatenate_permutation &&
-                         scenario == TestScenario::SingleStream;
+      auto equal_issue = settings.sample_concatenate_permutation;
       for (auto& s : samples) {
         s = loaded_samples[settings.performance_issue_unique
                            ? sample_distribution_unique(sample_rng)

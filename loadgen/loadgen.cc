@@ -120,7 +120,7 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
 
       if (sample_data_copy) {
         log.LogAccuracy(sample->sequence_id, sample->sample_index,
-                        LogBinaryAsHexString{sample_data_copy});
+                        LogBinaryAsHexString{sample_data_copy}, n_tokens);
         delete sample_data_copy;
       }
 

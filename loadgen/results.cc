@@ -650,6 +650,10 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
   if (!settings.use_token_latencies){
     MLPERF_LOG(detail, "early_stopping_result", early_stopping_recommendation);
   } else{
+    std::replace(early_stopping_ttft_recommendation.begin(),
+               early_stopping_ttft_recommendation.end(), '\n', ' ');
+    std::replace(early_stopping_tpot_recommendation.begin(),
+                early_stopping_tpot_recommendation.end(), '\n', ' ');
     MLPERF_LOG(detail, "early_stopping_ttft_result", early_stopping_ttft_recommendation);
     MLPERF_LOG(detail, "early_stopping_tpot_result", early_stopping_tpot_recommendation);
   }

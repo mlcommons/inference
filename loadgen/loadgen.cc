@@ -227,10 +227,8 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
              auto& gen) mutable { return dist(gen); };
 }
 
-/// \brief SampleDistribution for 3D-UNet SingleStream, for v2.0
-// FIXME: meant for 3D UNet SingleStream only at the moment but the logic should
-// work for others
-// TODO: consolidate the distribution generator after v2.0
+/// \brief Sample across the dataset, and ensure coverage of each of the samples.
+// Useful for non-uniform dataset (e.g. Llama2, GPTJ, 3d-unet)
 auto SampleDistributionEqualIssue(size_t sample_count, size_t set_size,
                                   std::mt19937* rng) {
   std::vector<size_t> indices;

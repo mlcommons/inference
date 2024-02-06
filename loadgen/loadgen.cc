@@ -316,9 +316,10 @@ std::vector<QueryMetadata> GenerateQueries(
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
-  // When sample_concatenate_permutation is turned on, pad to a multiple of the
+  // When sample_concatenate_permutation is turned on for Offline mode, pad to a multiple of the
   // complete dataset to ensure complete fairness.
   if (settings.sample_concatenate_permutation &&
+      scenario == TestScenario::Offline &&
       samples_per_query % loaded_samples.size() != 0) {
     size_t pad_size =
         (loaded_samples.size() - samples_per_query % loaded_samples.size());

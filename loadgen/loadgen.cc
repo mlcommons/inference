@@ -306,8 +306,6 @@ std::vector<QueryMetadata> GenerateQueries(
   auto sample_distribution_unique = SampleDistribution<TestMode::AccuracyOnly>(
       loaded_sample_set.sample_distribution_end, sample_stride, &sample_rng);
 
-  // FIXME: Only used for v2.0 3D-UNet KiTS19 SingleStream
-  // TODO: Need to consolidate the code for any generic usage after v2.0
   auto sample_distribution_equal_issue =
       SampleDistributionEqualIssue(min_queries,
                                    loaded_samples.size(),
@@ -316,14 +314,25 @@ std::vector<QueryMetadata> GenerateQueries(
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
 
-  // When sample_concatenate_permutation is turned on for Offline mode, pad to a multiple of the
-  // complete dataset to ensure complete fairness.
-  if (settings.sample_concatenate_permutation &&
-      scenario == TestScenario::Offline &&
-      samples_per_query % loaded_samples.size() != 0) {
-    size_t pad_size =
+  // When sample_concatenate_permutation is turned on, pad to a multiple of the
+  // complete dataset to ensure fairness.
+  auto enable_equal_issue = settings.sample_concatenate_permutation;
+  if (enable_equal_issue)
+  {
+    if (scenario == TestScenario::Offline &&
+      samples_per_query % loaded_samples.size() != 0)
+    {
+      // In offline mode, we pad samples_per_query
+      size_t pad_size =
         (loaded_samples.size() - samples_per_query % loaded_samples.size());
-    samples_per_query += pad_size;
+      samples_per_query += pad_size;
+    }
+    else if (min_queries % loaded_samples.size() != 0)
+    {
+      // In Server, SingleStream, MultiStream mode, the min_queries should be padded
+      size_t pad_size = (loaded_samples.size() - min_queries % loaded_samples.size());
+      min_queries += pad_size;
+    }
   }
 
   std::vector<QuerySampleIndex> samples(samples_per_query);
@@ -379,13 +388,12 @@ std::vector<QueryMetadata> GenerateQueries(
         }
       }
     } else {
-      auto equal_issue = settings.sample_concatenate_permutation;
       for (auto& s : samples) {
         s = loaded_samples[settings.performance_issue_unique
                            ? sample_distribution_unique(sample_rng)
                            : settings.performance_issue_same
                              ? same_sample
-                             : equal_issue
+                             : enable_equal_issue
                                ? sample_distribution_equal_issue(sample_rng)
                                : sample_distribution(sample_rng)];
       }
@@ -393,6 +401,13 @@ std::vector<QueryMetadata> GenerateQueries(
     queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
     prev_timestamp = timestamp;
     timestamp += schedule_distribution(schedule_rng);
+    // In equal_issue mode, the min_queries will be bumped up by a multiple of the dataset size
+    // if the test time has not met the threshold.
+    if (enable_equal_issue && (queries.size() >= min_queries) &&
+      (prev_timestamp < gen_duration) && (scenario != TestScenario::Offline))
+    {
+      min_queries += loaded_samples.size();
+    }
   }
 
   // See if we need to create a "remainder" query for offline+accuracy to

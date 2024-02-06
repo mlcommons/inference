@@ -399,10 +399,18 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
       //    the 1 second time point; but that would be the 1001th sample in
       //    the stream. Given the first 1001 queries, the QPS is
       //    1000 queries / 1 second.
+      // TODO: make a more permanent solution
+      if (settings.use_token_latencies){
+      double qps_as_completed =
+        (sample_count - 1) / pr.final_query_all_samples_done_time;
+      summary("Completed samples per second    : ",
+              DoubleToString(qps_as_completed));
+    } else {
       double qps_as_scheduled =
           (sample_count - 1) / pr.final_query_scheduled_time;
       summary("Scheduled samples per second : ",
               DoubleToString(qps_as_scheduled));
+    }
       break;
     }
     case TestScenario::Offline: {
@@ -516,10 +524,18 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
     summary("QPS w/o loadgen overhead        : " + DoubleToString(qps_wo_lg));
     summary("");
   } else if (settings.scenario == TestScenario::Server) {
-    double qps_as_completed =
+    // TODO: make a more permanent solution
+    if (!settings.use_token_latencies){
+      double qps_as_completed =
         (sample_count - 1) / pr.final_query_all_samples_done_time;
-    summary("Completed samples per second    : ",
-            DoubleToString(qps_as_completed));
+      summary("Completed samples per second    : ",
+              DoubleToString(qps_as_completed));
+    } else {
+      double qps_as_scheduled =
+          (sample_count - 1) / pr.final_query_scheduled_time;
+      summary("Scheduled samples per second : ",
+              DoubleToString(qps_as_scheduled));
+    }
     summary("");
   } else if (settings.scenario == TestScenario::MultiStream) {
     summary("Per-query latency:  ");

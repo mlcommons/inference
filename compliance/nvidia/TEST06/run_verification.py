@@ -112,7 +112,7 @@ def main():
     output += f"EOS check pass: {eos_pass}\n"
 
     # Add sample length check
-    output += f"Sample lenght check pass: {sample_len_pass}\n"
+    output += f"Sample length check pass: {sample_len_pass}\n"
 
     if eos_pass and first_token_pass and sample_len_pass:
         output += "TEST06 verification complete\n"

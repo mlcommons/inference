@@ -439,6 +439,8 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
         summary("Tokens per second: ", tokens_per_second);
         break;
       }
+      case TestScenario::Server:
+        break;
     }
   }
 

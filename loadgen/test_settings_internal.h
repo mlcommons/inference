@@ -83,8 +83,8 @@ struct TestSettingsInternal {
 
   bool sample_concatenate_permutation;
   bool use_token_latencies = false;
-  uint64_t server_ttft_latency;
-  uint64_t server_tpot_latency;
+  int64_t server_ttft_latency;
+  int64_t server_tpot_latency;
 };
 
 /// \brief A namespace of collections of FindPeakPerformance helper functions,

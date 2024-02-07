@@ -84,6 +84,8 @@ class Dataset():
         assert len(query_id_list) == output_seq.shape[0]
 
         # Save outputs
+        if not os.path.exists("run_outputs"):
+            os.makedirs("run_outputs")
         fname = "q" + "_".join([str(i) for i in query_id_list])
         fname = f"run_outputs/{fname}.pkl"
         with open(fname, mode='wb') as f:

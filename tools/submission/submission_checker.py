@@ -1381,11 +1381,11 @@ RESULT_FIELD_NEW = {
 RESULT_FIELD_BENCHMARK_OVERWRITE = {
     "llama2-70b-99": {
         "Offline": "result_tokens_per_second",
-        "Server": "result_scheduled_samples_per_sec",
+        "Server": "result_completed_samples_per_sec",
     },
     "llama2-70b-99.9": {
         "Offline": "result_tokens_per_second",
-        "Server": "result_scheduled_samples_per_sec",
+        "Server": "result_completed_samples_per_sec",
     }
 }
 

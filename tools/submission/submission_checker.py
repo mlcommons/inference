@@ -1129,7 +1129,9 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": ("CLIP_SCORE", 31.68631873, "FID_SCORE", 23.01085758)
         },
         "accuracy-upper-limit": {
-            "stable-diffusion-xl": ("CLIP_SCORE", 31.81331801, "FID_SCORE", 23.95007626)
+            "stable-diffusion-xl": ("CLIP_SCORE", 31.81331801, "FID_SCORE", 23.95007626),
+            "llama2-70b-99" : ("TOKENS_PER_SAMPLE", 294.45*1.1),
+            "llama2-70b-99.9" : ("TOKENS_PER_SAMPLE", 294.45*1.1)
         },
         "performance-sample-count": {
             "resnet": 1024,
@@ -1847,13 +1849,17 @@ def check_accuracy_dir(config, model, path, verbose):
     acc_targets = []
     if acc_upper_limit is not None:
         acc_limits = []
+        up_patterns = []
         acc_limit_check = True
+        for i in range(0, len(acc_upper_limit), 2):
+            acc_type, acc_target = acc_upper_limit[i:i+2]
+            acc_limits.append(acc_target)
+            up_patterns.append(ACC_PATTERN[acc_type])
+
     for i in range(0, len(target), 2):
         acc_type, acc_target = target[i:i+2]
         patterns.append(ACC_PATTERN[acc_type])
         acc_targets.append(acc_target)
-        if acc_upper_limit is not None:
-            acc_limits.append(acc_upper_limit[i+1])
     acc_seen = [False for _ in acc_targets]
     with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
@@ -1870,12 +1876,21 @@ def check_accuracy_dir(config, model, path, verbose):
                 elif acc is not None:
                     all_accuracy_valid = False
                     log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
-                if acc is not None and acc_upper_limit is not None and float(acc) > acc_limits[i]:
-                    acc_limit_check = False
-                    log.warning("%s accuracy not met: upper limit=%f, found=%s", path, acc_limits[i], acc)
                 if i == 0 and acc:
                     result_acc = acc
                 acc = None
+            if acc_upper_limit is not None:
+                for i, (pattern, acc_limit) in enumerate(zip(up_patterns, acc_limits)):
+                    m = re.match(pattern, line)
+                    if m:
+                        acc = m.group(1)
+                    m = re.match(r"^hash=([\w\d]+)$", line)
+                    if m:
+                        hash_val = m.group(1)
+                    if acc is not None and acc_upper_limit is not None and float(acc) > acc_limit:
+                        acc_limit_check = False
+                        log.warning("%s accuracy not met: upper limit=%f, found=%s", path, acc_limit, acc)
+                    acc = None
             if all(acc_seen) and hash_val:
                 break;
         is_valid = all_accuracy_valid & all(acc_seen)

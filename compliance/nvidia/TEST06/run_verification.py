@@ -61,12 +61,20 @@ def first_token_check(acc_data, dtype):
     for sample in acc_data:
         data = np.frombuffer(bytes.fromhex(sample["data"]), dtype=dtype)
         token_data = np.frombuffer(bytes.fromhex(sample["token_data"]), dtype=dtype)
-        print(token_data)
         for t1, t2 in zip(data, token_data):
             if t1 != t2:
                 return False
         
     return True
+
+def sample_len_check(acc_data, dtype):
+    for sample in acc_data:
+        data = np.frombuffer(bytes.fromhex(sample["data"]), dtype=dtype)
+        token_count = int(sample["token_count"])
+        if len(data) != token_count:
+            return False
+    return True
+
 
 def main():
     args = get_args()
@@ -90,6 +98,8 @@ def main():
             print("Unexpected error occured while doing the first token check")
             first_token_pass = False
 
+    sample_len_pass = sample_len_check(acc_data, DTYPE_MAP[args.dtype])
+
     # Construct output based on the results of checks
     output = ""
     # Add first token check
@@ -101,7 +111,10 @@ def main():
     # Add EOS check
     output += f"EOS check pass: {eos_pass}\n"
 
-    if eos_pass and first_token_pass:
+    # Add sample length check
+    output += f"Sample length check pass: {sample_len_pass}\n"
+
+    if eos_pass and first_token_pass and sample_len_pass:
         output += "TEST06 verification complete\n"
     else:
         output += "TEST06 verification failed\n"

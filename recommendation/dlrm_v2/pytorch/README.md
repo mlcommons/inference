@@ -79,6 +79,15 @@ You can download the weights by running:
 wget https://cloud.mlcommons.org/index.php/s/XzfSeLgW8FYfR3S/download -O weights.zip
 unzip weights.zip
 ```
+
+The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
+
+```
+pip install cmind
+cm pull repo mlcommons@ck
+cm run script --tags=get,ml-model,dlrm,_pytorch,_weight_sharded,_rclone -j
+```
+
 (optional) To speed up future downloads, we recommend you save the weights in a bucket (E.g GCP, AWS). For example, after saving the checkpoint in a GCP bucket, you can download the weights faster by running:
 ```
 export BUCKET_NAME=<BUCKET_CONTAINING_MODEL>

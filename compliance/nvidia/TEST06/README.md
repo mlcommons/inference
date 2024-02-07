@@ -8,9 +8,10 @@ This repository provides the config files and scripts to run and verify TEST 06 
 
 ## Introduction
 
-The purpose of this test is to ensure the consistency of the output of the Llama2 model and avoid a potential EOS exploit. This test will make a performance run, with a limit of 100 samples and logging them into `mlperf_log_accuracy.json`. To achieve a passing result in this test, two criteria must be met:
+The purpose of this test is to ensure the consistency of the output of the Llama2 model and avoid a potential EOS exploit. This test will make a performance run, with a limit of 100 samples and logging them into `mlperf_log_accuracy.json`. To achieve a passing result in this test, three criteria must be met:
 - In the case the first token is reported independently (not applicable for Offline scenario), it should match for every query with the first token of the model output.
 - For each query, the model output should only end with zero or one EOS token
+- The number of reported tokens should match with the length of it's
 
 ## Requisites
 
@@ -36,6 +37,7 @@ Expected output
 ```
 First token check pass: True                
 EOS check pass: True             
+Sample length check pass: True  
 TEST06 verification complete   
 ```
 
@@ -44,5 +46,6 @@ Or:
 ```
 First token check pass: Skipped                
 EOS check pass: True             
+Sample length check pass: True  
 TEST06 verification complete     
 ```

@@ -342,11 +342,11 @@ class SUTServer(SUT):
                                         )
 
             output_tokens = tokens_streamer.get_out_tokens()
-
+            n_tokens = len(output_tokens)
             response_array = array.array("B", np.array(output_tokens, np.int32).tobytes())
             bi = response_array.buffer_info()
             response = [lg.QuerySampleResponse(
-                qitem.id, bi[0], bi[1])]
+                qitem.id, bi[0], bi[1], n_tokens)]
             lg.QuerySamplesComplete(response)
 
 

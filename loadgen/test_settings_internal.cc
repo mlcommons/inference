@@ -690,12 +690,13 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, scenario, "test05_schedule_rng_seed", &test05_schedule_rng_seed, nullptr);
 
   // keys that apply to token metrics
-  if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr))
+  if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)){
     use_token_latencies = (val == 1) ? true : false;
     if (use_token_latencies){
       lookupkv(model, "Server", "ttft_latency", &server_ttft_latency, nullptr, 1000 * 1000);
       lookupkv(model, "Server", "tpot_latency", &server_tpot_latency, nullptr, 1000 * 1000);
     }
+  }
 
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,

@@ -74,6 +74,14 @@ Please download the fine-tuned GPT-J checkpoint from [here](https://cloud.mlcomm
 wget https://cloud.mlcommons.org/index.php/s/QAZ2oM94MkFtbQx/download --output-document checkpoint.zip
 ```
 
+The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
+
+```
+pip install cmind
+cm pull repo mlcommons@ck
+cm run script --tags=get,ml-model,gptj,_pytorch,_rclone -j
+```
+
 ### Running the Benchmark
 Replace the model and dataset path arguments with your corresponding paths. For evaluating the ROUGE score after the run, include --accuracy as shown below. For user specific target qps, please include user.conf.
 ```

@@ -3586,13 +3586,14 @@ def check_compliance_dir(
 
     # Check performance of all Tests (except for TEST06)
     for test in test_list:
-        if "TEST06" in test_list:
-            continue
         test_dir = os.path.join(compliance_dir, test)
         if not os.path.exists(test_dir):
             log.error("Missing %s in compliance dir %s", test, compliance_dir)
             compliance_perf_dir_pass = False
         else:
+            # TEST06 has no performance test.
+            if "TEST06" in test_list:
+                continue
             try:
                 compliance_perf_dir = os.path.join(
                     compliance_dir, test, "performance", "run_1"

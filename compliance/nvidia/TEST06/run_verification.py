@@ -120,7 +120,7 @@ def main():
         output += "TEST06 verification failed\n"
 
     # Output test output to console and folder
-    output_dir = args.output_dir
+    output_dir = os.path.join(args.output_dir, "TEST06")
     output_accuracy_dir = os.path.join(args.output_dir, "accuracy")
     
     if not os.path.isdir(output_dir):

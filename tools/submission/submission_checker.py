@@ -1392,13 +1392,10 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
 }
 
 LLAMA2_LATENCY_LIMITS = {
-    "interactive": {
-        "ttft": 500,
-        "tpot": 50
-    },
+    # We might add interactive in the next round. Latency in ns
     "conversational": {
-        "ttft": 2000,
-        "tpot": 200
+        "ttft": 2000 * 1000000,
+        "tpot": 200 * 1000000
     }
 }
 
@@ -1920,16 +1917,20 @@ def check_accuracy_dir(config, model, path, verbose):
 
 
 def extra_check_llama2(mlperf_log, scenario):
-    if (mlperf_log["use_token_latencies"]):
+    if (mlperf_log["requested_use_token_latencies"]):
         if scenario == "Offline":
             # For offline no further checks are necessary
             return None, True
         else:
             for constraint, limits in LLAMA2_LATENCY_LIMITS.items():
-                if mlperf_log["result_first_token_99.9_percentile_latency_ns"] < limits["ttft"] and mlperf_log["result_time_to_output_token"] < limits["tpot"]:
+                if mlperf_log["result_first_token_99.00_percentile_latency_ns"] < limits["ttft"] and mlperf_log["result_time_per_output_token_99.00_percentile_ns"] < limits["tpot"]:
                     return constraint, True
     else:
+        log.error(f'use_token_latencies flag needs to be enabled for Llama2 benchmark')
         return None, False
+
+    log.error(f'Failed Llama2 extra check for TTFT and TPOT. TTFT 99-tile: {mlperf_log["result_first_token_99.00_percentile_latency_ns"]}, TPOT 99-tile: {mlperf_log["result_time_per_output_token_99.00_percentile_ns"]}')
+    return None, False
             
 
 def get_performance_metric(
@@ -2986,6 +2987,7 @@ def check_results_dir(
                             n = ["run_1"]
 
                         for i in n:
+                            is_valid = True
                             perf_path = os.path.join(name, "performance", i)
                             if not os.path.exists(perf_path):
                                 log.error("%s is missing", perf_path)
@@ -3432,90 +3434,106 @@ def check_compliance_acc_dir(test_dir, model, config):
     if not os.path.exists(fname):
         log.error("%s is missing in %s", fname, test_dir)
     else:
-        # Accuracy can fail for TEST01
-        is_valid = True
-        with open(fname, "r") as f:
-            for line in f:
-                # look for: TEST PASS
-                if "TEST PASS" in line:
-                    acc_passed = True
-                    break
-        if acc_passed == False:
-            log.info(
-                "Compliance test accuracy check (deterministic mode) in %s failed",
-                test_dir,
-            )
-
-        # Check Accuracy dir
-        test_acc_path = os.path.join(test_dir, "accuracy")
-        if not os.path.exists(test_acc_path):
-            log.error("%s has no accuracy directory", test_dir)
-            is_valid = False
-        else:
-            diff = files_diff(
-                list_files(test_acc_path),
-                REQUIRED_TEST01_ACC_FILES_1
-                if acc_passed
-                else REQUIRED_TEST01_ACC_FILES,
-            )
-            if diff:
-                log.error("%s has file list mismatch (%s)", test_acc_path, diff)
-                is_valid = False
-            elif not acc_passed:
-                target = config.get_accuracy_target(model)
-                patterns = []
-                acc_types = []
-                for i in range(0, len(target), 2):
-                    acc_type = target[i:i+2]
-                    acc_types.append(acc_type)
-                    patterns.append(ACC_PATTERN[acc_type[0]])
-                acc_seen = [False for _ in acc_type]
-
-
-
-                more_accurate = model.find("99.9")
-                if more_accurate == -1:
-                    required_delta_perc = 1
-                else:
-                    required_delta_perc = 0.1
-                
-                acc_baseline = {
-                    acc_type: 0 for acc_type in acc_types
-                }
-                acc_compliance = {
-                    acc_type: 0 for acc_type in acc_types
-                }
-                with open(
-                    os.path.join(test_acc_path, "baseline_accuracy.txt"),
-                    "r",
-                    encoding="utf-8",
-                ) as f:
-                    for line in f:
-                        for acc_type, pattern in zip(acc_types, patterns):
-                            m = re.match(pattern, line)
-                            if m:
-                                acc_baseline[acc_type] = float(m.group(1))
-                with open(
-                    os.path.join(test_acc_path, "compliance_accuracy.txt"),
-                    "r",
-                    encoding="utf-8",
-                ) as f:
-                    for line in f:
-                        for acc_type, pattern in zip(acc_types, patterns):
-                            m = re.match(pattern, line)
-                            if m:
-                                acc_compliance[acc_type] = float(m.group(1))
-                for acc_type in acc_types:
-                    if acc_baseline[acc_type] == 0 or acc_compliance[acc_type] == 0:
-                        is_valid = False
+        if "TEST01" in test_dir:
+            # Accuracy can fail for TEST01
+            is_valid = True
+            with open(fname, "r") as f:
+                for line in f:
+                    # look for: TEST PASS
+                    if "TEST PASS" in line:
+                        acc_passed = True
                         break
+            if acc_passed == False:
+                log.info(
+                    "Compliance test accuracy check (deterministic mode) in %s failed",
+                    test_dir,
+                )
+
+            # Check Accuracy dir
+            test_acc_path = os.path.join(test_dir, "accuracy")
+            if not os.path.exists(test_acc_path):
+                log.error("%s has no accuracy directory", test_dir)
+                is_valid = False
+            else:
+                diff = files_diff(
+                    list_files(test_acc_path),
+                    REQUIRED_TEST01_ACC_FILES_1
+                    if acc_passed
+                    else REQUIRED_TEST01_ACC_FILES,
+                )
+                if diff:
+                    log.error("%s has file list mismatch (%s)", test_acc_path, diff)
+                    is_valid = False
+                elif not acc_passed:
+                    target = config.get_accuracy_target(model)
+                    patterns = []
+                    acc_types = []
+                    for i in range(0, len(target), 2):
+                        acc_type = target[i:i+2]
+                        acc_types.append(acc_type)
+                        patterns.append(ACC_PATTERN[acc_type[0]])
+                    acc_seen = [False for _ in acc_type]
+
+                    more_accurate = model.find("99.9")
+                    if more_accurate == -1:
+                        required_delta_perc = 1
                     else:
-                        delta_perc = abs(1 - acc_baseline[acc_type] / acc_compliance[acc_type]) * 100
-                        if delta_perc <= required_delta_perc:
-                            is_valid = True
-                        else:
+                        required_delta_perc = 0.1
+                    acc_baseline = {
+                        acc_type: 0 for acc_type in acc_types
+                    }
+                    acc_compliance = {
+                        acc_type: 0 for acc_type in acc_types
+                    }
+                    with open(
+                        os.path.join(test_acc_path, "baseline_accuracy.txt"),
+                        "r",
+                        encoding="utf-8",
+                    ) as f:
+                        for line in f:
+                            for acc_type, pattern in zip(acc_types, patterns):
+                                m = re.match(pattern, line)
+                                if m:
+                                    acc_baseline[acc_type] = float(m.group(1))
+                    with open(
+                        os.path.join(test_acc_path, "compliance_accuracy.txt"),
+                        "r",
+                        encoding="utf-8",
+                    ) as f:
+                        for line in f:
+                            for acc_type, pattern in zip(acc_types, patterns):
+                                m = re.match(pattern, line)
+                                if m:
+                                    acc_compliance[acc_type] = float(m.group(1))
+                    for acc_type in acc_types:
+                        if acc_baseline[acc_type] == 0 or acc_compliance[acc_type] == 0:
                             is_valid = False
                             break
+                        else:
+                            delta_perc = abs(1 - acc_baseline[acc_type] / acc_compliance[acc_type]) * 100
+                            if delta_perc <= required_delta_perc:
+                                is_valid = True
+                            else:
+                                is_valid = False
+                                break
+        elif "TEST06" in test_dir:
+            """
+            Expected output
+            First token check pass: True (or First token check pass: Skipped)
+            EOS check pass: True
+            TEST06 verification complete
+            """
+            with open(fname, "r") as f:
+                lines = f.readlines()
+            lines = [line.strip() for line in lines]
+            first_token_pass = "First token check pass: True" in lines or "First token check pass: Skipped" in lines
+            eos_pass = "EOS check pass: True" in lines
+            length_check_pass = "Sample length check pass: True" in lines
+            is_valid = first_token_pass and eos_pass and length_check_pass
+            if not is_valid:
+                log.error(f"TEST06 accuracy check failed. first_token_check: {first_token_pass} eos_check: {eos_pass} length_check: {length_check_pass}.")
+        else:
+            raise NotImplemented(f"{test_dir} is neither TEST01 and TEST06, which doesn't require accuracy check")
 
     return is_valid
 
@@ -3566,13 +3584,16 @@ def check_compliance_dir(
         log.error("no compliance dir for %s: %s", name, compliance_dir)
         return False
 
-    # Check performance of all Tests
+    # Check performance of all Tests (except for TEST06)
     for test in test_list:
         test_dir = os.path.join(compliance_dir, test)
         if not os.path.exists(test_dir):
             log.error("Missing %s in compliance dir %s", test, compliance_dir)
             compliance_perf_dir_pass = False
         else:
+            # TEST06 has no performance test.
+            if "TEST06" in test_list:
+                continue
             try:
                 compliance_perf_dir = os.path.join(
                     compliance_dir, test, "performance", "run_1"
@@ -3595,13 +3616,14 @@ def check_compliance_dir(
                 and compliance_perf_valid
             )
 
-    if "TEST01" in test_list:
-        # Check accuracy for TEST01
-        compliance_acc_pass = check_compliance_acc_dir(
-            os.path.join(compliance_dir, "TEST01"), model, config
-        )
-    else:
-        compliance_acc_pass= True
+    compliance_acc_pass= True
+    for test in ["TEST01", "TEST06"]:
+        if test in test_list:
+            # Check accuracy for TEST01
+            compliance_acc_pass &= check_compliance_acc_dir(
+                os.path.join(compliance_dir, test), model, config
+            )
+
 
     return compliance_perf_pass and compliance_acc_pass and compliance_perf_dir_pass
 

@@ -1282,7 +1282,6 @@ REQUIRED_TEST01_ACC_FILES = REQUIRED_TEST01_ACC_FILES_1 + [
     "baseline_accuracy.txt",
     "compliance_accuracy.txt",
 ]
-REQUIRED_TEST06_ACC_FILES = ["mlperf_log_accuracy.json"]
 
 OFFLINE_MIN_SPQ_SINCE_V4 = {
     "resnet": 24576,

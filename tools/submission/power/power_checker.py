@@ -39,7 +39,7 @@ class CheckerWarning(Exception):
     pass
 
 
-SUPPORTED_VERSION = ["1.10.0"]
+SUPPORTED_VERSION = ["1.11.0_prerelease"]
 SUPPORTED_MODEL = {
     "YokogawaWT210": 8,
     "YokogawaWT500": 35,

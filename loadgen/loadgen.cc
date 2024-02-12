@@ -315,7 +315,7 @@ std::vector<QueryMetadata> GenerateQueries(
   // When sample_concatenate_permutation is turned on, pad to a multiple of the
   // complete dataset to ensure fairness.
   auto enable_equal_issue = settings.sample_concatenate_permutation;
-  if (enable_equal_issue)
+  if (mode != TestMode::AccuracyOnly && enable_equal_issue)
   {
     if (scenario == TestScenario::Offline &&
       samples_per_query % loaded_samples.size() != 0)

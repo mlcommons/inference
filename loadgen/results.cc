@@ -476,7 +476,7 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
   
   bool all_constraints_met = min_duration_met &&
                              perf_constraints_met && early_stopping_met;
-  if (settings.enforce_max_duration){
+  if (!settings.enforce_max_duration){
     all_constraints_met = all_constraints_met && min_queries_met;
   }
   summary("Result is : ", all_constraints_met ? "VALID" : "INVALID");
@@ -485,7 +485,7 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
             perf_constraints_met ? "Yes" : "NO");
   }
   summary("  Min duration satisfied : ", min_duration_met ? "Yes" : "NO");
-  summary("  Min queries satisfied : ", min_queries_met ? "Yes" : settings.enforce_max_duration? "NO" : "Skipped");
+  summary("  Min queries satisfied : ", min_queries_met ? "Yes" : settings.enforce_max_duration ? "Skipped" : "NO");
   summary("  Early stopping satisfied: ", early_stopping_met ? "Yes" : "NO");
 
   if (!all_constraints_met) {

@@ -247,6 +247,13 @@ def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results, confi
 
                                     shutil.copytree(high_accuracy_model_path, \
                                             low_accuracy_model_path)
+                                high_accuracy_model_code_path = os.path.join(log_path, "..", \
+                                        "code", model)
+                                low_accuracy_model_code_path = os.path.join(log_path, "..", \
+                                        "code", low_accuracy_model)
+                                if not os.path.exists(low_accuracy_model_code_path):
+                                    shutil.copytree(high_accuracy_model_code_path, \
+                                            low_accuracy_model_code_path)
 
 
 

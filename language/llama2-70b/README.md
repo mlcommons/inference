@@ -63,32 +63,8 @@ Inside the container, set up the environment with `bash build.sh`. This will ins
 CPU-only setup, as well as any GPU versions for applicable libraries like PyTorch.
 
 
-## Get Model
-+ For now, MLCommons is not hosting the checkpoint, so you must first go to [llama2-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to huggingface (if you don't have account, you'd need to create one). **Please note your authentication credentials** as you may be required to provide them when cloninng below
-+ Requires Git Large Files Storage
-```
-export CHECKPOINT_PATH=${PWD}/Llama-2-70b-chat-hf
-git lfs install
-git clone https://huggingface.co/meta-llama/Llama-2-70b-chat-hf ${CHECKPOINT_PATH}
-
-```
-
-## Get Dataset
-
-```
-# First get the `open-orca` parquet from huggingface
-export OPENORCA_DATASET=${PWD}/open-orca
-git clone https://huggingface.co/datasets/Open-Orca/OpenOrca ${OPENORCA_DATASET}
-
-export OPENORCA_PARQUET=${OPENORCA_DATASET}/1M-GPT4-Augmented.parquet
-EXPORT_DIR=${PWD}/processed-openorca
-export DATASET_PATH=${PWD}/processed-data.pkl
-
-# Process the dataset according the Taskforce's agreed criteria
-python3 processorca.py --dataset_pq_path=${OPENORCA_PARQUET} --model_dir=${CHECKPOINT_PATH} --seqlen_limit=1024 --export_dir=${EXPORT_DIR} --num_total_samples=24576
-
-mv ${EXPORT_DIR}/open_orca_gpt4_tokenized_llama.sampled_24576.pkl ${DATASET_PATH}
-```
+## Get Model and Dataset
+MLCommons hosts the model and preprocessed dataset for download. You must first agree to the [confidentiality notice](https://docs.google.com/forms/d/e/1FAIpQLSc_8VIvRmXM3I8KQaYnKf7gy27Z63BBoI_I1u02f4lw6rBp3g/viewform), then follow the link to a directory containing Rclone download instructions.
 
 
 ## Run Performance Benchmarks

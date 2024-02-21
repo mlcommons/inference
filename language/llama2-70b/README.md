@@ -93,7 +93,7 @@ Once Rclone is installed, run the following command to authenticate with the buc
 ```
 rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
 ```
-You can then navigate in the terminal to your desired download directory and run the following commands to download the model checkpoint:
+You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
 ```
 rclone copy mlc-inference:mlcommons-inference-wg-public/open_orca ./open_orca -P

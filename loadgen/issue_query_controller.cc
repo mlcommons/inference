@@ -503,7 +503,7 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
            << " query_count " << queries_issued;
         MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
 #else
-        detail.Error("IssueQueryThread ", std::to_string(thread_idx),
+        detail("IssueQueryThread ", std::to_string(thread_idx),
                      " Ending early: Max query count reached.", "query_count",
                      std::to_string(queries_issued));
 #endif
@@ -522,7 +522,7 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
           ss << "IssueQueryThread " << thread_idx
             << " Ending early: Max test duration reached."
             << " duration_ns " << duration.count();
-          MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
+          MLPERF_LOG(detail, "error_runtime", ss.str());
 #else
           detail.Error("IssueQueryThread ", std::to_string(thread_idx),
                       " Ending early: Max test duration reached.", "duration_ns",

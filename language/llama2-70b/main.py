@@ -23,6 +23,7 @@ def get_args():
     parser.add_argument("--mlperf-conf", type=str, default="mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user-conf", type=str, default="user.conf", help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--total-sample-count", type=int, default=24576, help="Number of samples to use in benchmark.") # TODO: This interpretation of 'total-sample-count' is a little misleading. Fix it
+    parser.add_argument("--batch-size", type=int, default=1, help="Model batch-size to use in benchmark.")
     parser.add_argument("--output-log-dir", type=str, default="output-logs", help="Where logs are saved")
     parser.add_argument("--enable-log-trace", action="store_true", help="Enable log tracing. This file can become quite large")
     parser.add_argument("--num-workers", type=int, default=1, help="Number of workers to process queries")
@@ -69,6 +70,7 @@ def main():
     sut = sut_cls(
         model_path=args.model_path,
         dtype=args.dtype,
+        batch_size=args.batch_size,
         dataset_path=args.dataset_path,
         total_sample_count=args.total_sample_count,
         device=args.device,

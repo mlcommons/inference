@@ -5,9 +5,20 @@
 + Processing of Validation dataset is not finalized yet. Decision on input token lengths is pending
 + Streamer for communicating with loadgen has quite some overhead. This is only meant to provide functional implementation
 + For custom/optimized implementations of this benchmark it is important to include the :
-        - For server scenario, it is necesary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
+        - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
         - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
 
+## Automated command to run the benchmark via MLCommons CM 
+
+```
+python3 -m pip install cmind
+cm pull repo mlcommons@ck
+cm run script --tags=run-mlperf,inference  --model=llama2-70b-99 --implementation=reference --backend=pytorch --device=cpu --precision=float32 --scenario=Offline --quiet
+```
+* `--device=cuda` can be used to run on Nvidia GPUs and `--device=rocm` can be used to run on AMD GPUs
+* `--precision=float16` or `--precision=bfloat16` can be used to change the model precision
+* `--model=llama2-7b` can be used to run the llama2-7b variant (this is not the official MLPerf model and so not valid for a closed division submission)
+ 
 ## Prepare environment
 
 Copy the mlperf.conf file to this folder.

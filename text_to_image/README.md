@@ -4,18 +4,11 @@ This is the reference implementation for MLPerf Inference text to image
 
 ## Supported Models
 
-| model | accuracy | dataset | model link | model source | precision | notes |
-| ---- | ---- | ---- | ---- | ---- | ---- | ---- |
-| StableDiffusion | - | Coco2014 | [fp32](https://cloud.mlcommons.org/index.php/s/DjnCSGyNBkWA4Ro) and [f16](https://cloud.mlcommons.org/index.php/s/LCdW5RM6wgGWbxC) | [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) | fp32 | NCHW |
+| model | accuracy | dataset | model source | precision | notes |
+| ---- | ---- | ---- | ---- | ---- | ---- |
+| StableDiffusion | - | Coco2014 | [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) | fp32 | NCHW |
 
-The following MLCommons CM commands can be used to programmatically download the model checkpoints. 
 
-```
-pip install cmind
-cm pull repo mlcommons@ck
-cm run script --tags=get,ml-model,sdxl,_fp16,_rclone -j
-cm run script --tags=get,ml-model,sdxl,_fp32,_rclone -j
-```
 ## Dataset
 
 | Data | Description |
@@ -55,7 +48,43 @@ CFLAGS="-std=c++14" python setup.py install
 
 ### Download model
 
-We host two checkpoints ([fp32](https://cloud.mlcommons.org/index.php/s/DjnCSGyNBkWA4Ro) and [f16](https://cloud.mlcommons.org/index.php/s/LCdW5RM6wgGWbxC)) that are a snapshot of the [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) pipeline at the time of the release of the benchmark. Download them and move them to your model path.
+We host two checkpoints (fp32 and fp16) that are a snapshot of the [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) pipeline at the time of the release of the benchmark. Download them and move them to your model path.
+
+#### CM method
+
+The following MLCommons CM commands can be used to programmatically download the model checkpoints. 
+
+```
+pip install cmind
+cm pull repo mlcommons@ck
+cm run script --tags=get,ml-model,sdxl,_fp16,_rclone -j
+cm run script --tags=get,ml-model,sdxl,_fp32,_rclone -j
+```
+#### Manual method
+
+The above command automatically runs a set of Rclone commands to download the data from a Cloudflare R2 bucket. However, if you'd like to run the Rclone commands manually, you can do so as follows:
+
+To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
+To install Rclone on Linux/macOS/BSD systems, run:
+```
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+Once Rclone is installed, run the following command to authenticate with the bucket:
+```
+rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
+```
+You can then navigate in the terminal to your desired download directory and run the following commands to download the checkpoints:
+
+**`fp32`**
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp32 ./stable_diffusion_fp32 -P
+```
+**`fp16`**
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp16 ./stable_diffusion_fp16 -P
+```
+
+#### Move to model path
 
 ```bash
 mkdir $MODEL_PATH

@@ -43,7 +43,7 @@ def func_def(name, string):
 def generate_loadgen_version_definitions_git(ofile, git_command):
     git_rev = os.popen(git_command + "rev-parse --short=10 HEAD").read()
     git_commit_date = os.popen(git_command + "log --format=\"%cI\" -n 1").read()
-    git_status = os.popen(git_command + "status -s -uno").read()
+    git_status = os.popen(git_command + "status -s -uno .").read()
     git_log = subprocess.Popen(
         git_command + "log --pretty=oneline -n 16 --no-decorate", stdout=subprocess.PIPE, shell=True, encoding='ascii', errors="ignore" ).stdout.read()
     ofile.write(func_def("GitRevision", "\"" + git_rev[0:-1] + "\""))

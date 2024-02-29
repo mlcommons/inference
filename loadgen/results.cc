@@ -642,9 +642,11 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
                                         &pr.query_latencies,
                                         std::chrono::nanoseconds(settings.server_ttft_latency));
   }
-  bool all_constraints_met = min_duration_met && min_queries_met &&
+  bool all_constraints_met = min_duration_met &&
                              perf_constraints_met && early_stopping_met;
-
+  if (!settings.enforce_max_duration) {
+    all_constraints_met = all_constraints_met && min_queries_met;
+  }
   MLPERF_LOG(detail, "result_validity",
              all_constraints_met ? "VALID" : "INVALID");
   if (HasPerfConstraints()) {

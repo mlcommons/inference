@@ -1,11 +1,13 @@
 # Tools to check Submissions
 
 ## `truncate_accuracy_log.py` (Mandatory)
+
 ### Inputs
 **input**: Path to the directory containing your submission. `closed`, `open` directories must be inside this directory. <br>
 **output**: Path to the directory to output the submission with truncated files <br>
 **submitter**: Organization name <br>
-**backup**: Path to the directory to store an unmodified copy of the truncated files <br>
+**backup**: Path to the directory to store an unmodified copy of the truncated files <be>
+
 ### Summary
 Takes a directory containing a submission and truncates `mlperf_log_accuracy.json` files. There are two ways to use this script. First, we could create a new submission directory with the truncated files by running:
 ```
@@ -37,7 +39,7 @@ The input submission directory is modified with empty directories removed and lo
 
 The below input fields are off by default since v3.1 and are mandatory but can be turned on for debugging purposes
 
-**skip-power-check**: Flag to skip the extra power checks. This flag has no effect on non-power submissions
+**skip-power-check**: Flag to skip the extra power checks. This flag has no effect on non-power submission results
 
 **skip-meaningful-fields-emptiness-check**: Flag to avoid checking if mandatory system description fields are empty
 
@@ -46,7 +48,7 @@ The below input fields are off by default since v3.1 and are mandatory but can b
 **skip-check-power-measure-files**: Flag to avoid checking if the required power measurement files are present
 
 ### Summary
-Checks a directory that contains one or several submission. This script can be used by running the following command:
+Checks a directory that contains one or several submissions. This script can be used by running the following command:
 ```
 python3 submission_checker.py --input <path-to-folder> 
     [--version <version>]
@@ -87,13 +89,13 @@ Tool to remove manually verified ERRORs from the log file in the v0.7 submission
 
 ## `pack_submission.sh` (Deprecated)
 ### Summary
-Creates an encrypted tarball and generate the SHA1 of the tarball. Currently submissions do not need to be encrypted.
+Creates an encrypted tarball and generates the SHA1 of the tarball. Currently submissions do not need to be encrypted.
 
-## `repository_checks.sh`
+## `repository_checks.sh` (Deprecated)
 ### Inputs
 Takes as input the path of the directory to run the checks on.
 ### Summary
-Checks that a directory containing one or several submissions is able to be uploaded to github. This script can be used by running the following command:
+Checks that a directory containing one or several submissions can be uploaded to github. This script can be used by running the following command:
 ```
 ./repository_checks.sh <path-to-folder>
 ```

@@ -64,7 +64,12 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 
 
 ## Get Model
-+ For now, MLCommons is not hosting the checkpoint, so you must first go to [llama2-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to huggingface (if you don't have account, you'd need to create one). **Please note your authentication credentials** as you may be required to provide them when cloninng below
+### MLCommons Members Download
+MLCommons hosts the model and preprocessed dataset for download exclusively by MLCommons Members. You must first agree to the [confidentiality notice](https://docs.google.com/forms/d/e/1FAIpQLSc_8VIvRmXM3I8KQaYnKf7gy27Z63BBoI_I1u02f4lw6rBp3g/viewform), then follow the link to a directory containing Rclone download instructions.
+
+
+### External Download
++ First go to [llama2-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
 + Requires Git Large Files Storage
 ```
 export CHECKPOINT_PATH=${PWD}/Llama-2-70b-chat-hf
@@ -74,6 +79,29 @@ git clone https://huggingface.co/meta-llama/Llama-2-70b-chat-hf ${CHECKPOINT_PAT
 ```
 
 ## Get Dataset
+
+### Preprocessed
+
+You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
+
+To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
+To install Rclone on Linux/macOS/BSD systems, run:
+```
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+Once Rclone is installed, run the following command to authenticate with the bucket:
+```
+rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
+```
+You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
+
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/open_orca ./open_orca -P
+```
+
+### Unprocessed
+
+You can also download and process the dataset yourself as follows:
 
 ```
 # First get the `open-orca` parquet from huggingface

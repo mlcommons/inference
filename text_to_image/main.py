@@ -394,11 +394,18 @@ def main():
     count = ds.get_item_count()
 
     # warmup
-    ds.load_query_samples([0])
+    syntetic_str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit"
+    latents_pt = torch.rand(ds.latents.shape, dtype=dtype).to(args.device)
+    warmup_samples = [
+        {
+            "input_tokens": ds.preprocess(syntetic_str, model.pipe.tokenizer),
+            "input_tokens_2": ds.preprocess(syntetic_str, model.pipe.tokenizer_2),
+            "latents": latents_pt,
+        }
+        for _ in range(args.max_batchsize)
+    ]
     for i in range(5):
-        captions, _ = ds.get_samples([0])
-        _ = backend.predict(captions)
-    ds.unload_query_samples(None)
+        _ = backend.predict(warmup_samples)
 
     scenario = SCENARIO_MAP[args.scenario]
     runner_map = {

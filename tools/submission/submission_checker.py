@@ -2169,6 +2169,7 @@ def check_performance_dir(
                 required_min_duration,
                 min_duration,
             )
+            is_valid = False
 
     inferred = False
     if scenario_fixed != scenario:
@@ -2945,12 +2946,16 @@ def check_results_dir(
                                 "process_accuracy.py",
                                 acc_path,
                             )
+                            errors += 1
+                            continue
                         else:
                             diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
                             if diff:
                                 log.error(
                                     "%s has file list mismatch (%s)", acc_path, diff
                                 )
+                                errors += 1
+                                continue
                             accuracy_is_valid, acc = check_accuracy_dir(
                                 config,
                                 mlperf_model,

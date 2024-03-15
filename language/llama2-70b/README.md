@@ -129,7 +129,7 @@ python3 processorca.py --dataset_pq_path=${OPENORCA_PARQUET} --model_dir=${CHECK
 mv ${EXPORT_DIR}/open_orca_gpt4_tokenized_llama.sampled_24576.pkl ${DATASET_PATH}
 ```
 
-The script will performn the following steps on the original open_orca GPT4 dataset:
+The script will perform the following steps on the original open_orca GPT4 dataset:
 - filter out all queries with non-ascii characters, except for normal unicode quotes and hyphens.
 - filter out all queries with out-of-bound input/output sequence lengths
 - filter out all queries with expected answers shorter than 2 words (known to cause issues for Llama2)

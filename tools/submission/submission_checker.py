@@ -1116,16 +1116,9 @@ def get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, log_e
 
 def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
     # parse the power logs
-    if config.has_power_utc_timestamps():
-        server_timezone = datetime.timedelta(0)
-        client_timezone = datetime.timedelta(0)
-    else:
-        server_json_fname = os.path.join(power_path, "server.json")
-        with open(server_json_fname) as f:
-            server_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
-        client_json_fname = os.path.join(power_path, "client.json")
-        with open(client_json_fname) as f:
-            client_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
+    server_timezone = datetime.timedelta(0)
+    client_timezone = datetime.timedelta(0)
+    
     detail_log_fname = os.path.join(log_path, "mlperf_log_detail.txt")
     mlperf_log = MLPerfLog(detail_log_fname)
     datetime_format = "%m-%d-%Y %H:%M:%S.%f"
@@ -1138,20 +1131,8 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
         + client_timezone
     )
     # Obtain the scenario also from logs to check if power is inferred
-    if config.has_new_logging_format():
-        scenario = mlperf_log["effective_scenario"]
-    else:
-        rt = {}
-        fname = os.path.join(log_path, "mlperf_log_summary.txt")
-        with open(fname, "r") as f:
-            for line in f:
-                m = re.match(r"^Result\s+is\s*\:\s+VALID", line)
-                if m:
-                    is_valid = True
-                m = re.match(r"^\s*([\w\s.\(\)\/]+)\s*\:\s*([\w\+\.][\w\+\.\s]*)", line)
-                if m:
-                    rt[m.group(1).strip()] = m.group(2).strip()
-        scenario = rt["Scenario"].replace(" ", "")
+    scenario = mlperf_log["effective_scenario"]
+    
     spl_fname = os.path.join(log_path, "spl.txt")
     power_list = []
     with open(spl_fname) as f:
@@ -1189,26 +1170,9 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 "MultiStream",
                 "SingleStream",
             ], "Unknown scenario: {:}".format(scenario_fixed)
-            if not config.has_query_count_in_log():
-                # Before v2.0, LoadGen does NOT print out the actual number of queries in detail logs. There is a
-                # "generated_query_count", but LoadGen exits early when the min_duration has been met, so it is not equal to
-                # the actual number of queries. To work around it, make use of "result_qps_with_loadgen_overhead", which is
-                # defined as: (sample_count - 1) / pr.final_query_issued_time, where final_query_issued_time can be
-                # approximated by power_duration (off by one query worth of latency, which is in general negligible compared
-                # to 600-sec total runtime and can be offsetted by removing the "+1" when reconstructing the sample_count).
-                # As for MultiStream, it always runs for 270336 queries, so using "generated_query_count" as above is fine.
-                if scenario_fixed in ["MultiStream"]:
-                    num_queries = (
-                        mlperf_log["generated_query_count"]
-                        * mlperf_log["generated_samples_per_query"]
-                    )
-                elif scenario_fixed in ["SingleStream"]:
-                    num_queries = (
-                        mlperf_log["result_qps_with_loadgen_overhead"] * power_duration
-                    )
-            else:
-                # Starting from v2.0, LoadGen logs the actual number of issued queries.
-                num_queries = int(mlperf_log["result_query_count"])
+
+            num_queries = int(mlperf_log["result_query_count"])
+
             power_metric = avg_power * power_duration * 1000 / num_queries
 
             if scenario_fixed in ["SingleStream"]:

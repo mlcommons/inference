@@ -1781,7 +1781,7 @@ def check_results_dir(
                             log.info("Detected power logs for %s", name)
                             # The power related system_desc_fields are not used by submitters currently.
                             # Turning this check off for now
-                            elif False and not check_system_desc_id_power(
+                            if False and not check_system_desc_id_power(
                                 name,
                                 system_json,
                                 submitter,

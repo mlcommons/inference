@@ -353,6 +353,25 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "accelerator_memory_capacity",
     "framework",
     "operating_system",
+    "system_type",
+    "other_software_stack",
+    "host_processor_frequency",
+    "host_processor_caches",
+    "host_memory_configuration",
+    "host_processor_interconnect",
+    "host_networking",
+    "host_networking_topology",
+    "accelerator_frequency",
+    "accelerator_host_interconnect",
+    "accelerator_interconnect",
+    "accelerator_interconnect_topology",
+    "accelerator_memory_configuration",
+    "accelerator_on-chip_memories",
+    "cooling",
+    "hw_notes",
+    "sw_notes",
+    "host_network_card_count",
+    "system_type_detail"
 ]
 
 SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
@@ -382,31 +401,6 @@ SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
     "framework",
     "operating_system",
     "other_software_stack",
-]
-
-SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1 = [
-    "system_type",
-    "other_software_stack",
-    "host_processor_frequency",
-    "host_processor_caches",
-    "host_memory_configuration",
-    "host_processor_interconnect",
-    "host_networking",
-    "host_networking_topology",
-    "accelerator_frequency",
-    "accelerator_host_interconnect",
-    "accelerator_interconnect",
-    "accelerator_interconnect_topology",
-    "accelerator_memory_configuration",
-    "accelerator_on-chip_memories",
-    "cooling",
-    "hw_notes",
-    "sw_notes",
-]
-
-SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1 = [
-    "host_network_card_count",
-    "system_type_detail"
 ]
 
 SYSTEM_DESC_REQUIRED_FIELDS_POWER = [
@@ -521,7 +515,7 @@ class Config:
             model = "bert-99.9"
         elif "bert-99" in model:
             model = "bert-99"
-        # map again, for example v0.7 does not have mobilenet so it needs to be mapped to resnet
+        # map again
         mlperf_model = self.base["model_mapping"].get(model, model)
         return mlperf_model
 
@@ -569,21 +563,21 @@ class Config:
         return self.min_queries[model].get(scenario)
 
     def has_new_logging_format(self):
-        return self.version not in ["v0.5", "v0.7"]
+        return True
 
     def uses_legacy_multistream(self):
-        return self.version in ["v0.5", "v0.7", "v1.0", "v1.1"]
+        return False
 
     def uses_early_stopping(self, scenario):
-        return (self.version not in ["v0.5", "v0.7", "v1.0", "v1.1"]) and (
+        return (
             scenario in ["Server", "SingleStream", "MultiStream"]
         )
 
     def has_query_count_in_log(self):
-        return self.version not in ["v0.5", "v0.7", "v1.0", "v1.1"]
+        return True
 
     def has_power_utc_timestamps(self):
-        return self.version not in ["v0.5", "v0.7", "v1.0"]
+        return True
 
 
 def get_args():
@@ -701,38 +695,23 @@ def find_error_in_detail_log(config, fname):
         log.error("%s is missing", fname)
         is_valid = False
     else:
-        if config.has_new_logging_format():
-            mlperf_log = MLPerfLog(fname)
-            if mlperf_log.has_error():
-                if config.ignore_uncommited:
-                    has_other_errors = False
-                    for error in mlperf_log.get_errors():
-                        if (
-                            "Loadgen built with uncommitted changes!"
-                            not in error["value"]
-                        ):
-                            has_other_errors = True
-
-                log.error("%s contains errors:", fname)
+        mlperf_log = MLPerfLog(fname)
+        if mlperf_log.has_error():
+            if config.ignore_uncommited:
+                has_other_errors = False
                 for error in mlperf_log.get_errors():
-                    log.error("%s", error["value"])
+                    if (
+                        "Loadgen built with uncommitted changes!"
+                        not in error["value"]
+                    ):
+                        has_other_errors = True
 
-                if not config.ignore_uncommited or has_other_errors:
-                    is_valid = False
-        else:
-            with open(fname, "r") as f:
-                for line in f:
-                    # look for: ERROR
-                    if "ERROR" in line:
-                        if config.ignore_errors(line):
-                            if (
-                                "ERROR : Loadgen built with uncommitted changes!"
-                                in line
-                            ):
-                                log.warning("%s contains error: %s", fname, line)
-                            continue
-                        log.error("%s contains error: %s", fname, line)
-                        is_valid = False
+            log.error("%s contains errors:", fname)
+            for error in mlperf_log.get_errors():
+                log.error("%s", error["value"])
+
+            if not config.ignore_uncommited or has_other_errors:
+                is_valid = False
     return is_valid
 
 

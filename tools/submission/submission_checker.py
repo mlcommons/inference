@@ -127,27 +127,9 @@ MODEL_CONFIG = {
         # TODO: Update this list.
         "model_mapping": {
             # map model names to the official mlperf model class
-            "ssd-mobilenet": "ssd-small",
             "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
-            "resnet50": "resnet",
-            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
-            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
-            "rcnn-resnet50-lowproposals-coco": "ssd-large",
-            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
-            "rcnn-inception-v2-coco": "ssd-large",
-            "rcnn-nas-lowproposals-coco": "ssd-large",
-            "rcnn-resnet101-lowproposals-coco": "ssd-large",
-            "ssd_mobilenet_v1_coco": "ssd-small",
-            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
-            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
-            "ssd_mobilenet_v2_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
+            "resnet50": "resnet"
         },
         "seeds": {
             # TODO: Update random seeds

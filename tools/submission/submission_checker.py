@@ -819,62 +819,37 @@ def check_performance_dir(
     rt = {}
 
     # look for: Result is: VALID
-    if config.has_new_logging_format():
-        fname = os.path.join(path, "mlperf_log_detail.txt")
-        mlperf_log = MLPerfLog(fname)
-        if (
-            "result_validity" in mlperf_log.get_keys()
-            and mlperf_log["result_validity"] == "VALID"
-        ):
-            is_valid = True
-        performance_sample_count = mlperf_log["effective_performance_sample_count"]
-        qsl_rng_seed = mlperf_log["effective_qsl_rng_seed"]
-        sample_index_rng_seed = mlperf_log["effective_sample_index_rng_seed"]
-        schedule_rng_seed = mlperf_log["effective_schedule_rng_seed"]
-        scenario = mlperf_log["effective_scenario"]
+    fname = os.path.join(path, "mlperf_log_detail.txt")
+    mlperf_log = MLPerfLog(fname)
+    if (
+        "result_validity" in mlperf_log.get_keys()
+        and mlperf_log["result_validity"] == "VALID"
+    ):
+        is_valid = True
+    performance_sample_count = mlperf_log["effective_performance_sample_count"]
+    qsl_rng_seed = mlperf_log["effective_qsl_rng_seed"]
+    sample_index_rng_seed = mlperf_log["effective_sample_index_rng_seed"]
+    schedule_rng_seed = mlperf_log["effective_schedule_rng_seed"]
+    scenario = mlperf_log["effective_scenario"]
 
-        res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario]])
-        if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
-            res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario]])
+    res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario]])
+    if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
+        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario]])
         
-        if model in ["llama2-70b-99", "llama2-70b-99.9"]:
-            llama_constraint, is_valid = extra_check_llama2(mlperf_log, scenario_fixed)
+    if model in ["llama2-70b-99", "llama2-70b-99.9"]:
+        llama_constraint, is_valid = extra_check_llama2(mlperf_log, scenario_fixed)
 
-        latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
-        latency_mean = mlperf_log["result_mean_latency_ns"]
-        if scenario in ["MultiStream"]:
-            latency_99_percentile = mlperf_log[
-                "result_99.00_percentile_per_query_latency_ns"
-            ]
-            latency_mean = mlperf_log["result_mean_query_latency_ns"]
-        min_query_count = mlperf_log["effective_min_query_count"]
-        samples_per_query = mlperf_log["effective_samples_per_query"]
-        min_duration = mlperf_log["effective_min_duration_ms"]
-        sut_name = mlperf_log["sut_name"]
-    else:
-        fname = os.path.join(path, "mlperf_log_summary.txt")
-        with open(fname, "r") as f:
-            for line in f:
-                m = re.match(r"^Result\s+is\s*\:\s+VALID", line)
-                if m:
-                    is_valid = True
-                m = re.match(r"^\s*([\w\s.\(\)\/]+)\s*\:\s*([\w\+\.][\w\+\.\s]*)", line)
-                if m:
-                    rt[m.group(1).strip()] = m.group(2).strip()
-        performance_sample_count = int(rt["performance_sample_count"])
-        qsl_rng_seed = int(rt["qsl_rng_seed"])
-        sample_index_rng_seed = int(rt["sample_index_rng_seed"])
-        schedule_rng_seed = int(rt["schedule_rng_seed"])
-        scenario = rt["Scenario"].replace(" ", "")
-        res = float(rt[RESULT_FIELD[scenario]])
-        latency_99_percentile = int(rt["99.00 percentile latency (ns)"])
-        latency_mean = int(rt["Mean latency (ns)"])
-        min_query_count = int(rt["min_query_count"])
-        samples_per_query = int(rt["samples_per_query"])
-        min_duration = int(rt["min_duration (ms)"])
-        if scenario == "SingleStream":
-            qps_wo_loadgen_overhead = float(rt["QPS w/o loadgen overhead"])
-        sut_name = str(rt["System Under Test (SUT) name: "])
+    latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
+    latency_mean = mlperf_log["result_mean_latency_ns"]
+    if scenario in ["MultiStream"]:
+        latency_99_percentile = mlperf_log[
+            "result_99.00_percentile_per_query_latency_ns"
+        ]
+        latency_mean = mlperf_log["result_mean_query_latency_ns"]
+    min_query_count = mlperf_log["effective_min_query_count"]
+    samples_per_query = mlperf_log["effective_samples_per_query"]
+    min_duration = mlperf_log["effective_min_duration_ms"]
+    sut_name = mlperf_log["sut_name"]
 
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
@@ -928,90 +903,89 @@ def check_performance_dir(
         # FIXME: for open we script this because open can submit in all scenarios
         # not supported for v0.5
 
-        if uses_early_stopping:
-            # check if early_stopping condition was met
-            if not mlperf_log["early_stopping_met"]:
-                early_stopping_result = mlperf_log["early_stopping_result"]
-                log.error(
-                    "Early stopping condition was not met, msg=%s",
-                    early_stopping_result,
-                )
+    if uses_early_stopping:
+        # check if early_stopping condition was met
+        if not mlperf_log["early_stopping_met"]:
+            early_stopping_result = mlperf_log["early_stopping_result"]
+            log.error(
+                "Early stopping condition was not met, msg=%s",
+                early_stopping_result,
+            )
 
-            # If the scenario has a target latency (Server scenario), check
-            # that the target latency that was passed to the early stopping
-            # is less than the target latency.
-            target_latency = config.latency_constraint.get(model, dict()).get(scenario)
-            if target_latency:
-                early_stopping_latency_ns = mlperf_log["effective_target_latency_ns"]
-                log.info(
-                    "Target latency: %s, Early Stopping Latency: %s, Scenario: %s",
-                    target_latency,
-                    early_stopping_latency_ns,
-                    scenario,
-                )
-                if early_stopping_latency_ns > target_latency:
-                    log.error(
-                        "%s Latency constraint with early stopping not met, expected=%s, found=%s",
-                        fname,
-                        target_latency,
-                        early_stopping_latency_ns,
-                    )
-                    is_valid = False
-
-        else:
-            # check if the benchmark meets latency constraint
-            target_latency = config.latency_constraint.get(model, dict()).get(scenario)
+        # If the scenario has a target latency (Server scenario), check
+        # that the target latency that was passed to the early stopping
+        # is less than the target latency.
+        target_latency = config.latency_constraint.get(model, dict()).get(scenario)
+        if target_latency:
+            early_stopping_latency_ns = mlperf_log["effective_target_latency_ns"]
             log.info(
-                "Target latency: %s, Latency: %s, Scenario: %s",
+                "Target latency: %s, Early Stopping Latency: %s, Scenario: %s",
                 target_latency,
-                latency_99_percentile,
+                early_stopping_latency_ns,
                 scenario,
             )
-            if target_latency:
-                if latency_99_percentile > target_latency:
-                    log.error(
-                        "%s Latency constraint not met, expected=%s, found=%s",
-                        fname,
-                        target_latency,
-                        latency_99_percentile,
-                    )
-
-        # Check Minimum queries were issued to meet test duration
-        # Check if this run uses early stopping. If it does, get the
-        # min_queries from the detail log, otherwise get this value
-        # from the config
-        if not uses_early_stopping:
-            required_min_query_count = config.get_min_query_count(model, scenario)
-            if required_min_query_count and min_query_count < required_min_query_count:
+            if early_stopping_latency_ns > target_latency:
                 log.error(
-                    "%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
+                    "%s Latency constraint with early stopping not met, expected=%s, found=%s",
                     fname,
-                    required_min_query_count,
-                    min_query_count,
+                    target_latency,
+                    early_stopping_latency_ns,
                 )
                 is_valid = False
 
-        if config.version in ["v0.5", "v0.7", "v1.0", "v1.1", "v2.0", "v2.1", "v3.0", "v3.1"] and scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ) or \
-        scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ_SINCE_V4[model]):
+    else:
+        # check if the benchmark meets latency constraint
+        target_latency = config.latency_constraint.get(model, dict()).get(scenario)
+        log.info(
+            "Target latency: %s, Latency: %s, Scenario: %s",
+            target_latency,
+            latency_99_percentile,
+            scenario,
+        )
+        if target_latency:
+            if latency_99_percentile > target_latency:
+                log.error(
+                    "%s Latency constraint not met, expected=%s, found=%s",
+                    fname,
+                    target_latency,
+                    latency_99_percentile,
+                )
+
+    # Check Minimum queries were issued to meet test duration
+    # Check if this run uses early stopping. If it does, get the
+    # min_queries from the detail log, otherwise get this value
+    # from the config
+    if not uses_early_stopping:
+        required_min_query_count = config.get_min_query_count(model, scenario)
+        if required_min_query_count and min_query_count < required_min_query_count:
             log.error(
-                "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
+                "%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
                 fname,
-                OFFLINE_MIN_SPQ,
-                samples_per_query,
+                required_min_query_count,
+                min_query_count,
             )
             is_valid = False
 
-        # Test duration of 600s is met
-        required_min_duration = TEST_DURATION_MS
+    if scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ_SINCE_V4[model]):
+        log.error(
+            "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
+            fname,
+            OFFLINE_MIN_SPQ,
+            samples_per_query,
+        )
+        is_valid = False
 
-        if min_duration < required_min_duration:
-            log.error(
-                "%s Test duration less than 600s in user config. expected=%s, found=%s",
-                fname,
-                required_min_duration,
-                min_duration,
-            )
-            is_valid = False
+    # Test duration of 600s is met
+    required_min_duration = TEST_DURATION_MS
+
+    if min_duration < required_min_duration:
+        log.error(
+            "%s Test duration less than 600s in user config. expected=%s, found=%s",
+            fname,
+            required_min_duration,
+            min_duration,
+        )
+        is_valid = False
 
     inferred = False
     if scenario_fixed != scenario:
@@ -1185,6 +1159,7 @@ def check_power_dir(
         log.error("%s has file list mismatch (%s)", power_path, diff)
         is_valid = False
 
+    # uncomment to measure ranging mode power
     '''
     (
         is_valid,

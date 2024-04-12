@@ -565,19 +565,11 @@ class Config:
     def has_new_logging_format(self):
         return True
 
-    def uses_legacy_multistream(self):
-        return False
 
     def uses_early_stopping(self, scenario):
         return (
             scenario in ["Server", "SingleStream", "MultiStream"]
         )
-
-    def has_query_count_in_log(self):
-        return True
-
-    def has_power_utc_timestamps(self):
-        return True
 
 
 def get_args():
@@ -827,15 +819,10 @@ def get_performance_metric(
     ):
         is_valid = True
     scenario = mlperf_log["effective_scenario"]
-    scenario_for_res = (
-        "MultiStreamLegacy"
-        if scenario == "MultiStream" and config.uses_legacy_multistream()
-        else scenario
-    )
 
-    res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+    res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario]])
     if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
-        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario_for_res]])
+        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario]])
 
     inferred = False
     if scenario_fixed != scenario:
@@ -863,14 +850,10 @@ def check_performance_dir(
         sample_index_rng_seed = mlperf_log["effective_sample_index_rng_seed"]
         schedule_rng_seed = mlperf_log["effective_schedule_rng_seed"]
         scenario = mlperf_log["effective_scenario"]
-        scenario_for_res = (
-            "MultiStreamLegacy"
-            if scenario == "MultiStream" and config.uses_legacy_multistream()
-            else scenario
-        )
-        res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+
+        res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario]])
         if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
-            res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario_for_res]])
+            res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario]])
         
         if model in ["llama2-70b-99", "llama2-70b-99.9"]:
             llama_constraint, is_valid = extra_check_llama2(mlperf_log, scenario_fixed)
@@ -952,9 +935,8 @@ def check_performance_dir(
         )
         is_valid = False
 
-    if scenario == "SingleStream" or (
-        scenario == "MultiStream" and not config.uses_legacy_multistream()
-    ):
+    if scenario == "SingleStream" or
+        scenario == "MultiStream":
         res /= MS_TO_NS
 
     # Check if the current scenario (and version) uses early stopping
@@ -1090,13 +1072,13 @@ def get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, log_e
         res = qps_wo_loadgen_overhead
 
     if (
-        scenario_fixed in ["Offline"] and not config.uses_legacy_multistream()
+        scenario_fixed in ["Offline"]
     ) and scenario in ["MultiStream"]:
         inferred = True
         res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
     if (
-        scenario_fixed in ["MultiStream"] and not config.uses_legacy_multistream()
+        scenario_fixed in ["MultiStream"]
     ) and scenario in ["SingleStream"]:
         inferred = True
         # samples_per_query does not match with the one reported in the logs
@@ -1182,7 +1164,6 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
 
             if (
                 scenario_fixed in ["MultiStream"]
-                and not config.uses_legacy_multistream()
             ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries

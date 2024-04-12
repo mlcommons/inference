@@ -1,0 +1,46 @@
+
+name: "format"
+on:
+  pull_request:
+    branches: [ master ]
+    types: [opened,closed,synchronize]
+
+
+env:
+  python-version: "3.9"
+
+jobs:
+  cla-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up Python ${{python-version}}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{python-version}}
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install autopep8
+
+      - name: Grant permissions
+        run: |
+          chmod u+x "${GITHUB_WORKSPACE}/.github/scripts/format-cpp"
+          chmod u+x "${GITHUB_WORKSPACE}/.github/scripts/format-py"
+      
+      - name: Format Codebase
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          "${GITHUB_WORKSPACE}/.github/scripts/format-cpp ${GITHUB_WORKSPACE}"
+          "${GITHUB_WORKSPACE}/.github/scripts/format-py ${GITHUB_WORKSPACE}"
+
+      - name: Commit
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          HAS_CHANGES=$(git diff --cached --name-only)
+          if [ ${#HAS_CHANGES} -gt 0 ]; then
+            git commit -m '[Automated Commit] Format Codebase'
+            git push origin ${{ github.head_ref || github.ref_name }}
+          fi
+
+      

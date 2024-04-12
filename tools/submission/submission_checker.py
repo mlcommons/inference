@@ -1,4 +1,4 @@
-"""A checker for mlperf inference submissions
+"""A checker for MLPerf inference submissions
 """
 
 from __future__ import division

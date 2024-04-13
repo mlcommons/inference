@@ -892,16 +892,11 @@ def check_performance_dir(
         )
         is_valid = False
 
-    if scenario == "SingleStream" or
-        scenario == "MultiStream":
+    if scenario == "SingleStream" or scenario == "MultiStream":
         res /= MS_TO_NS
 
-    # Check if the current scenario (and version) uses early stopping
+    # Check if the current scenario uses early stopping
     uses_early_stopping = config.uses_early_stopping(scenario)
-
-    if config.version != "v0.5":
-        # FIXME: for open we script this because open can submit in all scenarios
-        # not supported for v0.5
 
     if uses_early_stopping:
         # check if early_stopping condition was met

@@ -44,7 +44,7 @@ def get_args():
         default=False, action="store_true")
     parser.add_argument(
         "--version",
-        default="v3.1",
+        default="v4.0",
         choices=list(checker.MODEL_CONFIG.keys()),
         help="mlperf version")
     parser.add_argument("--submitter", help="filter to submitter")
@@ -247,6 +247,13 @@ def infer_scenario_results(filter_submitter, noinfer_low_accuracy_results, confi
 
                                     shutil.copytree(high_accuracy_model_path, \
                                             low_accuracy_model_path)
+                                high_accuracy_model_code_path = os.path.join(log_path, "..", \
+                                        "code", model)
+                                low_accuracy_model_code_path = os.path.join(log_path, "..", \
+                                        "code", low_accuracy_model)
+                                if not os.path.exists(low_accuracy_model_code_path):
+                                    shutil.copytree(high_accuracy_model_code_path, \
+                                            low_accuracy_model_code_path)
 
 
 

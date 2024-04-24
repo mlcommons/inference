@@ -1049,6 +1049,185 @@ MODEL_CONFIG = {
             "gpt3-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
         },
     },
+    "v4.0": {
+        "models": [
+            "resnet",
+            "retinanet",
+            "rnnt",
+            "bert-99",
+            "bert-99.9",
+            "dlrm-v2-99",
+            "dlrm-v2-99.9",
+            "3d-unet-99",
+            "3d-unet-99.9",
+            "gptj-99",
+            "gptj-99.9",
+            "llama2-70b-99",
+            "llama2-70b-99.9",
+            "stable-diffusion-xl",
+        ],
+        "required-scenarios-datacenter": {
+            "resnet": ["Server", "Offline"],
+            "retinanet": ["Server", "Offline"],
+            "rnnt": ["Server", "Offline"],
+            "bert-99": ["Server", "Offline"],
+            "bert-99.9": ["Server", "Offline"],
+            "dlrm-v2-99": ["Server", "Offline"],
+            "dlrm-v2-99.9": ["Server", "Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+            "gptj-99": ["Server", "Offline"],
+            "gptj-99.9": ["Server", "Offline"],
+            "llama2-70b-99": ["Server", "Offline"],
+            "llama2-70b-99.9": ["Server", "Offline"],
+            "stable-diffusion-xl": ["Server", "Offline"],
+        },
+        "optional-scenarios-datacenter": {},
+        "required-scenarios-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline"],
+            "retinanet": ["SingleStream", "MultiStream", "Offline"],
+            "rnnt": ["SingleStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "gptj-99": ["SingleStream", "Offline"],
+            "gptj-99.9": ["SingleStream", "Offline"],
+            "stable-diffusion-xl": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-edge": {},
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "rnnt": ["SingleStream", "Offline", "Server"],
+            "bert-99": ["SingleStream", "Offline", "Server"],
+            "bert-99.9": ["Offline", "Server"],
+            "dlrm-v2-99": ["Offline", "Server"],
+            "dlrm-v2-99.9": ["Offline", "Server"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "gptj-99": ["SingleStream", "Offline", "Server"],
+            "gptj-99.9": ["SingleStream", "Offline", "Server"],
+            "llama2-70b-99": ["Server", "Offline"],
+            "llama2-70b-99.9": ["Server", "Offline"],
+            "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
+        },
+        "optional-scenarios-datacenter-edge": {},
+        "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
+            "retinanet": ("mAP", 37.55 * 0.99),
+            "rnnt": ("WER", (100 - 7.452) * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "dlrm-v2-99": ("AUC", 80.31 * 0.99),
+            "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
+            "3d-unet-99": ("DICE", 0.86170 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
+            "gptj-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
+            "gptj-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
+            "llama2-70b-99" : ("ROUGE1", 44.4312 * 0.99, "ROUGE2", 22.0352 * 0.99, "ROUGEL", 28.6162 * 0.99, "TOKENS_PER_SAMPLE", 294.45*0.9),
+            "llama2-70b-99.9" : ("ROUGE1", 44.4312 * 0.999, "ROUGE2", 22.0352 * 0.999, "ROUGEL", 28.6162 * 0.999, "TOKENS_PER_SAMPLE", 294.45*0.9),
+            "stable-diffusion-xl": ("CLIP_SCORE", 31.68631873, "FID_SCORE", 23.01085758)
+        },
+        "accuracy-upper-limit": {
+            "stable-diffusion-xl": ("CLIP_SCORE", 31.81331801, "FID_SCORE", 23.95007626),
+            "llama2-70b-99" : ("TOKENS_PER_SAMPLE", 294.45*1.1),
+            "llama2-70b-99.9" : ("TOKENS_PER_SAMPLE", 294.45*1.1)
+        },
+        "performance-sample-count": {
+            "resnet": 1024,
+            "retinanet": 64,
+            "rnnt": 2513,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-v2-99": 204800,
+            "dlrm-v2-99.9": 204800,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+            "gptj-99": 13368,
+            "gptj-99.9": 13368,
+            "llama2-70b-99": 24576,
+            "llama2-70b-99.9": 24576,
+            "stable-diffusion-xl": 5000
+        },
+        # TODO: Update this list.
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-mobilenet": "ssd-small",
+            "ssd-resnet34": "retinanet",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
+            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
+            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
+            "rcnn-resnet50-lowproposals-coco": "ssd-large",
+            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
+            "rcnn-inception-v2-coco": "ssd-large",
+            "rcnn-nas-lowproposals-coco": "ssd-large",
+            "rcnn-resnet101-lowproposals-coco": "ssd-large",
+            "ssd_mobilenet_v1_coco": "ssd-small",
+            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
+            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
+            "ssd_mobilenet_v2_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
+            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
+            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
+        },
+        "seeds": {
+            # TODO: Update random seeds
+            "qsl_rng_seed": 13281865557512327830,
+            "sample_index_rng_seed": 198141574272810017,
+            "schedule_rng_seed": 7575108116881280410,
+        },
+        "test05_seeds": {
+            # TODO: Update random seeds
+            "qsl_rng_seed": 2376919268182438552,
+            "sample_index_rng_seed": 11176391829184272374,
+            "schedule_rng_seed": 3911940905271271337,
+        },
+        "ignore_errors": [],
+        "latency-constraint": {
+            "resnet": {"Server": 15000000},
+            "retinanet": {"Server": 100000000},
+            "rnnt": {"Server": 1000000000},
+            "bert-99": {"Server": 130000000},
+            "bert-99.9": {"Server": 130000000},
+            "dlrm-v2-99": {"Server": 60000000},
+            "dlrm-v2-99.9": {"Server": 60000000},
+            "gptj-99": {"Server": 20000000000},
+            "gptj-99.9": {"Server": 20000000000},
+            "llama2-70b-99": {"Server": 20000000000},
+            "llama2-70b-99.9": {"Server": 20000000000},
+            "stable-diffusion-xl" : {"Server": 20000000000}
+        },
+        "min-queries": {
+            "resnet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "retinanet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-v2-99": {"Server": 270336, "Offline": 1},
+            "dlrm-v2-99.9": {"Server": 270336, "Offline": 1},
+            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
+            "gptj-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "stable-diffusion-xl": {"SingleStream": 1024, "Server": 270336, "Offline": 1}
+        },
+    },
 }
 
 VALID_DIVISIONS = ["open", "closed", "network"]
@@ -1069,6 +1248,24 @@ REQUIRED_ACC_FILES = [
     "accuracy.txt",
     "mlperf_log_accuracy.json",
 ]
+REQUIRED_ACC_BENCHMARK = {
+    "stable-diffusion-xl": {
+        "v4.0": {
+            "images": [
+                "4459",
+                "4015",
+                "2705",
+                "1682",
+                "4048",
+                "4683",
+                "3757",
+                "1578",
+                "3319",
+                "95"
+            ]
+        }
+    }
+}
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
 REQUIRED_POWER_MEASURE_FILES = ["analyzer_table.*", "power_settings.*"]
 MS_TO_NS = 1000 * 1000
@@ -1085,6 +1282,23 @@ REQUIRED_TEST01_ACC_FILES = REQUIRED_TEST01_ACC_FILES_1 + [
     "baseline_accuracy.txt",
     "compliance_accuracy.txt",
 ]
+
+OFFLINE_MIN_SPQ_SINCE_V4 = {
+    "resnet": 24576,
+    "retinanet": 24576,
+    "bert-99": 10833,
+    "bert-99.9": 10833,
+    "dlrm-v2-99": 24576,
+    "dlrm-v2-99.9": 24576,
+    "3d-unet-99": 43,
+    "3d-unet-99.9": 43,
+    "rnnt": 2513,
+    "gptj-99": 13368,
+    "gptj-99.9": 13368,
+    "llama2-70b-99": 24576,
+    "llama2-70b-99.9": 24576,
+    "stable-diffusion-xl": 5000
+}
 
 SCENARIO_MAPPING = {
     "singlestream": "SingleStream",
@@ -1156,6 +1370,32 @@ RESULT_FIELD_NEW = {
         "MultiStreamLegacy": "effective_samples_per_query",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_scheduled_samples_per_sec",
+    },
+    "v4.0": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_scheduled_samples_per_sec",
+    }
+}
+
+RESULT_FIELD_BENCHMARK_OVERWRITE = {
+    "llama2-70b-99": {
+        "Offline": "result_tokens_per_second",
+        "Server": "result_completed_samples_per_sec",
+    },
+    "llama2-70b-99.9": {
+        "Offline": "result_tokens_per_second",
+        "Server": "result_completed_samples_per_sec",
+    }
+}
+
+LLAMA2_LATENCY_LIMITS = {
+    # We might add interactive in the next round. Latency in ns
+    "conversational": {
+        "ttft": 2000 * 1000000,
+        "tpot": 200 * 1000000
     }
 }
 
@@ -1170,7 +1410,11 @@ ACC_PATTERN = {
     "ROUGE1": r".*'rouge1':\s([\d.]+).*",
     "ROUGE2": r".*'rouge2':\s([\d.]+).*",
     "ROUGEL": r".*'rougeL':\s([\d.]+).*",
+    "ROUGELSUM": r".*'rougeLsum':\s([\d.]+).*",
     "GEN_LEN": r".*'gen_len':\s([\d.]+).*",
+    "TOKENS_PER_SAMPLE": r".*'tokens_per_sample':\s([\d.]+).*",
+    "CLIP_SCORE": r".*'CLIP_SCORE':\s([\d.]+).*",
+    "FID_SCORE": r".*'FID_SCORE':\s([\d.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -1309,6 +1553,7 @@ class Config:
         self.seeds = self.base["seeds"]
         self.test05_seeds = self.base["test05_seeds"]
         self.accuracy_target = self.base["accuracy-target"]
+        self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
         self.performance_sample_count = self.base["performance-sample-count"]
         self.latency_constraint = self.base.get("latency-constraint", {})
         self.min_queries = self.base.get("min-queries", {})
@@ -1394,6 +1639,9 @@ class Config:
         if model not in self.accuracy_target:
             raise ValueError("model not known: " + model)
         return self.accuracy_target[model]
+    
+    def get_accuracy_upper_limit(self, model):
+        return self.accuracy_upper_limit.get(model, None)
 
     def get_performance_sample_count(self, model):
         model = self.get_mlperf_model(model)
@@ -1442,7 +1690,7 @@ def get_args():
     parser.add_argument("--input", required=True, help="submission directory")
     parser.add_argument(
         "--version",
-        default="v3.1",
+        default="v4.0",
         choices=list(MODEL_CONFIG.keys()),
         help="mlperf version",
     )
@@ -1522,6 +1770,25 @@ def list_files_recursively(*path):
     ]
 
 
+def check_extra_files(path, target_files):
+    missing_files = []
+    check_pass = True
+    folders = list_dir(path)
+    for dir in target_files.keys():
+        if dir not in folders:
+            check_pass = False
+            missing_files.append(os.path.join(path, dir))
+        else:
+            files = [f.split(".")[0] for f in list_files(os.path.join(path, dir))]
+            for target_file in target_files[dir]:
+                if target_file not in files:
+                    check_pass = False
+                    missing_files.append(f"{os.path.join(path, dir, target_file)}.png")
+            if "captions" not in files:
+                missing_files.append(f"{os.path.join(path, dir, 'captions.txt')}")
+    return check_pass, missing_files
+
+
 def split_path(m):
     return m.replace("\\", "/").split("/")
 
@@ -1574,8 +1841,18 @@ def check_accuracy_dir(config, model, path, verbose):
     result_acc = None
     hash_val = None
     target = config.get_accuracy_target(model)
+    acc_upper_limit = config.get_accuracy_upper_limit(model)
     patterns = []
     acc_targets = []
+    if acc_upper_limit is not None:
+        acc_limits = []
+        up_patterns = []
+        acc_limit_check = True
+        for i in range(0, len(acc_upper_limit), 2):
+            acc_type, acc_target = acc_upper_limit[i:i+2]
+            acc_limits.append(acc_target)
+            up_patterns.append(ACC_PATTERN[acc_type])
+
     for i in range(0, len(target), 2):
         acc_type, acc_target = target[i:i+2]
         patterns.append(ACC_PATTERN[acc_type])
@@ -1599,9 +1876,23 @@ def check_accuracy_dir(config, model, path, verbose):
                 if i == 0 and acc:
                     result_acc = acc
                 acc = None
+            if acc_upper_limit is not None:
+                for i, (pattern, acc_limit) in enumerate(zip(up_patterns, acc_limits)):
+                    m = re.match(pattern, line)
+                    if m:
+                        acc = m.group(1)
+                    m = re.match(r"^hash=([\w\d]+)$", line)
+                    if m:
+                        hash_val = m.group(1)
+                    if acc is not None and acc_upper_limit is not None and float(acc) > acc_limit:
+                        acc_limit_check = False
+                        log.warning("%s accuracy not met: upper limit=%f, found=%s", path, acc_limit, acc)
+                    acc = None
             if all(acc_seen) and hash_val:
                 break;
         is_valid = all_accuracy_valid & all(acc_seen)
+        if acc_upper_limit is not None:
+            is_valid &= acc_limit_check
 
     if not hash_val:
         log.error("%s not hash value for mlperf_log_accuracy.json", path)
@@ -1625,6 +1916,23 @@ def check_accuracy_dir(config, model, path, verbose):
     return is_valid, result_acc
 
 
+def extra_check_llama2(mlperf_log, scenario):
+    if (mlperf_log["requested_use_token_latencies"]):
+        if scenario == "Offline":
+            # For offline no further checks are necessary
+            return None, True
+        else:
+            for constraint, limits in LLAMA2_LATENCY_LIMITS.items():
+                if mlperf_log["result_first_token_99.00_percentile_latency_ns"] < limits["ttft"] and mlperf_log["result_time_per_output_token_99.00_percentile_ns"] < limits["tpot"]:
+                    return constraint, True
+    else:
+        log.error(f'use_token_latencies flag needs to be enabled for Llama2 benchmark')
+        return None, False
+
+    log.error(f'Failed Llama2 extra check for TTFT and TPOT. TTFT 99-tile: {mlperf_log["result_first_token_99.00_percentile_latency_ns"]}, TPOT 99-tile: {mlperf_log["result_time_per_output_token_99.00_percentile_ns"]}')
+    return None, False
+            
+
 def get_performance_metric(
     config, model, path, scenario_fixed, division, system_json, has_power=False
 ):
@@ -1645,6 +1953,8 @@ def get_performance_metric(
     )
 
     res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+    if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
+        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario_for_res]])
 
     inferred = False
     if scenario_fixed != scenario:
@@ -1678,6 +1988,12 @@ def check_performance_dir(
             else scenario
         )
         res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+        if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
+            res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario_for_res]])
+        
+        if model in ["llama2-70b-99", "llama2-70b-99.9"]:
+            llama_constraint, is_valid = extra_check_llama2(mlperf_log, scenario_fixed)
+
         latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
         latency_mean = mlperf_log["result_mean_latency_ns"]
         if scenario in ["MultiStream"]:
@@ -1830,7 +2146,8 @@ def check_performance_dir(
                 )
                 is_valid = False
 
-        if scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ):
+        if config.version in ["v0.5", "v0.7", "v1.0", "v1.1", "v2.0", "v2.1", "v3.0", "v3.1"] and scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ) or \
+        scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ_SINCE_V4[model]):
             log.error(
                 "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
                 fname,
@@ -1852,6 +2169,7 @@ def check_performance_dir(
                 required_min_duration,
                 min_duration,
             )
+            is_valid = False
 
     inferred = False
     if scenario_fixed != scenario:
@@ -1960,6 +2278,8 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
     power_list = []
     with open(spl_fname) as f:
         for line in f:
+            if not line.startswith("Time"):
+                continue
             timestamp = (
                 datetime.datetime.strptime(line.split(",")[1], datetime_format)
                 + server_timezone
@@ -2626,18 +2946,30 @@ def check_results_dir(
                                 "process_accuracy.py",
                                 acc_path,
                             )
+                            errors += 1
+                            continue
                         else:
                             diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
                             if diff:
                                 log.error(
                                     "%s has file list mismatch (%s)", acc_path, diff
                                 )
+                                errors += 1
+                                continue
                             accuracy_is_valid, acc = check_accuracy_dir(
                                 config,
                                 mlperf_model,
                                 acc_path,
                                 debug or is_closed_or_network,
                             )
+                            if mlperf_model in REQUIRED_ACC_BENCHMARK:
+                                if config.version in REQUIRED_ACC_BENCHMARK[mlperf_model]:
+                                    extra_files_pass, missing_files = check_extra_files(acc_path, REQUIRED_ACC_BENCHMARK[mlperf_model][config.version])
+                                    if not extra_files_pass:
+                                        log.error(
+                                            "%s expected to have the following extra files (%s)", acc_path, missing_files
+                                        )
+                                        accuracy_is_valid = False
                             if not accuracy_is_valid and not is_closed_or_network:
                                 if debug:
                                     log.warning(
@@ -2660,6 +2992,7 @@ def check_results_dir(
                             n = ["run_1"]
 
                         for i in n:
+                            is_valid = True
                             perf_path = os.path.join(name, "performance", i)
                             if not os.path.exists(perf_path):
                                 log.error("%s is missing", perf_path)
@@ -2793,24 +3126,21 @@ def check_results_dir(
                                 model_name,
                                 scenario,
                             )
-                            if not os.path.exists(compliance_dir) and "gptj" not in model_name:
-                                log.error("no compliance dir for %s", name)
+                            if not check_compliance_dir(
+                                compliance_dir,
+                                mlperf_model,
+                                scenario_fixed,
+                                config,
+                                division,
+                                system_json,
+                                name
+                            ):
+                                log.error(
+                                    "compliance dir %s has issues", compliance_dir
+                                )
                                 results[name] = None
                             else:
-                                if not check_compliance_dir(
-                                    compliance_dir,
-                                    mlperf_model,
-                                    scenario_fixed,
-                                    config,
-                                    division,
-                                    system_json,
-                                ):
-                                    log.error(
-                                        "compliance dir %s has issues", compliance_dir
-                                    )
-                                    results[name] = None
-                                else:
-                                    compliance = 1
+                                compliance = 1
 
                         if results.get(name):
                             if accuracy_is_valid:
@@ -3109,96 +3439,112 @@ def check_compliance_acc_dir(test_dir, model, config):
     if not os.path.exists(fname):
         log.error("%s is missing in %s", fname, test_dir)
     else:
-        # Accuracy can fail for TEST01
-        is_valid = True
-        with open(fname, "r") as f:
-            for line in f:
-                # look for: TEST PASS
-                if "TEST PASS" in line:
-                    acc_passed = True
-                    break
-        if acc_passed == False:
-            log.info(
-                "Compliance test accuracy check (deterministic mode) in %s failed",
-                test_dir,
-            )
-
-        # Check Accuracy dir
-        test_acc_path = os.path.join(test_dir, "accuracy")
-        if not os.path.exists(test_acc_path):
-            log.error("%s has no accuracy directory", test_dir)
-            is_valid = False
-        else:
-            diff = files_diff(
-                list_files(test_acc_path),
-                REQUIRED_TEST01_ACC_FILES_1
-                if acc_passed
-                else REQUIRED_TEST01_ACC_FILES,
-            )
-            if diff:
-                log.error("%s has file list mismatch (%s)", test_acc_path, diff)
-                is_valid = False
-            elif not acc_passed:
-                target = config.get_accuracy_target(model)
-                patterns = []
-                acc_types = []
-                for i in range(0, len(target), 2):
-                    acc_type = target[i:i+2]
-                    acc_types.append(acc_type)
-                    patterns.append(ACC_PATTERN[acc_type[0]])
-                acc_seen = [False for _ in acc_type]
-
-
-
-                more_accurate = model.find("99.9")
-                if more_accurate == -1:
-                    required_delta_perc = 1
-                else:
-                    required_delta_perc = 0.1
-                
-                acc_baseline = {
-                    acc_type: 0 for acc_type in acc_types
-                }
-                acc_compliance = {
-                    acc_type: 0 for acc_type in acc_types
-                }
-                with open(
-                    os.path.join(test_acc_path, "baseline_accuracy.txt"),
-                    "r",
-                    encoding="utf-8",
-                ) as f:
-                    for line in f:
-                        for acc_type, pattern in zip(acc_types, patterns):
-                            m = re.match(pattern, line)
-                            if m:
-                                acc_baseline[acc_type] = float(m.group(1))
-                with open(
-                    os.path.join(test_acc_path, "compliance_accuracy.txt"),
-                    "r",
-                    encoding="utf-8",
-                ) as f:
-                    for line in f:
-                        for acc_type, pattern in zip(acc_types, patterns):
-                            m = re.match(pattern, line)
-                            if m:
-                                acc_compliance[acc_type] = float(m.group(1))
-                for acc_type in acc_types:
-                    if acc_baseline[acc_type] == 0 or acc_compliance[acc_type] == 0:
-                        is_valid = False
+        if "TEST01" in test_dir:
+            # Accuracy can fail for TEST01
+            is_valid = True
+            with open(fname, "r") as f:
+                for line in f:
+                    # look for: TEST PASS
+                    if "TEST PASS" in line:
+                        acc_passed = True
                         break
+            if acc_passed == False:
+                log.info(
+                    "Compliance test accuracy check (deterministic mode) in %s failed",
+                    test_dir,
+                )
+
+            # Check Accuracy dir
+            test_acc_path = os.path.join(test_dir, "accuracy")
+            if not os.path.exists(test_acc_path):
+                log.error("%s has no accuracy directory", test_dir)
+                is_valid = False
+            else:
+                diff = files_diff(
+                    list_files(test_acc_path),
+                    REQUIRED_TEST01_ACC_FILES_1
+                    if acc_passed
+                    else REQUIRED_TEST01_ACC_FILES,
+                )
+                if diff:
+                    log.error("%s has file list mismatch (%s)", test_acc_path, diff)
+                    is_valid = False
+                elif not acc_passed:
+                    target = config.get_accuracy_target(model)
+                    patterns = []
+                    acc_types = []
+                    for i in range(0, len(target), 2):
+                        acc_type = target[i:i+2]
+                        acc_types.append(acc_type)
+                        patterns.append(ACC_PATTERN[acc_type[0]])
+                    acc_seen = [False for _ in acc_type]
+
+                    more_accurate = model.find("99.9")
+                    if more_accurate == -1:
+                        required_delta_perc = 1
                     else:
-                        delta_perc = abs(1 - acc_baseline[acc_type] / acc_compliance[acc_type]) * 100
-                        if delta_perc <= required_delta_perc:
-                            is_valid = True
-                        else:
+                        required_delta_perc = 0.1
+                    acc_baseline = {
+                        acc_type: 0 for acc_type in acc_types
+                    }
+                    acc_compliance = {
+                        acc_type: 0 for acc_type in acc_types
+                    }
+                    with open(
+                        os.path.join(test_acc_path, "baseline_accuracy.txt"),
+                        "r",
+                        encoding="utf-8",
+                    ) as f:
+                        for line in f:
+                            for acc_type, pattern in zip(acc_types, patterns):
+                                m = re.match(pattern, line)
+                                if m:
+                                    acc_baseline[acc_type] = float(m.group(1))
+                    with open(
+                        os.path.join(test_acc_path, "compliance_accuracy.txt"),
+                        "r",
+                        encoding="utf-8",
+                    ) as f:
+                        for line in f:
+                            for acc_type, pattern in zip(acc_types, patterns):
+                                m = re.match(pattern, line)
+                                if m:
+                                    acc_compliance[acc_type] = float(m.group(1))
+                    for acc_type in acc_types:
+                        if acc_baseline[acc_type] == 0 or acc_compliance[acc_type] == 0:
                             is_valid = False
                             break
+                        else:
+                            delta_perc = abs(1 - acc_baseline[acc_type] / acc_compliance[acc_type]) * 100
+                            if delta_perc <= required_delta_perc:
+                                is_valid = True
+                            else:
+                                is_valid = False
+                                break
+        elif "TEST06" in test_dir:
+            """
+            Expected output
+            First token check pass: True (or First token check pass: Skipped)
+            EOS check pass: True
+            TEST06 verification complete
+            """
+            with open(fname, "r") as f:
+                lines = f.readlines()
+            lines = [line.strip() for line in lines]
+            first_token_pass = "First token check pass: True" in lines or "First token check pass: Skipped" in lines
+            eos_pass = "EOS check pass: True" in lines
+            length_check_pass = "Sample length check pass: True" in lines
+            is_valid = first_token_pass and eos_pass and length_check_pass
+            if not is_valid:
+                log.error(f"TEST06 accuracy check failed. first_token_check: {first_token_pass} eos_check: {eos_pass} length_check: {length_check_pass}.")
+        else:
+            raise NotImplemented(f"{test_dir} is neither TEST01 and TEST06, which doesn't require accuracy check")
 
     return is_valid
 
 
 def check_compliance_dir(
-    compliance_dir, model, scenario, config, division, system_json
+    compliance_dir, model, scenario, config, division, system_json, name
 ):
     compliance_perf_pass = True
     compliance_perf_dir_pass = True
@@ -3216,27 +3562,43 @@ def check_compliance_dir(
         "retinanet",
         "gptj-99",
         "gptj-99.9",
-        "gpt3-99",
-        "gpt3-99.9",
+        "llama2-70b-99",
+        "llama2-70b-99.9",
+        "stable-diffusion-xl"
+
     ]:
         test_list.remove("TEST04")
 
     if model in [
         "gptj-99",
         "gptj-99.9",
-        "gpt3-99",
-        "gpt3-99.9",
+        "llama2-70b-99",
+        "llama2-70b-99.9",
+        "stable-diffusion-xl"
     ]:
         test_list.remove("TEST05")
         test_list.remove("TEST01") 
 
-    # Check performance of all Tests
+    if model in [
+        "llama2-70b-99",
+        "llama2-70b-99.9",
+    ]:
+        test_list.append("TEST06") 
+
+    if test_list and not os.path.exists(compliance_dir):
+        log.error("no compliance dir for %s: %s", name, compliance_dir)
+        return False
+
+    # Check performance of all Tests (except for TEST06)
     for test in test_list:
         test_dir = os.path.join(compliance_dir, test)
         if not os.path.exists(test_dir):
             log.error("Missing %s in compliance dir %s", test, compliance_dir)
             compliance_perf_dir_pass = False
         else:
+            # TEST06 has no performance test.
+            if "TEST06" in test_list:
+                continue
             try:
                 compliance_perf_dir = os.path.join(
                     compliance_dir, test, "performance", "run_1"
@@ -3259,13 +3621,14 @@ def check_compliance_dir(
                 and compliance_perf_valid
             )
 
-    if "TEST01" in test_list:
-        # Check accuracy for TEST01
-        compliance_acc_pass = check_compliance_acc_dir(
-            os.path.join(compliance_dir, "TEST01"), model, config
-        )
-    else:
-        compliance_acc_pass= True
+    compliance_acc_pass= True
+    for test in ["TEST01", "TEST06"]:
+        if test in test_list:
+            # Check accuracy for TEST01
+            compliance_acc_pass &= check_compliance_acc_dir(
+                os.path.join(compliance_dir, test), model, config
+            )
+
 
     return compliance_perf_pass and compliance_acc_pass and compliance_perf_dir_pass
 

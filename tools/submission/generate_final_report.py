@@ -14,8 +14,8 @@ def get_args():
   """Parse commandline."""
   parser = argparse.ArgumentParser()
   parser.add_argument('--input', required=True, help='results csv from checker')
-  parser.add_argument('--version', default='3.1', help='mlperf version')
-  parser.add_argument('--repository', default='submissions_inference_3.1', help='mlperf repository')
+  parser.add_argument('--version', default='4.0', help='mlperf version')
+  parser.add_argument('--repository', default='submissions_inference_4.0', help='mlperf repository')
   args = parser.parse_args()
   return args
 
@@ -104,7 +104,7 @@ def main():
                    [
                        'resnet', 'retinanet', '3d-unet-99', '3d-unet-99.9',
                        'rnnt', 'bert-99', 'bert-99.9', 'dlrm-v2-99', 'dlrm-v2-99.9',
-                       'gptj-99', 'gptj-99.9'
+                       'gptj-99', 'gptj-99.9', 'stable-diffusion-xl', 'llama2-70b-99', 'llama2-70b-99.9'
                    ], ['SingleStream', 'MultiStream', 'Server', 'Offline'],
                    [
                        'Latency (ms)',
@@ -127,6 +127,9 @@ def main():
           '3d-unet-99.9': ['Offline'],
           'gptj-99': ['Server', 'Offline'],
           'gptj-99.9': ['Server', 'Offline'],
+          'stable-diffusion-xl': ['Server', 'Offline'],
+          'llama2-70b-99': ['Server', 'Offline'],
+          'llama2-70b-99.9': ['Server', 'Offline'],
       },
       'edge': {
           'resnet': ['SingleStream', 'MultiStream', 'Offline'],
@@ -140,6 +143,7 @@ def main():
           '3d-unet-99.9': ['SingleStream', 'Offline'],
           'gptj-99': ['SingleStream', 'Offline'],
           'gptj-99.9': ['SingleStream', 'Offline'],
+          'stable-diffusion-xl': ['SingleStream', 'Offline'],
       }
   }
 

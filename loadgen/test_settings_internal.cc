@@ -48,7 +48,10 @@ TestSettingsInternal::TestSettingsInternal(
       performance_issue_same(requested.performance_issue_same),
       performance_issue_same_index(requested.performance_issue_same_index),
       performance_sample_count(0),
-      sample_concatenate_permutation(false){
+      sample_concatenate_permutation(false),
+      use_token_latencies(requested.use_token_latencies),
+      server_ttft_latency(requested.server_ttft_latency),
+      server_tpot_latency(requested.server_tpot_latency){
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -329,6 +332,14 @@ void LogRequestedTestSettings(const TestSettings &s) {
                s.performance_issue_same_index);
     MLPERF_LOG(detail, "requested_performance_sample_count_override",
                s.performance_sample_count_override);
+    // Token latencies specific values
+    if (s.use_token_latencies){
+      MLPERF_LOG(detail, "requested_use_token_latencies", s.use_token_latencies);
+      if (s.scenario != TestScenario::Offline){
+        MLPERF_LOG(detail, "requested_server_ttft_latency", s.server_ttft_latency);
+        MLPERF_LOG(detail, "requested_server_tpot_latency", s.server_tpot_latency);
+      }
+    }
 #else
     detail("");
     detail("Requested Settings:");
@@ -471,7 +482,12 @@ void TestSettingsInternal::LogAllSettings() const {
 void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("samples_per_query : ", samples_per_query);
   summary("target_qps : ", target_qps);
-  summary("target_latency (ns): ", target_latency.count());
+  if (!use_token_latencies){
+    summary("target_latency (ns): ", target_latency.count());
+  } else {
+    summary("ttft_latency (ns): ", server_ttft_latency);
+    summary("tpot_latency (ns): ", server_tpot_latency);
+  }
   summary("max_async_queries : ", max_async_queries);
   summary("min_duration (ms): ", min_duration.count());
   summary("max_duration (ms): ", max_duration.count());
@@ -672,6 +688,15 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, scenario, "test05_sample_index_rng_seed", &test05_sample_index_rng_seed,
            nullptr);
   lookupkv(model, scenario, "test05_schedule_rng_seed", &test05_schedule_rng_seed, nullptr);
+
+  // keys that apply to token metrics
+  if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)){
+    use_token_latencies = (val == 1) ? true : false;
+    if (use_token_latencies){
+      lookupkv(model, "Server", "ttft_latency", &server_ttft_latency, nullptr, 1000 * 1000);
+      lookupkv(model, "Server", "tpot_latency", &server_tpot_latency, nullptr, 1000 * 1000);
+    }
+  }
 
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,

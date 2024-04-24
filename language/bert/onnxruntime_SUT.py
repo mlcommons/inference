@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 # Modified by SCC23 UCSD Zixian Wang, Nov 11, 2023
 
+import threading
 import array
 import json
 import os
@@ -28,6 +30,7 @@ import numpy as np
 import onnxruntime
 from transformers import BertConfig, BertForQuestionAnswering
 from squad_QSL import get_squad_QSL
+from time import sleep
 
 
 # For multi-gpu runs
@@ -145,6 +148,7 @@ class BERT_ONNXRuntime_SUT():
 
         
         self.profile = args.profile
+        self.network = args.network
         self.options = onnxruntime.SessionOptions()
         self.options.enable_profiling = args.profile
         self.options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
@@ -258,6 +262,7 @@ class BERT_ONNXRuntime_SUT():
 
     
     def issue_queries(self, query_samples):
+
 
         
         # Sleep for 1 minute
@@ -462,7 +467,6 @@ class BERT_ONNXRuntime_SUT():
 
         
         
-
     def flush_queries(self):
         pass
 

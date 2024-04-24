@@ -302,6 +302,7 @@ class BERT_PyTorch_SUT():
                     response = lg.QuerySampleResponse(sample_ids[index], bi[0], bi[1])
                     lg.QuerySamplesComplete([response])
 
+
     def flush_queries(self):
         pass
 

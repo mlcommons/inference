@@ -2,9 +2,9 @@
 
 Please visit the individual benchmark links to see the run commands using the unified CM interface.
 
-1. [Image Classification](benchmarks/image_classification/resnet50.md) using ResNet50 model and Imagenet-2012 dataset
+1. [Image Classification](image_classification/resnet50.md) using ResNet50 model and Imagenet-2012 dataset
 
-2. [Text to Image](benchmarks/text_to_image/sdxl.md) using Stable Diffusion model and Coco2014 dataset
+2. [Text to Image](text_to_image/sdxl.md) using Stable Diffusion model and Coco2014 dataset
 
 3. [Object Detection](object_detection/retinanet.md) using Retinanet model and OpenImages dataset
 

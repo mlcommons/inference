@@ -100,4 +100,4 @@ def define_env(env):
      if execution_mode == "test":
        cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
-     return f"\n{f_pre_space} ```bash\n{f_pre_space} cm run script --tags=run-mlperf,inference{scenario_variation_tag} \\\n {pre_space} --model={model} \\\n {pre_space} --implementation={implementation} \\\n {pre_space} --framework={framework} \\\n {pre_space} --category={category} {scenario_option} \\\n {pre_space} --execution-mode={execution_mode} \\\n {pre_space} --device={device} {cmd_suffix}\n{f_pre_space} ```\n"
+     return f"\n{f_pre_space} ```bash\n{f_pre_space} cm run script --tags=run-mlperf,inference,_full{scenario_variation_tag} \\\n {pre_space} --model={model} \\\n {pre_space} --implementation={implementation} \\\n {pre_space} --framework={framework} \\\n {pre_space} --category={category} {scenario_option} \\\n {pre_space} --execution-mode={execution_mode} \\\n {pre_space} --device={device} {cmd_suffix}\n{f_pre_space} ```\n"

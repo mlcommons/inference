@@ -99,7 +99,7 @@ Please visit the [official CM installation page](https://github.com/mlcommons/ck
 ## Download the CM MLOps Repository
 
 ```bash
-   cm pull repo mlcommons@cm4mlops --branch=mlperf-inference
+   cm pull repo gateoverflow@cm4mlops
 ```
 
-Now, you are ready to use the `cm` commands to run MLPerf inference as given in the [benchmarks](../benchmarks) page
+Now, you are ready to use the `cm` commands to run MLPerf inference as given in the [benchmarks](../benchmarks/index.md) page

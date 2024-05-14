@@ -819,6 +819,6 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
   }
 #endif
 }
-
+}
 }  // namespace loadgen
 } // namespace mlperf

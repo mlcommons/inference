@@ -807,7 +807,7 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
   if (settings.infer_token_latencies){
     switch (settings.scenario) {
       case TestScenario::Server: {
-        double completed_tokens_per_second = sample_count * settings.token_latency_scaling_factor / pr.final_query_all_samples_done_time;
+        double completed_tokens_per_second = (sample_count - 1) * settings.token_latency_scaling_factor / pr.final_query_all_samples_done_time;
         MLPERF_LOG(detail, "result_inferred_completed_tokens_per_second", completed_tokens_per_second);
         break;
       }
@@ -815,7 +815,13 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
         double tokens_per_second = sample_count * settings.token_latency_scaling_factor / pr.max_latency;
         MLPERF_LOG(detail, "result_inferred_tokens_per_second", tokens_per_second);
         break;
-    }
+      }
+      case TestScenario::SingleStream: {
+        break;
+      }
+      case TestScenario::MultiStream: {
+        break;
+      }
   }
 #endif
 }

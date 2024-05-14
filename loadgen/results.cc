@@ -463,7 +463,7 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
       }
       case TestScenario::Server:
         double tps_as_completed =
-          settings.token_latency_scaling_factor * sample_count / pr.final_query_all_samples_done_time;
+          settings.token_latency_scaling_factor * (sample_count - 1) / pr.final_query_all_samples_done_time;
         summary("Completed tokens per second (inferred): ",
                 DoubleToString(tps_as_completed));
         break;

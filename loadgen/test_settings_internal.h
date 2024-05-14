@@ -85,6 +85,9 @@ struct TestSettingsInternal {
   bool use_token_latencies = false;
   int64_t server_ttft_latency;
   int64_t server_tpot_latency;
+
+  bool infer_token_latencies = false;
+  int64_t token_latency_scaling_factor;
 };
 
 /// \brief A namespace of collections of FindPeakPerformance helper functions,

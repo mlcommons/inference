@@ -17,7 +17,10 @@ def preprocess(query):
 
 def dnn_model(query):
     # Here may come for example a call to a dnn model such as resnet, bert, etc.
-    response = backend.process_sample(query)
+    input_ids_tensor = query["input_ids_tensor"]
+    input_masks_tensor = query["input_masks_tensor"]
+    response = backend.inference_call(input_ids_tensor, input_masks_tensor)
+    print(f"dnn model response:{response}")
     return response
 
 
@@ -33,6 +36,7 @@ def predict():
     """Receives a query (e.g., a text) runs inference, and returns a prediction."""
     query = request.get_json(force=True)['query']
     result = postprocess(dnn_model(preprocess(query)))
+    print(result)
     return jsonify(result=result)
 
 

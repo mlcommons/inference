@@ -5,6 +5,7 @@ import os
 
 import sys
 from backend import get_SUT
+import backend
 sys.path.insert(0, os.getcwd())
 
 
@@ -37,6 +38,8 @@ def get_args():
     parser.add_argument("--network", choices=["sut","lon",None], default=None, help="Loadgen network mode")
     parser.add_argument('--node', type=str, default="")
     parser.add_argument('--port', type=int, default=8000)
+    parser.add_argument('--sut_server', nargs="*", default= ['http://localhost:8000'],
+                    help='Address of the server(s) under test.')
     args = parser.parse_args()
     return args
 
@@ -86,6 +89,8 @@ def main():
 
     if args.network == "lon":
         print("LON network")
+        qdl = backend.GPTJ_QDL(sut, args.sut_server)
+        lg.StartTestWithLogSettings(qdl.qdl, sut.qsl, settings, log_settings, args.audit_conf)
     elif args.network == "sut":
         print("SUT network")
         from network_SUT import app, node, set_backend

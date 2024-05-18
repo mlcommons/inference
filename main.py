@@ -118,19 +118,19 @@ def define_env(env):
        scenario_option = f"\\\n {pre_space} --scenario={scenario}"
 
      if docker:
-       docker_cmd_suffix = f" \\\n {pre_space} --docker"
+       docker_cmd_suffix = f" \\\n {pre_space} --docker --quiet"
        docker_cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
-       docker_setup_cmd = f"\n{f_pre_space} ```bash\n{f_pre_space} cm run script --tags=run-mlperf,inference,_full{scenario_variation_tag} \\\n {pre_space} --model={model} \\\n {pre_space} --implementation={implementation} \\\n {pre_space} --framework={framework} \\\n {pre_space} --category={category} {scenario_option} \\\n {pre_space} --execution-mode=test \\\n {pre_space} --device={device} {docker_cmd_suffix}\n{f_pre_space} ```\n"
+       docker_setup_cmd = f"\n{f_pre_space} ```bash\n{f_pre_space} cm run script --tags=run-mlperf,inference,_find-performance,_full{scenario_variation_tag} \\\n {pre_space} --model={model} \\\n {pre_space} --implementation={implementation} \\\n {pre_space} --framework={framework} \\\n {pre_space} --category={category} {scenario_option} \\\n {pre_space} --execution-mode=test \\\n {pre_space} --device={device} {docker_cmd_suffix}\n{f_pre_space} ```\n"
 
        return docker_setup_cmd
 
      else:
-       cmd_suffix = f""
+       cmd_suffix = f"\\\n {pre_space} --quiet"
 
        if execution_mode == "test":
          cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
-       run_cmd = f"\n{f_pre_space} ```bash\n{f_pre_space} cm run script --tags=run-mlperf,inference,_full{scenario_variation_tag} \\\n {pre_space} --model={model} \\\n {pre_space} --implementation={implementation} \\\n {pre_space} --framework={framework} \\\n {pre_space} --category={category} {scenario_option} \\\n {pre_space} --execution-mode={execution_mode} \\\n {pre_space} --device={device} {cmd_suffix}\n{f_pre_space} ```\n"
+       run_cmd = f"\n{f_pre_space} ```bash\n{f_pre_space} cm run script --tags=run-mlperf,inference{scenario_variation_tag} \\\n {pre_space} --model={model} \\\n {pre_space} --implementation={implementation} \\\n {pre_space} --framework={framework} \\\n {pre_space} --category={category} {scenario_option} \\\n {pre_space} --execution-mode={execution_mode} \\\n {pre_space} --device={device} {cmd_suffix}\n{f_pre_space} ```\n"
 
        return run_cmd

@@ -53,7 +53,8 @@ class GPTJ_QDL:
         max_num_threads = int(os.environ.get('CM_MAX_NUM_THREADS', os.cpu_count()))
 
         for i in range(len(query_samples)):
-            query = query_samples[i]
+            index = query_samples[i].index
+            query = self.sut.data_object.sources[index]
             n = threading.active_count()
             while n >= max_num_threads:
                 sleep(0.0001)
@@ -75,7 +76,7 @@ class GPTJ_QDL:
         print(f"The url:{url} and query:{query}")
         response = requests.post(url, json={'query': query})
         output = response.json()['result']
-        output = np.array(output).astype(np.float32)
+        output = np.array(output).astype(np.int32)
         response_array = array.array("B", output.tobytes())
         bi = response_array.buffer_info()
 

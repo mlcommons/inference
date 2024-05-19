@@ -96,7 +96,8 @@ class SUT_base():
         list_prompts_attn_masks = []
 
         for i in tqdm(range(len(query_samples))):
-            query = query_samples[i]
+            index = query_samples[i].index
+            query = self.data_object.sources[index]
             self.inference_call(query, query_samples[i].id)
 
     def inference_call(self, query, query_id=None):
@@ -129,7 +130,7 @@ class SUT_base():
             pred_output_batch = output_batch_truncated.cpu().numpy()
 
             if self.network == "sut":
-                return output_batch_truncated.tolist()
+                return pred_output_batch.tolist()
 
             response_array = array.array("B", pred_output_batch[0].tobytes())
             bi = response_array.buffer_info()

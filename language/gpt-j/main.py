@@ -2,9 +2,10 @@ import subprocess
 import mlperf_loadgen as lg
 import argparse
 import os
-
+import math
 import sys
-from backend import get_SUT
+from backend_PyTorch import get_SUT
+from GPTJ_QDL import GPTJ_QDL
 sys.path.insert(0, os.getcwd())
 
 
@@ -34,6 +35,11 @@ def get_args():
                         help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--max_examples", type=int, default=13368,
                         help="Maximum number of examples to consider (not limited by default)")
+    parser.add_argument("--network", choices=["sut","lon",None], default=None, help="Loadgen network mode")
+    parser.add_argument('--node', type=str, default="")
+    parser.add_argument('--port', type=int, default=8000)
+    parser.add_argument('--sut_server', nargs="*", default= ['http://localhost:8000'],
+                    help='Address of the server(s) under test.')
     args = parser.parse_args()
     return args
 
@@ -56,6 +62,7 @@ def main():
         dataset_path=args.dataset_path,
         max_examples=args.max_examples,
         use_gpu=args.gpu,
+        network=args.network,
     )
 
     settings = lg.TestSettings()
@@ -80,7 +87,34 @@ def main():
     log_settings.log_output = log_output_settings
     log_settings.enable_trace = True
 
-    lg.StartTestWithLogSettings(sut.sut, sut.qsl, settings, log_settings, args.audit_conf)
+    if args.network == "lon":
+        print("LON network")
+        qdl = GPTJ_QDL(sut, args.sut_server)
+        lg.StartTestWithLogSettings(qdl.qdl, sut.qsl, settings, log_settings, args.audit_conf)
+    elif args.network == "sut":
+        print("SUT network")
+        # consider the cache generated with respect to beam size be 6xbeamSize
+        beam_size = int(os.environ.get("GPTJ_BEAM_SIZE", "4"))
+        temp_cache = 6 * beam_size
+        from network_SUT import app, node, set_backend, set_semaphore
+        from systemStatus import get_cpu_memory_info, get_gpu_memory_info
+        import threading
+        model_mem_size = sut.total_mem_size
+        if args.gpu:
+            free_mem = int(os.environ.get("CM_CUDA_DEVICE_PROP_GLOBAL_MEMORY", get_gpu_memory_info())) / (1024**3)
+        else:
+            free_mem = get_cpu_memory_info()
+        # for providing semaphore
+        lockVar = math.floor((free_mem - model_mem_size)/temp_cache)
+        node = args.node
+        set_semaphore(lockVar)
+        print(f"Set the semaphore lock variable to {lockVar}")
+        set_backend(sut)
+        app.run(debug=False, port=args.port, host="0.0.0.0")
+    else:
+        print("Running LoadGen test...")
+        lg.StartTestWithLogSettings(sut.sut, sut.qsl, settings, log_settings, args.audit_conf)
+
     print("Test Done!")
 
     print("Destroying SUT...")

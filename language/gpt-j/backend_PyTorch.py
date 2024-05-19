@@ -11,11 +11,6 @@ from dataset import Dataset
 from tqdm import tqdm
 from accelerate import disk_offload
 
-# For QDL
-import threading
-import requests
-from time import sleep
-
 gen_kwargs = {
     "early_stopping": True,
     "max_new_tokens": 128,
@@ -101,23 +96,16 @@ class SUT_base():
         list_prompts_attn_masks = []
 
         for i in tqdm(range(len(query_samples))):
-            index = query_samples[i].index
-            input_ids_tensor = self.data_object.source_encoded_input_ids[index]
-            input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
+            query = query_samples[i]
+            self.inference_call(query, query_samples[i].id)
 
-            # Cast to GPU
-            if self.use_gpu:
-                input_ids_tensor = input_ids_tensor.to(self.device)
-                input_masks_tensor = input_masks_tensor.to(self.device)
-
-            self.inference_call(input_ids_tensor, input_masks_tensor, query_samples[i].id)
-
-    def inference_call(self, input_ids_tensor, input_masks_tensor, query_id=None):
+    def inference_call(self, query, query_id=None):
         ''' Common for all scenarios '''
         torch_device_type = 'cuda' if self.use_gpu else 'cpu'
-        if isinstance(input_ids_tensor, list):
-            input_ids_tensor = torch.tensor(input_ids_tensor, dtype=torch.long)
-            input_masks_tensor = torch.tensor(input_masks_tensor, dtype=torch.long)
+        input_ids_tensor, input_masks_tensor = self.data_object.encode_input_from_network(query)
+        input_ids_tensor = input_ids_tensor.to(torch_device_type)
+        input_masks_tensor = input_masks_tensor.to(torch_device_type)           
+
             
         with torch.inference_mode(), torch.autocast(device_type=torch_device_type, enabled=self.amp_enabled, dtype=self.amp_dtype if self.amp_enabled else None):
             input_batch = dict()
@@ -218,105 +206,6 @@ class SUT_SingleStream(SUT_base):
         if self.total_samples_done % 5 == 0:
             print("Completed : ", self.total_samples_done)
 
-class GPTJ_QDL:
-    """QDL acting as a proxy to the SUT.
-    This QDL communicates with the SUT via HTTP.
-    It uses two endpoints to communicate with the SUT:
-    - /predict/ : Send a query to the SUT and get a response.
-    - /getname/ : Get the name of the SUT. Send a getname to the SUT and get a response.
-    """
-    def __init__(self, sut, sut_server_addr: list):
-        self.qsl = sut.qsl
-        self.sut = sut
-        # Construct QDL from the python binding
-        self.qdl = lg.ConstructQDL(
-            self.issue_query, self.flush_queries, self.client_get_name)
-        self.sut_server_addr = sut_server_addr
-        self.num_nodes = len(sut_server_addr)
-
-        # For round robin between the SUTs:
-        self.next_sut_id = 0
-        self.lock = threading.Lock()
-
-    def issue_query(self, query_samples):
-        """Process the query to send to the SUT"""
-        threading.Thread(target=self.process_query_async,
-                         args=[query_samples]).start()
-
-    def flush_queries(self):
-        """Flush the queries. Dummy implementation."""
-        pass
-
-    def process_query_async(self, query_samples):
-        """
-        This function is called by the Loadgen in a separate thread.
-        It is responsible for
-            1. Creating a query for the SUT, by reading the features from the QSL.
-            2. Sending the query to the SUT.
-            3. Waiting for the response from the SUT.
-            4. Deserializing the response.
-            5. Calling mlperf_loadgen.QuerySamplesComplete(query_samples, response)
-        Args:
-            query_samples: A list of QuerySample objects.
-        """
-
-        max_num_threads = int(os.environ.get('CM_MAX_NUM_THREADS', os.cpu_count()))
-
-        for i in range(len(query_samples)):
-            index = query_samples[i].index
-            input_ids_tensor = self.sut.data_object.source_encoded_input_ids[index]
-            input_masks_tensor = self.sut.data_object.source_encoded_attn_masks[index]
-
-            # for serialising the tensor to json, it should be converted to list
-            input_ids_list = input_ids_tensor.cpu().numpy().tolist()
-            input_masks_list = input_masks_tensor.cpu().numpy().tolist()
-
-            # # Cast to GPU
-            # if self.use_gpu:
-            #     input_ids_tensor = input_ids_tensor.to(self.device)
-            #     input_masks_tensor = input_masks_tensor.to(self.device)
-            encoded_eval_features = {
-                    "input_ids_tensor": input_ids_list,
-                    "input_masks_tensor": input_masks_list
-                    }
-            n = threading.active_count()
-            while n >= max_num_threads:
-                sleep(0.0001)
-                n = threading.active_count()
-            threading.Thread(target=self.client_predict_worker,
-                         args=[encoded_eval_features, query_samples[i].id]).start()
-    
-    def get_sut_id_round_robin(self):
-        """Get the SUT id in round robin."""
-        with self.lock:
-            res = self.next_sut_id
-            self.next_sut_id = (self.next_sut_id + 1) % self.num_nodes
-        return res
-    
-    def client_predict_worker(self, query, query_id):
-        """Serialize the query, send it to the SUT in round robin, and return the deserialized response."""
-        url = '{}/predict/'.format(self.sut_server_addr[self.get_sut_id_round_robin()])
-        responses = []
-        print(f"The url:{url} and query:{query}")
-        response = requests.post(url, json={'query': query})
-        output = response.json()['result']
-        output = np.array(output).astype(np.float32)
-        response_array = array.array("B", output.tobytes())
-        bi = response_array.buffer_info()
-
-        responses.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
-        lg.QuerySamplesComplete(responses)
-    
-    def client_get_name(self):
-        """Get the name of the SUT from ALL the SUTS."""
-        if len(self.sut_server_addr) == 1:
-            return requests.post(f'{self.sut_server_addr[0]}/getname/').json()['name']
-    
-        sut_names = [requests.post(f'{addr}/getname/').json()['name'] for addr in self.sut_server_addr]
-        return "Multi-node SUT: " + ', '.join(sut_names)
-
-    def __del__(self):
-        lg.DestroyQDL(self.qdl)   
 
 
 

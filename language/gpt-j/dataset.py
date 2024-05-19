@@ -72,6 +72,14 @@ class Dataset():
             source_encoded_attn_masks.append(source_encoded.attention_mask)
 
         return source_encoded_input_ids, source_encoded_attn_masks
+    
+    def encode_input_from_network(self, input):
+        source_encoded = self.tokenizer(input, return_tensors="pt",
+                                            padding=True, truncation=True,
+                                            max_length=1919)
+        source_encoded_input_id = source_encoded.input_ids
+        source_encoded_attn_mask = source_encoded.attention_mask
+        return source_encoded_input_id, source_encoded_attn_mask
 
     def LoadSamplesToRam(self, sample_list):
         pass

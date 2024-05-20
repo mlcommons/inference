@@ -76,8 +76,10 @@ class GPTJ_QDL:
         print(f"The url:{url} and query:{query}")
         response = requests.post(url, json={'query': query})
         output = response.json()['result']
-        output = np.array(output).astype(np.int32)
-        response_array = array.array("B", output.tobytes())
+        response_text = output["response_text"]
+        print(f"Response for query: {query} is {response_text}")
+        output_batch = np.array(output["pred_output_batch"]).astype(np.int32)
+        response_array = array.array("B", output_batch.tobytes())
         bi = response_array.buffer_info()
 
         responses.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))

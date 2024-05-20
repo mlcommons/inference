@@ -81,6 +81,13 @@ class SUT_base():
                 use_fast=False,)
             self.tokenizer.pad_token = self.tokenizer.eos_token
 
+            # calculate the size taken by the model in the memory
+            self.total_mem_size = 0
+            parameters = list(self.model.parameters())
+            for param in tqdm(parameters):
+                self.total_mem_size += param.numel() * param.element_size()
+            self.total_mem_size = self.total_mem_size / (1024 ** 3)
+
         self.data_object = Dataset(
                 self.dataset_path, total_count_override=max_examples)
         self.qsl = lg.ConstructQSL(self.data_object.count, self.data_object.perf_count,
@@ -129,8 +136,11 @@ class SUT_base():
 
             pred_output_batch = output_batch_truncated.cpu().numpy()
 
+            decoded_outputs = [self.tokenizer.decode(output, skip_special_tokens=True) for output in pred_output_batch]
+            response_text = decoded_outputs[0]
+
             if self.network == "sut":
-                return pred_output_batch.tolist()
+                return {"pred_output_batch":pred_output_batch.tolist(), "response_text": response_text}
 
             response_array = array.array("B", pred_output_batch[0].tobytes())
             bi = response_array.buffer_info()

@@ -1,0 +1,33 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Publish site
+
+
+on:
+  release:
+    types: [published]
+  push:
+    branches:
+      - master
+      - docs
+
+jobs:
+
+  publish:
+    name: Publish the site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository normally
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Install Mkdocs
+        run: pip install -r docs/requirements.txt
+
+      - name: Run Mkdocs deploy
+        run: mkdocs gh-deploy --force

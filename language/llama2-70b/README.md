@@ -112,7 +112,7 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/open_orca ./open_orca -P
 
 ### Unprocessed
 
-You can also download and process the dataset yourself as follows:
+You can also download and process the dataset yourself following the command below:
 
 ```
 # First get the `open-orca` parquet from huggingface
@@ -129,6 +129,12 @@ python3 processorca.py --dataset_pq_path=${OPENORCA_PARQUET} --model_dir=${CHECK
 mv ${EXPORT_DIR}/open_orca_gpt4_tokenized_llama.sampled_24576.pkl ${DATASET_PATH}
 ```
 
+The script will perform the following steps on the original open_orca GPT4 dataset:
+- filter out all queries with non-ascii characters, except for normal unicode quotes and hyphens.
+- filter out all queries with out-of-bound input/output sequence lengths
+- filter out all queries with expected answers shorter than 2 words (known to cause issues for Llama2)
+- filter out all queries with prompts that generate bad output texts using Llama2 models
+- sample equally from the sub-dataset (i.e. COT, NIV, FLAN, T0) and form the final dataset.
 
 ## Run Performance Benchmarks
 

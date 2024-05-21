@@ -110,7 +110,7 @@ def main():
         set_semaphore(lockVar)
         print(f"Set the semaphore lock variable to {lockVar}")
         set_backend(sut)
-        app.run(debug=False, port=args.port)
+        app.run(debug=False, port=args.port, host="0.0.0.0")
     else:
         print("Running LoadGen test...")
         lg.StartTestWithLogSettings(sut.sut, sut.qsl, settings, log_settings, args.audit_conf)

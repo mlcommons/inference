@@ -69,7 +69,8 @@ def define_env(env):
            content += f"{cur_space2}###### {device} device\n\n"
          
            content += f"{cur_space2}###### Docker Setup Command\n\n"
-           test_query_count=100
+           test_query_count=get_test_query_count(model, implementation, device)
+
            content += mlperf_inference_run_command(spaces+12, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True)
            content += f"{cur_space2}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for each scenario.\n\n"
            content += f"{cur_space2}<details>\n"
@@ -100,6 +101,21 @@ def define_env(env):
            content += run_suffix
 
      return content
+
+   def get_test_query_count(model, implementation, device, num_devices=1):
+
+       if model == "resnet50":
+           p_range = 1000
+       elif model in [ "retinanet", "bert-99", "bert-99.9" ]:
+           p_range = 100
+       else:
+           p_range = 50
+       if device == "cuda":
+           p_range *= 10
+       p_range *= num_devices
+
+       return p_range
+
 
      
    @env.macro

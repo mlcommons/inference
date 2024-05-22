@@ -440,6 +440,32 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
         break;
       }
       case TestScenario::Server:
+        double tps_as_completed =
+            token_count / pr.final_query_all_samples_done_time;
+        summary("Completed tokens per second: ",
+                DoubleToString(tps_as_completed));
+        break;
+    }
+  }
+
+  if (settings.infer_token_latencies){
+    switch (settings.scenario) {
+      case TestScenario::SingleStream: {
+        break;
+      }
+      case TestScenario::MultiStream: {
+        break;
+      }
+      case TestScenario::Offline: {
+        double tokens_per_second = settings.token_latency_scaling_factor * sample_count / pr.max_latency;
+        summary("Tokens per second (inferred): ", tokens_per_second);
+        break;
+      }
+      case TestScenario::Server:
+        double tps_as_completed =
+          settings.token_latency_scaling_factor * (sample_count - 1) / pr.final_query_all_samples_done_time;
+        summary("Completed tokens per second (inferred): ",
+                DoubleToString(tps_as_completed));
         break;
     }
   }
@@ -777,8 +803,28 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
       MLPERF_LOG(detail, "result_tokens_per_second", tokens_per_second);
     }
   }
+
+  if (settings.infer_token_latencies){
+    switch (settings.scenario) {
+      case TestScenario::Server: {
+        double completed_tokens_per_second = (sample_count - 1) * settings.token_latency_scaling_factor / pr.final_query_all_samples_done_time;
+        MLPERF_LOG(detail, "result_inferred_completed_tokens_per_second", completed_tokens_per_second);
+        break;
+      }
+      case TestScenario::Offline: {
+        double tokens_per_second = sample_count * settings.token_latency_scaling_factor / pr.max_latency;
+        MLPERF_LOG(detail, "result_inferred_tokens_per_second", tokens_per_second);
+        break;
+      }
+      case TestScenario::SingleStream: {
+        break;
+      }
+      case TestScenario::MultiStream: {
+        break;
+      }
+  }
 #endif
 }
-
+}
 }  // namespace loadgen
 } // namespace mlperf

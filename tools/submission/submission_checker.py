@@ -1,4 +1,4 @@
-"""A checker for mlperf inference submissions
+"""A checker for MLPerf Inference submissions
 """
 
 from __future__ import division
@@ -12,6 +12,7 @@ import logging
 import os
 import re
 import sys
+
 from glob import glob
 
 from log_parser import MLPerfLog
@@ -24,1031 +25,6 @@ log = logging.getLogger("main")
 submission_checker_dir = os.path.dirname(os.path.realpath(__file__))
 
 MODEL_CONFIG = {
-    "v0.5": {
-        "models": ["ssd-small", "ssd-large", "mobilenet", "resnet", "gnmt"],
-        "required-scenarios-datacenter": {
-            # anything goes
-        },
-        "optional-scenarios-datacenter": {
-            # anything goes
-        },
-        "required-scenarios-edge": {
-            # anything goes
-        },
-        "optional-scenarios-edge": {
-            # anything goes
-        },
-        "accuracy-target": {
-            "mobilenet": ("acc", 71.68 * 0.98),
-            "resnet": ("acc", 76.46 * 0.99),
-            "ssd-small": ("mAP", 22 * 0.99),
-            "ssd-large": ("mAP", 20 * 0.99),
-            "gnmt": ("bleu", 23.9 * 0.99),
-        },
-        "performance-sample-count": {
-            "mobilenet": 1024,
-            "resnet": 1024,
-            "ssd-small": 256,
-            "ssd-large": 64,
-            "gnmt": 3903900,
-        },
-        "model_mapping": {
-            # map model names to the official mlperf model class
-            "ssd-mobilenet": "ssd-small",
-            "ssd-resnet34": "ssd-large",
-            "resnet50": "resnet",
-        },
-        "seeds": {
-            "qsl_rng_seed": 3133965575612453542,
-            "sample_index_rng_seed": 665484352860916858,
-            "schedule_rng_seed": 3622009729038561421,
-        },
-        "test05_seeds": {
-            "qsl_rng_seed": 195,
-            "sample_index_rng_seed": 235,
-            "schedule_rng_seed": 634,
-        },
-        "ignore_errors": [
-            "check for ERROR in detailed",
-            "Loadgen built with uncommitted changes",
-            "Ran out of generated queries to issue before the minimum query "
-            "count and test duration were reached",
-            "CAS failed",
-        ],
-    },
-    "v0.7": {
-        "models": [
-            "ssd-small",
-            "ssd-large",
-            "resnet",
-            "rnnt",
-            "bert-99",
-            "bert-99.9",
-            "dlrm-99",
-            "dlrm-99.9",
-            "3d-unet-99",
-            "3d-unet-99.9",
-        ],
-        "required-scenarios-datacenter": {
-            "resnet": ["Offline"],
-            "ssd-large": ["Offline"],
-            "rnnt": ["Offline"],
-            "bert-99": ["Offline"],
-            "bert-99.9": ["Offline"],
-            "dlrm-99": ["Offline"],
-            "dlrm-99.9": ["Offline"],
-            "3d-unet-99": ["Offline"],
-            "3d-unet-99.9": ["Offline"],
-        },
-        "optional-scenarios-datacenter": {
-            "resnet": ["Server"],
-            "ssd-large": ["Server"],
-            "rnnt": ["Server"],
-            "bert-99": ["Server"],
-            "bert-99.9": ["Server"],
-            "dlrm-99": ["Server"],
-            "dlrm-99.9": ["Server"],
-        },
-        "required-scenarios-edge": {
-            "resnet": ["SingleStream", "Offline"],
-            "ssd-small": ["SingleStream", "Offline"],
-            "ssd-large": ["SingleStream", "Offline"],
-            "rnnt": ["SingleStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-edge": {
-            "resnet": ["MultiStream"],
-            "ssd-small": ["MultiStream"],
-            "ssd-large": ["MultiStream"],
-        },
-        "accuracy-target": {
-            "resnet": ("acc", 76.46 * 0.99),
-            "ssd-small": ("mAP", 22 * 0.99),
-            "ssd-large": ("mAP", 20 * 0.99),
-            "rnnt": ("WER", (100 - 7.452) * 0.99),
-            "bert-99": ("F1", 90.874 * 0.99),
-            "bert-99.9": ("F1", 90.874 * 0.999),
-            "dlrm-99": ("AUC", 80.25 * 0.99),
-            "dlrm-99.9": ("AUC", 80.25 * 0.999),
-            "3d-unet-99": ("DICE", 0.853 * 0.99),
-            "3d-unet-99.9": ("DICE", 0.853 * 0.999),
-        },
-        "performance-sample-count": {
-            "ssd-small": 256,
-            "ssd-large": 64,
-            "resnet": 1024,
-            "rnnt": 2513,
-            "bert-99": 10833,
-            "bert-99.9": 10833,
-            "dlrm-99": 204800,
-            "dlrm-99.9": 204800,
-            "3d-unet-99": 16,
-            "3d-unet-99.9": 16,
-        },
-        "model_mapping": {
-            # map model names to the official mlperf model class
-            "ssd-mobilenet": "ssd-small",
-            "ssd-resnet34": "ssd-large",
-            "mobilenet": "resnet",
-            "resnet50": "resnet",
-        },
-        "seeds": {
-            "qsl_rng_seed": 12786827339337101903,
-            "sample_index_rng_seed": 12640797754436136668,
-            "schedule_rng_seed": 3135815929913719677,
-        },
-        "test05_seeds": {
-            "qsl_rng_seed": 313588358309856706,
-            "sample_index_rng_seed": 471397156132239067,
-            "schedule_rng_seed": 413914573387865862,
-        },
-        "ignore_errors": [
-            "CAS failed",
-        ],
-        "latency-constraint": {
-            "resnet": {"Server": 15000000, "MultiStream": 50000000},
-            "ssd-small": {"MultiStream": 50000000},
-            "ssd-large": {"Server": 100000000, "MultiStream": 66000000},
-            "rnnt": {"Server": 1000000000},
-            "bert-99": {"Server": 130000000},
-            "bert-99.9": {"Server": 130000000},
-            "dlrm-99": {"Server": 30000000},
-            "dlrm-99.9": {"Server": 30000000},
-        },
-        "min-queries": {
-            "resnet": {
-                "SingleStream": 1024,
-                "Server": 270336,
-                "MultiStream": 270336,
-                "Offline": 1,
-            },
-            "ssd-small": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
-            "ssd-large": {
-                "SingleStream": 1024,
-                "Server": 270336,
-                "MultiStream": 270336,
-                "Offline": 1,
-            },
-            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "dlrm-99": {"Server": 270336, "Offline": 1},
-            "dlrm-99.9": {"Server": 270336, "Offline": 1},
-            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
-            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
-        },
-    },
-    "v1.0": {
-        "models": [
-            "ssd-small",
-            "ssd-large",
-            "resnet",
-            "rnnt",
-            "bert-99",
-            "bert-99.9",
-            "dlrm-99",
-            "dlrm-99.9",
-            "3d-unet-99",
-            "3d-unet-99.9",
-        ],
-        "required-scenarios-datacenter": {
-            "resnet": ["Offline"],
-            "ssd-large": ["Offline"],
-            "rnnt": ["Offline"],
-            "bert-99": ["Offline"],
-            "bert-99.9": ["Offline"],
-            "dlrm-99": ["Offline"],
-            "dlrm-99.9": ["Offline"],
-            "3d-unet-99": ["Offline"],
-            "3d-unet-99.9": ["Offline"],
-        },
-        "optional-scenarios-datacenter": {
-            "resnet": ["Server"],
-            "ssd-large": ["Server"],
-            "rnnt": ["Server"],
-            "bert-99": ["Server"],
-            "bert-99.9": ["Server"],
-            "dlrm-99": ["Server"],
-            "dlrm-99.9": ["Server"],
-        },
-        "required-scenarios-edge": {
-            "resnet": ["SingleStream", "Offline"],
-            "ssd-small": ["SingleStream", "Offline"],
-            "ssd-large": ["SingleStream", "Offline"],
-            "rnnt": ["SingleStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-edge": {
-            "resnet": ["MultiStream"],
-            "ssd-small": ["MultiStream"],
-            "ssd-large": ["MultiStream"],
-        },
-        "required-scenarios-datacenter-edge": {
-            "resnet": ["SingleStream", "Offline"],
-            "ssd-small": ["SingleStream", "Offline"],
-            "ssd-large": ["SingleStream", "Offline"],
-            "rnnt": ["SingleStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "bert-99.9": ["Offline"],
-            "dlrm-99": ["Offline"],
-            "dlrm-99.9": ["Offline"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-datacenter-edge": {
-            "resnet": ["MultiStream", "Server"],
-            "ssd-small": ["MultiStream"],
-            "ssd-large": ["MultiStream", "Server"],
-            "rnnt": ["Server"],
-            "bert-99": ["Server"],
-            "bert-99.9": ["Server"],
-            "dlrm-99": ["Server"],
-            "dlrm-99.9": ["Server"],
-        },
-        "accuracy-target": {
-            "resnet": ("acc", 76.46 * 0.99),
-            "ssd-small": ("mAP", 22 * 0.99),
-            "ssd-large": ("mAP", 20 * 0.99),
-            "rnnt": ("WER", (100 - 7.452) * 0.99),
-            "bert-99": ("F1", 90.874 * 0.99),
-            "bert-99.9": ("F1", 90.874 * 0.999),
-            "dlrm-99": ("AUC", 80.25 * 0.99),
-            "dlrm-99.9": ("AUC", 80.25 * 0.999),
-            "3d-unet-99": ("DICE", 0.853 * 0.99),
-            "3d-unet-99.9": ("DICE", 0.853 * 0.999),
-        },
-        "performance-sample-count": {
-            "ssd-small": 256,
-            "ssd-large": 64,
-            "resnet": 1024,
-            "rnnt": 2513,
-            "bert-99": 10833,
-            "bert-99.9": 10833,
-            "dlrm-99": 204800,
-            "dlrm-99.9": 204800,
-            "3d-unet-99": 16,
-            "3d-unet-99.9": 16,
-        },
-        "model_mapping": {
-            # map model names to the official mlperf model class
-            "ssd-mobilenet": "ssd-small",
-            "ssd-resnet34": "ssd-large",
-            "mobilenet": "resnet",
-            "resnet50": "resnet",
-        },
-        "seeds": {
-            "qsl_rng_seed": 7322528924094909334,
-            "sample_index_rng_seed": 1570999273408051088,
-            "schedule_rng_seed": 3507442325620259414,
-        },
-        "test05_seeds": {
-            "qsl_rng_seed": 313588358309856706,
-            "sample_index_rng_seed": 471397156132239067,
-            "schedule_rng_seed": 413914573387865862,
-        },
-        "ignore_errors": [],
-        "latency-constraint": {
-            "resnet": {"Server": 15000000, "MultiStream": 50000000},
-            "ssd-small": {"MultiStream": 50000000},
-            "ssd-large": {"Server": 100000000, "MultiStream": 66000000},
-            "rnnt": {"Server": 1000000000},
-            "bert-99": {"Server": 130000000},
-            "bert-99.9": {"Server": 130000000},
-            "dlrm-99": {"Server": 30000000},
-            "dlrm-99.9": {"Server": 30000000},
-        },
-        "min-queries": {
-            "resnet": {
-                "SingleStream": 1024,
-                "Server": 270336,
-                "MultiStream": 270336,
-                "Offline": 1,
-            },
-            "ssd-small": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
-            "ssd-large": {
-                "SingleStream": 1024,
-                "Server": 270336,
-                "MultiStream": 270336,
-                "Offline": 1,
-            },
-            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "dlrm-99": {"Server": 270336, "Offline": 1},
-            "dlrm-99.9": {"Server": 270336, "Offline": 1},
-            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
-            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
-        },
-    },
-    "v1.1": {
-        "models": [
-            "ssd-small",
-            "ssd-large",
-            "resnet",
-            "rnnt",
-            "bert-99",
-            "bert-99.9",
-            "dlrm-99",
-            "dlrm-99.9",
-            "3d-unet-99",
-            "3d-unet-99.9",
-        ],
-        "required-scenarios-datacenter": {
-            "resnet": ["Offline"],
-            "ssd-large": ["Offline"],
-            "rnnt": ["Offline"],
-            "bert-99": ["Offline"],
-            "bert-99.9": ["Offline"],
-            "dlrm-99": ["Offline"],
-            "dlrm-99.9": ["Offline"],
-            "3d-unet-99": ["Offline"],
-            "3d-unet-99.9": ["Offline"],
-        },
-        "optional-scenarios-datacenter": {
-            "resnet": ["Server"],
-            "ssd-large": ["Server"],
-            "rnnt": ["Server"],
-            "bert-99": ["Server"],
-            "bert-99.9": ["Server"],
-            "dlrm-99": ["Server"],
-            "dlrm-99.9": ["Server"],
-        },
-        "required-scenarios-edge": {
-            "resnet": ["SingleStream", "Offline"],
-            "ssd-small": ["SingleStream", "Offline"],
-            "ssd-large": ["SingleStream", "Offline"],
-            "rnnt": ["SingleStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "required-scenarios-datacenter-edge": {
-            "resnet": ["SingleStream", "Offline"],
-            "ssd-small": ["SingleStream", "Offline"],
-            "ssd-large": ["SingleStream", "Offline"],
-            "rnnt": ["SingleStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "bert-99.9": ["Offline"],
-            "dlrm-99": ["Offline"],
-            "dlrm-99.9": ["Offline"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-datacenter-edge": {
-            "resnet": ["Server"],
-            "ssd-large": ["Server"],
-            "rnnt": ["Server"],
-            "bert-99": ["Server"],
-            "bert-99.9": ["Server"],
-            "dlrm-99": ["Server"],
-            "dlrm-99.9": ["Server"],
-        },
-        "accuracy-target": {
-            "resnet": ("acc", 76.46 * 0.99),
-            "ssd-small": ("mAP", 22 * 0.99),
-            "ssd-large": ("mAP", 20 * 0.99),
-            "rnnt": ("WER", (100 - 7.452) * 0.99),
-            "bert-99": ("F1", 90.874 * 0.99),
-            "bert-99.9": ("F1", 90.874 * 0.999),
-            "dlrm-99": ("AUC", 80.25 * 0.99),
-            "dlrm-99.9": ("AUC", 80.25 * 0.999),
-            "3d-unet-99": ("DICE", 0.853 * 0.99),
-            "3d-unet-99.9": ("DICE", 0.853 * 0.999),
-        },
-        "performance-sample-count": {
-            "ssd-small": 256,
-            "ssd-large": 64,
-            "resnet": 1024,
-            "rnnt": 2513,
-            "bert-99": 10833,
-            "bert-99.9": 10833,
-            "dlrm-99": 204800,
-            "dlrm-99.9": 204800,
-            "3d-unet-99": 16,
-            "3d-unet-99.9": 16,
-        },
-        "model_mapping": {
-            # map model names to the official mlperf model class
-            "ssd-mobilenet": "ssd-small",
-            "ssd-resnet34": "ssd-large",
-            "mobilenet": "resnet",
-            "resnet50": "resnet",
-        },
-        "seeds": {
-            "qsl_rng_seed": 1624344308455410291,
-            "sample_index_rng_seed": 517984244576520566,
-            "schedule_rng_seed": 10051496985653635065,
-        },
-        "test05_seeds": {
-            "qsl_rng_seed": 313588358309856706,
-            "sample_index_rng_seed": 471397156132239067,
-            "schedule_rng_seed": 413914573387865862,
-        },
-        "ignore_errors": [],
-        "latency-constraint": {
-            "resnet": {"Server": 15000000, "MultiStream": 50000000},
-            "ssd-small": {"MultiStream": 50000000},
-            "ssd-large": {"Server": 100000000, "MultiStream": 66000000},
-            "rnnt": {"Server": 1000000000},
-            "bert-99": {"Server": 130000000},
-            "bert-99.9": {"Server": 130000000},
-            "dlrm-99": {"Server": 30000000},
-            "dlrm-99.9": {"Server": 30000000},
-        },
-        "min-queries": {
-            "resnet": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "ssd-small": {"SingleStream": 1024, "Offline": 1},
-            "ssd-large": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "dlrm-99": {"Server": 270336, "Offline": 1},
-            "dlrm-99.9": {"Server": 270336, "Offline": 1},
-            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
-            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
-        },
-    },
-    "v2.0": {
-        "models": [
-            "ssd-small",
-            "ssd-large",
-            "resnet",
-            "rnnt",
-            "bert-99",
-            "bert-99.9",
-            "dlrm-99",
-            "dlrm-99.9",
-            "3d-unet-99",
-            "3d-unet-99.9",
-        ],
-        # FIXME: required/optional scenarios for v2.0 needs to be filled up correctly; below lists are temporary
-        "required-scenarios-datacenter": {
-            "resnet": ["Server", "Offline"],
-            "ssd-large": ["Server", "Offline"],
-            "rnnt": ["Server", "Offline"],
-            "bert-99": ["Server", "Offline"],
-            "bert-99.9": ["Server", "Offline"],
-            "dlrm-99": ["Server", "Offline"],
-            "dlrm-99.9": ["Server", "Offline"],
-            "3d-unet-99": ["Offline"],
-            "3d-unet-99.9": ["Offline"],
-        },
-        "optional-scenarios-datacenter": {},
-        "required-scenarios-edge": {
-            "resnet": ["SingleStream", "MultiStream", "Offline"],
-            "ssd-small": ["SingleStream", "MultiStream", "Offline"],
-            "ssd-large": ["SingleStream", "MultiStream", "Offline"],
-            "rnnt": ["SingleStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-edge": {},
-        "required-scenarios-datacenter-edge": {
-            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "ssd-small": ["SingleStream", "Offline", "MultiStream"],
-            "ssd-large": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "rnnt": ["SingleStream", "Offline", "Server"],
-            "bert-99": ["SingleStream", "Offline", "Server"],
-            "bert-99.9": ["Offline", "Server"],
-            "dlrm-99": ["Offline", "Server"],
-            "dlrm-99.9": ["Offline", "Server"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-datacenter-edge": {},
-        "accuracy-target": {
-            "resnet": ("acc", 76.46 * 0.99),
-            "ssd-small": ("mAP", 22 * 0.99),
-            "ssd-large": ("mAP", 20 * 0.99),
-            "rnnt": ("WER", (100 - 7.452) * 0.99),
-            "bert-99": ("F1", 90.874 * 0.99),
-            "bert-99.9": ("F1", 90.874 * 0.999),
-            "dlrm-99": ("AUC", 80.25 * 0.99),
-            "dlrm-99.9": ("AUC", 80.25 * 0.999),
-            "3d-unet-99": ("DICE", 0.86331 * 0.99),
-            "3d-unet-99.9": ("DICE", 0.86331 * 0.999),
-        },
-        "performance-sample-count": {
-            "ssd-small": 256,
-            "ssd-large": 64,
-            "resnet": 1024,
-            "rnnt": 2513,
-            "bert-99": 10833,
-            "bert-99.9": 10833,
-            "dlrm-99": 204800,
-            "dlrm-99.9": 204800,
-            "3d-unet-99": 42,
-            "3d-unet-99.9": 42,
-        },
-        "model_mapping": {
-            # map model names to the official mlperf model class
-            "ssd-mobilenet": "ssd-small",
-            "ssd-resnet34": "ssd-large",
-            "mobilenet": "resnet",
-            "resnet50": "resnet",
-            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
-            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
-            "rcnn-resnet50-lowproposals-coco": "ssd-large",
-            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
-            "rcnn-inception-v2-coco": "ssd-large",
-            "rcnn-nas-lowproposals-coco": "ssd-large",
-            "rcnn-resnet101-lowproposals-coco": "ssd-large",
-            "ssd_mobilenet_v1_coco": "ssd-small",
-            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
-            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
-            "ssd_mobilenet_v2_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
-        },
-        "seeds": {
-            "qsl_rng_seed": 6655344265603136530,
-            "sample_index_rng_seed": 15863379492028895792,
-            "schedule_rng_seed": 12662793979680847247,
-        },
-        "test05_seeds": {
-            "qsl_rng_seed": 313588358309856706,
-            "sample_index_rng_seed": 471397156132239067,
-            "schedule_rng_seed": 413914573387865862,
-        },
-        "ignore_errors": [],
-        "latency-constraint": {
-            "resnet": {"Server": 15000000},
-            "ssd-large": {"Server": 100000000},
-            "rnnt": {"Server": 1000000000},
-            "bert-99": {"Server": 130000000},
-            "bert-99.9": {"Server": 130000000},
-            "dlrm-99": {"Server": 30000000},
-            "dlrm-99.9": {"Server": 30000000},
-        },
-        "min-queries": {
-            "resnet": {
-                "SingleStream": 1024,
-                "MultiStream": 270336,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "ssd-small": {"SingleStream": 1024, "MultiStream": 270336, "Offline": 1},
-            "ssd-large": {
-                "SingleStream": 1024,
-                "MultiStream": 270336,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "dlrm-99": {"Server": 270336, "Offline": 1},
-            "dlrm-99.9": {"Server": 270336, "Offline": 1},
-            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
-            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
-        },
-    },
-    "v2.1": {
-        "models": [
-            "resnet",
-            "retinanet",
-            "rnnt",
-            "bert-99",
-            "bert-99.9",
-            "dlrm-99",
-            "dlrm-99.9",
-            "3d-unet-99",
-            "3d-unet-99.9",
-        ],
-        "required-scenarios-datacenter": {
-            "resnet": ["Server", "Offline"],
-            "retinanet": ["Server", "Offline"],
-            "rnnt": ["Server", "Offline"],
-            "bert-99": ["Server", "Offline"],
-            "bert-99.9": ["Server", "Offline"],
-            "dlrm-99": ["Server", "Offline"],
-            "dlrm-99.9": ["Server", "Offline"],
-            "3d-unet-99": ["Offline"],
-            "3d-unet-99.9": ["Offline"],
-        },
-        "optional-scenarios-datacenter": {},
-        "required-scenarios-edge": {
-            "resnet": ["SingleStream", "MultiStream", "Offline"],
-            "retinanet": ["SingleStream", "MultiStream", "Offline"],
-            "rnnt": ["SingleStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-edge": {},
-        "required-scenarios-datacenter-edge": {
-            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "rnnt": ["SingleStream", "Offline", "Server"],
-            "bert-99": ["SingleStream", "Offline", "Server"],
-            "bert-99.9": ["Offline", "Server"],
-            "dlrm-99": ["Offline", "Server"],
-            "dlrm-99.9": ["Offline", "Server"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-datacenter-edge": {},
-        "accuracy-target": {
-            "resnet": ("acc", 76.46 * 0.99),
-            "retinanet": ("mAP", 37.55 * 0.99),
-            "rnnt": ("WER", (100 - 7.452) * 0.99),
-            "bert-99": ("F1", 90.874 * 0.99),
-            "bert-99.9": ("F1", 90.874 * 0.999),
-            "dlrm-99": ("AUC", 80.25 * 0.99),
-            "dlrm-99.9": ("AUC", 80.25 * 0.999),
-            "3d-unet-99": ("DICE", 0.86170 * 0.99),
-            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
-        },
-        "performance-sample-count": {
-            "resnet": 1024,
-            # TODO: Update perf sample count for retinanet
-            "retinanet": 64,
-            "rnnt": 2513,
-            "bert-99": 10833,
-            "bert-99.9": 10833,
-            "dlrm-99": 204800,
-            "dlrm-99.9": 204800,
-            "3d-unet-99": 43,
-            "3d-unet-99.9": 43,
-        },
-        # TODO: Update this list.
-        "model_mapping": {
-            # map model names to the official mlperf model class
-            "ssd-mobilenet": "ssd-small",
-            "ssd-resnet34": "retinanet",
-            "mobilenet": "resnet",
-            "resnet50": "resnet",
-            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
-            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
-            "rcnn-resnet50-lowproposals-coco": "ssd-large",
-            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
-            "rcnn-inception-v2-coco": "ssd-large",
-            "rcnn-nas-lowproposals-coco": "ssd-large",
-            "rcnn-resnet101-lowproposals-coco": "ssd-large",
-            "ssd_mobilenet_v1_coco": "ssd-small",
-            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
-            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
-            "ssd_mobilenet_v2_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
-        },
-        "seeds": {
-            "qsl_rng_seed": 14284205019438841327,
-            "sample_index_rng_seed": 4163916728725999944,
-            "schedule_rng_seed": 299063814864929621,
-        },
-        "test05_seeds": {
-            "qsl_rng_seed": 313588358309856706,
-            "sample_index_rng_seed": 471397156132239067,
-            "schedule_rng_seed": 413914573387865862,
-        },
-        "ignore_errors": [],
-        "latency-constraint": {
-            "resnet": {"Server": 15000000},
-            "retinanet": {"Server": 100000000},
-            "rnnt": {"Server": 1000000000},
-            "bert-99": {"Server": 130000000},
-            "bert-99.9": {"Server": 130000000},
-            "dlrm-99": {"Server": 30000000},
-            "dlrm-99.9": {"Server": 30000000},
-        },
-        "min-queries": {
-            "resnet": {
-                "SingleStream": 1024,
-                "MultiStream": 270336,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "retinanet": {
-                "SingleStream": 1024,
-                "MultiStream": 270336,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "dlrm-99": {"Server": 270336, "Offline": 1},
-            "dlrm-99.9": {"Server": 270336, "Offline": 1},
-            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
-            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
-        },
-    },
-    "v3.0": {
-        "models": [
-            "resnet",
-            "retinanet",
-            "rnnt",
-            "bert-99",
-            "bert-99.9",
-            "dlrm-99",
-            "dlrm-99.9",
-            "3d-unet-99",
-            "3d-unet-99.9",
-        ],
-        "required-scenarios-datacenter": {
-            "resnet": ["Server", "Offline"],
-            "retinanet": ["Server", "Offline"],
-            "rnnt": ["Server", "Offline"],
-            "bert-99": ["Server", "Offline"],
-            "bert-99.9": ["Server", "Offline"],
-            "dlrm-99": ["Server", "Offline"],
-            "dlrm-99.9": ["Server", "Offline"],
-            "3d-unet-99": ["Offline"],
-            "3d-unet-99.9": ["Offline"],
-        },
-        "optional-scenarios-datacenter": {},
-        "required-scenarios-edge": {
-            "resnet": ["SingleStream", "MultiStream", "Offline"],
-            "retinanet": ["SingleStream", "MultiStream", "Offline"],
-            "rnnt": ["SingleStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-edge": {},
-        "required-scenarios-datacenter-edge": {
-            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "rnnt": ["SingleStream", "Offline", "Server"],
-            "bert-99": ["SingleStream", "Offline", "Server"],
-            "bert-99.9": ["Offline", "Server"],
-            "dlrm-99": ["Offline", "Server"],
-            "dlrm-99.9": ["Offline", "Server"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-datacenter-edge": {},
-        "accuracy-target": {
-            "resnet": ("acc", 76.46 * 0.99),
-            "retinanet": ("mAP", 37.55 * 0.99),
-            "rnnt": ("WER", (100 - 7.452) * 0.99),
-            "bert-99": ("F1", 90.874 * 0.99),
-            "bert-99.9": ("F1", 90.874 * 0.999),
-            "dlrm-99": ("AUC", 80.25 * 0.99),
-            "dlrm-99.9": ("AUC", 80.25 * 0.999),
-            "3d-unet-99": ("DICE", 0.86170 * 0.99),
-            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
-        },
-        "performance-sample-count": {
-            "resnet": 1024,
-            # TODO: Update perf sample count for retinanet
-            "retinanet": 64,
-            "rnnt": 2513,
-            "bert-99": 10833,
-            "bert-99.9": 10833,
-            "dlrm-99": 204800,
-            "dlrm-99.9": 204800,
-            "3d-unet-99": 43,
-            "3d-unet-99.9": 43,
-        },
-        # TODO: Update this list.
-        "model_mapping": {
-            # map model names to the official mlperf model class
-            "ssd-mobilenet": "ssd-small",
-            "ssd-resnet34": "retinanet",
-            "mobilenet": "resnet",
-            "resnet50": "resnet",
-            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
-            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
-            "rcnn-resnet50-lowproposals-coco": "ssd-large",
-            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
-            "rcnn-inception-v2-coco": "ssd-large",
-            "rcnn-nas-lowproposals-coco": "ssd-large",
-            "rcnn-resnet101-lowproposals-coco": "ssd-large",
-            "ssd_mobilenet_v1_coco": "ssd-small",
-            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
-            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
-            "ssd_mobilenet_v2_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
-        },
-        "seeds": {
-            "qsl_rng_seed": 10003631887983097364,
-            "sample_index_rng_seed": 17183018601990103738,
-            "schedule_rng_seed": 12134888396634371638,
-        },
-        "test05_seeds": {
-            "qsl_rng_seed": 14646058500348515648,
-            "sample_index_rng_seed": 1207248993894122914,
-            "schedule_rng_seed": 11879132697760422006,
-        },
-        "ignore_errors": [],
-        "latency-constraint": {
-            "resnet": {"Server": 15000000},
-            "retinanet": {"Server": 100000000},
-            "rnnt": {"Server": 1000000000},
-            "bert-99": {"Server": 130000000},
-            "bert-99.9": {"Server": 130000000},
-            "dlrm-99": {"Server": 30000000},
-            "dlrm-99.9": {"Server": 30000000},
-        },
-        "min-queries": {
-            "resnet": {
-                "SingleStream": 1024,
-                "MultiStream": 270336,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "retinanet": {
-                "SingleStream": 1024,
-                "MultiStream": 270336,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "dlrm-99": {"Server": 270336, "Offline": 1},
-            "dlrm-99.9": {"Server": 270336, "Offline": 1},
-            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
-            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
-        },
-    },
-    "v3.1": {
-        "models": [
-            "resnet",
-            "retinanet",
-            "rnnt",
-            "bert-99",
-            "bert-99.9",
-            "dlrm-v2-99",
-            "dlrm-v2-99.9",
-            "3d-unet-99",
-            "3d-unet-99.9",
-            "gptj-99",
-            "gptj-99.9",
-            "gpt3-99",
-            "gpt3-99.9"
-        ],
-        "required-scenarios-datacenter": {
-            "resnet": ["Server", "Offline"],
-            "retinanet": ["Server", "Offline"],
-            "rnnt": ["Server", "Offline"],
-            "bert-99": ["Server", "Offline"],
-            "bert-99.9": ["Server", "Offline"],
-            "dlrm-v2-99": ["Server", "Offline"],
-            "dlrm-v2-99.9": ["Server", "Offline"],
-            "3d-unet-99": ["Offline"],
-            "3d-unet-99.9": ["Offline"],
-            "gptj-99": ["Server", "Offline"],
-            "gptj-99.9": ["Server", "Offline"],
-            "gpt3-99": ["Server", "Offline"],
-            "gpt3-99.9": ["Server", "Offline"],
-        },
-        "optional-scenarios-datacenter": {},
-        "required-scenarios-edge": {
-            "resnet": ["SingleStream", "MultiStream", "Offline"],
-            "retinanet": ["SingleStream", "MultiStream", "Offline"],
-            "rnnt": ["SingleStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-            "gptj-99": ["SingleStream", "Offline"],
-            "gptj-99.9": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-edge": {},
-        "required-scenarios-datacenter-edge": {
-            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "rnnt": ["SingleStream", "Offline", "Server"],
-            "bert-99": ["SingleStream", "Offline", "Server"],
-            "bert-99.9": ["Offline", "Server"],
-            "dlrm-v2-99": ["Offline", "Server"],
-            "dlrm-v2-99.9": ["Offline", "Server"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-            "gptj-99": ["SingleStream", "Offline", "Server"],
-            "gptj-99.9": ["SingleStream", "Offline", "Server"],
-            "gpt3-99": ["Server", "Offline"],
-            "gpt3-99.9": ["Server", "Offline"],
-        },
-        "optional-scenarios-datacenter-edge": {},
-        "accuracy-target": {
-            "resnet": ("acc", 76.46 * 0.99),
-            "retinanet": ("mAP", 37.55 * 0.99),
-            "rnnt": ("WER", (100 - 7.452) * 0.99),
-            "bert-99": ("F1", 90.874 * 0.99),
-            "bert-99.9": ("F1", 90.874 * 0.999),
-            "dlrm-v2-99": ("AUC", 80.31 * 0.99),
-            "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
-            "3d-unet-99": ("DICE", 0.86170 * 0.99),
-            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
-            "gptj-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
-            "gptj-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
-            # TODO: Replace with metrics for GPT3
-            "gpt3-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
-            "gpt3-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
-        },
-        "performance-sample-count": {
-            "resnet": 1024,
-            "retinanet": 64,
-            "rnnt": 2513,
-            "bert-99": 10833,
-            "bert-99.9": 10833,
-            "dlrm-v2-99": 204800,
-            "dlrm-v2-99.9": 204800,
-            "3d-unet-99": 43,
-            "3d-unet-99.9": 43,
-            "gptj-99": 13368,
-            "gptj-99.9": 13368,
-            "gpt3-99": 13368,
-            "gpt3-99.9": 13368,
-        },
-        # TODO: Update this list.
-        "model_mapping": {
-            # map model names to the official mlperf model class
-            "ssd-mobilenet": "ssd-small",
-            "ssd-resnet34": "retinanet",
-            "mobilenet": "resnet",
-            "resnet50": "resnet",
-            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
-            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
-            "rcnn-resnet50-lowproposals-coco": "ssd-large",
-            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
-            "rcnn-inception-v2-coco": "ssd-large",
-            "rcnn-nas-lowproposals-coco": "ssd-large",
-            "rcnn-resnet101-lowproposals-coco": "ssd-large",
-            "ssd_mobilenet_v1_coco": "ssd-small",
-            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
-            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
-            "ssd_mobilenet_v2_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
-        },
-        "seeds": {
-            # TODO: Update random seeds
-            "qsl_rng_seed": 148687905518835231,
-            "sample_index_rng_seed": 520418551913322573,
-            "schedule_rng_seed": 811580660758947900,
-        },
-        "test05_seeds": {
-            # TODO: Update random seeds
-            "qsl_rng_seed": 793197339507417767,
-            "sample_index_rng_seed": 255610748586851044,
-            "schedule_rng_seed": 352213341366340113,
-        },
-        "ignore_errors": [],
-        "latency-constraint": {
-            "resnet": {"Server": 15000000},
-            "retinanet": {"Server": 100000000},
-            "rnnt": {"Server": 1000000000},
-            "bert-99": {"Server": 130000000},
-            "bert-99.9": {"Server": 130000000},
-            "dlrm-v2-99": {"Server": 60000000},
-            "dlrm-v2-99.9": {"Server": 60000000},
-            "gptj-99": {"Server": 20000000000},
-            "gptj-99.9": {"Server": 20000000000},
-            "gpt3-99": {"Server": 20000000000},
-            "gpt3-99.9": {"Server": 20000000000},
-        },
-        "min-queries": {
-            "resnet": {
-                "SingleStream": 1024,
-                "MultiStream": 270336,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "retinanet": {
-                "SingleStream": 1024,
-                "MultiStream": 270336,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "rnnt": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "dlrm-v2-99": {"Server": 270336, "Offline": 1},
-            "dlrm-v2-99.9": {"Server": 270336, "Offline": 1},
-            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
-            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
-            "gptj-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "gpt3-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "gpt3-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-        },
-    },
     "v4.0": {
         "models": [
             "resnet",
@@ -1152,27 +128,9 @@ MODEL_CONFIG = {
         # TODO: Update this list.
         "model_mapping": {
             # map model names to the official mlperf model class
-            "ssd-mobilenet": "ssd-small",
             "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
-            "resnet50": "resnet",
-            "ssd_resnet101_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet101_v1_fpn_1024x1024": "ssd-large",
-            "ssd_resnet152_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet152_v1_fpn_1024x1024": "ssd-large",
-            "rcnn-resnet50-lowproposals-coco": "ssd-large",
-            "rcnn-inception-resnet-v2-lowproposals-coco": "ssd-large",
-            "rcnn-inception-v2-coco": "ssd-large",
-            "rcnn-nas-lowproposals-coco": "ssd-large",
-            "rcnn-resnet101-lowproposals-coco": "ssd-large",
-            "ssd_mobilenet_v1_coco": "ssd-small",
-            "ssd_mobilenet_v1_fpn_640x640": "ssd-small",
-            "ssd_mobilenet_v1_quantized_coco": "ssd-small",
-            "ssd_mobilenet_v2_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_320x320": "ssd-small",
-            "ssd_mobilenet_v2_fpnlite_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_640x640": "ssd-small",
-            "ssd_resnet50_v1_fpn_1024x1024": "ssd-large",
+            "resnet50": "resnet"
         },
         "seeds": {
             # TODO: Update random seeds
@@ -1315,62 +273,6 @@ RESULT_FIELD = {
 }
 
 RESULT_FIELD_NEW = {
-    "v0.5": {
-        "Offline": "result_samples_per_second",
-        "SingleStream": "result_90.00_percentile_latency_ns",
-        "MultiStreamLegacy": "effective_samples_per_query",
-        "MultiStream": "result_99.00_percentile_per_query_latency_ns",
-        "Server": "result_scheduled_samples_per_sec",
-    },
-    "v0.7": {
-        "Offline": "result_samples_per_second",
-        "SingleStream": "result_90.00_percentile_latency_ns",
-        "MultiStreamLegacy": "effective_samples_per_query",
-        "MultiStream": "result_99.00_percentile_per_query_latency_ns",
-        "Server": "result_scheduled_samples_per_sec",
-    },
-    "v1.0": {
-        "Offline": "result_samples_per_second",
-        "SingleStream": "result_90.00_percentile_latency_ns",
-        "MultiStreamLegacy": "effective_samples_per_query",
-        "MultiStream": "result_99.00_percentile_per_query_latency_ns",
-        "Server": "result_scheduled_samples_per_sec",
-    },
-    "v1.1": {
-        "Offline": "result_samples_per_second",
-        "SingleStream": "result_90.00_percentile_latency_ns",
-        "MultiStreamLegacy": "effective_samples_per_query",
-        "MultiStream": "result_99.00_percentile_per_query_latency_ns",
-        "Server": "result_scheduled_samples_per_sec",
-    },
-    "v2.0": {
-        "Offline": "result_samples_per_second",
-        "SingleStream": "early_stopping_latency_ss",
-        "MultiStreamLegacy": "effective_samples_per_query",
-        "MultiStream": "early_stopping_latency_ms",
-        "Server": "result_scheduled_samples_per_sec",
-    },
-    "v2.1": {
-        "Offline": "result_samples_per_second",
-        "SingleStream": "early_stopping_latency_ss",
-        "MultiStreamLegacy": "effective_samples_per_query",
-        "MultiStream": "early_stopping_latency_ms",
-        "Server": "result_scheduled_samples_per_sec",
-    },
-    "v3.0": {
-        "Offline": "result_samples_per_second",
-        "SingleStream": "early_stopping_latency_ss",
-        "MultiStreamLegacy": "effective_samples_per_query",
-        "MultiStream": "early_stopping_latency_ms",
-        "Server": "result_scheduled_samples_per_sec",
-    },
-    "v3.1": {
-        "Offline": "result_samples_per_second",
-        "SingleStream": "early_stopping_latency_ss",
-        "MultiStreamLegacy": "effective_samples_per_query",
-        "MultiStream": "early_stopping_latency_ms",
-        "Server": "result_scheduled_samples_per_sec",
-    },
     "v4.0": {
         "Offline": "result_samples_per_second",
         "SingleStream": "early_stopping_latency_ss",
@@ -1434,6 +336,25 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "accelerator_memory_capacity",
     "framework",
     "operating_system",
+    "system_type",
+    "other_software_stack",
+    "host_processor_frequency",
+    "host_processor_caches",
+    "host_memory_configuration",
+    "host_processor_interconnect",
+    "host_networking",
+    "host_networking_topology",
+    "accelerator_frequency",
+    "accelerator_host_interconnect",
+    "accelerator_interconnect",
+    "accelerator_interconnect_topology",
+    "accelerator_memory_configuration",
+    "accelerator_on-chip_memories",
+    "cooling",
+    "hw_notes",
+    "sw_notes",
+    "host_network_card_count",
+    "system_type_detail"
 ]
 
 SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
@@ -1463,31 +384,6 @@ SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
     "framework",
     "operating_system",
     "other_software_stack",
-]
-
-SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1 = [
-    "system_type",
-    "other_software_stack",
-    "host_processor_frequency",
-    "host_processor_caches",
-    "host_memory_configuration",
-    "host_processor_interconnect",
-    "host_networking",
-    "host_networking_topology",
-    "accelerator_frequency",
-    "accelerator_host_interconnect",
-    "accelerator_interconnect",
-    "accelerator_interconnect_topology",
-    "accelerator_memory_configuration",
-    "accelerator_on-chip_memories",
-    "cooling",
-    "hw_notes",
-    "sw_notes",
-]
-
-SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1 = [
-    "host_network_card_count",
-    "system_type_detail"
 ]
 
 SYSTEM_DESC_REQUIRED_FIELDS_POWER = [
@@ -1563,9 +459,7 @@ class Config:
         self.skip_power_check = skip_power_check
 
     def set_type(self, submission_type):
-        if submission_type is None and self.version in ["v0.5"]:
-            return
-        elif submission_type == "datacenter":
+        if submission_type == "datacenter":
             self.required = self.base["required-scenarios-datacenter"]
             self.optional = self.base["optional-scenarios-datacenter"]
         elif submission_type == "edge":
@@ -1597,39 +491,24 @@ class Config:
 
         # try to guess, keep this for backwards compatibility
         # TODO: Generalize this guess or remove it completely?
-        if (
-            "ssdlite" in model
-            or "ssd-inception" in model
-            or "yolo" in model
-            or "ssd-mobilenet" in model
-            or "ssd-resnet50" in model
-        ):
-            model = "ssd-small"
-        elif "mobilenet" in model:
-            model = "mobilenet"
-        elif "efficientnet" in model or "resnet50" in model:
+
+        if "mobilenet" in model or "efficientnet" in model or "resnet50" in model:
             model = "resnet"
-        elif "rcnn" in model:
-            model = "ssd-small"
         elif "bert-99.9" in model:
             model = "bert-99.9"
         elif "bert-99" in model:
             model = "bert-99"
-        # map again, for example v0.7 does not have mobilenet so it needs to be mapped to resnet
+        # map again
         mlperf_model = self.base["model_mapping"].get(model, model)
         return mlperf_model
 
     def get_required(self, model):
-        if self.version in ["v0.5"]:
-            return set()
         model = self.get_mlperf_model(model)
         if model not in self.required:
             return None
         return set(self.required[model])
 
     def get_optional(self, model):
-        if self.version in ["v0.5"]:
-            return set(["SingleStream", "MultiStream", "Server", "Offline"])
         model = self.get_mlperf_model(model)
         if model not in self.optional:
             return set()
@@ -1667,21 +546,13 @@ class Config:
         return self.min_queries[model].get(scenario)
 
     def has_new_logging_format(self):
-        return self.version not in ["v0.5", "v0.7"]
+        return True
 
-    def uses_legacy_multistream(self):
-        return self.version in ["v0.5", "v0.7", "v1.0", "v1.1"]
 
     def uses_early_stopping(self, scenario):
-        return (self.version not in ["v0.5", "v0.7", "v1.0", "v1.1"]) and (
+        return (
             scenario in ["Server", "SingleStream", "MultiStream"]
         )
-
-    def has_query_count_in_log(self):
-        return self.version not in ["v0.5", "v0.7", "v1.0", "v1.1"]
-
-    def has_power_utc_timestamps(self):
-        return self.version not in ["v0.5", "v0.7", "v1.0"]
 
 
 def get_args():
@@ -1799,38 +670,23 @@ def find_error_in_detail_log(config, fname):
         log.error("%s is missing", fname)
         is_valid = False
     else:
-        if config.has_new_logging_format():
-            mlperf_log = MLPerfLog(fname)
-            if mlperf_log.has_error():
-                if config.ignore_uncommited:
-                    has_other_errors = False
-                    for error in mlperf_log.get_errors():
-                        if (
-                            "Loadgen built with uncommitted changes!"
-                            not in error["value"]
-                        ):
-                            has_other_errors = True
-
-                log.error("%s contains errors:", fname)
+        mlperf_log = MLPerfLog(fname)
+        if mlperf_log.has_error():
+            if config.ignore_uncommited:
+                has_other_errors = False
                 for error in mlperf_log.get_errors():
-                    log.error("%s", error["value"])
+                    if (
+                        "Loadgen built with uncommitted changes!"
+                        not in error["value"]
+                    ):
+                        has_other_errors = True
 
-                if not config.ignore_uncommited or has_other_errors:
-                    is_valid = False
-        else:
-            with open(fname, "r") as f:
-                for line in f:
-                    # look for: ERROR
-                    if "ERROR" in line:
-                        if config.ignore_errors(line):
-                            if (
-                                "ERROR : Loadgen built with uncommitted changes!"
-                                in line
-                            ):
-                                log.warning("%s contains error: %s", fname, line)
-                            continue
-                        log.error("%s contains error: %s", fname, line)
-                        is_valid = False
+            log.error("%s contains errors:", fname)
+            for error in mlperf_log.get_errors():
+                log.error("%s", error["value"])
+
+            if not config.ignore_uncommited or has_other_errors:
+                is_valid = False
     return is_valid
 
 
@@ -1946,15 +802,10 @@ def get_performance_metric(
     ):
         is_valid = True
     scenario = mlperf_log["effective_scenario"]
-    scenario_for_res = (
-        "MultiStreamLegacy"
-        if scenario == "MultiStream" and config.uses_legacy_multistream()
-        else scenario
-    )
 
-    res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
+    res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario]])
     if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
-        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario_for_res]])
+        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario]])
 
     inferred = False
     if scenario_fixed != scenario:
@@ -1969,66 +820,37 @@ def check_performance_dir(
     rt = {}
 
     # look for: Result is: VALID
-    if config.has_new_logging_format():
-        fname = os.path.join(path, "mlperf_log_detail.txt")
-        mlperf_log = MLPerfLog(fname)
-        if (
-            "result_validity" in mlperf_log.get_keys()
-            and mlperf_log["result_validity"] == "VALID"
-        ):
-            is_valid = True
-        performance_sample_count = mlperf_log["effective_performance_sample_count"]
-        qsl_rng_seed = mlperf_log["effective_qsl_rng_seed"]
-        sample_index_rng_seed = mlperf_log["effective_sample_index_rng_seed"]
-        schedule_rng_seed = mlperf_log["effective_schedule_rng_seed"]
-        scenario = mlperf_log["effective_scenario"]
-        scenario_for_res = (
-            "MultiStreamLegacy"
-            if scenario == "MultiStream" and config.uses_legacy_multistream()
-            else scenario
-        )
-        res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario_for_res]])
-        if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
-            res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario_for_res]])
-        
-        if model in ["llama2-70b-99", "llama2-70b-99.9"]:
-            llama_constraint, is_valid = extra_check_llama2(mlperf_log, scenario_fixed)
+    fname = os.path.join(path, "mlperf_log_detail.txt")
+    mlperf_log = MLPerfLog(fname)
+    if (
+        "result_validity" in mlperf_log.get_keys()
+        and mlperf_log["result_validity"] == "VALID"
+    ):
+        is_valid = True
+    performance_sample_count = mlperf_log["effective_performance_sample_count"]
+    qsl_rng_seed = mlperf_log["effective_qsl_rng_seed"]
+    sample_index_rng_seed = mlperf_log["effective_sample_index_rng_seed"]
+    schedule_rng_seed = mlperf_log["effective_schedule_rng_seed"]
+    scenario = mlperf_log["effective_scenario"]
 
-        latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
-        latency_mean = mlperf_log["result_mean_latency_ns"]
-        if scenario in ["MultiStream"]:
-            latency_99_percentile = mlperf_log[
-                "result_99.00_percentile_per_query_latency_ns"
-            ]
-            latency_mean = mlperf_log["result_mean_query_latency_ns"]
-        min_query_count = mlperf_log["effective_min_query_count"]
-        samples_per_query = mlperf_log["effective_samples_per_query"]
-        min_duration = mlperf_log["effective_min_duration_ms"]
-        sut_name = mlperf_log["sut_name"]
-    else:
-        fname = os.path.join(path, "mlperf_log_summary.txt")
-        with open(fname, "r") as f:
-            for line in f:
-                m = re.match(r"^Result\s+is\s*\:\s+VALID", line)
-                if m:
-                    is_valid = True
-                m = re.match(r"^\s*([\w\s.\(\)\/]+)\s*\:\s*([\w\+\.][\w\+\.\s]*)", line)
-                if m:
-                    rt[m.group(1).strip()] = m.group(2).strip()
-        performance_sample_count = int(rt["performance_sample_count"])
-        qsl_rng_seed = int(rt["qsl_rng_seed"])
-        sample_index_rng_seed = int(rt["sample_index_rng_seed"])
-        schedule_rng_seed = int(rt["schedule_rng_seed"])
-        scenario = rt["Scenario"].replace(" ", "")
-        res = float(rt[RESULT_FIELD[scenario]])
-        latency_99_percentile = int(rt["99.00 percentile latency (ns)"])
-        latency_mean = int(rt["Mean latency (ns)"])
-        min_query_count = int(rt["min_query_count"])
-        samples_per_query = int(rt["samples_per_query"])
-        min_duration = int(rt["min_duration (ms)"])
-        if scenario == "SingleStream":
-            qps_wo_loadgen_overhead = float(rt["QPS w/o loadgen overhead"])
-        sut_name = str(rt["System Under Test (SUT) name: "])
+    res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario]])
+    if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
+        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario]])
+        
+    if model in ["llama2-70b-99", "llama2-70b-99.9"]:
+        llama_constraint, is_valid = extra_check_llama2(mlperf_log, scenario_fixed)
+
+    latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
+    latency_mean = mlperf_log["result_mean_latency_ns"]
+    if scenario in ["MultiStream"]:
+        latency_99_percentile = mlperf_log[
+            "result_99.00_percentile_per_query_latency_ns"
+        ]
+        latency_mean = mlperf_log["result_mean_query_latency_ns"]
+    min_query_count = mlperf_log["effective_min_query_count"]
+    samples_per_query = mlperf_log["effective_samples_per_query"]
+    min_duration = mlperf_log["effective_min_duration_ms"]
+    sut_name = mlperf_log["sut_name"]
 
     # check if there are any errors in the detailed log
     fname = os.path.join(path, "mlperf_log_detail.txt")
@@ -2071,105 +893,95 @@ def check_performance_dir(
         )
         is_valid = False
 
-    if scenario == "SingleStream" or (
-        scenario == "MultiStream" and not config.uses_legacy_multistream()
-    ):
+    if scenario == "SingleStream" or scenario == "MultiStream":
         res /= MS_TO_NS
 
-    # Check if current scenario (and version) uses early stopping
+    # Check if the current scenario uses early stopping
     uses_early_stopping = config.uses_early_stopping(scenario)
 
-    if config.version != "v0.5":
-        # FIXME: for open we script this because open can submit in all scenarios
-        # not supported for v0.5
+    if uses_early_stopping:
+        # check if early_stopping condition was met
+        if not mlperf_log["early_stopping_met"]:
+            early_stopping_result = mlperf_log["early_stopping_result"]
+            log.error(
+                "Early stopping condition was not met, msg=%s",
+                early_stopping_result,
+            )
 
-        if uses_early_stopping:
-            # check if early_stopping condition was met
-            if not mlperf_log["early_stopping_met"]:
-                early_stopping_result = mlperf_log["early_stopping_result"]
-                log.error(
-                    "Early stopping condition was not met, msg=%s",
-                    early_stopping_result,
-                )
-
-            # If the scenario has a target latency (Server scenario), check
-            # that the target latency that was passed to the early stopping
-            # is less than the target latency.
-            target_latency = config.latency_constraint.get(model, dict()).get(scenario)
-            if target_latency:
-                early_stopping_latency_ns = mlperf_log["effective_target_latency_ns"]
-                log.info(
-                    "Target latency: %s, Early Stopping Latency: %s, Scenario: %s",
-                    target_latency,
-                    early_stopping_latency_ns,
-                    scenario,
-                )
-                if early_stopping_latency_ns > target_latency:
-                    log.error(
-                        "%s Latency constraint with early stopping not met, expected=%s, found=%s",
-                        fname,
-                        target_latency,
-                        early_stopping_latency_ns,
-                    )
-                    is_valid = False
-
-        else:
-            # check if the benchmark meets latency constraint
-            target_latency = config.latency_constraint.get(model, dict()).get(scenario)
+        # If the scenario has a target latency (Server scenario), check
+        # that the target latency that was passed to the early stopping
+        # is less than the target latency.
+        target_latency = config.latency_constraint.get(model, dict()).get(scenario)
+        if target_latency:
+            early_stopping_latency_ns = mlperf_log["effective_target_latency_ns"]
             log.info(
-                "Target latency: %s, Latency: %s, Scenario: %s",
+                "Target latency: %s, Early Stopping Latency: %s, Scenario: %s",
                 target_latency,
-                latency_99_percentile,
+                early_stopping_latency_ns,
                 scenario,
             )
-            if target_latency:
-                if latency_99_percentile > target_latency:
-                    log.error(
-                        "%s Latency constraint not met, expected=%s, found=%s",
-                        fname,
-                        target_latency,
-                        latency_99_percentile,
-                    )
-
-        # Check Minimum queries were issued to meet test duration
-        # Check if this run uses early stopping. If it does, get the
-        # min_queries from the detail log, otherwise get this value
-        # from the config
-        if not uses_early_stopping:
-            required_min_query_count = config.get_min_query_count(model, scenario)
-            if required_min_query_count and min_query_count < required_min_query_count:
+            if early_stopping_latency_ns > target_latency:
                 log.error(
-                    "%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
+                    "%s Latency constraint with early stopping not met, expected=%s, found=%s",
                     fname,
-                    required_min_query_count,
-                    min_query_count,
+                    target_latency,
+                    early_stopping_latency_ns,
                 )
                 is_valid = False
 
-        if config.version in ["v0.5", "v0.7", "v1.0", "v1.1", "v2.0", "v2.1", "v3.0", "v3.1"] and scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ) or \
-        scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ_SINCE_V4[model]):
+    else:
+        # check if the benchmark meets latency constraint
+        target_latency = config.latency_constraint.get(model, dict()).get(scenario)
+        log.info(
+            "Target latency: %s, Latency: %s, Scenario: %s",
+            target_latency,
+            latency_99_percentile,
+            scenario,
+        )
+        if target_latency:
+            if latency_99_percentile > target_latency:
+                log.error(
+                    "%s Latency constraint not met, expected=%s, found=%s",
+                    fname,
+                    target_latency,
+                    latency_99_percentile,
+                )
+
+    # Check Minimum queries were issued to meet test duration
+    # Check if this run uses early stopping. If it does, get the
+    # min_queries from the detail log, otherwise get this value
+    # from the config
+    if not uses_early_stopping:
+        required_min_query_count = config.get_min_query_count(model, scenario)
+        if required_min_query_count and min_query_count < required_min_query_count:
             log.error(
-                "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
+                "%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
                 fname,
-                OFFLINE_MIN_SPQ,
-                samples_per_query,
+                required_min_query_count,
+                min_query_count,
             )
             is_valid = False
 
-        # Test duration of 600s is met
-        required_min_duration = (
-            TEST_DURATION_MS_PRE_1_0
-            if config.version in ["v0.5", "v0.7"]
-            else TEST_DURATION_MS
+    if scenario == "Offline" and (samples_per_query < OFFLINE_MIN_SPQ_SINCE_V4[model]):
+        log.error(
+            "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
+            fname,
+            OFFLINE_MIN_SPQ,
+            samples_per_query,
         )
-        if min_duration < required_min_duration:
-            log.error(
-                "%s Test duration less than 600s in user config. expected=%s, found=%s",
-                fname,
-                required_min_duration,
-                min_duration,
-            )
-            is_valid = False
+        is_valid = False
+
+    # Test duration of 600s is met
+    required_min_duration = TEST_DURATION_MS
+
+    if min_duration < required_min_duration:
+        log.error(
+            "%s Test duration less than 600s in user config. expected=%s, found=%s",
+            fname,
+            required_min_duration,
+            min_duration,
+        )
+        is_valid = False
 
     inferred = False
     if scenario_fixed != scenario:
@@ -2180,7 +992,7 @@ def check_performance_dir(
     )
     is_valid &= is_network_mode_valid
     if is_network_system:
-        # for network mode verify the SUT name is valid, accodring to the rules (must include "Network SUT" in name)
+        # for network mode verify the SUT name is valid, according to the rules (must include "Network SUT" in name)
         if NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME not in sut_name:
             log.error(
                 f"{fname} invalid sut name for network mode. expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}' got '{sut_name}'"
@@ -2212,13 +1024,13 @@ def get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, log_e
         res = qps_wo_loadgen_overhead
 
     if (
-        scenario_fixed in ["Offline"] and not config.uses_legacy_multistream()
+        scenario_fixed in ["Offline"]
     ) and scenario in ["MultiStream"]:
         inferred = True
         res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
     if (
-        scenario_fixed in ["MultiStream"] and not config.uses_legacy_multistream()
+        scenario_fixed in ["MultiStream"]
     ) and scenario in ["SingleStream"]:
         inferred = True
         # samples_per_query does not match with the one reported in the logs
@@ -2238,16 +1050,9 @@ def get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, log_e
 
 def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
     # parse the power logs
-    if config.has_power_utc_timestamps():
-        server_timezone = datetime.timedelta(0)
-        client_timezone = datetime.timedelta(0)
-    else:
-        server_json_fname = os.path.join(power_path, "server.json")
-        with open(server_json_fname) as f:
-            server_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
-        client_json_fname = os.path.join(power_path, "client.json")
-        with open(client_json_fname) as f:
-            client_timezone = datetime.timedelta(seconds=json.load(f)["timezone"])
+    server_timezone = datetime.timedelta(0)
+    client_timezone = datetime.timedelta(0)
+    
     detail_log_fname = os.path.join(log_path, "mlperf_log_detail.txt")
     mlperf_log = MLPerfLog(detail_log_fname)
     datetime_format = "%m-%d-%Y %H:%M:%S.%f"
@@ -2260,20 +1065,8 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
         + client_timezone
     )
     # Obtain the scenario also from logs to check if power is inferred
-    if config.has_new_logging_format():
-        scenario = mlperf_log["effective_scenario"]
-    else:
-        rt = {}
-        fname = os.path.join(log_path, "mlperf_log_summary.txt")
-        with open(fname, "r") as f:
-            for line in f:
-                m = re.match(r"^Result\s+is\s*\:\s+VALID", line)
-                if m:
-                    is_valid = True
-                m = re.match(r"^\s*([\w\s.\(\)\/]+)\s*\:\s*([\w\+\.][\w\+\.\s]*)", line)
-                if m:
-                    rt[m.group(1).strip()] = m.group(2).strip()
-        scenario = rt["Scenario"].replace(" ", "")
+    scenario = mlperf_log["effective_scenario"]
+    
     spl_fname = os.path.join(log_path, "spl.txt")
     power_list = []
     with open(spl_fname) as f:
@@ -2311,26 +1104,9 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 "MultiStream",
                 "SingleStream",
             ], "Unknown scenario: {:}".format(scenario_fixed)
-            if not config.has_query_count_in_log():
-                # Before v2.0, LoadGen does NOT print out the actual number of queries in detail logs. There is a
-                # "generated_query_count", but LoadGen exits early when the min_duration has been met, so it is not equal to
-                # the actual number of queries. To work around it, make use of "result_qps_with_loadgen_overhead", which is
-                # defined as: (sample_count - 1) / pr.final_query_issued_time, where final_query_issued_time can be
-                # approximated by power_duration (off by one query worth of latency, which is in general negligible compared
-                # to 600-sec total runtime and can be offsetted by removing the "+1" when reconstructing the sample_count).
-                # As for MultiStream, it always runs for 270336 queries, so using "generated_query_count" as above is fine.
-                if scenario_fixed in ["MultiStream"]:
-                    num_queries = (
-                        mlperf_log["generated_query_count"]
-                        * mlperf_log["generated_samples_per_query"]
-                    )
-                elif scenario_fixed in ["SingleStream"]:
-                    num_queries = (
-                        mlperf_log["result_qps_with_loadgen_overhead"] * power_duration
-                    )
-            else:
-                # Starting from v2.0, LoadGen logs the actual number of issued queries.
-                num_queries = int(mlperf_log["result_query_count"])
+
+            num_queries = int(mlperf_log["result_query_count"])
+
             power_metric = avg_power * power_duration * 1000 / num_queries
 
             if scenario_fixed in ["SingleStream"]:
@@ -2340,7 +1116,6 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
 
             if (
                 scenario_fixed in ["MultiStream"]
-                and not config.uses_legacy_multistream()
             ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
@@ -2380,6 +1155,7 @@ def check_power_dir(
         log.error("%s has file list mismatch (%s)", power_path, diff)
         is_valid = False
 
+    # uncomment to measure ranging mode power
     '''
     (
         is_valid,
@@ -2880,18 +1656,9 @@ def check_results_dir(
 
                         if has_power:
                             log.info("Detected power logs for %s", name)
-                            if config.version in [
-                                "v1.0",
-                                "v1.1",
-                                "v2.0",
-                                "v2.1",
-                                "v3.0",
-                                "v3.1"
-                            ]:
-                                pass  # Submission checker was not enforcing this
                             # The power related system_desc_fields are not used by submitters currently.
                             # Turning this check off for now
-                            elif False and not check_system_desc_id_power(
+                            if False and not check_system_desc_id_power(
                                 name,
                                 system_json,
                                 submitter,
@@ -2983,13 +1750,7 @@ def check_results_dir(
                                 log.error("%s, accuracy not valid", acc_path)
 
                         inferred = 0
-                        if scenario in ["Server"] and config.version in [
-                            "v0.5",
-                            "v0.7",
-                        ]:
-                            n = ["run_1", "run_2", "run_3", "run_4", "run_5"]
-                        else:
-                            n = ["run_1"]
+                        n = ["run_1"]
 
                         for i in n:
                             is_valid = True
@@ -3197,18 +1958,9 @@ def check_system_desc_id(
 ):
     is_valid = True
     # check all required fields
-    if version in ["v0.5", "v0.7"]:
-        required_fields = SYSTEM_DESC_REQUIRED_FIELDS
-    elif version in ["v1.0", "v1.1", "v2.0", "v2.1", "v3.0"]:
-        required_fields = (
-            SYSTEM_DESC_REQUIRED_FIELDS + SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1
-        )
-    else:
-        required_fields = (
-            SYSTEM_DESC_REQUIRED_FIELDS
-            + SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1
-            + SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V3_1
-        )
+   
+    required_fields = SYSTEM_DESC_REQUIRED_FIELDS.copy()
+
 
     is_network_system, is_network_mode_valid = is_system_over_network(
         division, systems_json, fname
@@ -3233,13 +1985,11 @@ def check_system_desc_id(
                 "%s, field %s requires a meaningful response but is empty", fname, k
             )
 
-    if version in ["v0.5", "v0.7"]:
-        all_fields = required_fields + SYSTEM_DESC_REQUIRED_FIELDS_SINCE_V1
-    else:
-        # SYSTEM_DESC_REQUIRED_FIELDS_POWER should be mandatory when a submission has power logs, but since we
-        # check power submission in check_results_dir, the information is not available yet at this stage and we do
-        # this check later
-        all_fields = required_fields + SYSTEM_DESC_REQUIRED_FIELDS_POWER
+   
+    # SYSTEM_DESC_REQUIRED_FIELDS_POWER should be mandatory when a submission has power logs, but since we
+    # check power submission in check_results_dir, the information is not available yet at this stage and we do
+    # this check later
+    all_fields = required_fields + SYSTEM_DESC_REQUIRED_FIELDS_POWER
     for k in systems_json.keys():
         if k not in all_fields:
             log.warning("%s, field %s is unknown", fname, k)
@@ -3642,11 +2392,6 @@ def main():
         ignore_uncommited=args.submission_exceptions,
         skip_power_check=args.skip_power_check,
     )
-
-    if args.version in [ "v0.5", "v0.7", "v1.0", "v1.1", "v2.0", "v2.1", "v3.0"]:
-        args.skip_meaningful_fields_emptiness_check = True
-        args.skip_empty_files_check = True
-        args.skip_check_power_measure_files = True
 
     with open(args.csv, "w") as csv:
         os.chdir(args.input)

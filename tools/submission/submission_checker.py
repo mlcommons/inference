@@ -1959,9 +1959,8 @@ def check_system_desc_id(
     is_valid = True
     # check all required fields
    
-    required_fields = (
-        SYSTEM_DESC_REQUIRED_FIELDS
-    )
+    required_fields = SYSTEM_DESC_REQUIRED_FIELDS.copy()
+
 
     is_network_system, is_network_mode_valid = is_system_over_network(
         division, systems_json, fname

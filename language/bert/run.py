@@ -124,7 +124,7 @@ def main():
         from network_SUT import app, node, set_backend
         node = args.node
         set_backend(sut)
-        app.run(debug=False, port=args.port)
+        app.run(debug=False, port=args.port, host="0.0.0.0")
 
     else:
         print("Running LoadGen test...")

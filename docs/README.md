@@ -2,8 +2,8 @@
 
 ## Commands to get the website running locally
 ```
-git clone https://github.com/GATEOverflow/cm4mlperf-inference
-cd cm4mlperf-inference
-pip install -r requirements.txt
+git clone https://github.com/mlcommons/inference
+cd inference
+pip install -r docs/requirements.txt
 mkdocs serve
 ```

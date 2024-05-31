@@ -9,6 +9,7 @@ def define_env(env):
      pre_space += " "
 
      content=""
+     scenarios = []
      if implementation == "reference":
        devices = [ "CPU", "CUDA", "ROCm" ]
        if model.lower() == "resnet50":
@@ -31,6 +32,13 @@ def define_env(env):
      elif implementation == "cpp":
        devices = [ "CPU", "CUDA" ]
        frameworks = [ "Onnxruntime" ]
+     elif implementation == "ctuning-cpp":
+       scenarios = [ "SingleStream" ]
+       devices = [ "CPU" ]
+       if model.lower() == "resnet50":
+         frameworks = [ "TFLite" ]
+       else:
+         frameworks = []
 
      if model.lower() == "bert-99.9":
        categories = [ "Datacenter" ]
@@ -40,11 +48,11 @@ def define_env(env):
        categories = [ "Edge", "Datacenter" ]
 
      for category in categories:
-       if category == "Edge":
+       if category == "Edge" and not scenarios:
          scenarios = [ "Offline", "SingleStream" ]
          if model.lower() in [ "resnet50", "retinanet" ]:
-           scenarios.append("Multistream")
-       elif category == "Datacenter":
+           scenarios.append("MultiStream")
+       elif category == "Datacenter" and not scenarios:
          scenarios = [ "Offline", "Server" ] 
 
        content += f"{pre_space}=== \"{category.lower()}\"\n\n"

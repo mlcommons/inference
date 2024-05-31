@@ -24,6 +24,8 @@ def define_env(env):
        devices = [ "CUDA" ]
        frameworks = [ "TensorRT" ]
      elif implementation == "intel":
+       if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9" ]:
+            return pre_space+"    WIP"
        devices = [ "CPU" ]
        frameworks = [ "Pytorch" ]
      elif implementation == "qualcomm":

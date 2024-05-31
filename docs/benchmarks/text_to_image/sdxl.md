@@ -37,13 +37,11 @@ Get the Official MLPerf Stable Diffusion Model
 
 === "Intel"
     ### Intel MLPerf Implementation
-    GPTJ-99
 {{ mlperf_inference_implementation_readme (4, "sdxl", "intel") }}
 
 
 === "Qualcomm"
     ### Qualcomm AI100 MLPerf Implementation
 
-    GPTJ-99
 {{ mlperf_inference_implementation_readme (4, "sdxl", "qualcomm") }}
 

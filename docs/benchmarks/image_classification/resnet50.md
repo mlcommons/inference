@@ -66,3 +66,5 @@ Get the Official MLPerf ResNet50 Model
     ### MLPerf Modular Implementation in C++
     
 {{ mlperf_inference_implementation_readme (4, "resnet50", "cpp") }}
+
+Please see [mobilenets.md](mobilenets.md) for running mobilenet models for Image Classification.

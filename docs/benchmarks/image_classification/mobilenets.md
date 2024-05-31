@@ -7,53 +7,53 @@ Mobilenet models are not official MLPerf models and so cannot be used for a Clos
 === "Mobilenet-V1"
     ### Mobilenet V1
     ```bash
-       cm run script --tags=run,mobilenet-models,_tflite,_mobilenet-v1
+       cm run script --tags=run,mobilenet-models,_tflite,_mobilenet-v1 --adr.compiler.tags=gcc
     ```
 === "Mobilenet-V2"
     ### Mobilenet V2
     ```bash
-       cm run script --tags=run,mobilenet-models,_tflite,_mobilenet-v2
+       cm run script --tags=run,mobilenet-models,_tflite,_mobilenet-v2 --adr.compiler.tags=gcc
     ```
 === "Mobilenet-V2"
     ### Mobilenet V2
     ```bash
-       cm run script --tags=run,mobilenet-models,_tflite,_mobilenet-v2
+       cm run script --tags=run,mobilenet-models,_tflite,_mobilenet-v2 --adr.compiler.tags=gcc
     ```
 === "Mobilenets"
     ### Mobilenet V1,V2,V3
     ```bash
-       cm run script --tags=run,mobilenet-models,_tflite,_mobilenet
+       cm run script --tags=run,mobilenet-models,_tflite,_mobilenet --adr.compiler.tags=gcc
     ```
 === "Efficientnet"
     ### Efficientnet
     ```bash
-       cm run script --tags=run,mobilenet-models,_tflite,_efficientnet
+       cm run script --tags=run,mobilenet-models,_tflite,_efficientnet --adr.compiler.tags=gcc
     ```
 
 ## ARMNN Backend
 === "Mobilenet-V1"
     ### Mobilenet V1
     ```bash
-       cm run script --tags=run,mobilenet-models,_tflite,_armnn,_mobilenet-v1
+       cm run script --tags=run,mobilenet-models,_tflite,_armnn,_mobilenet-v1 --adr.compiler.tags=gcc
     ```
 === "Mobilenet-V2"
     ### Mobilenet V2
     ```bash
-       cm run script --tags=run,mobilenet-models,_tflite,_armnn,_mobilenet-v2
+       cm run script --tags=run,mobilenet-models,_tflite,_armnn,_mobilenet-v2 --adr.compiler.tags=gcc
     ```
 === "Mobilenet-V2"
     ### Mobilenet V2
     ```bash
-       cm run script --tags=run,mobilenet-models,_tflite,_armnn,_mobilenet-v2
+       cm run script --tags=run,mobilenet-models,_tflite,_armnn,_mobilenet-v2 --adr.compiler.tags=gcc
     ```
 === "Mobilenets"
     ### Mobilenet V1,V2,V3
     ```bash
-       cm run script --tags=run,mobilenet-models,_tflite,_armnn,_mobilenet
+       cm run script --tags=run,mobilenet-models,_tflite,_armnn,_mobilenet --adr.compiler.tags=gcc
     ```
 === "Efficientnet"
     ### Efficientnet
     ```bash
-       cm run script --tags=run,mobilenet-models,_tflite,_armnn,_efficientnet
+       cm run script --tags=run,mobilenet-models,_tflite,_armnn,_efficientnet --adr.compiler.tags=gcc
     ```
 

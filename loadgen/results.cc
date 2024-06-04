@@ -783,6 +783,9 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
       MLPERF_LOG(detail, "result_time_to_output_token_min", time_per_output_token_min);
       MLPERF_LOG(detail, "result_time_to_output_token_max", time_per_output_token_max);
       MLPERF_LOG(detail, "result_time_to_output_token_mean", time_per_output_token_mean);
+      double tps_as_completed =
+            token_count / pr.final_query_all_samples_done_time;
+      MLPERF_LOG(detail, "result_completed_tokens_per_second", tps_as_completed);
     } else {
       double tokens_per_second = token_count / pr.max_latency;
       MLPERF_LOG(detail, "result_tokens_per_second", tokens_per_second);

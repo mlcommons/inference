@@ -121,7 +121,7 @@ def define_env(env):
        else:
            p_range = 50
        if device == "cuda":
-           p_range *= 10
+           p_range *= 40
        p_range *= num_devices
 
        return p_range

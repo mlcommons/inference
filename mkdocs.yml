@@ -19,8 +19,6 @@ theme:
     - navigation.top
     - toc.follow
 nav:
-  - Inference:
-    - index.md
   - Install:
     - install/index.md
     - Quick Start: install/quick-start.md

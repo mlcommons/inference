@@ -21,7 +21,6 @@ theme:
 nav:
   - Install:
     - install/index.md
-    - Quick Start: install/quick-start.md
   - Benchmarks:
     - benchmarks/index.md
     - Image Classification:

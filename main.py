@@ -24,8 +24,11 @@ def define_env(env):
                  frameworks = [ "Pytorch" ]
 
         elif implementation == "nvidia":
+            if model in [ "sdxl", "llama2-99", "llama2-99.9" ]:
+                 return pre_space+"    WIP"
             devices = [ "CUDA" ]
             frameworks = [ "TensorRT" ]
+
         elif implementation == "intel":
             if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9" ]:
                  return pre_space+"    WIP"
@@ -33,6 +36,9 @@ def define_env(env):
             frameworks = [ "Pytorch" ]
 
         elif implementation == "qualcomm":
+            if model not in [ "resnet50", "retinanet", "bert-99", "bert-99.9" ]:
+                 return pre_space+"    WIP"
+
             devices = [ "QAIC" ]
             frameworks = [ "Glow" ]
 

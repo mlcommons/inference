@@ -185,6 +185,14 @@ def define_env(env):
                  readme_suffix += f"{pre_space}* Please see [mobilenets.md](mobilenets.md) for running mobilenet models for Image Classification."
         return readme_suffix
 
+    def get_run_cmd_extra(f_pre_space, model, implementation, device):
+        extra_content = ""
+        f_pre_space += " "
+        if "gptj" in model and device == "cuda" and implementation == "reference":
+            extra_content += f"{f_pre_space}!!! tip\n\n"
+            extra_content += f"{f_pre_space}    * `--precision=[float16|bfloat16]` can help run on GPUs with less RAM \n"
+            extra_content += f"{f_pre_space}    * `--beam-size=1` Beam size of 4 is mandatory for a closed division submission but reducing the beam size can help in running the model on GPUs with lower device memory\n"
+        return extra_content
 
     @env.macro
     def mlperf_inference_run_command(spaces, model, implementation, framework, category, scenario, device="cpu", execution_mode="test", test_query_count="20", docker=False):
@@ -201,13 +209,15 @@ def define_env(env):
             scenario_variation_tag = ""
             scenario_option = f"\\\n {pre_space} --scenario={scenario}"
 
+        run_cmd_extra = get_run_cmd_extra(f_pre_space, model, implementation, device)
+
         if docker:
             docker_cmd_suffix = f" \\\n {pre_space} --docker --quiet"
             docker_cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
             docker_setup_cmd = f"\n{f_pre_space} ```bash\n{f_pre_space} cm run script --tags=run-mlperf,inference,_find-performance,_full{scenario_variation_tag} \\\n {pre_space} --model={model} \\\n {pre_space} --implementation={implementation} \\\n {pre_space} --framework={framework} \\\n {pre_space} --category={category} {scenario_option} \\\n {pre_space} --execution-mode=test \\\n {pre_space} --device={device} {docker_cmd_suffix}\n{f_pre_space} ```\n"
 
-            return docker_setup_cmd
+            return docker_setup_cmd + run_cmd_extra
 
         else:
             cmd_suffix = f"\\\n {pre_space} --quiet"
@@ -217,4 +227,4 @@ def define_env(env):
 
             run_cmd = f"\n{f_pre_space} ```bash\n{f_pre_space} cm run script --tags=run-mlperf,inference{scenario_variation_tag} \\\n {pre_space} --model={model} \\\n {pre_space} --implementation={implementation} \\\n {pre_space} --framework={framework} \\\n {pre_space} --category={category} {scenario_option} \\\n {pre_space} --execution-mode={execution_mode} \\\n {pre_space} --device={device} {cmd_suffix}\n{f_pre_space} ```\n"
 
-            return run_cmd
+            return run_cmd + run_cmd_extra

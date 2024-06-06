@@ -92,6 +92,10 @@ def define_env(env):
 
                     if "99.9" not in model: #not showing docker command as it is already done for the 99% variant
                         content += f"{cur_space2}###### Docker Setup Command\n\n"
+
+                        docker_info = get_docker_info(spaces+12, model, implementation, device)
+                        content += docker_info
+
                         test_query_count=get_test_query_count(model, implementation, device)
 
                         content += mlperf_inference_run_command(spaces+12, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True)
@@ -125,9 +129,11 @@ def define_env(env):
                     content += run_cmd
                     content += run_suffix
 
+        readme_prefix = get_readme_prefix(spaces, model, implementation)
+
         readme_suffix = get_readme_suffix(spaces, model, implementation)
 
-        return content + readme_suffix
+        return readme_prefix + content + readme_suffix
 
     def get_test_query_count(model, implementation, device, num_devices=1):
 
@@ -143,6 +149,27 @@ def define_env(env):
             p_range *= num_devices
 
         return p_range
+
+    def get_readme_prefix(spaces, model, implementation):
+        readme_prefix = ""
+        pre_space="    "
+        #for i in range(1,spaces):
+        #     pre_space  = pre_space + " "
+        #pre_space += "  "
+
+        return readme_prefix
+
+    def get_docker_info(spaces, model, implementation, device):
+        info = ""
+        pre_space=""
+        for i in range(1,spaces):
+             pre_space  = pre_space + " "
+        pre_space += " "
+        #pre_space = "                "
+        if implementation == "nvidia":
+            info += f"\n{pre_space}!!! tip\n\n"
+            info+= f"{pre_space}    All the Nvidia benchmarks use the same docker container. So, if you have already done the docker setup command for any benchmark, you can skip the docker setup command below and do the Run commands inside the already built docker container.\n\n"
+        return info
 
     def get_readme_suffix(spaces, model, implementation):
         readme_suffix = ""

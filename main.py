@@ -69,8 +69,6 @@ def define_env(env):
                  scenarios.append("MultiStream")
             elif category == "Datacenter" and not scenarios:
                  scenarios = [ "Offline", "Server" ] 
-            if "99.9" in model:     # Directly refer the commands of <model>-99
-                 return f"\n{pre_space}Follow the same procedure described in {model.split('.')[0]}. Change the `--model` tag value to `{model.lower()}`."
 
             content += f"{pre_space}=== \"{category.lower()}\"\n\n"
 
@@ -96,23 +94,26 @@ def define_env(env):
                     content += f"{cur_space1}=== \"{device}\"\n"
                     content += f"{cur_space2}###### {device} device\n\n"
 
-                    if "99.9" not in model: #not showing docker command as it is already done for the 99% variant
-                        # to select the execution environments(currently Docker and Native)
-                        for execution_env in execution_envs:
-                            if (device == "ROCm" or implementation == "qualcomm") and execution_env == "Docker":
-                                continue  # docker not currently supported for Qualcomm implementation and ROCm device
-                            if implementation == "nvidia" and execution_env == "Native":
-                                continue  # Nvidia implementation only supports execution through docker
-                            content += f"{cur_space2}=== \"{execution_env}\"\n"
-                            content += f"{cur_space3}###### {execution_env} Environment\n\n"
-                            test_query_count=get_test_query_count(model, implementation, device)
+                    # to select the execution environments(currently Docker and Native)
+                    for execution_env in execution_envs:
+                        if (device == "ROCm" or implementation == "qualcomm") and execution_env == "Docker":
+                            continue  # docker not currently supported for Qualcomm implementation and ROCm device
+                        if implementation == "nvidia" and execution_env == "Native":
+                            continue  # Nvidia implementation only supports execution through docker
+                        content += f"{cur_space2}=== \"{execution_env}\"\n"
+                        content += f"{cur_space3}###### {execution_env} Environment\n\n"
+                        test_query_count=get_test_query_count(model, implementation, device)
+
+                        if "99.9" not in model: #not showing docker command as it is already done for the 99% variant
                             if execution_env == "Native": # Native implementation steps through virtual environment
                                 content += f"{cur_space3}##### Setup a virtual environment for Python\n"
                                 content += get_venv_command(spaces+16)
-                                content += f"{cur_space3}##### Execute the CM command\n"
+                                content += f"{cur_space3}##### Performance Estimation for Offline Scenario\n"
                                 content += mlperf_inference_run_command(spaces+16, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True).replace("--docker ","")
                                 content += f"{cur_space3}The above command should do a test run of Offline scenario and record the estimated offline_target_qps.\n\n"
+
                             else: # Docker implementation steps
+                                content += f"{cur_space3}##### Docker Container Build and Performance Estimation for Offline Scenario\n"
                                 docker_info = get_docker_info(spaces+16, model, implementation, device)
                                 content += docker_info
                                 content += mlperf_inference_run_command(spaces+16, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True)
@@ -127,21 +128,28 @@ def define_env(env):
                                     content += f"{cur_space3}* `--docker_os_version=20.04`: [20.04, 22.04] are supported for Ubuntu and [8, 9] for RHEL\n"
 
                                 content += f"{cur_space3}</details>\n"
-                            run_suffix = ""
-                            run_suffix += f"\n{cur_space3}    ###### Run Options\n\n"
-                            run_suffix += f"{cur_space3}     * Use `--division=closed` to do a closed division submission which includes compliance runs\n\n"
-                            run_suffix += f"{cur_space3}     * Use `--rerun` to do a rerun even when a valid run exists\n\n"  
+                        else:
+                            content += f"{cur_space3} You can reuse the same environment as described for {model.split('.')[0]}.\n"
+                            content += f"{cur_space3}##### Performance Estimation for Offline Scenario\n"
+                            content += mlperf_inference_run_command(spaces+16, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True).replace("--docker ","")
+                            content += f"{cur_space3}The above command should do a test run of Offline scenario and record the estimated offline_target_qps.\n\n"
 
-                            for scenario in scenarios:
-                                content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}####### {scenario}\n\n"
-                                run_cmd = mlperf_inference_run_command(spaces+20, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), "valid")
-                                content += run_cmd
-                                content += run_suffix
-                      
-                            content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}####### All Scenarios\n\n"
-                            run_cmd = mlperf_inference_run_command(spaces+20, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), "valid")
+
+                        run_suffix = ""
+                        run_suffix += f"\n{cur_space3}    ###### Run Options\n\n"
+                        run_suffix += f"{cur_space3}     * Use `--division=closed` to do a closed division submission which includes compliance runs\n\n"
+                        run_suffix += f"{cur_space3}     * Use `--rerun` to do a rerun even when a valid run exists\n\n"  
+
+                        for scenario in scenarios:
+                            content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}####### {scenario}\n\n"
+                            run_cmd = mlperf_inference_run_command(spaces+20, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), "valid")
                             content += run_cmd
                             content += run_suffix
+ 
+                        content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}####### All Scenarios\n\n"
+                        run_cmd = mlperf_inference_run_command(spaces+20, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), "valid")
+                        content += run_cmd
+                        content += run_suffix
 
                     
 
@@ -192,7 +200,7 @@ def define_env(env):
         #pre_space = "                "
         if implementation == "nvidia":
             info += f"\n{pre_space}!!! tip\n\n"
-            info+= f"{pre_space}    All the Nvidia benchmarks use the same docker container. So, if you have already done the docker setup command for any benchmark, you can skip the docker setup command below and do the Run commands inside the already built docker container.\n\n"
+            info+= f"{pre_space}    All the Nvidia benchmarks, except GPT-J and LLAMA2-70B, use the same Docker container. Therefore, if you have already executed the Docker setup command for any benchmark, you can skip the Docker setup command below and run the commands inside the existing Docker container. The Docker container for GPT-J and LLAMA2-70B is the same and can be used for the other benchmarks, but not vice versa. This is because TensorRT-LLM is built specifically for the LLM benchmarks. If you are already inside a Docker container, execute the below Docker setup command without the --docker option for performance estimation.\n\n"
         return info
 
     def get_readme_suffix(spaces, model, implementation):
@@ -203,8 +211,9 @@ def define_env(env):
         pre_space += "  "
 
         if implementation == "reference":
-            model_base_name = model.replace("-99.9","").replace("-99","")
-            readme_suffix+= f"{pre_space}* If you want to download the official MLPerf model and dataset for {model} you can follow [this README](get-{model_base_name}-data.md).\n"
+            if not model.endswith("-99"):
+                model_base_name = model.replace("-99.9","").replace("-99","")
+                readme_suffix+= f"{pre_space}* If you want to download the official MLPerf model and dataset for {model} you can follow [this README](get-{model_base_name}-data.md).\n"
             if model == "resnet50":
                  readme_suffix += f"{pre_space}* Please see [mobilenets.md](mobilenets.md) for running mobilenet models for Image Classification."
         return readme_suffix

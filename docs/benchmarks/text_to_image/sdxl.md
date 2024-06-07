@@ -1,24 +1,23 @@
 # Text to Image using Stable Diffusion
 
 
-## Benchmark Implementations
 === "MLCommons-Python"
-    ### MLPerf Reference Implementation in Python
+    ## MLPerf Reference Implementation in Python
     
 {{ mlperf_inference_implementation_readme (4, "sdxl", "reference") }}
 
 === "Nvidia"
-    ### Nvidia MLPerf Implementation
+    ## Nvidia MLPerf Implementation
     
 {{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia") }}
 
 === "Intel"
-    ### Intel MLPerf Implementation
+    ## Intel MLPerf Implementation
 {{ mlperf_inference_implementation_readme (4, "sdxl", "intel") }}
 
 
 === "Qualcomm"
-    ### Qualcomm AI100 MLPerf Implementation
+    ## Qualcomm AI100 MLPerf Implementation
 
 {{ mlperf_inference_implementation_readme (4, "sdxl", "qualcomm") }}
 

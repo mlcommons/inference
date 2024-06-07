@@ -1,9 +1,8 @@
 # Medical Imaging using 3d-unet (KiTS 2019 kidney tumor segmentation task)
 
 
-## Benchmark Implementations
 === "MLCommons-Python"
-    ### MLPerf Reference Implementation in Python
+    ## MLPerf Reference Implementation in Python
 
     3d-unet-99
 
@@ -14,7 +13,7 @@
 {{ mlperf_inference_implementation_readme (4, "3d-unet-99.9", "reference") }}
 
 === "Nvidia"
-    ### Nvidia MLPerf Implementation
+    ## Nvidia MLPerf Implementation
     3d-unet-99
 
 {{ mlperf_inference_implementation_readme (4, "3d-unet-99", "nvidia") }}
@@ -24,7 +23,7 @@
 {{ mlperf_inference_implementation_readme (4, "3d-unet-99.9", "nvidia") }}
 
 === "Intel"
-    ### Intel MLPerf Implementation
+    ## Intel MLPerf Implementation
     3d-unet-99
 
 {{ mlperf_inference_implementation_readme (4, "3d-unet-99", "intel") }}

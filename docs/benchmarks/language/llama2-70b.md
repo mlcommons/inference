@@ -1,9 +1,8 @@
 # Text Summarization using LLAMA2-70b
 
 
-## Benchmark Implementations
 === "MLCommons-Python"
-    ### MLPerf Reference Implementation in Python
+    ## MLPerf Reference Implementation in Python
     
     LLAMA2-70b-99
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "reference") }}
@@ -12,7 +11,7 @@
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99.9", "reference") }}
 
 === "Nvidia"
-    ### Nvidia MLPerf Implementation
+    ## Nvidia MLPerf Implementation
     
     LLAMA2-70b-99
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "nvidia") }}
@@ -22,7 +21,7 @@
 
 
 === "Qualcomm"
-    ### Qualcomm AI100 MLPerf Implementation
+    ## Qualcomm AI100 MLPerf Implementation
 
     LLAMA2-70b-99
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "qualcomm") }}

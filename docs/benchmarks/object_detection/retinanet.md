@@ -1,27 +1,26 @@
 # Object Detection using Retinanet
 
-## Benchmark Implementations
 === "MLCommons-Python"
-    ### MLPerf Reference Implementation in Python
+    ## MLPerf Reference Implementation in Python
     
 {{ mlperf_inference_implementation_readme (4, "retinanet", "reference") }}
 
 === "Nvidia"
-    ### Nvidia MLPerf Implementation
+    ## Nvidia MLPerf Implementation
     
 {{ mlperf_inference_implementation_readme (4, "retinanet", "nvidia") }}
 
 === "Intel"
-    ### Intel MLPerf Implementation
+    ## Intel MLPerf Implementation
     
 {{ mlperf_inference_implementation_readme (4, "retinanet", "intel") }}
 
 === "Qualcomm"
-    ### Qualcomm AI100 MLPerf Implementation
+    ## Qualcomm AI100 MLPerf Implementation
     
 {{ mlperf_inference_implementation_readme (4, "retinanet", "qualcomm") }}
 
-=== "MLCommon-C++"
-    ### MLPerf Modular Implementation in C++
+=== "MLCommons-C++"
+    ## MLPerf Modular Implementation in C++
     
 {{ mlperf_inference_implementation_readme (4, "retinanet", "cpp") }}

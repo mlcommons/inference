@@ -75,13 +75,13 @@ def define_env(env):
             cur_space = pre_space + "    "
             scenarios_string = ", ".join(scenarios)
 
-            content += f"{cur_space}#### {category} category \n\n{cur_space} In the {category.lower()} category, {model} has {scenarios_string} scenarios and all the scenarios are mandatory for a closed division submission.\n\n"
+            content += f"{cur_space}### {category} category \n\n{cur_space} In the {category.lower()} category, {model} has {scenarios_string} scenarios and all the scenarios are mandatory for a closed division submission.\n\n"
 
 
             for framework in frameworks:
                 cur_space1 = cur_space + "    "
                 content += f"{cur_space}=== \"{framework}\"\n"
-                content += f"{cur_space1}##### {framework} framework\n\n"
+                content += f"{cur_space1}#### {framework} framework\n\n"
 
                 for device in devices:
                     if framework.lower() == "deepsparse":
@@ -92,7 +92,7 @@ def define_env(env):
                     cur_space4 = cur_space3 + "    "
                     
                     content += f"{cur_space1}=== \"{device}\"\n"
-                    content += f"{cur_space2}###### {device} device\n\n"
+                    content += f"{cur_space2}##### {device} device\n\n"
 
                     # to select the execution environments(currently Docker and Native)
                     for execution_env in execution_envs:
@@ -101,19 +101,19 @@ def define_env(env):
                         if implementation == "nvidia" and execution_env == "Native":
                             continue  # Nvidia implementation only supports execution through docker
                         content += f"{cur_space2}=== \"{execution_env}\"\n"
-                        content += f"{cur_space3}####### {execution_env} Environment\n\n"
+                        content += f"{cur_space3}###### {execution_env} Environment\n\n"
                         test_query_count=get_test_query_count(model, implementation, device)
 
                         if "99.9" not in model: #not showing docker command as it is already done for the 99% variant
                             if execution_env == "Native": # Native implementation steps through virtual environment
-                                content += f"{cur_space3}######## Setup a virtual environment for Python\n"
+                                content += f"{cur_space3}####### Setup a virtual environment for Python\n"
                                 content += get_venv_command(spaces+16)
-                                content += f"{cur_space3}######## Performance Estimation for Offline Scenario\n"
+                                content += f"{cur_space3}####### Performance Estimation for Offline Scenario\n"
                                 content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True).replace("--docker ","")
                                 content += f"{cur_space3}The above command should do a test run of Offline scenario and record the estimated offline_target_qps.\n\n"
 
                             else: # Docker implementation steps
-                                content += f"{cur_space3}######## Docker Container Build and Performance Estimation for Offline Scenario\n"
+                                content += f"{cur_space3}####### Docker Container Build and Performance Estimation for Offline Scenario\n"
                                 docker_info = get_docker_info(spaces+16, model, implementation, device)
                                 content += docker_info
                                 content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True)
@@ -130,7 +130,7 @@ def define_env(env):
                                 content += f"{cur_space3}</details>\n"
                         else:
                             content += f"{cur_space3} You can reuse the same environment as described for {model.split('.')[0]}.\n"
-                            content += f"{cur_space3}####### Performance Estimation for Offline Scenario\n"
+                            content += f"{cur_space3}###### Performance Estimation for Offline Scenario\n"
                             content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True).replace("--docker ","")
                             content += f"{cur_space3}The above command should do a test run of Offline scenario and record the estimated offline_target_qps.\n\n"
 
@@ -143,12 +143,12 @@ def define_env(env):
                     run_suffix += f"{cur_space3}</details>\n"
 
                     for scenario in scenarios:
-                        content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}####### {scenario}\n\n"
+                        content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}###### {scenario}\n\n"
                         run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), "valid")
                         content += run_cmd
                         #content += run_suffix
  
-                    content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}####### All Scenarios\n\n"
+                    content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
                     run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), "valid")
                     content += run_cmd
                     content += run_suffix

@@ -43,8 +43,8 @@ SUPPORTED_DATASETS = {
 SUPPORTED_PROFILES = {
     "defaults": {
         "dataset": "waymo",
-        "backend": "pytorch", # TODO: model backend
-        "model-name": "", # TODO: model name
+        "backend": "pytorch", 
+        "model-name": "pointpainting",
     },
 }
 
@@ -295,6 +295,12 @@ def main():
     # find backend
     backend = get_backend(
         # TODO: pass model, inference and backend arguments
+        args.backend,
+        type=args.dtype,
+        device=args.device,
+        ckpt_path=args.model_path,
+        batch_size=args.max_batchsize,
+        layout=args.layout
     )
     if args.dtype == "fp16":
         dtype = torch.float16
@@ -315,10 +321,7 @@ def main():
 
     # dataset to use
     dataset_class, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
-    ds = dataset_class(
-       # TODO: pass dataset arguments
-        **kwargs,
-    )
+    ds = dataset_class(data_root=args.data_root, split='val', painted=args.painted, cam_sync=False, inference=True)
     final_results = {
         "runtime": model.name(),
         "version": model.version(),

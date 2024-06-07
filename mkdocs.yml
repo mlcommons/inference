@@ -24,8 +24,7 @@ nav:
   - Benchmarks:
     - benchmarks/index.md
     - Image Classification:
-      - ResNet50: 
-        - benchmarks/image_classification/resnet50.md
+      - ResNet50: benchmarks/image_classification/resnet50.md
     - Text to Image:
       - Stable Diffusion: benchmarks/text_to_image/sdxl.md
     - Object Detection:

@@ -1,9 +1,10 @@
 # Installation
 We use MLCommons CM Automation framework to run MLPerf inference benchmarks.
 
-Please follow the [official installation page](https://docs.mlcommons.org/ck/install) to install CM
+Please follow the below steps
 
-## Download the CM MLOps Repository
+1. [official installation page](https://docs.mlcommons.org/ck/install) prior to installing CM
+2. ## Download the CM MLOps Repository
 
 ```bash
    cm pull repo gateoverflow@cm4mlops

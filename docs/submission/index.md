@@ -1,4 +1,4 @@
-If you follow the `cm run` commands under the individual model pages in the [benchmarks](../benchmarks) directory, all the valid results will get aggregated to the `cm cache` folder. Once all the results across all the modelsare ready you can use the following command to generate a valid submission tree compliant with the [MLPerf requirements](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc#inference-1).
+If you follow the `cm run` commands under the individual model pages in the [benchmarks](../benchmarks/index.md) directory, all the valid results will get aggregated to the `cm cache` folder. Once all the results across all the modelsare ready you can use the following command to generate a valid submission tree compliant with the [MLPerf requirements](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc#inference-1).
 
 ## Generate actual submission tree
 

@@ -279,17 +279,44 @@ RESULT_FIELD_NEW = {
         "MultiStreamLegacy": "effective_samples_per_query",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_scheduled_samples_per_sec",
+    },
+    "v4.1": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
+        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_completed_samples_per_sec",
     }
 }
 
 RESULT_FIELD_BENCHMARK_OVERWRITE = {
-    "llama2-70b-99": {
-        "Offline": "result_tokens_per_second",
-        "Server": "result_completed_samples_per_sec",
+    "v4.0": {
+        "llama2-70b-99": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_samples_per_sec",
+        },
+        "llama2-70b-99.9": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_samples_per_sec",
+        },
     },
-    "llama2-70b-99.9": {
+    "v4.1": {
+        "llama2-70b-99": {
         "Offline": "result_tokens_per_second",
-        "Server": "result_completed_samples_per_sec",
+        "Server": "result_completed_tokens_per_second",
+        },
+        "llama2-70b-99.9": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "gptj-99": {
+            "Offline": "result_inferred_tokens_per_second",
+            "Server": "result_inferred_completed_tokens_per_second",
+        },
+        "gptj-99.9": {
+            "Offline": "result_inferred_tokens_per_second",
+            "Server": "result_inferred_completed_tokens_per_second",
+        }
     }
 }
 
@@ -793,6 +820,7 @@ def get_performance_metric(
     config, model, path, scenario_fixed, division, system_json, has_power=False
 ):
     #Assumes new logging format
+    version = config.version
 
     fname = os.path.join(path, "mlperf_log_detail.txt")
     mlperf_log = MLPerfLog(fname)
@@ -803,9 +831,9 @@ def get_performance_metric(
         is_valid = True
     scenario = mlperf_log["effective_scenario"]
 
-    res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario]])
-    if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
-        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario]])
+    res = float(mlperf_log[RESULT_FIELD_NEW[version][scenario]])
+    if version in RESULT_FIELD_BENCHMARK_OVERWRITE and model in RESULT_FIELD_BENCHMARK_OVERWRITE[version] and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][model]:
+        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[version][model][scenario]])
 
     inferred = False
     if scenario_fixed != scenario:
@@ -819,6 +847,7 @@ def check_performance_dir(
     is_valid = False
     rt = {}
 
+    version = config.version
     # look for: Result is: VALID
     fname = os.path.join(path, "mlperf_log_detail.txt")
     mlperf_log = MLPerfLog(fname)
@@ -833,9 +862,10 @@ def check_performance_dir(
     schedule_rng_seed = mlperf_log["effective_schedule_rng_seed"]
     scenario = mlperf_log["effective_scenario"]
 
-    res = float(mlperf_log[RESULT_FIELD_NEW[config.version][scenario]])
-    if model in RESULT_FIELD_BENCHMARK_OVERWRITE and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[model]:
-        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[model][scenario]])
+    res = float(mlperf_log[RESULT_FIELD_NEW[version][scenario]])
+    if version in RESULT_FIELD_BENCHMARK_OVERWRITE and model in RESULT_FIELD_BENCHMARK_OVERWRITE[version] and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][model]:
+        res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[version][model][scenario]])
+
         
     if model in ["llama2-70b-99", "llama2-70b-99.9"]:
         llama_constraint, is_valid = extra_check_llama2(mlperf_log, scenario_fixed)

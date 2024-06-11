@@ -400,17 +400,10 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
       //    the stream. Given the first 1001 queries, the QPS is
       //    1000 queries / 1 second.
       // TODO: make a more permanent solution
-      if (settings.use_token_latencies){
       double qps_as_completed =
         (sample_count - 1) / pr.final_query_all_samples_done_time;
       summary("Completed samples per second    : ",
               DoubleToString(qps_as_completed));
-    } else {
-      double qps_as_scheduled =
-          (sample_count - 1) / pr.final_query_scheduled_time;
-      summary("Scheduled samples per second : ",
-              DoubleToString(qps_as_scheduled));
-    }
       break;
     }
     case TestScenario::Offline: {
@@ -552,19 +545,11 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
     summary("QPS w/o loadgen overhead        : " + DoubleToString(qps_wo_lg));
     summary("");
   } else if (settings.scenario == TestScenario::Server) {
-    // TODO: make a more permanent solution
-    if (!settings.use_token_latencies){
-      double qps_as_completed =
-        (sample_count - 1) / pr.final_query_all_samples_done_time;
-      summary("Completed samples per second    : ",
-              DoubleToString(qps_as_completed));
-    } else {
-      double qps_as_scheduled =
+    // Scheduled samples per second as an additional stat
+    double qps_as_scheduled =
           (sample_count - 1) / pr.final_query_scheduled_time;
       summary("Scheduled samples per second : ",
               DoubleToString(qps_as_scheduled));
-    }
-    summary("");
   } else if (settings.scenario == TestScenario::MultiStream) {
     summary("Per-query latency:  ");
     summary("Min latency (ns)                : ", query_latency_min);
@@ -798,6 +783,9 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
       MLPERF_LOG(detail, "result_time_to_output_token_min", time_per_output_token_min);
       MLPERF_LOG(detail, "result_time_to_output_token_max", time_per_output_token_max);
       MLPERF_LOG(detail, "result_time_to_output_token_mean", time_per_output_token_mean);
+      double tps_as_completed =
+            token_count / pr.final_query_all_samples_done_time;
+      MLPERF_LOG(detail, "result_completed_tokens_per_second", tps_as_completed);
     } else {
       double tokens_per_second = token_count / pr.max_latency;
       MLPERF_LOG(detail, "result_tokens_per_second", tokens_per_second);

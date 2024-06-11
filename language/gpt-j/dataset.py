@@ -3,7 +3,7 @@ import time
 import numpy as np
 import torch
 from datasets import load_dataset, load_from_disk
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from tokenizer_GPTJ import get_transformer_autotokenizer
 from torch.nn.functional import pad
 from torch.utils.data import DataLoader
 from typing import Optional, Dict, Sequence
@@ -36,11 +36,7 @@ class Dataset():
         self.pad_val = pad_val
         self.pad_max = pad_max
 
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_name,
-            model_max_length=2048,
-            padding_side="left",
-            use_fast=False,)
+        self.tokenizer = get_transformer_autotokenizer(self.model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
         self.list_data_dict = utils.jload(self.dataset_path)
@@ -72,14 +68,6 @@ class Dataset():
             source_encoded_attn_masks.append(source_encoded.attention_mask)
 
         return source_encoded_input_ids, source_encoded_attn_masks
-    
-    def encode_input_from_network(self, input):
-        source_encoded = self.tokenizer(input, return_tensors="pt",
-                                            padding=True, truncation=True,
-                                            max_length=1919)
-        source_encoded_input_id = source_encoded.input_ids
-        source_encoded_attn_mask = source_encoded.attention_mask
-        return source_encoded_input_id, source_encoded_attn_mask
 
     def LoadSamplesToRam(self, sample_list):
         pass

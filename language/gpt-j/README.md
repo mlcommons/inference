@@ -143,8 +143,8 @@ The below CM command will launch the SUT server
 
 ```
 cm run script --tags=run-mlperf,inference,_performance-only --model=gptj-99  \
---backend=pytorch   --device=cpu --beam_size=1 --precision=bfloat16 \
---network=sut --rerun --quiet --scenario=Offline --adr.compiler.tags=gcc 
+--backend=pytorch   --device=cuda --beam_size=1 --precision=bfloat16 \
+--network=sut --rerun --quiet --adr.compiler.tags=gcc 
 ```
 
 #### Note: 

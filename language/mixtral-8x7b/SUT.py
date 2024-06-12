@@ -33,14 +33,14 @@ gen_kwargs = {
 }
 
 
-
 class FirstTokenStreamer(BaseStreamer):
     """ Streams first tokens to a 'holder' """
 
-    def __init__(self, first_token, tokens_cache=[], is_first_token=True, response_ids=[] ):
+    def __init__(self, first_token, tokens_cache=[],
+                 is_first_token=True, response_ids=[]):
         """ Response ids added to 'sign' the first token"""
 
-        self.first_token = first_token # Queue for first token
+        self.first_token = first_token  # Queue for first token
         self.is_first_token = is_first_token
 
         # Cache for subsequent generated tokens
@@ -48,12 +48,14 @@ class FirstTokenStreamer(BaseStreamer):
 
         self.response_ids = response_ids
 
-        self.is_prompt = True # The first tokens sent to the streamer are actually the input prompts
+        # The first tokens sent to the streamer are actually the input prompts
+        self.is_prompt = True
 
     def put(self, value):
         """ Caches the tokens as they're generated. Assumes bs=1 """
 
-        # Prompts are streamed first so we need to skip the first time value that arrives
+        # Prompts are streamed first so we need to skip the first time value
+        # that arrives
         if self.is_prompt:
             self.is_prompt = False
             return
@@ -61,14 +63,14 @@ class FirstTokenStreamer(BaseStreamer):
         value = value.item()
         if self.is_first_token:
 
-            # Add generated first token together with its query response_id to first tokens queue
+            # Add generated first token together with its query response_id to
+            # first tokens queue
             self.first_token.put((value, self.response_ids[0]))
 
             self.is_first_token = False
             return
 
         self.tokens_cache.append(value)
-
 
     def end(self):
         pass
@@ -85,7 +87,9 @@ class SUT():
                  batch_size=None,
                  total_sample_count=24576,
                  dataset_path=None,
-                 use_cached_outputs=False,  # Set this to True *only for test accuracy runs* in case your prior session was killed partway through
+                 use_cached_outputs=False,
+                 # Set this to True *only for test accuracy runs* in case your
+                 # prior session was killed partway through
                  workers=1):
 
         self.model_path = model_path or "mistralai/Mixtral-8x7B-Instruct-v0.1"
@@ -130,7 +134,6 @@ class SUT():
         self.sample_counter = 0
         self.sample_counter_lock = threading.Lock()
 
-
     def start(self):
         # Create worker threads
         for j in range(self.num_workers):
@@ -144,7 +147,6 @@ class SUT():
 
         for worker in self.worker_threads:
             worker.join()
-
 
     def process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic """
@@ -179,11 +181,13 @@ class SUT():
                 input_len = []
                 for q in qitem:
                     input_ids_tensor.append(pad(self.data_object.input_ids[q.index],
-                                                (max_seq_len - self.data_object.input_lens[q.index], 0, 0, 0),
+                                                (max_seq_len -
+                                                 self.data_object.input_lens[q.index], 0, 0, 0),
                                                 value=self.tokenizer.pad_token_id))
                     input_masks_tensor.append(pad(self.data_object.attention_masks[q.index],
-                                                  (max_seq_len - self.data_object.input_lens[q.index], 0, 0, 0),
-                                                 value=0))
+                                                  (max_seq_len -
+                                                   self.data_object.input_lens[q.index], 0, 0, 0),
+                                                  value=0))
                     input_len.append(self.data_object.input_lens[q.index])
                 input_ids_tensor = torch.cat(input_ids_tensor)
                 input_masks_tensor = torch.cat(input_masks_tensor)
@@ -208,9 +212,15 @@ class SUT():
 
             for i in range(len(qitem)):
                 n_tokens = processed_output[i].shape[0]
-                response_array = array.array("B", processed_output[i].tobytes())
+                response_array = array.array(
+                    "B", processed_output[i].tobytes())
                 bi = response_array.buffer_info()
-                response = [lg.QuerySampleResponse(qitem[i].id, bi[0], bi[1], n_tokens)]
+                response = [
+                    lg.QuerySampleResponse(
+                        qitem[i].id,
+                        bi[0],
+                        bi[1],
+                        n_tokens)]
                 lg.QuerySamplesComplete(response)
 
             tok = time.time()
@@ -226,7 +236,6 @@ class SUT():
                 else:
                     print(f"\tLoaded from cache: {_p}")
 
-
     def load_model(self):
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_path,
@@ -238,7 +247,9 @@ class SUT():
 
         self.device = torch.device(self.device)
         if self.device == "cpu":
-            self.model = self.model.to(self.device)  # Force CPU if your system has GPU and you specifically want CPU-only run
+            # Force CPU if your system has GPU and you specifically want
+            # CPU-only run
+            self.model = self.model.to(self.device)
 
         self.model.eval()
         self.model = self.model.to(memory_format=torch.channels_last)
@@ -259,10 +270,8 @@ class SUT():
     def get_qsl(self):
         return self.qsl
 
-
-    def predict(self,**kwargs):
+    def predict(self, **kwargs):
         raise NotImplementedError
-
 
     def issue_queries(self, query_samples):
         """ Receives samples from loadgen and adds them to queue. Users may choose to batch here"""
@@ -276,7 +285,6 @@ class SUT():
             query_samples = query_samples[self.batch_size:]
         print(f"IssueQuery done")
 
-
     def flush_queries(self):
         pass
 
@@ -285,9 +293,16 @@ class SUT():
 
 
 class SUTServer(SUT):
-    def __init__(self, model_path=None, dtype="bfloat16", device="cpu", total_sample_count=24576, dataset_path=None, workers=1):
+    def __init__(self, model_path=None, dtype="bfloat16", device="cpu",
+                 total_sample_count=24576, dataset_path=None, workers=1):
 
-        super().__init__(model_path=model_path, dtype=dtype, device=device, total_sample_count=total_sample_count, dataset_path=dataset_path, workers=workers)
+        super().__init__(
+            model_path=model_path,
+            dtype=dtype,
+            device=device,
+            total_sample_count=total_sample_count,
+            dataset_path=dataset_path,
+            workers=workers)
 
         self.first_token_queue = queue.Queue()
 
@@ -300,9 +315,9 @@ class SUTServer(SUT):
             self.worker_threads[j] = worker
 
         # Create first token response thread
-        self.ft_response_thread = threading.Thread(target=self.process_first_tokens)
+        self.ft_response_thread = threading.Thread(
+            target=self.process_first_tokens)
         self.ft_response_thread.start()
-
 
     def process_first_tokens(self):
 
@@ -315,7 +330,8 @@ class SUTServer(SUT):
 
             first_tokens, response_id = first_token_item
 
-            response_data = array.array("B", np.array(first_tokens, np.float32).tobytes())
+            response_data = array.array("B", np.array(
+                first_tokens, np.float32).tobytes())
             bi = response_data.buffer_info()
             response = [lg.QuerySampleResponse(response_id, bi[0], bi[1])]
             lg.FirstTokenComplete(response)
@@ -331,30 +347,36 @@ class SUTServer(SUT):
             input_ids_tensor = self.data_object.input_ids[qitem.index]
             input_masks_tensor = self.data_object.attention_masks[qitem.index]
 
-            #TODO: This PoC is super slow with significant overhead. Best to create a patch to `generate`
+            # TODO: This PoC is super slow with significant overhead. Best to
+            # create a patch to `generate`
             tokens_cache = []
-            tokens_streamer = FirstTokenStreamer(self.first_token_queue, tokens_cache=tokens_cache, is_first_token=True, response_ids=[qitem.id])
+            tokens_streamer = FirstTokenStreamer(
+                self.first_token_queue,
+                tokens_cache=tokens_cache,
+                is_first_token=True,
+                response_ids=[
+                    qitem.id])
 
-            _ = self.model.generate(    input_ids=input_ids_tensor,
-                                        attention_mask=input_masks_tensor,
-                                        pad_token_id=self.tokenizer.pad_token_id,
-                                        streamer = tokens_streamer,
-                                        **gen_kwargs
-                                        )
+            _ = self.model.generate(input_ids=input_ids_tensor,
+                                    attention_mask=input_masks_tensor,
+                                    pad_token_id=self.tokenizer.pad_token_id,
+                                    streamer=tokens_streamer,
+                                    **gen_kwargs
+                                    )
 
             output_tokens = tokens_streamer.get_out_tokens()
             n_tokens = len(output_tokens)
-            response_array = array.array("B", np.array(output_tokens, np.int32).tobytes())
+            response_array = array.array(
+                "B", np.array(
+                    output_tokens, np.int32).tobytes())
             bi = response_array.buffer_info()
             response = [lg.QuerySampleResponse(
                 qitem.id, bi[0], bi[1], n_tokens)]
             lg.QuerySamplesComplete(response)
 
-
     def issue_queries(self, query_samples):
 
         self.query_queue.put(query_samples[0])
-
 
     def stop(self):
         for _ in range(self.num_workers):

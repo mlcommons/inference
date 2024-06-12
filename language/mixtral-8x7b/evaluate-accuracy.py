@@ -8,7 +8,6 @@ import json
 import re
 
 
-
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint-path", required=True,
@@ -17,7 +16,7 @@ def get_args():
                         help="path to mlperf_log_accuracy.json")
     parser.add_argument("--dataset-file", required=True,
                         help="path to processed validation dataset")
-    parser.add_argument("--n_workers", default = 2, type=int,
+    parser.add_argument("--n_workers", default=2, type=int,
                         help="Number of workers used for the MBXP evaluation")
     parser.add_argument("--verbose", action="store_true",
                         help="verbose messages")
@@ -43,6 +42,7 @@ def find_numbers(x: str) -> list[str]:
     ).findall(x)
     return numbers
 
+
 def find_number(x: str,
                 answer_delimiter: str = 'The answer is') -> str:
     """Finds the most relevant number in a string."""
@@ -60,18 +60,22 @@ def find_number(x: str,
         return numbers[-1]
     return ''
 
+
 def maybe_remove_comma(x: str) -> str:
     # Example: 5,600 -> 5600
     return x.replace(',', '')
 
+
 def try_float(x: str):
     try:
         ret = float(x)
-    except:
+    except BaseException:
         ret = None
     return ret
 
 # Functions for evaluating OpenOrca
+
+
 def postprocess_text(preds, targets):
     preds = [pred.strip() for pred in preds]
     targets = [target.strip() for target in targets]
@@ -83,6 +87,8 @@ def postprocess_text(preds, targets):
     return preds, targets
 
 # Functions for MBXP
+
+
 def create_mbxp_dict(row, response):
     lang, entry_point = row["id"].split("_", 1)
     return {
@@ -92,6 +98,7 @@ def create_mbxp_dict(row, response):
         "entry_point": entry_point,
         "response": response
     }
+
 
 def main():
 
@@ -106,7 +113,6 @@ def main():
         model_max_length=2048,
         padding_side="left",
         use_fast=False,)
-
 
     data = get_groundtruth(args.dataset_file)
     query_types, gt_outputs = data["dataset"], data["gt_output"]
@@ -137,36 +143,36 @@ def main():
             continue
 
         seen.add(qsl_idx)
-        
+
         query_type = query_types.iloc[qsl_idx]
         if query_type == "GSM8K":
             target = gt_outputs.iloc[qsl_idx]
             target_required_GSM8K.append(target)
-            pred = np.frombuffer( bytes.fromhex(pred['data']), eval_dtype)
+            pred = np.frombuffer(bytes.fromhex(pred['data']), eval_dtype)
 
             gen_tok_len += len(pred)
             preds_token_GSM8K.append(pred)
         elif query_type == "OpenOrca":
             target = gt_outputs.iloc[qsl_idx]
             target_required_OpenOrca.append(target)
-            pred = np.frombuffer( bytes.fromhex(pred['data']), eval_dtype)
+            pred = np.frombuffer(bytes.fromhex(pred['data']), eval_dtype)
 
             gen_tok_len += len(pred)
             preds_token_OpenOrca.append(pred)
         else:
             target = data.iloc[qsl_idx]
-            pred = np.frombuffer( bytes.fromhex(pred['data']), eval_dtype)
+            pred = np.frombuffer(bytes.fromhex(pred['data']), eval_dtype)
             pred_str = tokenizer.decode(pred)
             results_MBXP.append(create_mbxp_dict(target, pred_str))
 
             gen_tok_len += len(pred)
 
-
     # OpenOrca metric
     preds_decoded_text = tokenizer.batch_decode(
         preds_token_OpenOrca, skip_special_tokens=True)
 
-    preds, targets = postprocess_text(preds_decoded_text, target_required_OpenOrca)
+    preds, targets = postprocess_text(
+        preds_decoded_text, target_required_OpenOrca)
     result = metric.compute(
         predictions=preds, references=targets, use_stemmer=True, use_aggregator=False)
     result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
@@ -174,7 +180,10 @@ def main():
     # GSM8K metric
     preds_decoded_text = tokenizer.batch_decode(
         preds_token_GSM8K, skip_special_tokens=True)
-    pred_nums = [maybe_remove_comma(find_number(pred_text.split("\nQ:")[0])) for pred_text in preds_decoded_text]
+    pred_nums = [
+        maybe_remove_comma(
+            find_number(
+                pred_text.split("\nQ:")[0])) for pred_text in preds_decoded_text]
     gsm8k_total = len(target_required_GSM8K)
     correct = 0
     for idx in range(len(target_required_GSM8K)):
@@ -186,7 +195,7 @@ def main():
 
     gsm8k_accuracy = 100.0 * correct / gsm8k_total
 
-    # MBXP metric 
+    # MBXP metric
     from evaluate_mbxp import evaluate_mbxp
     mbxp_accuracy = evaluate_mbxp(results_MBXP, args.n_workers)
 

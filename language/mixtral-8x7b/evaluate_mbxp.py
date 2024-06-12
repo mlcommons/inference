@@ -27,24 +27,28 @@ from mxeval.execution import (
 
 
 def postprocess_golang(code: str) -> str:
-    multi_line_imports = re.compile(r"^import \(\n(.+)((?:\n.+)+)\n\)", re.MULTILINE)
+    multi_line_imports = re.compile(
+        r"^import \(\n(.+)((?:\n.+)+)\n\)", re.MULTILINE)
     line_imports = re.compile(r"^import \".*\"")
     func_main = re.compile(r"^func main.*^}", re.MULTILINE | re.DOTALL)
-    
-    code = code.replace("package main", "") # Remove package main
+
+    code = code.replace("package main", "")  # Remove package main
     code = multi_line_imports.sub("", code)
     code = line_imports.sub("", code)
     code = func_main.sub("", code)
 
     return code
 
+
 def postprocess_scala(code: str) -> str:
     code = code.replace("object Main extends App {", "")
     code = "".join(code.splitlines(True)[:-1])
     return code
 
+
 def postprocess_python(code: str) -> str:
     return code.lstrip()
+
 
 def worker(inp_queue, out_queue):
     while True:
@@ -64,7 +68,7 @@ def worker(inp_queue, out_queue):
         try:
             solution = solution[:solution.index("```")]
         except ValueError:
-            #Happens when a code block isn't closed properly
+            # Happens when a code block isn't closed properly
             pass
 
         if problem["lang"] == "go":
@@ -74,21 +78,29 @@ def worker(inp_queue, out_queue):
         elif problem["lang"] == "scala":
             solution = postprocess_scala(solution)
 
-        # Mixtral likes escaping underscores for some reason, so let's remove these
-        solution = solution.replace("\_", "_")
+        # Mixtral likes escaping underscores for some reason, so let's remove
+        # these
+        solution = solution.replace("\\_", "_")
 
         # Mixtral starts the code with <s>, so let's remove these as well
         solution = solution.replace("<s>\n", "")
-        
+
         # The evaluation script evaluates `code = prompt + solution + tests`
-        # But Mixtral regenerates the prompt in its output, so we should remove this
+        # But Mixtral regenerates the prompt in its output, so we should remove
+        # this
         problem["prompt"] = ""
         try:
             result = checker(problem, solution, timeout=20.0)
-            out_queue.put((key, problem["lang"], result["passed"], result["result"], problem["response"]))
+            out_queue.put(
+                (key,
+                 problem["lang"],
+                    result["passed"],
+                    result["result"],
+                    problem["response"]))
         except Exception as e:
             print(e)
-            out_queue.put((key, problem["lang"], False, "", problem["response"]))
+            out_queue.put(
+                (key, problem["lang"], False, "", problem["response"]))
 
 
 def evaluate_mbxp(results, n_workers):
@@ -98,36 +110,40 @@ def evaluate_mbxp(results, n_workers):
 
     inp_queue = multiprocessing.Queue()
     out_queue = multiprocessing.Queue()
-    
+
     n_problems = 0
 
     for lang, problems in by_lang.items():
-        if lang not in ["cpp", "python", "php", "javascript", "ruby", "typescript"]:
+        if lang not in ["cpp", "python", "php",
+                        "javascript", "ruby", "typescript"]:
             continue
 
         n_problems += len(problems)
         for problem in problems:
             inp_queue.put(problem)
-   
+
     start = timeit.default_timer()
     workers = []
     for _ in range(n_workers):
         w = multiprocessing.Process(target=worker, args=(inp_queue, out_queue))
         w.start()
         workers.append(w)
-   
+
     passes = {}
     n_passed = 0
     lang_passed = {}
     lang_counts = {}
     for i in tqdm(range(n_problems)):
         key, lang, passed, result, response = out_queue.get()
-        passes[key] = {"passed": passed, "result": result, "response": response}
+        passes[key] = {
+            "passed": passed,
+            "result": result,
+            "response": response}
         n_passed += passed
-        
+
         lang_passed.setdefault(lang, 0)
-        lang_passed[lang] += passed 
-        
+        lang_passed[lang] += passed
+
         lang_counts.setdefault(lang, 0)
         lang_counts[lang] += 1
 
@@ -136,7 +152,6 @@ def evaluate_mbxp(results, n_workers):
     print(f"{100 * n_passed / n_problems : .02f}% pass@1")
     print(lang_passed, lang_counts)
     with open("evaluated_test.json", "w") as f:
-       json.dump(passes, f, indent=2)
-   
-    return 100 * n_passed / n_problems
+        json.dump(passes, f, indent=2)
 
+    return 100 * n_passed / n_problems

@@ -80,9 +80,12 @@ def worker(inp_queue, out_queue):
         # The evaluation script evaluates `code = prompt + solution + tests`
         # But Mixtral regenerates the prompt in its output, so we should remove this
         problem["prompt"] = ""
-
-        result = checker(problem, solution, timeout=20.0)
-        out_queue.put((key, problem["lang"], result["passed"], result["result"], problem["response"]))
+        try:
+            result = checker(problem, solution, timeout=20.0)
+            out_queue.put((key, problem["lang"], result["passed"], result["result"], problem["response"]))
+        except Exception as e:
+            print(e)
+            out_queue.put((key, problem["lang"], 0, 0, problem["response"]))
 
 
 def evaluate_mbxp(results, n_workers):
@@ -129,6 +132,8 @@ def evaluate_mbxp(results, n_workers):
     print(f"Processed {n_problems} in {end - start}s")
     print(f"{100 * n_passed / n_problems : .02f}% pass@1")
     print(lang_passed, lang_counts)
+    with open("evaluated_test.json", "w") as f:
+       json.dump(passes, f, indent=2)
    
     return 100 * n_passed / n_problems
 

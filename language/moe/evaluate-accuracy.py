@@ -17,7 +17,7 @@ def get_args():
                         help="path to mlperf_log_accuracy.json")
     parser.add_argument("--dataset-file", required=True,
                         help="path to processed validation dataset")
-    parser.add_argument("--n_workers", default = 2,
+    parser.add_argument("--n_workers", default = 2, type=int,
                         help="Number of workers used for the MBXP evaluation")
     parser.add_argument("--verbose", action="store_true",
                         help="verbose messages")
@@ -28,7 +28,6 @@ def get_args():
 
 
 def get_groundtruth(processed_dataset_file):
-    import pandas as pd
     data = pd.read_pickle(processed_dataset_file)
     return data
 
@@ -110,7 +109,7 @@ def main():
 
 
     data = get_groundtruth(args.dataset_file)
-    query_types, targets, gt_outputs = data["dataset"], data['ref_output'], data["gt_output"]
+    query_types, gt_outputs = data["dataset"], data["gt_output"]
 
     target_required_GSM8K = []
     target_required_OpenOrca = []
@@ -148,7 +147,7 @@ def main():
             gen_tok_len += len(pred)
             preds_token_GSM8K.append(pred)
         elif query_type == "OpenOrca":
-            target = targets.iloc[qsl_idx]
+            target = gt_outputs.iloc[qsl_idx]
             target_required_OpenOrca.append(target)
             pred = np.frombuffer( bytes.fromhex(pred['data']), eval_dtype)
 

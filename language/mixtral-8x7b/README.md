@@ -1,8 +1,8 @@
-# Reference Implementation for Mixtral-8x7B-v0.1
+# Reference Implementation for Mixtral-8x7B-instruct-v0.1
 
-**Basic implementation for Mixtral-8x7B-v0.1. Few noteworthy items:**
+**Basic implementation for Mixtral-8x7B-instruct-v0.1. Few noteworthy items:**
 
-+ Processing of Validation dataset is not finalized yet. Decision on input token lengths is pending
++ Dataset was constructed by randomly sampling from the validation split of 3 datasets, open_orca_gpt4, GSM8k and MBXP. 5K samples from each one.
 + Streamer for communicating with loadgen has quite some overhead. This is only meant to provide functional implementation
 + For custom/optimized implementations of this benchmark it is important to include the :
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
@@ -68,7 +68,7 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 ### MLCommons Members Download
 
 TODO: Create MLCommons get fixed link.
-For now it can be downloaded from [Hugging Face](https://huggingface.co/mistralai/Mixtral-8x7B-v0.1)
+For now it can be downloaded from [Hugging Face](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1/tree/main)
 
 ## Get Dataset
 
@@ -105,7 +105,7 @@ python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
                 --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
-                --total-sample-count 24576 \
+                --total-sample-count 15000 \
                 --device cpu \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir offline-logs
@@ -118,7 +118,7 @@ python3 -u main.py --scenario Offline \
         --model-path ${CHECKPOINT_PATH} \
         --mlperf-conf mlperf.conf \
         --user-conf user.conf \
-        --total-sample-count 24576 \
+        --total-sample-count 15000 \
         --dataset-path ${DATASET_PATH} \
         --output-log-dir offline-logs \
         --dtype float32 \
@@ -131,7 +131,7 @@ python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
                 --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
-                --total-sample-count 24576 \
+                --total-sample-count 15000 \
                 --device cpu \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir server-logs
@@ -153,7 +153,7 @@ python -u main.py --scenario Offline \
                 --accuracy \
                 --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
-                --total-sample-count 24576 \
+                --total-sample-count 15000 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir ${OUTPUT_LOG_DIR} \
                 --device cpu
@@ -190,7 +190,7 @@ python -u main.py --scenario Server \
                 --accuracy \
                 --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
-                --total-sample-count 24576 \
+                --total-sample-count 15000 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir ${OUTPUT_LOG_DIR} \
                 --device cpu
@@ -219,7 +219,7 @@ sudo docker run -it -v $(pwd):/eval -t evaluation
 ```bash
 cd eval
 huggingface-cli login --token [huggingface_token]
-python -u evaluate-accuracy.py --checkpoint-path mistralai/Mixtral-8x7B-v0.1 \
+python -u evaluate-accuracy.py --checkpoint-path mistralai/Mixtral-8x7B-instruct-v0.1 \
                 --mlperf-accuracy-file [path_to_mlperf_accuracy_file] \
                 --dataset-file [path_to_dataset] \
                 --n_workers 8
@@ -228,4 +228,20 @@ python -u evaluate-accuracy.py --checkpoint-path mistralai/Mixtral-8x7B-v0.1 \
 
 ## Accuracy Target
 
-TODO
+Reference scores:
+Open Orca:
+```json
+{'rouge1': 45.4911, 'rouge2': 23.2829, 'rougeL': 30.3615, 'rougeLsum': 42.4333}
+```
+GSM8K:
+```json
+{'gsm8k_accuracy': 73.78}
+```
+MBXP:
+```json
+{'mbxp_accuracy': 60.12}
+```
+For official submissions, 99% of each reference score is enforced. Additionally, 90%-110% of the generated tokens_per_samples:
+```json
+{'tokens_per_sample': 145.9}
+```

@@ -9,12 +9,12 @@ from SUT import SUT, SUTServer
 sys.path.insert(0, os.getcwd())
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("mixtral-8x7B-v0.1-MAIN")
+log = logging.getLogger("Mixtral-8x7B-Instruct-v0.1-MAIN")
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", type=str, choices=["Offline", "Server"], default="Offline", help="Scenario")
-    parser.add_argument("--model-path", type=str, default="mistralai/Mixtral-8x7B-v0.1", help="Model name")
+    parser.add_argument("--model-path", type=str, default="mistralai/Mixtral-8x7B-Instruct-v0.1", help="Model name")
     parser.add_argument("--dataset-path", type=str, default=None, help="path to processed validation dataset")
     parser.add_argument("--accuracy", action="store_true", help="Run accuracy mode")
     parser.add_argument("--dtype", type=str, default="float32", help="data type of the model, choose from float16, bfloat16 and float32")
@@ -48,8 +48,8 @@ def main():
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
     # Need to update the conf
-    settings.FromConfig(args.mlperf_conf, "mixtral-8x7B", args.scenario)
-    settings.FromConfig(args.user_conf, "mixtral-8x7B", args.scenario)
+    settings.FromConfig(args.mlperf_conf, "mixtral-8x7b", args.scenario)
+    settings.FromConfig(args.user_conf, "mixtral-8x7b", args.scenario)
 
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly

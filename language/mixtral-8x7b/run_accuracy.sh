@@ -1,5 +1,5 @@
-CHECKPOINT_PATH="${CHECKPOINT_PATH:-meta-llama/Llama-2-70b-chat-hf}"
-DATASET_PATH="${DATASET_PATH:-open-orca-val-set.pkl}"
+CHECKPOINT_PATH="${CHECKPOINT_PATH:mistralai/Mixtral-8x7B-Instruct-v0.1}"
+DATASET_PATH="${DATASET_PATH:dataset/2024_06_06_mixtral_15k_v4.pkl}"
 
 mkdir -p "run_outputs"
 
@@ -8,7 +8,7 @@ python3 -u main.py --scenario Offline \
         --accuracy \
         --mlperf-conf mlperf.conf \
         --user-conf user.conf \
-        --total-sample-count 24576 \
+        --total-sample-count 15000 \
         --dataset-path ${DATASET_PATH} \
         --output-log-dir offline_accuracy_loadgen_logs \
         --dtype float32 \

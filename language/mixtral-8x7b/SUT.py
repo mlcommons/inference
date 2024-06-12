@@ -22,7 +22,7 @@ import mlperf_loadgen as lg
 from dataset import Dataset
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("Mixtral-8x7B-v0.1")
+log = logging.getLogger("Mixtral-8x7B-Instruct-v0.1")
 
 gen_kwargs = {
     "early_stopping": True,
@@ -88,7 +88,7 @@ class SUT():
                  use_cached_outputs=False,  # Set this to True *only for test accuracy runs* in case your prior session was killed partway through
                  workers=1):
 
-        self.model_path = model_path or "mistralai/Mixtral-8x7B-v0.1"
+        self.model_path = model_path or "mistralai/Mixtral-8x7B-Instruct-v0.1"
         self.device = device
 
         if not batch_size:

@@ -76,6 +76,9 @@ def worker(inp_queue, out_queue):
 
         # Mixtral likes escaping underscores for some reason, so let's remove these
         solution = solution.replace("\_", "_")
+
+        # Mixtral starts the code with <s>, so let's remove these as well
+        solution = solution.replace("<s>\n", "")
         
         # The evaluation script evaluates `code = prompt + solution + tests`
         # But Mixtral regenerates the prompt in its output, so we should remove this
@@ -85,7 +88,7 @@ def worker(inp_queue, out_queue):
             out_queue.put((key, problem["lang"], result["passed"], result["result"], problem["response"]))
         except Exception as e:
             print(e)
-            out_queue.put((key, problem["lang"], 0, 0, problem["response"]))
+            out_queue.put((key, problem["lang"], False, "", problem["response"]))
 
 
 def evaluate_mbxp(results, n_workers):

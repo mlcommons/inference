@@ -218,6 +218,7 @@ sudo docker run -it -v $(pwd):/eval -t evaluation
 3. 
 ```bash
 cd eval
+huggingface-cli login --token [huggingface_token]
 python -u evaluate-accuracy.py --checkpoint-path mistralai/Mixtral-8x7B-v0.1 \
                 --mlperf-accuracy-file [path_to_mlperf_accuracy_file] \
                 --dataset-file [path_to_dataset] \

@@ -59,6 +59,7 @@ class Dataset():
         self.input_ids = []
         self.input_lens = []
         self.attention_masks = []
+        self.dataset_names = []
 
         for ids in input_tokens:
             input_ids = torch.tensor(ids, dtype=torch.int32).view(
@@ -67,6 +68,9 @@ class Dataset():
             self.input_ids.append(input_ids)
             self.attention_masks.append(attn_mask)
             self.input_lens.append(input_ids.shape[-1])
+
+        for dataset in processed_data['dataset']:
+            self.dataset_names.append(dataset)
         print("Finished loading dataset.")
 
     def postProcess(self, out_tokens, input_seq_lens=None,

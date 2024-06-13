@@ -5,7 +5,7 @@ import array
 import torch
 from torch.nn.functional import pad
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, LogitsProcessor, LogitsProcessorList
 from transformers.generation.streamers import BaseStreamer
 
 import pickle
@@ -31,6 +31,38 @@ gen_kwargs = {
     "num_beams": 1,
     "do_sample": False
 }
+
+class StopAfterSequence(LogitsProcessor):
+        """Logits processor (to use with HuggingFace `generate()` method :
+        https://huggingface.co/docs/transformers/v4.24.0/en/main_classes/
+        text_generation#transformers.generation_utils.GenerationMixin).
+
+        This logits processor makes that when the model generates a specified
+        stopping sequence, it stops generating new tokens
+
+        Args:
+            stop_seq (List[int]): ID of the space token.
+            eos_token_id (int): ID of the EOS token.
+            device (str): Device that the model is running
+        """
+        def __init__(self, eos_token_id: int, stop_seq: List[int] = [13, 13940, 28832, 13], device="cpu"):
+            super().__init__()
+            assert(len(stop_seq) >= 1)
+            self.device = device
+            self.stop_seq = torch.tensor(stop_seq, dtype=torch.long).to(device)
+            self.stop_seq_length = len(stop_seq)
+            self.eos_token_id = eos_token_id
+
+        def check_stop_condition(self, input_ids: torch.LongTensor):
+            stop_condition_met = (input_ids[:, -self.stop_seq_length:] == self.stop_seq).all(dim=1)
+            return stop_condition_met
+        
+        def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
+            if input_ids.size(1) > self.stop_seq_length:
+                forced_eos = torch.full((scores.size(1),), -float("inf")).to(self.device)
+                forced_eos[self.eos_token_id] = 0
+                scores[self.check_stop_condition(input_ids)] = forced_eos
+            return scores
 
 
 class FirstTokenStreamer(BaseStreamer):
@@ -179,6 +211,7 @@ class SUT():
                 input_ids_tensor = []
                 input_masks_tensor = []
                 input_len = []
+                input_dataset = []
                 for q in qitem:
                     input_ids_tensor.append(pad(self.data_object.input_ids[q.index],
                                                 (max_seq_len -
@@ -189,6 +222,9 @@ class SUT():
                                                    self.data_object.input_lens[q.index], 0, 0, 0),
                                                   value=0))
                     input_len.append(self.data_object.input_lens[q.index])
+
+                    # In case we predict code generation, we can specify an additional stop sequence
+                    input_dataset.append(self.data_object.dataset_names[q.index])
                 input_ids_tensor = torch.cat(input_ids_tensor)
                 input_masks_tensor = torch.cat(input_masks_tensor)
 
@@ -196,14 +232,27 @@ class SUT():
                 assert input_ids_tensor.shape[0] <= self.batch_size
 
                 tik2 = time.time()
-
-                pred_output_tokens = self.model.generate(
-                    input_ids=input_ids_tensor,
-                    attention_mask=input_masks_tensor,
-                    pad_token_id=self.tokenizer.pad_token_id,
-                    **gen_kwargs
-                )
-
+                logits_processor = LogitsProcessorList([StopAfterSequence(self.tokenizer.eos_token_id, device=self.device)])
+                for i in range(len(input_ids_tensor)):
+                    ids, masks, dataset = input_ids_tensor[i:i+1], input_masks_tensor[i:i+1], input_dataset[i]
+                    pred_output_tokens = []
+                    if dataset == "MBXP":
+                        out = self.model.generate(
+                            input_ids=ids,
+                            attention_mask=masks,
+                            pad_token_id=self.tokenizer.pad_token_id,
+                            logits_processor=logits_processor,
+                            **gen_kwargs
+                        )
+                    else:
+                        out = self.model.generate(
+                            input_ids=ids,
+                            attention_mask=masks,
+                            pad_token_id=self.tokenizer.pad_token_id,
+                            **gen_kwargs
+                        )
+                    pred_output_tokens.append(out)
+                pred_output_tokens = torch.cat(pred_output_tokens)
                 tik3 = time.time()
 
                 processed_output = self.data_object.postProcess(pred_output_tokens,
@@ -346,6 +395,7 @@ class SUTServer(SUT):
 
             input_ids_tensor = self.data_object.input_ids[qitem.index]
             input_masks_tensor = self.data_object.attention_masks[qitem.index]
+            dataset = self.data_object.dataset_names[qitem.index]
 
             # TODO: This PoC is super slow with significant overhead. Best to
             # create a patch to `generate`
@@ -356,13 +406,23 @@ class SUTServer(SUT):
                 is_first_token=True,
                 response_ids=[
                     qitem.id])
-
-            _ = self.model.generate(input_ids=input_ids_tensor,
-                                    attention_mask=input_masks_tensor,
-                                    pad_token_id=self.tokenizer.pad_token_id,
-                                    streamer=tokens_streamer,
-                                    **gen_kwargs
-                                    )
+            
+            logits_processor = LogitsProcessorList([StopAfterSequence(self.tokenizer.eos_token_id, device=self.device)])
+            if dataset == "MBXP":
+                _ = self.model.generate(input_ids=input_ids_tensor,
+                                        attention_mask=input_masks_tensor,
+                                        pad_token_id=self.tokenizer.pad_token_id,
+                                        streamer=tokens_streamer,
+                                        logits_processor=logits_processor,
+                                        **gen_kwargs
+                                        )
+            else:
+                _ = self.model.generate(input_ids=input_ids_tensor,
+                                        attention_mask=input_masks_tensor,
+                                        pad_token_id=self.tokenizer.pad_token_id,
+                                        streamer=tokens_streamer,
+                                        **gen_kwargs
+                                        )
 
             output_tokens = tokens_streamer.get_out_tokens()
             n_tokens = len(output_tokens)

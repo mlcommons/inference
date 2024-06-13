@@ -17,7 +17,7 @@ RUN pip --version
 RUN git --version
 
 # Install requirements
-RUN pip install nltk==3.8.1 evaluate==0.4.0 absl-py==1.4.0 rouge-score==0.1.2 sentencepiece==0.1.99 accelerate==0.21.0 huggingface-cli
+RUN pip install transformers nltk==3.8.1 evaluate==0.4.0 absl-py==1.4.0 rouge-score==0.1.2 sentencepiece==0.1.99 accelerate==0.21.0 huggingface-cli
 
 # Clone and install mxeval
 RUN git clone https://github.com/amazon-science/mxeval.git

@@ -162,7 +162,7 @@ def main():
         else:
             target = data.iloc[qsl_idx]
             pred = np.frombuffer(bytes.fromhex(pred['data']), eval_dtype)
-            pred_str = tokenizer.decode(pred)
+            pred_str = tokenizer.decode(pred, skip_special_tokens=True)
             results_MBXP.append(create_mbxp_dict(target, pred_str))
 
             gen_tok_len += len(pred)

@@ -82,9 +82,6 @@ def worker(inp_queue, out_queue):
         # these
         solution = solution.replace("\\_", "_")
 
-        # Mixtral starts the code with <s>, so let's remove these as well
-        solution = solution.replace("<s>\n", "")
-
         # The evaluation script evaluates `code = prompt + solution + tests`
         # But Mixtral regenerates the prompt in its output, so we should remove
         # this

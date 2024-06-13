@@ -239,7 +239,7 @@ GSM8K:
 ```
 MBXP:
 ```json
-{'mbxp_accuracy': 60.12}
+{'mbxp_accuracy': 60.16}
 ```
 For official submissions, 99% of each reference score is enforced. Additionally, 90%-110% of the generated tokens_per_samples:
 ```json

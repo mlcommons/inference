@@ -76,21 +76,23 @@ TODO: Create scripts and procedure to download all of the parts of the dataset
 
 ### Preprocessed
 
-You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
+#### Using Rclone
+We make many of the MLPerf infernce models and datasets available using Rclone. In order to keep compatibility, you can use Rclone to get the preprocessed dataset:
 
 To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
 To install Rclone on Linux/macOS/BSD systems, run:
-```
+```bash
 sudo -v ; curl https://rclone.org/install.sh | sudo bash
 ```
-Once Rclone is installed, run the following command to authenticate with the bucket:
+Once Rclone is installed, cd into the folder where you want to place the dataset and run:
+```bash
+rclone copyurl https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_15k_v4.pkl ./ -a -P
 ```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=[TODO] secret_access_key=[TODO] endpoint=[TODO]
-```
-You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
+#### Using wget
 
-```
-rclone copy mlc-inference:mlcommons-inference-wg-public/[TODO] ./[TODO] -P
+Alternatively, you can simply cd into the folder where you want to place the dataset and run
+```bash
+wget https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_15k_v4.pkl
 ```
 
 ### Unprocessed

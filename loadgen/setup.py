@@ -40,6 +40,9 @@ public_headers = [
     "query_sample_library.h",
     "system_under_test.h",
     "test_settings.h",
+    "issue_query_controller.h",
+    "early_stopping.h",
+    "query_dispatch_library.h",
 ]
 
 lib_headers = [
@@ -49,6 +52,8 @@ lib_headers = [
     "utils.h",
     "version.h",
     "results.h",
+    "bindings/c_api.h",
+    "version_generator.py"
 ]
 
 lib_sources = [
@@ -63,6 +68,7 @@ lib_sources = [
 ]
 
 lib_bindings = [
+    "bindings/c_api.cc",
     "bindings/python_api.cc",
 ]
 

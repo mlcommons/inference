@@ -3,6 +3,12 @@ name: Build loadgen wheels and release them into PYPI
 on:
   release:
     types: [published]
+  push:
+    branches:
+      - master
+    paths:
+      - loadgen/**
+      - .github/workflows/build_wheels.yml
 
 jobs:
   build_wheels:

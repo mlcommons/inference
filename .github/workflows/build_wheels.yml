@@ -7,8 +7,7 @@ on:
     branches:
       - master
     paths:
-      - loadgen/**
-      - .github/workflows/build_wheels.yml
+      - loadgen/setup.py
 
 jobs:
   build_wheels:

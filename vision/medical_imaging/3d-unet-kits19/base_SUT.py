@@ -118,31 +118,39 @@ class BASE_3DUNET_SUT:
         # prepare arrays
         image = query[np.newaxis, ...]
         result, norm_map, norm_patch = infu.prepare_arrays(image, ROI_SHAPE)
-        t_image, t_result, t_norm_map, t_norm_patch =\
-            self.to_tensor(image), self.to_tensor(result), self.to_tensor(
-                norm_map), self.to_tensor(norm_patch)
+        t_image, t_result, t_norm_map, t_norm_patch = (
+            self.to_tensor(image),
+            self.to_tensor(result),
+            self.to_tensor(norm_map),
+            self.to_tensor(norm_patch),
+        )
 
         # sliding window inference
         subvol_cnt = 0
-        for i, j, k in infu.get_slice_for_sliding_window(t_image, ROI_SHAPE, SLIDE_OVERLAP_FACTOR):
+        for i, j, k in infu.get_slice_for_sliding_window(
+            t_image, ROI_SHAPE, SLIDE_OVERLAP_FACTOR
+        ):
             subvol_cnt += 1
             result_slice = t_result[
                 ...,
-                i:(ROI_SHAPE[0] + i),
-                j:(ROI_SHAPE[1] + j),
-                k:(ROI_SHAPE[2] + k)]
+                i: (ROI_SHAPE[0] + i),
+                j: (ROI_SHAPE[1] + j),
+                k: (ROI_SHAPE[2] + k),
+            ]
 
             input_slice = t_image[
                 ...,
-                i:(ROI_SHAPE[0] + i),
-                j:(ROI_SHAPE[1] + j),
-                k:(ROI_SHAPE[2] + k)]
+                i: (ROI_SHAPE[0] + i),
+                j: (ROI_SHAPE[1] + j),
+                k: (ROI_SHAPE[2] + k),
+            ]
 
             norm_map_slice = t_norm_map[
                 ...,
-                i:(ROI_SHAPE[0] + i),
-                j:(ROI_SHAPE[1] + j),
-                k:(ROI_SHAPE[2] + k)]
+                i: (ROI_SHAPE[0] + i),
+                j: (ROI_SHAPE[1] + j),
+                k: (ROI_SHAPE[2] + k),
+            ]
 
             result_slice += self.do_infer(input_slice) * t_norm_patch
 
@@ -169,7 +177,8 @@ class BASE_3DUNET_SUT:
         for qsi in range(total):
             query = self.qsl.get_features(query_samples[qsi].index)
             mystr = "{:5d}/{:5d} -- Processing sample id {:2d} with shape = {:}".format(
-                    qsi+1, total, query_samples[qsi].index, query.shape)
+                qsi + 1, total, query_samples[qsi].index, query.shape
+            )
             final_result, mystr = self.infer_single_query(query, mystr)
             if mystr:
                 print(mystr)

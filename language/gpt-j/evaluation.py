@@ -17,14 +17,23 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mlperf-accuracy-file", required=True,
-                        help="path to mlperf_log_accuracy.json")
-    parser.add_argument("--dataset-file", required=True,
-                        help="path to cnn_eval.json")
-    parser.add_argument("--verbose", action="store_true",
-                        help="verbose messages")
-    parser.add_argument("--dtype", default="int64",
-                        help="dtype of the accuracy log", choices=["int32", "int64"])
+    parser.add_argument(
+        "--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json"
+    )
+    parser.add_argument(
+        "--dataset-file",
+        required=True,
+        help="path to cnn_eval.json")
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="verbose messages")
+    parser.add_argument(
+        "--dtype",
+        default="int64",
+        help="dtype of the accuracy log",
+        choices=["int32", "int64"],
+    )
     args = parser.parse_args()
     return args
 
@@ -46,13 +55,14 @@ def main():
     model_name = "EleutherAI/gpt-j-6B"
     dataset_path = args.dataset_file
     metric = evaluate.load("rouge")
-    nltk.download('punkt')
+    nltk.download("punkt")
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,
         model_max_length=2048,
         padding_side="left",
-        use_fast=False,)
+        use_fast=False,
+    )
     tokenizer.pad_token = tokenizer.eos_token
 
     data_object = Dataset(dataset_path)
@@ -66,11 +76,11 @@ def main():
     dedup_results = []
     seen = set()
     for result in results:
-        item = result['qsl_idx']
+        item = result["qsl_idx"]
         if item not in seen:
             seen.add(item)
             dedup_results.append(result)
-    results = dedup_results      
+    results = dedup_results
 
     target_required = []
     preds_token_ids = []
@@ -80,19 +90,24 @@ def main():
         eval_dtype = np.int32
 
     for pred in results:
-        qsl_idx = pred['qsl_idx']
+        qsl_idx = pred["qsl_idx"]
         target = targets[qsl_idx]
         target_required.append(target)
-        preds_token_ids.append(np.frombuffer(
-            bytes.fromhex(pred['data']), eval_dtype))
+        preds_token_ids.append(
+            np.frombuffer(
+                bytes.fromhex(
+                    pred["data"]),
+                eval_dtype))
 
     preds_decoded_text = tokenizer.batch_decode(
-        preds_token_ids, skip_special_tokens=True)
+        preds_token_ids, skip_special_tokens=True
+    )
 
     preds, targets = postprocess_text(preds_decoded_text, target_required)
 
     result = metric.compute(
-        predictions=preds, references=targets, use_stemmer=True, use_aggregator=False)
+        predictions=preds, references=targets, use_stemmer=True, use_aggregator=False
+    )
     result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
     prediction_lens = [len(pred) for pred in preds]
     result["gen_len"] = np.sum(prediction_lens)

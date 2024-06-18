@@ -41,11 +41,11 @@ This script will compare the segmentation results from inference with ground tru
 Accuracy check from MLPerf-Inference accuracy log file:
     python3 accuracy_kits.py
     or
-    python3 accuracy_kits.py --log_file $(LOG_DIR)/$(ACCURACY_LOG_FILENAME) 
+    python3 accuracy_kits.py --log_file $(LOG_DIR)/$(ACCURACY_LOG_FILENAME)
                              --output_dtype $(DTYPE)
-                             --preprocessed_data_dir $(PREPROCESSED_DATA_DIR) 
+                             --preprocessed_data_dir $(PREPROCESSED_DATA_DIR)
                              --postprocessed_data_dir $(POSTPROCESSED_DATA_DIR)
-                             --num_proc $(NUMBER_PROCESSES) 
+                             --num_proc $(NUMBER_PROCESSES)
 """
 
 # $(DTYPE) mapping to numpy dtype
@@ -57,7 +57,7 @@ dtype_map = {
     "uint8": np.uint8,
     "float16": np.float16,
     "float32": np.float32,
-    "float64": np.float64
+    "float64": np.float64,
 }
 
 
@@ -65,25 +65,36 @@ def get_args():
     """
     Args used for postprocessing
     """
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument("--log_file",
-                        default="build/logs/mlperf_log_accuracy.json",
-                        help="Path to accuracy log json file")
-    parser.add_argument("--output_dtype",
-                        default="uint8",
-                        choices=dtype_map.keys(),
-                        help="Output data type")
-    parser.add_argument("--preprocessed_data_dir",
-                        default="build/preprocessed_data",
-                        help="Path to the directory containing preprocessed data")
-    parser.add_argument("--postprocessed_data_dir",
-                        default="build/postprocessed_data",
-                        help="Path to the directory containing postprocessed data")
-    parser.add_argument("--num_proc",
-                        type=int,
-                        default=4,
-                        help="Number of processors running postprocessing")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
+    parser.add_argument(
+        "--log_file",
+        default="build/logs/mlperf_log_accuracy.json",
+        help="Path to accuracy log json file",
+    )
+    parser.add_argument(
+        "--output_dtype",
+        default="uint8",
+        choices=dtype_map.keys(),
+        help="Output data type",
+    )
+    parser.add_argument(
+        "--preprocessed_data_dir",
+        default="build/preprocessed_data",
+        help="Path to the directory containing preprocessed data",
+    )
+    parser.add_argument(
+        "--postprocessed_data_dir",
+        default="build/postprocessed_data",
+        help="Path to the directory containing postprocessed data",
+    )
+    parser.add_argument(
+        "--num_proc",
+        type=int,
+        default=4,
+        help="Number of processors running postprocessing",
+    )
     args = parser.parse_args()
     return args
 
@@ -104,7 +115,7 @@ def prepare_one_hot(my_array, num_classes):
     Reinterprets my_array into one-hot encoded, for classes as many as num_classes
     """
     res = np.eye(num_classes)[np.array(my_array).reshape(-1)]
-    return res.reshape(list(my_array.shape)+[num_classes])
+    return res.reshape(list(my_array.shape) + [num_classes])
 
 
 def get_dice_score(case, prediction, target):
@@ -128,10 +139,12 @@ def get_dice_score(case, prediction, target):
     prediction = prediction[:, 1:]
 
     # calculate dice score
-    assert target.shape == prediction.shape, \
-        f"Different shape -- target: {target.shape}, prediction: {prediction.shape}"
-    assert target.dtype == np.float64 and prediction.dtype == np.float64, \
-        f"Unexpected dtype -- target: {target.dtype}, prediction: {prediction.dtype}"
+    assert (
+        target.shape == prediction.shape
+    ), f"Different shape -- target: {target.shape}, prediction: {prediction.shape}"
+    assert (
+        target.dtype == np.float64 and prediction.dtype == np.float64
+    ), f"Unexpected dtype -- target: {target.dtype}, prediction: {prediction.dtype}"
 
     # intersection for numerator; target/prediction sum for denominator
     # easy b/c one-hot encoded format
@@ -140,24 +153,28 @@ def get_dice_score(case, prediction, target):
     prediction_sum = np.sum(prediction, axis=reduce_axis)
 
     # get DICE score for each class
-    dice_val = (2.0 * intersection + smooth_nr) / \
-        (target_sum + prediction_sum + smooth_dr)
+    dice_val = (2.0 * intersection + smooth_nr) / (
+        target_sum + prediction_sum + smooth_dr
+    )
 
     # return after removing batch dim
     return (case, dice_val[0])
 
 
-def evaluate(target_files, preprocessed_data_dir, postprocessed_data_dir, num_proc):
+def evaluate(target_files, preprocessed_data_dir,
+             postprocessed_data_dir, num_proc):
     """
     Collects and summarizes DICE scores of all the predicted files using multi-processes
     """
     bundle = list()
 
     for case in target_files:
-        groundtruth_path = Path(preprocessed_data_dir,
-                                "nifti", case, "segmentation.nii.gz").absolute()
-        prediction_path = Path(postprocessed_data_dir,
-                               case, "prediction.nii.gz").absolute()
+        groundtruth_path = Path(
+            preprocessed_data_dir, "nifti", case, "segmentation.nii.gz"
+        ).absolute()
+        prediction_path = Path(
+            postprocessed_data_dir, case, "prediction.nii.gz"
+        ).absolute()
 
         groundtruth = nib.load(groundtruth_path).get_fdata().astype(np.uint8)
         prediction = nib.load(prediction_path).get_fdata().astype(np.uint8)
@@ -165,9 +182,11 @@ def evaluate(target_files, preprocessed_data_dir, postprocessed_data_dir, num_pr
         groundtruth = np.expand_dims(groundtruth, 0)
         prediction = np.expand_dims(prediction, 0)
 
-        assert groundtruth.shape == prediction.shape,\
-            "{} -- groundtruth: {} and prediction: {} have different shapes".format(
-                case, groundtruth.shape, prediction.shape)
+        assert (
+            groundtruth.shape == prediction.shape
+        ), "{} -- groundtruth: {} and prediction: {} have different shapes".format(
+            case, groundtruth.shape, prediction.shape
+        )
 
         bundle.append((case, groundtruth, prediction))
 
@@ -190,12 +209,9 @@ def save_evaluation_summary(postprocessed_data_dir, dice_scores):
         tumor = arr[1]
         composite = np.mean(arr)
         df = df.append(
-            {
-                "case": case,
-                "kidney": kidney,
-                "tumor": tumor,
-                "composite": composite
-            }, ignore_index=True)
+            {"case": case, "kidney": kidney, "tumor": tumor, "composite": composite},
+            ignore_index=True,
+        )
 
     df.set_index("case", inplace=True)
     # consider NaN as a crash hence zero
@@ -211,16 +227,18 @@ def save_nifti(bundle):
     # Note that affine has to be valid, otherwise NIFTI image will look weird
     image, affine, path_to_file = bundle
     if len(image.shape) != 3:
-        assert len(image.shape) == 4 and image.shape[0] == 1,\
-            "Unexpected image: {}".format(image.shape)
+        assert (
+            len(image.shape) == 4 and image.shape[0] == 1
+        ), "Unexpected image: {}".format(image.shape)
         image = np.squeeze(image, 0)
     nifti_image = nib.Nifti1Image(image, affine=affine)
     path_to_file.parent.mkdir(parents=True, exist_ok=True)
     nib.save(nifti_image, path_to_file)
 
 
-def save_predictions(predictions, output_dir, preprocessed_data_dir,
-                     preprocessed_files, aux, num_proc):
+def save_predictions(
+    predictions, output_dir, preprocessed_data_dir, preprocessed_files, aux, num_proc
+):
     """
     Saves all the segmentation result from inference into NIFTI files using affine matrices
     Affine matrices were stored for input images during preprocessing
@@ -230,8 +248,10 @@ def save_predictions(predictions, output_dir, preprocessed_data_dir,
     bundle = list()
     for case, case_d in predictions.items():
         pred_file_path = Path(output_dir, case, "prediction.nii.gz")
-        bundle.append((case_d['prediction'], aux[case]
-                       ['reshaped_affine'], pred_file_path))
+        bundle.append(
+            (case_d["prediction"], aux[case]
+             ["reshaped_affine"], pred_file_path)
+        )
 
     with Pool(num_proc) as p:
         p.map(save_nifti, bundle)
@@ -249,8 +269,9 @@ def load_loadgen_log(log_file, result_dtype, file_list, aux):
     with open(log_file) as f:
         predictions = json.load(f)
 
-    assert len(predictions) == len(aux.keys()),\
-        "Number of predictions does not match number of samples in validation set!"
+    assert len(predictions) == len(
+        aux.keys()
+    ), "Number of predictions does not match number of samples in validation set!"
 
     results = dict()
     for prediction in predictions:
@@ -258,12 +279,10 @@ def load_loadgen_log(log_file, result_dtype, file_list, aux):
         case = file_list[qsl_idx]
         assert qsl_idx >= 0 and qsl_idx < len(predictions), "Invalid qsl_idx!"
         result_shape = np.array(list(aux[case]["image_shape"]))
-        result = np.frombuffer(bytes.fromhex(
-            prediction["data"]), result_dtype).reshape(result_shape)
-        results[case] = {
-            'qsl_idx': qsl_idx,
-            'prediction': result
-        }
+        result = np.frombuffer(bytes.fromhex(prediction["data"]), result_dtype).reshape(
+            result_shape
+        )
+        results[case] = {"qsl_idx": qsl_idx, "prediction": result}
 
     assert len(results) == len(predictions), "Missing some results!"
 
@@ -287,8 +306,8 @@ def main():
     print("Loading necessary metadata...")
     with open(Path(preprocessed_data_dir, "preprocessed_files.pkl"), "rb") as f:
         preprocessed_files_content = pickle.load(f)
-    target_files = preprocessed_files_content['file_list']
-    aux = preprocessed_files_content['cases']
+    target_files = preprocessed_files_content["file_list"]
+    aux = preprocessed_files_content["cases"]
 
     # Load predictions from loadgen accuracy log.
     print("Loading loadgen accuracy log...")
@@ -296,23 +315,35 @@ def main():
 
     # Save predictions
     print("Running postprocessing...")
-    save_predictions(predictions, postprocessed_data_dir, preprocessed_data_dir,
-                     target_files, aux, num_proc)
+    save_predictions(
+        predictions,
+        postprocessed_data_dir,
+        preprocessed_data_dir,
+        target_files,
+        aux,
+        num_proc,
+    )
 
     # Run evaluation
     print("Running evaluation...")
-    evaluate(target_files, preprocessed_data_dir,
-             postprocessed_data_dir, num_proc)
+    evaluate(
+        target_files,
+        preprocessed_data_dir,
+        postprocessed_data_dir,
+        num_proc)
 
     # Finalize evaluation from evaluation summary
     print("Processing evaluation summary...")
     df = pd.read_csv(Path(postprocessed_data_dir, "summary.csv"))
-    final = df.loc[df['case'] == 'mean']
-    composite = float(final['composite'])
-    kidney = float(final['kidney'])
-    tumor = float(final['tumor'])
-    print("Accuracy: mean = {:.5f}, kidney = {:.4f}, tumor = {:.4f}".format(
-          composite, kidney, tumor))
+    final = df.loc[df["case"] == "mean"]
+    composite = float(final["composite"])
+    kidney = float(final["kidney"])
+    tumor = float(final["tumor"])
+    print(
+        "Accuracy: mean = {:.5f}, kidney = {:.4f}, tumor = {:.4f}".format(
+            composite, kidney, tumor
+        )
+    )
     print("Done!")
 
 

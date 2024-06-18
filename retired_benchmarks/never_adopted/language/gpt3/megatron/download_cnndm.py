@@ -1,15 +1,14 @@
 # experiment config
+import sys
+import simplejson as json
+import os
+import numpy as np
+from datasets import load_dataset
 dataset_id = "cnn_dailymail"
 dataset_config = "3.0.0"
 text_column = "article"
 summary_column = "highlights"
 
-from datasets import load_dataset
-
-import numpy as np
-import os
-import simplejson as json
-import sys
 
 save_dataset_path = os.environ.get("DATASET_CNNDM_PATH", "data")
 

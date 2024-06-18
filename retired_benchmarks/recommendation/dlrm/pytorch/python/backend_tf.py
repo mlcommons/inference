@@ -1,9 +1,11 @@
 """
 pytoch native backend for dlrm
 """
+
 # pylint: disable=unused-argument,missing-docstring
 import torch  # currently supports pytorch1.0
 import backend
+
 # from dlrm_s_pytorch import DLRM_Net
 import tensorflow as tf
 from tf_dlrm import logits_fn, rand_features_np
@@ -11,6 +13,7 @@ import numpy as np
 import collections
 from typing import Dict, Any
 import sys
+
 
 class BackendTF(backend.Backend):
     def __init__(self, dim_embed, vocab_sizes, mlp_bottom, mlp_top):
@@ -55,9 +58,12 @@ class BackendTF(backend.Backend):
 
         with self.graph.as_default():
 
-            features_int_np, features_cat_np = rand_features_np(1, num_d, num_s, minsize)
+            features_int_np, features_cat_np = rand_features_np(
+                1, num_d, num_s, minsize
+            )
 
-            features_int = tf.placeholder(tf.float32, [None, num_d], name="ph_1")
+            features_int = tf.placeholder(
+                tf.float32, [None, num_d], name="ph_1")
             features_cat = tf.placeholder(tf.int32, [None, num_s], name="ph_2")
 
             preds = logits_fn(features_int, features_cat, self.params)
@@ -68,7 +74,13 @@ class BackendTF(backend.Backend):
             self.sess = tf.compat.v1.Session(graph=self.graph)
 
             self.sess.run(init_op)
-            self.sess.run(preds, feed_dict = {features_int : features_int_np, features_cat : features_cat_np} )
+            self.sess.run(
+                preds,
+                feed_dict={
+                    features_int: features_int_np,
+                    features_cat: features_cat_np,
+                },
+            )
 
         self.params["is_training"] = False
 
@@ -92,12 +104,15 @@ class BackendTF(backend.Backend):
 
         # print_op_preds = tf.print(estim.predictions, output_stream=sys.stdout)
 
-        out_operation = self.graph.get_operation_by_name('preds')
+        out_operation = self.graph.get_operation_by_name("preds")
 
-        ph_1 = self.graph.get_tensor_by_name('ph_1:0')
-        ph_2 = self.graph.get_tensor_by_name('ph_2:0')
+        ph_1 = self.graph.get_tensor_by_name("ph_1:0")
+        ph_2 = self.graph.get_tensor_by_name("ph_2:0")
 
-        np_tensor_out = out_operation.outputs[0].eval(session=self.sess, feed_dict = {ph_1 : np_tensor_int, ph_2 : np_tensor_cat})
+        np_tensor_out = out_operation.outputs[0].eval(
+            session=self.sess, feed_dict={
+                ph_1: np_tensor_int, ph_2: np_tensor_cat}
+        )
         # print("1st output element: ", np_tensor_out[:1])
 
         output = torch.from_numpy(np_tensor_out)

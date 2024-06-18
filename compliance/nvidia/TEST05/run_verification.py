@@ -24,26 +24,30 @@ import numpy as np
 
 sys.path.append(os.getcwd())
 
+
 def main():
 
-
-    py3 = sys.version_info >= (3,0)
-    # Parse arguments to identify the path to the logs from the performance runs
+    py3 = sys.version_info >= (3, 0)
+    # Parse arguments to identify the path to the logs from the performance
+    # runs
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--results_dir", "-r",
+        "--results_dir",
+        "-r",
         help="Specifies the path to the corresponding results directory that contains the performance subdirectories containing the submission logs, i.e. inference_results_v0.7/closed/NVIDIA/results/T4x8/resnet/Offline.",
-        required=True
+        required=True,
     )
     parser.add_argument(
-        "--compliance_dir", "-c",
+        "--compliance_dir",
+        "-c",
         help="Specifies the path to the directory containing the logs from the compliance test run.",
-        required=True
+        required=True,
     )
     parser.add_argument(
-        "--output_dir", "-o",
+        "--output_dir",
+        "-o",
         help="Specifies the path to the output directory where compliance logs will be uploaded from, i.e. inference_results_v0.7/closed/NVIDIA/compliance/T4x8/resnet/Offline.",
-        required=True
+        required=True,
     )
 
     args = parser.parse_args()
@@ -54,20 +58,35 @@ def main():
     output_dir = os.path.join(args.output_dir, "TEST05")
 
     # run verify performance
-    verify_performance_binary = os.path.join(os.path.dirname(__file__),"verify_performance.py")
-    verify_performance_command = "python3 " + verify_performance_binary + " -r " + results_dir + "/performance/run_1/mlperf_log_summary.txt" + " -t " + compliance_dir + "/mlperf_log_summary.txt | tee verify_performance.txt"
+    verify_performance_binary = os.path.join(
+        os.path.dirname(__file__), "verify_performance.py"
+    )
+    verify_performance_command = (
+        "python3 "
+        + verify_performance_binary
+        + " -r "
+        + results_dir
+        + "/performance/run_1/mlperf_log_summary.txt"
+        + " -t "
+        + compliance_dir
+        + "/mlperf_log_summary.txt | tee verify_performance.txt"
+    )
     try:
         os.system(verify_performance_command)
     except Exception:
-        print("Exception occurred trying to execute:\n  " + verify_performance_command)
+        print(
+            "Exception occurred trying to execute:\n  " +
+            verify_performance_command)
 
     # check if verify performance script passes
     performance_pass_command = "grep PASS verify_performance.txt"
     try:
-        performance_pass = "TEST PASS" in subprocess.check_output(performance_pass_command, shell=True).decode("utf-8")
+        performance_pass = "TEST PASS" in subprocess.check_output(
+            performance_pass_command, shell=True
+        ).decode("utf-8")
     except Exception:
         performance_pass = False
-    
+
     # setup output compliance directory structure
     output_performance_dir = os.path.join(output_dir, "performance", "run_1")
     try:
@@ -77,21 +96,32 @@ def main():
         print("Exception occurred trying to create " + output_performance_dir)
 
     # copy compliance logs to output compliance directory
-    shutil.copy2("verify_performance.txt",output_dir)
-    summary_file = os.path.join(compliance_dir,"mlperf_log_summary.txt")
-    detail_file = os.path.join(compliance_dir,"mlperf_log_detail.txt")
+    shutil.copy2("verify_performance.txt", output_dir)
+    summary_file = os.path.join(compliance_dir, "mlperf_log_summary.txt")
+    detail_file = os.path.join(compliance_dir, "mlperf_log_detail.txt")
 
     try:
-        shutil.copy2(summary_file,output_performance_dir)
+        shutil.copy2(summary_file, output_performance_dir)
     except Exception:
-        print("Exception occured trying to copy " + summary_file + " to " + output_performance_dir)
+        print(
+            "Exception occured trying to copy "
+            + summary_file
+            + " to "
+            + output_performance_dir
+        )
     try:
-        shutil.copy2(detail_file,output_performance_dir)
+        shutil.copy2(detail_file, output_performance_dir)
     except Exception:
-        print("Exception occured trying to copy " + detail_file + " to " + output_performance_dir)
+        print(
+            "Exception occured trying to copy "
+            + detail_file
+            + " to "
+            + output_performance_dir
+        )
 
     print("Performance check pass: {:}".format(performance_pass))
     print("TEST05 verification complete")
 
-if __name__ == '__main__':
-	main()
+
+if __name__ == "__main__":
+    main()

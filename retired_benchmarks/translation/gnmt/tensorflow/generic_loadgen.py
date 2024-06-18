@@ -20,14 +20,17 @@ import time
 import mlperf_loadgen
 import array
 
-class ImplementationException (Exception):
+
+class ImplementationException(Exception):
     def __init__(self, msg):
         self.msg = msg
 
     def __repr__(self):
         return "ImplementationException: {}".format(self.msg)
 
-def flush_queries(): pass
+
+def flush_queries():
+    pass
 
 
 class Task:
@@ -35,8 +38,9 @@ class Task:
         self.query_id = query_id
         self.sample_id = sample_id
 
+
 class Runner:
-    
+
     def __init__(self, qSize=5):
         self.tasks = Queue(maxsize=qSize)
 
@@ -59,7 +63,7 @@ class Runner:
             # Block until an item becomes available
             qitem = self.tasks.get(block=True)
 
-            # When a "None" item was added, it is a 
+            # When a "None" item was added, it is a
             # signal from the parent to indicate we should stop
             # working (see finish)
             if qitem is None:
@@ -71,7 +75,7 @@ class Runner:
             self.post_process(qitem.query_id, results)
 
             self.tasks.task_done()
-    
+
     ##
     # @brief Post process results
     # @note This should serialize the results for query_ids and hand it over to loadgen
@@ -106,7 +110,8 @@ class Runner:
         self.worker.daemon = True
         self.worker.start()
 
-class DummyRunner (Runner):
+
+class DummyRunner(Runner):
     def __init__(self):
         Runner.__init__(self)
         self.count = 0
@@ -118,10 +123,15 @@ class DummyRunner (Runner):
             self.tasks.put(task)
 
     def process(self, qitem):
-        print("Default dummy process, processing the {}'th query for sample ID {}.".format(self.count, qitem.sample_id[0]))
+        print(
+            "Default dummy process, processing the {}'th query for sample ID {}.".format(
+                self.count, qitem.sample_id[0]
+            )
+        )
         self.count += 1
-        
+
         return self.count
+
 
 if __name__ == "__main__":
     runner = DummyRunner()
@@ -135,14 +145,17 @@ if __name__ == "__main__":
     # Specify exactly how many queries need to be made
     settings.min_query_count = 3003
     settings.max_query_count = 3003
-    
-    total_queries = 256 # Maximum sample ID + 1
-    perf_queries = 8   # TBD: Doesn't seem to have an effect
+
+    total_queries = 256  # Maximum sample ID + 1
+    perf_queries = 8  # TBD: Doesn't seem to have an effect
 
     sut = mlperf_loadgen.ConstructSUT(runner.enqueue, flush_queries)
     qsl = mlperf_loadgen.ConstructQSL(
-        total_queries, perf_queries, runner.load_samples_to_ram, runner.unload_samples_from_ram)
+        total_queries,
+        perf_queries,
+        runner.load_samples_to_ram,
+        runner.unload_samples_from_ram,
+    )
     mlperf_loadgen.StartTest(sut, qsl, settings)
     mlperf_loadgen.DestroyQSL(qsl)
     mlperf_loadgen.DestroySUT(sut)
-

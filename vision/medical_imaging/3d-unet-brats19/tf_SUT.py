@@ -14,21 +14,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from brats_QSL import get_brats_QSL
+from tensorflow.core.framework import graph_pb2
+import tensorflow as tf
+import numpy as np
+import mlperf_loadgen as lg
 import array
 import json
 import os
 import sys
+
 sys.path.insert(0, os.getcwd())
 
-import mlperf_loadgen as lg
-import numpy as np
-import tensorflow as tf
-from tensorflow.core.framework import graph_pb2
 
-from brats_QSL import get_brats_QSL
-
-
-class _3DUNET_TF_SUT():
+class _3DUNET_TF_SUT:
     def __init__(self, model_path, preprocessed_data_dir, performance_count):
         print("Loading TF model...")
         graph_def = graph_pb2.GraphDef()
@@ -50,15 +49,20 @@ class _3DUNET_TF_SUT():
         for i in range(len(query_samples)):
             data = self.qsl.get_features(query_samples[i].index)
 
-            print("Processing sample id {:d} with shape = {:}".format(
-                query_samples[i].index, data.shape))
+            print(
+                "Processing sample id {:d} with shape = {:}".format(
+                    query_samples[i].index, data.shape
+                )
+            )
 
-            output = self.sess.run(self.output, feed_dict={self.input: data[np.newaxis, ...]})[0].astype(np.float16)
+            output = self.sess.run(
+                self.output, feed_dict={self.input: data[np.newaxis, ...]}
+            )[0].astype(np.float16)
 
             response_array = array.array("B", output.tobytes())
             bi = response_array.buffer_info()
-            response = lg.QuerySampleResponse(query_samples[i].id, bi[0],
-                                              bi[1])
+            response = lg.QuerySampleResponse(
+                query_samples[i].id, bi[0], bi[1])
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):

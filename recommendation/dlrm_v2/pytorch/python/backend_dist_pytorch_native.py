@@ -1,6 +1,7 @@
 """
 pytoch native backend for dlrm
 """
+
 import os
 import torch
 import backend
@@ -61,7 +62,6 @@ class BackendDistPytorchNative(backend.Backend):
         else:
             print("Using CPU...")
 
-        
         # assert ngpus == 8, "Reference implementation only supports ngpus = 8"
         os.environ["RANK"] = "0"
         os.environ["MASTER_ADDR"] = "localhost"
@@ -80,7 +80,7 @@ class BackendDistPytorchNative(backend.Backend):
 
     def name(self):
         return "pytorch-native-dlrm"
-    
+
     def load(self, model_path, inputs=None, outputs=None):
         # debug prints
         # print(model_path, inputs, outputs)
@@ -93,7 +93,6 @@ class BackendDistPytorchNative(backend.Backend):
         self.dataset_cache = manager.dict()
         self.predictions_cache = [manager.dict() for _ in range(world_size)]
         self.main_lock = manager.Event()
-        
 
         # Create processes to load model
         ctx = mp.get_context("spawn")
@@ -102,7 +101,9 @@ class BackendDistPytorchNative(backend.Backend):
             p = ctx.Process(
                 target=self.distributed_setup,
                 args=(
-                    rank, world_size, model_path,
+                    rank,
+                    world_size,
+                    model_path,
                 ),
             )
             p.start()
@@ -110,13 +111,15 @@ class BackendDistPytorchNative(backend.Backend):
         self.main_lock.wait()
 
         return self
-        
+
     def distributed_setup(self, rank, world_size, model_path):
         print("Initializing process...")
         if self.use_gpu:
             self.device = torch.device(f"cuda:{rank}")
             torch.cuda.set_device(f"cuda:{rank}")
-        dist.init_process_group(backend=self.dist_backend, rank=rank, world_size=world_size)
+        dist.init_process_group(
+            backend=self.dist_backend, rank=rank, world_size=world_size
+        )
         pg = dist.group.WORLD
         print("Initializing embeddings...")
         eb_configs = [
@@ -155,16 +158,20 @@ class BackendDistPytorchNative(backend.Backend):
             model, get_default_sharders(), dist.GroupMember.WORLD
         )
         dist_model = DistributedModelParallel(
-            module=model, device=self.device, plan=plan, env=ShardingEnv.from_process_group(pg),
+            module=model,
+            device=self.device,
+            plan=plan,
+            env=ShardingEnv.from_process_group(pg),
         )
         self.model = dist_model
         if not self.debug:
             print("Loading model weights...")
             from torchsnapshot import Snapshot
+
             snapshot = Snapshot(path=model_path)
             snapshot.restore(app_state={"model": self.model})
 
-            ### To understand the keys in snapshot, you can look at following code snippet.
+            # To understand the keys in snapshot, you can look at following code snippet.
             # d = snapshot.get_manifest()
             # for k, v in d.items():
             #     print(k, v)
@@ -173,7 +180,7 @@ class BackendDistPytorchNative(backend.Backend):
         self.main_lock.set()
 
         # Main prediction loop
-        while(True):
+        while True:
             item = self.samples_q[rank].get()
             # If -1 is received terminate all subprocesses
             if item == -1:
@@ -198,7 +205,6 @@ class BackendDistPytorchNative(backend.Backend):
             self.predictions_cache[rank].pop(id)
         self.dataset_cache.pop(id)
         return out
-
 
     def predict(self, samples, ids):
         outputs = []

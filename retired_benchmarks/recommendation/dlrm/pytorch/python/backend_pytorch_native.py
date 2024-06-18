@@ -1,14 +1,17 @@
 """
 pytoch native backend for dlrm
 """
+
 # pylint: disable=unused-argument,missing-docstring
 import torch  # currently supports pytorch1.0
 import backend
 from dlrm_s_pytorch import DLRM_Net
 import numpy as np
 
+
 class BackendPytorchNative(backend.Backend):
-    def __init__(self, m_spa, ln_emb, ln_bot, ln_top, use_gpu=False, mini_batch_size=1):
+    def __init__(self, m_spa, ln_emb, ln_bot, ln_top,
+                 use_gpu=False, mini_batch_size=1):
         super(BackendPytorchNative, self).__init__()
         self.sess = None
         self.model = None
@@ -73,12 +76,12 @@ class BackendPytorchNative(backend.Backend):
                 # note that the call to .to(device) has already happened
                 ld_model = torch.load(
                     model_path,
-                    map_location=torch.device('cuda')
+                    map_location=torch.device("cuda"),
                     # map_location=lambda storage, loc: storage.cuda(0)
                 )
         else:
             # when targeting inference on CPU
-            ld_model = torch.load(model_path, map_location=torch.device('cpu'))
+            ld_model = torch.load(model_path, map_location=torch.device("cpu"))
         # debug print
         # print(ld_model)
         dlrm.load_state_dict(ld_model["state_dict"])
@@ -114,13 +117,21 @@ class BackendPytorchNative(backend.Backend):
         if self.use_gpu:
             batch_dense_X = batch_dense_X.to(self.device)
 
-            batch_lS_i = [S_i.to(self.device) for S_i in batch_lS_i] if isinstance(batch_lS_i, list) \
+            batch_lS_i = (
+                [S_i.to(self.device) for S_i in batch_lS_i]
+                if isinstance(batch_lS_i, list)
                 else batch_lS_i.to(self.device)
+            )
 
-
-            batch_lS_o = [S_o.to(self.device) for S_o in batch_lS_o] if isinstance(batch_lS_o, list) \
+            batch_lS_o = (
+                [S_o.to(self.device) for S_o in batch_lS_o]
+                if isinstance(batch_lS_o, list)
                 else batch_lS_o.to(self.device)
+            )
 
         with torch.no_grad():
-             output = self.model(dense_x=batch_dense_X, lS_o=batch_lS_o, lS_i=batch_lS_i)
+            output = self.model(
+                dense_x=batch_dense_X,
+                lS_o=batch_lS_o,
+                lS_i=batch_lS_i)
         return output

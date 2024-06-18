@@ -61,8 +61,9 @@ class _3DUNET_TensorFlow_SUT(BASE_3DUNET_SUT):
         """
         super().__init__(preprocessed_data_dir, performance_count)
         print("Loading TensorFlow model...")
-        assert Path(model_path, "saved_model.pb").is_file(),\
-            "Cannot find the model file {:}!".format(model_path)
+        assert Path(
+            model_path, "saved_model.pb"
+        ).is_file(), "Cannot find the model file {:}!".format(model_path)
         loaded_model = tf.saved_model.load(model_path)
         self.model = loaded_model.signatures["serving_default"]
         self.output_name = list(self.model.structured_outputs)[0]
@@ -78,4 +79,5 @@ def get_sut(model_path, preprocessed_data_dir, performance_count):
     """
     Redirect the call for instantiating SUT to TensorFlow specific SUT
     """
-    return _3DUNET_TensorFlow_SUT(model_path, preprocessed_data_dir, performance_count)
+    return _3DUNET_TensorFlow_SUT(
+        model_path, preprocessed_data_dir, performance_count)

@@ -16,25 +16,39 @@ import sklearn.metrics
 
 # pylint: disable=missing-docstring
 
+
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json")
-    parser.add_argument("--day-23-file", default=None,
-        help="path to day_23 file. If present, it is assumed that the accuracy log contains only the prediction, not the ground truth label.")
-    parser.add_argument("--aggregation-trace-file", default=None,
-        help="path to dlrm_trace_of_aggregated_samples.txt. Only needed if --day-23-file is specified")
-    parser.add_argument("--verbose", action="store_true", help="verbose messages")
-    parser.add_argument("--dtype", default="float32", choices=["float32", "int32", "int64"], help="data type of the label")
+    parser.add_argument(
+        "--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json"
+    )
+    parser.add_argument(
+        "--day-23-file",
+        default=None,
+        help="path to day_23 file. If present, it is assumed that the accuracy log contains only the prediction, not the ground truth label.",
+    )
+    parser.add_argument(
+        "--aggregation-trace-file",
+        default=None,
+        help="path to dlrm_trace_of_aggregated_samples.txt. Only needed if --day-23-file is specified",
+    )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="verbose messages")
+    parser.add_argument(
+        "--dtype",
+        default="float32",
+        choices=["float32", "int32", "int64"],
+        help="data type of the label",
+    )
     args = parser.parse_args()
     return args
 
 
-dtype_map = {
-    "float32": np.float32,
-    "int32": np.int32,
-    "int64": np.int64
-}
+dtype_map = {"float32": np.float32, "int32": np.int32, "int64": np.int64}
+
 
 def get_targets(args, qsl_indices):
     # Parse aggregation trace file to know the sample -> user-item pair mapping
@@ -42,10 +56,14 @@ def get_targets(args, qsl_indices):
     sample_boundaries = [0]
     with open(args.aggregation_trace_file) as f:
         for line in f:
-            sample_boundaries.append(sample_boundaries[-1] + int(line.split(", ")[2]))
+            sample_boundaries.append(
+                sample_boundaries[-1] + int(line.split(", ")[2]))
     if len(sample_boundaries) != len(qsl_indices) + 1:
-        print("Warning: number of samples in trace file ({}) does not match number of samples ({}) in "
-              "loadgen accuracy log!".format(len(sample_boundaries)-1, len(qsl_indices)))
+        print(
+            "Warning: number of samples in trace file ({}) does not match number of samples ({}) in "
+            "loadgen accuracy log!".format(
+                len(sample_boundaries) - 1, len(qsl_indices))
+        )
     # Get all the ground truth labels in the original order in day_23
     print("Parsing ground truth labels from day_23 file...")
     ground_truths = []
@@ -54,18 +72,22 @@ def get_targets(args, qsl_indices):
             if line_idx >= sample_boundaries[-1]:
                 break
             ground_truths.append(int(line.split("\t")[0]))
-    # Re-order the ground truth labels according to the qsl indices in the loadgen log.
+    # Re-order the ground truth labels according to the qsl indices in the
+    # loadgen log.
     print("Re-ordering ground truth labels...")
     targets = []
     for qsl_idx in qsl_indices:
-        for i in range(sample_boundaries[qsl_idx], sample_boundaries[qsl_idx + 1]):
+        for i in range(sample_boundaries[qsl_idx],
+                       sample_boundaries[qsl_idx + 1]):
             targets.append(ground_truths[i])
     return targets
+
 
 def main():
     args = get_args()
 
-    # If "--day-23-file" is specified, assume that the accuracy log contains only the prediction, not the ground truth label.
+    # If "--day-23-file" is specified, assume that the accuracy log contains
+    # only the prediction, not the ground truth label.
     log_contains_gt = args.day_23_file is None
 
     if log_contains_gt:
@@ -79,12 +101,12 @@ def main():
 
     seen = set()
     good = 0
-    total= 0
+    total = 0
     all_results = []
     all_targets = []
     qsl_indices = []
     for j in results:
-        idx = j['qsl_idx']
+        idx = j["qsl_idx"]
 
         # de-dupe in case loadgen sends the same sample multiple times
         if idx in seen:
@@ -93,7 +115,7 @@ def main():
         qsl_indices.append(idx)
 
         # reconstruct label from mlperf accuracy log
-        data = np.frombuffer(bytes.fromhex(j['data']), dtype_map[args.dtype])
+        data = np.frombuffer(bytes.fromhex(j["data"]), dtype_map[args.dtype])
 
         # data stores both predictions and targets
         output_count = 2 if log_contains_gt else 1
@@ -116,7 +138,11 @@ def main():
                     good += 1
                 else:
                     if args.verbose:
-                        print("{}:{}, expected: {}, found {}".format(idx, k, target, result.round()))
+                        print(
+                            "{}:{}, expected: {}, found {}".format(
+                                idx, k, target, result.round()
+                            )
+                        )
 
     if not log_contains_gt:
         all_targets = get_targets(args, qsl_indices)
@@ -131,9 +157,16 @@ def main():
     roc_auc = sklearn.metrics.roc_auc_score(all_targets, all_results)
     # compute accuracy metric
     acc = good / total
-    print("AUC={:.3f}%, accuracy={:.3f}%, good={}, total={}, queries={}".format(100. * roc_auc, 100. * acc, good, total, len(seen)))
+    print(
+        "AUC={:.3f}%, accuracy={:.3f}%, good={}, total={}, queries={}".format(
+            100.0 * roc_auc, 100.0 * acc, good, total, len(seen)
+        )
+    )
     if args.verbose:
-        print("found and ignored {} query dupes".format(len(results) - len(seen)))
+        print(
+            "found and ignored {} query dupes".format(
+                len(results) -
+                len(seen)))
 
 
 if __name__ == "__main__":

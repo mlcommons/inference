@@ -14,19 +14,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from brats_QSL import get_brats_QSL
+import onnxruntime
+import numpy as np
+import mlperf_loadgen as lg
 import array
 import json
 import os
 import sys
+
 sys.path.insert(0, os.getcwd())
 
-import mlperf_loadgen as lg
-import numpy as np
-import onnxruntime
 
-from brats_QSL import get_brats_QSL
-
-class _3DUNET_ONNXRuntime_SUT():
+class _3DUNET_ONNXRuntime_SUT:
     def __init__(self, model_path, preprocessed_data_dir, performance_count):
         print("Loading ONNX model...")
         self.sess = onnxruntime.InferenceSession(model_path)
@@ -40,19 +40,31 @@ class _3DUNET_ONNXRuntime_SUT():
         for i in range(len(query_samples)):
             data = self.qsl.get_features(query_samples[i].index)
 
-            print("Processing sample id {:d} with shape = {:}".format(query_samples[i].index, data.shape))
+            print(
+                "Processing sample id {:d} with shape = {:}".format(
+                    query_samples[i].index, data.shape
+                )
+            )
 
             # Follow the PyTorch implementation.
-            # The ONNX file has five outputs, but we only care about the one named "output".
-            output = self.sess.run(["output"], {"input": data[np.newaxis, ...]})[0].squeeze(0).astype(np.float16)
+            # The ONNX file has five outputs, but we only care about the one
+            # named "output".
+            output = (
+                self.sess.run(["output"], {"input": data[np.newaxis, ...]})[0]
+                .squeeze(0)
+                .astype(np.float16)
+            )
 
             response_array = array.array("B", output.tobytes())
             bi = response_array.buffer_info()
-            response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
+            response = lg.QuerySampleResponse(
+                query_samples[i].id, bi[0], bi[1])
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):
         pass
 
+
 def get_onnxruntime_sut(model_path, preprocessed_data_dir, performance_count):
-    return _3DUNET_ONNXRuntime_SUT(model_path, preprocessed_data_dir, performance_count)
+    return _3DUNET_ONNXRuntime_SUT(
+        model_path, preprocessed_data_dir, performance_count)

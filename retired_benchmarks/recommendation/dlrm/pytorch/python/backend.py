@@ -2,10 +2,10 @@
 abstract backend class
 """
 
-
 # pylint: disable=unused-argument,missing-docstring
 
-class Backend():
+
+class Backend:
     def __init__(self):
         self.inputs = []
         self.outputs = []

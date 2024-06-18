@@ -13,7 +13,7 @@
 # limitations under the License.
 # =============================================================================
 
-## \file
+# \file
 #  \brief MLPerf Inference LoadGen python module setup.
 #  \details Creates a module that python can import.
 #  All source files are compiled by python"s C++ toolchain  without depending
@@ -69,23 +69,30 @@ lib_bindings = [
 this_directory = Path(__file__).parent
 mlperf_loadgen_headers = public_headers + lib_headers
 mlperf_loadgen_sources_no_gen = lib_sources + lib_bindings
-mlperf_loadgen_sources = (mlperf_loadgen_sources_no_gen +
-                          [generated_version_source_filename])
-mlperf_long_description = (this_directory / "README.md").read_text(encoding="utf-8")
+mlperf_loadgen_sources = mlperf_loadgen_sources_no_gen + [
+    generated_version_source_filename
+]
+mlperf_long_description = (
+    this_directory /
+    "README.md").read_text(
+        encoding="utf-8")
 
 
 mlperf_loadgen_module = Pybind11Extension(
-        "mlperf_loadgen",
-        define_macros=[("MAJOR_VERSION", "4"), ("MINOR_VERSION", "0")],
-        include_dirs=[".", get_include()],
-        sources=mlperf_loadgen_sources,
-        depends=mlperf_loadgen_headers)
+    "mlperf_loadgen",
+    define_macros=[("MAJOR_VERSION", "4"), ("MINOR_VERSION", "0")],
+    include_dirs=[".", get_include()],
+    sources=mlperf_loadgen_sources,
+    depends=mlperf_loadgen_headers,
+)
 
-setup(name="mlperf_loadgen",
-      version="4.0",
-      description="MLPerf Inference LoadGen python bindings",
-      url="https://mlcommons.org/",
-      cmdclass={"build_ext": build_ext},
-      ext_modules=[mlperf_loadgen_module],
-      long_description=mlperf_long_description,
-      long_description_content_type='text/markdown')
+setup(
+    name="mlperf_loadgen",
+    version="4.0",
+    description="MLPerf Inference LoadGen python bindings",
+    url="https://mlcommons.org/",
+    cmdclass={"build_ext": build_ext},
+    ext_modules=[mlperf_loadgen_module],
+    long_description=mlperf_long_description,
+    long_description_content_type="text/markdown",
+)

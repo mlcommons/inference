@@ -12,8 +12,16 @@ def get_args():
     parser.add_argument(
         "--num-channels-latents", type=int, default=4, help="Batch size of the latent"
     )
-    parser.add_argument("--height", type=int, default=1024, help="Height of the image")
-    parser.add_argument("--width", type=int, default=1024, help="Width of the image")
+    parser.add_argument(
+        "--height",
+        type=int,
+        default=1024,
+        help="Height of the image")
+    parser.add_argument(
+        "--width",
+        type=int,
+        default=1024,
+        help="Width of the image")
     parser.add_argument(
         "--dtype",
         type=str,
@@ -33,7 +41,13 @@ def get_args():
         default=8,
         help="Variational Autoencoder scale factor, obtainded from model inspection",
     )
-    parser.add_argument("--output-type", type=str, default="pt", choices=["pt", "np"])
+    parser.add_argument(
+        "--output-type",
+        type=str,
+        default="pt",
+        choices=[
+            "pt",
+            "np"])
     args = parser.parse_args()
     return args
 

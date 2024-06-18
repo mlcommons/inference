@@ -42,12 +42,19 @@ class ScriptGreedyDecoder(torch.nn.Module):
         self._model = model
         self._blank_id = blank_index
         self._SOS = -1
-        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+        self.dev = (
+            torch.device("cuda:0")
+            if torch.cuda.is_available()
+            and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
+            else torch.device("cpu")
+        )
         assert max_symbols_per_step > 0
         self._max_symbols_per_step = max_symbols_per_step
 
     @torch.jit.export
-    def forward(self, x: torch.Tensor, out_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, List[List[int]]]:
+    def forward(
+        self, x: torch.Tensor, out_lens: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, List[List[int]]]:
         """Returns a list of sentences given an input batch.
 
         Args:
@@ -73,7 +80,8 @@ class ScriptGreedyDecoder(torch.nn.Module):
 
         return logits, logits_lens, output
 
-    def _greedy_decode(self, x: torch.Tensor, out_len: torch.Tensor) -> List[int]:
+    def _greedy_decode(self, x: torch.Tensor,
+                       out_len: torch.Tensor) -> List[int]:
         hidden: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
         label: List[int] = []
         for time_idx in range(int(out_len.item())):
@@ -84,9 +92,7 @@ class ScriptGreedyDecoder(torch.nn.Module):
 
             while not_blank and symbols_added < self._max_symbols_per_step:
                 g, hidden_prime = self._pred_step(
-                    self._get_last_symb(label),
-                    hidden
-                )
+                    self._get_last_symb(label), hidden)
                 logp = self._joint_step(f, g, log_normalize=False)[0, :]
 
                 # get index k, of max prob
@@ -102,7 +108,9 @@ class ScriptGreedyDecoder(torch.nn.Module):
 
         return label
 
-    def _pred_step(self, label: int, hidden: Optional[Tuple[torch.Tensor, torch.Tensor]]) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    def _pred_step(
+        self, label: int, hidden: Optional[Tuple[torch.Tensor, torch.Tensor]]
+    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         if label == self._SOS:
             return self._model.prediction(None, hidden)
         if label > self._blank_id:
@@ -110,7 +118,9 @@ class ScriptGreedyDecoder(torch.nn.Module):
         label = torch.tensor([[label]], dtype=torch.int64)
         return self._model.prediction(label, hidden)
 
-    def _joint_step(self, enc: torch.Tensor, pred: torch.Tensor, log_normalize: bool=False) -> torch.Tensor:
+    def _joint_step(
+        self, enc: torch.Tensor, pred: torch.Tensor, log_normalize: bool = False
+    ) -> torch.Tensor:
         logits = self._model.joint(enc, pred)[:, 0, 0, :]
         if not log_normalize:
             return logits

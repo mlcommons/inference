@@ -36,16 +36,21 @@ This script takes the open_orca GPT4 dataset parquet and perform the following p
 llama_prompt_system = "<s>[INST] <<SYS>>\n{}\n<</SYS>>\n\n{} [/INST]"
 llama_prompt_no_system = "<s>[INST] {} [/INST]"
 
+
 def format_llama_input(row):
-    if row['system_prompt']:
-        return llama_prompt_system.format(row['system_prompt'], row['question'])
+    if row["system_prompt"]:
+        return llama_prompt_system.format(
+            row["system_prompt"], row["question"])
     else:
-        return llama_prompt_no_system.format(row['question'])
+        return llama_prompt_no_system.format(row["question"])
+
 
 def is_english(s):
     for c in s:
         allowed = c.isascii()
-        allowed = allowed or (c in ['’', '–', '“', '”', '—'])  # Taken from Habana: Unicode quotes and hyphens
+        allowed = allowed or (
+            c in ["’", "–", "“", "”", "—"]
+        )  # Taken from Habana: Unicode quotes and hyphens
         if not allowed:
             return False
     return True
@@ -59,7 +64,8 @@ def _tokenize_helper(x, llama_tokenizer=None, append_response_init_token=True):
 
     if append_response_init_token:
         # Workaround to enable cheat checking for first token: Llama always outputs token 29871 first
-        # It is possible for submitters to just immediately output this token to achieve a very fast TTFT.
+        # It is possible for submitters to just immediately output this token
+        # to achieve a very fast TTFT.
         tokens.append(29871)
     return tokens
 
@@ -73,11 +79,13 @@ class Keyphrase:
 
 
 class OpenOrcaDatasetGenerator:
-    def __init__(self,
-                 pq_path: os.PathLike,
-                 model_dir: os.PathLike,
-                 io_token_limit: int,
-                 calibration_subset_size: int = 1000):
+    def __init__(
+        self,
+        pq_path: os.PathLike,
+        model_dir: os.PathLike,
+        io_token_limit: int,
+        calibration_subset_size: int = 1000,
+    ):
         self.pq_path = Path(pq_path)
         self.model_dir = Path(model_dir)
         self.io_token_limit = io_token_limit
@@ -90,29 +98,37 @@ class OpenOrcaDatasetGenerator:
         tik = time.time()
         df = pd.read_parquet(self.pq_path)
         print(f"Tokenizing input")
-        df.rename(columns={'response': 'output'}, inplace=True)
-        df['input'] = df.apply(format_llama_input, axis=1)
+        df.rename(columns={"response": "output"}, inplace=True)
+        df["input"] = df.apply(format_llama_input, axis=1)
 
-        input_tokenizer = partial(_tokenize_helper, llama_tokenizer=llama_tokenizer)
-        output_tokenizer = partial(_tokenize_helper, llama_tokenizer=llama_tokenizer, append_response_init_token=False)
-        df['tok_input'] = df['input'].apply(input_tokenizer)
-        df['tok_output'] = df['output'].apply(output_tokenizer)
+        input_tokenizer = partial(
+            _tokenize_helper,
+            llama_tokenizer=llama_tokenizer)
+        output_tokenizer = partial(
+            _tokenize_helper,
+            llama_tokenizer=llama_tokenizer,
+            append_response_init_token=False,
+        )
+        df["tok_input"] = df["input"].apply(input_tokenizer)
+        df["tok_output"] = df["output"].apply(output_tokenizer)
         tok = time.time()
         print(f"Loaded parquet and tokenized in {tok-tik} sec.")
         return df
 
     def filter_english(self, df: pd.DataFrame) -> pd.DataFrame:
-        df['input_english'] = df['input'].apply(is_english)
-        df['output_english'] = df['output'].apply(is_english)
-        df['all_english'] = df['input_english'] & df['output_english']
+        df["input_english"] = df["input"].apply(is_english)
+        df["output_english"] = df["output"].apply(is_english)
+        df["all_english"] = df["input_english"] & df["output_english"]
 
         # Filter based on english tokens
-        df = df[df['all_english']].drop(["input_english", "output_english", "all_english"], axis=1)
+        df = df[df["all_english"]].drop(
+            ["input_english", "output_english", "all_english"], axis=1
+        )
         return df.reset_index(drop=True)
 
     def filter_seqlen_oob(self, df: pd.DataFrame) -> pd.DataFrame:
-        df['tok_input_length'] = df['tok_input'].apply(lambda x: len(x))
-        df['tok_output_length'] = df['tok_output'].apply(lambda x: len(x))
+        df["tok_input_length"] = df["tok_input"].apply(lambda x: len(x))
+        df["tok_output_length"] = df["tok_output"].apply(lambda x: len(x))
 
         # Filter based on sequence length
         df = df[df["tok_input_length"] < self.io_token_limit]
@@ -129,22 +145,28 @@ class OpenOrcaDatasetGenerator:
         df = df[df["tok_output_length"] >= 3]
         return df.reset_index(drop=True)
 
-    def filter_bad_prompts(self, df: pd.DataFrame, only_niv_t0: bool = True) -> pd.DataFrame:
+    def filter_bad_prompts(
+        self, df: pd.DataFrame, only_niv_t0: bool = True
+    ) -> pd.DataFrame:
         # Some prompts underperform and cause very bad Rouge scores for a significant percentage of samples with these
         # prompts. See Jupyter notebook for analysis.
         # These generally only affect NIV and t0 and do not exist in flan or cot.
-        # Set 'only_niv_t0' to True to explicitly only remove these prompts from niv and t0 samples.
-        bad_prompts = ['',
-                       'You are an AI assistant that follows instruction extremely well. Help as much as you can.',
-                       'You are an AI assistant. Provide a detailed answer so user don’t need to search outside to understand the answer.',
-                       "You are an AI assistant. Provide a detailed answer so user don't need to search outside to understand the answer.",
-                       'User will you give you a task with some instruction. Your job is follow the instructions as faithfully as you can. While answering think step-by-step and justify your answer.',
-                       'Explain how you used the definition to come up with the answer.',
-                       ]
+        # Set 'only_niv_t0' to True to explicitly only remove these prompts
+        # from niv and t0 samples.
+        bad_prompts = [
+            "",
+            "You are an AI assistant that follows instruction extremely well. Help as much as you can.",
+            "You are an AI assistant. Provide a detailed answer so user don’t need to search outside to understand the answer.",
+            "You are an AI assistant. Provide a detailed answer so user don't need to search outside to understand the answer.",
+            "User will you give you a task with some instruction. Your job is follow the instructions as faithfully as you can. While answering think step-by-step and justify your answer.",
+            "Explain how you used the definition to come up with the answer.",
+        ]
         for prompt in bad_prompts:
-            criteria = (df.system_prompt == prompt)
+            criteria = df.system_prompt == prompt
             if only_niv_t0:
-                criteria = criteria & ((df.origin == "niv") | (df.origin == "t0"))
+                criteria = criteria & (
+                    (df.origin == "niv") | (
+                        df.origin == "t0"))
             df = df[~criteria]
 
         return df.reset_index(drop=True)
@@ -153,7 +175,8 @@ class OpenOrcaDatasetGenerator:
         self.keyphrases.append(keyphrase)
 
     def filter_keyphrases(self, df: pd.DataFrame) -> pd.DataFrame:
-        # Filter out registered keyphrases. This is unused for the final dataset as there are no registered keyphrases.
+        # Filter out registered keyphrases. This is unused for the final
+        # dataset as there are no registered keyphrases.
         for kp in self.keyphrases:
             if kp.startswith:
                 selector = df[kp.col].str.startswith(kp.phrase)
@@ -163,13 +186,13 @@ class OpenOrcaDatasetGenerator:
         return df.reset_index(drop=True)
 
     def set_origins(self, df: pd.DataFrame) -> pd.DataFrame:
-        get_sample_origin = lambda x: x.split(".")[0]
-        df['origin'] = df['id'].apply(get_sample_origin)
+        def get_sample_origin(x): return x.split(".")[0]
+        df["origin"] = df["id"].apply(get_sample_origin)
         return df
 
     def _per_origin_split(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         print(f"Unique sample origin datasets: {df.origin.unique()}")
-        dfs_by_origin = dict(tuple(df.groupby('origin')))
+        dfs_by_origin = dict(tuple(df.groupby("origin")))
         for origin, sub_df in dfs_by_origin.items():
             sub_df = sub_df.reset_index(drop=True, inplace=True)
         return dfs_by_origin
@@ -180,9 +203,13 @@ class OpenOrcaDatasetGenerator:
             raise RuntimeError(f"Not enough samples. Requires {N - _N} more.")
         return df.sample(n=_N, random_state=rng_seed)
 
-    def sample(self, dfs_by_origin: Dict[str, pd.DataFrame], n_total, rng_seed: int = 1337) -> pd.DataFrame:
+    def sample(
+        self, dfs_by_origin: Dict[str, pd.DataFrame], n_total, rng_seed: int = 1337
+    ) -> pd.DataFrame:
         nways = len(dfs_by_origin)
-        assert n_total % nways == 0, f"Total number of samples ({n_total}) must be divisible by n_origins ({nways})"
+        assert (
+            n_total % nways == 0
+        ), f"Total number of samples ({n_total}) must be divisible by n_origins ({nways})"
 
         split_size = n_total // nways
         samplings = []
@@ -195,17 +222,21 @@ class OpenOrcaDatasetGenerator:
         sampled_df = sampled_df.reset_index(drop=True)
         return sampled_df
 
-    def generate(self,
-                 export_dir: os.PathLike,
-                 n_samples: int = 24576,
-                 use_cached: bool = True,
-                 calib_rng_seed: int = 12345):
+    def generate(
+        self,
+        export_dir: os.PathLike,
+        n_samples: int = 24576,
+        use_cached: bool = True,
+        calib_rng_seed: int = 12345,
+    ):
         export_dir = Path(export_dir)
         if not export_dir.exists():
             print(f"Creating {export_dir}")
             export_dir.mkdir(parents=True)
         if export_dir.is_file():
-            raise ValueError(f"Cannot export to file {export_dir}. Must be a directory.")
+            raise ValueError(
+                f"Cannot export to file {export_dir}. Must be a directory."
+            )
 
         full_fpath = export_dir / f"open_orca_gpt4_tokenized_llama.full.pkl"
         if full_fpath.exists() and use_cached:
@@ -227,7 +258,8 @@ class OpenOrcaDatasetGenerator:
         # Export base files
         for origin, sub_df in dfs_by_origin.items():
             print(f"Subset '{origin}' has {sub_df.shape[0]} samples")
-            origin_fpath = export_dir / f"open_orca_gpt4_tokenized_llama.{origin}.pkl"
+            origin_fpath = export_dir / \
+                f"open_orca_gpt4_tokenized_llama.{origin}.pkl"
             if not origin_fpath.exists() or not use_cached:
                 sub_df.to_pickle(origin_fpath)
 
@@ -237,29 +269,59 @@ class OpenOrcaDatasetGenerator:
         # cot has a higher rouge score from a 100k sampling (of the whole dataset) than the rest, while niv has lower.
         # Sample from each dataset equally.
         sampled_df = self.sample(dfs_by_origin, n_samples)
-        sampled_fpath = export_dir / f"open_orca_gpt4_tokenized_llama.sampled_{n_samples}.pkl"
+        sampled_fpath = (
+            export_dir /
+            f"open_orca_gpt4_tokenized_llama.sampled_{n_samples}.pkl"
+        )
         sampled_df.to_pickle(sampled_fpath)
 
         # Calibration dataset
-        calib_ds = sampled_df.sample(n=self.calibration_subset_size,
-                                     random_state=calib_rng_seed)
+        calib_ds = sampled_df.sample(
+            n=self.calibration_subset_size, random_state=calib_rng_seed
+        )
         calib_ds = calib_ds.reset_index(drop=True)
-        calib_fpath = export_dir / f"open_orca_gpt4_tokenized_llama.calibration_{self.calibration_subset_size}.pkl"
+        calib_fpath = (
+            export_dir
+            / f"open_orca_gpt4_tokenized_llama.calibration_{self.calibration_subset_size}.pkl"
+        )
         calib_ds.to_pickle(calib_fpath)
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--dataset_pq_path', type=str,
-                        default='/raid/data/mlperf-llm/OpenOrca/1M-GPT4-Augmented.parquet',
-                        help="the path to the open_orca GPT4 parquet.")
-    parser.add_argument('--model_dir', type=str, default='/raid/data/mlperf-llm/Llama-2-70b-chat-hf')
-    parser.add_argument('--seqlen_limit', type=int, default=1024, help="Upper limit of the input/output sequence lengths")
-    parser.add_argument('--export_dir', type=str,
-                        default="/raid/data/mlperf-llm/OpenOrca/llama/filtered",
-                        help="Path to the output pkl file.")
-    parser.add_argument('--num_total_samples', type=int, default=24576, help="Number of samples to generate")
-    parser.add_argument('--calibration_subset_size', type=int, default=1000, help="Number of samples for calibration subset")
+    parser.add_argument(
+        "--dataset_pq_path",
+        type=str,
+        default="/raid/data/mlperf-llm/OpenOrca/1M-GPT4-Augmented.parquet",
+        help="the path to the open_orca GPT4 parquet.",
+    )
+    parser.add_argument(
+        "--model_dir", type=str, default="/raid/data/mlperf-llm/Llama-2-70b-chat-hf"
+    )
+    parser.add_argument(
+        "--seqlen_limit",
+        type=int,
+        default=1024,
+        help="Upper limit of the input/output sequence lengths",
+    )
+    parser.add_argument(
+        "--export_dir",
+        type=str,
+        default="/raid/data/mlperf-llm/OpenOrca/llama/filtered",
+        help="Path to the output pkl file.",
+    )
+    parser.add_argument(
+        "--num_total_samples",
+        type=int,
+        default=24576,
+        help="Number of samples to generate",
+    )
+    parser.add_argument(
+        "--calibration_subset_size",
+        type=int,
+        default=1000,
+        help="Number of samples for calibration subset",
+    )
     return parser.parse_args()
 
 
@@ -277,4 +339,9 @@ if __name__ == "__main__":
     )
 
     # Sample command to run:
-    # python3 processorca.py --dataset_pq_path=/raid/data/mlperf-llm/OpenOrca/1M-GPT4-Augmented.parquet --model_dir=/raid/data/mlperf-llm/Llama-2-70b-chat-hf --seqlen_limit=1024 --export_dir=/raid/data/mlperf-llm/OpenOrca/llama/filtered --num_total_samples=24576
+    # python3 processorca.py
+    # --dataset_pq_path=/raid/data/mlperf-llm/OpenOrca/1M-GPT4-Augmented.parquet
+    # --model_dir=/raid/data/mlperf-llm/Llama-2-70b-chat-hf
+    # --seqlen_limit=1024
+    # --export_dir=/raid/data/mlperf-llm/OpenOrca/llama/filtered
+    # --num_total_samples=24576

@@ -21,29 +21,39 @@ import pandas as pd
 from download_utils import download_file, md5_checksum, extract
 
 parser = argparse.ArgumentParser(
-    description='Download, verify and extract dataset files')
-parser.add_argument('csv', type=str,
-                    help='CSV file with urls and checksums to download.')
-parser.add_argument('dest', type=str,
-                    help='Download destnation folder.')
-parser.add_argument('-e', type=str, default=None,
-                    help='Extraction destnation folder. Defaults to download folder if not provided')
-parser.add_argument('--skip_download', action='store_true',
-                    help='Skip downloading the files')
-parser.add_argument('--skip_checksum', action='store_true',
-                    help='Skip checksum')
-parser.add_argument('--skip_extract', action='store_true',
-                    help='Skip extracting files')
+    description="Download, verify and extract dataset files"
+)
+parser.add_argument(
+    "csv", type=str, help="CSV file with urls and checksums to download."
+)
+parser.add_argument("dest", type=str, help="Download destnation folder.")
+parser.add_argument(
+    "-e",
+    type=str,
+    default=None,
+    help="Extraction destnation folder. Defaults to download folder if not provided",
+)
+parser.add_argument(
+    "--skip_download", action="store_true", help="Skip downloading the files"
+)
+parser.add_argument(
+    "--skip_checksum",
+    action="store_true",
+    help="Skip checksum")
+parser.add_argument(
+    "--skip_extract",
+    action="store_true",
+    help="Skip extracting files")
 args = parser.parse_args()
 args.e = args.e or args.dest
 
 
-df = pd.read_csv(args.csv, delimiter=',')
+df = pd.read_csv(args.csv, delimiter=",")
 
 
 if not args.skip_download:
     for url in df.url:
-        fname = url.split('/')[-1]
+        fname = url.split("/")[-1]
         print("Downloading %s:" % fname)
         download_file(url=url, dest_folder=args.dest, fname=fname)
 else:
@@ -52,11 +62,11 @@ else:
 
 if not args.skip_checksum:
     for index, row in df.iterrows():
-        url = row['url']
-        md5 = row['md5']
-        fname = url.split('/')[-1]
+        url = row["url"]
+        md5 = row["md5"]
+        fname = url.split("/")[-1]
         fpath = os.path.join(args.dest, fname)
-        print("Verifing %s: " % fname, end='')
+        print("Verifing %s: " % fname, end="")
         ret = md5_checksum(fpath=fpath, target_hash=md5)
         if not ret:
             raise ValueError(f"Checksum for {fname} failed!")
@@ -68,7 +78,7 @@ else:
 
 if not args.skip_extract:
     for url in df.url:
-        fname = url.split('/')[-1]
+        fname = url.split("/")[-1]
         fpath = os.path.join(args.dest, fname)
         print("Decompressing %s:" % fpath)
         extract(fpath=fpath, dest_folder=args.e)

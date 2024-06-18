@@ -41,16 +41,28 @@ def normalize_string(s, labels, table, **unused_kwargs):
 
     try:
         text = _clean_text(s, ["english_cleaners"], table).strip()
-        return ''.join([t for t in text if good_token(t, labels=labels)])
-    except:
+        return "".join([t for t in text if good_token(t, labels=labels)])
+    except BaseException:
         print("WARNING: Normalizing {} failed".format(s))
         return None
 
 
 class Manifest(object):
-    def __init__(self, data_dir, manifest_paths, labels, blank_index, max_duration=None, pad_to_max=False,
-                 min_duration=None, sort_by_duration=False, max_utts=0,
-                 normalize=True, speed_perturbation=False, filter_speed=1.0):
+    def __init__(
+        self,
+        data_dir,
+        manifest_paths,
+        labels,
+        blank_index,
+        max_duration=None,
+        pad_to_max=False,
+        min_duration=None,
+        sort_by_duration=False,
+        max_utts=0,
+        normalize=True,
+        speed_perturbation=False,
+        filter_speed=1.0,
+    ):
         self.labels_map = dict([(labels[i], i) for i in range(len(labels))])
         self.blank_index = blank_index
         self.max_duration = max_duration
@@ -71,7 +83,8 @@ class Manifest(object):
             # ~ -> tilde
             # _ -> underscore
             # % -> percent
-            # If a punctuation symbol is inside our vocab, we do not remove from text
+            # If a punctuation symbol is inside our vocab, we do not remove
+            # from text
             for l in labels:
                 punctuation = punctuation.replace(l, "")
             # Turn all punctuation to whitespace
@@ -80,72 +93,88 @@ class Manifest(object):
             with open(manifest_path, "r", encoding="utf-8") as fh:
                 a = json.load(fh)
                 for data in a:
-                    files_and_speeds = data['files']
+                    files_and_speeds = data["files"]
 
                     if pad_to_max:
                         if not speed_perturbation:
                             min_speed = filter_speed
                         else:
-                            min_speed = min(x['speed']
+                            min_speed = min(x["speed"]
                                             for x in files_and_speeds)
                         max_duration = self.max_duration * min_speed
 
-                    data['duration'] = data['original_duration']
-                    if min_duration is not None and data['duration'] < min_duration:
-                        filtered_duration += data['duration']
+                    data["duration"] = data["original_duration"]
+                    if min_duration is not None and data["duration"] < min_duration:
+                        filtered_duration += data["duration"]
                         continue
-                    if max_duration is not None and data['duration'] > max_duration:
-                        filtered_duration += data['duration']
+                    if max_duration is not None and data["duration"] > max_duration:
+                        filtered_duration += data["duration"]
                         continue
 
                     # Prune and normalize according to transcript
-                    transcript_text = data[
-                        'transcript'] if "transcript" in data else self.load_transcript(
-                        data['text_filepath'])
+                    transcript_text = (
+                        data["transcript"]
+                        if "transcript" in data
+                        else self.load_transcript(data["text_filepath"])
+                    )
                     if normalize:
-                        transcript_text = normalize_string(transcript_text, labels=labels,
-                                                           table=table)
+                        transcript_text = normalize_string(
+                            transcript_text, labels=labels, table=table
+                        )
                     if not isinstance(transcript_text, str):
                         print(
                             "WARNING: Got transcript: {}. It is not a string. Dropping data point".format(
-                                transcript_text))
-                        filtered_duration += data['duration']
+                                transcript_text
+                            )
+                        )
+                        filtered_duration += data["duration"]
                         continue
                     data["transcript"] = self.parse_transcript(
-                        transcript_text)  # convert to vocab indices
+                        transcript_text
+                    )  # convert to vocab indices
 
                     if speed_perturbation:
-                        audio_paths = [x['fname'] for x in files_and_speeds]
-                        data['audio_duration'] = [x['duration']
-                                                  for x in files_and_speeds]
+                        audio_paths = [x["fname"] for x in files_and_speeds]
+                        data["audio_duration"] = [
+                            x["duration"] for x in files_and_speeds
+                        ]
                     else:
                         audio_paths = [
-                            x['fname'] for x in files_and_speeds if x['speed'] == filter_speed]
-                        data['audio_duration'] = [x['duration']
-                                                  for x in files_and_speeds if x['speed'] == filter_speed]
-                    data['audio_filepath'] = [os.path.join(
-                        data_dir, x) for x in audio_paths]
-                    data.pop('files')
-                    data.pop('original_duration')
+                            x["fname"]
+                            for x in files_and_speeds
+                            if x["speed"] == filter_speed
+                        ]
+                        data["audio_duration"] = [
+                            x["duration"]
+                            for x in files_and_speeds
+                            if x["speed"] == filter_speed
+                        ]
+                    data["audio_filepath"] = [
+                        os.path.join(data_dir, x) for x in audio_paths
+                    ]
+                    data.pop("files")
+                    data.pop("original_duration")
 
                     ids.append(data)
-                    duration += data['duration']
+                    duration += data["duration"]
 
                     if max_utts > 0 and len(ids) >= max_utts:
                         print(
-                            'Stopping parsing %s as max_utts=%d' % (manifest_path, max_utts))
+                            "Stopping parsing %s as max_utts=%d"
+                            % (manifest_path, max_utts)
+                        )
                         break
 
         if sort_by_duration:
-            ids = sorted(ids, key=lambda x: x['duration'])
+            ids = sorted(ids, key=lambda x: x["duration"])
         self._data = ids
         self._size = len(ids)
         self._duration = duration
         self._filtered_duration = filtered_duration
 
     def load_transcript(self, transcript_path):
-        with open(transcript_path, 'r', encoding="utf-8") as transcript_file:
-            transcript = transcript_file.read().replace('\n', '')
+        with open(transcript_path, "r", encoding="utf-8") as transcript_file:
+            transcript = transcript_file.read().replace("\n", "")
         return transcript
 
     def parse_transcript(self, transcript):

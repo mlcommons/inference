@@ -10,12 +10,14 @@ try:
     # try dedicated tflite package first
     import tflite_runtime
     import tflite_runtime.interpreter as tflite
+
     _version = tflite_runtime.__version__
     _git_version = tflite_runtime.__git_version__
-except:
+except BaseException:
     # fall back to tflite bundled in tensorflow
     import tensorflow as tf
     from tensorflow.lite.python import interpreter as tflite
+
     _version = tf.__version__
     _git_version = tf.__git_version__
 
@@ -43,8 +45,12 @@ class BackendTflite(backend.Backend):
         self.sess = tflite.Interpreter(model_path=model_path)
         self.sess.allocate_tensors()
         # keep input/output name to index mapping
-        self.input2index = {i["name"]: i["index"] for i in self.sess.get_input_details()}
-        self.output2index = {i["name"]: i["index"] for i in self.sess.get_output_details()}
+        self.input2index = {
+            i["name"]: i["index"] for i in self.sess.get_input_details()
+        }
+        self.output2index = {
+            i["name"]: i["index"] for i in self.sess.get_output_details()
+        }
         # keep input/output names
         self.inputs = list(self.input2index.keys())
         self.outputs = list(self.output2index.keys())

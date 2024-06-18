@@ -1,29 +1,24 @@
+from megatron.training import get_model
+from megatron.model import GPTModel
+from megatron.initialize import initialize_megatron
+from megatron.checkpointing import load_checkpoint
+from megatron import mpu
+from megatron import print_rank_0
+from megatron.text_generation.generation import (
+    generate_tokens_probs_and_return_on_first_stage,
+    beam_search_and_return_on_first_stage,
+)
+from megatron import get_args
+from flask_restful import Resource, Api
+from flask import Flask, request, jsonify, current_app
+import threading
+import json
+import torch
+import datetime
 import os
 import sys
 
 sys.path.append(os.environ["MEGATRON_PATH"])
-
-import datetime
-import torch
-import json
-import threading
-from flask import Flask, request, jsonify, current_app
-from flask_restful import Resource, Api
-from megatron import get_args
-from megatron.text_generation.generation import (
-    generate_tokens_probs_and_return_on_first_stage,
-    beam_search_and_return_on_first_stage
-)
-
-
-from megatron import get_args
-from megatron import print_rank_0
-from megatron import mpu
-from megatron.checkpointing import load_checkpoint
-from megatron.initialize import initialize_megatron
-from megatron.model import GPTModel
-from megatron.training import get_model
-import torch
 
 
 GENERATE_NUM = 0
@@ -76,9 +71,11 @@ class MegatronGenerate(Resource):
             try:
                 if self.use_beam_search:
                     try:
-                        MegatronGenerate.send_do_beam_search()  # Tell other ranks we're doing beam_search
-                        input_ids_tensor, input_length_tensor = MegatronGenerate.sync_input(
-                            input_ids, input_length
+                        # Tell other ranks we're doing beam_search
+                        MegatronGenerate.send_do_beam_search()
+                        input_ids_tensor, input_length_tensor = (
+                            MegatronGenerate.sync_input(
+                                input_ids, input_length)
                         )
                         (
                             output_tokens,
@@ -88,13 +85,20 @@ class MegatronGenerate(Resource):
                             input_ids_tensor,
                             input_length_tensor,
                             beam_size=self.gen_kwargs.get("beam_size", 4),
-                            stop_token = self.gen_kwargs.get("beam_stop_token", 1),
-                            num_return_gen = self.gen_kwargs.get("beam_num_return_gen", 1),
-                            length_penalty = self.gen_kwargs.get("beam_length_penalty", 1),
-                            min_length = self.gen_kwargs.get("min_new_tokens", 30),
+                            stop_token=self.gen_kwargs.get(
+                                "beam_stop_token", 1),
+                            num_return_gen=self.gen_kwargs.get(
+                                "beam_num_return_gen", 1
+                            ),
+                            length_penalty=self.gen_kwargs.get(
+                                "beam_length_penalty", 1
+                            ),
+                            min_length=self.gen_kwargs.get(
+                                "min_new_tokens", 30),
                         )
                         output_batch_truncated = []
-                        for data, source_len in zip(output_tokens, input_length_tensor):
+                        for data, source_len in zip(
+                                output_tokens, input_length_tensor):
                             output_batch_truncated.append(
                                 data[source_len:].cpu().numpy().tolist()
                             )
@@ -108,8 +112,9 @@ class MegatronGenerate(Resource):
                 else:
                     try:
                         MegatronGenerate.send_do_generate()  # Tell other ranks we're doing generate
-                        input_ids_tensor, input_length_tensor = MegatronGenerate.sync_input(
-                            input_ids, input_length
+                        input_ids_tensor, input_length_tensor = (
+                            MegatronGenerate.sync_input(
+                                input_ids, input_length)
                         )
                         (
                             output_tokens,
@@ -120,11 +125,13 @@ class MegatronGenerate(Resource):
                             input_ids_tensor,
                             input_length_tensor,
                             top_k=self.gen_kwargs.get("top_k", 4),
-                            temperature=self.gen_kwargs.get("temperature", 0.0),
-                            min_length = gen_kwargs.get("min_new_tokens", 30),
+                            temperature=self.gen_kwargs.get(
+                                "temperature", 0.0),
+                            min_length=gen_kwargs.get("min_new_tokens", 30),
                         )
                         output_batch_truncated = []
-                        for data, source_len in zip(output_tokens, input_length_tensor):
+                        for data, source_len in zip(
+                                output_tokens, input_length_tensor):
                             output_batch_truncated.append(
                                 data[source_len:].cpu().numpy().tolist()
                             )
@@ -167,8 +174,8 @@ def model_provider(pre_process=True, post_process=True):
 
 
 def add_text_generate_args(parser):
-    group = parser.add_argument_group(title='text generation')
-    group.add_argument("--use-beam-search", action = "store_true")
+    group = parser.add_argument_group(title="text generation")
+    group.add_argument("--use-beam-search", action="store_true")
     return parser
 
 
@@ -179,7 +186,7 @@ if __name__ == "__main__":
             "tokenizer_type": "SentencePieceTokenizer",
             "no_load_rng": True,
             "no_load_optim": True,
-        }
+        },
     )
 
     args = get_args()
@@ -193,7 +200,7 @@ if __name__ == "__main__":
         "beam_size": 4,
         "beam_stop_token": 1,
         "beam_num_return_gen": 1,
-        "beam_length_penalty": 1
+        "beam_length_penalty": 1,
     }
     if args.num_layers_per_virtual_pipeline_stage is not None:
         print("Interleaved pipeline schedule is not yet supported for text generation.")
@@ -236,7 +243,7 @@ if __name__ == "__main__":
                     input_length_tensor,
                     top_k=gen_kwargs.get("top_k", 4),
                     temperature=gen_kwargs.get("temperature", 1.0),
-                    min_length = gen_kwargs.get("min_new_tokens", 30),
+                    min_length=gen_kwargs.get("min_new_tokens", 30),
                 )
             except ValueError as ve:
                 pass
@@ -261,10 +268,10 @@ if __name__ == "__main__":
                     input_ids_tensor,
                     input_length_tensor,
                     beam_size=gen_kwargs.get("beam_size", 4),
-                    stop_token = gen_kwargs.get("beam_stop_token", 1),
-                    num_return_gen = gen_kwargs.get("beam_num_return_gen", 1),
-                    length_penalty = gen_kwargs.get("beam_length_penalty", 1),
-                    min_length = gen_kwargs.get("min_new_tokens", 30),
+                    stop_token=gen_kwargs.get("beam_stop_token", 1),
+                    num_return_gen=gen_kwargs.get("beam_num_return_gen", 1),
+                    length_penalty=gen_kwargs.get("beam_length_penalty", 1),
+                    min_length=gen_kwargs.get("min_new_tokens", 30),
                 )
             except ValueError as ve:
                 pass

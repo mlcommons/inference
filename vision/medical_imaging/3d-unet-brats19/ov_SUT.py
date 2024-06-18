@@ -14,6 +14,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from scipy.special import softmax
+from openvino.inference_engine import IECore
+from brats_QSL import get_brats_QSL
+import numpy as np
+import mlperf_loadgen as lg
 import array
 import json
 import os
@@ -21,21 +26,13 @@ import sys
 
 sys.path.insert(0, os.getcwd())
 
-import mlperf_loadgen as lg
-import numpy as np
 
-from brats_QSL import get_brats_QSL
-
-from openvino.inference_engine import IECore
-from scipy.special import softmax
-
-
-class _3DUNET_OV_SUT():
+class _3DUNET_OV_SUT:
     def __init__(self, model_path, preprocessed_data_dir, performance_count):
         print("Loading OV model...")
 
         model_xml = model_path
-        model_bin = os.path.splitext(model_xml)[0] + '.bin'
+        model_bin = os.path.splitext(model_xml)[0] + ".bin"
 
         ie = IECore()
         net = ie.read_network(model=model_xml, weights=model_bin)
@@ -49,7 +46,7 @@ class _3DUNET_OV_SUT():
             if max_channels < net.outputs[output].shape[-1]:
                 _3DUNET_OV_SUT.output_name = output
 
-        self.exec_net = ie.load_network(network=net, device_name='CPU')
+        self.exec_net = ie.load_network(network=net, device_name="CPU")
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
@@ -60,17 +57,20 @@ class _3DUNET_OV_SUT():
         for i in range(len(query_samples)):
             data = self.qsl.get_features(query_samples[i].index)
 
-            print("Processing sample id {:d} with shape = {:}".format(
-                query_samples[i].index, data.shape))
+            print(
+                "Processing sample id {:d} with shape = {:}".format(
+                    query_samples[i].index, data.shape
+                )
+            )
 
             output = self.exec_net.infer(
-                inputs={self.input_name: data[np.newaxis, ...]})[
-                _3DUNET_OV_SUT.output_name].astype(np.float16)
+                inputs={self.input_name: data[np.newaxis, ...]}
+            )[_3DUNET_OV_SUT.output_name].astype(np.float16)
 
             response_array = array.array("B", output.tobytes())
             bi = response_array.buffer_info()
-            response = lg.QuerySampleResponse(query_samples[i].id, bi[0],
-                                              bi[1])
+            response = lg.QuerySampleResponse(
+                query_samples[i].id, bi[0], bi[1])
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):

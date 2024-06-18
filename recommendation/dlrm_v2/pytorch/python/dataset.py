@@ -14,7 +14,8 @@ import numpy as np
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("dataset")
 
-class Item():
+
+class Item:
     def __init__(self, label, img, idx):
         self.label = label
         self.img = img
@@ -23,19 +24,25 @@ class Item():
 
 
 def usleep(sec):
-    if sys.platform == 'win32':
+    if sys.platform == "win32":
         # on windows time.sleep() doesn't work to well
         import ctypes
+
         kernel32 = ctypes.windll.kernel32
-        timer = kernel32.CreateWaitableTimerA(ctypes.c_void_p(), True, ctypes.c_void_p())
+        timer = kernel32.CreateWaitableTimerA(
+            ctypes.c_void_p(), True, ctypes.c_void_p()
+        )
         delay = ctypes.c_longlong(int(-1 * (10 * 1000000 * sec)))
-        kernel32.SetWaitableTimer(timer, ctypes.byref(delay), 0, ctypes.c_void_p(), ctypes.c_void_p(), False)
-        kernel32.WaitForSingleObject(timer, 0xffffffff)
+        kernel32.SetWaitableTimer(
+            timer, ctypes.byref(
+                delay), 0, ctypes.c_void_p(), ctypes.c_void_p(), False
+        )
+        kernel32.WaitForSingleObject(timer, 0xFFFFFFFF)
     else:
         time.sleep(sec)
 
 
-class Dataset():
+class Dataset:
     def __init__(self):
         self.arrival = None
         self.image_list = []
@@ -92,7 +99,7 @@ class PostProcessCommon:
         self.good = 0
         self.total = 0
 
-    def finalize(self, results, ds=False,  output_dir=None):
+    def finalize(self, results, ds=False, output_dir=None):
         results["good"] = self.good
         results["total"] = self.total
 
@@ -125,4 +132,3 @@ class PostProcessArgMax:
     def finalize(self, results, ds=False, output_dir=None):
         results["good"] = self.good
         results["total"] = self.total
-

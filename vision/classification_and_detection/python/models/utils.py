@@ -15,7 +15,7 @@ class BatchNorm2d(nn.Module):
         self.register_buffer("scale", torch.ones(out))
         self.register_buffer("bias", torch.zeros(out))
 
-    #@torch.jit.script_method
+    # @torch.jit.script_method
     def forward(self, x):
         scale = self.scale.view(1, -1, 1, 1)
         bias = self.bias.view(1, -1, 1, 1)
@@ -31,7 +31,7 @@ class BiasAdd(nn.Module):
         super(BiasAdd, self).__init__()
         self.register_buffer("bias", torch.zeros(out))
 
-    #@torch.jit.script_method
+    # @torch.jit.script_method
     def forward(self, x):
         bias = self.bias.view(1, -1, 1, 1)
         return x + bias
@@ -52,14 +52,15 @@ class Conv2d_tf(nn.Conv2d):
         effective_filter_size = (filter_size - 1) * self.dilation[dim] + 1
         out_size = (input_size + self.stride[dim] - 1) // self.stride[dim]
         total_padding = max(
-            0, (out_size - 1) * self.stride[dim] + effective_filter_size - input_size
+            0, (out_size - 1) * self.stride[dim] +
+            effective_filter_size - input_size
         )
         additional_padding = int(total_padding % 2 != 0)
 
         return additional_padding, total_padding
 
     def forward(self, input):
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
         if self.padding == "valid":
             return F.conv2d(
                 input,
@@ -151,8 +152,8 @@ def decode_boxes(rel_codes, boxes, weights):
     # type: (torch.Tensor, torch.Tensor, torch.Tensor) -> torch.Tensor
 
     # perform some unpacking to make it JIT-fusion friendly
-    
-    #rel_codes=rel_codes[0][None]
+
+    # rel_codes=rel_codes[0][None]
     wx = weights[1]
     wy = weights[0]
     ww = weights[3]
@@ -163,10 +164,10 @@ def decode_boxes(rel_codes, boxes, weights):
     boxes_x2 = boxes[:, 3].unsqueeze(1).unsqueeze(0)
     boxes_y2 = boxes[:, 2].unsqueeze(1).unsqueeze(0)
 
-    dx = rel_codes[:,:, 1].unsqueeze(2)
-    dy = rel_codes[:,:, 0].unsqueeze(2)
-    dw = rel_codes[:,:, 3].unsqueeze(2)
-    dh = rel_codes[:,:, 2].unsqueeze(2)
+    dx = rel_codes[:, :, 1].unsqueeze(2)
+    dy = rel_codes[:, :, 0].unsqueeze(2)
+    dw = rel_codes[:, :, 3].unsqueeze(2)
+    dh = rel_codes[:, :, 2].unsqueeze(2)
 
     # implementation starts here
     widths = boxes_x2 - boxes_x1
@@ -180,7 +181,7 @@ def decode_boxes(rel_codes, boxes, weights):
     dh = dh / wh
 
     pred_ctr_x = dx * widths + ctr_x
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     pred_ctr_y = dy * heights + ctr_y
     pred_w = torch.exp(dw) * widths
     pred_h = torch.exp(dh) * heights
@@ -194,5 +195,5 @@ def decode_boxes(rel_codes, boxes, weights):
         ],
         dim=2,
     )
-    #import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
     return pred_boxes

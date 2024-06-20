@@ -783,7 +783,7 @@ def get_args():
     parser.add_argument("--input", required=True, help="submission directory")
     parser.add_argument(
         "--version",
-        default="v4.0",
+        default="v4.1",
         choices=list(MODEL_CONFIG.keys()),
         help="mlperf version",
     )

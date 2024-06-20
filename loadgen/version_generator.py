@@ -69,7 +69,6 @@ def generate_loadgen_version_definitions_sha1(ofile, loadgen_root):
     sha1s = ""
     loadgen_files = (
         ["/bindings/" + s for s in os.listdir(loadgen_root + "/bindings")] +
-        ["/demos/" + s for s in os.listdir(loadgen_root + "/demos")] +
         ["/" + s for s in os.listdir(loadgen_root)])
     for fn in sorted(loadgen_files):
         full_fn = loadgen_root + fn

@@ -245,7 +245,7 @@ MODEL_CONFIG = {
             "llama2-70b-99": ["Server", "Offline"],
             "llama2-70b-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
-            "mixtral-8x7b": ["SingleStream""Server", "Offline"]
+            "mixtral-8x7b": ["SingleStream", "Server", "Offline"]
         },
         "optional-scenarios-datacenter-edge": {},
         "accuracy-target": {
@@ -262,14 +262,13 @@ MODEL_CONFIG = {
             "llama2-70b-99" : ("ROUGE1", 44.4312 * 0.99, "ROUGE2", 22.0352 * 0.99, "ROUGEL", 28.6162 * 0.99, "TOKENS_PER_SAMPLE", 294.45*0.9),
             "llama2-70b-99.9" : ("ROUGE1", 44.4312 * 0.999, "ROUGE2", 22.0352 * 0.999, "ROUGEL", 28.6162 * 0.999, "TOKENS_PER_SAMPLE", 294.45*0.9),
             "stable-diffusion-xl": ("CLIP_SCORE", 31.68631873, "FID_SCORE", 23.01085758),
-            # TODO: Mixtral metrics
-            # "mixtral-8x7b" : ("ROUGE1", X * 0.99, "ROUGE2", X * 0.99, "ROUGEL", X * 0.99, "TOKENS_PER_SAMPLE", X * 0.9, "gsm8k_accuracy": 73.78*0.99, "mbxp_accuracy": 60.12 * 0.99),
+            "mixtral-8x7b" : ("ROUGE1", 45.4911 * 0.99, "ROUGE2", 23.2829 * 0.99, "ROUGEL", 30.3615 * 0.99, "TOKENS_PER_SAMPLE", 145.9 * 0.9, "gsm8k_accuracy", 73.78*0.99, "mbxp_accuracy", 60.12 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": ("CLIP_SCORE", 31.81331801, "FID_SCORE", 23.95007626),
             "llama2-70b-99" : ("TOKENS_PER_SAMPLE", 294.45*1.1),
-            "llama2-70b-99.9" : ("TOKENS_PER_SAMPLE", 294.45*1.1)
-            # "mixtral-8x7b" :("TOKENS_PER_SAMPLE", X * 0.9)
+            "llama2-70b-99.9" : ("TOKENS_PER_SAMPLE", 294.45*1.1),
+            "mixtral-8x7b" : ("TOKENS_PER_SAMPLE", 145.9 * 1.1)
         },
         "performance-sample-count": {
             "resnet": 1024,
@@ -515,12 +514,12 @@ LLM_LATENCY_LIMITS = {
             "tpot": 200 * 1000000
         }
     },
-    # "mixtral-8x7b":{
-    #     "conversational": {
-    #         "ttft": 2000 * 1000000,
-    #         "tpot": 200 * 1000000
-    #     }
-    # }
+    "mixtral-8x7b":{
+        "conversational": {
+            "ttft": 2000 * 1000000,
+            "tpot": 200 * 1000000
+        }
+    }
 }
 
 ACC_PATTERN = {
@@ -539,6 +538,8 @@ ACC_PATTERN = {
     "TOKENS_PER_SAMPLE": r".*'tokens_per_sample':\s([\d.]+).*",
     "CLIP_SCORE": r".*'CLIP_SCORE':\s([\d.]+).*",
     "FID_SCORE": r".*'FID_SCORE':\s([\d.]+).*",
+    "gsm8k_accuracy": r"'gsm8k':\s([\d.]+).*",
+    "mbxp_accuracy": r"'mbxp':\s([\d.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -2539,6 +2540,7 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
+        "stable-diffusion-xl",
         "mixtral-8x7b"
     ]:
         test_list.remove("TEST04")
@@ -2548,7 +2550,7 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "stable-diffusion-xl"
+        "stable-diffusion-xl",
         "mixtral-8x7b"
     ]:
         test_list.remove("TEST05")

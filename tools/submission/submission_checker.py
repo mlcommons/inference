@@ -2540,6 +2540,7 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
+        "stable-diffusion-xl",
         "mixtral-8x7b"
     ]:
         test_list.remove("TEST04")
@@ -2549,7 +2550,7 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "stable-diffusion-xl"
+        "stable-diffusion-xl",
         "mixtral-8x7b"
     ]:
         test_list.remove("TEST05")

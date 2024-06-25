@@ -3,12 +3,18 @@ name: Build loadgen wheels and release them into PYPI
 on:
   release:
     types: [published]
+  push:
+    branches:
+      - master
+    paths:
+      - loadgen/setup.py
 
 jobs:
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
 
@@ -18,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v3
 
       - name: Install requirements
-        run: python -m pip install cibuildwheel==2.16.2 twine==4.0.2
+        run: python -m pip install cibuildwheel twine
 
       - name: Build wheels
         run: python -m cibuildwheel loadgen/ --output-dir wheels

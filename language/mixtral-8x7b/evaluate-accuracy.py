@@ -193,11 +193,11 @@ def main():
             continue
         correct += (ref == tgt)
 
-    gsm8k_accuracy = 100.0 * correct / gsm8k_total
+    result['gsm8k'] = 100.0 * correct / gsm8k_total
 
     # MBXP metric
     from evaluate_mbxp import evaluate_mbxp
-    mbxp_accuracy = evaluate_mbxp(results_MBXP, args.n_workers)
+    result['mbxp'] = evaluate_mbxp(results_MBXP, args.n_workers)
 
     result = {
         **result,
@@ -205,8 +205,6 @@ def main():
         'gen_num': gen_num,
         'gen_tok_len': gen_tok_len,
         'tokens_per_sample': round(gen_tok_len / gen_num, 1),
-        'gsm8k_accuracy': gsm8k_accuracy,
-        'mbxp_accuracy': mbxp_accuracy
     }
 
     print("\nResults\n")

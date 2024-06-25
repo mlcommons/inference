@@ -37,5 +37,6 @@ The `run_verification.py` found in each test directory will copy the test files 
 | 3d-unet | [TEST01](./TEST01/), [TEST05](./TEST05/) |
 | rnnt | [TEST01](./TEST01/), [TEST05](./TEST05/) |
 | gpt-j | - |
-| stable-diffusion-xl | - |
-| Llama2-70b | [TEST06]() |
+| stable-diffusion-xl | [TEST01](./TEST01/), [TEST04](./TEST04/), [TEST05](./TEST05/) |
+| Llama2-70b | [TEST06](./TEST06/) |
+| mixtral-8x7b | [TEST06](./TEST06/) |

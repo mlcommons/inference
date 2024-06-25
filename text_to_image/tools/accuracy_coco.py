@@ -14,7 +14,10 @@ import numpy as np
 import pandas as pd
 import torch
 from clip.clip_encoder import CLIPEncoder
-from fid.fid_score import compute_fid
+from fid.inception import InceptionV3
+from fid.fid_score import compute_fid, get_activations
+from tqdm import tqdm
+import ijson
 
 
 
@@ -44,14 +47,9 @@ def preprocess_image(img_dir, file_name):
 
 def main():
     args = get_args()
-    result_dict = {}
 
     # Load dataset annotations
     df_captions = pd.read_csv(args.caption_path, sep="\t")
-
-    # Load model outputs
-    with open(args.mlperf_accuracy_file, "r") as f:
-        results = json.load(f)
 
     # set device
     device = args.device if torch.cuda.is_available() else "cpu"
@@ -79,39 +77,99 @@ def main():
             for idx in compliance_images_idx_list:
                 caption_file.write(f"{idx}  {df_captions.iloc[idx]['caption']}\n")
 
-    # Load torchmetrics modules
-    clip = CLIPEncoder(device=device)
+    # Compute accuracy
+    compute_accuracy(
+        args.mlperf_accuracy_file,
+        args.output_file,
+        device,
+        dump_compliance_images,
+        compliance_images_idx_list,
+        args.compliance_images_path,
+        df_captions,
+        statistics_path,
+    )
+    
+
+def compute_accuracy(
+    mlperf_accuracy_file, 
+    output_file,
+    device,
+    dump_compliance_images,
+    compliance_images_idx_list,
+    compliance_images_path,
+    df_captions,
+    statistics_path,
+    batch_size=8,
+    inception_dims=2048,
+    num_workers=1,
+):    
+    if num_workers is None:
+        try:
+            num_cpus = len(os.sched_getaffinity(0))
+        except AttributeError:
+            # os.sched_getaffinity is not available under Windows, use
+            # os.cpu_count instead (which may not return the *available* number
+            # of CPUs).
+            num_cpus = os.cpu_count()
+
+        num_workers = min(num_cpus, 8) if num_cpus is not None else 0
+    else:
+        num_workers = num_workers    
+
+    # Prepare models
+    block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[inception_dims]
+    inception_model = InceptionV3([block_idx]).to(device)
+    clip_model = CLIPEncoder(device=device)
+    
     clip_scores = []
     seen = set()
-    result_list = []
-    for j in results:
-        idx = j['qsl_idx']
-        if idx in seen:
-            continue
-        seen.add(idx)
+    result_batch = []
+    result_dict = {}
+    activations = np.empty((0, inception_dims))
+    
+    # Load model outputs
+    with open(mlperf_accuracy_file, "r") as f:
+        results = ijson.items(f, "item")
 
-        # Load generated image
-        generated_img = np.frombuffer(bytes.fromhex(j['data']), np.uint8).reshape(1024, 1024, 3)
-        result_list.append(generated_img)
-        generated_img = Image.fromarray(generated_img)
+        for j in tqdm(results):
+            idx = j['qsl_idx']
+            if idx in seen:
+                continue
+            seen.add(idx)
 
-        # Dump compliance images
-        if dump_compliance_images and idx in compliance_images_idx_list:
-            generated_img.save(os.path.join(args.compliance_images_path, f"{idx}.png"))
+            # Load generated image
+            generated_img = np.frombuffer(bytes.fromhex(j['data']), np.uint8).reshape(1024, 1024, 3)
+            generated_img = Image.fromarray(generated_img)
 
-        # generated_img = torch.Tensor(generated_img).to(torch.uint8).to(device)
-        # Load Ground Truth
-        caption = df_captions.iloc[idx]["caption"]
-        clip_scores.append(
-            100 * clip.get_clip_score(caption, generated_img).item()
-        )
-    fid_score = compute_fid(result_list, statistics_path, device)
+            # Dump compliance images
+            if dump_compliance_images and idx in compliance_images_idx_list:
+                generated_img.save(os.path.join(compliance_images_path, f"{idx}.png"))
+
+            # Load Ground Truth
+            caption = df_captions.iloc[idx]["caption"]
+            clip_scores.append(
+                100 * clip_model.get_clip_score(caption, generated_img).item()
+            )
+
+            result_batch.append(generated_img.convert("RGB"))
+
+            if len(result_batch) == batch_size:
+                act = get_activations(result_batch, inception_model, batch_size, inception_dims, device, num_workers)
+                activations = np.append(activations, act, axis=0)
+                result_batch.clear()
+        
+        # Remaining data for last batch
+        if len(result_batch) > 0:
+            act = get_activations(result_batch, inception_model, len(result_batch), inception_dims, device, num_workers)
+            activations = np.append(activations, act, axis=0)
+            
+    fid_score = compute_fid(inception_model, activations, statistics_path, device, inception_dims, num_workers)
 
     result_dict["FID_SCORE"] = fid_score
     result_dict["CLIP_SCORE"] = np.mean(clip_scores)
     print(f"Accuracy Results: {result_dict}")
 
-    with open(args.output_file, "w") as fp:
+    with open(output_file, "w") as fp:
         json.dump(result_dict, fp, sort_keys=True, indent=4)
 
 if __name__ == "__main__":

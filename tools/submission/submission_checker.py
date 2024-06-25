@@ -831,6 +831,11 @@ def get_args():
         action="store_true",
         help="skips the check of extra files inside the root submission dir",
     )
+    parser.add_argument(
+        "--scenarios-to-skip",
+        help="Delimited list input of scenarios to skip. i.e. if you only have Offline results, pass in 'Server'",
+        type=str
+    )
     args = parser.parse_args()
     return args
 
@@ -1460,6 +1465,7 @@ def check_results_dir(
     skip_empty_files_check=False,
     skip_check_power_measure_files=False,
     skip_extra_files_in_root_check=False,
+    scenarios_to_skip=[]
 ):
     """
     Walk the results directory and do the checking.
@@ -1860,6 +1866,10 @@ def check_results_dir(
                         # some submissions in v0.5 use lower case scenarios - map them for now
                         scenario_fixed = SCENARIO_MAPPING.get(scenario, scenario)
 
+                        # Skip scenario for debug purposes
+                        if scenario in scenarios_to_skip:
+                            continue
+
                         # we are looking at ./$division/$submitter/results/$system_desc/$model/$scenario,
                         #   ie ./closed/mlperf_org/results/t4-ort/bert/Offline
                         name = os.path.join(
@@ -1941,7 +1951,7 @@ def check_results_dir(
                             )
                             errors += 1
                             continue
-                        else:
+                        elif scenario not in scenarios_to_skip:
                             diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
                             if diff:
                                 log.error(
@@ -2105,6 +2115,8 @@ def check_results_dir(
                         # check if compliance dir is good for CLOSED division
                         compliance = 0 if is_closed_or_network else 1
                         if is_closed_or_network and not skip_compliance:
+                            if scenario in scenarios_to_skip:
+                                continue
                             compliance_dir = os.path.join(
                                 division,
                                 submitter,
@@ -2154,6 +2166,10 @@ def check_results_dir(
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)
+
+                    # Discard scenarios that we want to skip
+                    for scenario in scenarios_to_skip:
+                        required_scenarios.discard(scenario)
 
                     if required_scenarios:
                         name = os.path.join(results_path, system_desc, model_name)
@@ -2629,6 +2645,13 @@ def main():
         skip_power_check=args.skip_power_check,
     )
 
+    if args.scenarios_to_skip:
+        scenarios_to_skip = [
+            scenario for scenario in args.scenarios_to_skip.split(',')
+        ]
+    else:
+        scenarios_to_skip = []
+
     with open(args.csv, "w") as csv:
         os.chdir(args.input)
         # check results directory
@@ -2641,7 +2664,8 @@ def main():
             args.skip_meaningful_fields_emptiness_check,
             args.skip_empty_files_check,
             args.skip_check_power_measure_files,
-            args.skip_extra_files_in_root_check
+            args.skip_extra_files_in_root_check,
+            scenarios_to_skip
         )
 
     # log results

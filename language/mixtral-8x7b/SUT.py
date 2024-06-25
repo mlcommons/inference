@@ -301,7 +301,8 @@ class SUT():
             self.model = self.model.to(self.device)
 
         self.model.eval()
-        self.model = self.model.to(memory_format=torch.channels_last)
+        if self.device != "cpu":
+            self.model = self.model.to(memory_format=torch.channels_last)
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,

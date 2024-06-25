@@ -58,12 +58,8 @@ pip install torch-geometric torch-scatter torch-sparse -f https://data.pyg.org/w
 Follow instalation instructions at: https://github.com/alibaba/graphlearn-for-pytorch.git
 
 ### Download model
-
-TODO: fix a ckpt url
-```bash
-mkdir -p $MODEL_PATH
-wget <checkpoint url>
-```
+#### MLCommons Members Downloads
+You can find the checkpoint in the [MLCommons drive](https://drive.google.com/file/d/1J8TkLNVVjqNy-aRbctu6DAVemUW1y7Tt/view?usp=drive_link)
 
 ### Download and setup dataset
 #### Debug Dataset

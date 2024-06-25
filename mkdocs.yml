@@ -35,6 +35,7 @@ nav:
       - Bert-Large: benchmarks/language/bert.md
       - GPT-J: benchmarks/language/gpt-j.md
       - LLAMA2-70B: benchmarks/language/llama2-70b.md
+      - MIXTRAL-8x7b: benchmarks/language/mixtral-8x7b.md
     - Recommendation:
       - DLRM-v2: benchmarks/recommendation/dlrm-v2.md
   - Submission:

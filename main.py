@@ -25,7 +25,7 @@ def define_env(env):
                  frameworks = [ "Pytorch" ]
 
         elif implementation == "nvidia":
-            if model in [ "sdxl", "llama2-70b-99", "llama2-70b-99.9" ]:
+            if model in [ "sdxl", "llama2-70b-99", "llama2-70b-99.9", "mixtral-8x7b" ]:
                  return pre_space+"    WIP"
             devices = [ "CUDA" ]
             frameworks = [ "TensorRT" ]
@@ -57,7 +57,7 @@ def define_env(env):
 
         if model.lower() == "bert-99.9":
             categories = [ "Datacenter" ]
-        elif "dlrm" in model.lower() or "llama2" in model.lower():
+        elif "dlrm" in model.lower() or "llama2" in model.lower() or "mixtral" in model.lower():
             categories = [ "Datacenter" ]
         else:
             categories = [ "Edge", "Datacenter" ]

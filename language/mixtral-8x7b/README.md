@@ -247,15 +247,15 @@ python -u evaluate-accuracy.py --checkpoint-path mistralai/Mixtral-8x7B-instruct
 Reference scores:
 Open Orca:
 ```json
-{'rouge1': 45.4911, 'rouge2': 23.2829, 'rougeL': 30.3615, 'rougeLsum': 42.4333}
+{'rouge1': 45.4911, 'rouge2': 23.2829, 'rougeL': 30.3615}
 ```
 GSM8K:
 ```json
-{'gsm8k_accuracy': 73.78}
+{'gsm8k': 73.78}
 ```
 MBXP:
 ```json
-{'mbxp_accuracy': 60.16}
+{'mbxp': 60.16}
 ```
 For official submissions, 99% of each reference score is enforced. Additionally, 90%-110% of the generated tokens_per_samples:
 ```json

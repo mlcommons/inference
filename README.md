@@ -35,7 +35,7 @@ For power submissions please use [SPEC PTD 1.10](https://github.com/mlcommons/po
 
 * Framework here is given for the reference implementation. Submitters are free to use their own frameworks to run the benchmark.
 
-## MLPerf Inference v4.0 (submission deadline February 23, 2024)
+## MLPerf Inference v4.0 (submission February 23, 2024)
 
 There is an extra one-week extension allowed only for the llama2-70b submissions. For submissions, please use the master branch and any commit since the [4.0 seed release](https://github.com/mlcommons/inference/commit/8e36925bd36a503e39fcbbc488e9e46126f079ed) although it is best to use the latest commit. v4.0 tag will be created from the master branch after the result publication.
 

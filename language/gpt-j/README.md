@@ -135,3 +135,26 @@ This is a comprehensive list of public datasets and models used by this reposito
 | [gpt-j-6b (Hugging Face)](https://huggingface.co/EleutherAI/gpt-j-6b) | PyTorch | Text Summarization |
 
 Intel expressly disclaims the accuracy, adequacy, or completeness of any data, datasets or models, and is not liable for any errors, omissions, or defects in such content, or for any reliance thereon. Intel also expressly disclaims any warranty of non-infringement with respect to such data, dataset(s), or model(s). Intel is not liable for any liability or damages relating to your use of such data, datasets or models.
+
+
+## Loadgen over the Network 
+
+The below CM command will launch the SUT server
+
+```
+cm run script --tags=run-mlperf,inference,_performance-only --model=gptj-99  \
+--backend=pytorch   --device=cuda --beam_size=1 --precision=bfloat16 \
+--network=sut --rerun --quiet --adr.compiler.tags=gcc 
+```
+
+#### Note: 
+In our experimentation, we found out that in addition to memory occupied by the model, KV cache of size around 6xbeam_size GB occupies the memory.
+
+Once the SUT server is launched, the below command can be run on the loadgen node to do issue queries to the SUT nodes. In this command `-sut_servers` has just the localhost address - it can be changed to a comma-separated list of any hostname/IP in the network. 
+
+```
+cm run script --tags=run-mlperf,inference,_performance-only --model=gptj-99 \
+--backend=pytorch  --test_query_count=30  \
+--network=lon  --rerun --quiet --scenario=Offline \
+--sut_servers,=http://localhost:8000 --adr.compiler.tags=gcc
+```

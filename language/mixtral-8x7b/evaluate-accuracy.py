@@ -173,10 +173,17 @@ def main():
 
     preds, targets = postprocess_text(
         preds_decoded_text, target_required_OpenOrca)
-    result = metric.compute(
-        predictions=preds, references=targets, use_stemmer=True, use_aggregator=False)
-    result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
-    prediction_lens = [len(pred) for pred in preds]
+    
+    if preds:
+        result = metric.compute(
+            predictions=preds, references=targets, use_stemmer=True, use_aggregator=False)
+        result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
+        prediction_lens = [len(pred) for pred in preds]
+
+    else:
+        result = {}
+        prediction_lens = []
+
     # GSM8K metric
     preds_decoded_text = tokenizer.batch_decode(
         preds_token_GSM8K, skip_special_tokens=True)
@@ -197,7 +204,11 @@ def main():
 
     # MBXP metric
     from evaluate_mbxp import evaluate_mbxp
-    result['mbxp'] = evaluate_mbxp(results_MBXP, args.n_workers)
+
+    if results_MBXP:
+        result['mbxp'] = evaluate_mbxp(results_MBXP, args.n_workers)
+    else:
+        result['mbxp'] = 0
 
     result = {
         **result,

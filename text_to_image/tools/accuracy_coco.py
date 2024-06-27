@@ -15,7 +15,7 @@ import pandas as pd
 import torch
 from clip.clip_encoder import CLIPEncoder
 from fid.inception import InceptionV3
-from fid.fid_score import compute_fid, get_activations
+from fid.fid_score import compute_statistics_of_path, get_activations, calculate_frechet_distance
 from tqdm import tqdm
 import ijson
 
@@ -163,7 +163,21 @@ def compute_accuracy(
             act = get_activations(result_batch, inception_model, len(result_batch), inception_dims, device, num_workers)
             activations = np.append(activations, act, axis=0)
             
-    fid_score = compute_fid(inception_model, activations, statistics_path, device, inception_dims, num_workers)
+    m1, s1 = compute_statistics_of_path(
+        statistics_path,
+        inception_model,
+        batch_size,
+        inception_dims,
+        device,
+        num_workers,
+        None,
+        None,
+    )
+
+    m2 = np.mean(activations, axis=0)
+    s2 = np.cov(activations, rowvar=False)
+
+    fid_score = calculate_frechet_distance(m1, s1, m2, s2)
 
     result_dict["FID_SCORE"] = fid_score
     result_dict["CLIP_SCORE"] = np.mean(clip_scores)

@@ -312,8 +312,7 @@ def save_fid_stats(paths, batch_size, device, dims, num_workers=1):
 
 
 def compute_fid(
-    model, 
-    activations,
+    results,
     statistics_path,
     device,
     dims=2048,
@@ -322,6 +321,26 @@ def compute_fid(
     subset_size=None,
     shuffle_seed=None
 ):
+    imgs = [Image.fromarray(e).convert("RGB") for e in results]
+    device = torch.device(device if torch.cuda.is_available() else "cpu")
+    if num_workers is None:
+        try:
+            num_cpus = len(os.sched_getaffinity(0))
+        except AttributeError:
+            # os.sched_getaffinity is not available under Windows, use
+            # os.cpu_count instead (which may not return the *available* number
+            # of CPUs).
+            num_cpus = os.cpu_count()
+
+        num_workers = min(num_cpus, 8) if num_cpus is not None else 0
+    else:
+        num_workers = num_workers
+    assert statistics_path.endswith(".npz")
+
+    block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[dims]
+
+    model = InceptionV3([block_idx]).to(device)
+
     m1, s1 = compute_statistics_of_path(
         statistics_path,
         model,
@@ -333,8 +352,9 @@ def compute_fid(
         shuffle_seed,
     )
 
-    m2 = np.mean(activations, axis=0)
-    s2 = np.cov(activations, rowvar=False)
+    m2, s2 = calculate_activation_statistics(
+        imgs, model, batch_size, dims, device, num_workers
+    )
 
     fid_value = calculate_frechet_distance(m1, s1, m2, s2)
 

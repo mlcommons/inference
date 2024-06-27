@@ -19,7 +19,7 @@ device="cpu"
 for i in $* ; do
     case $i in
        tf|onnxruntime|tflite|pytorch|tvm-onnx|tvm-pytorch|tvm-tflite|ncnn) backend=$i; shift;;
-       cpu|gpu) device=$i; shift;;
+       cpu|gpu|rocm) device=$i; shift;;
        gpu) device=gpu; shift;;
        resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf|retinanet) model=$i; shift;;
     esac

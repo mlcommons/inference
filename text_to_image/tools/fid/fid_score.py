@@ -119,7 +119,7 @@ def get_activations(
 
     start_idx = 0
 
-    for batch in tqdm(dataloader):
+    for batch in dataloader:
         batch = batch.to(device)
 
         with torch.no_grad():

@@ -41,7 +41,7 @@ OLD_MODEL_PATH=./model/resnet/resnet50-19c8e357.pth
 MODEL_PATH=./model/resnet/resnet50-19c8e357-pytorch-native.pth
 DATASET_PATH=./dataset/imagenet/val
 LABEL_PATH=./dataset/imagenet/aux/val.txt
-LOG_PATH=./logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=50000 # total_len=50,000
 
 python tools/resnet50_v1_to_pytorch-native.py $OLD_MODEL_PATH $MODEL_PATH

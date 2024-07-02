@@ -38,7 +38,7 @@ printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=Offline
 MODEL_PATH=./model/3dunet_kits19_pytorch_checkpoint.pth
 PREPROC_DATASET_DIR=./dataset/kits19/preprocessed_data/
-LOG_PATH=./logs/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=43 # total_len=43
 
 LOG_PATH=$LOG_PATH \

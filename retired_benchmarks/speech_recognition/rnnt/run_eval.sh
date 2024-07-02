@@ -41,7 +41,7 @@ SCENARIO=Offline
 OLD_MODEL_PATH=./model/rnnt.pt
 MODEL_PATH=./model/rnnt.pt 
 DATASET_PATH=./dataset
-LOG_PATH=./logs/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 
 python run.py --scenario $SCENARIO --dataset_dir $DATASET_PATH --pytorch_checkpoint $MODEL_PATH \
               --manifest $DATASET_PATH/dev-clean-wav.json --log_dir $LOG_PATH  --accuracy

@@ -38,7 +38,7 @@ printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=Offline
 MODEL_PATH=./model
 DATASET_PATH=./dataset/cnn_eval.json
-LOG_PATH=./logs/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=13368 # total_len=13368
 
 LOG_PATH=$LOG_PATH python main.py --scenario=$SCENARIO --model-path=$MODEL_PATH --dataset-path=$DATASET_PATH --max_examples=$N_COUNT --accuracy --gpu

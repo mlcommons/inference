@@ -41,7 +41,7 @@ MODEL_PATH=./model/retinanet/resnext50_32x4d_fpn.pth
 DATASET_DIR=./dataset/openimages-mlperf
 DATASET_PATH=$DATASET_DIR/validation/data
 ANNOTATION_PATH=$(pwd)/$DATASET_DIR/annotations/openimages-mlperf.json
-LOG_PATH=./logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=24781 # total_len=24,781
 
 python python/main.py --profile=retinanet-pytorch --scenario=$SCENARIO \

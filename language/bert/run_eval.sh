@@ -40,7 +40,7 @@ SCENARIO=Offline
 MODEL_PATH=./model/model.pytorch
 VOCAB_PATH=./model/vocab.txt
 DATASET_PATH=./dataset/dev-v1.1.json
-LOG_PATH=./logs/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=10833 # total_len = 10833
 
 LOG_PATH=$LOG_PATH \

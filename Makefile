@@ -1,6 +1,6 @@
 # end-to-end evaluation
 .PHONY: all
-all: resnet retinanet 3d-unet bert rnnt gpt-j
+all: resnet retinanet 3d-unet bert rnnt gpt-j llama2 stablediffusion
 
 .PHONY: resnet
 resnet:
@@ -31,6 +31,16 @@ gpt-j:
 rnnt:
 	-bash scripts/build_rnnt_env.sh
 	-bash scripts/eval_rnnt.sh
+
+.PHONY: llama2
+llama2:
+	-bash scripts/build_llama2-70b_env.sh
+	-bash scripts/eval_llama2-70b.sh
+
+.PHONY: stablediffusion
+stablediffusion:
+	-bash scripts/build_stablediffusion_env.sh
+	-bash scripts/eval_stablediffusion.sh
 
 # verified evaluation log
 .PHONY: log_all

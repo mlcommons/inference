@@ -96,7 +96,6 @@ class StackTime(torch.nn.Module):
         self.factor = int(factor)
         self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
 
-
     def forward(self, x, x_lens):
         # T, B, U
         r = torch.transpose(x, 0, 1).to(self.dev)

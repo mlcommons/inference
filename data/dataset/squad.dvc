@@ -1,0 +1,6 @@
+outs:
+- md5: f25ebe4557e7ae9bc092d3b3230d5fc8.dir
+  size: 4857698
+  nfiles: 2
+  hash: md5
+  path: squad

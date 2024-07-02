@@ -3,4 +3,4 @@ outs:
   size: 24329181068
   nfiles: 13
   hash: md5
-  path: model
+  path: gpt-j

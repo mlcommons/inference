@@ -5,6 +5,8 @@ model_name=bert
 model_dir=language/bert
 git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
+data_dir=$git_dir/data
+log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 
@@ -18,10 +20,10 @@ conda activate $env_name
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=Offline
-MODEL_PATH=./model/model.pytorch
-VOCAB_PATH=./model/vocab.txt
-DATASET_PATH=./dataset/dev-v1.1.json
-LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+MODEL_PATH=$data_dir/models/bert/model.pytorch
+VOCAB_PATH=$data_dir/models/bert/vocab.txt
+DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
+LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=10833 # total_len = 10,833
 
 LOG_PATH=$LOG_PATH \

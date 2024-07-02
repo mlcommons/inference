@@ -1,0 +1,6 @@
+outs:
+- md5: 201e935deee205bc992d5a395091ea56.dir
+  size: 37719809932
+  nfiles: 646
+  hash: md5
+  path: kits19

@@ -5,6 +5,7 @@ model_name=gpt-j
 model_dir=language/gpt-j
 git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
+data_dir=$git_dir/data
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 
@@ -30,8 +31,8 @@ cd -
 # pull model and dataset
 printf "\n============= STEP-3: Pull dvc data =============\n"
 pip install dvc[s3]
-dvc pull model --force
-dvc pull dataset --force
+dvc pull $data_dir/models/gpt-j --force
+dvc pull $data_dir/dataset/cnn-daily-mail --force
 
 printf "\n============= End of build =============\n"
 

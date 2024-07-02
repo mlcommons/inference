@@ -1,0 +1,6 @@
+outs:
+- md5: f1c88bc44cfc377e492286e8cca5955f.dir
+  size: 205080278
+  nfiles: 2
+  hash: md5
+  path: resnet

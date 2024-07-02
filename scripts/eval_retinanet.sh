@@ -5,6 +5,8 @@ model_name=retinanet
 model_dir=vision/classification_and_detection
 git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
+data_dir=$git_dir/data
+log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 
@@ -18,11 +20,11 @@ conda activate $env_name
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=Offline
-MODEL_PATH=./model/retinanet/resnext50_32x4d_fpn.pth
-DATASET_DIR=./dataset/openimages-mlperf
+MODEL_PATH=$data_dir/models/retinanet/resnext50_32x4d_fpn.pth
+DATASET_DIR=$data_dir/dataset/openimages-mlperf
 DATASET_PATH=$DATASET_DIR/validation/data
-ANNOTATION_PATH=$(pwd)/$DATASET_DIR/annotations/openimages-mlperf.json
-LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+ANNOTATION_PATH=$DATASET_DIR/annotations/openimages-mlperf.json
+LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=24781 # total_len=24,781
 
 python python/main.py --profile=retinanet-pytorch --scenario=$SCENARIO \

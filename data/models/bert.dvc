@@ -3,4 +3,4 @@ outs:
   size: 1340897231
   nfiles: 2
   hash: md5
-  path: model
+  path: bert

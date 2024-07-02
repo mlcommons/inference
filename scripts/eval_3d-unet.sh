@@ -5,6 +5,8 @@ model_name=3d-unet
 model_dir=vision/medical_imaging/3d-unet-kits19
 git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
+data_dir=$git_dir/data
+log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 
@@ -18,9 +20,9 @@ conda activate $env_name
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=Offline
-MODEL_PATH=./model/3dunet_kits19_pytorch_checkpoint.pth
-PREPROC_DATASET_DIR=./dataset/kits19/preprocessed_data/
-LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+MODEL_PATH=$data_dir/models/3d-unet/3dunet_kits19_pytorch_checkpoint.pth
+PREPROC_DATASET_DIR=$data_dir/dataset/kits19/validation/preprocessed_data
+LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 
 LOG_PATH=$LOG_PATH \
 SKIP_VERIFY_ACCURACY=true \

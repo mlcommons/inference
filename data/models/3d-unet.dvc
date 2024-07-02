@@ -3,4 +3,4 @@ outs:
   size: 499153383
   nfiles: 1
   hash: md5
-  path: model
+  path: 3d-unet

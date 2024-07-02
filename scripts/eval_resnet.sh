@@ -5,6 +5,8 @@ model_name=resnet
 model_dir=vision/classification_and_detection
 git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
+data_dir=$git_dir/data
+log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 
@@ -18,11 +20,11 @@ conda activate $env_name
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=Offline
-OLD_MODEL_PATH=./model/resnet/resnet50-19c8e357.pth
-MODEL_PATH=./model/resnet/resnet50-19c8e357-pytorch-native.pth
-DATASET_PATH=./dataset/imagenet/val
-LABEL_PATH=./dataset/imagenet/aux/val.txt
-LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+OLD_MODEL_PATH=$data_dir/models/resnet/resnet50-19c8e357.pth
+MODEL_PATH=$data_dir/models/resnet/resnet50-19c8e357-pytorch-native.pth
+DATASET_PATH=$data_dir/dataset/imagenet/val
+LABEL_PATH=$data_dir/dataset/imagenet/aux/val.txt
+LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=50000 # total_len=50,000
 
 python tools/resnet50_v1_to_pytorch-native.py $OLD_MODEL_PATH $MODEL_PATH

@@ -1,0 +1,6 @@
+outs:
+- md5: b4db1005467dbc08297cc60ea5f35dd7.dir
+  size: 7641239530
+  nfiles: 24784
+  hash: md5
+  path: openimages-mlperf

@@ -1,0 +1,9 @@
+name: mlperf-bert-squad
+channels:
+  - defaults
+dependencies:
+  - python~=3.11.0
+  - pip:
+      - torch==2.1.0
+      - numpy==1.26.2
+      - transformers==4.35.2

@@ -39,16 +39,18 @@ SCENARIO=Offline
 MODEL_PATH=./model/3dunet_kits19_pytorch_checkpoint.pth
 PREPROC_DATASET_DIR=./dataset/kits19/preprocessed_data/
 LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-N_COUNT=43 # total_len=43
 
 LOG_PATH=$LOG_PATH \
 SKIP_VERIFY_ACCURACY=true \
 python run.py --scenario=$SCENARIO --backend=pytorch_checkpoint \
               --model=$MODEL_PATH --preprocessed_data_dir=$PREPROC_DATASET_DIR \
-              --performance_count=$N_COUNT --accuracy
+              --accuracy
 python accuracy_kits.py --log_file=$LOG_PATH/mlperf_log_accuracy.json \
                         --preprocessed_data_dir=$PREPROC_DATASET_DIR \
-                        --postprocessed_data_dir=$LOG_PATH/predictions
+                        --postprocessed_data_dir=$LOG_PATH/predictions \
+                        &> $LOG_PATH/accuracy_result.log
+
+printf "Save eval log to $LOG_PATH"
 
 printf "\n=============End of eval =============\n"
 

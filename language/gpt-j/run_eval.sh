@@ -39,10 +39,13 @@ SCENARIO=Offline
 MODEL_PATH=./model
 DATASET_PATH=./dataset/cnn_eval.json
 LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-N_COUNT=13368 # total_len=13368
+N_COUNT=13368 # total_len=13,368
 
 LOG_PATH=$LOG_PATH python main.py --scenario=$SCENARIO --model-path=$MODEL_PATH --dataset-path=$DATASET_PATH --max_examples=$N_COUNT --accuracy --gpu
-python evaluation.py --mlperf-accuracy-file=$LOG_PATH/mlperf_log_accuracy.json --dataset-file=$DATASET_PATH
+python evaluation.py --mlperf-accuracy-file=$LOG_PATH/mlperf_log_accuracy.json --dataset-file=$DATASET_PATH \
+                     &> $LOG_PATH/accuracy_result.log
+
+printf "Save eval log to $LOG_PATH"
 
 printf "\n=============End of eval =============\n"
 

@@ -49,7 +49,10 @@ python python/main.py --profile=retinanet-pytorch --scenario=$SCENARIO \
                       --output=$LOG_PATH --count=$N_COUNT --accuracy
 python tools/accuracy-openimages.py --openimages-dir=$DATASET_DIR \
                                     --mlperf-accuracy-file=$LOG_PATH/mlperf_log_accuracy.json \
-                                    --output-file=$LOG_PATH/openimages-results.json --verbose
+                                    --output-file=$LOG_PATH/openimages-results.json --verbose \
+                                    &> $LOG_PATH/accuracy_result.log
+
+printf "Save eval log to $LOG_PATH"
 
 printf "\n=============End of eval =============\n"
 

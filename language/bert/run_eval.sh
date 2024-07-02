@@ -41,7 +41,7 @@ MODEL_PATH=./model/model.pytorch
 VOCAB_PATH=./model/vocab.txt
 DATASET_PATH=./dataset/dev-v1.1.json
 LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-N_COUNT=10833 # total_len = 10833
+N_COUNT=10833 # total_len = 10,833
 
 LOG_PATH=$LOG_PATH \
 ML_MODEL_FILE_WITH_PATH=$MODEL_PATH \
@@ -49,7 +49,10 @@ VOCAB_FILE=$VOCAB_PATH \
 DATASET_FILE=$DATASET_PATH \
 SKIP_VERIFY_ACCURACY=true python run.py --scenario=$SCENARIO --backend=pytorch --max_examples=$N_COUNT --accuracy
 python accuracy-squad.py --vocab_file=$VOCAB_PATH --val_data=$DATASET_PATH \
-                         --log_file=$LOG_PATH/mlperf_log_accuracy.json --out_file=$LOG_PATH/predictions.json
+                         --log_file=$LOG_PATH/mlperf_log_accuracy.json --out_file=$LOG_PATH/predictions.json \
+                         &> $LOG_PATH/accuracy_result.log
+
+printf "Save eval log to $LOG_PATH"
 
 printf "\n=============End of eval =============\n"
 

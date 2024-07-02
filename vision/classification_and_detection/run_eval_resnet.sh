@@ -50,7 +50,10 @@ python python/main.py --profile=resnet50-pytorch --scenario=$SCENARIO \
                       --output=$LOG_PATH --count=$N_COUNT --accuracy
 python tools/accuracy-imagenet.py --imagenet-val-file=$LABEL_PATH \
                                   --mlperf-accuracy-file=$LOG_PATH/mlperf_log_accuracy.json \
-                                  --verbose
+                                  --verbose \
+                                  &> $LOG_PATH/accuracy_result.log
+
+printf "Save eval log to $LOG_PATH"
 
 printf "\n=============End of eval =============\n"
 

@@ -44,7 +44,12 @@ DATASET_PATH=./dataset
 LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 
 python run.py --scenario $SCENARIO --dataset_dir $DATASET_PATH --pytorch_checkpoint $MODEL_PATH \
-              --manifest $DATASET_PATH/dev-clean-wav.json --log_dir $LOG_PATH  --accuracy
+              --manifest $DATASET_PATH/dev-clean-wav.json --log_dir $LOG_PATH \
+              --accuracy
+python3 accuracy_eval.py --log_dir $LOG_PATH --dataset_dir $DATASET_PATH --manifest $DATASET_PATH/dev-clean-wav.json \
+                         &> $LOG_PATH/accuracy_result.log
+
+printf "Save eval log to $LOG_PATH"
 
 printf "\n=============End of eval =============\n"
 

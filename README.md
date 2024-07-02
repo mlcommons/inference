@@ -9,7 +9,7 @@
 git clone --branch v4.1-internal https://github.com/furiosa-ai/inference.git
 cd inference
 
-# (optional) if GCC Compiler is not installed on Ubuntu,
+# (optional, for mlperf loadgen) if GCC Compiler is not installed on Ubuntu,
 apt-get update && apt-get install build-essential -y
 ```
 
@@ -29,7 +29,7 @@ bash scripts/build_[model_name]_env.sh
 bash scripts/eval_[model_name].sh
 ```
 
-- `model_name` includes [resnet, retinanet, 3d-unet, bert, gpt-j, rnnt, all]
+- `model_name` includes [resnet, retinanet, 3d-unet, bert, gpt-j, rnnt, llama2, stablediffusion, all]
 - For example, to run E2E ResNet evaluation
     ```
     make resnet
@@ -55,7 +55,7 @@ bash scripts/eval_[model_name].sh
     - GPU: 1 NVIDIA A100-SXM4-80GB
     - CPU: Intel(R) Xeon(R) Platinum 8358 CPU
 
-| model name | internal result    | v3.1 mlperf result                                                                                                               | input shape*            | dataset                                                                                                                               |
+| model name | internal result    | mlperf result                                                                                                               | input shape*            | dataset                                                                                                                               |
 |------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------|------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
 | resnet     | 76.144%(top1 Acc.) | [76.014%(top1 Acc.)](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L18) | 1x3x224x224(NxCxHxW)       | [Imagenet2012 validation](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L86) (num_data: 50,000) |
 | retinanet  | 0.3755(mAP)        | [0.3755(mAP)](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L21)        | 1x3x800x800(NxCxHxW)       | [MLPerf Openimages](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L87) (num_data: 24,781)      |
@@ -89,6 +89,32 @@ make log_[model_name]
     make log_resnet
     ```
     the evaluation log of ResNet will be pulled to `logs/internal/resnet`.
+
+### Configurability
+Some parameters are configurable, for example,
+- llama2-70b
+    
+    The command `make llama2` is equivalent to
+    ```
+    export SCENARIO=Offline # SCENARIO is one of [Offline, Server]
+    export N_COUNT=24576   # N_COUNT is a number between [1, 24576]
+    export DATA_TYPE=float32    # DATA_TYPE is one of [float32, float16, bfloat16]
+    export DEVICE=cuda:0    # DEVICE is one of [cpu, cuda:0]
+    make llama2
+    ```
+    Each environment variable above has the value as default, which can be changed to another.
+
+Likewise,
+
+- stable-diffusion-xl-base
+
+    ```
+    export SCENARIO=Offline # SCENARIO is one of [Offline, SingleStream, MultiStream, Server]
+    export N_COUNT=5000   # N_COUNT is a number between [1, 5000]
+    export DATA_TYPE=fp32    # DATA_TYPE is one of [fp32, fp16, bf16]
+    export DEVICE=cuda    # DEVICE is one of [cpu, cuda]
+    make stablediffusion
+    ```
 
 
 # MLPerf™ Inference Benchmark Suite

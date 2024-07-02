@@ -137,6 +137,20 @@ class PostProcessArgMax:
         results["total"] = self.total
 
 
+class PostProcessArgMaxPytorch(PostProcessArgMax):
+    def __call__(self, results, ids, expected=None, result_dict=None):
+        processed_results = []
+        results = np.argmax(results.detach().cpu().numpy(), axis=1)
+        n = results.shape[0]
+        for idx in range(0, n):
+            result = results[idx] + self.offset
+            processed_results.append([result])
+            if result == expected[idx]:
+                self.good += 1
+        self.total += n
+        return processed_results
+
+
 #
 # pre-processing
 #

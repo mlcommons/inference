@@ -1,0 +1,6 @@
+outs:
+- md5: a45d43a8142477115ce58fa901e61c9a.dir
+  size: 94426849586
+  nfiles: 54
+  hash: md5
+  path: stablediffusion

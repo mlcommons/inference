@@ -86,7 +86,7 @@ Likewise,
     - GPU: 1 NVIDIA A100-SXM4-80GB
     - CPU: Intel(R) Xeon(R) Platinum 8358 CPU
 
-| model name | internal result    | mlperf result                                                                                                               | input shape*            | dataset                                                                                                                               |
+| model name | our result    | mlperf result                                                                                                               | input shape*            | dataset                                                                                                                               |
 |------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------|------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
 | resnet     | 76.144%(top1 Acc.) | [76.014%(top1 Acc.)](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L18) | 1x3x224x224(NxCxHxW)       | [Imagenet2012 validation](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L86) (num_data: 50,000) |
 | retinanet  | 0.3755(mAP)        | [0.3755(mAP)](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L21)        | 1x3x800x800(NxCxHxW)       | [MLPerf Openimages](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L87) (num_data: 24,781)      |
@@ -129,19 +129,19 @@ make log_[model_name]
 
 - LLaMA2-70b
 
-    | data type | internal result | mlperf result                                                                                                      | elapsed time | device |
+    | data type | our result | mlperf result                                                                                                      | elapsed time | device |
     |-----------|-----------------|--------------------------------------------------------------------------------------------------------------------|--------------|--------|
-    | float32   | 44.4312(Rouge1) | [44.4312(Rouge1)](https://github.com/mlcommons/inference/blob/master/tools/submission/submission_checker.py#L1128) | 6.6 days     | 6 H100 |
-    | float16   | 44.4362(Rouge1) |                                                          -                                                         | 3.5 days     | 3 A100 |
-    | bfloat16  | 44.4625(Rouge1) |                                                          -                                                         | 3.6 days     | 3 A100 |
+    | float32   | 44.4312(Rouge1) | [44.4312(Rouge1)](https://github.com/mlcommons/inference/blob/master/tools/submission/submission_checker.py#L1128) | 6.6 days     | 6 H100 PCIe |
+    | float16   | 44.4362(Rouge1) |                                                          -                                                         | 3.5 days     | 3 A100-SXM4-80GB |
+    | bfloat16  | 44.4625(Rouge1) |                                                          -                                                         | 3.6 days     | 3 A100-SXM4-80GB |
 
 - Stable Diffusion XL base
 
-    | data type | internal result     | mlperf result                                                                                                          | elapsed time | device    |
+    | data type | our result     | mlperf result                                                                                                          | elapsed time | device    |
     |-----------|---------------------|------------------------------------------------------------------------------------------------------------------------|--------------|-----------|
-    | float32   | 31.7466(clip_score) | [31.6863(clip_score)](https://github.com/mlcommons/inference/blob/master/tools/submission/submission_checker.py#L1129) | 24 hours     | 1 RTX3090 |
-    | float16   | 31.7558(clip_score) |                                                            -                                                           | 7.5 hours    | 1 RTX3090 |
-    | bfloat16  | 31.7380(clip_score) |                                                            -                                                           | 8.3 hours    | 1 RTX3090 |
+    | float32   | 31.7466(clip_score) | [31.6863(clip_score)](https://github.com/mlcommons/inference/blob/master/tools/submission/submission_checker.py#L1129) | 24 hours     | 1 GeForce RTX 3090 |
+    | float16   | 31.7558(clip_score) |                                                            -                                                           | 7.5 hours    | 1 GeForce RTX 3090 |
+    | bfloat16  | 31.7380(clip_score) |                                                            -                                                           | 8.3 hours    | 1 GeForce RTX 3090 |
 
 
 To get verified evaluation log:

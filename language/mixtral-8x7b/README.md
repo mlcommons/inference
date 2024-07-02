@@ -265,7 +265,7 @@ GSM8K:
 ```
 MBXP:
 ```json
-{'mbxp': 60.16}
+{'mbxp': 60.12}
 ```
 For official submissions, 99% of each reference score is enforced. Additionally, 90%-110% of the generated tokens_per_samples:
 ```json

@@ -1,0 +1,6 @@
+outs:
+- md5: 7532b9e41af14a9799769a05152b25cf.dir
+  size: 80978228
+  nfiles: 501
+  hash: md5
+  path: calibration

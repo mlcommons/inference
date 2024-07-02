@@ -21,8 +21,8 @@ conda activate $env_name
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=Offline
 MODEL_PATH=$data_dir/models/retinanet/resnext50_32x4d_fpn.pth
-DATASET_DIR=$data_dir/dataset/openimages-mlperf
-DATASET_PATH=$DATASET_DIR/validation/data
+DATASET_DIR=$data_dir/dataset/openimages-mlperf/validation
+DATASET_PATH=$DATASET_DIR/data
 ANNOTATION_PATH=$DATASET_DIR/annotations/openimages-mlperf.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=24781 # total_len=24,781

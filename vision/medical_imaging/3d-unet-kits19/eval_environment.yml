@@ -1,0 +1,11 @@
+name: mlperf-3d-unet
+channels:
+  - defaults
+dependencies:
+  - python~=3.8.0
+  - pip:
+      - torch==2.1.0
+      - numpy~=1.19.2
+      - scipy~=1.6.3
+      - pandas~=1.4.3
+      - nibabel~=5.1.0

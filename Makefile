@@ -4,23 +4,33 @@ all: resnet retinanet 3d-unet bert rnnt gpt-j
 
 .PHONY: resnet
 resnet:
-	-bash vision/classification_and_detection/run_eval_resnet.sh
+	-bash scripts/build_resnet_env.sh
+	-bash scripts/eval_resnet.sh
 
 .PHONY: retinanet
 retinanet:
-	-bash vision/classification_and_detection/run_eval_retinanet.sh
+	-bash scripts/build_retinanet_env.sh
+	-bash scripts/eval_retinanet.sh
 
 .PHONY: 3d-unet
 3d-unet:
-	-bash vision/medical_imaging/3d-unet-kits19/run_eval.sh
+	-bash scripts/build_3d-unet_env.sh
+	-bash scripts/eval_3d-unet.sh
 
 .PHONY: bert
 bert:
-	-bash language/bert/run_eval.sh
+	-bash scripts/build_bert_env.sh
+	-bash scripts/eval_bert.sh
 
 .PHONY: gpt-j
 gpt-j:
-	-bash language/gpt-j/run_eval.sh
+	-bash scripts/build_gpt-j_env.sh
+	-bash scripts/eval_gpt-j.sh
+
+.PHONY: rnnt
+rnnt:
+	-bash scripts/build_rnnt_env.sh
+	-bash scripts/eval_rnnt.sh
 
 # verified evaluation log
 .PHONY: log_all

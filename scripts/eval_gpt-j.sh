@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # define env. variables
-model_name=rnnt
-model_dir=speech_recognition/rnnt
+model_name=gpt-j
+model_dir=language/gpt-j
 git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
 env_name=mlperf-$model_name
@@ -18,16 +18,14 @@ conda activate $env_name
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=Offline
-OLD_MODEL_PATH=./model/rnnt.pt
-MODEL_PATH=./model/rnnt.pt 
-DATASET_PATH=./dataset
+MODEL_PATH=./model
+DATASET_PATH=./dataset/cnn_eval.json
 LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
+N_COUNT=13368 # total_len=13,368
 
-python run.py --scenario $SCENARIO --dataset_dir $DATASET_PATH --pytorch_checkpoint $MODEL_PATH \
-              --manifest $DATASET_PATH/dev-clean-wav.json --log_dir $LOG_PATH \
-              --accuracy
-python3 accuracy_eval.py --log_dir $LOG_PATH --dataset_dir $DATASET_PATH --manifest $DATASET_PATH/dev-clean-wav.json \
-                         &> $LOG_PATH/accuracy_result.log
+LOG_PATH=$LOG_PATH python main.py --scenario=$SCENARIO --model-path=$MODEL_PATH --dataset-path=$DATASET_PATH --max_examples=$N_COUNT --accuracy --gpu
+python evaluation.py --mlperf-accuracy-file=$LOG_PATH/mlperf_log_accuracy.json --dataset-file=$DATASET_PATH \
+                     &> $LOG_PATH/accuracy_result.log
 
 printf "Save eval log to $LOG_PATH"
 

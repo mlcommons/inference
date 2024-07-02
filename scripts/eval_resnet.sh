@@ -11,28 +11,9 @@ conda_base=$($CONDA_EXE info --base)
 # work on model directory
 cd $work_dir
 
-# create and enter conda env.
-printf "\n============= STEP-1: Create conda environment and activate =============\n"
-conda remove -n $env_name --all -y
-rm -rf $conda_base/env/$env_name
-conda env create -f eval_$model_name\_environment.yml
-set +u
+# enter existing conda env.
 source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
-set -u
-
-# build mlperf loadgen
-printf "\n============= STEP-2: Build mlperf loadgen =============\n"
-pip install pybind11==2.11.1
-cd $git_dir/loadgen; python setup.py install
-cd -
-
-# pull model and dataset
-printf "\n============= STEP-3: Pull dvc data =============\n"
-pip install dvc[s3]
-dvc pull model/resnet --force
-dvc pull dataset/imagenet/val --force
-dvc pull dataset/imagenet/aux --force
 
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
@@ -55,7 +36,7 @@ python tools/accuracy-imagenet.py --imagenet-val-file=$LABEL_PATH \
 
 printf "Save eval log to $LOG_PATH"
 
-printf "\n=============End of eval =============\n"
+printf "\n============= End of eval =============\n"
 
 # exit from conda env.
 conda deactivate

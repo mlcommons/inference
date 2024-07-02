@@ -1,0 +1,13 @@
+name: mlperf-rnnt
+channels:
+  - defaults
+dependencies:
+  - python~=3.11.0
+  - pip:
+      - torch==2.1.0
+      - torchvision~=0.16.0
+      - toml~=0.10.2
+      - tqdm~=4.66.1
+      - unidecode~=1.3.7
+      - inflect~=7.0.0
+      - librosa~=0.10.1

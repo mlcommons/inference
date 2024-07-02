@@ -1,4 +1,4 @@
-name: mlperf-bert-squad
+name: mlperf-bert
 channels:
   - defaults
 dependencies:

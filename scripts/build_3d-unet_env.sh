@@ -15,7 +15,7 @@ cd $work_dir
 printf "\n============= STEP-1: Create conda environment and activate =============\n"
 conda remove -n $env_name --all -y
 rm -rf $conda_base/env/$env_name
-conda env create -f eval_environment.yml
+conda env create -f $git_dir/scripts/envs/$model_name\_env.yml
 set +u
 source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
@@ -33,26 +33,7 @@ pip install dvc[s3]
 dvc pull model --force
 dvc pull dataset --force
 
-# eval model
-printf "\n============= STEP-4: Run eval =============\n"
-SCENARIO=Offline
-MODEL_PATH=./model/3dunet_kits19_pytorch_checkpoint.pth
-PREPROC_DATASET_DIR=./dataset/kits19/preprocessed_data/
-LOG_PATH=$git_dir/logs/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-
-LOG_PATH=$LOG_PATH \
-SKIP_VERIFY_ACCURACY=true \
-python run.py --scenario=$SCENARIO --backend=pytorch_checkpoint \
-              --model=$MODEL_PATH --preprocessed_data_dir=$PREPROC_DATASET_DIR \
-              --accuracy
-python accuracy_kits.py --log_file=$LOG_PATH/mlperf_log_accuracy.json \
-                        --preprocessed_data_dir=$PREPROC_DATASET_DIR \
-                        --postprocessed_data_dir=$LOG_PATH/predictions \
-                        &> $LOG_PATH/accuracy_result.log
-
-printf "Save eval log to $LOG_PATH"
-
-printf "\n=============End of eval =============\n"
+printf "\n============= End of build =============\n"
 
 # exit from conda env.
 conda deactivate

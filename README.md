@@ -1,4 +1,4 @@
-# FuriosaAI Internal Evaluation(MLPerf v3.1)
+# FuriosaAI Internal Evaluation(MLPerf v4.1 candidate)
 ## Prerequisites
 * Set up AWS credentials, following instructions on "[기타 - DVC & AWS S3 설정](https://www.notion.so/furiosa/DVC-AWS-S3-89c2ee0ce6564dc1bb6ba134e6e86381)".
 * Install Conda: https://docs.anaconda.com/free/anaconda/install/index.html
@@ -6,7 +6,7 @@
 
 ## Installation
 ```
-git clone --branch v3.1-internal https://github.com/furiosa-ai/inference.git
+git clone --branch v4.1-internal https://github.com/furiosa-ai/inference.git
 cd inference
 
 # (optional) if GCC Compiler is not installed on Ubuntu,

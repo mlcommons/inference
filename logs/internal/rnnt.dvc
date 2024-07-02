@@ -1,0 +1,6 @@
+outs:
+- md5: 35a932cbcb68ab7a00bea489ed0732c3.dir
+  size: 16914562
+  nfiles: 5
+  hash: md5
+  path: rnnt

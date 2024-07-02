@@ -1,0 +1,6 @@
+outs:
+- md5: 26cc68151f7fce011cf0e03504449138.dir
+  size: 87769669
+  nfiles: 6
+  hash: md5
+  path: bert-squad

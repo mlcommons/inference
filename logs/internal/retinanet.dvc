@@ -1,0 +1,6 @@
+outs:
+- md5: dee2172e03f324692a3e0b5e436713b4.dir
+  size: 1048155994
+  nfiles: 7
+  hash: md5
+  path: retinanet

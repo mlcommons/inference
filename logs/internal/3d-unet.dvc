@@ -1,0 +1,6 @@
+outs:
+- md5: dacc59510b8d6cde552f1e615cd80024.dir
+  size: 2850001134
+  nfiles: 49
+  hash: md5
+  path: 3d-unet

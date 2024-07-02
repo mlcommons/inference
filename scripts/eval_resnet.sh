@@ -22,7 +22,7 @@ printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=Offline
 OLD_MODEL_PATH=$data_dir/models/resnet/resnet50-19c8e357.pth
 MODEL_PATH=$data_dir/models/resnet/resnet50-19c8e357-pytorch-native.pth
-DATASET_PATH=$data_dir/dataset/imagenet/val
+DATASET_PATH=$data_dir/dataset/imagenet/validation
 LABEL_PATH=$data_dir/dataset/imagenet/aux/val.txt
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=50000 # total_len=50,000

@@ -1,0 +1,6 @@
+outs:
+- md5: 05752e4f97a4fc21f243c65da2dd0a11.dir
+  size: 275910775176
+  nfiles: 44
+  hash: md5
+  path: llama2

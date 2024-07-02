@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.join(os.getcwd(), "..", "..", "lon"))
 from absl import app
 from absl import flags
 
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -50,7 +51,12 @@ def get_args():
     parser.add_argument('--port', type=int, default=8000)
     parser.add_argument('--sut_server', nargs="*", default= ['http://localhost:8000'],
                     help='Address of the server(s) under test.')
-
+    parser.add_argument("--quant_config_path", help="a config for model quantization")
+    parser.add_argument("--quant_param_path", help="quantization parameters for calibrated layers")
+    parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
+    parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")
+    parser.add_argument('--torch_numeric_optim', action="store_true", help="use PyTorch numerical optimizaiton for CUDA/cuDNN")
+    parser.add_argument("--gpu", action="store_true", help="use GPU instead of CPU for the inference")
     args = parser.parse_args()
     return args
 
@@ -93,7 +99,22 @@ def main():
             sut = get_ray_sut(args)
         else:
             raise ValueError("Unknown backend: {:}".format(args.backend))
+    
+    if args.quantize:
+        from quantization import quantize_model
+        from quantization.utils import set_optimization, random_seed
 
+        random_seed()
+        set_optimization(args.torch_numeric_optim)
+
+        if not args.gpu:
+            raise ValueError(
+                "Inference on a device other than GPU is not supported yet."
+            )
+
+        sut.model = quantize_model(sut.model, args.quant_config_path,
+                                   args.quant_param_path, args.quant_format_path)
+        
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
     settings.FromConfig(args.mlperf_conf, "bert", args.scenario)

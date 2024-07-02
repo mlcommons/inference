@@ -86,8 +86,8 @@ class BERT_PyTorch_SUT():
                 attention_mask=torch.LongTensor(input_mask).unsqueeze(0).to(self.dev),
                 token_type_ids=torch.LongTensor(segment_ids).unsqueeze(0).to(self.dev))
             if self.version >= '4.0.0':
-                start_scores = model_output.start_logits
-                end_scores = model_output.end_logits
+                start_scores = model_output['start_logits']
+                end_scores = model_output['end_logits']
             else:
                 start_scores, end_scores = model_output
             output = torch.stack([start_scores, end_scores], axis=-1).squeeze(0).cpu().numpy()

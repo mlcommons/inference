@@ -1,0 +1,13 @@
+name: mlperf-qbert
+channels:
+  - defaults
+dependencies:
+  - python~=3.10.0
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu118
+      - torch==2.1.0+cu118
+      - transformers==4.31.0
+      - numpy==1.26.4
+      - git+https://github.com/furiosa-ai/model-compressor-private.git@050f46daad0b804e28d6c258023e832d3a0b18ae
+      - absl-py==2.1.0 
+      - tokenization==1.0.7

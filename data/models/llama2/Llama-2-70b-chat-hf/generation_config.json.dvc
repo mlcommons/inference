@@ -1,0 +1,5 @@
+outs:
+- md5: 69b48af692821071eb6dda77e71a3e2c
+  size: 188
+  hash: md5
+  path: generation_config.json

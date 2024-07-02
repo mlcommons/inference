@@ -1,0 +1,5 @@
+outs:
+- md5: 8e793fa071ab14dcd77e9bcd6f003be4
+  size: 7230
+  hash: md5
+  path: MODEL_CARD.md

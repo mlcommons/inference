@@ -1,0 +1,5 @@
+outs:
+- md5: eeec4125e9c7560836b4873b6f8e3025
+  size: 499723
+  hash: md5
+  path: tokenizer.model

@@ -1,0 +1,5 @@
+outs:
+- md5: 74a3732aaed2a0456f741f1fc65ce390
+  size: 4766
+  hash: md5
+  path: USE_POLICY.md

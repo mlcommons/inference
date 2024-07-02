@@ -1,0 +1,5 @@
+outs:
+- md5: 0f513a8f67186a9968a88eab15e0e9bd
+  size: 614
+  hash: md5
+  path: config.json

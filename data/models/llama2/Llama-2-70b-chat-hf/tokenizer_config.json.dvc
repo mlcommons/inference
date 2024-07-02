@@ -1,0 +1,5 @@
+outs:
+- md5: 26800a83bb73d5226009006a56095e85
+  size: 1618
+  hash: md5
+  path: tokenizer_config.json

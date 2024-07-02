@@ -1,0 +1,5 @@
+outs:
+- md5: 956cfb12e1e037d7db0845fd1d5e3f70
+  size: 66725
+  hash: md5
+  path: pytorch_model.bin.index.json

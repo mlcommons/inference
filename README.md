@@ -7,6 +7,10 @@
 ## Installation
 ```
 git clone --branch v3.1-internal https://github.com/furiosa-ai/inference.git
+cd inference
+
+# (optional) if GCC Compiler is not installed on Ubuntu,
+apt-get update && apt-get install build-essential -y
 ```
 
 ## How to run end-to-end evaluation

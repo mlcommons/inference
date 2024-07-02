@@ -9,9 +9,6 @@ data_dir=$git_dir/data
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
 
-# install dev package for cv2
-apt-get update && apt-get install libgl1 libglib2.0-0 -y
-
 # work on model directory
 cd $work_dir
 

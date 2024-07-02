@@ -11,6 +11,9 @@ cd inference
 
 # (optional, for mlperf loadgen) if GCC Compiler is not installed on Ubuntu,
 apt-get update && apt-get install build-essential -y
+
+# (optional, for Stable Diffusion only) it requires cv2 related devian packages to run Stable Diffusion
+DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2.0-0 -y
 ```
 
 ## How to run end-to-end evaluation

@@ -1,3 +1,92 @@
+# FuriosaAI Internal Evaluation(MLPerf v3.1)
+## Prerequisites
+* Set up AWS credentials, following instructions on "[기타 - DVC & AWS S3 설정](https://www.notion.so/furiosa/DVC-AWS-S3-89c2ee0ce6564dc1bb6ba134e6e86381)".
+* Install Conda: https://docs.anaconda.com/free/anaconda/install/index.html
+
+
+## Installation
+```
+git clone --branch v3.1-internal https://github.com/furiosa-ai/inference.git
+```
+
+## How to run end-to-end evaluation
+Ene-to-end(E2E) evaluation is the process of downloading models and dataset, building a Python environment, and performing model accuracy evaluation. E2E scripts are developed based on [mlperf v3.1](https://github.com/mlcommons/inference/tree/v3.1). 
+
+To run E2E evaluation:
+
+```
+make [model_name]
+```
+
+or equivalently,
+
+```
+bash scripts/build_[model_name]_env.sh
+bash scripts/eval_[model_name].sh
+```
+
+- `model_name` includes [resnet, retinanet, 3d-unet, bert, gpt-j, rnnt, all]
+- For example, to run E2E ResNet evaluation
+    ```
+    make resnet
+    ```
+
+    or
+
+    ```
+    # build conda environment and download dataset
+    bash scripts/build_resnet_env.sh
+    
+    # run evaluation on pre-built conda environment
+    bash scripts/eval_resnet.sh
+    ```
+
+
+## Evaluation results
+- Default settings:
+    - scenario: Offline
+    - model framework: pytorch
+    - data type: f32
+- Device info:
+    - GPU: 1 NVIDIA A100-SXM4-80GB
+    - CPU: Intel(R) Xeon(R) Platinum 8358 CPU
+
+| model name | internal result    | v3.1 mlperf result                                                                                                               | input shape*            | dataset                                                                                                                               |
+|------------|--------------------|----------------------------------------------------------------------------------------------------------------------------------|------------------------|---------------------------------------------------------------------------------------------------------------------------------------|
+| resnet     | 76.144%(top1 Acc.) | [76.014%(top1 Acc.)](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L18) | 1x3x224x224(NxCxHxW)       | [Imagenet2012 validation](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L86) (num_data: 50,000) |
+| retinanet  | 0.3755(mAP)        | [0.3755(mAP)](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L21)        | 1x3x800x800(NxCxHxW)       | [MLPerf Openimages](https://github.com/mlcommons/inference/blob/v3.1/vision/classification_and_detection/README.md?plain=1#L87) (num_data: 24,781)      |
+| 3d-unet    | 0.86173(Dice)      | [0.86170(Dice)](https://github.com/mlcommons/inference/blob/v3.1/vision/medical_imaging/3d-unet-kits19/README.md?plain=1#L23)    | 1x1x128x128x128(NxCxDxHxW) | [eval set of KiTS 2019](https://github.com/mlcommons/inference/blob/v3.1/vision/medical_imaging/3d-unet-kits19/README.md?plain=1#L23) (num_data: 2,761) |
+| bert       | 90.874%(F1)        | [90.874%(F1)](https://github.com/mlcommons/inference/blob/v3.1/language/bert/README.md?plain=1#L19)                              | 1x384(NxS)                 | [SQuAD v1.1 validation set](https://github.com/mlcommons/inference/blob/v3.1/language/bert/README.md?plain=1#L19) (num_data: 10,833)                     |
+| gpt-j      | 42.9865(Rouge1)    | [42.9865(Rouge1)](https://github.com/mlcommons/inference/blob/v3.1/language/gpt-j/README.md?plain=1#L91)                         | 1x1919(NxS)                | [CNN-Daily Mail](https://github.com/mlcommons/inference/blob/v3.1/language/gpt-j/README.md?plain=1#L54) (num_data: 13,368)                              |
+| rnnt       | 7.45901%(WER)      | [74.45225%(WER)](https://github.com/mlcommons/inference/blob/v3.1/speech_recognition/rnnt/README.md?plain=1#L116)                | 500x1x240(SxNxF)       | [OpenSLR LibriSpeech Corpus](https://github.com/mlcommons/inference/blob/v3.1/speech_recognition/rnnt/README.md?plain=1#L24) (num_data: 2,513)         |
+| dlrm-v2    | TBA                | [80.31%(AUC)](https://github.com/mlcommons/inference/blob/v3.1/recommendation/dlrm_v2/pytorch/README.md?plain=1#L12)             | TBA                    | [Criteo Terabyte (day 23)](https://github.com/mlcommons/inference/blob/v3.1/recommendation/dlrm_v2/pytorch/README.md?plain=1#L92) (num_data: TBA)     |
+
+\* Shape of preprocessed(transformed/tokenized) input. Notations:
+- N: Batch size
+- C: input Channel dimension
+- H: Height dimension
+- W: Width dimension
+- D: Depth dimension
+- S: max Sequence length
+- F: input Feature dimension
+
+To get verified evaluation log:
+
+```
+# (optional) if not installed,
+pip install dvc[s3]
+
+make log_[model_name]
+```
+
+- `model_name` includes [resnet, retinanet, 3d-unet, bert, gpt-j, rnnt, all]
+- For example, with
+    ```
+    make log_resnet
+    ```
+    the evaluation log of ResNet will be pulled to `logs/internal/resnet`.
+
+
 # MLPerf™ Inference Benchmark Suite
 MLPerf Inference is a benchmark suite for measuring how fast systems can run models in a variety of deployment scenarios. 
 

@@ -19,34 +19,52 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
 
 ## Submission Model
 
-### Wi8Ai8KVi8 quantized BERT (qBERT)
+### Wi8Ai8KVi8 Quantized BERT (qBERT)
 
-- Evaluation result
+- Evaluation Result
 
-    |    |         our result          | accuracy target |
+    |    |         Our Result          | Accuracy Target |
     |:--:|:---------------------------:|:---------------:|
-    | F1 | 91.05864237161231 (100.20%) | [90.874](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1119C31-L1119C37)
+    | F1 | 91.0586 (100.20%)           | [90.874](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1119C31-L1119C37) |
 
-To reproduce the above accuracy result, please run as follows:
+To reproduce the results, run the following commands:
 
-```
-. scripts/build_qbert_env.sh  # You can skip this step if you have already set up the environment.
+```sh
+. scripts/build_qbert_env.sh  # Skip this step if the environment is already set up.
 make qbert
 ```
 
-For other evaluations with different settings, you can also change the following environment variables. Each configuration is defined as follows:
-`SCENARIO` is an MLPerf scenario to evaluate the accuracy. It can be one of Offline, SingleStream, MultiStream, or Server. (default: Offline)
-* `N_COUNT`: the number of data to evaluate the accuracy. ([1, 10833])
-* `CALIBRATE`: the calibration is involved in the evaluation step if true. (default: false)
-* `N_CALIB`: the number of data to calibrate the quantized model. ([1, 100])
+For evaluations with different settings, modify the following environment variables:
 
-### Wi8Ai8KVi8 quantized GPT-J (qGPT-J)
+* `SCENARIO`: The MLPerf benchmark scenario. Possible values are `Offline`, `SingleStream`, `MultiStream`, or `Server`. (default: `Offline`)
+* `N_COUNT`: The number of data samples to evaluate. (range: `[1, 10833]`)
+* `CALIBRATE`: Specifies whether to perform calibration during evaluation. (default: `false`)
+* `N_CALIB`: The number of data samples to use for calibrating the quantized model. (range: `[1, 100]`)
 
-TBA
+### Wi8Ai8KVi8 Quantized GPT-J (qGPT-J)
 
-### Wi8Ai8KVi8 quantized LLaMA2-70b (qLLaMA2-70b)
+- Evaluation Result
 
-TBA
+    |         | Our Result                | Accuracy Target |
+    |:-------:|:-------------------------:|:---------------:|
+    | ROUGE1  | 43.0470 (100.14%)         | [42.9865](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C38-L1126C45) |
+    | ROUGE2  | 20.1573 (100.17%)         | [20.1235](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72) |
+    | ROUGEL  | 30.0462 (100.19%)         | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99) |
+    | GEN_LEN | 3,971,863 (98.88%)        | [4,016,878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127) |
+
+To reproduce the results, run the following commands:
+
+```sh
+. scripts/build_qgpt-j_env.sh # Skip this step if the environment is already set up.
+make qgpt-j
+```
+
+For evaluations with different settings, modify the following environment variables:
+
+* `SCENARIO`: The MLPerf benchmark scenario. Possible values are `Offline`, `SingleStream`, or `Server`. (default: `Offline`)
+* `N_COUNT`: The number of data samples to evaluate. (range: `[1, 13368]`)
+* `CALIBRATE`: Specifies whether to perform calibration during evaluation. (default: `false`)
+* `N_CALIB`: The number of data samples to use for calibrating the quantized model. (range: `[1, 1000]`)
 
 
 ## How to run end-to-end evaluation

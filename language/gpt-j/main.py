@@ -18,6 +18,8 @@ def get_args():
     parser.add_argument("--model-path", default="EleutherAI/gpt-j-6B", help="")
     parser.add_argument(
         "--dataset-path", default="./data/cnn_eval.json", help="")
+    parser.add_argument(
+        "--calib-dataset-path", default="./data/cnn_dailymail_calibration.json", help="")
     parser.add_argument("--accuracy", action="store_true",
                         help="enable accuracy pass")
     parser.add_argument("--dtype", default="float32", help="data type of the model, choose from float16, bfloat16 and float32")
@@ -33,13 +35,20 @@ def get_args():
         "--mlperf_conf", default="mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf",
                         help="user config for user LoadGen settings such as target QPS")
-    parser.add_argument("--max_examples", type=int, default=13368,
+    parser.add_argument("--max_examples", type=int, default=None,
                         help="Maximum number of examples to consider (not limited by default)")
     parser.add_argument("--network", choices=["sut","lon",None], default=None, help="Loadgen network mode")
     parser.add_argument('--node', type=str, default="")
     parser.add_argument('--port', type=int, default=8000)
     parser.add_argument('--sut_server', nargs="*", default= ['http://localhost:8000'],
                     help='Address of the server(s) under test.')
+    parser.add_argument("--quant_config_path", help="a config for model quantization")
+    parser.add_argument("--quant_param_path", help="quantization parameters for calibrated layers")
+    parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
+    parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")
+    parser.add_argument('--torch_numeric_optim', action="store_true", help="use PyTorch numerical optimizaiton for CUDA/cuDNN")
+    parser.add_argument("--num_splits", type=int, default=1, help="")
+    parser.add_argument("--split_idx", type=int, default=0, help="")
     args = parser.parse_args()
     return args
 
@@ -116,6 +125,20 @@ def main():
             max_examples=args.max_examples,
             qsl=qsl # If args.network is None, then only QSL get passed to the SUT, else it will be None
         )
+
+        if args.quantize:
+            from quantization import quantize_model
+            from quantization.utils import set_optimization, random_seed
+
+            random_seed()
+            set_optimization(args.torch_numeric_optim)
+
+            if not args.gpu:
+                raise ValueError(
+                    "Inference on a device other than GPU is not supported yet."
+                )
+            
+            sut.model = quantize_model(sut.model, args.quant_config_path, args.quant_param_path, args.quant_format_path)
     
     if args.network == "lon" and args.scenario == "SingleStream":
         print("ERROR: Single stream scenario in Loadgen Over the Network is not supported!")
@@ -149,7 +172,6 @@ def main():
         # Pass SUT as the backend
         set_backend(sut)
         app.run(debug=False, port=args.port, host="0.0.0.0")
-
     else:
         # Test not run in Loadgen Over the Network
         print("Running LoadGen test...")

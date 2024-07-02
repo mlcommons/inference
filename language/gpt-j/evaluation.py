@@ -12,7 +12,7 @@ import evaluate
 import argparse
 import nltk
 from transformers import AutoModelForCausalLM, AutoTokenizer
-
+import yaml,pdb
 
 def get_args():
     """Parse commandline."""
@@ -56,7 +56,6 @@ def main():
     tokenizer.pad_token = tokenizer.eos_token
 
     data_object = Dataset(dataset_path)
-
     targets = data_object.targets
 
     with open(args.mlperf_accuracy_file, "r") as f:
@@ -93,6 +92,9 @@ def main():
 
     result = metric.compute(
         predictions=preds, references=targets, use_stemmer=True, use_aggregator=False)
+    name = dataset_path.split('.')[1].split('/')[-1]
+    # with open(f'result_qlevel_4_{name}.yaml', 'w') as file:
+    #     yaml.dump(result, file)
     result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
     prediction_lens = [len(pred) for pred in preds]
     result["gen_len"] = np.sum(prediction_lens)

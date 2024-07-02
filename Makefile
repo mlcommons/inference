@@ -2,6 +2,9 @@
 .PHONY: qbert
 qbert:
 	-bash scripts/eval_qbert.sh
+.PHONY: qgpt-j
+qgpt-j:
+	-bash scripts/eval_qgpt-j.sh
 
 # end-to-end evaluation
 .PHONY: all

@@ -8,8 +8,9 @@ from torch.nn.functional import pad
 from torch.utils.data import DataLoader
 from typing import Optional, Dict, Sequence
 import io
-import utils
 import copy
+import json
+
 
 PROMPT_DICT = {
     "prompt_input": (
@@ -26,7 +27,7 @@ PROMPT_DICT = {
 
 
 class Dataset():
-    def __init__(self, dataset_path, batch_size=1, pad_val=1, pad_max=196, total_count_override=None, perf_count_override=None):
+    def __init__(self, dataset_path, batch_size=1, pad_val=1, pad_max=196, total_count_override=None, perf_count_override=None, num_splits=1, split_idx=0):
         print("Constructing QSL")
 
         self.dataset = "cnn_dailymail"
@@ -39,7 +40,12 @@ class Dataset():
         self.tokenizer = get_transformer_autotokenizer(self.model_name)
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        self.list_data_dict = utils.jload(self.dataset_path)
+        self.list_data_dict = jload(self.dataset_path)
+        if num_splits > 1:
+            n_splited_data = int(len(self.list_data_dict)/num_splits)
+            start_idx = split_idx*n_splited_data
+            end_idx= (split_idx+1)*n_splited_data if split_idx!=num_splits-1 else len(self.list_data_dict) + 1
+            self.list_data_dict = self.list_data_dict[start_idx:end_idx]
 
         prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
         self.sources = [prompt_input.format_map(
@@ -77,3 +83,17 @@ class Dataset():
 
     def __del__(self):
         print("Finished destroying QSL.")
+
+
+def _make_r_io_base(f, mode: str):
+    if not isinstance(f, io.IOBase):
+        f = open(f, mode=mode)
+    return f
+
+
+def jload(f, mode="r"):
+    """Load a .json file into a dictionary."""
+    f = _make_r_io_base(f, mode)
+    jdict = json.load(f)
+    f.close()
+    return jdict

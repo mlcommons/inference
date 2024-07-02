@@ -1,0 +1,6 @@
+outs:
+- md5: ae060019ee5272c392067f94d4995549.dir
+  size: 11849663
+  nfiles: 3
+  hash: md5
+  path: gpt-j

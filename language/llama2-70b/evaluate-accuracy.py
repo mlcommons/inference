@@ -80,7 +80,14 @@ def main():
         seen.add(qsl_idx)
         target = targets[qsl_idx]
         target_required.append(target)
-        pred = np.frombuffer( bytes.fromhex(pred['data']), eval_dtype)
+        pred = np.frombuffer( bytes.fromhex(pred['data']), eval_dtype).tolist()
+        
+        eos_token_id = 2
+        try:
+            ind = pred.index(eos_token_id)
+            pred = pred[:ind]
+        except:
+            pass
 
         gen_tok_len += len(pred)
         preds_token_ids.append(pred)

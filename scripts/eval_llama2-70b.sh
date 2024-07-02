@@ -61,7 +61,7 @@ printf "$((duration / 60)) minutes and $((duration % 60)) seconds elapsed." &> $
 ACCURACY_LOG_FILE=$LOG_PATH/mlperf_log_accuracy.json
 python evaluate-accuracy.py --checkpoint-path $CHECKPOINT_PATH \
                             --mlperf-accuracy-file $ACCURACY_LOG_FILE \
-                            --dataset-file $DATASET_PATH --dtype int32 \
+                            --dataset-file $DATASET_PATH --dtype int64 \
                             &> $LOG_PATH/accuracy_result.log
 printf "Save eval log to $LOG_PATH"
 

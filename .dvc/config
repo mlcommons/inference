@@ -1,0 +1,5 @@
+[core]
+    remote = mlperf-data
+    autostage = true
+['remote "mlperf-data"']
+    url = s3://furiosa-dvc-private/mlperf-data

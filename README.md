@@ -77,6 +77,98 @@ Likewise,
 
 ## Evaluation results
 
+### Summary
+
+In this section, we present our evaluation result(our result) and [mlperf reference accuracy(reference accuracy)](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1116-L1129) in a comparative manner. It is expected that this will allow us to clearly see the goals we need to achieve and our current status. 
+
+Note that all models are in Pytorch framework with float32 data type, and all experiments were conducted in Offline scenario.
+
+#### language
+
+- llama2-70b
+
+    |     benchmark     | our result | reference accuracy |
+    |:-----------------:|:----------:|:---------------:|
+    | ROUGE1            | 44.4312 (100.00%*)   | [44.4312](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1128C44-L1128C51)         |
+    | ROUGE2            | 22.0352 (100.00%)   | [22.0352](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1128C71-L1128C78)         |
+    | ROUGEL            | 28.6162 (100.00%)   | [28.6162](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1128C98-L1128C105)         |
+    | TOKENS_PER_SAMPLE | 294.4** (99.85%)    | [294.45](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1128C136-L1128C142)          |
+
+    \* `round(our result / reference accuracy, 2)`
+
+    \** `294.4`, our result, is [rounded at the second decimal place](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/language/llama2-70b/evaluate-accuracy.py#L103), whereas `294.4462890625` is actual. It is estimated that the reference accuracy is rounded to the 3rd decimal place.
+
+
+- gpt-j
+
+    |         | our result | reference accuracy |
+    |:-------:|:----------------------:|:---------------:|
+    | ROUGE1  | 42.9865 (100.00%)         | [42.9865](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C38-L1126C45)         |
+    | ROUGE2  | 20.1235 (100.00%)         | [20.1235](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72)         |
+    | ROUGEL  | 29.9881 (100.00%)               | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99)         |
+    | GEN_LEN | 4016878 (100.00%)               | [4016878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127)         |
+
+- bert
+
+    |    |        our result        | reference accuracy |
+    |:--:|:------------------------:|:---------------:|
+    | F1 | 90.87487229720105 (100.00%) | [90.874](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1119C31-L1119C37)          |
+
+#### vision
+
+- resnet
+
+    |        |     our result    | reference accuracy | accuracy(pytorch backend) |
+    |:------:|:-----------------:|:---------------------------------------:|:---------------------------:|
+    | acc(%) | 76.144 (99.59% / 100.17%)* | [76.46](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1116C31-L1116C36)                                   | [76.014](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/vision/classification_and_detection/README.md?plain=1#L18C29-L18C36)                      |
+    
+    \* There are differences between the types of model framework. That is, our model used for our result is Pytorch backended, and the one used for reference accuracy is Tensorflow. The reference accuracy of Pytorch backended model can be checked in the accuracy(pytorch backend) item.
+
+- retinanet
+
+    |        | our result | reference accuracy |
+    |:------:|:----------:|:---------------:|
+    | mAP(%) | 37.552 (100.01%)    | [37.55](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1117C34-L1117C39)           |
+
+- 3d-unet
+
+    |      | our result | reference accuracy |
+    |:----:|:----------:|:---------------:|
+    | DICE | 0.86173 (100.00%)    | [0.86170](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1124C38-L1124C45)         |
+
+#### speech recognition
+
+- rnnt
+
+    |            |        our result       | reference accuracy |
+    |:----------:|:-----------------------:|:---------------:|
+    | WER(%)     | 7.459018241673995      | [7.452](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1118C36-L1118C41)           |
+    | 100-WER(%) | 92.5409817583 (99.99%*) | [92.548](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1118C29-L1118C42)          |
+
+    \* Reason unknown.
+
+#### recommendation
+
+- dlrm-v2
+
+    |     | our result | reference accuracy |
+    |:---:|:----------:|:---------------:|
+    | AUC | TBA*       | [80.31](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1122C37-L1122C42)           |
+
+    \* 8 GPUs are needed for evaluation.
+
+#### text to image
+
+- stable-diffusion-xl-base
+
+    |            |     our result     | reference accuracy |
+    |:----------:|:------------------:|:---------------:|
+    | CLIP_SCORE | 31.74663716465235 (100.19%)  | [31.68631873](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1129C51-L1129C62)     |
+    | FID_SCORE  | 23.431448173651063 (101.83%) | [23.01085758](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1129C77-L1129C88)     |
+
+    \* The gap between our result and reference accuracy is quite large. There is a possibility that the published weight and the one used in the experiment are different. It is neccesary to update evaluation result later.
+
+
 ### v3.1
 - Default settings:
     - scenario: Offline

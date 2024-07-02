@@ -3,4 +3,4 @@ outs:
   size: 87769669
   nfiles: 6
   hash: md5
-  path: bert-squad
+  path: bert

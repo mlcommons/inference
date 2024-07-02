@@ -60,7 +60,7 @@ log_3d-unet:
 
 .PHONY: log_bert
 log_bert:
-	-dvc pull logs/internal/bert-squad.dvc
+	-dvc pull logs/internal/bert.dvc
 
 .PHONY: log_gpt-j
 log_gpt-j:

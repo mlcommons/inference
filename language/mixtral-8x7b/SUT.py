@@ -301,8 +301,10 @@ class SUT():
             self.model = self.model.to(self.device)
 
         self.model.eval()
-        if self.device != "cpu":
+        try: # for systems with low ram, the below command gives error as some part is offloaded to disk
             self.model = self.model.to(memory_format=torch.channels_last)
+        except:
+            pass
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,

@@ -53,7 +53,6 @@ def main():
 
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly
-        log.warning("Accuracy run will generate the accuracy logs, but the evaluation of the log is not completed yet")
     else:
         settings.mode = lg.TestMode.PerformanceOnly
 

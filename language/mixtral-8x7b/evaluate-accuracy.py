@@ -177,7 +177,7 @@ def main():
     if preds:
         result = metric.compute(
             predictions=preds, references=targets, use_stemmer=True, use_aggregator=False)
-        result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
+        result = {k: float(round(np.mean(v) * 100, 4)) for k, v in result.items()}
         prediction_lens = [len(pred) for pred in preds]
 
     else:
@@ -212,7 +212,7 @@ def main():
 
     result = {
         **result,
-        'gen_len': np.sum(prediction_lens),
+        'gen_len': int(np.sum(prediction_lens)),
         'gen_num': gen_num,
         'gen_tok_len': gen_tok_len,
         'tokens_per_sample': round(gen_tok_len / gen_num, 1),

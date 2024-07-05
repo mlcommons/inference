@@ -52,7 +52,7 @@ stablediffusion:
 
 # verified evaluation log
 .PHONY: log_all
-log_all: log_resnet log_retinanet log_3d-unet log_bert log_rnnt log_gpt-j log_llama2 log_stablediffusion
+log_all: log_resnet log_retinanet log_3d-unet log_bert log_rnnt log_gpt-j log_llama2 log_stablediffusion log_qbert
 
 .PHONY: log_resnet
 log_resnet:
@@ -85,3 +85,7 @@ log_llama2:
 .PHONY: log_stablediffusion
 log_stablediffusion:
 	-dvc pull logs/internal/stablediffusion.dvc
+
+.PHONY: log_qbert
+log_qbert:
+	-dvc pull logs/internal/qbert.dvc

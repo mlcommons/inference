@@ -4,12 +4,12 @@ import pickle
 
 import torch
 import yaml
+from torch.fx import GraphModule
 from torch.utils.data import DataLoader
 from transformers import BertConfig, BertForQuestionAnswering
 
 import model_compressor  # isort:skip
 
-from .custom_symbolic_trace import custom_symbolic_trace  # isort:skip
 from .utils import get_kwargs, random_seed, set_optimization  # isort:skip
 
 
@@ -42,8 +42,7 @@ def cal_data_loader(data_path, batch_size, n_calib):
     return DataLoader(data_list, batch_size=batch_size)
 
 
-def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
-    model, _, _ = custom_symbolic_trace(model)
+def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_dataloader):
     model.config.use_cache = False
 
     model = model_compressor.create_quantsim_model(

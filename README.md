@@ -21,11 +21,11 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
 
 ### Wi8Ai8KVi8 Quantized BERT (qBERT)
 
-- Evaluation Result
+- Evaluation Result(v3.11)
 
-    |    |         Our Result          | Accuracy Target |
-    |:--:|:---------------------------:|:---------------:|
-    | F1 | 91.0586 (100.20%)           | [90.874](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1119C31-L1119C37) |
+    |    |                Our Result               |                                                                    Accuracy Target                                                                    |
+    |:--:|:---------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------:|
+    | F1 | 91.05631631816962 (100.20062539138766%) | [90.874](https://github.com/mlcommons/inference/blob/9e2c9f642e6e12b74e7c08d2e099c8af0e542873/tools/submission/submission_checker.py#L254C31-L254C37) |
 
 To reproduce the results, run the following commands:
 

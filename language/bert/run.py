@@ -29,7 +29,7 @@ from absl import flags
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-            "--backend", choices=["tf", "pytorch", "onnxruntime", "tf_estimator", "ray"], default="tf", help="Backend")
+            "--backend", choices=["tf", "pytorch", "onnxruntime", "tf_estimator", "ray", "rngd"], default="tf", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline",
                                                "Server", "MultiStream"], default="Offline", help="Scenario")
     parser.add_argument("--accuracy", action="store_true",
@@ -71,9 +71,6 @@ scenario_map = {
 def main():
     args = get_args()
     
-    set_optimization(args)
-    random_seed()
-
     sut = None
 
     if not args.network or args.network == "sut":
@@ -100,24 +97,13 @@ def main():
             assert not args.profile, "Profiling is only supported by onnxruntime backend!"
             from ray_SUT import get_ray_sut
             sut = get_ray_sut(args)
+        elif args.backend == "rngd":
+            assert not args.profile, "Profiling is only supported by onnxruntime backend!"
+            from RNGD_SUT import get_rngd_sut
+            sut = get_rngd_sut(args)
         else:
             raise ValueError("Unknown backend: {:}".format(args.backend))
-    
-    if args.quantize:
-        from quantization import quantize_model
-        from quantization.utils import set_optimization, random_seed
 
-        random_seed()
-        set_optimization(args.torch_numeric_optim)
-
-        if not args.gpu:
-            raise ValueError(
-                "Inference on a device other than GPU is not supported yet."
-            )
-
-        sut.model = quantize_model(sut.model, args.quant_config_path,
-                                   args.quant_param_path, args.quant_format_path)
-        
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
     settings.FromConfig(args.mlperf_conf, "bert", args.scenario)

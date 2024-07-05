@@ -21,12 +21,13 @@ conda activate $env_name
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=${SCENARIO:=Offline}
+BACKEND="rngd"
 MODEL_PATH=$data_dir/models/bert/model.pytorch
 MODEL_CONFIG_PATH=$data_dir/models/bert/bert_config.json
 VOCAB_PATH=$data_dir/models/bert/vocab.txt
 DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-N_COUNT=${N_COUNT:=10833} # total_len = 10,833
+N_COUNT=${N_COUNT:="10833"} # total_len = 10,833
 
 # quantization args
 CALIBRATE=${CALIBRATE:=false}
@@ -53,7 +54,7 @@ if [ "$CALIBRATE" = true ]; then
     printf "\t\tNUM_CALIB_DATA: $N_CALIB\n"
     QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
     QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
-    python -m quantization.calibrate --backend=pytorch \
+    python -m quantization.calibrate --backend=$BACKEND \
                                      --model_path=$MODEL_PATH \
                                      --model_config_path=$MODEL_CONFIG_PATH \
                                      --quant_config_path=$QUANT_CONFIG_PATH \
@@ -70,7 +71,7 @@ fi
 
 SECONDS=0
 python -m run --scenario=$SCENARIO \
-              --backend=pytorch \
+              --backend=$BACKEND \
               --gpu \
               --quantize \
               --quant_config_path=$QUANT_CONFIG_PATH \

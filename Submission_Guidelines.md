@@ -21,7 +21,7 @@ The MLPerf inference submission rules are spread between the [MLCommons policies
 MLPerf inference submissions are expected to be run on various hardware and supported software stacks. Therefore, MLCommons provides only reference implementations to guide submitters in creating optimal implementations for their specific software and hardware configurations. Additionally, all implementations used for MLPerf inference submissions are available in the MLCommons Inference results repositories, offering further guidance for submitters developing their own implementations.
 
 ### Expected time to do benchmark runs
-1. Closed submission under data enter needs offline and server scenario runs with a minimum of ten minutes needed for both. 
+1. Closed submission under datacenter needs offline and server scenario runs with a minimum of ten minutes needed for both. 
 2. Closed submission under the edge category needs single stream, multi-stream (only for R50 and retinanet), and offline scenarios. A minimum of ten minutes is needed for each scenario. 
 3. Further two (three for ResNet50) compliance runs are needed for closed division, each taking at least 10 minutes for each scenario.
 4. SingleStream, MultiStream and Server scenarios use early stopping and so can always finish around 10 minutes

@@ -1,6 +1,6 @@
 # GPT-J Reference Implementation
 
-Please see [this readme](README_cm.md) file for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/gpt-j) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
 ### Setup Instructions
 

@@ -18,11 +18,7 @@ The MLPerf inference submission rules are spread between the [MLCommons policies
 
 ### Is there an automatic way to run the MLPerf inference benchmarks?
 
-MLPerf inference submissions are expected on different hardware and related software stacks. For this reason, only reference implementations are provided by MLCommons and they can guide submitters to make their own optimal implementations for their software/hardware stack. Also, all the previous implementations are made available in the MLCommons Inference results repositories and they can also guide submitters in doing their own implementations.
-
-[The MLCommons taskforce on automation and reproducibility](https://github.com/mlcommons/ck/blob/master/docs/taskforce.md) has automated all the MLCommons inference tasks using the [MLCommons CM language](https://github.com/mlcommons/ck/blob/master/cm) and [this readme](https://github.com/mlcommons/ck/tree/master/docs/mlperf/inference) can guide you in running the reference implementations with very minimal effort. Currently, this automation supports MLCommons reference implementations, Nvidia implementations, and C++ implementations for Onnxruntime and TFLite. Feel free to join the [taskforce Discord channel](https://discord.gg/8jbEM4J6Ff) if you have any questions.
-
-The previous MLPerf inference results are aggregated in [Collective Knowledge platform (MLCommons CK playground)](platform) as [reproducible experiments](https://access.cknowledge.org/playground/?action=experiments)  and can be used by submitters to compare their results with the previous ones while adding various derived metrics (such as performance/watt) and constraints.
+MLPerf inference submissions are expected to be run on various hardware and supported software stacks. Therefore, MLCommons provides only reference implementations to guide submitters in creating optimal implementations for their specific software and hardware configurations. Additionally, all implementations used for MLPerf inference submissions are available in the MLCommons Inference results repositories, offering further guidance for submitters developing their own implementations.
 
 ### Expected time to do benchmark runs
 1. Closed submission under data enter needs offline and server scenario runs with a minimum of ten minutes needed for both. 
@@ -41,17 +37,15 @@ The previous MLPerf inference results are aggregated in [Collective Knowledge pl
 3. Any submission passing the submission checker is valid to go to the review discussions but submitters are still required to answer any queries and fix any issues being reported by other submitters.
 
 ### Reviewing other submissions
-1. Ensure that the `system_desc_id.json` file is having meaningful responses - submission_checker only checks for the existence of the fields.
+1. Ensure that the `system_desc_id.json` file is having meaningful responses - `submission_checker` only checks for the existence of the fields.
 2. For power submissions, `power settings` and `analyzer table` files are to be submitted, and even though the submission checker checks for the existence of these files, the content of [these files](https://github.com/mlcommons/inference_policies/blob/master/power_measurement.adoc#64-power-management-settings) must be checked manually for validity.
 3. README files in the submission directory must be checked to make sure that the instructions are reproducible.
 4. For closed datacenter submissions, [ECC RAM and Networking requirements](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#constraints-for-the-closed-division) must be ensured.
 5. Submission checker might be reporting warnings and some of these warnings can warrant an answer from the submitter.
 
-## Changes from MLCommons Inference 3.0
+## Changes from MLCommons Inference 4.0
 
-1. Two new benchmarks GPT-J and GPT-3 and DLRMv2 replacing DLRM
-2. Submission checker is now checking for non-empty README files and mandatory system description and power-related fields
-3. New script is provided which can be used to infer scenario results and low-accuracy results from a high-accuracy result
-4. `min_query_count` is removed for all scenarios except offline due to early stopping. SingleStream now needs a minimum of 64 queries and MultiStream needs 662 queries as mandated by the early stopping criteria.
+1. One new benchmark in the datacenter category: Mixtral-8x7B. No changes in the edge category.
+2. For power submissions, there is no code change. 
 
 

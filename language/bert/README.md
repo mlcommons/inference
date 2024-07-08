@@ -47,6 +47,10 @@ Please run the following commands:
 
 ## Loadgen over the Network 
 
+```
+pip install cm4mlops
+```
+
 The below CM command will launch the SUT server
 
 ```

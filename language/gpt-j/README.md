@@ -75,8 +75,7 @@ Please download the fine-tuned GPT-J checkpoint using the instructions below. Th
 The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
 
 ```
-pip install cmind
-cm pull repo mlcommons@ck
+pip install cm4mlops
 cm run script --tags=get,ml-model,gptj,_pytorch,_rclone -j
 ```
 
@@ -138,6 +137,10 @@ Intel expressly disclaims the accuracy, adequacy, or completeness of any data, d
 
 
 ## Loadgen over the Network 
+
+```
+pip install cm4mlops
+```
 
 The below CM command will launch the SUT server
 

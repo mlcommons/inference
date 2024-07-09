@@ -27,13 +27,13 @@ MLPerf inference submissions are expected to be run on various hardware and supp
 4. SingleStream, MultiStream and Server scenarios use early stopping and so can always finish around 10 minutes
 5. Offline scenario needs a minimum of 24756 input queries to be processed -- can take hours for low-performing models like 3dunet, LLMs, etc.
 6. Open division has no accuracy constraints, no required compliance runs, and can be submitted for any single scenario. There is no constraint on the model used except that the model accuracy must be validated on the accuracy dataset used in the corresponding MLPerf inference task [or must be preapproved](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#412-relaxed-constraints-for-the-open-division).
-7. Power submission needs an extra ranging mode to determine the peak current usage and this often doubles the overall experiment run time.
+7. Power submission needs an extra ranging mode to determine the peak current usage and this often doubles the overall experiment run time. If this overhead is too much, ranging run can be reduced to 5 minutes run using mechanisms like [this](https://github.com/mlcommons/cm4mlops/blob/main/script/benchmark-program-mlperf/customize.py#L18).
 
 
 ## Validity of the submission
 
 1. [MLCommons Inference submission checker](https://github.com/mlcommons/inference/blob/master/tools/submission/submission_checker.py) is provided to ensure that all submissions are passing the required checks.
-2. In the unlikely event that there is an error on the submission checker for your submission, please raise a Github issue [here](https://github.com/mlcommons/inference/issues)
+2. In the unlikely event that there is an error on the submission checker for your submission, please raise a GitHub issue [here](https://github.com/mlcommons/inference/issues)
 3. Any submission passing the submission checker is valid to go to the review discussions but submitters are still required to answer any queries and fix any issues being reported by other submitters.
 
 ### Reviewing other submissions

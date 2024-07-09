@@ -9,9 +9,9 @@ Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks) 
 
 | Implementation | Framework | Supported Devices | Supported Precision |
 | -------------- | --------- | ----------------- | ------------------- |
-| [Reference](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_1_1) | Onnxruntime | CPU, CUDA, ROCm | fp32 |
-| [Reference](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_1_1) | Tensorflow | CPU, CUDA, ROCm | fp32 |
-| [Reference](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_1_1) | Deepsparse | CPU | fp32, int8 |
+| [Reference](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_3_1) | Onnxruntime | CPU, CUDA, ROCm | fp32 |
+| [Reference](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_3_2) | Tensorflow | CPU, CUDA, ROCm | fp32 |
+| [Reference](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_3_3) | Deepsparse | CPU | fp32, int8 |
 | [Nvidia](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_1_2) | TensorRT | CUDA | int8 |
 | [Intel](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_1_3) | PyTorch | CPU | int8 |
 | [MLCommons C++](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_1_5) | Onnxruntime | CPU, CUDA | fp32 |
@@ -20,8 +20,8 @@ Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks) 
 
 | Implementation | Framework | Supported Devices | Supported Precision |
 | -------------- | --------- | ----------------- | ------------------- |
-| [Reference](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_1_1) | Onnxruntime | CPU, CUDA, ROCm | fp32 |
-| [Reference](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_1_1) | PyTorch | CPU, CUDA, ROCm | fp32 |
+| [Reference](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_3_1) | Onnxruntime | CPU, CUDA, ROCm | fp32 |
+| [Reference](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_3_2) | PyTorch | CPU, CUDA, ROCm | fp32 |
 | [Nvidia](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_1_2) | TensorRT | CUDA | int8 |
 | [Intel](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_1_3) | PyTorch | CPU | int8 |
 | [MLCommons C++](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_1_5) | Onnxruntime | CPU, CUDA | fp32 |

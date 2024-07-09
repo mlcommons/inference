@@ -27,7 +27,7 @@ Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks) 
 | [MLCommons C++](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_1_5) | Onnxruntime | CPU, CUDA | fp32 |
 
 
-You can find a short tutorial on how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
+Additionally, you can find a short tutorial on how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
 
 
 ## Supported Models

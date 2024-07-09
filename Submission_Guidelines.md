@@ -18,7 +18,7 @@ The MLPerf inference submission rules are spread between the [MLCommons policies
 
 ### Is there an automatic way to run the MLPerf inference benchmarks?
 
-MLPerf inference submissions are expected to be run on various hardware and supported software stacks. Therefore, MLCommons provides only reference implementations to guide submitters in creating optimal implementations for their specific software and hardware configurations. Additionally, all implementations used for MLPerf inference submissions are available in the MLCommons [Inference_results](https://github.com/orgs/mlcommons/repositories?q=inference_results_v+sort%3Aname) repositories (under `closed/<submitter>/code` directory), offering further guidance for submitters developing their own implementations.
+MLPerf inference submissions are expected to be run on various hardware and supported software stacks. Therefore, MLCommons provides only reference implementations to guide submitters in creating optimal implementations for their specific software and hardware configurations. Additionally, all implementations used for MLPerf inference submissions are available in the MLCommons [Inference results](https://github.com/orgs/mlcommons/repositories?q=inference_results_v+sort%3Aname) repositories (under `closed/<submitter>/code` directory), offering further guidance for submitters developing their own implementations.
 
 ### Expected time to do benchmark runs
 1. Closed submission under datacenter needs offline and server scenario runs with a minimum of ten minutes needed for both. 

@@ -31,7 +31,7 @@ def get_args():
     parser.add_argument("--output-file", default="coco-results.json", help="path to output file")
     parser.add_argument("--compliance-images-path", required=False, help="path to dump 10 stable diffusion xl compliance images")
     parser.add_argument("--device", default="cpu", choices=["gpu", "cpu"])
-    parser.add_argument("--edge", action="store_true", help="device is edge device with limited storage")
+    parser.add_argument("--low_memory", action="store_true", help="If device is has limited memory (<70G), use the memory saving path.")
     args = parser.parse_args()
     return args
 
@@ -79,9 +79,9 @@ def main():
                 caption_file.write(f"{idx}  {df_captions.iloc[idx]['caption']}\n")
 
     # Compute accuracy
-    if args.edge:
-        print(f"Running on edge device, use storage saving method!")
-        compute_accuracy_storage_saving(
+    if args.low_memory:
+        print(f"Device has low memory, running memory saving path!")
+        compute_accuracy_low_memory(
             args.mlperf_accuracy_file,
             args.output_file,
             device,
@@ -156,7 +156,7 @@ def compute_accuracy(
         json.dump(result_dict, fp, sort_keys=True, indent=4)
 
 
-def compute_accuracy_storage_saving(
+def compute_accuracy_low_memory(
     mlperf_accuracy_file, 
     output_file,
     device,

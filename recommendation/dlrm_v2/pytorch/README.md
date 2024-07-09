@@ -2,6 +2,8 @@
 
 This is the reference implementation for MLCommons Inference benchmarks.
 
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/recommendation/dlrm-v2/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
 ### Supported Models
 
 **TODO: Decide benchmark name**
@@ -80,8 +82,7 @@ N/A | pytorch | <2GB | -
 The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
 
 ```
-pip install cmind
-cm pull repo mlcommons@ck
+pip install cm4mlops
 cm run script --tags=get,ml-model,dlrm,_pytorch,_weight_sharded,_rclone -j
 ```
 

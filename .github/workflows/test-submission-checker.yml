@@ -28,8 +28,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python3 -m pip install cmind
-        cm pull repo mlcommons@ck
+        python3 -m pip install cm4mlops
         git clone https://github.com/mlcommons/inference_results_v4.0 --depth 1
     - name: Test MLPerf inference submission checker
       run: |

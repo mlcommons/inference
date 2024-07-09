@@ -1,7 +1,13 @@
+# https://github.com/furiosa-ai/inference-compression/blob/MLPerf4.1-v3.11/language/gpt-j/quantization/autoscale/transform_descriptor_utils.py
+
 import json
 import logging
 
+import furiosa_llm_models
 import torch
+import transformers
+
+from .model_dict import GPTJForCausalLM_dict
 
 __all__ = ["create_descriptor_from_args", "load_predefined_settings"]
 
@@ -15,11 +21,10 @@ def _define_transform_descriptor_from_model_type(
     if_outlier_compensated=False,
     init_dict_with={},
 ):
+    from transformers.models.bert.modeling_bert import BertForQuestionAnswering
     from transformers.models.bloom.modeling_bloom import BloomForCausalLM
     from transformers.models.llama.modeling_llama import LlamaForCausalLM
     from transformers.models.opt.modeling_opt import OPTForCausalLM
-    from transformers.models.gptj.modeling_gptj import GPTJForCausalLM
-    from transformers.models.bert.modeling_bert import BertForQuestionAnswering
 
     if_autoscale_postprocessor = not if_autoscale_preprocessor
     transform_descriptor = []
@@ -27,40 +32,40 @@ def _define_transform_descriptor_from_model_type(
     if (
         isinstance(model, OPTForCausalLM)
         or isinstance(model, LlamaForCausalLM)
-        or isinstance(model, GPTJForCausalLM)
+        or type(model) in GPTJForCausalLM_dict.keys()
     ):
         if isinstance(model, OPTForCausalLM):
-            _model_type = 'OPTForCausalLM'
+            _model_type = "OPTForCausalLM"
         elif isinstance(model, LlamaForCausalLM):
-            _model_type = 'LlamaForCausalLM'
-        elif isinstance(model, GPTJForCausalLM):
-            _model_type = 'GPTJForCausalLM'
+            _model_type = "LlamaForCausalLM"
+        elif type(model) in GPTJForCausalLM_dict.keys():
+            _model_type = "GPTJForCausalLM"
 
         if if_autoscale_preprocessor:
             transform_descriptor.extend(
                 [
                     {
-                        'model_type': _model_type,
-                        'method': 'qkv_integration',
-                        'nodes_to_replace': ['q_proj', 'k_proj', 'v_proj'],
-                        'new_nodes_to_create': ['q_proj'],
+                        "model_type": _model_type,
+                        "method": "qkv_integration",
+                        "nodes_to_replace": ["q_proj", "k_proj", "v_proj"],
+                        "new_nodes_to_create": ["q_proj"],
                     }
                 ]
             )
 
         elif if_autoscale_postprocessor:
             if if_outlier_compensated:
-                _method = 'qkv_seperation_with_outlier_module'
+                _method = "qkv_seperation_with_outlier_module"
             else:
-                _method = 'qkv_seperation'
+                _method = "qkv_seperation"
 
             transform_descriptor.extend(
                 [
                     {
-                        'model_type': _model_type,
-                        'method': _method,
-                        'nodes_to_replace': ['q_proj'],
-                        'new_nodes_to_create': ['q_proj', 'k_proj', 'v_proj'],
+                        "model_type": _model_type,
+                        "method": _method,
+                        "nodes_to_replace": ["q_proj"],
+                        "new_nodes_to_create": ["q_proj", "k_proj", "v_proj"],
                     }
                 ]
             )
@@ -75,30 +80,30 @@ def _define_transform_descriptor_from_model_type(
             transform_descriptor.extend(
                 [
                     {
-                        'model_type': 'BertForQuestionAnswering',
-                        'method': 'qkv_integration',
-                        'nodes_to_replace': ['query', 'key', 'value'],
-                        'new_nodes_to_create': ['query'],
+                        "model_type": "BertForQuestionAnswering",
+                        "method": "qkv_integration",
+                        "nodes_to_replace": ["query", "key", "value"],
+                        "new_nodes_to_create": ["query"],
                     }
                 ]
             )
 
         elif if_autoscale_postprocessor:
             if if_outlier_compensated:
-                _method = 'qkv_seperation_with_outlier_module'
+                _method = "qkv_seperation_with_outlier_module"
             else:
-                _method = 'qkv_seperation'
+                _method = "qkv_seperation"
 
             transform_descriptor.extend(
                 [
                     {
-                        'model_type':'BertForQuestionAnswering',
-                        'method': _method,
-                        'nodes_to_replace': ['query'],
-                        'new_nodes_to_create': ['query', 'key', 'value'],
+                        "model_type": "BertForQuestionAnswering",
+                        "method": _method,
+                        "nodes_to_replace": ["query"],
+                        "new_nodes_to_create": ["query", "key", "value"],
                     }
                 ]
-            ) 
+            )
     else:
         raise NotImplementedError(type(model))
 
@@ -115,31 +120,31 @@ def _define_transform_descriptor_from_model_type(
 def _define_transform_descriptor_from_method(transform_method=None, init_dict_with={}):
     # define transform descriptor according to transform_method
 
-    if transform_method == 'qkv_integration':
+    if transform_method == "qkv_integration":
         transform_descriptor = {
-            'method': 'qkv_integration',
-            'nodes_to_replace': ['q_proj', 'k_proj', 'v_proj'],
-            'new_nodes_to_create': ['q_proj'],
+            "method": "qkv_integration",
+            "nodes_to_replace": ["q_proj", "k_proj", "v_proj"],
+            "new_nodes_to_create": ["q_proj"],
         }
-    elif transform_method == 'qkv_seperation':
+    elif transform_method == "qkv_seperation":
         transform_descriptor = {
-            'method': 'qkv_seperation',
-            'nodes_to_replace': ['q_proj'],
-            'new_nodes_to_create': ['q_proj', 'k_proj', 'v_proj'],
+            "method": "qkv_seperation",
+            "nodes_to_replace": ["q_proj"],
+            "new_nodes_to_create": ["q_proj", "k_proj", "v_proj"],
         }
-    elif transform_method == 'qkv_seperation_with_outlier_module':
+    elif transform_method == "qkv_seperation_with_outlier_module":
         transform_descriptor = {
-            'method': 'qkv_seperation_with_outlier_module',
-            'nodes_to_replace': ['q_proj'],
-            'new_nodes_to_create': ['q_proj', 'k_proj', 'v_proj'],
+            "method": "qkv_seperation_with_outlier_module",
+            "nodes_to_replace": ["q_proj"],
+            "new_nodes_to_create": ["q_proj", "k_proj", "v_proj"],
         }
-    elif transform_method == 'set_proxy_target':
+    elif transform_method == "set_proxy_target":
         transform_descriptor = {
-            'method': 'set_proxy_target',
-            'module2inspect': [],
-            'layers2inspect': [],
-            'nodes_using_proxy_target': [],
-            'layer_kwargs': {},
+            "method": "set_proxy_target",
+            "module2inspect": [],
+            "layers2inspect": [],
+            "nodes_using_proxy_target": [],
+            "layer_kwargs": {},
         }
     else:
         raise NotImplementedError(transform_method)
@@ -153,19 +158,19 @@ def _define_transform_descriptor_from_method(transform_method=None, init_dict_wi
 def load_predefined_settings(
     model: torch.nn.Module, autoscale, loader_calib, if_outlier_compensated=False
 ):
+    from transformers.models.bert.modeling_bert import BertForQuestionAnswering
     from transformers.models.bloom.modeling_bloom import BloomForCausalLM
     from transformers.models.llama.modeling_llama import LlamaForCausalLM
     from transformers.models.opt.modeling_opt import OPTForCausalLM
-    from transformers.models.gptj.modeling_gptj import GPTJForCausalLM
-    from transformers.models.bert.modeling_bert import BertForQuestionAnswering
+
     preprocessor = []
     postprocessor = []
 
     if (
         isinstance(model, OPTForCausalLM)
         or isinstance(model, LlamaForCausalLM)
-        or isinstance(model, GPTJForCausalLM)
         or isinstance(model, BertForQuestionAnswering)
+        or type(model) in GPTJForCausalLM_dict.keys()
     ):
         preprocessor.extend(
             _define_transform_descriptor_from_model_type(
@@ -184,7 +189,7 @@ def load_predefined_settings(
         pass
 
     else:
-        logger.warning(f'There is no predefined graph processor for {type(model)}')
+        logger.warning(f"There is no predefined graph processor for {type(model)}")
 
     return preprocessor, postprocessor
 
@@ -204,34 +209,36 @@ def create_descriptor_from_args(autoscale, customized_model_node_kwargs_json_pat
             print(e, f"Invalid json file. {customized_model_node_kwargs_json_path}")
 
     qkv_node_name = [
-        customized_model_node_kwargs.pop('q_node', None),
-        customized_model_node_kwargs.pop('k_node', None),
-        customized_model_node_kwargs.pop('v_node', None),
+        customized_model_node_kwargs.pop("q_node", None),
+        customized_model_node_kwargs.pop("k_node", None),
+        customized_model_node_kwargs.pop("v_node", None),
     ]
 
     if not all([name is not None for name in qkv_node_name]):
-        raise ValueError("Invalid q, k, v node name. Check args.customized_model_node_kwargs.")
+        raise ValueError(
+            "Invalid q, k, v node name. Check args.customized_model_node_kwargs."
+        )
 
-    if autoscale == 'AWQ':
-        qkv_node_suffix = [node_name.split('.')[-1] for node_name in qkv_node_name]
+    if autoscale == "AWQ":
+        qkv_node_suffix = [node_name.split(".")[-1] for node_name in qkv_node_name]
         if len(qkv_node_suffix) > 1:
             # Need to integrate qkv for autoscale. Preprocessor will redefine integrated linear node at qkv_node_suffix[0].
 
             preprocessor.append(
                 _define_transform_descriptor_from_method(
-                    'qkv_integration',
+                    "qkv_integration",
                     {
-                        'nodes_to_replace': qkv_node_suffix,
-                        'new_nodes_to_create': [qkv_node_suffix[0]],
+                        "nodes_to_replace": qkv_node_suffix,
+                        "new_nodes_to_create": [qkv_node_suffix[0]],
                     },
                 )
             )
             postprocessor.append(
                 _define_transform_descriptor_from_method(
-                    'qkv_seperation',
+                    "qkv_seperation",
                     {
-                        'nodes_to_replace': [qkv_node_suffix[0]],
-                        'new_nodes_to_create': qkv_node_suffix,
+                        "nodes_to_replace": [qkv_node_suffix[0]],
+                        "new_nodes_to_create": qkv_node_suffix,
                     },
                 )
             )

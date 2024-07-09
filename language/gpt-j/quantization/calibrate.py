@@ -4,13 +4,12 @@ import sys
 
 import torch
 import yaml
+from torch.fx import GraphModule
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM
 
 import model_compressor  # isort:skip
-
 from dataset import Dataset  # isort:skip
-from quantization.custom_symbolic_trace import custom_symbolic_trace  # isort:skip
 from quantization.utils import get_kwargs, random_seed, set_optimization  # isort:skip
 
 
@@ -54,25 +53,23 @@ def cal_data_loader(calib_dataset_path, batch_size, n_calib):
     data_object = Dataset(calib_dataset_path, batch_size)
     data_list = [
         {
-                "input_ids": data_object.source_encoded_input_ids[idx],
-                "attention_mask": data_object.source_encoded_attn_masks[idx],
-                "position_ids": torch.arange(
-                    len(data_object.source_encoded_input_ids[idx][0])
-                ),
-            }
+            "input_ids": data_object.source_encoded_input_ids[idx],
+            "attention_mask": data_object.source_encoded_attn_masks[idx],
+            "position_ids": torch.arange(
+                len(data_object.source_encoded_input_ids[idx][0])
+            ),
+        }
         for idx in range(len(data_object.source_encoded_input_ids))[:n_calib]
     ]
     return DataLoader(data_list, batch_size)
 
 
-def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
+def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_dataloader):
     run_autoscale = qconfig.get("autoscale", "disabled") != "disabled"
     if run_autoscale:
         autoscale_calib_cfg = get_autoscale_calib_config(
             qconfig, model, calib_dataloader
         )
-
-    model, _, _ = custom_symbolic_trace(model)
 
     model = model_compressor.create_quantsim_model(
         model,

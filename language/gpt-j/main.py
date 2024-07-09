@@ -4,7 +4,7 @@ import argparse
 import os
 import math
 import sys
-from backend_PyTorch import get_SUT
+
 from GPTJ_QDL import GPTJ_QDL
 from GPTJ_QSL import get_GPTJ_QSL
 
@@ -12,7 +12,7 @@ from GPTJ_QSL import get_GPTJ_QSL
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--backend", choices=["pytorch"], default="pytorch", help="Backend")
+        "--backend", choices=["pytorch", "rngd"], default="pytorch", help="Backend")
     parser.add_argument("--scenario", choices=["SingleStream", "Offline",
                         "Server"], default="Offline", help="Scenario")
     parser.add_argument("--model-path", default="EleutherAI/gpt-j-6B", help="")
@@ -115,7 +115,10 @@ def main():
         # Gets SUT.
         # SUT only initialised when network is either None or is SUT as it is not needed in case of client(LON).
         # Only the server loads the model.
-        sut = get_SUT(
+        if args.backend == "pytorch":
+            from backend_PyTorch import get_SUT
+        
+            sut = get_SUT(
             model_path=args.model_path,
             scenario=args.scenario,
             dtype=args.dtype,
@@ -125,20 +128,22 @@ def main():
             max_examples=args.max_examples,
             qsl=qsl # If args.network is None, then only QSL get passed to the SUT, else it will be None
         )
+        elif args.backend == "rngd":
+            from backend_RNGD import get_SUT
 
-        if args.quantize:
-            from quantization import quantize_model
-            from quantization.utils import set_optimization, random_seed
-
-            random_seed()
-            set_optimization(args.torch_numeric_optim)
-
-            if not args.gpu:
-                raise ValueError(
-                    "Inference on a device other than GPU is not supported yet."
-                )
-            
-            sut.model = quantize_model(sut.model, args.quant_config_path, args.quant_param_path, args.quant_format_path)
+            sut = get_SUT(
+            model_path=args.model_path,
+            scenario=args.scenario,
+            dtype=args.dtype,
+            use_gpu=args.gpu,
+            network=args.network,
+            dataset_path=args.dataset_path,
+            max_examples=args.max_examples,
+            qsl=qsl, # If args.network is None, then only QSL get passed to the SUT, else it will be None,
+            args=args
+        )
+        else:
+            raise ValueError(f"Unsupported backend: {args.backend}")
     
     if args.network == "lon" and args.scenario == "SingleStream":
         print("ERROR: Single stream scenario in Loadgen Over the Network is not supported!")

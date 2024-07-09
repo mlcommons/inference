@@ -2,12 +2,15 @@ name: mlperf-gpt-j
 channels:
   - defaults
 dependencies:
-  - python~=3.11.0
+  - python~=3.9.0
   - pip:
       - torch==2.1.0
-      - transformers==4.35.2
+      - transformers==4.31.0
       - datasets==2.15.0
       - nltk==3.8.1
       - evaluate==0.4.1
       - absl-py==2.0.0
       - rouge_score==0.1.2
+      - accelerate==0.31.0
+      - numpy==1.26.4
+      - git+https://github.com/furiosa-ai/furiosa-llm-models.git@MLPerf4.1-v3.11

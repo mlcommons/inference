@@ -1,18 +1,24 @@
+# https://github.com/furiosa-ai/inference-compression/blob/MLPerf4.1-v3.11/language/gpt-j/quantization/autoscale/extract_kwargs.py
+
 import gc
 import json
 import logging
 import sys
 from typing import Any, Dict
 
+import furiosa_llm_models
 import model_compressor
 import torch
+import transformers
+from transformers.models.bert.modeling_bert import BertForQuestionAnswering
+from transformers.models.bloom.modeling_bloom import (BloomBlock,
+                                                      BloomForCausalLM)
+from transformers.models.llama.modeling_llama import (LlamaAttention,
+                                                      LlamaForCausalLM)
+from transformers.models.opt.modeling_opt import OPTAttention, OPTForCausalLM
 
 from . import transform_descriptor_utils
-from transformers.models.bloom.modeling_bloom import BloomBlock, BloomForCausalLM
-from transformers.models.llama.modeling_llama import LlamaAttention, LlamaForCausalLM
-from transformers.models.opt.modeling_opt import OPTAttention, OPTForCausalLM
-from transformers.models.gptj.modeling_gptj import GPTJAttention, GPTJForCausalLM
-from transformers.models.bert.modeling_bert import BertForQuestionAnswering
+from .model_dict import GPTJForCausalLM_dict
 
 __all__ = ["get_autoscale_calib_cfg", "valid_check_calib_cfg"]
 
@@ -20,18 +26,18 @@ logger = logging.getLogger(__name__)
 
 
 def get_autoscale_calib_cfg(
-    args, model: torch.nn.Module, loader_calib, cache_ckpt_folder_path='./cache'
+    args, model: torch.nn.Module, loader_calib, cache_ckpt_folder_path="./cache"
 ) -> Dict[str, Any]:
     logger.info("Prepare autoscale calibration. Get_autoscale_calib_cfg.")
 
     calib_cfg = {}
     if_outlier_compensated = args.outlier_percentile is not None
 
-    if args.autoscale == 'AWQ':
+    if args.autoscale == "AWQ":
         layer_kwargs = _extract_layer_kwargs(
             model, next(iter(loader_calib))[0], cache_ckpt_folder_path
         )
-        calib_cfg['layer_kwargs'] = layer_kwargs
+        calib_cfg["layer_kwargs"] = layer_kwargs
 
     if args.use_customized_model:
         (
@@ -40,60 +46,81 @@ def get_autoscale_calib_cfg(
         ) = transform_descriptor_utils.create_descriptor_from_args(
             args.autoscale, args.customized_model_node_kwargs_json_path
         )
-        calib_cfg['graph_transform_descriptor'] = (graph_preprocessor, graph_postprocessor)
+        calib_cfg["graph_transform_descriptor"] = (
+            graph_preprocessor,
+            graph_postprocessor,
+        )
 
     else:
         (
             graph_preprocessor,
             graph_postprocessor,
         ) = transform_descriptor_utils.load_predefined_settings(
-            model, args.autoscale, loader_calib, if_outlier_compensated=if_outlier_compensated
+            model,
+            args.autoscale,
+            loader_calib,
+            if_outlier_compensated=if_outlier_compensated,
         )
-        calib_cfg['graph_transform_descriptor'] = (graph_preprocessor, graph_postprocessor)
+        calib_cfg["graph_transform_descriptor"] = (
+            graph_preprocessor,
+            graph_postprocessor,
+        )
 
     proxy_target_modules = []
-    if args.autoscale == 'AWQ':
-        if args.split_mode == 'block-by-block':
+    if args.autoscale == "AWQ":
+        if args.split_mode == "block-by-block":
             proxy_target_modules.extend(_get_proxy_target_modules(args, model))
 
-    calib_cfg['proxy_target_infos'] = proxy_target_modules
+    calib_cfg["proxy_target_infos"] = proxy_target_modules
 
-    if args.autoscale == 'SmoothQuant':
-        calib_cfg['alpha'] = args.smoothquant_alpha
+    if args.autoscale == "SmoothQuant":
+        calib_cfg["alpha"] = args.smoothquant_alpha
 
     def is_empty(_list):
         return not bool(_list)
 
     if is_empty(args.nodes_excluded_from_auto_scale_calib):
-        args.nodes_excluded_from_auto_scale_calib = _get_predefined_excluded_from_auto_scale_calib(
-            model, args.autoscale
+        args.nodes_excluded_from_auto_scale_calib = (
+            _get_predefined_excluded_from_auto_scale_calib(model, args.autoscale)
         )
-    calib_cfg['nodes_excluded_from_auto_scale_calib'] = args.nodes_excluded_from_auto_scale_calib
+    calib_cfg["nodes_excluded_from_auto_scale_calib"] = (
+        args.nodes_excluded_from_auto_scale_calib
+    )
 
     if is_empty(args.nodes_excluded_from_auto_clip_calib):
-        args.nodes_excluded_from_auto_clip_calib = _get_predefined_excluded_from_auto_clip_calib(
-            model
+        args.nodes_excluded_from_auto_clip_calib = (
+            _get_predefined_excluded_from_auto_clip_calib(model)
         )
-    calib_cfg['nodes_excluded_from_auto_clip_calib'] = args.nodes_excluded_from_auto_clip_calib
+    calib_cfg["nodes_excluded_from_auto_clip_calib"] = (
+        args.nodes_excluded_from_auto_clip_calib
+    )
 
-    if args.unify_smooth_factor and not isinstance(model, GPTJForCausalLM):
-        raise ValueError("In current, unifying smooth factor feature only supports GPT-J.")
-    calib_cfg['unify_smooth_factor'] = args.unify_smooth_factor
-    calib_cfg['module_name_to_replace_smooth_factor'] = args.module_name_to_replace_smooth_factor
-    calib_cfg['module_name_for_smooth_factor'] = args.module_name_for_smooth_factor
+    if args.unify_smooth_factor and type(model) not in GPTJForCausalLM_dict.keys():
+        raise ValueError(
+            "Unifying smoothing factor is implemented only for GPT-J at the moment."
+        )
+    calib_cfg["unify_smooth_factor"] = args.unify_smooth_factor
+    calib_cfg["module_name_to_replace_smooth_factor"] = (
+        args.module_name_to_replace_smooth_factor
+    )
+    calib_cfg["module_name_for_smooth_factor"] = args.module_name_for_smooth_factor
 
     return calib_cfg
 
 
 def valid_check_calib_cfg(calib_cfg, args):
     graph_preprocessor = calib_cfg["autoscale"]["graph_transform_descriptor"][0]
-    proxy_target_modules = calib_cfg["autoscale"]['proxy_target_infos']
+    proxy_target_modules = calib_cfg["autoscale"]["proxy_target_infos"]
 
     passed = (
-        _check_use_customized_model(graph_preprocessor[0]['nodes_to_replace'])
+        _check_use_customized_model(graph_preprocessor[0]["nodes_to_replace"])
         and _check_customized_proxy_target(proxy_target_modules)
-        and _check_nodes_excluded_from_auto_scale_calib(args.nodes_excluded_from_auto_scale_calib)
-        and _check_nodes_excluded_from_auto_clip_calib(args.nodes_excluded_from_auto_clip_calib)
+        and _check_nodes_excluded_from_auto_scale_calib(
+            args.nodes_excluded_from_auto_scale_calib
+        )
+        and _check_nodes_excluded_from_auto_clip_calib(
+            args.nodes_excluded_from_auto_clip_calib
+        )
     )
     if passed:
         print("test_customzied_autoscale_args passed")
@@ -105,21 +132,24 @@ def valid_check_calib_cfg(calib_cfg, args):
 
 
 def _check_use_customized_model(list_to_check):
-    gt_list = ['q_proj', 'k_proj', 'v_proj']
+    gt_list = ["q_proj", "k_proj", "v_proj"]
     return all([list_to_check[idx] == gt for idx, gt in enumerate(gt_list)])
 
 
 def _check_customized_proxy_target(proxy_target_modules):
-    return len(proxy_target_modules[0][0]) == 14 and proxy_target_modules[0][2][0] == 'q_proj'
+    return (
+        len(proxy_target_modules[0][0]) == 14
+        and proxy_target_modules[0][2][0] == "q_proj"
+    )
 
 
 def _check_nodes_excluded_from_auto_scale_calib(list_to_check):
-    gt_list = ['dense', 'dense_4h_to_h']
+    gt_list = ["dense", "dense_4h_to_h"]
     return all([list_to_check[idx] == gt for idx, gt in enumerate(gt_list)])
 
 
 def _check_nodes_excluded_from_auto_clip_calib(list_to_check):
-    gt_list = ['query_key_value']
+    gt_list = ["query_key_value"]
     return all([list_to_check[idx] == gt for idx, gt in enumerate(gt_list)])
 
 
@@ -127,20 +157,22 @@ def _get_predefined_proxy_target_module(torch_model):
     if isinstance(torch_model, LlamaForCausalLM):
         # Todo - need to check
         proxy_target_module_type = [LlamaAttention]
-        layers2inspect = [['q_proj', 'k_proj', 'v_proj']]
-        nodes_using_proxy_target = ['q_proj']
+        layers2inspect = [["q_proj", "k_proj", "v_proj"]]
+        nodes_using_proxy_target = ["q_proj"]
     elif isinstance(torch_model, OPTForCausalLM):
         proxy_target_module_type = [OPTAttention]
-        layers2inspect = [['q_proj', 'k_proj', 'v_proj']]
-        nodes_using_proxy_target = ['q_proj']
+        layers2inspect = [["q_proj", "k_proj", "v_proj"]]
+        nodes_using_proxy_target = ["q_proj"]
     elif isinstance(torch_model, BloomForCausalLM):
         proxy_target_module_type = [BloomBlock]
         layers2inspect = [None, None]
-        nodes_using_proxy_target = ['query_key_value', 'h_to_4h']
-    elif isinstance(torch_model, GPTJForCausalLM):
-        proxy_target_module_type = [GPTJAttention]
-        layers2inspect = [['q_proj', 'k_proj', 'v_proj']]
-        nodes_using_proxy_target = ['q_proj']
+        nodes_using_proxy_target = ["query_key_value", "h_to_4h"]
+    elif type(torch_model) in GPTJForCausalLM_dict.keys():
+        proxy_target_module_type = [
+            GPTJForCausalLM_dict[type(torch_model)].GPTJAttention
+        ]
+        layers2inspect = [["q_proj", "k_proj", "v_proj"]]
+        nodes_using_proxy_target = ["q_proj"]
     elif "mpt" in str(torch_model.__class__).lower():
         proxy_target_module_type = []
         layers2inspect = []
@@ -158,30 +190,30 @@ def _get_predefined_excluded_from_auto_scale_calib(torch_model, autoscale):
 
     if isinstance(torch_model, LlamaForCausalLM):
         # Todo - need to check
-        if autoscale == 'AWQ':
+        if autoscale == "AWQ":
             nodes_list = ["lm_head"]
-        elif autoscale == 'SmoothQuant':
+        elif autoscale == "SmoothQuant":
             nodes_list = ["o_proj", "down_proj", "lm_head"]
     elif isinstance(torch_model, OPTForCausalLM):
-        if autoscale == 'AWQ':
+        if autoscale == "AWQ":
             nodes_list = ["lm_head"]
-        elif autoscale == 'SmoothQuant':
-            nodes_list = ['out_proj', 'fc2', 'lm_head']
+        elif autoscale == "SmoothQuant":
+            nodes_list = ["out_proj", "fc2", "lm_head"]
     elif isinstance(torch_model, BloomForCausalLM):
-        if autoscale == 'AWQ':
+        if autoscale == "AWQ":
             nodes_list = ["dense"]
-        elif autoscale == 'SmoothQuant':
-            nodes_list = ['dense', 'dense_4h_to_h']
-    elif isinstance(torch_model, GPTJForCausalLM):
-        if autoscale == 'AWQ':
+        elif autoscale == "SmoothQuant":
+            nodes_list = ["dense", "dense_4h_to_h"]
+    elif type(torch_model) in GPTJForCausalLM_dict.keys():
+        if autoscale == "AWQ":
             nodes_list = ["lm_head"]
-        elif autoscale == 'SmoothQuant':
-            nodes_list = ['out_proj', 'fc_out', 'lm_head']
+        elif autoscale == "SmoothQuant":
+            nodes_list = ["out_proj", "fc_out", "lm_head"]
     elif isinstance(torch_model, BertForQuestionAnswering):
-        if autoscale == 'AWQ':
+        if autoscale == "AWQ":
             nodes_list = ["qa_outputs"]
-        elif autoscale == 'SmoothQuant':
-            nodes_list = ['output.dense', 'output_dense', 'qa_outputs']
+        elif autoscale == "SmoothQuant":
+            nodes_list = ["output.dense", "output_dense", "qa_outputs"]
 
     elif "mpt" in str(torch_model.__class__).lower():
         nodes_list = []
@@ -198,13 +230,13 @@ def _get_predefined_excluded_from_auto_scale_calib(torch_model, autoscale):
 
 def _get_predefined_excluded_from_auto_clip_calib(torch_model):
     if isinstance(torch_model, LlamaForCausalLM):
-        nodes_list = ['q_proj', 'k_proj', 'lm_head']
+        nodes_list = ["q_proj", "k_proj", "lm_head"]
     elif isinstance(torch_model, OPTForCausalLM):
-        nodes_list = ['q_proj', 'k_proj', 'lm_head']
+        nodes_list = ["q_proj", "k_proj", "lm_head"]
     elif isinstance(torch_model, BloomForCausalLM):
-        nodes_list = ['query_key_value']
-    elif isinstance(torch_model, GPTJForCausalLM):
-        nodes_list = ['q_proj', 'k_proj', 'lm_head']
+        nodes_list = ["query_key_value"]
+    elif type(torch_model) in GPTJForCausalLM_dict.keys():
+        nodes_list = ["q_proj", "k_proj", "lm_head"]
     elif "mpt" in str(torch_model.__class__).lower():
         nodes_list = []
     elif "falcon" in str(torch_model.__class__).lower():
@@ -225,7 +257,10 @@ def _map_module_name_to_module_type(customized_proxy_target_json_path, torch_mod
             print(e, f"Invalid json file. {customized_proxy_target_json_path}")
 
     collected_proxy_target_info = []
-    for proxy_target_module_name, proxy_target_info in customized_proxy_target_info.items():
+    for (
+        proxy_target_module_name,
+        proxy_target_info,
+    ) in customized_proxy_target_info.items():
         nodes_using_proxy_target = proxy_target_info["nodes_using_proxy_target"]
         layers2inspect = proxy_target_info["layers2inspect"]
 
@@ -262,7 +297,10 @@ def _get_proxy_target_modules(args, torch_model):
 
 
 def _find_proxy_modules_for_each_subgraph(
-    model: torch.nn.Module, module_types, exclude_first_graph=True, exclude_last_graph=True
+    model: torch.nn.Module,
+    module_types,
+    exclude_first_graph=True,
+    exclude_last_graph=True,
 ):
     modules = []
     if exclude_first_graph:
@@ -285,7 +323,7 @@ def _get_blocks(model):
         layers = model.model.decoder.layers
     elif isinstance(model, BloomForCausalLM):
         layers = model.transformer.h
-    elif isinstance(model, GPTJForCausalLM):
+    elif type(torch_model) in GPTJForCausalLM_dict.keys():
         layers = model.transformer.h
     elif "mpt" in str(model.__class__).lower():
         layers = model.transformer.blocks
@@ -299,7 +337,7 @@ def _get_blocks(model):
 def _extract_layer_kwargs(torch_model, samples, cache_ckpt_folder_path):
     def _return_to_meta_model(model):
         for _, module in model.named_modules():
-            module.to(device='meta')
+            module.to(device="meta")
         return model
 
     layers = _get_blocks(torch_model)
@@ -324,13 +362,13 @@ def _extract_layer_kwargs(torch_model, samples, cache_ckpt_folder_path):
             self.module = module
 
         def forward(self, **kwargs):
-            kwargs.pop('hidden_states')
+            kwargs.pop("hidden_states")
             layer_kwargs.update(kwargs)
             raise ValueError  # early exit to break later inference
 
     # patch layer 0 to catch input and kwargs
     device = next(torch_model.parameters()).device
-    if device in [torch.device('meta'), 'meta']:
+    if device in [torch.device("meta"), "meta"]:
         model_path = model_compressor.multi_chip.get_ckpt_upto_first_decoder_block(
             torch_model, type(layers[0]), cache_ckpt_folder_path
         )
@@ -338,7 +376,7 @@ def _extract_layer_kwargs(torch_model, samples, cache_ckpt_folder_path):
             torch_model, model_path
         )
 
-    if isinstance(torch_model, GPTJForCausalLM):
+    if type(torch_model) in GPTJForCausalLM_list:
         layers[0] = Catcher_GPTJ(layers[0])
     else:
         layers[0] = Catcher(layers[0])
@@ -352,7 +390,7 @@ def _extract_layer_kwargs(torch_model, samples, cache_ckpt_folder_path):
     del samples
 
     layers[0] = layers[0].module.to(device)
-    if device in [torch.device('meta'), 'meta']:
+    if device in [torch.device("meta"), "meta"]:
         _return_to_meta_model(torch_model)
     gc.collect()
     torch.cuda.empty_cache()

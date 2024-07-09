@@ -20,12 +20,13 @@ conda activate $env_name
 # eval model
 printf "\n============= STEP-4: Run eval =============\n"
 SCENARIO=Offline
+BACKEND=rngd
 MODEL_PATH=$data_dir/models/gpt-j
 DATASET_PATH=$data_dir/dataset/cnn-daily-mail/validation/cnn_eval.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 N_COUNT=13368 # total_len=13,368
 
-LOG_PATH=$LOG_PATH python main.py --scenario=$SCENARIO --model-path=$MODEL_PATH --dataset-path=$DATASET_PATH --max_examples=$N_COUNT --accuracy --gpu
+LOG_PATH=$LOG_PATH python main.py --scenario=$SCENARIO --backend=$BACKEND --model-path=$MODEL_PATH --dataset-path=$DATASET_PATH --max_examples=$N_COUNT --accuracy --gpu
 python evaluation.py --mlperf-accuracy-file=$LOG_PATH/mlperf_log_accuracy.json --dataset-file=$DATASET_PATH \
                      &> $LOG_PATH/accuracy_result.log
 

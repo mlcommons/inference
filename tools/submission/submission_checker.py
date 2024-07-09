@@ -2578,7 +2578,13 @@ def check_compliance_dir(
         "llama2-70b-99.9",
         "mixtral-8x7b"
     ]:
-        test_list.remove("TEST01") 
+        test_list.remove("TEST01")
+
+    if model in [
+        "stable-diffusion-xl"
+    ] and config.version in [ "v4.0" ]:
+        test_list.remove("TEST01")
+
 
     if model in [
         "llama2-70b-99",

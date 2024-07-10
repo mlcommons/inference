@@ -434,6 +434,8 @@ def main():
     settings = lg.TestSettings()
     settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
     settings.FromConfig(user_conf, args.model_name, args.scenario)
+    if os.path.exists(audit_config):
+        settings.FromConfig(audit_config, args.model_name, args.scenario)
     settings.scenario = scenario
     settings.mode = lg.TestMode.PerformanceOnly
     if args.accuracy:

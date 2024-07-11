@@ -6,8 +6,7 @@ import torch
 import yaml
 from torch.fx import GraphModule
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM
-
+from transformers import AutoModelForCausalLM, AutoTokenizer
 import model_compressor  # isort:skip
 from dataset import Dataset  # isort:skip
 from quantization.utils import get_kwargs, random_seed, set_optimization  # isort:skip
@@ -31,7 +30,29 @@ def get_autoscale_calib_config(model_script, model, calib_dataloader):
 
 
 def load_pytorch_model(model_path, use_gpu):
-    model = AutoModelForCausalLM.from_pretrained(
+    from furiosa_llm_models.gptj.symbolic.huggingface_rope_rngd_gelu import GPTJForCausalLM
+    
+    model = GPTJForCausalLM.from_pretrained(
+        model_path,
+        device_map="auto" if not use_gpu else None,
+        low_cpu_mem_usage=True if not use_gpu else False,
+        torch_dtype=torch.float32,
+    )
+
+    if use_gpu:
+        print(f"Casting models to GPU...")
+        assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
+        device = torch.device("cuda:0")
+        model.to(device)
+
+    model.eval()
+    model = model.to(memory_format=torch.channels_last)
+    return model
+
+def load_mlperf_submission_model(model_path, use_gpu):
+    from backend_RNGD import GPTJForCausalLM 
+    
+    model = GPTJForCausalLM.from_pretrained(
         model_path,
         device_map="auto" if not use_gpu else None,
         low_cpu_mem_usage=True if not use_gpu else False,
@@ -49,18 +70,28 @@ def load_pytorch_model(model_path, use_gpu):
     return model
 
 
-def cal_data_loader(calib_dataset_path, batch_size, n_calib):
+def make_calib_dataloader(calib_dataset_path, batch_size, n_calib):
     data_object = Dataset(calib_dataset_path, batch_size)
-    data_list = [
-        {
-            "input_ids": data_object.source_encoded_input_ids[idx],
-            "attention_mask": data_object.source_encoded_attn_masks[idx],
-            "position_ids": torch.arange(
-                len(data_object.source_encoded_input_ids[idx][0])
-            ),
-        }
-        for idx in range(len(data_object.source_encoded_input_ids))[:n_calib]
-    ]
+    data_list = []
+
+    for idx in range(n_calib):
+            bucket_size=2048
+            starting_input_ids = data_object.source_encoded_input_ids[idx]
+            batch_size, starting_input_len = starting_input_ids.shape
+            bucketized_input_ids = torch.zeros((batch_size, bucket_size), dtype=torch.int)
+            bucketized_input_ids[:, :starting_input_len] = starting_input_ids
+            
+            starting_attention_mask =  data_object.source_encoded_attn_masks[idx]
+            bucketized_attention_mask = torch.zeros((batch_size, bucket_size), dtype=torch.int)
+            bucketized_attention_mask[:, :starting_input_len] = starting_attention_mask
+            
+            starting_position_ids = torch.arange(len(data_object.source_encoded_input_ids[idx][0])).reshape(1,-1)
+            bucketized_position_ids = torch.cat([starting_position_ids, torch.zeros((1, bucket_size - starting_input_len), dtype=torch.long)], dim=1)
+            
+            data_list.append({'input_ids': bucketized_input_ids,
+                            'attention_mask': bucketized_attention_mask,
+                            'position_ids': bucketized_position_ids.squeeze(0)})
+    
     return DataLoader(data_list, batch_size)
 
 
@@ -71,35 +102,77 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
             qconfig, model, calib_dataloader
         )
 
-    model = model_compressor.create_quantsim_model(
-        model,
+    model_for_calib = model.trace_prefill()
+
+    model_for_calib = model_compressor.create_quantsim_model(
+        model_for_calib,
         dataloader=calib_dataloader,
-        disable_inout=(True, True),
+        disable_inout=(True, False),
         **get_kwargs(model_compressor.create_quantsim_model, qconfig),
     )
 
     model_compressor.calibrate(
-        model,
+        model_for_calib,
         calib_dataloader=calib_dataloader,
         autoscale_calib_kwargs=autoscale_calib_cfg if run_autoscale else None,
         **get_kwargs(model_compressor.calibrate, qconfig),
     )
 
     model_compressor.save(
-        model,
+        model_for_calib,
         qformat_out_path=qformat_path,
         qparam_out_path=qparam_path,
-        **get_kwargs(model_compressor.save, qconfig),
-    )
+        weight_calib_method=qconfig["weight_calib_method"],
+        weight_granularity=qconfig["weight_granularity"],
+        weight_dtype=qconfig["weight_dtype"],
+        weight_nbits=qconfig["weight_nbits"],
+        act_calib_method=qconfig["act_calib_method"],
+        act_granularity=qconfig["act_granularity"],
+        act_dtype=qconfig["act_dtype"],
+        act_nbits=qconfig["act_nbits"],
+        kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
+        disable_inout=(True, False),
+        )
+
+    del model_for_calib
 
     return
 
 
+def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_param_path, quant_format_path, qconfig):
+        
+        prefill_model = model_compressor.create_quantsim_model(
+            model.trace_prefill(),
+            qformat_path = golden_qformat_path,
+            qparam_path = golden_qparam_path,
+            qlevel=2,
+            target_machine=qconfig["target_machine"],
+            delete_org_weight=True,
+            immigrate_qparams = immigrate_qparams,
+        )
+
+        model_compressor.save(
+                prefill_model,
+                qparam_out_path=quant_param_path,
+                qformat_out_path=quant_format_path,
+                weight_calib_method=qconfig["weight_calib_method"],
+                weight_granularity=qconfig["weight_granularity"],
+                weight_dtype=qconfig["weight_dtype"],
+                weight_nbits=qconfig["weight_nbits"],
+                act_calib_method=qconfig["act_calib_method"],
+                act_granularity=qconfig["act_granularity"],
+                act_dtype=qconfig["act_dtype"],
+                act_nbits=qconfig["act_nbits"],
+                kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
+                disable_inout=(True, False),
+            )
+        
+        
+
+
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--backend", choices=["pytorch"], default="pytorch", help="Backend"
-    )
+
     parser.add_argument("--model_path", help="path to gpt-j model")
     parser.add_argument("--quant_config_path", help="a config for model quantization")
     parser.add_argument(
@@ -128,25 +201,26 @@ def get_args():
 def main():
     args = get_args()
     sut = None
-
-    if args.backend == "pytorch":
-        if not args.gpu:
-            raise ValueError(
-                "Inference on a device other than GPU is not supported yet."
-            )
-        model = load_pytorch_model(args.model_path, args.gpu)
-    else:
-        raise ValueError("Unsupported backend: {:}".format(args.backend))
+    golden_model = load_pytorch_model(args.model_path, args.gpu)
 
     random_seed()
     set_optimization(args.torch_numeric_optim)
 
     with open(args.quant_config_path, "r") as f:
         qconfig = yaml.safe_load(f)
-    dataloader = cal_data_loader(
-        args.calib_data_path, qconfig["calib_batch_size"], args.n_calib
-    )
-    calibrate(model, qconfig, args.quant_param_path, args.quant_format_path, dataloader)
+        
+    dataloader = make_calib_dataloader(args.calib_data_path, qconfig["calib_batch_size"], args.n_calib)
+
+
+    golden_quant_param_path = args.quant_param_path.replace('.npy', '_golden.npy')
+    golden_quant_format_path = args.quant_format_path.replace('.yaml', '_golden.yaml')
+
+    calibrate(golden_model, qconfig, golden_quant_param_path, golden_quant_format_path, dataloader)
+    
+    submission_model = load_mlperf_submission_model(args.model_path, args.gpu)
+
+    immigrate_qparams(submission_model, golden_quant_param_path, golden_quant_format_path, args.quant_param_path, args.quant_format_path, qconfig)
+
 
 
 if __name__ == "__main__":

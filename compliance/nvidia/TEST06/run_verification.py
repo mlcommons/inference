@@ -21,7 +21,6 @@ import json
 
 import numpy as np
 
-EOS_TOKEN = 2
 DTYPE_MAP = {
     "int64": np.int64,
     "int32": np.int32,
@@ -37,22 +36,24 @@ def get_args():
     parser.add_argument("--output_dir", "-o",
                         help="Specifies the path to the output directory where compliance logs will be uploaded from, i.e. inference_results_v0.7/closed/NVIDIA/compliance/T4x8/resnet/Offline.",
                         required=True)
+    parser.add_argument("--eos_token_id", '-e', default=2, help="EOS token id of the tokenizer")
     parser.add_argument("--dtype", "-d", default="int64", choices=["int64", "int32", "int16", "float32"])
     parser.add_argument("--scenario", "-s", required=True, choices=["Offline", "Server", "SingleStream", "MultiStream"])
     args = parser.parse_args()
     return args
 
-def eos_check(acc_data, dtype):
+def eos_check(acc_data, dtype, eos_token_id=2):
     for sample in acc_data:
         data = np.frombuffer(bytes.fromhex(sample["data"]), dtype=dtype)
         i = data.shape[0] - 1
         n_eos_tokens = 0
         while (i > 0):
-            if data[i] == EOS_TOKEN:
+            if data[i] == eos_token_id:
                 n_eos_tokens += 1
             if n_eos_tokens >= 2:
-                return False
-            if data[i] != EOS_TOKEN:
+                # Allow output to be [eos_token_id, eos_token_id]
+                return len(data) == 2
+            if data[i] != eos_token_id:
                 break
             i-=1
     return True
@@ -84,7 +85,7 @@ def main():
         acc_data = json.load(acc_json)
     
     try:
-        eos_pass = eos_check(acc_data, DTYPE_MAP[args.dtype])
+        eos_pass = eos_check(acc_data, DTYPE_MAP[args.dtype], args.eos_token_id)
     except Exception:
         print("Unexpected error occured while doing the EOS check")
         eos_pass = False

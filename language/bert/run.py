@@ -51,7 +51,6 @@ def get_args():
     parser.add_argument('--port', type=int, default=8000)
     parser.add_argument('--sut_server', nargs="*", default= ['http://localhost:8000'],
                     help='Address of the server(s) under test.')
-    parser.add_argument("--quant_config_path", help="a config for model quantization")
     parser.add_argument("--quant_param_path", help="quantization parameters for calibrated layers")
     parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
     parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")

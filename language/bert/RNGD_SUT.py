@@ -78,7 +78,6 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
             traced_model = self.model.trace()
             self.model = quantize_model(
                 traced_model,
-                args.quant_config_path,
                 args.quant_param_path,
                 args.quant_format_path,
             )

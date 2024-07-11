@@ -195,7 +195,7 @@ class SUT_base(PyTorch_SUT_base):
                     "Inference on a device other than GPU is not supported yet."
                 )
             traced_model = self.model.trace_all()
-            model= quantize_model(traced_model, qconfig_path=args.quant_config_path, qparam_path=args.quant_param_path, qformat_path=args.quant_format_path)
+            model= quantize_model(traced_model, qparam_path=args.quant_param_path, qformat_path=args.quant_format_path)
             self.kv_dtype = QUANT_KV_DTYPE
         else:
             model = self.model.trace_all()

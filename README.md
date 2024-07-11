@@ -21,7 +21,7 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
 
 ### Wi8Ai8KVi8 Quantized BERT (qBERT)
 
-- Evaluation Result(v3.11)
+- Evaluation Result(v3.12.1)
 
     |    |                Our Result               |                                                                    Accuracy Target                                                                    |
     |:--:|:---------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -43,14 +43,14 @@ For evaluations with different settings, modify the following environment variab
 
 ### Wi8Ai8KVi8 Quantized GPT-J (qGPT-J)
 
-- Evaluation Result(v3.11)
+- Evaluation Result(v3.12.1)
 
     |         | Our Result                | Accuracy Target |
     |:-------:|:-------------------------:|:---------------:|
-    | ROUGE1  | 43.0453 (100.14%)         | [42.9865](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C38-L1126C45) |
-    | ROUGE2  | 20.1418 (100.09%)         | [20.1235](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72) |
-    | ROUGEL  | 30.0315 (100.14%)         | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99) |
-    | GEN_LEN | 3,976,403 (98.99%)        | [4,016,878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127) |
+    | ROUGE1  | 43.0305 (100.10%)         | [42.9865](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C38-L1126C45) |
+    | ROUGE2  | 20.1437 (100.10%)         | [20.1235](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72) |
+    | ROUGEL  | 30.0211 (100.11%)         | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99) |
+    | GEN_LEN | 3,978,315 (99.04%)        | [4,016,878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127) |
     
     - reference: [v3.11 Quantized GPT-J evaluation report](https://www.notion.so/furiosa/hugginface_rope_rngd_gelu-061729cc2bdc4410a9dd078fa05a317d)
 

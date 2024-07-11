@@ -70,7 +70,6 @@ python -m main --scenario=$SCENARIO \
                --dataset-path=$DATASET_PATH \
                --gpu \
                --quantize \
-               --quant_config_path=$QUANT_CONFIG_PATH \
                --quant_param_path=$QUANT_PARAM_PATH \
                --quant_format_path=$QUANT_FORMAT_PATH \
                --max_examples=$N_COUNT \

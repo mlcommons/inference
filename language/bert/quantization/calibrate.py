@@ -12,8 +12,12 @@ import model_compressor  # isort:skip
 
 from .utils import get_kwargs, random_seed, set_optimization  # isort:skip
 
+PADDING_SIZE = 384
+BUCKET_SIZE = 384
+PAD_TOKEN_ID = 0
 
 def load_pytorch_model(model_path, model_config_path, use_gpu):
+    from furiosa_llm_models.bert.symbolic.huggingface_rngd_gelu import BertForQuestionAnswering
     with open(model_config_path) as f:
         config_json = json.load(f)
 
@@ -22,11 +26,27 @@ def load_pytorch_model(model_path, model_config_path, use_gpu):
 
     model = BertForQuestionAnswering(config)
     model.to(device)
+    model.eval()
     model.load_state_dict(torch.load(model_path), strict=False)
     return model
 
+def load_mlperf_submission_model(model_path, model_config_path, use_gpu):
+    from furiosa_llm_models.bert.symbolic.mlperf_submission import BertForQuestionAnswering
+    with open(model_config_path) as f:
+        config_json = json.load(f)
 
-def cal_data_loader(data_path, batch_size, n_calib):
+    config = BertConfig(**config_json)
+    device = torch.device("cuda:0") if use_gpu else torch.device("cpu")
+
+    model = BertForQuestionAnswering(config)
+    model.to(device)
+    model.eval()
+    model.load_state_dict(torch.load(model_path), strict=False)
+
+    return model
+
+
+def cal_data_loader(data_path, batch_size, n_calib, model_type, is_equivalence_ci=False):
     with open(data_path, "rb") as f:
         cal_features = pickle.load(f)
 
@@ -39,7 +59,54 @@ def cal_data_loader(data_path, batch_size, n_calib):
         for feature in cal_features[:n_calib]
     ]
 
-    return DataLoader(data_list, batch_size=batch_size)
+    if model_type == "golden":
+        return DataLoader(data_list, batch_size=batch_size)
+    
+    elif model_type == "mlperf-submission":
+        if is_equivalence_ci:
+            for data in data_list:
+                data.update(
+                    {
+                        "attention_mask": data["attention_mask"]
+                        .unsqueeze(0)
+                        .repeat(PADDING_SIZE, 1),
+                        "position_ids": torch.arange(PADDING_SIZE),
+                    }
+                )
+
+            return DataLoader(data_list, batch_size=batch_size)
+        
+        else:
+            from RNGD_encoder import greedy_attention_packing_bert, bucket_pad
+
+            for data in data_list:
+                (
+                    input_ids,
+                    token_type_ids,
+                    attention_mask,
+                    position_ids,
+                    packed_target_locations,
+                ) = greedy_attention_packing_bert(
+                    input_ids=bucket_pad(data["input_ids"].unsqueeze(0), BUCKET_SIZE),
+                    token_type_ids=bucket_pad(data["token_type_ids"].unsqueeze(0), BUCKET_SIZE),
+                    bucketized_attention_mask=bucket_pad(data["attention_mask"].unsqueeze(0), BUCKET_SIZE),
+                    pad_token_id=PAD_TOKEN_ID,
+                    compact_mask=False, # TODO : do we use compact mask?
+                )
+
+                data.update(
+                    {
+                        "input_ids": input_ids[0],
+                        "token_type_ids": token_type_ids[0],
+                        "attention_mask": attention_mask[0],
+                        "position_ids": position_ids[0],
+                    }
+                )
+
+            return DataLoader(data_list, batch_size=batch_size)
+    
+    else:
+        ValueError("Unsupported backend: {:}".format(model_type))
 
 
 def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_dataloader):
@@ -62,7 +129,16 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
         model,
         qformat_out_path=qformat_path,
         qparam_out_path=qparam_path,
-        **get_kwargs(model_compressor.save, qconfig),
+        weight_calib_method=qconfig["weight_calib_method"],
+        weight_granularity=qconfig["weight_granularity"],
+        weight_dtype=qconfig["weight_dtype"],
+        weight_nbits=qconfig["weight_nbits"],
+        act_calib_method=qconfig["act_calib_method"],
+        act_granularity=qconfig["act_granularity"],
+        act_dtype=qconfig["act_dtype"],
+        act_nbits=qconfig["act_nbits"],
+        kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
+        disable_inout=(True, True),
     )
 
     return
@@ -71,7 +147,7 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--backend", choices=["pytorch"], default="pytorch", help="Backend"
+        "--model_type", choices=["golden", "mlperf-submission"], default="mlperf-submission", help="model_type"
     )
     parser.add_argument("--model_path", help="path to bert model")
     parser.add_argument("--model_config_path", help="path to bert model config")
@@ -94,6 +170,12 @@ def get_args():
     parser.add_argument(
         "--gpu", action="store_true", help="use GPU instead of CPU for the inference"
     )
+    parser.add_argument(
+        "--is_equivalence_ci",
+        action="store_true",
+        default=False,
+        help="flag for equivalence_ci",
+    )
 
     args = parser.parse_args()
     return args
@@ -102,15 +184,25 @@ def get_args():
 def main():
     args = get_args()
 
-    if args.backend == "pytorch":
+    if args.model_type == "golden":
         if not args.gpu:
             raise ValueError(
-                "Inference on a device other than GPU is not supported yet."
+                "Calibration on a device other than GPU is not supported yet."
             )
         model = load_pytorch_model(args.model_path, args.model_config_path, args.gpu)
+        model = model.trace()
+
+    elif args.model_type == "mlperf-submission":
+        if not args.gpu:
+            raise ValueError(
+                "Calibration on a device other than GPU is not supported yet."
+            )
+        
+        model = load_mlperf_submission_model(args.model_path, args.model_config_path, args.gpu)
+        model = model.trace()
 
     else:
-        raise ValueError("Unsupported backend: {:}".format(args.backend))
+        raise ValueError("Unsupported backend: {:}".format(args.model_type))
 
     random_seed()
     set_optimization(args.torch_numeric_optim)
@@ -118,7 +210,7 @@ def main():
     with open(args.quant_config_path, "r") as f:
         qconfig = yaml.safe_load(f)
     dataloader = cal_data_loader(
-        args.calib_data_path, qconfig["calib_batch_size"], args.n_calib
+        args.calib_data_path, qconfig["calib_batch_size"], args.n_calib, args.model_type, args.is_equivalence_ci
     )
     calibrate(
         model,

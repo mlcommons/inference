@@ -1,5 +1,6 @@
 from dataset import Dataset
 import os
+from pathlib import Path
 import time
 import numpy as np
 import json
@@ -17,7 +18,7 @@ import yaml,pdb
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_script_name", required=True,
+    parser.add_argument("--first_log_folder_path", required=True,
                         help="path to mlperf_log_accuracy.json")
     parser.add_argument("--dataset-file", default="./data/cnn_eval.json",
                         help="path to cnn_eval.json")
@@ -60,11 +61,16 @@ def main():
     data_object = Dataset(dataset_path)
     targets = data_object.targets
 
-    root_logdir = os.path.join('./build/logs', args.model_script_name)
     default_log_name="mlperf_log_accuracy.json"
     results_path_list = []
+    
+    first_log_folder_path=Path(args.first_log_folder_path)
+    folder_name = first_log_folder_path.stem
+    # {TEST_DATE}_{DATASET}_{START_IDX} 로 입력받은 폴더 위치에서 전체 폴더를 추출함
+    # 0711_cnn_eval_0 을 입력 받고 log 가 포함된 0711_cnn_eval_0, 0711_cnn_eval_1, 0711_cnn_eval_2... 폴더 path list 생성
     for idx in range(args.num_splits):
-        results_path_list.append(os.path.join(root_logdir, f"{args.dataset_file.split('.')[1].split('/')[-1]}_{args.num_splits}_{idx}"))
+        new_folder_name = f"{folder_name[:-2]}_{idx}" 
+        results_path_list.append(first_log_folder_path.with_stem(new_folder_name))
         
     
 

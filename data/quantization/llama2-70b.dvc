@@ -1,0 +1,6 @@
+outs:
+- md5: a16adc861e07ee98b92f13302df860f5.dir
+  size: 79384835
+  nfiles: 3
+  hash: md5
+  path: llama2-70b

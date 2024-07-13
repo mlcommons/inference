@@ -5,6 +5,9 @@ qbert:
 .PHONY: qgpt-j
 qgpt-j:
 	-bash scripts/eval_qgpt-j.sh
+.PHONY: qllama2
+qllama2:
+	-bash scripts/eval_qllama2-70b.sh
 
 # end-to-end evaluation
 .PHONY: all

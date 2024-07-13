@@ -4,7 +4,6 @@ import argparse
 import os
 import logging
 import sys
-from SUT import SUT, SUTServer
 
 sys.path.insert(0, os.getcwd())
 
@@ -14,6 +13,7 @@ log = logging.getLogger("Llama-70B-MAIN")
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", type=str, choices=["Offline", "Server"], default="Offline", help="Scenario")
+    parser.add_argument("--backend", type=str, choices=["pytorch", "rngd"], help="Backend to use")
     parser.add_argument("--model-path", type=str, default="meta-llama/Llama-2-70b-chat-hf", help="Model name")
     parser.add_argument("--dataset-path", type=str, default=None, help="")
     parser.add_argument("--accuracy", action="store_true", help="Run accuracy mode")
@@ -27,6 +27,11 @@ def get_args():
     parser.add_argument("--output-log-dir", type=str, default="output-logs", help="Where logs are saved")
     parser.add_argument("--enable-log-trace", action="store_true", help="Enable log tracing. This file can become quite large")
     parser.add_argument("--num-workers", type=int, default=1, help="Number of workers to process queries")
+    parser.add_argument("--quant_config_path", help="a config for model quantization")
+    parser.add_argument("--quant_param_path", help="quantization parameters for calibrated layers")
+    parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
+    parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")
+    parser.add_argument('--torch_numeric_optim', action="store_true", help="use PyTorch numerical optimizaiton for CUDA/cuDNN")
 
     args = parser.parse_args()
     return args
@@ -37,10 +42,7 @@ scenario_map = {
     "server": lg.TestScenario.Server,
     }
 
-sut_map = {
-        "offline": SUT,
-        "server": SUTServer
-        }
+
 
 def main():
     args = get_args()
@@ -65,16 +67,39 @@ def main():
     log_settings.log_output = log_output_settings
     log_settings.enable_trace = args.enable_log_trace
 
+    if args.backend == "pytorch":
+        from SUT import SUT, SUTServer
+    elif args.backend == "rngd":
+        from RNGD_SUT import SUT, SUTServer
+    else:
+        raise ValueError(f"Backend {args.backend} not supported.")
+    
+    sut_map = {
+    "offline": SUT,
+    "server": SUTServer
+    }
+    
     sut_cls = sut_map[args.scenario.lower()]
 
-    sut = sut_cls(
-        model_path=args.model_path,
-        dtype=args.dtype,
-        batch_size=args.batch_size,
-        dataset_path=args.dataset_path,
-        total_sample_count=args.total_sample_count,
-        device=args.device,
-    )
+    if args.backend == "pytorch":
+        sut = sut_cls(
+            model_path=args.model_path,
+            dtype=args.dtype,
+            batch_size=args.batch_size,
+            dataset_path=args.dataset_path,
+            total_sample_count=args.total_sample_count,
+            device=args.device,
+        )
+    if args.backend == "rngd":
+        sut = sut_cls(
+            model_path=args.model_path,
+            dtype=args.dtype,
+            batch_size=args.batch_size,
+            dataset_path=args.dataset_path,
+            total_sample_count=args.total_sample_count,
+            device=args.device,
+            args=args,
+        )
 
     # Start sut before loadgen starts
     sut.start()

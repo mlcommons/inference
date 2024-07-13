@@ -68,6 +68,31 @@ For evaluations with different settings, modify the following environment variab
 * `CALIBRATE`: Specifies whether to perform calibration during evaluation. (default: `false`)
 * `N_CALIB`: The number of data samples to use for calibrating the quantized model. (range: `[1, 1000]`)
 
+### Wi8Ai8KVi8 Quantized LLaMA2 (qLLaMA2)
+
+- Evaluation Result(v3.11)
+
+    |                   | Our Result |                                                                   Accuracy Target(99.9%)                                                                  |
+    |:-----------------:|:----------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------:|
+    | ROUGE1            | TBA        | [44.3868](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1128C44-L1128C59)  |
+    | ROUGE2            | TBA        | [22.0132](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1128C71-L1128C86)  |
+    | ROUGEL            | TBA        | [28.5876](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1128C98-L1128C113) |
+    | TOKENS_PER_SAMPLE | TBA        | [265.005](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1128C98-L1128C113) |
+
+To reproduce the results, run the following commands:
+
+```sh
+. scripts/build_qllama2-70b_env.sh # Skip this step if the environment is already set up.
+make qllama2
+```
+
+For evaluations with different settings, modify the following environment variables:
+
+* `SCENARIO`: The MLPerf benchmark scenario. Possible values are `Offline`, `Server`. (default: `Offline`)
+* `N_COUNT`: The number of data samples to evaluate. (range: `[1, 24576]`)
+* `CALIBRATE`: Specifies whether to perform calibration during evaluation. (default: `false`)
+* `N_CALIB`: The number of data samples to use for calibrating the quantized model. (range: `[1, 1000]`)
+
 
 ## How to run end-to-end evaluation
 

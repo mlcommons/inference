@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # define env. variables
-model_name=llama2-70b
+model_name=qllama2-70b
 model_dir=language/llama2-70b
 git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
@@ -39,6 +39,7 @@ shopt -s extglob
 dvc pull $data_dir/models/llama2/Llama-2-70b-chat-hf/!(model-000*|pytorch_model-000*).dvc --force
 dvc pull $data_dir/dataset/open-orca/validation --force
 dvc pull $data_dir/dataset/open-orca/calibration --force
+dvc pull $data_dir/quantization/llama2-70b.dvc --force
 
 printf "\n============= End of build =============\n"
 

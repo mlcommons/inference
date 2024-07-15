@@ -67,7 +67,7 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 
 ## Get Model
 ### MLCommons Members Download
-MLCommons hosts the model and preprocessed dataset for download exclusively by MLCommons Members. You must first agree to the [confidentiality notice](https://docs.google.com/forms/d/e/1FAIpQLSc_8VIvRmXM3I8KQaYnKf7gy27Z63BBoI_I1u02f4lw6rBp3g/viewform), then follow the link to a directory containing Rclone download instructions.
+MLCommons hosts the model and preprocessed dataset for download **exclusively by MLCommons Members**. You must first agree to the [confidentiality notice](https://llama2.mlcommons.org), then you will receive a link to a directory containing Rclone download instructions.
 
 
 ### External Download

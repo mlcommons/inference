@@ -148,7 +148,7 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
             qlevel=2,
             target_machine=qconfig["target_machine"],
             delete_org_weight=True,
-            immigrate_qparams = immigrate_qparams,
+            immigrate_qparams = True,
         )
 
         model_compressor.save(
@@ -208,7 +208,7 @@ def main():
 
     with open(args.quant_config_path, "r") as f:
         qconfig = yaml.safe_load(f)
-        
+    
     dataloader = make_calib_dataloader(args.calib_data_path, qconfig["calib_batch_size"], args.n_calib)
 
 

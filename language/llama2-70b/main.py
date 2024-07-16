@@ -4,7 +4,6 @@ import argparse
 import os
 import logging
 import sys
-from SUT import SUT, SUTServer
 
 sys.path.insert(0, os.getcwd())
 
@@ -27,6 +26,9 @@ def get_args():
     parser.add_argument("--output-log-dir", type=str, default="output-logs", help="Where logs are saved")
     parser.add_argument("--enable-log-trace", action="store_true", help="Enable log tracing. This file can become quite large")
     parser.add_argument("--num-workers", type=int, default=1, help="Number of workers to process queries")
+    parser.add_argument("--vllm", action="store_true", help="vllm mode")
+    parser.add_argument("--api-model-name", type=str, default="meta-llama/Llama-2-70b-chat-hf", help="Model name(specified in llm server)")
+    parser.add_argument("--api-server", type=str, default=None, help="Specify an api endpoint call to use api mode")
 
     args = parser.parse_args()
     return args
@@ -36,11 +38,6 @@ scenario_map = {
     "offline": lg.TestScenario.Offline,
     "server": lg.TestScenario.Server,
     }
-
-sut_map = {
-        "offline": SUT,
-        "server": SUTServer
-        }
 
 def main():
     args = get_args()
@@ -64,6 +61,16 @@ def main():
     log_settings.log_output = log_output_settings
     log_settings.enable_trace = args.enable_log_trace
 
+    if args.vllm:
+        from SUT_API import SUT, SUTServer
+    else:
+        from SUT import SUT, SUTServer
+
+    sut_map = {
+        "offline": SUT,
+        "server": SUTServer
+        }
+
     sut_cls = sut_map[args.scenario.lower()]
 
     sut = sut_cls(
@@ -73,6 +80,8 @@ def main():
         dataset_path=args.dataset_path,
         total_sample_count=args.total_sample_count,
         device=args.device,
+        api_server=args.api_server,
+        api_model_name=args.api_model_name,
     )
 
     # Start sut before loadgen starts

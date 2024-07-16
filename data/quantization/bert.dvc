@@ -1,6 +1,6 @@
 outs:
-- md5: 1b1e25549b65973446e98b9bf2a9c8da.dir
-  size: 3258002
-  nfiles: 3
+- md5: f09592fda5709ceb6b8dadad8dd5a579.dir
+  size: 350
+  nfiles: 1
   hash: md5
   path: bert

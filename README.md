@@ -21,7 +21,7 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
 
 ### Wi8Ai8KVi8 Quantized BERT (qBERT)
 
-- Evaluation Result(v3.12.1)
+- Evaluation Result(v3.13)
 
     |    |                Our Result               |                                                                    Accuracy Target                                                                    |
     |:--:|:---------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------:|

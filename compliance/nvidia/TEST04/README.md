@@ -25,6 +25,8 @@ This test is not applicable for the following benchmarks whose performance is de
  5. retinanet (while retinanet input images are not variable, computation cost varies significantly due to the variance in qualified detections from the detector heads, which affect the NMS runtime)
  6. gpt-j
 
+**Warning:** For the stable diffusion benchmark, min_query_count is set to 500 to avoid a longer runtime. For loading benchmark specific configuration variables, you should load the audit configuration from your SUT code. You can do this by calling `settings.FromConfig(audit_config, model_name, scenario)`. This can't happend inside loadgen, because it is agnostic to the model that is being tested.
+
 ## Scenarios
 
  - This test is applicable for all scenarios.

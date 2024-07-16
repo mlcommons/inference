@@ -73,16 +73,26 @@ def main():
 
     sut_cls = sut_map[args.scenario.lower()]
 
-    sut = sut_cls(
-        model_path=args.model_path,
-        dtype=args.dtype,
-        batch_size=args.batch_size,
-        dataset_path=args.dataset_path,
-        total_sample_count=args.total_sample_count,
-        device=args.device,
-        api_server=args.api_server,
-        api_model_name=args.api_model_name,
-    )
+    if args.vllm:
+        sut = sut_cls(
+            model_path=args.model_path,
+            dtype=args.dtype,
+            batch_size=args.batch_size,
+            dataset_path=args.dataset_path,
+            total_sample_count=args.total_sample_count,
+            device=args.device,
+            api_server=args.api_server,
+            api_model_name=args.api_model_name,
+        )
+    else:
+        sut = sut_cls(
+            model_path=args.model_path,
+            dtype=args.dtype,
+            batch_size=args.batch_size,
+            dataset_path=args.dataset_path,
+            total_sample_count=args.total_sample_count,
+            device=args.device
+        )
 
     # Start sut before loadgen starts
     sut.start()

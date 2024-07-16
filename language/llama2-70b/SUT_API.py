@@ -220,7 +220,7 @@ class SUT():
 
                 tik1 = time.time()
 
-                # vLLM doesn't require padding and can take input tokens 
+                # OpenAI-API servers don't require padding and can take input tokens 
                 # directly, so we build our input_ids_tensor as a jagged list
                 input_ids_tensor = []
                 for q in qitem:
@@ -234,7 +234,7 @@ class SUT():
                 tik2 = time.time()
 
                 # NOTE(mgoin): I don't think threading is necessary since we are submitting all queries in one request
-                # vLLM takes care of mini-batches and scheduling
+                # The API server should take care of mini-batches and scheduling
                 if self.api_servers:
                     with ThreadPoolExecutor(max_workers=len(self.api_servers)) as executor:
                         #needs to be tested

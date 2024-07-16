@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaForCausalLM
 from transformers.generation.streamers import BaseStreamer
 
+import json
 import pickle
 import time
 import threading
@@ -184,7 +185,7 @@ class SUT():
             except Exception as e:
                 print(e)
                 print("connection failure")
-                exit(1)
+                break
         return [resp["text"] for resp in json.loads(response.text)["choices"]]
 
     def api_action_handler(self, chunk, server_idx):

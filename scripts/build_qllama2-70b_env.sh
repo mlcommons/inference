@@ -8,6 +8,9 @@ work_dir=$git_dir/$model_dir
 data_dir=$git_dir/data
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
+quant_data_dir=$data_dir/quantization/llama2-70b
+tag=MLPerf4.1-v3.13
+quant_data_dvc_dir=quantized/LLaMA2-70B/mlperf_submission/W8A8KV8/80L
 
 # work on model directory
 cd $work_dir
@@ -40,6 +43,22 @@ dvc pull $data_dir/models/llama2/Llama-2-70b-chat-hf/!(model-000*|pytorch_model-
 dvc pull $data_dir/dataset/open-orca/validation --force
 dvc pull $data_dir/dataset/open-orca/calibration --force
 dvc pull $data_dir/quantization/llama2-70b.dvc --force
+
+# pull quantization 
+printf "\n============= STEP-4: Pull quantization data =============\n"
+cd $git_dir
+git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+cd $git_dir/furiosa-llm-models-artifacts
+git checkout $tag
+
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml.dvc -r origin --force
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy.dvc -r origin --force
+
+mkdir -p $quant_data_dir/calibration_range
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
+
+
 
 printf "\n============= End of build =============\n"
 

@@ -70,7 +70,7 @@ For evaluations with different settings, modify the following environment variab
 
 ### Wi8Ai8KVi8 Quantized LLaMA2 (qLLaMA2)
 
-- Evaluation Result(v3.11)
+- Evaluation Result(v3.13)
 
     |                   | Our Result |                                                                   Accuracy Target(99.9%)                                                                  |
     |:-----------------:|:----------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------:|

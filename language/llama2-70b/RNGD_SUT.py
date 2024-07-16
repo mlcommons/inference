@@ -64,7 +64,6 @@ class SUT(PyTorchSUT):
     ):
         self.quantize = args.quantize
         self.torch_numeric_optim = args.torch_numeric_optim
-        self.quant_config_path = args.quant_config_path
         self.quant_param_path = args.quant_param_path
         self.quant_format_path = args.quant_format_path
         super().__init__(
@@ -242,7 +241,6 @@ class SUT(PyTorchSUT):
             traced_model = self.model.trace_all()
             model = quantize_model(
                 traced_model,
-                qconfig_path=self.quant_config_path,
                 qparam_path=self.quant_param_path,
                 qformat_path=self.quant_format_path,
             )

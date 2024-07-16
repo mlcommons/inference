@@ -27,7 +27,6 @@ def get_args():
     parser.add_argument("--output-log-dir", type=str, default="output-logs", help="Where logs are saved")
     parser.add_argument("--enable-log-trace", action="store_true", help="Enable log tracing. This file can become quite large")
     parser.add_argument("--num-workers", type=int, default=1, help="Number of workers to process queries")
-    parser.add_argument("--quant_config_path", help="a config for model quantization")
     parser.add_argument("--quant_param_path", help="quantization parameters for calibrated layers")
     parser.add_argument("--quant_format_path", help="quantization specifications for calibrated layers")
     parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")

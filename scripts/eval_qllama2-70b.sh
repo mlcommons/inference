@@ -77,7 +77,6 @@ python -u main.py --scenario $SCENARIO \
                   --accuracy \
                   --output-log-dir $LOG_PATH \
                   --quantize \
-                  --quant_config_path $QUANT_CONFIG_PATH \
                   --quant_param_path $QUANT_PARAM_PATH \
                   --quant_format_path $QUANT_FORMAT_PATH
 

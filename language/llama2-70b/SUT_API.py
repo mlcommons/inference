@@ -220,30 +220,21 @@ class SUT():
 
                 tik1 = time.time()
 
+                # vLLM doesn't require padding and can take input tokens 
+                # directly, so we build our input_ids_tensor as a jagged list
                 input_ids_tensor = []
-                input_masks_tensor = []
-                input_len = []
                 for q in qitem:
-                    input_ids_tensor.append(pad(self.data_object.input_ids[q.index],
-                                                (max_seq_len - self.data_object.input_lens[q.index], 0, 0, 0),
-                                                value=self.tokenizer.pad_token_id))
-                    input_masks_tensor.append(pad(self.data_object.attention_masks[q.index],
-                                                  (max_seq_len - self.data_object.input_lens[q.index], 0, 0, 0),
-                                                 value=0))
-                    input_len.append(self.data_object.input_lens[q.index])
-                input_ids_tensor = torch.cat(input_ids_tensor)
-                input_masks_tensor = torch.cat(input_masks_tensor)
+                    input_ids_tensor.append(self.data_object.input_ids[q.index])
+                
+                # NOTE(mgoin): I don't think this has to be a torch tensor
+                # input_ids_tensor = torch.cat(input_ids_tensor)
 
-                assert input_ids_tensor.shape == input_masks_tensor.shape
-                assert input_ids_tensor.shape[0] <= self.batch_size
-
-                if self.api_servers:
-                    decoded = self.tokenizer.batch_decode(input_ids_tensor)
-                    cleaned = [entry.replace('</s>','').replace('<s>','') for entry in decoded]
-                    cleaned_chunks = [list(c) for c in mit.divide(len(self.api_servers), cleaned)]
+                assert len(input_ids_tensor) <= self.batch_size
 
                 tik2 = time.time()
 
+                # NOTE(mgoin): I don't think threading is necessary since we are submitting all queries in one request
+                # vLLM takes care of mini-batches and scheduling
                 if self.api_servers:
                     with ThreadPoolExecutor(max_workers=len(self.api_servers)) as executor:
                         #needs to be tested
@@ -257,14 +248,10 @@ class SUT():
 
                 tik3 = time.time()
 
-                processed_output = self.data_object.postProcess(pred_output_tokens,
-                                                                input_seq_lens=input_len,
-                                                                query_id_list=query_ids)
-                if self.api_servers:
-                    processed_output = np.array(self.tokenizer(output, padding='longest')['input_ids'])
-
+            processed_output = self.tokenizer(output)['input_ids']
             for i in range(len(qitem)):
-                unpadded = np.delete(processed_output[i], np.where(processed_output[i] == 2))
+                # NOTE(mgoin): Not optimal to make numpy arrays just to serialize
+                unpadded = np.array(processed_output[i])
                 n_tokens = unpadded.shape[0]
                 response_array = array.array("B", unpadded.tobytes())
                 bi = response_array.buffer_info()

@@ -64,6 +64,7 @@ def main():
 
     # Set compliance images path
     dump_compliance_images = False
+    compliance_images_idx_list = []
     if args.compliance_images_path:
         if not os.path.exists(args.compliance_images_path):
             os.makedirs(args.compliance_images_path)

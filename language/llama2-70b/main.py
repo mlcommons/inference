@@ -80,6 +80,8 @@ def main():
         dataset_path=args.dataset_path,
         total_sample_count=args.total_sample_count,
         device=args.device,
+        api_server=args.api_server,
+        api_model_name=args.api_model_name,
     )
 
     # Start sut before loadgen starts

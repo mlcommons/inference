@@ -18,6 +18,12 @@ import logging
 from typing import TYPE_CHECKING, Optional, List
 from pathlib import Path
 
+import more_itertools as mit
+from concurrent.futures.thread import ThreadPoolExecutor
+
+import requests
+from urllib3.exceptions import InsecureRequestWarning
+
 import mlperf_loadgen as lg
 from dataset import Dataset
 
@@ -166,19 +172,20 @@ class SUT():
         json_data = {
             'model': self.api_model_name,
             'prompt': inputs,
-            'max_tokens': 1024,
+            'max_tokens': 8,
             'temperature': 0,
         }
 
         response_code = 0
-        print(f"Server path {{self.api_servers[idx]}/v1/completions}")
+        print(f"Server path {self.api_servers[idx]}/v1/completions")
         while response_code != 200:
             try:
-                response = requests.post(f'{self.api_servers[idx]}/v1/completions', headers=headers, json=json_data, verify=False)
+                response = requests.post(f"{self.api_servers[idx]}/v1/completions", headers=headers, json=json_data, verify=False)
                 response_code = response.status_code
-            except:
+            except Exception as e:
+                print(e)
                 print("connection failure")
-                exit()
+                exit(1)
         return [resp["text"] for resp in json.loads(response.text)["choices"]]
 
     def api_action_handler(self, chunk, server_idx):
@@ -246,7 +253,7 @@ class SUT():
                         output += row
                 else:
                     print("Error: Specify at least one API to which the request is to be sent!")
-                    exit()
+                    exit(1)
 
                 tik3 = time.time()
 

@@ -173,7 +173,8 @@ class SUT():
         json_data = {
             "model": self.api_model_name,
             "prompt": inputs,
-            "max_tokens": 8
+            "min_tokens": 1,
+            "max_tokens": 1024
         }
 
         response_code = 0

@@ -83,6 +83,7 @@ def main():
             device=args.device,
             api_server=args.api_server,
             api_model_name=args.api_model_name,
+            workers=args.num_workers
         )
     else:
         sut = sut_cls(
@@ -91,7 +92,8 @@ def main():
             batch_size=args.batch_size,
             dataset_path=args.dataset_path,
             total_sample_count=args.total_sample_count,
-            device=args.device
+            device=args.device,
+            workers=args.num_workers
         )
 
     # Start sut before loadgen starts

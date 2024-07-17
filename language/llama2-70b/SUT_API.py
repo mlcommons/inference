@@ -105,9 +105,7 @@ class SUT():
         self.api_model_name = api_model_name
         self.device = device
 
-        if not batch_size:
-            # API Servers can handle batching themselves
-            batch_size = total_sample_count
+        batch_size = total_sample_count
         self.batch_size = batch_size
 
         # dtype
@@ -224,6 +222,10 @@ class SUT():
                 input_ids_tensor = []
                 for q in qitem:
                     input_ids_tensor.append(self.data_object.input_ids[q.index].tolist())
+                
+                # NOTE(mgoin): I don't think this has to be a torch tensor
+                #input_ids_tensor = torch.cat(input_ids_tensor)
+
 
                 assert len(input_ids_tensor) <= self.batch_size
 
@@ -232,9 +234,12 @@ class SUT():
                 # NOTE(mgoin): I don't think threading is necessary since we are submitting all queries in one request
                 # The API server should take care of mini-batches and scheduling
                 if self.api_servers:
+                    '''
                     decoded = self.tokenizer.batch_decode(input_ids_tensor)
                     cleaned = [entry.replace('</s>','').replace('<s>','') for entry in decoded]
                     cleaned_chunks = [list(c) for c in mit.divide(len(self.api_servers), cleaned)]
+                    '''
+                    cleaned_chunks = input_ids_tensor
                     with ThreadPoolExecutor(max_workers=len(self.api_servers)) as executor:
                         #needs to be tested
                         output_chunks = list(executor.map(self.api_action_handler,cleaned_chunks,range(len(self.api_servers))))

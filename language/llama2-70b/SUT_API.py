@@ -106,10 +106,8 @@ class SUT():
         self.device = device
 
         if not batch_size:
-            if device == "cpu":
-                batch_size = 1
-            else:
-                batch_size = 32  # Reduce to 8 if using 4 GPUs, 16 for 8.
+            # API Servers can handle batching themselves
+            batch_size = total_sample_count
         self.batch_size = batch_size
 
         # dtype

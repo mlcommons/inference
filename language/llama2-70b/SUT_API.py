@@ -221,11 +221,13 @@ class SUT():
                 # directly, so we build our input_ids_tensor as a jagged list
                 input_ids_tensor = []
                 for q in qitem:
-                    input_ids_tensor.append(self.data_object.input_ids[q.index].tolist())
+                    #input_ids_tensor.append(self.data_object.input_ids[q.index].tolist())
+                    input_ids_tensor += self.data_object.input_ids[q.index].tolist()
                 
                 # NOTE(mgoin): I don't think this has to be a torch tensor
                 #input_ids_tensor = torch.cat(input_ids_tensor)
 
+                #print(input_ids_tensor)
 
                 assert len(input_ids_tensor) <= self.batch_size
 
@@ -239,7 +241,7 @@ class SUT():
                     cleaned = [entry.replace('</s>','').replace('<s>','') for entry in decoded]
                     cleaned_chunks = [list(c) for c in mit.divide(len(self.api_servers), cleaned)]
                     '''
-                    cleaned_chunks = input_ids_tensor
+                    cleaned_chunks = [input_ids_tensor]
                     with ThreadPoolExecutor(max_workers=len(self.api_servers)) as executor:
                         #needs to be tested
                         output_chunks = list(executor.map(self.api_action_handler,cleaned_chunks,range(len(self.api_servers))))
@@ -253,7 +255,8 @@ class SUT():
                 tik3 = time.time()
 
             processed_output = self.tokenizer(output)['input_ids']
-            for i in range(len(qitem)):
+            #for i in range(len(qitem)):
+            for i in range(len(processed_output)):
                 # NOTE(mgoin): Not optimal to make numpy arrays just to serialize
                 unpadded = np.array(processed_output[i])
                 n_tokens = unpadded.shape[0]

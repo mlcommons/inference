@@ -4,11 +4,26 @@ import argparse
 import os
 import logging
 import sys
+import requests
+import json
 
 sys.path.insert(0, os.getcwd())
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("Llama-70B-MAIN")
+
+# function to check the model name in server matches the user specified one
+def verify_model_name(user_specified_name, url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        response_dict = response.json()
+        server_model_name = response_dict["data"][0]["id"]
+        if user_specified_name == server_model_name:
+            return {"matched":True, "error":False}
+        else:
+            return {"matched":False, "error":f"User specified {user_specified_name} and server model name {server_model_name} mismatch!"}
+    else:
+        return {"matched":False, "error":f"Failed to get a valid response. Status code: {response.status_code}"}
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -41,6 +56,13 @@ scenario_map = {
 
 def main():
     args = get_args()
+    
+    if args.vllm:
+        resp = verify_model_name(args.api_model_name, args.api_server+"/v1/models")
+        if resp["error"]:
+            print(f"\n\n\033[91mError:\033[0m", end=" ")
+            print(resp["error"])
+            sys.exit(1)
 
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]

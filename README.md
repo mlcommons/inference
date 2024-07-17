@@ -17,40 +17,6 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
 ```
 
 
-## Build RNGD Software(Runtime) Stack for running on npu
-
-- Tested on Ubuntu 22.04 (Jammy)
-- Based on [RNGD SW Stack(Runtime) Guide](https://www.notion.so/furiosa/RNGD-SW-Stack-runtime-7df73fb4d92241e09a2721612ebd9c3d)
-- It takes about 1-2 hours to build the whole stack depending on your system, and approximately 20 GB of disk space is required.
-
-### Prerequisites - Internal Access Keys and S3 Authentication
-
-#### Step 1: Internal APT Archive Setup (Jammy 22.04)
-To set up the nightly distribution repository for internal users, follow the steps outlined in the following links:
-
-- [Internal APT Archive Setup - Step 1](https://www.notion.so/furiosa/Linux-Package-Distribution-Internal-Users-673f350682e148aba52832911eb186bc?pvs=4#916134e5ccc24a99925eb7300e61dd4d)
-- [Internal APT Archive Setup - Step 2](https://www.notion.so/furiosa/Linux-Package-Distribution-Internal-Users-673f350682e148aba52832911eb186bc?pvs=4#2ffcee8196a3498e9cc90d0da652d3b1)
-- [Internal APT Archive Setup - Step 3](https://www.notion.so/furiosa/Linux-Package-Distribution-Internal-Users-673f350682e148aba52832911eb186bc?pvs=4#b35416b3477447b8aeabe49b93ed3721)
-
-#### Step 2: Internal PyPI Setup
-To set up the internal PyPI repository, please refer to the guide provided in the following link:
-
-- [Setting up Internal PyPI Repository](https://www.notion.so/furiosa/Setting-up-Internal-PyPI-Repository-bb0fa80920a54cdc97030de45484e99c?pvs=4#2effec32470744bba7c25c3e591dd7b1)
-
-#### Step 3: DVC S3 Authentication
-To authenticate with DVC using S3, execute the following command:
-
-Visit [AWS CLI Furiosa](https://aws-cli.furiosa.dev/) and update the necessary configuration steps for your AWS credentials.
-
-### Build
-
-To build the RNGD environment, execute the following command:
-
-```shell
-make build-rngd
-```
-
-
 ## Submission Model
 
 ### Wi8Ai8KVi8 Quantized BERT (qBERT)

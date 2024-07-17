@@ -4,3 +4,6 @@
 [submodule "vision/medical_imaging/3d-unet-brats19/nnUnet"]
 	path = vision/medical_imaging/3d-unet-brats19/nnUnet
 	url = https://github.com/MIC-DKFZ/nnUNet.git
+[submodule "furiosa-runtime"]
+	path = furiosa-runtime
+	url = https://github.com/furiosa-ai/furiosa-runtime.git

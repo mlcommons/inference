@@ -1,3 +1,8 @@
+# build RNGD for running on NPU
+.PHONY build-rngd
+build-rngd:
+	-bash scripts/build_rngd_env.sh
+
 # end-to-end quantized model evaluation
 .PHONY: qbert
 qbert:

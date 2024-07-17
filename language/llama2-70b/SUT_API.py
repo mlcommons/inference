@@ -223,10 +223,7 @@ class SUT():
                 # directly, so we build our input_ids_tensor as a jagged list
                 input_ids_tensor = []
                 for q in qitem:
-                    input_ids_tensor.append(self.data_object.input_ids[q.index])
-                
-                # NOTE(mgoin): I don't think this has to be a torch tensor
-                input_ids_tensor = torch.cat(input_ids_tensor)
+                    input_ids_tensor.append(self.data_object.input_ids[q.index].tolist())
 
                 assert len(input_ids_tensor) <= self.batch_size
 

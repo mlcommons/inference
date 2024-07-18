@@ -10,6 +10,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 import model_compressor  # isort:skip
 from dataset import Dataset  # isort:skip
 from quantization.utils import get_kwargs, random_seed, set_optimization  # isort:skip
+from quantization.quantize import quantize_model
 
 
 def get_autoscale_calib_config(model_script, model, calib_dataloader):
@@ -95,7 +96,7 @@ def make_calib_dataloader(calib_dataset_path, batch_size, n_calib):
     return DataLoader(data_list, batch_size)
 
 
-def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_dataloader):
+def calibrate(model: GraphModule, model_type, qconfig, qparam_path, qformat_path, calib_dataloader, save_cache_files):
     run_autoscale = qconfig.get("autoscale", "disabled") != "disabled"
     if run_autoscale:
         autoscale_calib_cfg = get_autoscale_calib_config(
@@ -115,6 +116,7 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
         model_for_calib,
         calib_dataloader=calib_dataloader,
         autoscale_calib_kwargs=autoscale_calib_cfg if run_autoscale else None,
+        model_type=model_type,
         **get_kwargs(model_compressor.calibrate, qconfig),
     )
 
@@ -133,6 +135,22 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
         kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
         disable_inout=(True, False),
         )
+    
+    if save_cache_files:
+
+        traced_models = model.trace_all()
+        quant_models = quantize_model(traced_models, qparam_path, qformat_path,)
+
+        qlv4_prefill_out_path = qparam_path.replace("quant_param_golden.npy", "prefill.bin")
+        qlv4_decode_out_path = qparam_path.replace("quant_param_golden.npy", "decode.bin")
+        prefill_rblock_json_out_path = qparam_path.replace("quant_param_golden.npy", "prefill_graph_patterns.json")
+        decode_rblock_json_out_path = qparam_path.replace("quant_param_golden.npy", "decode_graph_patterns.json")
+
+        torch.save(quant_models["prefill"].state_dict(), qlv4_prefill_out_path)
+        torch.save(quant_models["decode"].state_dict(), qlv4_decode_out_path)
+        model_compressor.save_graph_patterns(quant_models["prefill"], prefill_rblock_json_out_path)
+        model_compressor.save_graph_patterns(quant_models["decode"], decode_rblock_json_out_path)
+
 
     del model_for_calib
 
@@ -193,6 +211,12 @@ def get_args():
     parser.add_argument(
         "--gpu", action="store_true", help="use GPU instead of CPU for the inference"
     )
+    parser.add_argument(
+        "--save_cache_files",
+        action="store_true",
+        default=False,
+        help="if true qlv4 state_dict and rblock .json will be saved",
+    )
 
     args = parser.parse_args()
     return args
@@ -202,6 +226,8 @@ def main():
     args = get_args()
     sut = None
     golden_model = load_pytorch_model(args.model_path, args.gpu)
+
+    model_type = type(golden_model)
 
     random_seed()
     set_optimization(args.torch_numeric_optim)
@@ -215,7 +241,7 @@ def main():
     golden_quant_param_path = args.quant_param_path.replace('.npy', '_golden.npy')
     golden_quant_format_path = args.quant_format_path.replace('.yaml', '_golden.yaml')
 
-    calibrate(golden_model, qconfig, golden_quant_param_path, golden_quant_format_path, dataloader)
+    calibrate(golden_model, model_type, qconfig, golden_quant_param_path, golden_quant_format_path, dataloader, args.save_cache_files)
     
     submission_model = load_mlperf_submission_model(args.model_path, args.gpu)
 

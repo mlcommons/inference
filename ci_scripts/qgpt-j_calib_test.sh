@@ -10,6 +10,26 @@ quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
+tag=MLPerf4.1-v3.13
+quant_data_dvc_dir=quantized/GPT-J/mlperf_submission/W8A8KV8/28L
+
+printf "\n============= STEP-1: Pull dvc data =============\n"
+cd $git_dir
+git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+cd $git_dir/furiosa-llm-models-artifacts
+git checkout $tag
+
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml.dvc -r origin --force
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy.dvc -r origin --force
+
+mkdir -p $quant_data_dir/calibration_range
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
+rm -rf $git_dir/furiosa-llm-models-artifacts
+
+
+RELEASED_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
+
 
 # work on model directory
 cd $work_dir
@@ -19,7 +39,7 @@ source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
 
 # eval model
-printf "\n============= STEP-1: Run calibration =============\n"
+printf "\n============= STEP-2: Run calibration =============\n"
 SCENARIO=${SCENARIO:="Offline"}
 #BACKEND="rngd"
 MODEL_TYPE="golden"
@@ -36,7 +56,7 @@ QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
 QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
 QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
 
-printf "<<EVAL_CONFIG>>\n"
+printf "<<CALIB_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"
 printf "\tNUM_EVAL_DATA: $N_COUNT\n"
 printf "\tCALIBRATE: $CALIBRATE\n"
@@ -55,7 +75,8 @@ if [ "$CALIBRATE" = true ]; then
                                      --quant_format_path=$QUANT_FORMAT_PATH \
                                      --calib_data_path=$CALIB_DATA_PATH \
                                      --n_calib=$N_CALIB \
-                                     --gpu
+                                     --gpu \
+                                     --save_cache_files
     printf "Save calibration range to $LOG_PATH/calibration_range"
 else
     cp $QUANT_PARAM_PATH $LOG_PATH/calibration_range/quant_param.npy
@@ -63,10 +84,7 @@ else
 fi
 
 
-printf "\n============= STEP-2: Pull dvc data =============\n"
-pip install dvc[s3]
-dvc pull --force $data_dir/quantization/gpt-j.dvc
-RELEASED_PARAM_PATH=$data_dir/quantization/gpt-j/calibration_range/quant_param.npy
+
 
 
 printf "\n============= STEP-3: Check the equivalence of quantiation parameters =============\n"
@@ -78,6 +96,7 @@ python ci_file/utils/check_qparam_equivalence.py --released_quant_param_path=$RE
 
 
 unset LOG_PATH
+unset CALIBRATE
 
 printf "\n============= End of calibration =============\n"
 

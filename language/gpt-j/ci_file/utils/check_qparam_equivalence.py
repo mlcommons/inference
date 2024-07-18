@@ -50,7 +50,7 @@ def is_qparam_same(created_quant_param_path, released_quant_param_path, print_lo
 if __name__ == "__main__":
     args = get_args()
     if is_qparam_same(args.created_quant_param_path, args.released_quant_param_path):
-        print("The Quantiation parameter comparsion test is passed.")
+        print("The Quantization parameter comparsion test is passed.")
 
 
 

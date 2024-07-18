@@ -88,6 +88,9 @@ python -m ci_file.qgpt_j_forward_test          --model_path=$MODEL_PATH \
 
 
 unset LOG_PATH
+unset CALIBRATE
+unset N_CALIB
+unset N_DATA
 
 printf "\n============= End of Forward Test for QGPT-J =============\n"
 

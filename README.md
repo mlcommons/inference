@@ -23,9 +23,11 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
 
 - Evaluation Result(v3.13)
 
-    |    |                Our Result               |                                                                    Accuracy Target                                                                    |
+    |    |                Our Result               |                                                                    Accuracy Target (99%)                                                                    |
     |:--:|:---------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------:|
-    | F1 | 91.05631631816962 (100.20062539138766%) | [90.874](https://github.com/mlcommons/inference/blob/9e2c9f642e6e12b74e7c08d2e099c8af0e542873/tools/submission/submission_checker.py#L254C31-L254C37) |
+    | F1 | 91.0563 (100.20%*) | [89.9653](https://github.com/mlcommons/inference/blob/9e2c9f642e6e12b74e7c08d2e099c8af0e542873/tools/submission/submission_checker.py#L254C31-L254C37) |
+
+    \*The percentage is calculated as follows: `(Our Result [Accuracy] / Reference Accuracy) * 100`. This formula applies to all the cases listed below.
 
 To reproduce the results, run the following commands:
 
@@ -45,13 +47,14 @@ For evaluations with different settings, modify the following environment variab
 
 - Evaluation Result(v3.13)
 
-    |         | Our Result                | Accuracy Target |
+    |         | Our Result                | Accuracy Target (99.9%) |
     |:-------:|:-------------------------:|:---------------:|
-    | ROUGE1  | 43.0305 (100.10%)         | [42.9865](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C38-L1126C45) |
-    | ROUGE2  | 20.1437 (100.10%)         | [20.1235](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72) |
-    | ROUGEL  | 30.0211 (100.11%)         | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99) |
-    | GEN_LEN | 3,978,315 (99.04%)        | [4,016,878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127) |
-    
+    | ROUGE1  | 43.0305 (100.10%)         | [42.9435](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C38-L1126C45) |
+    | ROUGE2  | 20.1437 (100.10%)         | [20.1034](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C65-L1126C72) |
+    | ROUGEL  | 30.0211 (100.11%)         | [29.9581](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99) |
+    | GEN_LEN | 3,978,315 (99.04%)        | [3,615,191](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127)* |
+
+    \*GEN_LEN is required to be at least 90% of the Reference.
 
 To reproduce the results, run the following commands:
 
@@ -71,7 +74,7 @@ For evaluations with different settings, modify the following environment variab
 
 - Evaluation Result(v3.13)
 
-    |                   | Our Result |                                                                   Accuracy Target(99.9%)                                                                  |
+    |                   | Our Result |                                                                   Accuracy Target (99.9%)                                                                  |
     |:-----------------:|:----------:|:---------------------------------------------------------------------------------------------------------------------------------------------------------:|
     | ROUGE1            | TBA        | [44.3868](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1128C44-L1128C59)  |
     | ROUGE2            | TBA        | [22.0132](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1128C71-L1128C86)  |

@@ -1,6 +1,6 @@
 outs:
-- md5: 78406ddb57ab1dce9c2662aee03668dd.dir
-  size: 13855549105
-  nfiles: 9
+- md5: 396ed8c57357132ca2ec7a17803400e9.dir
+  size: 26842925
+  nfiles: 4
   hash: md5
   path: qgpt-j

@@ -1,6 +1,6 @@
 outs:
-- md5: bdd4495238c41bbdc4115ab304760192.dir
-  size: 11608232
-  nfiles: 3
+- md5: e669e65f6f287986371bedf631b21453.dir
+  size: 522
+  nfiles: 1
   hash: md5
   path: gpt-j

@@ -8,6 +8,9 @@ work_dir=$git_dir/$model_dir
 data_dir=$git_dir/data
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
+quant_data_dir=$data_dir/quantization/gpt-j
+tag=MLPerf4.1-v3.13
+quant_data_dvc_dir=quantized/GPT-J/mlperf_submission/W8A8KV8/28L
 
 # work on model directory
 cd $work_dir
@@ -34,6 +37,21 @@ pip install dvc[s3]
 dvc pull $data_dir/models/gpt-j --force
 dvc pull $data_dir/dataset/cnn-daily-mail --force
 dvc pull $data_dir/quantization/gpt-j --force
+
+# pull quantization 
+printf "\n============= STEP-4: Pull quantization data =============\n"
+cd $git_dir
+git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+cd $git_dir/furiosa-llm-models-artifacts
+git checkout $tag
+
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml.dvc -r origin --force
+dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy.dvc -r origin --force
+
+mkdir -p $quant_data_dir/calibration_range
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $quant_data_dir/calibration_range/quant_format.yaml
+cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $quant_data_dir/calibration_range/quant_param.npy
+rm -rf $git_dir/furiosa-llm-models-artifacts
 
 printf "\n============= End of build =============\n"
 

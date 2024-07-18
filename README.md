@@ -43,7 +43,7 @@ For evaluations with different settings, modify the following environment variab
 
 ### Wi8Ai8KVi8 Quantized GPT-J (qGPT-J)
 
-- Evaluation Result(v3.12.1)
+- Evaluation Result(v3.13)
 
     |         | Our Result                | Accuracy Target |
     |:-------:|:-------------------------:|:---------------:|
@@ -52,7 +52,6 @@ For evaluations with different settings, modify the following environment variab
     | ROUGEL  | 30.0211 (100.11%)         | [29.9881](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C92-L1126C99) |
     | GEN_LEN | 3,978,315 (99.04%)        | [4,016,878](https://github.com/mlcommons/inference/blob/e39003a9c4c89a2215db0ca57ad7a57b16f9a785/tools/submission/submission_checker.py#L1126C120-L1126C127) |
     
-    - reference: [v3.11 Quantized GPT-J evaluation report](https://www.notion.so/furiosa/hugginface_rope_rngd_gelu-061729cc2bdc4410a9dd078fa05a317d)
 
 To reproduce the results, run the following commands:
 

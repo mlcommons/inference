@@ -109,7 +109,7 @@ def cal_data_loader(data_path, batch_size, n_calib, model_type, is_equivalence_c
         ValueError("Unsupported backend: {:}".format(model_type))
 
 
-def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_dataloader):
+def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_dataloader, save_cache_files):
     model.config.use_cache = False
 
     model = model_compressor.create_quantsim_model(
@@ -140,6 +140,14 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
         kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
         disable_inout=(True, True),
     )
+
+    if save_cache_files:
+        qlv4_prefill_out_path = qparam_path.replace("quant_param.npy", "bert.bin")
+        rblock_json_out_path = qparam_path.replace("quant_param.npy", "graph_patterns.json")
+        torch.save(model.state_dict(), qlv4_prefill_out_path)
+        
+        model_compressor.save_graph_patterns(model, rblock_json_out_path)
+
 
     return
 
@@ -175,6 +183,12 @@ def get_args():
         action="store_true",
         default=False,
         help="flag for equivalence_ci",
+    )
+    parser.add_argument(
+        "--save_cache_files",
+        action="store_true",
+        default=False,
+        help="if true qlv4 state_dict and rblock .json will be saved",
     )
 
     args = parser.parse_args()
@@ -218,6 +232,7 @@ def main():
         args.quant_param_path,
         args.quant_format_path,
         dataloader,
+        args.save_cache_files
     )
 
 

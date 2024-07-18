@@ -63,9 +63,15 @@ Inside the container, set up the environment with `bash build.sh`. This will ins
 CPU-only setup, as well as any GPU versions for applicable libraries like PyTorch.
 
 
-## Get Model
+## Model
 
-### Checkpoint
+| model | accuracy | model source | precision |
+| ---- | ---- | ---- | ---- |
+| Mixtral-8x7B-Instruct-v0.1 | [Accuracy target](#accuracy-target) | [Hugging Face](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1) | fp16 |
+
+**Important Note:** Files and configurations of the model have changed, and might change in the future. If you are going to get the model from Hugging Face or any external source, use a version of the model that exactly matches the one in this [commit](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1/commit/a60832cb6c88d5cb6e507680d0e9996fbad77050). We strongly recommend to get the model following the steps in the next section:
+
+### Get Checkpoint
 
 #### Using Rclone
 
@@ -243,8 +249,7 @@ sudo docker run -it -v $(pwd):/eval -t evaluation
 3. 
 ```bash
 cd eval
-huggingface-cli login --token [huggingface_token]
-python -u evaluate-accuracy.py --checkpoint-path mistralai/Mixtral-8x7B-instruct-v0.1 \
+python -u evaluate-accuracy.py --checkpoint-path [path_to_model_checkpoint] \
                 --mlperf-accuracy-file [path_to_mlperf_accuracy_file] \
                 --dataset-file [path_to_dataset] \
                 --n_workers 8

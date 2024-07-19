@@ -18,6 +18,7 @@ def quantize_model(
         model,
         qformat_path=qformat_path,
         qparam_path=qparam_path,
+        weighted_op_emul_dtype="fp64", # check issue https://furiosa-ai.slack.com/archives/C03PPKEGYUC/p1720961501100809
         target_machine=TARGET_MACHINE,
         qlevel=QLEVEL,
     )

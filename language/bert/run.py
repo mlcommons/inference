@@ -24,6 +24,7 @@ sys.path.insert(0, os.getcwd())
 sys.path.insert(0, os.path.join(os.getcwd(), "..", "..", "lon"))
 from absl import app
 from absl import flags
+from pathlib import Path
 
 
 def get_args():
@@ -56,6 +57,7 @@ def get_args():
     parser.add_argument("--quantize", action="store_true", help="quantize model using Model Compressor")
     parser.add_argument('--torch_numeric_optim', action="store_true", help="use PyTorch numerical optimizaiton for CUDA/cuDNN")
     parser.add_argument("--gpu", action="store_true", help="use GPU instead of CPU for the inference")
+    parser.add_argument("--dump_path", type=Path, default=None, help="path to dump BERT encoder input/outputs.")
     args = parser.parse_args()
     return args
 

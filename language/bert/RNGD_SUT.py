@@ -12,21 +12,17 @@ sys.path.insert(
 sys.path.insert(0, os.getcwd())
 
 import json
-from pathlib import Path
 
 import mlperf_loadgen as lg
 import numpy as np
 import torch
 import transformers
-from furiosa_llm_models.bert.symbolic.mlperf_submission import \
-    BertForQuestionAnswering
+from furiosa_llm_models.bert.symbolic.mlperf_submission import BertForQuestionAnswering
 from pytorch_SUT import BERT_PyTorch_SUT
 from RNGD_encoder import BertMLPerfSubmissionEncoder, stack_tensors
 from squad_QSL import get_squad_QSL
 from torch.fx import GraphModule
 from transformers import BertConfig
-
-import tqdm
 
 BUCKET_SIZE = 384
 PAD_TOKEN_ID: int = 0  # EOS token
@@ -35,8 +31,7 @@ PAD_TOKEN_ID: int = 0  # EOS token
 class BERT_RNGD_SUT(BERT_PyTorch_SUT):
     def __init__(self, args):
         print("Loading BERT configs...")
-        config_path = Path(__file__).parent.joinpath("bert_config.json")
-        with open(config_path, "r") as f:
+        with open("bert_config.json") as f:
             config_json = json.load(f)
 
         config = BertConfig(
@@ -58,12 +53,6 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
             torch.device("cuda:0") if torch.cuda.is_available() else torch.device("cpu")
         )
         self.version = transformers.__version__
-
-        self.dump_path = args.dump_path
-        if not self.dump_path.exists():
-            with open(self.dump_path, "w") as f:
-                json.dump([], f)
-        self.dump = {}
 
         print("Loading PyTorch model...")
         self.model = BertForQuestionAnswering(config)
@@ -104,23 +93,6 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
 
         self.qsl = get_squad_QSL(args.max_examples)
 
-    def issue_queries(self, query_samples):
-        for i in tqdm.tqdm(range(len(query_samples)), unit="queries"):
-            eval_features = self.qsl.get_features(query_samples[i].index)
-            if self.dump_path:
-                self.dump.update({"qsl_idx": query_samples[i].index})
-            self.process_sample(eval_features, query_samples[i].id)
-
-            if self.dump_path:
-                with open(self.dump_path, "r") as f:
-                    data = json.load(f)
-
-                data.append(self.dump)
-                data = sorted(data, key=lambda x: x["qsl_idx"])
-
-                with open(self.dump_path, "w") as f:
-                    json.dump(data, f)
-
     def process_sample(self, sample_input, query_id=None):
         if self.network == "sut":
             input_ids = sample_input["input_ids"]
@@ -131,24 +103,12 @@ class BERT_RNGD_SUT(BERT_PyTorch_SUT):
             input_mask = sample_input.input_mask
             segment_ids = sample_input.segment_ids
 
-        query = {
-            "input_ids": input_ids,
-            "input_mask": input_mask,
-            "segment_ids": segment_ids,
-        }
-
-        if self.dump_path:
-            self.dump.update({"input": query})
-
         with torch.no_grad():
             model_output = self.encoder.encode(
                 input_ids=torch.LongTensor(input_ids).unsqueeze(0).to(self.dev),
                 attention_mask=torch.LongTensor(input_mask).unsqueeze(0).to(self.dev),
                 token_type_ids=torch.LongTensor(segment_ids).unsqueeze(0).to(self.dev),
             )
-            if self.dump_path:
-                assert len(model_output) == 1
-                self.dump.update({"output": {"output_ids": model_output[0].tolist()}})
 
             input_length = torch.LongTensor(input_ids).unsqueeze(0).shape[-1]
             output = stack_tensors(model_output, max_shape=[input_length, 2])

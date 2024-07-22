@@ -10,7 +10,7 @@ quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
-tag=MLPerf4.1-v3.13
+tag=MLPerf4.1-v3.13.2
 quant_data_dvc_dir=quantized/GPT-J/mlperf_submission/W8A8KV8/28L
 
 printf "\n============= STEP-1: Pull dvc data =============\n"

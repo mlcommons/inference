@@ -10,7 +10,7 @@ quant_data_dir=$data_dir/quantization/bert
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
 conda_base=$($CONDA_EXE info --base)
-tag=MLPerf4.1-v3.13
+tag=MLPerf4.1-v3.13.2
 
 # work on model directory
 cd $work_dir

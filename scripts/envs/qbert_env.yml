@@ -8,7 +8,7 @@ dependencies:
       - torch==2.1.0+cu118
       - transformers==4.31.0
       - numpy==1.24.4
-      - git+https://github.com/furiosa-ai/furiosa-llm-models.git@MLPerf4.1-v3.13
-      - git+https://github.com/furiosa-ai/model-compressor-private.git@MLPerf4.1-v3.13
+      - git+https://github.com/furiosa-ai/furiosa-llm-models.git@MLPerf4.1-v3.13.2
+      - git+https://github.com/furiosa-ai/model-compressor-private.git@MLPerf4.1-v3.13.2
       - absl-py==2.1.0 
       - tokenization==1.0.7

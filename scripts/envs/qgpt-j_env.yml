@@ -12,6 +12,6 @@ dependencies:
       - evaluate==0.4.1
       - absl-py==2.1.0
       - rouge_score==0.1.2
-      - git+https://github.com/furiosa-ai/furiosa-llm-models.git@MLPerf4.1-v3.13
-      - git+https://github.com/furiosa-ai/model-compressor-private.git@MLPerf4.1-v3.13
+      - git+https://github.com/furiosa-ai/furiosa-llm-models.git@MLPerf4.1-v3.13.2
+      - git+https://github.com/furiosa-ai/model-compressor-private.git@MLPerf4.1-v3.13.2
       - accelerate==0.31.0

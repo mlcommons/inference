@@ -21,7 +21,7 @@ DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install libgl1 libglib2
 
 ### Wi8Ai8KVi8 Quantized BERT (qBERT)
 
-- Evaluation Result(v3.13)
+- Evaluation Result(v3.13.2)
 
     |    |                Our Result               |                                                                    Accuracy Target (99%)                                                                    |
     |:--:|:---------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------------------------:|
@@ -45,7 +45,7 @@ For evaluations with different settings, modify the following environment variab
 
 ### Wi8Ai8KVi8 Quantized GPT-J (qGPT-J)
 
-- Evaluation Result(v3.13)
+- Evaluation Result(v3.13.2)
 
     |         | Our Result                | Accuracy Target (99.9%) |
     |:-------:|:-------------------------:|:---------------:|

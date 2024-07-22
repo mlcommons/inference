@@ -13,4 +13,4 @@ dependencies:
       - rouge_score==0.1.2
       - accelerate==0.31.0
       - numpy==1.26.4
-      - git+https://github.com/furiosa-ai/furiosa-llm-models.git@MLPerf4.1-v3.13
+      - git+https://github.com/furiosa-ai/furiosa-llm-models.git@MLPerf4.1-v3.13.2

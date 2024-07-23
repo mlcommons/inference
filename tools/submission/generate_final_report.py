@@ -61,7 +61,7 @@ def main():
       lambda x: '=HYPERLINK("{}","details")'.format('/'.join(
           [base_url, x['Category'], x['Submitter'], 'results', x['Platform']])),
       axis=1)
-  
+
   # code url
   df['Code'] = df.apply(
       lambda x: '=HYPERLINK("{}","code")'.format('/'.join(
@@ -104,7 +104,8 @@ def main():
                    [
                        'resnet', 'retinanet', '3d-unet-99', '3d-unet-99.9',
                        'rnnt', 'bert-99', 'bert-99.9', 'dlrm-v2-99', 'dlrm-v2-99.9',
-                       'gptj-99', 'gptj-99.9', 'stable-diffusion-xl', 'llama2-70b-99', 'llama2-70b-99.9'
+                       'gptj-99', 'gptj-99.9', 'stable-diffusion-xl', 'llama2-70b-99', 'llama2-70b-99.9',
+                       'mixtral-8x7b',
                    ], ['SingleStream', 'MultiStream', 'Server', 'Offline'],
                    [
                        'Latency (ms)',
@@ -130,6 +131,7 @@ def main():
           'stable-diffusion-xl': ['Server', 'Offline'],
           'llama2-70b-99': ['Server', 'Offline'],
           'llama2-70b-99.9': ['Server', 'Offline'],
+          'mixtral-8x7b': ['Server', 'Offline'],
       },
       'edge': {
           'resnet': ['SingleStream', 'MultiStream', 'Offline'],

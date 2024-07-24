@@ -334,6 +334,8 @@ void LogRequestedTestSettings(const TestSettings &s) {
                s.performance_issue_same_index);
     MLPERF_LOG(detail, "requested_performance_sample_count_override",
                s.performance_sample_count_override);
+    MLPERF_LOG(detail, "requested_sample_concatenate_permutation",
+            s.sample_concatenate_permutation);
     // Token latencies specific values
     if (s.use_token_latencies){
       MLPERF_LOG(detail, "requested_use_token_latencies", s.use_token_latencies);
@@ -443,6 +445,8 @@ void TestSettingsInternal::LogEffectiveSettings() const {
                s.performance_issue_same_index);
     MLPERF_LOG(detail, "effective_performance_sample_count",
                s.performance_sample_count);
+    MLPERF_LOG(detail, "effective_sample_concatenate_permutation",
+               s.sample_concatenate_permutation);
 #else
     detail("");
     detail("Effective Settings:");

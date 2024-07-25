@@ -2612,7 +2612,7 @@ def check_compliance_acc_dir(test_dir, model, config):
                             is_valid = False
                             break
                         else:
-                            required_delta_perc = config.get_delta_perc(model, acc_types)
+                            required_delta_perc = config.get_delta_perc(model, acc_type[0])
                             delta_perc = abs(1 - acc_baseline[acc_type] / acc_compliance[acc_type]) * 100
                             if delta_perc <= required_delta_perc:
                                 is_valid = True

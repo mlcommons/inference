@@ -807,9 +807,9 @@ class Config:
             division in ["closed", "network"] and
             model in [
                 "3d-unet-99",
-                "3d-unet-99.9"
+                "3d-unet-99.9",
                 "gptj-99",
-                "gptj-99.9"
+                "gptj-99.9",
                 "llama2-70b-99",
                 "llama2-70b-99.9", 
                 "mixtral-8x7b"
@@ -1226,7 +1226,7 @@ def check_performance_dir(
     # Check if this run uses early stopping. If it does, get the
     # min_queries from the detail log, otherwise get this value
     # from the config
-    if not uses_early_stopping:
+    if not (uses_early_stopping or config.requires_equal_issue(model, division)):
         required_min_query_count = config.get_min_query_count(model, scenario)
         if required_min_query_count and min_query_count < required_min_query_count:
             log.error(

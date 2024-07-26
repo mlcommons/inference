@@ -19,7 +19,8 @@ source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
 
 # eval model
-printf "\n============= STEP-4: Run calibration =============\n"
+printf "\n============= Run calibration qbert =============\n"
+SCENARIO=${SCENARIO:=Offline}
 MODEL_PATH=$data_dir/models/bert/model.pytorch
 MODEL_CONFIG_PATH=$data_dir/models/bert/bert_config.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)

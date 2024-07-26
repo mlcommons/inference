@@ -19,14 +19,11 @@ source "$conda_base/etc/profile.d/conda.sh"
 conda activate $env_name
 
 # eval model
-printf "\n============= STEP-1: Run calibration =============\n"
+printf "\n============= Run calibration qgpt-j =============\n"
 SCENARIO=${SCENARIO:="Offline"}
-#BACKEND="rngd"
-MODEL_TYPE="golden"
 MODEL_PATH=$data_dir/models/gpt-j
 DATASET_PATH=$data_dir/dataset/cnn-daily-mail/validation/cnn_eval.json
 LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
-N_COUNT=${N_COUNT:="13368"} # total_len=13,368
 
 # quantization args
 N_CALIB=${N_CALIB:=1000} # total_len=1,000

@@ -1,3 +1,11 @@
+# calibration
+.PHONY: calibrate-qbert
+calibrate-qbert:
+	-bash scripts/calibrate_qbert.sh
+.PHONY: calibrate-qgpt-j
+calibrate-qgpt-j:
+	-bash scripts/calibrate_qgpt-j.sh
+
 # end-to-end quantized model evaluation
 .PHONY: qbert
 qbert:

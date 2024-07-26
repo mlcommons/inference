@@ -253,17 +253,29 @@ class MLPerfSubmissionBeamSearch:
             outputs = self.model(**forward_kwargs)
             logits = handle_outputs(outputs)
 
+            # if is_prefill:
+            #     next_token_logits = self.find_next_tokens(
+            #         logits, logit_target_locations, is_prefill
+            #     )
+            #     next_token_scores = torch.nn.functional.log_softmax(
+            #         next_token_logits, dim=-1
+            #     )  # [batch_size * num_beams, vocab_size]
+            #     print(next_token_scores)
+            # else:
+            #     # For decode, we will use the logits as scores as model outputs
+            #     # torch.nn.functional.log_softmax(lm_logits[:, -1], dim=-1)
+            #     next_token_scores = logits
             if is_prefill:
-                next_token_logits = self.find_next_tokens(
+                next_token_scores = self.find_next_tokens(
                     logits, logit_target_locations, is_prefill
                 )
-                next_token_scores = torch.nn.functional.log_softmax(
-                    next_token_logits, dim=-1
-                )  # [batch_size * num_beams, vocab_size]
+                # next_token_scores = torch.nn.functional.log_softmax(
+                #     next_token_logits, dim=-1
+                # )  # [batch_size * num_beams, vocab_size]
             else:
                 # For decode, we will use the logits as scores as model outputs
                 # torch.nn.functional.log_softmax(lm_logits[:, -1], dim=-1)
-                next_token_scores = logits
+                next_token_scores = logits[:, -1]
             next_token_scores_processed = logits_processor(
                 generated_ids, next_token_scores
             )
@@ -542,6 +554,11 @@ class MLPerfSubmissionBeamSearch:
                 assert single_batch_logit.dim() == 2
                 for logit_target in single_batch_logit_target_location:
                     # logit target will just be index
+
+                    # hard coding for prefill last block slice
+                    # for not, packing is not supported
+                    if single_batch_logit.shape[0] == 1:
+                        logit_target = 0
                     next_tokens_scores.append(
                         single_batch_logit[logit_target]
                     )  # will be [embedding_dimension]

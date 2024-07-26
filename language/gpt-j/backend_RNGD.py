@@ -7,7 +7,7 @@ import mlperf_loadgen as lg
 import torch
 from accelerate import disk_offload
 from backend_PyTorch import SUT_base as PyTorch_SUT_base
-from furiosa_llm_models.gptj.symbolic.mlperf_submission import \
+from furiosa_llm_models.gptj.symbolic.mlperf_submission_slice import \
     GPTJForCausalLM as upstream_GPTJForCausalLM
 from generator_RNGD import (MLPerfSubmissionBeamSearch,
                             expand_inputs_for_generation)
@@ -110,7 +110,7 @@ class GPTJForCausalLM(upstream_GPTJForCausalLM):
         return input_names, concrete_args
 
 # This is a hack to make the module name of the class to be the same as the original one
-GPTJForCausalLM.__module__ = "furiosa_llm_models.gptj.symbolic.mlperf_submission"
+GPTJForCausalLM.__module__ = "furiosa_llm_models.gptj.symbolic.mlperf_submission_slice"
 
 class SUT_base(PyTorch_SUT_base):
     def __init__(

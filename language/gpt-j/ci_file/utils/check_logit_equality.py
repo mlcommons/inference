@@ -25,16 +25,15 @@ def check_mcp_dump_output(
 
     golden_tensor_list = load_all_tensors_from_pickle(golden_model_file_path, mcm_module_name)
     comparison_tensor_list = load_all_tensors_from_pickle(comparison_model_file_path, mcm_module_name)
-    
 
     assert len(golden_tensor_list) == len(comparison_tensor_list)
     
     for idx in range(len(golden_tensor_list)):
         valid_seq_len = golden_tensor_list[idx].shape[1] if not is_decode else 1
         
-        if golden_tensor_list[idx].shape[0] != comparison_tensor_list[idx].shape[0]: 
+        if golden_tensor_list[idx].shape != comparison_tensor_list[idx].shape: 
             #If true, packing would have been applied in furiosa-llm-generator due to the short length of input_ids
-            is_successful = torch.equal(golden_tensor_list[idx][:, -valid_seq_len:, :][0].unsqueeze(0), comparison_tensor_list[idx][:, -valid_seq_len:, :][0].unsqueeze(0))
+            is_successful = torch.equal(golden_tensor_list[idx][0, -1:, :][0].unsqueeze(0), comparison_tensor_list[idx][0, -1:, :][0].unsqueeze(0))
         else:
             is_successful = torch.equal(golden_tensor_list[idx][:, -valid_seq_len:, :], comparison_tensor_list[idx][:, -valid_seq_len:, :])
 

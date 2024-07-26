@@ -1,0 +1,1959 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+      
+      
+      <link rel="icon" href="img/logo_v2.svg">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.30">
+    
+    
+      
+        <title>MLPerf Inference Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.3cba04c6.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="green">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#mlperftm-inference-benchmark-suite" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="." title="MLPerf Inference Documentation" class="md-header__button md-logo" aria-label="MLPerf Inference Documentation" data-md-component="logo">
+      
+  <img src="img/logo_v2.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            MLPerf Inference Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              MLPerf™ Inference Benchmark Suite
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+    
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/mlcommons/inference" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="install/" class="md-tabs__link">
+          
+  
+    
+  
+  Install
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="benchmarks/" class="md-tabs__link">
+          
+  
+    
+  
+  Benchmarks
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="submission/" class="md-tabs__link">
+          
+  
+    
+  
+  Submission
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="changelog/" class="md-tabs__link">
+          
+  
+    
+  
+  Release Notes
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="." title="MLPerf Inference Documentation" class="md-nav__button md-logo" aria-label="MLPerf Inference Documentation" data-md-component="logo">
+      
+  <img src="img/logo_v2.svg" alt="logo">
+
+    </a>
+    MLPerf Inference Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/mlcommons/inference" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 6.6.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2024 Fonticons, Inc.--><path d="M439.55 236.05 244 40.45a28.87 28.87 0 0 0-40.81 0l-40.66 40.63 51.52 51.52c27.06-9.14 52.68 16.77 43.39 43.68l49.66 49.66c34.23-11.8 61.18 31 35.47 56.69-26.49 26.49-70.21-2.87-56-37.34L240.22 199v121.85c25.3 12.54 22.26 41.85 9.08 55a34.34 34.34 0 0 1-48.55 0c-17.57-17.6-11.07-46.91 11.25-56v-123c-20.8-8.51-24.6-30.74-18.64-45L142.57 101 8.45 235.14a28.86 28.86 0 0 0 0 40.81l195.61 195.6a28.86 28.86 0 0 0 40.8 0l194.69-194.69a28.86 28.86 0 0 0 0-40.81z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    GitHub
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_1" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="install/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Install
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            Install
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="benchmarks/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Benchmarks
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_2" id="__nav_2_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Benchmarks
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_2" id="__nav_2_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Image Classification
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_2">
+            <span class="md-nav__icon md-icon"></span>
+            Image Classification
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="benchmarks/image_classification/resnet50/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    ResNet50
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_3" id="__nav_2_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Text to Image
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_3">
+            <span class="md-nav__icon md-icon"></span>
+            Text to Image
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="benchmarks/text_to_image/sdxl/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Stable Diffusion
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_4" id="__nav_2_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Object Detection
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_4">
+            <span class="md-nav__icon md-icon"></span>
+            Object Detection
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="benchmarks/object_detection/retinanet/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    RetinaNet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_5" id="__nav_2_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Medical Imaging
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_5">
+            <span class="md-nav__icon md-icon"></span>
+            Medical Imaging
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="benchmarks/medical_imaging/3d-unet/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    3d-unet
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_6" id="__nav_2_6_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Language Processing
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_6">
+            <span class="md-nav__icon md-icon"></span>
+            Language Processing
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="benchmarks/language/bert/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Bert-Large
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="benchmarks/language/gpt-j/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    GPT-J
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="benchmarks/language/llama2-70b/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    LLAMA2-70B
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="benchmarks/language/mixtral-8x7b/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    MIXTRAL-8x7B
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_2_7" id="__nav_2_7_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Recommendation
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_7">
+            <span class="md-nav__icon md-icon"></span>
+            Recommendation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="benchmarks/recommendation/dlrm-v2/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    DLRM-v2
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="submission/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Submission
+  </span>
+  
+
+            </a>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Submission
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="changelog/" class="md-nav__link ">
+              
+  
+  <span class="md-ellipsis">
+    Release Notes
+  </span>
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_4" id="__nav_4_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            Release Notes
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="changelog/changelog/" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-inference-v41-submission-deadline-july-26-2024" class="md-nav__link">
+    <span class="md-ellipsis">
+      MLPerf Inference v4.1 (submission deadline July 26, 2024)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-inference-v40-submission-february-23-2024" class="md-nav__link">
+    <span class="md-ellipsis">
+      MLPerf Inference v4.0 (submission February 23, 2024)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-inference-v31-submission-august-18-2023" class="md-nav__link">
+    <span class="md-ellipsis">
+      MLPerf Inference v3.1 (submission August 18, 2023)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-inference-v30-submission-03032023" class="md-nav__link">
+    <span class="md-ellipsis">
+      MLPerf Inference v3.0 (submission 03/03/2023)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-inference-v21-submission-08052022" class="md-nav__link">
+    <span class="md-ellipsis">
+      MLPerf Inference v2.1 (submission 08/05/2022)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-inference-v20-submission-02252022" class="md-nav__link">
+    <span class="md-ellipsis">
+      MLPerf Inference v2.0 (submission 02/25/2022)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-inference-v11-submission-08132021" class="md-nav__link">
+    <span class="md-ellipsis">
+      MLPerf Inference v1.1 (submission 08/13/2021)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-inference-v10-submission-03192021" class="md-nav__link">
+    <span class="md-ellipsis">
+      MLPerf Inference v1.0 (submission 03/19/2021)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-inference-v07-submission-9182020" class="md-nav__link">
+    <span class="md-ellipsis">
+      MLPerf Inference v0.7 (submission 9/18/2020)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#mlperf-inference-v05" class="md-nav__link">
+    <span class="md-ellipsis">
+      MLPerf Inference v0.5
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="mlperftm-inference-benchmark-suite">MLPerf™ Inference Benchmark Suite</h1>
+<p>MLPerf Inference is a benchmark suite for measuring how fast systems can run models in a variety of deployment scenarios. </p>
+<p>Please see the <a href="https://arxiv.org/abs/1911.02549">MLPerf Inference benchmark paper</a> for a detailed description of the benchmarks along with the motivation and guiding principles behind the benchmark suite. If you use any part of this benchmark (e.g., reference implementations, submissions, etc.), please cite the following:</p>
+<p><div class="highlight"><pre><span></span><code>@misc{reddi2019mlperf,
+    title={MLPerf Inference Benchmark},
+    author={Vijay Janapa Reddi and Christine Cheng and David Kanter and Peter Mattson and Guenther Schmuelling and Carole-Jean Wu and Brian Anderson and Maximilien Breughe and Mark Charlebois and William Chou and Ramesh Chukka and Cody Coleman and Sam Davis and Pan Deng and Greg Diamos and Jared Duke and Dave Fick and J. Scott Gardner and Itay Hubara and Sachin Idgunji and Thomas B. Jablin and Jeff Jiao and Tom St. John and Pankaj Kanwar and David Lee and Jeffery Liao and Anton Lokhmotov and Francisco Massa and Peng Meng and Paulius Micikevicius and Colin Osborne and Gennady Pekhimenko and Arun Tejusve Raghunath Rajan and Dilip Sequeira and Ashish Sirasao and Fei Sun and Hanlin Tang and Michael Thomson and Frank Wei and Ephrem Wu and Lingjie Xu and Koichi Yamada and Bing Yu and George Yuan and Aaron Zhong and Peizhao Zhang and Yuchen Zhou},
+    year={2019},
+    eprint={1911.02549},
+    archivePrefix={arXiv},
+    primaryClass={cs.LG}
+}
+</code></pre></div>
+Please see <a href="https://docs.mlcommons.org/inference/benchmarks/">here</a> for the MLPerf inference documentation website which includes automated commands to run MLPerf inference benchmarks using different implementations.</p>
+<h2 id="mlperf-inference-v41-submission-deadline-july-26-2024">MLPerf Inference v4.1 (submission deadline July 26, 2024)</h2>
+<p>For submissions, please use the master branch and any commit since the <a href="https://github.com/mlcommons/inference/pull/1736/files">4.1 seed release</a> although it is best to use the latest commit. v4.1 tag will be created from the master branch after the result publication.</p>
+<p>For power submissions please use <a href="https://github.com/mlcommons/power/tree/main/inference_v1.0">SPEC PTD 1.10</a> (needs special access) and any commit of the power-dev repository after the <a href="https://github.com/mlcommons/power-dev/pull/325">code-freeze</a></p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>reference app</th>
+<th>framework</th>
+<th>dataset</th>
+<th>category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resnet50-v1.5</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, onnx, tvm, ncnn</td>
+<td>imagenet2012</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>retinanet 800x800</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>pytorch, onnx</td>
+<td>openimages resized to 800x800</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>bert</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/bert">language/bert</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>squad-1.1</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>dlrm-v2</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/recommendation/dlrm_v2/pytorch">recommendation/dlrm_v2</a></td>
+<td>pytorch</td>
+<td>Multihot Criteo Terabyte</td>
+<td>datacenter</td>
+</tr>
+<tr>
+<td>3d-unet</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-kits19">vision/medical_imaging/3d-unet-kits19</a></td>
+<td>pytorch, tensorflow, onnx</td>
+<td>KiTS19</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>gpt-j</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/gpt-j">language/gpt-j</a></td>
+<td>pytorch</td>
+<td>CNN-Daily Mail</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>stable-diffusion-xl</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/text_to_image">text_to_image</a></td>
+<td>pytorch</td>
+<td>COCO 2014</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>llama2-70b</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/llama2-70b">language/llama2-70b</a></td>
+<td>pytorch</td>
+<td>OpenOrca</td>
+<td>datacenter</td>
+</tr>
+<tr>
+<td>mixtral-8x7b</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/mixtral-8x7b">language/mixtral-8x7b</a></td>
+<td>pytorch</td>
+<td>OpenOrca, MBXP, GSM8K</td>
+<td>datacenter</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Framework here is given for the reference implementation. Submitters are free to use their own frameworks to run the benchmark.</li>
+</ul>
+<h2 id="mlperf-inference-v40-submission-february-23-2024">MLPerf Inference v4.0 (submission February 23, 2024)</h2>
+<p>There is an extra one-week extension allowed only for the llama2-70b submissions. For submissions, please use the master branch and any commit since the <a href="https://github.com/mlcommons/inference/commit/8e36925bd36a503e39fcbbc488e9e46126f079ed">4.0 seed release</a> although it is best to use the latest commit. v4.0 tag will be created from the master branch after the result publication.</p>
+<p>For power submissions please use <a href="https://github.com/mlcommons/power/tree/main/inference_v1.0">SPEC PTD 1.10</a> (needs special access) and any commit of the power-dev repository after the <a href="https://github.com/mlcommons/power-dev/commit/4e026f43481f46ad57d2464d28924018444b0428">code-freeze</a></p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>reference app</th>
+<th>framework</th>
+<th>dataset</th>
+<th>category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resnet50-v1.5</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, onnx, tvm, ncnn</td>
+<td>imagenet2012</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>retinanet 800x800</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>pytorch, onnx</td>
+<td>openimages resized to 800x800</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>bert</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/bert">language/bert</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>squad-1.1</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>dlrm-v2</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/recommendation/dlrm_v2/pytorch">recommendation/dlrm_v2</a></td>
+<td>pytorch</td>
+<td>Multihot Criteo Terabyte</td>
+<td>datacenter</td>
+</tr>
+<tr>
+<td>3d-unet</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-kits19">vision/medical_imaging/3d-unet-kits19</a></td>
+<td>pytorch, tensorflow, onnx</td>
+<td>KiTS19</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>rnnt</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/speech_recognition/rnnt">speech_recognition/rnnt</a></td>
+<td>pytorch</td>
+<td>OpenSLR LibriSpeech Corpus</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>gpt-j</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/gpt-j">language/gpt-j</a></td>
+<td>pytorch</td>
+<td>CNN-Daily Mail</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>stable-diffusion-xl</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/text_to_image">text_to_image</a></td>
+<td>pytorch</td>
+<td>COCO 2014</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>llama2-70b</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/llama2-70b">language/llama2-70b</a></td>
+<td>pytorch</td>
+<td>OpenOrca</td>
+<td>datacenter</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>Framework here is given for the reference implementation. Submitters are free to use their own frameworks to run the benchmark.</li>
+</ul>
+<h2 id="mlperf-inference-v31-submission-august-18-2023">MLPerf Inference v3.1 (submission August 18, 2023)</h2>
+<p>Please use <a href="https://github.com/mlcommons/inference/releases/tag/v3.1">v3.1 tag</a> (<code>git checkout v3.1</code>) if you would like to reproduce the v3.1 results. </p>
+<p>For reproducing power submissions please use the <code>master</code> branch of the <a href="https://github.com/mlcommons/power-dev">MLCommons power-dev</a> repository and checkout to <a href="https://github.com/mlcommons/power-dev/tree/e9e16b1299ef61a2a5d8b9abf5d759309293c440">e9e16b1299ef61a2a5d8b9abf5d759309293c440</a>. </p>
+<p>You can see the individual README files in the benchmark task folders for more details regarding the benchmarks. For reproducing the submitted results please see the README files under the respective submitter folders in the <a href="https://github.com/mlcommons/inference_results_v3.1">inference v3.1 results repository</a>.</p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>reference app</th>
+<th>framework</th>
+<th>dataset</th>
+<th>category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resnet50-v1.5</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, onnx, tvm, ncnn</td>
+<td>imagenet2012</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>retinanet 800x800</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>pytorch, onnx</td>
+<td>openimages resized to 800x800</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>bert</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/bert">language/bert</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>squad-1.1</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>dlrm-v2</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/recommendation/dlrm_v2/pytorch">recommendation/dlrm_v2</a></td>
+<td>pytorch</td>
+<td>Multihot Criteo Terabyte</td>
+<td>datacenter</td>
+</tr>
+<tr>
+<td>3d-unet</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-kits19">vision/medical_imaging/3d-unet-kits19</a></td>
+<td>pytorch, tensorflow, onnx</td>
+<td>KiTS19</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>rnnt</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/speech_recognition/rnnt">speech_recognition/rnnt</a></td>
+<td>pytorch</td>
+<td>OpenSLR LibriSpeech Corpus</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>gpt-j</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/gpt-j">language/gpt-j</a></td>
+<td>pytorch</td>
+<td>CNN-Daily Mail</td>
+<td>edge,datacenter</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mlperf-inference-v30-submission-03032023">MLPerf Inference v3.0 (submission 03/03/2023)</h2>
+<p>Please use the v3.0 tag (<code>git checkout v3.0</code>) if you would like to reproduce v3.0 results.</p>
+<p>You can see the individual Readme files in the reference app for more details.</p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>reference app</th>
+<th>framework</th>
+<th>dataset</th>
+<th>category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resnet50-v1.5</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, onnx, tvm</td>
+<td>imagenet2012</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>retinanet 800x800</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>pytorch, onnx</td>
+<td>openimages resized to 800x800</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>bert</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/bert">language/bert</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>squad-1.1</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>dlrm</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/recommendation/dlrm/pytorch">recommendation/dlrm</a></td>
+<td>pytorch, tensorflow</td>
+<td>Criteo Terabyte</td>
+<td>datacenter</td>
+</tr>
+<tr>
+<td>3d-unet</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-kits19">vision/medical_imaging/3d-unet-kits19</a></td>
+<td>pytorch, tensorflow, onnx</td>
+<td>KiTS19</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>rnnt</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/speech_recognition/rnnt">speech_recognition/rnnt</a></td>
+<td>pytorch</td>
+<td>OpenSLR LibriSpeech Corpus</td>
+<td>edge,datacenter</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mlperf-inference-v21-submission-08052022">MLPerf Inference v2.1 (submission 08/05/2022)</h2>
+<p>Use the r2.1 branch (<code>git checkout r2.1</code>) if you want to submit or reproduce v2.1 results.</p>
+<p>See the individual Readme files in the reference app for details.</p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>reference app</th>
+<th>framework</th>
+<th>dataset</th>
+<th>category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resnet50-v1.5</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, onnx</td>
+<td>imagenet2012</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>retinanet 800x800</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>pytorch, onnx</td>
+<td>openimages resized to 800x800</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>bert</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/bert">language/bert</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>squad-1.1</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>dlrm</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/recommendation/dlrm/pytorch">recommendation/dlrm</a></td>
+<td>pytorch, tensorflow</td>
+<td>Criteo Terabyte</td>
+<td>datacenter</td>
+</tr>
+<tr>
+<td>3d-unet</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-kits19">vision/medical_imaging/3d-unet-kits19</a></td>
+<td>pytorch, tensorflow, onnx</td>
+<td>KiTS19</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>rnnt</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/speech_recognition/rnnt">speech_recognition/rnnt</a></td>
+<td>pytorch</td>
+<td>OpenSLR LibriSpeech Corpus</td>
+<td>edge,datacenter</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mlperf-inference-v20-submission-02252022">MLPerf Inference v2.0 (submission 02/25/2022)</h2>
+<p>Use the r2.0 branch (<code>git checkout r2.0</code>) if you want to submit or reproduce v2.0 results.</p>
+<p>See the individual Readme files in the reference app for details.</p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>reference app</th>
+<th>framework</th>
+<th>dataset</th>
+<th>category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resnet50-v1.5</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, onnx</td>
+<td>imagenet2012</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>ssd-mobilenet 300x300</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>coco resized to 300x300</td>
+<td>edge</td>
+</tr>
+<tr>
+<td>ssd-resnet34 1200x1200</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>coco resized to 1200x1200</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>bert</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/language/bert">language/bert</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>squad-1.1</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>dlrm</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/recommendation/dlrm/pytorch">recommendation/dlrm</a></td>
+<td>pytorch, tensorflow</td>
+<td>Criteo Terabyte</td>
+<td>datacenter</td>
+</tr>
+<tr>
+<td>3d-unet</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-kits19">vision/medical_imaging/3d-unet-kits19</a></td>
+<td>pytorch, tensorflow, onnx</td>
+<td>KiTS19</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>rnnt</td>
+<td><a href="https://github.com/mlcommons/inference/tree/master/speech_recognition/rnnt">speech_recognition/rnnt</a></td>
+<td>pytorch</td>
+<td>OpenSLR LibriSpeech Corpus</td>
+<td>edge,datacenter</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mlperf-inference-v11-submission-08132021">MLPerf Inference v1.1 (submission 08/13/2021)</h2>
+<p>Use the r1.1 branch (<code>git checkout r1.1</code>) if you want to submit or reproduce v1.1 results.</p>
+<p>See the individual Readme files in the reference app for details.</p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>reference app</th>
+<th>framework</th>
+<th>dataset</th>
+<th>category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resnet50-v1.5</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.1/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, onnx</td>
+<td>imagenet2012</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>ssd-mobilenet 300x300</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.1/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>coco resized to 300x300</td>
+<td>edge</td>
+</tr>
+<tr>
+<td>ssd-resnet34 1200x1200</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.1/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>coco resized to 1200x1200</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>bert</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.1/language/bert">language/bert</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>squad-1.1</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>dlrm</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.1/recommendation/dlrm/pytorch">recommendation/dlrm</a></td>
+<td>pytorch, tensorflow</td>
+<td>Criteo Terabyte</td>
+<td>datacenter</td>
+</tr>
+<tr>
+<td>3d-unet</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.1/vision/medical_imaging/3d-unet">vision/medical_imaging/3d-unet</a></td>
+<td>pytorch, tensorflow(?), onnx(?)</td>
+<td>BraTS 2019</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>rnnt</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.1/speech_recognition/rnnt">speech_recognition/rnnt</a></td>
+<td>pytorch</td>
+<td>OpenSLR LibriSpeech Corpus</td>
+<td>edge,datacenter</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mlperf-inference-v10-submission-03192021">MLPerf Inference v1.0 (submission 03/19/2021)</h2>
+<p>Use the r1.0 branch (<code>git checkout r1.0</code>) if you want to submit or reproduce v1.0 results.</p>
+<p>See the individual Readme files in the reference app for details.</p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>reference app</th>
+<th>framework</th>
+<th>dataset</th>
+<th>category</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resnet50-v1.5</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.0/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, onnx</td>
+<td>imagenet2012</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>ssd-mobilenet 300x300</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.0/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>coco resized to 300x300</td>
+<td>edge</td>
+</tr>
+<tr>
+<td>ssd-resnet34 1200x1200</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.0/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>coco resized to 1200x1200</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>bert</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.0/language/bert">language/bert</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>squad-1.1</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>dlrm</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.0/recommendation/dlrm/pytorch">recommendation/dlrm</a></td>
+<td>pytorch, tensorflow(?)</td>
+<td>Criteo Terabyte</td>
+<td>datacenter</td>
+</tr>
+<tr>
+<td>3d-unet</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.0/vision/medical_imaging/3d-unet">vision/medical_imaging/3d-unet</a></td>
+<td>pytorch, tensorflow(?), onnx(?)</td>
+<td>BraTS 2019</td>
+<td>edge,datacenter</td>
+</tr>
+<tr>
+<td>rnnt</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r1.0/speech_recognition/rnnt">speech_recognition/rnnt</a></td>
+<td>pytorch</td>
+<td>OpenSLR LibriSpeech Corpus</td>
+<td>edge,datacenter</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mlperf-inference-v07-submission-9182020">MLPerf Inference v0.7 (submission 9/18/2020)</h2>
+<p>Use the r0.7 branch (<code>git checkout r0.7</code>) if you want to submit or reproduce v0.7 results.</p>
+<p>See the individual Readme files in the reference app for details.</p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>reference app</th>
+<th>framework</th>
+<th>dataset</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resnet50-v1.5</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.7/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>imagenet2012</td>
+</tr>
+<tr>
+<td>ssd-mobilenet 300x300</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.7/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>coco resized to 300x300</td>
+</tr>
+<tr>
+<td>ssd-resnet34 1200x1200</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.7/vision/classification_and_detection">vision/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>coco resized to 1200x1200</td>
+</tr>
+<tr>
+<td>bert</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.7/language/bert">language/bert</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>squad-1.1</td>
+</tr>
+<tr>
+<td>dlrm</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.7/recommendation/dlrm/pytorch">recommendation/dlrm</a></td>
+<td>pytorch, tensorflow(?), onnx(?)</td>
+<td>Criteo Terabyte</td>
+</tr>
+<tr>
+<td>3d-unet</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.7/vision/medical_imaging/3d-unet">vision/medical_imaging/3d-unet</a></td>
+<td>pytorch, tensorflow(?), onnx(?)</td>
+<td>BraTS 2019</td>
+</tr>
+<tr>
+<td>rnnt</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.7/speech_recognition/rnnt">speech_recognition/rnnt</a></td>
+<td>pytorch</td>
+<td>OpenSLR LibriSpeech Corpus</td>
+</tr>
+</tbody>
+</table>
+<h2 id="mlperf-inference-v05">MLPerf Inference v0.5</h2>
+<p>Use the r0.5 branch (<code>git checkout r0.5</code>) if you want to reproduce v0.5 results.</p>
+<p>See the individual Readme files in the reference app for details.</p>
+<table>
+<thead>
+<tr>
+<th>model</th>
+<th>reference app</th>
+<th>framework</th>
+<th>dataset</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>resnet50-v1.5</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.5/v0.5/classification_and_detection">v0.5/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>imagenet2012</td>
+</tr>
+<tr>
+<td>mobilenet-v1</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.5/v0.5/classification_and_detection">v0.5/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>imagenet2012</td>
+</tr>
+<tr>
+<td>ssd-mobilenet 300x300</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.5/v0.5/classification_and_detection">v0.5/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>coco resized to 300x300</td>
+</tr>
+<tr>
+<td>ssd-resnet34 1200x1200</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.5/v0.5/classification_and_detection">v0.5/classification_and_detection</a></td>
+<td>tensorflow, pytorch, onnx</td>
+<td>coco resized to 1200x1200</td>
+</tr>
+<tr>
+<td>gnmt</td>
+<td><a href="https://github.com/mlcommons/inference/tree/r0.5/v0.5/translation/gnmt/tensorflow">v0.5/translation/gnmt/</a></td>
+<td>tensorflow, pytorch</td>
+<td>See Readme</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var tab,labels=set.querySelector(".tabbed-labels");for(tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    <script id="__config" type="application/json">{"base": ".", "features": ["content.tabs.link", "content.code.copy", "navigation.expand", "navigation.sections", "navigation.indexes", "navigation.instant", "navigation.tabs", "navigation.tabs.sticky", "navigation.top", "toc.follow"], "search": "assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="assets/javascripts/bundle.fe8b6f2b.min.js"></script>
+      
+    
+  </body>
+</html>

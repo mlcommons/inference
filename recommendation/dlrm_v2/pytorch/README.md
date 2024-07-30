@@ -69,6 +69,31 @@ cd $HOME/mlcommons/inference/loadgen
 CFLAGS="-std=c++14" python setup.py develop --user
 ```
 
+### Download preprocessed Dataset
+
+Download the preprocessed dataset using Rclone.
+
+To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
+To install Rclone on Linux/macOS/BSD systems, run:
+```
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+Once Rclone is installed, run the following command to authenticate with the bucket:
+```
+rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
+```
+Prepare your dataset destination:
+```
+cd $HOME/mlcommons/inference/recommendation/dlrm_v2/pytorch/
+mkdir ./dataset && cd ./dataset
+mv <downloaded_file(s)> ./
+export DATA_DIR=./dataset
+```
+Download the dataset
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/dlrm_preprocessed ./dataset  -P
+```
+
 
 ### Downloading model weights
 

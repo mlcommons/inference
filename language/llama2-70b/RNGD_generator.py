@@ -134,7 +134,7 @@ class MLPerfSubmissionGreedySearch:
 
                 (
                     packed_input_ids,
-                    _,
+                    packed_attention_mask,
                     causal_mask,
                     packed_position_ids,
                     logit_target_locations,
@@ -150,8 +150,8 @@ class MLPerfSubmissionGreedySearch:
 
                 forward_kwargs = {
                     "input_ids": packed_input_ids.to(device),
-                    "attention_mask": None,
-                    "causal_mask": causal_mask.to(device),
+                    "attention_mask": packed_attention_mask,
+                    # "causal_mask": causal_mask.to(device),
                     "position_ids": packed_position_ids.to(device),
                     "past_key_values": key_value_blocks,
                     "new_key_location": new_key_location.to(device),
@@ -185,7 +185,7 @@ class MLPerfSubmissionGreedySearch:
                 forward_kwargs = {
                     "input_ids": input_ids,
                     "attention_mask": attention_mask,
-                    "causal_mask": None,
+                    # "causal_mask": None,
                     "position_ids": position_ids,
                     "past_key_values": key_value_blocks,
                     "new_key_location": new_key_location,
@@ -418,7 +418,7 @@ class MLPerfSubmissionGreedySearch:
                 for logit_target in single_batch_logit_target_location:
                     # logit target will just be index
                     next_token_logits.append(
-                        single_batch_logit[logit_target]
+                        single_batch_logit[-1]
                     )  # will be [embedding_dimension]
 
             # stack this back to [batch, vocab_size]

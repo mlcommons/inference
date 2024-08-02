@@ -1241,7 +1241,7 @@ def check_performance_dir(
         log.error(
             "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
             fname,
-            OFFLINE_MIN_SPQ,
+            OFFLINE_MIN_SPQ_SINCE_V4[model],
             samples_per_query,
         )
         is_valid = False

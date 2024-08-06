@@ -46,6 +46,7 @@ printf "\tDEVICE: $DEVICE\n"
 CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
 DATASET_PATH=$data_dir/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
 LOG_PATH=$log_dir/$model_name/$SCENARIO/W8A8KV8/$(date +%Y%m%d_%H%M%S%Z)
+SUBMISSION_MODEL_SOURCE="mlperf_submission_slice"
 
 export LOG_PATH
 
@@ -59,6 +60,7 @@ if [ "$CALIBRATE" = true ]; then
                                      --quant_format_path=$QUANT_FORMAT_PATH \
                                      --calib_data_path=$CALIB_DATA_PATH \
                                      --n_calib=$N_CALIB \
+                                     --submission_model_source=$SUBMISSION_MODEL_SOURCE \
                                      --gpu
 
 fi

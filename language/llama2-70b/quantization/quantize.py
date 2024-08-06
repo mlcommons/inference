@@ -50,7 +50,6 @@ def quantize_model(
     qparam_path: str,
     qformat_path: str,
 ) -> Dict[str, GraphModule]:
-
     quantized_prefill = quantize_prefill_graph(
         model=model["prefill"],
         qparam_path=qparam_path,

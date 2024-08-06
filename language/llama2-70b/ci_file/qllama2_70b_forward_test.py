@@ -134,7 +134,7 @@ def obtain_traced_model_dict(model):
         }
 
 
-    elif type(model) == furiosa_llm_models.llama.symbolic.mlperf_submission.LlamaForCausalLM:
+    elif type(model) == furiosa_llm_models.llama.symbolic.mlperf_submission_slice.LlamaForCausalLM:
         traced_models = model.trace_all()
 
         input_names = {
@@ -202,13 +202,13 @@ def get_generator_for_submission_model(model_path, qconfig_path, submission_quan
         raise ValueError("Logit folder path is required to enable mcp dumping")
 
     submission_model = load_pytorch_model(
-                            model_source = 'mlperf_submission', 
+                            model_source = 'mlperf_submission_slice', 
                             model_path = model_path, 
                             use_gpu = gpu, 
                             n_layers = n_layers
                             )
 
-    assert type(submission_model) == furiosa_llm_models.llama.symbolic.mlperf_submission.LlamaForCausalLM
+    assert type(submission_model) == furiosa_llm_models.llama.symbolic.mlperf_submission_slice.LlamaForCausalLM
 
 
     # Needs to place paged attention key value blocks on the same device as the transformer layers
@@ -287,74 +287,6 @@ def perform_generation(generator, test_data_list, logit_file_path, generation_re
 
 
 
-
-
-    
-def perform_generation_to_check_equality(golden_model_generator, submission_model_generator, dataset_path, n_data):
-
-
-    test_data_list = gen_test_data(dataset_path, n_data)
-
-    validation_dataset = Dataset(dataset_path)
-    device = golden_model_generator.prefill_model.device
-    
-    for idx in range(n_data):
-        input_batch = dict()
-        input_batch['input_ids'] = validation_dataset.source_encoded_input_ids[idx].to(device)
-        input_batch['attention_mask'] = validation_dataset.source_encoded_attn_masks[idx].to(device)
-        seq_len = input_batch['input_ids'].shape[1]
-
-
-        # Run golden generator
-        output_batch_golden = golden_model_generator.generate(**input_batch, **gen_kwargs, pad_token_id = golden_model_generator.config.eos_token_id)
-
-
-        # Prepare to run submission generator
-        logits_processor = LOGITS_PROCESSOR(
-                input_batch['input_ids'].shape[-1], MIN_NEW_TOKENS, EOS_TOKEN_ID
-            )
-            # stopping_criteria = STOPPING_CRITERIA(
-        #         MAX_LENGTH,
-        #         getattr(submission_generator.model_config, "max_position_embeddings", None),
-        #     )
-            #The stopping_criteria cannot be used for MLPerf BeamSearch, as the length of every input_ids is fixed to max_prompt_length
-
-        stopping_criteria = None
-
-
-        beam_scorer = BeamSearchScorer(
-            batch_size=input_batch['input_ids'].shape[0],
-            num_beams=NUM_BEAMS,
-            device=input_batch['input_ids'].device,
-            length_penalty=LENGTH_PENALTY,
-            do_early_stopping=EARYLY_STOPPING,
-            num_beam_hyps_to_keep=NUM_RETURN_SEQUENCES,
-            max_length=MAX_LENGTH,
-        )
-        input_ids_tensor, input_masks_tensor_dict = expand_inputs_for_generation(
-            input_ids=input_batch['input_ids'],
-            expand_size=NUM_BEAMS,
-            attention_mask= input_batch['attention_mask'],
-        )
-        input_masks_tensor = input_masks_tensor_dict["attention_mask"]
-
-        # Run submission generator
-        output_batch = submission_model_generator.generate(
-            input_ids=input_ids_tensor,
-            attention_mask=input_masks_tensor,
-            beam_scorer=beam_scorer,
-            logits_processor=logits_processor,
-            stopping_criteria=stopping_criteria,
-            max_length=MAX_LENGTH,
-            pad_token_id=PAD_TOKEN_ID,
-            eos_token_id=EOS_TOKEN_ID,
-            return_dict_in_generate=RETURN_DICT_IN_GENERATE,
-            kv_dtype=KV_DTYPE,
-            bucket_size=BUCKET_SIZE,
-        )
-    
-
-
 #load model_script
 def compare_model_outputs(args):
 
@@ -407,7 +339,7 @@ def compare_model_outputs(args):
     compare_output_yaml(golden_generation_result_file_path, submission_generation_result_file_path)
    
     if args.mcp_dumping_on:
-        compare_logits(args.logit_folder_path)
+        compare_logits(args.logit_folder_path, is_slice = True)
     
 
     

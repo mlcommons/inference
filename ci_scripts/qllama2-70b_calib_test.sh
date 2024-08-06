@@ -77,7 +77,7 @@ cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $quant
 rm -rf $git_dir/furiosa-llm-models-artifacts
 
 RELEASED_QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_from_dvc.npy
-
+SUBMISSION_MODEL_SOURCE="mlperf_submission_slice"
 
 printf "\n============= STEP-1: Run calibration =============\n"
 cd $work_dir    
@@ -88,6 +88,7 @@ if [ "$CALIBRATE" = true ]; then
                                      --quant_format_path=$QUANT_FORMAT_PATH \
                                      --calib_data_path=$CALIB_DATA_PATH \
                                      --n_calib=$N_CALIB \
+                                     --submission_model_source=$SUBMISSION_MODEL_SOURCE \
                                      --gpu
 
 fi

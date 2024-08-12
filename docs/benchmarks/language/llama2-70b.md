@@ -28,7 +28,7 @@ hide:
     ## Neural Magic MLPerf Implementation
     
     LLAMA2-70b-99
-{{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "NeuralMagic") }}
+{{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "neuralmagic") }}
 
     LLAMA2-70b-99.9
-{{ mlperf_inference_implementation_readme (4, "llama2-70b-99.9", "NeuralMagic") }}
+{{ mlperf_inference_implementation_readme (4, "llama2-70b-99.9", "neuralmagic") }}

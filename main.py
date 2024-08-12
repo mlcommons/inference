@@ -34,9 +34,9 @@ def define_env(env):
             devices = [ "CUDA" ]
             frameworks = [ "TensorRT" ]
         
-        elif implementation == "NeuralMagic":
+        elif implementation == "neuralmagic":
             devices = [ "CUDA" ]
-            frameworks = [ "vLLM" ]
+            frameworks = [ "pytorch" ]
 
         elif implementation == "intel":
             if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9", "dlrm_v2-99", "dlrm_v2-99.9" ]:
@@ -269,7 +269,7 @@ def define_env(env):
             docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count}"
             
             if "llama2-70b" in model:
-                if implementation != "NeuralMagic":
+                if implementation != "neuralmagic":
                     docker_cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
                     docker_cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
                 else:
@@ -295,7 +295,7 @@ def define_env(env):
                 cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
             if "llama2-70b" in model:
-                if implementation != "NeuralMagic":
+                if implementation != "neuralmagic":
                     cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
                     cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
                 else:

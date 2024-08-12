@@ -29,10 +29,14 @@ def define_env(env):
                  frameworks = [ "Pytorch" ]
 
         elif implementation == "nvidia":
-            if model in [ "sdxl", "llama2-70b-99", "llama2-70b-99.9", "mixtral-8x7b" ]:
+            if model in [ "sdxl", "mixtral-8x7b" ]:
                  return pre_space+"    WIP"
             devices = [ "CUDA" ]
             frameworks = [ "TensorRT" ]
+        
+        elif implementation == "NeuralMagic":
+            devices = [ "CUDA" ]
+            frameworks = [ "vLLM" ]
 
         elif implementation == "intel":
             if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
@@ -208,7 +212,7 @@ def define_env(env):
         #pre_space = "                "
         if implementation == "nvidia":
             info += f"\n{pre_space}!!! tip\n\n"
-            info+= f"{pre_space}    All the Nvidia benchmarks, except GPT-J and LLAMA2-70B, use the same Docker container. Therefore, if you have already executed the Docker setup command for any benchmark, you can skip the Docker setup command below and run the commands inside the existing Docker container. The Docker container for GPT-J and LLAMA2-70B is the same and can be used for the other benchmarks, but not vice versa. This is because TensorRT-LLM is built specifically for the LLM benchmarks. If you are already inside a Docker container, execute the below Docker setup command without the --docker option for performance estimation.\n\n"
+            info+= f"{pre_space}    If ran with `--all_models=yes`, all the benchmark models of NVIDIA implementation could be run within the same container.\n\n"
         return info
 
     def get_readme_suffix(spaces, model, implementation):
@@ -263,6 +267,13 @@ def define_env(env):
         if docker:
             docker_cmd_suffix = f" \\\n{pre_space} --docker --quiet"
             docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count}"
+            
+            if "llama2-70b" in model:
+                if implementation != "NeuralMagic":
+                    docker_cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
+                    docker_cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
+                else:
+                    docker_cmd_suffix += f" \\\n{pre_space} --api_server=<API_SERVER_URL>"
 
             docker_setup_cmd = f"""\n
 {f_pre_space}```bash
@@ -282,6 +293,13 @@ def define_env(env):
 
             if execution_mode == "test":
                 cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
+
+            if "llama2-70b" in model:
+                if implementation != "NeuralMagic":
+                    cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
+                    cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
+                else:
+                    cmd_suffix += f" \\\n{pre_space} --api_server=<API_SERVER_URL>"
 
             run_cmd = f"""\n
 {f_pre_space}```bash

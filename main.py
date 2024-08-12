@@ -39,7 +39,7 @@ def define_env(env):
             frameworks = [ "pytorch" ]
 
         elif implementation == "intel":
-            if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9", "dlrm_v2-99", "dlrm_v2-99.9" ]:
+            if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9", "dlrm-v2-99", "dlrm-v2-99.9" ]:
                  return pre_space+"    WIP"
             if model in [ "bert-99", "bert-99.9", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
                  code_version="r4.0"
@@ -274,6 +274,9 @@ def define_env(env):
                     docker_cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
                 else:
                     docker_cmd_suffix += f" \\\n{pre_space} --api_server=<API_SERVER_URL>"
+            
+            if "dlrm-v2" in model and implementation == "nvidia":
+                docker_cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
 
             docker_setup_cmd = f"""\n
 {f_pre_space}```bash
@@ -300,6 +303,9 @@ def define_env(env):
                     cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
                 else:
                     cmd_suffix += f" \\\n{pre_space} --api_server=<API_SERVER_URL>"
+            
+            if "dlrm-v2" in model and implementation == "nvidia":
+                cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
 
             run_cmd = f"""\n
 {f_pre_space}```bash

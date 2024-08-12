@@ -39,7 +39,7 @@ def define_env(env):
             frameworks = [ "vLLM" ]
 
         elif implementation == "intel":
-            if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
+            if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9", "dlrm_v2-99", "dlrm_v2-99.9" ]:
                  return pre_space+"    WIP"
             if model in [ "bert-99", "bert-99.9", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
                  code_version="r4.0"

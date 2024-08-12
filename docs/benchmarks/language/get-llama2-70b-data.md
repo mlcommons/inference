@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Text Summarization using LLAMA2-70b
 
 ## Dataset

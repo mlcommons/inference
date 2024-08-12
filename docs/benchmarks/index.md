@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # MLPerf Inference Benchmarks
 
 Please visit the individual benchmark links to see the run commands using the unified CM interface.

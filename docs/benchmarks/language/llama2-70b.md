@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Text Summarization using LLAMA2-70b
 
 
@@ -19,10 +24,11 @@
     LLAMA2-70b-99.9
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99.9", "nvidia") }}
 
-
-=== "Qualcomm"
-    ## Qualcomm AI100 MLPerf Implementation
-
+=== "Neural Magic"
+    ## Neural Magic MLPerf Implementation
+    
     LLAMA2-70b-99
-{{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "qualcomm") }}
+{{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "NeuralMagic") }}
 
+    LLAMA2-70b-99.9
+{{ mlperf_inference_implementation_readme (4, "llama2-70b-99.9", "NeuralMagic") }}

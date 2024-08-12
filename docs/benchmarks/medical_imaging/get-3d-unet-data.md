@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Medical Imaging using 3d-unet (KiTS 2019 kidney tumor segmentation task)
 
 ## Dataset

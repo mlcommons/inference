@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Recommendation using DLRM v2
 
 

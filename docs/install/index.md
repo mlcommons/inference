@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Installation
 We use MLCommons CM Automation framework to run MLPerf inference benchmarks.
 

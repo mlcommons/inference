@@ -1,3 +1,7 @@
+---
+hide:
+  - toc
+---
 
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python

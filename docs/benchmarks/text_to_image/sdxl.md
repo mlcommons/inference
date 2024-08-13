@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Text to Image using Stable Diffusion
 
 
@@ -14,10 +19,4 @@
 === "Intel"
     ## Intel MLPerf Implementation
 {{ mlperf_inference_implementation_readme (4, "sdxl", "intel") }}
-
-
-=== "Qualcomm"
-    ## Qualcomm AI100 MLPerf Implementation
-
-{{ mlperf_inference_implementation_readme (4, "sdxl", "qualcomm") }}
 

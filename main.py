@@ -24,18 +24,22 @@ def define_env(env):
             elif model.lower() == "retinanet":
                  frameworks = [ "Onnxruntime", "Pytorch" ]
             elif "bert" in model.lower():
-                 frameworks = [ "Onnxruntime", "Pytorch", "Tensorflow" ]
+                 frameworks = [ "Pytorch" ]
             else:
                  frameworks = [ "Pytorch" ]
 
         elif implementation == "nvidia":
-            if model in [ "sdxl", "llama2-70b-99", "llama2-70b-99.9", "mixtral-8x7b" ]:
+            if model in [ "mixtral-8x7b" ]:
                  return pre_space+"    WIP"
             devices = [ "CUDA" ]
             frameworks = [ "TensorRT" ]
+        
+        elif implementation == "neuralmagic":
+            devices = [ "CUDA" ]
+            frameworks = [ "pytorch" ]
 
         elif implementation == "intel":
-            if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
+            if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9", "dlrm-v2-99", "dlrm-v2-99.9", "sdxl" ]:
                  return pre_space+"    WIP"
             if model in [ "bert-99", "bert-99.9", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
                  code_version="r4.0"
@@ -111,6 +115,13 @@ def define_env(env):
                         test_query_count=get_test_query_count(model, implementation, device)
 
                         if "99.9" not in model: #not showing docker command as it is already done for the 99% variant
+                            if implementation == "neuralmagic":
+                                content += f"{cur_space3}####### Run the Inference Server\n"
+                                content += get_inference_server_run_cmd(spaces+16,implementation)
+                                # tips regarding the running of nural magic server
+                                content += f"\n{cur_space3}!!! tip\n\n"
+                                content += f"{cur_space3}    - Host and Port number of the server can be configured through `--host` and `--port`. Otherwise, server will run on default host `localhost` and port `8000`.\n\n"
+                                
                             if execution_env == "Native": # Native implementation steps through virtual environment
                                 content += f"{cur_space3}####### Setup a virtual environment for Python\n"
                                 content += get_venv_command(spaces+16)
@@ -155,7 +166,7 @@ def define_env(env):
                             #content += run_suffix
  
                         content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
-                        run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), "valid", scenarios, code_version)
+                        run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), "valid", 0, False, scenarios, code_version)
                         content += run_cmd
                         content += run_suffix
 
@@ -191,6 +202,16 @@ def define_env(env):
 
         return readme_prefix
     
+    def get_inference_server_run_cmd(spaces, implementation):
+        indent = " "*spaces + " "
+        if implementation == "neuralmagic":
+            pre_space = " "*spaces
+            return f"""\n
+{pre_space}```bash
+{pre_space}cm run script --tags=run,vllm-server \\
+{indent}--model=nm-testing/Llama-2-70b-chat-hf-FP8 
+{pre_space}```\n"""
+
     def get_venv_command(spaces):
       pre_space = " "*spaces
       return f"""\n
@@ -208,7 +229,7 @@ def define_env(env):
         #pre_space = "                "
         if implementation == "nvidia":
             info += f"\n{pre_space}!!! tip\n\n"
-            info+= f"{pre_space}    All the Nvidia benchmarks, except GPT-J and LLAMA2-70B, use the same Docker container. Therefore, if you have already executed the Docker setup command for any benchmark, you can skip the Docker setup command below and run the commands inside the existing Docker container. The Docker container for GPT-J and LLAMA2-70B is the same and can be used for the other benchmarks, but not vice versa. This is because TensorRT-LLM is built specifically for the LLM benchmarks. If you are already inside a Docker container, execute the below Docker setup command without the --docker option for performance estimation.\n\n"
+            info+= f"{pre_space}    If ran with `--all_models=yes`, all the benchmark models of NVIDIA implementation could be run within the same container.\n\n"
         return info
 
     def get_readme_suffix(spaces, model, implementation):
@@ -256,13 +277,24 @@ def define_env(env):
             scenario_option = f"\\\n{pre_space} --scenario={scenario}"
 
         if scenario == "Server" or (scenario == "All Scenarios" and "Server" in scenarios):
-            scenario_option = f"\\\n{pre_space} --server_target_qps=<SERVER_TARGET_QPS>"
+            scenario_option += f"\\\n{pre_space} --server_target_qps=<SERVER_TARGET_QPS>"
 
         run_cmd_extra = get_run_cmd_extra(f_pre_space, model, implementation, device, scenario, scenarios)
 
         if docker:
             docker_cmd_suffix = f" \\\n{pre_space} --docker --quiet"
             docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count}"
+            
+            if "llama2-70b" in model:
+                if implementation == "nvidia":
+                    docker_cmd_suffix += f" \\\n{pre_space} --tp_size=2"
+                    docker_cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
+                elif implementation == "neuralmagic":
+                    docker_cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
+                    docker_cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"
+            
+            if "dlrm-v2" in model and implementation == "nvidia":
+                docker_cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
 
             docker_setup_cmd = f"""\n
 {f_pre_space}```bash
@@ -282,6 +314,17 @@ def define_env(env):
 
             if execution_mode == "test":
                 cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
+
+            if "llama2-70b" in model:
+                if implementation == "nvidia":
+                    cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
+                    cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
+                elif implementation == "neuralmagic":
+                    cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
+                    cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"
+            
+            if "dlrm-v2" in model and implementation == "nvidia":
+                cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
 
             run_cmd = f"""\n
 {f_pre_space}```bash

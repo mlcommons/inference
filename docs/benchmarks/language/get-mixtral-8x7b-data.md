@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 ## Dataset
 
 The benchmark implementation run command will automatically download the preprocessed validation and calibration datasets. In case you want to download only the datasets, you can use the below commands.

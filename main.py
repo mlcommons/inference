@@ -29,7 +29,7 @@ def define_env(env):
                  frameworks = [ "Pytorch" ]
 
         elif implementation == "nvidia":
-            if model in [ "sdxl", "mixtral-8x7b" ]:
+            if model in [ "mixtral-8x7b" ]:
                  return pre_space+"    WIP"
             devices = [ "CUDA" ]
             frameworks = [ "TensorRT" ]
@@ -39,7 +39,7 @@ def define_env(env):
             frameworks = [ "pytorch" ]
 
         elif implementation == "intel":
-            if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9", "dlrm-v2-99", "dlrm-v2-99.9" ]:
+            if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9", "dlrm-v2-99", "dlrm-v2-99.9", "sdxl" ]:
                  return pre_space+"    WIP"
             if model in [ "bert-99", "bert-99.9", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
                  code_version="r4.0"

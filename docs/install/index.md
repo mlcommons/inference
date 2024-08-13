@@ -20,5 +20,12 @@ CM needs `git`, `python3-pip` and `python3-venv` installed on your system. If an
    pip install cm4mlops
 ```
 
+## To work on custom GitHub repo and branch
+
+```bash
+   pip install cmind && cm init --quiet --repo=mlcommons@cm4mlops --branch=mlperf-inference
+```
+
+Here, repo is in the format `githubUsername@githubRepo`.
 
 Now, you are ready to use the `cm` commands to run MLPerf inference as given in the [benchmarks](../benchmarks/index.md) page

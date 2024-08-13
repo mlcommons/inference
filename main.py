@@ -209,7 +209,9 @@ def define_env(env):
             return f"""\n
 {pre_space}```bash
 {pre_space}cm run script --tags=run,vllm-server \\
-{indent}--model=nm-testing/Llama-2-70b-chat-hf-FP8 
+{indent}--model=nm-testing/Llama-2-70b-chat-hf-FP8 \\
+{indent}--vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8 \\
+{indent}--quiet
 {pre_space}```\n"""
 
     def get_venv_command(spaces):

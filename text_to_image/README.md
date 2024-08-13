@@ -1,6 +1,8 @@
 # MLPerf™ Inference Benchmarks for Text to Image
 
-This is the reference implementation for MLPerf Inference text to image
+This is the reference implementation for MLPerf Inference text to image.
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/text_to_image/sdxl) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
 ## Supported Models
 
@@ -16,15 +18,6 @@ This is the reference implementation for MLPerf Inference text to image
 | Coco-2014 | We use a subset of 5000 images and captions of the coco 2014 validation dataset, so that there is exaclty one caption per image. The model takes as input the caption of the image and generates an image from it. The original images and the generated images are used to compute FID score. The caption and the generated images are used to compute the CLIP score. We provide a [script](tools/coco.py) to automatically download the dataset |
 | Coco-2014 (calibration) | We use a subset of 500 captions and images of the coco 2014 training dataset, so that there is exaclty one caption per image. The subset was generated using this [script](tools/coco_generate_calibration.py). We provide the [caption ids](../calibration/COCO-2014/coco_cal_captions_list.txt) and a [script](tools/coco_calibration.py) to download them. |
 
-## Automated command to run the benchmark via MLCommons CM
-
-```
-python3 -m pip install cmind
-cm pull repo mlcommons@ck
-cm run script --tags=run-mlperf,inference  --model=sdxl --implementation=reference --backend=pytorch --device=cpu --precision=float32 --scenario=Offline --quiet
-```
-* `--device=cuda` can be used to run on Nvidia GPUs and `--device=rocm` can be used to run on AMD GPUs
-* `--precision=float16` or `--precision=bfloat16` can be used to change the model precision
  
 ## Setup
 Set the following helper variables

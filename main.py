@@ -12,6 +12,10 @@ def define_env(env):
         content=""
         scenarios = []
         execution_envs = ["Docker","Native"]
+        code_version="r4.1"
+
+        if model == "rnnt":
+            code_version="r4.0"
 
         if implementation == "reference":
             devices = [ "CPU", "CUDA", "ROCm" ]
@@ -25,14 +29,16 @@ def define_env(env):
                  frameworks = [ "Pytorch" ]
 
         elif implementation == "nvidia":
-            if model in [ "sdxl", "llama2-70b-99", "llama2-70b-99.9" ]:
+            if model in [ "sdxl", "llama2-70b-99", "llama2-70b-99.9", "mixtral-8x7b" ]:
                  return pre_space+"    WIP"
             devices = [ "CUDA" ]
             frameworks = [ "TensorRT" ]
 
         elif implementation == "intel":
-            if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9" ]:
+            if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
                  return pre_space+"    WIP"
+            if model in [ "bert-99", "bert-99.9", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
+                 code_version="r4.0"
             devices = [ "CPU" ]
             frameworks = [ "Pytorch" ]
 
@@ -57,7 +63,7 @@ def define_env(env):
 
         if model.lower() == "bert-99.9":
             categories = [ "Datacenter" ]
-        elif "dlrm" in model.lower() or "llama2" in model.lower():
+        elif "dlrm" in model.lower() or "llama2" in model.lower() or "mixtral" in model.lower():
             categories = [ "Datacenter" ]
         else:
             categories = [ "Edge", "Datacenter" ]
@@ -109,14 +115,14 @@ def define_env(env):
                                 content += f"{cur_space3}####### Setup a virtual environment for Python\n"
                                 content += get_venv_command(spaces+16)
                                 content += f"{cur_space3}####### Performance Estimation for Offline Scenario\n"
-                                content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True).replace("--docker ","")
+                                content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True, scenarios, code_version).replace("--docker ","")
                                 content += f"{cur_space3}The above command should do a test run of Offline scenario and record the estimated offline_target_qps.\n\n"
 
                             else: # Docker implementation steps
                                 content += f"{cur_space3}####### Docker Container Build and Performance Estimation for Offline Scenario\n"
                                 docker_info = get_docker_info(spaces+16, model, implementation, device)
                                 content += docker_info
-                                content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True)
+                                content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True, scenarios, code_version)
                                 content += f"{cur_space3}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for each scenario.\n\n"
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
@@ -131,7 +137,7 @@ def define_env(env):
                         else:
                             content += f"{cur_space3} You can reuse the same environment as described for {model.split('.')[0]}.\n"
                             content += f"{cur_space3}###### Performance Estimation for Offline Scenario\n"
-                            content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True).replace("--docker ","")
+                            content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True, scenarios, code_version).replace("--docker ","")
                             content += f"{cur_space3}The above command should do a test run of Offline scenario and record the estimated offline_target_qps.\n\n"
 
 
@@ -144,12 +150,12 @@ def define_env(env):
 
                         for scenario in scenarios:
                             content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}###### {scenario}\n\n"
-                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), "valid", scenarios)
+                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), "valid", 0, False, scenarios, code_version)
                             content += run_cmd
                             #content += run_suffix
  
                         content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
-                        run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), "valid", scenarios)
+                        run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), "valid", scenarios, code_version)
                         content += run_cmd
                         content += run_suffix
 
@@ -235,7 +241,7 @@ def define_env(env):
         return extra_content
 
     @env.macro
-    def mlperf_inference_run_command(spaces, model, implementation, framework, category, scenario, device="cpu", execution_mode="test", test_query_count="20", docker=False, scenarios = []):
+    def mlperf_inference_run_command(spaces, model, implementation, framework, category, scenario, device="cpu", execution_mode="test", test_query_count="20", docker=False, scenarios = [], code_version="r4.1"):
         pre_space = ""
         for i in range(1,spaces):
              pre_space  = pre_space + " "
@@ -260,7 +266,7 @@ def define_env(env):
 
             docker_setup_cmd = f"""\n
 {f_pre_space}```bash
-{f_pre_space}cm run script --tags=run-mlperf,inference,_find-performance,_full{scenario_variation_tag} \\
+{f_pre_space}cm run script --tags=run-mlperf,inference,_find-performance,_full,_{code_version}{scenario_variation_tag} \\
 {pre_space} --model={model} \\
 {pre_space} --implementation={implementation} \\
 {pre_space} --framework={framework} \\
@@ -279,7 +285,7 @@ def define_env(env):
 
             run_cmd = f"""\n
 {f_pre_space}```bash
-{f_pre_space}cm run script --tags=run-mlperf,inference{scenario_variation_tag} \\
+{f_pre_space}cm run script --tags=run-mlperf,inference,_{code_version}{scenario_variation_tag} \\
 {pre_space} --model={model} \\
 {pre_space} --implementation={implementation} \\
 {pre_space} --framework={framework} \\

@@ -82,13 +82,13 @@ mlperf_long_description = (this_directory / "README.md").read_text(encoding="utf
 
 mlperf_loadgen_module = Pybind11Extension(
         "mlperf_loadgen",
-        define_macros=[("MAJOR_VERSION", "4"), ("MINOR_VERSION", "0")],
+        define_macros=[("MAJOR_VERSION", "4"), ("MINOR_VERSION", "1")],
         include_dirs=[".", get_include()],
         sources=mlperf_loadgen_sources,
         depends=mlperf_loadgen_headers)
 
-setup(name="mlperf_loadgen",
-      version="4.0",
+setup(name="mlcommons_loadgen",
+      version="4.1",
       description="MLPerf Inference LoadGen python bindings",
       url="https://mlcommons.org/",
       cmdclass={"build_ext": build_ext},

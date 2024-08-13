@@ -24,7 +24,7 @@ def define_env(env):
             elif model.lower() == "retinanet":
                  frameworks = [ "Onnxruntime", "Pytorch" ]
             elif "bert" in model.lower():
-                 frameworks = [ "Onnxruntime", "Pytorch", "Tensorflow" ]
+                 frameworks = [ "Pytorch" ]
             else:
                  frameworks = [ "Pytorch" ]
 
@@ -115,6 +115,13 @@ def define_env(env):
                         test_query_count=get_test_query_count(model, implementation, device)
 
                         if "99.9" not in model: #not showing docker command as it is already done for the 99% variant
+                            if implementation == "neuralmagic":
+                                content += f"{cur_space3}####### Run the Inference Server\n"
+                                content += get_inference_server_run_cmd(spaces+16,implementation)
+                                # tips regarding the running of nural magic server
+                                content += f"\n{cur_space3}!!! tip\n\n"
+                                content += f"{cur_space3}    - Host and Port number of the server can be configured through `--host` and `--port`. Otherwise, server will run on default host `localhost` and port `8000`.\n\n"
+                                
                             if execution_env == "Native": # Native implementation steps through virtual environment
                                 content += f"{cur_space3}####### Setup a virtual environment for Python\n"
                                 content += get_venv_command(spaces+16)
@@ -159,7 +166,7 @@ def define_env(env):
                             #content += run_suffix
  
                         content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
-                        run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), "valid", scenarios, code_version)
+                        run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), "valid", 0, False, scenarios, code_version)
                         content += run_cmd
                         content += run_suffix
 
@@ -195,6 +202,16 @@ def define_env(env):
 
         return readme_prefix
     
+    def get_inference_server_run_cmd(spaces, implementation):
+        indent = " "*spaces + " "
+        if implementation == "neuralmagic":
+            pre_space = " "*spaces
+            return f"""\n
+{pre_space}```bash
+{pre_space}cm run script --tags=run,vllm-server \\
+{indent}--model=nm-testing/Llama-2-70b-chat-hf-FP8 
+{pre_space}```\n"""
+
     def get_venv_command(spaces):
       pre_space = " "*spaces
       return f"""\n
@@ -260,7 +277,7 @@ def define_env(env):
             scenario_option = f"\\\n{pre_space} --scenario={scenario}"
 
         if scenario == "Server" or (scenario == "All Scenarios" and "Server" in scenarios):
-            scenario_option = f"\\\n{pre_space} --server_target_qps=<SERVER_TARGET_QPS>"
+            scenario_option += f"\\\n{pre_space} --server_target_qps=<SERVER_TARGET_QPS>"
 
         run_cmd_extra = get_run_cmd_extra(f_pre_space, model, implementation, device, scenario, scenarios)
 
@@ -269,11 +286,12 @@ def define_env(env):
             docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count}"
             
             if "llama2-70b" in model:
-                if implementation != "neuralmagic":
-                    docker_cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
+                if implementation == "nvidia":
+                    docker_cmd_suffix += f" \\\n{pre_space} --tp_size=2"
                     docker_cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
-                else:
-                    docker_cmd_suffix += f" \\\n{pre_space} --api_server=<API_SERVER_URL>"
+                elif implementation == "neuralmagic":
+                    docker_cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
+                    docker_cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"
             
             if "dlrm-v2" in model and implementation == "nvidia":
                 docker_cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
@@ -298,11 +316,12 @@ def define_env(env):
                 cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
             if "llama2-70b" in model:
-                if implementation != "neuralmagic":
+                if implementation == "nvidia":
                     cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
                     cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
-                else:
-                    cmd_suffix += f" \\\n{pre_space} --api_server=<API_SERVER_URL>"
+                elif implementation == "neuralmagic":
+                    cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
+                    cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"
             
             if "dlrm-v2" in model and implementation == "nvidia":
                 cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"

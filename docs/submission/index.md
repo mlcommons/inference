@@ -11,62 +11,62 @@ If you follow the `cm run` commands under the individual model pages in the [ben
     ### Closed Edge Submission
     ```bash
        cm run script -tags=generate,inference,submission \
-      --clean \
-      --preprocess_submission=yes \
-      --run-checker \
-      --submitter=MLCommons \
-      --tar=yes \
-      --env.CM_TAR_OUTFILE=submission.tar.gz \
-      --division=closed \
-      --category=edge \
-      --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
-      --quiet
+          --clean \
+          --preprocess_submission=yes \
+          --run-checker \
+          --submitter=MLCommons \
+          --tar=yes \
+          --env.CM_TAR_OUTFILE=submission.tar.gz \
+          --division=closed \
+          --category=edge \
+          --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
+          --quiet
     ```
 
 === "Closed Datacenter"
     ### Closed Datacenter Submission
     ```bash
        cm run script -tags=generate,inference,submission \
-      --clean \
-      --preprocess_submission=yes \
-      --run-checker \
-      --submitter=MLCommons \
-      --tar=yes \
-      --env.CM_TAR_OUTFILE=submission.tar.gz \
-      --division=closed \
-      --category=datacenter \
-      --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
-      --quiet
+          --clean \
+          --preprocess_submission=yes \
+          --run-checker \
+          --submitter=MLCommons \
+          --tar=yes \
+          --env.CM_TAR_OUTFILE=submission.tar.gz \
+          --division=closed \
+          --category=datacenter \
+          --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
+          --quiet
     ```
 === "Open Edge"
     ### Open Edge Submission
     ```bash
        cm run script -tags=generate,inference,submission \
-      --clean \
-      --preprocess_submission=yes \
-      --run-checker \
-      --submitter=MLCommons \
-      --tar=yes \
-      --env.CM_TAR_OUTFILE=submission.tar.gz \
-      --division=open \
-      --category=edge \
-      --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
-      --quiet
+          --clean \
+          --preprocess_submission=yes \
+          --run-checker \
+          --submitter=MLCommons \
+          --tar=yes \
+          --env.CM_TAR_OUTFILE=submission.tar.gz \
+          --division=open \
+          --category=edge \
+          --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
+          --quiet
     ```
 === "Open Datacenter"
     ### Closed Datacenter Submission
     ```bash
        cm run script -tags=generate,inference,submission \
-      --clean \
-      --preprocess_submission=yes \
-      --run-checker \
-      --submitter=MLCommons \
-      --tar=yes \
-      --env.CM_TAR_OUTFILE=submission.tar.gz \
-      --division=open \
-      --category=datacenter \
-      --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
-      --quiet
+          --clean \
+          --preprocess_submission=yes \
+          --run-checker \
+          --submitter=MLCommons \
+          --tar=yes \
+          --env.CM_TAR_OUTFILE=submission.tar.gz \
+          --division=open \
+          --category=datacenter \
+          --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
+          --quiet
     ```
 
 * Use `--hw_name="My system name"` to give a meaningful system name. Examples can be seen [here](https://github.com/mlcommons/inference_results_v3.0/tree/main/open/cTuning/systems)

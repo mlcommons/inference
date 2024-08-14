@@ -28,4 +28,4 @@ CM needs `git`, `python3-pip` and `python3-venv` installed on your system. If an
 
 Here, repo is in the format `githubUsername@githubRepo`.
 
-Now, you are ready to use the `cm` commands to run MLPerf inference as given in the [benchmarks](../benchmarks/index.md) page
+Now, you are ready to use the `cm` commands to run MLPerf inference as given in the [benchmarks](../index.md) page

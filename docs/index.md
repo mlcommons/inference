@@ -1,7 +1,7 @@
 # MLPerf Inference Benchmarks
 
 ## Overview
-This document provides details on various [MLPerf Inference Benchmarks](official_gh_index.md) categorized by tasks, models, and datasets. Each section lists the models performing similar tasks, with details on datasets, accuracy, and server latency constraints.
+This document provides details on various [MLPerf Inference Benchmarks](index_gh.md) categorized by tasks, models, and datasets. Each section lists the models performing similar tasks, with details on datasets, accuracy, and server latency constraints.
 
 ---
 
@@ -16,6 +16,7 @@ This document provides details on various [MLPerf Inference Benchmarks](official
 - **Equal Issue mode**: False
 - **Accuracy Variants**: None
 - **Precision**: fp32, int8
+- **Submission Category**: Data Center, Edge
 
 ---
 
@@ -30,7 +31,8 @@ This document provides details on various [MLPerf Inference Benchmarks](official
   - CLIP: 32.68631873 ≤ CLIP ≤ 31.81331801
 - **Equal Issue mode**: True
 - **Accuracy Variants**: None
-- **Precision**: fp32, fp16
+- **Precision**: fp32
+- **Submission Category**: Data Center, Edge
 
 ---
 
@@ -46,6 +48,7 @@ This document provides details on various [MLPerf Inference Benchmarks](official
 - **Accuracy Variants**: None
 - **Accuracy Variants**: 99% and 99.9% of reference model accuracy
 - **Precision**: fp32
+- **Submission Category**: Data Center, Edge
 
 ---
 
@@ -60,6 +63,7 @@ This document provides details on various [MLPerf Inference Benchmarks](official
 - **Equal Issue mode**: True
 - **Accuracy Variants**: 99% and 99.9% of reference model accuracy
 - **Precision**: fp32
+- **Submission Category**: Data Center, Edge
 
 ---
 
@@ -77,6 +81,7 @@ This document provides details on various [MLPerf Inference Benchmarks](official
 - **Equal Issue mode**: True
 - **Accuracy Variants**: 99% and 99.9% of reference model accuracy
 - **Precision**: fp32, int8
+- **Submission Category**: Data Center, Edge
 
 ### [LLAMA2-70B](benchmarks/language/llama2-70b.md)
 - **Dataset**: OpenORCA (GPT-4 split, max_seq_len=1024)
@@ -94,6 +99,7 @@ This document provides details on various [MLPerf Inference Benchmarks](official
 - **Equal Issue mode**: True
 - **Accuracy Variants**: 99% and 99.9% of reference model accuracy
 - **Precision**: fp32
+- **Submission Category**: Data Center
 
 ### 5.2. Text Summarization
 
@@ -111,6 +117,7 @@ This document provides details on various [MLPerf Inference Benchmarks](official
 - **Equal Issue mode**: True
 - **Accuracy Variants**: 99% and 99.9% of reference model accuracy
 - **Precision**: fp32
+- **Submission Category**: Data Center, Edge
 
 ### 5.3. Mixed Tasks (Question Answering, Math, and Code Generation)
 
@@ -133,8 +140,9 @@ This document provides details on various [MLPerf Inference Benchmarks](official
   - TTFT: 2000ms
   - TPOT: 200ms
 - **Equal Issue mode**: True
-- **Accuracy Variants**: None
+- **Accuracy Variants**: 99% and of reference model
 - **Precision**: fp16
+- **Submission Category**: Data Center
 
 ---
 
@@ -149,11 +157,12 @@ This document provides details on various [MLPerf Inference Benchmarks](official
 - **Equal Issue mode**: False
 - **Accuracy Variants**: 99% and 99.9% of reference model accuracy
 - **Precision**: fp32
+- **Submission Category**: Data Center
 
 ---
 
-### Participation Categories
-- **Datacenter Category**: All nine benchmarks can participate.
+### Submission Categories
+- **Datacenter Category**: All the benchmarks can participate.
 - **Edge Category**: All benchmarks except DLRMv2, LLAMA2, and Mixtral-8x7B can participate.
 
 ### High Accuracy Variants

@@ -1592,6 +1592,38 @@ def check_results_dir(
         if system_json.get("sw_notes"):
             notes = notes + ". " if notes else ""
             notes = notes + system_json.get("sw_notes")
+        special_unit_dict = {
+            "gptj-99": {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "gptj-99.9": {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama2-70b-99" : {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama2-70b-99.9" : {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "mixtral-8x7b" : {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            }
+        }
         unit_dict = {
             "SingleStream": "Latency (ms)",
             "MultiStream": "Latency (ms)",
@@ -1604,7 +1636,7 @@ def check_results_dir(
             "Offline": "Watts",
             "Server": "Watts",
         }
-        unit = unit_dict[scenario_fixed]
+        unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
         power_unit = power_unit_dict[scenario_fixed]
 
         csv.write(

@@ -10,11 +10,10 @@ hide:
     cm find cache --tags=get,mlperf,inference,results,dir | xargs tree
     ```
 === "Non CM based benchmark"
-    If you have not followed the `cm run` commands under the individual model pages in the [benchmarks](../index.md) directory, make sure that the result directory is structured in the following way. 
+    If you have not followed the `cm run` commands under the individual model pages in the [benchmarks](../index.md) directory, please make sure that the result directory is structured in the following way. 
     ```
     └── SUT_Name
         ├── cm_sut_info.json
-        ├── model_mapping.json
         └── model
             └── Scenario
                 └── loadgen_Mode
@@ -31,14 +30,20 @@ hide:
             - `device`
             - `framework`
             - `run_config`
-        - The `model_mapping.json` is used to map the custom model full name to the official model name. The format of json file is:
-            ```
-            {
-                "custom_model_name_for_model1":"official_model_name_for_model1",
-                "custom_model_name_for_model2":"official_model_name_for_model2",
+    
+    <details>
+    <summary>Click here if you are submitting custom model in open division</summary>
 
-            }
-            ```
+    * The `model_mapping.json` should be included inside the SUT folder which is used to map the custom model full name to the official model name. The format of json file is:
+
+    ```
+        {
+            "custom_model_name_for_model1":"official_model_name_for_model1",
+            "custom_model_name_for_model2":"official_model_name_for_model2",
+
+        }
+    ```
+    </details>
 
 Once all the results across all the models are ready you can use the following command to generate a valid submission tree compliant with the [MLPerf requirements](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc#inference-1).
 

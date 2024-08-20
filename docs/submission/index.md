@@ -12,20 +12,37 @@ hide:
 === "Non CM based benchmark"
     If you have not followed the `cm run` commands under the individual model pages in the [benchmarks](../index.md) directory, please make sure that the result directory is structured in the following way. 
     ```
-    └── SUT_Name
+    └── System description ID
         ├── cm_sut_info.json
-        └── model
+        └── Benchmark
             └── Scenario
-                └── loadgen_Mode
-                    ├── file-1
-                    ├── ...
-                    └── file-n
+                ├── Performance
+                |   └── run_x/#1 run for all scenarios
+                |       ├── mlperf_log_summary.txt
+                |       └── mlperf_log_detail.txt
+                ├── Accuracy
+                |   ├── mlperf_log_summary.txt
+                |   ├── mlperf_log_detail.txt
+                |   ├── mlperf_log_accuracy.json
+                |   └── accuracy.txt
+                └── Test_ID
+                    ├── Performance
+                    |   └── run_x/#1 run for all scenarios
+                    |       ├── mlperf_log_summary.txt
+                    |       └── mlperf_log_detail.txt
+                    ├── Accuracy
+                    |   ├── baseline_accuracy.txt
+                    |   ├── compliance_accuracy.txt
+                    |   ├── mlperf_log_accuracy.json
+                    |   └── accuracy.txt
+                    ├── verify_performance.txt
+                    └── verify_accuracy.txt #for TEST01 only
     ```
 
     !!! tip
 
         - The `cm_sut_info.json` should contain the following keys
-            - `system_name`
+            - `hardware_name`
             - `implementation`
             - `device`
             - `framework`

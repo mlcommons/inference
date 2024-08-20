@@ -12,27 +12,35 @@ hide:
 === "Non CM based benchmark"
     If you have not followed the `cm run` commands under the individual model pages in the [benchmarks](../index.md) directory, please make sure that the result directory is structured in the following way. 
     ```
-    └── SUT_Name
-        ├── cm_sut_info.json
-        └── model
+    └── System description ID(SUT Name)
+        ├── system_meta.json
+        └── Benchmark
             └── Scenario
-                └── loadgen_Mode
-                    ├── file-1
-                    ├── ...
-                    └── file-n
+                ├── Performance
+                |   └── run_x/#1 run for all scenarios
+                |       ├── mlperf_log_summary.txt
+                |       └── mlperf_log_detail.txt
+                ├── Accuracy
+                |   ├── mlperf_log_summary.txt
+                |   ├── mlperf_log_detail.txt
+                |   ├── mlperf_log_accuracy.json
+                |   └── accuracy.txt
+                └── Compliance_Test_ID
+                    ├── Performance
+                    |   └── run_x/#1 run for all scenarios
+                    |       ├── mlperf_log_summary.txt
+                    |       └── mlperf_log_detail.txt
+                    ├── Accuracy
+                    |   ├── baseline_accuracy.txt
+                    |   ├── compliance_accuracy.txt
+                    |   ├── mlperf_log_accuracy.json
+                    |   └── accuracy.txt
+                    ├── verify_performance.txt
+                    └── verify_accuracy.txt #for TEST01 only
     ```
-
-    !!! tip
-
-        - The `cm_sut_info.json` should contain the following keys
-            - `system_name`
-            - `implementation`
-            - `device`
-            - `framework`
-            - `run_config`
     
     <details>
-    <summary>Click here if you are submitting custom model in open division</summary>
+    <summary>Click here if you are submitting in open division</summary>
 
     * The `model_mapping.json` should be included inside the SUT folder which is used to map the custom model full name to the official model name. The format of json file is:
 

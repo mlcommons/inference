@@ -1,7 +1,7 @@
 # MLPerf Inference Benchmarks
 
 ## Overview
-The currently valid [MLPerf Inference Benchmarks](index_gh.md) as of MLPerf inference v4.0 round are listed below, categorized by tasks. Under each model you can find its details like the dataset used, accuracy, server latency constraints etc.
+The currently valid [MLPerf Inference Benchmarks](index_gh.md) as of MLPerf inference v4.0 round are listed below, categorized by tasks. Under each model you can find its details like the dataset used, reference accuracy, server latency constraints etc.
 
 ---
 
@@ -27,9 +27,10 @@ The currently valid [MLPerf Inference Benchmarks](index_gh.md) as of MLPerf infe
     - **QSL Size**: 5,000
 - **Number of Parameters**: 3.5 billion <!-- taken from https://stability.ai/news/stable-diffusion-sdxl-1-announcement -->
 - **FLOPs**: 1.28 - 2.4 trillion
+- **Reference Model Accuracy (fp32)**:  CLIP: 31.74981837, FID: 23.48046692
 - **Required Accuracy (Closed Division)**:
-    - FID: 23.01085758 ≤ FID ≤ 23.95007626
-    - CLIP: 32.68631873 ≤ CLIP ≤ 31.81331801
+    - CLIP: 31.68631873 ≤ CLIP ≤ 31.81331801 (within 0.2% of the reference model CLIP score)
+    - FID: 23.01085758 ≤ FID ≤ 23.95007626 (within 2% of the reference model FID score)
 - **Equal Issue mode**: False
 - **High accuracy variant**: No
 - **Submission Category**: Datacenter, Edge
@@ -87,7 +88,7 @@ The currently valid [MLPerf Inference Benchmarks](index_gh.md) as of MLPerf infe
     - **QSL Size**: 24,576
 - **Number of Parameters**: 70 billion
 - **FLOPs**: ~500 trillion
-- **Reference Model Accuracy (fp16) **:
+- **Reference Model Accuracy (fp32) **:
     - Rouge1: 44.4312
     - Rouge2: 22.0352
     - RougeL: 28.6162

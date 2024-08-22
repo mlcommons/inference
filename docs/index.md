@@ -1,11 +1,11 @@
 # MLPerf Inference Benchmarks
 
 ## Overview
-This document provides details on various [MLPerf Inference Benchmarks](index_gh.md) categorized by tasks, models, and datasets. Each section lists the models performing similar tasks, with details on datasets, accuracy, and server latency constraints.
+The currently valid [MLPerf Inference Benchmarks](index_gh.md) as of MLPerf inference v4.0 round are listed below, categorized by tasks. Under each model you can find its details like the dataset used, accuracy, server latency constraints etc.
 
 ---
 
-## 1. Image Classification
+## Image Classification
 ### [ResNet50-v1.5](benchmarks/image_classification/resnet50.md)
 - **Dataset**: Imagenet-2012 (224x224) Validation
   - **Dataset Size**: 50,000
@@ -20,7 +20,7 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 
 ---
 
-## 2. Text to Image
+## Text to Image
 ### [Stable Diffusion](benchmarks/text_to_image/sdxl.md)
 - **Dataset**: Subset of Coco2014
   - **Dataset Size**: 5,000
@@ -28,15 +28,15 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 - **Number of Parameters**: 3.5 billion <!-- taken from https://stability.ai/news/stable-diffusion-sdxl-1-announcement -->
 - **FLOPs**: 1.28 - 2.4 trillion
 - **Required Accuracy (Closed Division)**:
-  - FID: 23.01085758 ≤ FID ≤ 23.95007626
-  - CLIP: 32.68631873 ≤ CLIP ≤ 31.81331801
+    - FID: 23.01085758 ≤ FID ≤ 23.95007626
+    - CLIP: 32.68631873 ≤ CLIP ≤ 31.81331801
 - **Equal Issue mode**: False
 - **High accuracy variant**: No
 - **Submission Category**: Datacenter, Edge
 
 ---
 
-## 3. Object Detection
+## Object Detection
 ### [Retinanet](benchmarks/object_detection/retinanet.md)
 - **Dataset**: OpenImages
   - **Dataset Size**: 24,781
@@ -50,7 +50,7 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 
 ---
 
-## 4. Medical Image Segmentation
+## Medical Image Segmentation
 ### [3d-unet](benchmarks/medical_imaging/3d-unet.md) <!-- https://ar5iv.labs.arxiv.org/html/1809.10483v2 -->
 - **Dataset**: KiTS2019
   - **Dataset Size**: 42
@@ -65,11 +65,11 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 
 ---
 
-## 5. Language Tasks
+## Language Tasks
 
-### 5.1. Question Answering
+### Question Answering
 
-### [Bert-Large](benchmarks/language/bert.md)
+#### [Bert-Large](benchmarks/language/bert.md)
 - **Dataset**: Squad v1.1 (384 Sequence Length)
   - **Dataset Size**: 10,833
   - **QSL Size**: 10,833
@@ -81,7 +81,7 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 - **High accuracy variant**: yes
 - **Submission Category**: Datacenter, Edge
 
-### [LLAMA2-70B](benchmarks/language/llama2-70b.md)
+#### [LLAMA2-70B](benchmarks/language/llama2-70b.md)
 - **Dataset**: OpenORCA (GPT-4 split, max_seq_len=1024)
   - **Dataset Size**: 24,576
   - **QSL Size**: 24,576
@@ -96,9 +96,9 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 - **High accuracy variant**: Yes
 - **Submission Category**: Datacenter
 
-### 5.2. Text Summarization
+###  Text Summarization
 
-### [GPT-J](benchmarks/language/gpt-j.md)
+#### [GPT-J](benchmarks/language/gpt-j.md)
 - **Dataset**: CNN Daily Mail v3.0.0
   - **Dataset Size**: 13,368
   - **QSL Size**: 13,368
@@ -111,13 +111,13 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 - **High accuracy variant**: Yes
 - **Submission Category**: Datacenter, Edge
 
-### 5.3. Mixed Tasks (Question Answering, Math, and Code Generation)
+### Mixed Tasks (Question Answering, Math, and Code Generation)
 
-### [Mixtral-8x7B](benchmarks/language/mixtral-8x7b.md)
+#### [Mixtral-8x7B](benchmarks/language/mixtral-8x7b.md)
 - **Datasets**:
-  - OpenORCA (5k samples of GPT-4 split, max_seq_len=2048)
-  - GSM8K (5k samples of the validation split, max_seq_len=2048)
-  - MBXP (5k samples of the validation split, max_seq_len=2048)
+    - OpenORCA (5k samples of GPT-4 split, max_seq_len=2048)
+    - GSM8K (5k samples of the validation split, max_seq_len=2048)
+    - MBXP (5k samples of the validation split, max_seq_len=2048)
   - **Dataset Size**: 15,000
   - **QSL Size**: 15,000
 - **Number of Parameters**: 47 billion <!-- https://huggingface.co/blog/moe -->
@@ -135,8 +135,8 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 
 ---
 
-## 6. Recommendation
-### [DLRMv2](benchmarks/recommendation/dlrm-v2.md)
+## Recommendation
+### [DLRM_v2](benchmarks/recommendation/dlrm-v2.md)
 - **Dataset**: Synthetic Multihot Criteo
   - **Dataset Size**: 204,800
   - **QSL Size**: 204,800
@@ -149,10 +149,10 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 
 ---
 
-### Submission Categories
+## Submission Categories
 - **Datacenter Category**: All the current inference benchmarks are applicable to the datacenter category.
 - **Edge Category**: All benchmarks except DLRMv2, LLAMA2-70B, and Mixtral-8x7B are applicable to the edge category.
 
-### High Accuracy Variants
+## High Accuracy Variants
 - **Benchmarks**: `bert`, `llama2-70b`, `gpt-j`,  `dlrm_v2`, and `3d-unet` have a normal accuracy variant as well as a high accuracy variant.
 - **Requirement**: Must achieve at least 99.9% of the reference model accuracy, compared to the default 99% accuracy requirement.

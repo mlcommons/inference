@@ -24,7 +24,7 @@ def define_env(env):
             elif model.lower() == "retinanet":
                  frameworks = [ "Onnxruntime", "Pytorch" ]
             elif "bert" in model.lower():
-                 frameworks = [ "Pytorch" ]
+                 frameworks = [ "Pytorch", "deepsparse" ]
             else:
                  frameworks = [ "Pytorch" ]
 
@@ -157,7 +157,28 @@ def define_env(env):
                         run_suffix += f"{cur_space3}<summary> Please click here to see more options for the RUN command</summary>\n\n"
                         run_suffix += f"{cur_space3}* Use `--division=closed` to do a closed division submission which includes compliance runs\n\n"
                         run_suffix += f"{cur_space3}* Use `--rerun` to do a rerun even when a valid run exists\n"  
-                        run_suffix += f"{cur_space3}</details>\n"
+                        run_suffix += f"{cur_space3}</details>\n\n"
+
+                        if "bert" in model.lower() and framework == "deepsparse":
+                            run_suffix += f"{cur_space3}<details>\n"
+                            run_suffix += f"{cur_space3}<summary> Please click here for generic model stubs for bert deepsparse</summary>\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/obert-large/pytorch/huggingface/squad/pruned95_quant-none-vnni\n\n" 
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/14layer_pruned50_quant-none-vnni\n\n" 
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/bert-base/pytorch/huggingface/squad/pruned95_obs_quant-none\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/14layer_pruned50-none-vnni\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/obert-base/pytorch/huggingface/squad/pruned90-none\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/obert-large/pytorch/huggingface/squad/pruned97_quant-none\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/bert-base/pytorch/huggingface/squad/pruned90-none\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/bert-large/pytorch/huggingface/squad/pruned80_quant-none-vnni\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/obert-large/pytorch/huggingface/squad/pruned95-none-vnni\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/obert-large/pytorch/huggingface/squad/pruned97-none\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/bert-large/pytorch/huggingface/squad/base-none\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/obert-large/pytorch/huggingface/squad/base-none\n\n"
+                            run_suffix += f"{cur_space3}* zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base-none\n"
+                            run_suffix += f"{cur_space3}</details>\n"
+
+                        
 
                         for scenario in scenarios:
                             content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}###### {scenario}\n\n"
@@ -287,7 +308,9 @@ def define_env(env):
             docker_cmd_suffix = f" \\\n{pre_space} --docker --quiet"
             docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count}"
             
-            if "llama2-70b" in model:
+            if "bert" in model.lower() and framework == "deepsparse":
+                docker_cmd_suffix += f"\\\n{pre_space} --env.CM_MLPERF_NEURALMAGIC_MODEL_ZOO_STUB=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
+            if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     docker_cmd_suffix += f" \\\n{pre_space} --tp_size=2"
                     docker_cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
@@ -295,7 +318,7 @@ def define_env(env):
                     docker_cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
                     docker_cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"
             
-            if "dlrm-v2" in model and implementation == "nvidia":
+            if "dlrm-v2" in model.lower() and implementation == "nvidia":
                 docker_cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
 
             docker_setup_cmd = f"""\n
@@ -317,7 +340,9 @@ def define_env(env):
             if execution_mode == "test":
                 cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
-            if "llama2-70b" in model:
+            if "bert" in model.lower() and framework == "deepsparse":
+                cmd_suffix += f"\\\n{pre_space} --env.CM_MLPERF_NEURALMAGIC_MODEL_ZOO_STUB=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
+            if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
                     cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"

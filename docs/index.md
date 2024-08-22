@@ -88,10 +88,7 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 - **Number of Parameters**: 70 billion
 - **FLOPs**: ~500 trillion
 - **Reference Model Accuracy (fp16) **:
-  - Rouge1: 44.4312
-  - Rouge2: 22.0352
-  - RougeL: 28.6162
-  - Tokens_per_sample: 294.45
+  - Rouge1: 44.4312, Rouge2: 22.0352, RougeL: 28.6162, Tokens_per_sample: 294.45
 - **Server Scenario Latency Constraint**:
   - TTFT: 2000ms
   - TPOT: 200ms
@@ -108,10 +105,7 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 - **Number of Parameters**: 6 billion
 - **FLOPs**: ~148 billion
 - **Reference Model Accuracy (fp32) **:
-  - Rouge1: 42.9865
-  - Rouge2: 20.1235
-  - RougeL: 29.9881
-  - Gen_len: 4,016,878
+  - Rouge1: 42.9865, Rouge2: 20.1235, RougeL: 29.9881, Gen_len: 4,016,878
 - **Server Scenario Latency Constraint**: 20s
 - **Equal Issue mode**: True
 - **High accuracy variant**: Yes
@@ -128,9 +122,7 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
   - **QSL Size**: 15,000
 - **Number of Parameters**: 47 billion <!-- https://huggingface.co/blog/moe -->
 - **Reference Model Accuracy (fp16) **:
-  - Rouge1: 45.4911
-  - Rouge2: 23.2829
-  - RougeL: 30.3615
+  - Rouge1: 45.4911, Rouge2: 23.2829, RougeL: 30.3615
   - GSM8K Accuracy: 73.78%
   - MBXP Accuracy: 60.12%
   - Tokens_per_sample: 294.45

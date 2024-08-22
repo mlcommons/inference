@@ -147,8 +147,8 @@ The currently valid [MLPerf Inference Benchmarks](index_gh.md) as of MLPerf infe
 ## Recommendation
 ### [DLRM_v2](benchmarks/recommendation/dlrm-v2.md)
 - **Dataset**: Synthetic Multihot Criteo
-  - **Dataset Size**: 204,800
-  - **QSL Size**: 204,800
+    - **Dataset Size**: 204,800
+    - **QSL Size**: 204,800
 - **Number of Parameters**: ~23 billion
 - **Reference Model Accuracy**: AUC = 80.31%
 - **Server Scenario Latency Constraint**: 60ms

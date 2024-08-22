@@ -150,9 +150,9 @@ This document provides details on various [MLPerf Inference Benchmarks](index_gh
 ---
 
 ### Submission Categories
-- **Datacenter Category**: All the benchmarks can participate.
-- **Edge Category**: All benchmarks except DLRMv2, LLAMA2, and Mixtral-8x7B can participate.
+- **Datacenter Category**: All the current inference benchmarks are applicable to the datacenter category.
+- **Edge Category**: All benchmarks except DLRMv2, LLAMA2-70B, and Mixtral-8x7B are applicable to the edge category.
 
 ### High Accuracy Variants
-- **Benchmarks**: `bert`, `llama2-70b`, `dlrm_v2`, and `3d-unet`
+- **Benchmarks**: `bert`, `llama2-70b`, `gpt-j`,  `dlrm_v2`, and `3d-unet` have a normal accuracy variant as well as a high accuracy variant.
 - **Requirement**: Must achieve at least 99.9% of the reference model accuracy, compared to the default 99% accuracy requirement.

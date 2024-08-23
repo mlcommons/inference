@@ -104,6 +104,9 @@ def define_env(env):
                     content += f"{cur_space1}=== \"{device}\"\n"
                     content += f"{cur_space2}##### {device} device\n\n"
 
+                    # minimum system requirements
+                    content += get_min_system_requirements(cur_space2, model, implementation, device)
+
                     # to select the execution environments(currently Docker and Native)
                     for execution_env in execution_envs:
                         if (device == "ROCm" or implementation == "qualcomm") and execution_env == "Docker":
@@ -213,6 +216,55 @@ def define_env(env):
             p_range *= num_devices
 
         return p_range
+    
+    def get_min_system_requirements(spaces, model, implementation, device):
+        model = model.lower()
+        min_sys_req_content = ""
+        min_sys_req_content += f"{spaces}<details>\n"
+        min_sys_req_content += f"{spaces}<summary>Please click here to see the minimum system requirements for running the benchmark</summary>\n\n"
+        # device memory
+        if device.lower() == "cuda" and (implementation.lower() == "nvidia" or implementation.lower() == "reference"):
+            if implementation.lower() == "nvidia":
+                if "dlrm" in model:
+                    device_memory = "24GB"
+                elif "llama2-70b" in model or "mixtral" in model:
+                    device_memory = "80GB"
+                elif "sdxl" in model or "gptj" in model:
+                    device_memory = "16GB"
+                else:
+                    device_memory = "8GB"
+            elif implementation.lower() == "reference":
+                if "dlrm" in model:
+                    device_memory = "2x80GB"
+                elif "llama2-70b" in model:
+                    device_memory = "8x80GB"
+                elif "mixtral" in model:
+                    device_memory = "4x80GB"
+                elif "sdxl" in model:
+                    device_memory = "24GB(fp32), 16GB(fp16)"
+                elif "gptj" in model:
+                    device_memory = "80GB(fp32). 40GB(fp16)"
+                else:
+                    device_memory = "8GB"
+            min_sys_req_content += f"{spaces}* **Device Memory**: {device_memory}\n\n"
+        # disk space
+        if "dlrm" in model:
+            disk_space = "500GB"
+        elif "llama2-70b" in model:
+            disk_space = "700GB"
+        elif "mixtral" in model:
+            disk_space = "100GB"
+        elif "retinanet" in model:
+            disk_space = "200GB"
+        else:
+            disk_space = "50GB"
+        min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"
+        # System memory
+        if "dlrm" in model:
+            system_memory = "512GB"
+            min_sys_req_content += f"{spaces}* **System Memory(RAM+SWAP)**: {system_memory}\n\n"
+        min_sys_req_content += f"{spaces}</details>\n"
+        return min_sys_req_content
 
     def get_readme_prefix(spaces, model, implementation):
         readme_prefix = ""

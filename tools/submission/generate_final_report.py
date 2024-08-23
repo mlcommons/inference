@@ -244,27 +244,32 @@ def main():
     outjsondata[i] = {'ID': result_id, **result}
 
   outjsondata.sort(key=lambda x:x["Units"])
+  outjsondata.sort(key=lambda x:x["Scenario"])
+  outjsondata.sort(key=lambda x:x["UsedModel"])
   outjsondata.sort(key=lambda x:x["ID"])
 
   #remove duplicate perf results
-  keystomatch = ['ID', 'UsedModel', 'Scenario']
-  for i in range(len(outjsondata)):
+  keystomatch = ['ID', 'UsedModel', 'Scenario', 'Units']
+  i = 0
+  n = len(outjsondata)
+  while i < n:
     result = outjsondata[i]
-    if not result:
-      continue
-    if i < len(outjsondata) - 1:
-      if all(result[key] == outjsondata[i+1][key] for key in keystomatch):
-        outjsondata[i+1] = {}
-
-  outjsondata = [ i for i in outjsondata if i != {}]
+    while i < n - 1 and all(result[key] == outjsondata[i+1][key] for key in keystomatch):
+      del(outjsondata[i+1])
+      n -= 1
+    i += 1
 
   #merge perf and power results
+  keystomatch.pop()
+
   for i in range(len(outjsondata)):
     result = outjsondata[i]
     if not result:
       continue
     if i < len(outjsondata) - 1:
       if all(result[key] == outjsondata[i+1][key] for key in keystomatch):
+        #print(result)
+        #print(outjsondata[i+1])
         if "Watts" in result['Units'] or "joules" in result['Units']:
           result['Performance_Result'] = outjsondata[i+1]['Result']
           result['Performance_Units'] = outjsondata[i+1]['Units']

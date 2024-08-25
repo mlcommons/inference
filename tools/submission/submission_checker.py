@@ -1704,7 +1704,7 @@ def check_results_dir(
                     inferred,
                     power_metric > 0,
                     power_unit,
-                    weight_data_types
+                    '"' + weight_data_types + '"',
                 )
             )
 

@@ -1562,7 +1562,7 @@ def check_results_dir(
         "inferred",
         "has_power",
         "Units",
-        "model_weights"
+        "weight_data_types"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
@@ -1670,7 +1670,7 @@ def check_results_dir(
                 inferred,
                 power_metric > 0,
                 unit,
-                weight_data_types,
+                '"' + weight_data_types + '"',
             )
         )
 
@@ -1722,7 +1722,7 @@ def check_results_dir(
         ]
         if len(files_outside_division) > 0 and not skip_extra_files_in_root_check:
             log.error(
-                "Root contains files outside division folder %s",
+                "Root contains files outside division folder %s. You can use '--skip-extra-files-in-root-check' to skip this check temporarily",
                 division,
                 files_outside_division,
             )

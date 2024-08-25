@@ -318,7 +318,7 @@ class SUTServer(SUT):
 
             first_tokens, response_id = first_token_item
 
-            response_data = array.array("B", np.array(first_tokens, np.float32).tobytes())
+            response_data = array.array("B", np.array(first_tokens, np.int32).tobytes())
             bi = response_data.buffer_info()
             response = [lg.QuerySampleResponse(response_id, bi[0], bi[1])]
             lg.FirstTokenComplete(response)

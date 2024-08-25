@@ -112,6 +112,7 @@ def main():
                        'Latency (ms)',
                        'Samples/s',
                        'Queries/s',
+                       'Tokens/s',
                        'millijoules',
                        'Watts',
                    ]]

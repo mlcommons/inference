@@ -2258,7 +2258,7 @@ def check_results_dir(
                                     config,
                                     inferred=inferred,
                                     power_metric=power_metric,
-                                    weight_data_types
+                                    weight_data_types=weight_data_types
                                 )
                             else:
                                 results[name] = None

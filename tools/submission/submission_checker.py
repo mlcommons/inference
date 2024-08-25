@@ -1638,7 +1638,10 @@ def check_results_dir(
             "Offline": "Watts",
             "Server": "Watts",
         }
-        unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
+        if config.version == "v4.0":
+            unit = unit_dict[scenario_fixed]
+        else:
+            unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
         power_unit = power_unit_dict[scenario_fixed]
 
         csv.write(

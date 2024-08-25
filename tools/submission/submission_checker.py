@@ -1541,6 +1541,7 @@ def check_results_dir(
         "inferred",
         "has_power",
         "Units",
+        "model_weights"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
@@ -1566,6 +1567,7 @@ def check_results_dir(
         config,
         inferred=0,
         power_metric=0,
+        weight_data_types="fp32"
     ):
         notes = system_json.get("hw_notes", "")
         if system_json.get("sw_notes"):
@@ -1615,6 +1617,7 @@ def check_results_dir(
                 inferred,
                 power_metric > 0,
                 unit,
+                weight_data_types,
             )
         )
 
@@ -1648,6 +1651,7 @@ def check_results_dir(
                     inferred,
                     power_metric > 0,
                     power_unit,
+                    weight_data_types
                 )
             )
 
@@ -1946,7 +1950,7 @@ def check_results_dir(
                             errors += 1
                             continue
                         else:
-                            if not check_measurement_dir(
+                            valid_measurement_dir, weight_data_types = check_measurement_dir(
                                 measurement_dir,
                                 name,
                                 system_desc,
@@ -1957,7 +1961,8 @@ def check_results_dir(
                                 skip_meaningful_fields_emptiness_check,
                                 skip_empty_files_check,
                                 skip_check_power_measure_files,
-                            ):
+                            )
+                            if not valid_measurement_dir:
                                 log.error(
                                     "%s measurement_dir has issues", measurement_dir
                                 )
@@ -2187,6 +2192,7 @@ def check_results_dir(
                                     config,
                                     inferred=inferred,
                                     power_metric=power_metric,
+                                    weight_data_types
                                 )
                             else:
                                 results[name] = None
@@ -2381,9 +2387,11 @@ def check_measurement_dir(
                 end = len(".json")
                 break
 
+    weight_data_types = None
     if system_file:
         with open(os.path.join(measurement_dir, system_file), "r") as f:
             j = json.load(f)
+            weight_data_types = j['weight_data_types']
             for k in SYSTEM_IMP_REQUIRED_FILES:
                 if k not in j:
                     is_valid = False
@@ -2410,7 +2418,7 @@ def check_measurement_dir(
         log.error("%s is missing %s*.json", fname, system_desc)
         is_valid = False
 
-    return is_valid
+    return is_valid, weight_data_types
 
 
 def check_compliance_perf_dir(test_dir):

@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Text Summarization using GPT-J
 
 ## Dataset

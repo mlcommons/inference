@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Image Classification using Mobilenet models
 
 Mobilenet models are not official MLPerf models and so cannot be used for a Closed division MLPerf inference submission. But since they can be run with Imagenet dataset, we are allowed to use them for Open division submission. Only CPU runs are supported now. 

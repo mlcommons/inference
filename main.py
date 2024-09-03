@@ -12,7 +12,7 @@ def define_env(env):
         content=""
         scenarios = []
         execution_envs = ["Docker","Native"]
-        code_version="r4.1"
+        code_version="r4.1-dev"
 
         if model == "rnnt":
             code_version="r4.0"
@@ -140,7 +140,7 @@ def define_env(env):
                                 content += f"{cur_space3}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for each scenario.\n\n"
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
-                                content += f"{cur_space3}* `--docker_cm_repo <Custom CM repo URL>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_cm_repo=<Custom CM repo URL>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"
 
                                 if device.lower() not in [ "cuda" ]:
@@ -337,7 +337,7 @@ def define_env(env):
         return extra_content
 
     @env.macro
-    def mlperf_inference_run_command(spaces, model, implementation, framework, category, scenario, device="cpu", execution_mode="test", test_query_count="20", docker=False, scenarios = [], code_version="r4.1"):
+    def mlperf_inference_run_command(spaces, model, implementation, framework, category, scenario, device="cpu", execution_mode="test", test_query_count="20", docker=False, scenarios = [], code_version="r4.1-dev"):
         pre_space = ""
         for i in range(1,spaces):
              pre_space  = pre_space + " "

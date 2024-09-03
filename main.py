@@ -18,6 +18,11 @@ def define_env(env):
             code_version="r4.0"
 
         if implementation == "reference":
+            # Tip
+            if "99.9" not in model:
+                content += f"\n{pre_space}!!! tip\n\n"
+                content += f"{pre_space}    - MLCommons reference implementations are only meant to provide a rules compliant reference implementation for the submitters and in most cases are not best performing. If you want to benchmark any system, it is advisable to use the vendor MLPerf implementation for that system like Nvidia, Intel etc.\n\n"
+              
             devices = [ "CPU", "CUDA", "ROCm" ]
             if model.lower() == "resnet50":
                  frameworks = [ "Onnxruntime", "Tensorflow", "Deepsparse" ]
@@ -39,6 +44,11 @@ def define_env(env):
             frameworks = [ "pytorch" ]
 
         elif implementation == "intel":
+            # Tip
+            if "99.9" not in model:
+                content += f"\n{pre_space}!!! tip\n\n"
+                content += f"{pre_space}    - Intel MLPerf inference implementation is available only for datacenter category and has been tested only on a limited number of systems. Most of the benchmarks using Intel implementation require at least Intel Sapphire Rapids or higher CPU generation.\n\n"
+                                
             if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9", "dlrm-v2-99", "dlrm-v2-99.9", "sdxl" ]:
                  return pre_space+"    WIP"
             if model in [ "bert-99", "bert-99.9", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
@@ -72,6 +82,8 @@ def define_env(env):
         else:
             categories = [ "Edge", "Datacenter" ]
 
+        # model name
+        content += f"{pre_space}{model.upper()}\n\n"
         for category in categories:
             if category == "Edge" and not scenarios:
                 scenarios = [ "Offline", "SingleStream" ]

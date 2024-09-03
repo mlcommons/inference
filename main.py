@@ -12,12 +12,17 @@ def define_env(env):
         content=""
         scenarios = []
         execution_envs = ["Docker","Native"]
-        code_version="r4.1"
+        code_version="r4.1-dev"
 
         if model == "rnnt":
             code_version="r4.0"
 
         if implementation == "reference":
+            # Tip
+            if "99.9" not in model:
+                content += f"\n{pre_space}!!! tip\n\n"
+                content += f"{pre_space}    - MLCommons reference implementations are only meant to provide a rules compliant reference implementation for the submitters and in most cases are not best performing. If you want to benchmark any system, it is advisable to use the vendor MLPerf implementation for that system like Nvidia, Intel etc.\n\n"
+              
             devices = [ "CPU", "CUDA", "ROCm" ]
             if model.lower() == "resnet50":
                  frameworks = [ "Onnxruntime", "Tensorflow", "Deepsparse" ]
@@ -39,6 +44,11 @@ def define_env(env):
             frameworks = [ "pytorch" ]
 
         elif implementation == "intel":
+            # Tip
+            if "99.9" not in model:
+                content += f"\n{pre_space}!!! tip\n\n"
+                content += f"{pre_space}    - Intel MLPerf inference implementation is available only for datacenter category and has been tested only on a limited number of systems. Most of the benchmarks using Intel implementation require at least Intel Sapphire Rapids or higher CPU generation.\n\n"
+                                
             if model not in [ "bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50", "retinanet", "3d-unet-99", "3d-unet-99.9", "dlrm-v2-99", "dlrm-v2-99.9", "sdxl" ]:
                  return pre_space+"    WIP"
             if model in [ "bert-99", "bert-99.9", "retinanet", "3d-unet-99", "3d-unet-99.9" ]:
@@ -72,6 +82,8 @@ def define_env(env):
         else:
             categories = [ "Edge", "Datacenter" ]
 
+        # model name
+        content += f"{pre_space}{model.upper()}\n\n"
         for category in categories:
             if category == "Edge" and not scenarios:
                 scenarios = [ "Offline", "SingleStream" ]
@@ -115,6 +127,8 @@ def define_env(env):
                             continue  # Nvidia implementation only supports execution through docker
                         content += f"{cur_space2}=== \"{execution_env}\"\n"
                         content += f"{cur_space3}###### {execution_env} Environment\n\n"
+                        # ref to cm installation
+                        content += f"{cur_space3}Please refer to the [installation page](../../install/index.md) to install CM for running the automated benchmark commands.\n\n"
                         test_query_count=get_test_query_count(model, implementation, device)
 
                         if "99.9" not in model: #not showing docker command as it is already done for the 99% variant
@@ -140,7 +154,7 @@ def define_env(env):
                                 content += f"{cur_space3}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for each scenario.\n\n"
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
-                                content += f"{cur_space3}* `--docker_cm_repo <Custom CM repo URL>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_cm_repo=<Custom CM repo URL>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"
 
                                 if device.lower() not in [ "cuda" ]:
@@ -337,7 +351,7 @@ def define_env(env):
         return extra_content
 
     @env.macro
-    def mlperf_inference_run_command(spaces, model, implementation, framework, category, scenario, device="cpu", execution_mode="test", test_query_count="20", docker=False, scenarios = [], code_version="r4.1"):
+    def mlperf_inference_run_command(spaces, model, implementation, framework, category, scenario, device="cpu", execution_mode="test", test_query_count="20", docker=False, scenarios = [], code_version="r4.1-dev"):
         pre_space = ""
         for i in range(1,spaces):
              pre_space  = pre_space + " "

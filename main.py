@@ -383,6 +383,7 @@ def define_env(env):
                 elif implementation == "neuralmagic":
                     docker_cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
                     docker_cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"
+                    docker_cmd_suffix += f" \\\n{pre_space} --adr.mlperf-implementation.tags=_repo.https://github.com/neuralmagic/inference,_branch.vllm"
             
             if "dlrm-v2" in model.lower() and implementation == "nvidia":
                 docker_cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
@@ -415,6 +416,7 @@ def define_env(env):
                 elif implementation == "neuralmagic":
                     cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
                     cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"
+                    cmd_suffix += f" \\\n{pre_space} --adr.mlperf-implementation.tags=_repo.https://github.com/neuralmagic/inference,_branch.vllm"
             
             if "dlrm-v2" in model and implementation == "nvidia":
                 cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"

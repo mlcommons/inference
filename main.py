@@ -127,6 +127,8 @@ def define_env(env):
                             continue  # Nvidia implementation only supports execution through docker
                         content += f"{cur_space2}=== \"{execution_env}\"\n"
                         content += f"{cur_space3}###### {execution_env} Environment\n\n"
+                        # ref to cm installation
+                        content += f"{cur_space3}Please refer to the [installation page](../../install/index.md) to install CM for running the automated benchmark commands.\n\n"
                         test_query_count=get_test_query_count(model, implementation, device)
 
                         if "99.9" not in model: #not showing docker command as it is already done for the 99% variant

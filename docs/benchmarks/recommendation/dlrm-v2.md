@@ -5,8 +5,8 @@ hide:
 
 # Recommendation using DLRM v2
 
+Install CM following the [installation page](/install).
 
-## Benchmark Implementations
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
 

@@ -19,9 +19,7 @@ theme:
     - navigation.top
     - toc.follow
 nav:
-  - Install:
-    - install/index.md
-  - Benchmarks:
+  - Home:
     - index.md
     - Image Classification:
       - ResNet50: benchmarks/image_classification/resnet50.md
@@ -38,6 +36,8 @@ nav:
       - MIXTRAL-8x7B: benchmarks/language/mixtral-8x7b.md
     - Recommendation:
       - DLRM-v2: benchmarks/recommendation/dlrm-v2.md
+  - Install CM:
+    - install/index.md
   - Submission:
     - Submission Generation: submission/index.md
   - Release Notes:
@@ -62,3 +62,6 @@ markdown_extensions:
 plugins:
   - search
   - macros
+  - redirects:
+      redirect_maps:
+        'benchmarks/index.md': 'index.md'

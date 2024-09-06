@@ -2,7 +2,7 @@ name: Auto PR and Comment
 
 on:
   schedule:
-    - cron: "00 6 * * *"
+    - cron: "28 6 * * *"
     
 jobs:
   create-pr-and-comment:
@@ -36,3 +36,4 @@ jobs:
             repo: context.repo.repo,
             body: '/test'
           });
+        github-token: ${{ secrets.GITHUB_TOKEN }}

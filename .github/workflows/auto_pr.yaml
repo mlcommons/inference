@@ -2,7 +2,7 @@ name: Auto PR and Comment
 
 on:
   schedule:
-    - cron: "20 5 * * *"  # 매일 오후 2시 13분 실행 (KTC 기준) UTC 5시 13분
+    - cron: "25 5 * * *"  # 매일 오후 2시 13분 실행 (KTC 기준) UTC 5시 13분
     
 jobs:
   create-pr-and-comment:
@@ -19,7 +19,7 @@ jobs:
         commit-message: "Auto update for testing"
         title: "Auto-generated PR for testing"
         body: "This PR is auto-generated for testing purposes."
-        base: main  # PR의 타겟 브랜치
+        base: v4.1-internal  # PR의 타겟 브랜치
         branch: auto-generated-branch  # PR의 새로운 브랜치 이름
         delete-branch: true  # PR이 머지되면 자동으로 브랜치를 삭제
 

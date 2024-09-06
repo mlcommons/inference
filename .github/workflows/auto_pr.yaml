@@ -2,7 +2,7 @@ name: Auto PR and Comment
 
 on:
   schedule:
-    - cron: "28 6 * * *"
+    - cron: "30 6 * * *"
     
 jobs:
   create-pr-and-comment:
@@ -10,6 +10,10 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+
+    # 파일을 자동으로 수정
+    - name: Modify a file
+      run: echo "Update made on $(date)" >> auto-update-file.txt
 
     # PR 생성
     - name: Create Pull Request

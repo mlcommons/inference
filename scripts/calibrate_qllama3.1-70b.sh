@@ -36,11 +36,9 @@ fi
 
 #N_CALIB=${N_CALIB:=1000} # total_len=1,000
 
-export N_CALIB=4 #test code
-CALIB_DATA_PATH=$data_dir/dataset/open-orca/calibration/open_orca_gpt4_tokenized_llama.calibration_1000.pkl
+export N_CALIB=10 #test code
+CALIB_DATA_PATH='/home/home-mcl/sunghyuck/inference/mgoin_ultrachat_2k_calibration_128.pkl'
 QUANT_CONFIG_PATH=$quant_data_dir/quant_config.yaml
-QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
-QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
 
 printf "<<EVAL_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"
@@ -50,9 +48,10 @@ printf "\tDEVICE: $DEVICE\n"
 printf "\tNUM_CALIB_DATA: $N_CALIB\n"
 
 
-CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
+CHECKPOINT_PATH=$data_dir/models/llama3/Meta-Llama-3.1-70B-Instruct
 DATASET_PATH=$data_dir/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
-LOG_PATH=$log_dir/$model_name/$SCENARIO/W8A8KV8/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=$log_dir/qllama3.1-70b/$SCENARIO/W8A8KV8/$(date +%Y%m%d_%H%M%S%Z)
+SUBMISSION_MODEL_SOURCE="mlperf_submission_slice"
 
 export LOG_PATH
 
@@ -62,13 +61,16 @@ mkdir -p $LOG_PATH/calibration_range
 printf "\n============= STEP-1: Run calibration =============\n"
 # work on model directory
 cd $work_dir
+QUANT_PARAM_PATH=$LOG_PATH/calibration_range/llama3.1-70B-quant_param.npy
+QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/llama3.1-70B-quant_format.yaml
 
-python -m quantization.calibrate --model_path=$CHECKPOINT_PATH \
+python -m quantization.calibrate_llama3 --model_path=$CHECKPOINT_PATH \
                                     --quant_config_path=$QUANT_CONFIG_PATH \
                                     --quant_param_path=$QUANT_PARAM_PATH \
                                     --quant_format_path=$QUANT_FORMAT_PATH \
                                     --calib_data_path=$CALIB_DATA_PATH \
                                     --n_calib=$N_CALIB \
+                                    --submission_model_source=$SUBMISSION_MODEL_SOURCE \
                                     --gpu \
                                     --save_cache_files
 

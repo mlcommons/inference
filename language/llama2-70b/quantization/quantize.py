@@ -27,6 +27,7 @@ def _quantize(
         weighted_op_emul_dtype="fp64",
         target_machine=TARGET_MACHINE,
         qlevel=QLEVEL,
+        disable_auto_node_mapping=quantized_prefill is not None,
     )
 
 

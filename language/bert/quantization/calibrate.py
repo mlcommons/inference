@@ -121,32 +121,24 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
 
     model_compressor.calibrate(
         model,
-        calib_dataloader=calib_dataloader,
+        dataloader=calib_dataloader,
         **get_kwargs(model_compressor.calibrate, qconfig),
     )
 
-    model_compressor.save(
-        model,
-        qformat_out_path=qformat_path,
-        qparam_out_path=qparam_path,
-        weight_calib_method=qconfig["weight_calib_method"],
-        weight_granularity=qconfig["weight_granularity"],
-        weight_dtype=qconfig["weight_dtype"],
-        weight_nbits=qconfig["weight_nbits"],
-        act_calib_method=qconfig["act_calib_method"],
-        act_granularity=qconfig["act_granularity"],
-        act_dtype=qconfig["act_dtype"],
-        act_nbits=qconfig["act_nbits"],
-        kv_dtype=qconfig["kv_dtype"] if  "kv_dtype" in qconfig else 'bf16',
-        disable_inout=(True, True),
-    )
+    qformat, qparam = model_compressor.extract_qformat_and_qparam(model)
+    model_compressor.save_qformat_qparam(qformat_dict=qformat,
+                                         qformat_out_path=qformat_path,
+                                         qparam_dict=qparam, 
+                                         qparam_out_path=qparam_path,
+                                         **get_kwargs(model_compressor.save_qformat_qparam, qconfig),
+                                         )
 
     if save_cache_files:
         qlv4_prefill_out_path = qparam_path.replace("quant_param.npy", "bert.bin")
         rblock_json_out_path = qparam_path.replace("quant_param.npy", "graph_patterns.json")
         torch.save(model.state_dict(), qlv4_prefill_out_path)
         
-        model_compressor.save_graph_patterns(model, rblock_json_out_path)
+        # model_compressor.save_graph_patterns(model, rblock_json_out_path)
 
 
     return

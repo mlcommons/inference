@@ -72,7 +72,7 @@ dtype_map = {
 }
 
 
-def get_final_text(pred_text, orig_text, do_lower_case):
+def get_final_text(tokenizer, pred_text, orig_text, do_lower_case):
     """Project the tokenized prediction back to the original text."""
 
     # When we created the data, we kept track of the alignment between original
@@ -115,8 +115,8 @@ def get_final_text(pred_text, orig_text, do_lower_case):
     # and `pred_text`, and check if they are the same length. If they are
     # NOT the same length, the heuristic has failed. If they are the same
     # length, we assume the characters are one-to-one aligned.
-    tokenizer = tokenization.BasicTokenizer(do_lower_case=do_lower_case)
-
+    # tokenizer = tokenization.BasicTokenizer(do_lower_case=do_lower_case)
+    
     tok_text = " ".join(tokenizer.tokenize(orig_text))
 
     start_position = tok_text.find(pred_text)
@@ -194,7 +194,7 @@ def _compute_softmax(scores):
     return probs
 
 
-def write_predictions(all_examples, all_features, all_results, n_best_size,
+def write_predictions(tokenizer, all_examples, all_features, all_results, n_best_size,
                       max_answer_length, do_lower_case, output_prediction_file, max_examples=None):
     """Write final predictions to the json file and log-odds of null if needed."""
     print("Writing predictions to: %s" % (output_prediction_file))
@@ -295,7 +295,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
             tok_text = " ".join(tok_text.split())
             orig_text = " ".join(orig_tokens)
 
-            final_text = get_final_text(tok_text, orig_text, do_lower_case)
+            final_text = get_final_text(tokenizer, tok_text, orig_text, do_lower_case)
             if final_text in seen_predictions:
                 continue
 
@@ -398,6 +398,8 @@ def main():
                                         is_training=False, version_2_with_negative=False)
 
     eval_features = []
+    print("Creating tokenizer...")
+    tokenizer = BertTokenizer(args.vocab_file)
     # Load features if cached, convert from examples otherwise.
     cache_path = args.features_cache_file
     if os.path.exists(cache_path):
@@ -434,7 +436,7 @@ def main():
         args.log_file, eval_features, output_dtype, args.output_transposed)
 
     print("Post-processing predictions...")
-    write_predictions(eval_examples, eval_features, results,
+    write_predictions(tokenizer, eval_examples, eval_features, results,
                       20, 30, True, args.out_file, args.max_examples)
 
     print("Evaluating predictions...")

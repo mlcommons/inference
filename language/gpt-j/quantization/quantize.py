@@ -25,6 +25,7 @@ def _quantize(
         quantized_prefill_model=quantized_prefill,
         target_machine=TARGET_MACHINE,
         qlevel=QLEVEL,
+        disable_auto_node_mapping=quantized_prefill is not None,
     )
 
 

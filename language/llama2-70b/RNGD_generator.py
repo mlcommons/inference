@@ -151,7 +151,7 @@ class MLPerfSubmissionGreedySearch:
                 forward_kwargs = {
                     "input_ids": packed_input_ids.to(device),
                     "attention_mask": packed_attention_mask,
-                    # "causal_mask": causal_mask.to(device),
+                    "causal_mask": causal_mask.to(device), # TEST TODOS
                     "position_ids": packed_position_ids.to(device),
                     "past_key_values": key_value_blocks,
                     "new_key_location": new_key_location.to(device),

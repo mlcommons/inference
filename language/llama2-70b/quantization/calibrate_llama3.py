@@ -25,11 +25,11 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
     amp_dtype = torch.float32
 
     if model_source == 'furiosa_llm_rope':
-        from furiosa_llm_models.llama.symbolic.huggingface_rope import LlamaForCausalLM
+        from furiosa_llm_models.llama3.symbolic.huggingface_rope import LlamaForCausalLM
     elif model_source == 'mlperf_submission':
-        from furiosa_llm_models.llama.symbolic.mlperf_submission import LlamaForCausalLM
+        from furiosa_llm_models.llama3.symbolic.mlperf_submission import LlamaForCausalLM
     elif model_source == 'mlperf_submission_slice':
-        from furiosa_llm_models.llama.symbolic.mlperf_submission_slice import LlamaForCausalLM
+        from furiosa_llm_models.llama3.symbolic.mlperf_submission_slice import LlamaForCausalLM
     else:
         raise ValueError
     
@@ -48,11 +48,18 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
             device = torch.device("cuda:0")
             model.to(device)
     else:
+        CONFIG_PATH = os.path.join(model_path, "config.json")
+        with open(CONFIG_PATH, "r") as f:
+            config_dict = json.load(f)
+        custom_config = LlamaConfig.from_dict(config_dict)
+        # custom_config.num_hidden_layers = 4
+
         model = LlamaForCausalLM.from_pretrained(
                 model_path,
                 device_map="auto",
                 low_cpu_mem_usage=True,
-                torch_dtype=amp_dtype
+                torch_dtype=amp_dtype,
+                config=custom_config,
             )
 
     print("Loaded model")
@@ -71,11 +78,14 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
 def make_calib_dataloader(model, data_path, batch_size, n_calib,):
     if not os.path.isfile(data_path):
         print("Calibration dataset {} not found. Please check that the path is correct".format(data_path))
+
+    import pickle
+
+    with open(data_path, 'rb') as f:
+        loaded_tensor = pickle.load(f)
     
-    import pandas as pd
-    calib_dataset = pd.read_pickle(data_path)
-    
-    input_tokens = calib_dataset['tok_input']
+    input_tokens = loaded_tensor
+
     max_length = 2048
     
     data_list = []
@@ -119,6 +129,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         model,
         dataloader=calib_dataloader,
         disable_inout=(True, True),
+        set_pow_dtype_to_bf16=True,
         **get_kwargs(model_compressor.create_quantsim_model, qconfig),
     )
 

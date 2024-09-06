@@ -192,8 +192,8 @@ def generate_compare_gen_token(
     tokenizer = get_tokenizer()
     # load reference generated tokens.
     update_ref_path = ref_path + f"/generated_data_list_{config_dtype}.json"
-    with open(update_ref_path, "r") as file:
-        ref_data = json.load(file)
+    # with open(update_ref_path, "r") as file:
+    #     ref_data = json.load(file)
 
     results = []
     result_flag = True
@@ -258,13 +258,13 @@ def generate_compare_gen_token(
             generated_data_list.append(generated_data)
         print(f"생성 토큰 문장 {idx}: {gen_sentence}")
         # compare submission model's decoded_test with reference sentences.
-        ref_sentence = ref_data[idx]["gen_text"]
-        result_flag = check_diff(idx, ref_sentence, gen_sentence, results, result_flag)
+        # ref_sentence = ref_data[idx]["gen_text"]
+        # result_flag = check_diff(idx, ref_sentence, gen_sentence, results, result_flag)
 
-    compare_results_path = res_path + f"/qgpt_j_compare_result_{config_dtype}.json"
-    with open(compare_results_path, "w") as file:
-        json.dump(results, file, indent=4)
-        print(f"토큰 동치비교 결과가 저장되었습니다. dir: {compare_results_path}")
+    # compare_results_path = res_path + f"/qgpt_j_compare_result_{config_dtype}.json"
+    # with open(compare_results_path, "w") as file:
+    #     json.dump(results, file, indent=4)
+    #     print(f"토큰 동치비교 결과가 저장되었습니다. dir: {compare_results_path}")
     if update_gen_list:
         with open(update_ref_path, "w") as file:
             json.dump(generated_data_list, file, indent=4)

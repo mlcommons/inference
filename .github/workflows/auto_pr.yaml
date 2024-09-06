@@ -33,9 +33,10 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
+          const pr_number = ${{ steps.create_pr.outputs.pull_request_number }};
           console.log(`PR Number: ${context.issue.number}`);
           await github.rest.issues.createComment({
-            issue_number: context.issue.number,
+            issue_number: pr_number,
             owner: context.repo.owner,
             repo: context.repo.repo,
             body: '/test'

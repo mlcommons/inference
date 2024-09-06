@@ -15,7 +15,7 @@ jobs:
     if: >
         github.event_name == 'repository_dispatch' ||
         contains(github.event.comment.body, '/test')
-    runs-on: phil
+    runs-on: self-hosted
     steps:
       - name: Get PR branch
         uses: kphilpark/pr-issue-info@v1

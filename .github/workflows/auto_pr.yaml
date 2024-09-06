@@ -2,7 +2,7 @@ name: Auto PR and Comment
 
 on:
   schedule:
-    - cron: "30 6 * * *"
+    - cron: "40 6 * * *"
     
 jobs:
   create-pr-and-comment:

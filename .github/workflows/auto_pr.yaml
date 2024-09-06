@@ -2,7 +2,7 @@ name: Auto PR and Comment
 
 on:
   schedule:
-    - cron: "37 5 * * *"
+    - cron: "47 5 * * *"
     
 jobs:
   create-pr-and-comment:
@@ -16,6 +16,7 @@ jobs:
       id: create_pr
       uses: peter-evans/create-pull-request@v4
       with:
+        token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: "Auto update for testing"
         title: "Auto-generated PR for testing"
         body: "This PR is auto-generated for testing purposes."

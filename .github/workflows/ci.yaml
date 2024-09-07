@@ -10,7 +10,7 @@ env:
   MODEL_COMPRESSOR_PRIVATE_TAG: "MLPerf4.1-v4.3.1"
 
 jobs:
-  CI_TEST:
+  CI_TEST_1:
     # if: ${{ contains(github.event.comment.body, '/test') }}
     if: >
         github.event_name == 'repository_dispatch' ||
@@ -93,12 +93,6 @@ jobs:
           pwd
           bash ./ci_scripts/ci_llama2-70b_int8.sh
 
-      - name: Run llama2-70b FP8 CI
-        run: |
-          cd /home/home-mcl/phil/actions-runner/_work/inference/inference/
-          pwd
-          bash ./ci_scripts/ci_llama2-70b_fp8.sh
-
       - name: Set latest commit status as ${{ job.status }}
         uses: myrotvorets/set-commit-status-action@master
         if: always()
@@ -124,6 +118,108 @@ jobs:
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/qgpt_j_compare_result_int8.json',
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/qgpt_j_compare_result_fp8.json',
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/llama2-70b_compare_result_int8.json',
+            ];
+
+            let jsonContent = '';
+            
+            jsonPaths.forEach((jsonPath) => {
+              try {
+                const content = fs.readFileSync(path.resolve(jsonPath), 'utf8');
+                jsonContent += `\n\n**${path.basename(jsonPath)}:**\n\`\`\`json\n${content}\n\`\`\``;
+              } catch (err) {
+                jsonContent += `\n\n**${path.basename(jsonPath)}:**\nFailed to read the file.\n`;
+              }
+            });
+
+            const name = 'CI_TEST';
+            const url = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}';
+            const success = '${{ job.status }}' === 'success';
+            const body = `${url}\n${name}: \n\n### JSON Content:${jsonContent}`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            })
+  CI_TEST_2:
+    # if: ${{ contains(github.event.comment.body, '/test') }}
+    if: >
+        github.event_name == 'repository_dispatch' ||
+        contains(github.event.comment.body, '/test')
+    runs-on: self-hosted
+    needs: [CI_TEST_1]
+    steps:
+      - name: Get PR branch
+        uses: kphilpark/pr-issue-info@v1
+        id: comment-branch
+
+      - name: Checkout current PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.comment-branch.outputs.head_sha }}
+
+      - name: Clone MCP:${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }} repository
+        run: |
+          git clone --branch ${{ env.MODEL_COMPRESSOR_PRIVATE_TAG }} https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/model-compressor-private.git ./model-compressor-private
+          pwd
+
+      - name: Clone furiosa-llm-models:${{ env.FURIOSA_LLM_MODELS_TAG }} repository
+        run: |
+          echo ${{ env.FURIOSA_LLM_MODELS_TAG }}
+          git clone --branch ${{ env.FURIOSA_LLM_MODELS_TAG }} https://${{ secrets.ORGANIZATION_REPO_TOKEN }}@github.com/furiosa-ai/furiosa-llm-models.git ./furiosa-llm-models
+          pwd
+
+      - name: Install dependencies
+        run: |
+          cd /home/home-mcl/phil/actions-runner/_work/inference/inference/model-compressor-private
+          pip install -e .
+          pwd
+          git rev-parse HEAD
+          cd /home/home-mcl/phil/actions-runner/_work/inference/inference/furiosa-llm-models
+          pip install -e .
+          pwd
+          git rev-parse HEAD
+          pip list | grep model
+
+      - name: Set up PATH for Conda
+        run: |
+          echo "/anaconda/condabin" >> $GITHUB_PATH
+          export CONDA_EXE="/anaconda/condabin/conda"
+          
+      - name: Verify Conda installation
+        run: conda --version
+      
+      - name: Run CI setting
+        run: |
+          cd /home/home-mcl/phil/actions-runner/_work/inference/inference/
+          pwd
+          bash ./ci_scripts/set_ci_conda.sh
+
+      - name: Run llama2-70b FP8 CI
+        run: |
+          cd /home/home-mcl/phil/actions-runner/_work/inference/inference/
+          pwd
+          bash ./ci_scripts/ci_llama2-70b_fp8.sh
+
+      - name: Set latest commit status as ${{ job.status }}
+        uses: myrotvorets/set-commit-status-action@master
+        if: always()
+        with:
+          sha: ${{ steps.comment-branch.outputs.head_sha }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          status: ${{ job.status }}
+          context: 'CI_TEST'
+      
+      - name: Add comment to PR
+        uses: actions/github-script@v6
+        if: always()
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+
+            const jsonPaths = [
               '/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results/llama2-70b_compare_result_fp8.json'          
             ];
 
@@ -149,3 +245,4 @@ jobs:
               repo: context.repo.repo,
               body: body
             })
+

@@ -7,7 +7,7 @@ on:
     types: [custom_event]
 env:
   FURIOSA_LLM_MODELS_TAG: "MLPerf4.1-v4.2.1"
-  MODEL_COMPRESSOR_PRIVATE_TAG: "MLPerf4.1-v4.3.1"
+  MODEL_COMPRESSOR_PRIVATE_TAG: "main"
 
 jobs:
   CI_TEST_1:

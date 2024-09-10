@@ -5,6 +5,7 @@ hide:
 
 # Text Summarization using LLAMA2-70b
 
+Install CM following the [installation page](/install).
 
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python

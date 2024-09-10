@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Question Answering using Bert-Large
 
 ## Dataset

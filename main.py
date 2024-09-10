@@ -157,6 +157,9 @@ def define_env(env):
                                 content += f"{cur_space3}* `--docker_cm_repo=<Custom CM repo URL>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"
 
+                                if implementation.lower() == "nvidia":
+                                    content += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPU's with configured batch sizes in CM are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`.\n"
+
                                 if device.lower() not in [ "cuda" ]:
                                     content += f"{cur_space3}* `--docker_os=ubuntu`: ubuntu and rhel are supported. \n"
                                     content += f"{cur_space3}* `--docker_os_version=20.04`: [20.04, 22.04] are supported for Ubuntu and [8, 9] for RHEL\n"
@@ -174,6 +177,8 @@ def define_env(env):
                         run_suffix += f"{cur_space3}<summary> Please click here to see more options for the RUN command</summary>\n\n"
                         run_suffix += f"{cur_space3}* Use `--division=closed` to do a closed division submission which includes compliance runs\n\n"
                         run_suffix += f"{cur_space3}* Use `--rerun` to do a rerun even when a valid run exists\n"  
+                        if implementation.lower() == "nvidia":
+                            run_suffix += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPU's with configured batch sizes in CM are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`.\n"
                         run_suffix += f"{cur_space3}</details>\n\n"
 
                         if "bert" in model.lower() and framework == "deepsparse":
@@ -318,10 +323,9 @@ def define_env(env):
         #pre_space = "                "
         info += f"\n{pre_space}!!! tip\n\n"
         info+= f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size.\n\n"
-        info+= f"{pre_space}    - If batch size is not specified, CM scans for accelerator name and sets a predetermined batch size for known accelerators. For example, the batch size for BERT on an RTX 4090 can be found [here](https://github.com/anandhu-eng/cm4mlops/blob/54af88fb64d898758e2f0edfd79bb6e5aed9c38a/script/app-mlperf-inference-nvidia/_cm.yaml#L1381).\n\n"
-        info+= f"{pre_space}    - If batch size is not specifieid and the accelerator name is unknown, CM sets default value to 1.\n\n"
         if implementation.lower() == "nvidia":
-            info+= f"{pre_space}    - when run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"
+            info+= f"{pre_space}    - Default batch size [is assigned](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) as per GPU memory or [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify GPU name.\n\n"
+            info+= f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"
             if "llama2" in model.lower():
                 info+= f"{pre_space}    - The dataset for NVIDIA's implementation of Llama2 is not publicly available. The user must fill [this](https://docs.google.com/forms/d/e/1FAIpQLSc_8VIvRmXM3I8KQaYnKf7gy27Z63BBoI_I1u02f4lw6rBp3g/viewform?pli=1&fbzx=-8842630989397184967) form and be verified as a MLCommons member to access the dataset.\n\n"
                 info+= f"{pre_space}    - `PATH_TO_PICKE_FILE` should be replaced with path to the downloaded pickle file.\n\n"
@@ -347,7 +351,6 @@ def define_env(env):
         f_pre_space += ""
         if scenario == "Server" or (scenario == "All Scenarios" and "Server" in scenarios):
             extra_content += f"{f_pre_space}    * `<SERVER_TARGET_QPS>` must be determined manually. It is usually around 80% of the Offline QPS, but on some systems, it can drop below 50%. If a higher value is specified, the latency constraint will not be met, and the run will be considered invalid.\n"
-
         if "gptj" in model and device == "cuda" and implementation == "reference":
             extra_content += f"{f_pre_space}    * `--precision=[float16|bfloat16]` can help run on GPUs with less RAM \n"
             extra_content += f"{f_pre_space}    * `--beam-size=1` Beam size of 4 is mandatory for a closed division submission but reducing the beam size can help in running the model on GPUs with lower device memory\n"

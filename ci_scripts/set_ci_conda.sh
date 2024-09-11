@@ -3,6 +3,7 @@
 RES_PATH=/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results
 if [ ! -d "$RES_PATH" ]; then
   mkdir -p "$RES_PATH"
+  mkdir -p "$RES_PATH/backward_compatibility_test"
   echo "Directory $RES_PATH created."
 fi
 

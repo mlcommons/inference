@@ -636,6 +636,7 @@ SYSTEM_DESC_REQUIRED_FIELDS_POWER = [
     "power_supply_details",
     "disk_drives",
     "disk_controllers",
+    "system_power_only",
 ]
 
 SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS_POWER = []
@@ -930,6 +931,18 @@ def check_extra_files(path, target_files):
 
 def split_path(m):
     return m.replace("\\", "/").split("/")
+
+def get_boolean(s):
+    if s is None:
+        return False
+    elif isinstance(s, bool):
+        return s
+    elif isinstance(s, str):
+        return (s.lower() == "true")
+    elif isinstance(s, int):
+        return bool(s)
+    else:
+        raise TypeError(f"Variable should be bool, string or int, got {type(s)} instead")
 
 
 def find_error_in_detail_log(config, fname):
@@ -1639,36 +1652,37 @@ def check_results_dir(
         unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
         power_unit = power_unit_dict[scenario_fixed]
 
-        csv.write(
-            fmt.format(
-                submitter,
-                available,
-                division,
-                '"' + system_type + '"',
-                '"' + system_name + '"',
-                system_desc,
-                model_name,
-                mlperf_model,
-                scenario_fixed,
-                r,
-                acc,
-                system_json.get("number_of_nodes"),
-                '"' + system_json.get("host_processor_model_name") + '"',
-                system_json.get("host_processors_per_node"),
-                system_json.get("host_processor_core_count"),
-                '"' + system_json.get("accelerator_model_name") + '"',
-                '"' + str(system_json.get("accelerators_per_node")) + '"',
-                name.replace("\\", "/"),
-                '"' + system_json.get("framework", "") + '"',
-                '"' + system_json.get("operating_system", "") + '"',
-                '"' + notes + '"',
-                compliance,
-                errors,
-                config.version,
-                inferred,
-                power_metric > 0,
-                unit,
-            )
+        if (power_metric <= 0) or (not get_boolean(system_json.get("system_power_only"))):
+            csv.write(
+                fmt.format(
+                    submitter,
+                    available,
+                    division,
+                    '"' + system_type + '"',
+                    '"' + system_name + '"',
+                    system_desc,
+                    model_name,
+                    mlperf_model,
+                    scenario_fixed,
+                    r,
+                    acc,
+                    system_json.get("number_of_nodes"),
+                    '"' + system_json.get("host_processor_model_name") + '"',
+                    system_json.get("host_processors_per_node"),
+                    system_json.get("host_processor_core_count"),
+                    '"' + system_json.get("accelerator_model_name") + '"',
+                    '"' + str(system_json.get("accelerators_per_node")) + '"',
+                    name.replace("\\", "/"),
+                    '"' + system_json.get("framework", "") + '"',
+                    '"' + system_json.get("operating_system", "") + '"',
+                    '"' + notes + '"',
+                    compliance,
+                    errors,
+                    config.version,
+                    inferred,
+                    power_metric > 0,
+                    unit,
+                )
         )
 
         if power_metric > 0:

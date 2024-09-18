@@ -5,8 +5,6 @@ hide:
 
 # Medical Imaging using 3d-unet (KiTS 2019 kidney tumor segmentation task)
 
-Install CM following the [installation page](/install).
-
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
 

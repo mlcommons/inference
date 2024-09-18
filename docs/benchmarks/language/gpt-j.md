@@ -5,8 +5,6 @@ hide:
 
 # Text Summarization using GPT-J
 
-Install CM following the [installation page](/install).
-
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
 

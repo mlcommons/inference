@@ -419,9 +419,14 @@ def define_env(env):
             if "dlrm-v2" in model.lower() and implementation == "nvidia":
                 docker_cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
 
+            if "short" in extra_variation_tags:
+                full_ds_needed_tag = ""
+            else:
+                full_ds_needed_tag = ",_full"
+
             docker_setup_cmd = f"""\n
 {f_pre_space}```bash
-{f_pre_space}cm run script --tags=run-mlperf,inference,_find-performance,_full,_{code_version}{scenario_variation_tag}{extra_variation_tags} \\
+{f_pre_space}cm run script --tags=run-mlperf,inference,_find-performance,{full_ds_needed_tag}_{code_version}{scenario_variation_tag}{extra_variation_tags} \\
 {pre_space} --model={model} \\
 {pre_space} --implementation={implementation} \\
 {pre_space} --framework={framework} \\

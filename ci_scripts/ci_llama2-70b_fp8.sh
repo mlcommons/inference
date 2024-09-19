@@ -34,7 +34,7 @@ if [ $DEVICE = "cpu" ];
 fi
 # quantization args
 export CALIBRATE=true
-export N_CALIB=50
+export N_CALIB=1000 #test 50
 export N_DATA=1
 
 CALIB_DATA_PATH=$data_dir/dataset/open-orca/calibration/open_orca_gpt4_tokenized_llama.calibration_1000.pkl
@@ -50,7 +50,7 @@ printf "\tDEVICE: $DEVICE\n"
 
 CHECKPOINT_PATH=$data_dir/models/llama2/Llama-2-70b-chat-hf
 DATASET_PATH=$data_dir/dataset/open-orca/validation/open_orca_gpt4_tokenized_llama.sampled_24576.pkl
-LOG_PATH=$log_dir/$model_name/$SCENARIO/W8A8KV8/$(date +%Y%m%d_%H%M%S%Z)
+LOG_PATH=$log_dir/$model_name/$SCENARIO/W8fA8fKV8f/$(date +%Y%m%d_%H%M%S%Z)
 SUBMISSION_MODEL_SOURCE="mlperf_submission_slice"
 
 export LOG_PATH
@@ -59,6 +59,9 @@ mkdir -p $LOG_PATH/calibration_range
 
 if [ "$CALIBRATE" = true ]; then
     printf "\tNUM_CALIB_DATA: $N_CALIB\n"
+    QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
+    QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
+    OUTPUT_PATH=$LOG_PATH/calibration_range/
     python -m quantization.calibrate --model_path=$CHECKPOINT_PATH \
                                      --quant_config_path=$QUANT_CONFIG_PATH \
                                      --quant_param_path=$QUANT_PARAM_PATH \
@@ -66,14 +69,15 @@ if [ "$CALIBRATE" = true ]; then
                                      --calib_data_path=$CALIB_DATA_PATH \
                                      --n_calib=$N_CALIB \
                                      --submission_model_source=$SUBMISSION_MODEL_SOURCE \
-                                     --gpu
-
+                                     --gpu \
+                                     --save_cache_files \
+                                     --output_path=$OUTPUT_PATH
 fi
 
 
 
-GOLDEN_QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param_golden.npy
-GOLDEN_QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format_golden.yaml
+GOLDEN_QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param_golden.npy
+GOLDEN_QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format_golden.yaml
 LOGIT_FOLDER_PATH=ci_file/logit_files
 OUTPUT_FOLDER_PATH=ci_file/output_files
 mkdir -p $LOGIT_FOLDER_PATH
@@ -96,7 +100,7 @@ python -m ci_file.qllama2_70b_forward_test  --model_path=$CHECKPOINT_PATH \
                                             --ref_path=$REF_PATH\
                                             --res_path=$RES_PATH\
                                             --config_dtype=$CONFIG_DTYPE\
-                                            --update_gen_list
+                                            # --update_gen_list
 
 
 printf "\n============= End of Forward Test for Qllama2-70b =============\n"

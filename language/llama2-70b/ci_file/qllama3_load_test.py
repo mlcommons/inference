@@ -113,6 +113,7 @@ def get_qlv4_load_models(
         target_machine='RGDA0',
         decode_phase=True,
         quantized_prefill_model=test_prefill_quantized_model,
+        disable_auto_node_mapping=True,
     )
 
     map_location = torch.device(DEVICE)

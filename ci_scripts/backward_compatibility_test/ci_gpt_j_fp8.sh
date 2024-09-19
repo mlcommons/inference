@@ -8,6 +8,7 @@ work_dir=$git_dir/$model_dir
 data_dir=/home/home-mcl/phil/actions-runner/_work/data
 REF_PATH=/home/home-mcl/phil/actions-runner/_work/data/quantization/gpt-j/ref
 RES_PATH=/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results
+MODEL_DATA_DIR=$data_dir/furiosa_llm_modles_artifacts/quantized/furiosa-ai/mlperf-gpt-j-6b/mlperf_submission_slice/W8fA8fKV8f/28L
 quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
@@ -15,11 +16,11 @@ CONFIG_DTYPE=fp8
 # work on model directory
 cd $work_dir
 
-# enter existing conda env.
-export CONDA_EXE="/anaconda/condabin/conda"
-conda_base=$($CONDA_EXE info --base)
-source "$conda_base/etc/profile.d/conda.sh"
-conda activate inference-ci
+# # enter existing conda env.
+# export CONDA_EXE="/anaconda/condabin/conda"
+# conda_base=$($CONDA_EXE info --base)
+# source "$conda_base/etc/profile.d/conda.sh"
+# conda activate inference-ci
 
 # eval model
 printf "\n============= STEP-1: Run calibration =============\n"
@@ -32,7 +33,7 @@ LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 
 # quantization args
 export CALIBRATE=true
-export N_CALIB=1000 #test 50 #full 1000
+export N_CALIB=50
 export N_DATA=10
 N_COUNT=${N_COUNT:="10"} # total_len=13,368
 
@@ -50,35 +51,35 @@ export LOG_PATH
 
 mkdir -p $LOG_PATH/calibration_range
 
-if [ "$CALIBRATE" = true ]; then
-    printf "\tNUM_CALIB_DATA: $N_CALIB\n"
-    QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param.npy
-    QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format.yaml
-    python -m quantization.calibrate --model_path=$MODEL_PATH \
-                                     --quant_config_path=$QUANT_CONFIG_PATH \
-                                     --quant_param_path=$QUANT_PARAM_PATH \
-                                     --quant_format_path=$QUANT_FORMAT_PATH \
-                                     --calib_data_path=$CALIB_DATA_PATH \
-                                     --n_calib=$N_CALIB \
-                                     --gpu
-    printf "Save calibration range to $LOG_PATH/calibration_range"
-else
-    cp $QUANT_PARAM_PATH $LOG_PATH/calibration_range/quant_param.npy
-    cp $QUANT_FORMAT_PATH $LOG_PATH/calibration_range/quant_format.yaml
-fi
+printf "\n============= STEP-1: pull dvc =============\n"
+
+# TAG=main
+# cd $git_dir
+# git clone https://github.com/furiosa-ai/furiosa-llm-models-artifacts.git
+# cd $git_dir/furiosa-llm-models-artifacts
+# git checkout $TAG
+
+# quant_data_dvc_dir=/quantized/furiosa-ai/mlperf-gpt-j-6b/mlperf_submission_slice/W8fA8fKV8f/28L
+# dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml.dvc -r origin --force
+# dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy.dvc -r origin --force
 
 
-GOLDEN_QUANT_PARAM_PATH=$LOG_PATH/calibration_range/quant_param_golden.npy
-GOLDEN_QUANT_FORMAT_PATH=$LOG_PATH/calibration_range/quant_format_golden.yaml
-LOGIT_FOLDER_PATH=ci_file/logit_files
+# cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $MODEL_DATA_DIR/quant_format.yaml
+# cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $MODEL_DATA_DIR/quant_param.npy
+
+# rm -rf $git_dir/furiosa-llm-models-artifacts
+
+QUANT_FORMAT_PATH=$MODEL_DATA_DIR/quant_format.yaml
+QUANT_PARAM_PATH=$MODEL_DATA_DIR/quant_param.npy
+
+LOGIT_FOLDER_PATH=$work_dir/ci_file/logit_files
 mkdir -p $LOGIT_FOLDER_PATH
 
 printf "\n============= STEP-2: Check the equivalence of logits obtained at each generation step =============\n"
 
-python -m ci_file.qgpt_j_forward_test          --model_path=$MODEL_PATH \
+python -m ci_file.backward_compatibility_test_qgpt_j_forward_test\
+                                                --model_path=$MODEL_PATH \
                                                 --quant_config_path=$QUANT_CONFIG_PATH \
-                                                --golden_quant_param_path=$GOLDEN_QUANT_PARAM_PATH \
-                                                --golden_quant_format_path=$GOLDEN_QUANT_FORMAT_PATH \
                                                 --submission_quant_format_path=$QUANT_FORMAT_PATH \
                                                 --submission_quant_param_path=$QUANT_PARAM_PATH \
                                                 --n_data=$N_DATA \
@@ -88,7 +89,6 @@ python -m ci_file.qgpt_j_forward_test          --model_path=$MODEL_PATH \
                                                 --ref_path=$REF_PATH\
                                                 --res_path=$RES_PATH\
                                                 --config_dtype=$CONFIG_DTYPE\
-                                                # --update_gen_list #정답지 업데이트용 argument
 
 unset LOG_PATH
 unset CALIBRATE

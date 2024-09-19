@@ -32,7 +32,7 @@ LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 
 # quantization args
 export CALIBRATE=true
-export N_CALIB=50
+export N_CALIB=1000 #test 50
 export N_DATA=10
 N_COUNT=${N_COUNT:="10"} # total_len=13,368
 
@@ -87,8 +87,8 @@ python -m ci_file.qgpt_j_forward_test          --model_path=$MODEL_PATH \
                                                 --gpu \
                                                 --ref_path=$REF_PATH\
                                                 --res_path=$RES_PATH\
-                                                --config_dtype=$CONFIG_DTYPE\
-                                                --update_gen_list #정답지 업데이트용 argument
+                                            --config_dtype=$CONFIG_DTYPE\
+                                                # --update_gen_list #정답지 업데이트용 argument
 
 
                                             

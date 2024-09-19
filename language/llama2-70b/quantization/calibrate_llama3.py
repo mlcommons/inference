@@ -143,7 +143,6 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
 
     model_compressor.calibrate(
         model,
-        dataloader=calib_dataloader,
         **get_kwargs(model_compressor.calibrate, qconfig),
         model_type = model_type,
         autoscale_calib_kwargs=autoscale_calib_kwargs,
@@ -166,7 +165,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
     return
 
 
-def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_param_path, quant_format_path, qconfig, save_cache_files):
+def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_param_path, quant_format_path, qconfig, save_cache_files, output_path):
         
     prefill_model = model_compressor.create_quantsim_model(
         model.trace_prefill(),
@@ -174,7 +173,6 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
         qparam_path = golden_qparam_path,
         qlevel=2,
         target_machine=qconfig["target_machine"],
-        delete_org_weight=True,
         immigrate_qparams = True,
     )
 
@@ -189,7 +187,7 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
     if save_cache_files:
 
         traced_models = model.trace_all()
-        quant_models = quantize_model(traced_models, quant_param_path, quant_format_path,)
+        quant_models = quantize_model(traced_models, quant_param_path, quant_format_path, output_path=output_path)
 
         qlv4_prefill_out_path = quant_param_path.replace("quant_param.npy", "prefill.bin")
         qlv4_decode_out_path = quant_param_path.replace("quant_param.npy", "decode.bin")
@@ -240,7 +238,11 @@ def get_args():
         default=False,
         help="if true qlv4 state_dict and rblock .json will be saved",
     )
-    
+    parser.add_argument(
+        "--output_path",
+        default='./',
+        help="skeleton, bin 파일 저장 장소",
+    )
  
 
     args = parser.parse_args()
@@ -251,6 +253,7 @@ def main():
     args = get_args()
     # print(args.quant_config_path)
     # exit()
+    print(f'n_layers: {args.n_layers}')
     golden_model = load_pytorch_model(
                             model_source = 'furiosa_llm_rope', 
                             model_path = args.model_path, 
@@ -266,7 +269,6 @@ def main():
         qconfig = yaml.safe_load(f)
 
     dataloader = make_calib_dataloader(golden_model, args.calib_data_path, qconfig["calib_batch_size"], args.n_calib,)
-
     
     golden_quant_param_path = args.quant_param_path.replace('.npy', '_golden.npy')
     golden_quant_format_path = args.quant_format_path.replace('.yaml', '_golden.yaml')
@@ -293,7 +295,7 @@ def main():
 
 
 
-    immigrate_qparams(submission_model, golden_quant_param_path, golden_quant_format_path, args.quant_param_path, args.quant_format_path, qconfig, args.save_cache_files)
+    immigrate_qparams(submission_model, golden_quant_param_path, golden_quant_format_path, args.quant_param_path, args.quant_format_path, qconfig, args.save_cache_files, output_path=args.output_path)
 
 if __name__ == "__main__":
     main()

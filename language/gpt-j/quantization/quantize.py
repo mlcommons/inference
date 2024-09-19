@@ -20,7 +20,6 @@ def _quantize(
         model,
         qformat_path=qformat_path,
         qparam_path=qparam_path,
-        delete_org_weight=True,
         decode_phase=quantized_prefill is not None,
         quantized_prefill_model=quantized_prefill,
         target_machine=TARGET_MACHINE,

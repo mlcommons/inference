@@ -114,14 +114,12 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
 
     model = model_compressor.create_quantsim_model(
         model,
-        dataloader=calib_dataloader,
         disable_inout=(True, True),
         **get_kwargs(model_compressor.create_quantsim_model, qconfig),
     )
 
     model_compressor.calibrate(
         model,
-        dataloader=calib_dataloader,
         **get_kwargs(model_compressor.calibrate, qconfig),
     )
 

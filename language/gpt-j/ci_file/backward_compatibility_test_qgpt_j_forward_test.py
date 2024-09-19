@@ -85,8 +85,6 @@ def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", help="path to gpt-j model")
     parser.add_argument("--quant_config_path", help="a config for model quantization")
-    parser.add_argument("--golden_quant_format_path", help="path of golden qformat_path")
-    parser.add_argument("--golden_quant_param_path", help="path of golden qparam path")
     parser.add_argument("--submission_quant_format_path", help="path of submission qformat_path")
     parser.add_argument("--submission_quant_param_path", help="path of submission qparam path")
     parser.add_argument("--gpu", action="store_true", help="use GPU instead of CPU for the inference")
@@ -121,36 +119,6 @@ def obtain_quant_graphs(
     return quant_models, input_names, concrete_args
 
 
-def get_generator_for_golden_model(
-    model_path,
-    qconfig_path,
-    golden_quant_param_path,
-    golden_quant_format_path,
-    gpu,
-    logit_folder_path,
-):
-    golden_model = load_pytorch_model(model_path, gpu)
-    golden_model_type = type(golden_model)
-    quant_golden_models, golden_input_names, golden_concrete_args = obtain_quant_graphs(
-        golden_model, golden_quant_param_path, golden_quant_format_path, gpu
-    )
-
-    turn_on_mcp_dumping(
-        quant_golden_models,
-        logit_folder_path + "/golden_prefill_logits.pkl",
-        logit_folder_path + "/golden_decode_logits.pkl",
-    )
-
-    quant_golden_models = {
-        "prefill_model": quant_golden_models["prefill"],
-        "decode_model": quant_golden_models["decode"],
-    }
-
-    return model_compressor.helper.QuantCausalLM(
-        quant_golden_models, golden_model_type, golden_input_names, golden_concrete_args
-    )
-
-
 def get_generator_for_submission_model(
     model_path,
     qconfig_path,
@@ -178,7 +146,6 @@ def get_generator_for_submission_model(
     )
 
 def generate_compare_gen_token(
-    golden_model_generator,
     submission_model_generator,
     dataset_path,
     n_data,
@@ -188,10 +155,10 @@ def generate_compare_gen_token(
     update_gen_list=False,
 ):
     validation_dataset = Dataset(dataset_path, total_count_override=n_data)
-    device = golden_model_generator.prefill_model.device
+    device = submission_model_generator.model.device
     tokenizer = get_tokenizer()
     # load reference generated tokens.
-    update_ref_path = ref_path + f"/generated_data_list_{config_dtype}.json"
+    update_ref_path = ref_path + f"/full_generated_data_list_{config_dtype}.json"
     with open(update_ref_path, "r") as file:
         ref_data = json.load(file)
 
@@ -204,15 +171,10 @@ def generate_compare_gen_token(
     for idx in range(n_data):
         input_batch = dict()
         input_batch["input_ids"] = validation_dataset.source_encoded_input_ids[idx].to(device)
+        # input_batch["input_ids"] = validation_dataset.source_encoded_input_ids[idx]
         input_batch["attention_mask"] = validation_dataset.source_encoded_attn_masks[idx].to(device)
+        # input_batch["attention_mask"] = validation_dataset.source_encoded_attn_masks[idx]
         seq_len = input_batch["input_ids"].shape[1]
-
-        # Run golden generator
-        output_batch_golden = golden_model_generator.generate(
-            **input_batch,
-            **gen_kwargs,
-            pad_token_id=golden_model_generator.config.eos_token_id,
-        )
 
         # Prepare to run submission generator
         logits_processor = LOGITS_PROCESSOR(
@@ -261,7 +223,7 @@ def generate_compare_gen_token(
         ref_sentence = ref_data[idx]["gen_text"]
         result_flag = check_diff(idx, ref_sentence, gen_sentence, results, result_flag)
 
-    compare_results_path = res_path + f"/qgpt_j_compare_result_{config_dtype}.json"
+    compare_results_path = res_path + f"/backward_compatibility_test/qgpt_j_compare_result_{config_dtype}.json"
     with open(compare_results_path, "w") as file:
         json.dump(results, file, indent=4)
         print(f"토큰 동치비교 결과가 저장되었습니다. dir: {compare_results_path}")
@@ -276,15 +238,6 @@ def generate_compare_gen_token(
 def compare_model_outputs(args):
     args = get_args()
 
-    golden_model_generator = get_generator_for_golden_model(
-        args.model_path,
-        args.quant_config_path,
-        args.golden_quant_param_path,
-        args.golden_quant_format_path,
-        args.gpu,
-        args.logit_folder_path,
-    )
-
     submission_model_generator = get_generator_for_submission_model(
         args.model_path,
         args.quant_config_path,
@@ -295,7 +248,6 @@ def compare_model_outputs(args):
     )
 
     result_flag = generate_compare_gen_token(
-        golden_model_generator,
         submission_model_generator,
         args.dataset_path,
         args.n_data,
@@ -307,10 +259,8 @@ def compare_model_outputs(args):
     print("----------------------------------------------")
     print(f"토큰 동치 비교 결과 : {result_flag}")
     print("----------------------------------------------")
-    compare_logits(args.logit_folder_path)
 
 
 if __name__ == "__main__":
     args = get_args()
     compare_model_outputs(args)
-    print("gptj Golden <-> Submission logit 동치비교: PASS")

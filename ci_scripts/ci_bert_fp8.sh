@@ -129,7 +129,7 @@ python accuracy-squad.py --vocab_file=$VOCAB_PATH \
                          &> $LOG_PATH/accuracy_result_$CONFIG_DTYPE.log
 
 CUR_F1_SCORE=$(grep -oP '"f1":\s*\K[0-9.]+' "$LOG_PATH/accuracy_result_$CONFIG_DTYPE.log")
-REF_F1_SCORE=95.46667
+REF_F1_SCORE=95.46667 #fp8
 
 # f1 score 비교: Ref <-> submission model 
 

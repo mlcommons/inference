@@ -24,7 +24,10 @@ nav:
     - Image Classification:
       - ResNet50: benchmarks/image_classification/resnet50.md
     - Text to Image:
-      - Stable Diffusion: benchmarks/text_to_image/sdxl.md
+      - Stable Diffusion:
+        - Run Commands: benchmarks/text_to_image/sdxl.md
+        - Reproducibility:
+          - SCC24: benchmarks/text_to_image/reproducibility/scc24.md
     - Object Detection:
       - RetinaNet: benchmarks/object_detection/retinanet.md
     - Medical Imaging:
@@ -62,6 +65,7 @@ markdown_extensions:
 plugins:
   - search
   - macros
+  - site-urls
   - redirects:
       redirect_maps:
         'benchmarks/index.md': 'index.md'

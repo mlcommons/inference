@@ -6,7 +6,6 @@ hide:
 
 # Image Classification using ResNet50 
 
-Install CM following the [installation page](/install).
 
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python

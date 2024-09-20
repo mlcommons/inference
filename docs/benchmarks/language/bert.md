@@ -5,8 +5,6 @@ hide:
 
 # Question Answering using Bert-Large
 
-Install CM following the [installation page](/install).
-
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
     

@@ -5,8 +5,6 @@ hide:
 
 # Object Detection using Retinanet
 
-Install CM following the [installation page](/install).
-
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
     

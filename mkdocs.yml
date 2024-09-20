@@ -33,7 +33,10 @@ nav:
     - Medical Imaging:
       - 3d-unet: benchmarks/medical_imaging/3d-unet.md
     - Language Processing:
-      - Bert-Large: benchmarks/language/bert.md
+      - Bert-Large:
+        - Run Commands: benchmarks/language/bert.md
+        - Reproducibility:
+          - IndySCC24: benchmarks/language/reproducibility/scc24-bert.md
       - GPT-J: benchmarks/language/gpt-j.md
       - LLAMA2-70B: benchmarks/language/llama2-70b.md
       - MIXTRAL-8x7B: benchmarks/language/mixtral-8x7b.md

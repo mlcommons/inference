@@ -91,6 +91,8 @@ def define_env(env):
         # model name
         content += f"{pre_space}{model.upper()}\n\n"
 
+        final_run_mode = "valid" if "short" not in extra_variation_tags else "test"
+
         for category in categories:
             if not scenarios:
                 if category == "Edge" and not scenarios:
@@ -137,7 +139,7 @@ def define_env(env):
                         content += f"{cur_space3}###### {execution_env} Environment\n\n"
                         # ref to cm installation
                         content += f"{cur_space3}Please refer to the [installation page](site:inference/install/) to install CM for running the automated benchmark commands.\n\n"
-                        test_query_count=get_test_query_count(model, implementation, device)
+                        test_query_count=get_test_query_count(model, implementation, device.lower())
 
                         if "99.9" not in model: #not showing docker command as it is already done for the 99% variant
                             if implementation == "neuralmagic":
@@ -220,13 +222,13 @@ def define_env(env):
 
                         for scenario in scenarios:
                             content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}###### {scenario}\n\n"
-                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), "valid", 0, False, scenarios, code_version, extra_variation_tags, extra_input_string)
+                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), final_run_mode, -1, False, scenarios, code_version, extra_variation_tags, extra_input_string)
                             content += run_cmd
                             #content += run_suffix
 
                         if len(scenarios) > 1: 
                             content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
-                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), "valid", 0, False, scenarios, code_version, extra_variation_tags, extra_input_string)
+                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), final_run_mode, -1, False, scenarios, code_version, extra_variation_tags, extra_input_string)
                             content += run_cmd
                             content += run_suffix
 
@@ -245,10 +247,10 @@ def define_env(env):
         elif model in [ "retinanet", "bert-99", "bert-99.9" ]:
              p_range = 100
         else:
-             p_range = 50
+             p_range = 10
 
         if device == "cuda":
-            p_range *= 40
+            p_range *= 5
             p_range *= num_devices
 
         return p_range
@@ -452,7 +454,7 @@ def define_env(env):
         else:
             cmd_suffix = f"\\\n{pre_space} --quiet {extra_input_string}"
 
-            if execution_mode == "test":
+            if execution_mode == "test" and test_query_count > 0:
                 cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
             if "bert" in model.lower() and framework == "deepsparse":
@@ -471,7 +473,7 @@ def define_env(env):
 
             run_cmd = f"""\n
 {f_pre_space}```bash
-{f_pre_space}cm run script --tags=run-mlperf,inference,_{code_version}{scenario_variation_tag} \\
+{f_pre_space}cm run script --tags=run-mlperf,inference,_{code_version}{scenario_variation_tag}{extra_variation_tags} \\
 {pre_space} --model={model} \\
 {pre_space} --implementation={implementation} \\
 {pre_space} --framework={framework} \\

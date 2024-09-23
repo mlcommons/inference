@@ -417,8 +417,8 @@ def define_env(env):
 
         if docker:
             docker_cmd_suffix = f" \\\n{pre_space} --docker --quiet"
-            if "scc24" not in extra_variation_tags:
-                docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count} {extra_docker_input_string} {extra_input_string}"
+            if test_query_count > 0:
+                docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count}""
             if extra_docker_input_string != "" or extra_input_string != "":
                 docker_cmd_suffix += f" \\\n{pre_space} {extra_docker_input_string} {extra_input_string}"
             if "bert" in model.lower() and framework == "deepsparse":
@@ -456,7 +456,7 @@ def define_env(env):
         else:
             cmd_suffix = f"\\\n{pre_space} --quiet {extra_input_string}"
 
-            if execution_mode == "test" and test_query_count > 0 and "scc24" not in extra_variation_tags:
+            if execution_mode == "test" and test_query_count > 0:
                 cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
             if "bert" in model.lower() and framework == "deepsparse":

@@ -48,10 +48,45 @@ or supporting multi-node execution) useful for the community and [MLCommons](htt
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
     
-{{ mlperf_inference_implementation_readme (4, "sdxl", "reference", extra_variation_tags=",_short", scenarios=["Offline"],categories=["Edge"], setup_tips=False) }}
+{{ mlperf_inference_implementation_readme (4, "sdxl", "reference", extra_variation_tags=",_short,_scc24-base", devices=["ROCm", "CUDA"],scenarios=["Offline"],categories=["Edge"], setup_tips=False) }}
 
 === "Nvidia"
     ## Nvidia MLPerf Implementation
 {{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia", extra_variation_tags=",_short", scenarios=["Offline"],categories=["Edge"], setup_tips=False, implementation_tips=False) }}
     
+## Submission Commands
 
+### Generate actual submission tree
+
+```bash
+    cm run script --tags=generate,inference,submission \
+      --clean \
+      --preprocess_submission=yes \
+      --run-checker \
+      --submitter=<Team Name> \
+      --tar=yes \
+      --env.CM_TAR_OUTFILE=submission.tar.gz \
+      --division=open \
+      --category=datacenter \
+      --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
+      --quiet
+```
+
+* Use `--hw_name="My system name"` to give a meaningful system name. Examples can be seen [here](https://github.com/mlcommons/inference_results_v3.0/tree/main/open/cTuning/systems)
+
+* Use `--hw_notes_extra` option to add additional notes like `--hw_notes_extra="Result taken by NAME" `
+
+<!-- ### Aggregate Results in GitHub
+
+If you are collecting results across multiple systems you can generate different submissions and aggregate all of them to a GitHub repository (can be private) and use it to generate a single tar ball which can be uploaded to the [MLCommons Submission UI](https://submissions-ui.mlcommons.org/submission). 
+
+Run the following command after **replacing `--repo_url` with your GitHub repository URL**.
+
+```bash
+   cm run script --tags=push,github,mlperf,inference,submission \
+   --repo_url=https://github.com/GATEOverflow/mlperf_inference_submissions_v4.1 \
+   --commit_message="Results on <HW name> added by <Name>" \
+   --quiet
+```
+
+At the end, you can download the github repo and upload to the [MLCommons Submission UI](https://submissions-ui.mlcommons.org/submission). -->

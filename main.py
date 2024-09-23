@@ -418,7 +418,7 @@ def define_env(env):
         if docker:
             docker_cmd_suffix = f" \\\n{pre_space} --docker --quiet"
             if test_query_count > 0:
-                docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count}""
+                docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count}"
             if extra_docker_input_string != "" or extra_input_string != "":
                 docker_cmd_suffix += f" \\\n{pre_space} {extra_docker_input_string} {extra_input_string}"
             if "bert" in model.lower() and framework == "deepsparse":

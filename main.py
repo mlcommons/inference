@@ -1,7 +1,7 @@
 def define_env(env):
 
     @env.macro
-    def mlperf_inference_implementation_readme(spaces, model, implementation, *, implementation_tips=True, setup_tips=True, run_tips=True, scenarios = [], devices=[], frameworks=[], categories=[], extra_variation_tags="", extra_input_string="", extra_docker_input_string=""):
+    def mlperf_inference_implementation_readme(spaces, model, implementation, *, implementation_tips=True, setup_tips=True, run_tips=True, skip_test_query_count=False, scenarios = [], devices=[], frameworks=[], categories=[], extra_variation_tags="", extra_input_string="", extra_docker_input_string=""):
         pre_space = ""
 
         for i in range(1,spaces):
@@ -150,7 +150,7 @@ def define_env(env):
                                     content += f"\n{cur_space3}!!! tip\n\n"
                                     content += f"{cur_space3}    - Host and Port number of the server can be configured through `--host` and `--port` options. Otherwise, server will run on the default host `localhost` and port `8000`.\n\n"
                                 
-                            setup_run_cmd = mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True, scenarios, code_version, extra_variation_tags, extra_input_string, extra_docker_input_string)
+                            setup_run_cmd = mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True, skip_test_query_count, scenarios, code_version, extra_variation_tags, extra_input_string, extra_docker_input_string)
 
                             if execution_env == "Native": # Native implementation steps through virtual environment
                                 content += f"{cur_space3}####### Setup a virtual environment for Python\n"
@@ -186,7 +186,7 @@ def define_env(env):
                             content += f"{cur_space3} You can reuse the same environment as described for {model.split('.')[0]}.\n"
                             content += f"{cur_space3}###### Performance Estimation for Offline Scenario\n"
 
-                            content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True, scenarios, code_version).replace("--docker ","")
+                            content += mlperf_inference_run_command(spaces+17, model, implementation, framework.lower(), category.lower(), "Offline", device.lower(), "test", test_query_count, True, skip_test_query_count, scenarios, code_version).replace("--docker ","")
                             content += f"{cur_space3}The above command should do a test run of Offline scenario and record the estimated offline_target_qps.\n\n"
 
 
@@ -222,13 +222,13 @@ def define_env(env):
 
                         for scenario in scenarios:
                             content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}###### {scenario}\n\n"
-                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), final_run_mode, -1, False, scenarios, code_version, extra_variation_tags, extra_input_string)
+                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), final_run_mode, -1, False, skip_test_query_count, scenarios, code_version, extra_variation_tags, extra_input_string)
                             content += run_cmd
                             #content += run_suffix
 
                         if len(scenarios) > 1: 
                             content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
-                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), final_run_mode, -1, False, scenarios, code_version, extra_variation_tags, extra_input_string)
+                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), final_run_mode, -1, False, skip_test_query_count, scenarios, code_version, extra_variation_tags, extra_input_string)
                             content += run_cmd
                             content += run_suffix
 
@@ -396,7 +396,7 @@ def define_env(env):
        
 
     @env.macro
-    def mlperf_inference_run_command(spaces, model, implementation, framework, category, scenario, device="cpu", execution_mode="test", test_query_count="20", docker=False, scenarios = [], code_version="r4.1-dev", extra_variation_tags="", extra_input_string="", extra_docker_input_string=""):
+    def mlperf_inference_run_command(spaces, model, implementation, framework, category, scenario, device="cpu", execution_mode="test", test_query_count="20", docker=False, skip_test_query_count=False, scenarios = [], code_version="r4.1-dev", extra_variation_tags="", extra_input_string="", extra_docker_input_string=""):
         pre_space = ""
         for i in range(1,spaces):
              pre_space  = pre_space + " "
@@ -417,7 +417,7 @@ def define_env(env):
 
         if docker:
             docker_cmd_suffix = f" \\\n{pre_space} --docker --quiet"
-            if test_query_count > 0:
+            if not skip_test_query_count:
                 docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count}"
             if extra_docker_input_string != "" or extra_input_string != "":
                 docker_cmd_suffix += f" \\\n{pre_space} {extra_docker_input_string} {extra_input_string}"
@@ -456,7 +456,7 @@ def define_env(env):
         else:
             cmd_suffix = f"\\\n{pre_space} --quiet {extra_input_string}"
 
-            if execution_mode == "test" and test_query_count > 0:
+            if execution_mode == "test" and not skip_test_query_count:
                 cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
             if "bert" in model.lower() and framework == "deepsparse":

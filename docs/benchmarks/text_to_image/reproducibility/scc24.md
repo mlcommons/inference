@@ -48,11 +48,11 @@ or supporting multi-node execution) useful for the community and [MLCommons](htt
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
     
-{{ mlperf_inference_implementation_readme (4, "sdxl", "reference", extra_variation_tags=",_short,_scc24-base", devices=["ROCm", "CUDA"],scenarios=["Offline"],categories=["Datacenter"], setup_tips=False) }}
+{{ mlperf_inference_implementation_readme (4, "sdxl", "reference", extra_variation_tags=",_short,_scc24-base", devices=["ROCm", "CUDA"],scenarios=["Offline"],categories=["Datacenter"], setup_tips=False, skip_test_query_count=True) }}
 
 === "Nvidia"
     ## Nvidia MLPerf Implementation
-{{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia", extra_variation_tags=",_short", scenarios=["Offline"],categories=["Datacenter"], setup_tips=False, implementation_tips=False) }}
+{{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia", extra_variation_tags=",_short", scenarios=["Offline"],categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
     
 ## Submission Commands
 

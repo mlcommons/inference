@@ -79,7 +79,7 @@ cm run script --tags=generate,inference,submission \
 
 ### Aggregate Results in GitHub
 
-Fork the repository URL at https://github.com/gateoverflow/cm4mlperf-inference. 
+Fork the repository URL at [https://github.com/gateoverflow/cm4mlperf-inference](https://github.com/gateoverflow/cm4mlperf-inference). 
 
 Run the following command after **replacing `--repo_url` with your GitHub fork URL**.
 
@@ -92,5 +92,5 @@ cm run script --tags=push,github,mlperf,inference,submission \
 ```
 
 Once uploaded give a Pull Request to the origin repository. Github action will be running there and once 
-finished you can see your submitted results at https://gateoverflow.github.io/cm4mlperf-inference.
+finished you can see your submitted results at [https://gateoverflow.github.io/cm4mlperf-inference](https://gateoverflow.github.io/cm4mlperf-inference).
 

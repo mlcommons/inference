@@ -385,9 +385,9 @@ def define_env(env):
         if scenario == "Server" or (scenario == "All Scenarios" and "Server" in scenarios):
             extra_content += f"{f_pre_space}    * `<SERVER_TARGET_QPS>` must be determined manually. It is usually around 80% of the Offline QPS, but on some systems, it can drop below 50%. If a higher value is specified, the latency constraint will not be met, and the run will be considered invalid.\n"
         if implementation == "reference" and model in [ "sdxl", "gptj-99", "gptj-99.9" ] and device in ["cuda", "rocm"]:
-            extra_content += f"{f_pre_space}    * `--precision=float16` can help run on GPUs with less RAM \n"
+            extra_content += f"{f_pre_space}    * `--precision=float16` can help run on GPUs with less RAM / gives better performance \n"
         if implementation == "reference" and model in [ "sdxl", "gptj-99", "gptj-99.9" ] and device in ["cpu"]:
-            extra_content += f"{f_pre_space}    * `--precision=bfloat16` can help run on GPUs with less RAM \n"
+            extra_content += f"{f_pre_space}    * `--precision=bfloat16` can give better performance \n"
         if "gptj" in model and implementation == "reference":
             extra_content += f"{f_pre_space}    * `--beam-size=1` Beam size of 4 is mandatory for a closed division submission but reducing the beam size can help in running the model on GPUs with lower device memory\n"
         if extra_content:

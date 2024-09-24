@@ -50,7 +50,7 @@ or supporting multi-node execution) useful for the community and [MLCommons](htt
 
 === "Nvidia"
     ## Nvidia MLPerf Implementation
-{{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia", extra_variation_tags=",_short", scenarios=["Offline"],categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
+{{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia", extra_variation_tags=",_short,_scc24-base", scenarios=["Offline"],categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
 
 !!! info
     Once the above run is successful, you can change `_scc24-base` to `_scc24-main` to run the main variant.

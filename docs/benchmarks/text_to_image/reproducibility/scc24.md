@@ -7,7 +7,7 @@ hide:
 
 ## Introduction
 
-This guide is designed for the [Student Cluster Competition 2024](https://studentclustercompetition.us/2024/index.html) to walk participants through running and optimizing the [MLPerf Inference Benchmark](https://arxiv.org/abs/1911.02549) using [Stable Diffusion XL 1.0](https://github.com/mlcommons/inference/tree/master/text_to_image#supported-models) across various software and hardware configurations. The goal is to maximize system throughput (measured in samples per second) without compromising accuracy. Since the model performs poorly on CPUs, it is essential to run it on GPUs.
+This guide is designed for the [Student Cluster Competition 2024](https://sc24.supercomputing.org/students/student-cluster-competition/) to walk participants through running and optimizing the [MLPerf Inference Benchmark](https://arxiv.org/abs/1911.02549) using [Stable Diffusion XL 1.0](https://github.com/mlcommons/inference/tree/master/text_to_image#supported-models) across various software and hardware configurations. The goal is to maximize system throughput (measured in samples per second) without compromising accuracy. Since the model performs poorly on CPUs, it is essential to run it on GPUs.
 
 For a valid MLPerf inference submission, two types of runs are required: a performance run and an accuracy run. In this competition, we focus on the `Offline` scenario, where throughput is the key metric—higher values are better. The official MLPerf inference benchmark for Stable Diffusion XL requires processing a minimum of 5,000 samples in both performance and accuracy modes using the COCO 2014 dataset. However, for SCC, we have reduced this and we also have two variants. `scc-base` variant has dataset size reduced to 50 samples, making it possible to complete both performance and accuracy runs in approximately 5-10 minutes. `scc-main` variant has dataset size of 500 and running it will fetch extra points as compared to running just the base variant. Setting up for Nvidia GPUs may take 2-3 hours but can be done offline. Your final output will be a tarball (`mlperf_submission.tar.gz`) containing MLPerf-compatible results, which you will submit to the SCC organizers for scoring.
 
@@ -19,7 +19,7 @@ Once the initial run is successful, you'll have the opportunity to optimize the 
 
 Since vendor implementations of the MLPerf inference benchmark vary and are often limited to single-node benchmarking, teams will compete within their respective hardware categories (e.g., Nvidia GPUs, AMD GPUs). Points will be awarded based on the throughput achieved on your system.
 
-Additionally, significant bonus points will be awarded if your team enhances an existing implementation, adds support for new hardware (such as an unsupported GPU), enables multi-node execution, or adds new scripts to cm4mlops repository supporting new devices, frameworks, implementations etc. All improvements must be made publicly available under the Apache 2.0 license and submitted alongside your results to the SCC committee to earn these bonus points, contributing to the MLPerf community.
+Additionally, significant bonus points will be awarded if your team enhances an existing implementation, adds support for new hardware (such as an unsupported GPU), enables multi-node execution, or adds/extends scripts to [cm4mlops repository](https://github.com/mlcommons/cm4mlops/script) supporting new devices, frameworks, implementations etc. All improvements must be made publicly available under the Apache 2.0 license and submitted alongside your results to the SCC committee to earn these bonus points, contributing to the MLPerf community.
 
 
 !!! info
@@ -51,7 +51,10 @@ or supporting multi-node execution) useful for the community and [MLCommons](htt
 === "Nvidia"
     ## Nvidia MLPerf Implementation
 {{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia", extra_variation_tags=",_short", scenarios=["Offline"],categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
-    
+
+!!! info
+    Once the above run is successful, you can change `_scc24-base` to `_scc24-main` to run the main variant.
+
 ## Submission Commands
 
 ### Generate actual submission tree

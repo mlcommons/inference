@@ -417,7 +417,7 @@ def define_env(env):
         if scenario == "Server" or (scenario == "All Scenarios" and "Server" in scenarios):
             scenario_option += f"\\\n{pre_space} --server_target_qps=<SERVER_TARGET_QPS>"
 
-        run_cmd_extra = get_run_cmd_extra(f_pre_space, model, implementation, device, scenario, scenarios, extra_input_string)
+        run_cmd_extra = get_run_cmd_extra(f_pre_space, model, implementation, device, scenario, scenarios, True, extra_input_string)
 
         if docker:
             docker_cmd_suffix = f" \\\n{pre_space} --docker --quiet"

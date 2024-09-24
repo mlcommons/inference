@@ -379,14 +379,14 @@ def define_env(env):
                  readme_suffix += f"{pre_space}* Please see [mobilenets.md](mobilenets.md) for running mobilenet models for Image Classification."
         return readme_suffix
 
-    def get_run_cmd_extra(f_pre_space, model, implementation, device, scenario, scenarios = [], run_tips=True):
+    def get_run_cmd_extra(f_pre_space, model, implementation, device, scenario, scenarios = [], run_tips=True, extra_input_string=""):
         extra_content = ""
         f_pre_space += ""
         if scenario == "Server" or (scenario == "All Scenarios" and "Server" in scenarios):
             extra_content += f"{f_pre_space}    * `<SERVER_TARGET_QPS>` must be determined manually. It is usually around 80% of the Offline QPS, but on some systems, it can drop below 50%. If a higher value is specified, the latency constraint will not be met, and the run will be considered invalid.\n"
-        if implementation == "reference" and model in [ "sdxl", "gptj-99", "gptj-99.9" ] and device in ["cuda", "rocm"]:
+        if implementation == "reference" and model in [ "sdxl", "gptj-99", "gptj-99.9" ] and device in ["cuda", "rocm"] and "precision" not in extra_input_string:
             extra_content += f"{f_pre_space}    * `--precision=float16` can help run on GPUs with less RAM / gives better performance \n"
-        if implementation == "reference" and model in [ "sdxl", "gptj-99", "gptj-99.9" ] and device in ["cpu"]:
+        if implementation == "reference" and model in [ "sdxl", "gptj-99", "gptj-99.9" ] and device in ["cpu"] and "precision" not in extra_input_string:
             extra_content += f"{f_pre_space}    * `--precision=bfloat16` can give better performance \n"
         if "gptj" in model and implementation == "reference":
             extra_content += f"{f_pre_space}    * `--beam-size=1` Beam size of 4 is mandatory for a closed division submission but reducing the beam size can help in running the model on GPUs with lower device memory\n"
@@ -417,7 +417,7 @@ def define_env(env):
         if scenario == "Server" or (scenario == "All Scenarios" and "Server" in scenarios):
             scenario_option += f"\\\n{pre_space} --server_target_qps=<SERVER_TARGET_QPS>"
 
-        run_cmd_extra = get_run_cmd_extra(f_pre_space, model, implementation, device, scenario, scenarios)
+        run_cmd_extra = get_run_cmd_extra(f_pre_space, model, implementation, device, scenario, scenarios, extra_input_string)
 
         if docker:
             docker_cmd_suffix = f" \\\n{pre_space} --docker --quiet"

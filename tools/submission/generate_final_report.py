@@ -25,6 +25,9 @@ def main():
 
   df = pd.read_csv(args.input).fillna('')
 
+  if df.empty:
+    return
+
   # rename some fields
   df.rename(
       columns={
@@ -111,6 +114,7 @@ def main():
                        'Latency (ms)',
                        'Samples/s',
                        'Queries/s',
+                       'Tokens/s',
                        'millijoules',
                        'Watts',
                    ]]

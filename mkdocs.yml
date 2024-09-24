@@ -22,7 +22,7 @@ nav:
   - Install:
     - install/index.md
   - Benchmarks:
-    - benchmarks/index.md
+    - index.md
     - Image Classification:
       - ResNet50: benchmarks/image_classification/resnet50.md
     - Text to Image:

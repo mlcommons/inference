@@ -5,7 +5,6 @@ hide:
 
 # Text Summarization using GPT-J
 
-
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
 

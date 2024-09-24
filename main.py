@@ -226,13 +226,13 @@ def define_env(env):
 
                         for scenario in scenarios:
                             content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}###### {scenario}\n\n"
-                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), final_run_mode, -1, False, skip_test_query_count, scenarios, code_version, extra_variation_tags, extra_input_string)
+                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), scenario, device.lower(), final_run_mode, test_query_count, False, skip_test_query_count, scenarios, code_version, extra_variation_tags, extra_input_string)
                             content += run_cmd
                             #content += run_suffix
 
                         if len(scenarios) > 1: 
                             content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
-                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), final_run_mode, -1, False, skip_test_query_count, scenarios, code_version, extra_variation_tags, extra_input_string)
+                            run_cmd = mlperf_inference_run_command(spaces+21, model, implementation, framework.lower(), category.lower(), "All Scenarios", device.lower(), final_run_mode, test_query_count, False, skip_test_query_count, scenarios, code_version, extra_variation_tags, extra_input_string)
                             content += run_cmd
                             content += run_suffix
 

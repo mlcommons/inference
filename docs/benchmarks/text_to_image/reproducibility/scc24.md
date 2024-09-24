@@ -32,7 +32,7 @@ You will need to submit the following files:
 
 * `mlperf_submission.run` - CM commands to run MLPerf inference benchmark saved to this file.
 * `mlperf_submission.md` - description of your platform and some highlights of the MLPerf benchmark execution.
-*  <Team Name> under which results are pushed to the github repository. 
+* `<Team Name>` under which results are pushed to the github repository. 
 
 
 ## SCC interview
@@ -69,7 +69,8 @@ cm run script --tags=generate,inference,submission \
    --division=open \
    --category=datacenter \
    --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
-   --run_style=test --adr.submission-checker.tags=_short-run \
+   --run_style=test \
+   --adr.submission-checker.tags=_short-run \
    --quiet \
    --submitter=<Team Name>
 ```

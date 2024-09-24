@@ -19,7 +19,7 @@ Once the initial run is successful, you'll have the opportunity to optimize the 
 
 Since vendor implementations of the MLPerf inference benchmark vary and are often limited to single-node benchmarking, teams will compete within their respective hardware categories (e.g., Nvidia GPUs, AMD GPUs). Points will be awarded based on the throughput achieved on your system.
 
-Additionally, significant bonus points will be awarded if your team enhances an existing implementation, adds support for new hardware (such as an unsupported GPU), enables multi-node execution, or adds/extends scripts to [cm4mlops repository](https://github.com/mlcommons/cm4mlops/script) supporting new devices, frameworks, implementations etc. All improvements must be made publicly available under the Apache 2.0 license and submitted alongside your results to the SCC committee to earn these bonus points, contributing to the MLPerf community.
+Additionally, significant bonus points will be awarded if your team enhances an existing implementation, adds support for new hardware (such as an unsupported GPU), enables multi-node execution, or adds/extends scripts to [cm4mlops repository](https://github.com/mlcommons/cm4mlops/tree/main/script) supporting new devices, frameworks, implementations etc. All improvements must be made publicly available under the Apache 2.0 license and submitted alongside your results to the SCC committee to earn these bonus points, contributing to the MLPerf community.
 
 
 !!! info

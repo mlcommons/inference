@@ -5,8 +5,6 @@ hide:
 
 # Recommendation using DLRM v2
 
-
-## Benchmark Implementations
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
 

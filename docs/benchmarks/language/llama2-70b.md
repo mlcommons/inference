@@ -5,7 +5,6 @@ hide:
 
 # Text Summarization using LLAMA2-70b
 
-
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
     

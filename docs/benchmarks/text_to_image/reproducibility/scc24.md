@@ -77,7 +77,7 @@ cm run script --tags=generate,inference,submission \
 * Use `--hw_name="My system name"` to give a meaningful system name.
 
 
-### Aggregate Results in GitHub
+### Push Results to GitHub
 
 Fork the repository URL at [https://github.com/gateoverflow/cm4mlperf-inference](https://github.com/gateoverflow/cm4mlperf-inference). 
 
@@ -93,4 +93,3 @@ cm run script --tags=push,github,mlperf,inference,submission \
 
 Once uploaded give a Pull Request to the origin repository. Github action will be running there and once 
 finished you can see your submitted results at [https://gateoverflow.github.io/cm4mlperf-inference](https://gateoverflow.github.io/cm4mlperf-inference).
-

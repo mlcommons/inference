@@ -444,6 +444,7 @@ def define_env(env):
             else:
                 full_ds_needed_tag = "_full"
 
+
             docker_setup_cmd = f"""\n
 {f_pre_space}```bash
 {f_pre_space}cm run script --tags=run-mlperf,inference,_find-performance,{full_ds_needed_tag}_{code_version}{scenario_variation_tag}{extra_variation_tags} \\

@@ -73,4 +73,4 @@ Expected outcome:
 2. Run the reference accuracy script (i.e. the script that produces the F1/mAP/DICE/WER/Top1%/AUC score) on mlperf_log_accuracy_baseline.json, capture output and save to `<submitting_organization>/compliance/<system_desc_id>/<benchmark>/<scenario>/TEST01/accuracy/baseline_accuracy.txt` for upload.
 3. Run accuracy script on mlperf_log_accuracy.json from the compliance run, capture output and save to `<submitting_organization>/compliance/<system_desc_id>/<benchmark>/<scenario>/TEST01/accuracy/compliance_accuracy.txt` for upload.
 
-**The delta between the two accuracy metrics should be within 1% for the 99% target accuracy category and within 0.1% for the 99.9% target accuracy category.**
+**For each target accuracy metric, the delta between the two accuracy results should be within (1-x)%. For example, for 99.9% accuracy metric, the delta of the accuracy results should be within 0.1%.**

@@ -23,22 +23,43 @@ import os
 import subprocess
 import sys
 
-sys.path.insert(0, os.path.dirname(__file__))
-
 import numpy as np
+import pkg_resources
 import six
-import tokenization
 from transformers import BertTokenizer
-from create_squad_data import read_squad_examples, convert_examples_to_features
 
 # To support feature cache.
 import pickle
+
+sys.path.insert(0, os.path.dirname(__file__))
+
+installed = {pkg.key for pkg in pkg_resources.working_set}
+if "tensorflow" in installed:
+    import tensorflow
+    sys.path.insert(
+        0, os.path.join(
+            os.path.dirname(__file__),
+            "DeepLearningExamples", "TensorFlow", "LanguageModeling", "BERT"
+        )
+    )
+elif "torch" in installed:
+    import torch
+    sys.path.insert(
+        0, os.path.join(
+            os.path.dirname(__file__),
+            "DeepLearningExamples", "PyTorch", "LanguageModeling", "BERT"
+        )
+    )
+
+import tokenization
+from create_squad_data import convert_examples_to_features, read_squad_examples
 
 max_seq_length = 384
 max_query_length = 64
 doc_stride = 128
 
-RawResult = collections.namedtuple("RawResult", ["unique_id", "start_logits", "end_logits"])
+RawResult = collections.namedtuple(
+    "RawResult", ["unique_id", "start_logits", "end_logits"])
 
 dtype_map = {
     "int8": np.int8,
@@ -49,6 +70,7 @@ dtype_map = {
     "float32": np.float32,
     "float64": np.float64
 }
+
 
 def get_final_text(pred_text, orig_text, do_lower_case):
     """Project the tokenized prediction back to the original text."""
@@ -135,9 +157,11 @@ def get_final_text(pred_text, orig_text, do_lower_case):
     output_text = orig_text[orig_start_position:(orig_end_position + 1)]
     return output_text
 
+
 def _get_best_indexes(logits, n_best_size):
     """Get the n-best logits from a list."""
-    index_and_score = sorted(enumerate(logits), key=lambda x: x[1], reverse=True)
+    index_and_score = sorted(
+        enumerate(logits), key=lambda x: x[1], reverse=True)
 
     best_indexes = []
     for i in range(len(index_and_score)):
@@ -145,6 +169,7 @@ def _get_best_indexes(logits, n_best_size):
             break
         best_indexes.append(index_and_score[i][0])
     return best_indexes
+
 
 def _compute_softmax(scores):
     """Compute softmax probability over raw logits."""
@@ -191,7 +216,8 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
     scores_diff_json = collections.OrderedDict()
 
     for (example_index, example) in enumerate(all_examples):
-        if max_examples and example_index==max_examples: break
+        if max_examples and example_index == max_examples:
+            break
 
         features = example_index_to_features[example_index]
 
@@ -315,6 +341,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
     with open(output_prediction_file, "w") as writer:
         writer.write(json.dumps(all_predictions, indent=4) + "\n")
 
+
 def load_loadgen_log(log_path, eval_features, dtype=np.float32, output_transposed=False):
     with open(log_path) as f:
         predictions = json.load(f)
@@ -323,10 +350,12 @@ def load_loadgen_log(log_path, eval_features, dtype=np.float32, output_transpose
     for prediction in predictions:
         qsl_idx = prediction["qsl_idx"]
         if output_transposed:
-            logits = np.frombuffer(bytes.fromhex(prediction["data"]), dtype).reshape(2, -1)
+            logits = np.frombuffer(bytes.fromhex(
+                prediction["data"]), dtype).reshape(2, -1)
             logits = np.transpose(logits)
         else:
-            logits = np.frombuffer(bytes.fromhex(prediction["data"]), dtype).reshape(-1, 2)
+            logits = np.frombuffer(bytes.fromhex(
+                prediction["data"]), dtype).reshape(-1, 2)
         # Pad logits to max_seq_length
         seq_length = logits.shape[0]
         start_logits = np.ones(max_seq_length) * -10000.0
@@ -334,30 +363,39 @@ def load_loadgen_log(log_path, eval_features, dtype=np.float32, output_transpose
         start_logits[:seq_length] = logits[:, 0]
         end_logits[:seq_length] = logits[:, 1]
         results.append(RawResult(
-                unique_id=eval_features[qsl_idx].unique_id,
-                start_logits=start_logits.tolist(),
-                end_logits=end_logits.tolist()
-            ))
+            unique_id=eval_features[qsl_idx].unique_id,
+            start_logits=start_logits.tolist(),
+            end_logits=end_logits.tolist()
+        ))
 
     return results
 
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--vocab_file", default="build/data/bert_tf_v1_1_large_fp32_384_v2/vocab.txt", help="Path to vocab.txt")
-    parser.add_argument("--val_data", default="build/data/dev-v1.1.json", help="Path to validation data")
-    parser.add_argument("--log_file", default="build/logs/mlperf_log_accuracy.json", help="Path to LoadGen accuracy log")
-    parser.add_argument("--out_file", default="build/result/predictions.json", help="Path to output predictions file")
-    parser.add_argument("--features_cache_file", default="eval_features.pickle", help="Path to features' cache file")
-    parser.add_argument("--output_transposed", action="store_true", help="Transpose the output")
-    parser.add_argument("--output_dtype", default="float32", choices=dtype_map.keys(), help="Output data type")
-    parser.add_argument("--max_examples", type=int, help="Maximum number of examples to consider (not limited by default)")
+    parser.add_argument(
+        "--vocab_file", default="build/data/bert_tf_v1_1_large_fp32_384_v2/vocab.txt", help="Path to vocab.txt")
+    parser.add_argument(
+        "--val_data", default="build/data/dev-v1.1.json", help="Path to validation data")
+    parser.add_argument("--log_file", default="build/logs/mlperf_log_accuracy.json",
+                        help="Path to LoadGen accuracy log")
+    parser.add_argument("--out_file", default="build/result/predictions.json",
+                        help="Path to output predictions file")
+    parser.add_argument("--features_cache_file",
+                        default="eval_features.pickle", help="Path to features' cache file")
+    parser.add_argument("--output_transposed",
+                        action="store_true", help="Transpose the output")
+    parser.add_argument("--output_dtype", default="float32",
+                        choices=dtype_map.keys(), help="Output data type")
+    parser.add_argument("--max_examples", type=int,
+                        help="Maximum number of examples to consider (not limited by default)")
     args = parser.parse_args()
 
     output_dtype = dtype_map[args.output_dtype]
 
     print("Reading examples...")
     eval_examples = read_squad_examples(input_file=args.val_data,
-        is_training=False, version_2_with_negative=False)
+                                        is_training=False, version_2_with_negative=False)
 
     eval_features = []
     # Load features if cached, convert from examples otherwise.
@@ -373,6 +411,7 @@ def main():
         tokenizer = BertTokenizer(args.vocab_file)
 
         print("Converting examples to features...")
+
         def append_feature(feature):
             eval_features.append(feature)
 
@@ -391,15 +430,20 @@ def main():
             pickle.dump(eval_features, cache_file)
 
     print("Loading LoadGen logs...")
-    results = load_loadgen_log(args.log_file, eval_features, output_dtype, args.output_transposed)
+    results = load_loadgen_log(
+        args.log_file, eval_features, output_dtype, args.output_transposed)
 
     print("Post-processing predictions...")
-    write_predictions(eval_examples, eval_features, results, 20, 30, True, args.out_file, args.max_examples)
+    write_predictions(eval_examples, eval_features, results,
+                      20, 30, True, args.out_file, args.max_examples)
 
     print("Evaluating predictions...")
-    cmd = "python3 {:}/evaluate-v1.1.py {:} {:} {}".format(os.path.dirname(__file__),
-        args.val_data, args.out_file, '--max_examples={}'.format(args.max_examples) if args.max_examples else '')
+    cmd = "python3 {:}/evaluate_v1.1.py {:} {:} {}".format(
+        os.path.dirname(os.path.abspath(__file__)), args.val_data,
+        args.out_file, '--max_examples {}'.format(
+            args.max_examples) if args.max_examples else '')
     subprocess.check_call(cmd, shell=True)
+
 
 if __name__ == "__main__":
     main()

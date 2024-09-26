@@ -17,13 +17,6 @@ limitations under the License.
 #ifndef MLPERF_LOADGEN_ISSUE_QUERY_CONTROLLER_H_
 #define MLPERF_LOADGEN_ISSUE_QUERY_CONTROLLER_H_
 
-#include "loadgen.h"
-#include "logging.h"
-#include "query_sample.h"
-#include "system_under_test.h"
-#include "test_settings_internal.h"
-#include "utils.h"
-
 #include <stdint.h>
 
 #include <atomic>
@@ -35,6 +28,13 @@ limitations under the License.
 #include <random>
 #include <thread>
 #include <vector>
+
+#include "loadgen.h"
+#include "logging.h"
+#include "query_sample.h"
+#include "system_under_test.h"
+#include "test_settings_internal.h"
+#include "utils.h"
 
 namespace mlperf {
 
@@ -68,7 +68,11 @@ struct SequenceGen {
 struct ResponseDelegate {
   virtual ~ResponseDelegate() = default;
   virtual void SampleComplete(SampleMetadata*, QuerySampleResponse*,
-                              PerfClock::time_point, const ResponseCallback&) = 0;
+                              PerfClock::time_point,
+                              const ResponseCallback&) = 0;
+  virtual void TokenComplete(SampleMetadata*, QuerySampleResponse*,
+                              PerfClock::time_point,
+                              const ResponseCallback&) = 0;
   virtual void QueryComplete() = 0;
   std::atomic<size_t> queries_completed{0};
 };
@@ -116,7 +120,7 @@ class QueryMetadata {
 
   size_t scheduled_intervals = 0;  // Number of intervals between queries, as
                                    // actually scheduled during the run.
-                                   // For the multi-stream scenario only.
+                                   // For the MultiStream scenario only.
   PerfClock::time_point scheduled_time;
   PerfClock::time_point issued_start_time;
   PerfClock::time_point all_samples_done_time;

@@ -38,8 +38,6 @@ typedef uintptr_t ClientData;
 
 typedef void (*IssueQueryCallback)(ClientData, const QuerySample*, size_t);
 typedef void (*FlushQueriesCallback)();
-typedef void (*ReportLatencyResultsCallback)(ClientData, const int64_t*,
-                                             size_t);
 typedef void (*ResponseCallback)(ClientData, QuerySampleResponse*);
 
 /// \brief SUT calls this function to report query result back to loadgen
@@ -51,11 +49,18 @@ void QuerySamplesCompleteResponseCb(QuerySampleResponse* responses,
                                     ResponseCallback response_cb,
                                     ClientData client_data);
 
+void FirstTokenComplete(QuerySampleResponse* responses,
+                          size_t response_count);
+                        
+void FirstTokenCompleteResponseCb(QuerySampleResponse* responses,
+                                    size_t response_count,
+                                    ResponseCallback response_cb,
+                                    ClientData client_data);
+
 /// \brief Create an opaque SUT pointer based on C callbacks.
 void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,
                    IssueQueryCallback issue_cb,
-                   FlushQueriesCallback flush_queries_cb,
-                   ReportLatencyResultsCallback report_latency_results_cb);
+                   FlushQueriesCallback flush_queries_cb);
 /// \brief Destroys the SUT created by ConstructSUT.
 void DestroySUT(void* sut);
 
@@ -75,12 +80,13 @@ void DestroyQSL(void* qsl);
 /// \brief Run tests on a SUT created by ConstructSUT().
 /// \details This is the C entry point. See mlperf::StartTest for the C++ entry
 /// point.
-void StartTest(void* sut, void* qsl, const TestSettings& settings);
+void StartTest(void* sut, void* qsl, const TestSettings& settings,
+               const std::string& audit_config_filename);
 
 ///
 /// \brief Register a thread for query issuing in Server scenario.
-/// \details This is the C entry point. See mlperf::RegisterIssueQueryThread for the C++ entry
-/// point.
+/// \details This is the C entry point. See mlperf::RegisterIssueQueryThread for
+/// the C++ entry point.
 ///
 void RegisterIssueQueryThread();
 

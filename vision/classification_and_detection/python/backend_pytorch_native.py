@@ -3,8 +3,8 @@ pytoch native backend
 """
 # pylint: disable=unused-argument,missing-docstring
 import torch  # currently supports pytorch1.0
+import torchvision
 import backend
-
 
 
 class BackendPytorchNative(backend.Backend):
@@ -13,6 +13,7 @@ class BackendPytorchNative(backend.Backend):
         self.sess = None
         self.model = None
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
+
     def version(self):
         return torch.__version__
 
@@ -23,7 +24,7 @@ class BackendPytorchNative(backend.Backend):
         return "NCHW"
 
     def load(self, model_path, inputs=None, outputs=None):
-        self.model = torch.load(model_path,map_location=lambda storage, loc: storage)
+        self.model = torch.load(model_path)
         self.model.eval()
         # find inputs from the model if not passed in by config
         if inputs:
@@ -48,10 +49,9 @@ class BackendPytorchNative(backend.Backend):
         self.model = self.model.to(self.device)
         return self
 
-        
     def predict(self, feed):
-        key=[key for key in feed.keys()][0]    
+        key = [key for key in feed.keys()][0]
         feed[key] = torch.tensor(feed[key]).float().to(self.device)
         with torch.no_grad():
-            output = self.model(feed[key])    
+            output = self.model(feed[key])
         return output

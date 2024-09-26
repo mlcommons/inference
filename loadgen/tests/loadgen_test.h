@@ -33,7 +33,6 @@ limitations under the License.
 #define REGISTER_TEST_ALL_SCENARIOS(name, test, ...)                \
   REGISTER_TEST_SCENARIO(name, SingleStream, test, __VA_ARGS__);    \
   REGISTER_TEST_SCENARIO(name, MultiStream, test, __VA_ARGS__);     \
-  REGISTER_TEST_SCENARIO(name, MultiStreamFree, test, __VA_ARGS__); \
   REGISTER_TEST_SCENARIO(name, Server, test, __VA_ARGS__);          \
   REGISTER_TEST_SCENARIO(name, Offline, test, __VA_ARGS__);
 

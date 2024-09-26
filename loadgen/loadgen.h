@@ -19,6 +19,9 @@ limitations under the License.
 
 #include <cstddef>
 #include <functional>
+#include <string>
+#include <numeric>
+
 
 /// \brief Contains the loadgen API.
 namespace mlperf {
@@ -50,8 +53,8 @@ using ResponseCallback = std::function<void(QuerySampleResponse*)>;
 ///     loadgen copies the response data. The response callback enables the
 ///     loadgen to simulate response data being stored in accelerator DRAM.
 ///     After the response callback is called, response data must reside on the
-///     host so that the loadgen can copy it. Submitters must seek prior approval
-///     to use this feature of loadgen (refer to
+///     host so that the loadgen can copy it. Submitters must seek prior
+///     approval to use this feature of loadgen (refer to
 ///     https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#5-load-generator).
 /// * All calls to QuerySampleComplete are thread-safe and wait-free bounded.
 ///   + Any number of threads can call QuerySampleComplete simultaneously.
@@ -59,8 +62,11 @@ using ResponseCallback = std::function<void(QuerySampleResponse*)>;
 ///     finish QuerySampleComplete in a bounded number of cycles.
 ///   + Note: If a callback is provided, the SUT must ensure that the callback
 ///     is also thread-safe and wait-free bounded for the above to hold.
-void QuerySamplesComplete(QuerySampleResponse* responses,
-                          size_t response_count, const ResponseCallback& response_cb = {});
+void QuerySamplesComplete(QuerySampleResponse* responses, size_t response_count,
+                          const ResponseCallback& response_cb = {});
+
+void FirstTokenComplete(QuerySampleResponse* responses, size_t response_count,
+                          const ResponseCallback& response_cb = {});
 
 ///
 /// \brief Starts the test against SUT with the specified settings.
@@ -69,7 +75,8 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 ///
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,
-               const LogSettings& log_settings);
+               const LogSettings& log_settings,
+               const std::string audit_config_filename = "audit.config");
 
 ///
 /// \brief Aborts the running test.
@@ -88,7 +95,8 @@ void AbortTest();
 /// C entry point.
 ///
 void RegisterIssueQueryThread();
-
+// inline long long samples_overhead_acum;
+// inline long long tokens_overhead_acum;
 /// @}
 
 }  // namespace mlperf

@@ -38,12 +38,10 @@ namespace {
 
 std::string DateTimeString(const char* format,
                            std::chrono::system_clock::time_point tp,
-                           bool append_ms,
-                           bool utc) {
+                           bool append_ms, bool utc) {
   std::time_t tp_time_t = std::chrono::system_clock::to_time_t(tp);
-  std::tm date_time = utc
-                          ? *std::gmtime(&tp_time_t)
-                          : *std::localtime(&tp_time_t);
+  std::tm date_time =
+      utc ? *std::gmtime(&tp_time_t) : *std::localtime(&tp_time_t);
   constexpr size_t kDateTimeMaxSize = 256;
   char date_time_cstring[kDateTimeMaxSize];
   std::strftime(date_time_cstring, kDateTimeMaxSize, format, &date_time);

@@ -17,7 +17,11 @@ Performance must be within 5% of the submission performance. In single stream mo
 ## Instructions
 
 ### Part I
-Run the benchmark with the provided audit.config in the corresponding benchmark subdirectory. Note that audit.config must be copied to the directory where the benchmark is being run from. Verification that audit.config was properly read can be done by checking that loadgen has found audit.config in mlperf_log_detail.txt 
+Run the benchmark with the provided audit.config in the corresponding benchmark subdirectory. 
+
+The audit.config file must be copied to the directory where the benchmark is being run from. Verification that audit.config was properly read can be done by checking that loadgen has found audit.config in mlperf_log_detail.txt 
+
+Alternatively, you can alter the mlperf.conf (or the configuration file's copy your benchmark is using) by setting the value `*.*.test05 = 1`. For this option make sure you have the right values for `*.*.test05_qsl_rng_seed`, `*.*.test05_sample_index_rng_seed` and `*.*.test05_schedule_rng_seed` included in your configuration file.
 
 ### Part II
 Run the verification script:

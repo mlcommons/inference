@@ -1,4 +1,5 @@
 # coding=utf-8
+# Copyright 2021 Arm Limited and affiliates.
 # Copyright (c) 2020 NVIDIA CORPORATION. All rights reserved.
 # Copyright 2018 The Google AI Language Team Authors.
 #
@@ -29,15 +30,22 @@ from squad_QSL import get_squad_QSL
 class BERT_TF_SUT():
     def __init__(self, args):
         print("Loading TF model...")
-        self.sess = tf.compat.v1.Session()
-        with gfile.FastGFile('build/data/bert_tf_v1_1_large_fp32_384_v2/model.pb', 'rb') as f:
+        infer_config = tf.compat.v1.ConfigProto()
+        infer_config.intra_op_parallelism_threads = int(os.environ['TF_INTRA_OP_PARALLELISM_THREADS']) \
+                if 'TF_INTRA_OP_PARALLELISM_THREADS' in os.environ else os.cpu_count()
+        infer_config.inter_op_parallelism_threads = int(os.environ['TF_INTER_OP_PARALLELISM_THREADS']) \
+                if 'TF_INTER_OP_PARALLELISM_THREADS' in os.environ else os.cpu_count()
+        infer_config.use_per_session_threads = 1
+        self.sess = tf.compat.v1.Session(config=infer_config)
+        model_file = os.environ.get('ML_MODEL_FILE_WITH_PATH', 'build/data/bert_tf_v1_1_large_fp32_384_v2/model.pb')
+        with gfile.FastGFile(model_file, 'rb') as f:
             graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f.read())
             self.sess.graph.as_default()
             tf.import_graph_def(graph_def, name='')
 
         print("Constructing SUT...")
-        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
+        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("Finished constructing SUT.")
 
         self.qsl = get_squad_QSL(args.max_examples)
@@ -62,9 +70,6 @@ class BERT_TF_SUT():
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):
-        pass
-
-    def process_latencies(self, latencies_ns):
         pass
 
     def __del__(self):

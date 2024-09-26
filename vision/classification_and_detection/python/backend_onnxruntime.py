@@ -5,7 +5,7 @@ onnxruntime backend (https://github.com/microsoft/onnxruntime)
 # pylint: disable=unused-argument,missing-docstring,useless-super-delegation
 
 import onnxruntime as rt
-
+import os
 import backend
 
 
@@ -27,10 +27,19 @@ class BackendOnnxruntime(backend.Backend):
     def load(self, model_path, inputs=None, outputs=None):
         """Load model and find input/outputs from the model file."""
         opt = rt.SessionOptions()
-        # enable level 3 optimizations
-        # FIXME: enable below once onnxruntime 0.5 is released
-        # opt.set_graph_optimization_level(3)
-        self.sess = rt.InferenceSession(model_path, opt)
+
+        # By default all optimizations are enabled
+        # https://onnxruntime.ai/docs/performance/graph-optimizations.html
+        # Enable only upto extended optimizations on aarch64 due to an accuracy issue
+        if os.environ.get("HOST_PLATFORM_FLAVOR", "") == "aarch64":
+            opt.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
+
+        # self.sess = rt.InferenceSession(model_path, opt)
+        if len(rt.get_all_providers()) > 1 and os.environ.get("USE_GPU", "yes").lower() not in [ "0", "false", "off", "no" ]:
+            self.sess = rt.InferenceSession(model_path, opt, providers=["CUDAExecutionProvider"])
+        else:
+            self.sess = rt.InferenceSession(model_path, opt, providers=["CPUExecutionProvider"])
+            
         # get input and output names
         if not inputs:
             self.inputs = [meta.name for meta in self.sess.get_inputs()]

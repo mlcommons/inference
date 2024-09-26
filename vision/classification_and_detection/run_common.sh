@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime|pytorch|tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34] [cpu|gpu]"
+    echo "usage: $0 tf|onnxruntime|pytorch|tflite|tvm-onnx|tvm-pytorch|tvm-tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|retinanet] [cpu|gpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -18,10 +18,10 @@ device="cpu"
 
 for i in $* ; do
     case $i in
-       tf|onnxruntime|tflite|pytorch) backend=$i; shift;;
-       cpu|gpu) device=$i; shift;;
+       tf|onnxruntime|tflite|pytorch|tvm-onnx|tvm-pytorch|tvm-tflite|ncnn) backend=$i; shift;;
+       cpu|gpu|rocm) device=$i; shift;;
        gpu) device=gpu; shift;;
-       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf) model=$i; shift;;
+       resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf|retinanet) model=$i; shift;;
     esac
 done
 
@@ -77,6 +77,10 @@ if [ $name == "ssd-resnet34-tf-onnxruntime" ] ; then
     model_path="$MODEL_DIR/ssd_resnet34_mAP_20.2.onnx"
     profile=ssd-resnet34-onnxruntime-tf
 fi
+if [ $name == "retinanet-onnxruntime" ] ; then
+    model_path="$MODEL_DIR/resnext50_32x4d_fpn.onnx"
+    profile=retinanet-onnxruntime
+fi
 
 #
 # pytorch
@@ -95,6 +99,10 @@ if [ $name == "ssd-resnet34-pytorch" ] ; then
     model_path="$MODEL_DIR/resnet34-ssd1200.pytorch"
     profile=ssd-resnet34-pytorch
 fi
+if [ $name == "retinanet-pytorch" ] ; then
+    model_path="$MODEL_DIR/resnext50_32x4d_fpn.pth"
+    profile=retinanet-pytorch
+fi
 
 
 #
@@ -111,5 +119,39 @@ if [ $name == "mobilenet-tflite" ] ; then
     extra_args="$extra_args --backend tflite"
 fi
 
+#
+# TVM with ONNX models
+#
+if [ $name == "resnet50-tvm-onnx" ] ; then
+    model_path="$MODEL_DIR/resnet50_v1.onnx"
+    profile=resnet50-onnxruntime
+    extra_args="$extra_args --backend tvm"
+fi
+
+#
+# TVM with PyTorch models
+#
+if [ $name == "resnet50-tvm-pytorch" ] ; then
+    model_path="$MODEL_DIR/resnet50_INT8bit_quantized.pt"
+    profile=resnet50-pytorch
+    extra_args="$extra_args --backend tvm"
+fi
+
+#
+# TVM with TFLite models
+#
+if [ $name == "resnet50-tvm-tflite" ] ; then
+    model_path="$MODEL_DIR/resnet50_v1.tflite"
+    profile=resnet50-tf
+    extra_args="$extra_args --backend tvm"
+fi
+
+#
+# ncnn
+#
+if [ $name == "resnet50-ncnn" ] ; then
+    model_path="$MODEL_DIR/resnet50_v1"
+    profile=resnet50-ncnn
+fi
 name="$backend-$device/$model"
 EXTRA_OPS="$extra_args $EXTRA_OPS"

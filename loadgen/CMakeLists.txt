@@ -3,13 +3,17 @@ cmake_minimum_required(VERSION 3.1)
 project(mlperf_loadgen)
 
 # The mlperf_loadgen version.
-set(mlperf_loadgen_VERSION_MAJOR 1)
+set(mlperf_loadgen_VERSION_MAJOR 4)
 set(mlperf_loadgen_VERSION_MINOR 1)
 message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}")
 
 # Set build options. NB: CXX_STANDARD is supported since CMake 3.1.
 if (NOT MSVC)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -W -Wall")
+endif()
+# Extra build options can be specified by setting the MLPERF_LOADGEN_CXX_FLAGS variable
+if (MLPERF_LOADGEN_CXX_FLAGS)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MLPERF_LOADGEN_CXX_FLAGS}")
 endif()
 message(STATUS "Using C++ compiler flags: ${CMAKE_CXX_FLAGS}")
 set(CMAKE_CXX_STANDARD "14")
@@ -34,6 +38,7 @@ execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version
 set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/bindings/c_api.h
   ${CMAKE_CURRENT_SOURCE_DIR}/bindings/c_api.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/early_stopping.cc  
   ${CMAKE_CURRENT_SOURCE_DIR}/issue_query_controller.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/loadgen.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/logging.cc
@@ -42,6 +47,8 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/test_settings_internal.h
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/utils.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/results.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/results.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.h
   ${CMAKE_BINARY_DIR}/version_generated.cc

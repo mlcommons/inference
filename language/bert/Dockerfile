@@ -27,7 +27,8 @@ RUN cd /tmp \
  && rm -rf inference
 
 # Install dependencies
-RUN python3 -m pip install torch==1.4.0 onnx==1.6.0 transformers==2.4.0 onnxruntime==1.2.0 numpy==1.18.0
+RUN python3 -m pip install torch==1.4.0 onnx==1.6.0 transformers==2.4.0 \ 
+    onnxruntime==1.2.0 numpy==1.18.0 tokenization==1.0.7
 
 # Add user
 ARG GID

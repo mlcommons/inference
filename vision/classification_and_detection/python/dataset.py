@@ -271,3 +271,12 @@ def pre_process_coco_resnet34_tf(img, dims=None, need_transpose=False):
         img = img.transpose([2, 0, 1])
 
     return img
+
+
+def pre_process_openimages_retinanet(img, dims=None, need_transpose=False):
+    img = maybe_resize(img, dims)
+    img /= 255.
+    # transpose if needed
+    if need_transpose:
+        img = img.transpose([2, 0, 1])
+    return img

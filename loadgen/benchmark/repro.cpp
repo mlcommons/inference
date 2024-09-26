@@ -30,7 +30,7 @@
 class QSL : public mlperf::QuerySampleLibrary {
  public:
   ~QSL() override{};
-  const std::string& Name() const override { return mName; }
+  const std::string& Name() override { return mName; }
   size_t TotalSampleCount() override { return 1000000; }
   size_t PerformanceSampleCount() override { return TotalSampleCount(); }
   void LoadSamplesToRam(
@@ -49,7 +49,7 @@ class BasicSUT : public mlperf::SystemUnderTest {
     initResponse(10000);
   }
   ~BasicSUT() override {}
-  const std::string& Name() const override { return mName; }
+  const std::string& Name() override { return mName; }
   void IssueQuery(const std::vector<mlperf::QuerySample>& samples) override {
     int n = samples.size();
     if (n > mResponses.size()) {
@@ -64,8 +64,6 @@ class BasicSUT : public mlperf::SystemUnderTest {
     mlperf::QuerySamplesComplete(mResponses.data(), n);
   }
   void FlushQueries() override {}
-  void ReportLatencyResults(
-      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override{};
 
  private:
   void initResponse(int size) {
@@ -98,7 +96,7 @@ class QueueSUT : public mlperf::SystemUnderTest {
       thread.join();
     }
   }
-  const std::string& Name() const override { return mName; }
+  const std::string& Name() override { return mName; }
   void IssueQuery(const std::vector<mlperf::QuerySample>& samples) override {
     std::unique_lock<std::mutex> lck(mMtx);
     for (const auto& sample : samples) {
@@ -108,8 +106,6 @@ class QueueSUT : public mlperf::SystemUnderTest {
     mCondVar.notify_one();
   }
   void FlushQueries() override {}
-  void ReportLatencyResults(
-      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override{};
 
  private:
   void CompleteThread(int threadIdx) {
@@ -167,7 +163,7 @@ class MultiBasicSUT : public mlperf::SystemUnderTest {
       thread.join();
     }
   }
-  const std::string& Name() const override { return mName; }
+  const std::string& Name() override { return mName; }
   void IssueQuery(const std::vector<mlperf::QuerySample>& samples) override {
     int thread_idx = mThreadMap[std::this_thread::get_id()];
     int n = samples.size();
@@ -185,8 +181,6 @@ class MultiBasicSUT : public mlperf::SystemUnderTest {
     mlperf::QuerySamplesComplete(reponses.data(), n);
   }
   void FlushQueries() override {}
-  void ReportLatencyResults(
-      const std::vector<mlperf::QuerySampleLatency>& latencies_ns) override{};
 
  private:
   void initResponse(int size) {

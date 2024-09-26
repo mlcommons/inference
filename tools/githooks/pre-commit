@@ -1,0 +1,28 @@
+#================================================================
+# HEADER
+#================================================================
+# DESCRIPTION
+#    This is a git hook containing some commands to help you
+#    automatically format the code. This will help to maintain
+#    good quality code in the github repository. This script
+#    will be executed before every commit you make.
+# SET UP
+#    Set the folder containing this file as a custom hooks
+#    directory. This can be done with git >= 2.9 with the 
+#    command git config core.hooksPath tools/githooks. Then 
+#    set the hook file as an executable by running 
+#    chmod u+x <path to file>
+# REQUIREMENTS
+#    clang-format
+#================================================================
+# END_OF_HEADER
+#================================================================
+
+
+# Checks all the modified c/c++ files, format them and adds them
+# to the commit.
+for FILE in $(git diff --cached --name-only | grep -E '.*\.(cc|cpp|h|hpp)$')
+do
+    clang-format -i -style=file $FILE
+    git add $FILE
+done

@@ -27,18 +27,16 @@ namespace {
 // Forwards SystemUnderTest calls to relevant callbacks.
 class SystemUnderTestTrampoline : public SystemUnderTest {
  public:
-  SystemUnderTestTrampoline(
-      ClientData client_data, std::string name, IssueQueryCallback issue_cb,
-      FlushQueriesCallback flush_queries_cb,
-      ReportLatencyResultsCallback report_latency_results_cb)
+  SystemUnderTestTrampoline(ClientData client_data, std::string name,
+                            IssueQueryCallback issue_cb,
+                            FlushQueriesCallback flush_queries_cb)
       : client_data_(client_data),
         name_(std::move(name)),
         issue_cb_(issue_cb),
-        flush_queries_cb_(flush_queries_cb),
-        report_latency_results_cb_(report_latency_results_cb) {}
+        flush_queries_cb_(flush_queries_cb) {}
   ~SystemUnderTestTrampoline() override = default;
 
-  const std::string& Name() const override { return name_; }
+  const std::string& Name() override { return name_; }
 
   void IssueQuery(const std::vector<QuerySample>& samples) override {
     (*issue_cb_)(client_data_, samples.data(), samples.size());
@@ -46,29 +44,20 @@ class SystemUnderTestTrampoline : public SystemUnderTest {
 
   void FlushQueries() override { (*flush_queries_cb_)(); }
 
-  void ReportLatencyResults(
-      const std::vector<QuerySampleLatency>& latencies_ns) override {
-    (*report_latency_results_cb_)(client_data_, latencies_ns.data(),
-                                  latencies_ns.size());
-  }
-
  private:
   ClientData client_data_;
   std::string name_;
   IssueQueryCallback issue_cb_;
   FlushQueriesCallback flush_queries_cb_;
-  ReportLatencyResultsCallback report_latency_results_cb_;
 };
 
 }  // namespace
 
 void* ConstructSUT(ClientData client_data, const char* name, size_t name_length,
                    IssueQueryCallback issue_cb,
-                   FlushQueriesCallback flush_queries_cb,
-                   ReportLatencyResultsCallback report_latency_results_cb) {
+                   FlushQueriesCallback flush_queries_cb) {
   SystemUnderTestTrampoline* sut = new SystemUnderTestTrampoline(
-      client_data, std::string(name, name_length), issue_cb, flush_queries_cb,
-      report_latency_results_cb);
+      client_data, std::string(name, name_length), issue_cb, flush_queries_cb);
   return reinterpret_cast<void*>(sut);
 }
 
@@ -96,7 +85,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
         unload_samples_from_ram_cb_(unload_samples_from_ram_cb) {}
   ~QuerySampleLibraryTrampoline() override = default;
 
-  const std::string& Name() const override { return name_; }
+  const std::string& Name() override { return name_; }
   size_t TotalSampleCount() override { return total_sample_count_; }
   size_t PerformanceSampleCount() override { return performance_sample_count_; }
 
@@ -139,13 +128,15 @@ void DestroyQSL(void* qsl) {
 
 // mlperf::c::StartTest just forwards to mlperf::StartTest after doing the
 // proper cast.
-void StartTest(void* sut, void* qsl, const TestSettings& settings) {
+void StartTest(void* sut, void* qsl, const TestSettings& settings,
+               const std::string& audit_config_filename = "audit.config") {
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   QuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
   LogSettings default_log_settings;
-  mlperf::StartTest(sut_cast, qsl_cast, settings, default_log_settings);
+  mlperf::StartTest(sut_cast, qsl_cast, settings, default_log_settings,
+                    audit_config_filename);
 }
 
 void QuerySamplesComplete(QuerySampleResponse* responses,
@@ -154,10 +145,28 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
 }
 
 void QuerySamplesCompleteResponseCb(QuerySampleResponse* responses,
-                                    size_t response_count, ResponseCallback response_cb,
+                                    size_t response_count,
+                                    ResponseCallback response_cb,
                                     ClientData client_data) {
-  mlperf::QuerySamplesComplete(responses, response_count,
-      [client_data, response_cb] (QuerySampleResponse* response) {
+  mlperf::QuerySamplesComplete(
+      responses, response_count,
+      [client_data, response_cb](QuerySampleResponse* response) {
+        response_cb(client_data, response);
+      });
+}
+
+void FirstTokenComplete(QuerySampleResponse* responses,
+                          size_t response_count) {
+  mlperf::FirstTokenComplete(responses, response_count);
+}
+
+void FirstTokenCompleteResponseCb(QuerySampleResponse* responses,
+                                    size_t response_count,
+                                    ResponseCallback response_cb,
+                                    ClientData client_data) {
+  mlperf::FirstTokenComplete(
+      responses, response_count,
+      [client_data, response_cb](QuerySampleResponse* response) {
         response_cb(client_data, response);
       });
 }

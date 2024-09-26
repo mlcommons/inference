@@ -1,4 +1,4 @@
-FROM nvidia/cuda:11.1-cudnn8-devel-ubuntu16.04
+FROM nvidia/cuda:11.1.1-cudnn8-devel-ubuntu16.04
 
 ENV PYTHON_VERSION=3.7
 ENV LANG C.UTF-8
@@ -38,7 +38,9 @@ RUN pip install --upgrade pip && \
     ldconfig
 
 RUN conda install pytorch torchvision -c pytorch
-RUN pip install tensorflow onnxruntime-gpu
+RUN conda install tensorflow-gpu
+RUN pip install --upgrade pip
+RUN pip install onnxruntime-gpu
 RUN pip install Cython && pip install pycocotools
 
 

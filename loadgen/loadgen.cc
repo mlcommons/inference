@@ -21,16 +21,17 @@ limitations under the License.
 #include <cstring>
 #include <ctime>
 #include <fstream>
-#include <sstream>
 #include <future>
 #include <iomanip>
 #include <iostream>
 #include <queue>
 #include <random>
+#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
 
+#include "early_stopping.h"
 #include "issue_query_controller.h"
 #include "logging.h"
 #include "query_sample.h"
@@ -40,6 +41,7 @@ limitations under the License.
 #include "test_settings_internal.h"
 #include "utils.h"
 #include "version.h"
+#include "results.h"
 
 namespace mlperf {
 
@@ -50,7 +52,7 @@ namespace loadgen {
 /// loaded together.
 struct LoadableSampleSet {
   std::vector<QuerySampleIndex> set;
-  const size_t sample_distribution_end;  // Excludes padding in multi-stream.
+  const size_t sample_distribution_end;  // Excludes padding in MultiStream.
 };
 
 /// \brief Generates nanoseconds from a start time to multiple end times.
@@ -70,7 +72,8 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
   double accuracy_log_prob = 0.0f;
 
   void SampleComplete(SampleMetadata* sample, QuerySampleResponse* response,
-                      PerfClock::time_point complete_begin_time, const ResponseCallback& response_cb) override {
+                      PerfClock::time_point complete_begin_time,
+                      const ResponseCallback& response_cb) override {
     // Using a raw pointer here should help us hit the std::function
     // small buffer optimization code path when we aren't copying data.
     // For some reason, using std::unique_ptr<std::vector> wasn't moving
@@ -82,8 +85,9 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
             : sample->accuracy_log_val + accuracy_log_offset - 1.0;
     if (mode == TestMode::AccuracyOnly ||
         accuracy_log_val <= accuracy_log_prob) {
-      // if a response_cb callback is provided, data only needs to reside on the host *after* calling it
-      // note that the callback is blocking and will likely involve a memcpy from accelerator to host
+      // if a response_cb callback is provided, data only needs to reside on the
+      // host *after* calling it note that the callback is blocking and will
+      // likely involve a memcpy from accelerator to host
       if (response_cb) {
         response_cb(response);
       }
@@ -92,10 +96,10 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
       uint8_t* src_end = src_begin + response->size;
       sample_data_copy = new std::vector<uint8_t>(src_begin, src_end);
     }
-    Log([sample, complete_begin_time, sample_data_copy](AsyncLog& log) {
+    int64_t n_tokens = response->n_tokens;
+    Log([sample, complete_begin_time, sample_data_copy, n_tokens](AsyncLog& log) {
       QueryMetadata* query = sample->query_metadata;
       DurationGeneratorNs sched{query->scheduled_time};
-
       if (scenario == TestScenario::Server) {
         // Trace the server scenario as a stacked graph via counter events.
         DurationGeneratorNs issued{query->issued_start_time};
@@ -116,7 +120,7 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
 
       if (sample_data_copy) {
         log.LogAccuracy(sample->sequence_id, sample->sample_index,
-                        LogBinaryAsHexString{sample_data_copy});
+                        LogBinaryAsHexString{sample_data_copy}, n_tokens);
         delete sample_data_copy;
       }
 
@@ -124,6 +128,50 @@ struct ResponseDelegateDetailed : public ResponseDelegate {
       // thread and potentially destroy the metadata being used above.
       QuerySampleLatency latency = sched.delta(complete_begin_time);
       log.RecordSampleCompletion(sample->sequence_id, complete_begin_time,
+                                 latency, n_tokens);
+    });
+  }
+
+    void TokenComplete(SampleMetadata* sample, QuerySampleResponse* response,
+                      PerfClock::time_point complete_begin_time,
+                      const ResponseCallback& response_cb) override {
+    // Using a raw pointer here should help us hit the std::function
+    // small buffer optimization code path when we aren't copying data.
+    // For some reason, using std::unique_ptr<std::vector> wasn't moving
+    // into the lambda; even with C++14.
+    std::vector<uint8_t>* token_data_copy = nullptr;
+    double accuracy_log_val =
+        sample->accuracy_log_val + accuracy_log_offset < 1.0
+            ? sample->accuracy_log_val + accuracy_log_offset
+            : sample->accuracy_log_val + accuracy_log_offset - 1.0;
+    if (mode == TestMode::AccuracyOnly ||
+        accuracy_log_val <= accuracy_log_prob) {
+      uint8_t* src_begin = reinterpret_cast<uint8_t*>(response->data);
+      uint8_t* src_end = src_begin + response->size;
+      token_data_copy = new std::vector<uint8_t>(src_begin, src_end);
+    }
+    Log([sample, complete_begin_time, token_data_copy](AsyncLog& log) {
+      QueryMetadata* query = sample->query_metadata;
+      DurationGeneratorNs sched{query->scheduled_time};
+      if (scenario == TestScenario::Server) {
+        DurationGeneratorNs issued{query->issued_start_time};
+        log.TraceCounterEvent("Token_Latency", query->scheduled_time, "issue_delay",
+                              sched.delta(query->issued_start_time),
+                              "issue_to_done",
+                              issued.delta(complete_begin_time));
+      }else{
+        log.TraceSample("Token", sample->sequence_id, query->scheduled_time,
+                      complete_begin_time, "sample_seq", sample->sequence_id,
+                      "query_seq", query->sequence_id, "sample_idx",
+                      sample->sample_index, "issue_start_ns",
+                      sched.delta(query->issued_start_time), "complete_ns",
+                      sched.delta(complete_begin_time));
+      }
+      if (token_data_copy) {
+        log.CacheToken(sample->sequence_id, LogBinaryAsHexString{token_data_copy});
+      }
+      QuerySampleLatency latency = sched.delta(complete_begin_time);
+      log.RecordTokenCompletion(sample->sequence_id, complete_begin_time,
                                  latency);
     });
   }
@@ -179,6 +227,23 @@ auto SampleDistribution<TestMode::PerformanceOnly>(size_t sample_count,
              auto& gen) mutable { return dist(gen); };
 }
 
+/// \brief Sample across the dataset, and ensure coverage of each of the samples.
+// Useful for non-uniform dataset (e.g. Llama2, GPTJ, 3d-unet)
+auto SampleDistributionEqualIssue(size_t sample_count, size_t set_size,
+                                  std::mt19937* rng) {
+  std::vector<size_t> indices;
+  std::vector<size_t> shuffle_indices(set_size);
+  std::iota(shuffle_indices.begin(), shuffle_indices.end(), 0);
+  for (size_t j = 0; j < sample_count; j += set_size) {
+    std::shuffle(shuffle_indices.begin(), shuffle_indices.end(), *rng);
+    indices.insert(indices.end(), shuffle_indices.begin(),
+                   shuffle_indices.end());
+  }
+  return [indices = std::move(indices), i = size_t(0)](auto& /*gen*/) mutable {
+    return indices.at((i++) % indices.size());
+  };
+}
+
 /// \brief Generates queries for the requested settings, templated by
 /// scenario and mode.
 /// \todo Make GenerateQueries faster.
@@ -213,8 +278,7 @@ std::vector<QueryMetadata> GenerateQueries(
   }
 
   // We should not exit early in accuracy mode.
-  if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique ||
-      settings.performance_issue_same) {
+  if (mode == TestMode::AccuracyOnly || settings.performance_issue_unique) {
     gen_duration = std::chrono::microseconds(0);
     // Integer truncation here is intentional.
     // For MultiStream, loaded samples is properly padded.
@@ -229,8 +293,7 @@ std::vector<QueryMetadata> GenerateQueries(
   std::mt19937 sample_rng(settings.sample_index_rng_seed);
   std::mt19937 schedule_rng(settings.schedule_rng_seed);
 
-  constexpr bool kIsMultiStream = scenario == TestScenario::MultiStream ||
-                                  scenario == TestScenario::MultiStreamFree;
+  constexpr bool kIsMultiStream = scenario == TestScenario::MultiStream;
   const size_t sample_stride = kIsMultiStream ? samples_per_query : 1;
 
   auto sample_distribution = SampleDistribution<mode>(
@@ -241,8 +304,34 @@ std::vector<QueryMetadata> GenerateQueries(
   auto sample_distribution_unique = SampleDistribution<TestMode::AccuracyOnly>(
       loaded_sample_set.sample_distribution_end, sample_stride, &sample_rng);
 
+  auto sample_distribution_equal_issue =
+      SampleDistributionEqualIssue(min_queries,
+                                   loaded_samples.size(),
+                                   &sample_rng);
+
   auto schedule_distribution =
       ScheduleDistribution<scenario>(settings.target_qps);
+
+  // When sample_concatenate_permutation is turned on, pad to a multiple of the
+  // complete dataset to ensure fairness.
+  auto enable_equal_issue = settings.sample_concatenate_permutation;
+  if (mode != TestMode::AccuracyOnly && enable_equal_issue)
+  {
+    if (scenario == TestScenario::Offline &&
+      samples_per_query % loaded_samples.size() != 0)
+    {
+      // In offline mode, we pad samples_per_query
+      size_t pad_size =
+        (loaded_samples.size() - samples_per_query % loaded_samples.size());
+      samples_per_query += pad_size;
+    }
+    else if (min_queries % loaded_samples.size() != 0)
+    {
+      // In Server, SingleStream, MultiStream mode, the min_queries should be padded
+      size_t pad_size = (loaded_samples.size() - min_queries % loaded_samples.size());
+      min_queries += pad_size;
+    }
+  }
 
   std::vector<QuerySampleIndex> samples(samples_per_query);
   std::chrono::nanoseconds timestamp(0);
@@ -254,15 +343,15 @@ std::vector<QueryMetadata> GenerateQueries(
     if (kIsMultiStream) {
       QuerySampleIndex sample_i = settings.performance_issue_unique
                                       ? sample_distribution_unique(sample_rng)
-                                      : settings.performance_issue_same
-                                            ? same_sample
-                                            : sample_distribution(sample_rng);
+                                  : settings.performance_issue_same
+                                      ? same_sample
+                                      : sample_distribution(sample_rng);
       for (auto& s : samples) {
         // Select contiguous samples in the MultiStream scenario.
         // This will not overflow, since GenerateLoadableSets adds padding at
         // the end of the loadable sets in the MultiStream scenario.
         // The padding allows the starting samples to be the same for each
-        // query as the value of samples_per_query increases.
+        // query with respect to samples_per_query.
         s = loaded_samples[sample_i++];
       }
     } else if (scenario == TestScenario::Offline) {
@@ -275,29 +364,48 @@ std::vector<QueryMetadata> GenerateQueries(
       size_t num_full_repeats = samples_per_query / num_loaded_samples;
       uint64_t remainder = samples_per_query % (num_loaded_samples);
       if (settings.performance_issue_same) {
-        std::fill(samples.begin(), samples.begin() + num_loaded_samples,
+        std::fill(samples.begin(), samples.begin() + samples_per_query,
                   loaded_samples[same_sample]);
       } else {
         for (size_t i = 0; i < num_full_repeats; ++i) {
           std::copy(loaded_samples.begin(), loaded_samples.end(),
                     samples.begin() + i * num_loaded_samples);
+
+          if (settings.sample_concatenate_permutation) {
+            std::shuffle(samples.begin() + i * num_loaded_samples,
+                         samples.begin() + (i + 1) * num_loaded_samples,
+                         sample_rng);
+          }
         }
 
         std::copy(loaded_samples.begin(), loaded_samples.begin() + remainder,
                   samples.begin() + num_full_repeats * num_loaded_samples);
+
+        if (settings.sample_concatenate_permutation) {
+          assert(remainder == 0);
+        }
       }
     } else {
       for (auto& s : samples) {
         s = loaded_samples[settings.performance_issue_unique
-                               ? sample_distribution_unique(sample_rng)
-                               : settings.performance_issue_same
-                                     ? same_sample
-                                     : sample_distribution(sample_rng)];
+                           ? sample_distribution_unique(sample_rng)
+                           : settings.performance_issue_same
+                             ? same_sample
+                             : enable_equal_issue
+                               ? sample_distribution_equal_issue(sample_rng)
+                               : sample_distribution(sample_rng)];
       }
     }
     queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
     prev_timestamp = timestamp;
     timestamp += schedule_distribution(schedule_rng);
+    // In equal_issue mode, the min_queries will be bumped up by a multiple of the dataset size
+    // if the test time has not met the threshold.
+    if (enable_equal_issue && (queries.size() >= min_queries) &&
+      (prev_timestamp < gen_duration) && (scenario != TestScenario::Offline))
+    {
+      min_queries += loaded_samples.size();
+    }
   }
 
   // See if we need to create a "remainder" query for offline+accuracy to
@@ -329,20 +437,6 @@ std::vector<QueryMetadata> GenerateQueries(
   return queries;
 }
 
-/// \brief Provides performance results that are independent of scenario
-/// and other context.
-/// \todo Move to results.h/cc
-struct PerformanceResult {
-  std::vector<QuerySampleLatency> sample_latencies;
-  std::vector<QuerySampleLatency> query_latencies;  // MultiStream only.
-  std::vector<size_t> query_intervals;              // MultiStream only.
-  size_t queries_issued;
-  double max_latency;
-  double final_query_scheduled_time;         // seconds from start.
-  double final_query_issued_time;            // seconds from start.
-  double final_query_all_samples_done_time;  // seconds from start.
-};
-
 /// \brief Issues a series of pre-generated queries.
 // TODO: Templates for scenario and mode are overused, given the loadgen
 //       no longer generates queries on the fly. Should we reduce the
@@ -371,6 +465,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       settings.target_qps * settings.min_duration.count() / 1000;
   uint64_t minimum_queries =
       settings.min_query_count * settings.samples_per_query;
+
   if (scenario != TestScenario::Offline) {
     expected_queries *= settings.samples_per_query;
   } else {
@@ -440,6 +535,16 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   std::vector<QuerySampleLatency> sample_latencies(
       GlobalLogger().GetLatenciesBlocking(expected_latencies));
 
+  std::vector<QuerySampleLatency> first_token_latencies(
+    GlobalLogger().GetTokenLatencies(expected_latencies));
+
+  std::vector<QuerySampleLatency> time_per_output_token_arr(
+    GlobalLogger().GetTimePerOutputToken(expected_latencies));
+
+  std::vector<int64_t> tokens_per_sample(
+    GlobalLogger().GetTokensPerSample(expected_latencies));
+
+
   // Log contention counters after every test as a sanity check.
   GlobalLogger().LogContentionAndAllocations();
 
@@ -478,477 +583,27 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       DurationToSeconds(final_query.all_samples_done_time - start);
 
   std::vector<QuerySampleLatency> query_latencies;
-  std::vector<size_t> query_intervals;
-  if (scenario == TestScenario::MultiStream ||
-      scenario == TestScenario::MultiStreamFree) {
+  if (scenario == TestScenario::MultiStream) {
     query_latencies.resize(queries_issued);
-    query_intervals.resize(queries_issued);
     for (size_t i = 0; i < queries_issued; i++) {
       query_latencies[i] = DurationGeneratorNs{queries[i].scheduled_time}.delta(
           queries[i].all_samples_done_time);
-      if (i < queries_issued - settings.max_async_queries) {
-        // For all queries except the last few, take into account actual
-        // skipped intervals to the next query.
-        query_intervals[i] =
-            queries[i + settings.max_async_queries].scheduled_intervals;
-      } else {
-        // For the last queries, use query latency to guess if imaginary
-        // queries issued at the end would have skipped intervals.
-        query_intervals[i] =
-            std::ceil(settings.target_qps *
-                      QuerySampleLatencyToSeconds(query_latencies[i]));
-      }
     }
   }
 
   return PerformanceResult{std::move(sample_latencies),
-                           std::move(query_latencies),
-                           std::move(query_intervals),
-                           queries_issued,
-                           max_latency,
-                           final_query_scheduled_time,
-                           final_query_issued_time,
-                           final_query_all_samples_done_time};
-}
-
-/// \brief Wraps PerformanceResult with relevant context to change how
-/// it's interpreted and reported.
-/// \todo Move to results.h/cc
-struct PerformanceSummary {
-  std::string sut_name;
-  TestSettingsInternal settings;
-  PerformanceResult pr;
-
-  // Set by ProcessLatencies.
-  size_t sample_count = 0;
-  QuerySampleLatency sample_latency_min = 0;
-  QuerySampleLatency sample_latency_max = 0;
-  QuerySampleLatency sample_latency_mean = 0;
-
-  /// \brief The latency at a given percentile.
-  struct PercentileEntry {
-    const double percentile;
-    QuerySampleLatency sample_latency = 0;
-    QuerySampleLatency query_latency = 0;  // MultiStream only.
-    size_t query_intervals = 0;            // MultiStream only.
-  };
-  // Latency target percentile
-  PercentileEntry target_latency_percentile{settings.target_latency_percentile};
-  PercentileEntry latency_percentiles[6] = {{.50}, {.90}, {.95},
-                                            {.97}, {.99}, {.999}};
-
-#if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
-  // MSVC complains if there is no explicit constructor.
-  // (target_latency_percentile above depends on construction with settings)
-  PerformanceSummary(const std::string& sut_name_arg,
-                     const TestSettingsInternal& settings_arg,
-                     const PerformanceResult& pr_arg)
-      : sut_name(sut_name_arg), settings(settings_arg), pr(pr_arg){};
-#endif
-  void ProcessLatencies();
-
-  bool MinDurationMet(std::string* recommendation);
-  bool MinQueriesMet();
-  bool MinSamplesMet();
-  bool HasPerfConstraints();
-  bool PerfConstraintsMet(std::string* recommendation);
-  void LogSummary(AsyncSummary& summary);
-  void LogDetail(AsyncDetail& detail);
-};
-
-void PerformanceSummary::ProcessLatencies() {
-  if (pr.sample_latencies.empty()) {
-    return;
-  }
-
-  sample_count = pr.sample_latencies.size();
-
-  QuerySampleLatency accumulated_latency = 0;
-  for (auto latency : pr.sample_latencies) {
-    accumulated_latency += latency;
-  }
-  sample_latency_mean = accumulated_latency / sample_count;
-
-  std::sort(pr.sample_latencies.begin(), pr.sample_latencies.end());
-
-  target_latency_percentile.sample_latency =
-      pr.sample_latencies[sample_count * target_latency_percentile.percentile];
-  sample_latency_min = pr.sample_latencies.front();
-  sample_latency_max = pr.sample_latencies.back();
-  for (auto& lp : latency_percentiles) {
-    assert(lp.percentile >= 0.0);
-    assert(lp.percentile < 1.0);
-    lp.sample_latency = pr.sample_latencies[sample_count * lp.percentile];
-  }
-
-  // MultiStream only after this point.
-  if (settings.scenario != TestScenario::MultiStream &&
-      settings.scenario != TestScenario::MultiStreamFree) {
-    return;
-  }
-
-  // Calculate per-query stats.
-  size_t query_count = pr.queries_issued;
-  assert(pr.query_latencies.size() == query_count);
-  assert(pr.query_intervals.size() == query_count);
-  std::sort(pr.query_latencies.begin(), pr.query_latencies.end());
-  std::sort(pr.query_intervals.begin(), pr.query_intervals.end());
-  target_latency_percentile.query_latency =
-      pr.query_latencies[query_count * target_latency_percentile.percentile];
-  target_latency_percentile.query_intervals =
-      pr.query_intervals[query_count * target_latency_percentile.percentile];
-  for (auto& lp : latency_percentiles) {
-    lp.query_latency = pr.query_latencies[query_count * lp.percentile];
-    lp.query_intervals = pr.query_intervals[query_count * lp.percentile];
-  }
-}
-
-bool PerformanceSummary::MinDurationMet(std::string* recommendation) {
-  recommendation->clear();
-  const double min_duration = DurationToSeconds(settings.min_duration);
-  bool min_duration_met = false;
-  switch (settings.scenario) {
-    case TestScenario::Offline:
-      min_duration_met = pr.max_latency >= min_duration;
-      break;
-    case TestScenario::Server:
-      min_duration_met = pr.final_query_scheduled_time >= min_duration;
-      break;
-    case TestScenario::SingleStream:
-    case TestScenario::MultiStream:
-    case TestScenario::MultiStreamFree:
-      min_duration_met = pr.final_query_issued_time >= min_duration;
-      break;
-  }
-  if (min_duration_met) {
-    return true;
-  }
-
-  switch (settings.scenario) {
-    case TestScenario::SingleStream:
-      *recommendation =
-          "Decrease the expected latency so the loadgen pre-generates more "
-          "queries.";
-      break;
-    case TestScenario::MultiStream:
-      *recommendation =
-          "MultiStream should always meet the minimum duration. "
-          "Please file a bug.";
-      break;
-    case TestScenario::MultiStreamFree:
-      *recommendation =
-          "Increase the target QPS so the loadgen pre-generates more queries.";
-      break;
-    case TestScenario::Server:
-      *recommendation =
-          "Increase the target QPS so the loadgen pre-generates more queries.";
-      break;
-    case TestScenario::Offline:
-      *recommendation =
-          "Increase expected QPS so the loadgen pre-generates a larger "
-          "(coalesced) query.";
-      break;
-  }
-  return false;
-}
-
-bool PerformanceSummary::MinQueriesMet() {
-  return pr.queries_issued >= settings.min_query_count;
-}
-
-bool PerformanceSummary::MinSamplesMet() {
-  return sample_count >= settings.min_sample_count;
-}
-
-bool PerformanceSummary::HasPerfConstraints() {
-  return settings.scenario == TestScenario::MultiStream ||
-         settings.scenario == TestScenario::MultiStreamFree ||
-         settings.scenario == TestScenario::Server;
-}
-
-bool PerformanceSummary::PerfConstraintsMet(std::string* recommendation) {
-  recommendation->clear();
-  bool perf_constraints_met = true;
-  switch (settings.scenario) {
-    case TestScenario::SingleStream:
-      break;
-    case TestScenario::MultiStream:
-      ProcessLatencies();
-      if (target_latency_percentile.query_intervals >= 2) {
-        *recommendation = "Reduce samples per query to improve latency.";
-        perf_constraints_met = false;
-      }
-      break;
-    case TestScenario::MultiStreamFree:
-      ProcessLatencies();
-      if (target_latency_percentile.query_latency >
-          settings.target_latency.count()) {
-        *recommendation = "Reduce samples per query to improve latency.";
-        perf_constraints_met = false;
-      }
-      break;
-    case TestScenario::Server:
-      ProcessLatencies();
-      if (target_latency_percentile.sample_latency >
-          settings.target_latency.count()) {
-        *recommendation = "Reduce target QPS to improve latency.";
-        perf_constraints_met = false;
-      }
-      break;
-    case TestScenario::Offline:
-      break;
-  }
-  return perf_constraints_met;
-}
-
-void PerformanceSummary::LogSummary(AsyncSummary& summary) {
-  ProcessLatencies();
-
-  summary(
-      "================================================\n"
-      "MLPerf Results Summary\n"
-      "================================================");
-  summary("SUT name : ", sut_name);
-  summary("Scenario : ", ToString(settings.scenario));
-  summary("Mode     : ", ToString(settings.mode));
-
-  switch (settings.scenario) {
-    case TestScenario::SingleStream: {
-      summary(DoubleToString(target_latency_percentile.percentile * 100, 0) +
-                  "th percentile latency (ns) : ",
-              target_latency_percentile.sample_latency);
-      break;
-    }
-    case TestScenario::MultiStream: {
-      summary("Samples per query : ", settings.samples_per_query);
-      break;
-    }
-    case TestScenario::MultiStreamFree: {
-      double samples_per_second = pr.queries_issued *
-                                  settings.samples_per_query /
-                                  pr.final_query_all_samples_done_time;
-      summary("Samples per second : ", samples_per_second);
-      break;
-    }
-    case TestScenario::Server: {
-      // Subtract 1 from sample count since the start of the final sample
-      // represents the open end of the time range: i.e. [begin, end).
-      // This makes sense since:
-      // a) QPS doesn't apply if there's only one sample; it's pure latency.
-      // b) If you have precisely 1k QPS, there will be a sample exactly on
-      //    the 1 second time point; but that would be the 1001th sample in
-      //    the stream. Given the first 1001 queries, the QPS is
-      //    1000 queries / 1 second.
-      double qps_as_scheduled =
-          (sample_count - 1) / pr.final_query_scheduled_time;
-      summary("Scheduled samples per second : ",
-              DoubleToString(qps_as_scheduled));
-      break;
-    }
-    case TestScenario::Offline: {
-      double samples_per_second = sample_count / pr.max_latency;
-      summary("Samples per second: ", samples_per_second);
-      break;
-    }
-  }
-
-  std::string min_duration_recommendation;
-  std::string perf_constraints_recommendation;
-
-  bool min_duration_met = MinDurationMet(&min_duration_recommendation);
-  bool min_queries_met = MinQueriesMet() && MinSamplesMet();
-  bool perf_constraints_met =
-      PerfConstraintsMet(&perf_constraints_recommendation);
-  bool all_constraints_met =
-      min_duration_met && min_queries_met && perf_constraints_met;
-  summary("Result is : ", all_constraints_met ? "VALID" : "INVALID");
-  if (HasPerfConstraints()) {
-    summary("  Performance constraints satisfied : ",
-            perf_constraints_met ? "Yes" : "NO");
-  }
-  summary("  Min duration satisfied : ", min_duration_met ? "Yes" : "NO");
-  summary("  Min queries satisfied : ", min_queries_met ? "Yes" : "NO");
-
-  if (!all_constraints_met) {
-    summary("Recommendations:");
-    if (!perf_constraints_met) {
-      summary(" * " + perf_constraints_recommendation);
-    }
-    if (!min_duration_met) {
-      summary(" * " + min_duration_recommendation);
-    }
-    if (!min_queries_met) {
-      summary(
-          " * The test exited early, before enough queries were issued.\n"
-          "   See the detailed log for why this may have occurred.");
-    }
-  }
-
-  summary(
-      "\n"
-      "================================================\n"
-      "Additional Stats\n"
-      "================================================");
-
-  if (settings.scenario == TestScenario::SingleStream) {
-    double qps_w_lg = (sample_count - 1) / pr.final_query_issued_time;
-    double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(sample_latency_mean);
-    summary("QPS w/ loadgen overhead         : " + DoubleToString(qps_w_lg));
-    summary("QPS w/o loadgen overhead        : " + DoubleToString(qps_wo_lg));
-    summary("");
-  } else if (settings.scenario == TestScenario::Server) {
-    double qps_as_completed =
-        (sample_count - 1) / pr.final_query_all_samples_done_time;
-    summary("Completed samples per second    : ",
-            DoubleToString(qps_as_completed));
-    summary("");
-  } else if (settings.scenario == TestScenario::MultiStream ||
-             settings.scenario == TestScenario::MultiStreamFree) {
-    double ms_per_interval = std::milli::den / settings.target_qps;
-    summary("Intervals between each IssueQuery:  ", "qps", settings.target_qps,
-            "ms", ms_per_interval);
-    for (auto& lp : latency_percentiles) {
-      summary(DoubleToString(lp.percentile * 100) + " percentile : ",
-              lp.query_intervals);
-    }
-
-    summary("");
-    double target_ns = settings.target_latency.count();
-    double target_ms = target_ns * std::milli::den / std::nano::den;
-    summary("Per-query latency:  ", "target_ns",
-            settings.target_latency.count(), "target_ms", target_ms);
-    for (auto& lp : latency_percentiles) {
-      summary(
-          DoubleToString(lp.percentile * 100) + " percentile latency (ns)   : ",
-          lp.query_latency);
-    }
-
-    summary("");
-    summary("Per-sample latency:");
-  }
-
-  summary("Min latency (ns)                : ", sample_latency_min);
-  summary("Max latency (ns)                : ", sample_latency_max);
-  summary("Mean latency (ns)               : ", sample_latency_mean);
-  for (auto& lp : latency_percentiles) {
-    summary(
-        DoubleToString(lp.percentile * 100) + " percentile latency (ns)   : ",
-        lp.sample_latency);
-  }
-
-  summary(
-      "\n"
-      "================================================\n"
-      "Test Parameters Used\n"
-      "================================================");
-  settings.LogSummary(summary);
-}
-
-void PerformanceSummary::LogDetail(AsyncDetail& detail) {
-#if USE_NEW_LOGGING_FORMAT
-  ProcessLatencies();
-
-  // General validity checking
-  std::string min_duration_recommendation;
-  std::string perf_constraints_recommendation;
-  bool min_duration_met = MinDurationMet(&min_duration_recommendation);
-  bool min_queries_met = MinQueriesMet() && MinSamplesMet();
-  bool perf_constraints_met =
-      PerfConstraintsMet(&perf_constraints_recommendation);
-  bool all_constraints_met =
-      min_duration_met && min_queries_met && perf_constraints_met;
-
-  MLPERF_LOG(detail, "result_validity",
-             all_constraints_met ? "VALID" : "INVALID");
-  if (HasPerfConstraints()) {
-    MLPERF_LOG(detail, "result_perf_constraints_met", perf_constraints_met);
-  }
-  MLPERF_LOG(detail, "result_min_duration_met", min_duration_met);
-  MLPERF_LOG(detail, "result_min_queries_met", min_queries_met);
-  if (!all_constraints_met) {
-    std::string recommendation;
-    if (!perf_constraints_met) {
-      recommendation += perf_constraints_recommendation + " ";
-    }
-    if (!min_duration_met) {
-      recommendation += min_duration_recommendation + " ";
-    }
-    if (!min_queries_met) {
-      recommendation +=
-          "The test exited early, before enough queries were issued.";
-    }
-    MLPERF_LOG(detail, "result_invalid_reason", recommendation);
-  }
-
-  auto reportPerQueryLatencies = [&]() {
-    for (auto& lp : latency_percentiles) {
-      std::string percentile = DoubleToString(lp.percentile * 100);
-      MLPERF_LOG(detail,
-                  "result_" + percentile +
-                      "_percentile_num_intervals_between_queries",
-                  lp.query_intervals);
-      MLPERF_LOG(detail,
-                  "result_" + percentile + "_percentile_per_query_latency_ns",
-                  lp.query_latency);
-    }
-  };
-
-  // Per-scenario performance results.
-  switch (settings.scenario) {
-    case TestScenario::SingleStream: {
-      double qps_w_lg = (sample_count - 1) / pr.final_query_issued_time;
-      double qps_wo_lg = 1 / QuerySampleLatencyToSeconds(sample_latency_mean);
-      MLPERF_LOG(detail, "result_qps_with_loadgen_overhead", qps_w_lg);
-      MLPERF_LOG(detail, "result_qps_without_loadgen_overhead", qps_wo_lg);
-      break;
-    }
-    case TestScenario::MultiStreamFree: {
-      double samples_per_second = pr.queries_issued *
-                                  settings.samples_per_query /
-                                  pr.final_query_all_samples_done_time;
-      MLPERF_LOG(detail, "result_samples_per_second", samples_per_second);
-      reportPerQueryLatencies();
-      break;
-    }
-    case TestScenario::MultiStream: {
-      reportPerQueryLatencies();
-      break;
-    }
-    case TestScenario::Server: {
-      // Subtract 1 from sample count since the start of the final sample
-      // represents the open end of the time range: i.e. [begin, end).
-      // This makes sense since:
-      // a) QPS doesn't apply if there's only one sample; it's pure latency.
-      // b) If you have precisely 1k QPS, there will be a sample exactly on
-      //    the 1 second time point; but that would be the 1001th sample in
-      //    the stream. Given the first 1001 queries, the QPS is
-      //    1000 queries / 1 second.
-      double qps_as_scheduled =
-          (sample_count - 1) / pr.final_query_scheduled_time;
-      MLPERF_LOG(detail, "result_scheduled_samples_per_sec", qps_as_scheduled);
-      double qps_as_completed =
-          (sample_count - 1) / pr.final_query_all_samples_done_time;
-      MLPERF_LOG(detail, "result_completed_samples_per_sec", qps_as_completed);
-      break;
-    }
-    case TestScenario::Offline: {
-      double samples_per_second = sample_count / pr.max_latency;
-      MLPERF_LOG(detail, "result_samples_per_second", samples_per_second);
-      break;
-    }
-  }
-
-  // Detailed latencies
-  MLPERF_LOG(detail, "result_min_latency_ns", sample_latency_min);
-  MLPERF_LOG(detail, "result_max_latency_ns", sample_latency_max);
-  MLPERF_LOG(detail, "result_mean_latency_ns", sample_latency_mean);
-  for (auto& lp : latency_percentiles) {
-    MLPERF_LOG(detail,
-               "result_" + DoubleToString(lp.percentile * 100) +
-                   "_percentile_latency_ns",
-               lp.sample_latency);
-  }
-#endif
+                          std::move(query_latencies),
+                          queries_issued,
+                          max_latency,
+                          final_query_scheduled_time,
+                          final_query_issued_time,
+                          final_query_all_samples_done_time,
+                          TokenPerformanceResults{
+                            first_token_latencies,
+                            time_per_output_token_arr,
+                            tokens_per_sample
+                          }
+                        };
 }
 
 void LoadSamplesToRam(QuerySampleLibrary* qsl,
@@ -991,11 +646,9 @@ std::vector<LoadableSampleSet> GenerateLoadableSets(
 
   // Partition the samples into loadable sets.
   const size_t set_size = settings.performance_sample_count;
-  const size_t set_padding =
-      (settings.scenario == TestScenario::MultiStream ||
-       settings.scenario == TestScenario::MultiStreamFree)
-          ? settings.samples_per_query - 1
-          : 0;
+  const size_t set_padding = (settings.scenario == TestScenario::MultiStream)
+                                 ? settings.samples_per_query - 1
+                                 : 0;
   std::vector<QuerySampleIndex> loadable_set;
   loadable_set.reserve(set_size + set_padding);
 
@@ -1015,7 +668,7 @@ std::vector<LoadableSampleSet> GenerateLoadableSets(
   }
 
   // Add padding for the multi stream scenario. Padding allows the
-  // startings sample to be the same for all SUTs, independent of the value
+  // starting sample to be the same for all SUTs, independent of the value
   // of samples_per_query, while enabling samples in a query to be contiguous.
   for (auto& loadable_set : result) {
     auto& set = loadable_set.set;
@@ -1262,8 +915,6 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     });
   }
 
-  sut->ReportLatencyResults(pr.sample_latencies);
-
   PerformanceSummary perf_summary{sut->Name(), settings, std::move(pr)};
   LogSummary([perf_summary](AsyncSummary& summary) mutable {
     perf_summary.LogSummary(summary);
@@ -1298,9 +949,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 #endif
   });
 
-  if (scenario != TestScenario::MultiStream &&
-      scenario != TestScenario::MultiStreamFree &&
-      scenario != TestScenario::Server) {
+  if (scenario != TestScenario::Server) {
     LogDetail([unsupported_scenario = ToString(scenario)](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT
       MLPERF_LOG_ERROR(detail, "error_invalid_config",
@@ -1357,8 +1006,6 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
           msg);
 #endif
     });
-
-    sut->ReportLatencyResults(base_perf_summary.pr.sample_latencies);
 
     PerformanceSummary perf_summary{sut->Name(), base_settings,
                                     std::move(base_perf_summary.pr)};
@@ -1420,8 +1067,6 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     detail("FindPeakPerformance: Found peak performance field: " + field);
 #endif
   });
-
-  sut->ReportLatencyResults(perf_summary.pr.sample_latencies);
 
   LogSummary([perf_summary](AsyncSummary& summary) mutable {
     perf_summary.LogSummary(summary);
@@ -1493,8 +1138,6 @@ struct RunFunctions {
         return GetCompileTime<TestScenario::SingleStream>();
       case TestScenario::MultiStream:
         return GetCompileTime<TestScenario::MultiStream>();
-      case TestScenario::MultiStreamFree:
-        return GetCompileTime<TestScenario::MultiStreamFree>();
       case TestScenario::Server:
         return GetCompileTime<TestScenario::Server>();
       case TestScenario::Offline:
@@ -1514,7 +1157,8 @@ struct RunFunctions {
 
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,
-               const LogSettings& log_settings) {
+               const LogSettings& log_settings,
+               const std::string audit_config_filename) {
   GlobalLogger().StartIOThread();
 
   const std::string test_date_time = CurrentDateTimeISO8601();
@@ -1528,23 +1172,40 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                               &log_outputs.accuracy_out,
                               log_settings.log_output.copy_detail_to_stdout,
                               log_settings.log_output.copy_summary_to_stdout);
+            
+  GlobalLogger().SetUseTokens(requested_settings.use_token_latencies);
+  bool needs_first_token = (requested_settings.scenario != TestScenario::Offline);
+  GlobalLogger().SetNeedsFirstToken(needs_first_token);
 
   if (log_settings.enable_trace) {
     GlobalLogger().StartNewTrace(&log_outputs.trace_out, PerfClock::now());
   }
 
+  // measure sut->Name() response time
+  PerfClock::time_point pre_get_sut_name_ts = PerfClock::now();
+  const std::string& sut_name = sut->Name();
+  PerfClock::time_point post_get_sut_name_ts = PerfClock::now();
+
+  auto get_sut_name_duration_ns =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          post_get_sut_name_ts - pre_get_sut_name_ts)
+          .count();
+
   LogLoadgenVersion();
-  LogDetail([sut, qsl, test_date_time](AsyncDetail& detail) {
+  LogDetail([sut, qsl, test_date_time, &sut_name,
+             &get_sut_name_duration_ns](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT
     MLPERF_LOG(detail, "test_datetime", test_date_time);
-    MLPERF_LOG(detail, "sut_name", sut->Name());
+    MLPERF_LOG(detail, "sut_name", sut_name);
+    MLPERF_LOG(detail, "get_sut_name_duration_ns", get_sut_name_duration_ns);
     MLPERF_LOG(detail, "qsl_name", qsl->Name());
     MLPERF_LOG(detail, "qsl_reported_total_count", qsl->TotalSampleCount());
     MLPERF_LOG(detail, "qsl_reported_performance_count",
                qsl->PerformanceSampleCount());
 #else
     detail("Date + time of test: ", test_date_time);
-    detail("System Under Test (SUT) name: ", sut->Name());
+    detail("System Under Test (SUT) name: ", sut_name);
+    detail("Get SUT name time [ns]: ", get_sut_name_duration_ns);
     detail("Query Sample Library (QSL) name: ", qsl->Name());
     detail("QSL total size: ", qsl->TotalSampleCount());
     detail("QSL performance size*: ", qsl->PerformanceSampleCount());
@@ -1555,7 +1216,6 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
 
   TestSettings test_settings = requested_settings;
   // Look for Audit Config file to override TestSettings during audit
-  const std::string audit_config_filename = "audit.config";
   if (FileExists(audit_config_filename)) {
     LogDetail([](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT
@@ -1574,6 +1234,25 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     const std::string generic_model = "*";
     test_settings.FromConfig(audit_config_filename, generic_model,
                              audit_scenario);
+  }
+  if(test_settings.test05){
+    // If the configuration indicates we are running test05,
+    // random seeds
+    LogDetail([](AsyncDetail& detail) {
+#if USE_NEW_LOGGING_FORMAT
+      MLPERF_LOG_WARNING(detail, "warning_generic_message",
+                         "Test05 flag detected"
+                         " Overriding random seeds");
+#else
+      detail(
+          "Test05 flag detected"
+          " Overriding random seeds");
+#endif
+    });
+    test_settings.mode = TestMode::PerformanceOnly;
+    test_settings.qsl_rng_seed = requested_settings.test05_qsl_rng_seed;
+    test_settings.sample_index_rng_seed = requested_settings.test05_sample_index_rng_seed;
+    test_settings.schedule_rng_seed = requested_settings.test05_schedule_rng_seed;
   }
 
   loadgen::TestSettingsInternal sanitized_settings(
@@ -1615,8 +1294,8 @@ void AbortTest() {
   GlobalLogger().StopIOThread();
 }
 
-void QuerySamplesComplete(QuerySampleResponse* responses,
-                          size_t response_count, const ResponseCallback& response_cb) {
+void QuerySamplesComplete(QuerySampleResponse* responses, size_t response_count,
+                          const ResponseCallback& response_cb) {
   PerfClock::time_point timestamp = PerfClock::now();
 
   auto tracer = MakeScopedTracer(
@@ -1637,8 +1316,32 @@ void QuerySamplesComplete(QuerySampleResponse* responses,
     loadgen::SampleMetadata* sample =
         reinterpret_cast<loadgen::SampleMetadata*>(response->id);
     loadgen::QueryMetadata* query = sample->query_metadata;
-    query->response_delegate->SampleComplete(sample, response, timestamp, response_cb);
+    query->response_delegate->SampleComplete(sample, response, timestamp,
+                                             response_cb);
   }
+  // PerfClock::time_point end_timestamp = PerfClock::now();
+  // mlperf::samples_overhead_acum += (end_timestamp - timestamp).count();
+}
+
+void FirstTokenComplete(QuerySampleResponse* responses, size_t response_count,
+                          const ResponseCallback& response_cb) {
+  PerfClock::time_point timestamp = PerfClock::now();
+
+  auto tracer = MakeScopedTracer(
+      [](AsyncTrace& trace) { trace("FirstTokenComplete"); });
+
+  const QuerySampleResponse* end = responses + response_count;
+
+  // Log samples.
+  for (QuerySampleResponse* response = responses; response < end; response++) {
+    loadgen::SampleMetadata* sample =
+        reinterpret_cast<loadgen::SampleMetadata*>(response->id);
+    loadgen::QueryMetadata* query = sample->query_metadata;
+    query->response_delegate->TokenComplete(sample, response, timestamp,
+                                             response_cb);
+  }
+  // PerfClock::time_point end_timestamp = PerfClock::now();
+  // mlperf::tokens_overhead_acum += (end_timestamp - timestamp).count();
 }
 
 }  // namespace mlperf

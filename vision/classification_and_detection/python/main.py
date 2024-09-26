@@ -23,6 +23,7 @@ import numpy as np
 import dataset
 import imagenet
 import coco
+import openimages
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -48,7 +49,19 @@ SUPPORTED_DATASETS = {
          {"image_size": [300, 300, 3]}),
     "coco-300-pt":
         (coco.Coco, dataset.pre_process_coco_pt_mobilenet, coco.PostProcessCocoPt(False,0.3),
-         {"image_size": [300, 300, 3]}),         
+         {"image_size": [300, 300, 3]}),
+    "openimages-300-retinanet":
+        (openimages.OpenImages, dataset.pre_process_openimages_retinanet, openimages.PostProcessOpenImagesRetinanet(False,0.05,300,300), 
+        {"image_size": [300, 300, 3]}),
+    "openimages-800-retinanet":
+        (openimages.OpenImages, dataset.pre_process_openimages_retinanet, openimages.PostProcessOpenImagesRetinanet(False,0.05,800,800), 
+        {"image_size": [800, 800, 3]}),
+    "openimages-1200-retinanet":
+        (openimages.OpenImages, dataset.pre_process_openimages_retinanet, openimages.PostProcessOpenImagesRetinanet(False,0.05,1200,1200), 
+        {"image_size": [1200, 1200, 3]}),
+    "openimages-800-retinanet-onnx":
+        (openimages.OpenImages, dataset.pre_process_openimages_retinanet, openimages.PostProcessOpenImagesRetinanet(False,0.05,800,800,False), 
+        {"image_size": [800, 800, 3]}),       
     "coco-1200":
         (coco.Coco, dataset.pre_process_coco_resnet34, coco.PostProcessCoco(),
          {"image_size": [1200, 1200, 3]}),
@@ -85,7 +98,7 @@ SUPPORTED_PROFILES = {
     "resnet50-pytorch": {
         "inputs": "image",
         "outputs": "ArgMax:0",
-        "dataset": "imagenet",
+        "dataset": "imagenet_pytorch",
         "backend": "tensorflow",
         "model-name": "resnet50",
     },
@@ -93,6 +106,12 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet",
         "outputs": "ArgMax:0",
         "backend": "onnxruntime",
+        "model-name": "resnet50",
+    },
+    "resnet50-ncnn": {
+        "dataset": "imagenet_pytorch",
+        "outputs": "out0",
+        "backend": "ncnn",
         "model-name": "resnet50",
     },
 
@@ -167,6 +186,23 @@ SUPPORTED_PROFILES = {
         "data-format": "NHWC",
         "model-name": "ssd-resnet34",
     },
+
+    # retinanet
+    "retinanet-pytorch": {
+        "inputs": "image",
+        "outputs": "boxes,labels,scores",
+        "dataset": "openimages-800-retinanet",
+        "backend": "pytorch-native",
+        "model-name": "retinanet",
+    },
+    "retinanet-onnxruntime": {
+        "inputs": "images",
+        "outputs": "boxes,labels,scores",
+        "dataset": "openimages-800-retinanet-onnx",
+        "backend": "onnxruntime",
+        "model-name": "retinanet",
+        "max-batchsize": 1
+    },
 }
 
 SCENARIO_MAP = {
@@ -199,6 +235,9 @@ def get_args():
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--qps", type=int, help="target qps")
     parser.add_argument("--cache", type=int, default=0, help="use cache")
+    parser.add_argument("--cache_dir", type=str, default=None, help="dir path for caching")
+    parser.add_argument("--preprocessed_dir", type=str, default=None, help="dir path for storing preprocessed images (overrides cache_dir)")
+    parser.add_argument("--use_preprocessed_dataset", action="store_true", help="use preprocessed dataset instead of the original")
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
     parser.add_argument("--debug", action="store_true", help="debug, turn traces on")
@@ -207,12 +246,15 @@ def get_args():
     parser.add_argument("--mlperf_conf", default="../../mlperf.conf", help="mlperf rules config")
     # file for user LoadGen settings such as target QPS
     parser.add_argument("--user_conf", default="user.conf", help="user config for user LoadGen settings such as target QPS")
+    # file for LoadGen audit settings
+    parser.add_argument("--audit_conf", default="audit.config", help="config for LoadGen audit settings")
 
     # below will override mlperf rules compliant settings - don't use for official submission
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
+    parser.add_argument("--performance-sample-count", type=int, help="performance sample count")
     parser.add_argument("--max-latency", type=float, help="mlperf max latency in pct tile")
-    parser.add_argument("--samples-per-query", type=int, help="mlperf multi-stream sample per query")
+    parser.add_argument("--samples-per-query", default=8, type=int, help="mlperf multi-stream samples per query")
     args = parser.parse_args()
 
     # don't use defaults in argparser. Instead we default to a dict, override that with a profile
@@ -243,6 +285,9 @@ def get_backend(backend):
     elif backend == "onnxruntime":
         from backend_onnxruntime import BackendOnnxruntime
         backend = BackendOnnxruntime()
+    elif backend == "tvm":
+        from backend_tvm import BackendTVM
+        backend = BackendTVM()
     elif backend == "null":
         from backend_null import BackendNull
         backend = BackendNull()
@@ -255,6 +300,9 @@ def get_backend(backend):
     elif backend == "tflite":
         from backend_tflite import BackendTflite
         backend = BackendTflite()
+    elif backend == "ncnn":
+        from backend_ncnn import BackendNCNN
+        backend = BackendNCNN()
     else:
         raise ValueError("unknown backend: " + backend)
     return backend
@@ -299,7 +347,7 @@ class RunnerBase:
             processed_results = self.post_process(results, qitem.content_id, qitem.label, self.result_dict)
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
-                self.result_timing.append(time.time() - qitem.start)
+            self.result_timing.append(time.time() - qitem.start)
         except Exception as ex:  # pylint: disable=broad-except
             src = [self.ds.get_item_loc(i) for i in qitem.content_id]
             log.error("thread: failed on contentid=%s, %s", src, ex)
@@ -420,11 +468,17 @@ def main():
     # find backend
     backend = get_backend(args.backend)
 
+     # If TVM, pass max_batchsize to the backend
+    if args.backend.startswith('tvm'):
+        backend.max_batchsize = args.max_batchsize
+        backend.arena_num = args.threads
+        backend.arena_size = 4
+
     # override image format if given
     image_format = args.data_format if args.data_format else backend.image_format()
 
     # --count applies to accuracy mode only and can be used to limit the number of images
-    # for testing. For perf model we always limit count to 200.
+    # for testing.
     count_override = False
     count = args.count
     if count:
@@ -432,19 +486,26 @@ def main():
 
     # dataset to use
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
+    if args.use_preprocessed_dataset:
+        pre_proc=None
     ds = wanted_dataset(data_path=args.dataset_path,
                         image_list=args.dataset_list,
                         name=args.dataset,
                         image_format=image_format,
                         pre_process=pre_proc,
                         use_cache=args.cache,
-                        count=count, **kwargs)
+                        count=count,
+                        cache_dir=args.cache_dir,
+                        preprocessed_dir=args.preprocessed_dir,
+                        threads=args.threads,
+                        **kwargs)
     # load model to backend
     model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
     final_results = {
         "runtime": model.name(),
         "version": model.version(),
         "time": int(time.time()),
+        "args": vars(args),
         "cmdline": str(args),
     }
 
@@ -457,6 +518,8 @@ def main():
     if not os.path.exists(user_conf):
         log.error("{} not found".format(user_conf))
         sys.exit(1)
+
+    audit_config = os.path.abspath(args.audit_conf)
 
     if args.output:
         output_dir = os.path.abspath(args.output)
@@ -489,11 +552,6 @@ def main():
 
     def flush_queries():
         pass
-
-    def process_latencies(latencies_ns):
-        # called by loadgen to show us the recorded latencies
-        global last_timeing
-        last_timeing = [t / NANO_SEC for t in latencies_ns]
 
     log_output_settings = lg.LogOutputSettings()
     log_output_settings.outdir = output_dir
@@ -530,16 +588,17 @@ def main():
         settings.multi_stream_samples_per_query = args.samples_per_query
     if args.max_latency:
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
-        settings.multi_stream_target_latency_ns = int(args.max_latency * NANO_SEC)
+        settings.multi_stream_expected_latency_ns = int(args.max_latency * NANO_SEC)
 
-    sut = lg.ConstructSUT(issue_queries, flush_queries, process_latencies)
-    qsl = lg.ConstructQSL(count, min(count, 500), ds.load_query_samples, ds.unload_query_samples)
+    performance_sample_count = args.performance_sample_count if args.performance_sample_count else min(count, 500)
+    sut = lg.ConstructSUT(issue_queries, flush_queries)
+    qsl = lg.ConstructQSL(count, performance_sample_count, ds.load_query_samples, ds.unload_query_samples)
 
     log.info("starting {}".format(scenario))
     result_dict = {"good": 0, "total": 0, "scenario": str(scenario)}
     runner.start_run(result_dict, args.accuracy)
 
-    lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
+    lg.StartTestWithLogSettings(sut, qsl, settings, log_settings, audit_config)
 
     if not last_timeing:
         last_timeing = runner.result_timing

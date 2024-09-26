@@ -60,8 +60,6 @@ class BASE_3DUNET_SUT:
         SUT is to perform each query and calls back to LoadGen with QuerySamplesComplete()
     flush_queries():
         not used
-    process_latencies(latencies_ns):
-        not used
     """
 
     def __init__(self, preprocessed_data_dir, performance_count):
@@ -78,8 +76,7 @@ class BASE_3DUNET_SUT:
                 number of query samples guaranteed to fit in memory
         """
         print("Constructing SUT...")
-        self.sut = lg.ConstructSUT(
-            self.issue_queries, self.flush_queries, self.process_latencies)
+        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("Finished constructing SUT.")
         self.qsl = get_kits_QSL(preprocessed_data_dir, performance_count)
 
@@ -183,12 +180,6 @@ class BASE_3DUNET_SUT:
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):
-        """
-        Unused; LoadGen requires override
-        """
-        pass
-
-    def process_latencies(self, latencies_ns):
         """
         Unused; LoadGen requires override
         """

@@ -1,0 +1,74 @@
+site_name: MLPerf Inference Documentation
+repo_url: https://github.com/mlcommons/inference
+theme:
+  name: material
+  logo: img/logo_v2.svg
+  favicon: img/logo_v2.svg
+  palette:
+    primary: deep purple
+    accent: green
+  features:
+    - content.tabs.link
+    - content.code.copy
+    - navigation.expand
+    - navigation.sections
+    - navigation.indexes
+    - navigation.instant
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.top
+    - toc.follow
+nav:
+  - Home:
+    - index.md
+    - Image Classification:
+      - ResNet50: benchmarks/image_classification/resnet50.md
+    - Text to Image:
+      - Stable Diffusion:
+        - Run Commands: benchmarks/text_to_image/sdxl.md
+        - Reproducibility:
+          - SCC24: benchmarks/text_to_image/reproducibility/scc24.md
+    - Object Detection:
+      - RetinaNet: benchmarks/object_detection/retinanet.md
+    - Medical Imaging:
+      - 3d-unet: benchmarks/medical_imaging/3d-unet.md
+    - Language Processing:
+      - Bert-Large:
+        - Run Commands: benchmarks/language/bert.md
+        - Reproducibility:
+          - IndySCC24: benchmarks/language/reproducibility/indyscc24-bert.md
+      - GPT-J: benchmarks/language/gpt-j.md
+      - LLAMA2-70B: benchmarks/language/llama2-70b.md
+      - MIXTRAL-8x7B: benchmarks/language/mixtral-8x7b.md
+    - Recommendation:
+      - DLRM-v2: benchmarks/recommendation/dlrm-v2.md
+  - Install CM:
+    - install/index.md
+  - Submission:
+    - Submission Generation: submission/index.md
+  - Release Notes:
+    - What's New: changelog/index.md
+    - Changelog: changelog/changelog.md
+
+markdown_extensions:
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.details
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+plugins:
+  - search
+  - macros
+  - site-urls
+  - redirects:
+      redirect_maps:
+        'benchmarks/index.md': 'index.md'

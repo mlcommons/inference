@@ -44,7 +44,7 @@ class Conv2d_tf(nn.Conv2d):
 
     def __init__(self, *args, **kwargs):
         super(Conv2d_tf, self).__init__(*args, **kwargs)
-        self.padding = kwargs.get("padding", "SAME")
+        self.padding = kwargs.get("padding", "same")
 
     def _compute_padding(self, input, dim):
         input_size = input.size(dim + 2)
@@ -60,7 +60,7 @@ class Conv2d_tf(nn.Conv2d):
 
     def forward(self, input):
         #import pdb; pdb.set_trace()
-        if self.padding == "VALID":
+        if self.padding == "valid":
             return F.conv2d(
                 input,
                 self.weight,

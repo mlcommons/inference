@@ -46,6 +46,12 @@ def get_args():
     parser.add_argument("--output", help="new submission directory")
     parser.add_argument("--submitter", required=True, help="filter to submitter")
     parser.add_argument("--backup", help="directory to store the original accuacy log")
+    parser.add_argument(
+        "--scenarios-to-skip",
+        help="Delimited list input of scenarios to skip. i.e. if you only have Offline results, pass in 'Server'",
+        type=str
+    )
+
 
     args = parser.parse_args()
     if not args.output and not args.backup:
@@ -81,6 +87,8 @@ def get_hash(fname):
 def truncate_file(fname):
     """Truncate file to 4K from start and 4K from end."""
     size = os.stat(fname).st_size
+    if size < VIEWABLE_SIZE:
+       return
     with open(fname, "r") as src:
         start = src.read(VIEWABLE_SIZE)
         src.seek(size - VIEWABLE_SIZE, 0)
@@ -93,7 +101,7 @@ def truncate_file(fname):
 
 def copy_submission_dir(src, dst, filter_submitter):
     for division in list_dir(src):
-        if division not in ["closed", "open"]:
+        if division not in ["closed", "open", "network"]:
             continue
         for submitter in list_dir(os.path.join(src, division)):
             if filter_submitter and submitter != filter_submitter:
@@ -102,7 +110,7 @@ def copy_submission_dir(src, dst, filter_submitter):
                             os.path.join(dst, division, submitter))
 
 
-def truncate_results_dir(filter_submitter, backup):
+def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
     """Walk result dir and 
        write a hash of mlperf_log_accuracy.json to accuracy.txt
        copy mlperf_log_accuracy.json to a backup location
@@ -110,7 +118,7 @@ def truncate_results_dir(filter_submitter, backup):
     """
     for division in list_dir("."):
         # we are looking at ./$division, ie ./closed
-        if division not in ["closed", "open"]:
+        if division not in ["closed", "open", "network"]:
             continue
 
         for submitter in list_dir(division):
@@ -129,6 +137,8 @@ def truncate_results_dir(filter_submitter, backup):
                 for system_desc in list_dir(log_path):
                     for model in list_dir(log_path, system_desc):
                         for scenario in list_dir(log_path, system_desc, model):
+                            if scenario in scenarios_to_skip:
+                                continue
                             for test in list_dir(log_path, system_desc, model, scenario):
 
                                 name = os.path.join(log_path, system_desc, model, scenario)
@@ -198,8 +208,16 @@ def main():
         src_dir = args.output
 
     os.chdir(src_dir)
+
+    if args.scenarios_to_skip:
+        scenarios_to_skip = [
+            scenario for scenario in args.scenarios_to_skip.split(',')
+        ]
+    else:
+        scenarios_to_skip = []
+
     # truncate results directory
-    truncate_results_dir(args.submitter, args.backup)
+    truncate_results_dir(args.submitter, args.backup, scenarios_to_skip)
 
     backup_location = args.output or args.backup
     log.info("Make sure you keep a backup of %s in case mlperf wants to see the original accuracy logs", backup_location)

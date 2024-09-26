@@ -69,7 +69,7 @@ def get_args():
                                      formatter_class=argparse.RawTextHelpFormatter)
 
     parser.add_argument("--backend",
-                        choices=["pytorch", "onnxruntime", "tensorflow"],
+                        choices=["pytorch", "pytorch_checkpoint", "onnxruntime", "tensorflow"],
                         default="pytorch",
                         help="Backend")
     parser.add_argument("--scenario",
@@ -85,6 +85,9 @@ def get_args():
     parser.add_argument("--user_conf",
                         default="user.conf",
                         help="user config for user LoadGen settings such as target QPS")
+    parser.add_argument("--audit_conf",
+                        default="audit.conf",
+                        help="audit config for LoadGen settings during compliance runs")
     parser.add_argument("--model",
                         default="build/model/3dunet_kits19_pytorch.ptc",
                         help="Path to PyTorch, ONNX, or TF model")
@@ -93,7 +96,7 @@ def get_args():
                         help="path to preprocessed data")
     parser.add_argument("--performance_count",
                         type=int,
-                        default=16,
+                        default=None,
                         help="performance count")
     args = parser.parse_args()
     return args
@@ -123,6 +126,8 @@ def main():
     # instantiate SUT as per requested backend; QSL is also instantiated
     if args.backend == "pytorch":
         from pytorch_SUT import get_sut
+    elif args.backend == "pytorch_checkpoint":
+        from pytorch_checkpoint_SUT import get_sut
     elif args.backend == "onnxruntime":
         from onnxruntime_SUT import get_sut
     elif args.backend == "tensorflow":
@@ -143,7 +148,7 @@ def main():
         settings.mode = lg.TestMode.PerformanceOnly
 
     # set up mlperf logger
-    log_path = Path("build", "logs").absolute()
+    log_path = Path(os.environ.get("LOG_PATH", os.path.join("build", "logs"))).absolute()
     log_path.mkdir(parents=True, exist_ok=True)
     log_output_settings = lg.LogOutputSettings()
     log_output_settings.outdir = str(log_path)
@@ -153,12 +158,12 @@ def main():
 
     # start running test, from LoadGen
     print("Running Loadgen test...")
-    lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings)
+    lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings, args.audit_conf)
 
     # if needed check accuracy
-    if args.accuracy:
+    if args.accuracy and not os.environ.get('SKIP_VERIFY_ACCURACY', False):
         print("Checking accuracy...")
-        cmd = "python3 accuracy_kits.py"
+        cmd = f"python3 accuracy_kits.py --preprocessed_data_dir={args.preprocessed_data_dir} --log_file={os.path.join(log_path, 'mlperf_log_accuracy.json')}"
         subprocess.check_call(cmd, shell=True)
 
     # all done

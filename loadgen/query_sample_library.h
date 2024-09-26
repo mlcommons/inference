@@ -17,8 +17,8 @@ limitations under the License.
 #define MLPERF_LOADGEN_QUERY_SAMPLE_LIBRARY_H
 
 #include <memory>
-#include <vector>
 #include <string>
+#include <vector>
 
 #include "query_sample.h"
 
@@ -34,7 +34,7 @@ class QuerySampleLibrary {
   virtual ~QuerySampleLibrary() {}
 
   /// \brief A human readable name for the model.
-  virtual const std::string& Name() const = 0;
+  virtual const std::string& Name() = 0;
 
   /// \brief Total number of samples in library.
   virtual size_t TotalSampleCount() = 0;

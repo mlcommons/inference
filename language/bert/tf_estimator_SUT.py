@@ -39,13 +39,13 @@ class BERT_TF_ESTIMATOR_SUT():
 
         model_fn = self.model_fn_builder(
             bert_config=bert_config,
-            init_checkpoint="build/data/bert_tf_v1_1_large_fp32_384_v2/model.ckpt-5474")
+            init_checkpoint=os.environ.get("ML_MODEL_FILE_WITH_PATH", "build/data/bert_tf_v1_1_large_fp32_384_v2/model.ckpt-5474"))
 
         self.estimator = tf.estimator.Estimator(model_fn=model_fn)
         self.batch_size = batch_size
 
         print("Constructing SUT...")
-        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.process_latencies)
+        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         print("Finished constructing SUT.")
 
         self.qsl = get_squad_QSL()
@@ -76,9 +76,6 @@ class BERT_TF_ESTIMATOR_SUT():
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):
-        pass
-
-    def process_latencies(self, latencies_ns):
         pass
 
     def __del__(self):

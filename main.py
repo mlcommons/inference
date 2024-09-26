@@ -442,7 +442,7 @@ def define_env(env):
             if "short" in extra_variation_tags:
                 full_ds_needed_tag = ""
             else:
-                full_ds_needed_tag = "_full"
+                full_ds_needed_tag = "_full,"
 
 
             docker_setup_cmd = f"""\n

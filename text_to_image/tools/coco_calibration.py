@@ -89,7 +89,7 @@ if __name__ == "__main__":
         df_images = pd.DataFrame(images)
 
         # Calibration images 
-        with open(f"{calibration_dir}/coco_cal_images_list.txt") as f:
+        with open(f"{calibration_dir}/coco_cal_captions_list.txt") as f:
             calibration_ids = f.readlines()
             calibration_ids = [int(id.replace('\n', '')) for id in calibration_ids]
             calibration_ids = calibration_ids
@@ -118,5 +118,5 @@ if __name__ == "__main__":
         [_ for _ in tqdm.tqdm(pool.imap_unordered(download_img, tasks), total=len(tasks))]
     # Finalize annotations
     df_annotations[
-        ["id", "image_id", "caption", "height", "width", "file_name"]
+        ["id", "image_id", "caption", "height", "width", "file_name", "coco_url"]
     ].to_csv(f"{dataset_dir}/calibration/captions.tsv", sep="\t", index=False)

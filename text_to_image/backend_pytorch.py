@@ -17,10 +17,10 @@ class BackendPytorch(backend.Backend):
         model_id="xl",
         guidance=8,
         steps=20,
+        batch_size=1,
         device="cuda",
         precision="fp32",
         negative_prompt="normal quality, low quality, worst quality, low res, blurry, nsfw, nude",
-        seed=42
     ):
         super(BackendPytorch, self).__init__()
         self.model_path = model_path
@@ -45,7 +45,7 @@ class BackendPytorch(backend.Backend):
         self.steps = steps
         self.negative_prompt = negative_prompt
         self.max_length_neg_prompt = 77
-        self.seed = seed
+        self.batch_size = batch_size
 
     def version(self):
         return torch.__version__
@@ -315,20 +315,30 @@ class BackendPytorch(backend.Backend):
             pooled_prompt_embeds,
             negative_pooled_prompt_embeds,
         )
-
-    def predict(self, inputs):
-        images = []
-        with torch.no_grad():
-            for prompt in inputs:
+    
+    def prepare_inputs(self, inputs, i):
+        if self.batch_size == 1:
+            return self.encode_tokens(
+                self.pipe,
+                inputs[i]["input_tokens"],
+                inputs[i]["input_tokens_2"],
+                negative_prompt=self.negative_prompt_tokens,
+                negative_prompt_2=self.negative_prompt_tokens_2,
+            )
+        else:
+            prompt_embeds = []
+            negative_prompt_embeds = []
+            pooled_prompt_embeds = []
+            negative_pooled_prompt_embeds = []
+            for prompt in inputs[i:min(i+self.batch_size, len(inputs))]:
                 assert isinstance(prompt, dict)
                 text_input = prompt["input_tokens"]
                 text_input_2 = prompt["input_tokens_2"]
-                latents_input = prompt["latents"].to(self.dtype)
                 (
-                    prompt_embeds,
-                    negative_prompt_embeds,
-                    pooled_prompt_embeds,
-                    negative_pooled_prompt_embeds,
+                    p_e,
+                    n_p_e,
+                    p_p_e,
+                    n_p_p_e,
                 ) = self.encode_tokens(
                     self.pipe,
                     text_input,
@@ -336,7 +346,31 @@ class BackendPytorch(backend.Backend):
                     negative_prompt=self.negative_prompt_tokens,
                     negative_prompt_2=self.negative_prompt_tokens_2,
                 )
-                image = self.pipe(
+                prompt_embeds.append(p_e)
+                negative_prompt_embeds.append(n_p_e)
+                pooled_prompt_embeds.append(p_p_e)
+                negative_pooled_prompt_embeds.append(n_p_p_e)
+
+
+            prompt_embeds = torch.cat(prompt_embeds)
+            negative_prompt_embeds = torch.cat(negative_prompt_embeds)
+            pooled_prompt_embeds = torch.cat(pooled_prompt_embeds)
+            negative_pooled_prompt_embeds = torch.cat(negative_pooled_prompt_embeds)
+            return prompt_embeds, negative_prompt_embeds, pooled_prompt_embeds, negative_pooled_prompt_embeds
+
+    def predict(self, inputs):
+        images = []
+        with torch.no_grad():
+            for i in range(0, len(inputs), self.batch_size):
+                latents_input = [inputs[idx]["latents"] for idx in range(i, min(i+self.batch_size, len(inputs)))]
+                latents_input = torch.cat(latents_input).to(self.device)
+                (
+                    prompt_embeds,
+                    negative_prompt_embeds,
+                    pooled_prompt_embeds,
+                    negative_pooled_prompt_embeds,
+                ) = self.prepare_inputs(inputs, i)
+                generated = self.pipe(
                     prompt_embeds=prompt_embeds,
                     negative_prompt_embeds=negative_prompt_embeds,
                     pooled_prompt_embeds=pooled_prompt_embeds,
@@ -345,8 +379,7 @@ class BackendPytorch(backend.Backend):
                     num_inference_steps=self.steps,
                     output_type="pt",
                     latents=latents_input,
-                    generator=torch.Generator(device=self.device).manual_seed(self.seed)
-                ).images[0]
-                images.append(image)
+                ).images
+                images.extend(generated)
         return images
 

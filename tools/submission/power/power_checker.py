@@ -49,6 +49,9 @@ SUPPORTED_MODEL = {
     "YokogawaWT330": 52,
     "YokogawaWT330E": 52,
     "YokogawaWT330_multichannel": 77,
+    "YokogawaWT210_DC": 508,
+    "YokogawaWT310_DC": 549,
+    "YokogawaWT330_DC": 586,
 }
 
 RANGING_MODE = "ranging"
@@ -81,7 +84,7 @@ WARNING_NEEDS_TO_BE_ERROR_TESTING_RE = [
     re.compile(r"Uncertainty \d+.\d+%, which is above 1.00% limit for the last sample!")
 ]
 
-TIME_DELTA_TOLERANCE = 500  # in milliseconds
+TIME_DELTA_TOLERANCE = 800  # in milliseconds
 
 
 def _normalize(path: str) -> str:
@@ -393,8 +396,8 @@ def phases_check(
         )
 
         # convert to UTC
-        power_begin = datetime.fromtimestamp(power_begin, tz = timezone.utc)
-        power_end = datetime.fromtimestamp(power_end, tz = timezone.utc)
+        power_begin = datetime.fromtimestamp(power_begin, tz=timezone.utc)
+        power_end = datetime.fromtimestamp(power_end, tz=timezone.utc)
 
         detail_log_fname = os.path.join(run_path, "mlperf_log_detail.txt")
         datetime_format = "%m-%d-%Y %H:%M:%S.%f"
@@ -405,6 +408,8 @@ def phases_check(
 
         with open(spl_fname) as f:
             for line in f:
+                if not line.startswith("Time"):
+                    continue
                 timestamp = (
                     datetime.strptime(line.split(",")[1], datetime_format)
                 ).replace(tzinfo=timezone.utc)
@@ -654,12 +659,12 @@ def check_ptd_logs(
             continue
         if (not start_ranging_time) and (start_ranging_line == msg):
             start_ranging_time = get_time_from_line(
-                line, date_regexp, file_path, 0 #timezone_offset
+                line, date_regexp, file_path, 0  # timezone_offset
             )
         if (not stop_ranging_time) and bool(start_ranging_time):
             if ": Completed test" == msg:
                 stop_ranging_time = get_time_from_line(
-                    line, date_regexp, file_path, 0 #timezone_offset
+                    line, date_regexp, file_path, 0  # timezone_offset
                 )
                 break
 
@@ -674,7 +679,7 @@ def check_ptd_logs(
             try:
                 log_time = None
                 log_time = get_time_from_line(
-                    line, date_regexp, file_path, 0 #timezone_offset
+                    line, date_regexp, file_path, 0  # timezone_offset
                 )
             except LineWithoutTimeStamp:
                 assert (

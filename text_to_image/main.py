@@ -111,7 +111,7 @@ def get_args():
     parser.add_argument(
         "--device",
         default="cuda",
-        choices=["cuda", "cpu"],
+        choices=["cuda", "cpu", "rocm"],
         help="device to run the benchmark",
     )
     parser.add_argument(
@@ -135,6 +135,11 @@ def get_args():
     parser.add_argument(
         "--audit_conf", default="audit.config", help="config for LoadGen audit settings"
     )
+    # arguments to save images
+    # pass this argument for official submission
+    # parser.add_argument("--output-images", action="store_true", help="Store a subset of the generated images")
+    # do not modify this argument for official submission
+    parser.add_argument("--ids-path", help="Path to caption ids", default="tools/sample_ids.txt")
 
     # below will override mlperf rules compliant settings - don't use for official submission
     parser.add_argument("--time", type=int, help="time to scan in seconds")
@@ -319,6 +324,7 @@ def main():
         precision=args.dtype,
         device=args.device,
         model_path=args.model_path,
+        batch_size=args.max_batchsize
     )
     if args.dtype == "fp16":
         dtype = torch.float16
@@ -371,6 +377,12 @@ def main():
         sys.exit(1)
 
     audit_config = os.path.abspath(args.audit_conf)
+    
+    if args.accuracy:
+        ids_path = os.path.abspath(args.ids_path)
+        with open(ids_path) as f:
+            saved_images_ids = [int(_) for _ in f.readlines()]
+
     if args.output:
         output_dir = os.path.abspath(args.output)
         os.makedirs(output_dir, exist_ok=True)
@@ -382,11 +394,18 @@ def main():
     count = ds.get_item_count()
 
     # warmup
-    ds.load_query_samples([0])
+    syntetic_str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit"
+    latents_pt = torch.rand(ds.latents.shape, dtype=dtype).to(args.device)
+    warmup_samples = [
+        {
+            "input_tokens": ds.preprocess(syntetic_str, model.pipe.tokenizer),
+            "input_tokens_2": ds.preprocess(syntetic_str, model.pipe.tokenizer_2),
+            "latents": latents_pt,
+        }
+        for _ in range(args.max_batchsize)
+    ]
     for i in range(5):
-        captions, _ = ds.get_samples([0])
-        _ = backend.predict(captions)
-    ds.unload_query_samples(None)
+        _ = backend.predict(warmup_samples)
 
     scenario = SCENARIO_MAP[args.scenario]
     runner_map = {
@@ -415,6 +434,8 @@ def main():
     settings = lg.TestSettings()
     settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
     settings.FromConfig(user_conf, args.model_name, args.scenario)
+    if os.path.exists(audit_config):
+        settings.FromConfig(audit_config, args.model_name, args.scenario)
     settings.scenario = scenario
     settings.mode = lg.TestMode.PerformanceOnly
     if args.accuracy:
@@ -461,6 +482,7 @@ def main():
     if args.accuracy:
         post_proc.finalize(result_dict, ds, output_dir=args.output)
         final_results["accuracy_results"] = result_dict
+        post_proc.save_images(saved_images_ids, ds)
 
     runner.finish()
     lg.DestroyQSL(qsl)

@@ -60,7 +60,7 @@ def process_query_async(query_samples, i_slice):
         response_token_info = response_token.buffer_info()
         response_token_data = response_token_info[0]
         response_token_size = response_token_info[1] * response_token.itemsize
-        mlperf_loadgen.FirstTokenComplete([mlperf_loadgen.QuerySampleResponse(s.id, response_token_data, response_token_size)])
+        # mlperf_loadgen.FirstTokenComplete([mlperf_loadgen.QuerySampleResponse(s.id, response_token_data, response_token_size)])
         time.sleep(.02)
         n_tokens = len(response_array)
         response_array = array.array("B", response_array.tobytes())

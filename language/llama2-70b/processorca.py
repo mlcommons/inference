@@ -19,9 +19,19 @@ import argparse
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from transformers import LlamaTokenizerFast
 from typing import Dict
+
+__doc__ = """
+This script takes the open_orca GPT4 dataset parquet and perform the following preprocessing and filtering steps:
+1. filter out all queries with non-ascii characters, except for normal unicode quotes and hyphens.
+2. filter out all queries with out-of-bound input/output sequence lengths
+3. filter out all queries with expected answers shorter than 2 words (known to cause issues for Llama2)
+4. filter out all queries with prompts that generate bad output texts using Llama2 models
+4. sample equally from the sub-dataset (i.e. COT, NIV, FLAN, T0) and form the final dataset.
+"""
 
 llama_prompt_system = "<s>[INST] <<SYS>>\n{}\n<</SYS>>\n\n{} [/INST]"
 llama_prompt_no_system = "<s>[INST] {} [/INST]"
@@ -41,6 +51,19 @@ def is_english(s):
     return True
 
 
+def _tokenize_helper(x, llama_tokenizer=None, append_response_init_token=True):
+    if not isinstance(x, str):
+        return []
+
+    tokens = llama_tokenizer(x)["input_ids"]
+
+    if append_response_init_token:
+        # Workaround to enable cheat checking for first token: Llama always outputs token 29871 first
+        # It is possible for submitters to just immediately output this token to achieve a very fast TTFT.
+        tokens.append(29871)
+    return tokens
+
+
 @dataclass
 class Keyphrase:
     col: str
@@ -53,11 +76,13 @@ class OpenOrcaDatasetGenerator:
     def __init__(self,
                  pq_path: os.PathLike,
                  model_dir: os.PathLike,
-                 io_token_limit: int):
+                 io_token_limit: int,
+                 calibration_subset_size: int = 1000):
         self.pq_path = Path(pq_path)
         self.model_dir = Path(model_dir)
         self.io_token_limit = io_token_limit
         self.keyphrases = []
+        self.calibration_subset_size = calibration_subset_size
 
     def load_parquet(self) -> pd.DataFrame:
         llama_tokenizer = LlamaTokenizerFast.from_pretrained(self.model_dir)
@@ -67,8 +92,11 @@ class OpenOrcaDatasetGenerator:
         print(f"Tokenizing input")
         df.rename(columns={'response': 'output'}, inplace=True)
         df['input'] = df.apply(format_llama_input, axis=1)
-        df['tok_input'] = df['input'].apply(lambda x: llama_tokenizer(x)['input_ids'] if isinstance(x, str) else [])
-        df['tok_output'] = df['output'].apply(lambda x: llama_tokenizer(x)['input_ids'] if isinstance(x, str) else [])
+
+        input_tokenizer = partial(_tokenize_helper, llama_tokenizer=llama_tokenizer)
+        output_tokenizer = partial(_tokenize_helper, llama_tokenizer=llama_tokenizer, append_response_init_token=False)
+        df['tok_input'] = df['input'].apply(input_tokenizer)
+        df['tok_output'] = df['output'].apply(output_tokenizer)
         tok = time.time()
         print(f"Loaded parquet and tokenized in {tok-tik} sec.")
         return df
@@ -86,7 +114,7 @@ class OpenOrcaDatasetGenerator:
         df['tok_input_length'] = df['tok_input'].apply(lambda x: len(x))
         df['tok_output_length'] = df['tok_output'].apply(lambda x: len(x))
 
-        # Filter based on sequence length (2048, 2048)
+        # Filter based on sequence length
         df = df[df["tok_input_length"] < self.io_token_limit]
         df = df[df["tok_output_length"] < self.io_token_limit]
         return df.reset_index(drop=True)
@@ -167,7 +195,11 @@ class OpenOrcaDatasetGenerator:
         sampled_df = sampled_df.reset_index(drop=True)
         return sampled_df
 
-    def generate(self, export_dir: os.PathLike, n_samples: int = 24576, use_cached: bool = True):
+    def generate(self,
+                 export_dir: os.PathLike,
+                 n_samples: int = 24576,
+                 use_cached: bool = True,
+                 calib_rng_seed: int = 12345):
         export_dir = Path(export_dir)
         if not export_dir.exists():
             print(f"Creating {export_dir}")
@@ -208,6 +240,13 @@ class OpenOrcaDatasetGenerator:
         sampled_fpath = export_dir / f"open_orca_gpt4_tokenized_llama.sampled_{n_samples}.pkl"
         sampled_df.to_pickle(sampled_fpath)
 
+        # Calibration dataset
+        calib_ds = sampled_df.sample(n=self.calibration_subset_size,
+                                     random_state=calib_rng_seed)
+        calib_ds = calib_ds.reset_index(drop=True)
+        calib_fpath = export_dir / f"open_orca_gpt4_tokenized_llama.calibration_{self.calibration_subset_size}.pkl"
+        calib_ds.to_pickle(calib_fpath)
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser()
@@ -215,11 +254,12 @@ def parse_arguments():
                         default='/raid/data/mlperf-llm/OpenOrca/1M-GPT4-Augmented.parquet',
                         help="the path to the open_orca GPT4 parquet.")
     parser.add_argument('--model_dir', type=str, default='/raid/data/mlperf-llm/Llama-2-70b-chat-hf')
-    parser.add_argument('--seqlen_limit', type=int, default=2048, help="Upper limit of the input/output sequence lengths")
+    parser.add_argument('--seqlen_limit', type=int, default=1024, help="Upper limit of the input/output sequence lengths")
     parser.add_argument('--export_dir', type=str,
                         default="/raid/data/mlperf-llm/OpenOrca/llama/filtered",
                         help="Path to the output pkl file.")
     parser.add_argument('--num_total_samples', type=int, default=24576, help="Number of samples to generate")
+    parser.add_argument('--calibration_subset_size', type=int, default=1000, help="Number of samples for calibration subset")
     return parser.parse_args()
 
 
@@ -229,6 +269,7 @@ if __name__ == "__main__":
         pq_path=args.dataset_pq_path,
         model_dir=args.model_dir,
         io_token_limit=args.seqlen_limit,
+        calibration_subset_size=args.calibration_subset_size,
     )
     ds_gen.generate(
         export_dir=args.export_dir,
@@ -236,4 +277,4 @@ if __name__ == "__main__":
     )
 
     # Sample command to run:
-    # python3 processorca.py --dataset_pq_path=/raid/data/mlperf-llm/OpenOrca/1M-GPT4-Augmented.parquet --model_dir=/raid/data/mlperf-llm/Llama-2-70b-chat-hf --seqlen_limit=2048 --export_dir=/raid/data/mlperf-llm/OpenOrca/llama/filtered --num_total_samples=24576
+    # python3 processorca.py --dataset_pq_path=/raid/data/mlperf-llm/OpenOrca/1M-GPT4-Augmented.parquet --model_dir=/raid/data/mlperf-llm/Llama-2-70b-chat-hf --seqlen_limit=1024 --export_dir=/raid/data/mlperf-llm/OpenOrca/llama/filtered --num_total_samples=24576

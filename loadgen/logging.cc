@@ -279,7 +279,8 @@ void AsyncLog::StopTrace() {
 }
 
 void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
-                           const LogBinaryAsHexString& response) {
+                           const LogBinaryAsHexString& response,
+                           int64_t n_tokens = 0) {
   std::unique_lock<std::mutex> lock(log_mutex_);
   if (!accuracy_out_) {
     return;
@@ -288,10 +289,15 @@ void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
   if (!use_tokens_){
     LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
           response);
-  } else {
+  } else if (!needs_first_token_)
+  {
+    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
+          response, "token_count", n_tokens);
+  }
+  else {
     const size_t i = seq_id - latencies_first_sample_sequence_id_;
     LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "data",
-          response, "token_data", token_records_[i]);
+          response, "token_data", token_records_[i], "token_count", n_tokens);
   }
   
   *accuracy_out_ << " }";
@@ -349,6 +355,7 @@ void AsyncLog::RestartLatencyRecording(uint64_t first_sample_sequence_id,
   latencies_.reserve(latencies_to_reserve);
   token_latencies_.reserve(latencies_to_reserve);
   tokens_per_sample_.reserve(latencies_to_reserve);
+  time_per_output_token_.reserve(latencies_to_reserve);
 }
 
 void AsyncLog::RecordSampleCompletion(uint64_t sample_sequence_id,
@@ -403,10 +410,10 @@ void AsyncLog::RecordSampleCompletion(uint64_t sample_sequence_id,
   }
   
   if (use_tokens_){
-    if(token_latencies_.size() <= i){
+    if(needs_first_token_ && (token_latencies_.size() <= i)){
       MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
                           "Attempted to record a sample latency before it's first token latency");
-    }else if (token_latencies_[i] == kInvalidLatency){
+    }else if (needs_first_token_ && (token_latencies_[i] == kInvalidLatency)){
       MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
                           "Attempted to record a sample latency before it's first token latency");
     }
@@ -430,12 +437,40 @@ void AsyncLog::RecordSampleCompletion(uint64_t sample_sequence_id,
       // If the SUT recorded the wrong sample, the test will hang and see
       // the error above.
       return;
-    } else if (n_tokens <= 0){
+    } 
+    if (n_tokens == 0){
+      MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
+                            "n_tokens argument missing or attempted to record 0 as number of tokens");
+    } else if (n_tokens < 0){
       MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
                             "Attempted to record a negative number of tokens");
       n_tokens = 0;
+    } else if (n_tokens == 1){
+      MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
+                            "Number of tokens need to be greater than 1");
+      n_tokens = 0;
+    }
+    if (time_per_output_token_.size() <= i){
+      time_per_output_token_.resize(i + 1, kInvalidLatency);
+    } else if (time_per_output_token_[i] != kInvalidLatency) {
+      // Call LogErrorSync here since this kind of error could result in a
+      // segfault in the near future.
+  #if USE_NEW_LOGGING_FORMAT
+      MLPERF_LOG_ERROR_SYNC(GlobalLogger(), "error_runtime",
+                            "Attempted to complete a sample twice.");
+  #else
+      GlobalLogger().LogErrorSync("Attempted to complete a sample twice.");
+  #endif
+
+      // Return without recording the latency again to avoid potentially
+      // ending the test before the SUT is actually done, which could result
+      // in a segfault.
+      // If the SUT recorded the wrong sample, the test will hang and see
+      // the error above.
+      return;
     }
     tokens_per_sample_[i] = n_tokens;
+    time_per_output_token_[i] = (latency - token_latencies_[i]) / (n_tokens - 1);
   }
   latencies_[i] = latency;
   latencies_recorded_++;
@@ -569,6 +604,12 @@ std::vector<QuerySampleLatency> AsyncLog::GetTokenLatencies(size_t expected_coun
   return token_latencies;
 }
 
+std::vector<QuerySampleLatency> AsyncLog::GetTimePerOutputToken(size_t expected_count){
+  std::vector<QuerySampleLatency> tpot_latencies;
+  tpot_latencies.swap(time_per_output_token_);
+  return tpot_latencies;
+}
+
 std::vector<int64_t> AsyncLog::GetTokensPerSample(size_t expected_count) {
   std::vector<int64_t> tokens_per_sample;
   tokens_per_sample.swap(tokens_per_sample_);
@@ -586,6 +627,10 @@ QuerySampleLatency AsyncLog::GetMaxLatencySoFar() {
 
 void AsyncLog::SetUseTokens(bool use_tokens){
   use_tokens_ = use_tokens;
+}
+
+void AsyncLog::SetNeedsFirstToken(bool needs_first_token){
+  needs_first_token_ = needs_first_token;
 }
 
 /// \brief Records a single thread using thread-local storage and submits
@@ -901,6 +946,10 @@ std::vector<QuerySampleLatency> Logger::GetTokenLatencies(
     size_t expected_count) {
   return async_logger_.GetTokenLatencies(expected_count);
 }
+std::vector<QuerySampleLatency> Logger::GetTimePerOutputToken(
+    size_t expected_count) {
+  return async_logger_.GetTimePerOutputToken(expected_count);
+}
 std::vector<QuerySampleLatency> Logger::GetTokensPerSample(
     size_t expected_count) {
   return async_logger_.GetTokensPerSample(expected_count);
@@ -916,6 +965,10 @@ QuerySampleLatency Logger::GetMaxLatencySoFar() {
 
 void Logger::SetUseTokens(bool use_tokens){
   async_logger_.SetUseTokens(use_tokens);
+}
+
+void Logger::SetNeedsFirstToken(bool needs_first_token){
+  async_logger_.SetNeedsFirstToken(needs_first_token);
 }
 
 TlsLogger* Logger::GetTlsLoggerThatRequestedSwap(size_t slot, size_t next_id) {

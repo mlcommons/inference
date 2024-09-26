@@ -4,7 +4,7 @@ This is the reference implementation for MLPerf Inference benchmarks for Natural
 
 The chosen model is BERT-Large performing SQuAD v1.1 question answering task.
 
-Please see [this readme](README_cm.md) file for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/bert) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
 ## Prerequisites
 
@@ -47,12 +47,14 @@ Please run the following commands:
 
 ## Loadgen over the Network 
 
+```
+pip install cm4mlops
+```
+
 The below CM command will launch the SUT server
 
 ```
 cm run script --tags=generate-run-cmds,inference --model=bert-99 --backend=pytorch  \
---rerun --adr.mlperf-implementation.version=custom \
---adr.mlperf-implementation.tags=_repo.https://github.com/GATEOVerflow/inference \
 --mode=performance --device=cuda --quiet --test_query_count=1000 --network=sut
 ```
 
@@ -61,8 +63,6 @@ Once the SUT server is launched, the below command can be run on the loadgen nod
 
 ```
 cm run script --tags=generate-run-cmds,inference --model=bert-99 --backend=pytorch  --rerun \
---adr.mlperf-implementation.version=custom \
---adr.mlperf-implementation.tags=_repo.https://github.com/GATEOVerflow/inference \
 --mode=performance --device=cuda --quiet --test_query_count=1000  \
 --sut_servers,=http://localhost:8000 --network=lon
 ```

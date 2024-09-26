@@ -264,6 +264,12 @@ struct TestSettings {
   uint64_t performance_sample_count_override = 0;
   /// \brief Measure token latencies
   bool use_token_latencies = false;
+  /// Token latency parameters
+  uint64_t server_ttft_latency = 100000000;
+  uint64_t server_tpot_latency = 100000000;
+  /// \brief Infer token latencies
+  bool infer_token_latencies = false;
+  uint64_t token_latency_scaling_factor;
   /**@}*/
 };
 

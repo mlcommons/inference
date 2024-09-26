@@ -1,5 +1,3 @@
-
-
 CHECKPOINT_PATH="${CHECKPOINT_PATH:-meta-llama/Llama-2-70b-chat-hf}"
 DATASET_PATH="${DATASET_PATH:-open-orca-val-set.pkl}"
 

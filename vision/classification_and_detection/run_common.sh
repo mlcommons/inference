@@ -108,18 +108,21 @@ fi
 #
 # tflite
 #
-if [ $name == "resnet50-tflite" ] && [ $device == "tpu" ]; then
-    model_path="$MODEL_DIR/resnet50_quant_full_mlperf_edgetpu.tflite"
-    profile=resnet50-tflite
-    extra_args="$extra_args --backend tflite --device tpu"
-else
-    model_path="$MODEL_DIR/resnet50_v1.tflite"
-    profile=resnet50-tf
-    extra_args="$extra_args --backend tflite"
+if [ "$name" = "resnet50-tflite" ]; then
+  if [ "$device" = "tpu" ]; then
+      model_path="$MODEL_DIR/resnet50_quant_full_mlperf_edgetpu.tflite"
+      profile="resnet50-tflite"
+      extra_args="$extra_args --backend tflite --device tpu"
+  else
+      model_path="$MODEL_DIR/resnet50_v1.tflite"
+      profile="resnet50-tf"
+      extra_args="$extra_args --backend tflite"
+  fi
 fi
-if [ $name == "mobilenet-tflite" ] ; then
+
+if [ "$name" = "mobilenet-tflite" ]; then
     model_path="$MODEL_DIR/mobilenet_v1_1.0_224.tflite"
-    profile=mobilenet-tf
+    profile="mobilenet-tf"
     extra_args="$extra_args --backend tflite"
 fi
 

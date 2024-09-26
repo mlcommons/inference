@@ -51,7 +51,9 @@ TestSettingsInternal::TestSettingsInternal(
       sample_concatenate_permutation(false),
       use_token_latencies(requested.use_token_latencies),
       server_ttft_latency(requested.server_ttft_latency),
-      server_tpot_latency(requested.server_tpot_latency){
+      server_tpot_latency(requested.server_tpot_latency),
+      infer_token_latencies(requested.infer_token_latencies),
+      token_latency_scaling_factor(requested.token_latency_scaling_factor){
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -332,6 +334,8 @@ void LogRequestedTestSettings(const TestSettings &s) {
                s.performance_issue_same_index);
     MLPERF_LOG(detail, "requested_performance_sample_count_override",
                s.performance_sample_count_override);
+    MLPERF_LOG(detail, "requested_sample_concatenate_permutation",
+            s.sample_concatenate_permutation);
     // Token latencies specific values
     if (s.use_token_latencies){
       MLPERF_LOG(detail, "requested_use_token_latencies", s.use_token_latencies);
@@ -441,6 +445,8 @@ void TestSettingsInternal::LogEffectiveSettings() const {
                s.performance_issue_same_index);
     MLPERF_LOG(detail, "effective_performance_sample_count",
                s.performance_sample_count);
+    MLPERF_LOG(detail, "effective_sample_concatenate_permutation",
+               s.sample_concatenate_permutation);
 #else
     detail("");
     detail("Effective Settings:");
@@ -689,7 +695,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
            nullptr);
   lookupkv(model, scenario, "test05_schedule_rng_seed", &test05_schedule_rng_seed, nullptr);
 
-  // keys that apply to token metrics
+  // keys to measure token metrics
   if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)){
     use_token_latencies = (val == 1) ? true : false;
     if (use_token_latencies){
@@ -698,6 +704,13 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     }
   }
 
+  // keys to infer token metrics
+  if (lookupkv(model, scenario, "infer_token_latencies", &val, nullptr)){
+    infer_token_latencies = (val == 1) ? true : false;
+    if (infer_token_latencies){
+      lookupkv(model, scenario, "token_latency_scaling_factor", &token_latency_scaling_factor, nullptr, 1);
+    }
+  }
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
            &single_stream_target_latency_percentile, 0.01);

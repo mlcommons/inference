@@ -24,6 +24,15 @@ from pathlib import Path
 from transformers import LlamaTokenizerFast
 from typing import Dict
 
+__doc__ = """
+This script takes the open_orca GPT4 dataset parquet and perform the following preprocessing and filtering steps:
+1. filter out all queries with non-ascii characters, except for normal unicode quotes and hyphens.
+2. filter out all queries with out-of-bound input/output sequence lengths
+3. filter out all queries with expected answers shorter than 2 words (known to cause issues for Llama2)
+4. filter out all queries with prompts that generate bad output texts using Llama2 models
+4. sample equally from the sub-dataset (i.e. COT, NIV, FLAN, T0) and form the final dataset.
+"""
+
 llama_prompt_system = "<s>[INST] <<SYS>>\n{}\n<</SYS>>\n\n{} [/INST]"
 llama_prompt_no_system = "<s>[INST] {} [/INST]"
 
@@ -105,7 +114,7 @@ class OpenOrcaDatasetGenerator:
         df['tok_input_length'] = df['tok_input'].apply(lambda x: len(x))
         df['tok_output_length'] = df['tok_output'].apply(lambda x: len(x))
 
-        # Filter based on sequence length (2048, 2048)
+        # Filter based on sequence length
         df = df[df["tok_input_length"] < self.io_token_limit]
         df = df[df["tok_output_length"] < self.io_token_limit]
         return df.reset_index(drop=True)

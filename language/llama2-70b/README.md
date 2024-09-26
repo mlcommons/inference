@@ -2,12 +2,14 @@
 
 **Basic implementation for llama2-70b. Few noteworthy items:**
 
-+ Processing of Validation dataset is not finalized yet. Decision on input token lengths is pending
 + Streamer for communicating with loadgen has quite some overhead. This is only meant to provide functional implementation
 + For custom/optimized implementations of this benchmark it is important to include the :
-        - For server scenario, it is necesary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
+        - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
         - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
 
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama2-70b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+ 
 ## Prepare environment
 
 Copy the mlperf.conf file to this folder.
@@ -65,7 +67,7 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 
 ## Get Model
 ### MLCommons Members Download
-MLCommons hosts the model and preprocessed dataset for download exclusively by MLCommons Members. You must first agree to the [confidentiality notice](https://docs.google.com/forms/d/e/1FAIpQLSc_8VIvRmXM3I8KQaYnKf7gy27Z63BBoI_I1u02f4lw6rBp3g/viewform), then follow the link to a directory containing Rclone download instructions.
+MLCommons hosts the model and preprocessed dataset for download **exclusively by MLCommons Members**. You must first agree to the [confidentiality notice](https://llama2.mlcommons.org) using your organizational email address, then you will receive a link to a directory containing Rclone download instructions. _If you cannot access the form but you are part of a MLCommons Member organization, submit the [MLCommons subscription form](https://mlcommons.org/community/subscribe/) with your organizational email address and [associate a Google account](https://accounts.google.com/SignUpWithoutGmail) with your organizational email address._
 
 
 ### External Download
@@ -101,7 +103,7 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/open_orca ./open_orca -P
 
 ### Unprocessed
 
-You can also download and process the dataset yourself as follows:
+You can also download and process the dataset yourself following the command below:
 
 ```
 # First get the `open-orca` parquet from huggingface
@@ -118,6 +120,12 @@ python3 processorca.py --dataset_pq_path=${OPENORCA_PARQUET} --model_dir=${CHECK
 mv ${EXPORT_DIR}/open_orca_gpt4_tokenized_llama.sampled_24576.pkl ${DATASET_PATH}
 ```
 
+The script will perform the following steps on the original open_orca GPT4 dataset:
+- filter out all queries with non-ascii characters, except for normal unicode quotes and hyphens.
+- filter out all queries with out-of-bound input/output sequence lengths
+- filter out all queries with expected answers shorter than 2 words (known to cause issues for Llama2)
+- filter out all queries with prompts that generate bad output texts using Llama2 models
+- sample equally from the sub-dataset (i.e. COT, NIV, FLAN, T0) and form the final dataset.
 
 ## Run Performance Benchmarks
 

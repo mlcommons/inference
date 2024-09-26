@@ -1,0 +1,63 @@
+# Use Ubuntu 22.04 as the base image
+FROM ubuntu:22.04
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Update package lists
+RUN apt-get update
+
+# Install Python 3 and pip
+RUN apt-get install -y python3 python3-pip git
+
+# Set Python 3 as the default python interpreter
+RUN ln -s /usr/bin/python3 /usr/bin/python
+
+# Verify installation
+RUN python --version
+RUN pip --version
+RUN git --version
+
+# Install requirements
+RUN pip install transformers nltk==3.8.1 evaluate==0.4.0 absl-py==1.4.0 rouge-score==0.1.2 sentencepiece==0.1.99 accelerate==0.21.0 huggingface-cli
+
+# Clone and install mxeval
+RUN git clone https://github.com/amazon-science/mxeval.git
+RUN pip install -e mxeval
+
+# Get language dependencies
+RUN apt install -y wget
+
+# Ruby
+RUN apt install -y curl libssl-dev libreadline-dev zlib1g-dev autoconf bison build-essential libyaml-dev libreadline-dev libncurses5-dev libffi-dev libgdbm-dev
+
+# PHP
+RUN apt install -y software-properties-common ca-certificates lsb-release apt-transport-https
+RUN add-apt-repository ppa:ondrej/php
+RUN apt-get update
+RUN apt install -y php8.0
+# RUN apt install -y php-{pear,cgi,pdo,common,curl,mbstring,gd,mysqlnd,gettext,bcmath,json,xml,fpm,intl,zip}
+
+# JAVA
+RUN apt-get install -y openjdk-8-jdk
+
+# JAVASCRIPT
+RUN apt install -y npm
+
+# SCALA
+RUN apt-get install -y scala
+
+# C#
+RUN apt-get install -y dotnet6
+
+# Kotlin
+RUN apt install -y zip unzip
+
+SHELL ["/bin/bash", "-c"]
+WORKDIR "/mxeval"
+RUN sed -i 's/sudo//g' /mxeval/language_setup/ubuntu.sh
+RUN sed -i 's/source/PS1=1 source/g' /mxeval/language_setup/ubuntu.sh # Need this to make sure that the "source ~/.bashrc" lines work correctly
+RUN sed -i 's/npx tsc/tsc/g' /mxeval/mxeval/execution.py # npx tsc runs into permission issues
+
+RUN PATH="$HOME/.rbenv/bin:$PATH" bash /mxeval/language_setup/ubuntu.sh
+
+WORKDIR "/"
+CMD bash

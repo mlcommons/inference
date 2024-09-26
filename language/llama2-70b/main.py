@@ -4,12 +4,26 @@ import argparse
 import os
 import logging
 import sys
-from SUT import SUT, SUTServer
+import requests
+import json
 
 sys.path.insert(0, os.getcwd())
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("Llama-70B-MAIN")
+
+# function to check the model name in server matches the user specified one
+def verify_model_name(user_specified_name, url):
+    response = requests.get(url)
+    if response.status_code == 200:
+        response_dict = response.json()
+        server_model_name = response_dict["data"][0]["id"]
+        if user_specified_name == server_model_name:
+            return {"matched":True, "error":False}
+        else:
+            return {"matched":False, "error":f"User specified {user_specified_name} and server model name {server_model_name} mismatch!"}
+    else:
+        return {"matched":False, "error":f"Failed to get a valid response. Status code: {response.status_code}"}
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -23,9 +37,13 @@ def get_args():
     parser.add_argument("--mlperf-conf", type=str, default="mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user-conf", type=str, default="user.conf", help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--total-sample-count", type=int, default=24576, help="Number of samples to use in benchmark.") # TODO: This interpretation of 'total-sample-count' is a little misleading. Fix it
+    parser.add_argument("--batch-size", type=int, default=1, help="Model batch-size to use in benchmark.")
     parser.add_argument("--output-log-dir", type=str, default="output-logs", help="Where logs are saved")
     parser.add_argument("--enable-log-trace", action="store_true", help="Enable log tracing. This file can become quite large")
     parser.add_argument("--num-workers", type=int, default=1, help="Number of workers to process queries")
+    parser.add_argument("--vllm", action="store_true", help="vllm mode")
+    parser.add_argument("--api-model-name", type=str, default="meta-llama/Llama-2-70b-chat-hf", help="Model name(specified in llm server)")
+    parser.add_argument("--api-server", type=str, default=None, help="Specify an api endpoint call to use api mode")
 
     args = parser.parse_args()
     return args
@@ -36,13 +54,15 @@ scenario_map = {
     "server": lg.TestScenario.Server,
     }
 
-sut_map = {
-        "offline": SUT,
-        "server": SUTServer
-        }
-
 def main():
     args = get_args()
+    
+    if args.vllm:
+        resp = verify_model_name(args.api_model_name, args.api_server+"/v1/models")
+        if resp["error"]:
+            print(f"\n\n\033[91mError:\033[0m", end=" ")
+            print(resp["error"])
+            sys.exit(1)
 
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
@@ -52,7 +72,6 @@ def main():
 
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly
-        log.warning("Accuracy run will generate the accuracy logs, but the evaluation of the log is not completed yet")
     else:
         settings.mode = lg.TestMode.PerformanceOnly
 
@@ -64,15 +83,40 @@ def main():
     log_settings.log_output = log_output_settings
     log_settings.enable_trace = args.enable_log_trace
 
+    if args.vllm:
+        from SUT_API import SUT, SUTServer
+    else:
+        from SUT import SUT, SUTServer
+
+    sut_map = {
+        "offline": SUT,
+        "server": SUTServer
+        }
+
     sut_cls = sut_map[args.scenario.lower()]
 
-    sut = sut_cls(
-        model_path=args.model_path,
-        dtype=args.dtype,
-        dataset_path=args.dataset_path,
-        total_sample_count=args.total_sample_count,
-        device=args.device,
-    )
+    if args.vllm:
+        sut = sut_cls(
+            model_path=args.model_path,
+            dtype=args.dtype,
+            batch_size=args.batch_size,
+            dataset_path=args.dataset_path,
+            total_sample_count=args.total_sample_count,
+            device=args.device,
+            api_server=args.api_server,
+            api_model_name=args.api_model_name,
+            workers=args.num_workers
+        )
+    else:
+        sut = sut_cls(
+            model_path=args.model_path,
+            dtype=args.dtype,
+            batch_size=args.batch_size,
+            dataset_path=args.dataset_path,
+            total_sample_count=args.total_sample_count,
+            device=args.device,
+            workers=args.num_workers
+        )
 
     # Start sut before loadgen starts
     sut.start()

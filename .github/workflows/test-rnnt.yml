@@ -5,7 +5,7 @@ name: Test for MLPerf inference rnnt submission generation using CM script autom
 
 on:
   pull_request:
-    branches: [ "master", "dev" ]
+    branches: [ "master-retired", "dev-retired" ]
     paths:
       - speech_recognition/rnnt/**
       - tools/submission/**

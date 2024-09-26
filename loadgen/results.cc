@@ -400,17 +400,10 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
       //    the stream. Given the first 1001 queries, the QPS is
       //    1000 queries / 1 second.
       // TODO: make a more permanent solution
-      if (settings.use_token_latencies){
       double qps_as_completed =
         (sample_count - 1) / pr.final_query_all_samples_done_time;
       summary("Completed samples per second    : ",
               DoubleToString(qps_as_completed));
-    } else {
-      double qps_as_scheduled =
-          (sample_count - 1) / pr.final_query_scheduled_time;
-      summary("Scheduled samples per second : ",
-              DoubleToString(qps_as_scheduled));
-    }
       break;
     }
     case TestScenario::Offline: {
@@ -440,6 +433,32 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
         break;
       }
       case TestScenario::Server:
+        double tps_as_completed =
+            token_count / pr.final_query_all_samples_done_time;
+        summary("Completed tokens per second: ",
+                DoubleToString(tps_as_completed));
+        break;
+    }
+  }
+
+  if (settings.infer_token_latencies){
+    switch (settings.scenario) {
+      case TestScenario::SingleStream: {
+        break;
+      }
+      case TestScenario::MultiStream: {
+        break;
+      }
+      case TestScenario::Offline: {
+        double tokens_per_second = settings.token_latency_scaling_factor * sample_count / pr.max_latency;
+        summary("Tokens per second (inferred): ", tokens_per_second);
+        break;
+      }
+      case TestScenario::Server:
+        double tps_as_completed =
+          settings.token_latency_scaling_factor * (sample_count - 1) / pr.final_query_all_samples_done_time;
+        summary("Completed tokens per second (inferred): ",
+                DoubleToString(tps_as_completed));
         break;
     }
   }
@@ -526,19 +545,11 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
     summary("QPS w/o loadgen overhead        : " + DoubleToString(qps_wo_lg));
     summary("");
   } else if (settings.scenario == TestScenario::Server) {
-    // TODO: make a more permanent solution
-    if (!settings.use_token_latencies){
-      double qps_as_completed =
-        (sample_count - 1) / pr.final_query_all_samples_done_time;
-      summary("Completed samples per second    : ",
-              DoubleToString(qps_as_completed));
-    } else {
-      double qps_as_scheduled =
+    // Scheduled samples per second as an additional stat
+    double qps_as_scheduled =
           (sample_count - 1) / pr.final_query_scheduled_time;
       summary("Scheduled samples per second : ",
               DoubleToString(qps_as_scheduled));
-    }
-    summary("");
   } else if (settings.scenario == TestScenario::MultiStream) {
     summary("Per-query latency:  ");
     summary("Min latency (ns)                : ", query_latency_min);
@@ -661,6 +672,8 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
       recommendation +=
           "The test exited early, before enough queries were issued.";
     }
+    std::replace(recommendation.begin(),
+               recommendation.end(), '\n', ' ');
     MLPERF_LOG(detail, "result_invalid_reason", recommendation);
   }
   std::replace(early_stopping_recommendation.begin(),
@@ -772,13 +785,36 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
       MLPERF_LOG(detail, "result_time_to_output_token_min", time_per_output_token_min);
       MLPERF_LOG(detail, "result_time_to_output_token_max", time_per_output_token_max);
       MLPERF_LOG(detail, "result_time_to_output_token_mean", time_per_output_token_mean);
+      double tps_as_completed =
+            token_count / pr.final_query_all_samples_done_time;
+      MLPERF_LOG(detail, "result_completed_tokens_per_second", tps_as_completed);
     } else {
       double tokens_per_second = token_count / pr.max_latency;
       MLPERF_LOG(detail, "result_tokens_per_second", tokens_per_second);
     }
   }
+
+  if (settings.infer_token_latencies){
+    switch (settings.scenario) {
+      case TestScenario::Server: {
+        double completed_tokens_per_second = (sample_count - 1) * settings.token_latency_scaling_factor / pr.final_query_all_samples_done_time;
+        MLPERF_LOG(detail, "result_inferred_completed_tokens_per_second", completed_tokens_per_second);
+        break;
+      }
+      case TestScenario::Offline: {
+        double tokens_per_second = sample_count * settings.token_latency_scaling_factor / pr.max_latency;
+        MLPERF_LOG(detail, "result_inferred_tokens_per_second", tokens_per_second);
+        break;
+      }
+      case TestScenario::SingleStream: {
+        break;
+      }
+      case TestScenario::MultiStream: {
+        break;
+      }
+  }
 #endif
 }
-
+}
 }  // namespace loadgen
 } // namespace mlperf

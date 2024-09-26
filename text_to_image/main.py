@@ -111,7 +111,7 @@ def get_args():
     parser.add_argument(
         "--device",
         default="cuda",
-        choices=["cuda", "cpu"],
+        choices=["cuda", "cpu", "rocm"],
         help="device to run the benchmark",
     )
     parser.add_argument(

@@ -3,6 +3,8 @@ hide:
   - toc
 ---
 
+# Question Answering, Math, and Code Generation using Mixtral-8x7B
+
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
     

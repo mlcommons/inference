@@ -28,6 +28,8 @@ from setuptools import Extension
 from setuptools import setup
 from version_generator import generate_loadgen_version_definitions
 from pathlib import Path
+from pybind11 import get_include
+from pybind11.setup_helpers import Pybind11Extension, build_ext
 
 generated_version_source_filename = "generated/version_generated.cc"
 generate_loadgen_version_definitions(generated_version_source_filename, ".")
@@ -38,6 +40,9 @@ public_headers = [
     "query_sample_library.h",
     "system_under_test.h",
     "test_settings.h",
+    "issue_query_controller.h",
+    "early_stopping.h",
+    "query_dispatch_library.h",
 ]
 
 lib_headers = [
@@ -47,6 +52,8 @@ lib_headers = [
     "utils.h",
     "version.h",
     "results.h",
+    "bindings/c_api.h",
+    "version_generator.py"
 ]
 
 lib_sources = [
@@ -61,6 +68,7 @@ lib_sources = [
 ]
 
 lib_bindings = [
+    "bindings/c_api.cc",
     "bindings/python_api.cc",
 ]
 
@@ -72,17 +80,18 @@ mlperf_loadgen_sources = (mlperf_loadgen_sources_no_gen +
 mlperf_long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 
-mlperf_loadgen_module = Extension(
+mlperf_loadgen_module = Pybind11Extension(
         "mlperf_loadgen",
-        define_macros=[("MAJOR_VERSION", "3"), ("MINOR_VERSION", "1")],
-        include_dirs=[".", "../third_party/pybind/include"],
+        define_macros=[("MAJOR_VERSION", "4"), ("MINOR_VERSION", "1")],
+        include_dirs=[".", get_include()],
         sources=mlperf_loadgen_sources,
         depends=mlperf_loadgen_headers)
 
-setup(name="mlperf_loadgen",
-      version="3.1",
+setup(name="mlcommons_loadgen",
+      version="4.1",
       description="MLPerf Inference LoadGen python bindings",
       url="https://mlcommons.org/",
+      cmdclass={"build_ext": build_ext},
       ext_modules=[mlperf_loadgen_module],
       long_description=mlperf_long_description,
       long_description_content_type='text/markdown')

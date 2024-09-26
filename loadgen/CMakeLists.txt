@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.1)
 project(mlperf_loadgen)
 
 # The mlperf_loadgen version.
-set(mlperf_loadgen_VERSION_MAJOR 3)
+set(mlperf_loadgen_VERSION_MAJOR 4)
 set(mlperf_loadgen_VERSION_MINOR 1)
 message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}")
 

@@ -120,10 +120,10 @@ def main():
         print("num_perf_log_qsl_idx_match = {:}".format(num_perf_log_qsl_idx_match))
         print("num_perf_log_data_mismatch = {:}".format(num_perf_log_data_mismatch))
         print("num_missing_qsl_idxs = {:}".format(num_missing_qsl_idxs))
-        if num_perf_log_data_mismatch > 0 :
-            print("TEST FAIL\n");
-        else :
-            print("TEST PASS\n");
+        if num_perf_log_data_mismatch == 0 and num_perf_log_qsl_idx_match > 0:
+            print("TEST PASS\n")
+        else:
+            print("TEST FAIL\n")
         exit()
 
     py33 = sys.version_info >= (3,3)
@@ -146,6 +146,7 @@ def main():
     #print(num_perf_lines)
     
     num_perf_log_data_mismatch = 0
+    num_perf_log_data_match = 0
     print("Each dot represents 1% completion:")
     for perf_line in range(0, num_perf_lines):
         if perf_line % int(num_perf_lines/100) == 0:
@@ -170,15 +171,17 @@ def main():
 
         if perf_md5sum != acc_md5sum:
             num_perf_log_data_mismatch += 1
+        else:
+            num_perf_log_data_match += 1
 
     print("")
     print("num_acc_log_entries = {:}".format(num_acc_log_entries))
     print("num_perf_log_data_mismatch = {:}".format(num_perf_log_data_mismatch))
     print("num_perf_log_entries = {:}".format(num_perf_log_entries))
-    if num_perf_log_data_mismatch > 0 :
-        print("TEST FAIL\n");
-    else :
-        print("TEST PASS\n");
+    if num_perf_log_data_mismatch == 0 and num_perf_log_data_match > 0:
+        print("TEST PASS\n")
+    else:
+        print("TEST FAIL\n")
 
 if __name__ == '__main__':
 	main()

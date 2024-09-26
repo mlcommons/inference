@@ -6,11 +6,10 @@ Developers: Alexander Peskov, Thierry Moreau, Grigori Fursin
 import backend
 
 import tvm
+import numpy as np
 from tvm import auto_scheduler
 from tvm.contrib import graph_executor
 from tvm.runtime import vm as runtime_vm
-
-import numpy as np
 
 import os
 import multiprocessing
@@ -26,6 +25,8 @@ class BackendTVM(backend.Backend):
         self.executor_type = None
         self.max_batchsize = None
         self.pool = None
+        self.model_format = None
+        self.shape_dict = None
 
     def version(self):
         return tvm.__version__
@@ -36,7 +37,7 @@ class BackendTVM(backend.Backend):
 
     def image_format(self):
         """Requested image_format. Use a more popular layout NCHW"""
-        return "NCHW"
+        return "NHWC" if self.model_format == ".tflite" else "NCHW"
 
     def create_omp_args(self, arena_idx):
         idx_start = self.arena_size * arena_idx
@@ -58,13 +59,43 @@ class BackendTVM(backend.Backend):
     def set_omp_envs(omp_args):
         for env_arg in omp_args:
             os.environ[env_arg[0]] = env_arg[1]
+                
+    @staticmethod
+    def vmobj_to_list(o):
+        if isinstance(o, tvm.nd.NDArray):
+            result = [o.numpy()]
+        elif isinstance(o, tvm.runtime.container.ADT):
+            result = []
+            for f in o:
+                result.extend(BackendTVM.vmobj_to_list(f))
+        elif isinstance(o, tvm.relay.backend.interpreter.ConstructorValue):
+            if o.constructor.name_hint == "Cons":
+                tl = BackendTVM.vmobj_to_list(o.fields[1])
+                hd = BackendTVM.vmobj_to_list(o.fields[0])
+                hd.extend(tl)
+                result = hd
+            elif o.constructor.name_hint == "Nil":
+                result = []
+            elif "tensor_nil" in o.constructor.name_hint:
+                result = [0]
+            elif "tensor" in o.constructor.name_hint:
+                result = [o.fields[0].numpy()]
+            else:
+                raise RuntimeError(f"Unknown object type: {o.constructor.name_hint}")
+        else:
+            raise RuntimeError(f"Unknown object type: {type(o)}")
+        return result
 
     def load_impl(self, model_path, inputs, outputs, max_batchsize):
 
         self.max_batchsize = max_batchsize
-
+        _, self.model_format = os.path.splitext(model_path)
+        
         work_dir = os.path.dirname(model_path)
         compiled_model = os.path.join(work_dir, 'model-tvm.so')
+        
+        with open(os.path.join(work_dir, "input_layer_name"), 'r') as file:
+            self.input_layer_name = file.read().strip()
 
         if compiled_model.endswith('.so') or compiled_model.endswith('.dylib'):
             if not os.path.isfile(compiled_model):
@@ -136,10 +167,12 @@ class BackendTVM(backend.Backend):
         input_idx = self.inputs.index(iname)
         if self.executor_type == "virtual_machine":
             self.executor.set_input(
-                "main", **{"input_tensor:0": tvm.nd.array(item)})
-            result = self.executor.run()
-
-            return [result[0].asnumpy()[:batch_size], result[1].asnumpy()[:batch_size]]
+                "main", **{self.input_layer_name: tvm.nd.array(item)}
+            )
+            result = BackendTVM.vmobj_to_list(self.executor.run())
+            if self.model_format == ".tflite":
+                result = result[::-1]
+            return result
         else:
             self.executor.set_input(input_idx, tvm.nd.array(item))
             self.executor.run()
@@ -171,7 +204,6 @@ class BackendTVM(backend.Backend):
                                                        self.create_omp_args(0))
                                              )
 
-        # TODO(@apeskov): do we really have to return self ??
         return self
 
     def predict(self, feed):

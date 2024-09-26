@@ -2,6 +2,8 @@
 
 This is the reference implementation for MLCommons Inference benchmarks.
 
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/recommendation/dlrm-v2/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
 ### Supported Models
 
 **TODO: Decide benchmark name**
@@ -67,40 +69,78 @@ cd $HOME/mlcommons/inference/loadgen
 CFLAGS="-std=c++14" python setup.py develop --user
 ```
 
+### Download preprocessed Dataset
+
+Download the preprocessed dataset using Rclone.
+
+To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
+To install Rclone on Linux/macOS/BSD systems, run:
+```
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+Once Rclone is installed, run the following command to authenticate with the bucket:
+```
+rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
+```
+Prepare your dataset destination:
+```
+cd $HOME/mlcommons/inference/recommendation/dlrm_v2/pytorch/
+mkdir ./dataset && cd ./dataset
+mv <downloaded_file(s)> ./
+export DATA_DIR=./dataset
+```
+Download the dataset
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/dlrm_preprocessed ./dataset  -P
+```
+
+
 ### Downloading model weights
 
-File name | framework | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
--|-|-|-
+framework | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
+-|-|-
 N/A | pytorch | <2GB | -
-[weight_sharded](https://cloud.mlcommons.org/index.php/s/XzfSeLgW8FYfR3S/download) | pytorch | 97.31GB | -
+ pytorch | 97.31GB | -
 
-You can download the weights by running:
+#### CM method
+
+The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
+
 ```
-wget https://cloud.mlcommons.org/index.php/s/XzfSeLgW8FYfR3S/download -O weigths.zip
-unzip weights.zip
+pip install cm4mlops
+cm run script --tags=get,ml-model,dlrm,_pytorch,_weight_sharded,_rclone -j
 ```
-(optional) To speed future downloads, we recommend you to save the weights in a bucket (E.g GCP, AWS). For example, after saving the checkpoint in a GCP bucket, you can download the weights faster by running:
+
+#### Manual method
+
+The above command automatically runs a set of Rclone commands to download the data from a Cloudflare R2 bucket. However, if you'd like to run the Rclone commands manually, you can do so as follows:
+
+To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
+To install Rclone on Linux/macOS/BSD systems, run:
+```
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+Once Rclone is installed, run the following command to authenticate with the bucket:
+```
+rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
+```
+You can then navigate in the terminal to your desired download directory and run the following command to download the model weights:
+
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/model_weights ./model_weights -P
+```
+
+#### (optional) 
+
+To speed up future downloads, we recommend you save the weights in a bucket (E.g GCP, AWS). For example, after saving the checkpoint in a GCP bucket, you can download the weights faster by running:
 ```
 export BUCKET_NAME=<BUCKET_CONTAINING_MODEL>
 cd $HOME/mlcommons/inference/recommendation/dlrm_v2/pytorch/model/
 gsutil -m cp -r "gs://$BUCKET_NAME/model_weights/*" .
 ```
 
-### Downloading dataset
-| Original dataset | download link |
-| ---- | ---- |
-| Criteo Terabyte (day 23) | https://labs.criteo.com/2013/12/download-terabyte-click-logs/ |
 
-
-1. The Criteo fake dataset can be created in place of the real datasets in order to facilitate debugging and testing. We provide a fake (random) data generator that can be used to quickly generate data samples in a format compatible with the original dataset. Please use the following script in `./tools` to quickly create random samples for the corresponding models, which will be placed into `./fake_criteo` directory
-```
-./make_fake_criteo.sh
-mv ./fake_criteo .. && cd ..
-export DATA_DIR=./fake_criteo
-```
-
-
-2. The Multihot Criteo dataset is stored in several files corresponding to 24 days: `day_0.gz`, `day_1.gz`, ..., `day_23.gz` (~343GB). For this benchmark, we only use the validation dataset, which corresponds to first half of `day_23.gz`.
+2. The Multihot Criteo dataset is stored in several files corresponding to 24 days: `day_0.gz`, `day_1.gz`, ..., `day_23.gz` (~343GB). For this benchmark, we only use the validation dataset, which corresponds to the first half of `day_23.gz`.
     - The dataset can be constructed from the criteo terabyte dataset. You can find the instructions for constructing the dataset [here](https://github.com/mlcommons/training/tree/master/recommendation_v2/torchrec_dlrm#create-the-synthetic-multi-hot-dataset)
 
 
@@ -110,7 +150,7 @@ For MLPerf Inference, we use the first 128000 rows (user-item pairs) of the seco
 
 ## Running the benchmark
 
-Download and install all the pre-requisites. Both local and docker environment need to set 3 environment variables:
+Download and install all the pre-requisites. Both local and docker environments need to set 3 environment variables:
 ```
 export WORLD_SIZE=<number_of_nodes>
 export DATA_DIR=YourCriteoMultihotLocation
@@ -171,7 +211,7 @@ Server scenario perf and accuracy modes
 ```
 
 
-Note that this script will pre-process the data during the first run and reuse it over sub-sequent runs. The pre-processing of data can take a significant amount of time during the first run.
+Note that this script will pre-process the data during the first run and reuse it over subsequent runs. The pre-processing of data can take a significant amount of time during the first run.
 
 In order to use GPU(s), you might need to select the number of GPUs with the environment variable `CUDA_VISIBLE_DEVICES`, and run
 ```
@@ -322,7 +362,7 @@ usage: main.py [-h]
 
 `--model-path MODEL_PATH` path to the file with model weights.
 
-`--dataset` use the specified dataset. Currently we only support Criteo Terabyte.
+`--dataset` use the specified dataset. Currently, we only support Criteo Terabyte.
 
 `--dataset-path` path to the dataset.
 
@@ -330,7 +370,7 @@ usage: main.py [-h]
 
 `--profile {dlrm-debug-pytorch,dlrm-multihot-criteo-sample-pytorch,dlrm-multihot-criteo-pytorch}` this fills in default command line options with the once specified in the profile. Command line options that follow may override the those.
 
-`--backend` only the PyTorch backedn is currently supported. However, we expect to add TensorFlow backend in the future.
+`--backend` only the PyTorch backend is currently supported. However, we expect to add TensorFlow backend in the future.
 
 `--max-ind-range` the maximum number of vectors allowed in an embedding table.
 

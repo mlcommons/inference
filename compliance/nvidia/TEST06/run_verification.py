@@ -37,7 +37,7 @@ def get_args():
                         help="Specifies the path to the output directory where compliance logs will be uploaded from, i.e. inference_results_v0.7/closed/NVIDIA/compliance/T4x8/resnet/Offline.",
                         required=True)
     parser.add_argument("--eos_token_id", '-e', default=2, help="EOS token id of the tokenizer")
-    parser.add_argument("--dtype", "-d", default="int64", choices=["int64", "int32", "int16", "float32"])
+    parser.add_argument("--dtype", "-d", default="int32", choices=["int64", "int32", "int16", "float32"])
     parser.add_argument("--scenario", "-s", required=True, choices=["Offline", "Server", "SingleStream", "MultiStream"])
     args = parser.parse_args()
     return args

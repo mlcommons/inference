@@ -109,6 +109,12 @@ MODEL_CONFIG = {
             "llama2-70b-99" : ("TOKENS_PER_SAMPLE", 294.45*1.1),
             "llama2-70b-99.9" : ("TOKENS_PER_SAMPLE", 294.45*1.1)
         },
+        "accuracy-delta-perc": {
+            "stable-diffusion-xl": {
+                "CLIP_SCORE": 1,
+                "FID_SCORE": 2
+            }
+        },
         "performance-sample-count": {
             "resnet": 1024,
             "retinanet": 64,
@@ -269,6 +275,12 @@ MODEL_CONFIG = {
             "llama2-70b-99" : ("TOKENS_PER_SAMPLE", 294.45*1.1),
             "llama2-70b-99.9" : ("TOKENS_PER_SAMPLE", 294.45*1.1),
             "mixtral-8x7b" : ("TOKENS_PER_SAMPLE", 145.9 * 1.1)
+        },
+        "accuracy-delta-perc": {
+            "stable-diffusion-xl": {
+                "CLIP_SCORE": 1,
+                "FID_SCORE": 2
+            }
         },
         "performance-sample-count": {
             "resnet": 1024,
@@ -538,8 +550,8 @@ ACC_PATTERN = {
     "TOKENS_PER_SAMPLE": r".*'tokens_per_sample':\s([\d.]+).*",
     "CLIP_SCORE": r".*'CLIP_SCORE':\s([\d.]+).*",
     "FID_SCORE": r".*'FID_SCORE':\s([\d.]+).*",
-    "gsm8k_accuracy": r"'gsm8k':\s([\d.]+).*",
-    "mbxp_accuracy": r"'mbxp':\s([\d.]+).*",
+    "gsm8k_accuracy": r".*'gsm8k':\s([\d.]+).*",
+    "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -624,6 +636,7 @@ SYSTEM_DESC_REQUIRED_FIELDS_POWER = [
     "power_supply_details",
     "disk_drives",
     "disk_controllers",
+    "system_power_only",
 ]
 
 SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS_POWER = []
@@ -672,6 +685,7 @@ class Config:
         self.seeds = self.base["seeds"]
         self.test05_seeds = self.base["test05_seeds"]
         self.accuracy_target = self.base["accuracy-target"]
+        self.accuracy_delta_perc = self.base["accuracy-delta-perc"]
         self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
         self.performance_sample_count = self.base["performance-sample-count"]
         self.latency_constraint = self.base.get("latency-constraint", {})
@@ -767,6 +781,18 @@ class Config:
         if model not in self.min_queries:
             raise ValueError("model not known: " + model)
         return self.min_queries[model].get(scenario)
+    
+    def get_delta_perc(self, model, metric):
+        if model in self.accuracy_delta_perc:
+            if metric in self.accuracy_delta_perc[model]:
+                return self.accuracy_delta_perc[model][metric]
+        
+        more_accurate = model.find("99.9")
+        if more_accurate == -1:
+            required_delta_perc = 1
+        else:
+            required_delta_perc = 0.1
+        return required_delta_perc
 
     def has_new_logging_format(self):
         return True
@@ -775,6 +801,21 @@ class Config:
     def uses_early_stopping(self, scenario):
         return (
             scenario in ["Server", "SingleStream", "MultiStream"]
+        )
+    
+    def requires_equal_issue(self, model, division):
+        return (
+            division in ["closed", "network"] and
+            model in [
+                "3d-unet-99",
+                "3d-unet-99.9",
+                "gptj-99",
+                "gptj-99.9",
+                "llama2-70b-99",
+                "llama2-70b-99.9", 
+                "mixtral-8x7b"
+            ]
+            and self.version in ["v4.1"]
         )
 
 
@@ -891,6 +932,18 @@ def check_extra_files(path, target_files):
 def split_path(m):
     return m.replace("\\", "/").split("/")
 
+def get_boolean(s):
+    if s is None:
+        return False
+    elif isinstance(s, bool):
+        return s
+    elif isinstance(s, str):
+        return (s.lower() == "true")
+    elif isinstance(s, int):
+        return bool(s)
+    else:
+        raise TypeError(f"Variable should be bool, string or int, got {type(s)} instead")
+
 
 def find_error_in_detail_log(config, fname):
     is_valid = True
@@ -922,12 +975,13 @@ def check_accuracy_dir(config, model, path, verbose):
     is_valid = False
     all_accuracy_valid = True
     acc = None
-    result_acc = None
+    result_acc = {}
     hash_val = None
     target = config.get_accuracy_target(model)
     acc_upper_limit = config.get_accuracy_upper_limit(model)
     patterns = []
     acc_targets = []
+    acc_types = []
     if acc_upper_limit is not None:
         acc_limits = []
         up_patterns = []
@@ -941,10 +995,11 @@ def check_accuracy_dir(config, model, path, verbose):
         acc_type, acc_target = target[i:i+2]
         patterns.append(ACC_PATTERN[acc_type])
         acc_targets.append(acc_target)
+        acc_types.append(acc_type)
     acc_seen = [False for _ in acc_targets]
     with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
-            for i, (pattern, acc_target) in enumerate(zip(patterns, acc_targets)):
+            for i, (pattern, acc_target, acc_type) in enumerate(zip(patterns, acc_targets, acc_types)):
                 m = re.match(pattern, line)
                 if m:
                     acc = m.group(1)
@@ -957,8 +1012,8 @@ def check_accuracy_dir(config, model, path, verbose):
                 elif acc is not None:
                     all_accuracy_valid = False
                     log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
-                if i == 0 and acc:
-                    result_acc = acc
+                if acc:
+                    result_acc[acc_type] = acc
                 acc = None
             if acc_upper_limit is not None:
                 for i, (pattern, acc_limit) in enumerate(zip(up_patterns, acc_limits)):
@@ -1081,6 +1136,9 @@ def check_performance_dir(
     min_query_count = mlperf_log["effective_min_query_count"]
     samples_per_query = mlperf_log["effective_samples_per_query"]
     min_duration = mlperf_log["effective_min_duration_ms"]
+    equal_issue_used_check = (mlperf_log["effective_sample_concatenate_permutation"] == "true")
+    if not config.requires_equal_issue(model, division):
+        equal_issue_used_check = True
     sut_name = mlperf_log["sut_name"]
 
     # check if there are any errors in the detailed log
@@ -1126,6 +1184,7 @@ def check_performance_dir(
 
     if scenario == "SingleStream" or scenario == "MultiStream":
         res /= MS_TO_NS
+    
 
     # Check if the current scenario uses early stopping
     uses_early_stopping = config.uses_early_stopping(scenario)
@@ -1182,7 +1241,7 @@ def check_performance_dir(
     # Check if this run uses early stopping. If it does, get the
     # min_queries from the detail log, otherwise get this value
     # from the config
-    if not uses_early_stopping:
+    if not (uses_early_stopping or config.requires_equal_issue(model, division)):
         required_min_query_count = config.get_min_query_count(model, scenario)
         if required_min_query_count and min_query_count < required_min_query_count:
             log.error(
@@ -1230,7 +1289,7 @@ def check_performance_dir(
             )
             is_valid = False
 
-    return is_valid, res, inferred
+    return is_valid, res, inferred, equal_issue_used_check
 
 def get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, log_error=False):
 
@@ -1546,6 +1605,38 @@ def check_results_dir(
         if system_json.get("sw_notes"):
             notes = notes + ". " if notes else ""
             notes = notes + system_json.get("sw_notes")
+        special_unit_dict = {
+            "gptj-99": {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "gptj-99.9": {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama2-70b-99" : {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama2-70b-99.9" : {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "mixtral-8x7b" : {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            }
+        }
         unit_dict = {
             "SingleStream": "Latency (ms)",
             "MultiStream": "Latency (ms)",
@@ -1558,39 +1649,40 @@ def check_results_dir(
             "Offline": "Watts",
             "Server": "Watts",
         }
-        unit = unit_dict[scenario_fixed]
+        unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
         power_unit = power_unit_dict[scenario_fixed]
 
-        csv.write(
-            fmt.format(
-                submitter,
-                available,
-                division,
-                '"' + system_type + '"',
-                '"' + system_name + '"',
-                system_desc,
-                model_name,
-                mlperf_model,
-                scenario_fixed,
-                r,
-                acc,
-                system_json.get("number_of_nodes"),
-                '"' + system_json.get("host_processor_model_name") + '"',
-                system_json.get("host_processors_per_node"),
-                system_json.get("host_processor_core_count"),
-                '"' + system_json.get("accelerator_model_name") + '"',
-                '"' + str(system_json.get("accelerators_per_node")) + '"',
-                name.replace("\\", "/"),
-                '"' + system_json.get("framework", "") + '"',
-                '"' + system_json.get("operating_system", "") + '"',
-                '"' + notes + '"',
-                compliance,
-                errors,
-                config.version,
-                inferred,
-                power_metric > 0,
-                unit,
-            )
+        if (power_metric <= 0) or (not get_boolean(system_json.get("system_power_only"))):
+            csv.write(
+                fmt.format(
+                    submitter,
+                    available,
+                    division,
+                    '"' + system_type + '"',
+                    '"' + system_name + '"',
+                    system_desc,
+                    model_name,
+                    mlperf_model,
+                    scenario_fixed,
+                    r,
+                    acc,
+                    system_json.get("number_of_nodes"),
+                    '"' + system_json.get("host_processor_model_name") + '"',
+                    system_json.get("host_processors_per_node"),
+                    system_json.get("host_processor_core_count"),
+                    '"' + system_json.get("accelerator_model_name") + '"',
+                    '"' + str(system_json.get("accelerators_per_node")) + '"',
+                    name.replace("\\", "/"),
+                    '"' + system_json.get("framework", "") + '"',
+                    '"' + system_json.get("operating_system", "") + '"',
+                    '"' + notes + '"',
+                    compliance,
+                    errors,
+                    config.version,
+                    inferred,
+                    power_metric > 0,
+                    unit,
+                )
         )
 
         if power_metric > 0:
@@ -1921,18 +2013,21 @@ def check_results_dir(
                             errors += 1
                             continue
                         else:
-                            if not check_measurement_dir(
+                            measurement_check, conf_equal_issue_check = check_measurement_dir(
+                                config,
                                 measurement_dir,
                                 name,
                                 system_desc,
                                 os.path.join(division, submitter),
                                 model_name,
                                 scenario,
+                                division,
                                 has_power,
                                 skip_meaningful_fields_emptiness_check,
                                 skip_empty_files_check,
                                 skip_check_power_measure_files,
-                            ):
+                            )
+                            if not measurement_check:
                                 log.error(
                                     "%s measurement_dir has issues", measurement_dir
                                 )
@@ -1965,6 +2060,7 @@ def check_results_dir(
                                 acc_path,
                                 debug or is_closed_or_network,
                             )
+                            acc = json.dumps(acc).replace(",", " ").replace('"', "").replace("{", "").replace("}", "")
                             if mlperf_model in REQUIRED_ACC_BENCHMARK:
                                 if config.version in REQUIRED_ACC_BENCHMARK[mlperf_model]:
                                     extra_files_pass, missing_files = check_extra_files(acc_path, REQUIRED_ACC_BENCHMARK[mlperf_model][config.version])
@@ -2014,7 +2110,7 @@ def check_results_dir(
                                 continue
 
                             try:
-                                is_valid, r, is_inferred = check_performance_dir(
+                                is_valid, r, is_inferred, performance_equal_issue_check = check_performance_dir(
                                     config,
                                     mlperf_model,
                                     perf_path,
@@ -2028,6 +2124,16 @@ def check_results_dir(
                                     log.info(
                                         "%s has inferred results, qps=%s", perf_path, r
                                     )
+
+                                # Check equal issue mode
+                                if not (conf_equal_issue_check or performance_equal_issue_check):
+                                    log.error(
+                                        "%s %s requires equal issue mode (sample_concatenate_permutation), expected=true, found=%s",
+                                        perf_path,
+                                        measurement_dir,
+                                        not (conf_equal_issue_check or performance_equal_issue_check),
+                                    )
+                                    is_valid, r = False, None
                             except Exception as e:
                                 log.error(
                                     "%s caused exception in check_performance_dir: %s",
@@ -2285,12 +2391,14 @@ def check_system_desc_id_power(
 
 
 def check_measurement_dir(
+    config,
     measurement_dir,
     fname,
     system_desc,
     root,
     model,
     scenario,
+    division,
     has_power,
     skip_meaningful_fields_emptiness_check,
     skip_empty_files_check,
@@ -2381,11 +2489,63 @@ def check_measurement_dir(
             if not os.path.exists(os.path.dirname(code_dir)):
                 log.error("%s is missing code_dir %s", fname, code_dir)
                 is_valid = False
+  
+        # Check equal issue mode 
+        equal_issue_used = False       
+        if "mlperf.conf" in files and config.requires_equal_issue(model, division):
+            with open(f"{measurement_dir}/mlperf.conf") as f:
+                lines = f.readlines()
+                conf_ref_model = model.replace("-99.9", "").replace("-99", "")
+                for line in lines:
+                    line = line.replace(" ", "").replace("\n", "")
+                    if line.startswith("#"):
+                        continue
+                    elif line == "":
+                        continue
+                    else:
+                        key, val = line.split("=")
+                        key.replace(" ", "")
+                        val.replace(" ", "")
+                        conf_model, conf_scenario, conf_key = key.split(".")
+                        if (
+                            (conf_key == "sample_concatenate_permutation") and 
+                            ((conf_model == conf_ref_model) or conf_model == "*") and
+                            ((conf_scenario == scenario) or conf_scenario == "*")
+                        ):
+                            if val.isnumeric():
+                                val = int(val)
+                                equal_issue_used = (val == 1)
+                                break
+
+        if "user.conf" in files and config.requires_equal_issue(model, division):
+            with open(f"{measurement_dir}/user.conf") as f:
+                lines = f.readlines()
+                conf_ref_model = model.replace("-99.9", "").replace("-99", "")
+                for line in lines:
+                    line = line.replace(" ", "").replace("\n", "")
+                    if line.startswith("#"):
+                        continue
+                    elif line == "":
+                        continue
+                    else:
+                        key, val = line.split("=")
+                        key.replace(" ", "")
+                        val.replace(" ", "")
+                        conf_model, conf_scenario, conf_key = key.split(".")
+                        if (
+                            (conf_key == "sample_concatenate_permutation") and 
+                            ((conf_model == conf_ref_model) or conf_model == "*") and
+                            ((conf_scenario == scenario) or conf_scenario == "*")
+                        ):
+                            if val.isnumeric():
+                                val = int(val)
+                                equal_issue_used = (val == 1)
+                                break
     else:
         log.error("%s is missing %s*.json", fname, system_desc)
         is_valid = False
 
-    return is_valid
+    return is_valid, equal_issue_used
 
 
 def check_compliance_perf_dir(test_dir):
@@ -2470,12 +2630,6 @@ def check_compliance_acc_dir(test_dir, model, config):
                         acc_types.append(acc_type)
                         patterns.append(ACC_PATTERN[acc_type[0]])
                     acc_seen = [False for _ in acc_type]
-
-                    more_accurate = model.find("99.9")
-                    if more_accurate == -1:
-                        required_delta_perc = 1
-                    else:
-                        required_delta_perc = 0.1
                     acc_baseline = {
                         acc_type: 0 for acc_type in acc_types
                     }
@@ -2507,6 +2661,7 @@ def check_compliance_acc_dir(test_dir, model, config):
                             is_valid = False
                             break
                         else:
+                            required_delta_perc = config.get_delta_perc(model, acc_type[0])
                             delta_perc = abs(1 - acc_baseline[acc_type] / acc_compliance[acc_type]) * 100
                             if delta_perc <= required_delta_perc:
                                 is_valid = True
@@ -2611,7 +2766,7 @@ def check_compliance_dir(
                 compliance_perf_dir = os.path.join(
                     compliance_dir, test, "performance", "run_1"
                 )
-                compliance_perf_valid, r, is_inferred = check_performance_dir(
+                compliance_perf_valid, r, is_inferred, _ = check_performance_dir(
                     config, model, compliance_perf_dir, scenario, division, system_json
                 )
                 if is_inferred:

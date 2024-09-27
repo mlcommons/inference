@@ -306,6 +306,8 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::server_find_peak_qps_boundary_step_size)
       .def_readwrite("server_max_async_queries",
                      &TestSettings::server_max_async_queries)
+      .def_readwrite("server_num_issue_query_threads",
+                     &TestSettings::server_num_issue_query_threads)
       .def_readwrite("offline_expected_qps",
                      &TestSettings::offline_expected_qps)
       .def_readwrite("min_duration_ms", &TestSettings::min_duration_ms)

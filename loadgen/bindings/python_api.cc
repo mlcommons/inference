@@ -258,6 +258,12 @@ void QuerySamplesComplete(std::vector<QuerySampleResponse> responses,
   mlperf::QuerySamplesComplete(responses.data(), responses.size(), response_cb);
 }
 
+void FirstTokenComplete(std::vector<QuerySampleResponse> responses,
+                          ResponseCallback response_cb = {}) {
+  pybind11::gil_scoped_release gil_releaser;
+  mlperf::FirstTokenComplete(responses.data(), responses.size(), response_cb);
+}
+
 PYBIND11_MODULE(mlperf_loadgen, m) {
   m.doc() = "MLPerf Inference load generator.";
 
@@ -325,10 +331,15 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::performance_sample_count_override)
       .def_readwrite("test05",
                      &TestSettings::test05)
-      .def_readwrite("test05_qsl_rng_seed", &TestSettings::qsl_rng_seed)
+      .def_readwrite("test05_qsl_rng_seed", &TestSettings::test05_qsl_rng_seed)
       .def_readwrite("test05_sample_index_rng_seed",
-                     &TestSettings::sample_index_rng_seed)
-      .def_readwrite("test05_schedule_rng_seed", &TestSettings::schedule_rng_seed)
+                     &TestSettings::test05_sample_index_rng_seed)
+      .def_readwrite("test05_schedule_rng_seed", &TestSettings::test05_schedule_rng_seed)
+      .def_readwrite("use_token_latencies", &TestSettings::use_token_latencies)
+      .def_readwrite("ttft_latency", &TestSettings::server_ttft_latency)
+      .def_readwrite("tpot_latency", &TestSettings::server_tpot_latency)
+      .def_readwrite("infer_token_latencies", &TestSettings::infer_token_latencies)
+      .def_readwrite("token_latency_scaling_factor", &TestSettings::token_latency_scaling_factor)
       .def("FromConfig", &TestSettings::FromConfig, "FromConfig.");
 
   pybind11::enum_<LoggingMode>(m, "LoggingMode")
@@ -379,22 +390,30 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
   pybind11::class_<QuerySampleResponse>(m, "QuerySampleResponse")
       .def(pybind11::init<>())
       .def(pybind11::init<ResponseId, uintptr_t, size_t>())
+      .def(pybind11::init<ResponseId, uintptr_t, size_t, int64_t>())
       .def_readwrite("id", &QuerySampleResponse::id)
       .def_readwrite("data", &QuerySampleResponse::data)
       .def_readwrite("size", &QuerySampleResponse::size)
+      .def_readwrite("n_tokens", &QuerySampleResponse::n_tokens)
       .def(pybind11::pickle(
           [](const QuerySampleResponse& qsr) {  // __getstate__
             /* Return a tuple that fully encodes state of object*/
             return pybind11::make_tuple(qsr.id, qsr.data, qsr.size);
           },
           [](pybind11::tuple t) {  // __setstate__
-            if (t.size() != 3)
+            if ((t.size() != 3) || (t.size() != 4))
               throw std::runtime_error("Invalid state for QuerySampleResponse");
             /* Create a new C++ instance*/
             QuerySampleResponse q;
             q.id = t[0].cast<uintptr_t>();
             q.data = t[1].cast<uintptr_t>();
             q.size = t[2].cast<size_t>();
+            if (t.size() == 4){
+              q.n_tokens = t[3].cast<int64_t>();
+            }
+            else{
+              q.n_tokens = 0;
+            }
             return q;
           }));
 
@@ -436,6 +455,11 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         pybind11::arg("audit_config_filename") = "audit.config");
   m.def("QuerySamplesComplete", &py::QuerySamplesComplete,
         "Called by the SUT to indicate that samples from some combination of"
+        "IssueQuery calls have finished.",
+        pybind11::arg("responses"),
+        pybind11::arg("response_cb") = ResponseCallback{});
+  m.def("FirstTokenComplete", &py::FirstTokenComplete,
+        "Called by the SUT to indicate that tokens from some combination of"
         "IssueQuery calls have finished.",
         pybind11::arg("responses"),
         pybind11::arg("response_cb") = ResponseCallback{});

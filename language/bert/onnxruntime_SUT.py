@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import threading
 import array
 import json
 import os
@@ -25,10 +26,12 @@ import numpy as np
 import onnxruntime
 from transformers import BertConfig, BertForQuestionAnswering
 from squad_QSL import get_squad_QSL
+from time import sleep
 
 class BERT_ONNXRuntime_SUT():
     def __init__(self, args):
         self.profile = args.profile
+        self.network = args.network
         self.options = onnxruntime.SessionOptions()
         self.options.enable_profiling = args.profile
 
@@ -54,27 +57,52 @@ class BERT_ONNXRuntime_SUT():
         self.qsl = get_squad_QSL(args.max_examples)
 
     def issue_queries(self, query_samples):
+        max_num_threads = int(os.environ.get('CM_MAX_NUM_THREADS', os.cpu_count()))
+
         for i in range(len(query_samples)):
             eval_features = self.qsl.get_features(query_samples[i].index)
-            if self.quantized:
-                fd = {
-                    "input_ids": np.array(eval_features.input_ids).astype(np.int64)[np.newaxis, :],
-                    "attention_mask": np.array(eval_features.input_mask).astype(np.int64)[np.newaxis, :],
-                    "token_type_ids": np.array(eval_features.segment_ids).astype(np.int64)[np.newaxis, :]
-                }
-            else:
-                fd = {
-                    "input_ids": np.array(eval_features.input_ids).astype(np.int64)[np.newaxis, :],
-                    "input_mask": np.array(eval_features.input_mask).astype(np.int64)[np.newaxis, :],
-                    "segment_ids": np.array(eval_features.segment_ids).astype(np.int64)[np.newaxis, :]
-                }
-            scores = self.sess.run([o.name for o in self.sess.get_outputs()], fd)
-            output = np.stack(scores, axis=-1)[0]
+            n = threading.active_count()
+            while n >= max_num_threads:
+                #sleep(0.01)
+                n = threading.active_count()
+            threading.Thread(target=self.process_sample,
+                         args=[eval_features, query_samples[i].id]).start()
 
-            response_array = array.array("B", output.tobytes())
-            bi = response_array.buffer_info()
-            response = lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])
-            lg.QuerySamplesComplete([response])
+    def process_sample(self, eval_features, query_id=None):
+
+        '''For Loadgen over the network'''
+        if self.network == "sut":
+            input_ids = eval_features['input_ids']
+            input_mask = eval_features['input_mask']
+            segment_ids = eval_features['segment_ids']
+        else:
+            input_ids = eval_features.input_ids
+            input_mask = eval_features.input_mask
+            segment_ids = eval_features.segment_ids
+
+        if self.quantized:
+            fd = {
+                "input_ids": np.array(input_ids).astype(np.int64)[np.newaxis, :],
+                "attention_mask": np.array(input_mask).astype(np.int64)[np.newaxis, :],
+                "token_type_ids": np.array(segment_ids).astype(np.int64)[np.newaxis, :]
+            }
+        else:
+            fd = {
+                "input_ids": np.array(input_ids).astype(np.int64)[np.newaxis, :],
+                "input_mask": np.array(input_mask).astype(np.int64)[np.newaxis, :],
+                "segment_ids": np.array(segment_ids).astype(np.int64)[np.newaxis, :]
+            }
+
+        scores = self.sess.run([o.name for o in self.sess.get_outputs()], fd)
+        output = np.stack(scores, axis=-1)[0]
+
+        if self.network == "sut":
+            return output.tolist()
+
+        response_array = array.array("B", output.tobytes())
+        bi = response_array.buffer_info()
+        response = lg.QuerySampleResponse(query_id, bi[0], bi[1])
+        lg.QuerySamplesComplete([response])
 
     def flush_queries(self):
         pass

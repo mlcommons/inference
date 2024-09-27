@@ -2,11 +2,32 @@
 
 This is the reference implementation for MLPerf Inference Classification and Object Detection benchmarks
 
-Please see the below readme files for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
-1. [Resnet50](README_cm_resnet50.md)
-2. [Retinanet](README_cm_retinanet.md)
+## Automated Run Commands
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
-Alternatively, you can find a short tutorial on how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
+### ResNet50
+
+| Implementation | Framework | Supported Devices | Supported Precision |
+| -------------- | --------- | ----------------- | ------------------- |
+| [Reference](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_3_1) | Onnxruntime | CPU, CUDA, ROCm | fp32 |
+| [Reference](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_3_2) | Tensorflow | CPU, CUDA, ROCm | fp32 |
+| [Reference](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_3_3) | Deepsparse | CPU | fp32, int8 |
+| [Nvidia](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_1_2) | TensorRT | CUDA | int8 |
+| [Intel](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_1_3) | PyTorch | CPU | int8 |
+| [MLCommons C++](https://docs.mlcommons.org/inference/benchmarks/image_classification/resnet50/#__tabbed_1_5) | Onnxruntime | CPU, CUDA | fp32 |
+
+### Retinanet
+
+| Implementation | Framework | Supported Devices | Supported Precision |
+| -------------- | --------- | ----------------- | ------------------- |
+| [Reference](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_3_1) | Onnxruntime | CPU, CUDA, ROCm | fp32 |
+| [Reference](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_3_2) | PyTorch | CPU, CUDA, ROCm | fp32 |
+| [Nvidia](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_1_2) | TensorRT | CUDA | int8 |
+| [Intel](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_1_3) | PyTorch | CPU | int8 |
+| [MLCommons C++](https://docs.mlcommons.org/inference/benchmarks/object_detection/retinanet/#__tabbed_1_5) | Onnxruntime | CPU, CUDA | fp32 |
+
+
+Additionally, you can find a short tutorial on how to use this benchmark [here](https://github.com/mlperf/inference/blob/master/vision/classification_and_detection/GettingStarted.ipynb).
 
 
 ## Supported Models
@@ -48,8 +69,7 @@ Alternatively, you can find a short tutorial on how to use this benchmark [here]
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
 It is written in python which might make it less suitable for lite models like mobilenet or large number of cpu's.
-There is a [C++ implementation](https://github.com/mlcommons/ck/tree/master/cm-mlops/script/app-mlperf-inference-cpp) in
-[MLCommons CK repository](https://github.com/mlcommons/ck) which currently supports onnxruntime backend.
+There is a [C++ implementation](https://github.com/mlcommons/cm4mlops/tree/mlperf-inference/script/app-mlperf-inference-mlcommons-cpp) available which currently supports onnxruntime backend for CPUs and Nvidia GPUs.
 
 ## Tools for preparing datasets and validating accuracy
 The reference implementation includes all required pre-processing of datasets.

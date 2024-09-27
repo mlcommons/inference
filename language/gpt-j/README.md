@@ -1,6 +1,6 @@
 # GPT-J Reference Implementation
 
-Please see [this readme](README_cm.md) file for an automated way to run this benchmark out of the box and do an end-to-end submission with or without docker using the [MLCommons CM](https://github.com/mlcommons/ck/tree/master/cm) language.
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/gpt-j) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
 ### Setup Instructions
 
@@ -68,11 +68,36 @@ pip install datasets
 python prepare-calibration.py --calibration-list-file calibration-list.txt --output-dir </path/to/output-folder>
 ```
 ### Download GPT-J model
-Please download the fine-tuned GPT-J checkpoint from [here](https://cloud.mlcommons.org/index.php/s/QAZ2oM94MkFtbQx) and extract it as model/. The download_gptj.py only downloads the default huggingface model which is not fine-tuned on CNN-Daily mail dataset. 
+Please download the fine-tuned GPT-J checkpoint using the instructions below. The download_gptj.py only downloads the default huggingface model which is not fine-tuned on CNN-Daily mail dataset. 
+
+#### CM method
+
+The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
 
 ```
-wget https://cloud.mlcommons.org/index.php/s/QAZ2oM94MkFtbQx/download --output-document checkpoint.zip
+pip install cm4mlops
+cm run script --tags=get,ml-model,gptj,_pytorch,_rclone -j
 ```
+
+#### Manual method
+
+The above command automatically runs a set of Rclone commands to download the data from a Cloudflare R2 bucket. However, if you'd like to run the Rclone commands manually, you can do so as follows:
+
+To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
+To install Rclone on Linux/macOS/BSD systems, run:
+```
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+Once Rclone is installed, run the following command to authenticate with the bucket:
+```
+rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
+```
+You can then navigate in the terminal to your desired download directory and run the following command to download the model checkpoint:
+
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/gpt-j ./model -P
+```
+
 
 ### Running the Benchmark
 Replace the model and dataset path arguments with your corresponding paths. For evaluating the ROUGE score after the run, include --accuracy as shown below. For user specific target qps, please include user.conf.
@@ -109,3 +134,30 @@ This is a comprehensive list of public datasets and models used by this reposito
 | [gpt-j-6b (Hugging Face)](https://huggingface.co/EleutherAI/gpt-j-6b) | PyTorch | Text Summarization |
 
 Intel expressly disclaims the accuracy, adequacy, or completeness of any data, datasets or models, and is not liable for any errors, omissions, or defects in such content, or for any reliance thereon. Intel also expressly disclaims any warranty of non-infringement with respect to such data, dataset(s), or model(s). Intel is not liable for any liability or damages relating to your use of such data, datasets or models.
+
+
+## Loadgen over the Network 
+
+```
+pip install cm4mlops
+```
+
+The below CM command will launch the SUT server
+
+```
+cm run script --tags=run-mlperf,inference,_performance-only --model=gptj-99  \
+--backend=pytorch   --device=cuda --beam_size=1 --precision=bfloat16 \
+--network=sut --rerun --quiet --adr.compiler.tags=gcc 
+```
+
+#### Note: 
+In our experimentation, we found out that in addition to memory occupied by the model, KV cache of size around 6xbeam_size GB occupies the memory.
+
+Once the SUT server is launched, the below command can be run on the loadgen node to do issue queries to the SUT nodes. In this command `-sut_servers` has just the localhost address - it can be changed to a comma-separated list of any hostname/IP in the network. 
+
+```
+cm run script --tags=run-mlperf,inference,_performance-only --model=gptj-99 \
+--backend=pytorch  --test_query_count=30  \
+--network=lon  --rerun --quiet --scenario=Offline \
+--sut_servers,=http://localhost:8000 --adr.compiler.tags=gcc
+```

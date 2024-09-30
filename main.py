@@ -142,7 +142,7 @@ def define_env(env):
                         test_query_count=get_test_query_count(model, implementation, device.lower())
                         if device.lower() == "cuda" and execution_env.lower() == "native":
                             content += f"\n{cur_space3}!!! tip\n\n"
-                            content += f"{cur_space3}    - Unless CUDA, cuDNN and TensorRT are available in the environment it is recommended to use the Docker option.\n\n"
+                            content += f"{cur_space3}    - It is advisable to use the commands in the Docker tab for CUDA. Run the below native command only if you are already on a CUDA setup with cuDNN and TensorRT installed.\n\n"
 
                         if "99.9" not in model: #not showing docker command as it is already done for the 99% variant
                             if implementation == "neuralmagic":

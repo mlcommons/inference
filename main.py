@@ -140,6 +140,9 @@ def define_env(env):
                         # ref to cm installation
                         content += f"{cur_space3}Please refer to the [installation page](site:inference/install/) to install CM for running the automated benchmark commands.\n\n"
                         test_query_count=get_test_query_count(model, implementation, device.lower())
+                        if device.lower() == "cuda" and execution_env.lower() == "native":
+                            content += f"\n{cur_space3}!!! tip\n\n"
+                            content += f"{cur_space3}    - Unless CUDA, cuDNN and TensorRT are available in the environment it is recommended to use the Docker option.\n\n"
 
                         if "99.9" not in model: #not showing docker command as it is already done for the 99% variant
                             if implementation == "neuralmagic":

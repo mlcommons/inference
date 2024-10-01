@@ -12,8 +12,8 @@ CM needs `git`, `python3-pip` and `python3-venv` installed on your system. If an
 This step is not mandatory as CM can use separate virtual environment for MLPerf inference. But the latest `pip` install requires this or else will need the `--break-system-packages` flag while installing `cm4mlops`.
 
 ```bash
-   python3 -m venv cm
-   source cm/bin/activate
+python3 -m venv cm
+source cm/bin/activate
 ```
 
 ## Install CM and pulls any needed repositories

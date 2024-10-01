@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Text Summarization using LLAMA2-70b
 
 ## Dataset
@@ -23,4 +28,8 @@ Get the Official MLPerf LLAMA2-70b Model
     ```
     cm run script --tags=get,ml-model,llama2-70b,_pytorch -j
     ```
+  
+!!! tip
+
+    Downloading llama2-70B model from Hugging Face will prompt you to enter the Hugging Face username and password. Please note that the password required is the [**access token**](https://huggingface.co/settings/tokens) generated for your account. Additionally, ensure that your account has access to the [llama2-70B](https://huggingface.co/meta-llama/Llama-2-70b-chat-hf) model.
 

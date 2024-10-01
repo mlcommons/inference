@@ -111,7 +111,7 @@ def get_args():
     parser.add_argument(
         "--device",
         default="cuda",
-        choices=["cuda", "cpu"],
+        choices=["cuda", "cpu", "rocm"],
         help="device to run the benchmark",
     )
     parser.add_argument(
@@ -434,6 +434,8 @@ def main():
     settings = lg.TestSettings()
     settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
     settings.FromConfig(user_conf, args.model_name, args.scenario)
+    if os.path.exists(audit_config):
+        settings.FromConfig(audit_config, args.model_name, args.scenario)
     settings.scenario = scenario
     settings.mode = lg.TestMode.PerformanceOnly
     if args.accuracy:

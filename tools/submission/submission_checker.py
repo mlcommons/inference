@@ -109,6 +109,12 @@ MODEL_CONFIG = {
             "llama2-70b-99" : ("TOKENS_PER_SAMPLE", 294.45*1.1),
             "llama2-70b-99.9" : ("TOKENS_PER_SAMPLE", 294.45*1.1)
         },
+        "accuracy-delta-perc": {
+            "stable-diffusion-xl": {
+                "CLIP_SCORE": 1,
+                "FID_SCORE": 2
+            }
+        },
         "performance-sample-count": {
             "resnet": 1024,
             "retinanet": 64,
@@ -186,6 +192,174 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": {"SingleStream": 1024, "Server": 270336, "Offline": 1}
         },
     },
+    "v4.1": {
+        "models": [
+            "resnet",
+            "retinanet",
+            "bert-99",
+            "bert-99.9",
+            "dlrm-v2-99",
+            "dlrm-v2-99.9",
+            "3d-unet-99",
+            "3d-unet-99.9",
+            "gptj-99",
+            "gptj-99.9",
+            "llama2-70b-99",
+            "llama2-70b-99.9",
+            "stable-diffusion-xl",
+            "mixtral-8x7b"
+        ],
+        "required-scenarios-datacenter": {
+            "resnet": ["Server", "Offline"],
+            "retinanet": ["Server", "Offline"],
+            "bert-99": ["Server", "Offline"],
+            "bert-99.9": ["Server", "Offline"],
+            "dlrm-v2-99": ["Server", "Offline"],
+            "dlrm-v2-99.9": ["Server", "Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+            "gptj-99": ["Server", "Offline"],
+            "gptj-99.9": ["Server", "Offline"],
+            "llama2-70b-99": ["Server", "Offline"],
+            "llama2-70b-99.9": ["Server", "Offline"],
+            "stable-diffusion-xl": ["Server", "Offline"],
+            "mixtral-8x7b": ["Server", "Offline"]
+        },
+        "optional-scenarios-datacenter": {},
+        "required-scenarios-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline"],
+            "retinanet": ["SingleStream", "MultiStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "gptj-99": ["SingleStream", "Offline"],
+            "gptj-99.9": ["SingleStream", "Offline"],
+            "stable-diffusion-xl": ["SingleStream", "Offline"],
+        },
+        "optional-scenarios-edge": {},
+        "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "bert-99": ["SingleStream", "Offline", "Server"],
+            "bert-99.9": ["Offline", "Server"],
+            "dlrm-v2-99": ["Offline", "Server"],
+            "dlrm-v2-99.9": ["Offline", "Server"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "gptj-99": ["SingleStream", "Offline", "Server"],
+            "gptj-99.9": ["SingleStream", "Offline", "Server"],
+            "llama2-70b-99": ["Server", "Offline"],
+            "llama2-70b-99.9": ["Server", "Offline"],
+            "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
+            "mixtral-8x7b": ["SingleStream", "Server", "Offline"]
+        },
+        "optional-scenarios-datacenter-edge": {},
+        "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
+            "retinanet": ("mAP", 37.55 * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "dlrm-v2-99": ("AUC", 80.31 * 0.99),
+            "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
+            "3d-unet-99": ("DICE", 0.86170 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
+            "gptj-99" : ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878*0.9),
+            "gptj-99.9" : ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878*0.9),
+            "llama2-70b-99" : ("ROUGE1", 44.4312 * 0.99, "ROUGE2", 22.0352 * 0.99, "ROUGEL", 28.6162 * 0.99, "TOKENS_PER_SAMPLE", 294.45*0.9),
+            "llama2-70b-99.9" : ("ROUGE1", 44.4312 * 0.999, "ROUGE2", 22.0352 * 0.999, "ROUGEL", 28.6162 * 0.999, "TOKENS_PER_SAMPLE", 294.45*0.9),
+            "stable-diffusion-xl": ("CLIP_SCORE", 31.68631873, "FID_SCORE", 23.01085758),
+            "mixtral-8x7b" : ("ROUGE1", 45.4911 * 0.99, "ROUGE2", 23.2829 * 0.99, "ROUGEL", 30.3615 * 0.99, "TOKENS_PER_SAMPLE", 145.9 * 0.9, "gsm8k_accuracy", 73.78*0.99, "mbxp_accuracy", 60.12 * 0.99),
+        },
+        "accuracy-upper-limit": {
+            "stable-diffusion-xl": ("CLIP_SCORE", 31.81331801, "FID_SCORE", 23.95007626),
+            "llama2-70b-99" : ("TOKENS_PER_SAMPLE", 294.45*1.1),
+            "llama2-70b-99.9" : ("TOKENS_PER_SAMPLE", 294.45*1.1),
+            "mixtral-8x7b" : ("TOKENS_PER_SAMPLE", 145.9 * 1.1)
+        },
+        "accuracy-delta-perc": {
+            "stable-diffusion-xl": {
+                "CLIP_SCORE": 1,
+                "FID_SCORE": 2
+            }
+        },
+        "performance-sample-count": {
+            "resnet": 1024,
+            "retinanet": 64,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-v2-99": 204800,
+            "dlrm-v2-99.9": 204800,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+            "gptj-99": 13368,
+            "gptj-99.9": 13368,
+            "llama2-70b-99": 24576,
+            "llama2-70b-99.9": 24576,
+            "stable-diffusion-xl": 5000,
+            "mixtral-8x7b": 15000,
+        },
+        # TODO: Update this list.
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-resnet34": "retinanet",
+            "mobilenet": "resnet",
+            "resnet50": "resnet"
+        },
+        "seeds": {
+            # TODO: Update random seeds
+            "qsl_rng_seed": 3066443479025735752,
+            "sample_index_rng_seed": 10688027786191513374,
+            "schedule_rng_seed": 14962580496156340209,
+        },
+        "test05_seeds": {
+            # TODO: Update random seeds
+            "qsl_rng_seed": 16799458546791641818,
+            "sample_index_rng_seed": 5453809927556429288,
+            "schedule_rng_seed": 5435552105434836064,
+        },
+        "ignore_errors": [],
+        "latency-constraint": {
+            "resnet": {"Server": 15000000},
+            "retinanet": {"Server": 100000000},
+            "bert-99": {"Server": 130000000},
+            "bert-99.9": {"Server": 130000000},
+            "dlrm-v2-99": {"Server": 60000000},
+            "dlrm-v2-99.9": {"Server": 60000000},
+            "gptj-99": {"Server": 20000000000},
+            "gptj-99.9": {"Server": 20000000000},
+            "llama2-70b-99": {"Server": 20000000000},
+            "llama2-70b-99.9": {"Server": 20000000000},
+            "stable-diffusion-xl" : {"Server": 20000000000}
+            # TODO: Mixtral metrics
+            # "mixtral-8x7b" : {"Server": 20000000000}
+        },
+        "min-queries": {
+            "resnet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "retinanet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "dlrm-v2-99": {"Server": 270336, "Offline": 1},
+            "dlrm-v2-99.9": {"Server": 270336, "Offline": 1},
+            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
+            "gptj-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "stable-diffusion-xl": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "mixtral-8x7b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+        },
+    },
 }
 
 VALID_DIVISIONS = ["open", "closed", "network"]
@@ -221,6 +395,20 @@ REQUIRED_ACC_BENCHMARK = {
                 "3319",
                 "95"
             ]
+        },
+        "v4.1": {
+            "images": [
+                "4655",
+                "2569",
+                "1303",
+                "109",
+                "4509",
+                "3009",
+                "2179",
+                "1826",
+                "2094",
+                "3340"
+            ]
         }
     }
 }
@@ -255,7 +443,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "gptj-99.9": 13368,
     "llama2-70b-99": 24576,
     "llama2-70b-99.9": 24576,
-    "stable-diffusion-xl": 5000
+    "stable-diffusion-xl": 5000,
+    "mixtral-8x7b": 15000
 }
 
 SCENARIO_MAPPING = {
@@ -302,8 +491,8 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
     },
     "v4.1": {
         "llama2-70b-99": {
-        "Offline": "result_tokens_per_second",
-        "Server": "result_completed_tokens_per_second",
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
         },
         "llama2-70b-99.9": {
             "Offline": "result_tokens_per_second",
@@ -316,15 +505,32 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
         "gptj-99.9": {
             "Offline": "result_inferred_tokens_per_second",
             "Server": "result_inferred_completed_tokens_per_second",
+        },
+        "mixtral-8x7b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
         }
     }
 }
 
-LLAMA2_LATENCY_LIMITS = {
-    # We might add interactive in the next round. Latency in ns
-    "conversational": {
-        "ttft": 2000 * 1000000,
-        "tpot": 200 * 1000000
+LLM_LATENCY_LIMITS = {
+    "llama2-70b-99":{
+        "conversational": {
+            "ttft": 2000 * 1000000,
+            "tpot": 200 * 1000000
+        }
+    },
+    "llama2-70b-99.9":{
+        "conversational": {
+            "ttft": 2000 * 1000000,
+            "tpot": 200 * 1000000
+        }
+    },
+    "mixtral-8x7b":{
+        "conversational": {
+            "ttft": 2000 * 1000000,
+            "tpot": 200 * 1000000
+        }
     }
 }
 
@@ -344,6 +550,8 @@ ACC_PATTERN = {
     "TOKENS_PER_SAMPLE": r".*'tokens_per_sample':\s([\d.]+).*",
     "CLIP_SCORE": r".*'CLIP_SCORE':\s([\d.]+).*",
     "FID_SCORE": r".*'FID_SCORE':\s([\d.]+).*",
+    "gsm8k_accuracy": r".*'gsm8k':\s([\d.]+).*",
+    "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
 }
 
 SYSTEM_DESC_REQUIRED_FIELDS = [
@@ -428,6 +636,7 @@ SYSTEM_DESC_REQUIRED_FIELDS_POWER = [
     "power_supply_details",
     "disk_drives",
     "disk_controllers",
+    "system_power_only",
 ]
 
 SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS_POWER = []
@@ -476,6 +685,7 @@ class Config:
         self.seeds = self.base["seeds"]
         self.test05_seeds = self.base["test05_seeds"]
         self.accuracy_target = self.base["accuracy-target"]
+        self.accuracy_delta_perc = self.base["accuracy-delta-perc"]
         self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
         self.performance_sample_count = self.base["performance-sample-count"]
         self.latency_constraint = self.base.get("latency-constraint", {})
@@ -571,6 +781,18 @@ class Config:
         if model not in self.min_queries:
             raise ValueError("model not known: " + model)
         return self.min_queries[model].get(scenario)
+    
+    def get_delta_perc(self, model, metric):
+        if model in self.accuracy_delta_perc:
+            if metric in self.accuracy_delta_perc[model]:
+                return self.accuracy_delta_perc[model][metric]
+        
+        more_accurate = model.find("99.9")
+        if more_accurate == -1:
+            required_delta_perc = 1
+        else:
+            required_delta_perc = 0.1
+        return required_delta_perc
 
     def has_new_logging_format(self):
         return True
@@ -580,6 +802,21 @@ class Config:
         return (
             scenario in ["Server", "SingleStream", "MultiStream"]
         )
+    
+    def requires_equal_issue(self, model, division):
+        return (
+            division in ["closed", "network"] and
+            model in [
+                "3d-unet-99",
+                "3d-unet-99.9",
+                "gptj-99",
+                "gptj-99.9",
+                "llama2-70b-99",
+                "llama2-70b-99.9", 
+                "mixtral-8x7b"
+            ]
+            and self.version in ["v4.1"]
+        )
 
 
 def get_args():
@@ -588,7 +825,7 @@ def get_args():
     parser.add_argument("--input", required=True, help="submission directory")
     parser.add_argument(
         "--version",
-        default="v4.0",
+        default="v4.1",
         choices=list(MODEL_CONFIG.keys()),
         help="mlperf version",
     )
@@ -634,6 +871,11 @@ def get_args():
         "--skip-extra-files-in-root-check",
         action="store_true",
         help="skips the check of extra files inside the root submission dir",
+    )
+    parser.add_argument(
+        "--scenarios-to-skip",
+        help="Delimited list input of scenarios to skip. i.e. if you only have Offline results, pass in 'Server'",
+        type=str
     )
     args = parser.parse_args()
     return args
@@ -690,6 +932,18 @@ def check_extra_files(path, target_files):
 def split_path(m):
     return m.replace("\\", "/").split("/")
 
+def get_boolean(s):
+    if s is None:
+        return False
+    elif isinstance(s, bool):
+        return s
+    elif isinstance(s, str):
+        return (s.lower() == "true")
+    elif isinstance(s, int):
+        return bool(s)
+    else:
+        raise TypeError(f"Variable should be bool, string or int, got {type(s)} instead")
+
 
 def find_error_in_detail_log(config, fname):
     is_valid = True
@@ -721,12 +975,13 @@ def check_accuracy_dir(config, model, path, verbose):
     is_valid = False
     all_accuracy_valid = True
     acc = None
-    result_acc = None
+    result_acc = {}
     hash_val = None
     target = config.get_accuracy_target(model)
     acc_upper_limit = config.get_accuracy_upper_limit(model)
     patterns = []
     acc_targets = []
+    acc_types = []
     if acc_upper_limit is not None:
         acc_limits = []
         up_patterns = []
@@ -740,10 +995,11 @@ def check_accuracy_dir(config, model, path, verbose):
         acc_type, acc_target = target[i:i+2]
         patterns.append(ACC_PATTERN[acc_type])
         acc_targets.append(acc_target)
+        acc_types.append(acc_type)
     acc_seen = [False for _ in acc_targets]
     with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
-            for i, (pattern, acc_target) in enumerate(zip(patterns, acc_targets)):
+            for i, (pattern, acc_target, acc_type) in enumerate(zip(patterns, acc_targets, acc_types)):
                 m = re.match(pattern, line)
                 if m:
                     acc = m.group(1)
@@ -756,8 +1012,8 @@ def check_accuracy_dir(config, model, path, verbose):
                 elif acc is not None:
                     all_accuracy_valid = False
                     log.warning("%s accuracy not met: expected=%f, found=%s", path, acc_target, acc)
-                if i == 0 and acc:
-                    result_acc = acc
+                if acc:
+                    result_acc[acc_type] = acc
                 acc = None
             if acc_upper_limit is not None:
                 for i, (pattern, acc_limit) in enumerate(zip(up_patterns, acc_limits)):
@@ -799,13 +1055,13 @@ def check_accuracy_dir(config, model, path, verbose):
     return is_valid, result_acc
 
 
-def extra_check_llama2(mlperf_log, scenario):
+def extra_check_llm(mlperf_log, scenario, model):
     if (mlperf_log["requested_use_token_latencies"]):
         if scenario == "Offline":
             # For offline no further checks are necessary
             return None, True
         else:
-            for constraint, limits in LLAMA2_LATENCY_LIMITS.items():
+            for constraint, limits in LLM_LATENCY_LIMITS[model].items():
                 if mlperf_log["result_first_token_99.00_percentile_latency_ns"] < limits["ttft"] and mlperf_log["result_time_per_output_token_99.00_percentile_ns"] < limits["tpot"]:
                     return constraint, True
     else:
@@ -867,8 +1123,8 @@ def check_performance_dir(
         res = float(mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[version][model][scenario]])
 
         
-    if model in ["llama2-70b-99", "llama2-70b-99.9"]:
-        llama_constraint, is_valid = extra_check_llama2(mlperf_log, scenario_fixed)
+    if model in ["llama2-70b-99", "llama2-70b-99.9", "mixtral-8x7b"]:
+        llama_constraint, is_valid = extra_check_llm(mlperf_log, scenario_fixed, model)
 
     latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
     latency_mean = mlperf_log["result_mean_latency_ns"]
@@ -880,6 +1136,9 @@ def check_performance_dir(
     min_query_count = mlperf_log["effective_min_query_count"]
     samples_per_query = mlperf_log["effective_samples_per_query"]
     min_duration = mlperf_log["effective_min_duration_ms"]
+    equal_issue_used_check = (mlperf_log["effective_sample_concatenate_permutation"] == "true")
+    if not config.requires_equal_issue(model, division):
+        equal_issue_used_check = True
     sut_name = mlperf_log["sut_name"]
 
     # check if there are any errors in the detailed log
@@ -925,6 +1184,7 @@ def check_performance_dir(
 
     if scenario == "SingleStream" or scenario == "MultiStream":
         res /= MS_TO_NS
+    
 
     # Check if the current scenario uses early stopping
     uses_early_stopping = config.uses_early_stopping(scenario)
@@ -981,7 +1241,7 @@ def check_performance_dir(
     # Check if this run uses early stopping. If it does, get the
     # min_queries from the detail log, otherwise get this value
     # from the config
-    if not uses_early_stopping:
+    if not (uses_early_stopping or config.requires_equal_issue(model, division)):
         required_min_query_count = config.get_min_query_count(model, scenario)
         if required_min_query_count and min_query_count < required_min_query_count:
             log.error(
@@ -996,7 +1256,7 @@ def check_performance_dir(
         log.error(
             "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
             fname,
-            OFFLINE_MIN_SPQ,
+            OFFLINE_MIN_SPQ_SINCE_V4[model],
             samples_per_query,
         )
         is_valid = False
@@ -1029,7 +1289,7 @@ def check_performance_dir(
             )
             is_valid = False
 
-    return is_valid, res, inferred
+    return is_valid, res, inferred, equal_issue_used_check
 
 def get_inferred_result(scenario_fixed, scenario, res, mlperf_log, config, log_error=False):
 
@@ -1264,6 +1524,7 @@ def check_results_dir(
     skip_empty_files_check=False,
     skip_check_power_measure_files=False,
     skip_extra_files_in_root_check=False,
+    scenarios_to_skip=[]
 ):
     """
     Walk the results directory and do the checking.
@@ -1314,6 +1575,7 @@ def check_results_dir(
         "inferred",
         "has_power",
         "Units",
+        "weight_data_types"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
@@ -1339,11 +1601,44 @@ def check_results_dir(
         config,
         inferred=0,
         power_metric=0,
+        weight_data_types="fp32"
     ):
         notes = system_json.get("hw_notes", "")
         if system_json.get("sw_notes"):
             notes = notes + ". " if notes else ""
             notes = notes + system_json.get("sw_notes")
+        special_unit_dict = {
+            "gptj-99": {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "gptj-99.9": {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama2-70b-99" : {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama2-70b-99.9" : {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "mixtral-8x7b" : {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            }
+        }
         unit_dict = {
             "SingleStream": "Latency (ms)",
             "MultiStream": "Latency (ms)",
@@ -1356,39 +1651,45 @@ def check_results_dir(
             "Offline": "Watts",
             "Server": "Watts",
         }
-        unit = unit_dict[scenario_fixed]
+        if config.version == "v4.0":
+            unit = unit_dict[scenario_fixed]
+        else:
+            unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
         power_unit = power_unit_dict[scenario_fixed]
 
-        csv.write(
-            fmt.format(
-                submitter,
-                available,
-                division,
-                '"' + system_type + '"',
-                '"' + system_name + '"',
-                system_desc,
-                model_name,
-                mlperf_model,
-                scenario_fixed,
-                r,
-                acc,
-                system_json.get("number_of_nodes"),
-                '"' + system_json.get("host_processor_model_name") + '"',
-                system_json.get("host_processors_per_node"),
-                system_json.get("host_processor_core_count"),
-                '"' + system_json.get("accelerator_model_name") + '"',
-                '"' + str(system_json.get("accelerators_per_node")) + '"',
-                name.replace("\\", "/"),
-                '"' + system_json.get("framework", "") + '"',
-                '"' + system_json.get("operating_system", "") + '"',
-                '"' + notes + '"',
-                compliance,
-                errors,
-                config.version,
-                inferred,
-                power_metric > 0,
-                unit,
-            )
+
+        if (power_metric <= 0) or (not get_boolean(system_json.get("system_power_only"))):
+            csv.write(
+                fmt.format(
+                    submitter,
+                    available,
+                    division,
+                    '"' + system_type + '"',
+                    '"' + system_name + '"',
+                    system_desc,
+                    model_name,
+                    mlperf_model,
+                    scenario_fixed,
+                    r,
+                    acc,
+                    system_json.get("number_of_nodes"),
+                    '"' + system_json.get("host_processor_model_name") + '"',
+                    system_json.get("host_processors_per_node"),
+                    system_json.get("host_processor_core_count"),
+                    '"' + system_json.get("accelerator_model_name") + '"',
+                    '"' + str(system_json.get("accelerators_per_node")) + '"',
+                    name.replace("\\", "/"),
+                    '"' + system_json.get("framework", "") + '"',
+                    '"' + system_json.get("operating_system", "") + '"',
+                    '"' + notes + '"',
+                    compliance,
+                    errors,
+                    config.version,
+                    inferred,
+                    power_metric > 0,
+                    unit,
+                    '"' + weight_data_types + '"',
+                )
         )
 
         if power_metric > 0:
@@ -1421,6 +1722,7 @@ def check_results_dir(
                     inferred,
                     power_metric > 0,
                     power_unit,
+                    '"' + weight_data_types + '"',
                 )
             )
 
@@ -1438,7 +1740,7 @@ def check_results_dir(
         ]
         if len(files_outside_division) > 0 and not skip_extra_files_in_root_check:
             log.error(
-                "Root contains files outside division folder %s",
+                "Root contains files outside division folder %s. You can use '--skip-extra-files-in-root-check' to skip this check temporarily",
                 division,
                 files_outside_division,
             )
@@ -1664,6 +1966,10 @@ def check_results_dir(
                         # some submissions in v0.5 use lower case scenarios - map them for now
                         scenario_fixed = SCENARIO_MAPPING.get(scenario, scenario)
 
+                        # Skip scenario for debug purposes
+                        if scenario in scenarios_to_skip:
+                            continue
+
                         # we are looking at ./$division/$submitter/results/$system_desc/$model/$scenario,
                         #   ie ./closed/mlperf_org/results/t4-ort/bert/Offline
                         name = os.path.join(
@@ -1715,18 +2021,21 @@ def check_results_dir(
                             errors += 1
                             continue
                         else:
-                            if not check_measurement_dir(
+                            measurement_check, conf_equal_issue_check, weight_data_types = check_measurement_dir(
+                                config,
                                 measurement_dir,
                                 name,
                                 system_desc,
                                 os.path.join(division, submitter),
                                 model_name,
                                 scenario,
+                                division,
                                 has_power,
                                 skip_meaningful_fields_emptiness_check,
                                 skip_empty_files_check,
                                 skip_check_power_measure_files,
-                            ):
+                            )
+                            if not measurement_check:
                                 log.error(
                                     "%s measurement_dir has issues", measurement_dir
                                 )
@@ -1745,7 +2054,7 @@ def check_results_dir(
                             )
                             errors += 1
                             continue
-                        else:
+                        elif scenario not in scenarios_to_skip:
                             diff = files_diff(list_files(acc_path), REQUIRED_ACC_FILES)
                             if diff:
                                 log.error(
@@ -1759,6 +2068,7 @@ def check_results_dir(
                                 acc_path,
                                 debug or is_closed_or_network,
                             )
+                            acc = json.dumps(acc).replace(",", " ").replace('"', "").replace("{", "").replace("}", "")
                             if mlperf_model in REQUIRED_ACC_BENCHMARK:
                                 if config.version in REQUIRED_ACC_BENCHMARK[mlperf_model]:
                                     extra_files_pass, missing_files = check_extra_files(acc_path, REQUIRED_ACC_BENCHMARK[mlperf_model][config.version])
@@ -1808,7 +2118,7 @@ def check_results_dir(
                                 continue
 
                             try:
-                                is_valid, r, is_inferred = check_performance_dir(
+                                is_valid, r, is_inferred, performance_equal_issue_check = check_performance_dir(
                                     config,
                                     mlperf_model,
                                     perf_path,
@@ -1822,6 +2132,16 @@ def check_results_dir(
                                     log.info(
                                         "%s has inferred results, qps=%s", perf_path, r
                                     )
+
+                                # Check equal issue mode
+                                if not (conf_equal_issue_check or performance_equal_issue_check):
+                                    log.error(
+                                        "%s %s requires equal issue mode (sample_concatenate_permutation), expected=true, found=%s",
+                                        perf_path,
+                                        measurement_dir,
+                                        not (conf_equal_issue_check or performance_equal_issue_check),
+                                    )
+                                    is_valid, r = False, None
                             except Exception as e:
                                 log.error(
                                     "%s caused exception in check_performance_dir: %s",
@@ -1909,6 +2229,8 @@ def check_results_dir(
                         # check if compliance dir is good for CLOSED division
                         compliance = 0 if is_closed_or_network else 1
                         if is_closed_or_network and not skip_compliance:
+                            if scenario in scenarios_to_skip:
+                                continue
                             compliance_dir = os.path.join(
                                 division,
                                 submitter,
@@ -1954,10 +2276,15 @@ def check_results_dir(
                                     config,
                                     inferred=inferred,
                                     power_metric=power_metric,
+                                    weight_data_types=weight_data_types
                                 )
                             else:
                                 results[name] = None
                                 log.error("%s is OK but accuracy has issues", name)
+
+                    # Discard scenarios that we want to skip
+                    for scenario in scenarios_to_skip:
+                        required_scenarios.discard(scenario)
 
                     if required_scenarios:
                         name = os.path.join(results_path, system_desc, model_name)
@@ -2073,12 +2400,14 @@ def check_system_desc_id_power(
 
 
 def check_measurement_dir(
+    config,
     measurement_dir,
     fname,
     system_desc,
     root,
     model,
     scenario,
+    division,
     has_power,
     skip_meaningful_fields_emptiness_check,
     skip_empty_files_check,
@@ -2144,9 +2473,11 @@ def check_measurement_dir(
                 end = len(".json")
                 break
 
+    weight_data_types = None
     if system_file:
         with open(os.path.join(measurement_dir, system_file), "r") as f:
             j = json.load(f)
+            weight_data_types = j['weight_data_types']
             for k in SYSTEM_IMP_REQUIRED_FILES:
                 if k not in j:
                     is_valid = False
@@ -2169,11 +2500,63 @@ def check_measurement_dir(
             if not os.path.exists(os.path.dirname(code_dir)):
                 log.error("%s is missing code_dir %s", fname, code_dir)
                 is_valid = False
+  
+        # Check equal issue mode 
+        equal_issue_used = False       
+        if "mlperf.conf" in files and config.requires_equal_issue(model, division):
+            with open(f"{measurement_dir}/mlperf.conf") as f:
+                lines = f.readlines()
+                conf_ref_model = model.replace("-99.9", "").replace("-99", "")
+                for line in lines:
+                    line = line.replace(" ", "").replace("\n", "")
+                    if line.startswith("#"):
+                        continue
+                    elif line == "":
+                        continue
+                    else:
+                        key, val = line.split("=")
+                        key.replace(" ", "")
+                        val.replace(" ", "")
+                        conf_model, conf_scenario, conf_key = key.split(".")
+                        if (
+                            (conf_key == "sample_concatenate_permutation") and 
+                            ((conf_model == conf_ref_model) or conf_model == "*") and
+                            ((conf_scenario == scenario) or conf_scenario == "*")
+                        ):
+                            if val.isnumeric():
+                                val = int(val)
+                                equal_issue_used = (val == 1)
+                                break
+
+        if "user.conf" in files and config.requires_equal_issue(model, division):
+            with open(f"{measurement_dir}/user.conf") as f:
+                lines = f.readlines()
+                conf_ref_model = model.replace("-99.9", "").replace("-99", "")
+                for line in lines:
+                    line = line.replace(" ", "").replace("\n", "")
+                    if line.startswith("#"):
+                        continue
+                    elif line == "":
+                        continue
+                    else:
+                        key, val = line.split("=")
+                        key.replace(" ", "")
+                        val.replace(" ", "")
+                        conf_model, conf_scenario, conf_key = key.split(".")
+                        if (
+                            (conf_key == "sample_concatenate_permutation") and 
+                            ((conf_model == conf_ref_model) or conf_model == "*") and
+                            ((conf_scenario == scenario) or conf_scenario == "*")
+                        ):
+                            if val.isnumeric():
+                                val = int(val)
+                                equal_issue_used = (val == 1)
+                                break
     else:
         log.error("%s is missing %s*.json", fname, system_desc)
         is_valid = False
 
-    return is_valid
+    return is_valid, equal_issue_used, weight_data_types
 
 
 def check_compliance_perf_dir(test_dir):
@@ -2258,12 +2641,6 @@ def check_compliance_acc_dir(test_dir, model, config):
                         acc_types.append(acc_type)
                         patterns.append(ACC_PATTERN[acc_type[0]])
                     acc_seen = [False for _ in acc_type]
-
-                    more_accurate = model.find("99.9")
-                    if more_accurate == -1:
-                        required_delta_perc = 1
-                    else:
-                        required_delta_perc = 0.1
                     acc_baseline = {
                         acc_type: 0 for acc_type in acc_types
                     }
@@ -2295,6 +2672,7 @@ def check_compliance_acc_dir(test_dir, model, config):
                             is_valid = False
                             break
                         else:
+                            required_delta_perc = config.get_delta_perc(model, acc_type[0])
                             delta_perc = abs(1 - acc_baseline[acc_type] / acc_compliance[acc_type]) * 100
                             if delta_perc <= required_delta_perc:
                                 is_valid = True
@@ -2344,8 +2722,7 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "stable-diffusion-xl"
-
+        "mixtral-8x7b"
     ]:
         test_list.remove("TEST04")
 
@@ -2354,14 +2731,31 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "stable-diffusion-xl"
+        "stable-diffusion-xl",
+        "mixtral-8x7b"
     ]:
         test_list.remove("TEST05")
-        test_list.remove("TEST01") 
+
+    if model in [
+        "gptj-99",
+        "gptj-99.9",
+        "llama2-70b-99",
+        "llama2-70b-99.9",
+        "mixtral-8x7b"
+    ]:
+        test_list.remove("TEST01")
+
+    if model in [
+        "stable-diffusion-xl"
+    ] and config.version in [ "v4.0" ]:
+        test_list.remove("TEST01")
+        test_list.remove("TEST04")
+
 
     if model in [
         "llama2-70b-99",
         "llama2-70b-99.9",
+        "mixtral-8x7b"
     ]:
         test_list.append("TEST06") 
 
@@ -2383,7 +2777,7 @@ def check_compliance_dir(
                 compliance_perf_dir = os.path.join(
                     compliance_dir, test, "performance", "run_1"
                 )
-                compliance_perf_valid, r, is_inferred = check_performance_dir(
+                compliance_perf_valid, r, is_inferred, _ = check_performance_dir(
                     config, model, compliance_perf_dir, scenario, division, system_json
                 )
                 if is_inferred:
@@ -2423,6 +2817,13 @@ def main():
         skip_power_check=args.skip_power_check,
     )
 
+    if args.scenarios_to_skip:
+        scenarios_to_skip = [
+            scenario for scenario in args.scenarios_to_skip.split(',')
+        ]
+    else:
+        scenarios_to_skip = []
+
     with open(args.csv, "w") as csv:
         os.chdir(args.input)
         # check results directory
@@ -2435,7 +2836,8 @@ def main():
             args.skip_meaningful_fields_emptiness_check,
             args.skip_empty_files_check,
             args.skip_check_power_measure_files,
-            args.skip_extra_files_in_root_check
+            args.skip_extra_files_in_root_check,
+            scenarios_to_skip
         )
 
     # log results

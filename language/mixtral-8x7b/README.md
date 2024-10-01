@@ -8,9 +8,8 @@
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
         - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
 
-## Automated command to run the benchmark via MLCommons CM 
 
-TODO
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/mixtral-8x7b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
  
 ## Prepare environment
 
@@ -64,15 +63,34 @@ Inside the container, set up the environment with `bash build.sh`. This will ins
 CPU-only setup, as well as any GPU versions for applicable libraries like PyTorch.
 
 
-## Get Model
-### MLCommons Members Download
+## Model
 
-TODO: Create MLCommons get fixed link.
-For now it can be downloaded from [Hugging Face](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1/tree/main)
+| model | accuracy | model source | precision |
+| ---- | ---- | ---- | ---- |
+| Mixtral-8x7B-Instruct-v0.1 | [Accuracy target](#accuracy-target) | [Hugging Face](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1) | fp16 |
+
+**Important Note:** Files and configurations of the model have changed, and might change in the future. If you are going to get the model from Hugging Face or any external source, use a version of the model that exactly matches the one in this [commit](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1/commit/a60832cb6c88d5cb6e507680d0e9996fbad77050). We strongly recommend to get the model following the steps in the next section:
+
+### Get Checkpoint
+
+#### Using Rclone
+
+To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
+To install Rclone on Linux/macOS/BSD systems, run:
+```
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+Once Rclone is installed, run the following command to authenticate with the bucket:
+```
+rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
+```
+You can then navigate in the terminal to your desired download directory and run the following command to download the model checkpoint:
+
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/mixtral_8x7b/mixtral-8x7b-instruct-v0.1 ./mixtral-8x7b-instruct-v0.1 -P
+```
 
 ## Get Dataset
-
-TODO: Create scripts and procedure to download all of the parts of the dataset
 
 ### Preprocessed
 
@@ -95,9 +113,20 @@ Alternatively, you can simply cd into the folder where you want to place the dat
 wget https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_15k_v4.pkl
 ```
 
-### Unprocessed
+### Calibration dataset
 
-TODO: Share instructions and scripts
+#### Using Rclone
+Rclone is installed, cd into the folder where you want to place the dataset and run:
+```bash
+rclone copyurl https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_15k_calibration_v4.pkl ./ -a -P
+```
+
+#### Using wget
+
+Alternatively, you can simply cd into the folder where you want to place the dataset and run
+```bash
+wget https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_15k_calibration_v4.pkl
+```
 
 ## Run Performance Benchmarks
 
@@ -220,8 +249,7 @@ sudo docker run -it -v $(pwd):/eval -t evaluation
 3. 
 ```bash
 cd eval
-huggingface-cli login --token [huggingface_token]
-python -u evaluate-accuracy.py --checkpoint-path mistralai/Mixtral-8x7B-instruct-v0.1 \
+python -u evaluate-accuracy.py --checkpoint-path [path_to_model_checkpoint] \
                 --mlperf-accuracy-file [path_to_mlperf_accuracy_file] \
                 --dataset-file [path_to_dataset] \
                 --n_workers 8
@@ -233,15 +261,15 @@ python -u evaluate-accuracy.py --checkpoint-path mistralai/Mixtral-8x7B-instruct
 Reference scores:
 Open Orca:
 ```json
-{'rouge1': 45.4911, 'rouge2': 23.2829, 'rougeL': 30.3615, 'rougeLsum': 42.4333}
+{'rouge1': 45.4911, 'rouge2': 23.2829, 'rougeL': 30.3615}
 ```
 GSM8K:
 ```json
-{'gsm8k_accuracy': 73.78}
+{'gsm8k': 73.78}
 ```
 MBXP:
 ```json
-{'mbxp_accuracy': 60.16}
+{'mbxp': 60.12}
 ```
 For official submissions, 99% of each reference score is enforced. Additionally, 90%-110% of the generated tokens_per_samples:
 ```json

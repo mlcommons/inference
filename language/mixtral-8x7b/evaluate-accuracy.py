@@ -173,10 +173,17 @@ def main():
 
     preds, targets = postprocess_text(
         preds_decoded_text, target_required_OpenOrca)
-    result = metric.compute(
-        predictions=preds, references=targets, use_stemmer=True, use_aggregator=False)
-    result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
-    prediction_lens = [len(pred) for pred in preds]
+    
+    if preds:
+        result = metric.compute(
+            predictions=preds, references=targets, use_stemmer=True, use_aggregator=False)
+        result = {k: float(round(np.mean(v) * 100, 4)) for k, v in result.items()}
+        prediction_lens = [len(pred) for pred in preds]
+
+    else:
+        result = {}
+        prediction_lens = []
+
     # GSM8K metric
     preds_decoded_text = tokenizer.batch_decode(
         preds_token_GSM8K, skip_special_tokens=True)
@@ -193,20 +200,22 @@ def main():
             continue
         correct += (ref == tgt)
 
-    gsm8k_accuracy = 100.0 * correct / gsm8k_total
+    result['gsm8k'] = 100.0 * correct / gsm8k_total
 
     # MBXP metric
     from evaluate_mbxp import evaluate_mbxp
-    mbxp_accuracy = evaluate_mbxp(results_MBXP, args.n_workers)
+
+    if results_MBXP:
+        result['mbxp'] = evaluate_mbxp(results_MBXP, args.n_workers)
+    else:
+        result['mbxp'] = 0
 
     result = {
         **result,
-        'gen_len': np.sum(prediction_lens),
+        'gen_len': int(np.sum(prediction_lens)),
         'gen_num': gen_num,
         'gen_tok_len': gen_tok_len,
         'tokens_per_sample': round(gen_tok_len / gen_num, 1),
-        'gsm8k_accuracy': gsm8k_accuracy,
-        'mbxp_accuracy': mbxp_accuracy
     }
 
     print("\nResults\n")

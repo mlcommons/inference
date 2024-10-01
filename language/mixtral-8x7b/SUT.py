@@ -301,7 +301,10 @@ class SUT():
             self.model = self.model.to(self.device)
 
         self.model.eval()
-        self.model = self.model.to(memory_format=torch.channels_last)
+        try: # for systems with low ram, the below command gives error as some part is offloaded to disk
+            self.model = self.model.to(memory_format=torch.channels_last)
+        except:
+            pass
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,
@@ -380,7 +383,7 @@ class SUTServer(SUT):
             first_tokens, response_id = first_token_item
 
             response_data = array.array("B", np.array(
-                first_tokens, np.float32).tobytes())
+                first_tokens, np.int32).tobytes())
             bi = response_data.buffer_info()
             response = [lg.QuerySampleResponse(response_id, bi[0], bi[1])]
             lg.FirstTokenComplete(response)

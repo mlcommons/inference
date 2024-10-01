@@ -672,6 +672,8 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
       recommendation +=
           "The test exited early, before enough queries were issued.";
     }
+    std::replace(recommendation.begin(),
+               recommendation.end(), '\n', ' ');
     MLPERF_LOG(detail, "result_invalid_reason", recommendation);
   }
   std::replace(early_stopping_recommendation.begin(),

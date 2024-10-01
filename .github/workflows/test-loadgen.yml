@@ -28,8 +28,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python3 -m pip install cmind
-        cm pull repo mlcommons@ck
+        python3 -m pip install cm4mlops
     - name: Test Loadgen
       run: |
-        cm run script --tags=get,mlperf,inference,loadgen --quiet --version=custom --adr.inference-src.env.CM_GIT_CHECKOUT=${{ github.event.pull_request.head.ref }} --adr.inference-src.env.CM_GIT_URL=${{ github.event.pull_request.head.repo.html_url }}
+        cm run script --tags=get,mlperf,inference,loadgen --quiet --version=custom --adr.inference-src.tags=_repo.${{ github.event.pull_request.head.repo.html_url }},_branch.${{ github.event.pull_request.head.ref }}

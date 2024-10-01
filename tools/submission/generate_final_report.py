@@ -8,7 +8,7 @@ import sys
 import re
 import numpy as np
 import pandas as pd
-
+import json
 
 def get_args():
   """Parse commandline."""
@@ -73,6 +73,7 @@ def main():
 
   output = args.input[:-4]
   writer = pd.ExcelWriter(output + '.xlsx', engine='xlsxwriter')
+  outjsondata = []
 
   indices = {}
   indices['closed'] = [
@@ -153,15 +154,18 @@ def main():
       }
   }
 
-  def MakeWorksheet(df, index, filter_dict, sheet_name):
+  def MakeWorksheet(df, index, filter_dict, sheet_name, outjsondata=[]):
     for key, value in filter_dict.items():
       if type(key) == tuple:
         key = list(key)
       df = df[value(df[key])]
-    df = df.pivot_table(index=index, columns=columns, values=['Result'])
-    df = df.fillna('')
     if df.size == 0:
       return
+    json_df = df.to_json(orient='records')
+    outjsondata += json.loads(json_df)
+
+    df = df.pivot_table(index=index, columns=columns, values=['Result'])
+    df = df.fillna('')
     for i, order in enumerate(columns_order):
       df = df.reindex(columns=order, level=i)
     df.to_excel(writer, sheet_name=sheet_name)
@@ -222,7 +226,7 @@ def main():
                       NotEqual('millijoules/Stream')),
               ('Scenario', 'Model'):
                   Apply(FilterScenario, suite)
-          }, suite + ' - ' + category)
+          }, suite + ' - ' + category, outjsondata)
 
       MakeWorksheet(
           df, indices[category], {
@@ -230,8 +234,70 @@ def main():
               'Suite': Contain(suite),
               'has_power': Equal(True),
               ('Scenario', 'Model'): Apply(FilterScenario, suite)
-          }, suite + ' - ' + category + ' - power')
+          }, suite + ' - ' + category + ' - power', outjsondata)
 
+  def reformatlink(data, key):
+    details = data[key]
+    details = details[details.find("(")+2:details.find(",")-1]
+    return details
+
+  for i,result in enumerate(outjsondata):
+    result['Details'] = reformatlink(result, "Details")
+    result['Code'] = reformatlink(result, "Code")
+    result_id = result.pop('ID')
+    outjsondata[i] = {'ID': result_id, **result}
+
+  outjsondata.sort(key=lambda x:x["Units"])
+  outjsondata.sort(key=lambda x:x["Scenario"])
+  outjsondata.sort(key=lambda x:x["UsedModel"])
+  outjsondata.sort(key=lambda x:x["ID"])
+
+  #remove duplicate perf results
+  keystomatch = ['ID', 'UsedModel', 'Scenario', 'Units']
+  i = 0
+  n = len(outjsondata)
+  while i < n:
+    result = outjsondata[i]
+    while i < n - 1 and all(result[key] == outjsondata[i+1][key] for key in keystomatch):
+      del(outjsondata[i+1])
+      n -= 1
+    i += 1
+
+  #merge perf and power results
+  keystomatch.pop()
+
+  for i in range(len(outjsondata)):
+    result = outjsondata[i]
+    if not result:
+      continue
+    if i < len(outjsondata) - 1:
+      if all(result[key] == outjsondata[i+1][key] for key in keystomatch):
+        #print(result)
+        #print(outjsondata[i+1])
+        if "Watts" in result['Units'] or "joules" in result['Units']:
+          result['Performance_Result'] = outjsondata[i+1]['Result']
+          result['Performance_Units'] = outjsondata[i+1]['Units']
+          result['Power_Result'] = result['Result']
+          result['Power_Units'] = result['Units']
+        else:
+          result['Power_Result'] = outjsondata[i+1]['Result']
+          result['Power_Units'] = outjsondata[i+1]['Units']
+          result['Performance_Result'] = result['Result']
+          result['Performance_Units'] = result['Units']
+        outjsondata[i+1] = {}
+        del(result['Result'])
+        del(result['Units'])
+
+  for i,result in enumerate(outjsondata):
+    if result.get('Result'):
+      result['Performance_Result'] = result['Result']
+      result['Performance_Units'] = result['Units']
+      del(result['Result'])
+      del(result['Units'])
+
+  outjsondata = [ i for i in outjsondata if i != {}]
+  with open(f"{output}_results.json", "w") as f:
+    f.write(json.dumps(outjsondata, indent=2))
   score_format = writer.book.add_format({'num_format': '#,##0.00'})
   bg_format = writer.book.add_format({'bg_color': '#efefef'})
   for ws in writer.book.worksheets():

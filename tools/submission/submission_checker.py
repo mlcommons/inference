@@ -1256,7 +1256,7 @@ def check_performance_dir(
         log.error(
             "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
             fname,
-            OFFLINE_MIN_SPQ,
+            OFFLINE_MIN_SPQ_SINCE_V4[model],
             samples_per_query,
         )
         is_valid = False
@@ -1575,6 +1575,7 @@ def check_results_dir(
         "inferred",
         "has_power",
         "Units",
+        "weight_data_types"
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
@@ -1600,6 +1601,7 @@ def check_results_dir(
         config,
         inferred=0,
         power_metric=0,
+        weight_data_types="fp32"
     ):
         notes = system_json.get("hw_notes", "")
         if system_json.get("sw_notes"):
@@ -1649,8 +1651,12 @@ def check_results_dir(
             "Offline": "Watts",
             "Server": "Watts",
         }
-        unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
+        if config.version == "v4.0":
+            unit = unit_dict[scenario_fixed]
+        else:
+            unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
         power_unit = power_unit_dict[scenario_fixed]
+
 
         if (power_metric <= 0) or (not get_boolean(system_json.get("system_power_only"))):
             csv.write(
@@ -1682,6 +1688,7 @@ def check_results_dir(
                     inferred,
                     power_metric > 0,
                     unit,
+                    '"' + weight_data_types + '"',
                 )
         )
 
@@ -1715,6 +1722,7 @@ def check_results_dir(
                     inferred,
                     power_metric > 0,
                     power_unit,
+                    '"' + weight_data_types + '"',
                 )
             )
 
@@ -1732,7 +1740,7 @@ def check_results_dir(
         ]
         if len(files_outside_division) > 0 and not skip_extra_files_in_root_check:
             log.error(
-                "Root contains files outside division folder %s",
+                "Root contains files outside division folder %s. You can use '--skip-extra-files-in-root-check' to skip this check temporarily",
                 division,
                 files_outside_division,
             )
@@ -2013,7 +2021,7 @@ def check_results_dir(
                             errors += 1
                             continue
                         else:
-                            measurement_check, conf_equal_issue_check = check_measurement_dir(
+                            measurement_check, conf_equal_issue_check, weight_data_types = check_measurement_dir(
                                 config,
                                 measurement_dir,
                                 name,
@@ -2268,6 +2276,7 @@ def check_results_dir(
                                     config,
                                     inferred=inferred,
                                     power_metric=power_metric,
+                                    weight_data_types=weight_data_types
                                 )
                             else:
                                 results[name] = None
@@ -2464,9 +2473,11 @@ def check_measurement_dir(
                 end = len(".json")
                 break
 
+    weight_data_types = None
     if system_file:
         with open(os.path.join(measurement_dir, system_file), "r") as f:
             j = json.load(f)
+            weight_data_types = j['weight_data_types']
             for k in SYSTEM_IMP_REQUIRED_FILES:
                 if k not in j:
                     is_valid = False
@@ -2545,7 +2556,7 @@ def check_measurement_dir(
         log.error("%s is missing %s*.json", fname, system_desc)
         is_valid = False
 
-    return is_valid, equal_issue_used
+    return is_valid, equal_issue_used, weight_data_types
 
 
 def check_compliance_perf_dir(test_dir):

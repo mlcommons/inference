@@ -1,0 +1,55 @@
+
+name: "format"
+on:
+  pull_request:
+    branches: [ master ]
+    types: [opened, closed, synchronize]
+
+
+env:
+  python_version: "3.9"
+  repo: "mlcommons/inference"
+
+jobs:
+  format-code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+      - name: Set up Python ${{ env.python_version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ env.python_version }}
+
+      - name: Install dependencies
+        run: |
+          python3 -m pip install autopep8
+
+      - name: Grant permissions
+        run: |
+          chmod 777 "${GITHUB_WORKSPACE}/.github/scripts/format-cpp.sh"
+          chmod 777 "${GITHUB_WORKSPACE}/.github/scripts/format-py.sh"
+      
+      - name: Format Codebase
+        if: ${{ github.event.pull_request.base.repo.full_name == env.repo }}
+        run: |
+          git remote add upstream ${{ github.event.pull_request.base.repo.clone_url }}
+          git fetch upstream ${{ github.event.pull_request.base.ref }}
+          ".github/scripts/format-cpp.sh" "${{ github.event.pull_request.base.ref }}"
+          ".github/scripts/format-py.sh" "${{ github.event.pull_request.base.ref }}"
+
+      - name: Commit
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          HAS_CHANGES=$(git diff --cached --name-only)
+          if [ ${#HAS_CHANGES} -gt 0 ]; then
+            git log
+            git config --global user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
+            git config --global user.name "${GITHUB_ACTOR}"
+            git commit -m '[Automated Commit] Format Codebase'
+            git push origin ${{ github.head_ref || github.ref_name }}
+          fi
+
+      

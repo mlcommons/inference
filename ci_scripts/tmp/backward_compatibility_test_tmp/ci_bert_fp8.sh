@@ -6,21 +6,20 @@ model_dir=language/bert
 git_dir=$(git rev-parse --show-toplevel)
 work_dir=$git_dir/$model_dir
 data_dir=/home/home-mcl/phil/actions-runner/_work/data
-MODEL_DATA_DIR=$data_dir/furiosa_llm_modles_artifacts/quantized/furiosa-ai/mlperf-bert-large/mlperf_submission/W8A8/24L
 REF_PATH=/home/home-mcl/phil/actions-runner/_work/data/quantization/bert/ref
 RES_PATH=/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results
 
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
-CONFIG_DTYPE=int8
+CONFIG_DTYPE=fp8
 # work on model directory
 cd $work_dir
 
-# # enter existing conda env.
-# export CONDA_EXE="/anaconda/condabin/conda"
-# conda_base=$($CONDA_EXE info --base)
-# source "$conda_base/etc/profile.d/conda.sh"
-# conda activate inference-ci
+# enter existing conda env.
+export CONDA_EXE="/anaconda/condabin/conda"
+conda_base=$($CONDA_EXE info --base)
+source "$conda_base/etc/profile.d/conda.sh"
+conda activate inference-ci
 
 SCENARIO=${SCENARIO:="Offline"}
 BACKEND="rngd"
@@ -33,6 +32,7 @@ N_COUNT=${N_COUNT:="100"} # total_len = 10,833
 
 # eval model
 printf "\n============= STEP-1: pull dvc =============\n"
+MODEL_DATA_DIR=$data_dir/furiosa_llm_models_artifacts/quantized/furiosa-ai/mlperf-bert-large/mlperf_submission/W8fA8f/24L
 
 # TAG=main
 # cd $git_dir
@@ -44,8 +44,6 @@ printf "\n============= STEP-1: pull dvc =============\n"
 # dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml.dvc -r origin --force
 # dvc pull $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy.dvc -r origin --force
 
-
-# cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $MODEL_DATA_DIR/quant_format.yaml
 # cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qparam.npy $MODEL_DATA_DIR/quant_param.npy
 
 # rm -rf $git_dir/furiosa-llm-models-artifacts
@@ -71,8 +69,8 @@ python -m ci_file.backward_compatibility_test_qbert_forward \
                                     --gpu \
                                     --ref_path=$REF_PATH \
                                     --res_path=$RES_PATH \
-                                    --config_dtype=$CONFIG_DTYPE\
-                                    # --update_gen_list #정답지 업데이트용 argument
+                                    --config_dtype=$CONFIG_DTYPE
+# cp $git_dir/furiosa-llm-models-artifacts/$quant_data_dvc_dir/qformat.yaml $MODEL_DATA_DIR/quant_format.yaml
 
 
 printf "\n============= STEP-3: Check the equivalence of f1 score between current mlperf submission <-> ref =============\n"
@@ -80,7 +78,6 @@ export ML_MODEL_FILE_WITH_PATH=$MODEL_PATH
 export LOG_PATH=$LOG_PATH
 VOCAB_PATH=$data_dir/models/bert/vocab.txt
 DATASET_PATH=$data_dir/dataset/squad/validation/dev-v1.1.json
-export VOCAB_FILE=$VOCAB_PATH
 export DATASET_FILE=$DATASET_PATH
 export SKIP_VERIFY_ACCURACY=true
 
@@ -105,7 +102,7 @@ python accuracy-squad.py --vocab_file=$VOCAB_PATH \
                          &> $LOG_PATH/accuracy_result_$CONFIG_DTYPE.log
 
 CUR_F1_SCORE=$(grep -oP '"f1":\s*\K[0-9.]+' "$LOG_PATH/accuracy_result_$CONFIG_DTYPE.log")
-REF_F1_SCORE=94.86666 #int8
+REF_F1_SCORE=95.46667 #fp8
 
 # f1 score 비교: Ref <-> submission model 
 
@@ -142,7 +139,6 @@ printf "Save evaluation log to $LOG_PATH"
 
 unset LOG_PATH
 unset ML_MODEL_FILE_WITH_PATH
-unset VOCAB_FILE
 unset DATASET_FILE
 unset SKIP_VERIFY_ACCURACY
 

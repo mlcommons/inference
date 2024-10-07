@@ -16,12 +16,14 @@ PADDING_SIZE = 384
 BUCKET_SIZE = 384
 PAD_TOKEN_ID = 0
 
-def load_pytorch_model(model_path, model_config_path, use_gpu):
+def load_pytorch_model(model_path, model_config_path, use_gpu, n_layers=-1):
     from furiosa_llm_models.bert.symbolic.huggingface_rngd_gelu import BertForQuestionAnswering
     with open(model_config_path) as f:
         config_json = json.load(f)
 
     config = BertConfig(**config_json)
+    if n_layers != -1:
+        config.num_hidden_layers = n_layers
     device = torch.device("cuda:0") if use_gpu else torch.device("cpu")
 
     model = BertForQuestionAnswering(config)
@@ -30,12 +32,14 @@ def load_pytorch_model(model_path, model_config_path, use_gpu):
     model.load_state_dict(torch.load(model_path), strict=False)
     return model
 
-def load_mlperf_submission_model(model_path, model_config_path, use_gpu):
+def load_mlperf_submission_model(model_path, model_config_path, use_gpu, n_layers=-1):
     from furiosa_llm_models.bert.symbolic.mlperf_submission import BertForQuestionAnswering
     with open(model_config_path) as f:
         config_json = json.load(f)
 
     config = BertConfig(**config_json)
+    if n_layers != -1:
+        config.num_hidden_layers = n_layers
     device = torch.device("cuda:0") if use_gpu else torch.device("cpu")
 
     model = BertForQuestionAnswering(config)
@@ -114,6 +118,7 @@ def calibrate(model: GraphModule, qconfig, qparam_path, qformat_path, calib_data
 
     model = model_compressor.create_quantsim_model(
         model,
+        dataloader=calib_dataloader,
         disable_inout=(True, True),
         **get_kwargs(model_compressor.create_quantsim_model, qconfig),
     )
@@ -180,7 +185,12 @@ def get_args():
         default=False,
         help="if true qlv4 state_dict and rblock .json will be saved",
     )
-
+    parser.add_argument(
+        "--n_layers", 
+        type=int, 
+        default=-1,
+        help="the number of layers"
+    )
     args = parser.parse_args()
     return args
 
@@ -193,7 +203,7 @@ def main():
             raise ValueError(
                 "Calibration on a device other than GPU is not supported yet."
             )
-        model = load_pytorch_model(args.model_path, args.model_config_path, args.gpu)
+        model = load_pytorch_model(args.model_path, args.model_config_path, args.gpu, args.n_layers)
         model = model.trace()
 
     elif args.model_type == "mlperf-submission":
@@ -202,7 +212,7 @@ def main():
                 "Calibration on a device other than GPU is not supported yet."
             )
         
-        model = load_mlperf_submission_model(args.model_path, args.model_config_path, args.gpu)
+        model = load_mlperf_submission_model(args.model_path, args.model_config_path, args.gpu, args.n_layers)
         model = model.trace()
 
     else:

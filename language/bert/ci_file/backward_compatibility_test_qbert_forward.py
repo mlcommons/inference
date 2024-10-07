@@ -110,7 +110,7 @@ def get_submission_model(
     logit_folder_path,
 ):
 
-    submission_model = load_mlperf_submission_model(model_path, model_config_path, gpu)
+    submission_model = load_mlperf_submission_model(model_path, model_config_path, gpu, -1)
     submission_model = submission_model.trace()
 
     quant_submission_model = quantize_model(

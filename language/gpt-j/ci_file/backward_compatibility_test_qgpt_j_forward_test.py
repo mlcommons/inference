@@ -127,7 +127,7 @@ def get_generator_for_submission_model(
     gpu,
     logit_folder_path,
 ):
-    submission_model = load_mlperf_submission_model(model_path, gpu)
+    submission_model = load_mlperf_submission_model(model_path, gpu, -1)
     model_config = submission_model.config
     (
         quant_submission_models,

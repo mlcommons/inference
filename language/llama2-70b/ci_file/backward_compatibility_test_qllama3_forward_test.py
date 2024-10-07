@@ -7,7 +7,7 @@ import re
 import os
 import furiosa_llm_models
 import joblib
-import model_compressor
+import model_compressor_impl
 import torch
 import yaml
 from torch.nn.functional import pad
@@ -31,7 +31,7 @@ from RNGD_generator import MLPerfSubmissionGreedySearch
 BLOCK_SIZE = 1
 # bucket size would simply be a max value such as 2048 since we only provide one bucket
 EARLY_STOPPING = True
-PAD_TOKEN_ID = EOS_TOKEN_ID = 2
+PAD_TOKEN_ID = EOS_TOKEN_ID = 128009 #128001
 MAX_LENGTH = 2048
 MAX_NEW_TOKENS = 1024
 MIN_NEW_TOKENS = 1
@@ -79,6 +79,7 @@ def make_calib_dataloader(tokenizer, data_path, batch_size, n_calib,):
             "position_ids": pad(torch.arange(0, len(input_token), 1), (padding_size, 0)),
         }
     ]
+    
     # data_list = []
 
     # for input_token in input_tokens[:n_calib]:
@@ -154,7 +155,7 @@ def obtain_traced_model_dict(model):
             prefill_model,
             prefill_input_names,
             prefill_concrete_args,
-        ) = model_compressor.helper.llama_custom_symbolic_trace(
+        ) = model_compressor_impl.helper.llama_custom_symbolic_trace(
             model, 
             input_names=["input_ids", "attention_mask", "position_ids"], 
             disable_check=True
@@ -163,7 +164,7 @@ def obtain_traced_model_dict(model):
             decode_model,
             decode_input_names,
             decode_concrete_args,
-        ) = model_compressor.helper.llama_custom_symbolic_trace(
+        ) = model_compressor_impl.helper.llama_custom_symbolic_trace(
             model,
             input_names=["input_ids", "past_key_values", "attention_mask", "position_ids"],
             disable_check=True,
@@ -232,7 +233,6 @@ def get_generator_for_submission_model(
     else:
         device_map = None
 
-    print(device_map)
     traced_submission_models, _ , _ = obtain_traced_model_dict(submission_model)
 
     quant_submission_models = quantize_model(traced_submission_models, submission_quant_param_path, submission_quant_format_path)
@@ -270,7 +270,7 @@ def perform_generation(
     generation_output_dictionary = dict()
     with torch.no_grad():
         for idx, test_data in enumerate(test_data_list):
-            if type(generator) == model_compressor.helper.QuantCausalLM:
+            if type(generator) == model_compressor_impl.helper.QuantCausalLM:
                 output = generator.generate(**test_data, **gen_kwargs)
             elif type(generator) == MLPerfSubmissionGreedySearch:  
                 input_ids_tensor = []
@@ -361,14 +361,21 @@ def perform_generation(
 def compare_model_outputs(args):
 
     # test_data_list = gen_test_data(args.dataset_path, args.n_data)
-
+    test_data_list = []
+    sample_data = torch.load('/home/home-mcl/shared_data/dataset/open-orca/validation/test_data.pt')
+    test_data_list.append(sample_data)
+    
     tokenizer = AutoTokenizer.from_pretrained(
         args.model_path,
         model_max_length=1024,
         padding_side="left",
         use_fast=False,
     )
-    test_data_list = make_calib_dataloader(tokenizer, args.dataset_path, 1, args.n_data,)
+    tokenizer.pad_token = tokenizer.eos_token
+    print(f"Pad token: {tokenizer.pad_token}")
+    print(f"Pad token ID: {tokenizer.pad_token_id}")
+
+    # test_data_list = make_calib_dataloader(tokenizer, args.dataset_path, 1, args.n_data,)
     
     submission_model_generator = get_generator_for_submission_model(
         args.model_path,

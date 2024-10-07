@@ -19,7 +19,7 @@ from transformers.generation.logits_process import \
 from transformers.generation.stopping_criteria import MaxLengthCriteria
 from transformers.generation.utils import BeamSearchScorer
 import accelerate
-from furiosa_llm_models.llama3.symbolic.mlperf_submission_slice import LlamaForCausalLM
+# from furiosa_llm_models.llama3.symbolic.mlperf_submission_slice import LlamaForCausalLM
 
 from ci_file.utils.check_logit_equality import compare_logits
 from ci_file.utils.compare_output_yaml import compare_output_yaml
@@ -225,8 +225,8 @@ def perform_generation(
     if type(generator) == MLPerfSubmissionGreedySearch:  # mlperf submission generate
         # load reference generated tokens.
         update_ref_path = ref_path + f"/generated_data_list_{config_dtype}.json"
-        # with open(update_ref_path, "r") as file:
-        #     ref_data = json.load(file)
+        with open(update_ref_path, "r") as file:
+            ref_data = json.load(file)
 
         results = []
         result_flag = True
@@ -300,7 +300,7 @@ def perform_generation(
                     generated_data_list.append(generated_data)
                 print(f"생성 토큰 문장 {idx}: {gen_sentence}")
                 # compare submission model's decoded_test with reference sentences.
-                # ref_sentence = ref_data[idx]["gen_text"]
+                ref_sentence = ref_data[idx]["gen_text"]
                 result_flag = check_diff(idx, ref_sentence, gen_sentence, results, result_flag)
 
             generation_output_dictionary[idx] = tokenizer.decode(

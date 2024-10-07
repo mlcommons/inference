@@ -6,7 +6,6 @@ import yaml
 from torch.utils.data import DataLoader
 from torch.nn.functional import pad
 import model_compressor
-import model_compressor_impl
 from quantization.utils import get_kwargs, random_seed, set_optimization
 from quantization.quantize import quantize_model
 
@@ -20,7 +19,7 @@ BLOCK_SIZE = 1
 BUCKET_SIZE = 2048
 
 
-def load_pytorch_model(model_source, model_path, use_gpu, n_layers=-1):
+def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
     if use_gpu:
         assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
     amp_dtype = torch.float32
@@ -71,8 +70,8 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers=-1):
     model = model.to(memory_format=torch.channels_last)
     
     if hasattr(model, 'hf_device_map'):
-            model.device_map = model.hf_device_map
-            model.module_name =  model.__class__.__module__ + "." + model.__class__.__name__
+        model.device_map = model.hf_device_map
+        model.module_name =  model.__class__.__module__ + "." + model.__class__.__name__
     
     return model
 
@@ -121,7 +120,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         autoscale_calib_kwargs = None
 
     model_type = type(model)
-    model, _,_ = model_compressor_impl.helper.llama_custom_symbolic_trace(
+    model, _,_ = model_compressor.helper.llama_custom_symbolic_trace(
         model,
         input_names=["input_ids", "attention_mask", "position_ids"], 
         disable_check=True
@@ -152,12 +151,12 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         nodes_excluded_from_auto_scale_calib=nodes_excluded_from_auto_scale_calib,
     )
 
-    qformat, qparam = model_compressor_impl.extract_qformat_and_qparam(model)
-    model_compressor_impl.save_qformat_qparam(qformat_dict=qformat,
+    qformat, qparam = model_compressor.extract_qformat_and_qparam(model)
+    model_compressor.save_qformat_qparam(qformat_dict=qformat,
                                          qformat_out_path=qformat_path,
                                          qparam_dict=qparam, 
                                          qparam_out_path=qparam_path,
-                                         **get_kwargs(model_compressor_impl.save_qformat_qparam, qconfig),
+                                         **get_kwargs(model_compressor.save_qformat_qparam, qconfig),
                                          )
 
     model.cpu()
@@ -170,30 +169,30 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
 
 def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_param_path, quant_format_path, qconfig, save_cache_files, output_path):
         
-    prefill_model = model_compressor.create_quantsim_model(
-        model.trace_prefill(),
-        qformat_path = golden_qformat_path,
-        qparam_path = golden_qparam_path,
-        qlevel=2,
-        target_machine=qconfig["target_machine"],
-        immigrate_qparams = True,
-    )
+    # prefill_model = model_compressor.create_quantsim_model(
+    #     model.trace_prefill(),
+    #     qformat_path = golden_qformat_path,
+    #     qparam_path = golden_qparam_path,
+    #     qlevel=2,
+    #     target_machine=qconfig["target_machine"],
+    #     immigrate_qparams = True,
+    # )
 
-    qformat, qparam = model_compressor_impl.extract_qformat_and_qparam(prefill_model)
-    model_compressor_impl.save_qformat_qparam(qformat_dict=qformat,
-                                         qformat_out_path=quant_format_path,
-                                         qparam_dict=qparam, 
-                                         qparam_out_path=quant_param_path,
-                                         **get_kwargs(model_compressor_impl.save_qformat_qparam, qconfig),
-                                         )
+    # qformat, qparam = model_compressor.extract_qformat_and_qparam(prefill_model)
+    # model_compressor.save_qformat_qparam(qformat_dict=qformat,
+    #                                      qformat_out_path=quant_format_path,
+    #                                      qparam_dict=qparam, 
+    #                                      qparam_out_path=quant_param_path,
+    #                                      **get_kwargs(model_compressor.save_qformat_qparam, qconfig),
+    #                                      )
 
     if save_cache_files:
 
         traced_models = model.trace_all()
         quant_models = quantize_model(traced_models, quant_param_path, quant_format_path, output_path=output_path)
 
-        qlv4_prefill_out_path = quant_param_path.replace("quant_param.npy", "prefill.bin")
-        qlv4_decode_out_path = quant_param_path.replace("quant_param.npy", "decode.bin")
+        qlv4_prefill_out_path = quant_param_path.replace("quant_param_zp2zero.npy", "prefill_zp2zero.bin")
+        qlv4_decode_out_path = quant_param_path.replace("quant_param_zp2zero.npy", "decode_zp2zero.bin")
         # prefill_rblock_json_out_path = quant_param_path.replace("quant_param.npy", "prefill_graph_patterns.json")
         # decode_rblock_json_out_path = quant_param_path.replace("quant_param.npy", "decode_graph_patterns.json")
 
@@ -254,12 +253,15 @@ def get_args():
 
 def main():
     args = get_args()
-    golden_model = load_pytorch_model(
-                            model_source = 'furiosa_llm_rope', 
-                            model_path = args.model_path, 
-                            use_gpu = args.gpu, 
-                            n_layers = args.n_layers
-                            )
+    # print(args.quant_config_path)
+    # exit()
+    print(f'n_layers: {args.n_layers}')
+    # golden_model = load_pytorch_model(
+    #                         model_source = 'furiosa_llm_rope', 
+    #                         model_path = args.model_path, 
+    #                         use_gpu = args.gpu, 
+    #                         n_layers = args.n_layers
+    #                         )
     
 
     random_seed()
@@ -268,23 +270,23 @@ def main():
     with open(args.quant_config_path, "r") as f:
         qconfig = yaml.safe_load(f)
 
-    dataloader = make_calib_dataloader(golden_model, args.calib_data_path, qconfig["calib_batch_size"], args.n_calib,)
+    # dataloader = make_calib_dataloader(golden_model, args.calib_data_path, qconfig["calib_batch_size"], args.n_calib,)
     
     golden_quant_param_path = args.quant_param_path.replace('.npy', '_golden.npy')
     golden_quant_format_path = args.quant_format_path.replace('.yaml', '_golden.yaml')
 
-    calibrate(
-        golden_model,
-        qconfig,
-        golden_quant_param_path,
-        golden_quant_format_path,
-        dataloader,
-    )
+    # calibrate(
+    #     golden_model,
+    #     qconfig,
+    #     golden_quant_param_path,
+    #     golden_quant_format_path,
+    #     dataloader,
+    # )
 
-    golden_model.cpu()
-    del golden_model
-    gc.collect()
-    torch.cuda.empty_cache() 
+    # golden_model.cpu()
+    # del golden_model
+    # gc.collect()
+    # torch.cuda.empty_cache() 
 
     submission_model = load_pytorch_model(
                         model_source = args.submission_model_source, 

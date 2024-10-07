@@ -5,6 +5,7 @@ import torch
 import yaml
 from torch.utils.data import DataLoader
 from torch.nn.functional import pad
+import model_compressor_impl
 import model_compressor
 from quantization.utils import get_kwargs, random_seed, set_optimization
 from quantization.quantize import quantize_model
@@ -37,7 +38,7 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
         from transformers import AutoConfig
         config_exp =  AutoConfig.from_pretrained(model_path)
         config_exp.num_hidden_layers = n_layers
-
+        
         model = LlamaForCausalLM.from_pretrained(
             model_path, 
             config=config_exp
@@ -53,7 +54,7 @@ def load_pytorch_model(model_source, model_path, use_gpu, n_layers):
                 device_map="auto",
                 low_cpu_mem_usage=True,
                 torch_dtype=amp_dtype
-            )
+        )
 
     print("Loaded model")
 
@@ -108,7 +109,7 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         autoscale_calib_kwargs = None
 
     model_type = type(model)
-    model, _,_ = model_compressor.helper.llama_custom_symbolic_trace(
+    model, _,_ = model_compressor_impl.helper.llama_custom_symbolic_trace(
         model,
         input_names=["input_ids", "attention_mask", "position_ids"], 
         disable_check=True
@@ -138,12 +139,12 @@ def calibrate(model, qconfig, qparam_path, qformat_path, calib_dataloader):
         nodes_excluded_from_auto_scale_calib=nodes_excluded_from_auto_scale_calib,
     )
 
-    qformat, qparam = model_compressor.extract_qformat_and_qparam(model)
-    model_compressor.save_qformat_qparam(qformat_dict=qformat,
+    qformat, qparam = model_compressor_impl.extract_qformat_and_qparam(model)
+    model_compressor_impl.save_qformat_qparam(qformat_dict=qformat,
                                          qformat_out_path=qformat_path,
                                          qparam_dict=qparam, 
                                          qparam_out_path=qparam_path,
-                                         **get_kwargs(model_compressor.save_qformat_qparam, qconfig),
+                                         **get_kwargs(model_compressor_impl.save_qformat_qparam, qconfig),
                                          )
 
     model.cpu()
@@ -165,13 +166,12 @@ def immigrate_qparams(model, golden_qparam_path, golden_qformat_path, quant_para
         immigrate_qparams = True,
     )
 
-    qformat, qparam = model_compressor.extract_qformat_and_qparam(prefill_model)
-    print(f'here: {quant_format_path}')
-    model_compressor.save_qformat_qparam(qformat_dict=qformat,
+    qformat, qparam = model_compressor_impl.extract_qformat_and_qparam(prefill_model)
+    model_compressor_impl.save_qformat_qparam(qformat_dict=qformat,
                                          qformat_out_path=quant_format_path,
                                          qparam_dict=qparam, 
                                          qparam_out_path=quant_param_path,
-                                         **get_kwargs(model_compressor.save_qformat_qparam, qconfig),
+                                         **get_kwargs(model_compressor_impl.save_qformat_qparam, qconfig),
                                          )
 
     if save_cache_files:

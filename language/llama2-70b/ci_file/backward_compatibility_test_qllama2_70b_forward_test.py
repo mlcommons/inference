@@ -371,24 +371,28 @@ def compare_model_outputs(args):
         args.logit_folder_path,
         args.mcp_dumping_on,
     )
-
-    submission_generation_result_file_path = (
-        args.generation_result_folder_path + "/submission_generation_output.yaml"
-    )
-    result_flag = perform_generation(
-        submission_model_generator,
-        test_data_list,
-        args.logit_folder_path,
-        submission_generation_result_file_path,
-        tokenizer,
-        ref_path=args.ref_path,
-        res_path=args.res_path,
-        config_dtype=args.config_dtype,
-        update_gen_list=args.update_gen_list,
-    )
     print("----------------------------------------------")
-    print(f"토큰 동치 비교 결과 : {result_flag}")
+    print(f"DONE: create quantization simulation model")
     print("----------------------------------------------")
+    
+    if args.n_data != 0:
+        submission_generation_result_file_path = (
+            args.generation_result_folder_path + "/submission_generation_output.yaml"
+        )
+        result_flag = perform_generation(
+            submission_model_generator,
+            test_data_list,
+            args.logit_folder_path,
+            submission_generation_result_file_path,
+            tokenizer,
+            ref_path=args.ref_path,
+            res_path=args.res_path,
+            config_dtype=args.config_dtype,
+            update_gen_list=args.update_gen_list,
+        )
+        print("----------------------------------------------")
+        print(f"토큰 동치 비교 결과 : {result_flag}")
+        print("----------------------------------------------")
 
 if __name__ == "__main__":
     args = get_args()

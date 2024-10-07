@@ -8,22 +8,22 @@ work_dir=$git_dir/$model_dir
 data_dir=/home/home-mcl/phil/actions-runner/_work/data
 REF_PATH=/home/home-mcl/phil/actions-runner/_work/data/quantization/gpt-j/ref
 RES_PATH=/home/home-mcl/phil/actions-runner/_work/inference/inference/language/results
-MODEL_DATA_DIR=$data_dir/furiosa_llm_modles_artifacts/quantized/furiosa-ai/mlperf-gpt-j-6b/mlperf_submission_slice/W8A8KV8/28L
+MODEL_DATA_DIR=$data_dir/furiosa_llm_modles_artifacts/quantized/furiosa-ai/mlperf-gpt-j-6b/mlperf_submission_slice/W8fA8fKV8f/28L
 quant_data_dir=$data_dir/quantization/gpt-j
 log_dir=$git_dir/logs
 env_name=mlperf-$model_name
-CONFIG_DTYPE=int8
+CONFIG_DTYPE=fp8
+QUANT_CONFIG_PATH=$quant_data_dir/quant_config_$CONFIG_DTYPE.yaml
 # work on model directory
 cd $work_dir
 
-# # enter existing conda env.
-# export CONDA_EXE="/anaconda/condabin/conda"
-# conda_base=$($CONDA_EXE info --base)
-# source "$conda_base/etc/profile.d/conda.sh"
-# conda activate inference-ci
+# enter existing conda env.
+export CONDA_EXE="/anaconda/condabin/conda"
+conda_base=$($CONDA_EXE info --base)
+source "$conda_base/etc/profile.d/conda.sh"
+conda activate inference-ci
 
 # eval model
-printf "\n============= STEP-1: Run calibration =============\n"
 SCENARIO=${SCENARIO:="Offline"}
 #BACKEND="rngd"
 
@@ -33,18 +33,10 @@ LOG_PATH=$log_dir/$model_name/$SCENARIO/$(date +%Y%m%d_%H%M%S%Z)
 
 # quantization args
 export CALIBRATE=true
-export N_CALIB=50
-export N_DATA=10
-N_COUNT=${N_COUNT:="10"} # total_len=13,368
-
-CALIB_DATA_PATH=$data_dir/dataset/cnn-daily-mail/calibration/cnn_dailymail_calibration.json
-QUANT_CONFIG_PATH=$quant_data_dir/quant_config_$CONFIG_DTYPE.yaml
-QUANT_PARAM_PATH=$quant_data_dir/calibration_range/quant_param.npy
-QUANT_FORMAT_PATH=$quant_data_dir/calibration_range/quant_format.yaml
+export N_DATA=3
 
 printf "<<EVAL_CONFIG>>\n"
 printf "\tSCENARIO: $SCENARIO\n"
-printf "\tNUM_EVAL_DATA: $N_COUNT\n"
 printf "\tCALIBRATE: $CALIBRATE\n"
 
 export LOG_PATH
@@ -52,6 +44,7 @@ export LOG_PATH
 mkdir -p $LOG_PATH/calibration_range
 
 printf "\n============= STEP-1: pull dvc =============\n"
+mkdir -p $LOGIT_FOLDER_PATH
 
 # TAG=main
 # cd $git_dir
@@ -71,11 +64,9 @@ printf "\n============= STEP-1: pull dvc =============\n"
 
 QUANT_FORMAT_PATH=$MODEL_DATA_DIR/quant_format.yaml
 QUANT_PARAM_PATH=$MODEL_DATA_DIR/quant_param.npy
-
 LOGIT_FOLDER_PATH=$work_dir/ci_file/logit_files
-mkdir -p $LOGIT_FOLDER_PATH
 
-printf "\n============= STEP-2: Check the equivalence of logits obtained at each generation step =============\n"
+printf "\n============= STEP-2: Check the equivalence of generated tokens (현재 MCP에서 과거 qparam, qformat 작동 유무 확인 + 토큰 동치) =============\n"
 
 python -m ci_file.backward_compatibility_test_qgpt_j_forward_test\
                                                 --model_path=$MODEL_PATH \
@@ -86,16 +77,16 @@ python -m ci_file.backward_compatibility_test_qgpt_j_forward_test\
                                                 --dataset_path=$DATASET_PATH \
                                                 --logit_folder_path=$LOGIT_FOLDER_PATH \
                                                 --gpu \
-                                                --ref_path=$REF_PATH\
-                                                --res_path=$RES_PATH\
-                                                --config_dtype=$CONFIG_DTYPE\
+                                                --ref_path=$REF_PATH \
+                                                --res_path=$RES_PATH \
+                                                --config_dtype=$CONFIG_DTYPE 
 
 unset LOG_PATH
 unset CALIBRATE
-unset N_CALIB
 unset N_DATA
 
 printf "\n============= End of Forward Test for QGPT-J =============\n"
+
 
 # exit from conda env.
 conda deactivate

@@ -78,24 +78,7 @@ def perform_generation(
     generator,
     test_data_list,
     tokenizer,
-    ref_path=None,
-    res_path=None,
-    config_dtype=None,
-    update_gen_list=False,
-    param_num='8b',
 ):
-    if type(generator) == MLPerfSubmissionGreedySearch:  # mlperf submission generate
-        # load reference generated tokens.
-        update_ref_path = ref_path + f"/full_generated_data_list_{config_dtype}.json"
-        # with open(update_ref_path, "r") as file:
-        #     ref_data = json.load(file)
-
-        results = []
-        result_flag = True
-        if update_gen_list:
-            generated_data_list = []
-
-    generation_output_dictionary = dict()
     with torch.no_grad():
         for idx, test_data in enumerate(test_data_list):
             if type(generator) == model_compressor.helper.QuantCausalLM:
@@ -153,49 +136,12 @@ def perform_generation(
                 gen_sentence = tokenizer.decode(
                     generated_token, skip_special_tokens=True
                 )
-                if update_gen_list:
-                    inp_decoded_text = tokenizer.decode(
-                        input_ids_tensor[0], skip_special_tokens=True
-                    )
-                    generated_data = {
-                        "inp_text": inp_decoded_text,
-                        "gen_text": gen_sentence,
-                    }
-                    generated_data_list.append(generated_data)
-                print(f"생성 토큰 문장 {idx}: {gen_sentence}")
-                # compare submission model's decoded_test with reference sentences.
-                # ref_sentence = ref_data[idx]["gen_text"]
-                result_flag = check_diff(idx, ref_sentence, gen_sentence, results, result_flag)
-
-            generation_output_dictionary[idx] = tokenizer.decode(
-                output[0], skip_special_tokens=True
-            )
-
-        if (type(generator) == MLPerfSubmissionGreedySearch):  # mlperf submission generate
-            # compare_results_path = res_path + f"/llama3.1-{param_num}_compare_result_{config_dtype}.json"
-            # with open(compare_results_path, "w") as file:
-            #     json.dump(results, file, indent=4)
-            #     print(f"토큰 동치비교 결과가 저장되었습니다. dir: {compare_results_path}")
-            if update_gen_list:
-                with open(update_ref_path, "w") as file:
-                    json.dump(generated_data_list, file, indent=4)
-                print(
-                    f"새로운 토큰 결과로 reference가 업데이트 되었습니다. dir: {update_ref_path}"
-                )
-            return result_flag
-
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", help="path to gpt-j model")
     parser.add_argument("--quant_config_path", help="a config for model quantization")
     parser.add_argument("--quant_data_path", help="path of submission quant data path")
-    parser.add_argument("--generation_result_folder_path",help="path of the folder in which the log files of generation results are to be stored",)
-    parser.add_argument("--ref_path", help="path of reference data")
-    parser.add_argument("--res_path", help="path of ci result")
-    parser.add_argument("--config_dtype", help="int8 or fp8")
-    parser.add_argument("--param_num", default='8b', help="wheter to update gen_list")
-    parser.add_argument("--update_gen_list", action="store_true", help="wheter to update gen_list")
     args = parser.parse_args()
     return args
 
@@ -311,8 +257,7 @@ def get_qlv4_load_models(
     
     # device_map = test_prefill_quantized_model.device_map
 
-    # return model_type, test_prefill_quantized_model, test_decode_quantized_model, device_map
-    return model_type, test_prefill_quantized_model, test_decode_quantized_model
+    return model_type, test_prefill_quantized_model, test_decode_quantized_model, device_map
 
 
 
@@ -335,8 +280,7 @@ def create_qlv4_model(args):
     prefill_state_dict_path = os.path.join(args.quant_data_path, 'prefill.bin')
     decode_state_dict_path = os.path.join(args.quant_data_path, 'decode.bin')
     
-    # model_type, prefill_quantized_model, decode_quantized_model, device_map = get_qlv4_load_models(
-    model_type, prefill_quantized_model, decode_quantized_model = get_qlv4_load_models(
+    model_type, prefill_quantized_model, decode_quantized_model, device_map = get_qlv4_load_models(
         args.model_path, 
         args.quant_data_path, 
         qparam_path, 
@@ -345,25 +289,20 @@ def create_qlv4_model(args):
         decode_state_dict_path
         )
     
-    # quant_submission_model = {"prefill": prefill_quantized_model, "decode": decode_quantized_model}
+    quant_submission_model = {"prefill": prefill_quantized_model, "decode": decode_quantized_model}
     
-    # submission_model_generator = MLPerfSubmissionGreedySearch(
-    #     model=quant_submission_model, device_map=device_map
-    # )
+    submission_model_generator = MLPerfSubmissionGreedySearch(
+        model=quant_submission_model, device_map=device_map
+    )
 
-    # result_flag = perform_generation(
-    #     submission_model_generator,
-    #     test_data_list,
-    #     tokenizer,
-    #     ref_path=args.ref_path,
-    #     res_path=args.res_path,
-    #     config_dtype=args.config_dtype,
-    #     update_gen_list=args.update_gen_list,
-    #     param_num=args.param_num
-    # )
-    # print("----------------------------------------------")
-    # print(f"토큰 동치 비교 결과 : {result_flag}")
-    # print("----------------------------------------------")
+    result_flag = perform_generation(
+        submission_model_generator,
+        test_data_list,
+        tokenizer,
+    )
+    print("----------------------------------------------")
+    print(f"토큰 동치 비교 결과 : {result_flag}")
+    print("----------------------------------------------")
     
     
 if __name__ == "__main__":

@@ -19,5 +19,10 @@ def gen_test_data(data_path, n_data=1):
                 "attention_mask": torch.ones((1,len(input_token)), dtype=torch.int32, device='cuda'),
             }
         data_list.append(test_data)
-            
+    
+    print(data_list[0])
+    # test_data_cpu를 파일로 저장합니다.
+    torch.save(data_list[0], '/home/home-mcl/shared_data/dataset/open-orca/validation/test_data.pt')
+    
+    
     return data_list

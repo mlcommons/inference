@@ -49,7 +49,7 @@ jobs:
             git config --global user.email "${GITHUB_ACTOR_ID}+${GITHUB_ACTOR}@users.noreply.github.com"
             git config --global user.name "${GITHUB_ACTOR}"
             git commit -m '[Automated Commit] Format Codebase'
-            git push origin ${{ github.head_ref || github.ref_name }}
+            git push upstream ${{ github.head_ref || github.ref_name }}
           fi
 
       

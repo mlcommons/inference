@@ -705,21 +705,18 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   // keys to measure token metrics
   if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)) {
     use_token_latencies = (val == 1) ? true : false;
-    if (use_token_latencies) {
-      lookupkv(model, "Server", "ttft_latency", &server_ttft_latency, nullptr,
-               1000 * 1000);
-      lookupkv(model, "Server", "tpot_latency", &server_tpot_latency, nullptr,
-               1000 * 1000);
-    }
+  }
+  if (use_token_latencies){
+    lookupkv(model, "Server", "ttft_latency", &server_ttft_latency, nullptr, 1000 * 1000);
+    lookupkv(model, "Server", "tpot_latency", &server_tpot_latency, nullptr, 1000 * 1000);
   }
 
   // keys to infer token metrics
   if (lookupkv(model, scenario, "infer_token_latencies", &val, nullptr)) {
     infer_token_latencies = (val == 1) ? true : false;
-    if (infer_token_latencies) {
-      lookupkv(model, scenario, "token_latency_scaling_factor",
-               &token_latency_scaling_factor, nullptr, 1);
-    }
+  }
+  if (infer_token_latencies){
+    lookupkv(model, scenario, "token_latency_scaling_factor", &token_latency_scaling_factor, nullptr, 1);
   }
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,

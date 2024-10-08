@@ -873,6 +873,11 @@ def get_args():
         help="skips the check of extra files inside the root submission dir",
     )
     parser.add_argument(
+        "--skip-extra-accuracy-files-check",
+        action="store_true",
+        help="skips the check of extra accuracy files like the images folder of SDXL",
+    )
+    parser.add_argument(
         "--scenarios-to-skip",
         help="Delimited list input of scenarios to skip. i.e. if you only have Offline results, pass in 'Server'",
         type=str
@@ -1524,6 +1529,7 @@ def check_results_dir(
     skip_empty_files_check=False,
     skip_check_power_measure_files=False,
     skip_extra_files_in_root_check=False,
+    skip_extra_accuracy_files_check=False,
     scenarios_to_skip=[]
 ):
     """
@@ -2070,7 +2076,7 @@ def check_results_dir(
                             )
                             acc = json.dumps(acc).replace(",", " ").replace('"', "").replace("{", "").replace("}", "")
                             if mlperf_model in REQUIRED_ACC_BENCHMARK:
-                                if config.version in REQUIRED_ACC_BENCHMARK[mlperf_model]:
+                                if config.version in REQUIRED_ACC_BENCHMARK[mlperf_model] and not skip_extra_accuracy_files_check:
                                     extra_files_pass, missing_files = check_extra_files(acc_path, REQUIRED_ACC_BENCHMARK[mlperf_model][config.version])
                                     if not extra_files_pass:
                                         log.error(
@@ -2837,6 +2843,7 @@ def main():
             args.skip_empty_files_check,
             args.skip_check_power_measure_files,
             args.skip_extra_files_in_root_check,
+            args.skip_extra_accuracy_files_check,
             scenarios_to_skip
         )
 

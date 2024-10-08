@@ -17,7 +17,7 @@ def remap_tf_base_names(orig_weights):
         if "batchnorm" not in k and "pointwise_" not in k
     }
 
-    matcher = re.compile("(.*)Conv2d_(\d+)")
+    matcher = re.compile("(.*)Conv2d_(\\d+)")
     mapping = {}
     for k in convs.keys():
         l = matcher.match(k).group(2)
@@ -52,7 +52,7 @@ def remap_tf_extras(orig_weights):
     }
     weights = {k: v for k, v in weights.items() if "pointwise_" in k}
 
-    matcher = re.compile("(.*)Conv2d_(\d+)_(\d)x(\d)")
+    matcher = re.compile("(.*)Conv2d_(\\d+)_(\\d)x(\\d)")
     mapping = {}
     for k in weights.keys():
         m = matcher.match(k)
@@ -75,7 +75,7 @@ def remap_tf_predictors(orig_weights):
     weights = {k: v for k, v in orig_weights.items() if "BoxPredictor" in k}
     weights = {k: v for k, v in weights.items() if "BoxEncodingPredictor" in k}
 
-    matcher = re.compile("BoxPredictor_(\d+)")
+    matcher = re.compile("BoxPredictor_(\\d+)")
     for k in weights.keys():
         pos = matcher.match(k).group(1)
         wtype = "weight" if "weights" in k else "bias"
@@ -125,13 +125,15 @@ def get_state_dict(weights):
 def read_tf_weights(frozen_model):
     import tensorflow as tf
     from tensorflow.python.framework import tensor_util
+
     weights = {}
     with tf.Session() as sess:
-        with tf.gfile.GFile(frozen_model, 'rb') as f:
+        with tf.gfile.GFile(frozen_model, "rb") as f:
             graph_def = tf.GraphDef()
             graph_def.ParseFromString(f.read())
             tf.import_graph_def(graph_def)
         for n in graph_def.node:
-            if n.op == 'Const':
-                weights[n.name] = tensor_util.MakeNdarray(n.attr['value'].tensor)
+            if n.op == "Const":
+                weights[n.name] = tensor_util.MakeNdarray(
+                    n.attr["value"].tensor)
     return weights

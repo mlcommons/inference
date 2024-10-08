@@ -22,13 +22,19 @@ def get_args():
     parser.add_argument(
         "--tsv-path", default=None, help="Precomputed tsv file location"
     )
-    parser.add_argument("--num-workers", default=1, type=int, help="Number of processes to download images")
+    parser.add_argument(
+        "--num-workers",
+        default=1,
+        type=int,
+        help="Number of processes to download images",
+    )
     parser.add_argument(
         "--calibration-dir", default=None, help="Calibration ids location"
     )
     parser.add_argument(
-        "--keep-raw", action="store_true", help="Keep the raw dataset"
-    )
+        "--keep-raw",
+        action="store_true",
+        help="Keep the raw dataset")
     parser.add_argument(
         "--download-images", action="store_true", help="Download the calibration set"
     )
@@ -47,17 +53,28 @@ def download_img(args):
 if __name__ == "__main__":
     args = get_args()
     dataset_dir = os.path.abspath(args.dataset_dir)
-    calibration_dir = args.calibration_dir if args.calibration_dir is not None else os.path.join(os.path.dirname(__file__), "..", "..", "calibration", "COCO-2014")
+    calibration_dir = (
+        args.calibration_dir
+        if args.calibration_dir is not None
+        else os.path.join(
+            os.path.dirname(__file__), "..", "..", "calibration", "COCO-2014"
+        )
+    )
     # Check if the annotation dataframe is there
     if os.path.exists(f"{dataset_dir}/calibration/captions.tsv"):
-        df_annotations = pd.read_csv(f"{dataset_dir}/calibration/captions.tsv", sep="\t")
+        df_annotations = pd.read_csv(
+            f"{dataset_dir}/calibration/captions.tsv", sep="\t"
+        )
     elif args.tsv_path is not None and os.path.exists(f"{args.tsv_path}"):
         os.makedirs(f"{dataset_dir}/calibration/", exist_ok=True)
         os.system(f"cp {args.tsv_path} {dataset_dir}/calibration/")
-        df_annotations = pd.read_csv(f"{dataset_dir}/calibration/captions.tsv", sep="\t")
+        df_annotations = pd.read_csv(
+            f"{dataset_dir}/calibration/captions.tsv", sep="\t"
+        )
     else:
         # Check if raw annotations file already exist
-        if not os.path.exists(f"{dataset_dir}/raw/annotations/captions_train2014.json"):
+        if not os.path.exists(
+                f"{dataset_dir}/raw/annotations/captions_train2014.json"):
             # Download annotations
             os.makedirs(f"{dataset_dir}/raw/", exist_ok=True)
             os.makedirs(f"{dataset_dir}/download_aux/", exist_ok=True)
@@ -88,15 +105,19 @@ if __name__ == "__main__":
         df_annotations = pd.DataFrame(annotations)
         df_images = pd.DataFrame(images)
 
-        # Calibration images 
+        # Calibration images
         with open(f"{calibration_dir}/coco_cal_captions_list.txt") as f:
             calibration_ids = f.readlines()
-            calibration_ids = [int(id.replace('\n', '')) for id in calibration_ids]
+            calibration_ids = [int(id.replace("\n", ""))
+                               for id in calibration_ids]
             calibration_ids = calibration_ids
 
-        df_annotations = df_annotations[np.isin(df_annotations["id"], calibration_ids)]
+        df_annotations = df_annotations[np.isin(
+            df_annotations["id"], calibration_ids)]
         df_annotations = df_annotations.sort_values(by=["id"])
-        df_annotations['caption'] = df_annotations['caption'].apply(lambda x: x.replace('\n', '').strip())
+        df_annotations["caption"] = df_annotations["caption"].apply(
+            lambda x: x.replace("\n", "").strip()
+        )
         df_annotations = (
             df_annotations.merge(
                 df_images, how="inner", left_on="image_id", right_on="id"
@@ -111,11 +132,18 @@ if __name__ == "__main__":
     if args.download_images:
         os.makedirs(f"{dataset_dir}/calibration/data/", exist_ok=True)
         tasks = [
-            (row["coco_url"], f"{dataset_dir}/calibration/data/", row["file_name"])
+            (row["coco_url"],
+             f"{dataset_dir}/calibration/data/",
+             row["file_name"])
             for i, row in df_annotations.iterrows()
         ]
         pool = Pool(processes=args.num_workers)
-        [_ for _ in tqdm.tqdm(pool.imap_unordered(download_img, tasks), total=len(tasks))]
+        [
+            _
+            for _ in tqdm.tqdm(
+                pool.imap_unordered(download_img, tasks), total=len(tasks)
+            )
+        ]
     # Finalize annotations
     df_annotations[
         ["id", "image_id", "caption", "height", "width", "file_name", "coco_url"]

@@ -22,16 +22,17 @@ from parts.features import FeatureFactory
 
 
 class AudioPreprocessing(nn.Module):
-    """GPU accelerated audio preprocessing
-    """
+    """GPU accelerated audio preprocessing"""
 
     def __init__(self, **kwargs):
-        nn.Module.__init__(self)    # For PyTorch API
+        nn.Module.__init__(self)  # For PyTorch API
         self.optim_level = kwargs.get(
-            'optimization_level', Optimization.nothing)
+            "optimization_level", Optimization.nothing)
         self.featurizer = FeatureFactory.from_config(kwargs)
 
-    def forward(self, x: Tuple[torch.Tensor, torch.Tensor]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x: Tuple[torch.Tensor, torch.Tensor]
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         input_signal, length = x
         length.requires_grad_(False)
         processed_signal = self.featurizer(x)

@@ -35,7 +35,8 @@ if __name__ == "__main__":
     num_classes = 264
     image_size = [800, 800]
 
-    model = retinanet_from_backbone(backbone, num_classes, image_size=image_size)
+    model = retinanet_from_backbone(
+        backbone, num_classes, image_size=image_size)
     checkpoint = torch.load(args.weights, map_location="cpu")
     model.load_state_dict(checkpoint["model"])
     model.eval()

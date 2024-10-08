@@ -4,6 +4,13 @@ implementation of criteo dataset
 
 # pylint: disable=unused-argument,missing-docstring
 
+from torchrec.datasets.criteo import (
+    CAT_FEATURE_COUNT,
+    DAYS,
+    DEFAULT_CAT_NAMES,
+    DEFAULT_INT_NAMES,
+)
+from dataset import Dataset
 import logging
 import os
 import sys
@@ -23,14 +30,6 @@ from torchrec.sparse.jagged_tensor import KeyedJaggedTensor
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("criteo")
-
-from dataset import Dataset
-from torchrec.datasets.criteo import (
-    CAT_FEATURE_COUNT,
-    DAYS,
-    DEFAULT_CAT_NAMES,
-    DEFAULT_INT_NAMES,
-)
 
 
 class MultihotCriteo(Dataset):
@@ -74,19 +73,22 @@ class MultihotCriteo(Dataset):
         if name == "debug":
             stage_files = [
                 [os.path.join(data_path, f"day_{DAYS-1}_dense_debug.npy")],
-                [os.path.join(data_path, f"day_{DAYS-1}_sparse_multi_hot_debug.npz")],
+                [os.path.join(data_path,
+                              f"day_{DAYS-1}_sparse_multi_hot_debug.npz")],
                 [os.path.join(data_path, f"day_{DAYS-1}_labels_debug.npy")],
             ]
         elif name == "multihot-criteo-sample":
             stage_files = [
                 [os.path.join(data_path, f"day_{DAYS-1}_dense_sample.npy")],
-                [os.path.join(data_path, f"day_{DAYS-1}_sparse_multi_hot_sample.npz")],
+                [os.path.join(data_path,
+                              f"day_{DAYS-1}_sparse_multi_hot_sample.npz")],
                 [os.path.join(data_path, f"day_{DAYS-1}_labels_sample.npy")],
             ]
         elif name == "multihot-criteo":
             stage_files = [
                 [os.path.join(data_path, f"day_{DAYS-1}_dense.npy")],
-                [os.path.join(data_path, f"day_{DAYS-1}_sparse_multi_hot.npz")],
+                [os.path.join(data_path,
+                              f"day_{DAYS-1}_sparse_multi_hot.npz")],
                 [os.path.join(data_path, f"day_{DAYS-1}_labels.npy")],
             ]
         else:
@@ -112,7 +114,8 @@ class MultihotCriteo(Dataset):
         # of size samples_to_aggregate as an item we need to adjust the original dataset item_count.
         # On the other hand, data loader always returns number of batches.
         if self.use_fixed_size:
-            # the offsets for fixed query size will be generated on-the-fly later on
+            # the offsets for fixed query size will be generated on-the-fly
+            # later on
             print("Using fixed query size: " + str(self.samples_to_aggregate))
             self.num_aggregated_samples = (
                 self.num_individual_samples + self.samples_to_aggregate - 1
@@ -121,7 +124,8 @@ class MultihotCriteo(Dataset):
         else:
             # the offsets for variable query sizes will be pre-generated here
             if self.samples_to_aggregate_quantile_file is None:
-                # generate number of samples in a query from a uniform(min,max) distribution
+                # generate number of samples in a query from a uniform(min,max)
+                # distribution
                 print(
                     "Using variable query size: uniform distribution ("
                     + str(self.samples_to_aggregate_min)
@@ -160,7 +164,8 @@ class MultihotCriteo(Dataset):
                 # The inverse of its cdf with granularity of 0.05 can be written as
                 # quantile_p = [.05, .10, .15, .20, .25, .30, .35, .40, .45, .50, .55, .60, .65, .70, .75, .80, .85, .90, .95, 1.0] # p
                 # quantile_x = [100, 100, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 300, 300, 400, 500, 600, 700] # q(p) = x, such that f(x) >= p
-                # Notice that once we have quantile, we can apply inverse transform sampling method.
+                # Notice that once we have quantile, we can apply inverse
+                # transform sampling method.
                 print(
                     "Using variable query size: custom distribution (file "
                     + str(samples_to_aggregate_quantile_file)
@@ -186,7 +191,8 @@ class MultihotCriteo(Dataset):
                 self.random_offsets.append(int(qo))
 
                 # compute min and max number of samples
-                nas_max = (self.num_individual_samples + quantile[0] - 1) // quantile[0]
+                nas_max = (self.num_individual_samples +
+                           quantile[0] - 1) // quantile[0]
                 nas_min = (self.num_individual_samples + quantile[-1] - 1) // quantile[
                     -1
                 ]
@@ -203,7 +209,8 @@ class MultihotCriteo(Dataset):
 
         # limit number of items to count if needed
         if self.count is not None:
-            self.num_aggregated_samples = min(self.count, self.num_aggregated_samples)
+            self.num_aggregated_samples = min(
+                self.count, self.num_aggregated_samples)
 
         # dump the trace of aggregated samples
         if samples_to_aggregate_trace_file is not None:
@@ -268,7 +275,7 @@ class MultihotCriteo(Dataset):
         for item in id_list:
             idx_offsets.append(idx_offsets[-1] + self.item_sizes[item])
         return [self.items_in_memory[item] for item in id_list], idx_offsets
-    
+
     def get_labels(self, sample):
         if isinstance(sample, list):
             labels = [s.labels for s in sample]
@@ -298,7 +305,7 @@ class MultihotCriteoPipe:
         self.batch_size = batch_size
         self.rank = rank
         self.world_size = world_size
-        self.split = (self.world_size > 1)
+        self.split = self.world_size > 1
 
         # Load arrays
         m = "r" if mmap_mode else None
@@ -320,7 +327,7 @@ class MultihotCriteoPipe:
 
         len_d0 = len(self.dense_arrs[0])
         second_half_start_index = int(len_d0 // 2 + len_d0 % 2)
-        if (stage == "val" and name == "multihot-criteo"):
+        if stage == "val" and name == "multihot-criteo":
             self.dense_arrs[0] = self.dense_arrs[0][:second_half_start_index, :]
             self.labels_arrs[0] = self.labels_arrs[0][:second_half_start_index, :]
             self.sparse_arrs[0] = [
@@ -364,7 +371,8 @@ class MultihotCriteoPipe:
         # read .npy header
         zf.open(npy_name, "r")
         version = np.lib.format.read_magic(zf.fp)
-        shape, fortran_order, dtype = np.lib.format._read_array_header(zf.fp, version)
+        shape, fortran_order, dtype = np.lib.format._read_array_header(
+            zf.fp, version)
         assert (
             dtype == "int32"
         ), f"sparse multi-hot dtype is {dtype} but should be int32"
@@ -380,20 +388,27 @@ class MultihotCriteoPipe:
         )
 
     def _np_arrays_to_batch(
-        self, dense: np.ndarray, sparse: List[np.ndarray], labels: np.ndarray,
+        self,
+        dense: np.ndarray,
+        sparse: List[np.ndarray],
+        labels: np.ndarray,
     ) -> Batch:
         batch_size = len(dense)
-        lengths = torch.ones((CAT_FEATURE_COUNT * batch_size), dtype=torch.int32)
+        lengths = torch.ones(
+            (CAT_FEATURE_COUNT * batch_size),
+            dtype=torch.int32)
         for k, multi_hot_size in enumerate(self.multi_hot_sizes):
-            lengths[k * batch_size : (k + 1) * batch_size] = multi_hot_size
-        offsets = torch.cumsum(torch.concat((torch.tensor([0]), lengths)), dim=0)
+            lengths[k * batch_size: (k + 1) * batch_size] = multi_hot_size
+        offsets = torch.cumsum(torch.concat(
+            (torch.tensor([0]), lengths)), dim=0)
         length_per_key = [
             batch_size * multi_hot_size for multi_hot_size in self.multi_hot_sizes
         ]
         offset_per_key = torch.cumsum(
             torch.concat((torch.tensor([0]), torch.tensor(length_per_key))), dim=0
         )
-        values = torch.concat([torch.from_numpy(feat).flatten() for feat in sparse])
+        values = torch.concat([torch.from_numpy(feat).flatten()
+                              for feat in sparse])
         return Batch(
             dense_features=torch.from_numpy(dense.copy()),
             sparse_features=KeyedJaggedTensor(
@@ -413,11 +428,16 @@ class MultihotCriteoPipe:
         if self.split:
             batch = []
             n_samples = len(sample_list)
-            limits = [i*n_samples//self.world_size for i in range(self.world_size + 1)]
+            limits = [
+                i * n_samples // self.world_size for i in range(self.world_size + 1)
+            ]
             for i in range(self.world_size):
-                dense = self.dense_arrs[0][sample_list[limits[i]:limits[i+1]], :]
-                sparse = [arr[sample_list[limits[i]:limits[i+1]], :] for arr in self.sparse_arrs[0]]
-                labels = self.labels_arrs[0][sample_list[limits[i]:limits[i+1]], :]
+                dense = self.dense_arrs[0][sample_list[limits[i]: limits[i + 1]], :]
+                sparse = [
+                    arr[sample_list[limits[i]: limits[i + 1]], :]
+                    for arr in self.sparse_arrs[0]
+                ]
+                labels = self.labels_arrs[0][sample_list[limits[i]: limits[i + 1]], :]
                 batch.append(self._np_arrays_to_batch(dense, sparse, labels))
             return batch
         else:
@@ -445,7 +465,8 @@ class DlrmPostProcess:
         n = len(results)
         for idx in range(0, n):
             # NOTE: copy from GPU to CPU while post processing, if needed. Alternatively,
-            # we could do this on the output of predict function in backend_pytorch_native.py
+            # we could do this on the output of predict function in
+            # backend_pytorch_native.py
             result = results[idx].detach().cpu()
             target = expected[idx]
 

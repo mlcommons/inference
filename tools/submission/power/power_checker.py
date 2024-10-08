@@ -81,7 +81,8 @@ COMMON_ERROR_RANGING = [
 ]
 COMMON_ERROR_TESTING = ["USB."]
 WARNING_NEEDS_TO_BE_ERROR_TESTING_RE = [
-    re.compile(r"Uncertainty \d+.\d+%, which is above 1.00% limit for the last sample!")
+    re.compile(
+        r"Uncertainty \d+.\d+%, which is above 1.00% limit for the last sample!")
 ]
 
 TIME_DELTA_TOLERANCE = 800  # in milliseconds
@@ -89,7 +90,7 @@ TIME_DELTA_TOLERANCE = 800  # in milliseconds
 
 def _normalize(path: str) -> str:
     allparts: List[str] = []
-    while 1:
+    while True:
         parts = os.path.split(path)
         if parts[0] == path:  # sentinel for absolute paths
             allparts.insert(0, parts[0])
@@ -126,8 +127,10 @@ def get_time_from_line(
 ) -> float:
     log_time_str = re.search(data_regexp, line)
     if log_time_str and log_time_str.group(0):
-        log_datetime = datetime.strptime(log_time_str.group(0), "%m-%d-%Y %H:%M:%S.%f")
-        return log_datetime.replace(tzinfo=timezone.utc).timestamp() + timezone_offset
+        log_datetime = datetime.strptime(
+            log_time_str.group(0), "%m-%d-%Y %H:%M:%S.%f")
+        return log_datetime.replace(
+            tzinfo=timezone.utc).timestamp() + timezone_offset
     raise LineWithoutTimeStamp(f"{line.strip()!r} in {file}.")
 
 
@@ -156,8 +159,10 @@ class SessionDescriptor:
         ), f"Required fields {', '.join(absent_keys)!r} does not exist in {self.path!r}"
 
 
-def compare_dicts_values(d1: Dict[str, str], d2: Dict[str, str], comment: str) -> None:
-    files_with_diff_check_sum = {k: d1[k] for k in d1 if k in d2 and d1[k] != d2[k]}
+def compare_dicts_values(
+        d1: Dict[str, str], d2: Dict[str, str], comment: str) -> None:
+    files_with_diff_check_sum = {k: d1[k]
+                                 for k in d1 if k in d2 and d1[k] != d2[k]}
     assert len(files_with_diff_check_sum) == 0, f"{comment}" + "".join(
         [
             f"Expected {d1[i]}, but got {d2[i]} for {i}\n"
@@ -166,7 +171,8 @@ def compare_dicts_values(d1: Dict[str, str], d2: Dict[str, str], comment: str) -
     )
 
 
-def compare_dicts(s1: Dict[str, str], s2: Dict[str, str], comment: str) -> None:
+def compare_dicts(s1: Dict[str, str],
+                  s2: Dict[str, str], comment: str) -> None:
     assert (
         not s1.keys() - s2.keys()
     ), f"{comment} Missing {', '.join(sorted(s1.keys() - s2.keys()))!r}"
@@ -224,7 +230,8 @@ def ptd_messages_check(sd: SessionDescriptor) -> None:
         for msg in msgs:
             if msg["cmd"].startswith(cmd):
                 if msg["cmd"] == "Stop":
-                    # In normal flow the third answer to stop command is `Error: no measurement to stop`
+                    # In normal flow the third answer to stop command is
+                    # `Error: no measurement to stop`
                     if stop_counter == 2:
                         reply = "Error: no measurement to stop"
                     stop_counter += 1
@@ -243,13 +250,15 @@ def ptd_messages_check(sd: SessionDescriptor) -> None:
     def get_initial_range(param_num: int, reply: str) -> str:
         reply_list = reply.split(",")
         try:
-            if reply_list[param_num] == "0" and float(reply_list[param_num + 1]) > 0:
+            if reply_list[param_num] == "0" and float(
+                    reply_list[param_num + 1]) > 0:
                 return reply_list[param_num + 1]
         except (ValueError, IndexError):
             assert False, f"Can not get power meters initial values from {reply!r}"
         return "Auto"
 
-    def get_command_by_value_and_number(cmd: str, number: int) -> Optional[str]:
+    def get_command_by_value_and_number(
+            cmd: str, number: int) -> Optional[str]:
         command_counter = 0
         for msg in msgs:
             if msg["cmd"].startswith(cmd):
@@ -273,7 +282,8 @@ def ptd_messages_check(sd: SessionDescriptor) -> None:
     ), f"Do not set Volts range as initial. Expected 'SR,V,{initial_volts}', got {initial_volts_command!r}."
 
 
-def uuid_check(client_sd: SessionDescriptor, server_sd: SessionDescriptor) -> None:
+def uuid_check(client_sd: SessionDescriptor,
+               server_sd: SessionDescriptor) -> None:
     """Compare UUIDs from client.json and server.json. They should be the same."""
     uuid_c = client_sd.json_object["uuid"]
     uuid_s = server_sd.json_object["uuid"]
@@ -362,7 +372,8 @@ def phases_check(
     def compare_time_boundaries(
         begin: float, end: float, phases: List[Any], mode: str
     ) -> None:
-        # TODO: temporary workaround, remove when proper DST handling is implemented!
+        # TODO: temporary workaround, remove when proper DST handling is
+        # implemented!
         assert (
             phases[1][0] < begin < phases[2][0]
             or phases[1][0] < begin - 3600 < phases[2][0]
@@ -380,8 +391,16 @@ def phases_check(
         os.path.join(path, "run_1"), client_sd
     )
 
-    compare_time_boundaries(system_begin_r, system_end_r, phases_ranging_c, "ranging")
-    compare_time_boundaries(system_begin_t, system_end_t, phases_testing_c, "testing")
+    compare_time_boundaries(
+        system_begin_r,
+        system_end_r,
+        phases_ranging_c,
+        "ranging")
+    compare_time_boundaries(
+        system_begin_t,
+        system_end_t,
+        phases_testing_c,
+        "testing")
 
     ranging_duration_d = system_end_r - system_begin_r
     testing_duration_d = system_end_t - system_begin_t
@@ -464,7 +483,8 @@ def session_name_check(
     ), f"Session name is not equal. Client session name is {session_name_c!r}. Server session name is {session_name_s!r}"
 
 
-def messages_check(client_sd: SessionDescriptor, server_sd: SessionDescriptor) -> None:
+def messages_check(client_sd: SessionDescriptor,
+                   server_sd: SessionDescriptor) -> None:
     """Compare client and server messages list length.
     Compare messages values and replies from client.json and server.json.
     Compare client and server version.
@@ -488,14 +508,19 @@ def messages_check(client_sd: SessionDescriptor, server_sd: SessionDescriptor) -
             )
 
     # Check client and server version from server.json.
-    # Server.json contains all client.json messages and replies. Checked earlier.
+    # Server.json contains all client.json messages and replies. Checked
+    # earlier.
     def get_version(regexp: str, line: str) -> str:
         version_o = re.search(regexp, line)
         assert version_o is not None, f"Server version is not defined in:'{line}'"
         return version_o.group(1)
 
-    client_version = get_version(r"mlcommons\/power client v(\d+)$", ms[0]["cmd"])
-    server_version = get_version(r"mlcommons\/power server v(\d+)$", ms[0]["reply"])
+    client_version = get_version(
+        r"mlcommons\/power client v(\d+)$",
+        ms[0]["cmd"])
+    server_version = get_version(
+        r"mlcommons\/power server v(\d+)$",
+        ms[0]["reply"])
 
     assert (
         client_version == server_version
@@ -550,7 +575,8 @@ def results_check(
         f"{client_sd.path} and {server_sd.path} results checksum comparison",
     )
 
-    # Check if the hashes of the files in results directory match the ones recorded in server.json/client.json.
+    # Check if the hashes of the files in results directory match the ones
+    # recorded in server.json/client.json.
     result_c_s = {**results_c, **results_s}
 
     compare_dicts(
@@ -616,7 +642,8 @@ def check_ptd_logs(
 
                 # Treat uncommon errors in ranging phase as warnings
                 if all(
-                    not problem_line.group(0).strip().startswith(common_ranging_error)
+                    not problem_line.group(0).strip().startswith(
+                        common_ranging_error)
                     for common_ranging_error in COMMON_ERROR_RANGING
                 ):
                     raise CheckerWarning(
@@ -674,7 +701,8 @@ def check_ptd_logs(
     is_uncertainty_check_activated = False
 
     for line in ptd_log_lines:
-        msg_o = re.search(r"Uncertainty checking for Yokogawa\S+ is activated", line)
+        msg_o = re.search(
+            r"Uncertainty checking for Yokogawa\S+ is activated", line)
         if msg_o is not None:
             try:
                 log_time = None
@@ -742,7 +770,8 @@ def debug_check(server_sd: SessionDescriptor) -> None:
     ), "Server was running in debug mode"
 
 
-def check_with_logging(check_name: str, check: Callable[[], None]) -> Tuple[bool, bool]:
+def check_with_logging(
+        check_name: str, check: Callable[[], None]) -> Tuple[bool, bool]:
     try:
         check()
     except AssertionError as e:
@@ -811,7 +840,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Check PTD client-server session results"
     )
-    parser.add_argument("session_directory", help="directory with session results data")
+    parser.add_argument(
+        "session_directory",
+        help="directory with session results data")
 
     args = parser.parse_args()
 

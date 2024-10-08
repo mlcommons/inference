@@ -43,8 +43,10 @@ ignore = [
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", required=True,
-                        help="orignal submission directory")
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="orignal submission directory")
     parser.add_argument("--output", help="new submission directory")
     args = parser.parse_args()
     return args

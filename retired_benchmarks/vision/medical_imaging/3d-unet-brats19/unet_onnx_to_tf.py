@@ -14,27 +14,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import onnx_tf
+import onnx
+import argparse
 import os
 import sys
+
 sys.path.insert(0, os.getcwd())
 
-import argparse
-import onnx
-import onnx_tf
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--onnx_model",
-                        default="build/model/224_224_160.onnx",
-                        help="Path to the ONNX model")
-    parser.add_argument("--output_name",
-                        default="224_224_160.pb",
-                        help="Name of output model")
-    parser.add_argument("--output_dir",
-                        default="build/model",
-                        help="Directory to save output model")
+    parser.add_argument(
+        "--onnx_model",
+        default="build/model/224_224_160.onnx",
+        help="Path to the ONNX model",
+    )
+    parser.add_argument(
+        "--output_name", default="224_224_160.pb", help="Name of output model"
+    )
+    parser.add_argument(
+        "--output_dir", default="build/model", help="Directory to save output model"
+    )
     args = parser.parse_args()
     return args
+
 
 def main():
     args = get_args()

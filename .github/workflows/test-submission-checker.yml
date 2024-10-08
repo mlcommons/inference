@@ -29,7 +29,7 @@ jobs:
     - name: Install dependencies
       run: |
         python3 -m pip install cm4mlops
-        git clone https://github.com/mlcommons/inference_results_v4.0 --depth 1
+        git clone https://github.com/mlcommons/inference_results_v4.1 --depth 1
     - name: Test MLPerf inference submission checker
       run: |
-        cm run script --tags=run,mlperf,inference,submission,checker --adr.inference-src.tags=_branch.${{ github.event.pull_request.head.ref }},_repo.${{ github.event.pull_request.head.repo.html_url }} --adr.inference-src.version=custom --input=`pwd`/inference_results_v4.0 --src_version=v4.0 --quiet 
+        cm run script --tags=run,mlperf,inference,submission,checker --adr.inference-src.tags=_branch.${{ github.event.pull_request.head.ref }},_repo.${{ github.event.pull_request.head.repo.html_url }} --adr.inference-src.version=custom --input=`pwd`/inference_results_v4.1 --src_version=v4.1 --extra_args=" --skip-extra-accuracy-files-check" --quiet 

@@ -19,7 +19,7 @@
 
 # Checks all the modified c/c++ files, format them and adds them
 # to the commit.
-for FILE in $(git diff upstream/$1 --name-only | grep -E '.*\.py$')
+for FILE in $(git diff $1/$2 --name-only | grep -E '.*\.py$')
 do
     autopep8 --in-place -a $FILE
     git add $FILE

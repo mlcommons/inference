@@ -10,12 +10,14 @@ try:
     # try dedicated tflite package first
     import tflite_runtime
     import tflite_runtime.interpreter as tflite
+
     _version = tflite_runtime.__version__
     _git_version = tflite_runtime.__git_version__
-except:
+except BaseException:
     # fall back to tflite bundled in tensorflow
     import tensorflow as tf
     from tensorflow.lite.python import interpreter as tflite
+
     _version = tf.__version__
     _git_version = tf.__git_version__
 
@@ -43,13 +45,18 @@ class BackendTflite(backend.Backend):
         self.use_tpu = use_tpu
         if use_tpu:
             from pycoral.utils.edgetpu import make_interpreter
+
             self.sess = make_interpreter(model_path)
         else:
             self.sess = tflite.Interpreter(model_path=model_path)
         self.sess.allocate_tensors()
         # keep input/output name to index mapping
-        self.input2index = {i["name"]: i["index"] for i in self.sess.get_input_details()}
-        self.output2index = {i["name"]: i["index"] for i in self.sess.get_output_details()}
+        self.input2index = {
+            i["name"]: i["index"] for i in self.sess.get_input_details()
+        }
+        self.output2index = {
+            i["name"]: i["index"] for i in self.sess.get_output_details()
+        }
         # keep input/output names
         self.inputs = list(self.input2index.keys())
         self.outputs = list(self.output2index.keys())
@@ -59,8 +66,11 @@ class BackendTflite(backend.Backend):
         self.lock.acquire()
         # set inputs
         for k, v in self.input2index.items():
-            if self.use_tpu and self.sess.get_input_details()[v]['dtype'] == np.uint8:
-                input_scale, input_zero_point = self.sess.get_input_details()[v]["quantization"]
+            if self.use_tpu and self.sess.get_input_details()[
+                    v]["dtype"] == np.uint8:
+                input_scale, input_zero_point = self.sess.get_input_details()[v][
+                    "quantization"
+                ]
                 feed[k] = feed[k] / input_scale + input_zero_point
                 feed[k] = feed[k].astype(np.uint8)
             self.sess.set_tensor(v, feed[k])

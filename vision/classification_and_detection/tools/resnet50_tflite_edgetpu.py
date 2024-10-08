@@ -5,19 +5,26 @@ import numpy as np
 
 import tensorflow as tf
 from tensorflow.keras.preprocessing import image
-from tensorflow.keras.applications.resnet50 import ResNet50, decode_predictions, preprocess_input
+from tensorflow.keras.applications.resnet50 import (
+    ResNet50,
+    decode_predictions,
+    preprocess_input,
+)
 
 
 def main(path_to_mlperf_calib_dataset):
     # load tf model
-    model = ResNet50(weights='imagenet')
+    model = ResNet50(weights="imagenet")
 
     # read jpeg files from mlperf calib dataset
     jpeg_files = []
     for filename in os.listdir(path_to_mlperf_calib_dataset):
-        if filename.lower().endswith('.jpg') or filename.lower().endswith('.jpeg'):
-            jpeg_files.append(os.path.join(path_to_mlperf_calib_dataset, filename))
-    
+        if filename.lower().endswith(".jpg") or filename.lower().endswith(".jpeg"):
+            jpeg_files.append(
+                os.path.join(
+                    path_to_mlperf_calib_dataset,
+                    filename))
+
     # qunatization
     def representative_data_gen():
         for img_path in jpeg_files:
@@ -38,13 +45,13 @@ def main(path_to_mlperf_calib_dataset):
     converter.inference_output_type = tf.uint8
 
     tflite_model_quant = converter.convert()
-    with open('resnet50_quant_full_mlperf.tflite', 'wb') as f:
+    with open("resnet50_quant_full_mlperf.tflite", "wb") as f:
         f.write(tflite_model_quant)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image-dir', type=str, default=None)
+    parser.add_argument("--image-dir", type=str, default=None)
     args = parser.parse_args()
     print(args)
     if args.image_dir is None or not os.path.exists(args.image_dir):

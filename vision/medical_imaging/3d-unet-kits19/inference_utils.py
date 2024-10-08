@@ -103,28 +103,34 @@ def prepare_arrays(image, roi_shape=ROI_SHAPE):
     - norm_map where normal map is constructed upon
     - norm_patch, a gaussian kernel that is applied to each sub-volume inference result
     """
-    assert isinstance(roi_shape, list) and len(roi_shape) == 3 and any(roi_shape),\
-        f"Need proper ROI shape: {roi_shape}"
+    assert (
+        isinstance(roi_shape, list) and len(roi_shape) == 3 and any(roi_shape)
+    ), f"Need proper ROI shape: {roi_shape}"
 
     image_shape = list(image.shape[2:])
 
     result = np.zeros(shape=(1, 3, *image_shape), dtype=image.dtype)
     norm_map = np.zeros_like(result)
-    norm_patch = gaussian_kernel(
-        roi_shape[0], 0.125*roi_shape[0]).astype(norm_map.dtype)
+    norm_patch = gaussian_kernel(roi_shape[0], 0.125 * roi_shape[0]).astype(
+        norm_map.dtype
+    )
 
     return result, norm_map, norm_patch
 
 
-def get_slice_for_sliding_window(image, roi_shape=ROI_SHAPE, overlap=SLIDE_OVERLAP_FACTOR):
+def get_slice_for_sliding_window(
+    image, roi_shape=ROI_SHAPE, overlap=SLIDE_OVERLAP_FACTOR
+):
     """
     Returns indices for image stride, to fulfill sliding window inference
     Stride is determined by roi_shape and overlap
     """
-    assert isinstance(roi_shape, list) and len(roi_shape) == 3 and any(roi_shape),\
-        f"Need proper ROI shape: {roi_shape}"
-    assert isinstance(overlap, float) and overlap > 0 and overlap < 1,\
-        f"Need sliding window overlap factor in (0,1): {overlap}"
+    assert (
+        isinstance(roi_shape, list) and len(roi_shape) == 3 and any(roi_shape)
+    ), f"Need proper ROI shape: {roi_shape}"
+    assert (
+        isinstance(overlap, float) and overlap > 0 and overlap < 1
+    ), f"Need sliding window overlap factor in (0,1): {overlap}"
 
     image_shape = list(image.shape[2:])
     dim = len(image_shape)
@@ -150,7 +156,7 @@ def runtime_measure(function):
         ts = time.time()
         result, mystr = function(*args, **kw)
         te = time.time()
-        print('{:86} took {:>10.5f} sec'.format(mystr, te - ts))
+        print("{:86} took {:>10.5f} sec".format(mystr, te - ts))
         return result, ""
 
     return get_latency

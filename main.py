@@ -179,6 +179,7 @@ def define_env(env):
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
                                 content += f"{cur_space3}* `--docker_cm_repo=<Custom CM GitHub repo URL in username@repo format>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_cm_repo_branch=<Custom CM GitHub repo Branch>`: to checkout a custom branch of the cloned cm4mlops repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"
 
                                 if implementation.lower() == "nvidia":

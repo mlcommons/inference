@@ -15,6 +15,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+# Modified by SCC23 UCSD Zixian Wang, Nov 11, 2023
+
 import subprocess
 import mlperf_loadgen as lg
 import argparse
@@ -45,11 +48,20 @@ def get_args():
                         help="audit config for LoadGen settings during compliance runs")
     parser.add_argument("--max_examples", type=int,
                         help="Maximum number of examples to consider (not limited by default)")
+
+    parser.add_argument("--batch_size", type=int, default=1, 
+                        help="Check your input patch size")
+    parser.add_argument("--gpu_num", type=int, default=0, 
+                        help="Check the number of gpu you want to run")
+    parser.add_argument("--gpu_device", type=int, default=0, 
+                        help="Check the gpu device you want to run")
+
     parser.add_argument("--network", choices=["sut","lon",None], default=None, help="Loadgen network mode")
     parser.add_argument('--node', type=str, default="")
     parser.add_argument('--port', type=int, default=8000)
     parser.add_argument('--sut_server', nargs="*", default= ['http://localhost:8000'],
                     help='Address of the server(s) under test.')
+
 
     args = parser.parse_args()
     return args

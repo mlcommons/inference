@@ -14,8 +14,10 @@ def get_args():
   """Parse commandline."""
   parser = argparse.ArgumentParser()
   parser.add_argument('--input', required=True, help='results csv from checker')
-  parser.add_argument('--version', default='4.0', help='mlperf version')
-  parser.add_argument('--repository', default='submissions_inference_4.0', help='mlperf repository')
+  parser.add_argument('--version', default='4.1', help='mlperf version')
+  parser.add_argument('--repository', default='submissions_inference_4.1', help='mlperf repository')
+  parser.add_argument('--repository-owner', default='mlcommons', help='mlperf repository owner in GitHub')
+  parser.add_argument('--repository-branch', default='main', help='mlperf repository branch')
   args = parser.parse_args()
   return args
 
@@ -59,7 +61,7 @@ def main():
   df['p#'] = df.apply(lambda x: int(x['host_processors_per_node']), axis=1)
 
   # details url
-  base_url = f'https://github.com/mlcommons/{args.repository}/tree/main'
+  base_url = f'https://github.com/{args.repository_owner}/{args.repository}/tree/{args.repository_branch}'
   df['Details'] = df.apply(
       lambda x: '=HYPERLINK("{}","details")'.format('/'.join(
           [base_url, x['Category'], x['Submitter'], 'results', x['Platform']])),

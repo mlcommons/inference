@@ -29,7 +29,7 @@ export MODEL_PATH=$PWD/inference/text_to_image/model/
 ```
 ### Clone the repository
 ```bash
-git clone --recurse-submodules https://github.com/mlcommmons/inference.git --depth 1
+git clone --recurse-submodules https://github.com/mlcommons/inference --depth 1
 ```
 Finally copy the `mlperf.conf` file to the stable diffusion folder
 ```bash
@@ -39,12 +39,12 @@ cp $ROOT/mlperf.conf $SD_FOLDER
 ### Install requirements (only for running without using docker)
 Install requirements:
 ```bash
-cd SD_FOLDER
+cd $SD_FOLDER
 pip install -r requirements.txt
 ```
 Install loadgen:
 ```bash
-cd LOADGEN_FOLDER
+cd $LOADGEN_FOLDER
 CFLAGS="-std=c++14" python setup.py install
 ```
 

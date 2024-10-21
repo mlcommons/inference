@@ -346,9 +346,9 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::infer_token_latencies)
       .def_readwrite("token_latency_scaling_factor",
                      &TestSettings::token_latency_scaling_factor)
-      .def("FromConfig", &TestSettings::FromConfig, py::arg("path"),
-           py::arg("model"), py::arg("scenario"),
-           py::arg("is_mlperf_conf") = false,
+      .def("FromConfig", &TestSettings::FromConfig, pybind11::arg("path"),
+           pybind11::arg("model"), pybind11::arg("scenario"),
+           pybind11::arg("is_mlperf_conf") = false,
            "This function configures settings from the given user "
            "configuration file, model, and scenario. The is_mlperf_conf flag "
            "should be set to false or else only the default mlperf_conf file "

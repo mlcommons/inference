@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.5)
 project(mlperf_loadgen)
 
 # Read the version file
-file(READ "${CMAKE_SOURCE_DIR}/VERSION" VERSION_CONTENTS)
+file(READ "${CMAKE_SOURCE_DIR}/VERSION.txt" VERSION_CONTENTS)
 
 # Extract the major and minor versions from the VERSION file (assuming "MAJOR.MINOR.PATCH" format)
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)" VERSION_MATCH ${VERSION_CONTENTS})

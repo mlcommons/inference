@@ -50,7 +50,7 @@ jobs:
         run: |
           cd loadgen
           # Check if VERSION file exists, else initialize it
-          if [ ! -f loadgen/VERSION ]; then
+          if [ ! -f VERSION ]; then
             echo "0.0.0" > VERSION
           fi
 
@@ -64,7 +64,7 @@ jobs:
 
       # Step 5: Commit the updated version to the repository
       - name: Commit updated version
-        if: steps.version_changed.outputs.version_changed == 'false'
+        if: steps.version_changed.outputs.version_changed == 'false' && runner.os == 'Linux'
         run: |
           cd loadgen
           git config --global user.name "${{ github.actor }}"

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ $# -lt 1 ]; then
-    echo "usage: $0 tf|onnxruntime|pytorch|tflite|tvm-onnx|tvm-pytorch|tvm-tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|retinanet] [cpu|gpu]"
+    echo "usage: $0 tf|onnxruntime|pytorch|tflite|tvm-onnx|tvm-pytorch|tvm-tflite [resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|retinanet] [cpu|gpu|tpu]"
     exit 1
 fi
 if [ "x$DATA_DIR" == "x" ]; then
@@ -19,7 +19,7 @@ device="cpu"
 for i in $* ; do
     case $i in
        tf|onnxruntime|tflite|pytorch|tvm-onnx|tvm-pytorch|tvm-tflite|ncnn) backend=$i; shift;;
-       cpu|gpu|rocm) device=$i; shift;;
+       cpu|gpu|tpu|rocm) device=$i; shift;;
        gpu) device=gpu; shift;;
        resnet50|mobilenet|ssd-mobilenet|ssd-resnet34|ssd-resnet34-tf|retinanet) model=$i; shift;;
     esac
@@ -108,14 +108,21 @@ fi
 #
 # tflite
 #
-if [ $name == "resnet50-tflite" ] ; then
-    model_path="$MODEL_DIR/resnet50_v1.tflite"
-    profile=resnet50-tf
-    extra_args="$extra_args --backend tflite"
+if [ "$name" = "resnet50-tflite" ]; then
+  if [ "$device" = "tpu" ]; then
+      model_path="$MODEL_DIR/resnet50_quant_full_mlperf_edgetpu.tflite"
+      profile="resnet50-tflite"
+      extra_args="$extra_args --backend tflite --device tpu"
+  else
+      model_path="$MODEL_DIR/resnet50_v1.tflite"
+      profile="resnet50-tf"
+      extra_args="$extra_args --backend tflite"
+  fi
 fi
-if [ $name == "mobilenet-tflite" ] ; then
+
+if [ "$name" = "mobilenet-tflite" ]; then
     model_path="$MODEL_DIR/mobilenet_v1_1.0_224.tflite"
-    profile=mobilenet-tf
+    profile="mobilenet-tf"
     extra_args="$extra_args --backend tflite"
 fi
 

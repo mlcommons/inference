@@ -237,7 +237,7 @@ The ServerSUT was not tested for GPU runs.
 
 
 ## Accuracy Target
-Running the GPU implementation in FP32 precision resulted in the following FP32 accuracy targets (normalized to a 0-100
+Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets (normalized to a 0-100
 scale from a 0.0-1.0 scale):
 - Rouge1: 44.4312
 - Rouge2: 22.0352

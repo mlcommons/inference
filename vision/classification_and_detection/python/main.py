@@ -41,6 +41,9 @@ SUPPORTED_DATASETS = {
     "imagenet_mobilenet":
         (imagenet.Imagenet, dataset.pre_process_mobilenet, dataset.PostProcessArgMax(offset=-1),
          {"image_size": [224, 224, 3]}),
+    "imagenet_tflite_tpu":
+        (imagenet.Imagenet, dataset.pre_process_imagenet_tflite_tpu, dataset.PostProcessArgMax(offset=0),
+         {"image_size": [224, 224, 3]}),
     "imagenet_pytorch":
         (imagenet.Imagenet, dataset.pre_process_imagenet_pytorch, dataset.PostProcessArgMax(offset=0),
          {"image_size": [224, 224, 3]}),
@@ -112,6 +115,12 @@ SUPPORTED_PROFILES = {
         "dataset": "imagenet_pytorch",
         "outputs": "out0",
         "backend": "ncnn",
+        "model-name": "resnet50",
+    },
+    "resnet50-tflite": {
+        "dataset": "imagenet_tflite_tpu",
+        "outputs": "ArgMax:0",
+        "backend": "tflite",
         "model-name": "resnet50",
     },
 
@@ -231,6 +240,7 @@ def get_args():
     parser.add_argument("--inputs", help="model inputs")
     parser.add_argument("--outputs", help="model outputs")
     parser.add_argument("--backend", help="runtime to use")
+    parser.add_argument("--device", help="device to use")
     parser.add_argument("--model-name", help="name of the mlperf model, ie. resnet50")
     parser.add_argument("--threads", default=os.cpu_count(), type=int, help="threads")
     parser.add_argument("--qps", type=int, help="target qps")
@@ -500,7 +510,10 @@ def main():
                         threads=args.threads,
                         **kwargs)
     # load model to backend
-    model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
+    if args.device == "tpu":
+        model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs, use_tpu=True)
+    else:
+        model = backend.load(args.model, inputs=args.inputs, outputs=args.outputs)
     final_results = {
         "runtime": model.name(),
         "version": model.version(),

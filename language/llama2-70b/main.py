@@ -34,7 +34,6 @@ def get_args():
     parser.add_argument("--dtype", type=str, default="float32", help="data type of the model, choose from float16, bfloat16 and float32")
     parser.add_argument("--device", type=str,  choices=["cpu", "cuda:0"], default="cpu", help="device to use")
     parser.add_argument("--audit-conf", type=str, default="audit.conf", help="audit config for LoadGen settings during compliance runs")
-    parser.add_argument("--mlperf-conf", type=str, default="mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user-conf", type=str, default="user.conf", help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--total-sample-count", type=int, default=24576, help="Number of samples to use in benchmark.") # TODO: This interpretation of 'total-sample-count' is a little misleading. Fix it
     parser.add_argument("--batch-size", type=int, default=1, help="Model batch-size to use in benchmark.")
@@ -66,8 +65,8 @@ def main():
 
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
-    # Need to update the conf
-    settings.FromConfig(args.mlperf_conf, "llama2-70b", args.scenario)
+    # mlperf.conf is automatically loaded by the loadgen
+    # settings.FromConfig(args.mlperf_conf, "llama2-70b", args.scenario)
     settings.FromConfig(args.user_conf, "llama2-70b", args.scenario)
 
     if args.accuracy:

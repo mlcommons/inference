@@ -29,8 +29,6 @@ def get_args():
                         help="use GPU instead of CPU for the inference")
     parser.add_argument("--audit_conf", default="audit.conf",
                         help="audit config for LoadGen settings during compliance runs")
-    parser.add_argument(
-        "--mlperf_conf", default="mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf",
                         help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--max_examples", type=int, default=13368,
@@ -78,8 +76,8 @@ def main():
         # Initiates and loads loadgen test settings and log path
         settings = lg.TestSettings()
         settings.scenario = scenario_map[args.scenario]
-        # Need to update the conf
-        settings.FromConfig(args.mlperf_conf, "gptj", args.scenario)
+        # mlperf conf is automatically loaded by the loadgen
+        #settings.FromConfig(args.mlperf_conf, "gptj", args.scenario)
         settings.FromConfig(args.user_conf, "gptj", args.scenario)
 
         # Chosing test mode Accutacy/Performance

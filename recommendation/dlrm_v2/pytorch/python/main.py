@@ -114,8 +114,6 @@ def get_args():
     parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
     parser.add_argument("--find-peak-performance", action="store_true", help="enable finding peak performance pass")
 
-    # file to use mlperf rules compliant parameters
-    parser.add_argument("--mlperf_conf", default="mlperf.conf", help="mlperf rules config")
     # file for user LoadGen settings such as target QPS
     parser.add_argument("--user_conf", default="user.conf", help="user config for user LoadGen settings such as target QPS")
 
@@ -453,11 +451,6 @@ def main():
         "cmdline": str(args),
     }
 
-    mlperf_conf = os.path.abspath(args.mlperf_conf)
-    if not os.path.exists(mlperf_conf):
-        log.error("{} not found".format(mlperf_conf))
-        sys.exit(1)
-
     user_conf = os.path.abspath(args.user_conf)
     if not os.path.exists(user_conf):
         log.error("{} not found".format(user_conf))
@@ -498,7 +491,8 @@ def main():
         pass
 
     settings = lg.TestSettings()
-    settings.FromConfig(mlperf_conf, args.model_path, args.scenario)
+    # mlperf_conf is automatically loaded by the loadgen
+    #settings.FromConfig(mlperf_conf, args.model_path, args.scenario)
     settings.FromConfig(user_conf, args.model_path, args.scenario)
     settings.scenario = scenario
     settings.mode = lg.TestMode.PerformanceOnly

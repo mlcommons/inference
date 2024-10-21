@@ -37,8 +37,6 @@ def get_args():
                         help="use quantized model (only valid for onnxruntime backend)")
     parser.add_argument("--profile", action="store_true",
                         help="enable profiling (only valid for onnxruntime backend)")
-    parser.add_argument(
-            "--mlperf_conf", default="build/mlperf.conf", help="mlperf rules config")
     parser.add_argument("--user_conf", default="user.conf",
                         help="user config for user LoadGen settings such as target QPS")
     parser.add_argument("--audit_conf", default="audit.conf",
@@ -96,7 +94,8 @@ def main():
 
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
-    settings.FromConfig(args.mlperf_conf, "bert", args.scenario)
+    # mlperf.conf is automatically loaded by the loadgen
+    #settings.FromConfig(args.mlperf_conf, "bert", args.scenario)
     settings.FromConfig(args.user_conf, "bert", args.scenario)
 
     if args.accuracy:

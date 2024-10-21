@@ -121,10 +121,6 @@ def get_args():
         help="framework to load the latents",
     )
 
-    # file to use mlperf rules compliant parameters
-    parser.add_argument(
-        "--mlperf_conf", default="mlperf.conf", help="mlperf rules config"
-    )
     # file for user LoadGen settings such as target QPS
     parser.add_argument(
         "--user_conf",
@@ -366,11 +362,6 @@ def main():
         "cmdline": str(args),
     }
 
-    mlperf_conf = os.path.abspath(args.mlperf_conf)
-    if not os.path.exists(mlperf_conf):
-        log.error("{} not found".format(mlperf_conf))
-        sys.exit(1)
-
     user_conf = os.path.abspath(args.user_conf)
     if not os.path.exists(user_conf):
         log.error("{} not found".format(user_conf))
@@ -432,7 +423,8 @@ def main():
     log_settings.log_output = log_output_settings
 
     settings = lg.TestSettings()
-    settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
+    # mlperf.conf is automatically loaded by the loadgen
+    #settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
     settings.FromConfig(user_conf, args.model_name, args.scenario)
     if os.path.exists(audit_config):
         settings.FromConfig(audit_config, args.model_name, args.scenario)

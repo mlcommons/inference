@@ -1,2 +1,2 @@
-mlperf.conf
-VERSION
+include mlperf.conf
+include VERSION

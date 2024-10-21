@@ -43,6 +43,11 @@ def define_env(env):
             devices = [ "CUDA" ]
             frameworks = [ "TensorRT" ]
         
+        elif implementation == "amd":
+            devices = [ "cuda" ]
+            frameworks = [ "pytorch" ]
+            execution_envs.remove("Docker")
+        
         elif implementation == "neuralmagic":
             devices = [ "CUDA" ]
             frameworks = [ "pytorch" ]

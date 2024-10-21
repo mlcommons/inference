@@ -13,7 +13,7 @@
 # limitations under the License.
 # =============================================================================
 
-## \file
+# \file
 #  \brief MLPerf Inference LoadGen python module setup.
 #  \details Creates a module that python can import.
 #  All source files are compiled by python"s C++ toolchain  without depending
@@ -77,7 +77,10 @@ mlperf_loadgen_headers = public_headers + lib_headers
 mlperf_loadgen_sources_no_gen = lib_sources + lib_bindings
 mlperf_loadgen_sources = (mlperf_loadgen_sources_no_gen +
                           [generated_version_source_filename])
-mlperf_long_description = (this_directory / "README.md").read_text(encoding="utf-8")
+mlperf_long_description = (
+    this_directory /
+    "README.md").read_text(
+        encoding="utf-8")
 
 # Get the path of the config file and pass it as a -D option
 config_file_path = pkg_resources.resource_filename(__name__, "mlperf.conf")
@@ -90,11 +93,17 @@ if len(version_split) < 2:
 
 
 mlperf_loadgen_module = Pybind11Extension(
-        "mlperf_loadgen",
-        define_macros=[("MAJOR_VERSION", version_split[0]), ("MINOR_VERSION", version_split[1]), ("MLPERF_CONF_PATH", f'"{config_file_path}"') ],
-        include_dirs=[".", get_include()],
-        sources=mlperf_loadgen_sources,
-        depends=mlperf_loadgen_headers)
+    "mlperf_loadgen",
+    define_macros=[
+        ("MAJOR_VERSION",
+         version_split[0]),
+        ("MINOR_VERSION",
+         version_split[1]),
+        ("MLPERF_CONF_PATH",
+         f'"{config_file_path}"')],
+    include_dirs=[".", get_include()],
+    sources=mlperf_loadgen_sources,
+    depends=mlperf_loadgen_headers)
 
 setup(name="mlcommons_loadgen",
       version=version,

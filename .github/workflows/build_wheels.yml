@@ -80,6 +80,24 @@ jobs:
       - name: Build wheels
         run: python -m cibuildwheel loadgen/ --output-dir wheels
 
+       # Save wheels as artifacts
+      - name: Upload built wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
+          path: wheels
+
+  publish_wheels:
+    needs: build_wheels  # Wait for the build_wheels job to complete
+    runs-on: ubuntu-latest  # Only run this job on Linux
+    steps:
+      - uses: actions/checkout@v3
+
+      # Download the built wheels from all platforms
+      - name: Download all wheels
+        uses: actions/download-artifact@v3
+        with:
+          name: wheels-*
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

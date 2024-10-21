@@ -89,7 +89,7 @@ if sys.version_info >= (3, 9):
 else:
     import pkg_resources
     config_file_path = pkg_resources.resource_filename(__name__, "mlperf.conf")
-i
+
 with open("VERSION", "r") as f:
     version = f.read()
 version_split = version.split(".")

@@ -73,15 +73,22 @@ SCENARIO_MAP = {
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", choices=SUPPORTED_DATASETS.keys(), help="dataset")
-    parser.add_argument("--dataset-path", required=True, help="path to the dataset")
+    parser.add_argument(
+        "--dataset",
+        choices=SUPPORTED_DATASETS.keys(),
+        help="dataset")
+    parser.add_argument(
+        "--dataset-path",
+        required=True,
+        help="path to the dataset")
     parser.add_argument(
         "--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles"
     )
     parser.add_argument(
         "--scenario",
         default="SingleStream",
-        help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())),
+        help="mlperf benchmark scenario, one of " +
+        str(list(SCENARIO_MAP.keys())),
     )
     parser.add_argument(
         "--max-batchsize",
@@ -90,7 +97,10 @@ def get_args():
         help="max batch size in a single inference",
     )
     parser.add_argument("--threads", default=1, type=int, help="threads")
-    parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
+    parser.add_argument(
+        "--accuracy",
+        action="store_true",
+        help="enable accuracy pass")
     parser.add_argument(
         "--find-peak-performance",
         action="store_true",
@@ -135,9 +145,13 @@ def get_args():
     # pass this argument for official submission
     # parser.add_argument("--output-images", action="store_true", help="Store a subset of the generated images")
     # do not modify this argument for official submission
-    parser.add_argument("--ids-path", help="Path to caption ids", default="tools/sample_ids.txt")
+    parser.add_argument(
+        "--ids-path",
+        help="Path to caption ids",
+        default="tools/sample_ids.txt")
 
-    # below will override mlperf rules compliant settings - don't use for official submission
+    # below will override mlperf rules compliant settings - don't use for
+    # official submission
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--debug", action="store_true", help="debug")
@@ -255,9 +269,9 @@ class RunnerBase:
         else:
             bs = self.max_batchsize
             for i in range(0, len(idx), bs):
-                data, label = self.ds.get_samples(idx[i : i + bs])
+                data, label = self.ds.get_samples(idx[i: i + bs])
                 self.run_one_item(
-                    Item(query_id[i : i + bs], idx[i : i + bs], data, label)
+                    Item(query_id[i: i + bs], idx[i: i + bs], data, label)
                 )
 
     def finish(self):
@@ -272,7 +286,9 @@ class QueueRunner(RunnerBase):
         self.result_dict = {}
 
         for _ in range(self.threads):
-            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
+            worker = threading.Thread(
+                target=self.handle_tasks, args=(
+                    self.tasks,))
             worker.daemon = True
             self.workers.append(worker)
             worker.start()
@@ -368,7 +384,7 @@ def main():
         sys.exit(1)
 
     audit_config = os.path.abspath(args.audit_conf)
-    
+
     if args.accuracy:
         ids_path = os.path.abspath(args.ids_path)
         with open(ids_path) as f:
@@ -424,7 +440,7 @@ def main():
 
     settings = lg.TestSettings()
     # mlperf.conf is automatically loaded by the loadgen
-    #settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
+    # settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
     settings.FromConfig(user_conf, args.model_name, args.scenario)
     if os.path.exists(audit_config):
         settings.FromConfig(audit_config, args.model_name, args.scenario)
@@ -453,7 +469,8 @@ def main():
         settings.multi_stream_samples_per_query = args.samples_per_query
     if args.max_latency:
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
-        settings.multi_stream_expected_latency_ns = int(args.max_latency * NANO_SEC)
+        settings.multi_stream_expected_latency_ns = int(
+            args.max_latency * NANO_SEC)
 
     performance_sample_count = (
         args.performance_sample_count

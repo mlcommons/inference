@@ -84,12 +84,12 @@ struct PerformanceSummary {
   // Set by ProcessTokenLatencies
   size_t token_count = 0;
   size_t overlatency_first_token_count = 0;
-  QuerySampleLatency first_token_latency_min;
-  QuerySampleLatency first_token_latency_max;
-  QuerySampleLatency first_token_latency_mean;
-  QuerySampleLatency time_per_output_token_min;
-  QuerySampleLatency time_per_output_token_max;
-  QuerySampleLatency time_per_output_token_mean;
+  QuerySampleLatency first_token_latency_min = 0;
+  QuerySampleLatency first_token_latency_max = 0;
+  QuerySampleLatency first_token_latency_mean = 0;
+  QuerySampleLatency time_per_output_token_min = 0;
+  QuerySampleLatency time_per_output_token_max = 0;
+  QuerySampleLatency time_per_output_token_mean = 0;
 
   // Latency token target percentile
   PercentileEntry token_target_latency_percentile{settings.target_latency_percentile};

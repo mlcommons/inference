@@ -8,6 +8,7 @@ on:
     branches: [ "master", "dev" ]
     paths:
       - vision/classification_and_detection/**
+      - loadgen/**
       - tools/submission/**
       - .github/workflows/test-resnet50.yml
       - '!**.md'

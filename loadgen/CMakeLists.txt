@@ -73,3 +73,8 @@ install(TARGETS mlperf_loadgen
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/include FILES_MATCHING PATTERN "*.h")
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mlperf.conf
+        DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
+
+# Define preprocessor macro with the path to mlperf.conf
+add_definitions(-DMLPERF_CONF_PATH=\"${CMAKE_INSTALL_PREFIX}/include/mlperf.conf\")

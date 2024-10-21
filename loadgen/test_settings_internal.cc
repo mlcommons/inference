@@ -53,7 +53,7 @@ TestSettingsInternal::TestSettingsInternal(
       server_ttft_latency(requested.server_ttft_latency),
       server_tpot_latency(requested.server_tpot_latency),
       infer_token_latencies(requested.infer_token_latencies),
-      token_latency_scaling_factor(requested.token_latency_scaling_factor){
+      token_latency_scaling_factor(requested.token_latency_scaling_factor) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -158,14 +158,15 @@ TestSettingsInternal::TestSettingsInternal(
   // performance_sample_count == 0 makes it to be equal to loaded_samples.size()
   if (sample_concatenate_permutation &&
       requested.scenario == TestScenario::SingleStream) {
-    // set slack larger for 3D-UNet KiTS19 distribution, i.e. 50% latency << 90% latency
+    // set slack larger for 3D-UNet KiTS19 distribution, i.e. 50% latency << 90%
+    // latency
     constexpr double kSlack = 2.0;
-    uint64_t expected_queries = kSlack * DurationToSeconds(target_duration) * target_qps;
-    min_query_count = min_query_count > expected_queries 
-                      ? min_query_count
-                      : expected_queries;
-    min_query_count += 
-        qsl_performance_sample_count - (min_query_count  % qsl_performance_sample_count);
+    uint64_t expected_queries =
+        kSlack * DurationToSeconds(target_duration) * target_qps;
+    min_query_count =
+        min_query_count > expected_queries ? min_query_count : expected_queries;
+    min_query_count += qsl_performance_sample_count -
+                       (min_query_count % qsl_performance_sample_count);
   }
 
   min_sample_count = min_query_count * samples_per_query;
@@ -335,13 +336,16 @@ void LogRequestedTestSettings(const TestSettings &s) {
     MLPERF_LOG(detail, "requested_performance_sample_count_override",
                s.performance_sample_count_override);
     MLPERF_LOG(detail, "requested_sample_concatenate_permutation",
-            s.sample_concatenate_permutation);
+               s.sample_concatenate_permutation);
     // Token latencies specific values
-    if (s.use_token_latencies){
-      MLPERF_LOG(detail, "requested_use_token_latencies", s.use_token_latencies);
-      if (s.scenario != TestScenario::Offline){
-        MLPERF_LOG(detail, "requested_server_ttft_latency", s.server_ttft_latency);
-        MLPERF_LOG(detail, "requested_server_tpot_latency", s.server_tpot_latency);
+    if (s.use_token_latencies) {
+      MLPERF_LOG(detail, "requested_use_token_latencies",
+                 s.use_token_latencies);
+      if (s.scenario != TestScenario::Offline) {
+        MLPERF_LOG(detail, "requested_server_ttft_latency",
+                   s.server_ttft_latency);
+        MLPERF_LOG(detail, "requested_server_tpot_latency",
+                   s.server_tpot_latency);
       }
     }
 #else
@@ -488,7 +492,7 @@ void TestSettingsInternal::LogAllSettings() const {
 void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("samples_per_query : ", samples_per_query);
   summary("target_qps : ", target_qps);
-  if (!use_token_latencies){
+  if (!use_token_latencies) {
     summary("target_latency (ns): ", target_latency.count());
   } else {
     summary("ttft_latency (ns): ", server_ttft_latency);
@@ -514,13 +518,26 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
 
 }  // namespace loadgen
 
-/// \todo The TestSettings::FromConfig definition belongs in a test_settings.cc
-/// file which doesn't yet exist. To avoid churn so close to the submission
-/// deadline, adding a test_settings.cc file has been deferred to v0.6.
 int TestSettings::FromConfig(const std::string &path, const std::string &model,
-                             const std::string &scenario) {
-  // TODO: move this method to a new file test_settings.cc
+                             const std::string &scenario, bool is_mlperf_conf) {
   std::map<std::string, std::string> kv;
+  static int configCount = 0;
+
+  if (configCount == 0) {
+    // Only allow userConf as the single configFile and loadgen loads the
+    // mlperfConf automatically
+    FromConfig(MLPERF_CONF_PATH, model, scenario, true);
+    configCount++;
+  }
+
+  else if (configCount > 1) {
+    LogDetail([](AsyncDetail &detail) {
+      std::stringstream ss;
+      ss << "Multiple conf files are used. This is not valid for official "
+            "submission.";
+      MLPERF_LOG_ERROR(detail, "error_invalid_config", ss.str());
+    });
+  }
 
   // lookup key/value pairs from config
   auto lookupkv = [&](const std::string &model, const std::string &scenario,
@@ -686,30 +703,36 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
            &performance_issue_same_index, nullptr);
   lookupkv(model, scenario, "performance_sample_count_override",
            &performance_sample_count_override, nullptr);
-  if (lookupkv(model, scenario, "sample_concatenate_permutation", &val, nullptr))
+  if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
+               nullptr))
     sample_concatenate_permutation = (val == 1) ? true : false;
   if (lookupkv(model, scenario, "test05", &val, nullptr))
     test05 = (val == 1) ? true : false;
-  lookupkv(model, scenario, "test05_qsl_rng_seed", &test05_qsl_rng_seed, nullptr);
-  lookupkv(model, scenario, "test05_sample_index_rng_seed", &test05_sample_index_rng_seed,
+  lookupkv(model, scenario, "test05_qsl_rng_seed", &test05_qsl_rng_seed,
            nullptr);
-  lookupkv(model, scenario, "test05_schedule_rng_seed", &test05_schedule_rng_seed, nullptr);
+  lookupkv(model, scenario, "test05_sample_index_rng_seed",
+           &test05_sample_index_rng_seed, nullptr);
+  lookupkv(model, scenario, "test05_schedule_rng_seed",
+           &test05_schedule_rng_seed, nullptr);
 
   // keys to measure token metrics
-  if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)){
+  if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)) {
     use_token_latencies = (val == 1) ? true : false;
   }
-  if (use_token_latencies){
-    lookupkv(model, "Server", "ttft_latency", &server_ttft_latency, nullptr, 1000 * 1000);
-    lookupkv(model, "Server", "tpot_latency", &server_tpot_latency, nullptr, 1000 * 1000);
+  if (use_token_latencies) {
+    lookupkv(model, "Server", "ttft_latency", &server_ttft_latency, nullptr,
+             1000 * 1000);
+    lookupkv(model, "Server", "tpot_latency", &server_tpot_latency, nullptr,
+             1000 * 1000);
   }
 
   // keys to infer token metrics
-  if (lookupkv(model, scenario, "infer_token_latencies", &val, nullptr)){
+  if (lookupkv(model, scenario, "infer_token_latencies", &val, nullptr)) {
     infer_token_latencies = (val == 1) ? true : false;
   }
-  if (infer_token_latencies){
-    lookupkv(model, scenario, "token_latency_scaling_factor", &token_latency_scaling_factor, nullptr, 1);
+  if (infer_token_latencies) {
+    lookupkv(model, scenario, "token_latency_scaling_factor",
+             &token_latency_scaling_factor, nullptr, 1);
   }
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,

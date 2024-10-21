@@ -83,7 +83,7 @@ mlperf_long_description = (
         encoding="utf-8")
 
 # Get the path of the config file and pass it as a -D option
-if sys.version_info >= (3.9):
+if sys.version_info >= (3, 9):
     import importlib.resources as resources
     config_file_path = resources.files(__name__).joinpath('mlperf.conf')
 else:

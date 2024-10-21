@@ -29,7 +29,6 @@ from pathlib import Path
 from pybind11 import get_include
 from pybind11.setup_helpers import Pybind11Extension, build_ext
 from version_generator import generate_loadgen_version_definitions
-import sys
 
 generated_version_source_filename = "generated/version_generated.cc"
 generate_loadgen_version_definitions(generated_version_source_filename, ".")
@@ -82,13 +81,7 @@ mlperf_long_description = (
     "README.md").read_text(
         encoding="utf-8")
 
-# Get the path of the config file and pass it as a -D option
-if sys.version_info >= (3, 9):
-    import importlib.resources as resources
-    config_file_path = resources.files(__name__).joinpath('mlperf.conf')
-else:
-    import pkg_resources
-    config_file_path = pkg_resources.resource_filename(__name__, "mlperf.conf")
+config_file_path = Path(__file__).parent / "mlperf.conf"
 
 with open("VERSION", "r") as f:
     version = f.read()

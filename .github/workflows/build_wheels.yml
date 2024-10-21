@@ -29,14 +29,14 @@ jobs:
 
       - uses: actions/setup-python@v3
 
-      # Step 3: Check if VERSION file has changed in this push
-      - name: Check if VERSION file has changed
+      # Step 3: Check if VERSION.txt file has changed in this push
+      - name: Check if VERSION.txt file has changed
         id: version_changed
         run: |
-          if git diff --name-only HEAD~1 | grep -q "VERSION"; then
-            echo "VERSION file has been modified"
+          if git diff --name-only HEAD~1 | grep -q "VERSION.txt"; then
+            echo "VERSION.txt file has been modified"
             echo "::set-output name=version_changed::true"
-            new_version=$(cat VERSION)
+            new_version=$(cat VERSION.txt)
           else
             echo "VERSION file has NOT been modified"
             echo "::set-output name=version_changed::false"
@@ -50,15 +50,15 @@ jobs:
         run: |
           cd loadgen
           # Check if VERSION file exists, else initialize it
-          if [ ! -f VERSION ]; then
-            echo "0.0.0" > VERSION
+          if [ ! -f VERSION.txt ]; then
+            echo "0.0.0" > VERSION.txt
           fi
 
-          version=$(cat VERSION)
+          version=$(cat VERSION.txt)
           IFS='.' read -r major minor patch <<< "$version"
           patch=$((patch + 1))
           new_version="$major.$minor.$patch"
-          echo $new_version > VERSION
+          echo $new_version > VERSION.txt
           echo "New version: $new_version"
           echo "::set-output name=new_version::$new_version"
 
@@ -69,7 +69,7 @@ jobs:
           cd loadgen
           git config --global user.name "${{ github.actor }}"
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-          git add VERSION
+          git add VERSION.txt
           git commit -m "Increment version to ${{ steps.do_version_increment.outputs.new_version }}"
           git push
 

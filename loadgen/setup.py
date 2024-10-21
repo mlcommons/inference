@@ -83,7 +83,7 @@ mlperf_long_description = (
 
 config_file_path = Path(__file__).parent / "mlperf.conf"
 
-with open("VERSION", "r") as f:
+with open("VERSION.txt", "r") as f:
     version = f.read()
 version_split = version.split(".")
 

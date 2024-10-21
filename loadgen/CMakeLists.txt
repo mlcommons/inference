@@ -1,10 +1,17 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
 
 project(mlperf_loadgen)
 
-# The mlperf_loadgen version.
-set(mlperf_loadgen_VERSION_MAJOR 4)
-set(mlperf_loadgen_VERSION_MINOR 1)
+# Read the version file
+file(READ "${CMAKE_SOURCE_DIR}/VERSION" VERSION_CONTENTS)
+
+# Extract the major and minor versions from the VERSION file (assuming "MAJOR.MINOR.PATCH" format)
+string(REGEX MATCH "^([0-9]+)\\.([0-9]+)" VERSION_MATCH ${VERSION_CONTENTS})
+
+# Set the variables for the major and minor versions
+set(mlperf_loadgen_VERSION_MAJOR "${CMAKE_MATCH_1}")
+set(mlperf_loadgen_VERSION_MINOR "${CMAKE_MATCH_2}")
+
 message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}")
 
 # Set build options. NB: CXX_STANDARD is supported since CMake 3.1.

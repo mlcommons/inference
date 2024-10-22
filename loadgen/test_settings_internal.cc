@@ -692,14 +692,6 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
              &accuracy_log_probability, 0.01);
     lookupkv(model, scenario, "accuracy_log_sampling_target",
              &accuracy_log_sampling_target, nullptr);
-    if (lookupkv(model, scenario, "print_timestamps", &val, nullptr))
-      print_timestamps = (val == 0) ? false : true;
-    if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr))
-      performance_issue_unique = (val == 0) ? false : true;
-    if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr))
-      performance_issue_same = (val == 0) ? false : true;
-    lookupkv(model, scenario, "performance_issue_same_index",
-             &performance_issue_same_index, nullptr);
     if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
                  nullptr))
       sample_concatenate_permutation = (val == 1) ? true : false;
@@ -711,11 +703,6 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
              &test05_sample_index_rng_seed, nullptr);
     lookupkv(model, scenario, "test05_schedule_rng_seed",
              &test05_schedule_rng_seed, nullptr);
-
-    if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
-      server_coalesce_queries = (val == 0) ? false : true;
-    if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))
-      server_max_async_queries = int(val);
   }
 
   // keys that can be overriden in user.conf but will make the results eligibale
@@ -756,6 +743,18 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
 
   // keys that can be overriden in user.conf (the provided values still need to
   // pass the submission checker rules)
+  if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr))
+    performance_issue_unique = (val == 0) ? false : true;
+  if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr))
+    performance_issue_same = (val == 0) ? false : true;
+  lookupkv(model, scenario, "performance_issue_same_index",
+           &performance_issue_same_index, nullptr);
+
+  if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
+    server_coalesce_queries = (val == 0) ? false : true;
+  if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))
+    server_max_async_queries = int(val);
+
   lookupkv(model, scenario, "min_duration", &min_duration_ms, nullptr);
   lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);
   lookupkv(model, scenario, "min_query_count", &min_query_count, nullptr);
@@ -768,6 +767,9 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
            &multi_stream_expected_latency_ns, 1000 * 1000);
   lookupkv(model, "Server", "target_qps", nullptr, &server_target_qps);
   lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);
+
+  if (lookupkv(model, scenario, "print_timestamps", &val, nullptr))
+    print_timestamps = (val == 0) ? false : true;
 
   return 0;
 }

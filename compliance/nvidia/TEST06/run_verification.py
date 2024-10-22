@@ -51,8 +51,7 @@ def eos_check(acc_data, dtype, eos_token_id=2):
             if data[i] == eos_token_id:
                 n_eos_tokens += 1
             if n_eos_tokens >= 2:
-                # Allow output to be [eos_token_id, eos_token_id]
-                return len(data) == 2
+                return False
             if data[i] != eos_token_id:
                 break
             i-=1

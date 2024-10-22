@@ -84,7 +84,7 @@ jobs:
       - name: Upload built wheels
         uses: actions/upload-artifact@v3
         with:
-          name: wheels-${{ matrix.os }}-${{ matrix.python-version }}
+          name: all-wheels
           path: wheels
 
   publish_wheels:
@@ -97,7 +97,7 @@ jobs:
       - name: Download all wheels
         uses: actions/download-artifact@v3
         with:
-          name: wheels-*
+          name: all-wheels
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

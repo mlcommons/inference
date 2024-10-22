@@ -712,45 +712,47 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     lookupkv(model, scenario, "test05_schedule_rng_seed",
              &test05_schedule_rng_seed, nullptr);
 
-    // keys to measure token metrics
-    if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)) {
-      use_token_latencies = (val == 1) ? true : false;
-    }
-    if (use_token_latencies) {
-      lookupkv(model, "Server", "ttft_latency", &server_ttft_latency, nullptr,
-               1000 * 1000);
-      lookupkv(model, "Server", "tpot_latency", &server_tpot_latency, nullptr,
-               1000 * 1000);
-    }
-
-    // keys to infer token metrics
-    if (lookupkv(model, scenario, "infer_token_latencies", &val, nullptr)) {
-      infer_token_latencies = (val == 1) ? true : false;
-    }
-    if (infer_token_latencies) {
-      lookupkv(model, scenario, "token_latency_scaling_factor",
-               &token_latency_scaling_factor, nullptr, 1);
-    }
-    // keys that apply to SingleStream
-    lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
-             &single_stream_target_latency_percentile, 0.01);
-
-    // keys that apply to MultiStream
-    lookupkv(model, "MultiStream", "target_latency_percentile", nullptr,
-             &multi_stream_target_latency_percentile, 0.01);
-    lookupkv(model, "MultiStream", "samples_per_query",
-             &multi_stream_samples_per_query, nullptr, 1);
-
-    // keys that apply to Server
-    lookupkv(model, "Server", "target_latency_percentile", nullptr,
-             &server_target_latency_percentile, 0.01);
-    lookupkv(model, "Server", "target_latency", &server_target_latency_ns,
-             nullptr, 1000 * 1000);
     if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
       server_coalesce_queries = (val == 0) ? false : true;
     if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))
       server_max_async_queries = int(val);
   }
+
+  // keys that can be overriden in user.conf but will make the results eligibale
+  // only for open submission keys to measure token metrics
+  if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)) {
+    use_token_latencies = (val == 1) ? true : false;
+  }
+  if (use_token_latencies) {
+    lookupkv(model, "Server", "ttft_latency", &server_ttft_latency, nullptr,
+             1000 * 1000);
+    lookupkv(model, "Server", "tpot_latency", &server_tpot_latency, nullptr,
+             1000 * 1000);
+  }
+
+  // keys to infer token metrics
+  if (lookupkv(model, scenario, "infer_token_latencies", &val, nullptr)) {
+    infer_token_latencies = (val == 1) ? true : false;
+  }
+  if (infer_token_latencies) {
+    lookupkv(model, scenario, "token_latency_scaling_factor",
+             &token_latency_scaling_factor, nullptr, 1);
+  }
+  // keys that apply to SingleStream
+  lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
+           &single_stream_target_latency_percentile, 0.01);
+
+  // keys that apply to MultiStream
+  lookupkv(model, "MultiStream", "target_latency_percentile", nullptr,
+           &multi_stream_target_latency_percentile, 0.01);
+  lookupkv(model, "MultiStream", "samples_per_query",
+           &multi_stream_samples_per_query, nullptr, 1);
+
+  // keys that apply to Server
+  lookupkv(model, "Server", "target_latency_percentile", nullptr,
+           &server_target_latency_percentile, 0.01);
+  lookupkv(model, "Server", "target_latency", &server_target_latency_ns,
+           nullptr, 1000 * 1000);
 
   // keys that can be overriden in user.conf (the provided values still need to
   // pass the submission checker rules)

@@ -1,7 +1,7 @@
 def define_env(env):
 
     @env.macro
-    def mlperf_inference_implementation_readme(spaces, model, implementation, *, implementation_tips=True, setup_tips=True, run_tips=True, skip_test_query_count=False, scenarios = [], devices=[], frameworks=[], categories=[], extra_variation_tags="", extra_input_string="", extra_docker_input_string=""):
+    def mlperf_inference_implementation_readme(spaces, model, implementation, *, implementation_tips=True, setup_tips=True, run_tips=True, skip_test_query_count=False, fixed_scenarios = [], devices=[], frameworks=[], categories=[], extra_variation_tags="", extra_input_string="", extra_docker_input_string=""):
         pre_space = ""
 
         for i in range(1,spaces):
@@ -78,7 +78,7 @@ def define_env(env):
             frameworks = [ "Onnxruntime" ]
 
         elif implementation == "ctuning-cpp":
-            scenarios = [ "SingleStream" ]
+            fixed_scenarios = [ "SingleStream" ]
             devices = [ "CPU" ]
             if model.lower() == "resnet50":
                  frameworks = [ "TFLite" ]
@@ -99,13 +99,14 @@ def define_env(env):
         final_run_mode = "valid" if "short" not in extra_variation_tags else "test"
 
         for category in categories:
-            if not scenarios:
-                if category == "Edge" and not scenarios:
-                    scenarios = [ "Offline", "SingleStream" ]
-                    if model.lower() in [ "resnet50", "retinanet" ] and not "MultiStream" in scenarios:#MultiStream was duplicating
-                         scenarios.append("MultiStream")
-                elif category == "Datacenter":
-                     scenarios = [ "Offline", "Server" ] 
+            if category == "Edge":
+                scenarios = [ "Offline", "SingleStream" ]
+                if model.lower() in [ "resnet50", "retinanet" ] and not "MultiStream" in scenarios:#MultiStream was duplicating
+                    scenarios.append("MultiStream")
+            elif category == "Datacenter":
+                scenarios = [ "Offline", "Server" ]
+            if fixed_scenarios:
+                scenarios = [ scenario for scenario in scenarios if scenario in fixed_scenarios ]
 
             content += f"{pre_space}=== \"{category.lower()}\"\n\n"
 

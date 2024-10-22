@@ -2,7 +2,7 @@
 
 source ./run_common.sh
 
-common_opt="--mlperf_conf ../../mlperf.conf"
+common_opt=""
 dataset="--dataset-path $DATA_DIR"
 OUTPUT_DIR=${OUTPUT_DIR:-`pwd`/output/$name}
 if [ ! -d "$OUTPUT_DIR" ]; then

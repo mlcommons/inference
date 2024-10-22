@@ -69,12 +69,15 @@ class Waymo(dataset.Dataset):
         self.split = split
         self.pts_prefix = pts_prefix
         info_file = f'waymo_infos_val.pkl'
-        self.data_infos = read_pickle(os.path.join(data_root, info_file))
-        self.sorted_ids = range(len(self.data_infos))
         self.painted = painted
         self.cam_sync = cam_sync
         self.point_range_filter = [-74.88, -74.88, -2, 74.88, 74.88, 4]
-
+        if painted or cam_sync:
+            info_file = f'painted_waymo_infos_{split}.pkl'
+        else:
+            info_file = f'waymo_infos_{split}.pkl'
+        self.data_infos = read_pickle(os.path.join(data_root, info_file))
+        self.sorted_ids = range(len(self.data_infos))
     def preprocess(self, input):
         image_transform = transforms.Compose([
             transforms.ToTensor(),
@@ -100,7 +103,13 @@ class Waymo(dataset.Dataset):
         pass
 
     def get_samples(self, id_list):
-        return [self.get_item(id) for id in id_list]
+        data = []
+        labels = []
+        for id in id_list:
+            item = self.get_item(id)
+            data.append({'pts': item['pts'], 'images': item['images'], 'calib_info': item['calib_info']})
+            labels.append({'gt_labels': item['gt_labels'], 'calib_info': item['calib_info'], 'gt_names': item['gt_names'],})
+        return data, labels
 
     def get_item(self, id):
         data_info = self.data_infos[self.sorted_ids[id]]
@@ -144,7 +153,13 @@ class Waymo(dataset.Dataset):
             images.append(image)
         data_dict['images'] = images
 
-        return self.preprocess(data_dict)
+        return data_dict
+    
+    def remove_dont_care(self, annos_info):
+        keep_ids = [i for i, name in enumerate(annos_info['name']) if name != 'DontCare']
+        for k, v in annos_info.items():
+            annos_info[k] = v[keep_ids]
+        return annos_info
     
     def get_image(self, idx, camera):
         filename = os.path.join(self.data_root, 'training', camera + ('%s.jpg' % idx))

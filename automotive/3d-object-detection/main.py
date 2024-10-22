@@ -216,6 +216,8 @@ class RunnerBase:
             response_array_refs = []
             response = []
             for idx, query_id in enumerate(qitem.query_id):
+                import pdb
+                pdb.set_trace()
                 response_array = array.array(
                     "B", np.array(processed_results[idx], np.uint8).tobytes()
                 )
@@ -295,12 +297,7 @@ def main():
     # find backend
     backend = get_backend(
         # TODO: pass model, inference and backend arguments
-        args.backend,
-        type=args.dtype,
-        device=args.device,
-        ckpt_path=args.model_path,
-        batch_size=args.max_batchsize,
-        layout=args.layout
+        args.backend
     )
     if args.dtype == "fp16":
         dtype = torch.float16
@@ -321,7 +318,7 @@ def main():
 
     # dataset to use
     dataset_class, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
-    ds = dataset_class(data_root=args.data_root, split='val', painted=args.painted, cam_sync=False, inference=True)
+    ds = dataset_class(data_root=args.dataset_path, split='val', painted=True, cam_sync=False)
     final_results = {
         "runtime": model.name(),
         "version": model.version(),

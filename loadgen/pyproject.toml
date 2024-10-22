@@ -4,4 +4,4 @@ build-backend = "setuptools.build_meta:__legacy__"
 
 [tool.cibuildwheel]
 environment = "CFLAGS='-std=c++14'"
-build = "cp3{13}-*"
+build = "cp3{12,13}-*"

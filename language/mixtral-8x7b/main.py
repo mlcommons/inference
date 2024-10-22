@@ -55,11 +55,6 @@ def get_args():
         default="audit.conf",
         help="audit config for LoadGen settings during compliance runs")
     parser.add_argument(
-        "--mlperf-conf",
-        type=str,
-        default="mlperf.conf",
-        help="mlperf rules config")
-    parser.add_argument(
         "--user-conf",
         type=str,
         default="user.conf",
@@ -111,8 +106,8 @@ def main():
 
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
-    # Need to update the conf
-    settings.FromConfig(args.mlperf_conf, "mixtral-8x7b", args.scenario)
+    # mlperf_conf is automatically loaded by the loadgen
+    # settings.FromConfig(args.mlperf_conf, "mixtral-8x7b", args.scenario)
     settings.FromConfig(args.user_conf, "mixtral-8x7b", args.scenario)
 
     if args.accuracy:

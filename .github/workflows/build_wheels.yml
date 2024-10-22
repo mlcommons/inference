@@ -6,7 +6,7 @@ on:
   push:
     branches:
       - master
-      - loadgen-dev
+      - loadgen-release
     paths:
       - loadgen/**
 

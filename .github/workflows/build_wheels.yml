@@ -80,7 +80,7 @@ jobs:
       - name: Upload built wheels
         uses: actions/upload-artifact@v3
         with:
-          name: all-wheels
+          name: wheels-${{ matrix.os }}
           path: wheels
 
   publish_wheels:
@@ -92,11 +92,23 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      # Download the built wheels from all platforms
-      - name: Download all wheels
+      # Download the built wheels from ubuntu
+      - name: Download Ubuntu wheels
         uses: actions/download-artifact@v3
         with:
-          name: all-wheels
+          name: wheels-ubuntu-latest
+          path: wheels
+      # Download the built wheels from macOS
+      - name: Download macOS wheels
+        uses: actions/download-artifact@v3
+        with:
+          name: wheels-macos-latest
+          path: wheels
+      # Download the built wheels from Windows
+      - name: Download Windows wheels
+        uses: actions/download-artifact@v3
+        with:
+          name: wheels-windows-latest
           path: wheels
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1

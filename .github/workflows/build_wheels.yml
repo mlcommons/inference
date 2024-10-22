@@ -11,24 +11,15 @@ on:
       - loadgen/**
 
 jobs:
-  build_wheels:
-    name: Build wheels on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    environment: release
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
+  update_version:
+    name: Update version only on ubuntu but used by windows and macos
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      - uses: actions/setup-python@v3
 
       # Step 3: Check if VERSION.txt file has changed in this push
       - name: Check if VERSION.txt file has changed
         id: version_changed
-        if: runner.os == 'Linux'
         run: |
           if git diff --name-only HEAD~1 | grep -q "VERSION.txt"; then
             echo "VERSION.txt file has been modified"
@@ -43,7 +34,7 @@ jobs:
       # Step 4: Increment version if VERSION was not changed
       - name: Increment version if necessary
         id: do_version_increment
-        if: runner.os == 'Linux' && steps.version_changed.outputs.version_changed == 'false'
+        if: steps.version_changed.outputs.version_changed == 'false'
         run: |
           cd loadgen
           # Check if VERSION file exists, else initialize it
@@ -61,7 +52,7 @@ jobs:
 
       # Step 5: Commit the updated version to the repository
       - name: Commit updated version
-        if: steps.version_changed.outputs.version_changed == 'false' && runner.os == 'Linux'
+        if: steps.version_changed.outputs.version_changed == 'false'
         run: |
           cd loadgen
           git config --global user.name "${{ github.actor }}"
@@ -69,6 +60,20 @@ jobs:
           git add VERSION.txt
           git commit -m "Increment version to ${{ steps.do_version_increment.outputs.new_version }}"
           git push
+  
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    needs: update_version
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-python@v3
 
       - name: Install requirements
         run: python -m pip install cibuildwheel twine
@@ -86,6 +91,7 @@ jobs:
   publish_wheels:
     needs: build_wheels  # Wait for the build_wheels job to complete
     runs-on: ubuntu-latest  # Only run this job on Linux
+    environment: release
     permissions:
       # IMPORTANT: this permission is mandatory for trusted publishing
       id-token: write

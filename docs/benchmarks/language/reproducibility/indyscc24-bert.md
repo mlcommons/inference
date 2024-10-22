@@ -27,7 +27,7 @@ All the needed files are automatically pushed to the GitHub repository if you ma
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
     
-{{ mlperf_inference_implementation_readme (4, "bert-99", "reference", extra_variation_tags="", scenarios=["Offline"],categories=["Edge"], setup_tips=False) }}
+{{ mlperf_inference_implementation_readme (4, "bert-99", "reference", extra_variation_tags="", fixed_scenarios=["Offline"],categories=["Edge"], setup_tips=False) }}
 
 
 ## Submission Commands

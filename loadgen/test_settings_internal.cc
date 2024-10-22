@@ -681,87 +681,90 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
         break;
     }
   }
+  if (is_mlperf_conf) {
+    lookupkv(model, scenario, "qsl_rng_seed", &qsl_rng_seed, nullptr);
+    lookupkv(model, scenario, "sample_index_rng_seed", &sample_index_rng_seed,
+             nullptr);
+    lookupkv(model, scenario, "schedule_rng_seed", &schedule_rng_seed, nullptr);
+    lookupkv(model, scenario, "accuracy_log_rng_seed", &accuracy_log_rng_seed,
+             nullptr);
+    lookupkv(model, scenario, "accuracy_log_probability", nullptr,
+             &accuracy_log_probability, 0.01);
+    lookupkv(model, scenario, "accuracy_log_sampling_target",
+             &accuracy_log_sampling_target, nullptr);
+    if (lookupkv(model, scenario, "print_timestamps", &val, nullptr))
+      print_timestamps = (val == 0) ? false : true;
+    if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr))
+      performance_issue_unique = (val == 0) ? false : true;
+    if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr))
+      performance_issue_same = (val == 0) ? false : true;
+    lookupkv(model, scenario, "performance_issue_same_index",
+             &performance_issue_same_index, nullptr);
+    if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
+                 nullptr))
+      sample_concatenate_permutation = (val == 1) ? true : false;
+    if (lookupkv(model, scenario, "test05", &val, nullptr))
+      test05 = (val == 1) ? true : false;
+    lookupkv(model, scenario, "test05_qsl_rng_seed", &test05_qsl_rng_seed,
+             nullptr);
+    lookupkv(model, scenario, "test05_sample_index_rng_seed",
+             &test05_sample_index_rng_seed, nullptr);
+    lookupkv(model, scenario, "test05_schedule_rng_seed",
+             &test05_schedule_rng_seed, nullptr);
+
+    // keys to measure token metrics
+    if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)) {
+      use_token_latencies = (val == 1) ? true : false;
+    }
+    if (use_token_latencies) {
+      lookupkv(model, "Server", "ttft_latency", &server_ttft_latency, nullptr,
+               1000 * 1000);
+      lookupkv(model, "Server", "tpot_latency", &server_tpot_latency, nullptr,
+               1000 * 1000);
+    }
+
+    // keys to infer token metrics
+    if (lookupkv(model, scenario, "infer_token_latencies", &val, nullptr)) {
+      infer_token_latencies = (val == 1) ? true : false;
+    }
+    if (infer_token_latencies) {
+      lookupkv(model, scenario, "token_latency_scaling_factor",
+               &token_latency_scaling_factor, nullptr, 1);
+    }
+    // keys that apply to SingleStream
+    lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
+             &single_stream_target_latency_percentile, 0.01);
+
+    // keys that apply to MultiStream
+    lookupkv(model, "MultiStream", "target_latency_percentile", nullptr,
+             &multi_stream_target_latency_percentile, 0.01);
+    lookupkv(model, "MultiStream", "samples_per_query",
+             &multi_stream_samples_per_query, nullptr, 1);
+
+    // keys that apply to Server
+    lookupkv(model, "Server", "target_latency_percentile", nullptr,
+             &server_target_latency_percentile, 0.01);
+    lookupkv(model, "Server", "target_latency", &server_target_latency_ns,
+             nullptr, 1000 * 1000);
+    if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
+      server_coalesce_queries = (val == 0) ? false : true;
+    if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))
+      server_max_async_queries = int(val);
+  }
+
+  // keys that can be overriden in user.conf (the provided values still need to
+  // pass the submission checker rules)
   lookupkv(model, scenario, "min_duration", &min_duration_ms, nullptr);
   lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);
   lookupkv(model, scenario, "min_query_count", &min_query_count, nullptr);
   lookupkv(model, scenario, "max_query_count", &max_query_count, nullptr);
-  lookupkv(model, scenario, "qsl_rng_seed", &qsl_rng_seed, nullptr);
-  lookupkv(model, scenario, "sample_index_rng_seed", &sample_index_rng_seed,
-           nullptr);
-  lookupkv(model, scenario, "schedule_rng_seed", &schedule_rng_seed, nullptr);
-  lookupkv(model, scenario, "accuracy_log_rng_seed", &accuracy_log_rng_seed,
-           nullptr);
-  lookupkv(model, scenario, "accuracy_log_probability", nullptr,
-           &accuracy_log_probability, 0.01);
-  lookupkv(model, scenario, "accuracy_log_sampling_target",
-           &accuracy_log_sampling_target, nullptr);
-  if (lookupkv(model, scenario, "print_timestamps", &val, nullptr))
-    print_timestamps = (val == 0) ? false : true;
-  if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr))
-    performance_issue_unique = (val == 0) ? false : true;
-  if (lookupkv(model, scenario, "performance_issue_same", &val, nullptr))
-    performance_issue_same = (val == 0) ? false : true;
-  lookupkv(model, scenario, "performance_issue_same_index",
-           &performance_issue_same_index, nullptr);
   lookupkv(model, scenario, "performance_sample_count_override",
            &performance_sample_count_override, nullptr);
-  if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
-               nullptr))
-    sample_concatenate_permutation = (val == 1) ? true : false;
-  if (lookupkv(model, scenario, "test05", &val, nullptr))
-    test05 = (val == 1) ? true : false;
-  lookupkv(model, scenario, "test05_qsl_rng_seed", &test05_qsl_rng_seed,
-           nullptr);
-  lookupkv(model, scenario, "test05_sample_index_rng_seed",
-           &test05_sample_index_rng_seed, nullptr);
-  lookupkv(model, scenario, "test05_schedule_rng_seed",
-           &test05_schedule_rng_seed, nullptr);
-
-  // keys to measure token metrics
-  if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)) {
-    use_token_latencies = (val == 1) ? true : false;
-  }
-  if (use_token_latencies) {
-    lookupkv(model, "Server", "ttft_latency", &server_ttft_latency, nullptr,
-             1000 * 1000);
-    lookupkv(model, "Server", "tpot_latency", &server_tpot_latency, nullptr,
-             1000 * 1000);
-  }
-
-  // keys to infer token metrics
-  if (lookupkv(model, scenario, "infer_token_latencies", &val, nullptr)) {
-    infer_token_latencies = (val == 1) ? true : false;
-  }
-  if (infer_token_latencies) {
-    lookupkv(model, scenario, "token_latency_scaling_factor",
-             &token_latency_scaling_factor, nullptr, 1);
-  }
-  // keys that apply to SingleStream
-  lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
-           &single_stream_target_latency_percentile, 0.01);
   lookupkv(model, "SingleStream", "target_latency", nullptr,
            &single_stream_expected_latency_ns, 1000 * 1000);
-
-  // keys that apply to MultiStream
-  lookupkv(model, "MultiStream", "target_latency_percentile", nullptr,
-           &multi_stream_target_latency_percentile, 0.01);
   lookupkv(model, "MultiStream", "target_latency", nullptr,
            &multi_stream_expected_latency_ns, 1000 * 1000);
-  lookupkv(model, "MultiStream", "samples_per_query",
-           &multi_stream_samples_per_query, nullptr, 1);
-
-  // keys that apply to Server
-  lookupkv(model, "Server", "target_latency_percentile", nullptr,
-           &server_target_latency_percentile, 0.01);
-  lookupkv(model, "Server", "target_latency", &server_target_latency_ns,
-           nullptr, 1000 * 1000);
   lookupkv(model, "Server", "target_qps", nullptr, &server_target_qps);
-  if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
-    server_coalesce_queries = (val == 0) ? false : true;
-  if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))
-    server_max_async_queries = int(val);
-
-  // keys that apply to Offline
   lookupkv(model, "Offline", "target_qps", 0, &offline_expected_qps);
 
   return 0;

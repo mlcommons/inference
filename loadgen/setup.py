@@ -127,6 +127,7 @@ setup(name="mlcommons_loadgen",
       url="https://mlcommons.org/",
       cmdclass={"build_ext": build_ext},
       ext_modules=[mlperf_loadgen_module],
+      package_dir={'': 'mlcommons_loadgen'},
       include_package_data=True,
       long_description=mlperf_long_description,
       long_description_content_type='text/markdown')

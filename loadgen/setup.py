@@ -83,8 +83,6 @@ mlperf_long_description = (
     "README.md").read_text(
         encoding="utf-8")
 
-config_file_path = Path(__file__).parent / "mlperf.conf"
-
 with open("VERSION.txt", "r") as f:
     version = f.read()
 version_split = version.split(".")
@@ -105,9 +103,8 @@ mlperf_loadgen_module = Pybind11Extension(
         ("MAJOR_VERSION",
          version_split[0]),
         ("MINOR_VERSION",
-         version_split[1]),
-        ("MLPERF_CONF_PATH",
-         f'"{config_file_path}"')],
+         version_split[1])
+        ],
     include_dirs=[".", get_include()],
     sources=mlperf_loadgen_sources,
     depends=mlperf_loadgen_headers)

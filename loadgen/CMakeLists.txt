@@ -5,14 +5,21 @@ project(mlperf_loadgen)
 # Read the version file
 file(READ "${CMAKE_SOURCE_DIR}/VERSION.txt" VERSION_CONTENTS)
 
-# Extract the major and minor versions from the VERSION file (assuming "MAJOR.MINOR.PATCH" format)
-string(REGEX MATCH "^([0-9]+)\\.([0-9]+)" VERSION_MATCH ${VERSION_CONTENTS})
+# Extract the major, minor, and patch versions from the VERSION file (assuming "MAJOR.MINOR.PATCH" format)
+string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" VERSION_MATCH ${VERSION_CONTENTS})
 
-# Set the variables for the major and minor versions
+# Set the variables for the major, minor, and patch versions
 set(mlperf_loadgen_VERSION_MAJOR "${CMAKE_MATCH_1}")
 set(mlperf_loadgen_VERSION_MINOR "${CMAKE_MATCH_2}")
+set(mlperf_loadgen_VERSION_PATCH "${CMAKE_MATCH_3}")
 
-message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}")
+# Check if the version format was parsed correctly
+if(NOT mlperf_loadgen_VERSION_MAJOR OR NOT mlperf_loadgen_VERSION_MINOR OR NOT mlperf_loadgen_VERSION_PATCH)
+    message(FATAL_ERROR "Version format in VERSION.txt is incorrect. Expected format: MAJOR.MINOR.PATCH")
+endif()
+
+# Print out the version
+message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}.${mlperf_loadgen_VERSION_PATCH}")
 
 # Set build options. NB: CXX_STANDARD is supported since CMake 3.1.
 if (NOT MSVC)

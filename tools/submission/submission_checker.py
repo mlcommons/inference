@@ -412,7 +412,7 @@ REQUIRED_ACC_BENCHMARK = {
         }
     }
 }
-REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
+REQUIRED_MEASURE_FILES = ["user.conf", "README.md"]
 REQUIRED_POWER_MEASURE_FILES = ["analyzer_table.*", "power_settings.*"]
 MS_TO_NS = 1000 * 1000
 S_TO_MS = 1000
@@ -2021,7 +2021,7 @@ def check_results_dir(
                             errors += 1
                             continue
                         else:
-                            measurement_check, conf_equal_issue_check, weight_data_types = check_measurement_dir(
+                            measurement_check, weight_data_types = check_measurement_dir(
                                 config,
                                 measurement_dir,
                                 name,
@@ -2134,12 +2134,10 @@ def check_results_dir(
                                     )
 
                                 # Check equal issue mode
-                                if not (conf_equal_issue_check or performance_equal_issue_check):
+                                if not performance_equal_issue_check:
                                     log.error(
-                                        "%s %s requires equal issue mode (sample_concatenate_permutation), expected=true, found=%s",
-                                        perf_path,
-                                        measurement_dir,
-                                        not (conf_equal_issue_check or performance_equal_issue_check),
+                                        "%s requires equal issue mode (sample_concatenate_permutation), expected=true, found=false",
+                                        perf_path
                                     )
                                     is_valid, r = False, None
                             except Exception as e:
@@ -2501,62 +2499,11 @@ def check_measurement_dir(
                 log.error("%s is missing code_dir %s", fname, code_dir)
                 is_valid = False
   
-        # Check equal issue mode 
-        equal_issue_used = False       
-        if "mlperf.conf" in files and config.requires_equal_issue(model, division):
-            with open(f"{measurement_dir}/mlperf.conf") as f:
-                lines = f.readlines()
-                conf_ref_model = model.replace("-99.9", "").replace("-99", "")
-                for line in lines:
-                    line = line.replace(" ", "").replace("\n", "")
-                    if line.startswith("#"):
-                        continue
-                    elif line == "":
-                        continue
-                    else:
-                        key, val = line.split("=")
-                        key.replace(" ", "")
-                        val.replace(" ", "")
-                        conf_model, conf_scenario, conf_key = key.split(".")
-                        if (
-                            (conf_key == "sample_concatenate_permutation") and 
-                            ((conf_model == conf_ref_model) or conf_model == "*") and
-                            ((conf_scenario == scenario) or conf_scenario == "*")
-                        ):
-                            if val.isnumeric():
-                                val = int(val)
-                                equal_issue_used = (val == 1)
-                                break
-
-        if "user.conf" in files and config.requires_equal_issue(model, division):
-            with open(f"{measurement_dir}/user.conf") as f:
-                lines = f.readlines()
-                conf_ref_model = model.replace("-99.9", "").replace("-99", "")
-                for line in lines:
-                    line = line.replace(" ", "").replace("\n", "")
-                    if line.startswith("#"):
-                        continue
-                    elif line == "":
-                        continue
-                    else:
-                        key, val = line.split("=")
-                        key.replace(" ", "")
-                        val.replace(" ", "")
-                        conf_model, conf_scenario, conf_key = key.split(".")
-                        if (
-                            (conf_key == "sample_concatenate_permutation") and 
-                            ((conf_model == conf_ref_model) or conf_model == "*") and
-                            ((conf_scenario == scenario) or conf_scenario == "*")
-                        ):
-                            if val.isnumeric():
-                                val = int(val)
-                                equal_issue_used = (val == 1)
-                                break
     else:
         log.error("%s is missing %s*.json", fname, system_desc)
         is_valid = False
 
-    return is_valid, equal_issue_used, weight_data_types
+    return is_valid, weight_data_types
 
 
 def check_compliance_perf_dir(test_dir):

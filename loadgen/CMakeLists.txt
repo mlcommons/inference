@@ -39,7 +39,7 @@ find_package(PythonInterp)
 message(STATUS "Using Python interpreter: ${PYTHON_EXECUTABLE}")
 
 # Generate source file with version info.
-execute_process(COMMAND xdd -i ${CMAKE_CURRENT_SOURCE_DIR}/mlperf.conf > ${CMAKE_CURRENT_SOURCE_DIR}/mlperf_conf.h)
+execute_process(COMMAND xxd -i ${CMAKE_CURRENT_SOURCE_DIR}/mlperf.conf ${CMAKE_CURRENT_SOURCE_DIR}/mlperf_conf.h)
 
 # Generate source file with version info.
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version_generator.py ${CMAKE_BINARY_DIR}/version_generated.cc ${CMAKE_CURRENT_SOURCE_DIR})

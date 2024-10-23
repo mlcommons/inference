@@ -27,12 +27,12 @@ jobs:
             echo "::set-output name=version_changed::true"
             new_version=$(cat VERSION.txt)
           else
-            echo "VERSION file has NOT been modified"
+            echo "VERSION.txt file has NOT been modified"
             echo "::set-output name=version_changed::false"
           fi
           echo "::set-output name=new_version::$new_version"
 
-      # Step 4: Increment version if VERSION was not changed
+      # Step 4: Increment version if VERSION.txt was not changed
       - name: Increment version if necessary
         id: do_version_increment
         if: steps.version_changed.outputs.version_changed == 'false'

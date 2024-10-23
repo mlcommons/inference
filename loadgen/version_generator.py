@@ -94,7 +94,7 @@ def generate_loadgen_version_definitions(cc_filename, loadgen_root):
     ofile.write("#include <string>\n\n")
     ofile.write("namespace mlperf {\n\n")
     # Open and read the VERSION.txt file
-    with open("VERSION.txt", "r") as version_file:
+    with open(os.path.join(loadgen_root, "VERSION.txt"), "r") as version_file:
         version_contents = version_file.read().strip()  # Read and strip any extra whitespace/newlines
 
     # Write the version into the function definition

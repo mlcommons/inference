@@ -72,6 +72,7 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/version.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.h
   ${CMAKE_CURRENT_SOURCE_DIR}/mlperf_conf.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt
   ${CMAKE_BINARY_DIR}/version_generated.cc
 )
 

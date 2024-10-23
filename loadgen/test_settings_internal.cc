@@ -603,7 +603,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     }
   } else {
     // Convert unsigned char array to std::string
-    std::string config_str(reinterpret_cast<const char*>(mlperf_conf), mlperf_conf_len);
+    std::string config_str(mlperf_conf);
     fss = std::make_unique<std::istringstream>(config_str);
 
   }

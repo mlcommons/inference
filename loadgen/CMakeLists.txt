@@ -45,10 +45,26 @@ message(STATUS "Using output path: ${LIBRARY_OUTPUT_PATH}")
 find_package(PythonInterp)
 message(STATUS "Using Python interpreter: ${PYTHON_EXECUTABLE}")
 
+# Specify the source and destination files
+set(CONF_FILE "mlperf.conf")
+set(HEADER_FILE "mlperf_conf.h")
 
-# Generate source file with version info.
-execute_process(COMMAND xxd -i mlperf.conf mlperf_conf.h
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+# Read the content of the configuration file
+file(READ ${CONF_FILE} CONF_CONTENTS)
+
+# Escape all double quotes and backslashes
+string(REPLACE "\\" "\\\\" CONF_CONTENTS "${CONF_CONTENTS}")
+string(REPLACE "\"" "\\\"" CONF_CONTENTS "${CONF_CONTENTS}")
+
+# Handle new lines
+string(REPLACE "\n" "\\n\"\n\"" CONF_CONTENTS "${CONF_CONTENTS}")
+
+# Wrap the content in a C++ string declaration
+set(FORMATTED_CONTENT "const char* mlperf_conf =\n\"${CONF_CONTENTS}\";\n")
+
+# Write the formatted content to the header file
+file(WRITE ${HEADER_FILE} "${FORMATTED_CONTENT}")
+
 message(STATUS "Output config:  ${CMAKE_BINARY_DIR}/mlperf_conf.h")
 
 # Generate source file with version info.

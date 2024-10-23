@@ -116,7 +116,7 @@ mlperf_loadgen_module = Pybind11Extension(
          version_split[0]),
         ("MINOR_VERSION",
          version_split[1])
-        ],
+    ],
     include_dirs=[".", get_include()],
     sources=mlperf_loadgen_sources,
     depends=mlperf_loadgen_headers)

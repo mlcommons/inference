@@ -11,7 +11,6 @@ limitations under the License.
 ==============================================================================*/
 
 #include "test_settings_internal.h"
-#include "mlperf_conf.h"
 
 #include <fstream>
 #include <map>
@@ -19,6 +18,7 @@ limitations under the License.
 #include <string>
 
 #include "logging.h"
+#include "mlperf_conf.h"
 #include "utils.h"
 
 namespace mlperf {
@@ -589,7 +589,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   if (!is_mlperf_conf) {
     // dirt simple config parser
     fss = std::make_unique<std::ifstream>(path);
-    if (!static_cast<std::ifstream*>(fss.get())->is_open()) {
+    if (!static_cast<std::ifstream *>(fss.get())->is_open()) {
       LogDetail([p = path](AsyncDetail &detail) {
 #if USE_NEW_LOGGING_FORMAT
         std::stringstream ss;
@@ -605,7 +605,6 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     // Convert unsigned char array to std::string
     std::string config_str(mlperf_conf);
     fss = std::make_unique<std::istringstream>(config_str);
-
   }
   while (std::getline(*fss, line)) {
     line_nr++;

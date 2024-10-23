@@ -13,7 +13,7 @@
 # limitations under the License.
 # =============================================================================
 
-## \file
+# \file
 #  \brief A script run by the build to generate the version definitions
 #  expected at link time.
 
@@ -27,9 +27,10 @@ import subprocess
 
 # Creates a C++ raw string literal using a delimiter that is very
 # unlikely to show up in a git stats.
-def make_raw_string(str) :
+def make_raw_string(str):
     delimeter = "LGVG_RSLD"
     return "R\"" + delimeter + "(" + str + ")" + delimeter + "\""
+
 
 def func_def(name, string):
     return ("const std::string& Loadgen" + name + "() {\n" +
@@ -42,10 +43,12 @@ def func_def(name, string):
 # any modifications.
 def generate_loadgen_version_definitions_git(ofile, git_command):
     git_rev = os.popen(git_command + "rev-parse --short=10 HEAD").read()
-    git_commit_date = os.popen(git_command + "log --format=\"%cI\" -n 1").read()
+    git_commit_date = os.popen(
+        git_command +
+        "log --format=\"%cI\" -n 1").read()
     git_status = os.popen(git_command + "status -s -uno .").read()
     git_log = subprocess.Popen(
-        git_command + "log --pretty=oneline -n 16 --no-decorate", stdout=subprocess.PIPE, shell=True, encoding='ascii', errors="ignore" ).stdout.read()
+        git_command + "log --pretty=oneline -n 16 --no-decorate", stdout=subprocess.PIPE, shell=True, encoding='ascii', errors="ignore").stdout.read()
     ofile.write(func_def("GitRevision", "\"" + git_rev[0:-1] + "\""))
     ofile.write(func_def("GitCommitDate", "\"" + git_commit_date[0:-1] + "\""))
     ofile.write(func_def("GitStatus", make_raw_string(git_status[0:-1])))
@@ -95,7 +98,8 @@ def generate_loadgen_version_definitions(cc_filename, loadgen_root):
     ofile.write("namespace mlperf {\n\n")
     # Open and read the VERSION.txt file
     with open(os.path.join(loadgen_root, "VERSION.txt"), "r") as version_file:
-        version_contents = version_file.read().strip()  # Read and strip any extra whitespace/newlines
+        # Read and strip any extra whitespace/newlines
+        version_contents = version_file.read().strip()
 
     # Write the version into the function definition
     ofile.write(func_def("Version", f"\"{version_contents}\""))

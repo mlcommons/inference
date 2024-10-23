@@ -70,7 +70,7 @@ def main():
         if item not in seen:
             seen.add(item)
             dedup_results.append(result)
-    results = dedup_results      
+    results = dedup_results
 
     target_required = []
     preds_token_ids = []

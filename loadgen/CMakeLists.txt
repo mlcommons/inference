@@ -40,7 +40,7 @@ message(STATUS "Using Python interpreter: ${PYTHON_EXECUTABLE}")
 
 
 # Generate source file with version info.
-execute_process(COMMAND xxd -i mlperf.conf ${CMAKE_BINARY_DIR}/mlperf_conf.h
+execute_process(COMMAND xxd -i mlperf.conf mlperf_conf.h
 	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 message(STATUS "Output config:  ${CMAKE_BINARY_DIR}/mlperf_conf.h")
 
@@ -64,7 +64,7 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/results.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.h
-  ${CMAKE_BINARY_DIR}/mlperf_conf.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/mlperf_conf.h
   ${CMAKE_BINARY_DIR}/version_generated.cc
 )
 
@@ -87,5 +87,3 @@ install(TARGETS mlperf_loadgen
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/include FILES_MATCHING PATTERN "*.h")
-install(FILES ${CMAKE_BINARY_DIR}/mlperf_conf.h
-	DESTINATION ${CMAKE_INSTALL_PREFIX}/include)

@@ -528,7 +528,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     if (configCount == 0) {
       // Only allow userConf as the single configFile and loadgen loads the
       // mlperfConf automatically
-      FromConfig(NULL, model, scenario, true);
+      FromConfig("", model, scenario, true);
     }
 
     else {

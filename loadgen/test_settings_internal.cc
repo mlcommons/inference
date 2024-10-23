@@ -11,6 +11,7 @@ limitations under the License.
 ==============================================================================*/
 
 #include "test_settings_internal.h"
+#include "mlperf_conf.h"
 
 #include <fstream>
 #include <map>
@@ -527,7 +528,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     if (configCount == 0) {
       // Only allow userConf as the single configFile and loadgen loads the
       // mlperfConf automatically
-      FromConfig(MLPERF_CONF_PATH, model, scenario, true);
+      FromConfig(NULL, model, scenario, true);
     }
 
     else {
@@ -579,24 +580,34 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     return true;
   };
 
-  // dirt simple config parser
-  std::ifstream fss(path);
-  std::string line;
   int line_nr = 0;
   int errors = 0;
-  if (!fss.is_open()) {
-    LogDetail([p = path](AsyncDetail &detail) {
+  // Declare the input stream before the if-else block
+  std::unique_ptr<std::istream> fss;
+  std::string line;
+
+  if (!is_mlperf_conf) {
+    // dirt simple config parser
+    fss = std::make_unique<std::ifstream>(path);
+    if (!static_cast<std::ifstream*>(fss.get())->is_open()) {
+      LogDetail([p = path](AsyncDetail &detail) {
 #if USE_NEW_LOGGING_FORMAT
-      std::stringstream ss;
-      ss << "can't open file " << p;
-      MLPERF_LOG_ERROR(detail, "error_invalid_config", ss.str());
+        std::stringstream ss;
+        ss << "can't open file " << p;
+        MLPERF_LOG_ERROR(detail, "error_invalid_config", ss.str());
 #else
-      detail.Error("can't open file ", p);
+        detail.Error("can't open file ", p);
 #endif
-    });
-    return -ENOENT;
+      });
+      return -ENOENT;
+    }
+  } else {
+    // Convert unsigned char array to std::string
+    std::string config_str(reinterpret_cast<const char*>(mlperf_conf), mlperf_conf_len);
+    fss = std::make_unique<std::istringstream>(config_str);
+
   }
-  while (std::getline(fss, line)) {
+  while (std::getline(*fss, line)) {
     line_nr++;
     std::istringstream iss(line);
     std::string s, k;

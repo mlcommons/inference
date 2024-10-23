@@ -39,6 +39,9 @@ find_package(PythonInterp)
 message(STATUS "Using Python interpreter: ${PYTHON_EXECUTABLE}")
 
 # Generate source file with version info.
+execute_process(COMMAND xdd -i ${CMAKE_CURRENT_SOURCE_DIR}/mlperf.conf > ${CMAKE_CURRENT_SOURCE_DIR}/mlperf_conf.h)
+
+# Generate source file with version info.
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version_generator.py ${CMAKE_BINARY_DIR}/version_generated.cc ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Add source files.
@@ -58,6 +61,7 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/results.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/mlperf_conf.h
   ${CMAKE_BINARY_DIR}/version_generated.cc
 )
 
@@ -82,6 +86,3 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/include FILES_MATCHING PATTERN "*.h")
 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mlperf.conf
         DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
-
-# Define preprocessor macro with the path to mlperf.conf
-add_definitions(-DMLPERF_CONF_PATH=\"${CMAKE_INSTALL_PREFIX}/include/mlperf.conf\")

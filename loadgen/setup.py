@@ -90,12 +90,24 @@ version_split = version.split(".")
 if len(version_split) < 2:
     print("Version is incomplete. Needs a format like 4.1.1 in VERSION file")
 
-command = ["xxd", "-i", "mlperf.conf", "mlperf_conf.h" ]
+
 try:
-    subprocess.check_call(command)
-except subprocess.CalledProcessError as e:
-    print(f"Failed to generate the mlperf_conf.h file: {e}")
-    raise
+    with open("mlperf.conf", 'r') as file:
+        conf_contents = file.read()
+
+    # Escape backslashes and double quotes
+    conf_contents = conf_contents.replace('\\', '\\\\').replace('"', '\\"')
+
+    # Convert newlines
+    conf_contents = conf_contents.replace('\n', '\\n"\n"')
+
+    formatted_content = f'const char* mlperf_conf =\n"{conf_contents}";\n'
+
+    with open("mlperf_conf.h", 'w') as header_file:
+        header_file.write(formatted_content)
+
+except IOError as e:
+    raise RuntimeError(f"Failed to generate header file: {e}")
 
 mlperf_loadgen_module = Pybind11Extension(
     "mlperf_loadgen",

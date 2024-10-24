@@ -24,7 +24,7 @@ jobs:
         run: |
           echo "version_changed=false" >> $GITHUB_ENV
           echo "new_version=" >> $GITHUB_ENV  # Initialize with empty value
-          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "VERSION.txt"; then
+          if git diff --name-only HEAD~1 | grep -q "VERSION.txt"; then
             echo "VERSION.txt file has been modified"
             echo "version_changed=true" >> $GITHUB_ENV
             new_version=$(cat VERSION.txt)

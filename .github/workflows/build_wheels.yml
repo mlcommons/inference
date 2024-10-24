@@ -29,7 +29,7 @@ jobs:
           if git diff --name-only HEAD~1 | grep -q "VERSION.txt"; then
             echo "VERSION.txt file has been modified"
             echo "version_changed=true" >> $GITHUB_ENV
-            new_version=$(cat VERSION.txt)
+            new_version=$(cat loadgen/VERSION.txt)
             echo "new_version=$new_version" >> $GITHUB_ENV
           else
             echo "VERSION.txt file has NOT been modified"

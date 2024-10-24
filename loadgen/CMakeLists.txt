@@ -1,18 +1,25 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.12)
 
 project(mlperf_loadgen)
 
 # Read the version file
 file(READ "${CMAKE_SOURCE_DIR}/VERSION.txt" VERSION_CONTENTS)
 
-# Extract the major and minor versions from the VERSION file (assuming "MAJOR.MINOR.PATCH" format)
-string(REGEX MATCH "^([0-9]+)\\.([0-9]+)" VERSION_MATCH ${VERSION_CONTENTS})
+# Extract the major, minor, and patch versions from the VERSION file (assuming "MAJOR.MINOR.PATCH" format)
+string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)" VERSION_MATCH ${VERSION_CONTENTS})
 
-# Set the variables for the major and minor versions
+# Set the variables for the major, minor, and patch versions
 set(mlperf_loadgen_VERSION_MAJOR "${CMAKE_MATCH_1}")
 set(mlperf_loadgen_VERSION_MINOR "${CMAKE_MATCH_2}")
+set(mlperf_loadgen_VERSION_PATCH "${CMAKE_MATCH_3}")
 
-message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}")
+# Check if the version format was parsed correctly
+if(NOT mlperf_loadgen_VERSION_MAJOR OR NOT mlperf_loadgen_VERSION_MINOR OR NOT mlperf_loadgen_VERSION_PATCH)
+    message(FATAL_ERROR "Version format in VERSION.txt is incorrect. Expected format: MAJOR.MINOR.PATCH")
+endif()
+
+# Print out the version
+message("mlperf_loadgen v${mlperf_loadgen_VERSION_MAJOR}.${mlperf_loadgen_VERSION_MINOR}.${mlperf_loadgen_VERSION_PATCH}")
 
 # Set build options. NB: CXX_STANDARD is supported since CMake 3.1.
 if (NOT MSVC)
@@ -38,6 +45,28 @@ message(STATUS "Using output path: ${LIBRARY_OUTPUT_PATH}")
 find_package(PythonInterp)
 message(STATUS "Using Python interpreter: ${PYTHON_EXECUTABLE}")
 
+# Specify the source and destination files
+set(CONF_FILE "mlperf.conf")
+set(HEADER_FILE "mlperf_conf.h")
+
+# Read the content of the configuration file
+file(READ ${CONF_FILE} CONF_CONTENTS)
+
+# Escape all double quotes and backslashes
+string(REPLACE "\\" "\\\\" CONF_CONTENTS "${CONF_CONTENTS}")
+string(REPLACE "\"" "\\\"" CONF_CONTENTS "${CONF_CONTENTS}")
+
+# Handle new lines
+string(REPLACE "\n" "\\n\"\n\"" CONF_CONTENTS "${CONF_CONTENTS}")
+
+# Wrap the content in a C++ string declaration
+set(FORMATTED_CONTENT "const char* mlperf_conf =\n\"${CONF_CONTENTS}\";\n")
+
+# Write the formatted content to the header file
+file(WRITE ${HEADER_FILE} "${FORMATTED_CONTENT}")
+
+message(STATUS "Output config:  ${CMAKE_BINARY_DIR}/mlperf_conf.h")
+
 # Generate source file with version info.
 execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/version_generator.py ${CMAKE_BINARY_DIR}/version_generated.cc ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -58,6 +87,8 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/results.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/version.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/mlperf_conf.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/VERSION.txt
   ${CMAKE_BINARY_DIR}/version_generated.cc
 )
 
@@ -80,8 +111,3 @@ install(TARGETS mlperf_loadgen
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
 	DESTINATION ${CMAKE_INSTALL_PREFIX}/include FILES_MATCHING PATTERN "*.h")
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/mlperf.conf
-        DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
-
-# Define preprocessor macro with the path to mlperf.conf
-add_definitions(-DMLPERF_CONF_PATH=\"${CMAKE_INSTALL_PREFIX}/include/mlperf.conf\")

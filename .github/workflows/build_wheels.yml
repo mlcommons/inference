@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
 
       # Check if VERSION.txt file has changed in this push
       - name: Check if VERSION.txt file has changed

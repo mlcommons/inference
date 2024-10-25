@@ -412,7 +412,7 @@ REQUIRED_ACC_BENCHMARK = {
         }
     }
 }
-REQUIRED_MEASURE_FILES = ["user.conf", "README.md"]
+REQUIRED_MEASURE_FILES = ["user.conf", "README.md", "model-info.json"]
 REQUIRED_POWER_MEASURE_FILES = ["analyzer_table.*", "power_settings.*"]
 MS_TO_NS = 1000 * 1000
 S_TO_MS = 1000
@@ -1951,19 +1951,17 @@ def check_results_dir(
                         results[name] = None
                         continue
                     system_type = system_json.get("system_type")
-                    if config.version not in ["v0.5"]:
-                        valid_system_types = ["datacenter", "edge"]
-                        if config.version not in ["v0.7"]:
-                            valid_system_types += ["datacenter,edge",
-                                                   "edge,datacenter"]
-                        if system_type not in valid_system_types:
-                            log.error(
-                                "%s has invalid system type (%s)",
-                                system_id_json,
-                                system_type,
-                            )
-                            results[name] = None
-                            continue
+                    valid_system_types = ["datacenter", "edge", "datacenter,edge", "edge,datacenter"]
+                    
+                    if system_type not in valid_system_types:
+                        log.error(
+                            "%s has invalid system type (%s)",
+                            system_id_json,
+                            system_type,
+                        )
+                        results[name] = None
+                        continue
+
                     config.set_type(system_type)
                     if not check_system_desc_id(
                         name,
@@ -2546,26 +2544,7 @@ def check_measurement_dir(
                 log.error("%s is having empty %s", measurement_dir, i)
                 is_valid = False
 
-    for i in files:
-        if i.startswith(system_desc) and i.endswith("_" + scenario + ".json"):
-            system_file = i
-            end = len("_" + scenario + ".json")
-            break
-        elif i.startswith(system_desc) and i.endswith(".json"):
-            system_file = i
-            end = len(".json")
-            break
-
-    if not system_file and os.environ.get("INFER_SYSTEM_FILE", "") == "yes":
-        for i in files:
-            if i.endswith(".json"):
-                system_file = system_desc + ".json"
-                os.rename(
-                    os.path.join(measurement_dir, i),
-                    os.path.join(measurement_dir, system_file),
-                )
-                end = len(".json")
-                break
+    system_file = "model-info.json"
 
     weight_data_types = None
     if system_file:
@@ -2767,7 +2746,6 @@ def check_compliance_dir(
     test_list = ["TEST01", "TEST04", "TEST05"]
 
     if model in [
-        "rnnt",
         "bert-99",
         "bert-99.9",
         "dlrm-v2-99",

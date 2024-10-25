@@ -412,7 +412,7 @@ REQUIRED_ACC_BENCHMARK = {
         }
     }
 }
-REQUIRED_MEASURE_FILES = ["user.conf", "README.md", "model-info.json"]
+REQUIRED_MEASURE_FILES = ["user.conf", "README.md"]
 REQUIRED_POWER_MEASURE_FILES = ["analyzer_table.*", "power_settings.*"]
 MS_TO_NS = 1000 * 1000
 S_TO_MS = 1000
@@ -2546,29 +2546,19 @@ def check_measurement_dir(
                 is_valid = False
 
     if config.version in ["v4.0", "v4.1"]:
-        for i in files:
-            if i.startswith(system_desc) and i.endswith(
-                    "_" + scenario + ".json"):
-                system_file = i
-                end = len("_" + scenario + ".json")
-                break
-            elif i.startswith(system_desc) and i.endswith(".json"):
-                system_file = i
-                end = len(".json")
-                break
-        if not system_file and os.environ.get(
-                "INFER_SYSTEM_FILE", "") == "yes":
-            for i in files:
-                if i.endswith(".json"):
-                    system_file = system_desc + ".json"
-                    os.rename(
-                        os.path.join(measurement_dir, i),
-                        os.path.join(measurement_dir, system_file),
-                    )
-                    end = len(".json")
-                    break
-        else:
-            system_file = "model-info.json"
+        system_file_prefix = system_desc
+    else:
+        system_file_prefix = "model-info"
+    for i in files:
+        if i.startswith(system_desc) and i.endswith(
+                "_" + scenario + ".json"):
+            system_file = i
+            end = len("_" + scenario + ".json")
+            break
+        elif i.startswith(system_desc) and i.endswith(".json"):
+            system_file = i
+            end = len(".json")
+            break
 
     weight_data_types = None
     if system_file:

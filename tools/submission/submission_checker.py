@@ -1951,8 +1951,9 @@ def check_results_dir(
                         results[name] = None
                         continue
                     system_type = system_json.get("system_type")
-                    valid_system_types = ["datacenter", "edge", "datacenter,edge", "edge,datacenter"]
-                    
+                    valid_system_types = [
+                        "datacenter", "edge", "datacenter,edge", "edge,datacenter"]
+
                     if system_type not in valid_system_types:
                         log.error(
                             "%s has invalid system type (%s)",

@@ -2767,6 +2767,7 @@ def check_compliance_dir(
         "3d-unet-99",
         "3d-unet-99.9",
         "retinanet",
+        "rnnt",
         "gptj-99",
         "gptj-99.9",
         "llama2-70b-99",

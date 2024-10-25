@@ -2545,7 +2545,28 @@ def check_measurement_dir(
                 log.error("%s is having empty %s", measurement_dir, i)
                 is_valid = False
 
-    system_file = "model-info.json"
+    if config.version in [ "v4.0", "v4.1" ]:
+        for i in files:
+            if i.startswith(system_desc) and i.endswith("_" + scenario + ".json"):
+                system_file = i
+                end = len("_" + scenario + ".json")
+                break
+            elif i.startswith(system_desc) and i.endswith(".json"):
+                system_file = i
+                end = len(".json")
+                break
+        if not system_file and os.environ.get("INFER_SYSTEM_FILE", "") == "yes":
+            for i in files:
+                if i.endswith(".json"):
+                    system_file = system_desc + ".json"
+                    os.rename(
+                        os.path.join(measurement_dir, i),
+                        os.path.join(measurement_dir, system_file),
+                    )
+                    end = len(".json")
+                    break
+        else:
+            system_file = "model-info.json"
 
     weight_data_types = None
     if system_file:

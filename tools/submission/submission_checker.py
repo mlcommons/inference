@@ -1,4 +1,4 @@
-"""A checker for MLPerf Inference submissions
+"""A checker for MLPerf Inference submissions from v4.0 onwards (for checking older submissions please use the submission checker from the respective release)
 """
 
 from __future__ import division

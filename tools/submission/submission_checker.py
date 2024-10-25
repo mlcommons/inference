@@ -2545,9 +2545,10 @@ def check_measurement_dir(
                 log.error("%s is having empty %s", measurement_dir, i)
                 is_valid = False
 
-    if config.version in [ "v4.0", "v4.1" ]:
+    if config.version in ["v4.0", "v4.1"]:
         for i in files:
-            if i.startswith(system_desc) and i.endswith("_" + scenario + ".json"):
+            if i.startswith(system_desc) and i.endswith(
+                    "_" + scenario + ".json"):
                 system_file = i
                 end = len("_" + scenario + ".json")
                 break
@@ -2555,7 +2556,8 @@ def check_measurement_dir(
                 system_file = i
                 end = len(".json")
                 break
-        if not system_file and os.environ.get("INFER_SYSTEM_FILE", "") == "yes":
+        if not system_file and os.environ.get(
+                "INFER_SYSTEM_FILE", "") == "yes":
             for i in files:
                 if i.endswith(".json"):
                     system_file = system_desc + ".json"

@@ -2820,7 +2820,7 @@ def check_compliance_dir(
                 compliance_perf_dir = os.path.join(
                     compliance_dir, test, "performance", "run_1"
                 )
-                compliance_perf_valid, r, is_inferred  = check_performance_dir(
+                compliance_perf_valid, r, is_inferred = check_performance_dir(
                     config, model, compliance_perf_dir, scenario, division, system_json
                 )
                 if is_inferred:

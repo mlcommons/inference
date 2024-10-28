@@ -1103,7 +1103,7 @@ def extra_check_llm(mlperf_log, scenario, model):
 
 
 def get_performance_metric(
-    config, model, path, scenario_fixed, division):
+        config, model, path, scenario_fixed, division):
     # Assumes new logging format
     version = config.version
 
@@ -1131,7 +1131,7 @@ def get_performance_metric(
 
 
 def check_performance_dir(
-    config, model, path, scenario_fixed, division, system_json):
+        config, model, path, scenario_fixed, division, system_json):
     is_valid = False
     rt = {}
 
@@ -1177,7 +1177,7 @@ def check_performance_dir(
     if not equal_issue_used_check:
         log.error(
             "%s requires equal issue mode (sample_concatenate_permutation), expected=true, found=false", path
-            )
+        )
         is_valid = False
 
     sut_name = mlperf_log["sut_name"]
@@ -2196,7 +2196,7 @@ def check_results_dir(
                                 continue
 
                             try:
-                                is_valid, r, is_inferred  = check_performance_dir(
+                                is_valid, r, is_inferred = check_performance_dir(
                                     config,
                                     mlperf_model,
                                     perf_path,

@@ -814,7 +814,7 @@ class Config:
                 "llama2-70b-99.9",
                 "mixtral-8x7b"
             ]
-            and self.version in ["v4.1"]
+            and self.version not in ["v4.0", "v4.1"]
         )
 
 
@@ -1010,6 +1010,7 @@ def check_accuracy_dir(config, model, path, verbose):
         acc_targets.append(acc_target)
         acc_types.append(acc_type)
     acc_seen = [False for _ in acc_targets]
+
     with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
             for i, (pattern, acc_target, acc_type) in enumerate(
@@ -1025,11 +1026,12 @@ def check_accuracy_dir(config, model, path, verbose):
                     acc_seen[i] = True
                 elif acc is not None:
                     all_accuracy_valid = False
-                    log.warning(
-                        "%s accuracy not met: expected=%f, found=%s",
-                        path,
-                        acc_target,
-                        acc)
+                    if verbose:
+                        log.warning(
+                            "%s accuracy not met: expected=%f, found=%s",
+                            path,
+                            acc_target,
+                            acc)
                 if acc:
                     result_acc[acc_type] = acc
                 acc = None
@@ -1045,11 +1047,12 @@ def check_accuracy_dir(config, model, path, verbose):
                     if acc is not None and acc_upper_limit is not None and float(
                             acc) > acc_limit:
                         acc_limit_check = False
-                        log.warning(
-                            "%s accuracy not met: upper limit=%f, found=%s",
-                            path,
-                            acc_limit,
-                            acc)
+                        if verbose:
+                            log.warning(
+                                "%s accuracy not met: upper limit=%f, found=%s",
+                                path,
+                                acc_limit,
+                                acc)
                     acc = None
             if all(acc_seen) and hash_val:
                 break
@@ -1100,8 +1103,7 @@ def extra_check_llm(mlperf_log, scenario, model):
 
 
 def get_performance_metric(
-    config, model, path, scenario_fixed, division, system_json, has_power=False
-):
+    config, model, path, scenario_fixed, division):
     # Assumes new logging format
     version = config.version
 
@@ -1129,8 +1131,7 @@ def get_performance_metric(
 
 
 def check_performance_dir(
-    config, model, path, scenario_fixed, division, system_json, has_power=False
-):
+    config, model, path, scenario_fixed, division, system_json):
     is_valid = False
     rt = {}
 
@@ -1173,6 +1174,12 @@ def check_performance_dir(
         mlperf_log["effective_sample_concatenate_permutation"] == "true")
     if not config.requires_equal_issue(model, division):
         equal_issue_used_check = True
+    if not equal_issue_used_check:
+        log.error(
+            "%s requires equal issue mode (sample_concatenate_permutation), expected=true, found=false", path
+            )
+        is_valid = False
+
     sut_name = mlperf_log["sut_name"]
 
     # check if there are any errors in the detailed log
@@ -1277,7 +1284,7 @@ def check_performance_dir(
     # Check if this run uses early stopping. If it does, get the
     # min_queries from the detail log, otherwise get this value
     # from the config
-    if not (uses_early_stopping or config.requires_equal_issue(model, division)):
+    if not uses_early_stopping:
         required_min_query_count = config.get_min_query_count(model, scenario)
         if required_min_query_count and min_query_count < required_min_query_count:
             log.error(
@@ -1328,7 +1335,7 @@ def check_performance_dir(
             )
             is_valid = False
 
-    return is_valid, res, inferred, equal_issue_used_check
+    return is_valid, res, inferred
 
 
 def get_inferred_result(scenario_fixed, scenario, res,
@@ -2189,14 +2196,13 @@ def check_results_dir(
                                 continue
 
                             try:
-                                is_valid, r, is_inferred, performance_equal_issue_check = check_performance_dir(
+                                is_valid, r, is_inferred  = check_performance_dir(
                                     config,
                                     mlperf_model,
                                     perf_path,
                                     scenario_fixed,
                                     division,
                                     system_json,
-                                    has_power,
                                 )
                                 if is_inferred:
                                     inferred = 1
@@ -2204,13 +2210,6 @@ def check_results_dir(
                                         "%s has inferred results, qps=%s", perf_path, r
                                     )
 
-                                # Check equal issue mode
-                                if not performance_equal_issue_check:
-                                    log.error(
-                                        "%s requires equal issue mode (sample_concatenate_permutation), expected=true, found=false",
-                                        perf_path
-                                    )
-                                    is_valid, r = False, None
                             except Exception as e:
                                 log.error(
                                     "%s caused exception in check_performance_dir: %s",
@@ -2225,16 +2224,12 @@ def check_results_dir(
                                     ranging_path = os.path.join(
                                         name, "performance", "ranging"
                                     )
-                                    (
-                                        ranging_r
-                                    ) = get_performance_metric(
+                                    ranging_r = get_performance_metric(
                                         config,
                                         mlperf_model,
                                         ranging_path,
                                         scenario_fixed,
                                         division,
-                                        system_json,
-                                        has_power,
                                     )
                                 except Exception as e:
                                     log.error(
@@ -2242,7 +2237,7 @@ def check_results_dir(
                                         ranging_path,
                                         e,
                                     )
-                                    is_valid, r = False, None
+                                    is_valid, ranging_r = False, None
 
                                 try:
                                     (

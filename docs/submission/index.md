@@ -125,6 +125,8 @@ Once all the results across all the models are ready you can use the following c
 
 * Use `--hw_notes_extra` option to add additional notes like `--hw_notes_extra="Result taken by NAME" `
 
+* Use `--results_dir` option to specify the results folder for Non CM based benchmarks
+
 The above command should generate "submission.tar.gz" if there are no submission checker issues and you can upload it to the [MLCommons Submission UI](https://submissions-ui.mlcommons.org/submission).
 
 ## Aggregate Results in GitHub

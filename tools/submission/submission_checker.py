@@ -1103,7 +1103,7 @@ def extra_check_llm(mlperf_log, scenario, model):
 
 
 def get_performance_metric(
-        config, model, path, scenario_fixed, division):
+        config, model, path, scenario_fixed):
     # Assumes new logging format
     version = config.version
 
@@ -2229,7 +2229,6 @@ def check_results_dir(
                                         mlperf_model,
                                         ranging_path,
                                         scenario_fixed,
-                                        division,
                                     )
                                 except Exception as e:
                                     log.error(

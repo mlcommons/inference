@@ -181,7 +181,6 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                         mlperf_model,
                         ranging_path,
                         scenario_fixed,
-                        division,
                     )
                     (
                         power_is_valid,

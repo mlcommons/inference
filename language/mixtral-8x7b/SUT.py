@@ -27,7 +27,7 @@ log = logging.getLogger("Mixtral-8x7B-Instruct-v0.1")
 gen_kwargs = {
     "early_stopping": True,
     "max_new_tokens": 1024,
-    "min_new_tokens": 1,
+    "min_new_tokens": 2,
     "num_beams": 1,
     "do_sample": False
 }

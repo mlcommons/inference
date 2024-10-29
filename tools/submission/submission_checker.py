@@ -1456,7 +1456,6 @@ def check_performance_dir(
     return is_valid, res, inferred
 
 
-
 def get_inferred_result(
     scenario_fixed, scenario, res, mlperf_log, config, log_error=False
 ):
@@ -1572,7 +1571,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -1830,7 +1829,6 @@ def check_results_dir(
         else:
             unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
         power_unit = power_unit_dict[scenario_fixed]
-
 
         if (power_metric <= 0) or (
             not get_boolean(system_json.get("system_power_only"))

@@ -466,7 +466,6 @@ def infer_scenario_results(args, config):
                                                     low_accuracy_model_code_path)
 
 
-
 def main():
     """
     Tool to infer scenario results and cleanup submission tree
@@ -486,14 +485,12 @@ def main():
         args.version,
         args.extra_model_benchmark_map)
 
-
     if not args.nodelete_empty_dirs:
         delete_empty_dirs(os.path.join(src_dir))
 
     os.chdir(src_dir)
 
     infer_scenario_results(args, config)
-
 
     return 0
 

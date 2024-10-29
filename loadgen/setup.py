@@ -134,4 +134,3 @@ setup(name="mlcommons_loadgen",
       include_package_data=True,
       long_description=mlperf_long_description,
       long_description_content_type='text/markdown')
-

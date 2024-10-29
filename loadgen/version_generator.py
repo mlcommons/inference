@@ -32,7 +32,6 @@ def make_raw_string(str):
     return 'R"' + delimeter + "(" + str + ")" + delimeter + '"'
 
 
-
 def func_def(name, string):
     return (
         "const std::string& Loadgen"

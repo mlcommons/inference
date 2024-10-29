@@ -10,7 +10,7 @@ def define_env(env):
         setup_tips=True,
         run_tips=True,
         skip_test_query_count=False,
-        scenarios=[],
+        fixed_scenarios=[],
         devices=[],
         frameworks=[],
         categories=[],
@@ -58,6 +58,11 @@ def define_env(env):
                 return pre_space + "    WIP"
             devices = ["CUDA"]
             frameworks = ["TensorRT"]
+
+        elif implementation == "amd":
+            devices = ["cuda"]
+            frameworks = ["pytorch"]
+            execution_envs.remove("Docker")
 
         elif implementation == "neuralmagic":
             devices = ["CUDA"]
@@ -107,7 +112,7 @@ def define_env(env):
             frameworks = ["Onnxruntime"]
 
         elif implementation == "ctuning-cpp":
-            scenarios = ["SingleStream"]
+            fixed_scenarios = ["SingleStream"]
             devices = ["CPU"]
             if model.lower() == "resnet50":
                 frameworks = ["TFLite"]
@@ -132,16 +137,16 @@ def define_env(env):
         final_run_mode = "valid" if "short" not in extra_variation_tags else "test"
 
         for category in categories:
-            if not scenarios:
-                if category == "Edge" and not scenarios:
-                    scenarios = ["Offline", "SingleStream"]
-                    if (
-                        model.lower() in ["resnet50", "retinanet"]
-                        and not "MultiStream" in scenarios
-                    ):  # MultiStream was duplicating
-                        scenarios.append("MultiStream")
-                elif category == "Datacenter":
-                    scenarios = ["Offline", "Server"]
+            if category == "Edge":
+                scenarios = ["Offline", "SingleStream"]
+                if model.lower() in [
+                        "resnet50", "retinanet"] and not "MultiStream" in scenarios:  # MultiStream was duplicating
+                    scenarios.append("MultiStream")
+            elif category == "Datacenter":
+                scenarios = ["Offline", "Server"]
+            if fixed_scenarios:
+                scenarios = [
+                    scenario for scenario in scenarios if scenario in fixed_scenarios]
 
             content += f'{pre_space}=== "{category.lower()}"\n\n'
 
@@ -163,7 +168,7 @@ def define_env(env):
                     cur_space3 = cur_space2 + "    "
                     cur_space4 = cur_space3 + "    "
 
-                    content += f'{cur_space1}=== "{device}"\n'
+                    content += f"{cur_space1}=== \"{device}\"\n"
                     content += f"{cur_space2}##### {device} device\n\n"
 
                     # minimum system requirements
@@ -185,6 +190,7 @@ def define_env(env):
                         # ref to cm installation
                         content += f"{cur_space3}Please refer to the [installation page](site:inference/install/) to install CM for running the automated benchmark commands.\n\n"
                         test_query_count = get_test_query_count(
+
                             model, implementation, device.lower()
                         )
                         if (
@@ -262,6 +268,7 @@ def define_env(env):
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
                                 content += f"{cur_space3}* `--docker_cm_repo=<Custom CM GitHub repo URL in username@repo format>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_cm_repo_branch=<Custom CM GitHub repo Branch>`: to checkout a custom branch of the cloned cm4mlops repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"
 
                                 if implementation.lower() == "nvidia":
@@ -325,7 +332,7 @@ def define_env(env):
                             run_suffix += f"{cur_space3}</details>\n"
 
                         for scenario in scenarios:
-                            content += f'{cur_space3}=== "{scenario}"\n{cur_space4}###### {scenario}\n\n'
+                            content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}###### {scenario}\n\n"
                             run_cmd = mlperf_inference_run_command(
                                 spaces + 21,
                                 model,
@@ -347,7 +354,7 @@ def define_env(env):
                             # content += run_suffix
 
                         if len(scenarios) > 1:
-                            content += f'{cur_space3}=== "All Scenarios"\n{cur_space4}###### All Scenarios\n\n'
+                            content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
                             run_cmd = mlperf_inference_run_command(
                                 spaces + 21,
                                 model,

@@ -16,13 +16,22 @@ def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--input",
+        '--input',
         required=True,
-        help="results csv from checker")
-    parser.add_argument("--version", default="4.0", help="mlperf version")
+        help='results csv from checker')
+    parser.add_argument('--version', default='4.1', help='mlperf version')
     parser.add_argument(
-        "--repository", default="submissions_inference_4.0", help="mlperf repository"
-    )
+        '--repository',
+        default='submissions_inference_4.1',
+        help='mlperf repository')
+    parser.add_argument(
+        '--repository-owner',
+        default='mlcommons',
+        help='mlperf repository owner in GitHub')
+    parser.add_argument(
+        '--repository-branch',
+        default='main',
+        help='mlperf repository branch')
     args = parser.parse_args()
     return args
 
@@ -343,6 +352,7 @@ def main():
     outjsondata = [i for i in outjsondata if i != {}]
     with open(f"{output}_results.json", "w") as f:
         f.write(json.dumps(outjsondata, indent=2))
+
     score_format = writer.book.add_format({"num_format": "#,##0.00"})
     bg_format = writer.book.add_format({"bg_color": "#efefef"})
     for ws in writer.book.worksheets():

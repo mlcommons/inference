@@ -104,16 +104,15 @@ sudo -v ; curl https://rclone.org/install.sh | sudo bash
 ```
 Once Rclone is installed, cd into the folder where you want to place the dataset and run:
 ```bash
-rclone copyurl https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_15k_v4.pkl ./ -a -P
+rclone copyurl https://inference.mlcommons-storage.org/mixtral_8x7b/09292024_mixtral_15k_mintoken2_v1.pkl ./ -a -P
 ```
 #### Using wget
 
 Alternatively, you can simply cd into the folder where you want to place the dataset and run
 
-TBD: The dataset is being replaced in v5.0 due to https://github.com/mlcommons/inference/issues/1777
 
 ```bash
-wget https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_15k_v4.pkl
+wget https://inference.mlcommons-storage.org/mixtral_8x7b/09292024_mixtral_15k_mintoken2_v1.pkl
 ```
 
 ### Calibration dataset

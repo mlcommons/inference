@@ -300,7 +300,7 @@ MODEL_CONFIG = {
             "llama2-70b-99": ["Server", "Offline"],
             "llama2-70b-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
-            "mixtral-8x7b": ["SingleStream", "Server", "Offline"],
+            "mixtral-8x7b": ["Server", "Offline"]
         },
         "optional-scenarios-datacenter-edge": {},
         "accuracy-target": {
@@ -2701,6 +2701,7 @@ def check_measurement_dir(
             if not os.path.exists(os.path.dirname(code_dir)):
                 log.error("%s is missing code_dir %s", fname, code_dir)
                 is_valid = False
+
     else:
         log.error("%s is missing %s*.json", fname, system_desc)
         is_valid = False

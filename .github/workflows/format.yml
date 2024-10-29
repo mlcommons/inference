@@ -33,6 +33,7 @@ jobs:
       - name: Format Codebase
         run: |
           git remote add upstream ${{ github.event.pull_request.base.repo.clone_url }}
+          git fetch upstream
           ".github/scripts/format-cpp.sh" "upstream" "${{ github.event.pull_request.base.ref }}"
           ".github/scripts/format-py.sh" "upstream" "${{ github.event.pull_request.base.ref }}"
 

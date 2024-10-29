@@ -109,6 +109,9 @@ rclone copyurl https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06
 #### Using wget
 
 Alternatively, you can simply cd into the folder where you want to place the dataset and run
+
+TBD: The dataset is being replaced in v5.0 due to https://github.com/mlcommons/inference/issues/1777
+
 ```bash
 wget https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_15k_v4.pkl
 ```
@@ -261,17 +264,17 @@ python -u evaluate-accuracy.py --checkpoint-path [path_to_model_checkpoint] \
 Reference scores:
 Open Orca:
 ```json
-{'rouge1': 45.4911, 'rouge2': 23.2829, 'rougeL': 30.3615}
+{'rouge1': 45.5989, 'rouge2': 23.3526, 'rougeL': 30.4608}
 ```
 GSM8K:
 ```json
-{'gsm8k': 73.78}
+{'gsm8k': 73.66}
 ```
 MBXP:
 ```json
-{'mbxp': 60.12}
+{'mbxp': 60.16}
 ```
-For official submissions, 99% of each reference score is enforced. Additionally, 90%-110% of the generated tokens_per_samples:
+For official submissions, 99% of each reference score is enforced. Additionally, 90%-110% of the generated tokens_per_samples (counting all the non-EOS tokens):
 ```json
-{'tokens_per_sample': 145.9}
+{'tokens_per_sample': 144.84}
 ```

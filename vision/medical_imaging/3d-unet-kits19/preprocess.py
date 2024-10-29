@@ -67,11 +67,11 @@ class Stats:
         collects average values in the preprocessed images
     std: list
         collects standard deviation of values in the preprocessed images
-    d: 
+    d:
         collects depths of the preprocessed images
-    h: 
+    h:
         collects heights of the preprocessed images
-    w: 
+    w:
         collects widths of the preprocessed images
 
     Methods
@@ -94,11 +94,11 @@ class Stats:
             collects average values in the preprocessed images
         std: list
             collects standard deviation of values in the preprocessed images
-        d: 
+        d:
             collects depths of the preprocessed images
-        h: 
+        h:
             collects heights of the preprocessed images
-        w: 
+        w:
             collects widths of the preprocessed images
         """
         self.mean = []
@@ -182,7 +182,7 @@ class Preprocessor:
     pad_to_min_shape(image, label):
         pads image/label so that the shape is equal or larger than ROI shape
     load_and_resample(case):
-        gets a pair of CT-imaging/segmentation data for the case, then, 
+        gets a pair of CT-imaging/segmentation data for the case, then,
         resample to the same, predetermined common voxel spacing
     normalize_intensity(image):
         normalize intensity for a given target stats
@@ -245,9 +245,11 @@ class Preprocessor:
         all_set = set([f for f in os.listdir(self.data_dir) if "case" in f])
         target_set = set(self.target_cases)
         collected_set = all_set & target_set
-        assert collected_set == target_set,\
-            "Some of the target inference cases were found: {}".format(
-                target_set - collected_set)
+        assert (
+            collected_set == target_set
+        ), "Some of the target inference cases were found: {}".format(
+            target_set - collected_set
+        )
         return sorted(list(collected_set))
 
     def print_stats(self):
@@ -279,7 +281,7 @@ class Preprocessor:
         image, label = self.pad_to_min_shape(image, label)
         image, label = self.adjust_shape_for_sliding_window(image, label)
         self.save(image, label, aux)
-        aux['image_shape'] = image.shape
+        aux["image_shape"] = image.shape
         return aux
 
     @staticmethod
@@ -290,8 +292,9 @@ class Preprocessor:
         current_shape = image.shape[1:]
         bounds = [max(0, ROI_SHAPE[i] - current_shape[i]) for i in range(3)]
         paddings = [(0, 0)]
-        paddings.extend([(bounds[i] // 2, bounds[i] - bounds[i] // 2)
-                         for i in range(3)])
+        paddings.extend(
+            [(bounds[i] // 2, bounds[i] - bounds[i] // 2) for i in range(3)]
+        )
 
         image = np.pad(image, paddings, mode="edge")
         label = np.pad(label, paddings, mode="edge")
@@ -307,9 +310,13 @@ class Preprocessor:
         aux = dict()
 
         image = nibabel.load(
-            Path(self.data_dir, case, "imaging.nii.gz").absolute())
+            Path(
+                self.data_dir,
+                case,
+                "imaging.nii.gz").absolute())
         label = nibabel.load(
-            Path(self.data_dir, case, "segmentation.nii.gz").absolute())
+            Path(self.data_dir, case, "segmentation.nii.gz").absolute()
+        )
 
         image_spacings = image.header["pixdim"][1:4].tolist()
         original_affine = image.affine
@@ -329,15 +336,27 @@ class Preprocessor:
             reshaped_affine[i][idx] = targ_arr[idx] * sign
 
         if image_spacings != self.target_spacing:
-            image = zoom(image, zoom_factor, order=1,
-                         mode='constant', cval=image.min(), grid_mode=False)
-            label = zoom(label, zoom_factor, order=0,
-                         mode='constant', cval=label.min(), grid_mode=False)
+            image = zoom(
+                image,
+                zoom_factor,
+                order=1,
+                mode="constant",
+                cval=image.min(),
+                grid_mode=False,
+            )
+            label = zoom(
+                label,
+                zoom_factor,
+                order=0,
+                mode="constant",
+                cval=label.min(),
+                grid_mode=False,
+            )
 
-        aux['original_affine'] = original_affine
-        aux['reshaped_affine'] = reshaped_affine
-        aux['zoom_factor'] = zoom_factor
-        aux['case'] = case
+        aux["original_affine"] = original_affine
+        aux["reshaped_affine"] = reshaped_affine
+        aux["zoom_factor"] = zoom_factor
+        aux["case"] = case
 
         image = np.expand_dims(image, 0)
         label = np.expand_dims(label, 0)
@@ -369,40 +388,57 @@ class Preprocessor:
         strides = [int(roi_shape[i] * (1 - overlap)) for i in range(dim)]
 
         bounds = [image_shape[i] % strides[i] for i in range(dim)]
-        bounds = [bounds[i] if bounds[i] <
-                  strides[i] // 2 else 0 for i in range(dim)]
-        image = image[...,
-                      bounds[0] // 2: image_shape[0] - (bounds[0] - bounds[0] // 2),
-                      bounds[1] // 2: image_shape[1] - (bounds[1] - bounds[1] // 2),
-                      bounds[2] // 2: image_shape[2] - (bounds[2] - bounds[2] // 2)]
-        label = label[...,
-                      bounds[0] // 2: image_shape[0] - (bounds[0] - bounds[0] // 2),
-                      bounds[1] // 2: image_shape[1] - (bounds[1] - bounds[1] // 2),
-                      bounds[2] // 2: image_shape[2] - (bounds[2] - bounds[2] // 2)]
+        bounds = [
+            bounds[i] if bounds[i] < strides[i] //
+            2 else 0 for i in range(dim)]
+        image = image[
+            ...,
+            bounds[0] // 2: image_shape[0] - (bounds[0] - bounds[0] // 2),
+            bounds[1] // 2: image_shape[1] - (bounds[1] - bounds[1] // 2),
+            bounds[2] // 2: image_shape[2] - (bounds[2] - bounds[2] // 2),
+        ]
+        label = label[
+            ...,
+            bounds[0] // 2: image_shape[0] - (bounds[0] - bounds[0] // 2),
+            bounds[1] // 2: image_shape[1] - (bounds[1] - bounds[1] // 2),
+            bounds[2] // 2: image_shape[2] - (bounds[2] - bounds[2] // 2),
+        ]
         image, paddings = self.constant_pad_volume(
-            image, roi_shape, strides, self.padding_val)
+            image, roi_shape, strides, self.padding_val
+        )
         label, paddings = self.constant_pad_volume(
             label, roi_shape, strides, 0)
 
         return image, label
 
-    def constant_pad_volume(self, volume, roi_shape, strides, padding_val, dim=3):
+    def constant_pad_volume(self, volume, roi_shape,
+                            strides, padding_val, dim=3):
         """
         Helper padding volume symmetrically with value of padding_val
         Padded volume becomes ROI shape friendly
         """
-        bounds = [(strides[i] - volume.shape[1:][i] % strides[i]) %
-                  strides[i] for i in range(dim)]
-        bounds = [bounds[i] if (volume.shape[1:][i] + bounds[i]) >= roi_shape[i] else
-                  bounds[i] + strides[i]
-                  for i in range(dim)]
-        paddings = [(0, 0),
-                    (bounds[0] // 2, bounds[0] - bounds[0] // 2),
-                    (bounds[1] // 2, bounds[1] - bounds[1] // 2),
-                    (bounds[2] // 2, bounds[2] - bounds[2] // 2)]
+        bounds = [
+            (strides[i] - volume.shape[1:][i] % strides[i]) % strides[i]
+            for i in range(dim)
+        ]
+        bounds = [
+            (
+                bounds[i]
+                if (volume.shape[1:][i] + bounds[i]) >= roi_shape[i]
+                else bounds[i] + strides[i]
+            )
+            for i in range(dim)
+        ]
+        paddings = [
+            (0, 0),
+            (bounds[0] // 2, bounds[0] - bounds[0] // 2),
+            (bounds[1] // 2, bounds[1] - bounds[1] // 2),
+            (bounds[2] // 2, bounds[2] - bounds[2] // 2),
+        ]
 
         padded_volume = np.pad(
-            volume, paddings, mode='constant', constant_values=[padding_val])
+            volume, paddings, mode="constant", constant_values=[padding_val]
+        )
         return padded_volume, paddings
 
     def save(self, image, label, aux):
@@ -416,35 +452,51 @@ class Preprocessor:
             - case name
         Preprocessed imaging/segmentation data saved as NIFTI
         """
-        case = aux['case']
-        reshaped_affine = aux['reshaped_affine']
+        case = aux["case"]
+        reshaped_affine = aux["reshaped_affine"]
         image = image.astype(np.float32)
         label = label.astype(np.uint8)
         mean, std = np.round(np.mean(image, (1, 2, 3)), 2), np.round(
-            np.std(image, (1, 2, 3)), 2)
+            np.std(image, (1, 2, 3)), 2
+        )
         self.stats.append(
-            mean, std, image.shape[1], image.shape[2], image.shape[3])
+            mean,
+            std,
+            image.shape[1],
+            image.shape[2],
+            image.shape[3])
         pickle_file_path = Path(self.results_dir, f"{case}.pkl").absolute()
         with open(pickle_file_path, "wb") as f:
             pickle.dump([image, label], f)
         f.close()
         print(
-            f"Saved {str(pickle_file_path)} -- shape {image.shape} mean {mean} std {std}")
+            f"Saved {str(pickle_file_path)} -- shape {image.shape} mean {mean} std {std}"
+        )
         if not self.calibration:
             path_to_nifti_dir = Path(
                 self.results_dir, "nifti", case).absolute()
             path_to_nifti_dir.mkdir(parents=True, exist_ok=True)
             nifti_image = nibabel.Nifti1Image(
-                np.squeeze(image, 0), affine=reshaped_affine)
+                np.squeeze(image, 0), affine=reshaped_affine
+            )
             nifti_label = nibabel.Nifti1Image(
-                np.squeeze(label, 0), affine=reshaped_affine)
-            nibabel.save(nifti_image, Path(
-                path_to_nifti_dir / "imaging.nii.gz"))
-            nibabel.save(nifti_label, Path(
-                path_to_nifti_dir / "segmentation.nii.gz"))
-            assert nifti_image.shape == nifti_label.shape, \
-                "While saving NIfTI files to {}, image: {} and label: {} have different shape".format(
-                    path_to_nifti_dir, nifti_image.shape, nifti_label.shape)
+                np.squeeze(label, 0), affine=reshaped_affine
+            )
+            nibabel.save(
+                nifti_image,
+                Path(
+                    path_to_nifti_dir /
+                    "imaging.nii.gz"))
+            nibabel.save(
+                nifti_label,
+                Path(
+                    path_to_nifti_dir /
+                    "segmentation.nii.gz"))
+            assert (
+                nifti_image.shape == nifti_label.shape
+            ), "While saving NIfTI files to {}, image: {} and label: {} have different shape".format(
+                path_to_nifti_dir, nifti_image.shape, nifti_label.shape
+            )
 
 
 def preprocess_multiproc_helper(preproc, case):
@@ -459,10 +511,12 @@ def save_preprocessed_info(preproc_dir, aux, targets):
     """
     Saves list of preprocessed files and the associated aux info into preprocessed_files.pkl
     """
-    assert len(targets) == len(aux['cases']),\
-        "Error in number of preprocessed files:\nExpected:{}\nProcessed:{}".format(
-            targets, list(aux['cases'].keys()))
-    with open(os.path.join(preproc_dir, 'preprocessed_files.pkl'), 'wb') as f:
+    assert len(targets) == len(
+        aux["cases"]
+    ), "Error in number of preprocessed files:\nExpected:{}\nProcessed:{}".format(
+        targets, list(aux["cases"].keys())
+    )
+    with open(os.path.join(preproc_dir, "preprocessed_files.pkl"), "wb") as f:
         pickle.dump(aux, f)
     f.close()
 
@@ -473,16 +527,14 @@ def preprocess_with_multiproc(args):
     """
     preproc = Preprocessor(args)
     cases = preproc.collect_cases()
-    aux = {
-        'file_list': preproc.target_cases,
-        'cases': dict()
-    }
+    aux = {"file_list": preproc.target_cases, "cases": dict()}
     with Pool(args.num_proc) as p:
-        pool_out = p.starmap(preprocess_multiproc_helper,
-                             zip([preproc]*len(cases), cases))
+        pool_out = p.starmap(
+            preprocess_multiproc_helper, zip([preproc] * len(cases), cases)
+        )
 
     for _d in pool_out:
-        aux['cases'][_d['case']] = _d
+        aux["cases"][_d["case"]] = _d
     save_preprocessed_info(preproc.results_dir, aux, preproc.target_cases)
     p.join()
     p.close()
@@ -492,7 +544,7 @@ def generate_hash_from_volume(vol_path):
     """
     Generates MD5 hash from a single preprocessed file
     """
-    with open(vol_path, 'rb') as f:
+    with open(vol_path, "rb") as f:
         data = f.read()
         md5_hash = hashlib.md5(data).hexdigest()
     f.close()
@@ -507,19 +559,21 @@ def generate_hash_from_dataset(args):
     num_proc = args.num_proc
     checksum = dict()
     CHECKSUM_FILE = CHECKSUM_CALIB_FILE if args.calibration else CHECKSUM_INFER_FILE
-    results = [f for f in os.listdir(results_dir) if f.startswith(
-        'case') and f.endswith('pkl')]
+    results = [
+        f for f in os.listdir(results_dir) if f.startswith("case") and f.endswith("pkl")
+    ]
     vol_path = [os.path.join(results_dir, v) for v in results]
 
     print(
-        f"Generating checksum file checksum.json from preprocessed data in {results_dir}...")
+        f"Generating checksum file checksum.json from preprocessed data in {results_dir}..."
+    )
     with Pool(num_proc) as p:
         pool_out = p.map(generate_hash_from_volume, vol_path)
 
     for vol, md5 in pool_out:
         checksum[vol] = md5
 
-    with open(CHECKSUM_FILE, 'w') as f:
+    with open(CHECKSUM_FILE, "w") as f:
         json.dump(dict(sorted(checksum.items())), f, indent=4, sort_keys=True)
     f.close()
 
@@ -535,8 +589,9 @@ def verify_dataset(args):
     results_dir = args.results_dir
     num_proc = args.num_proc
     CHECKSUM_FILE = CHECKSUM_CALIB_FILE if args.calibration else CHECKSUM_INFER_FILE
-    results = [f for f in os.listdir(results_dir) if f.startswith(
-        'case') and f.endswith('pkl')]
+    results = [
+        f for f in os.listdir(results_dir) if f.startswith("case") and f.endswith("pkl")
+    ]
     vol_path = [os.path.join(results_dir, v) for v in results]
     violations = dict()
 
@@ -544,9 +599,11 @@ def verify_dataset(args):
     with open(CHECKSUM_FILE) as f:
         source = json.load(f)
     f.close()
-    assert len(source) == len(results),\
-        "checksum.json has {} entries while {} volumes found".format(
-            len(source), len(results))
+    assert len(source) == len(
+        results
+    ), "checksum.json has {} entries while {} volumes found".format(
+        len(source), len(results)
+    )
 
     with Pool(num_proc) as p:
         pool_out = p.map(generate_hash_from_volume, vol_path)
@@ -558,9 +615,9 @@ def verify_dataset(args):
     if any(violations):
         for vol, (res, ref) in violations.items():
             print(f"{vol} -- Invalid hash, got {res} while expecting {ref}")
-        assert False,\
-            "Verification failed, {}/{} mismatch(es) found".format(
-                len(violations), len(results))
+        assert False, "Verification failed, {}/{} mismatch(es) found".format(
+            len(violations), len(results)
+        )
 
     p.join()
     p.close()
@@ -571,34 +628,45 @@ def parse_args():
     """
     Args used for preprocessing
     """
-    PARSER = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    PARSER = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
 
-    PARSER.add_argument('--raw_data_dir',
-                        dest='data_dir',
-                        required=True,
-                        help="Dir where KiTS19 GIT repo is cloned")
-    PARSER.add_argument('--results_dir',
-                        dest='results_dir',
-                        required=True,
-                        help="Dir to store preprocessed data")
-    PARSER.add_argument('--mode',
-                        dest='mode',
-                        choices=["preprocess", "verify", "gen_hash"],
-                        default="preprocess",
-                        help="""preprocess for generating inference dataset, 
-                                gen_hash for generating new checksum file, 
-                                verify for verifying the checksums against stored checksum file""")
-    PARSER.add_argument('--calibration',
-                        dest='calibration',
-                        action='store_true',
-                        help="Preprocess calibration dataset instead of inference dataset")
-    PARSER.add_argument('--num_proc',
-                        dest='num_proc',
-                        type=int,
-                        choices=list(range(1, 17)),
-                        default=4,
-                        help="Number of processes to be used")
+    PARSER.add_argument(
+        "--raw_data_dir",
+        dest="data_dir",
+        required=True,
+        help="Dir where KiTS19 GIT repo is cloned",
+    )
+    PARSER.add_argument(
+        "--results_dir",
+        dest="results_dir",
+        required=True,
+        help="Dir to store preprocessed data",
+    )
+    PARSER.add_argument(
+        "--mode",
+        dest="mode",
+        choices=["preprocess", "verify", "gen_hash"],
+        default="preprocess",
+        help="""preprocess for generating inference dataset,
+                                gen_hash for generating new checksum file,
+                                verify for verifying the checksums against stored checksum file""",
+    )
+    PARSER.add_argument(
+        "--calibration",
+        dest="calibration",
+        action="store_true",
+        help="Preprocess calibration dataset instead of inference dataset",
+    )
+    PARSER.add_argument(
+        "--num_proc",
+        dest="num_proc",
+        type=int,
+        choices=list(range(1, 17)),
+        default=4,
+        help="Number of processes to be used",
+    )
 
     args = PARSER.parse_args()
 
@@ -622,5 +690,5 @@ def main():
         verify_dataset(args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

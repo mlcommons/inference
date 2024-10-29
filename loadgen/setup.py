@@ -52,7 +52,7 @@ lib_headers = [
     "version.h",
     "results.h",
     "bindings/c_api.h",
-    "version_generator.py"
+    "version_generator.py",
 ]
 
 lib_sources = [
@@ -74,8 +74,9 @@ lib_bindings = [
 this_directory = Path(__file__).parent
 mlperf_loadgen_headers = public_headers + lib_headers
 mlperf_loadgen_sources_no_gen = lib_sources + lib_bindings
-mlperf_loadgen_sources = (mlperf_loadgen_sources_no_gen +
-                          [generated_version_source_filename])
+mlperf_loadgen_sources = mlperf_loadgen_sources_no_gen + [
+    generated_version_source_filename
+]
 mlperf_long_description = (
     this_directory /
     "README.md").read_text(
@@ -94,24 +95,25 @@ if len(version_split) < 2:
 mlperf_loadgen_module = Pybind11Extension(
     "mlperf_loadgen",
     define_macros=[
-        ("MAJOR_VERSION",
-         version_split[0]),
-        ("MINOR_VERSION",
-         version_split[1]),
-        ("MLPERF_CONF_PATH",
-         f'"{config_file_path}"')],
+        ("MAJOR_VERSION", version_split[0]),
+        ("MINOR_VERSION", version_split[1]),
+        ("MLPERF_CONF_PATH", f'"{config_file_path}"'),
+    ],
     include_dirs=[".", get_include()],
     sources=mlperf_loadgen_sources,
-    depends=mlperf_loadgen_headers)
+    depends=mlperf_loadgen_headers,
+)
 
-setup(name="mlcommons_loadgen",
-      version=version,
-      description="MLPerf Inference LoadGen python bindings",
-      url="https://mlcommons.org/",
-      cmdclass={"build_ext": build_ext},
-      ext_modules=[mlperf_loadgen_module],
-      packages=[''],
-      package_data={'': ['mlperf.conf']},
-      include_package_data=True,
-      long_description=mlperf_long_description,
-      long_description_content_type='text/markdown')
+setup(
+    name="mlcommons_loadgen",
+    version=version,
+    description="MLPerf Inference LoadGen python bindings",
+    url="https://mlcommons.org/",
+    cmdclass={"build_ext": build_ext},
+    ext_modules=[mlperf_loadgen_module],
+    packages=[""],
+    package_data={"": ["mlperf.conf"]},
+    include_package_data=True,
+    long_description=mlperf_long_description,
+    long_description_content_type="text/markdown",
+)

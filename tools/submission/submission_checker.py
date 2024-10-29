@@ -98,22 +98,65 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
             "3d-unet-99": ("DICE", 0.86170 * 0.99),
             "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
-            "gptj-99": ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878 * 0.9),
-            "gptj-99.9": ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878 * 0.9),
-            "llama2-70b-99": ("ROUGE1", 44.4312 * 0.99, "ROUGE2", 22.0352 * 0.99, "ROUGEL", 28.6162 * 0.99, "TOKENS_PER_SAMPLE", 294.45 * 0.9),
-            "llama2-70b-99.9": ("ROUGE1", 44.4312 * 0.999, "ROUGE2", 22.0352 * 0.999, "ROUGEL", 28.6162 * 0.999, "TOKENS_PER_SAMPLE", 294.45 * 0.9),
-            "stable-diffusion-xl": ("CLIP_SCORE", 31.68631873, "FID_SCORE", 23.01085758)
+            "gptj-99": (
+                "ROUGE1",
+                42.9865 * 0.99,
+                "ROUGE2",
+                20.1235 * 0.99,
+                "ROUGEL",
+                29.9881 * 0.99,
+                "GEN_LEN",
+                4016878 * 0.9,
+            ),
+            "gptj-99.9": (
+                "ROUGE1",
+                42.9865 * 0.999,
+                "ROUGE2",
+                20.1235 * 0.999,
+                "ROUGEL",
+                29.9881 * 0.999,
+                "GEN_LEN",
+                4016878 * 0.9,
+            ),
+            "llama2-70b-99": (
+                "ROUGE1",
+                44.4312 * 0.99,
+                "ROUGE2",
+                22.0352 * 0.99,
+                "ROUGEL",
+                28.6162 * 0.99,
+                "TOKENS_PER_SAMPLE",
+                294.45 * 0.9,
+            ),
+            "llama2-70b-99.9": (
+                "ROUGE1",
+                44.4312 * 0.999,
+                "ROUGE2",
+                22.0352 * 0.999,
+                "ROUGEL",
+                28.6162 * 0.999,
+                "TOKENS_PER_SAMPLE",
+                294.45 * 0.9,
+            ),
+            "stable-diffusion-xl": (
+                "CLIP_SCORE",
+                31.68631873,
+                "FID_SCORE",
+                23.01085758,
+            ),
         },
         "accuracy-upper-limit": {
-            "stable-diffusion-xl": ("CLIP_SCORE", 31.81331801, "FID_SCORE", 23.95007626),
+            "stable-diffusion-xl": (
+                "CLIP_SCORE",
+                31.81331801,
+                "FID_SCORE",
+                23.95007626,
+            ),
             "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
-            "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1)
+            "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
         },
         "accuracy-delta-perc": {
-            "stable-diffusion-xl": {
-                "CLIP_SCORE": 1,
-                "FID_SCORE": 2
-            }
+            "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}
         },
         "performance-sample-count": {
             "resnet": 1024,
@@ -129,14 +172,14 @@ MODEL_CONFIG = {
             "gptj-99.9": 13368,
             "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
-            "stable-diffusion-xl": 5000
+            "stable-diffusion-xl": 5000,
         },
         # TODO: Update this list.
         "model_mapping": {
             # map model names to the official mlperf model class
             "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
-            "resnet50": "resnet"
+            "resnet50": "resnet",
         },
         "seeds": {
             # TODO: Update random seeds
@@ -163,7 +206,7 @@ MODEL_CONFIG = {
             "gptj-99.9": {"Server": 20000000000},
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
-            "stable-diffusion-xl": {"Server": 20000000000}
+            "stable-diffusion-xl": {"Server": 20000000000},
         },
         "min-queries": {
             "resnet": {
@@ -189,7 +232,11 @@ MODEL_CONFIG = {
             "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "stable-diffusion-xl": {"SingleStream": 1024, "Server": 270336, "Offline": 1}
+            "stable-diffusion-xl": {
+                "SingleStream": 1024,
+                "Server": 270336,
+                "Offline": 1,
+            },
         },
     },
     "v4.1": {
@@ -207,7 +254,7 @@ MODEL_CONFIG = {
             "llama2-70b-99",
             "llama2-70b-99.9",
             "stable-diffusion-xl",
-            "mixtral-8x7b"
+            "mixtral-8x7b",
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
@@ -223,7 +270,7 @@ MODEL_CONFIG = {
             "llama2-70b-99": ["Server", "Offline"],
             "llama2-70b-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["Server", "Offline"],
-            "mixtral-8x7b": ["Server", "Offline"]
+            "mixtral-8x7b": ["Server", "Offline"],
         },
         "optional-scenarios-datacenter": {},
         "required-scenarios-edge": {
@@ -263,24 +310,80 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
             "3d-unet-99": ("DICE", 0.86170 * 0.99),
             "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
-            "gptj-99": ("ROUGE1", 42.9865 * 0.99, "ROUGE2", 20.1235 * 0.99, "ROUGEL", 29.9881 * 0.99, "GEN_LEN", 4016878 * 0.9),
-            "gptj-99.9": ("ROUGE1", 42.9865 * 0.999, "ROUGE2", 20.1235 * 0.999, "ROUGEL", 29.9881 * 0.999, "GEN_LEN", 4016878 * 0.9),
-            "llama2-70b-99": ("ROUGE1", 44.4312 * 0.99, "ROUGE2", 22.0352 * 0.99, "ROUGEL", 28.6162 * 0.99, "TOKENS_PER_SAMPLE", 294.45 * 0.9),
-            "llama2-70b-99.9": ("ROUGE1", 44.4312 * 0.999, "ROUGE2", 22.0352 * 0.999, "ROUGEL", 28.6162 * 0.999, "TOKENS_PER_SAMPLE", 294.45 * 0.9),
-            "stable-diffusion-xl": ("CLIP_SCORE", 31.68631873, "FID_SCORE", 23.01085758),
-            "mixtral-8x7b": ("ROUGE1", 45.4911 * 0.99, "ROUGE2", 23.2829 * 0.99, "ROUGEL", 30.3615 * 0.99, "TOKENS_PER_SAMPLE", 145.9 * 0.9, "gsm8k_accuracy", 73.78 * 0.99, "mbxp_accuracy", 60.12 * 0.99),
+            "gptj-99": (
+                "ROUGE1",
+                42.9865 * 0.99,
+                "ROUGE2",
+                20.1235 * 0.99,
+                "ROUGEL",
+                29.9881 * 0.99,
+                "GEN_LEN",
+                4016878 * 0.9,
+            ),
+            "gptj-99.9": (
+                "ROUGE1",
+                42.9865 * 0.999,
+                "ROUGE2",
+                20.1235 * 0.999,
+                "ROUGEL",
+                29.9881 * 0.999,
+                "GEN_LEN",
+                4016878 * 0.9,
+            ),
+            "llama2-70b-99": (
+                "ROUGE1",
+                44.4312 * 0.99,
+                "ROUGE2",
+                22.0352 * 0.99,
+                "ROUGEL",
+                28.6162 * 0.99,
+                "TOKENS_PER_SAMPLE",
+                294.45 * 0.9,
+            ),
+            "llama2-70b-99.9": (
+                "ROUGE1",
+                44.4312 * 0.999,
+                "ROUGE2",
+                22.0352 * 0.999,
+                "ROUGEL",
+                28.6162 * 0.999,
+                "TOKENS_PER_SAMPLE",
+                294.45 * 0.9,
+            ),
+            "stable-diffusion-xl": (
+                "CLIP_SCORE",
+                31.68631873,
+                "FID_SCORE",
+                23.01085758,
+            ),
+            "mixtral-8x7b": (
+                "ROUGE1",
+                45.4911 * 0.99,
+                "ROUGE2",
+                23.2829 * 0.99,
+                "ROUGEL",
+                30.3615 * 0.99,
+                "TOKENS_PER_SAMPLE",
+                145.9 * 0.9,
+                "gsm8k_accuracy",
+                73.78 * 0.99,
+                "mbxp_accuracy",
+                60.12 * 0.99,
+            ),
         },
         "accuracy-upper-limit": {
-            "stable-diffusion-xl": ("CLIP_SCORE", 31.81331801, "FID_SCORE", 23.95007626),
+            "stable-diffusion-xl": (
+                "CLIP_SCORE",
+                31.81331801,
+                "FID_SCORE",
+                23.95007626,
+            ),
             "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
-            "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1)
+            "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
         },
         "accuracy-delta-perc": {
-            "stable-diffusion-xl": {
-                "CLIP_SCORE": 1,
-                "FID_SCORE": 2
-            }
+            "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}
         },
         "performance-sample-count": {
             "resnet": 1024,
@@ -303,7 +406,7 @@ MODEL_CONFIG = {
             # map model names to the official mlperf model class
             "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
-            "resnet50": "resnet"
+            "resnet50": "resnet",
         },
         "seeds": {
             # TODO: Update random seeds
@@ -329,7 +432,7 @@ MODEL_CONFIG = {
             "gptj-99.9": {"Server": 20000000000},
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
-            "stable-diffusion-xl": {"Server": 20000000000}
+            "stable-diffusion-xl": {"Server": 20000000000},
             # TODO: Mixtral metrics
             # "mixtral-8x7b" : {"Server": 20000000000}
         },
@@ -356,7 +459,11 @@ MODEL_CONFIG = {
             "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "stable-diffusion-xl": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "stable-diffusion-xl": {
+                "SingleStream": 1024,
+                "Server": 270336,
+                "Offline": 1,
+            },
             "mixtral-8x7b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
         },
     },
@@ -393,7 +500,7 @@ REQUIRED_ACC_BENCHMARK = {
                 "3757",
                 "1578",
                 "3319",
-                "95"
+                "95",
             ]
         },
         "v4.1": {
@@ -407,9 +514,9 @@ REQUIRED_ACC_BENCHMARK = {
                 "2179",
                 "1826",
                 "2094",
-                "3340"
+                "3340",
             ]
-        }
+        },
     }
 }
 REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
@@ -444,7 +551,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "llama2-70b-99": 24576,
     "llama2-70b-99.9": 24576,
     "stable-diffusion-xl": 5000,
-    "mixtral-8x7b": 15000
+    "mixtral-8x7b": 15000,
 }
 
 SCENARIO_MAPPING = {
@@ -475,7 +582,7 @@ RESULT_FIELD_NEW = {
         "MultiStreamLegacy": "effective_samples_per_query",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_completed_samples_per_sec",
-    }
+    },
 }
 
 RESULT_FIELD_BENCHMARK_OVERWRITE = {
@@ -509,29 +616,18 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
         "mixtral-8x7b": {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
-        }
-    }
+        },
+    },
 }
 
 LLM_LATENCY_LIMITS = {
     "llama2-70b-99": {
-        "conversational": {
-            "ttft": 2000 * 1000000,
-            "tpot": 200 * 1000000
-        }
+        "conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}
     },
     "llama2-70b-99.9": {
-        "conversational": {
-            "ttft": 2000 * 1000000,
-            "tpot": 200 * 1000000
-        }
+        "conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}
     },
-    "mixtral-8x7b": {
-        "conversational": {
-            "ttft": 2000 * 1000000,
-            "tpot": 200 * 1000000
-        }
-    }
+    "mixtral-8x7b": {"conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}},
 }
 
 ACC_PATTERN = {
@@ -589,7 +685,7 @@ SYSTEM_DESC_REQUIRED_FIELDS = [
     "hw_notes",
     "sw_notes",
     "host_network_card_count",
-    "system_type_detail"
+    "system_type_detail",
 ]
 
 SYSTEM_DESC_MEANINGFUL_RESPONSE_REQUIRED_FIELDS = [
@@ -798,21 +894,20 @@ class Config:
         return True
 
     def uses_early_stopping(self, scenario):
-        return (
-            scenario in ["Server", "SingleStream", "MultiStream"]
-        )
+        return scenario in ["Server", "SingleStream", "MultiStream"]
 
     def requires_equal_issue(self, model, division):
         return (
-            division in ["closed", "network"] and
-            model in [
+            division in ["closed", "network"]
+            and model
+            in [
                 "3d-unet-99",
                 "3d-unet-99.9",
                 "gptj-99",
                 "gptj-99.9",
                 "llama2-70b-99",
                 "llama2-70b-99.9",
-                "mixtral-8x7b"
+                "mixtral-8x7b",
             ]
             and self.version in ["v4.1"]
         )
@@ -880,7 +975,7 @@ def get_args():
     parser.add_argument(
         "--scenarios-to-skip",
         help="Delimited list input of scenarios to skip. i.e. if you only have Offline results, pass in 'Server'",
-        type=str
+        type=str,
     )
     args = parser.parse_args()
     return args
@@ -950,12 +1045,13 @@ def get_boolean(s):
     elif isinstance(s, bool):
         return s
     elif isinstance(s, str):
-        return (s.lower() == "true")
+        return s.lower() == "true"
     elif isinstance(s, int):
         return bool(s)
     else:
         raise TypeError(
-            f"Variable should be bool, string or int, got {type(s)} instead")
+            f"Variable should be bool, string or int, got {type(s)} instead"
+        )
 
 
 def find_error_in_detail_log(config, fname):
@@ -969,10 +1065,7 @@ def find_error_in_detail_log(config, fname):
             if config.ignore_uncommited:
                 has_other_errors = False
                 for error in mlperf_log.get_errors():
-                    if (
-                        "Loadgen built with uncommitted changes!"
-                        not in error["value"]
-                    ):
+                    if "Loadgen built with uncommitted changes!" not in error["value"]:
                         has_other_errors = True
 
             log.error("%s contains errors:", fname)
@@ -1000,12 +1093,12 @@ def check_accuracy_dir(config, model, path, verbose):
         up_patterns = []
         acc_limit_check = True
         for i in range(0, len(acc_upper_limit), 2):
-            acc_type, acc_target = acc_upper_limit[i:i + 2]
+            acc_type, acc_target = acc_upper_limit[i: i + 2]
             acc_limits.append(acc_target)
             up_patterns.append(ACC_PATTERN[acc_type])
 
     for i in range(0, len(target), 2):
-        acc_type, acc_target = target[i:i + 2]
+        acc_type, acc_target = target[i: i + 2]
         patterns.append(ACC_PATTERN[acc_type])
         acc_targets.append(acc_target)
         acc_types.append(acc_type)
@@ -1013,7 +1106,8 @@ def check_accuracy_dir(config, model, path, verbose):
     with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
             for i, (pattern, acc_target, acc_type) in enumerate(
-                    zip(patterns, acc_targets, acc_types)):
+                zip(patterns, acc_targets, acc_types)
+            ):
                 m = re.match(pattern, line)
                 if m:
                     acc = m.group(1)
@@ -1029,7 +1123,8 @@ def check_accuracy_dir(config, model, path, verbose):
                         "%s accuracy not met: expected=%f, found=%s",
                         path,
                         acc_target,
-                        acc)
+                        acc,
+                    )
                 if acc:
                     result_acc[acc_type] = acc
                 acc = None
@@ -1042,14 +1137,18 @@ def check_accuracy_dir(config, model, path, verbose):
                     m = re.match(r"^hash=([\w\d]+)$", line)
                     if m:
                         hash_val = m.group(1)
-                    if acc is not None and acc_upper_limit is not None and float(
-                            acc) > acc_limit:
+                    if (
+                        acc is not None
+                        and acc_upper_limit is not None
+                        and float(acc) > acc_limit
+                    ):
                         acc_limit_check = False
                         log.warning(
                             "%s accuracy not met: upper limit=%f, found=%s",
                             path,
                             acc_limit,
-                            acc)
+                            acc,
+                        )
                     acc = None
             if all(acc_seen) and hash_val:
                 break
@@ -1080,22 +1179,27 @@ def check_accuracy_dir(config, model, path, verbose):
 
 
 def extra_check_llm(mlperf_log, scenario, model):
-    if (mlperf_log["requested_use_token_latencies"]):
+    if mlperf_log["requested_use_token_latencies"]:
         if scenario == "Offline":
             # For offline no further checks are necessary
             return None, True
         else:
             for constraint, limits in LLM_LATENCY_LIMITS[model].items():
-                if mlperf_log["result_first_token_99.00_percentile_latency_ns"] < limits[
-                        "ttft"] and mlperf_log["result_time_per_output_token_99.00_percentile_ns"] < limits["tpot"]:
+                if (
+                    mlperf_log["result_first_token_99.00_percentile_latency_ns"]
+                    < limits["ttft"]
+                    and mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
+                    < limits["tpot"]
+                ):
                     return constraint, True
     else:
         log.error(
-            f'use_token_latencies flag needs to be enabled for Llama2 benchmark')
+            f"use_token_latencies flag needs to be enabled for Llama2 benchmark")
         return None, False
 
     log.error(
-        f'Failed Llama2 extra check for TTFT and TPOT. TTFT 99-tile: {mlperf_log["result_first_token_99.00_percentile_latency_ns"]}, TPOT 99-tile: {mlperf_log["result_time_per_output_token_99.00_percentile_ns"]}')
+        f'Failed Llama2 extra check for TTFT and TPOT. TTFT 99-tile: {mlperf_log["result_first_token_99.00_percentile_latency_ns"]}, TPOT 99-tile: {mlperf_log["result_time_per_output_token_99.00_percentile_ns"]}'
+    )
     return None, False
 
 
@@ -1115,15 +1219,21 @@ def get_performance_metric(
     scenario = mlperf_log["effective_scenario"]
 
     res = float(mlperf_log[RESULT_FIELD_NEW[version][scenario]])
-    if version in RESULT_FIELD_BENCHMARK_OVERWRITE and model in RESULT_FIELD_BENCHMARK_OVERWRITE[
-            version] and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][model]:
+    if (
+        version in RESULT_FIELD_BENCHMARK_OVERWRITE
+        and model in RESULT_FIELD_BENCHMARK_OVERWRITE[version]
+        and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][model]
+    ):
         res = float(
-            mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[version][model][scenario]])
+            mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[version]
+                       [model][scenario]]
+        )
 
     inferred = False
     if scenario_fixed != scenario:
         inferred, res = get_inferred_result(
-            scenario_fixed, scenario, res, mlperf_log, config, False)
+            scenario_fixed, scenario, res, mlperf_log, config, False
+        )
 
     return res
 
@@ -1150,10 +1260,15 @@ def check_performance_dir(
     scenario = mlperf_log["effective_scenario"]
 
     res = float(mlperf_log[RESULT_FIELD_NEW[version][scenario]])
-    if version in RESULT_FIELD_BENCHMARK_OVERWRITE and model in RESULT_FIELD_BENCHMARK_OVERWRITE[
-            version] and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][model]:
+    if (
+        version in RESULT_FIELD_BENCHMARK_OVERWRITE
+        and model in RESULT_FIELD_BENCHMARK_OVERWRITE[version]
+        and scenario in RESULT_FIELD_BENCHMARK_OVERWRITE[version][model]
+    ):
         res = float(
-            mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[version][model][scenario]])
+            mlperf_log[RESULT_FIELD_BENCHMARK_OVERWRITE[version]
+                       [model][scenario]]
+        )
 
     if model in ["llama2-70b-99", "llama2-70b-99.9", "mixtral-8x7b"]:
         llama_constraint, is_valid = extra_check_llm(
@@ -1170,7 +1285,8 @@ def check_performance_dir(
     samples_per_query = mlperf_log["effective_samples_per_query"]
     min_duration = mlperf_log["effective_min_duration_ms"]
     equal_issue_used_check = (
-        mlperf_log["effective_sample_concatenate_permutation"] == "true")
+        mlperf_log["effective_sample_concatenate_permutation"] == "true"
+    )
     if not config.requires_equal_issue(model, division):
         equal_issue_used_check = True
     sut_name = mlperf_log["sut_name"]
@@ -1313,7 +1429,8 @@ def check_performance_dir(
     inferred = False
     if scenario_fixed != scenario:
         inferred, res = get_inferred_result(
-            scenario_fixed, scenario, res, mlperf_log, config, True)
+            scenario_fixed, scenario, res, mlperf_log, config, True
+        )
 
     is_network_system, is_network_mode_valid = is_system_over_network(
         division, system_json, path
@@ -1331,8 +1448,9 @@ def check_performance_dir(
     return is_valid, res, inferred, equal_issue_used_check
 
 
-def get_inferred_result(scenario_fixed, scenario, res,
-                        mlperf_log, config, log_error=False):
+def get_inferred_result(
+    scenario_fixed, scenario, res, mlperf_log, config, log_error=False
+):
 
     inferred = False
     # Check if current scenario (and version) uses early stopping
@@ -1355,15 +1473,11 @@ def get_inferred_result(scenario_fixed, scenario, res,
         inferred = True
         res = qps_wo_loadgen_overhead
 
-    if (
-        scenario_fixed in ["Offline"]
-    ) and scenario in ["MultiStream"]:
+    if (scenario_fixed in ["Offline"]) and scenario in ["MultiStream"]:
         inferred = True
         res = samples_per_query * S_TO_MS / (latency_mean / MS_TO_NS)
 
-    if (
-        scenario_fixed in ["MultiStream"]
-    ) and scenario in ["SingleStream"]:
+    if (scenario_fixed in ["MultiStream"]) and scenario in ["SingleStream"]:
         inferred = True
         # samples_per_query does not match with the one reported in the logs
         # when inferring MultiStream from SingleStream
@@ -1448,9 +1562,8 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
             elif scenario_fixed in ["MultiStream"]:
                 samples_per_query = 8
 
-            if (
-                scenario_fixed in ["MultiStream"]
-            ) and scenario in ["SingleStream"]:
+            if (scenario_fixed in ["MultiStream"]
+                    ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -1496,7 +1609,7 @@ def check_power_dir(
         is_valid = False
 
     # uncomment to measure ranging mode power
-    '''
+    """
     (
         is_valid,
         power_metric_ranging,
@@ -1505,7 +1618,7 @@ def check_power_dir(
     ) = get_power_metric(
         config, scenario_fixed, ranging_path, is_valid, power_res_ranging
     )
-    '''
+    """
     is_valid, power_metric, scenario, power_efficiency_testing = get_power_metric(
         config, scenario_fixed, testing_path, is_valid, power_res_testing
     )
@@ -1576,7 +1689,7 @@ def check_results_dir(
     skip_empty_files_check=False,
     skip_check_power_measure_files=False,
     skip_extra_files_in_root_check=False,
-    scenarios_to_skip=[]
+    scenarios_to_skip=[],
 ):
     """
     Walk the results directory and do the checking.
@@ -1627,7 +1740,7 @@ def check_results_dir(
         "inferred",
         "has_power",
         "Units",
-        "weight_data_types"
+        "weight_data_types",
     ]
     fmt = ",".join(["{}"] * len(head)) + "\n"
     csv.write(",".join(head) + "\n")
@@ -1653,7 +1766,7 @@ def check_results_dir(
         config,
         inferred=0,
         power_metric=0,
-        weight_data_types="fp32"
+        weight_data_types="fp32",
     ):
         notes = system_json.get("hw_notes", "")
         if system_json.get("sw_notes"):
@@ -1689,7 +1802,7 @@ def check_results_dir(
                 "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
-            }
+            },
         }
         unit_dict = {
             "SingleStream": "Latency (ms)",
@@ -1709,8 +1822,9 @@ def check_results_dir(
             unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
         power_unit = power_unit_dict[scenario_fixed]
 
-        if (power_metric <= 0) or (not get_boolean(
-                system_json.get("system_power_only"))):
+        if (power_metric <= 0) or (
+            not get_boolean(system_json.get("system_power_only"))
+        ):
             csv.write(
                 fmt.format(
                     submitter,
@@ -2081,7 +2195,11 @@ def check_results_dir(
                             errors += 1
                             continue
                         else:
-                            measurement_check, conf_equal_issue_check, weight_data_types = check_measurement_dir(
+                            (
+                                measurement_check,
+                                conf_equal_issue_check,
+                                weight_data_types,
+                            ) = check_measurement_dir(
                                 config,
                                 measurement_dir,
                                 name,
@@ -2130,22 +2248,29 @@ def check_results_dir(
                                 acc_path,
                                 debug or is_closed_or_network,
                             )
-                            acc = json.dumps(acc).replace(
-                                ",",
-                                " ").replace(
-                                '"',
-                                "").replace(
-                                "{",
-                                "").replace(
-                                "}",
-                                "")
+                            acc = (
+                                json.dumps(acc)
+                                .replace(",", " ")
+                                .replace('"', "")
+                                .replace("{", "")
+                                .replace("}", "")
+                            )
                             if mlperf_model in REQUIRED_ACC_BENCHMARK:
-                                if config.version in REQUIRED_ACC_BENCHMARK[mlperf_model]:
+                                if (
+                                    config.version
+                                    in REQUIRED_ACC_BENCHMARK[mlperf_model]
+                                ):
                                     extra_files_pass, missing_files = check_extra_files(
-                                        acc_path, REQUIRED_ACC_BENCHMARK[mlperf_model][config.version])
+                                        acc_path,
+                                        REQUIRED_ACC_BENCHMARK[mlperf_model][
+                                            config.version
+                                        ],
+                                    )
                                     if not extra_files_pass:
                                         log.error(
-                                            "%s expected to have the following extra files (%s)", acc_path, missing_files
+                                            "%s expected to have the following extra files (%s)",
+                                            acc_path,
+                                            missing_files,
                                         )
                                         accuracy_is_valid = False
                             if not accuracy_is_valid and not is_closed_or_network:
@@ -2190,7 +2315,12 @@ def check_results_dir(
                                 continue
 
                             try:
-                                is_valid, r, is_inferred, performance_equal_issue_check = check_performance_dir(
+                                (
+                                    is_valid,
+                                    r,
+                                    is_inferred,
+                                    performance_equal_issue_check,
+                                ) = check_performance_dir(
                                     config,
                                     mlperf_model,
                                     perf_path,
@@ -2207,13 +2337,17 @@ def check_results_dir(
 
                                 # Check equal issue mode
                                 if not (
-                                        conf_equal_issue_check or performance_equal_issue_check):
+                                    conf_equal_issue_check
+                                    or performance_equal_issue_check
+                                ):
                                     log.error(
                                         "%s %s requires equal issue mode (sample_concatenate_permutation), expected=true, found=%s",
                                         perf_path,
                                         measurement_dir,
                                         not (
-                                            conf_equal_issue_check or performance_equal_issue_check),
+                                            conf_equal_issue_check
+                                            or performance_equal_issue_check
+                                        ),
                                     )
                                     is_valid, r = False, None
                             except Exception as e:
@@ -2230,9 +2364,7 @@ def check_results_dir(
                                     ranging_path = os.path.join(
                                         name, "performance", "ranging"
                                     )
-                                    (
-                                        ranging_r
-                                    ) = get_performance_metric(
+                                    (ranging_r) = get_performance_metric(
                                         config,
                                         mlperf_model,
                                         ranging_path,
@@ -2320,7 +2452,7 @@ def check_results_dir(
                                 config,
                                 division,
                                 system_json,
-                                name
+                                name,
                             ):
                                 log.error(
                                     "compliance dir %s has issues", compliance_dir
@@ -2350,7 +2482,7 @@ def check_results_dir(
                                     config,
                                     inferred=inferred,
                                     power_metric=power_metric,
-                                    weight_data_types=weight_data_types
+                                    weight_data_types=weight_data_types,
                                 )
                             else:
                                 results[name] = None
@@ -2505,36 +2637,28 @@ def check_measurement_dir(
     if has_power and not skip_check_power_measure_files:
         path = measurement_dir
         all_files_1 = [
-            os.path.join(
-                path,
-                f) for f in os.listdir(path) if os.path.isfile(
-                os.path.join(
-                    path,
-                    f))]
+            os.path.join(path, f)
+            for f in os.listdir(path)
+            if os.path.isfile(os.path.join(path, f))
+        ]
         path = os.path.join(path, "..")
         all_files_2 = [
-            os.path.join(
-                path,
-                f) for f in os.listdir(path) if os.path.isfile(
-                os.path.join(
-                    path,
-                    f))]
+            os.path.join(path, f)
+            for f in os.listdir(path)
+            if os.path.isfile(os.path.join(path, f))
+        ]
         path = os.path.join(path, "..")
         all_files_3 = [
-            os.path.join(
-                path,
-                f) for f in os.listdir(path) if os.path.isfile(
-                os.path.join(
-                    path,
-                    f))]
+            os.path.join(path, f)
+            for f in os.listdir(path)
+            if os.path.isfile(os.path.join(path, f))
+        ]
         path = os.path.join(path, "..")
         all_files_4 = [
-            os.path.join(
-                path,
-                f) for f in os.listdir(path) if os.path.isfile(
-                os.path.join(
-                    path,
-                    f))]
+            os.path.join(path, f)
+            for f in os.listdir(path)
+            if os.path.isfile(os.path.join(path, f))
+        ]
         all_files = all_files_1 + all_files_2 + all_files_3 + all_files_4
 
         for i in REQUIRED_POWER_MEASURE_FILES:
@@ -2575,7 +2699,7 @@ def check_measurement_dir(
     if system_file:
         with open(os.path.join(measurement_dir, system_file), "r") as f:
             j = json.load(f)
-            weight_data_types = j['weight_data_types']
+            weight_data_types = j["weight_data_types"]
             for k in SYSTEM_IMP_REQUIRED_FILES:
                 if k not in j:
                     is_valid = False
@@ -2619,13 +2743,14 @@ def check_measurement_dir(
                         val.replace(" ", "")
                         conf_model, conf_scenario, conf_key = key.split(".")
                         if (
-                            (conf_key == "sample_concatenate_permutation") and
-                            ((conf_model == conf_ref_model) or conf_model == "*") and
-                            ((conf_scenario == scenario) or conf_scenario == "*")
+
+                            (conf_key == "sample_concatenate_permutation")
+                            and ((conf_model == conf_ref_model) or conf_model == "*")
+                            and ((conf_scenario == scenario) or conf_scenario == "*")
                         ):
                             if val.isnumeric():
                                 val = int(val)
-                                equal_issue_used = (val == 1)
+                                equal_issue_used = val == 1
                                 break
 
         if "user.conf" in files and config.requires_equal_issue(
@@ -2645,13 +2770,13 @@ def check_measurement_dir(
                         val.replace(" ", "")
                         conf_model, conf_scenario, conf_key = key.split(".")
                         if (
-                            (conf_key == "sample_concatenate_permutation") and
-                            ((conf_model == conf_ref_model) or conf_model == "*") and
-                            ((conf_scenario == scenario) or conf_scenario == "*")
+                            (conf_key == "sample_concatenate_permutation")
+                            and ((conf_model == conf_ref_model) or conf_model == "*")
+                            and ((conf_scenario == scenario) or conf_scenario == "*")
                         ):
                             if val.isnumeric():
                                 val = int(val)
-                                equal_issue_used = (val == 1)
+                                equal_issue_used = val == 1
                                 break
     else:
         log.error("%s is missing %s*.json", fname, system_desc)
@@ -2731,9 +2856,11 @@ def check_compliance_acc_dir(test_dir, model, config):
             else:
                 diff = files_diff(
                     list_files(test_acc_path),
-                    REQUIRED_TEST01_ACC_FILES_1
-                    if acc_passed
-                    else REQUIRED_TEST01_ACC_FILES,
+                    (
+                        REQUIRED_TEST01_ACC_FILES_1
+                        if acc_passed
+                        else REQUIRED_TEST01_ACC_FILES
+                    ),
                 )
                 if diff:
                     log.error(
@@ -2746,16 +2873,12 @@ def check_compliance_acc_dir(test_dir, model, config):
                     patterns = []
                     acc_types = []
                     for i in range(0, len(target), 2):
-                        acc_type = target[i:i + 2]
+                        acc_type = target[i: i + 2]
                         acc_types.append(acc_type)
                         patterns.append(ACC_PATTERN[acc_type[0]])
                     acc_seen = [False for _ in acc_type]
-                    acc_baseline = {
-                        acc_type: 0 for acc_type in acc_types
-                    }
-                    acc_compliance = {
-                        acc_type: 0 for acc_type in acc_types
-                    }
+                    acc_baseline = {acc_type: 0 for acc_type in acc_types}
+                    acc_compliance = {acc_type: 0 for acc_type in acc_types}
                     with open(
                         os.path.join(test_acc_path, "baseline_accuracy.txt"),
                         "r",
@@ -2783,9 +2906,16 @@ def check_compliance_acc_dir(test_dir, model, config):
                             break
                         else:
                             required_delta_perc = config.get_delta_perc(
-                                model, acc_type[0])
-                            delta_perc = abs(
-                                1 - acc_baseline[acc_type] / acc_compliance[acc_type]) * 100
+                                model, acc_type[0]
+                            )
+                            delta_perc = (
+                                abs(
+                                    1
+                                    - acc_baseline[acc_type] /
+                                    acc_compliance[acc_type]
+                                )
+                                * 100
+                            )
                             if delta_perc <= required_delta_perc:
                                 is_valid = True
                             else:
@@ -2801,16 +2931,21 @@ def check_compliance_acc_dir(test_dir, model, config):
             with open(fname, "r") as f:
                 lines = f.readlines()
             lines = [line.strip() for line in lines]
-            first_token_pass = "First token check pass: True" in lines or "First token check pass: Skipped" in lines
+            first_token_pass = (
+                "First token check pass: True" in lines
+                or "First token check pass: Skipped" in lines
+            )
             eos_pass = "EOS check pass: True" in lines
             length_check_pass = "Sample length check pass: True" in lines
             is_valid = first_token_pass and eos_pass and length_check_pass
             if not is_valid:
                 log.error(
-                    f"TEST06 accuracy check failed. first_token_check: {first_token_pass} eos_check: {eos_pass} length_check: {length_check_pass}.")
+                    f"TEST06 accuracy check failed. first_token_check: {first_token_pass} eos_check: {eos_pass} length_check: {length_check_pass}."
+                )
         else:
             raise NotImplemented(
-                f"{test_dir} is neither TEST01 and TEST06, which doesn't require accuracy check")
+                f"{test_dir} is neither TEST01 and TEST06, which doesn't require accuracy check"
+            )
 
     return is_valid
 
@@ -2836,7 +2971,7 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "mixtral-8x7b"
+        "mixtral-8x7b",
     ]:
         test_list.remove("TEST04")
 
@@ -2846,7 +2981,7 @@ def check_compliance_dir(
         "llama2-70b-99",
         "llama2-70b-99.9",
         "stable-diffusion-xl",
-        "mixtral-8x7b"
+        "mixtral-8x7b",
     ]:
         test_list.remove("TEST05")
 
@@ -2855,21 +2990,15 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "mixtral-8x7b"
+        "mixtral-8x7b",
     ]:
         test_list.remove("TEST01")
 
-    if model in [
-        "stable-diffusion-xl"
-    ] and config.version in ["v4.0"]:
+    if model in ["stable-diffusion-xl"] and config.version in ["v4.0"]:
         test_list.remove("TEST01")
         test_list.remove("TEST04")
 
-    if model in [
-        "llama2-70b-99",
-        "llama2-70b-99.9",
-        "mixtral-8x7b"
-    ]:
+    if model in ["llama2-70b-99", "llama2-70b-99.9", "mixtral-8x7b"]:
         test_list.append("TEST06")
 
     if test_list and not os.path.exists(compliance_dir):
@@ -2934,8 +3063,7 @@ def main():
 
     if args.scenarios_to_skip:
         scenarios_to_skip = [
-            scenario for scenario in args.scenarios_to_skip.split(',')
-        ]
+            scenario for scenario in args.scenarios_to_skip.split(",")]
     else:
         scenarios_to_skip = []
 
@@ -2952,7 +3080,7 @@ def main():
             args.skip_empty_files_check,
             args.skip_check_power_measure_files,
             args.skip_extra_files_in_root_check,
-            scenarios_to_skip
+            scenarios_to_skip,
         )
 
     # log results

@@ -298,7 +298,7 @@ MODEL_CONFIG = {
             "llama2-70b-99": ["Server", "Offline"],
             "llama2-70b-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
-            "mixtral-8x7b": ["SingleStream", "Server", "Offline"],
+            "mixtral-8x7b": ["Server", "Offline"]
         },
         "optional-scenarios-datacenter-edge": {},
         "accuracy-target": {
@@ -2743,6 +2743,7 @@ def check_measurement_dir(
                         val.replace(" ", "")
                         conf_model, conf_scenario, conf_key = key.split(".")
                         if (
+
                             (conf_key == "sample_concatenate_permutation")
                             and ((conf_model == conf_ref_model) or conf_model == "*")
                             and ((conf_scenario == scenario) or conf_scenario == "*")

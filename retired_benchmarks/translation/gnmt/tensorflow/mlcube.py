@@ -1,4 +1,5 @@
 """MLCube handler file"""
+
 import os
 import yaml
 import typer
@@ -21,7 +22,9 @@ class DownloadDataTask(object):
 
         env = os.environ.copy()
         env.update(
-            {"DATA_DIR": data_dir,}
+            {
+                "DATA_DIR": data_dir,
+            }
         )
 
         process = subprocess.Popen("./download_dataset.sh", cwd=".", env=env)
@@ -42,10 +45,13 @@ class DownloadModelTask(object):
 
         env = os.environ.copy()
         env.update(
-            {"MODEL_DIR": model_dir,}
+            {
+                "MODEL_DIR": model_dir,
+            }
         )
 
-        process = subprocess.Popen("./download_trained_model.sh", cwd=".", env=env)
+        process = subprocess.Popen(
+            "./download_trained_model.sh", cwd=".", env=env)
         process.wait()
 
 
@@ -59,18 +65,21 @@ class RunPerformanceTask(object):
     Then executes the benchmark script"""
 
     @staticmethod
-    def run(data_dir: str, model_dir: str, output_dir: str, parameters_file: str) -> None:
+    def run(
+        data_dir: str, model_dir: str, output_dir: str, parameters_file: str
+    ) -> None:
         with open(parameters_file, "r") as stream:
             parameters = yaml.safe_load(stream)
 
-        
         env = os.environ.copy()
-        env.update({
-            'DATA_DIR': os.path.join(data_dir, 'nmt', 'data'),
-            'MODEL_DIR': os.path.join(model_dir, 'ende_gnmt_model_4_layer'),
-            'OUTPUT_DIR': output_dir,
-            'TASK': "performance"
-        })
+        env.update(
+            {
+                "DATA_DIR": os.path.join(data_dir, "nmt", "data"),
+                "MODEL_DIR": os.path.join(model_dir, "ende_gnmt_model_4_layer"),
+                "OUTPUT_DIR": output_dir,
+                "TASK": "performance",
+            }
+        )
 
         env.update(parameters)
 
@@ -88,18 +97,21 @@ class RunAccuracyTask(object):
     Then executes the benchmark script"""
 
     @staticmethod
-    def run(data_dir: str, model_dir: str, output_dir: str, parameters_file: str) -> None:
+    def run(
+        data_dir: str, model_dir: str, output_dir: str, parameters_file: str
+    ) -> None:
         with open(parameters_file, "r") as stream:
             parameters = yaml.safe_load(stream)
 
-        
         env = os.environ.copy()
-        env.update({
-            'DATA_DIR': os.path.join(data_dir, 'nmt', 'data'),
-            'MODEL_DIR': os.path.join(model_dir, 'ende_gnmt_model_4_layer'),
-            'OUTPUT_DIR': output_dir,
-            'TASK': "accuracy"
-        })
+        env.update(
+            {
+                "DATA_DIR": os.path.join(data_dir, "nmt", "data"),
+                "MODEL_DIR": os.path.join(model_dir, "ende_gnmt_model_4_layer"),
+                "OUTPUT_DIR": output_dir,
+                "TASK": "accuracy",
+            }
+        )
 
         env.update(parameters)
 
@@ -125,6 +137,7 @@ def run_performance(
     parameters_file: str = typer.Option(..., "--parameters_file"),
 ):
     RunPerformanceTask.run(data_dir, model_dir, output_dir, parameters_file)
+
 
 @app.command("run_accuracy")
 def run_accuracy(

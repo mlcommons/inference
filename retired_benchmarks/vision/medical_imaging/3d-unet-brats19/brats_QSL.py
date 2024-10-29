@@ -17,18 +17,27 @@
 import os
 import pickle
 import sys
+
 sys.path.insert(0, os.getcwd())
 
-import mlperf_loadgen as lg
 
 sys.path.insert(0, os.path.join(os.getcwd(), "nnUnet"))
-from nnUnet.nnunet.inference.predict import preprocess_multithreaded
 
-class BraTS_2019_QSL():
+try:
+    from nnUnet.nnunet.inference.predict import preprocess_multithreaded
+    import mlperf_loadgen as lg
+except BaseException:
+    raise Exception("Error importing local modules")
+
+
+class BraTS_2019_QSL:
     def __init__(self, preprocessed_data_dir, perf_count):
         print("Constructing QSL...")
         self.preprocessed_data_dir = preprocessed_data_dir
-        with open(os.path.join(self.preprocessed_data_dir, "preprocessed_files.pkl"), "rb") as f:
+        with open(
+            os.path.join(self.preprocessed_data_dir,
+                         "preprocessed_files.pkl"), "rb"
+        ) as f:
             self.preprocess_files = pickle.load(f)
 
         self.count = len(self.preprocess_files)
@@ -37,14 +46,24 @@ class BraTS_2019_QSL():
         print("Using performance count = {:d}".format(self.perf_count))
 
         self.loaded_files = {}
-        self.qsl = lg.ConstructQSL(self.count, self.perf_count, self.load_query_samples, self.unload_query_samples)
+        self.qsl = lg.ConstructQSL(
+            self.count,
+            self.perf_count,
+            self.load_query_samples,
+            self.unload_query_samples,
+        )
         print("Finished constructing QSL.")
 
     def load_query_samples(self, sample_list):
         for sample_id in sample_list:
             file_name = self.preprocess_files[sample_id]
             print("Loading file {:}".format(file_name))
-            with open(os.path.join(self.preprocessed_data_dir, "{:}.pkl".format(file_name)), "rb") as f:
+            with open(
+                os.path.join(
+                    self.preprocessed_data_dir,
+                    "{:}.pkl".format(file_name)),
+                "rb",
+            ) as f:
                 self.loaded_files[sample_id] = pickle.load(f)[0]
 
     def unload_query_samples(self, sample_list):
@@ -54,5 +73,7 @@ class BraTS_2019_QSL():
     def get_features(self, sample_id):
         return self.loaded_files[sample_id]
 
-def get_brats_QSL(preprocessed_data_dir="build/preprocessed_data", perf_count=None):
+
+def get_brats_QSL(
+        preprocessed_data_dir="build/preprocessed_data", perf_count=None):
     return BraTS_2019_QSL(preprocessed_data_dir, perf_count)

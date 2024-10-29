@@ -35,9 +35,13 @@ import cv2
 
 
 BUCKET_NAME = "open-images-dataset"
-BBOX_ANNOTATIONS_URL = "https://storage.googleapis.com/openimages/v6/oidv6-train-annotations-bbox.csv"
+BBOX_ANNOTATIONS_URL = (
+    "https://storage.googleapis.com/openimages/v6/oidv6-train-annotations-bbox.csv"
+)
 ANNOTATIONS_FILE = "oidv6-train-annotations-bbox.csv"
-MAP_CLASSES_URL = "https://storage.googleapis.com/openimages/v5/class-descriptions-boxable.csv"
+MAP_CLASSES_URL = (
+    "https://storage.googleapis.com/openimages/v5/class-descriptions-boxable.csv"
+)
 MAP_CLASSES_FILE = "class-descriptions-boxable.csv"
 CHUNK_SIZE = 1024 * 8
 
@@ -116,16 +120,16 @@ def export_to_coco(
     annotations["image_id"] = pd.factorize(annotations["ImageID"].tolist())[0]
     annotations[["height", "width"]] = annotations.apply(
         lambda x: extract_dims(
-            os.path.join(dataset_path, f"{x['ImageID']}.jpg")
-        ),
+            os.path.join(
+                dataset_path,
+                f"{x['ImageID']}.jpg")),
         axis=1,
         result_type="expand",
     )
     # Images
     images_ = []
-    for i, row in (
-        annotations.groupby(["image_id", "ImageID"]).first().iterrows()
-    ):
+    for i, row in annotations.groupby(
+            ["image_id", "ImageID"]).first().iterrows():
         id, ImageID = i
         images_.append(
             {
@@ -197,8 +201,7 @@ def download_one_image(bucket, split, image_id, download_folder):
         )
     except botocore.exceptions.ClientError as exception:
         sys.exit(
-            f"ERROR when downloading image `{split}/{image_id}`: {str(exception)}"
-        )
+            f"ERROR when downloading image `{split}/{image_id}`: {str(exception)}")
 
 
 def download_all_images(args, image_list):
@@ -216,9 +219,8 @@ def download_all_images(args, image_list):
     if not os.path.exists(os.path.join(download_folder, "annotations")):
         os.makedirs(os.path.join(download_folder, "annotations"))
 
-    if not os.path.exists(
-        os.path.join(download_folder, "calibration", "data")
-    ):
+    if not os.path.exists(os.path.join(
+            download_folder, "calibration", "data")):
         os.makedirs(os.path.join(download_folder, "calibration", "data"))
 
     try:
@@ -246,9 +248,7 @@ def download_all_images(args, image_list):
     progress_bar = tqdm.tqdm(
         total=len(image_list), desc="Downloading images", leave=True
     )
-    with futures.ThreadPoolExecutor(
-        max_workers=args.num_processes
-    ) as executor:
+    with futures.ThreadPoolExecutor(max_workers=args.num_processes) as executor:
         all_futures = [
             executor.submit(
                 download_one_image,
@@ -280,8 +280,9 @@ if __name__ == "__main__":
         # Try to find the calibration file in case it was not provided
         repo_root = os.path.dirname(
             os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            )
+                os.path.dirname(
+                    os.path.dirname(
+                        os.path.abspath(__file__))))
         )
         calibration_file = os.path.join(
             repo_root,

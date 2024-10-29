@@ -21,9 +21,13 @@ import sys
 
 # pylint: disable=missing-docstring
 
-logging.basicConfig(level=logging.INFO, format="[%(asctime)s %(filename)s:%(lineno)d %(levelname)s] %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(asctime)s %(filename)s:%(lineno)d %(levelname)s] %(message)s",
+)
 
-class MLPerfLog():
+
+class MLPerfLog:
     def __init__(self, log_path, strict=True):
         """
         Helper class to parse the detail logs.
@@ -38,16 +42,22 @@ class MLPerfLog():
                 line = line.rstrip()
                 if line.find(self.marker) == 0:
                     try:
-                        self.messages.append(json.loads(line[len(self.marker):]))
-                    except:
+                        self.messages.append(
+                            json.loads(line[len(self.marker):]))
+                    except BaseException:
                         if strict:
-                            raise RuntimeError("Encountered invalid line: {:}".format(line))
+                            raise RuntimeError(
+                                "Encountered invalid line: {:}".format(line)
+                            )
                         else:
-                            self.logger.warning("Skipping invalid line: {:}".format(line))
+                            self.logger.warning(
+                                "Skipping invalid line: {:}".format(line)
+                            )
         self.keys = set()
         for message in self.messages:
             self.keys.add(message["key"])
-        self.logger.info("Sucessfully loaded MLPerf log from {:}.".format(log_path))
+        self.logger.info(
+            "Sucessfully loaded MLPerf log from {:}.".format(log_path))
 
     def __getitem__(self, key):
         """
@@ -60,7 +70,11 @@ class MLPerfLog():
             if message["key"] == key:
                 results.append(message)
         if len(results) != 1:
-            self.logger.warning("There are multiple messages with key {:} in the log. Emprically choosing the first one.".format(key))
+            self.logger.warning(
+                "There are multiple messages with key {:} in the log. Emprically choosing the first one.".format(
+                    key
+                )
+            )
         return results[0]["value"]
 
     def get(self, key):
@@ -95,7 +109,11 @@ class MLPerfLog():
             if message["key"] not in result:
                 result[message["key"]] = message["value"]
             else:
-                self.logger.warning("There are multiple messages with key {:} in the log. Emprically choosing the first one.".format(key))
+                self.logger.warning(
+                    "There are multiple messages with key {:} in the log. Emprically choosing the first one.".format(
+                        key
+                    )
+                )
 
     def dump(self, output_path):
         """
@@ -105,11 +123,11 @@ class MLPerfLog():
             json.dump(self.messages, f, indent=4)
 
     def num_messages(self):
-        """ Get number of messages (including errors and warnings) in the log. """
+        """Get number of messages (including errors and warnings) in the log."""
         return len(self.messages)
 
     def num_errors(self):
-        """ Get number of errors in the log. """
+        """Get number of errors in the log."""
         count = 0
         for message in self.messages:
             if message["metadata"]["is_error"]:
@@ -117,7 +135,7 @@ class MLPerfLog():
         return count
 
     def num_warnings(self):
-        """ Get number of warning in the log. """
+        """Get number of warning in the log."""
         count = 0
         for message in self.messages:
             if message["metadata"]["is_warning"]:
@@ -125,11 +143,11 @@ class MLPerfLog():
         return count
 
     def has_error(self):
-        """ Check if the log contains any errors. """
+        """Check if the log contains any errors."""
         return self.num_errors() != 0
 
     def has_warning(self):
-        """ Check if the log contains any warnings. """
+        """Check if the log contains any warnings."""
         return self.num_warnings() != 0
 
     def get_errors(self):
@@ -152,13 +170,22 @@ class MLPerfLog():
                 results.append(message)
         return results
 
+
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--input", required=True, help="path to the detail log")
-    parser.add_argument("--ignore_invalid_lines", action="store_true", help="whether to stop if there are lines with invalid formats")
+    parser.add_argument(
+        "--input",
+        required=True,
+        help="path to the detail log")
+    parser.add_argument(
+        "--ignore_invalid_lines",
+        action="store_true",
+        help="whether to stop if there are lines with invalid formats",
+    )
     args = parser.parse_args()
     return args
+
 
 def main():
     """
@@ -174,8 +201,9 @@ def main():
     logger.info("- Contents:")
     messages = mlperf_log.get_messages()
     for message in messages:
-        logger.info("\"{:}\": {:}".format(message["key"], message["value"]))
+        logger.info('"{:}": {:}'.format(message["key"], message["value"]))
     logger.info("Done!")
+
 
 if __name__ == "__main__":
     sys.exit(main())

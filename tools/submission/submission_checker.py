@@ -1571,7 +1571,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                ) and scenario in ["SingleStream"]:
+                    ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -1697,6 +1697,7 @@ def check_results_dir(
     skip_empty_files_check=False,
     skip_check_power_measure_files=False,
     skip_extra_files_in_root_check=False,
+    skip_extra_accuracy_files_check=False,
     scenarios_to_skip=[],
 ):
     """
@@ -2260,9 +2261,8 @@ def check_results_dir(
                             )
                             if mlperf_model in REQUIRED_ACC_BENCHMARK:
                                 if (
-                                    config.version
-                                    in REQUIRED_ACC_BENCHMARK[mlperf_model]
-                                ):
+                                        config.version
+                                        in REQUIRED_ACC_BENCHMARK[mlperf_model] and not skip_extra_accuracy_files_check:):
                                     extra_files_pass, missing_files = check_extra_files(
                                         acc_path,
                                         REQUIRED_ACC_BENCHMARK[mlperf_model][
@@ -2998,6 +2998,7 @@ def main():
             args.skip_empty_files_check,
             args.skip_check_power_measure_files,
             args.skip_extra_files_in_root_check,
+            args.skip_extra_accuracy_files_check,
             scenarios_to_skip,
         )
 

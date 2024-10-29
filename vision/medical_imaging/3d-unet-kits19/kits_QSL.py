@@ -26,12 +26,12 @@ class KiTS_2019_QSL:
     """
     A class to represent QSL (Query Sample Library) for MLPerf.
 
-    This populates preprocessed KiTS19 inference data set into LoadGen compatible QSL 
+    This populates preprocessed KiTS19 inference data set into LoadGen compatible QSL
 
     Attributes
     ----------
     preprocessed_data_dir: str
-        path to directory containing preprocessed data 
+        path to directory containing preprocessed data
     preprocessed_files: list of str
         list of KiTS19 cases that are used in inference
     count: int
@@ -62,8 +62,10 @@ class KiTS_2019_QSL:
         """
         print("Constructing QSL...")
         self.preprocessed_data_dir = preprocessed_data_dir
-        with open(Path(self.preprocessed_data_dir, "preprocessed_files.pkl"), "rb") as f:
-            self.preprocess_files = pickle.load(f)['file_list']
+        with open(
+            Path(self.preprocessed_data_dir, "preprocessed_files.pkl"), "rb"
+        ) as f:
+            self.preprocess_files = pickle.load(f)["file_list"]
 
         self.count = len(self.preprocess_files)
         self.perf_count = perf_count if perf_count is not None else self.count
@@ -72,7 +74,11 @@ class KiTS_2019_QSL:
 
         self.loaded_files = {}
         self.qsl = lg.ConstructQSL(
-            self.count, self.perf_count, self.load_query_samples, self.unload_query_samples)
+            self.count,
+            self.perf_count,
+            self.load_query_samples,
+            self.unload_query_samples,
+        )
         print("Finished constructing QSL.")
 
     def load_query_samples(self, sample_list):
@@ -82,7 +88,10 @@ class KiTS_2019_QSL:
         for sample_id in sample_list:
             file_name = self.preprocess_files[sample_id]
             print("Loading file {:}".format(file_name))
-            with open(Path(self.preprocessed_data_dir, "{:}.pkl".format(file_name)), "rb") as f:
+            with open(
+                Path(self.preprocessed_data_dir,
+                     "{:}.pkl".format(file_name)), "rb"
+            ) as f:
                 self.loaded_files[sample_id] = pickle.load(f)[0]
 
     def unload_query_samples(self, sample_list):
@@ -99,5 +108,6 @@ class KiTS_2019_QSL:
         return self.loaded_files[sample_id]
 
 
-def get_kits_QSL(preprocessed_data_dir="build/preprocessed_data", perf_count=None):
+def get_kits_QSL(
+        preprocessed_data_dir="build/preprocessed_data", perf_count=None):
     return KiTS_2019_QSL(preprocessed_data_dir, perf_count)

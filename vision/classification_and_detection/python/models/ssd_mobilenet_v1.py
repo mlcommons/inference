@@ -81,7 +81,8 @@ class PredictionHead(nn.Module):
         self.classification = nn.Conv2d(
             in_channels, num_classes * num_anchors, kernel_size=1
         )
-        self.regression = nn.Conv2d(in_channels, num_anchors * 4, kernel_size=1)
+        self.regression = nn.Conv2d(
+            in_channels, num_anchors * 4, kernel_size=1)
 
         self.num_classes = num_classes
         self.num_anchors = num_anchors
@@ -161,12 +162,11 @@ class SSD(nn.Module):
             self._feature_map_shapes = shapes
 
         self.coder_weights = self.coder_weights.to(scores)
-        if box_regression.dim()==2:
+        if box_regression.dim() == 2:
             box_regression = box_regression[None]
         boxes = decode_boxes(box_regression, self.priors, self.coder_weights)
         # add a batch dimension
         return scores, boxes
-
 
     def forward(self, images):
         """
@@ -175,13 +175,15 @@ class SSD(nn.Module):
         """
 
         scores, boxes = self.ssd_model(images)
-        list_boxes=[]; list_labels=[]; list_scores=[]
+        list_boxes = []
+        list_labels = []
+        list_scores = []
         for b in range(len(scores)):
             bboxes, blabels, bscores = self.filter_results(scores[b], boxes[b])
             list_boxes.append(bboxes)
             list_labels.append(blabels.long())
             list_scores.append(bscores)
-        #boxes = self.rescale_boxes(boxes, height, width)
+        # boxes = self.rescale_boxes(boxes, height, width)
         return [list_boxes, list_labels, list_scores]
 
     def filter_results(self, scores, boxes):
@@ -190,8 +192,8 @@ class SSD(nn.Module):
         # on python. This implementation is faster on the
         # CPU, which is why we run this part on the CPU
         cpu_device = torch.device("cpu")
-        #boxes = boxes[0]
-        #scores = scores[0]
+        # boxes = boxes[0]
+        # scores = scores[0]
         boxes = boxes.to(cpu_device)
         scores = scores.to(cpu_device)
         selected_box_probs = []
@@ -205,7 +207,8 @@ class SSD(nn.Module):
             box_probs = nms(box_probs, self.nms_threshold)
             selected_box_probs.append(box_probs)
             labels.append(
-                torch.full((box_probs.size(0),), class_index, dtype=torch.int64)
+                torch.full(
+                    (box_probs.size(0),), class_index, dtype=torch.int64)
             )
         selected_box_probs = torch.cat(selected_box_probs)
         labels = torch.cat(labels)

@@ -66,7 +66,7 @@ def worker(inp_queue, out_queue):
         solution = problem["response"]
 
         try:
-            solution = solution[:solution.index("```")]
+            solution = solution[: solution.index("```")]
         except ValueError:
             # Happens when a code block isn't closed properly
             pass
@@ -89,11 +89,14 @@ def worker(inp_queue, out_queue):
         try:
             result = checker(problem, solution, timeout=20.0)
             out_queue.put(
-                (key,
-                 problem["lang"],
+                (
+                    key,
+                    problem["lang"],
                     result["passed"],
                     result["result"],
-                    problem["response"]))
+                    problem["response"],
+                )
+            )
         except Exception as e:
             print(e)
             out_queue.put(

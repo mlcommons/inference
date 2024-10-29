@@ -29,79 +29,71 @@ from . import train
 
 
 def _update_flags(flags, test_name):
-  """Update flags for basic training."""
-  flags.num_train_steps = 100
-  flags.steps_per_stats = 5
-  flags.src = "en"
-  flags.tgt = "vi"
-  flags.train_prefix = ("nmt/testdata/"
-                        "iwslt15.tst2013.100")
-  flags.vocab_prefix = ("nmt/testdata/"
-                        "iwslt15.vocab.100")
-  flags.dev_prefix = ("nmt/testdata/"
-                      "iwslt15.tst2013.100")
-  flags.test_prefix = ("nmt/testdata/"
-                       "iwslt15.tst2013.100")
-  flags.out_dir = os.path.join(tf.test.get_temp_dir(), test_name)
+    """Update flags for basic training."""
+    flags.num_train_steps = 100
+    flags.steps_per_stats = 5
+    flags.src = "en"
+    flags.tgt = "vi"
+    flags.train_prefix = "nmt/testdata/" "iwslt15.tst2013.100"
+    flags.vocab_prefix = "nmt/testdata/" "iwslt15.vocab.100"
+    flags.dev_prefix = "nmt/testdata/" "iwslt15.tst2013.100"
+    flags.test_prefix = "nmt/testdata/" "iwslt15.tst2013.100"
+    flags.out_dir = os.path.join(tf.test.get_temp_dir(), test_name)
 
 
 class NMTTest(tf.test.TestCase):
 
-  def testTrain(self):
-    """Test the training loop is functional with basic hparams."""
-    nmt_parser = argparse.ArgumentParser()
-    nmt.add_arguments(nmt_parser)
-    FLAGS, unparsed = nmt_parser.parse_known_args()
+    def testTrain(self):
+        """Test the training loop is functional with basic hparams."""
+        nmt_parser = argparse.ArgumentParser()
+        nmt.add_arguments(nmt_parser)
+        FLAGS, unparsed = nmt_parser.parse_known_args()
 
-    _update_flags(FLAGS, "nmt_train_test")
+        _update_flags(FLAGS, "nmt_train_test")
 
-    default_hparams = nmt.create_hparams(FLAGS)
+        default_hparams = nmt.create_hparams(FLAGS)
 
-    train_fn = train.train
-    nmt.run_main(FLAGS, default_hparams, train_fn, None)
+        train_fn = train.train
+        nmt.run_main(FLAGS, default_hparams, train_fn, None)
 
+    def testTrainWithAvgCkpts(self):
+        """Test the training loop is functional with basic hparams."""
+        nmt_parser = argparse.ArgumentParser()
+        nmt.add_arguments(nmt_parser)
+        FLAGS, unparsed = nmt_parser.parse_known_args()
 
-  def testTrainWithAvgCkpts(self):
-    """Test the training loop is functional with basic hparams."""
-    nmt_parser = argparse.ArgumentParser()
-    nmt.add_arguments(nmt_parser)
-    FLAGS, unparsed = nmt_parser.parse_known_args()
+        _update_flags(FLAGS, "nmt_train_test_avg_ckpts")
+        FLAGS.avg_ckpts = True
 
-    _update_flags(FLAGS, "nmt_train_test_avg_ckpts")
-    FLAGS.avg_ckpts = True
+        default_hparams = nmt.create_hparams(FLAGS)
 
-    default_hparams = nmt.create_hparams(FLAGS)
+        train_fn = train.train
+        nmt.run_main(FLAGS, default_hparams, train_fn, None)
 
-    train_fn = train.train
-    nmt.run_main(FLAGS, default_hparams, train_fn, None)
+    def testInference(self):
+        """Test inference is function with basic hparams."""
+        nmt_parser = argparse.ArgumentParser()
+        nmt.add_arguments(nmt_parser)
+        FLAGS, unparsed = nmt_parser.parse_known_args()
 
+        _update_flags(FLAGS, "nmt_train_infer")
 
-  def testInference(self):
-    """Test inference is function with basic hparams."""
-    nmt_parser = argparse.ArgumentParser()
-    nmt.add_arguments(nmt_parser)
-    FLAGS, unparsed = nmt_parser.parse_known_args()
+        # Train one step so we have a checkpoint.
+        FLAGS.num_train_steps = 1
+        default_hparams = nmt.create_hparams(FLAGS)
+        train_fn = train.train
+        nmt.run_main(FLAGS, default_hparams, train_fn, None)
 
-    _update_flags(FLAGS, "nmt_train_infer")
+        # Update FLAGS for inference.
+        FLAGS.inference_input_file = "nmt/testdata/" "iwslt15.tst2013.100.en"
+        FLAGS.inference_output_file = os.path.join(FLAGS.out_dir, "output")
+        FLAGS.inference_ref_file = "nmt/testdata/" "iwslt15.tst2013.100.vi"
 
-    # Train one step so we have a checkpoint.
-    FLAGS.num_train_steps = 1
-    default_hparams = nmt.create_hparams(FLAGS)
-    train_fn = train.train
-    nmt.run_main(FLAGS, default_hparams, train_fn, None)
+        default_hparams = nmt.create_hparams(FLAGS)
 
-    # Update FLAGS for inference.
-    FLAGS.inference_input_file = ("nmt/testdata/"
-                                  "iwslt15.tst2013.100.en")
-    FLAGS.inference_output_file = os.path.join(FLAGS.out_dir, "output")
-    FLAGS.inference_ref_file = ("nmt/testdata/"
-                                "iwslt15.tst2013.100.vi")
-
-    default_hparams = nmt.create_hparams(FLAGS)
-
-    inference_fn = inference.inference
-    nmt.run_main(FLAGS, default_hparams, None, inference_fn)
+        inference_fn = inference.inference
+        nmt.run_main(FLAGS, default_hparams, None, inference_fn)
 
 
 if __name__ == "__main__":
-  tf.test.main()
+    tf.test.main()

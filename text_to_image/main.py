@@ -146,9 +146,8 @@ def get_args():
     # parser.add_argument("--output-images", action="store_true", help="Store a subset of the generated images")
     # do not modify this argument for official submission
     parser.add_argument(
-        "--ids-path",
-        help="Path to caption ids",
-        default="tools/sample_ids.txt")
+        "--ids-path", help="Path to caption ids", default="tools/sample_ids.txt"
+    )
 
     # below will override mlperf rules compliant settings - don't use for
     # official submission
@@ -156,7 +155,10 @@ def get_args():
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--debug", action="store_true", help="debug")
     parser.add_argument(
-        "--performance-sample-count", type=int, help="performance sample count", default=5000
+        "--performance-sample-count",
+        type=int,
+        help="performance sample count",
+        default=5000,
     )
     parser.add_argument(
         "--max-latency", type=float, help="mlperf max latency in pct tile"
@@ -336,7 +338,7 @@ def main():
         precision=args.dtype,
         device=args.device,
         model_path=args.model_path,
-        batch_size=args.max_batchsize
+        batch_size=args.max_batchsize,
     )
     if args.dtype == "fp16":
         dtype = torch.float16

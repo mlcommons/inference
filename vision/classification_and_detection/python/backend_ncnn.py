@@ -3,6 +3,7 @@ import numpy as np
 import backend
 from ncnn_models import *
 
+
 class BackendNCNN(backend.Backend):
     def __init__(self):
         super(BackendNCNN, self).__init__()
@@ -24,9 +25,12 @@ class BackendNCNN(backend.Backend):
             self.net = Resnet50(param_file, bin_file)
         else:
             import sys
-            print("please add your ncnn model .param and .bin files to dir named 'resnet'")
+
+            print(
+                "please add your ncnn model .param and .bin files to dir named 'resnet'"
+            )
             sys.exit()
-        
+
         if not inputs:
             self.inputs = [self.net.input_name]
         else:

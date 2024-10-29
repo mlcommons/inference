@@ -5,7 +5,12 @@ import array
 import torch
 from torch.nn.functional import pad
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer, LogitsProcessor, LogitsProcessorList
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    LogitsProcessor,
+    LogitsProcessorList,
+)
 from transformers.generation.streamers import BaseStreamer
 
 import pickle
@@ -29,48 +34,61 @@ gen_kwargs = {
     "max_new_tokens": 1024,
     "min_new_tokens": 2,
     "num_beams": 1,
-    "do_sample": False
+    "do_sample": False,
 }
 
+
 class StopAfterSequence(LogitsProcessor):
-        """Logits processor (to use with HuggingFace `generate()` method :
-        https://huggingface.co/docs/transformers/v4.24.0/en/main_classes/
-        text_generation#transformers.generation_utils.GenerationMixin).
+    """Logits processor (to use with HuggingFace `generate()` method :
+    https://huggingface.co/docs/transformers/v4.24.0/en/main_classes/
+    text_generation#transformers.generation_utils.GenerationMixin).
 
-        This logits processor makes that when the model generates a specified
-        stopping sequence, it stops generating new tokens
+    This logits processor makes that when the model generates a specified
+    stopping sequence, it stops generating new tokens
 
-        Args:
-            stop_seq (List[int]): ID of the space token.
-            eos_token_id (int): ID of the EOS token.
-            device (str): Device that the model is running
-        """
-        def __init__(self, eos_token_id: int, stop_seq: List[int] = [13, 13940, 28832, 13], device="cpu"):
-            super().__init__()
-            assert(len(stop_seq) >= 1)
-            self.device = device
-            self.stop_seq = torch.tensor(stop_seq, dtype=torch.long).to(device)
-            self.stop_seq_length = len(stop_seq)
-            self.eos_token_id = eos_token_id
+    Args:
+        stop_seq (List[int]): ID of the space token.
+        eos_token_id (int): ID of the EOS token.
+        device (str): Device that the model is running
+    """
 
-        def check_stop_condition(self, input_ids: torch.LongTensor):
-            stop_condition_met = (input_ids[:, -self.stop_seq_length:] == self.stop_seq).all(dim=1)
-            return stop_condition_met
-        
-        def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor) -> torch.FloatTensor:
-            if input_ids.size(1) > self.stop_seq_length:
-                forced_eos = torch.full((scores.size(1),), -float("inf")).to(self.device)
-                forced_eos[self.eos_token_id] = 0
-                scores[self.check_stop_condition(input_ids)] = forced_eos
-            return scores
+    def __init__(
+        self,
+        eos_token_id: int,
+        stop_seq: List[int] = [13, 13940, 28832, 13],
+        device="cpu",
+    ):
+        super().__init__()
+        assert len(stop_seq) >= 1
+        self.device = device
+        self.stop_seq = torch.tensor(stop_seq, dtype=torch.long).to(device)
+        self.stop_seq_length = len(stop_seq)
+        self.eos_token_id = eos_token_id
+
+    def check_stop_condition(self, input_ids: torch.LongTensor):
+        stop_condition_met = (
+            input_ids[:, -self.stop_seq_length:] == self.stop_seq
+        ).all(dim=1)
+        return stop_condition_met
+
+    def __call__(
+        self, input_ids: torch.LongTensor, scores: torch.FloatTensor
+    ) -> torch.FloatTensor:
+        if input_ids.size(1) > self.stop_seq_length:
+            forced_eos = torch.full(
+                (scores.size(1),), -float("inf")).to(self.device)
+            forced_eos[self.eos_token_id] = 0
+            scores[self.check_stop_condition(input_ids)] = forced_eos
+        return scores
 
 
 class FirstTokenStreamer(BaseStreamer):
-    """ Streams first tokens to a 'holder' """
+    """Streams first tokens to a 'holder'"""
 
-    def __init__(self, first_token, tokens_cache=[],
-                 is_first_token=True, response_ids=[]):
-        """ Response ids added to 'sign' the first token"""
+    def __init__(
+        self, first_token, tokens_cache=[], is_first_token=True, response_ids=[]
+    ):
+        """Response ids added to 'sign' the first token"""
 
         self.first_token = first_token  # Queue for first token
         self.is_first_token = is_first_token
@@ -84,7 +102,7 @@ class FirstTokenStreamer(BaseStreamer):
         self.is_prompt = True
 
     def put(self, value):
-        """ Caches the tokens as they're generated. Assumes bs=1 """
+        """Caches the tokens as they're generated. Assumes bs=1"""
 
         # Prompts are streamed first so we need to skip the first time value
         # that arrives
@@ -111,18 +129,20 @@ class FirstTokenStreamer(BaseStreamer):
         return self.tokens_cache
 
 
-class SUT():
-    def __init__(self,
-                 model_path=None,
-                 dtype="bfloat16",
-                 device="cpu",
-                 batch_size=None,
-                 total_sample_count=24576,
-                 dataset_path=None,
-                 use_cached_outputs=False,
-                 # Set this to True *only for test accuracy runs* in case your
-                 # prior session was killed partway through
-                 workers=1):
+class SUT:
+    def __init__(
+        self,
+        model_path=None,
+        dtype="bfloat16",
+        device="cpu",
+        batch_size=None,
+        total_sample_count=24576,
+        dataset_path=None,
+        use_cached_outputs=False,
+        # Set this to True *only for test accuracy runs* in case your
+        # prior session was killed partway through
+        workers=1,
+    ):
 
         self.model_path = model_path or "mistralai/Mixtral-8x7B-Instruct-v0.1"
         self.device = device
@@ -135,26 +155,32 @@ class SUT():
         self.batch_size = batch_size
 
         # dtype
-        if dtype == 'bfloat16':
+        if dtype == "bfloat16":
             self.amp_enabled = True
             self.amp_dtype = torch.bfloat16
-        elif dtype == 'float16':
+        elif dtype == "float16":
             self.amp_enabled = True
             self.amp_dtype = torch.float16
         else:
             self.amp_enabled = False
             self.amp_dtype = torch.float32
 
-        if 'cuda' in self.device:
+        if "cuda" in self.device:
             assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
 
         self.dataset_path = dataset_path
-        self.data_object = Dataset(self.model_path,
-                                   dataset_path=self.dataset_path,
-                                   total_sample_count=total_sample_count,
-                                   device=self.device)
-        self.qsl = lg.ConstructQSL(self.data_object.total_sample_count, self.data_object.perf_count,
-                                   self.data_object.LoadSamplesToRam, self.data_object.UnloadSamplesFromRam)
+        self.data_object = Dataset(
+            self.model_path,
+            dataset_path=self.dataset_path,
+            total_sample_count=total_sample_count,
+            device=self.device,
+        )
+        self.qsl = lg.ConstructQSL(
+            self.data_object.total_sample_count,
+            self.data_object.perf_count,
+            self.data_object.LoadSamplesToRam,
+            self.data_object.UnloadSamplesFromRam,
+        )
 
         self.load_model()
 
@@ -181,7 +207,7 @@ class SUT():
             worker.join()
 
     def process_queries(self):
-        """Processor of the queued queries. User may choose to add batching logic """
+        """Processor of the queued queries. User may choose to add batching logic"""
 
         while True:
             qitem = self.query_queue.get()
@@ -213,18 +239,38 @@ class SUT():
                 input_len = []
                 input_dataset = []
                 for q in qitem:
-                    input_ids_tensor.append(pad(self.data_object.input_ids[q.index],
-                                                (max_seq_len -
-                                                 self.data_object.input_lens[q.index], 0, 0, 0),
-                                                value=self.tokenizer.pad_token_id))
-                    input_masks_tensor.append(pad(self.data_object.attention_masks[q.index],
-                                                  (max_seq_len -
-                                                   self.data_object.input_lens[q.index], 0, 0, 0),
-                                                  value=0))
+                    input_ids_tensor.append(
+                        pad(
+                            self.data_object.input_ids[q.index],
+                            (
+                                max_seq_len -
+                                self.data_object.input_lens[q.index],
+                                0,
+                                0,
+                                0,
+                            ),
+                            value=self.tokenizer.pad_token_id,
+                        )
+                    )
+                    input_masks_tensor.append(
+                        pad(
+                            self.data_object.attention_masks[q.index],
+                            (
+                                max_seq_len -
+                                self.data_object.input_lens[q.index],
+                                0,
+                                0,
+                                0,
+                            ),
+                            value=0,
+                        )
+                    )
                     input_len.append(self.data_object.input_lens[q.index])
 
-                    # In case we predict code generation, we can specify an additional stop sequence
-                    input_dataset.append(self.data_object.dataset_names[q.index])
+                    # In case we predict code generation, we can specify an
+                    # additional stop sequence
+                    input_dataset.append(
+                        self.data_object.dataset_names[q.index])
                 input_ids_tensor = torch.cat(input_ids_tensor)
                 input_masks_tensor = torch.cat(input_masks_tensor)
 
@@ -232,9 +278,16 @@ class SUT():
                 assert input_ids_tensor.shape[0] <= self.batch_size
 
                 tik2 = time.time()
-                logits_processor = LogitsProcessorList([StopAfterSequence(self.tokenizer.eos_token_id, device=self.device)])
+                logits_processor = LogitsProcessorList(
+                    [StopAfterSequence(
+                        self.tokenizer.eos_token_id, device=self.device)]
+                )
                 for i in range(len(input_ids_tensor)):
-                    ids, masks, dataset = input_ids_tensor[i:i+1], input_masks_tensor[i:i+1], input_dataset[i]
+                    ids, masks, dataset = (
+                        input_ids_tensor[i: i + 1],
+                        input_masks_tensor[i: i + 1],
+                        input_dataset[i],
+                    )
                     pred_output_tokens = []
                     if dataset == "MBXP":
                         out = self.model.generate(
@@ -242,22 +295,24 @@ class SUT():
                             attention_mask=masks,
                             pad_token_id=self.tokenizer.pad_token_id,
                             logits_processor=logits_processor,
-                            **gen_kwargs
+                            **gen_kwargs,
                         )
                     else:
                         out = self.model.generate(
                             input_ids=ids,
                             attention_mask=masks,
                             pad_token_id=self.tokenizer.pad_token_id,
-                            **gen_kwargs
+                            **gen_kwargs,
                         )
                     pred_output_tokens.append(out)
                 pred_output_tokens = torch.cat(pred_output_tokens)
                 tik3 = time.time()
 
-                processed_output = self.data_object.postProcess(pred_output_tokens,
-                                                                input_seq_lens=input_len,
-                                                                query_id_list=query_ids)
+                processed_output = self.data_object.postProcess(
+                    pred_output_tokens,
+                    input_seq_lens=input_len,
+                    query_id_list=query_ids,
+                )
 
             for i in range(len(qitem)):
                 n_tokens = processed_output[i].shape[0]
@@ -290,7 +345,7 @@ class SUT():
             self.model_path,
             device_map="auto",
             low_cpu_mem_usage=True,
-            torch_dtype=self.amp_dtype
+            torch_dtype=self.amp_dtype,
         )
         print("Loaded model")
 
@@ -301,16 +356,17 @@ class SUT():
             self.model = self.model.to(self.device)
 
         self.model.eval()
-        try: # for systems with low ram, the below command gives error as some part is offloaded to disk
+        try:  # for systems with low ram, the below command gives error as some part is offloaded to disk
             self.model = self.model.to(memory_format=torch.channels_last)
-        except:
+        except BaseException:
             pass
 
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_path,
             model_max_length=1024,
             padding_side="left",
-            use_fast=False,)
+            use_fast=False,
+        )
 
         self.tokenizer.pad_token = self.tokenizer.eos_token
         print("Loaded tokenizer")
@@ -326,14 +382,14 @@ class SUT():
         raise NotImplementedError
 
     def issue_queries(self, query_samples):
-        """ Receives samples from loadgen and adds them to queue. Users may choose to batch here"""
+        """Receives samples from loadgen and adds them to queue. Users may choose to batch here"""
 
         list_prompts_tokens = []
         list_prompts_attn_masks = []
 
         print(f"IssueQuery started with {len(query_samples)} samples")
         while len(query_samples) > 0:
-            self.query_queue.put(query_samples[:self.batch_size])
+            self.query_queue.put(query_samples[: self.batch_size])
             query_samples = query_samples[self.batch_size:]
         print(f"IssueQuery done")
 
@@ -345,8 +401,15 @@ class SUT():
 
 
 class SUTServer(SUT):
-    def __init__(self, model_path=None, dtype="bfloat16", device="cpu",
-                 total_sample_count=24576, dataset_path=None, workers=1):
+    def __init__(
+        self,
+        model_path=None,
+        dtype="bfloat16",
+        device="cpu",
+        total_sample_count=24576,
+        dataset_path=None,
+        workers=1,
+    ):
 
         super().__init__(
             model_path=model_path,
@@ -354,7 +417,8 @@ class SUTServer(SUT):
             device=device,
             total_sample_count=total_sample_count,
             dataset_path=dataset_path,
-            workers=workers)
+            workers=workers,
+        )
 
         self.first_token_queue = queue.Queue()
 
@@ -382,14 +446,15 @@ class SUTServer(SUT):
 
             first_tokens, response_id = first_token_item
 
-            response_data = array.array("B", np.array(
-                first_tokens, np.int32).tobytes())
+            response_data = array.array(
+                "B", np.array(
+                    first_tokens, np.int32).tobytes())
             bi = response_data.buffer_info()
             response = [lg.QuerySampleResponse(response_id, bi[0], bi[1])]
             lg.FirstTokenComplete(response)
 
     def process_queries(self):
-        """Processor of the queued queries. User may choose to add batching logic """
+        """Processor of the queued queries. User may choose to add batching logic"""
         while True:
 
             qitem = self.query_queue.get()
@@ -407,34 +472,43 @@ class SUTServer(SUT):
                 self.first_token_queue,
                 tokens_cache=tokens_cache,
                 is_first_token=True,
-                response_ids=[
-                    qitem.id])
-            
-            logits_processor = LogitsProcessorList([StopAfterSequence(self.tokenizer.eos_token_id, device=self.device)])
+                response_ids=[qitem.id],
+            )
+
+            logits_processor = LogitsProcessorList(
+                [StopAfterSequence(
+                    self.tokenizer.eos_token_id, device=self.device)]
+            )
             if dataset == "MBXP":
-                _ = self.model.generate(input_ids=input_ids_tensor,
-                                        attention_mask=input_masks_tensor,
-                                        pad_token_id=self.tokenizer.pad_token_id,
-                                        streamer=tokens_streamer,
-                                        logits_processor=logits_processor,
-                                        **gen_kwargs
-                                        )
+                _ = self.model.generate(
+                    input_ids=input_ids_tensor,
+                    attention_mask=input_masks_tensor,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    streamer=tokens_streamer,
+                    logits_processor=logits_processor,
+                    **gen_kwargs,
+                )
             else:
-                _ = self.model.generate(input_ids=input_ids_tensor,
-                                        attention_mask=input_masks_tensor,
-                                        pad_token_id=self.tokenizer.pad_token_id,
-                                        streamer=tokens_streamer,
-                                        **gen_kwargs
-                                        )
+                _ = self.model.generate(
+                    input_ids=input_ids_tensor,
+                    attention_mask=input_masks_tensor,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                    streamer=tokens_streamer,
+                    **gen_kwargs,
+                )
 
             output_tokens = tokens_streamer.get_out_tokens()
             n_tokens = len(output_tokens)
             response_array = array.array(
-                "B", np.array(
-                    output_tokens, np.int32).tobytes())
+                "B", np.array(output_tokens, np.int32).tobytes()
+            )
             bi = response_array.buffer_info()
-            response = [lg.QuerySampleResponse(
-                qitem.id, bi[0], bi[1], n_tokens)]
+            response = [
+                lg.QuerySampleResponse(
+                    qitem.id,
+                    bi[0],
+                    bi[1],
+                    n_tokens)]
             lg.QuerySamplesComplete(response)
 
     def issue_queries(self, query_samples):

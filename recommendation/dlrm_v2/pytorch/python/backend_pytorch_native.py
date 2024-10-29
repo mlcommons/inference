@@ -1,6 +1,7 @@
 """
 pytoch native backend for dlrm
 """
+
 import os
 import torch
 import backend
@@ -68,7 +69,7 @@ class BackendPytorchNative(backend.Backend):
             self.dist_backend = "nccl"
             # torch.cuda.set_device(self.device)
         else:
-            #os.environ["WORLD_SIZE"] = "8"
+            # os.environ["WORLD_SIZE"] = "8"
             self.device: torch.device = torch.device("cpu")
             self.dist_backend = "gloo"
 
@@ -82,9 +83,12 @@ class BackendPytorchNative(backend.Backend):
         # debug prints
         # print(model_path, inputs, outputs)
         print(f"Loading model from {model_path}")
-        
+
         print("Initializing embeddings...")
-        dist.init_process_group(backend=self.dist_backend, rank=0, world_size=1)
+        dist.init_process_group(
+            backend=self.dist_backend,
+            rank=0,
+            world_size=1)
         eb_configs = [
             EmbeddingBagConfig(
                 name=f"t_{feature_name}",
@@ -121,9 +125,7 @@ class BackendPytorchNative(backend.Backend):
             model, get_default_sharders(), dist.GroupMember.WORLD
         )
         self.model = DistributedModelParallel(
-            module=model,
-            device=self.device,
-            plan=plan
+            module=model, device=self.device, plan=plan
         )
         # path_to_sharded_weights should have 2 subdirectories - batched and sharded
         # If we need to load the weights on different device or world size, we would need to change the process
@@ -133,26 +135,24 @@ class BackendPytorchNative(backend.Backend):
         if not self.debug:
             print("Loading model weights...")
             from torchsnapshot import Snapshot
+
             snapshot = Snapshot(path=model_path)
             snapshot.restore(app_state={"model": self.model})
 
-            ### To understand the keys in snapshot, you can look at following code snippet.
+            # To understand the keys in snapshot, you can look at following code snippet.
             # d = snapshot.get_manifest()
             # for k, v in d.items():
             #     print(k, v)
         self.model.eval()
         return self
 
-    def predict(self, samples, ids = None):
+    def predict(self, samples, ids=None):
         outputs = []
         for batch in samples:
             batch_in = batch.to(self.device)
             with torch.no_grad():
-                _, (_, out, _) = self.model(
-                    batch_in
-                )
+                _, (_, out, _) = self.model(batch_in)
                 out = torch.sigmoid(out)
                 out = torch.reshape(out, (-1,))
                 outputs.append(out)
         return outputs
-

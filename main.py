@@ -1,8 +1,23 @@
 def define_env(env):
 
     @env.macro
-    def mlperf_inference_implementation_readme(spaces, model, implementation, *, implementation_tips=True, setup_tips=True, run_tips=True, skip_test_query_count=False, fixed_scenarios=[
-    ], devices=[], frameworks=[], categories=[], extra_variation_tags="", extra_input_string="", extra_docker_input_string=""):
+    def mlperf_inference_implementation_readme(
+        spaces,
+        model,
+        implementation,
+        *,
+        implementation_tips=True,
+        setup_tips=True,
+        run_tips=True,
+        skip_test_query_count=False,
+        fixed_scenarios=[],
+        devices=[],
+        frameworks=[],
+        categories=[],
+        extra_variation_tags="",
+        extra_input_string="",
+        extra_docker_input_string="",
+    ):
         pre_space = ""
 
         for i in range(1, spaces):
@@ -59,11 +74,27 @@ def define_env(env):
                 content += f"\n{pre_space}!!! tip\n\n"
                 content += f"{pre_space}    - Intel MLPerf inference implementation is available only for datacenter category and has been tested only on a limited number of systems. Most of the benchmarks using Intel implementation require at least Intel Sapphire Rapids or higher CPU generation.\n\n"
 
-            if model not in ["bert-99", "bert-99.9", "gptj-99", "gptj-99.9", "resnet50",
-                             "retinanet", "3d-unet-99", "3d-unet-99.9", "dlrm-v2-99", "dlrm-v2-99.9", "sdxl"]:
+            if model not in [
+                "bert-99",
+                "bert-99.9",
+                "gptj-99",
+                "gptj-99.9",
+                "resnet50",
+                "retinanet",
+                "3d-unet-99",
+                "3d-unet-99.9",
+                "dlrm-v2-99",
+                "dlrm-v2-99.9",
+                "sdxl",
+            ]:
                 return pre_space + "    WIP"
-            if model in ["bert-99", "bert-99.9",
-                         "retinanet", "3d-unet-99", "3d-unet-99.9"]:
+            if model in [
+                "bert-99",
+                "bert-99.9",
+                "retinanet",
+                "3d-unet-99",
+                "3d-unet-99.9",
+            ]:
                 code_version = "r4.0"
             devices = ["CPU"]
             frameworks = ["Pytorch"]
@@ -91,7 +122,11 @@ def define_env(env):
         if not categories:
             if model.lower() == "bert-99.9":
                 categories = ["Datacenter"]
-            elif "dlrm" in model.lower() or "llama2" in model.lower() or "mixtral" in model.lower():
+            elif (
+                "dlrm" in model.lower()
+                or "llama2" in model.lower()
+                or "mixtral" in model.lower()
+            ):
                 categories = ["Datacenter"]
             else:
                 categories = ["Edge", "Datacenter"]
@@ -113,7 +148,7 @@ def define_env(env):
                 scenarios = [
                     scenario for scenario in scenarios if scenario in fixed_scenarios]
 
-            content += f"{pre_space}=== \"{category.lower()}\"\n\n"
+            content += f'{pre_space}=== "{category.lower()}"\n\n'
 
             cur_space = pre_space + "    "
             scenarios_string = ", ".join(scenarios)
@@ -122,7 +157,7 @@ def define_env(env):
 
             for framework in frameworks:
                 cur_space1 = cur_space + "    "
-                content += f"{cur_space}=== \"{framework}\"\n"
+                content += f'{cur_space}=== "{framework}"\n'
                 content += f"{cur_space1}#### {framework} framework\n\n"
 
                 for device in devices:
@@ -138,31 +173,43 @@ def define_env(env):
 
                     # minimum system requirements
                     content += get_min_system_requirements(
-                        cur_space2, model, implementation, device)
+                        cur_space2, model, implementation, device
+                    )
 
                     # to select the execution environments(currently Docker and
                     # Native)
                     for execution_env in execution_envs:
-                        if (device == "ROCm" or implementation ==
-                                "qualcomm") and execution_env == "Docker":
+                        if (
+                            device == "ROCm" or implementation == "qualcomm"
+                        ) and execution_env == "Docker":
                             continue  # docker not currently supported for Qualcomm implementation and ROCm device
                         if implementation == "nvidia" and execution_env == "Native":
                             continue  # Nvidia implementation only supports execution through docker
-                        content += f"{cur_space2}=== \"{execution_env}\"\n"
+                        content += f'{cur_space2}=== "{execution_env}"\n'
                         content += f"{cur_space3}###### {execution_env} Environment\n\n"
                         # ref to cm installation
                         content += f"{cur_space3}Please refer to the [installation page](site:inference/install/) to install CM for running the automated benchmark commands.\n\n"
                         test_query_count = get_test_query_count(
-                            model, implementation, device.lower())
-                        if device.lower() == "cuda" and execution_env.lower() == "native":
+
+                            model, implementation, device.lower()
+                        )
+                        if (
+                            device.lower() == "cuda"
+                            and execution_env.lower() == "native"
+                        ):
                             content += f"\n{cur_space3}!!! tip\n\n"
                             content += f"{cur_space3}    - It is advisable to use the commands in the Docker tab for CUDA. Run the below native command only if you are already on a CUDA setup with cuDNN and TensorRT installed.\n\n"
 
-                        if "99.9" not in model:  # not showing docker command as it is already done for the 99% variant
+                        if (
+                            "99.9" not in model
+                        ):  # not showing docker command as it is already done for the 99% variant
                             if implementation == "neuralmagic":
-                                content += f"{cur_space3}####### Run the Inference Server\n"
+                                content += (
+                                    f"{cur_space3}####### Run the Inference Server\n"
+                                )
                                 content += get_inference_server_run_cmd(
-                                    spaces + 16, implementation)
+                                    spaces + 16, implementation
+                                )
                                 if run_tips:
                                     # tips regarding the running of nural magic
                                     # server
@@ -185,9 +232,12 @@ def define_env(env):
                                 code_version,
                                 extra_variation_tags,
                                 extra_input_string,
-                                extra_docker_input_string)
+                                extra_docker_input_string,
+                            )
 
-                            if execution_env == "Native":  # Native implementation steps through virtual environment
+                            if (
+                                execution_env == "Native"
+                            ):  # Native implementation steps through virtual environment
                                 content += f"{cur_space3}####### Setup a virtual environment for Python\n"
                                 content += get_venv_command(spaces + 16)
                                 content += f"{cur_space3}####### Performance Estimation for Offline Scenario\n"
@@ -200,7 +250,12 @@ def define_env(env):
                             else:  # Docker implementation steps
                                 content += f"{cur_space3}####### Docker Container Build and Performance Estimation for Offline Scenario\n"
                                 docker_info = get_docker_info(
-                                    spaces + 16, model, implementation, device, setup_tips)
+                                    spaces + 16,
+                                    model,
+                                    implementation,
+                                    device,
+                                    setup_tips,
+                                )
                                 content += docker_info
 
                                 content += setup_run_cmd
@@ -208,7 +263,7 @@ def define_env(env):
                                 if len(scenarios) == 1:
                                     scenario_text = f"""the {scenarios[0]} scenario"""
                                 else:
-                                    scenario_text = "each scenario"""
+                                    scenario_text = "each scenario" ""
                                 content += f"{cur_space3}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for {scenario_text}.\n\n"
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
@@ -241,9 +296,8 @@ def define_env(env):
                                 True,
                                 skip_test_query_count,
                                 scenarios,
-                                code_version).replace(
-                                "--docker ",
-                                "")
+                                code_version,
+                            ).replace("--docker ", "")
                             content += f"{cur_space3}The above command should do a test run of Offline scenario and record the estimated offline_target_qps.\n\n"
 
                         run_suffix = ""
@@ -255,7 +309,10 @@ def define_env(env):
                             run_suffix += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPUs with supported configs in CM are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`. For other GPUs, default configuration as per the GPU memory will be used.\n"
                         run_suffix += f"{cur_space3}</details>\n\n"
 
-                        if "bert" in model.lower() and framework.lower() == "deepsparse":
+                        if (
+                            "bert" in model.lower()
+                            and framework.lower() == "deepsparse"
+                        ):
                             run_suffix += f"{cur_space3}<details>\n"
                             run_suffix += f"{cur_space3}<summary> Please click here to view available generic model stubs for bert deepsparse</summary>\n\n"
                             run_suffix += f"{cur_space3}* **obert-large-pruned95_quant-none-vnni:** zoo:nlp/question_answering/obert-large/pytorch/huggingface/squad/pruned95_quant-none-vnni\n\n"
@@ -291,7 +348,8 @@ def define_env(env):
                                 scenarios,
                                 code_version,
                                 extra_variation_tags,
-                                extra_input_string)
+                                extra_input_string,
+                            )
                             content += run_cmd
                             # content += run_suffix
 
@@ -312,15 +370,18 @@ def define_env(env):
                                 scenarios,
                                 code_version,
                                 extra_variation_tags,
-                                extra_input_string)
+                                extra_input_string,
+                            )
                             content += run_cmd
                             content += run_suffix
 
         readme_prefix = get_readme_prefix(
-            spaces, model, implementation, extra_variation_tags)
+            spaces, model, implementation, extra_variation_tags
+        )
 
         readme_suffix = get_readme_suffix(
-            spaces, model, implementation, extra_variation_tags)
+            spaces, model, implementation, extra_variation_tags
+        )
 
         return readme_prefix + content + readme_suffix
 
@@ -345,8 +406,9 @@ def define_env(env):
         min_sys_req_content += f"{spaces}<details>\n"
         min_sys_req_content += f"{spaces}<summary>Please click here to see the minimum system requirements for running the benchmark</summary>\n\n"
         # device memory
-        if device.lower() == "cuda" and (implementation.lower() ==
-                                         "nvidia" or implementation.lower() == "reference"):
+        if device.lower() == "cuda" and (
+            implementation.lower() == "nvidia" or implementation.lower() == "reference"
+        ):
             if implementation.lower() == "nvidia":
                 if "dlrm" in model:
                     device_memory = "24GB"
@@ -385,7 +447,9 @@ def define_env(env):
         # System memory
         if "dlrm" in model:
             system_memory = "512GB"
-            min_sys_req_content += f"{spaces}* **System Memory(RAM+SWAP)**: {system_memory}\n\n"
+            min_sys_req_content += (
+                f"{spaces}* **System Memory(RAM+SWAP)**: {system_memory}\n\n"
+            )
         min_sys_req_content += f"{spaces}</details>\n"
         return min_sys_req_content
 
@@ -461,18 +525,35 @@ def define_env(env):
                 readme_suffix += f"{pre_space}* Please see [mobilenets.md](mobilenets.md) for running mobilenet models for Image Classification."
         return readme_suffix
 
-    def get_run_cmd_extra(f_pre_space, model, implementation, device,
-                          scenario, scenarios=[], run_tips=True, extra_input_string=""):
+    def get_run_cmd_extra(
+        f_pre_space,
+        model,
+        implementation,
+        device,
+        scenario,
+        scenarios=[],
+        run_tips=True,
+        extra_input_string="",
+    ):
         extra_content = ""
         f_pre_space += ""
         if scenario == "Server" or (
-                scenario == "All Scenarios" and "Server" in scenarios):
+            scenario == "All Scenarios" and "Server" in scenarios
+        ):
             extra_content += f"{f_pre_space}    * `<SERVER_TARGET_QPS>` must be determined manually. It is usually around 80% of the Offline QPS, but on some systems, it can drop below 50%. If a higher value is specified, the latency constraint will not be met, and the run will be considered invalid.\n"
-        if implementation == "reference" and model in [
-                "sdxl", "gptj-99", "gptj-99.9"] and device in ["cuda", "rocm"] and "precision" not in extra_input_string:
+        if (
+            implementation == "reference"
+            and model in ["sdxl", "gptj-99", "gptj-99.9"]
+            and device in ["cuda", "rocm"]
+            and "precision" not in extra_input_string
+        ):
             extra_content += f"{f_pre_space}    * `--precision=float16` can help run on GPUs with less RAM / gives better performance \n"
-        if implementation == "reference" and model in [
-                "sdxl", "gptj-99", "gptj-99.9"] and device in ["cpu"] and "precision" not in extra_input_string:
+        if (
+            implementation == "reference"
+            and model in ["sdxl", "gptj-99", "gptj-99.9"]
+            and device in ["cpu"]
+            and "precision" not in extra_input_string
+        ):
             extra_content += f"{f_pre_space}    * `--precision=bfloat16` can give better performance \n"
         if "gptj" in model and implementation == "reference":
             extra_content += f"{f_pre_space}    * `--beam-size=1` Beam size of 4 is mandatory for a closed division submission but reducing the beam size can help in running the model on GPUs with lower device memory\n"
@@ -485,8 +566,24 @@ def define_env(env):
             return ""
 
     @env.macro
-    def mlperf_inference_run_command(spaces, model, implementation, framework, category, scenario, device="cpu", execution_mode="test", test_query_count="20",
-                                     docker=False, skip_test_query_count=False, scenarios=[], code_version="r4.1-dev", extra_variation_tags="", extra_input_string="", extra_docker_input_string=""):
+    def mlperf_inference_run_command(
+        spaces,
+        model,
+        implementation,
+        framework,
+        category,
+        scenario,
+        device="cpu",
+        execution_mode="test",
+        test_query_count="20",
+        docker=False,
+        skip_test_query_count=False,
+        scenarios=[],
+        code_version="r4.1-dev",
+        extra_variation_tags="",
+        extra_input_string="",
+        extra_docker_input_string="",
+    ):
         pre_space = ""
         for i in range(1, spaces):
             pre_space = pre_space + " "
@@ -501,8 +598,11 @@ def define_env(env):
             scenario_option = f"\\\n{pre_space} --scenario={scenario}"
 
         if scenario == "Server" or (
-                scenario == "All Scenarios" and "Server" in scenarios):
-            scenario_option += f"\\\n{pre_space} --server_target_qps=<SERVER_TARGET_QPS>"
+            scenario == "All Scenarios" and "Server" in scenarios
+        ):
+            scenario_option += (
+                f"\\\n{pre_space} --server_target_qps=<SERVER_TARGET_QPS>"
+            )
 
         run_cmd_extra = get_run_cmd_extra(
             f_pre_space,
@@ -512,14 +612,19 @@ def define_env(env):
             scenario,
             scenarios,
             True,
-            extra_input_string)
+            extra_input_string,
+        )
 
         if docker:
             docker_cmd_suffix = f" \\\n{pre_space} --docker --quiet"
             if not skip_test_query_count:
-                docker_cmd_suffix += f" \\\n{pre_space} --test_query_count={test_query_count}"
+                docker_cmd_suffix += (
+                    f" \\\n{pre_space} --test_query_count={test_query_count}"
+                )
             if extra_docker_input_string != "" or extra_input_string != "":
-                docker_cmd_suffix += f" \\\n{pre_space} {extra_docker_input_string} {extra_input_string}"
+                docker_cmd_suffix += (
+                    f" \\\n{pre_space} {extra_docker_input_string} {extra_input_string}"
+                )
             if "bert" in model.lower() and framework == "deepsparse":
                 docker_cmd_suffix += f"\\\n{pre_space} --env.CM_MLPERF_NEURALMAGIC_MODEL_ZOO_STUB=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
             if "llama2-70b" in model.lower():
@@ -527,7 +632,9 @@ def define_env(env):
                     docker_cmd_suffix += f" \\\n{pre_space} --tp_size=2"
                     docker_cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKLE_FILE>"
                 elif implementation == "neuralmagic":
-                    docker_cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
+                    docker_cmd_suffix += (
+                        f" \\\n{pre_space} --api_server=http://localhost:8000"
+                    )
                     docker_cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"
                     docker_cmd_suffix += f" \\\n{pre_space} --adr.mlperf-implementation.tags=_repo.https://github.com/neuralmagic/inference,_branch.vllm"
 

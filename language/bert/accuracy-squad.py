@@ -82,8 +82,7 @@ dtype_map = {
     "int64": np.int64,
     "float16": np.float16,
     "float32": np.float32,
-    "float64": np.float64,
-}
+    "float64": np.float64}
 
 
 def get_final_text(pred_text, orig_text, do_lower_case):

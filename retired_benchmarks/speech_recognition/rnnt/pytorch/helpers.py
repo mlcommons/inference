@@ -20,6 +20,7 @@ from metrics import word_error_rate
 class Optimization(Enum):
     """Various levels of Optimization.
     WARNING: This might have effect on model accuracy."""
+
     nothing = 0
     mxprO0 = 1
     mxprO1 = 2
@@ -27,10 +28,12 @@ class Optimization(Enum):
     mxprO3 = 4
 
 
-AmpOptimizations = {Optimization.mxprO0: "O0",
-                    Optimization.mxprO1: "O1",
-                    Optimization.mxprO2: "O2",
-                    Optimization.mxprO3: "O3"}
+AmpOptimizations = {
+    Optimization.mxprO0: "O0",
+    Optimization.mxprO1: "O1",
+    Optimization.mxprO2: "O2",
+    Optimization.mxprO3: "O3",
+}
 
 
 def add_blank_label(labels):
@@ -53,7 +56,7 @@ def __rnnt_decoder_predictions_tensor(tensor, labels):
     labels_map = dict([(i, labels[i]) for i in range(len(labels))])
     # iterate over batch
     for ind in range(len(tensor)):
-        hypothesis = ''.join([labels_map[c] for c in tensor[ind]])
+        hypothesis = "".join([labels_map[c] for c in tensor[ind]])
         hypotheses.append(hypothesis)
     return hypotheses
 
@@ -65,13 +68,14 @@ def __gather_predictions(predictions_list: list, labels: list) -> list:
     return results
 
 
-def __gather_transcripts(transcript_list: list, transcript_len_list: list,
-                         labels: list) -> list:
+def __gather_transcripts(
+    transcript_list: list, transcript_len_list: list, labels: list
+) -> list:
     results = []
     labels_map = dict([(i, labels[i]) for i in range(len(labels))])
     for i, t in enumerate(transcript_list):
         target = t.numpy().tolist()
-        reference = ''.join([labels_map[c] for c in target])
+        reference = "".join([labels_map[c] for c in target])
         results.append(reference)
     return results
 
@@ -85,17 +89,17 @@ def process_evaluation_batch(tensors: dict, global_vars: dict, labels: list):
         labels: A list of labels
     """
     for kv, v in tensors.items():
-        if kv.startswith('predictions'):
-            global_vars['predictions'] += __gather_predictions(
+        if kv.startswith("predictions"):
+            global_vars["predictions"] += __gather_predictions(
                 v, labels=labels)
-        elif kv.startswith('transcript_length'):
+        elif kv.startswith("transcript_length"):
             transcript_len_list = v
-        elif kv.startswith('transcript'):
+        elif kv.startswith("transcript"):
             transcript_list = v
 
-    global_vars['transcripts'] += __gather_transcripts(transcript_list,
-                                                       transcript_len_list,
-                                                       labels=labels)
+    global_vars["transcripts"] += __gather_transcripts(
+        transcript_list, transcript_len_list, labels=labels
+    )
 
 
 def process_evaluation_epoch(global_vars: dict, tag=None):
@@ -107,17 +111,18 @@ def process_evaluation_epoch(global_vars: dict, tag=None):
         wer: final word error rate
         loss: final loss
     """
-    hypotheses = global_vars['predictions']
-    references = global_vars['transcripts']
+    hypotheses = global_vars["predictions"]
+    references = global_vars["transcripts"]
 
     wer, scores, num_words = word_error_rate(
-        hypotheses=hypotheses, references=references)
+        hypotheses=hypotheses, references=references
+    )
     return wer
 
 
 def print_dict(d):
     maxLen = max([len(ii) for ii in d.keys()])
-    fmtString = '\t%' + str(maxLen) + 's : %s'
-    print('Arguments:')
+    fmtString = "\t%" + str(maxLen) + "s : %s"
+    print("Arguments:")
     for keyPair in sorted(d.items()):
         print(fmtString % keyPair)

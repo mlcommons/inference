@@ -22,6 +22,7 @@ import onnx
 import argparse
 import os
 import sys
+
 sys.path.insert(0, os.getcwd())
 
 
@@ -49,18 +50,23 @@ def get_args():
     """
     Args used for converting ONNX to TensorFlow model
     """
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
 
-    parser.add_argument("--model",
-                        default="build/model/3dunet_kits19_128x128x128.onnx",
-                        help="Path to the ONNX model")
-    parser.add_argument("--output_name",
-                        default="3dunet_kits19_128x128x128.tf",
-                        help="Name of output model")
-    parser.add_argument("--output_dir",
-                        default="build/model",
-                        help="Directory to save output model")
+    parser.add_argument(
+        "--model",
+        default="build/model/3dunet_kits19_128x128x128.onnx",
+        help="Path to the ONNX model",
+    )
+    parser.add_argument(
+        "--output_name",
+        default="3dunet_kits19_128x128x128.tf",
+        help="Name of output model",
+    )
+    parser.add_argument(
+        "--output_dir", default="build/model", help="Directory to save output model"
+    )
 
     args = parser.parse_args()
 

@@ -34,15 +34,24 @@ MILLI_SEC = 1000
 
 # the datasets we support
 SUPPORTED_DATASETS = {
-    "debug":
-        (multihot_criteo.MultihotCriteo, multihot_criteo.pre_process_criteo_dlrm, multihot_criteo.DlrmPostProcess(),
-         {"randomize": 'total', "memory_map": True}),
-    "multihot-criteo-sample":
-        (multihot_criteo.MultihotCriteo, multihot_criteo.pre_process_criteo_dlrm, multihot_criteo.DlrmPostProcess(),
-         {"randomize": 'total', "memory_map": True}),
-    "multihot-criteo":
-        (multihot_criteo.MultihotCriteo, multihot_criteo.pre_process_criteo_dlrm, multihot_criteo.DlrmPostProcess(),
-         {"randomize": 'total', "memory_map": True}),
+    "debug": (
+        multihot_criteo.MultihotCriteo,
+        multihot_criteo.pre_process_criteo_dlrm,
+        multihot_criteo.DlrmPostProcess(),
+        {"randomize": "total", "memory_map": True},
+    ),
+    "multihot-criteo-sample": (
+        multihot_criteo.MultihotCriteo,
+        multihot_criteo.pre_process_criteo_dlrm,
+        multihot_criteo.DlrmPostProcess(),
+        {"randomize": "total", "memory_map": True},
+    ),
+    "multihot-criteo": (
+        multihot_criteo.MultihotCriteo,
+        multihot_criteo.pre_process_criteo_dlrm,
+        multihot_criteo.DlrmPostProcess(),
+        {"randomize": "total", "memory_map": True},
+    ),
 }
 
 # pre-defined command line options so simplify things. They are used as defaults and can be
@@ -80,7 +89,7 @@ SUPPORTED_PROFILES = {
         "backend": "pytorch-native",
         "model": "dlrm",
         "max-batchsize": 2048,
-    }
+    },
 }
 
 SCENARIO_MAP = {
@@ -110,16 +119,18 @@ def get_args():
         required=True,
         help="path to the dataset")
     parser.add_argument(
-        "--profile",
-        choices=SUPPORTED_PROFILES.keys(),
-        help="standard profiles")
-    parser.add_argument("--scenario", default="SingleStream",
-                        help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())))
+        "--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles"
+    )
+    parser.add_argument(
+        "--scenario",
+        default="SingleStream",
+        help="mlperf benchmark scenario, one of " +
+        str(list(SCENARIO_MAP.keys())),
+    )
     parser.add_argument("--max-ind-range", type=int, default=-1)
     parser.add_argument(
-        "--max-batchsize",
-        type=int,
-        help="max batch size in a single inference")
+        "--max-batchsize", type=int, help="max batch size in a single inference"
+    )
     parser.add_argument("--output", help="test results")
     parser.add_argument("--inputs", help="model inputs (currently not used)")
     parser.add_argument("--outputs", help="model outputs (currently not used)")
@@ -137,13 +148,15 @@ def get_args():
     parser.add_argument(
         "--find-peak-performance",
         action="store_true",
-        help="enable finding peak performance pass")
+        help="enable finding peak performance pass",
+    )
 
     # file for user LoadGen settings such as target QPS
     parser.add_argument(
         "--user_conf",
         default="user.conf",
-        help="user config for user LoadGen settings such as target QPS")
+        help="user config for user LoadGen settings such as target QPS",
+    )
 
     # below will override mlperf rules compliant settings - don't use for
     # official submission
@@ -153,9 +166,8 @@ def get_args():
         help="duration in milliseconds (ms)")
     parser.add_argument("--target-qps", type=int, help="target/expected qps")
     parser.add_argument(
-        "--max-latency",
-        type=float,
-        help="mlperf max latency in pct tile")
+        "--max-latency", type=float, help="mlperf max latency in pct tile"
+    )
     parser.add_argument(
         "--count-samples",
         type=int,
@@ -168,33 +180,40 @@ def get_args():
         "--samples-per-query-multistream",
         default=8,
         type=int,
-        help="query length for multi-stream scenario (in terms of aggregated samples)")
+        help="query length for multi-stream scenario (in terms of aggregated samples)",
+    )
     # --samples-per-query-offline is equivalent to perf_sample_count
     parser.add_argument(
         "--samples-per-query-offline",
         type=int,
         default=2048,
-        help="query length for offline scenario (in terms of aggregated samples)")
+        help="query length for offline scenario (in terms of aggregated samples)",
+    )
     parser.add_argument(
         "--samples-to-aggregate-fix",
         type=int,
-        help="number of samples to be treated as one")
+        help="number of samples to be treated as one",
+    )
     parser.add_argument(
         "--samples-to-aggregate-min",
         type=int,
-        help="min number of samples to be treated as one in random query size")
+        help="min number of samples to be treated as one in random query size",
+    )
     parser.add_argument(
         "--samples-to-aggregate-max",
         type=int,
-        help="max number of samples to be treated as one in random query size")
+        help="max number of samples to be treated as one in random query size",
+    )
     parser.add_argument(
         "--samples-to-aggregate-quantile-file",
         type=str,
-        help="distribution quantile used to generate number of samples to be treated as one in random query size")
+        help="distribution quantile used to generate number of samples to be treated as one in random query size",
+    )
     parser.add_argument(
         "--samples-to-aggregate-trace-file",
         type=str,
-        default="dlrm_trace_of_aggregated_samples.txt")
+        default="dlrm_trace_of_aggregated_samples.txt",
+    )
     parser.add_argument("--numpy-rand-seed", type=int, default=123)
     parser.add_argument("--debug", action="store_true", default=False)
     args = parser.parse_args()
@@ -227,6 +246,7 @@ def get_backend(backend, dataset, use_gpu, debug):
     if backend == "pytorch-native":
         from backend_pytorch_native import BackendPytorchNative
         from backend_dist_pytorch_native import BackendDistPytorchNative
+
         n_cores = int(os.environ.get("WORLD_SIZE", 1))
         if n_cores > 1:
             if dataset == "debug":
@@ -239,7 +259,7 @@ def get_backend(backend, dataset, use_gpu, debug):
                     dense_arch_layer_sizes=[512, 256, 128],
                     over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
                     use_gpu=use_gpu,
-                    debug=True
+                    debug=True,
                 )
             elif dataset == "multihot-criteo-sample":
                 # 2. Syntetic multihot criteo sample
@@ -270,14 +290,15 @@ def get_backend(backend, dataset, use_gpu, debug):
                         590152,
                         12973,
                         108,
-                        36],
+                        36,
+                    ],
                     embedding_dim=128,
                     dcn_num_layers=3,
                     dcn_low_rank_dim=512,
                     dense_arch_layer_sizes=[512, 256, 128],
                     over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
                     use_gpu=use_gpu,
-                    debug=debug
+                    debug=debug,
                 )
             elif dataset == "multihot-criteo":
                 # 3. Syntetic multihot criteo
@@ -308,18 +329,20 @@ def get_backend(backend, dataset, use_gpu, debug):
                         590152,
                         12973,
                         108,
-                        36],
+                        36,
+                    ],
                     embedding_dim=128,
                     dcn_num_layers=3,
                     dcn_low_rank_dim=512,
                     dense_arch_layer_sizes=[512, 256, 128],
                     over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
                     use_gpu=use_gpu,
-                    debug=debug
+                    debug=debug,
                 )
             else:
                 raise ValueError(
-                    "only debug|multihot-criteo-sample|multihot-criteo dataset options are supported")
+                    "only debug|multihot-criteo-sample|multihot-criteo dataset options are supported"
+                )
         else:
             if dataset == "debug":
                 # 1. Syntetic debug dataset
@@ -331,7 +354,7 @@ def get_backend(backend, dataset, use_gpu, debug):
                     dense_arch_layer_sizes=[512, 256, 128],
                     over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
                     use_gpu=use_gpu,
-                    debug=True
+                    debug=True,
                 )
             elif dataset == "multihot-criteo-sample":
                 # 2. Syntetic multihot criteo sample
@@ -362,14 +385,15 @@ def get_backend(backend, dataset, use_gpu, debug):
                         590152,
                         12973,
                         108,
-                        36],
+                        36,
+                    ],
                     embedding_dim=128,
                     dcn_num_layers=3,
                     dcn_low_rank_dim=512,
                     dense_arch_layer_sizes=[512, 256, 128],
                     over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
                     use_gpu=use_gpu,
-                    debug=debug
+                    debug=debug,
                 )
             elif dataset == "multihot-criteo":
                 # 3. Syntetic multihot criteo
@@ -400,18 +424,20 @@ def get_backend(backend, dataset, use_gpu, debug):
                         590152,
                         12973,
                         108,
-                        36],
+                        36,
+                    ],
                     embedding_dim=128,
                     dcn_num_layers=3,
                     dcn_low_rank_dim=512,
                     dense_arch_layer_sizes=[512, 256, 128],
                     over_arch_layer_sizes=[1024, 1024, 512, 256, 1],
                     use_gpu=use_gpu,
-                    debug=debug
+                    debug=debug,
                 )
             else:
                 raise ValueError(
-                    "only debug|multihot-criteo-sample|multihot-criteo dataset options are supported")
+                    "only debug|multihot-criteo-sample|multihot-criteo dataset options are supported"
+                )
 
     else:
         raise ValueError("unknown backend: " + backend)
@@ -456,7 +482,8 @@ class RunnerBase:
         try:
             results = self.model.predict(qitem.features, qitem.content_id)
             processed_results = self.post_process(
-                results, qitem.batch_T, self.result_dict)
+                results, qitem.batch_T, self.result_dict
+            )
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
             self.result_timing.append(time.time() - qitem.start)
@@ -476,8 +503,10 @@ class RunnerBase:
                 # print("s,e:",s_idx,e_idx, len(processed_results))
                 s_idx = qitem.idx_offsets[idx]
                 e_idx = qitem.idx_offsets[idx + 1]
-                response_array = array.array("B", np.array(
-                    processed_results[s_idx:e_idx], np.float32).tobytes())
+                response_array = array.array(
+                    "B", np.array(
+                        processed_results[s_idx:e_idx], np.float32).tobytes()
+                )
                 response_array_refs.append(response_array)
                 bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
@@ -506,7 +535,9 @@ class RunnerBase:
                 samples, idx_offsets = self.ds.get_samples(idx[i:ie])
                 batch_T = [self.ds.get_labels(sample) for sample in samples]
                 self.run_one_item(
-                    Item(query_id[i:ie], idx[i:ie], samples, batch_T, idx_offsets))
+                    Item(query_id[i:ie], idx[i:ie],
+                         samples, batch_T, idx_offsets)
+                )
 
     def finish(self):
         pass
@@ -556,7 +587,9 @@ class QueueRunner(RunnerBase):
                 samples, idx_offsets = self.ds.get_samples(idx)
                 batch_T = [self.ds.get_labels(sample) for sample in samples]
                 self.tasks.put(
-                    Item(query_id[i:ie], idx[i:ie], samples, batch_T, idx_offsets))
+                    Item(query_id[i:ie], idx[i:ie],
+                         samples, batch_T, idx_offsets)
+                )
 
     def finish(self):
         # exit all threads
@@ -566,12 +599,14 @@ class QueueRunner(RunnerBase):
             worker.join()
 
 
-def add_results(final_results, name, result_dict,
-                result_list, took, show_accuracy=False):
-    percentiles = [50., 80., 90., 95., 99., 99.9]
+def add_results(
+    final_results, name, result_dict, result_list, took, show_accuracy=False
+):
+    percentiles = [50.0, 80.0, 90.0, 95.0, 99.0, 99.9]
     buckets = np.percentile(result_list, percentiles).tolist()
-    buckets_str = ",".join(["{}:{:.4f}".format(p, b)
-                           for p, b in zip(percentiles, buckets)])
+    buckets_str = ",".join(
+        ["{}:{:.4f}".format(p, b) for p, b in zip(percentiles, buckets)]
+    )
 
     if result_dict["total"] == 0:
         result_dict["total"] = len(result_list)
@@ -588,19 +623,27 @@ def add_results(final_results, name, result_dict,
     }
     acc_str = ""
     if show_accuracy:
-        result["accuracy"] = 100. * result_dict["good"] / result_dict["total"]
+        result["accuracy"] = 100.0 * result_dict["good"] / result_dict["total"]
         acc_str = ", acc={:.3f}%".format(result["accuracy"])
         if "roc_auc" in result_dict:
-            result["roc_auc"] = 100. * result_dict["roc_auc"]
+            result["roc_auc"] = 100.0 * result_dict["roc_auc"]
             acc_str += ", auc={:.3f}%".format(result["roc_auc"])
 
     # add the result to the result dict
     final_results[name] = result
 
     # to stdout
-    print("{} qps={:.2f}, mean={:.4f}, time={:.3f}{}, queries={}, tiles={}".format(
-        name, result["qps"], result["mean"], took, acc_str,
-        len(result_list), buckets_str))
+    print(
+        "{} qps={:.2f}, mean={:.4f}, time={:.3f}{}, queries={}, tiles={}".format(
+            name,
+            result["qps"],
+            result["mean"],
+            took,
+            acc_str,
+            len(result_list),
+            buckets_str,
+        )
+    )
 
 
 def main():
@@ -620,18 +663,47 @@ def main():
     wanted_dataset, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
 
     # --count-samples can be used to limit the number of samples used for testing
-    ds = wanted_dataset(num_embeddings_per_feature=[40000000, 39060, 17295, 7424, 20265, 3, 7122, 1543, 63, 40000000, 3067956, 405282, 10, 2209, 11938, 155, 4, 976, 14, 40000000, 40000000, 40000000, 590152, 12973, 108, 3],
-                        data_path=args.dataset_path,
-                        name=args.dataset,
-                        pre_process=pre_proc,  # currently an identity function
-                        count=args.count_samples,
-                        samples_to_aggregate_fix=args.samples_to_aggregate_fix,
-                        samples_to_aggregate_min=args.samples_to_aggregate_min,
-                        samples_to_aggregate_max=args.samples_to_aggregate_max,
-                        samples_to_aggregate_quantile_file=args.samples_to_aggregate_quantile_file,
-                        samples_to_aggregate_trace_file=args.samples_to_aggregate_trace_file,
-                        max_ind_range=args.max_ind_range,
-                        **kwargs)
+    ds = wanted_dataset(
+        num_embeddings_per_feature=[
+            40000000,
+            39060,
+            17295,
+            7424,
+            20265,
+            3,
+            7122,
+            1543,
+            63,
+            40000000,
+            3067956,
+            405282,
+            10,
+            2209,
+            11938,
+            155,
+            4,
+            976,
+            14,
+            40000000,
+            40000000,
+            40000000,
+            590152,
+            12973,
+            108,
+            3,
+        ],
+        data_path=args.dataset_path,
+        name=args.dataset,
+        pre_process=pre_proc,  # currently an identity function
+        count=args.count_samples,
+        samples_to_aggregate_fix=args.samples_to_aggregate_fix,
+        samples_to_aggregate_min=args.samples_to_aggregate_min,
+        samples_to_aggregate_max=args.samples_to_aggregate_max,
+        samples_to_aggregate_quantile_file=args.samples_to_aggregate_quantile_file,
+        samples_to_aggregate_trace_file=args.samples_to_aggregate_trace_file,
+        max_ind_range=args.max_ind_range,
+        **kwargs
+    )
     # load model to backend
     model = backend.load(
         args.model_path,
@@ -672,15 +744,12 @@ def main():
         lg.TestScenario.SingleStream: RunnerBase,
         lg.TestScenario.MultiStream: QueueRunner,
         lg.TestScenario.Server: QueueRunner,
-        lg.TestScenario.Offline: QueueRunner
+        lg.TestScenario.Offline: QueueRunner,
     }
 
     runner = runner_map[scenario](
-        model,
-        ds,
-        args.threads,
-        post_proc=post_proc,
-        max_batchsize=args.max_batchsize)
+        model, ds, args.threads, post_proc=post_proc, max_batchsize=args.max_batchsize
+    )
 
     def issue_queries(query_samples):
         runner.enqueue(query_samples)
@@ -722,11 +791,12 @@ def main():
             args.max_latency * NANO_SEC)
 
     sut = lg.ConstructSUT(issue_queries, flush_queries)
-    qsl = lg.ConstructQSL(count,
-                          min(count,
-                              args.samples_per_query_offline),
-                          ds.load_query_samples,
-                          ds.unload_query_samples)
+    qsl = lg.ConstructQSL(
+        count,
+        min(count, args.samples_per_query_offline),
+        ds.load_query_samples,
+        ds.unload_query_samples,
+    )
 
     log.info("starting {}".format(scenario))
     result_dict = {
@@ -745,14 +815,20 @@ def main():
     if args.accuracy:
         post_proc.finalize(result_dict, ds, output_dir=args.output)
 
-    add_results(final_results, "{}".format(scenario),
-                result_dict, last_timeing, time.time() - ds.last_loaded, args.accuracy)
+    add_results(
+        final_results,
+        "{}".format(scenario),
+        result_dict,
+        last_timeing,
+        time.time() - ds.last_loaded,
+        args.accuracy,
+    )
 
     runner.finish()
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)
     # If multiple subprocesses are running the model send a signal to stop them
-    if (int(os.environ.get("WORLD_SIZE", 1)) > 1):
+    if int(os.environ.get("WORLD_SIZE", 1)) > 1:
         backend.predict(None, None)
 
     #

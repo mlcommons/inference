@@ -32,8 +32,9 @@ def get_args():
         "--seed", type=int, default=2023, help="Seed to choose the dataset"
     )
     parser.add_argument(
-        "--keep-raw", action="store_true", help="Keep raw folder"
-    )
+        "--keep-raw",
+        action="store_true",
+        help="Keep raw folder")
 
     args = parser.parse_args()
     return args
@@ -42,10 +43,17 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
     dataset_dir = os.path.abspath(args.dataset_dir)
-    calibration_dir = args.calibration_dir if args.calibration_dir is not None else os.path.join(os.path.dirname(__file__), "..", "..", "calibration", "COCO-2014")
-    
+    calibration_dir = (
+        args.calibration_dir
+        if args.calibration_dir is not None
+        else os.path.join(
+            os.path.dirname(__file__), "..", "..", "calibration", "COCO-2014"
+        )
+    )
+
     # Check if raw annotations file already exist
-    if not os.path.exists(f"{dataset_dir}/raw/annotations/captions_train2014.json"):
+    if not os.path.exists(
+            f"{dataset_dir}/raw/annotations/captions_train2014.json"):
         # Download annotations
         os.makedirs(f"{dataset_dir}/raw/", exist_ok=True)
         os.makedirs(f"{dataset_dir}/download_aux/", exist_ok=True)
@@ -68,19 +76,24 @@ if __name__ == "__main__":
     df_annotations = pd.DataFrame(annotations)
     df_images = pd.DataFrame(images)
 
-    # Calibration images 
+    # Calibration images
     df_annotations = df_annotations.drop_duplicates(
-        subset=["image_id"], keep="first"
-    )
+        subset=["image_id"], keep="first")
     # Sort, shuffle and choose the final dataset
     df_annotations = df_annotations.sort_values(by=["id"])
-    df_annotations = df_annotations.sample(frac=1, random_state=args.seed).reset_index(drop=True)
+    df_annotations = df_annotations.sample(frac=1, random_state=args.seed).reset_index(
+        drop=True
+    )
     df_annotations = df_annotations.iloc[: args.max_images]
-    df_annotations['caption'] = df_annotations['caption'].apply(lambda x: x.replace('\n', '').strip())
+    df_annotations["caption"] = df_annotations["caption"].apply(
+        lambda x: x.replace("\n", "").strip()
+    )
     df_annotations = (
         df_annotations.merge(
-            df_images, how="inner", left_on="image_id", right_on="id"
-        )
+            df_images,
+            how="inner",
+            left_on="image_id",
+            right_on="id")
         .drop(["id_y"], axis=1)
         .rename(columns={"id_x": "id"})
         .sort_values(by=["id"])
@@ -92,4 +105,3 @@ if __name__ == "__main__":
         f.write(s)
     # Remove Folder
     os.system(f"rm -rf {dataset_dir}")
-

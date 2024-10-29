@@ -22,6 +22,7 @@ import mlperf_loadgen as lg
 import argparse
 import os
 import sys
+
 sys.path.insert(0, os.getcwd())
 sys.path.insert(0, os.path.join(os.getcwd(), "..", "..", "lon"))
 
@@ -29,33 +30,60 @@ sys.path.insert(0, os.path.join(os.getcwd(), "..", "..", "lon"))
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--backend", choices=["tf", "pytorch", "onnxruntime", "tf_estimator", "ray"], default="tf", help="Backend")
-    parser.add_argument("--scenario", choices=["SingleStream", "Offline",
-                                               "Server", "MultiStream"], default="Offline", help="Scenario")
-    parser.add_argument("--accuracy", action="store_true",
-                        help="enable accuracy pass")
-    parser.add_argument("--quantized", action="store_true",
-                        help="use quantized model (only valid for onnxruntime backend)")
-    parser.add_argument("--profile", action="store_true",
-                        help="enable profiling (only valid for onnxruntime backend)")
-    parser.add_argument("--user_conf", default="user.conf",
-                        help="user config for user LoadGen settings such as target QPS")
-    parser.add_argument("--audit_conf", default="audit.conf",
-                        help="audit config for LoadGen settings during compliance runs")
-    parser.add_argument("--max_examples", type=int,
-                        help="Maximum number of examples to consider (not limited by default)")
+        "--backend",
+        choices=["tf", "pytorch", "onnxruntime", "tf_estimator", "ray"],
+        default="tf",
+        help="Backend",
+    )
+    parser.add_argument(
+        "--scenario",
+        choices=["SingleStream", "Offline", "Server", "MultiStream"],
+        default="Offline",
+        help="Scenario",
+    )
+    parser.add_argument(
+        "--accuracy",
+        action="store_true",
+        help="enable accuracy pass")
+    parser.add_argument(
+        "--quantized",
+        action="store_true",
+        help="use quantized model (only valid for onnxruntime backend)",
+    )
+    parser.add_argument(
+        "--profile",
+        action="store_true",
+        help="enable profiling (only valid for onnxruntime backend)",
+    )
+    parser.add_argument(
+        "--user_conf",
+        default="user.conf",
+        help="user config for user LoadGen settings such as target QPS",
+    )
+    parser.add_argument(
+        "--audit_conf",
+        default="audit.conf",
+        help="audit config for LoadGen settings during compliance runs",
+    )
+    parser.add_argument(
+        "--max_examples",
+        type=int,
+        help="Maximum number of examples to consider (not limited by default)",
+    )
     parser.add_argument(
         "--network",
-        choices=[
-            "sut",
-            "lon",
-            None],
+        choices=["sut", "lon", None],
         default=None,
-        help="Loadgen network mode")
-    parser.add_argument('--node', type=str, default="")
-    parser.add_argument('--port', type=int, default=8000)
-    parser.add_argument('--sut_server', nargs="*", default=['http://localhost:8000'],
-                        help='Address of the server(s) under test.')
+        help="Loadgen network mode",
+    )
+    parser.add_argument("--node", type=str, default="")
+    parser.add_argument("--port", type=int, default=8000)
+    parser.add_argument(
+        "--sut_server",
+        nargs="*",
+        default=["http://localhost:8000"],
+        help="Address of the server(s) under test.",
+    )
 
     args = parser.parse_args()
     return args
@@ -65,7 +93,7 @@ scenario_map = {
     "SingleStream": lg.TestScenario.SingleStream,
     "Offline": lg.TestScenario.Offline,
     "Server": lg.TestScenario.Server,
-    "MultiStream": lg.TestScenario.MultiStream
+    "MultiStream": lg.TestScenario.MultiStream,
 }
 
 
@@ -76,27 +104,48 @@ def main():
 
     if not args.network or args.network == "sut":
         if args.backend == "pytorch":
-            assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
-            assert not args.profile, "Profiling is only supported by onnxruntime backend!"
+            assert (
+                not args.quantized
+            ), "Quantized model is only supported by onnxruntime backend!"
+            assert (
+                not args.profile
+            ), "Profiling is only supported by onnxruntime backend!"
             from pytorch_SUT import get_pytorch_sut
+
             sut = get_pytorch_sut(args)
         elif args.backend == "tf":
-            assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
-            assert not args.profile, "Profiling is only supported by onnxruntime backend!"
+            assert (
+                not args.quantized
+            ), "Quantized model is only supported by onnxruntime backend!"
+            assert (
+                not args.profile
+            ), "Profiling is only supported by onnxruntime backend!"
             from tf_SUT import get_tf_sut
+
             sut = get_tf_sut(args)
         elif args.backend == "tf_estimator":
-            assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
-            assert not args.profile, "Profiling is only supported by onnxruntime backend!"
+            assert (
+                not args.quantized
+            ), "Quantized model is only supported by onnxruntime backend!"
+            assert (
+                not args.profile
+            ), "Profiling is only supported by onnxruntime backend!"
             from tf_estimator_SUT import get_tf_estimator_sut
+
             sut = get_tf_estimator_sut()
         elif args.backend == "onnxruntime":
             from onnxruntime_SUT import get_onnxruntime_sut
+
             sut = get_onnxruntime_sut(args)
         elif args.backend == "ray":
-            assert not args.quantized, "Quantized model is only supported by onnxruntime backend!"
-            assert not args.profile, "Profiling is only supported by onnxruntime backend!"
+            assert (
+                not args.quantized
+            ), "Quantized model is only supported by onnxruntime backend!"
+            assert (
+                not args.profile
+            ), "Profiling is only supported by onnxruntime backend!"
             from ray_SUT import get_ray_sut
+
             sut = get_ray_sut(args)
         else:
             raise ValueError("Unknown backend: {:}".format(args.backend))
@@ -125,6 +174,7 @@ def main():
 
     if args.network == "lon":
         from network_LON import app, set_args, main as app_main
+
         set_args(
             args,
             settings,
@@ -132,11 +182,13 @@ def main():
             args.audit_conf,
             args.sut_server,
             args.backend,
-            args.max_examples)
+            args.max_examples,
+        )
         app.run(app_main)
 
     elif args.network == "sut":
         from network_SUT import app, node, set_backend
+
         node = args.node
         set_backend(sut)
         app.run(debug=False, port=args.port, host="0.0.0.0")
@@ -144,16 +196,17 @@ def main():
     else:
         print("Running LoadGen test...")
         lg.StartTestWithLogSettings(
-            sut.sut,
-            sut.qsl.qsl,
-            settings,
-            log_settings,
-            args.audit_conf)
+            sut.sut, sut.qsl.qsl, settings, log_settings, args.audit_conf
+        )
         if args.accuracy and not os.environ.get("SKIP_VERIFY_ACCURACY"):
             cmd = "python3 {:}/accuracy-squad.py {}".format(
                 os.path.dirname(os.path.abspath(__file__)),
-                '--max_examples {}'.format(
-                    args.max_examples) if args.max_examples else '')
+                (
+                    "--max_examples {}".format(args.max_examples)
+                    if args.max_examples
+                    else ""
+                ),
+            )
             subprocess.check_call(cmd, shell=True)
 
     print("Done!")

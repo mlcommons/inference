@@ -3,7 +3,9 @@ import ncnn
 
 
 class Resnet50:
-    def __init__(self, model_param, model_bin, target_size=224, num_threads=1, use_gpu=False):
+    def __init__(
+        self, model_param, model_bin, target_size=224, num_threads=1, use_gpu=False
+    ):
         self.target_size = target_size
         self.num_threads = num_threads
 
@@ -14,11 +16,11 @@ class Resnet50:
 
     def __del__(self):
         self.net = None
-    
+
     @property
     def input_name(self):
         return "in0"
-    
+
     @property
     def output_name(self):
         return "out0"

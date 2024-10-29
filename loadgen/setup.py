@@ -76,8 +76,9 @@ lib_bindings = [
 this_directory = Path(__file__).parent
 mlperf_loadgen_headers = public_headers + lib_headers
 mlperf_loadgen_sources_no_gen = lib_sources + lib_bindings
-mlperf_loadgen_sources = (mlperf_loadgen_sources_no_gen +
-                          [generated_version_source_filename])
+mlperf_loadgen_sources = mlperf_loadgen_sources_no_gen + [
+    generated_version_source_filename
+]
 mlperf_long_description = (
     this_directory /
     "README.md").read_text(
@@ -119,7 +120,8 @@ mlperf_loadgen_module = Pybind11Extension(
     ],
     include_dirs=[".", get_include()],
     sources=mlperf_loadgen_sources,
-    depends=mlperf_loadgen_headers)
+    depends=mlperf_loadgen_headers,
+)
 
 setup(name="mlcommons_loadgen",
       version=version,
@@ -132,3 +134,4 @@ setup(name="mlcommons_loadgen",
       include_package_data=True,
       long_description=mlperf_long_description,
       long_description_content_type='text/markdown')
+

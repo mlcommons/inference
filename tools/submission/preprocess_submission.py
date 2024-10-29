@@ -52,16 +52,18 @@ def get_args():
     parser.add_argument("--nodelete-failed",
                         help="do not delete failed results (submission checker will fail)",
                         default=False, action="store_true")
+
     parser.add_argument(
         "--version",
         default="v4.1",
         choices=list(checker.MODEL_CONFIG.keys()),
-        help="mlperf version")
+        help="mlperf version",
+    )
     parser.add_argument("--submitter", help="filter to submitter")
     parser.add_argument(
         "--extra-model-benchmark-map",
         help="File containing extra custom model mapping.\
-                    It is assumed to be inside the folder open/<submitter>",
+              It is assumed to be inside the folder open/<submitter>",
         default="model_mapping.json")
 
     args = parser.parse_args()
@@ -106,8 +108,10 @@ def copy_submission_dir(src, dst, filter_submitter):
         for submitter in next(os.walk(os.path.join(src, division)))[1]:
             if filter_submitter and submitter != filter_submitter:
                 continue
-            shutil.copytree(os.path.join(src, division, submitter),
-                            os.path.join(dst, division, submitter))
+            shutil.copytree(
+                os.path.join(src, division, submitter),
+                os.path.join(dst, division, submitter),
+            )
 
 
 def change_first_directory_to_open(path):
@@ -320,14 +324,13 @@ def infer_scenario_results(args, config):
                         log.error("Division %s, submitter %s, "
                                   "system %s has invalid system type (%s)",
                                   division, submitter, system_id_json, system_type)
+
                     config.set_type(system_type)
 
                     for model in list_dir(log_path, system_desc):
                         extra_model_mapping = None
                         if division == "open":
-                            model_mapping_path = (
-                                f"{division}/{submitter}/{config.extra_model_benchmark_map}"
-                            )
+                            model_mapping_path = f"{division}/{submitter}/{config.extra_model_benchmark_map}"
                             if os.path.exists(model_mapping_path):
                                 with open(model_mapping_path) as fp:
                                     extra_model_mapping = json.load(fp)
@@ -351,8 +354,9 @@ def infer_scenario_results(args, config):
 
                         required_scenarios = config.get_required(mlperf_model)
                         all_scenarios = set(
-                            list(required_scenarios) +
-                            list(config.get_optional(mlperf_model)))
+                            list(required_scenarios)
+                            + list(config.get_optional(mlperf_model))
+                        )
 
                         if directory == "results":
                             clean_invalid_results(
@@ -383,6 +387,7 @@ def infer_scenario_results(args, config):
                                                                          model, "multistream")
                                 if not os.path.exists(multistream_scenario_path) and \
                                         not os.path.exists(offline_scenario_path):
+
                                     # infer both the scenarios from SS
                                     tobeinferredpaths = [offline_scenario_path]
                                     if "MultiStream" in all_scenarios:
@@ -429,6 +434,7 @@ def infer_scenario_results(args, config):
                                         log.info("Division %s, submitter %s, system %s, model %s: \
                                                 inferring %s results from %s", division, submitter,
                                                  system_desc, model, "offline", "multistream")
+
                                         shutil.copytree(
                                             scenario_path, tobeinferredpath)
 
@@ -460,6 +466,7 @@ def infer_scenario_results(args, config):
                                                     low_accuracy_model_code_path)
 
 
+
 def main():
     """
     Tool to infer scenario results and cleanup submission tree
@@ -479,12 +486,14 @@ def main():
         args.version,
         args.extra_model_benchmark_map)
 
+
     if not args.nodelete_empty_dirs:
         delete_empty_dirs(os.path.join(src_dir))
 
     os.chdir(src_dir)
 
     infer_scenario_results(args, config)
+
 
     return 0
 

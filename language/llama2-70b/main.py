@@ -23,11 +23,15 @@ def verify_model_name(user_specified_name, url):
         if user_specified_name == server_model_name:
             return {"matched": True, "error": False}
         else:
-            return {"matched": False,
-                    "error": f"User specified {user_specified_name} and server model name {server_model_name} mismatch!"}
+            return {
+                "matched": False,
+                "error": f"User specified {user_specified_name} and server model name {server_model_name} mismatch!",
+            }
     else:
-        return {"matched": False,
-                "error": f"Failed to get a valid response. Status code: {response.status_code}"}
+        return {
+            "matched": False,
+            "error": f"Failed to get a valid response. Status code: {response.status_code}",
+        }
 
 
 def get_args():
@@ -35,16 +39,16 @@ def get_args():
     parser.add_argument(
         "--scenario",
         type=str,
-        choices=[
-            "Offline",
-            "Server"],
+        choices=["Offline", "Server"],
         default="Offline",
-        help="Scenario")
+        help="Scenario",
+    )
     parser.add_argument(
         "--model-path",
         type=str,
         default="meta-llama/Llama-2-70b-chat-hf",
-        help="Model name")
+        help="Model name",
+    )
     parser.add_argument("--dataset-path", type=str, default=None, help="")
     parser.add_argument(
         "--accuracy",
@@ -54,62 +58,68 @@ def get_args():
         "--dtype",
         type=str,
         default="float32",
-        help="data type of the model, choose from float16, bfloat16 and float32")
+        help="data type of the model, choose from float16, bfloat16 and float32",
+    )
     parser.add_argument(
         "--device",
         type=str,
-        choices=[
-            "cpu",
-            "cuda:0"],
+        choices=["cpu", "cuda:0"],
         default="cpu",
-        help="device to use")
+        help="device to use",
+    )
     parser.add_argument(
         "--audit-conf",
         type=str,
         default="audit.conf",
-        help="audit config for LoadGen settings during compliance runs")
+        help="audit config for LoadGen settings during compliance runs",
+    )
     parser.add_argument(
         "--user-conf",
         type=str,
         default="user.conf",
-        help="user config for user LoadGen settings such as target QPS")
+        help="user config for user LoadGen settings such as target QPS",
+    )
     # TODO: This interpretation of 'total-sample-count' is a little
     # misleading. Fix it
     parser.add_argument(
         "--total-sample-count",
         type=int,
         default=24576,
-        help="Number of samples to use in benchmark.")
+        help="Number of samples to use in benchmark.",
+    )
     parser.add_argument(
         "--batch-size",
         type=int,
         default=1,
-        help="Model batch-size to use in benchmark.")
+        help="Model batch-size to use in benchmark.",
+    )
     parser.add_argument(
-        "--output-log-dir",
-        type=str,
-        default="output-logs",
-        help="Where logs are saved")
+        "--output-log-dir", type=str, default="output-logs", help="Where logs are saved"
+    )
     parser.add_argument(
         "--enable-log-trace",
         action="store_true",
-        help="Enable log tracing. This file can become quite large")
+        help="Enable log tracing. This file can become quite large",
+    )
     parser.add_argument(
         "--num-workers",
         type=int,
         default=1,
-        help="Number of workers to process queries")
+        help="Number of workers to process queries",
+    )
     parser.add_argument("--vllm", action="store_true", help="vllm mode")
     parser.add_argument(
         "--api-model-name",
         type=str,
         default="meta-llama/Llama-2-70b-chat-hf",
-        help="Model name(specified in llm server)")
+        help="Model name(specified in llm server)",
+    )
     parser.add_argument(
         "--api-server",
         type=str,
         default=None,
-        help="Specify an api endpoint call to use api mode")
+        help="Specify an api endpoint call to use api mode",
+    )
 
     args = parser.parse_args()
     return args
@@ -157,10 +167,7 @@ def main():
     else:
         from SUT import SUT, SUTServer
 
-    sut_map = {
-        "offline": SUT,
-        "server": SUTServer
-    }
+    sut_map = {"offline": SUT, "server": SUTServer}
 
     sut_cls = sut_map[args.scenario.lower()]
 
@@ -174,7 +181,7 @@ def main():
             device=args.device,
             api_server=args.api_server,
             api_model_name=args.api_model_name,
-            workers=args.num_workers
+            workers=args.num_workers,
         )
     else:
         sut = sut_cls(
@@ -184,7 +191,7 @@ def main():
             dataset_path=args.dataset_path,
             total_sample_count=args.total_sample_count,
             device=args.device,
-            workers=args.num_workers
+            workers=args.num_workers,
         )
 
     # Start sut before loadgen starts

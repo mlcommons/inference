@@ -29,14 +29,21 @@ import subprocess
 # unlikely to show up in a git stats.
 def make_raw_string(str):
     delimeter = "LGVG_RSLD"
-    return "R\"" + delimeter + "(" + str + ")" + delimeter + "\""
+    return 'R"' + delimeter + "(" + str + ")" + delimeter + '"'
+
 
 
 def func_def(name, string):
-    return ("const std::string& Loadgen" + name + "() {\n" +
-            "  static const std::string str = " + string + ";\n" +
-            "  return str;\n" +
-            "}\n\n")
+    return (
+        "const std::string& Loadgen"
+        + name
+        + "() {\n"
+        + "  static const std::string str = "
+        + string
+        + ";\n"
+        + "  return str;\n"
+        + "}\n\n"
+    )
 
 
 # For clients that build the loadgen from the git respository without
@@ -58,7 +65,7 @@ def generate_loadgen_version_definitions_git(ofile, git_command):
 # For clients that might not import the loadgen code as the original git
 # repository.
 def generate_loadgen_verstion_definitions_git_stubs(ofile):
-    na = "\"NA\""
+    na = '"NA"'
     ofile.write(func_def("GitRevision", na))
     ofile.write(func_def("GitCommitDate", na))
     ofile.write(func_def("GitStatus", na))
@@ -70,9 +77,9 @@ def generate_loadgen_verstion_definitions_git_stubs(ofile):
 def generate_loadgen_version_definitions_sha1(ofile, loadgen_root):
     """Writes definition for Sha1OfFiles."""
     sha1s = ""
-    loadgen_files = (
-        ["/bindings/" + s for s in os.listdir(loadgen_root + "/bindings")] +
-        ["/" + s for s in os.listdir(loadgen_root)])
+    loadgen_files = [
+        "/bindings/" + s for s in os.listdir(loadgen_root + "/bindings")
+    ] + ["/" + s for s in os.listdir(loadgen_root)]
     for fn in sorted(loadgen_files):
         full_fn = loadgen_root + fn
         if not os.path.isfile(full_fn):
@@ -106,11 +113,11 @@ def generate_loadgen_version_definitions(cc_filename, loadgen_root):
 
     date_time_now_local = datetime.datetime.now().isoformat()
     date_time_now_utc = datetime.datetime.utcnow().isoformat()
-    ofile.write(func_def("BuildDateLocal", "\"" + date_time_now_local + "\""))
-    ofile.write(func_def("BuildDateUtc", "\"" + date_time_now_utc + "\""))
+    ofile.write(func_def("BuildDateLocal", '"' + date_time_now_local + '"'))
+    ofile.write(func_def("BuildDateUtc", '"' + date_time_now_utc + '"'))
 
-    git_dir = "--git-dir=\"" + loadgen_root + "/../.git\" "
-    git_work_tree = "--work-tree=\"" + loadgen_root + "/..\" "
+    git_dir = '--git-dir="' + loadgen_root + '/../.git" '
+    git_work_tree = '--work-tree="' + loadgen_root + '/.." '
     git_command = "git " + git_dir + git_work_tree
     git_status = os.popen(git_command + "status")
     git_status.read()

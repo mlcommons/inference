@@ -11,7 +11,8 @@ import torch
 
 
 class BackendOnnxruntime(backend.Backend):
-    def __init__(self, m_spa, ln_emb, ln_bot, ln_top, use_gpu=False, mini_batch_size=1):
+    def __init__(self, m_spa, ln_emb, ln_bot, ln_top,
+                 use_gpu=False, mini_batch_size=1):
         super(BackendOnnxruntime, self).__init__()
 
     def version(self):
@@ -30,11 +31,11 @@ class BackendOnnxruntime(backend.Backend):
         # print("onnx load", model_path, inputs, outputs)
         self.sess = rt.InferenceSession(model_path, opt)
         # get input and output names
-        if True: #not inputs:
+        if True:  # not inputs:
             self.inputs = [meta.name for meta in self.sess.get_inputs()]
         else:
             self.inputs = inputs
-        if True: #not outputs:
+        if True:  # not outputs:
             self.outputs = [meta.name for meta in self.sess.get_outputs()]
         else:
             self.outputs = outputs
@@ -63,16 +64,22 @@ class BackendOnnxruntime(backend.Backend):
             dict_inputs["offsets"] = batch_lS_o.numpy().astype(np.int64)
         else:  # list
             for i in range(len(batch_lS_o)):
-                dict_inputs["offsets_"+str(i)] = batch_lS_o[i].numpy().astype(np.int64)
+                dict_inputs["offsets_" + str(i)] = (
+                    batch_lS_o[i].numpy().astype(np.int64)
+                )
         if torch.is_tensor(batch_lS_i):
             dict_inputs["indices"] = batch_lS_i.numpy().astype(np.int64)
         else:  # list
             for i in range(len(batch_lS_i)):
-                dict_inputs["indices_"+str(i)] = batch_lS_i[i].numpy().astype(np.int64)
+                dict_inputs["indices_" + str(i)] = (
+                    batch_lS_i[i].numpy().astype(np.int64)
+                )
 
         # predict and return output
         # print("dict_inputs", dict_inputs)
-        output = self.sess.run(output_names=self.outputs, input_feed=dict_inputs)
+        output = self.sess.run(
+            output_names=self.outputs,
+            input_feed=dict_inputs)
         output = torch.tensor(output, requires_grad=False).view(-1, 1)
         # print("output", output)
         # print("output.shape", output.shape)

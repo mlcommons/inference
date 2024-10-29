@@ -2262,7 +2262,7 @@ def check_results_dir(
                             if mlperf_model in REQUIRED_ACC_BENCHMARK:
                                 if (
                                         config.version
-                                        in REQUIRED_ACC_BENCHMARK[mlperf_model] and not skip_extra_accuracy_files_check:):
+                                        in REQUIRED_ACC_BENCHMARK[mlperf_model] and not skip_extra_accuracy_files_check):
                                     extra_files_pass, missing_files = check_extra_files(
                                         acc_path,
                                         REQUIRED_ACC_BENCHMARK[mlperf_model][

@@ -75,15 +75,7 @@ RawResult = collections.namedtuple(
     "RawResult", ["unique_id", "start_logits", "end_logits"]
 )
 
-dtype_map = {
-    "int8": np.int8,
-    "int16": np.int16,
-    "int32": np.int32,
-    "int64": np.int64,
-    "float16": np.float16,
-    "float32": np.float32,
-    "float64": np.float64,
-}
+dtype_map = {"int8": np.int8, "int16": np.int16, "int32": np.int32, "int64": np.int64, "float16": np.float16, "float32": np.float32, "float64": np.float64}
 
 
 def get_final_text(pred_text, orig_text, do_lower_case):

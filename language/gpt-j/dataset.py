@@ -25,8 +25,16 @@ PROMPT_DICT = {
 }
 
 
-class Dataset():
-    def __init__(self, dataset_path, batch_size=1, pad_val=1, pad_max=196, total_count_override=None, perf_count_override=None):
+class Dataset:
+    def __init__(
+        self,
+        dataset_path,
+        batch_size=1,
+        pad_val=1,
+        pad_max=196,
+        total_count_override=None,
+        perf_count_override=None,
+    ):
         print("Constructing QSL")
 
         self.dataset = "cnn_dailymail"
@@ -41,13 +49,19 @@ class Dataset():
 
         self.list_data_dict = utils.jload(self.dataset_path)
 
-        prompt_input, prompt_no_input = PROMPT_DICT["prompt_input"], PROMPT_DICT["prompt_no_input"]
-        self.sources = [prompt_input.format_map(
-            example) for example in self.list_data_dict]
+        prompt_input, prompt_no_input = (
+            PROMPT_DICT["prompt_input"],
+            PROMPT_DICT["prompt_no_input"],
+        )
+        self.sources = [
+            prompt_input.format_map(example) for example in self.list_data_dict
+        ]
         self.targets = [
             f"{example['output']}" for example in self.list_data_dict]
 
-        self.source_encoded_input_ids, self.source_encoded_attn_masks = self.encode_samples()
+        self.source_encoded_input_ids, self.source_encoded_attn_masks = (
+            self.encode_samples()
+        )
 
         self.count = total_count_override or len(self.sources)
         self.perf_count = perf_count_override or self.count
@@ -61,9 +75,13 @@ class Dataset():
         source_encoded_attn_masks = []
 
         for i in range(total_samples):
-            source_encoded = self.tokenizer(self.sources[i], return_tensors="pt",
-                                            padding=True, truncation=True,
-                                            max_length=1919)
+            source_encoded = self.tokenizer(
+                self.sources[i],
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=1919,
+            )
             source_encoded_input_ids.append(source_encoded.input_ids)
             source_encoded_attn_masks.append(source_encoded.attention_mask)
 

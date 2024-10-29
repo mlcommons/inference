@@ -30,62 +30,72 @@ def seq_collate_fn(batch):
     Returns
     batches of tensors
     """
-    audio_lengths = torch.LongTensor([sample.waveform.size(0)
-                                      for sample in batch])
-    transcript_lengths = torch.LongTensor([sample.transcript.size(0)
-                                           for sample in batch])
+    audio_lengths = torch.LongTensor(
+        [sample.waveform.size(0) for sample in batch])
+    transcript_lengths = torch.LongTensor(
+        [sample.transcript.size(0) for sample in batch]
+    )
     permute_indices = torch.argsort(audio_lengths, descending=True)
 
     audio_lengths = audio_lengths[permute_indices]
     transcript_lengths = transcript_lengths[permute_indices]
     padded_audio_signals = torch.nn.utils.rnn.pad_sequence(
-        [batch[i].waveform for i in permute_indices],
-        batch_first=True
+        [batch[i].waveform for i in permute_indices], batch_first=True
     )
-    transcript_list = [batch[i].transcript
-                       for i in permute_indices]
-    packed_transcripts = torch.nn.utils.rnn.pack_sequence(transcript_list,
-                                                          enforce_sorted=False)
+    transcript_list = [batch[i].transcript for i in permute_indices]
+    packed_transcripts = torch.nn.utils.rnn.pack_sequence(
+        transcript_list, enforce_sorted=False
+    )
 
     # TODO: Don't I need to stop grad at some point now?
-    return (padded_audio_signals, audio_lengths, transcript_list,
-            packed_transcripts, transcript_lengths)
+    return (
+        padded_audio_signals,
+        audio_lengths,
+        transcript_list,
+        packed_transcripts,
+        transcript_lengths,
+    )
 
 
 class AudioToTextDataLayer:
-    """Data layer with data loader
-    """
+    """Data layer with data loader"""
 
     def __init__(self, **kwargs):
-        featurizer_config = kwargs['featurizer_config']
-        pad_to_max = kwargs.get('pad_to_max', False)
-        perturb_config = kwargs.get('perturb_config', None)
-        manifest_filepath = kwargs['manifest_filepath']
-        dataset_dir = kwargs['dataset_dir']
-        labels = kwargs['labels']
-        batch_size = kwargs['batch_size']
-        drop_last = kwargs.get('drop_last', False)
-        shuffle = kwargs.get('shuffle', True)
-        min_duration = featurizer_config.get('min_duration', 0.1)
-        max_duration = featurizer_config.get('max_duration', None)
-        normalize_transcripts = kwargs.get('normalize_transcripts', True)
-        trim_silence = kwargs.get('trim_silence', False)
-        sampler_type = kwargs.get('sampler', 'default')
-        speed_perturbation = featurizer_config.get('speed_perturbation', False)
-        sort_by_duration = sampler_type == 'bucket'
+        featurizer_config = kwargs["featurizer_config"]
+        pad_to_max = kwargs.get("pad_to_max", False)
+        perturb_config = kwargs.get("perturb_config", None)
+        manifest_filepath = kwargs["manifest_filepath"]
+        dataset_dir = kwargs["dataset_dir"]
+        labels = kwargs["labels"]
+        batch_size = kwargs["batch_size"]
+        drop_last = kwargs.get("drop_last", False)
+        shuffle = kwargs.get("shuffle", True)
+        min_duration = featurizer_config.get("min_duration", 0.1)
+        max_duration = featurizer_config.get("max_duration", None)
+        normalize_transcripts = kwargs.get("normalize_transcripts", True)
+        trim_silence = kwargs.get("trim_silence", False)
+        sampler_type = kwargs.get("sampler", "default")
+        speed_perturbation = featurizer_config.get("speed_perturbation", False)
+        sort_by_duration = sampler_type == "bucket"
         self._featurizer = WaveformFeaturizer.from_config(
-            featurizer_config, perturbation_configs=perturb_config)
+            featurizer_config, perturbation_configs=perturb_config
+        )
         self._dataset = AudioDataset(
             dataset_dir=dataset_dir,
             manifest_filepath=manifest_filepath,
-            labels=labels, blank_index=len(labels),
+            labels=labels,
+            blank_index=len(labels),
             sort_by_duration=sort_by_duration,
             pad_to_max=pad_to_max,
-            featurizer=self._featurizer, max_duration=max_duration,
-            min_duration=min_duration, normalize=normalize_transcripts,
-            trim=trim_silence, speed_perturbation=speed_perturbation)
+            featurizer=self._featurizer,
+            max_duration=max_duration,
+            min_duration=min_duration,
+            normalize=normalize_transcripts,
+            trim=trim_silence,
+            speed_perturbation=speed_perturbation,
+        )
 
-        print('sort_by_duration', sort_by_duration)
+        print("sort_by_duration", sort_by_duration)
 
         self._dataloader = torch.utils.data.DataLoader(
             dataset=self._dataset,
@@ -95,7 +105,7 @@ class AudioToTextDataLayer:
             shuffle=shuffle,
             num_workers=0,
             pin_memory=True,
-            sampler=None
+            sampler=None,
         )
 
     def __len__(self):
@@ -107,9 +117,22 @@ class AudioToTextDataLayer:
 
 
 class AudioDataset(Dataset):
-    def __init__(self, dataset_dir, manifest_filepath, labels, featurizer, max_duration=None, pad_to_max=False,
-                 min_duration=None, blank_index=0, max_utts=0, normalize=True, sort_by_duration=False,
-                 trim=False, speed_perturbation=False):
+    def __init__(
+        self,
+        dataset_dir,
+        manifest_filepath,
+        labels,
+        featurizer,
+        max_duration=None,
+        pad_to_max=False,
+        min_duration=None,
+        blank_index=0,
+        max_utts=0,
+        normalize=True,
+        sort_by_duration=False,
+        trim=False,
+        speed_perturbation=False,
+    ):
         """Dataset that loads tensors via a json file containing paths to audio files, transcripts, and durations
         (in seconds). Each entry is a different audio sample.
         Args:
@@ -128,32 +151,44 @@ class AudioDataset(Dataset):
             speed_perturbation: specify if using data contains speed perburbation
         """
         m_paths = [manifest_filepath]
-        self.manifest = Manifest(dataset_dir, m_paths, labels, blank_index, pad_to_max=pad_to_max,
-                                 max_duration=max_duration,
-                                 sort_by_duration=sort_by_duration,
-                                 min_duration=min_duration, max_utts=max_utts,
-                                 normalize=normalize, speed_perturbation=speed_perturbation)
+        self.manifest = Manifest(
+            dataset_dir,
+            m_paths,
+            labels,
+            blank_index,
+            pad_to_max=pad_to_max,
+            max_duration=max_duration,
+            sort_by_duration=sort_by_duration,
+            min_duration=min_duration,
+            max_utts=max_utts,
+            normalize=normalize,
+            speed_perturbation=speed_perturbation,
+        )
         self.featurizer = featurizer
         self.blank_index = blank_index
         self.trim = trim
         print(
             "Dataset loaded with {0:.2f} hours. Filtered {1:.2f} hours.".format(
-                self.manifest.duration / 3600,
-                self.manifest.filtered_duration / 3600))
+                self.manifest.duration / 3600, self.manifest.filtered_duration / 3600
+            )
+        )
 
     def __getitem__(self, index):
         sample = self.manifest[index]
-        rn_indx = np.random.randint(len(sample['audio_filepath']))
-        duration = sample['audio_duration'][rn_indx] if 'audio_duration' in sample else 0
-        offset = sample['offset'] if 'offset' in sample else 0
-        features = self.featurizer.process(sample['audio_filepath'][rn_indx],
-                                           offset=offset, duration=duration,
-                                           trim=self.trim)
+        rn_indx = np.random.randint(len(sample["audio_filepath"]))
+        duration = (
+            sample["audio_duration"][rn_indx] if "audio_duration" in sample else 0
+        )
+        offset = sample["offset"] if "offset" in sample else 0
+        features = self.featurizer.process(
+            sample["audio_filepath"][rn_indx],
+            offset=offset,
+            duration=duration,
+            trim=self.trim,
+        )
 
-        AudioSample = namedtuple('AudioSample', ['waveform',
-                                                 'transcript'])
-        return AudioSample(features,
-                           torch.LongTensor(sample["transcript"]))
+        AudioSample = namedtuple("AudioSample", ["waveform", "transcript"])
+        return AudioSample(features, torch.LongTensor(sample["transcript"]))
 
     def __len__(self):
         return len(self.manifest)

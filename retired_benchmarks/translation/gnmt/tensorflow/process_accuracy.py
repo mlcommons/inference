@@ -24,29 +24,44 @@ from nmt.scripts import bleu
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--reference', type=str, default=os.path.join(os.getcwd(), 'nmt', 'data', 'newstest2014.tok.bpe.32000.de'),
-                            help="Reference text to compare accuracy against.")
-    parser.add_argument('--accuracy_log', type=str, default = 'mlperf_log_accuracy.json',
-                            help="Accuracy log file")
+    parser.add_argument(
+        "--reference",
+        type=str,
+        default=os.path.join(
+            os.getcwd(), "nmt", "data", "newstest2014.tok.bpe.32000.de"
+        ),
+        help="Reference text to compare accuracy against.",
+    )
+    parser.add_argument(
+        "--accuracy_log",
+        type=str,
+        default="mlperf_log_accuracy.json",
+        help="Accuracy log file",
+    )
     args = parser.parse_args()
-
 
     # Check whether reference and log files exist
     if not os.path.exists(args.reference):
-        print("Could not find reference file {}. Please specify its location".format(args.reference))
+        print(
+            "Could not find reference file {}. Please specify its location".format(
+                args.reference
+            )
+        )
         sys.exit(0)
 
     if not os.path.exists(args.accuracy_log):
-        print("Could not find accuracy log file {}. Please specify its location".format(args.accuracy_log))
+        print(
+            "Could not find accuracy log file {}. Please specify its location".format(
+                args.accuracy_log
+            )
+        )
         sys.exit(0)
 
-    
     ##
     # @note: List of lists of words from the reference
     # @note: ref[i][j] refers to the j'th word of sentence i
     ref = []
-    with codecs.getreader("utf-8")(
-        tf.gfile.GFile(args.reference, "rb")) as ifh:
+    with codecs.getreader("utf-8")(tf.gfile.GFile(args.reference, "rb")) as ifh:
         ref_sentences = ifh.readlines()
         # Sanitize each sentence and convert to array of words
         ref = [e_utils._clean(s, "bpe").split(" ") for s in ref_sentences]
@@ -80,7 +95,6 @@ if __name__ == "__main__":
 
             # Update the Running BLEU Scorer for this sentence
             runningBLUE.add_sentence(ref[sent_id], trans)
-
 
     (bleu, _, _, _, _, _) = runningBLUE.calc_BLEU_score()
 

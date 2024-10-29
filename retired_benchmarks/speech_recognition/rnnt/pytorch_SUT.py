@@ -14,26 +14,29 @@
 
 import sys
 import os
+
 sys.path.insert(0, os.path.join(os.getcwd(), "pytorch"))
 
-import array
-import torch
-import numpy as np
-import toml
-import mlperf_loadgen as lg
-from tqdm import tqdm
-
-from QSL import AudioQSL, AudioQSLInMemory
-from decoders import ScriptGreedyDecoder
-from helpers import add_blank_label
-from preprocessing import AudioPreprocessing
-from model_separable_rnnt import RNNT
+try:
+    from model_separable_rnnt import RNNT
+    from preprocessing import AudioPreprocessing
+    from helpers import add_blank_label
+    from decoders import ScriptGreedyDecoder
+    from QSL import AudioQSL, AudioQSLInMemory
+    from tqdm import tqdm
+    import mlperf_loadgen as lg
+    import toml
+    import numpy as np
+    import torch
+    import array
+except ImportError:
+    raise Exception("Error importing local modules")
 
 
 def load_and_migrate_checkpoint(ckpt_path):
     checkpoint = torch.load(ckpt_path, map_location="cpu")
     migrated_state_dict = {}
-    for key, value in checkpoint['state_dict'].items():
+    for key, value in checkpoint["state_dict"].items():
         key = key.replace("joint_net", "joint.net")
         migrated_state_dict[key] = value
     del migrated_state_dict["audio_preprocessor.featurizer.fb"]
@@ -42,46 +45,59 @@ def load_and_migrate_checkpoint(ckpt_path):
 
 
 class PytorchSUT:
-    def __init__(self, config_toml, checkpoint_path, dataset_dir,
-                 manifest_filepath, perf_count):
+    def __init__(
+        self, config_toml, checkpoint_path, dataset_dir, manifest_filepath, perf_count
+    ):
         config = toml.load(config_toml)
 
-        dataset_vocab = config['labels']['labels']
+        dataset_vocab = config["labels"]["labels"]
         rnnt_vocab = add_blank_label(dataset_vocab)
-        featurizer_config = config['input_eval']
+        featurizer_config = config["input_eval"]
 
-        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+        self.dev = (
+            torch.device("cuda:0")
+            if torch.cuda.is_available()
+            and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
+            else torch.device("cpu")
+        )
 
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
-        self.qsl = AudioQSLInMemory(dataset_dir,
-                                    manifest_filepath,
-                                    dataset_vocab,
-                                    featurizer_config["sample_rate"],
-                                    perf_count)
+        self.qsl = AudioQSLInMemory(
+            dataset_dir,
+            manifest_filepath,
+            dataset_vocab,
+            featurizer_config["sample_rate"],
+            perf_count,
+        )
         self.audio_preprocessor = AudioPreprocessing(**featurizer_config)
         self.audio_preprocessor.eval()
         self.audio_preprocessor = torch.jit.script(self.audio_preprocessor)
         self.audio_preprocessor = torch.jit._recursive.wrap_cpp_module(
-            torch._C._freeze_module(self.audio_preprocessor._c))
+            torch._C._freeze_module(self.audio_preprocessor._c)
+        )
 
         model = RNNT(
             feature_config=featurizer_config,
-            rnnt=config['rnnt'],
-            num_classes=len(rnnt_vocab)
+            rnnt=config["rnnt"],
+            num_classes=len(rnnt_vocab),
         )
-        model.load_state_dict(load_and_migrate_checkpoint(checkpoint_path),
-                              strict=True)
+        model.load_state_dict(
+            load_and_migrate_checkpoint(checkpoint_path),
+            strict=True)
         model.to(self.dev)
         model.eval()
         model.encoder = torch.jit.script(model.encoder)
         model.encoder = torch.jit._recursive.wrap_cpp_module(
-            torch._C._freeze_module(model.encoder._c))
+            torch._C._freeze_module(model.encoder._c)
+        )
         model.prediction = torch.jit.script(model.prediction)
         model.prediction = torch.jit._recursive.wrap_cpp_module(
-            torch._C._freeze_module(model.prediction._c))
+            torch._C._freeze_module(model.prediction._c)
+        )
         model.joint = torch.jit.script(model.joint)
         model.joint = torch.jit._recursive.wrap_cpp_module(
-            torch._C._freeze_module(model.joint._c))
+            torch._C._freeze_module(model.joint._c)
+        )
         model = torch.jit.script(model)
 
         self.greedy_decoder = ScriptGreedyDecoder(len(rnnt_vocab) - 1, model)
@@ -96,18 +112,22 @@ class PytorchSUT:
             with torch.no_grad():
                 waveform = torch.from_numpy(waveform)
                 waveform_length = torch.from_numpy(waveform_length)
-                feature, feature_length = self.audio_preprocessor.forward((waveform, waveform_length))
+                feature, feature_length = self.audio_preprocessor.forward(
+                    (waveform, waveform_length)
+                )
                 assert feature.ndim == 3
                 assert feature_length.ndim == 1
                 feature = feature.permute(2, 0, 1)
 
-                _, _, transcript = self.greedy_decoder.forward(feature, feature_length)
+                _, _, transcript = self.greedy_decoder.forward(
+                    feature, feature_length)
 
             assert len(transcript) == 1
-            response_array = array.array('q', transcript[0])
+            response_array = array.array("q", transcript[0])
             bi = response_array.buffer_info()
-            response = lg.QuerySampleResponse(query_sample.id, bi[0],
-                                              bi[1] * response_array.itemsize)
+            response = lg.QuerySampleResponse(
+                query_sample.id, bi[0], bi[1] * response_array.itemsize
+            )
             lg.QuerySamplesComplete([response])
 
     def flush_queries(self):

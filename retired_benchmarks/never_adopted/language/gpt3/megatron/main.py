@@ -18,8 +18,14 @@ def get_args():
         default="Offline",
         help="Scenario",
     )
-    parser.add_argument("--dataset-path", default="./data/cnn_eval.json", help="")
-    parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
+    parser.add_argument(
+        "--dataset-path",
+        default="./data/cnn_eval.json",
+        help="")
+    parser.add_argument(
+        "--accuracy",
+        action="store_true",
+        help="enable accuracy pass")
     parser.add_argument(
         "--mlperf_conf", default="mlperf.conf", help="mlperf rules config"
     )

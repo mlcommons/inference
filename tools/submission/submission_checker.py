@@ -976,6 +976,11 @@ def get_args():
         help="skips the check of extra files inside the root submission dir",
     )
     parser.add_argument(
+        "--skip-extra-accuracy-files-check",
+        action="store_true",
+        help="skips the check of extra accuracy files like the images folder of SDXL",
+    )
+    parser.add_argument(
         "--scenarios-to-skip",
         help="Delimited list input of scenarios to skip. i.e. if you only have Offline results, pass in 'Server'",
         type=str,

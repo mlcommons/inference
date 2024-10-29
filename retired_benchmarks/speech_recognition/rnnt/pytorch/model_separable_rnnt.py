@@ -16,10 +16,11 @@ class RNNT(torch.nn.Module):
             feat_config = kwargs.get("feature_config")
             # This may be useful in the future, for MLPerf
             # configuration.
-            in_features = feat_config['features'] * \
+            in_features = feat_config["features"] * \
                 feat_config.get("frame_splicing", 1)
 
-        self.encoder = Encoder(in_features,
+        self.encoder = Encoder(
+            in_features,
             rnnt["encoder_n_hidden"],
             rnnt["encoder_pre_rnn_layers"],
             rnnt["encoder_post_rnn_layers"],
@@ -48,17 +49,32 @@ class RNNT(torch.nn.Module):
             rnnt["dropout"],
         )
 
-    def forward(self, x_padded: torch.Tensor, x_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x_padded: torch.Tensor, x_lens: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         return self.encoder(x_padded, x_lens)
-        
+
 
 class Encoder(torch.nn.Module):
-    def __init__(self, in_features, encoder_n_hidden,
-                 encoder_pre_rnn_layers, encoder_post_rnn_layers,
-                 forget_gate_bias, norm, rnn_type, encoder_stack_time_factor,
-                 dropout):
+    def __init__(
+        self,
+        in_features,
+        encoder_n_hidden,
+        encoder_pre_rnn_layers,
+        encoder_post_rnn_layers,
+        forget_gate_bias,
+        norm,
+        rnn_type,
+        encoder_stack_time_factor,
+        dropout,
+    ):
         super().__init__()
-        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+        self.dev = (
+            torch.device("cuda:0")
+            if torch.cuda.is_available()
+            and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
+            else torch.device("cpu")
+        )
 
         self.pre_rnn = rnn(
             rnn=rnn_type,
@@ -81,7 +97,9 @@ class Encoder(torch.nn.Module):
             dropout=dropout,
         )
 
-    def forward(self, x_padded: torch.Tensor, x_lens: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(
+        self, x_padded: torch.Tensor, x_lens: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         x_padded, _ = self.pre_rnn(x_padded.to(self.dev), None)
         x_padded, x_lens = self.stack_time(x_padded, x_lens)
         # (T, B, H)
@@ -90,11 +108,25 @@ class Encoder(torch.nn.Module):
         x_padded = x_padded.transpose(0, 1)
         return x_padded, x_lens
 
+
 class Prediction(torch.nn.Module):
-    def __init__(self, vocab_size, n_hidden, pred_rnn_layers,
-                 forget_gate_bias, norm, rnn_type, dropout):
+    def __init__(
+        self,
+        vocab_size,
+        n_hidden,
+        pred_rnn_layers,
+        forget_gate_bias,
+        norm,
+        rnn_type,
+        dropout,
+    ):
         super().__init__()
-        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+        self.dev = (
+            torch.device("cuda:0")
+            if torch.cuda.is_available()
+            and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
+            else torch.device("cpu")
+        )
 
         self.embed = torch.nn.Embedding(vocab_size - 1, n_hidden)
         self.n_hidden = n_hidden
@@ -108,8 +140,11 @@ class Prediction(torch.nn.Module):
             dropout=dropout,
         )
 
-    def forward(self, y: Optional[torch.Tensor],
-                state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    def forward(
+        self,
+        y: Optional[torch.Tensor],
+        state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         B - batch size
         U - label length
@@ -133,7 +168,9 @@ class Prediction(torch.nn.Module):
             assert state is None
             # Hacky, no way to determine this right now!
             B = 1
-            y = torch.zeros((B, 1, self.n_hidden), dtype=torch.float32).to(self.dev)
+            y = torch.zeros(
+                (B, 1, self.n_hidden), dtype=torch.float32).to(
+                self.dev)
         else:
             y = self.embed(y.to(self.dev)).to(self.dev)
 
@@ -151,21 +188,34 @@ class Prediction(torch.nn.Module):
         # del y, state
         return g, hid
 
-class Joint(torch.nn.Module):
-    def __init__(self, vocab_size, pred_n_hidden, enc_n_hidden,
-                 joint_n_hidden, dropout):
-        super().__init__()
-        self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
 
-        layers = [
-            torch.nn.Linear(pred_n_hidden + enc_n_hidden, joint_n_hidden),
-            torch.nn.ReLU(),
-        ] + ([torch.nn.Dropout(p=dropout), ] if dropout else []) + [
-            torch.nn.Linear(joint_n_hidden, vocab_size)
-        ]
-        self.net = torch.nn.Sequential(
-            *layers
+class Joint(torch.nn.Module):
+    def __init__(
+        self, vocab_size, pred_n_hidden, enc_n_hidden, joint_n_hidden, dropout
+    ):
+        super().__init__()
+        self.dev = (
+            torch.device("cuda:0")
+            if torch.cuda.is_available()
+            and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
+            else torch.device("cpu")
         )
+
+        layers = (
+            [
+                torch.nn.Linear(pred_n_hidden + enc_n_hidden, joint_n_hidden),
+                torch.nn.ReLU(),
+            ]
+            + (
+                [
+                    torch.nn.Dropout(p=dropout),
+                ]
+                if dropout
+                else []
+            )
+            + [torch.nn.Linear(joint_n_hidden, vocab_size)]
+        )
+        self.net = torch.nn.Sequential(*layers)
 
     def forward(self, f: torch.Tensor, g: torch.Tensor):
         """
@@ -179,16 +229,17 @@ class Joint(torch.nn.Module):
         B, T, H = f.shape
         B, U_, H2 = g.shape
 
-        f = f.unsqueeze(dim=2).to(self.dev)   # (B, T, 1, H)
+        f = f.unsqueeze(dim=2).to(self.dev)  # (B, T, 1, H)
         f = f.expand((B, T, U_, H))
 
-        g = g.unsqueeze(dim=1).to(self.dev)   # (B, 1, U + 1, H)
+        g = g.unsqueeze(dim=1).to(self.dev)  # (B, 1, U + 1, H)
         g = g.expand((B, T, U_, H2))
 
-        inp = torch.cat([f, g], dim=3)   # (B, T, U, 2H)
+        inp = torch.cat([f, g], dim=3)  # (B, T, U, 2H)
         res = self.net(inp)
         # del f, g, inp
         return res
+
 
 def label_collate(labels):
     """Collates the label inputs for the rnn-t prediction network.
@@ -206,15 +257,14 @@ def label_collate(labels):
         return labels.type(torch.int64)
     if not isinstance(labels, (list, tuple)):
         raise ValueError(
-            f"`labels` should be a list or tensor not {type(labels)}"
-        )
+            f"`labels` should be a list or tensor not {type(labels)}")
 
     batch_size = len(labels)
     max_len = max(len(l) for l in labels)
 
     cat_labels = np.full((batch_size, max_len), fill_value=0.0, dtype=np.int32)
     for e, l in enumerate(labels):
-        cat_labels[e, :len(l)] = l
+        cat_labels[e, : len(l)] = l
     labels = torch.LongTensor(cat_labels)
 
     return labels

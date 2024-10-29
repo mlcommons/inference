@@ -149,6 +149,9 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
         scenario_fixed = checker.SCENARIO_MAPPING.get(
             scenario, scenario)
         scenario_path = os.path.join(log_path, system_desc, model, scenario)
+        if not os.path.exists(
+                scenario_path):  # can happen since scenario results may be moved to open division on failure
+            continue
         acc_path = os.path.join(scenario_path, "accuracy")
         try:
             accuracy_is_valid, acc = checker.check_accuracy_dir(
@@ -158,7 +161,7 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                 is_closed_or_network,
             )
         except Exception as e:
-            print(e)
+            log.warning(e)
             accuracy_is_valid = False
         perf_path = os.path.join(scenario_path, "performance", "run_1")
         try:
@@ -171,7 +174,7 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                 system_json,
             )
         except Exception as e:
-            print(e)
+            log.warning(e)
             perf_is_valid = False
         if perf_is_valid:
             power_path = os.path.join(scenario_path, "performance", "power")
@@ -202,21 +205,37 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                 except Exception as e:
                     power_is_valid = False
                 if not power_is_valid:
-                    print(
-                        f"Power result is invalid for {model} {scenario} scenario in {division} division. Removing...")
+                    log.warning(
+                        f"Power result is invalid for {system_desc}: {model} {scenario} scenario in {division} division. Removing...")
                     shutil.rmtree(power_path)
                     shutil.rmtree(ranging_path)
                     shutil.rmtree(os.path.join(perf_path, "spl.txt"))
 
-        is_valid = accuracy_is_valid and perf_is_valid
+            compliance_is_valid = True
+            if is_closed_or_network:
+                compliance_dir = change_folder_name_in_path(
+                    scenario_path, "results", "compliance")
+                if not checker.check_compliance_dir(
+                    compliance_dir,
+                    mlperf_model,
+                    scenario_fixed,
+                    config,
+                    division,
+                    system_json,
+                    os.path.dirname(scenario_path)
+                ):
+                    compliance_is_valid = False
+
+        is_valid = accuracy_is_valid and perf_is_valid and compliance_is_valid
         if not is_valid:  # Remove the scenario result
             scenario_measurements_path = change_folder_name_in_path(
                 scenario_path, "results", "measurements")
             if scenario in [
-                    "Offline", "MultiStream"] or division == "open":  # they can be inferred
+                    "Offline", "MultiStream"] and (not accuracy_is_valid or not perf_is_valid) or division == "open":  # they can be inferred
                 scenario_compliance_path = change_folder_name_in_path(
                     scenario_path, "results", "compliance")
-                print(f"{scenario} scenario result is invalid for {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing...")
+                log.warning(
+                    f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing...")
                 shutil.rmtree(scenario_path)
                 shutil.rmtree(scenario_measurements_path)
                 shutil.rmtree(scenario_compliance_path)
@@ -238,10 +257,12 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                         model_measurements_path)
                     target_system_json = change_first_directory_to_open(
                         system_id_json)
-                    # if only accuracy failed, result is valid for open
+                    # if only accuracy or compliance failed, result is valid
+                    # for open
                     if not perf_is_valid:
                         shutil.rmtree(scenario_path)
-                        print(f"{scenario} scenario result is invalid for {model} in {division} and open divisions. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing it...")
+                        log.warning(
+                            f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} and open divisions. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing it...")
                     if not os.path.exists(target_results_path):
                         shutil.copytree(
                             model_results_path, target_results_path)
@@ -261,9 +282,12 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                         target_system_json_contents['division'] = 'open'
                         with open(target_system_json, 'w') as f:
                             json.dump(target_system_json_contents, f, indent=2)
-                    print(f"{scenario} scenario result is invalid for {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Moving other scenario results to open...")
+                    if perf_is_valid:
+                        log.warning(f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Compliance: {compliance_is_valid}. Moving {model} results to open...")
+                    else:
+                        log.warning(f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Compliance: {compliance_is_valid}. Moving other scenario results of {model} to open...")
                 else:
-                    print(f"{scenario} scenario result is invalid for {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing all dependent scenario results...")
+                    log.warning(f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing all dependent scenario results...")
                 shutil.rmtree(model_results_path)
                 shutil.rmtree(model_measurements_path)
                 shutil.rmtree(model_compliance_path)
@@ -272,7 +296,8 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                 shutil.rmtree(scenario_path)
                 # delete other scenario results too
                 shutil.rmtree(scenario_measurements_path)
-                print(f"{scenario} scenario result is invalid for {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing it...")
+                log.warning(
+                    f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing it...")
 
 
 def infer_scenario_results(args, config):
@@ -475,7 +500,7 @@ def main():
     src_dir = args.input
 
     if os.path.exists(args.output):
-        print(f"output directory {args.output} already exists")
+        log.error(f"output directory {args.output} already exists")
         sys.exit(1)
     os.makedirs(args.output)
     copy_submission_dir(args.input, args.output, args.submitter)

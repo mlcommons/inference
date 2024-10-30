@@ -3,5 +3,6 @@
     "implementation": "nvidia",
     "device": "cuda",
     "framework": "tensorrt",
+    "framework_version": "default",
     "run_config": "default"
 }

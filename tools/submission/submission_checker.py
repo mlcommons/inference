@@ -2982,7 +2982,7 @@ def check_compliance_dir(
         "llama2-70b-99.9",
         "stable-diffusion-xl",
         "mixtral-8x7b",
-    ]:
+    ] or config.version not in ["v4.0", "v4.1"]:
         test_list.remove("TEST05")
 
     if model in [

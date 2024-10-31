@@ -1,4 +1,4 @@
-"""A checker for MLPerf Inference submissions
+"""A checker for MLPerf Inference submissions from v4.0 onwards (for checking older submissions please use the submission checker from the respective release)
 """
 
 from __future__ import division
@@ -98,6 +98,7 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
             "3d-unet-99": ("DICE", 0.86170 * 0.99),
             "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
+
             "gptj-99": (
                 "ROUGE1",
                 42.9865 * 0.99,
@@ -206,6 +207,7 @@ MODEL_CONFIG = {
             "gptj-99.9": {"Server": 20000000000},
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
+
             "stable-diffusion-xl": {"Server": 20000000000},
         },
         "min-queries": {
@@ -310,6 +312,7 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
             "3d-unet-99": ("DICE", 0.86170 * 0.99),
             "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
+
             "gptj-99": (
                 "ROUGE1",
                 42.9865 * 0.99,
@@ -519,7 +522,7 @@ REQUIRED_ACC_BENCHMARK = {
         },
     }
 }
-REQUIRED_MEASURE_FILES = ["mlperf.conf", "user.conf", "README.md"]
+REQUIRED_MEASURE_FILES = ["user.conf", "README.md"]
 REQUIRED_POWER_MEASURE_FILES = ["analyzer_table.*", "power_settings.*"]
 MS_TO_NS = 1000 * 1000
 S_TO_MS = 1000
@@ -909,7 +912,7 @@ class Config:
                 "llama2-70b-99.9",
                 "mixtral-8x7b",
             ]
-            and self.version in ["v4.1"]
+            and self.version not in ["v4.0", "v4.1"]
         )
 
 
@@ -971,6 +974,11 @@ def get_args():
         "--skip-extra-files-in-root-check",
         action="store_true",
         help="skips the check of extra files inside the root submission dir",
+    )
+    parser.add_argument(
+        "--skip-extra-accuracy-files-check",
+        action="store_true",
+        help="skips the check of extra accuracy files like the images folder of SDXL",
     )
     parser.add_argument(
         "--scenarios-to-skip",
@@ -1103,6 +1111,7 @@ def check_accuracy_dir(config, model, path, verbose):
         acc_targets.append(acc_target)
         acc_types.append(acc_type)
     acc_seen = [False for _ in acc_targets]
+
     with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
         for line in f:
             for i, (pattern, acc_target, acc_type) in enumerate(
@@ -1204,8 +1213,7 @@ def extra_check_llm(mlperf_log, scenario, model):
 
 
 def get_performance_metric(
-    config, model, path, scenario_fixed, division, system_json, has_power=False
-):
+        config, model, path, scenario_fixed):
     # Assumes new logging format
     version = config.version
 
@@ -1239,8 +1247,7 @@ def get_performance_metric(
 
 
 def check_performance_dir(
-    config, model, path, scenario_fixed, division, system_json, has_power=False
-):
+        config, model, path, scenario_fixed, division, system_json):
     is_valid = False
     rt = {}
 
@@ -1289,6 +1296,12 @@ def check_performance_dir(
     )
     if not config.requires_equal_issue(model, division):
         equal_issue_used_check = True
+    if not equal_issue_used_check:
+        log.error(
+            "%s requires equal issue mode (sample_concatenate_permutation), expected=true, found=false", path
+        )
+        is_valid = False
+
     sut_name = mlperf_log["sut_name"]
 
     # check if there are any errors in the detailed log
@@ -1393,7 +1406,7 @@ def check_performance_dir(
     # Check if this run uses early stopping. If it does, get the
     # min_queries from the detail log, otherwise get this value
     # from the config
-    if not (uses_early_stopping or config.requires_equal_issue(model, division)):
+    if not uses_early_stopping:
         required_min_query_count = config.get_min_query_count(model, scenario)
         if required_min_query_count and min_query_count < required_min_query_count:
             log.error(
@@ -1445,7 +1458,7 @@ def check_performance_dir(
             )
             is_valid = False
 
-    return is_valid, res, inferred, equal_issue_used_check
+    return is_valid, res, inferred
 
 
 def get_inferred_result(
@@ -1689,6 +1702,7 @@ def check_results_dir(
     skip_empty_files_check=False,
     skip_check_power_measure_files=False,
     skip_extra_files_in_root_check=False,
+    skip_extra_accuracy_files_check=False,
     scenarios_to_skip=[],
 ):
     """
@@ -2065,19 +2079,18 @@ def check_results_dir(
                         results[name] = None
                         continue
                     system_type = system_json.get("system_type")
-                    if config.version not in ["v0.5"]:
-                        valid_system_types = ["datacenter", "edge"]
-                        if config.version not in ["v0.7"]:
-                            valid_system_types += ["datacenter,edge",
-                                                   "edge,datacenter"]
-                        if system_type not in valid_system_types:
-                            log.error(
-                                "%s has invalid system type (%s)",
-                                system_id_json,
-                                system_type,
-                            )
-                            results[name] = None
-                            continue
+                    valid_system_types = [
+                        "datacenter", "edge", "datacenter,edge", "edge,datacenter"]
+
+                    if system_type not in valid_system_types:
+                        log.error(
+                            "%s has invalid system type (%s)",
+                            system_id_json,
+                            system_type,
+                        )
+                        results[name] = None
+                        continue
+
                     config.set_type(system_type)
                     if not check_system_desc_id(
                         name,
@@ -2195,11 +2208,7 @@ def check_results_dir(
                             errors += 1
                             continue
                         else:
-                            (
-                                measurement_check,
-                                conf_equal_issue_check,
-                                weight_data_types,
-                            ) = check_measurement_dir(
+                            measurement_check, weight_data_types = check_measurement_dir(
                                 config,
                                 measurement_dir,
                                 name,
@@ -2257,9 +2266,8 @@ def check_results_dir(
                             )
                             if mlperf_model in REQUIRED_ACC_BENCHMARK:
                                 if (
-                                    config.version
-                                    in REQUIRED_ACC_BENCHMARK[mlperf_model]
-                                ):
+                                        config.version
+                                        in REQUIRED_ACC_BENCHMARK[mlperf_model] and not skip_extra_accuracy_files_check):
                                     extra_files_pass, missing_files = check_extra_files(
                                         acc_path,
                                         REQUIRED_ACC_BENCHMARK[mlperf_model][
@@ -2315,19 +2323,13 @@ def check_results_dir(
                                 continue
 
                             try:
-                                (
-                                    is_valid,
-                                    r,
-                                    is_inferred,
-                                    performance_equal_issue_check,
-                                ) = check_performance_dir(
+                                is_valid, r, is_inferred = check_performance_dir(
                                     config,
                                     mlperf_model,
                                     perf_path,
                                     scenario_fixed,
                                     division,
                                     system_json,
-                                    has_power,
                                 )
                                 if is_inferred:
                                     inferred = 1
@@ -2335,21 +2337,6 @@ def check_results_dir(
                                         "%s has inferred results, qps=%s", perf_path, r
                                     )
 
-                                # Check equal issue mode
-                                if not (
-                                    conf_equal_issue_check
-                                    or performance_equal_issue_check
-                                ):
-                                    log.error(
-                                        "%s %s requires equal issue mode (sample_concatenate_permutation), expected=true, found=%s",
-                                        perf_path,
-                                        measurement_dir,
-                                        not (
-                                            conf_equal_issue_check
-                                            or performance_equal_issue_check
-                                        ),
-                                    )
-                                    is_valid, r = False, None
                             except Exception as e:
                                 log.error(
                                     "%s caused exception in check_performance_dir: %s",
@@ -2364,14 +2351,11 @@ def check_results_dir(
                                     ranging_path = os.path.join(
                                         name, "performance", "ranging"
                                     )
-                                    (ranging_r) = get_performance_metric(
+                                    ranging_r = get_performance_metric(
                                         config,
                                         mlperf_model,
                                         ranging_path,
                                         scenario_fixed,
-                                        division,
-                                        system_json,
-                                        has_power,
                                     )
                                 except Exception as e:
                                     log.error(
@@ -2379,7 +2363,7 @@ def check_results_dir(
                                         ranging_path,
                                         e,
                                     )
-                                    is_valid, r = False, None
+                                    is_valid, ranging_r = False, None
 
                                 try:
                                     (
@@ -2674,8 +2658,13 @@ def check_measurement_dir(
                 log.error("%s is having empty %s", measurement_dir, i)
                 is_valid = False
 
+    if config.version in ["v4.0", "v4.1"]:
+        system_file_prefix = system_desc
+    else:
+        system_file_prefix = "model-info"
     for i in files:
-        if i.startswith(system_desc) and i.endswith("_" + scenario + ".json"):
+        if i.startswith(system_desc) and i.endswith(
+                "_" + scenario + ".json"):
             system_file = i
             end = len("_" + scenario + ".json")
             break
@@ -2683,17 +2672,6 @@ def check_measurement_dir(
             system_file = i
             end = len(".json")
             break
-
-    if not system_file and os.environ.get("INFER_SYSTEM_FILE", "") == "yes":
-        for i in files:
-            if i.endswith(".json"):
-                system_file = system_desc + ".json"
-                os.rename(
-                    os.path.join(measurement_dir, i),
-                    os.path.join(measurement_dir, system_file),
-                )
-                end = len(".json")
-                break
 
     weight_data_types = None
     if system_file:
@@ -2724,65 +2702,11 @@ def check_measurement_dir(
                 log.error("%s is missing code_dir %s", fname, code_dir)
                 is_valid = False
 
-        # Check equal issue mode
-        equal_issue_used = False
-        if "mlperf.conf" in files and config.requires_equal_issue(
-                model, division):
-            with open(f"{measurement_dir}/mlperf.conf") as f:
-                lines = f.readlines()
-                conf_ref_model = model.replace("-99.9", "").replace("-99", "")
-                for line in lines:
-                    line = line.replace(" ", "").replace("\n", "")
-                    if line.startswith("#"):
-                        continue
-                    elif line == "":
-                        continue
-                    else:
-                        key, val = line.split("=")
-                        key.replace(" ", "")
-                        val.replace(" ", "")
-                        conf_model, conf_scenario, conf_key = key.split(".")
-                        if (
-
-                            (conf_key == "sample_concatenate_permutation")
-                            and ((conf_model == conf_ref_model) or conf_model == "*")
-                            and ((conf_scenario == scenario) or conf_scenario == "*")
-                        ):
-                            if val.isnumeric():
-                                val = int(val)
-                                equal_issue_used = val == 1
-                                break
-
-        if "user.conf" in files and config.requires_equal_issue(
-                model, division):
-            with open(f"{measurement_dir}/user.conf") as f:
-                lines = f.readlines()
-                conf_ref_model = model.replace("-99.9", "").replace("-99", "")
-                for line in lines:
-                    line = line.replace(" ", "").replace("\n", "")
-                    if line.startswith("#"):
-                        continue
-                    elif line == "":
-                        continue
-                    else:
-                        key, val = line.split("=")
-                        key.replace(" ", "")
-                        val.replace(" ", "")
-                        conf_model, conf_scenario, conf_key = key.split(".")
-                        if (
-                            (conf_key == "sample_concatenate_permutation")
-                            and ((conf_model == conf_ref_model) or conf_model == "*")
-                            and ((conf_scenario == scenario) or conf_scenario == "*")
-                        ):
-                            if val.isnumeric():
-                                val = int(val)
-                                equal_issue_used = val == 1
-                                break
     else:
         log.error("%s is missing %s*.json", fname, system_desc)
         is_valid = False
 
-    return is_valid, equal_issue_used, weight_data_types
+    return is_valid, weight_data_types
 
 
 def check_compliance_perf_dir(test_dir):
@@ -2959,7 +2883,6 @@ def check_compliance_dir(
     test_list = ["TEST01", "TEST04", "TEST05"]
 
     if model in [
-        "rnnt",
         "bert-99",
         "bert-99.9",
         "dlrm-v2-99",
@@ -2967,6 +2890,7 @@ def check_compliance_dir(
         "3d-unet-99",
         "3d-unet-99.9",
         "retinanet",
+        "rnnt",
         "gptj-99",
         "gptj-99.9",
         "llama2-70b-99",
@@ -3019,7 +2943,7 @@ def check_compliance_dir(
                 compliance_perf_dir = os.path.join(
                     compliance_dir, test, "performance", "run_1"
                 )
-                compliance_perf_valid, r, is_inferred, _ = check_performance_dir(
+                compliance_perf_valid, r, is_inferred = check_performance_dir(
                     config, model, compliance_perf_dir, scenario, division, system_json
                 )
                 if is_inferred:
@@ -3080,6 +3004,7 @@ def main():
             args.skip_empty_files_check,
             args.skip_check_power_measure_files,
             args.skip_extra_files_in_root_check,
+            args.skip_extra_accuracy_files_check,
             scenarios_to_skip,
         )
 

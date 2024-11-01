@@ -201,8 +201,8 @@ class RunnerBase:
         # run the prediction
         processed_results = []
         try:
-            import pdb
-            pdb.set_trace()
+            #import pdb
+            #pdb.set_trace()
             results = self.model.predict(qitem.inputs)
             processed_results = self.post_process(results, qitem.content_id, qitem.inputs, self.result_dict)
             if self.take_accuracy:
@@ -217,8 +217,8 @@ class RunnerBase:
             response_array_refs = []
             response = []
             for idx, query_id in enumerate(qitem.query_id):
-                import pdb
-                pdb.set_trace()
+                #import pdb
+                #pdb.set_trace()
                 response_array = array.array(
                     "B", np.array(processed_results[idx], np.uint8).tobytes()
                 )

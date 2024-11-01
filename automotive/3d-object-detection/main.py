@@ -85,7 +85,8 @@ def get_args():
     parser.add_argument("--model-name", help="Name of the model")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--qps", type=int, help="target qps")
-    parser.add_argument("--model-path", help="Path to model weights")
+    parser.add_argument("--lidar-path", help="Path to model weights")
+    parser.add_argument("--segmentor-path", help="Path to model weights")
 
     parser.add_argument(
         "--dtype",
@@ -200,10 +201,10 @@ class RunnerBase:
         # run the prediction
         processed_results = []
         try:
+            import pdb
+            pdb.set_trace()
             results = self.model.predict(qitem.inputs)
-            processed_results = self.post_process(
-                results, qitem.content_id, qitem.inputs, self.result_dict
-            )
+            processed_results = self.post_process(results, qitem.content_id, qitem.inputs, self.result_dict)
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
             self.result_timing.append(time.time() - qitem.start)
@@ -297,7 +298,10 @@ def main():
     # find backend
     backend = get_backend(
         # TODO: pass model, inference and backend arguments
-        args.backend
+        args.backend,
+        lidar_detector_path=args.lidar_path,
+        segmentor_path=args.segmentor_path,
+        data_path=args.dataset_path
     )
     if args.dtype == "fp16":
         dtype = torch.float16
@@ -355,7 +359,7 @@ def main():
     ds.load_query_samples([0])
     for i in range(5):
         input = ds.get_samples([0])
-        _ = backend.predict(input)
+        _ = backend.predict(input[0])
 
     scenario = SCENARIO_MAP[args.scenario]
     runner_map = {

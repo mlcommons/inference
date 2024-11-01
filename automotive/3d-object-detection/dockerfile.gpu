@@ -1,11 +1,11 @@
-ARG FROM_IMAGE_NAME=nvcr.io/nvidia/pytorch:23.08-py3
+ARG FROM_IMAGE_NAME=pytorch/pytorch:2.0.1-cuda11.7-cudnn8-devel
 FROM ${FROM_IMAGE_NAME}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # apt dependencies
 RUN apt-get update
-RUN apt-get install -y ffmpeg libsm6 libxext6
+RUN apt-get install -y ffmpeg libsm6 libxext6 git
 
 # install LDM
 COPY . /diffusion

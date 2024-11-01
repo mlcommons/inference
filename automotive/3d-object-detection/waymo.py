@@ -107,14 +107,14 @@ class Waymo(dataset.Dataset):
         labels = []
         for id in id_list:
             item = self.get_item(id)
-            data.append({'pts': item['pts'], 'images': item['images'], 'calib_info': item['calib_info']})
+            data.append({'pts': item['pts'], 'images': item['images'], 'calib_info': item['calib_info'], 'image_info': item['image_info']})
             labels.append({'gt_labels': item['gt_labels'], 'calib_info': item['calib_info'], 'gt_names': item['gt_names'],})
         return data, labels
 
     def get_item(self, id):
         data_info = self.data_infos[self.sorted_ids[id]]
         image_info, calib_info, annos_info = \
-            data_info['image'], data_info['calib'], data_info['annos']
+            data_info['image'], data_info['calib'].copy(), data_info['annos']
         # point cloud input
         velodyne_path = data_info['point_cloud']['velodyne_path']
         pts_path = os.path.join(self.data_root, velodyne_path)
@@ -127,6 +127,8 @@ class Waymo(dataset.Dataset):
         # because
         tr_velo_to_cam = calib_info['Tr_velo_to_cam_0'].astype(np.float32)
         r0_rect = calib_info['R0_rect'].astype(np.float32)
+        for key in calib_info.keys():
+            calib_info[key] = torch.from_numpy(calib_info[key]).type(torch.float32)
 
         # annotations input
         annos_info = self.remove_dont_care(annos_info)
@@ -138,9 +140,9 @@ class Waymo(dataset.Dataset):
         gt_bboxes_3d = process.bbox_camera2lidar(gt_bboxes, tr_velo_to_cam, r0_rect)
         gt_labels = [self.CLASSES.get(name, -1) for name in annos_name]
         data_dict = {
-            'pts': pts,
-            'gt_bboxes_3d': gt_bboxes_3d,
-            'gt_labels': np.array(gt_labels), 
+            'pts': torch.from_numpy(pts),
+            'gt_bboxes_3d': torch.from_numpy(gt_bboxes_3d),
+            'gt_labels': torch.from_numpy(np.array(gt_labels)), 
             'gt_names': annos_name,
             'difficulty': annos_info['difficulty'],
             'image_info': image_info,
@@ -185,10 +187,10 @@ class PostProcessWaymo:
     def add_results(self, results):
         self.results.extend(results)
 
-    def __call__(self, results, ids):
-        self.content_ids.extend(ids)
+    def __call__(self, results, content_id, inputs, result_dict):
+        self.content_ids.extend(content_id)
         # TODO: Postprocess results
-        return []
+        return results
 
     def start(self):
         self.results = []

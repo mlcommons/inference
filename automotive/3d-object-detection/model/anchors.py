@@ -1,6 +1,6 @@
 import torch
 import math
-from utils import limit_period, iou2d_nearest
+from tools.process import limit_period, iou2d_nearest
 
 
 class Anchors():

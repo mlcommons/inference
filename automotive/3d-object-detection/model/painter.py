@@ -7,7 +7,7 @@ import copy
 import sys
 from tqdm import tqdm
 sys.path.append('..')
-import segmentation as network
+import model.segmentation as network
 import argparse
 
 def get_calib_from_file(calib_file):

@@ -1,6 +1,6 @@
 # MLPerf™ Inference Benchmarks for Text to Image
 
-This is the reference implementation for MLPerf Inference text to image
+This is the reference implementation for MLPerf Inference text to image. Two implementation are currently supported, Graphlearn for Pytorch (GLT) and Deep Graph Library (DGL), both using pytorch as the backbone of the model.
 
 ## Supported Models
 
@@ -47,13 +47,14 @@ Install loadgen:
 cd $LOADGEN_FOLDER
 CFLAGS="-std=c++14" python setup.py install
 ```
-### Install graphlearn for pytorch
 
-Install pytorch geometric:
+### Install pytorch geometric
+
 ```bash
 export TORCH_VERSION=$(python -c "import torch; print(torch.__version__)")
 pip install torch-geometric torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-${TORCH_VERSION}.html
 ```
+### Install graphlearn for pytorch (Only for GLT implementation)
 
 Follow instalation instructions at: https://github.com/alibaba/graphlearn-for-pytorch.git
 
@@ -80,7 +81,7 @@ cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size tiny
 ```
 
-**Compress graph (optional)**
+**Compress graph (optional, only for GLT implementation)**
 ```bash
 cd $GRAPH_FOLDER
 python3 tools/compress_graph.py --path igbh --dataset_size tiny --layout <CSC or CSR>
@@ -99,7 +100,7 @@ cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size full
 ```
 
-**Compress graph (optional)**
+**Compress graph (optional, only for GLT implementation)**
 ```bash
 cd $GRAPH_FOLDER
 python3 tools/compress_graph.py --path igbh --dataset_size tiny --layout <CSC or CSR>
@@ -114,16 +115,22 @@ TODO
 ```bash
 # Go to the benchmark folder
 cd $GRAPH_FOLDER
-# Run the benchmark
-python3 main.py --dataset igbh-tiny --dataset-path igbh/ --profile debug [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
+# Run the benchmark GLT
+python3 main.py --dataset igbh-glt-tiny --dataset-path igbh/ --profile debug-glt [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
+
+# Run the benchmark DGL
+python3 main.py --dataset igbh-dgl-tiny --dataset-path igbh/ --profile debug-dgl [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
 
 #### Local run
 ```bash
 # Go to the benchmark folder
 cd $GRAPH_FOLDER
-# Run the benchmark
-python3 main.py --dataset igbh --dataset-path igbh/ [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
+# Run the benchmark GLT
+python3 main.py --dataset igbh-glt --dataset-path igbh/ --profile rgat-glt-full [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
+
+# Run the benchmark DGL
+python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
 #### Run using docker
 

@@ -16,8 +16,6 @@ import logging
 import argparse
 import dataset
 import numpy as np
-import graphlearn_torch as glt
-from igb.dataloader import IGB260MDGLDataset
 
 
 logging.basicConfig(level=logging.INFO)

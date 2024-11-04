@@ -37,7 +37,6 @@ jobs:
 
       - name: Commit
         run: |
-          cd ${GITHUB_WORKSPACE}
           HAS_CHANGES=$(git diff --staged --name-only)
           if [ ${#HAS_CHANGES} -gt 0 ]; then
             git log

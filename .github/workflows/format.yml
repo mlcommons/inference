@@ -45,5 +45,5 @@ jobs:
             git config --global user.email "${{ github.actor }}@users.noreply.github.com"
             git config --global user.name "${{ github.actor }}"
             git commit -m '[Automated Commit] Format Codebase'
-            git push
+            git push origin "${GITHUB_REF_NAME}"
           fi

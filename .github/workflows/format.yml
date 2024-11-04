@@ -14,6 +14,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
       - name: Set up Python ${{ env.python_version }}
         uses: actions/setup-python@v3
         with:
@@ -31,20 +33,17 @@ jobs:
       - name: Format Codebase
         run: |
           git remote add upstream ${{ github.event.pull_request.base.repo.clone_url }}
-          git fetch upstream
+          git fetch upstream ${{ github.event.pull_request.base.ref }}
           ".github/scripts/format-cpp.sh" "upstream" "${{ github.event.pull_request.base.ref }}"
           ".github/scripts/format-py.sh" "upstream" "${{ github.event.pull_request.base.ref }}"
 
       - name: Commit
         run: |
-          cd ${GITHUB_WORKSPACE}
           HAS_CHANGES=$(git diff --staged --name-only)
           if [ ${#HAS_CHANGES} -gt 0 ]; then
-            git log
+            git checkout -B "${GITHUB_REF_NAME}"
             git config --global user.email "${{ github.actor }}@users.noreply.github.com"
             git config --global user.name "${{ github.actor }}"
             git commit -m '[Automated Commit] Format Codebase'
-            git push 
+            git push origin "${GITHUB_REF_NAME}"
           fi
-
-      

@@ -32,20 +32,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from torch.nn.functional import adaptive_avg_pool2d
+from scipy import linalg
+from PIL import Image
+import torchvision.transforms as TF
+import torch
+import random
+import numpy as np
+from typing import Any
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+import pathlib
+import os
 import sys
 sys.path.insert("..", 0)
 from inception import InceptionV3  # noqa: E402
-import os
-import pathlib
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Any
-import numpy as np
-import random
-import torch
-import torchvision.transforms as TF
-from PIL import Image
-from scipy import linalg
-from torch.nn.functional import adaptive_avg_pool2d
 
 
 try:

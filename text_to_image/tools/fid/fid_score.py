@@ -33,6 +33,8 @@ limitations under the License.
 """
 
 import sys
+sys.path.insert("..", 0)
+from inception import InceptionV3  # noqa: E402
 import os
 import pathlib
 from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
@@ -44,8 +46,6 @@ import torchvision.transforms as TF
 from PIL import Image
 from scipy import linalg
 from torch.nn.functional import adaptive_avg_pool2d
-from inception import InceptionV3
-sys.path.append(os.path.dirname(__file__))
 
 
 try:

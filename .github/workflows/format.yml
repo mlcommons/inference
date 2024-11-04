@@ -31,7 +31,7 @@ jobs:
       - name: Format Codebase
         run: |
           git remote add upstream ${{ github.event.pull_request.base.repo.clone_url }}
-          git fetch upstream
+          git fetch upstream ${{ github.event.pull_request.base.ref }}
           ".github/scripts/format-cpp.sh" "upstream" "${{ github.event.pull_request.base.ref }}"
           ".github/scripts/format-py.sh" "upstream" "${{ github.event.pull_request.base.ref }}"
 
@@ -44,7 +44,5 @@ jobs:
             git config --global user.email "${{ github.actor }}@users.noreply.github.com"
             git config --global user.name "${{ github.actor }}"
             git commit -m '[Automated Commit] Format Codebase'
-            git push 
+            git push origin ${{ github.event.pull_request.head.ref }}
           fi
-
-      

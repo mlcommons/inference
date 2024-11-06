@@ -1,3 +1,11 @@
+from utils import IGL260MDataset
+import warnings
+from tqdm import tqdm
+import numpy as np
+import time
+import torch.nn.functional as F
+import torch.optim as optim
+import torch.nn as nn
 import dgl
 from dgl.data import DGLDataset
 import dgl.nn.pytorch as dglnn
@@ -9,15 +17,7 @@ from sys import getsizeof
 import torch
 torch.manual_seed(0)
 dgl.seed(0)
-import torch.nn as nn
-import torch.optim as optim
-import torch.nn.functional as F
-import time
-import numpy as np
-from tqdm import tqdm
-import warnings
 warnings.filterwarnings("ignore")
-from utils import IGL260MDataset
 
 
 class GCN(nn.Module):
@@ -34,10 +34,18 @@ class GCN(nn.Module):
         self.n_hidden = n_hidden
         self.n_classes = n_classes
         # input layer
-        self.layers.append(GraphConv(in_feats, n_hidden, activation=activation))
+        self.layers.append(
+            GraphConv(
+                in_feats,
+                n_hidden,
+                activation=activation))
         # hidden layers
         for i in range(n_layers - 1):
-            self.layers.append(GraphConv(n_hidden, n_hidden, activation=activation))
+            self.layers.append(
+                GraphConv(
+                    n_hidden,
+                    n_hidden,
+                    activation=activation))
         # output layer
         self.layers.append(GraphConv(n_hidden, n_classes))
         self.dropout = nn.Dropout(p=dropout)
@@ -67,7 +75,7 @@ class GCN(nn.Module):
         # TODO: can we standardize this?
         for l, layer in enumerate(self.layers):
             y = torch.zeros(g.number_of_nodes(), self.n_hidden if l !=
-                         len(self.layers) - 1 else self.n_classes)
+                            len(self.layers) - 1 else self.n_classes)
 
             sampler = dgl.dataloading.MultiLayerFullNeighborSampler(1)
             dataloader = dgl.dataloading.NodeDataLoader(
@@ -215,7 +223,7 @@ class SAGE(nn.Module):
                  n_layers,
                  activation,
                  dropout,
-                aggregator_type):
+                 aggregator_type):
         super().__init__()
         self.n_layers = n_layers
         self.n_hidden = n_hidden
@@ -223,8 +231,16 @@ class SAGE(nn.Module):
         self.layers = nn.ModuleList()
         self.layers.append(dglnn.SAGEConv(in_feats, n_hidden, aggregator_type))
         for i in range(1, n_layers - 1):
-            self.layers.append(dglnn.SAGEConv(n_hidden, n_hidden, aggregator_type))
-        self.layers.append(dglnn.SAGEConv(n_hidden, n_classes, aggregator_type))
+            self.layers.append(
+                dglnn.SAGEConv(
+                    n_hidden,
+                    n_hidden,
+                    aggregator_type))
+        self.layers.append(
+            dglnn.SAGEConv(
+                n_hidden,
+                n_classes,
+                aggregator_type))
         self.dropout = nn.Dropout(dropout)
         self.activation = activation
 
@@ -252,7 +268,7 @@ class SAGE(nn.Module):
         # TODO: can we standardize this?
         for l, layer in enumerate(self.layers):
             y = torch.zeros(g.number_of_nodes(), self.n_hidden if l !=
-                         len(self.layers) - 1 else self.n_classes)
+                            len(self.layers) - 1 else self.n_classes)
 
             sampler = dgl.dataloading.MultiLayerFullNeighborSampler(1)
             dataloader = dgl.dataloading.NodeDataLoader(
@@ -278,4 +294,3 @@ class SAGE(nn.Module):
 
             x = y
         return y
-

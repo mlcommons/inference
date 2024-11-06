@@ -1,8 +1,10 @@
 import numpy as np
 import torch
 
+
 class IGL260MDataset(object):
-    def __init__(self, root: str, size: str, in_memory: int, classes: int, synthetic: int):
+    def __init__(self, root: str, size: str, in_memory: int,
+                 classes: int, synthetic: int):
         self.dir = root
         self.size = size
         self.synthetic = synthetic
@@ -18,8 +20,13 @@ class IGL260MDataset(object):
     def paper_feat(self) -> np.ndarray:
         if self.synthetic:
             return np.random((self.num_nodes, self.num_edges))
-            
-        path = osp.join(self.dir, self.size, 'processed', 'paper', 'node_feat.npy')
+
+        path = osp.join(
+            self.dir,
+            self.size,
+            'processed',
+            'paper',
+            'node_feat.npy')
         if self.in_memory:
             return np.load(path)
         else:
@@ -28,9 +35,19 @@ class IGL260MDataset(object):
     @property
     def paper_label(self) -> np.ndarray:
         if self.num_classes == 19:
-            path = osp.join(self.dir, self.size, 'processed', 'paper', 'node_label_19.npy')
+            path = osp.join(
+                self.dir,
+                self.size,
+                'processed',
+                'paper',
+                'node_label_19.npy')
         else:
-            path = osp.join(self.dir, self.size, 'processed', 'paper', 'node_label_2K.npy')
+            path = osp.join(
+                self.dir,
+                self.size,
+                'processed',
+                'paper',
+                'node_label_2K.npy')
         if self.in_memory:
             return np.load(path)
         else:
@@ -38,12 +55,16 @@ class IGL260MDataset(object):
 
     @property
     def paper_edge(self) -> np.ndarray:
-        path = osp.join(self.dir, self.size, 'processed', 'paper__cites__paper', 'edge_index.npy')
+        path = osp.join(
+            self.dir,
+            self.size,
+            'processed',
+            'paper__cites__paper',
+            'edge_index.npy')
         if self.in_memory:
             return np.load(path)
         else:
             return np.load(path, mmap_mode='r')
-
 
 
 def compute_acc(pred, labels):
@@ -52,6 +73,7 @@ def compute_acc(pred, labels):
     """
     labels = labels.long()
     return (torch.argmax(pred, dim=1) == labels).float().sum() / len(pred)
+
 
 def evaluate(model, g, inputs, labels, val_nid, batch_size, device):
     """
@@ -69,6 +91,7 @@ def evaluate(model, g, inputs, labels, val_nid, batch_size, device):
     model.train()
     return compute_acc(pred[val_nid], labels[val_nid])
 
+
 def load_subtensor(g, seeds, input_nodes, device):
     """
     Copys features and labels of a set of nodes onto GPU.
@@ -76,6 +99,7 @@ def load_subtensor(g, seeds, input_nodes, device):
     batch_inputs = g.ndata['features'][input_nodes].to(device)
     batch_labels = g.ndata['labels'][seeds].to(device)
     return batch_inputs, batch_labels
+
 
 def track_acc(g, args):
     train_accuracy = []
@@ -86,7 +110,8 @@ def track_acc(g, args):
     n_classes = args.num_classes
 
     # Create csr/coo/csc formats before launching training processes with multi-gpu.
-    # This avoids creating certain formats in each sub-process, which saves momory and CPU.
+    # This avoids creating certain formats in each sub-process, which saves
+    # momory and CPU.
     g.create_formats_()
 
     num_epochs = args.epochs
@@ -102,8 +127,8 @@ def track_acc(g, args):
 
     # Create PyTorch DataLoader for constructing blocks
     sampler = dgl.dataloading.MultiLayerNeighborSampler(
-                [int(fanout) for fanout in fan_out.split(',')])
-    
+        [int(fanout) for fanout in fan_out.split(',')])
+
     dataloader = dgl.dataloading.NodeDataLoader(
         g,
         train_nid,
@@ -117,7 +142,14 @@ def track_acc(g, args):
     if args.model_type == 'gcn':
         model = GCN(in_feats, num_hidden, n_classes, 1, F.relu, dropout)
     if args.model_type == 'sage':
-        model = SAGE(in_feats, num_hidden, n_classes, num_layers, F.relu, dropout, 'gcn')
+        model = SAGE(
+            in_feats,
+            num_hidden,
+            n_classes,
+            num_layers,
+            F.relu,
+            dropout,
+            'gcn')
     if args.model_type == 'gat':
         model = GAT(in_feats, num_hidden, n_classes, num_layers, 2, F.relu)
 
@@ -126,7 +158,7 @@ def track_acc(g, args):
     loss_fcn = loss_fcn.to(device)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=args.decay)
 
-     # Training loop
+    # Training loop
     avg = 0
     best_test_acc = 0
     log_every = 1
@@ -139,7 +171,7 @@ def track_acc(g, args):
         epoch_start = time.time()
         for step, (input_nodes, seeds, blocks) in (enumerate(dataloader)):
             # Load the input features as well as output labels
-            #batch_inputs, batch_labels = load_subtensor(g, seeds, input_nodes, device)
+            # batch_inputs, batch_labels = load_subtensor(g, seeds, input_nodes, device)
             blocks = [block.int().to(device) for block in blocks]
             batch_inputs = blocks[0].srcdata['features']
             batch_labels = blocks[-1].dstdata['labels']
@@ -164,7 +196,7 @@ def track_acc(g, args):
             train_g.ndata['train_mask'], as_tuple=True)[0]
         train_acc = evaluate(
             model, train_g, train_g.ndata['features'], train_g.ndata['labels'], train_nid, batch_size, device)
-        
+
         test_g = g
         test_nid = torch.nonzero(
             test_g.ndata['test_mask'], as_tuple=True)[0]

@@ -5,6 +5,7 @@ import os.path as osp
 import numpy as np
 from typing import Literal
 
+
 def float2half(base_path, dataset_size):
     paper_nodes_num = {
         "tiny": 100000,
@@ -155,23 +156,24 @@ class IGBH:
 
 class IGBHeteroGraphStructure:
     """
-    Synchronously (optionally parallelly) loads the edge relations for IGBH. 
-    Current IGBH edge relations are not yet converted to torch tensor. 
+    Synchronously (optionally parallelly) loads the edge relations for IGBH.
+    Current IGBH edge relations are not yet converted to torch tensor.
     """
+
     def __init__(
-            self,
-            data_path,
-            dataset_size="full",
-            use_label_2K=True,
-            in_memory=False,
-            use_fp16=True,
-            # in-memory and memory-related optimizations
-            separate_sampling_aggregation=False,
-            # perf related
-            multithreading=True,
-            **kwargs,
-        ):
-        
+        self,
+        data_path,
+        dataset_size="full",
+        use_label_2K=True,
+        in_memory=False,
+        use_fp16=True,
+        # in-memory and memory-related optimizations
+        separate_sampling_aggregation=False,
+        # perf related
+        multithreading=True,
+        **kwargs,
+    ):
+
         self.dir = data_path
         self.dataset_size = dataset_size
         self.use_fp16 = use_fp16
@@ -189,32 +191,46 @@ class IGBHeteroGraphStructure:
         }[self.dataset_size]
 
         self.use_journal_conference = True
-        self.separate_sampling_aggregation=separate_sampling_aggregation
+        self.separate_sampling_aggregation = separate_sampling_aggregation
 
         self.torch_tensor_input_dir = data_path
         self.torch_tensor_input = self.torch_tensor_input_dir != ""
 
         self.multithreading = multithreading
 
-        # This class only stores the edge data, labels, and the train/val indices
+        # This class only stores the edge data, labels, and the train/val
+        # indices
         self.edge_dict = self.load_edge_dict()
         self.label = self.load_labels()
-        self.full_num_trainable_nodes = (227130858 if self.num_classes != 2983 else 157675969)
+        self.full_num_trainable_nodes = (
+            227130858 if self.num_classes != 2983 else 157675969)
         self.train_idx, self.val_idx = self.get_train_val_test_indices()
         if self.use_fp16:
-            float2half(os.path.join(self.dir, self.dataset_size, "processed"), self.dataset_size)
+            float2half(
+                os.path.join(
+                    self.dir,
+                    self.dataset_size,
+                    "processed"),
+                self.dataset_size)
 
     def load_edge_dict(self):
         mmap_mode = None if self.in_memory else "r"
-        
-        edges = ["paper__cites__paper", "paper__written_by__author", "author__affiliated_to__institute", "paper__topic__fos"]
-        if self.use_journal_conference: 
+
+        edges = [
+            "paper__cites__paper",
+            "paper__written_by__author",
+            "author__affiliated_to__institute",
+            "paper__topic__fos"]
+        if self.use_journal_conference:
             edges += ["paper__published__journal", "paper__venue__conference"]
-        
+
         loaded_edges = None
-        def load_edge(edge, mmap=mmap_mode, parent_path=osp.join(self.dir, self.dataset_size, "processed")):
-            return edge, torch.from_numpy(np.load(osp.join(parent_path, edge, "edge_index.npy"), mmap_mode=mmap))
-        
+
+        def load_edge(edge, mmap=mmap_mode, parent_path=osp.join(
+                self.dir, self.dataset_size, "processed")):
+            return edge, torch.from_numpy(
+                np.load(osp.join(parent_path, edge, "edge_index.npy"), mmap_mode=mmap))
+
         if self.multithreading:
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 loaded_edges = executor.map(load_edge, edges)
@@ -228,31 +244,31 @@ class IGBHeteroGraphStructure:
             }
 
         return self.augment_edges(loaded_edges)
-    
+
     def load_labels(self):
         if self.dataset_size not in ['full', 'large']:
             return torch.from_numpy(
                 np.load(
                     osp.join(
-                        self.dir, 
-                        self.dataset_size, 
-                        'processed', 
-                        'paper', 
+                        self.dir,
+                        self.dataset_size,
+                        'processed',
+                        'paper',
                         self.label_file)
                 )
             ).to(torch.long)
-        else: 
+        else:
             return torch.from_numpy(
                 np.memmap(
                     osp.join(
-                        self.dir, 
-                        self.dataset_size, 
-                        'processed', 
-                        'paper', 
+                        self.dir,
+                        self.dataset_size,
+                        'processed',
+                        'paper',
                         self.label_file
-                    ), 
-                    dtype='float32', 
-                    mode='r', 
+                    ),
+                    dtype='float32',
+                    mode='r',
                     shape=(
                         (269346174 if self.dataset_size == "full" else 100000000)
                     )
@@ -291,35 +307,47 @@ class IGBHeteroGraphStructure:
         base_dir = osp.join(self.dir, self.dataset_size, "processed")
         assert osp.exists(osp.join(base_dir, "train_idx.pt")) and osp.exists(osp.join(base_dir, "val_idx.pt")), \
             "Train and validation indices not found. Please run GLT's split_seeds.py first."
-        
+
         return (
-            torch.load(osp.join(self.dir, self.dataset_size, "processed", "train_idx.pt")), 
-            torch.load(osp.join(self.dir, self.dataset_size, "processed", "val_idx.pt"))
+            torch.load(
+                osp.join(
+                    self.dir,
+                    self.dataset_size,
+                    "processed",
+                    "train_idx.pt")),
+            torch.load(
+                osp.join(
+                    self.dir,
+                    self.dataset_size,
+                    "processed",
+                    "val_idx.pt"))
         )
-        
+
 
 class Features:
     """
-    Lazily initializes the features for IGBH. 
+    Lazily initializes the features for IGBH.
 
-    Features will be initialized only when *build_features* is called. 
+    Features will be initialized only when *build_features* is called.
 
     Features will be placed into shared memory when *share_features* is called
-    or if the features are built (either mmap-ed or loaded in memory) 
+    or if the features are built (either mmap-ed or loaded in memory)
     and *torch.multiprocessing.spawn* is called
     """
+
     def __init__(self, path, dataset_size, in_memory=True, use_fp16=True):
         self.path = path
         self.dataset_size = dataset_size
-        self.in_memory=in_memory
-        self.use_fp16=use_fp16
+        self.in_memory = in_memory
+        self.use_fp16 = use_fp16
         if self.use_fp16:
             self.dtype = torch.float16
         else:
             self.dtype = torch.float32
         self.feature = {}
 
-    def build_features(self, use_journal_conference=False, multithreading=False):
+    def build_features(self, use_journal_conference=False,
+                       multithreading=False):
         node_types = ['paper', 'author', 'institute', 'fos']
         if use_journal_conference or self.dataset_size in ['large', 'full']:
             node_types += ['conference', 'journal']
@@ -329,7 +357,8 @@ class Features:
                 return feature_store.load(feature_name), feature_name
 
             with concurrent.futures.ThreadPoolExecutor() as executor:
-                loaded_features = executor.map(load_feature, [(self, ntype) for ntype in node_types])
+                loaded_features = executor.map(
+                    load_feature, [(self, ntype) for ntype in node_types])
                 self.feature = {
                     node_type: feature_value for feature_value, node_type in loaded_features
                 }
@@ -342,22 +371,25 @@ class Features:
             self.feature[node_type] = self.feature[node_type].share_memory_()
 
     def load_from_tensor(self, node):
-        return torch.load(osp.join(self.path, self.dataset_size, "processed", node, "node_feat_fp16.pt"))
-        
+        return torch.load(osp.join(self.path, self.dataset_size,
+                          "processed", node, "node_feat_fp16.pt"))
+
     def load_in_memory_numpy(self, node):
-        return torch.from_numpy(np.load(osp.join(self.path, self.dataset_size, 'processed', node, 'node_feat.npy')))
-        
+        return torch.from_numpy(np.load(
+            osp.join(self.path, self.dataset_size, 'processed', node, 'node_feat.npy')))
+
     def load_mmap_numpy(self, node):
         """
         Loads a given numpy array through mmap_mode="r"
         """
-        return torch.from_numpy(np.load(osp.join(self.path, self.dataset_size, "processed", node, "node_feat.npy"), mmap_mode="r" ))
+        return torch.from_numpy(np.load(osp.join(
+            self.path, self.dataset_size, "processed", node, "node_feat.npy"), mmap_mode="r"))
 
     def memmap_mmap_numpy(self, node):
         """
-        Loads a given NumPy array through memory-mapping np.memmap. 
-        
-        This is the same code as the one provided in IGB codebase. 
+        Loads a given NumPy array through memory-mapping np.memmap.
+
+        This is the same code as the one provided in IGB codebase.
         """
         shape = [None, 1024]
         if self.dataset_size == "full":
@@ -372,28 +404,31 @@ class Features:
                 shape[0] = 116959896
 
         assert shape[0] is not None
-        return torch.from_numpy(np.memmap(osp.join(self.path, self.dataset_size, "processed", node, "node_feat.npy"), dtype="float32", mode='r', shape=shape))
+        return torch.from_numpy(np.memmap(osp.join(self.path, self.dataset_size,
+                                "processed", node, "node_feat.npy"), dtype="float32", mode='r', shape=shape))
 
     def load(self, node):
         if self.in_memory:
             if self.use_fp16:
                 return self.load_from_tensor(node)
             else:
-                if self.dataset_size in ['large', 'full'] and node in ['paper', 'author']:
+                if self.dataset_size in [
+                        'large', 'full'] and node in ['paper', 'author']:
                     return self.memmap_mmap_numpy(node)
                 else:
                     return self.load_in_memory_numpy(node)
         else:
-            if self.dataset_size in ['large', 'full'] and node in ['paper', 'author']:
+            if self.dataset_size in [
+                    'large', 'full'] and node in ['paper', 'author']:
                 return self.memmap_mmap_numpy(node)
             else:
                 return self.load_mmap_numpy(node)
 
-    def get_input_features(self, input_dict, device): 
+    def get_input_features(self, input_dict, device):
         # fetches the batch inputs
         # moving it here so so that future modifications could be easier
         return {
-            key: self.feature[key][value.to(torch.device("cpu")), :].to(device).to(self.dtype) 
+            key: self.feature[key][value.to(torch.device("cpu")), :].to(
+                device).to(self.dtype)
             for key, value in input_dict.items()
         }
-        

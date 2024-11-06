@@ -13,7 +13,6 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("backend-dgl")
 
 
-
 class BackendDGL(backend.Backend):
     def __init__(
         self,
@@ -41,13 +40,16 @@ class BackendDGL(backend.Backend):
         self.fan_out = [5, 10, 15]
         self.igbh_graph_structure = igbh.igbh_dataset
         self.feature_store = Features(
-            self.igbh_graph_structure.dir, 
-            self.igbh_graph_structure.dataset_size, 
-            self.igbh_graph_structure.in_memory, 
+            self.igbh_graph_structure.dir,
+            self.igbh_graph_structure.dataset_size,
+            self.igbh_graph_structure.in_memory,
             use_fp16=self.igbh_graph_structure.use_fp16,
         )
         self.feature_store.build_features(use_journal_conference=True)
-        self.graph = build_graph(self.igbh_graph_structure, "dgl", features=self.feature_store)
+        self.graph = build_graph(
+            self.igbh_graph_structure,
+            "dgl",
+            features=self.feature_store)
         self.neighbor_loader = PyGSampler([5, 10, 15])
         # Load model Architechture
         self.model = RGAT(
@@ -89,6 +91,6 @@ class BackendDGL(backend.Backend):
             input_size = inputs.shape[0]
             # Get batch
             batch = self.neighbor_loader.sample(self.graph, {"paper": inputs})
-            batch_preds, batch_labels = self.model(batch, self.device, self.feature_store)
+            batch_preds, batch_labels = self.model(
+                batch, self.device, self.feature_store)
         return batch_preds
-

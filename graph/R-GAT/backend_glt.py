@@ -13,7 +13,7 @@ from igbh import IGBHeteroDataset, IGBH
 import graphlearn_torch as glt
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("backend-pytorch")
+log = logging.getLogger("backend-glt")
 
 
 class CustomNeighborLoader(NodeLoader):
@@ -114,20 +114,19 @@ class CustomNeighborLoader(NodeLoader):
         return result
 
 
-class BackendPytorch(backend.Backend):
+class BackendGLT(backend.Backend):
     def __init__(
         self,
         model_type="rgat",
         type: Literal["fp16", "fp32"] = "fp16",
         device: Literal["cpu", "gpu"] = "gpu",
         ckpt_path: str = None,
-        igbh_dataset: IGBHeteroDataset = None,
+        igbh: IGBH = None,
         batch_size: int = 1,
         layout: Literal["CSC", "CSR", "COO"] = "COO",
         edge_dir: str = "in",
     ):
-        super(BackendPytorch, self).__init__()
-        self.i = 0
+        super(BackendGLT, self).__init__()
         # Set device and type
         if device == "gpu":
             self.device = torch.device("cuda")
@@ -140,6 +139,7 @@ class BackendPytorch(backend.Backend):
             self.type = torch.float16
         # Create Node and neighbor loade
         self.glt_dataset = glt.data.Dataset(edge_dir=edge_dir)
+        igbh_dataset = igbh.igbh_dataset
         self.glt_dataset.init_node_features(
             node_feature_data=igbh_dataset.feat_dict,
             with_gpu=(device == "gpu"),

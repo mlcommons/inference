@@ -84,7 +84,6 @@ class BackendPytorch(backend.Backend):
                 scheduler=self.scheduler,
                 safety_checker=None,
                 add_watermarker=False,
-                variant="fp16" if (self.dtype == torch.float16) else None,
                 torch_dtype=self.dtype,
             )
             # self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)

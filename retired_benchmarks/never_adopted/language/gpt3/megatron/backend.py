@@ -54,15 +54,23 @@ class SUT_base:
 
             response_array = array.array("B", pred_output_batch[0].tobytes())
             bi = response_array.buffer_info()
-            response = [lg.QuerySampleResponse(query_samples[i].id, bi[0], bi[1])]
+            response = [
+                lg.QuerySampleResponse(
+                    query_samples[i].id,
+                    bi[0],
+                    bi[1])]
             lg.QuerySamplesComplete(response)
             if i % 5 == 0:
                 print("Completed : ", i)
 
     def inference_call(self, input_ids_tensor, input_length_tensor):
         """Common for all scenarios"""
-        data = {"input_ids": input_ids_tensor, "input_length": input_length_tensor}
-        response = requests.put(self.url, data=json.dumps(data), headers=self.headers)
+        data = {"input_ids": input_ids_tensor,
+                "input_length": input_length_tensor}
+        response = requests.put(
+            self.url,
+            data=json.dumps(data),
+            headers=self.headers)
         if response.status_code != 200:
             # TODO: Manage exeption
             return None
@@ -80,7 +88,10 @@ class SUT_base:
 
 class SUT_Offline(SUT_base):
     def __init__(
-        self, dataset_path, max_examples, args,
+        self,
+        dataset_path,
+        max_examples,
+        args,
     ):
         SUT_base.__init__(
             self,
@@ -94,7 +105,10 @@ class SUT_Offline(SUT_base):
 
 class SUT_Server(SUT_base):
     def __init__(
-        self, dataset_path, max_examples, args,
+        self,
+        dataset_path,
+        max_examples,
+        args,
     ):
 
         SUT_base.__init__(
@@ -114,9 +128,8 @@ class SUT_Server(SUT_base):
         # input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
         input_length_tensor = self.data_object.source_encoded_input_id_lengths[index]
 
-        pred_output_batch = (
-            self.inference_call(input_ids_tensor, input_length_tensor)
-        )
+        pred_output_batch = self.inference_call(
+            input_ids_tensor, input_length_tensor)
 
         response_array = array.array("B", pred_output_batch[0].tobytes())
         bi = response_array.buffer_info()
@@ -129,7 +142,10 @@ class SUT_Server(SUT_base):
 
 class SUT_SingleStream(SUT_base):
     def __init__(
-        self, dataset_path, max_examples, args,
+        self,
+        dataset_path,
+        max_examples,
+        args,
     ):
         SUT_base.__init__(
             self,
@@ -147,9 +163,8 @@ class SUT_SingleStream(SUT_base):
         # input_masks_tensor = self.data_object.source_encoded_attn_masks[index]
         input_length_tensor = self.data_object.source_encoded_input_id_lengths[index]
 
-        pred_output_batch = (
-            self.inference_call(input_ids_tensor, input_length_tensor)
-        )
+        pred_output_batch = self.inference_call(
+            input_ids_tensor, input_length_tensor)
 
         response_array = array.array("B", pred_output_batch[0].tobytes())
         bi = response_array.buffer_info()

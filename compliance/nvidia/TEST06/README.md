@@ -10,7 +10,7 @@ This repository provides the config files and scripts to run and verify TEST 06 
 
 The purpose of this test is to ensure the consistency of the output of the LLM (Llama2 and Mixtral) model and avoid a potential EOS exploit. This test will make a performance run, with a limit of 100 samples and logging them into `mlperf_log_accuracy.json`. To achieve a passing result in this test, three criteria must be met:
 - In the case the first token is reported independently (not applicable for Offline scenario), it should match for every query with the first token of the model output.
-- For each query, the model output should only end with zero or one EOS token. The only exception for 2 EOS tokens is when the entire output sequences are EOS tokens (i.e. output is [eos_token_id, eos_token_id])
+- For each query, the model output should only end with zero or one EOS token.
 - The number of reported tokens should match with the length of output sequence.
 
 ## Requisites

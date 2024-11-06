@@ -5,7 +5,7 @@
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
-#   
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,18 +14,19 @@
 # =============================================================================
 
 
+from time import sleep
+import squad_QSL
+import mlperf_loadgen as lg
+import numpy as np
 import threading
 import requests
 import array
 import time
 import os
 import sys
-sys.path.insert(0, os.getcwd())
-import numpy as np
 
-import mlperf_loadgen as lg
-import squad_QSL
-from time import sleep
+sys.path.insert(0, os.getcwd())
+
 
 class bert_QDL:
     """QDL acting as a proxy to the SUT.
@@ -44,10 +45,11 @@ class bert_QDL:
         """
         self.qsl = qsl
         self.quantized = False
- 
+
         # Construct QDL from the python binding
         self.qdl = lg.ConstructQDL(
-            self.issue_query, self.flush_queries, self.client_get_name)
+            self.issue_query, self.flush_queries, self.client_get_name
+        )
         self.sut_server_addr = sut_server_addr
         self.num_nodes = len(sut_server_addr)
 
@@ -57,8 +59,9 @@ class bert_QDL:
 
     def issue_query(self, query_samples):
         """Process the query to send to the SUT"""
-        threading.Thread(target=self.process_query_async,
-                         args=[query_samples]).start()
+        threading.Thread(
+            target=self.process_query_async,
+            args=[query_samples]).start()
 
     def flush_queries(self):
         """Flush the queries. Dummy implementation."""
@@ -77,22 +80,26 @@ class bert_QDL:
             query_samples: A list of QuerySample objects.
         """
 
-        max_num_threads = int(os.environ.get('CM_MAX_NUM_THREADS', os.cpu_count()))
+        max_num_threads = int(
+            os.environ.get(
+                "CM_MAX_NUM_THREADS",
+                os.cpu_count()))
 
         for i in range(len(query_samples)):
             eval_features = self.qsl.get_features(query_samples[i].index)
             encoded_eval_features = {
-                    "input_ids": eval_features.input_ids,
-                    "input_mask": eval_features.input_mask,
-                    "segment_ids": eval_features.segment_ids
-                    }
+                "input_ids": eval_features.input_ids,
+                "input_mask": eval_features.input_mask,
+                "segment_ids": eval_features.segment_ids,
+            }
             n = threading.active_count()
             while n >= max_num_threads:
                 sleep(0.0001)
                 n = threading.active_count()
-            threading.Thread(target=self.client_predict_worker,
-                         args=[encoded_eval_features, query_samples[i].id]).start()
-
+            threading.Thread(
+                target=self.client_predict_worker,
+                args=[encoded_eval_features, query_samples[i].id],
+            ).start()
 
     def get_sut_id_round_robin(self):
         """Get the SUT id in round robin."""
@@ -103,10 +110,11 @@ class bert_QDL:
 
     def client_predict_worker(self, query, query_id):
         """Serialize the query, send it to the SUT in round robin, and return the deserialized response."""
-        url = '{}/predict/'.format(self.sut_server_addr[self.get_sut_id_round_robin()])
+        url = "{}/predict/".format(
+            self.sut_server_addr[self.get_sut_id_round_robin()])
         responses = []
-        response = requests.post(url, json={'query': query})
-        output = response.json()['result']
+        response = requests.post(url, json={"query": query})
+        output = response.json()["result"]
         output = np.array(output).astype(np.float32)
         response_array = array.array("B", output.tobytes())
         bi = response_array.buffer_info()
@@ -117,12 +125,14 @@ class bert_QDL:
     def client_get_name(self):
         """Get the name of the SUT from ALL the SUTS."""
         if len(self.sut_server_addr) == 1:
-            return requests.post(f'{self.sut_server_addr[0]}/getname/').json()['name']
-    
-        sut_names = [requests.post(f'{addr}/getname/').json()['name'] for addr in self.sut_server_addr]
-        return "Multi-node SUT: " + ', '.join(sut_names)
+            return requests.post(
+                f"{self.sut_server_addr[0]}/getname/").json()["name"]
+
+        sut_names = [
+            requests.post(f"{addr}/getname/").json()["name"]
+            for addr in self.sut_server_addr
+        ]
+        return "Multi-node SUT: " + ", ".join(sut_names)
 
     def __del__(self):
         lg.DestroyQDL(self.qdl)
-
-

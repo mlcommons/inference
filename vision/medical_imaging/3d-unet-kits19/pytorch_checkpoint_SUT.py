@@ -38,6 +38,7 @@ normalizations = {
     "none": lambda _, __: nn.Identity(),
 }
 
+
 def _normalization(norm_type, num_features, num_groups=16):
     """
     A helper redirecting normalization function used in 3D-UNet
@@ -45,6 +46,7 @@ def _normalization(norm_type, num_features, num_groups=16):
     if norm_type in normalizations:
         return normalizations[norm_type](num_features, num_groups)
     raise ValueError(f"Unknown normalization {norm_type}")
+
 
 def _activation(activation):
     """
@@ -54,33 +56,53 @@ def _activation(activation):
         return activations[activation]
     raise ValueError(f"Unknown activation {activation}")
 
-def conv_block_factory(in_channels, out_channels,
-                       kernel_size=3, stride=1, padding=1,
-                       conv_type="regular",
-                       normalization="instancenorm", activation="relu"):
+
+def conv_block_factory(
+    in_channels,
+    out_channels,
+    kernel_size=3,
+    stride=1,
+    padding=1,
+    conv_type="regular",
+    normalization="instancenorm",
+    activation="relu",
+):
     """
     A method used for building basic 3D Convolution block of 3D-UNet
     """
     conv = convolutions[conv_type]
-    conv = conv(in_channels, out_channels, kernel_size=kernel_size, stride=stride,
-                padding=padding, bias=normalization=="none")
+    conv = conv(
+        in_channels,
+        out_channels,
+        kernel_size=kernel_size,
+        stride=stride,
+        padding=padding,
+        bias=normalization == "none",
+    )
 
     normalization = _normalization(normalization, out_channels)
     activation = _activation(activation)
 
-    return nn.Sequential(conv, normalization, activation)    
+    return nn.Sequential(conv, normalization, activation)
 
 
 class DownsampleBlock(nn.Module):
     """
     A class building encoder block of 3D-UNet
     """
+
     def __init__(self, in_channels, out_channels):
         super(DownsampleBlock, self).__init__()
-        self.conv1 = conv_block_factory(in_channels, out_channels, stride=2,
-                                        normalization="instancenorm", activation="relu")
-        self.conv2 = conv_block_factory(out_channels, out_channels, 
-                                        normalization="instancenorm", activation="relu")
+        self.conv1 = conv_block_factory(
+            in_channels,
+            out_channels,
+            stride=2,
+            normalization="instancenorm",
+            activation="relu",
+        )
+        self.conv2 = conv_block_factory(
+            out_channels, out_channels, normalization="instancenorm", activation="relu"
+        )
 
     def forward(self, x):
         x = self.conv1(x)
@@ -92,20 +114,32 @@ class UpsampleBlock(nn.Module):
     """
     A class building decoder block of 3D-UNet
     """
+
     def __init__(self, in_channels, out_channels):
         super(UpsampleBlock, self).__init__()
 
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.upsample_conv = conv_block_factory(in_channels, out_channels,
-                                                kernel_size=2, stride=2, padding=0,
-                                                conv_type="transpose", 
-                                                normalization="none", activation="none")
+        self.upsample_conv = conv_block_factory(
+            in_channels,
+            out_channels,
+            kernel_size=2,
+            stride=2,
+            padding=0,
+            conv_type="transpose",
+            normalization="none",
+            activation="none",
+        )
 
-        self.conv1 = conv_block_factory(2 * out_channels, out_channels,
-                                        normalization="instancenorm", activation="relu")
-        self.conv2 = conv_block_factory(out_channels, out_channels,
-                                        normalization="instancenorm", activation="relu")
+        self.conv1 = conv_block_factory(
+            2 * out_channels,
+            out_channels,
+            normalization="instancenorm",
+            activation="relu",
+        )
+        self.conv2 = conv_block_factory(
+            out_channels, out_channels, normalization="instancenorm", activation="relu"
+        )
 
     def forward(self, x, skip):
         x = self.upsample_conv(x)
@@ -119,12 +153,15 @@ class InputBlock(nn.Module):
     """
     A class building the very first input block of 3D-UNet
     """
+
     def __init__(self, in_channels, out_channels):
         super(InputBlock, self).__init__()
-        self.conv1 = conv_block_factory(in_channels, out_channels, 
-                                        normalization="instancenorm", activation="relu")
-        self.conv2 = conv_block_factory(out_channels, out_channels,
-                                        normalization="instancenorm", activation="relu")
+        self.conv1 = conv_block_factory(
+            in_channels, out_channels, normalization="instancenorm", activation="relu"
+        )
+        self.conv2 = conv_block_factory(
+            out_channels, out_channels, normalization="instancenorm", activation="relu"
+        )
 
     def forward(self, x):
         x = self.conv1(x)
@@ -136,10 +173,17 @@ class OutputLayer(nn.Module):
     """
     A class building final output block of 3D-UNet
     """
+
     def __init__(self, in_channels, n_class):
         super(OutputLayer, self).__init__()
-        self.conv = conv_block_factory(in_channels, n_class, kernel_size=1, padding=0,
-                                       activation="none", normalization="none")
+        self.conv = conv_block_factory(
+            in_channels,
+            n_class,
+            kernel_size=1,
+            padding=0,
+            activation="none",
+            normalization="none",
+        )
 
     def forward(self, x):
         return self.conv(x)
@@ -157,12 +201,13 @@ class Unet3D(nn.Module):
     n_class: int
         number of classes the segmentation ends up for
     """
+
     def __init__(self, in_channels=1, n_class=3):
         """
         Constructs 3D-UNet as in MLPerf-Training 3D-UNet:
         https://github.com/mlcommons/training/blob/master/image_segmentation/pytorch
 
-        """        
+        """
         super(Unet3D, self).__init__()
 
         filters = [32, 64, 128, 256, 320]
@@ -175,18 +220,21 @@ class Unet3D(nn.Module):
         self.input_block = InputBlock(in_channels, input_dim)
 
         self.downsample = nn.ModuleList(
-            [DownsampleBlock(i, o)
-             for (i, o) in zip(self.inp, self.out)]
+            [DownsampleBlock(i, o) for (i, o) in zip(self.inp, self.out)]
         )
         self.bottleneck = DownsampleBlock(filters[-1], filters[-1])
         upsample = [UpsampleBlock(filters[-1], filters[-1])]
-        upsample.extend([UpsampleBlock(i, o)
-                         for (i, o) in zip(reversed(self.out), reversed(self.inp))])
+        upsample.extend(
+            [
+                UpsampleBlock(i, o)
+                for (i, o) in zip(reversed(self.out), reversed(self.inp))
+            ]
+        )
         self.upsample = nn.ModuleList(upsample)
         self.output = OutputLayer(input_dim, n_class)
 
         for name, v in self.named_parameters():
-            if 'weight' in name or 'bias' in name:
+            if "weight" in name or "bias" in name:
                 v.data *= 1.0
 
     def forward(self, x):
@@ -246,18 +294,19 @@ class _3DUNET_PyTorch_CHECKPOINT_SUT(BASE_3DUNET_SUT):
             preprocessed_data_dir: str or PosixPath
                 path to directory containing preprocessed data
             performance_count: int
-                number of query samples guaranteed to fit in memory                
+                number of query samples guaranteed to fit in memory
         """
         super().__init__(preprocessed_data_dir, performance_count)
         print("Loading PyTorch model...")
-        assert Path(model_path).is_file(
-        ), "Cannot find the model file {:}!".format(model_path)
+        assert Path(model_path).is_file(), "Cannot find the model file {:}!".format(
+            model_path
+        )
         self.device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = Unet3D()
         self.model.to(self.device)
         checkpoint = torch.load(model_path, map_location=self.device)
-        self.model.load_state_dict(checkpoint['best_model_state_dict'])
+        self.model.load_state_dict(checkpoint["best_model_state_dict"])
         self.model.eval()
 
     def do_infer(self, input_tensor):
@@ -284,4 +333,6 @@ def get_sut(model_path, preprocessed_data_dir, performance_count):
     """
     Redirect the call for instantiating SUT to PyTorch/TorchScript specific SUT
     """
-    return _3DUNET_PyTorch_CHECKPOINT_SUT(model_path, preprocessed_data_dir, performance_count)
+    return _3DUNET_PyTorch_CHECKPOINT_SUT(
+        model_path, preprocessed_data_dir, performance_count
+    )

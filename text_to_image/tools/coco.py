@@ -27,24 +27,36 @@ def get_args():
         type=int,
         help="Maximun number of images to download",
     )
-    parser.add_argument("--num-workers", default=1, type=int, help="Number of processes to download images")
+    parser.add_argument(
+        "--num-workers",
+        default=1,
+        type=int,
+        help="Number of processes to download images",
+    )
     parser.add_argument(
         "--allow-duplicate-images",
         action="store_true",
-        help="Allow mulple captions per image"
+        help="Allow mulple captions per image",
     )
     parser.add_argument(
-        "--latents-path-torch", default="latents.pt", type=str, help="Path to pytorch latents"
+        "--latents-path-torch",
+        default="latents.pt",
+        type=str,
+        help="Path to pytorch latents",
     )
     parser.add_argument(
-        "--latents-path-numpy", default="latents.npy", type=str, help="Path to numpy latents"
+        "--latents-path-numpy",
+        default="latents.npy",
+        type=str,
+        help="Path to numpy latents",
     )
     parser.add_argument(
         "--seed", type=int, default=2023, help="Seed to choose the dataset"
     )
     parser.add_argument(
-        "--keep-raw", action="store_true", help="Keep raw folder"
-    )
+        "--keep-raw",
+        action="store_true",
+        help="Keep raw folder")
     parser.add_argument(
         "--download-images", action="store_true", help="Download the calibration set"
     )
@@ -66,22 +78,29 @@ if __name__ == "__main__":
     dataset_dir = os.path.abspath(args.dataset_dir)
     # Check if the annotation dataframe is there
     if os.path.exists(f"{dataset_dir}/captions/captions_source.tsv"):
-        df_annotations = pd.read_csv(f"{dataset_dir}/captions/captions_source.tsv", sep="\t")
+        df_annotations = pd.read_csv(
+            f"{dataset_dir}/captions/captions_source.tsv", sep="\t"
+        )
         df_annotations = df_annotations.iloc[: args.max_images]
     elif os.path.exists(f"{dataset_dir}/../captions_source.tsv"):
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
-        os.system(f"cp {dataset_dir}/../captions_source.tsv {dataset_dir}/captions/")
-        df_annotations = pd.read_csv(f"{dataset_dir}/captions/captions_source.tsv", sep="\t")
+        os.system(
+            f"cp {dataset_dir}/../captions_source.tsv {dataset_dir}/captions/")
+        df_annotations = pd.read_csv(
+            f"{dataset_dir}/captions/captions_source.tsv", sep="\t"
+        )
         df_annotations = df_annotations.iloc[: args.max_images]
     elif args.tsv_path is not None and os.path.exists(f"{args.tsv_path}"):
         file_name = args.tsv_path.split("/")[-1]
         os.makedirs(f"{dataset_dir}/captions/", exist_ok=True)
         os.system(f"cp {args.tsv_path} {dataset_dir}/captions/")
-        df_annotations = pd.read_csv(f"{dataset_dir}/captions/{file_name}", sep="\t")
+        df_annotations = pd.read_csv(
+            f"{dataset_dir}/captions/{file_name}", sep="\t")
         df_annotations = df_annotations.iloc[: args.max_images]
     else:
         # Check if raw annotations file already exist
-        if not os.path.exists(f"{dataset_dir}/raw/annotations/captions_val2014.json"):
+        if not os.path.exists(
+                f"{dataset_dir}/raw/annotations/captions_val2014.json"):
             # Download annotations
             os.makedirs(f"{dataset_dir}/raw/", exist_ok=True)
             os.makedirs(f"{dataset_dir}/download_aux/", exist_ok=True)
@@ -121,7 +140,9 @@ if __name__ == "__main__":
             frac=1, random_state=args.seed
         ).reset_index(drop=True)
         df_annotations = df_annotations.iloc[: args.max_images]
-        df_annotations['caption'] = df_annotations['caption'].apply(lambda x: x.replace('\n', '').strip())
+        df_annotations["caption"] = df_annotations["caption"].apply(
+            lambda x: x.replace("\n", "").strip()
+        )
         df_annotations = (
             df_annotations.merge(
                 df_images, how="inner", left_on="image_id", right_on="id"
@@ -135,11 +156,18 @@ if __name__ == "__main__":
     if args.download_images:
         os.makedirs(f"{dataset_dir}/validation/data/", exist_ok=True)
         tasks = [
-            (row["coco_url"], f"{dataset_dir}/validation/data/", row["file_name"])
+            (row["coco_url"],
+             f"{dataset_dir}/validation/data/",
+             row["file_name"])
             for i, row in df_annotations.iterrows()
         ]
         pool = Pool(processes=args.num_workers)
-        [_ for _ in tqdm.tqdm(pool.imap_unordered(download_img, tasks), total=len(tasks))]
+        [
+            _
+            for _ in tqdm.tqdm(
+                pool.imap_unordered(download_img, tasks), total=len(tasks)
+            )
+        ]
     # Finalize annotations
     df_annotations[
         ["id", "image_id", "caption", "height", "width", "file_name", "coco_url"]

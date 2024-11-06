@@ -52,17 +52,20 @@ import cv2
 
 
 BUCKET_NAME = "open-images-dataset"
-BBOX_ANNOTATIONS_URL = "https://storage.googleapis.com/openimages/v5/validation-annotations-bbox.csv"
+BBOX_ANNOTATIONS_URL = (
+    "https://storage.googleapis.com/openimages/v5/validation-annotations-bbox.csv"
+)
 ANNOTATIONS_FILE = "validation-annotations-bbox.csv"
-MAP_CLASSES_URL = "https://storage.googleapis.com/openimages/v5/class-descriptions-boxable.csv"
+MAP_CLASSES_URL = (
+    "https://storage.googleapis.com/openimages/v5/class-descriptions-boxable.csv"
+)
 MAP_CLASSES_FILE = "class-descriptions-boxable.csv"
 CHUNK_SIZE = 1024 * 8
 
 
 def get_args():
     parser = argparse.ArgumentParser(
-        description="Download OpenImages", add_help=True
-    )
+        description="Download OpenImages", add_help=True)
     parser.add_argument(
         "--dataset-dir",
         default="/open-images-v6",
@@ -138,20 +141,26 @@ def export_to_coco(
     image_list_df.columns = ["image_list"]
     image_list_df[["height", "width"]] = image_list_df.apply(
         lambda x: extract_dims(
-            os.path.join(dataset_path, f"{x['image_list']}.jpg")
-        ),
+            os.path.join(
+                dataset_path,
+                f"{x['image_list']}.jpg")),
         axis=1,
         result_type="expand",
     )
-    annotations = pd.merge(annotations, image_list_df, how="inner", left_on="ImageID", right_on="image_list")
+    annotations = pd.merge(
+        annotations,
+        image_list_df,
+        how="inner",
+        left_on="ImageID",
+        right_on="image_list",
+    )
     annotations = annotations.merge(class_map, on="LabelName", how="inner")
     annotations = annotations.sort_values(by=["ImageID"])
     annotations["image_id"] = pd.factorize(annotations["ImageID"].tolist())[0]
     # Images
     images_ = []
-    for i, row in (
-        annotations.groupby(["image_id", "ImageID"]).first().iterrows()
-    ):
+    for i, row in annotations.groupby(
+            ["image_id", "ImageID"]).first().iterrows():
         id, ImageID = i
         images_.append(
             {
@@ -237,8 +246,7 @@ def download_one_image(bucket, split, image_id, download_folder):
         )
     except botocore.exceptions.ClientError as exception:
         sys.exit(
-            f"ERROR when downloading image `{split}/{image_id}`: {str(exception)}"
-        )
+            f"ERROR when downloading image `{split}/{image_id}`: {str(exception)}")
 
 
 def download_all_images(args):
@@ -285,8 +293,7 @@ def download_all_images(args):
         if args.max_images is not None:
             np.random.seed(args.seed)
             selected_index = np.random.choice(
-                len(image_list), size=args.max_images
-            )
+                len(image_list), size=args.max_images)
             image_list = [image_list[i] for i in selected_index]
     except ValueError as exception:
         sys.exit(exception)
@@ -294,9 +301,7 @@ def download_all_images(args):
     progress_bar = tqdm.tqdm(
         total=len(image_list), desc="Downloading images", leave=True
     )
-    with futures.ThreadPoolExecutor(
-        max_workers=args.num_processes
-    ) as executor:
+    with futures.ThreadPoolExecutor(max_workers=args.num_processes) as executor:
         all_futures = [
             executor.submit(
                 download_one_image,

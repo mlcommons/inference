@@ -15,7 +15,8 @@ import numpy as np
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("dataset")
 
-class Item():
+
+class Item:
     def __init__(self, label, img, idx):
         self.label = label
         self.img = img
@@ -24,19 +25,25 @@ class Item():
 
 
 def usleep(sec):
-    if sys.platform == 'win32':
+    if sys.platform == "win32":
         # on windows time.sleep() doesn't work to well
         import ctypes
+
         kernel32 = ctypes.windll.kernel32
-        timer = kernel32.CreateWaitableTimerA(ctypes.c_void_p(), True, ctypes.c_void_p())
+        timer = kernel32.CreateWaitableTimerA(
+            ctypes.c_void_p(), True, ctypes.c_void_p()
+        )
         delay = ctypes.c_longlong(int(-1 * (10 * 1000000 * sec)))
-        kernel32.SetWaitableTimer(timer, ctypes.byref(delay), 0, ctypes.c_void_p(), ctypes.c_void_p(), False)
-        kernel32.WaitForSingleObject(timer, 0xffffffff)
+        kernel32.SetWaitableTimer(
+            timer, ctypes.byref(
+                delay), 0, ctypes.c_void_p(), ctypes.c_void_p(), False
+        )
+        kernel32.WaitForSingleObject(timer, 0xFFFFFFFF)
     else:
         time.sleep(sec)
 
 
-class Dataset():
+class Dataset:
     def __init__(self):
         self.arrival = None
         self.image_list = []
@@ -62,7 +69,7 @@ class Dataset():
     def unload_query_samples(self, sample_list):
         if sample_list:
             for sample in sample_list:
-                if sample in self.image_list_inmemory :
+                if sample in self.image_list_inmemory:
                     del self.image_list_inmemory[sample]
         else:
             self.image_list_inmemory = {}
@@ -102,7 +109,7 @@ class PostProcessCommon:
         self.good = 0
         self.total = 0
 
-    def finalize(self, results, ds=False,  output_dir=None):
+    def finalize(self, results, ds=False, output_dir=None):
         results["good"] = self.good
         results["total"] = self.total
 
@@ -141,6 +148,7 @@ class PostProcessArgMax:
 # pre-processing
 #
 
+
 def center_crop(img, out_height, out_width):
     height, width, _ = img.shape
     left = int((width - out_width) / 2)
@@ -151,10 +159,12 @@ def center_crop(img, out_height, out_width):
     return img
 
 
-def resize_with_aspectratio(img, out_height, out_width, scale=87.5, inter_pol=cv2.INTER_LINEAR):
+def resize_with_aspectratio(
+    img, out_height, out_width, scale=87.5, inter_pol=cv2.INTER_LINEAR
+):
     height, width, _ = img.shape
-    new_height = int(100. * out_height / scale)
-    new_width = int(100. * out_width / scale)
+    new_height = int(100.0 * out_height / scale)
+    new_width = int(100.0 * out_width / scale)
     if height > width:
         w = new_width
         h = int(new_height * height / width)
@@ -170,9 +180,11 @@ def pre_process_vgg(img, dims=None, need_transpose=False):
 
     output_height, output_width, _ = dims
     cv2_interpol = cv2.INTER_AREA
-    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2_interpol)
+    img = resize_with_aspectratio(
+        img, output_height, output_width, inter_pol=cv2_interpol
+    )
     img = center_crop(img, output_height, output_width)
-    img = np.asarray(img, dtype='float32')
+    img = np.asarray(img, dtype="float32")
 
     # normalize image
     means = np.array([123.68, 116.78, 103.94], dtype=np.float32)
@@ -188,9 +200,11 @@ def pre_process_mobilenet(img, dims=None, need_transpose=False):
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     output_height, output_width, _ = dims
-    img = resize_with_aspectratio(img, output_height, output_width, inter_pol=cv2.INTER_LINEAR)
+    img = resize_with_aspectratio(
+        img, output_height, output_width, inter_pol=cv2.INTER_LINEAR
+    )
     img = center_crop(img, output_height, output_width)
-    img = np.asarray(img, dtype='float32')
+    img = np.asarray(img, dtype="float32")
 
     img /= 255.0
     img -= 0.5
@@ -208,9 +222,10 @@ def maybe_resize(img, dims):
         # some images might be grayscale
         img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    if dims != None:
+    if dims is not None:
         im_height, im_width, _ = dims
-        img = cv2.resize(img, (im_width, im_height), interpolation=cv2.INTER_LINEAR)
+        img = cv2.resize(img, (im_width, im_height),
+                         interpolation=cv2.INTER_LINEAR)
     return img
 
 
@@ -238,7 +253,7 @@ def pre_process_coco_resnet34(img, dims=None, need_transpose=False):
     mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
     std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
-    img = img / 255. - mean
+    img = img / 255.0 - mean
     img = img / std
 
     if need_transpose:

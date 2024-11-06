@@ -31,20 +31,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
+from torch.nn.functional import adaptive_avg_pool2d
+from scipy import linalg
+from PIL import Image
+import torchvision.transforms as TF
+import torch
+import random
+import numpy as np
+from typing import Any
+from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
+import pathlib
 import os
 import sys
-sys.path.append(os.path.dirname(__file__))
-import pathlib
-from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
-from typing import Any
-
-import numpy as np
-import random
-import torch
-import torchvision.transforms as TF
-from PIL import Image
-from scipy import linalg
-from torch.nn.functional import adaptive_avg_pool2d
+sys.path.insert("..", 0)
+from inception import InceptionV3  # noqa: E402
 
 
 try:
@@ -53,9 +54,6 @@ except ImportError:
     # If tqdm is not available, provide a mock version of it
     def tqdm(x):
         return x
-
-
-from inception import InceptionV3
 
 
 class ImagesDataset(torch.utils.data.Dataset):
@@ -71,7 +69,7 @@ class ImagesDataset(torch.utils.data.Dataset):
         if self.transforms is not None:
             img = self.transforms(img)
         return img
-    
+
 
 def get_activations(
     files, model, batch_size=50, dims=2048, device="cpu", num_workers=1
@@ -132,7 +130,7 @@ def get_activations(
 
         pred = pred.squeeze(3).squeeze(2).cpu().numpy()
 
-        pred_arr[start_idx : start_idx + pred.shape[0]] = pred
+        pred_arr[start_idx: start_idx + pred.shape[0]] = pred
 
         start_idx = start_idx + pred.shape[0]
 
@@ -196,7 +194,8 @@ def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
 
     tr_covmean = np.trace(covmean)
 
-    return diff.dot(diff) + np.trace(sigma1) + np.trace(sigma2) - 2 * tr_covmean
+    return diff.dot(diff) + np.trace(sigma1) + \
+        np.trace(sigma2) - 2 * tr_covmean
 
 
 def calculate_activation_statistics(
@@ -241,7 +240,8 @@ def compute_statistics_of_path(
     else:
         path = pathlib.Path(path)
         files = sorted(
-            [file for ext in IMAGE_EXTENSIONS for file in path.glob("*.{}".format(ext))]
+            [file for ext in IMAGE_EXTENSIONS for file in path.glob(
+                "*.{}".format(ext))]
         )
         if subset_size is not None:
             random.seed(shuffle_seed)
@@ -319,7 +319,7 @@ def compute_fid(
     num_workers=1,
     batch_size=1,
     subset_size=None,
-    shuffle_seed=None
+    shuffle_seed=None,
 ):
     imgs = [Image.fromarray(e).convert("RGB") for e in results]
     device = torch.device(device if torch.cuda.is_available() else "cpu")
@@ -359,4 +359,3 @@ def compute_fid(
     fid_value = calculate_frechet_distance(m1, s1, m2, s2)
 
     return fid_value
-

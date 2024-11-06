@@ -36,7 +36,7 @@ def annotate_image(results, cocoGt, output):
 
     new_results = collections.defaultdict(list)
     for result in results:
-        new_results[result['image_id']].append(result)
+        new_results[result["image_id"]].append(result)
     print("Unique images = {}".format(len(new_results)))
     results = new_results
 
@@ -44,32 +44,40 @@ def annotate_image(results, cocoGt, output):
         draw = None
         image = None
         for v in result:
-            box = v['bbox']
-            score = v['score']
+            box = v["bbox"]
+            score = v["score"]
             predicted_class = v["category_id"]
             try:
                 predicted_class = cocoGt.loadCats(predicted_class)[0]["name"]
             except Exception as ex:
-                print("category {} not found, image {}".format(predicted_class, v["image_loc"]))
+                print(
+                    "category {} not found, image {}".format(
+                        predicted_class, v["image_loc"]
+                    )
+                )
             # predicted_class = self.class_names[c]
             # "image_loc": "/home/gs/data/coco300/val2017/000000397133.jpg",
             if not draw:
-                image = Image.open(v['image_loc'])
-                if image.mode != 'RGB':
-                    image = image.convert('RGB')
+                image = Image.open(v["image_loc"])
+                if image.mode != "RGB":
+                    image = image.convert("RGB")
 
                 draw = ImageDraw.Draw(image)
             # font = ImageFont.truetype(font='FreeMono.ttf',
-            #            size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
+            # size=np.floor(3e-2 * image.size[1] + 0.5).astype('int32'))
             try:
                 left, top, w, h = box
                 bottom = top + h
                 right = left + w
-                top = max(0, np.floor(top + 0.5).astype('int32'))
-                left = max(0, np.floor(left + 0.5).astype('int32'))
-                bottom = min(image.size[1], np.floor(bottom + 0.5).astype('int32'))
-                right = min(image.size[0], np.floor(right + 0.5).astype('int32'))
-                label = '{} {:.2f}'.format(predicted_class, score)
+                top = max(0, np.floor(top + 0.5).astype("int32"))
+                left = max(0, np.floor(left + 0.5).astype("int32"))
+                bottom = min(
+                    image.size[1], np.floor(
+                        bottom + 0.5).astype("int32"))
+                right = min(
+                    image.size[0], np.floor(
+                        right + 0.5).astype("int32"))
+                label = "{} {:.2f}".format(predicted_class, score)
                 # label_size = draw.textsize(label, font)
                 label_size = draw.textsize(label)
 
@@ -80,11 +88,19 @@ def annotate_image(results, cocoGt, output):
 
                 color = ImageColor.getrgb("red")
                 thickness = 0
-                draw.rectangle([left + thickness, top + thickness, right - thickness, bottom - thickness], outline=color)
+                draw.rectangle(
+                    [
+                        left + thickness,
+                        top + thickness,
+                        right - thickness,
+                        bottom - thickness,
+                    ],
+                    outline=color,
+                )
                 draw.text(text_origin, label, fill=color)  # , font=font)
             except Exception as ex:
-                print("{} failed, ex {}".format(v['image_loc'], ex))
-        image.save(os.path.join(output, os.path.basename(v['image_loc'])))
+                print("{} failed, ex {}".format(v["image_loc"], ex))
+        image.save(os.path.join(output, os.path.basename(v["image_loc"])))
         del draw
 
 
@@ -93,7 +109,7 @@ def calculate_map(results, cocoGt, output):
     # x1, x2, y1, y2 = [bb[0], bb[0] + bb[2], bb[1], bb[1] + bb[3]]
 
     cocoDt = cocoGt.loadRes(results)
-    cocoEval = COCOeval(cocoGt, cocoDt, iouType='bbox')
+    cocoEval = COCOeval(cocoGt, cocoDt, iouType="bbox")
     cocoEval.evaluate()
     cocoEval.accumulate()
     cocoEval.summarize()
@@ -110,11 +126,11 @@ def calculate_map(results, cocoGt, output):
         "DetectionBoxes_Recall/AR@100": cocoEval.stats[8],
         "DetectionBoxes_Recall/AR@100 (small)": cocoEval.stats[9],
         "DetectionBoxes_Recall/AR@100 (medium)": cocoEval.stats[10],
-        "DetectionBoxes_Recall/AR@100 (large)": cocoEval.stats[11]
+        "DetectionBoxes_Recall/AR@100 (large)": cocoEval.stats[11],
     }
 
-    mAP = all_metrics['DetectionBoxes_Precision/mAP']
-    recall = all_metrics['DetectionBoxes_Recall/AR@100']
+    mAP = all_metrics["DetectionBoxes_Precision/mAP"]
+    recall = all_metrics["DetectionBoxes_Recall/AR@100"]
     print("mAP={}, recall={}".format(mAP, recall))
 
 
@@ -124,7 +140,8 @@ def main():
     with open(args.input, "r") as f:
         results = json.load(f)
 
-    annotation_file = os.path.join(args.coco, "annotations/instances_val2017.json")
+    annotation_file = os.path.join(
+        args.coco, "annotations/instances_val2017.json")
     cocoGt = COCO(annotation_file)
     annotate_image(results, cocoGt, args.output)
     calculate_map(args.input, cocoGt, args.output)

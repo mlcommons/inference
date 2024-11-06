@@ -25,19 +25,29 @@ import shutil
 import sys
 import time
 
-sys.path.insert(0, os.path.join(os.getcwd(), "DeepLearningExamples", "TensorFlow", "LanguageModeling", "BERT"))
+sys.path.insert(
+    0,
+    os.path.join(
+        os.getcwd(), "DeepLearningExamples", "TensorFlow", "LanguageModeling", "BERT"
+    ),
+)
 sys.path.insert(0, os.getcwd())
 
-import numpy as np
-import torch
-from transformers import BertConfig, BertTokenizer, BertForQuestionAnswering
-import tensorflow as tf
+try:
+    import tensorflow as tf
+    from transformers import BertConfig, BertTokenizer, BertForQuestionAnswering
+    import torch
+    import numpy as np
+except ImportError:
+    raise Exception("Error importing local modules")
+
 
 def load_from_tf(config, tf_path):
     model = BertForQuestionAnswering(config)
     model.classifier = model.qa_outputs
 
-    # This part is copied from HuggingFace Transformers with a fix to bypass an error
+    # This part is copied from HuggingFace Transformers with a fix to bypass
+    # an error
     init_vars = tf.train.list_variables(tf_path)
     names = []
     arrays = []
@@ -67,7 +77,9 @@ def load_from_tf(config, tf_path):
             elif scope_names[0] == "output_weights":
                 pointer = getattr(pointer, "weight")
             elif scope_names[0] == "squad":
-                pointer = getattr(pointer, "classifier") # This line is causing the issue
+                pointer = getattr(
+                    pointer, "classifier"
+                )  # This line is causing the issue
             else:
                 try:
                     pointer = getattr(pointer, scope_names[0])
@@ -93,8 +105,11 @@ def load_from_tf(config, tf_path):
     del model.classifier
     return model
 
+
 def save_to_onnx(model):
-    tokenizer = BertTokenizer.from_pretrained("bert-large-uncased-whole-word-masking-finetuned-squad")
+    tokenizer = BertTokenizer.from_pretrained(
+        "bert-large-uncased-whole-word-masking-finetuned-squad"
+    )
     model.eval()
 
     dummy_input = torch.ones((1, 384), dtype=torch.int64)
@@ -103,12 +118,20 @@ def save_to_onnx(model):
         (dummy_input, dummy_input, dummy_input),
         "build/data/bert_tf_v1_1_large_fp32_384_v2/model.onnx",
         verbose=True,
-        input_names = ["input_ids", "input_mask", "segment_ids"],
-        output_names = ["output_start_logits", "output_end_logits"],
+        input_names=["input_ids", "input_mask", "segment_ids"],
+        output_names=["output_start_logits", "output_end_logits"],
         opset_version=11,
-        dynamic_axes=({"input_ids": {0: "batch_size"}, "input_mask": {0: "batch_size"}, "segment_ids": {0: "batch_size"},
-            "output_start_logits": {0: "batch_size"}, "output_end_logits": {0: "batch_size"}})
+        dynamic_axes=(
+            {
+                "input_ids": {0: "batch_size"},
+                "input_mask": {0: "batch_size"},
+                "segment_ids": {0: "batch_size"},
+                "output_start_logits": {0: "batch_size"},
+                "output_end_logits": {0: "batch_size"},
+            }
+        ),
     )
+
 
 def main():
     with open("build/data/bert_tf_v1_1_large_fp32_384_v2/bert_config.json") as f:
@@ -125,11 +148,17 @@ def main():
         num_attention_heads=config_json["num_attention_heads"],
         num_hidden_layers=config_json["num_hidden_layers"],
         type_vocab_size=config_json["type_vocab_size"],
-        vocab_size=config_json["vocab_size"])
+        vocab_size=config_json["vocab_size"],
+    )
 
-    model = load_from_tf(config, "build/data/bert_tf_v1_1_large_fp32_384_v2/model.ckpt-5474")
-    torch.save(model.state_dict(), "build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch")
+    model = load_from_tf(
+        config, "build/data/bert_tf_v1_1_large_fp32_384_v2/model.ckpt-5474"
+    )
+    torch.save(
+        model.state_dict(), "build/data/bert_tf_v1_1_large_fp32_384_v2/model.pytorch"
+    )
     save_to_onnx(model)
+
 
 if __name__ == "__main__":
     main()

@@ -28,11 +28,11 @@ import re
 import sys
 import time
 
-PATTERN = re.compile('[a-zA-Z0-9]+')
+PATTERN = re.compile("[a-zA-Z0-9]+")
 
-LOG_FILE = os.getenv('COMPLIANCE_FILE')
+LOG_FILE = os.getenv("COMPLIANCE_FILE")
 # create logger with 'spam_application'
-LOGGER = logging.getLogger('mlperf_compliance')
+LOGGER = logging.getLogger("mlperf_compliance")
 LOGGER.setLevel(logging.DEBUG)
 
 _STREAM_HANDLER = logging.StreamHandler(stream=sys.stdout)
@@ -40,21 +40,22 @@ _STREAM_HANDLER.setLevel(logging.INFO)
 LOGGER.addHandler(_STREAM_HANDLER)
 
 if LOG_FILE:
-  _FILE_HANDLER = logging.FileHandler(LOG_FILE)
-  _FILE_HANDLER.setLevel(logging.DEBUG)
-  LOGGER.addHandler(_FILE_HANDLER)
+    _FILE_HANDLER = logging.FileHandler(LOG_FILE)
+    _FILE_HANDLER.setLevel(logging.DEBUG)
+    LOGGER.addHandler(_FILE_HANDLER)
 else:
-  _STREAM_HANDLER.setLevel(logging.DEBUG)
+    _STREAM_HANDLER.setLevel(logging.DEBUG)
 
 
 def get_caller(stack_index=2, root_dir=None):
-  caller = inspect.getframeinfo(inspect.stack()[stack_index][0])
+    caller = inspect.getframeinfo(inspect.stack()[stack_index][0])
 
-  # Trim the filenames for readability.
-  filename = caller.filename
-  if root_dir is not None:
-    filename = re.sub('^' + root_dir + '/', '', filename)
-  return (filename, caller.lineno)
+    # Trim the filenames for readability.
+    filename = caller.filename
+    if root_dir is not None:
+        filename = re.sub("^" + root_dir + "/", "", filename)
+    return (filename, caller.lineno)
+
 
 # :::MLL 1556733699.71 run_start: {"value": null,
 # "metadata": {"lineno": 77, "file": main.py}}
@@ -62,21 +63,29 @@ LOG_TEMPLATE = ':::MLL {:.3f} {}: {{"value": {}, "metadata": {}}}'
 
 
 def mlperf_format(key, value, stack_offset=0, metadata=None):
-  """Format a message for MLPerf."""
-  if metadata is None:
-    metadata = {}
+    """Format a message for MLPerf."""
+    if metadata is None:
+        metadata = {}
 
-  if 'lineno' not in metadata:
-    filename, lineno = get_caller(2 + stack_offset, root_dir=None)
-    metadata['lineno'] = lineno
-    metadata['file'] = filename
+    if "lineno" not in metadata:
+        filename, lineno = get_caller(2 + stack_offset, root_dir=None)
+        metadata["lineno"] = lineno
+        metadata["file"] = filename
 
-  now = time.time()
-  msg = LOG_TEMPLATE.format(now, key, json.dumps(value), json.dumps(metadata))
-  return msg
+    now = time.time()
+    msg = LOG_TEMPLATE.format(
+        now,
+        key,
+        json.dumps(value),
+        json.dumps(metadata))
+    return msg
 
 
 def mlperf_print(key, value, stack_offset=0, metadata=None):
-  LOGGER.info(
-      mlperf_format(
-          key, value, stack_offset=stack_offset + 1, metadata=metadata))
+    LOGGER.info(
+        mlperf_format(
+            key,
+            value,
+            stack_offset=stack_offset + 1,
+            metadata=metadata)
+    )

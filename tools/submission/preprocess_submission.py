@@ -2,10 +2,6 @@
 Tool to infer scenario results and cleanup submission tree
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import argparse
 import logging
 import os
@@ -142,6 +138,27 @@ def change_folder_name_in_path(path, old_folder_name, new_folder_name):
     return new_path
 
 
+def clean_model_dir(model_results_dir):
+    model_measurements_dir = change_folder_name_in_path(
+        model_results_dir, "results", "measurements")
+    model_compliance_dir = change_folder_name_in_path(
+        model_results_dir, "results", "compliance")
+
+    print(f"rmtree {model_results_dir}")
+    shutil.rmtree(model_results_dir)
+    shutil.rmtree(model_measurements_dir)
+    shutil.rmtree(model_compliance_dir)
+    sut_results_dir = os.path.dirname(model_results_dir)
+    if not os.listdir(sut_results_dir):
+        # clean sut dir
+        sut = os.path.basename(sut_results_dir)
+        log.info(
+            f"No benchmark results remaining for {sut}. rmtree {sut_results_dir}")
+        shutil.rmtree(sut_results_dir)
+        shutil.rmtree(os.path.dirname(model_measurements_dir))
+        shutil.rmtree(os.path.dirname(model_compliance_dir))
+
+
 def clean_invalid_results(args, log_path, config, system_desc, system_json,
                           model, mlperf_model, division, system_id_json, is_closed_or_network):
     # cleanup invalid results
@@ -176,6 +193,7 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
         except Exception as e:
             log.warning(e)
             perf_is_valid = False
+        compliance_is_valid = False
         if perf_is_valid:
             power_path = os.path.join(scenario_path, "performance", "power")
             has_power = os.path.exists(power_path)
@@ -260,9 +278,12 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                     # if only accuracy or compliance failed, result is valid
                     # for open
                     if not perf_is_valid:
-                        shutil.rmtree(scenario_path)
                         log.warning(
                             f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} and open divisions. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing it...")
+                        shutil.rmtree(scenario_path)
+                        scenario_measurements_path = change_folder_name_in_path(
+                            scenario_path, "results", "measurements")
+                        shutil.rmtree(scenario_measurements_path)
                     if not os.path.exists(target_results_path):
                         shutil.copytree(
                             model_results_path, target_results_path)
@@ -288,9 +309,7 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                         log.warning(f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Compliance: {compliance_is_valid}. Moving other scenario results of {model} to open...")
                 else:
                     log.warning(f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing all dependent scenario results...")
-                shutil.rmtree(model_results_path)
-                shutil.rmtree(model_measurements_path)
-                shutil.rmtree(model_compliance_path)
+                clean_model_dir(model_results_path)
             else:  # delete this result
                 # delete other scenario results too
                 shutil.rmtree(scenario_path)
@@ -516,6 +535,9 @@ def main():
     os.chdir(src_dir)
 
     infer_scenario_results(args, config)
+
+    if not args.nodelete_empty_dirs:
+        delete_empty_dirs(os.path.join(src_dir))
 
     return 0
 

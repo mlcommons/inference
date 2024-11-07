@@ -105,7 +105,7 @@ def main():
         sample_ids_file_path = args.ids_path if args.ids_path else os.path.join(
             os.path.dirname(__file__), "sample_ids.txt")
         with open(
-            os.path.join(sample_ids_file_path, "r"
+            os.path.join(sample_ids_file_path, "r")
         ) as compliance_id_file:
             for line in compliance_id_file:
                 idx=int(line.strip())

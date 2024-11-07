@@ -23,6 +23,8 @@ import torch
 
 import dataset
 import igbh
+import dgl_utilities.feature_fetching as dgl_igbh
+
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -31,32 +33,62 @@ NANO_SEC = 1e9
 MILLI_SEC = 1000
 
 SUPPORTED_DATASETS = {
-    "igbh-tiny": (
+    "igbh-glt-tiny": (
         igbh.IGBH,
         dataset.preprocess,
         igbh.PostProcessIGBH(),
         {"dataset_size": "tiny", "use_label_2K": True},
     ),
-    "igbh-small": (
+    "igbh-glt-small": (
         igbh.IGBH,
         dataset.preprocess,
         igbh.PostProcessIGBH(),
         {"dataset_size": "small", "use_label_2K": True},
     ),
-    "igbh-medium": (
+    "igbh-glt-medium": (
         igbh.IGBH,
         dataset.preprocess,
         igbh.PostProcessIGBH(),
         {"dataset_size": "medium", "use_label_2K": True},
     ),
-    "igbh-large": (
+    "igbh-glt-large": (
         igbh.IGBH,
         dataset.preprocess,
         igbh.PostProcessIGBH(),
         {"dataset_size": "large", "use_label_2K": True},
     ),
-    "igbh": (
+    "igbh-glt": (
         igbh.IGBH,
+        dataset.preprocess,
+        igbh.PostProcessIGBH(),
+        {"dataset_size": "full", "use_label_2K": True},
+    ),
+    "igbh-dgl-tiny": (
+        dgl_igbh.IGBH,
+        dataset.preprocess,
+        igbh.PostProcessIGBH(),
+        {"dataset_size": "tiny", "use_label_2K": True},
+    ),
+    "igbh-dgl-small": (
+        dgl_igbh.IGBH,
+        dataset.preprocess,
+        igbh.PostProcessIGBH(),
+        {"dataset_size": "small", "use_label_2K": True},
+    ),
+    "igbh-dgl-medium": (
+        dgl_igbh.IGBH,
+        dataset.preprocess,
+        igbh.PostProcessIGBH(),
+        {"dataset_size": "medium", "use_label_2K": True},
+    ),
+    "igbh-dgl-large": (
+        dgl_igbh.IGBH,
+        dataset.preprocess,
+        igbh.PostProcessIGBH(),
+        {"dataset_size": "large", "use_label_2K": True},
+    ),
+    "igbh-dgl": (
+        dgl_igbh.IGBH,
         dataset.preprocess,
         igbh.PostProcessIGBH(),
         {"dataset_size": "full", "use_label_2K": True},
@@ -66,33 +98,58 @@ SUPPORTED_DATASETS = {
 
 SUPPORTED_PROFILES = {
     "defaults": {
-        "dataset": "igbh-tiny",
-        "backend": "pytorch",
+        "dataset": "igbh-glt-tiny",
+        "backend": "glt",
         "model-name": "rgat",
     },
-    "debug": {
-        "dataset": "igbh-tiny",
-        "backend": "pytorch",
+    "debug-glt": {
+        "dataset": "igbh-glt-tiny",
+        "backend": "glt",
         "model-name": "rgat",
     },
-    "rgat-pytorch-small": {
-        "dataset": "igbh-small",
-        "backend": "pytorch",
+    "rgat-glt-small": {
+        "dataset": "igbh-glt-small",
+        "backend": "glt",
         "model-name": "rgat",
     },
-    "rgat-pytorch-medium": {
-        "dataset": "igbh-medium",
-        "backend": "pytorch",
+    "rgat-glt-medium": {
+        "dataset": "igbh-glt-medium",
+        "backend": "glt",
         "model-name": "rgat",
     },
-    "rgat-pytorch-large": {
-        "dataset": "igbh-large",
-        "backend": "pytorch",
+    "rgat-glt-large": {
+        "dataset": "igbh-glt-large",
+        "backend": "glt",
         "model-name": "rgat",
     },
-    "rgat-pytorch-full": {
-        "dataset": "igbh",
-        "backend": "pytorch",
+    "rgat-glt-full": {
+        "dataset": "igbh-glt",
+        "backend": "glt",
+        "model-name": "rgat",
+    },
+    "debug-dgl": {
+        "dataset": "igbh-dgl-tiny",
+        "backend": "dgl",
+        "model-name": "rgat",
+    },
+    "rgat-dgl-small": {
+        "dataset": "igbh-dgl-small",
+        "backend": "dgl",
+        "model-name": "rgat",
+    },
+    "rgat-dgl-medium": {
+        "dataset": "igbh-dgl-medium",
+        "backend": "dgl",
+        "model-name": "rgat",
+    },
+    "rgat-dgl-large": {
+        "dataset": "igbh-dgl-large",
+        "backend": "dgl",
+        "model-name": "rgat",
+    },
+    "rgat-dgl-full": {
+        "dataset": "igbh-dgl",
+        "backend": "dgl",
         "model-name": "rgat",
     },
 }
@@ -226,10 +283,12 @@ def get_args():
 
 
 def get_backend(backend, **kwargs):
-    if backend == "pytorch":
-        from backend_pytorch import BackendPytorch
-
-        backend = BackendPytorch(**kwargs)
+    if backend == "glt":
+        from backend_glt import BackendGLT
+        backend = BackendGLT(**kwargs)
+    elif backend == "dgl":
+        from backend_dgl import BackendDGL
+        backend = BackendDGL(**kwargs)
     else:
         raise ValueError("unknown backend: " + backend)
     return backend
@@ -380,7 +439,7 @@ def main():
         device=args.device,
         ckpt_path=args.model_path,
         batch_size=args.max_batchsize,
-        igbh_dataset=ds.igbh_dataset,
+        igbh=ds,
         layout=args.layout,
     )
 
@@ -425,7 +484,7 @@ def main():
     count = ds.get_item_count()
 
     # warmup
-    warmup_samples = torch.Tensor([0]).to(torch.int64).to(backend.device)
+    warmup_samples = torch.Tensor([0]).to(torch.int64)
     for i in range(5):
         _ = backend.predict(warmup_samples)
 

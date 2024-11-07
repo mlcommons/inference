@@ -193,7 +193,7 @@ class PostProcessCoco:
             info.append((self.content_ids[idx[image_id]], caption))
         with open("images/captions.txt", "w+") as f:
             for image_id, caption in info:
-                f.write(f"{id}  {caption}\n")
+                f.write(f"{image_id}  {caption}\n")
 
     def start(self):
         self.results = []

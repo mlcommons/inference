@@ -141,9 +141,12 @@ def change_folder_name_in_path(path, old_folder_name, new_folder_name):
     new_path = os.path.join(*path_parts)
     return new_path
 
+
 def clean_model_dir(model_results_dir):
-    model_measurements_dir = change_folder_name_in_path(model_results_dir, "results", "measurements")
-    model_compliance_dir = change_folder_name_in_path(model_results_dir, "results", "compliance")
+    model_measurements_dir = change_folder_name_in_path(
+        model_results_dir, "results", "measurements")
+    model_compliance_dir = change_folder_name_in_path(
+        model_results_dir, "results", "compliance")
 
     print(f"rmtree {model_results_dir}")
     shutil.rmtree(model_results_dir)
@@ -151,12 +154,14 @@ def clean_model_dir(model_results_dir):
     shutil.rmtree(model_compliance_dir)
     sut_results_dir = os.path.dirname(model_results_dir)
     if not os.listdir(sut_results_dir):
-        #clean sut dir
+        # clean sut dir
         sut = os.path.basename(sut_results_dir)
-        print(f"No benchmark results remaining for {sut}. rmtree {sut_results_dir}")
+        print(
+            f"No benchmark results remaining for {sut}. rmtree {sut_results_dir}")
         shutil.rmtree(sut_results_dir)
         shutil.rmtree(os.path.dirname(model_measurements_dir))
         shutil.rmtree(os.path.dirname(model_compliance_dir))
+
 
 def clean_invalid_results(args, log_path, config, system_desc, system_json,
                           model, mlperf_model, division, system_id_json, is_closed_or_network):
@@ -280,7 +285,8 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                         log.warning(
                             f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} and open divisions. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing it...")
                         shutil.rmtree(scenario_path)
-                        scenario_measurements_path = change_folder_name_in_path(scenario_path, "results", "measurements")
+                        scenario_measurements_path = change_folder_name_in_path(
+                            scenario_path, "results", "measurements")
                         shutil.rmtree(scenario_measurements_path)
                     if not os.path.exists(target_results_path):
                         shutil.copytree(

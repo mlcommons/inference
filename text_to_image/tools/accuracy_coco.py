@@ -51,6 +51,10 @@ def get_args():
         required=False,
         help="path to dump 10 stable diffusion xl compliance images",
     )
+    #Do not use for official MLPerf inference submissions as only the default one is valid
+    parser.add_argument(
+        "--ids-path", help="Path to 10 caption ids to dump as compliance images", default="os.path.join(os.path.dirname(__file__), 'sample_ids.txt')"
+    )
     parser.add_argument("--device", default="cpu", choices=["gpu", "cpu"])
     parser.add_argument(
         "--low_memory",
@@ -97,8 +101,9 @@ def main():
             os.makedirs(args.compliance_images_path)
         dump_compliance_images = True
         compliance_images_idx_list = []
+        sample_ids_file_path = args.ids_path if args.ids_path else os.path.join(os.path.dirname(__file__), "sample_ids.txt")
         with open(
-            os.path.join(os.path.dirname(__file__), "sample_ids.txt"), "r"
+            os.path.join(sample_ids_file_path, "r"
         ) as compliance_id_file:
             for line in compliance_id_file:
                 idx = int(line.strip())

@@ -2,10 +2,6 @@
 Tool to infer scenario results and cleanup submission tree
 """
 
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import argparse
 import logging
 import os
@@ -156,7 +152,7 @@ def clean_model_dir(model_results_dir):
     if not os.listdir(sut_results_dir):
         # clean sut dir
         sut = os.path.basename(sut_results_dir)
-        print(
+        log.info(
             f"No benchmark results remaining for {sut}. rmtree {sut_results_dir}")
         shutil.rmtree(sut_results_dir)
         shutil.rmtree(os.path.dirname(model_measurements_dir))

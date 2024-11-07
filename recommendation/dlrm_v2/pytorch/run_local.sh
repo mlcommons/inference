@@ -2,7 +2,9 @@
 
 source ./run_common.sh
 
-common_opt="--mlperf_conf ../../../mlperf.conf"
+#mlperf.conf is now automatically loaded by loadgen
+#common_opt="--mlperf_conf ../../../mlperf.conf"
+
 OUTPUT_DIR=`pwd`/output/$name
 if [ ! -d $OUTPUT_DIR ]; then
     mkdir -p $OUTPUT_DIR

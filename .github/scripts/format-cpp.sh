@@ -19,7 +19,7 @@
 
 # Checks all the modified c/c++ files, format them and adds them
 # to the commit.
-for FILE in $(git diff upstream/$1 --name-only | grep -E '.*\.(cc|cpp|h|hpp)$')
+for FILE in $(git diff $1/$2 --name-only | grep -E '.*\.(cc|cpp|h|hpp)$')
 do
     clang-format -i -style=file $FILE
     git add $FILE

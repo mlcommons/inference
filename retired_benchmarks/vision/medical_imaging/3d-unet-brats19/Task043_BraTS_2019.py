@@ -14,7 +14,8 @@
 #    limitations under the License.
 
 # This file is copied from nnUnet/nnunet/dataset_conversion/Task043_BraTS_2019.py, except that
-# the validation/test set part is removed and downloaded_data_dir is now configurable.
+# the validation/test set part is removed and downloaded_data_dir is now
+# configurable.
 
 import argparse
 import numpy as np
@@ -24,27 +25,37 @@ import sys
 
 sys.path.insert(0, os.path.join(os.getcwd(), "nnUnet"))
 
-from batchgenerators.utilities.file_and_folder_operations import *
-from nnunet.paths import nnUNet_raw_data
-import SimpleITK as sitk
-import shutil
+try:
+    import shutil
+    import SimpleITK as sitk
+    from nnunet.paths import nnUNet_raw_data
+    from batchgenerators.utilities.file_and_folder_operations import *
+except BaseException:
+    raise Exception("Error importing local modules")
+
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--downloaded_data_dir", default="build/MICCAI_BraTS_2019_Data_Training", help="path to MICCAI_BraTS_2019_Data_Training")
+    parser.add_argument(
+        "--downloaded_data_dir",
+        default="build/MICCAI_BraTS_2019_Data_Training",
+        help="path to MICCAI_BraTS_2019_Data_Training",
+    )
     args = parser.parse_args()
     return args
 
+
 def copy_BraTS_segmentation_and_convert_labels(in_file, out_file):
     # use this for segmentation only!!!
-    # nnUNet wants the labels to be continuous. BraTS is 0, 1, 2, 4 -> we make that into 0, 1, 2, 3
+    # nnUNet wants the labels to be continuous. BraTS is 0, 1, 2, 4 -> we make
+    # that into 0, 1, 2, 3
     img = sitk.ReadImage(in_file)
     img_npy = sitk.GetArrayFromImage(img)
 
     uniques = np.unique(img_npy)
     for u in uniques:
         if u not in [0, 1, 2, 4]:
-            raise RuntimeError('unexpected label')
+            raise RuntimeError("unexpected label")
 
     seg_new = np.zeros_like(img_npy)
     seg_new[img_npy == 4] = 3
@@ -53,6 +64,7 @@ def copy_BraTS_segmentation_and_convert_labels(in_file, out_file):
     img_corr = sitk.GetImageFromArray(seg_new)
     img_corr.CopyInformation(img)
     sitk.WriteImage(img_corr, out_file)
+
 
 def main():
 
@@ -89,47 +101,65 @@ def main():
             flair = join(patdir, p + "_flair.nii.gz")
             seg = join(patdir, p + "_seg.nii.gz")
 
-            assert all([
-                isfile(t1),
-                isfile(t1c),
-                isfile(t2),
-                isfile(flair),
-                isfile(seg)
-            ]), "%s" % patient_name
+            assert all(
+                [isfile(t1), isfile(t1c), isfile(t2),
+                 isfile(flair), isfile(seg)]
+            ), ("%s" % patient_name)
 
-            shutil.copy(t1, join(target_imagesTr, patient_name + "_0000.nii.gz"))
-            shutil.copy(t1c, join(target_imagesTr, patient_name + "_0001.nii.gz"))
-            shutil.copy(t2, join(target_imagesTr, patient_name + "_0002.nii.gz"))
-            shutil.copy(flair, join(target_imagesTr, patient_name + "_0003.nii.gz"))
+            shutil.copy(
+                t1,
+                join(
+                    target_imagesTr,
+                    patient_name +
+                    "_0000.nii.gz"))
+            shutil.copy(
+                t1c,
+                join(
+                    target_imagesTr,
+                    patient_name +
+                    "_0001.nii.gz"))
+            shutil.copy(
+                t2,
+                join(
+                    target_imagesTr,
+                    patient_name +
+                    "_0002.nii.gz"))
+            shutil.copy(
+                flair,
+                join(
+                    target_imagesTr,
+                    patient_name +
+                    "_0003.nii.gz"))
 
-            copy_BraTS_segmentation_and_convert_labels(seg, join(target_labelsTr, patient_name + ".nii.gz"))
+            copy_BraTS_segmentation_and_convert_labels(
+                seg, join(target_labelsTr, patient_name + ".nii.gz")
+            )
 
     json_dict = OrderedDict()
-    json_dict['name'] = "BraTS2019"
-    json_dict['description'] = "nothing"
-    json_dict['tensorImageSize'] = "4D"
-    json_dict['reference'] = "see BraTS2019"
-    json_dict['licence'] = "see BraTS2019 license"
-    json_dict['release'] = "0.0"
-    json_dict['modality'] = {
-        "0": "T1",
-        "1": "T1ce",
-        "2": "T2",
-        "3": "FLAIR"
-    }
-    json_dict['labels'] = {
+    json_dict["name"] = "BraTS2019"
+    json_dict["description"] = "nothing"
+    json_dict["tensorImageSize"] = "4D"
+    json_dict["reference"] = "see BraTS2019"
+    json_dict["licence"] = "see BraTS2019 license"
+    json_dict["release"] = "0.0"
+    json_dict["modality"] = {"0": "T1", "1": "T1ce", "2": "T2", "3": "FLAIR"}
+    json_dict["labels"] = {
         "0": "background",
         "1": "edema",
         "2": "non-enhancing",
         "3": "enhancing",
     }
-    json_dict['numTraining'] = len(patient_names)
-    json_dict['numTest'] = 0
-    json_dict['training'] = [{'image': "./imagesTr/%s.nii.gz" % i, "label": "./labelsTr/%s.nii.gz" % i} for i in
-                             patient_names]
-    json_dict['test'] = []
+    json_dict["numTraining"] = len(patient_names)
+    json_dict["numTest"] = 0
+    json_dict["training"] = [
+        {"image": "./imagesTr/%s.nii.gz" %
+            i, "label": "./labelsTr/%s.nii.gz" % i}
+        for i in patient_names
+    ]
+    json_dict["test"] = []
 
     save_json(json_dict, join(target_base, "dataset.json"))
+
 
 if __name__ == "__main__":
     main()

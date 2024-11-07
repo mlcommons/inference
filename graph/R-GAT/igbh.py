@@ -5,27 +5,21 @@ implementation of coco dataset
 # pylint: disable=unused-argument,missing-docstring
 # Parts of this script were taken from:
 # https://github.com/mlcommons/training/blob/master/graph_neural_network/dataset.py
-# Specifically the float2half function and the IGBH class are 
+# Specifically the float2half function and the IGBH class are
 # slightly modified copies.
 
+from typing import Literal
+from torch_geometric.utils import add_self_loops, remove_self_loops
+import torch
 import os
 import logging
 import argparse
 import dataset
 import numpy as np
-import graphlearn_torch as glt
-from igb.dataloader import IGB260MDGLDataset
 
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("coco")
-
-
-import numpy as np
-import torch
-
-from torch_geometric.utils import add_self_loops, remove_self_loops
-from typing import Literal
 
 
 def float2half(base_path, dataset_size):
@@ -45,7 +39,8 @@ def float2half(base_path, dataset_size):
     }
     # paper node
     paper_feat_path = os.path.join(base_path, "paper", "node_feat.npy")
-    paper_fp16_feat_path = os.path.join(base_path, "paper", "node_feat_fp16.pt")
+    paper_fp16_feat_path = os.path.join(
+        base_path, "paper", "node_feat_fp16.pt")
     if not os.path.exists(paper_fp16_feat_path):
         if dataset_size in ["large", "full"]:
             num_paper_nodes = paper_nodes_num[dataset_size]
@@ -66,7 +61,8 @@ def float2half(base_path, dataset_size):
 
     # author node
     author_feat_path = os.path.join(base_path, "author", "node_feat.npy")
-    author_fp16_feat_path = os.path.join(base_path, "author", "node_feat_fp16.pt")
+    author_fp16_feat_path = os.path.join(
+        base_path, "author", "node_feat_fp16.pt")
     if not os.path.exists(author_fp16_feat_path):
         if dataset_size in ["large", "full"]:
             num_author_nodes = author_nodes_num[dataset_size]
@@ -87,7 +83,8 @@ def float2half(base_path, dataset_size):
 
     # institute node
     institute_feat_path = os.path.join(base_path, "institute", "node_feat.npy")
-    institute_fp16_feat_path = os.path.join(base_path, "institute", "node_feat_fp16.pt")
+    institute_fp16_feat_path = os.path.join(
+        base_path, "institute", "node_feat_fp16.pt")
     if not os.path.exists(institute_fp16_feat_path):
         institute_node_features = torch.from_numpy(
             np.load(institute_feat_path, mmap_mode="r")
@@ -99,12 +96,14 @@ def float2half(base_path, dataset_size):
     fos_feat_path = os.path.join(base_path, "fos", "node_feat.npy")
     fos_fp16_feat_path = os.path.join(base_path, "fos", "node_feat_fp16.pt")
     if not os.path.exists(fos_fp16_feat_path):
-        fos_node_features = torch.from_numpy(np.load(fos_feat_path, mmap_mode="r"))
+        fos_node_features = torch.from_numpy(
+            np.load(fos_feat_path, mmap_mode="r"))
         fos_node_features = fos_node_features.half()
         torch.save(fos_node_features, fos_fp16_feat_path)
 
     # conference node
-    conference_feat_path = os.path.join(base_path, "conference", "node_feat.npy")
+    conference_feat_path = os.path.join(
+        base_path, "conference", "node_feat.npy")
     conference_fp16_feat_path = os.path.join(
         base_path, "conference", "node_feat_fp16.pt"
     )
@@ -117,7 +116,8 @@ def float2half(base_path, dataset_size):
 
     # journal node
     journal_feat_path = os.path.join(base_path, "journal", "node_feat.npy")
-    journal_fp16_feat_path = os.path.join(base_path, "journal", "node_feat_fp16.pt")
+    journal_fp16_feat_path = os.path.join(
+        base_path, "journal", "node_feat_fp16.pt")
     if not os.path.exists(journal_fp16_feat_path):
         journal_node_features = torch.from_numpy(
             np.load(journal_feat_path, mmap_mode="r")
@@ -145,7 +145,13 @@ class IGBHeteroDataset(object):
         self.layout = layout
         self.use_fp16 = use_fp16
 
-        self.ntypes = ["paper", "author", "institute", "fos", "journal", "conference"]
+        self.ntypes = [
+            "paper",
+            "author",
+            "institute",
+            "fos",
+            "journal",
+            "conference"]
         self.etypes = None
         self.edge_dict = {}
         self.feat_dict = {}
@@ -286,7 +292,8 @@ class IGBHeteroDataset(object):
                         )
                     ).t()
 
-                cites_edge = add_self_loops(remove_self_loops(paper_paper_edges)[0])[0]
+                cites_edge = add_self_loops(
+                    remove_self_loops(paper_paper_edges)[0])[0]
                 self.edge_dict = {
                     ("paper", "cites", "paper"): (
                         torch.cat([cites_edge[1, :], cites_edge[0, :]]),
@@ -308,7 +315,7 @@ class IGBHeteroDataset(object):
                         paper_fos_edges[0, :],
                     ),
                 }
-            
+
                 self.edge_dict[("paper", "published", "journal")] = (
                     paper_published_journal
                 )
@@ -324,17 +331,20 @@ class IGBHeteroDataset(object):
                     paper_venue_conference[0, :],
                 )
 
-            # directly load from CSC or CSC files, which can be generated using compress_graph.py
+            # directly load from CSC or CSC files, which can be generated using
+            # compress_graph.py
             else:
                 compress_edge_dict = {}
-                compress_edge_dict[("paper", "cites", "paper")] = "paper__cites__paper"
+                compress_edge_dict[("paper", "cites", "paper")
+                                   ] = "paper__cites__paper"
                 compress_edge_dict[("paper", "written_by", "author")] = (
                     "paper__written_by__author"
                 )
                 compress_edge_dict[("author", "affiliated_to", "institute")] = (
                     "author__affiliated_to__institute"
                 )
-                compress_edge_dict[("paper", "topic", "fos")] = "paper__topic__fos"
+                compress_edge_dict[("paper", "topic", "fos")
+                                   ] = "paper__topic__fos"
                 compress_edge_dict[("author", "rev_written_by", "paper")] = (
                     "author__rev_written_by__paper"
                 )
@@ -365,8 +375,10 @@ class IGBHeteroDataset(object):
                         edge_path = os.path.join(
                             self.base_path, self.layout, compress_edge_dict[etype]
                         )
-                        indptr = torch.load(os.path.join(edge_path, "indptr.pt"))
-                        indices = torch.load(os.path.join(edge_path, "indices.pt"))
+                        indptr = torch.load(
+                            os.path.join(edge_path, "indptr.pt"))
+                        indices = torch.load(
+                            os.path.join(edge_path, "indices.pt"))
                         if self.layout == "CSC":
                             self.edge_dict[etype] = (indices, indptr)
                         else:
@@ -383,7 +395,8 @@ class IGBHeteroDataset(object):
         label_file = (
             "node_label_19.npy" if not self.use_label_2K else "node_label_2K.npy"
         )
-        paper_feat_path = os.path.join(self.base_path, "paper", "node_feat.npy")
+        paper_feat_path = os.path.join(
+            self.base_path, "paper", "node_feat.npy")
         paper_lbl_path = os.path.join(self.base_path, "paper", label_file)
         num_paper_nodes = self.paper_nodes_num[self.dataset_size]
         if self.in_memory:
@@ -392,7 +405,8 @@ class IGBHeteroDataset(object):
                     os.path.join(self.base_path, "paper", "node_feat_fp16.pt")
                 )
             else:
-                paper_node_features = torch.from_numpy(np.load(paper_feat_path))
+                paper_node_features = torch.from_numpy(
+                    np.load(paper_feat_path))
         else:
             if self.dataset_size in ["large", "full"]:
                 paper_node_features = torch.from_numpy(
@@ -414,19 +428,23 @@ class IGBHeteroDataset(object):
                 )
             ).to(torch.long)
         else:
-            paper_node_labels = torch.from_numpy(np.load(paper_lbl_path)).to(torch.long)
+            paper_node_labels = torch.from_numpy(
+                np.load(paper_lbl_path)).to(
+                torch.long)
         self.feat_dict["paper"] = paper_node_features
         self.label = paper_node_labels
 
         num_author_nodes = self.author_nodes_num[self.dataset_size]
-        author_feat_path = os.path.join(self.base_path, "author", "node_feat.npy")
+        author_feat_path = os.path.join(
+            self.base_path, "author", "node_feat.npy")
         if self.in_memory:
             if self.use_fp16:
                 author_node_features = torch.load(
                     os.path.join(self.base_path, "author", "node_feat_fp16.pt")
                 )
             else:
-                author_node_features = torch.from_numpy(np.load(author_feat_path))
+                author_node_features = torch.from_numpy(
+                    np.load(author_feat_path))
         else:
             if self.dataset_size in ["large", "full"]:
                 author_node_features = torch.from_numpy(
@@ -446,11 +464,18 @@ class IGBHeteroDataset(object):
         if self.in_memory:
             if self.use_fp16:
                 institute_node_features = torch.load(
-                    os.path.join(self.base_path, "institute", "node_feat_fp16.pt")
+                    os.path.join(
+                        self.base_path,
+                        "institute",
+                        "node_feat_fp16.pt")
                 )
             else:
                 institute_node_features = torch.from_numpy(
-                    np.load(os.path.join(self.base_path, "institute", "node_feat.npy"))
+                    np.load(
+                        os.path.join(
+                            self.base_path,
+                            "institute",
+                            "node_feat.npy"))
                 )
         else:
             institute_node_features = torch.from_numpy(
@@ -468,7 +493,11 @@ class IGBHeteroDataset(object):
                 )
             else:
                 fos_node_features = torch.from_numpy(
-                    np.load(os.path.join(self.base_path, "fos", "node_feat.npy"))
+                    np.load(
+                        os.path.join(
+                            self.base_path,
+                            "fos",
+                            "node_feat.npy"))
                 )
         else:
             fos_node_features = torch.from_numpy(
@@ -481,18 +510,26 @@ class IGBHeteroDataset(object):
         if self.in_memory:
             if self.use_fp16:
                 conference_node_features = torch.load(
-                    os.path.join(self.base_path, "conference", "node_feat_fp16.pt")
+                    os.path.join(
+                        self.base_path,
+                        "conference",
+                        "node_feat_fp16.pt")
                 )
             else:
                 conference_node_features = torch.from_numpy(
                     np.load(
-                        os.path.join(self.base_path, "conference", "node_feat.npy")
-                    )
+                        os.path.join(
+                            self.base_path,
+                            "conference",
+                            "node_feat.npy"))
                 )
         else:
             conference_node_features = torch.from_numpy(
                 np.load(
-                    os.path.join(self.base_path, "conference", "node_feat.npy"),
+                    os.path.join(
+                        self.base_path,
+                        "conference",
+                        "node_feat.npy"),
                     mmap_mode="r",
                 )
             )
@@ -501,13 +538,18 @@ class IGBHeteroDataset(object):
         if self.in_memory:
             if self.use_fp16:
                 journal_node_features = torch.load(
-                    os.path.join(self.base_path, "journal", "node_feat_fp16.pt")
+                    os.path.join(
+                        self.base_path,
+                        "journal",
+                        "node_feat_fp16.pt")
                 )
             else:
                 journal_node_features = torch.from_numpy(
                     np.load(
-                        os.path.join(self.base_path, "journal", "node_feat.npy")
-                    )
+                        os.path.join(
+                            self.base_path,
+                            "journal",
+                            "node_feat.npy"))
                 )
         else:
             journal_node_features = torch.from_numpy(
@@ -518,10 +560,17 @@ class IGBHeteroDataset(object):
             )
         self.feat_dict["journal"] = journal_node_features
 
-        # Please ensure that train_idx and val_idx have been generated using split_seeds.py
+        # Please ensure that train_idx and val_idx have been generated using
+        # split_seeds.py
         try:
-            self.train_idx = torch.load(os.path.join(self.base_path, "train_idx.pt"))
-            self.val_idx = torch.load(os.path.join(self.base_path, "val_idx.pt"))
+            self.train_idx = torch.load(
+                os.path.join(
+                    self.base_path,
+                    "train_idx.pt"))
+            self.val_idx = torch.load(
+                os.path.join(
+                    self.base_path,
+                    "val_idx.pt"))
         except FileNotFoundError as e:
             print(
                 f"FileNotFound: {e}, please ensure that train_idx and val_idx have been generated using split_seeds.py"
@@ -565,10 +614,10 @@ class IGBH(dataset.Dataset):
 
     def get_labels(self, id_list):
         return self.igbh_dataset.label[self.get_samples(id_list)]
-    
+
     def get_item_count(self):
         return len(self.igbh_dataset.val_idx)
-    
+
     def load_query_samples(self, id):
         pass
 
@@ -581,7 +630,8 @@ class PostProcessIGBH:
         self,
         device="cpu",
         dtype="uint8",
-        statistics_path=os.path.join(os.path.dirname(__file__), "tools", "val2014.npz"),
+        statistics_path=os.path.join(
+            os.path.dirname(__file__), "tools", "val2014.npz"),
     ):
         self.results = []
         self.content_ids = []
@@ -603,8 +653,7 @@ class PostProcessIGBH:
         total = len(self.results)
         good = 0
         for l, r in zip(labels, self.results):
-            if (l == r):
+            if l == r:
                 good += 1
         result_dict["accuracy"] = good / total
         return result_dict
-

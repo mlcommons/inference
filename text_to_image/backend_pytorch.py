@@ -84,13 +84,12 @@ class BackendPytorch(backend.Backend):
                 scheduler=self.scheduler,
                 safety_checker=None,
                 add_watermarker=False,
-                variant="fp16" if (self.dtype == torch.float16) else None,
                 torch_dtype=self.dtype,
             )
             # self.pipe.unet = torch.compile(self.pipe.unet, mode="reduce-overhead", fullgraph=True)
 
         self.pipe.to(self.device)
-        #self.pipe.set_progress_bar_config(disable=True)
+        # self.pipe.set_progress_bar_config(disable=True)
 
         self.negative_prompt_tokens = self.pipe.tokenizer(
             self.convert_prompt(self.negative_prompt, self.pipe.tokenizer),
@@ -211,13 +210,15 @@ class BackendPytorch(backend.Backend):
                     text_input_ids.to(device), output_hidden_states=True
                 )
 
-                # We are only ALWAYS interested in the pooled output of the final text encoder
+                # We are only ALWAYS interested in the pooled output of the
+                # final text encoder
                 pooled_prompt_embeds = prompt_embeds[0]
                 if clip_skip is None:
                     prompt_embeds = prompt_embeds.hidden_states[-2]
                 else:
                     # "2" because SDXL always indexes from the penultimate layer.
-                    prompt_embeds = prompt_embeds.hidden_states[-(clip_skip + 2)]
+                    prompt_embeds = prompt_embeds.hidden_states[-(
+                        clip_skip + 2)]
 
                 prompt_embeds_list.append(prompt_embeds)
 
@@ -233,7 +234,8 @@ class BackendPytorch(backend.Backend):
             and zero_out_negative_prompt
         ):
             negative_prompt_embeds = torch.zeros_like(prompt_embeds)
-            negative_pooled_prompt_embeds = torch.zeros_like(pooled_prompt_embeds)
+            negative_pooled_prompt_embeds = torch.zeros_like(
+                pooled_prompt_embeds)
         elif do_classifier_free_guidance and negative_prompt_embeds is None:
             negative_prompt = negative_prompt or ""
             negative_prompt_2 = negative_prompt_2 or negative_prompt
@@ -260,30 +262,35 @@ class BackendPytorch(backend.Backend):
                     uncond_input.to(device),
                     output_hidden_states=True,
                 )
-                # We are only ALWAYS interested in the pooled output of the final text encoder
+                # We are only ALWAYS interested in the pooled output of the
+                # final text encoder
                 negative_pooled_prompt_embeds = negative_prompt_embeds[0]
                 negative_prompt_embeds = negative_prompt_embeds.hidden_states[-2]
 
                 negative_prompt_embeds_list.append(negative_prompt_embeds)
 
-            negative_prompt_embeds = torch.concat(negative_prompt_embeds_list, dim=-1)
+            negative_prompt_embeds = torch.concat(
+                negative_prompt_embeds_list, dim=-1)
 
         if pipe.text_encoder_2 is not None:
             prompt_embeds = prompt_embeds.to(
                 dtype=pipe.text_encoder_2.dtype, device=device
             )
         else:
-            prompt_embeds = prompt_embeds.to(dtype=pipe.unet.dtype, device=device)
+            prompt_embeds = prompt_embeds.to(
+                dtype=pipe.unet.dtype, device=device)
 
         bs_embed, seq_len, _ = prompt_embeds.shape
-        # duplicate text embeddings for each generation per prompt, using mps friendly method
+        # duplicate text embeddings for each generation per prompt, using mps
+        # friendly method
         prompt_embeds = prompt_embeds.repeat(1, num_images_per_prompt, 1)
         prompt_embeds = prompt_embeds.view(
             bs_embed * num_images_per_prompt, seq_len, -1
         )
 
         if do_classifier_free_guidance:
-            # duplicate unconditional embeddings for each generation per prompt, using mps friendly method
+            # duplicate unconditional embeddings for each generation per
+            # prompt, using mps friendly method
             seq_len = negative_prompt_embeds.shape[1]
 
             if pipe.text_encoder_2 is not None:
@@ -315,7 +322,7 @@ class BackendPytorch(backend.Backend):
             pooled_prompt_embeds,
             negative_pooled_prompt_embeds,
         )
-    
+
     def prepare_inputs(self, inputs, i):
         if self.batch_size == 1:
             return self.encode_tokens(
@@ -330,7 +337,7 @@ class BackendPytorch(backend.Backend):
             negative_prompt_embeds = []
             pooled_prompt_embeds = []
             negative_pooled_prompt_embeds = []
-            for prompt in inputs[i:min(i+self.batch_size, len(inputs))]:
+            for prompt in inputs[i: min(i + self.batch_size, len(inputs))]:
                 assert isinstance(prompt, dict)
                 text_input = prompt["input_tokens"]
                 text_input_2 = prompt["input_tokens_2"]
@@ -351,18 +358,26 @@ class BackendPytorch(backend.Backend):
                 pooled_prompt_embeds.append(p_p_e)
                 negative_pooled_prompt_embeds.append(n_p_p_e)
 
-
             prompt_embeds = torch.cat(prompt_embeds)
             negative_prompt_embeds = torch.cat(negative_prompt_embeds)
             pooled_prompt_embeds = torch.cat(pooled_prompt_embeds)
-            negative_pooled_prompt_embeds = torch.cat(negative_pooled_prompt_embeds)
-            return prompt_embeds, negative_prompt_embeds, pooled_prompt_embeds, negative_pooled_prompt_embeds
+            negative_pooled_prompt_embeds = torch.cat(
+                negative_pooled_prompt_embeds)
+            return (
+                prompt_embeds,
+                negative_prompt_embeds,
+                pooled_prompt_embeds,
+                negative_pooled_prompt_embeds,
+            )
 
     def predict(self, inputs):
         images = []
         with torch.no_grad():
             for i in range(0, len(inputs), self.batch_size):
-                latents_input = [inputs[idx]["latents"] for idx in range(i, min(i+self.batch_size, len(inputs)))]
+                latents_input = [
+                    inputs[idx]["latents"]
+                    for idx in range(i, min(i + self.batch_size, len(inputs)))
+                ]
                 latents_input = torch.cat(latents_input).to(self.device)
                 (
                     prompt_embeds,
@@ -382,4 +397,3 @@ class BackendPytorch(backend.Backend):
                 ).images
                 images.extend(generated)
         return images
-

@@ -1,3 +1,7 @@
+from graphlearn_torch.typing import InputNodes, NumNeighbors
+from graphlearn_torch.sampler import NeighborSampler, NodeSamplerInput
+from graphlearn_torch.data import Dataset
+from graphlearn_torch.loader import NodeLoader
 from typing import Optional, List, Union
 import os
 import torch
@@ -9,13 +13,7 @@ from igbh import IGBHeteroDataset, IGBH
 import graphlearn_torch as glt
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("backend-pytorch")
-
-from graphlearn_torch.loader import NodeLoader
-
-from graphlearn_torch.data import Dataset
-from graphlearn_torch.sampler import NeighborSampler, NodeSamplerInput
-from graphlearn_torch.typing import InputNodes, NumNeighbors
+log = logging.getLogger("backend-glt")
 
 
 class CustomNeighborLoader(NodeLoader):
@@ -116,20 +114,19 @@ class CustomNeighborLoader(NodeLoader):
         return result
 
 
-class BackendPytorch(backend.Backend):
+class BackendGLT(backend.Backend):
     def __init__(
         self,
         model_type="rgat",
         type: Literal["fp16", "fp32"] = "fp16",
         device: Literal["cpu", "gpu"] = "gpu",
         ckpt_path: str = None,
-        igbh_dataset: IGBHeteroDataset = None,
+        igbh: IGBH = None,
         batch_size: int = 1,
         layout: Literal["CSC", "CSR", "COO"] = "COO",
         edge_dir: str = "in",
     ):
-        super(BackendPytorch, self).__init__()
-        self.i = 0
+        super(BackendGLT, self).__init__()
         # Set device and type
         if device == "gpu":
             self.device = torch.device("cuda")
@@ -142,15 +139,19 @@ class BackendPytorch(backend.Backend):
             self.type = torch.float16
         # Create Node and neighbor loade
         self.glt_dataset = glt.data.Dataset(edge_dir=edge_dir)
+        igbh_dataset = igbh.igbh_dataset
         self.glt_dataset.init_node_features(
-            node_feature_data=igbh_dataset.feat_dict, with_gpu=(device == "gpu"), dtype=self.type
+            node_feature_data=igbh_dataset.feat_dict,
+            with_gpu=(device == "gpu"),
+            dtype=self.type,
         )
         self.glt_dataset.init_graph(
             edge_index=igbh_dataset.edge_dict,
             layout=layout,
             graph_mode="ZERO_COPY" if (device == "gpu") else "CPU",
         )
-        self.glt_dataset.init_node_labels(node_label_data={"paper": igbh_dataset.label})
+        self.glt_dataset.init_node_labels(
+            node_label_data={"paper": igbh_dataset.label})
         self.neighbor_loader = CustomNeighborLoader(
             self.glt_dataset,
             [15, 10, 5],
@@ -161,17 +162,21 @@ class BackendPytorch(backend.Backend):
             seed=42,
         )
 
-        self.model = RGNN(
-            self.glt_dataset.get_edge_types(),
-            self.glt_dataset.node_features["paper"].shape[1],
-            512,
-            2983,
-            num_layers=3,
-            dropout=0.2,
-            model=model_type,
-            heads=4,
-            node_type="paper",
-        ).to(self.type).to(self.device)
+        self.model = (
+            RGNN(
+                self.glt_dataset.get_edge_types(),
+                self.glt_dataset.node_features["paper"].shape[1],
+                512,
+                2983,
+                num_layers=3,
+                dropout=0.2,
+                model=model_type,
+                heads=4,
+                node_type="paper",
+            )
+            .to(self.type)
+            .to(self.device)
+        )
         self.model.eval()
         ckpt = None
         if ckpt_path is not None:
@@ -207,4 +212,3 @@ class BackendPytorch(backend.Backend):
                 batch.edge_index_dict,
             )[:input_size]
         return out
-

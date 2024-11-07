@@ -6,21 +6,75 @@ on:
   push:
     branches:
       - master
+      - loadgen-release
+      - dev
     paths:
-      - loadgen/setup.py
+      - loadgen/**
 
 jobs:
+  update_version:
+    name: Update version only on ubuntu but used by windows and macos
+    if: github.repository_owner == 'mlcommons'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      # Check if VERSION.txt file has changed in this push
+      - name: Check if VERSION.txt file has changed
+        id: version_changed
+        run: |
+          echo "version_changed=false" >> $GITHUB_ENV
+          echo "new_version=" >> $GITHUB_ENV  # Initialize with empty value
+          if git diff --name-only HEAD~1 | grep -q "VERSION.txt"; then
+            echo "VERSION.txt file has been modified"
+            echo "version_changed=true" >> $GITHUB_ENV
+            new_version=$(cat loadgen/VERSION.txt)
+            echo "new_version=$new_version" >> $GITHUB_ENV
+          else
+            echo "VERSION.txt file has NOT been modified"
+          fi
+
+      # Step 4: Increment version if VERSION.txt was not changed
+      - name: Increment version if necessary
+        id: do_version_increment
+        if: env.version_changed == 'false'
+        run: |
+          cd loadgen
+          # Check if VERSION file exists, else initialize it
+          if [ ! -f VERSION.txt ]; then
+            echo "0.0.0" > VERSION.txt
+          fi
+
+          version=$(cat VERSION.txt)
+          IFS='.' read -r major minor patch <<< "$version"
+          patch=$((patch + 1))
+          new_version="$major.$minor.$patch"
+          echo $new_version > VERSION.txt
+          echo "New version: $new_version"
+          echo "new_version=$new_version" >> $GITHUB_ENV
+
+      # Step 5: Commit the updated version to the repository
+      - name: Commit updated version
+        if: env.version_changed == 'false'
+        run: |
+          cd loadgen
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+          git add VERSION.txt
+          git commit -m "Increment version to $new_version"
+          git push
+  
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
+    needs: update_version
     runs-on: ${{ matrix.os }}
-    environment: release
-    permissions:
-      # IMPORTANT: this permission is mandatory for trusted publishing
-      id-token: write
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - uses: actions/checkout@v3
@@ -31,8 +85,43 @@ jobs:
         run: python -m pip install cibuildwheel twine
 
       - name: Build wheels
-        run: python -m cibuildwheel loadgen/ --output-dir wheels
+        run: git pull && python -m cibuildwheel loadgen/ --output-dir wheels
 
+       # Save wheels as artifacts
+      - name: Upload built wheels
+        uses: actions/upload-artifact@v3
+        with:
+          name: wheels-${{ matrix.os }}
+          path: wheels
+
+  publish_wheels:
+    needs: build_wheels  # Wait for the build_wheels job to complete
+    runs-on: ubuntu-latest  # Only run this job on Linux
+    environment: release
+    permissions:
+      # IMPORTANT: this permission is mandatory for trusted publishing
+      id-token: write
+    steps:
+      - uses: actions/checkout@v3
+
+      # Download the built wheels from ubuntu
+      - name: Download Ubuntu wheels
+        uses: actions/download-artifact@v3
+        with:
+          name: wheels-ubuntu-latest
+          path: wheels
+      # Download the built wheels from macOS
+      - name: Download macOS wheels
+        uses: actions/download-artifact@v3
+        with:
+          name: wheels-macos-latest
+          path: wheels
+      # Download the built wheels from Windows
+      - name: Download Windows wheels
+        uses: actions/download-artifact@v3
+        with:
+          name: wheels-windows-latest
+          path: wheels
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

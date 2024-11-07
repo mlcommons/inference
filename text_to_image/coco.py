@@ -183,7 +183,8 @@ class PostProcessCoco:
             os.makedirs("images/", exist_ok=True)
         for image_id in ids:
             if not idx.get(image_id):
-                print(f"image id {image_id} is missing in the results. Hence not saved.")
+                print(
+                    f"image id {image_id} is missing in the results. Hence not saved.")
                 continue
             caption = ds.get_caption(image_id)
             generated = Image.fromarray(self.results[idx[image_id]])

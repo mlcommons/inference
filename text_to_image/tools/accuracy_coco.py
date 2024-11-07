@@ -51,7 +51,8 @@ def get_args():
         required=False,
         help="path to dump 10 stable diffusion xl compliance images",
     )
-    #Do not use for official MLPerf inference submissions as only the default one is valid
+    # Do not use for official MLPerf inference submissions as only the default
+    # one is valid
     parser.add_argument(
         "--ids-path", help="Path to 10 caption ids to dump as compliance images", default="os.path.join(os.path.dirname(__file__), 'sample_ids.txt')"
     )
@@ -101,12 +102,13 @@ def main():
             os.makedirs(args.compliance_images_path)
         dump_compliance_images = True
         compliance_images_idx_list = []
-        sample_ids_file_path = args.ids_path if args.ids_path else os.path.join(os.path.dirname(__file__), "sample_ids.txt")
+        sample_ids_file_path = args.ids_path if args.ids_path else os.path.join(
+            os.path.dirname(__file__), "sample_ids.txt")
         with open(
             os.path.join(sample_ids_file_path, "r"
         ) as compliance_id_file:
             for line in compliance_id_file:
-                idx = int(line.strip())
+                idx=int(line.strip())
                 compliance_images_idx_list.append(idx)
         # Dump caption.txt
         with open(
@@ -153,28 +155,28 @@ def compute_accuracy(
     statistics_path,
 ):
     # Load torchmetrics modules
-    clip = CLIPEncoder(device=device)
-    clip_scores = []
-    seen = set()
-    result_list = []
-    result_dict = {}
+    clip=CLIPEncoder(device=device)
+    clip_scores=[]
+    seen=set()
+    result_list=[]
+    result_dict={}
 
     # Load model outputs
     with open(mlperf_accuracy_file, "r") as f:
-        results = json.load(f)
+        results=json.load(f)
 
     for j in tqdm(results):
-        idx = j["qsl_idx"]
+        idx=j["qsl_idx"]
         if idx in seen:
             continue
         seen.add(idx)
 
         # Load generated image
-        generated_img = np.frombuffer(bytes.fromhex(j["data"]), np.uint8).reshape(
+        generated_img=np.frombuffer(bytes.fromhex(j["data"]), np.uint8).reshape(
             1024, 1024, 3
         )
         result_list.append(generated_img)
-        generated_img = Image.fromarray(generated_img)
+        generated_img=Image.fromarray(generated_img)
 
         # Dump compliance images
         if dump_compliance_images and idx in compliance_images_idx_list:
@@ -185,16 +187,16 @@ def compute_accuracy(
 
         # generated_img = torch.Tensor(generated_img).to(torch.uint8).to(device)
         # Load Ground Truth
-        caption = df_captions.iloc[idx]["caption"]
+        caption=df_captions.iloc[idx]["caption"]
         clip_scores.append(
             100 *
             clip.get_clip_score(
                 caption,
                 generated_img).item())
-    fid_score = compute_fid(result_list, statistics_path, device)
+    fid_score=compute_fid(result_list, statistics_path, device)
 
-    result_dict["FID_SCORE"] = fid_score
-    result_dict["CLIP_SCORE"] = np.mean(clip_scores)
+    result_dict["FID_SCORE"]=fid_score
+    result_dict["CLIP_SCORE"]=np.mean(clip_scores)
     print(f"Accuracy Results: {result_dict}")
 
     with open(output_file, "w") as fp:
@@ -216,43 +218,43 @@ def compute_accuracy_low_memory(
 ):
     if num_workers is None:
         try:
-            num_cpus = len(os.sched_getaffinity(0))
+            num_cpus=len(os.sched_getaffinity(0))
         except AttributeError:
             # os.sched_getaffinity is not available under Windows, use
             # os.cpu_count instead (which may not return the *available* number
             # of CPUs).
-            num_cpus = os.cpu_count()
+            num_cpus=os.cpu_count()
 
-        num_workers = min(num_cpus, 8) if num_cpus is not None else 0
+        num_workers=min(num_cpus, 8) if num_cpus is not None else 0
     else:
-        num_workers = num_workers
+        num_workers=num_workers
 
     # Load torchmetrics modules
-    block_idx = InceptionV3.BLOCK_INDEX_BY_DIM[inception_dims]
-    inception_model = InceptionV3([block_idx]).to(device)
-    clip_model = CLIPEncoder(device=device)
+    block_idx=InceptionV3.BLOCK_INDEX_BY_DIM[inception_dims]
+    inception_model=InceptionV3([block_idx]).to(device)
+    clip_model=CLIPEncoder(device=device)
 
-    clip_scores = []
-    seen = set()
-    result_batch = []
-    result_dict = {}
-    activations = np.empty((0, inception_dims))
+    clip_scores=[]
+    seen=set()
+    result_batch=[]
+    result_dict={}
+    activations=np.empty((0, inception_dims))
 
     # Load model outputs
     with open(mlperf_accuracy_file, "r") as f:
-        results = ijson.items(f, "item")
+        results=ijson.items(f, "item")
 
         for j in tqdm(results):
-            idx = j["qsl_idx"]
+            idx=j["qsl_idx"]
             if idx in seen:
                 continue
             seen.add(idx)
 
             # Load generated image
-            generated_img = np.frombuffer(bytes.fromhex(j["data"]), np.uint8).reshape(
+            generated_img=np.frombuffer(bytes.fromhex(j["data"]), np.uint8).reshape(
                 1024, 1024, 3
             )
-            generated_img = Image.fromarray(generated_img)
+            generated_img=Image.fromarray(generated_img)
 
             # Dump compliance images
             if dump_compliance_images and idx in compliance_images_idx_list:
@@ -262,7 +264,7 @@ def compute_accuracy_low_memory(
                         f"{idx}.png"))
 
             # Load Ground Truth
-            caption = df_captions.iloc[idx]["caption"]
+            caption=df_captions.iloc[idx]["caption"]
             clip_scores.append(
                 100 * clip_model.get_clip_score(caption, generated_img).item()
             )
@@ -270,7 +272,7 @@ def compute_accuracy_low_memory(
             result_batch.append(generated_img.convert("RGB"))
 
             if len(result_batch) == batch_size:
-                act = get_activations(
+                act=get_activations(
                     result_batch,
                     inception_model,
                     batch_size,
@@ -278,12 +280,12 @@ def compute_accuracy_low_memory(
                     device,
                     num_workers,
                 )
-                activations = np.append(activations, act, axis=0)
+                activations=np.append(activations, act, axis=0)
                 result_batch.clear()
 
         # Remaining data for last batch
         if len(result_batch) > 0:
-            act = get_activations(
+            act=get_activations(
                 result_batch,
                 inception_model,
                 len(result_batch),
@@ -291,9 +293,9 @@ def compute_accuracy_low_memory(
                 device,
                 num_workers,
             )
-            activations = np.append(activations, act, axis=0)
+            activations=np.append(activations, act, axis=0)
 
-    m1, s1 = compute_statistics_of_path(
+    m1, s1=compute_statistics_of_path(
         statistics_path,
         inception_model,
         batch_size,
@@ -304,13 +306,13 @@ def compute_accuracy_low_memory(
         None,
     )
 
-    m2 = np.mean(activations, axis=0)
-    s2 = np.cov(activations, rowvar=False)
+    m2=np.mean(activations, axis=0)
+    s2=np.cov(activations, rowvar=False)
 
-    fid_score = calculate_frechet_distance(m1, s1, m2, s2)
+    fid_score=calculate_frechet_distance(m1, s1, m2, s2)
 
-    result_dict["FID_SCORE"] = fid_score
-    result_dict["CLIP_SCORE"] = np.mean(clip_scores)
+    result_dict["FID_SCORE"]=fid_score
+    result_dict["CLIP_SCORE"]=np.mean(clip_scores)
     print(f"Accuracy Results: {result_dict}")
 
     with open(output_file, "w") as fp:

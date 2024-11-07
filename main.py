@@ -74,7 +74,6 @@ def define_env(env):
                 content += f"\n{pre_space}!!! tip\n\n"
                 content += f"{pre_space}    - Intel MLPerf inference implementation is available only for datacenter category and has been tested only on a limited number of systems. Most of the benchmarks using Intel implementation require at least Intel Sapphire Rapids or higher CPU generation.\n\n"
 
-
             if model not in [
                 "bert-99",
                 "bert-99.9",
@@ -569,7 +568,6 @@ def define_env(env):
             return ""
 
     @env.macro
-
     def mlperf_inference_run_command(
         spaces,
         model,

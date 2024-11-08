@@ -54,7 +54,7 @@ def get_args():
     # Do not use for official MLPerf inference submissions as only the default
     # one is valid
     parser.add_argument(
-        "--ids-path", help="Path to 10 caption ids to dump as compliance images", default="os.path.join(os.path.dirname(__file__), 'sample_ids.txt')"
+        "--ids-path", help="Path to 10 caption ids to dump as compliance images"
     )
     parser.add_argument("--device", default="cpu", choices=["gpu", "cpu"])
     parser.add_argument(

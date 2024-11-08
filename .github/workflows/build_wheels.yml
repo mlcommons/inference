@@ -89,7 +89,7 @@ jobs:
 
        # Save wheels as artifacts
       - name: Upload built wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: wheels-${{ matrix.os }}
           path: wheels
@@ -106,19 +106,19 @@ jobs:
 
       # Download the built wheels from ubuntu
       - name: Download Ubuntu wheels
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: wheels-ubuntu-latest
           path: wheels
       # Download the built wheels from macOS
       - name: Download macOS wheels
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: wheels-macos-latest
           path: wheels
       # Download the built wheels from Windows
       - name: Download Windows wheels
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: wheels-windows-latest
           path: wheels

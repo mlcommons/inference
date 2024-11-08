@@ -1,12 +1,11 @@
+import asyncio
 import os
 import time
 import numpy as np
 import array
 import torch
 from torch.nn.functional import pad
-from transformers import AutoTokenizer, LlamaForCausalLM
-from transformers.generation.streamers import BaseStreamer
-from vllm import LLM, SamplingParams
+from vllm import LLM, AsyncLLMEngine, AsyncEngineArgs, SamplingParams
 
 import pickle
 import time
@@ -24,62 +23,6 @@ from dataset import Dataset
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("Llama-70B-SUT")
 
-gen_kwargs = {
-    "temperature": 1,
-    "top_p": 1,
-    "top_k": 1,
-    "seed": 42,
-    "max_tokens": 8000,
-    "min_tokens": 2
-}
-
-
-class FirstTokenStreamer(BaseStreamer):
-    """Streams first tokens to a 'holder'"""
-
-    def __init__(
-        self, first_token, tokens_cache=[], is_first_token=True, response_ids=[]
-    ):
-        """Response ids added to 'sign' the first token"""
-
-        self.first_token = first_token  # Queue for first token
-        self.is_first_token = is_first_token
-
-        # Cache for subsequent generated tokens
-        self.tokens_cache = tokens_cache
-
-        self.response_ids = response_ids
-
-        self.is_prompt = (
-            True  # The first tokens sent to the streamer are actually the input prompts
-        )
-
-    def put(self, value):
-        """Caches the tokens as they're generated. Assumes bs=1"""
-
-        # Prompts are streamed first so we need to skip the first time value
-        # that arrives
-        if self.is_prompt:
-            self.is_prompt = False
-            return
-
-        value = value.item()
-        if self.is_first_token:
-
-            # Add generated first token together with its query response_id to
-            # first tokens queue
-            self.first_token.put((value, self.response_ids[0]))
-
-            self.is_first_token = False
-            return
-
-        self.tokens_cache.append(value)
-
-    def end(self):
-        pass
-
-    def get_out_tokens(self):
-        return self.tokens_cache
 
 
 class SUT:
@@ -95,12 +38,10 @@ class SUT:
         # Set this to True *only for test accuracy runs* in case your prior
         # session was killed partway through
         workers=1,
-        tensor_parallel_size=8
+        tensor_parallel_size=1
     ):
 
         self.model_path = model_path or f"Meta-Llama-3.1-405B-Instruct{'-FP8' if dtype == 'float8' else ''}"
-        print(self.model_path)
-        input("...")
         self.device = device
 
         if not batch_size:
@@ -132,6 +73,16 @@ class SUT:
         )
 
         self.load_model()
+        gen_kwargs = {
+            "temperature": 1,
+            "top_p": 1,
+            "top_k": 1,
+            "seed": 42,
+            "max_tokens": 256,
+            "min_tokens": 20
+        }
+        self.sampling_params = SamplingParams(**gen_kwargs)
+        self.sampling_params.all_stop_token_ids.add(self.model.get_tokenizer().eos_token_id)
 
         self.num_workers = workers
         self.worker_threads = [None] * self.num_workers
@@ -165,126 +116,56 @@ class SUT:
 
             query_ids = [q.index for q in qitem]
 
-            fname = "q" + "_".join([str(i) for i in query_ids])
-            fname = f"run_outputs/{fname}.pkl"
-            _p = Path(fname)
-            if self.use_cached_outputs and _p.exists():
-                # Read cache
-                with _p.open(mode="rb") as f:
-                    d = pickle.load(f)
-                processed_output = d["outputs"]
-                tik1 = None
-                tik2 = None
-                tik3 = None
-                tok = None
-            else:
-                # Construct / collate batch
-                max_seq_len = 1024
+            tik1 = time.time()
 
-                tik1 = time.time()
+            input_ids_tensor = [self.data_object.input_ids[q.index][:256] for q in qitem]
+            
+            tik2 = time.time()
+            print(f"Input {input_ids_tensor}")
+            outputs = self.model.generate(
+                prompt_token_ids=input_ids_tensor, sampling_params = self.sampling_params
+            )
+            pred_output_tokens = []
+            for output in outputs:
+                pred_output_tokens.append(list(output.outputs[0].token_ids))
+            print(f"Output {outputs[0].outputs[0].text}")
+            print(f"Output {pred_output_tokens}")
+            tik3 = time.time()
 
-                input_ids_tensor = []
-                input_masks_tensor = []
-                input_len = []
-                for q in qitem:
-                    input_ids_tensor.append(
-                        pad(
-                            self.data_object.input_ids[q.index],
-                            (
-                                max_seq_len -
-                                self.data_object.input_lens[q.index],
-                                0,
-                                0,
-                                0,
-                            ),
-                            value=self.tokenizer.pad_token_id,
-                        )
-                    )
-                    input_masks_tensor.append(
-                        pad(
-                            self.data_object.attention_masks[q.index],
-                            (
-                                max_seq_len -
-                                self.data_object.input_lens[q.index],
-                                0,
-                                0,
-                                0,
-                            ),
-                            value=0,
-                        )
-                    )
-                    input_len.append(self.data_object.input_lens[q.index])
-                input_ids_tensor = torch.cat(input_ids_tensor)
-                input_masks_tensor = torch.cat(input_masks_tensor)
+            processed_output = self.data_object.postProcess(
+                pred_output_tokens,
+                query_id_list=query_ids,
+            )
 
-                assert input_ids_tensor.shape == input_masks_tensor.shape
-                assert input_ids_tensor.shape[0] <= self.batch_size
+        for i in range(len(qitem)):
+            n_tokens = processed_output[i].shape[0]
+            response_array = array.array(
+                "B", processed_output[i].tobytes())
+            bi = response_array.buffer_info()
+            response = [
+                lg.QuerySampleResponse(
+                    qitem[i].id,
+                    bi[0],
+                    bi[1],
+                    n_tokens)]
+            lg.QuerySamplesComplete(response)
 
-                tik2 = time.time()
+        tok = time.time()
 
-                pred_output_tokens = self.model.generate(
-                    prompt_token_ids=input_ids_tensor, sampling_params = SamplingParams(**gen_kwargs)
-                )
-
-                tik3 = time.time()
-
-                processed_output = self.data_object.postProcess(
-                    pred_output_tokens,
-                    input_seq_lens=input_len,
-                    query_id_list=query_ids,
-                )
-
-            for i in range(len(qitem)):
-                n_tokens = processed_output[i].shape[0]
-                response_array = array.array(
-                    "B", processed_output[i].tobytes())
-                bi = response_array.buffer_info()
-                response = [
-                    lg.QuerySampleResponse(
-                        qitem[i].id,
-                        bi[0],
-                        bi[1],
-                        n_tokens)]
-                lg.QuerySamplesComplete(response)
-
-            tok = time.time()
-
-            with self.sample_counter_lock:
-                self.sample_counter += len(qitem)
-                print(f"Samples run: {self.sample_counter}")
-                if tik1:
-                    print(f"\tBatchMaker time: {tik2 - tik1}")
-                    print(f"\tInference time: {tik3 - tik2}")
-                    print(f"\tPostprocess time: {tok - tik3}")
-                    print(f"\t==== Total time: {tok - tik1}")
-                else:
-                    print(f"\tLoaded from cache: {_p}")
+        with self.sample_counter_lock:
+            self.sample_counter += len(qitem)
+            print(f"Samples run: {self.sample_counter}")
+            if tik1:
+                print(f"\tBatchMaker time: {tik2 - tik1}")
+                print(f"\tInference time: {tik3 - tik2}")
+                print(f"\tPostprocess time: {tok - tik3}")
+                print(f"\t==== Total time: {tok - tik1}")
 
     def load_model(self):
+        print("Loading model...")
         self.model = LLM(self.model_path, dtype=self.dtype, tensor_parallel_size=self.tensor_parallel_size,)
         print("Loaded model")
-
         self.device = torch.device(self.device)
-        if self.device == "cpu":
-            self.model = self.model.to(
-                self.device
-            )  # Force CPU if your system has GPU and you specifically want CPU-only run
-
-        self.model.eval()
-        try:  # for systems with low ram, the below command gives error as some part is offloaded to disk
-            self.model = self.model.to(memory_format=torch.channels_last)
-        except BaseException:
-            pass
-
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_path,
-            model_max_length=1024,
-            padding_side="left",
-            use_fast=False,
-        )
-
-        self.tokenizer.pad_token = self.tokenizer.eos_token
-        print("Loaded tokenizer")
 
     def get_sut(self):
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
@@ -345,29 +226,35 @@ class SUTServer(SUT):
             worker = threading.Thread(target=self.process_queries)
             worker.start()
             self.worker_threads[j] = worker
+    
+    async def stream_output(self, qitem, results_generator):
+        first = True
+        async for request_output in results_generator:
+            output_response = request_output
+            if first:
+                first_tokens = output_response[0].outputs[0].token_ids
+                response_data = array.array("B", np.array(first_tokens, np.int32).tobytes())
+                bi = response_data.buffer_info()
+                response = [lg.QuerySampleResponse(qitem.id, bi[0], bi[1])]
+                lg.FirstTokenComplete(response)
 
-        # Create first token response thread
-        self.ft_response_thread = threading.Thread(
-            target=self.process_first_tokens)
-        self.ft_response_thread.start()
+        outputs = output_response
+        pred_output_tokens = []
+        for output in outputs:
+            pred_output_tokens.append(output.outputs[0].token_ids)
+        n_tokens = len(pred_output_tokens)
+        response_array = array.array(
+            "B", np.array(pred_output_tokens, np.int32).tobytes()
+        )
+        bi = response_array.buffer_info()
+        response = [
+            lg.QuerySampleResponse(
+                qitem.id,
+                bi[0],
+                bi[1],
+                n_tokens)]
+        lg.QuerySamplesComplete(response)
 
-    def process_first_tokens(self):
-
-        while True:
-            first_token_item = self.first_token_queue.get()
-
-            if first_token_item is None:
-                log.info("Exiting First token response thread")
-                break
-
-            first_tokens, response_id = first_token_item
-
-            response_data = array.array(
-                "B", np.array(
-                    first_tokens, np.int32).tobytes())
-            bi = response_data.buffer_info()
-            response = [lg.QuerySampleResponse(response_id, bi[0], bi[1])]
-            lg.FirstTokenComplete(response)
 
     def process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic"""
@@ -382,34 +269,12 @@ class SUTServer(SUT):
 
             # TODO: This PoC is super slow with significant overhead. Best to
             # create a patch to `generate`
-            tokens_cache = []
-            tokens_streamer = FirstTokenStreamer(
-                self.first_token_queue,
-                tokens_cache=tokens_cache,
-                is_first_token=True,
-                response_ids=[qitem.id],
+            results_generator = self.model.generate(
+                prompt_token_ids=input_ids_tensor, sampling_params = self.sampling_params
             )
-
-            _ = self.model.generate(
-                prompt_token_ids=input_ids_tensor, sampling_params = SamplingParams(**gen_kwargs)
-            )
-
-            output_tokens = tokens_streamer.get_out_tokens()
-            n_tokens = len(output_tokens)
-            response_array = array.array(
-                "B", np.array(output_tokens, np.int32).tobytes()
-            )
-            bi = response_array.buffer_info()
-            response = [
-                lg.QuerySampleResponse(
-                    qitem.id,
-                    bi[0],
-                    bi[1],
-                    n_tokens)]
-            lg.QuerySamplesComplete(response)
+            asyncio.run(self.stream_output(qitem, results_generator))
 
     def issue_queries(self, query_samples):
-
         self.query_queue.put(query_samples[0])
 
     def stop(self):
@@ -421,3 +286,9 @@ class SUTServer(SUT):
 
         self.first_token_queue.put(None)
         self.ft_response_thread.join()
+    
+    def load_model(self):
+        self.engine_args = AsyncEngineArgs(self.model_path, dtype=self.dtype, tensor_parallel_size=self.tensor_parallel_size)
+        self.model = AsyncLLMEngine.from_engine_args(self.engine_args)
+        print("Loaded model")
+        self.device = torch.device(self.device)

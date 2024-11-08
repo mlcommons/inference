@@ -66,27 +66,17 @@ class Dataset:
         print("Loading dataset...")
         import pandas as pd
 
-        processed_data = pd.read_pickle(self.dataset_path)
+        self.processed_data = pd.read_pickle(self.dataset_path)
 
-        input_tokens = processed_data["tok_input"]
+        self.input = self.processed_data.input.tolist()
+        self.input_ids = self.processed_data.tok_input.tolist()
+        self.input_lens = self.processed_data.tok_input_len.tolist()
 
-        self.input_ids = []
-        self.input_lens = []
-        self.attention_masks = []
-
-        for ids in input_tokens:
-            input_ids = torch.tensor(ids, dtype=torch.int32).view(
-                1, -1).to(self.device)
-            attn_mask = torch.ones_like(input_ids)
-            self.input_ids.append(input_ids)
-            self.attention_masks.append(attn_mask)
-            self.input_lens.append(input_ids.shape[-1])
         print("Finished loading dataset.")
 
     def postProcess(
         self,
         out_tokens,
-        input_seq_lens=None,
         query_id_list=None,
         sample_index_list=None,
     ):
@@ -104,8 +94,8 @@ class Dataset:
         """
         # Everything is padded to max_len (1024), so prune the input and parse
         # to numpy
-        output_seq = out_tokens[:, 1024:].cpu().numpy()
-        assert len(query_id_list) == output_seq.shape[0]
+        output_seq = out_tokens
+        assert len(query_id_list) == len(output_seq)
 
         # Save outputs
         if not os.path.exists("run_outputs"):
@@ -117,7 +107,7 @@ class Dataset:
             print(f"Saving outputs to {fname}")
             pickle.dump(d, f)
 
-        return output_seq
+        return np.asarray(output_seq, dtype=np.int32)
 
     def LoadSamplesToRam(self, sample_list):
         pass
@@ -133,7 +123,7 @@ if __name__ == "__main__":
     data_object = Dataset(
         dataset_path="dataset/mlperf_llama3.1_405b_dataset_8318_processed_fp16_eval.pkl"
     )
-    print(len(data_object.input_ids))
-    print(len(data_object.attention_masks))
-    print(data_object.input_ids[0])
-    print(data_object.attention_masks[0])
+    # print(data_object.input)
+    print(data_object.input_ids)
+    # print(data_object.input_lens)
+    input("...")

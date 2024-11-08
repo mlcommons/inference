@@ -107,6 +107,12 @@ def get_args():
         default=1,
         help="Number of workers to process queries",
     )
+    parser.add_argument(
+        "--tensor-parallel-size",
+        type=int,
+        default=1,
+        help="Number of workers to process queries",
+    )
     parser.add_argument("--vllm", action="store_true", help="vllm mode")
     parser.add_argument(
         "--api-model-name",
@@ -171,6 +177,7 @@ def main():
             total_sample_count=args.total_sample_count,
             device=args.device,
             workers=args.num_workers,
+            tensor_parallel_size=args.tensor_parallel_size
         )
     else:
         sut = sut_cls(

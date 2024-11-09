@@ -201,6 +201,7 @@ def main():
             df = df[value(df[key])]
         if df.size == 0:
             return
+
         json_df = df.to_json(orient="records")
         outjsondata += json.loads(json_df)
 
@@ -328,6 +329,7 @@ def main():
                    for key in keystomatch):
                 # print(result)
                 # print(outjsondata[i+1])
+
                 if "Watts" in result["Units"] or "joules" in result["Units"]:
                     result["Performance_Result"] = outjsondata[i + 1]["Result"]
                     result["Performance_Units"] = outjsondata[i + 1]["Units"]

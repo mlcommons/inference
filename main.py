@@ -248,7 +248,7 @@ def define_env(env):
                                 content += f"{cur_space3}####### Setup a virtual environment for Python\n"
                                 content += get_venv_command(spaces + 16)
                                 content += f"{cur_space3}####### Performance Estimation for Offline Scenario\n"
-                                
+
                                 content += common_info
 
                                 content += setup_run_cmd.replace(
@@ -485,7 +485,8 @@ def define_env(env):
 {pre_space}export CM_SCRIPT_EXTRA_CMD=\"--adr.python.name=mlperf\"
 {pre_space}```\n"""
 
-    # contains run command information which is common to both docker and native runs
+    # contains run command information which is common to both docker and
+    # native runs
     def get_common_info(spaces, implementation):
         info = ""
         pre_space = ""
@@ -499,7 +500,7 @@ def define_env(env):
             info += f"{pre_space}    - Add `--adr.mlperf-implementation.tags=_branch.master,_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the official MLPerf Inference implementation in a custom fork.\n\n"
             info += f"{pre_space}    - Add `--adr.inference-src.tags=_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the model config accuracy script in the submission checker within a custom fork.\n\n"
             info += f"{pre_space}    - Add `--adr.inference-src.version=custom` if you are using the modified MLPerf Inference code or accuracy script on submission checker within a custom fork.\n\n"
-        
+
         return info
 
     def get_docker_info(spaces, model, implementation,

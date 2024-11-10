@@ -385,7 +385,8 @@ def define_env(env):
                                 extra_input_string,
                             )
                             content += run_cmd
-                            content += run_suffix
+                            
+                        content += run_suffix
 
         readme_prefix = get_readme_prefix(
             spaces, model, implementation, extra_variation_tags

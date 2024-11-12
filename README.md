@@ -21,6 +21,7 @@ cm run script --tags=generate,mlperf,inference,submission \
 
 Expected Output
 <details>
+
 ```
 INFO:root:* cm run script "generate mlperf inference submission"
 INFO:root:  * cm run script "get python3"

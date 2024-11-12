@@ -219,9 +219,7 @@ class RunnerBase:
             for idx, query_id in enumerate(qitem.query_id):
                 #import pdb
                 #pdb.set_trace()
-                response_array = array.array(
-                    "B", np.array(processed_results[idx], np.uint8).tobytes()
-                )
+                response_array = array.array("B", np.array(processed_results[idx], np.float32).tobytes())
                 response_array_refs.append(response_array)
                 bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
@@ -432,7 +430,7 @@ def main():
     lg.StartTestWithLogSettings(sut, qsl, settings, log_settings, audit_config)
 
     if args.accuracy:
-        post_proc.finalize(result_dict, ds, output_dir=args.output)
+        post_proc.finalize(result_dict, ds)
         final_results["accuracy_results"] = result_dict
 
     runner.finish()

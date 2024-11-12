@@ -182,15 +182,34 @@ class PostProcessWaymo:
     ):
         self.content_ids = []
         # TODO: Init Postprocess parameters
-        pass
+        self.results = []
 
     def add_results(self, results):
         self.results.extend(results)
 
     def __call__(self, results, content_id, inputs, result_dict):
         self.content_ids.extend(content_id)
+        #import pdb
+        #pdb.set_trace()
         # TODO: Postprocess results
-        return results
+        processed_results = []
+        for idx in range(len(content_id)):
+            processed_results.append([])
+            detection_num = len(results[0][idx])
+            for detection in range(0, detection_num):
+                processed_results[idx].append([
+                    results[0][idx][detection][0],
+                    results[0][idx][detection][1],
+                    results[0][idx][detection][2],
+                    results[1][idx][detection][0],
+                    results[1][idx][detection][1],
+                    results[1][idx][detection][2],
+                    results[2][idx][detection],
+                    results[3][idx][detection],
+                    results[4][idx][detection],
+                    results[5][idx]
+                ])
+        return processed_results
 
     def start(self):
         self.results = []

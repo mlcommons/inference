@@ -63,7 +63,7 @@ class BackendDeploy(backend.Backend):
 
     def predict(self, inputs):
         # TODO: implement predict
-        Boxes, Classes, Scores = [], [], []
+        dimensions, locations, rotation_y, class_labels, class_scores, ids = [], [], [], [], [], []
         with torch.inference_mode():
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             format_results = {}
@@ -79,7 +79,7 @@ class BackendDeploy(backend.Backend):
                                     mode='val')
             for j, result in enumerate(batch_results):
                     format_result = {
-                        'name': [],
+                        'class': [],
                         'truncated': [],
                         'occluded': [],
                         'alpha': [],
@@ -87,7 +87,8 @@ class BackendDeploy(backend.Backend):
                         'dimensions': [],
                         'location': [],
                         'rotation_y': [],
-                        'score': []
+                        'score': [],
+                        'idx': -1
                     }
                     
                     calib_info = model_input['calib_info']
@@ -103,7 +104,7 @@ class BackendDeploy(backend.Backend):
                     bboxes2d, camera_bboxes = result_filter['bboxes2d'], result_filter['camera_bboxes']
                     for lidar_bbox, label, score, bbox2d, camera_bbox in \
                         zip(lidar_bboxes, labels, scores, bboxes2d, camera_bboxes):
-                        format_result['name'].append(self.LABEL2CLASSES[label.item()])
+                        format_result['class'].append(label.item())
                         format_result['truncated'].append(0.0)
                         format_result['occluded'].append(0)
                         alpha = camera_bbox[6] - np.arctan2(camera_bbox[0], camera_bbox[2])
@@ -113,14 +114,20 @@ class BackendDeploy(backend.Backend):
                         format_result['location'].append(camera_bbox[:3])
                         format_result['rotation_y'].append(camera_bbox[6].item())
                         format_result['score'].append(score.item())
+                        format_results['idx'] = idx
                     
                     #write_label(format_result, os.path.join(saved_submit_path, f'{idx:06d}.txt'))
 
                     if len(format_result['dimensions']) > 0:
                         format_result['dimensions'] = torch.stack(format_result['dimensions'])
                         format_result['location'] = torch.stack(format_result['location'])
-                    format_results[idx] = {k:np.array(v) for k, v in format_result.items()}
+                    dimensions.append(format_result['dimensions'])
+                    locations.append(format_result['location'])
+                    rotation_y.append(format_result['rotation_y'])
+                    class_labels.append(format_result['class'])
+                    class_scores.append(format_result['score'])
+                    ids.append(format_results['idx'])
             #return Boxes, Classes, Scores # Change to desired output
-        return format_results
+        return dimensions, locations, rotation_y, class_labels, class_scores, ids
         
 

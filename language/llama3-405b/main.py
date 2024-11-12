@@ -61,13 +61,6 @@ def get_args():
         help="data type of the model, choose from float16, bfloat16 and float32",
     )
     parser.add_argument(
-        "--device",
-        type=str,
-        choices=["cpu", "cuda:0"],
-        default="cpu",
-        help="device to use",
-    )
-    parser.add_argument(
         "--audit-conf",
         type=str,
         default="audit.conf",
@@ -143,8 +136,8 @@ def main():
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
     # mlperf.conf is automatically loaded by the loadgen
-    # settings.FromConfig(args.mlperf_conf, "llama2-70b", args.scenario)
-    settings.FromConfig(args.user_conf, "llama2-70b", args.scenario)
+    # settings.FromConfig(args.mlperf_conf, "llama3-405b", args.scenario)
+    settings.FromConfig(args.user_conf, "llama3-405b", args.scenario)
 
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly
@@ -162,7 +155,7 @@ def main():
     if args.vllm:
         from SUT_VLLM import SUT, SUTServer
     else:
-        from SUT import SUT, SUTServer
+        raise NotImplementedError
 
     sut_map = {"offline": SUT, "server": SUTServer}
 
@@ -175,7 +168,6 @@ def main():
             batch_size=args.batch_size,
             dataset_path=args.dataset_path,
             total_sample_count=args.total_sample_count,
-            device=args.device,
             workers=args.num_workers,
             tensor_parallel_size=args.tensor_parallel_size
         )
@@ -186,7 +178,6 @@ def main():
             batch_size=args.batch_size,
             dataset_path=args.dataset_path,
             total_sample_count=args.total_sample_count,
-            device=args.device,
             workers=args.num_workers,
         )
 

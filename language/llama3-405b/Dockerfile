@@ -44,5 +44,5 @@ WORKDIR /tmp
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.5.2-0-Linux-x86_64.sh \
     && bash Miniconda3-* -b -p /opt/miniconda3
 ENV PATH="$PATH:/opt/miniconda3/bin"
-RUN conda create -n llama2-70b python=3.10
+RUN conda create -n llama3-405b python=3.10
 RUN chmod -R 777 /opt/miniconda3

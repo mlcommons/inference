@@ -6,6 +6,7 @@ import array
 import torch
 from torch.nn.functional import pad
 from vllm import LLM, AsyncLLMEngine, AsyncEngineArgs, SamplingParams
+from vllm.inputs import TokensPrompt
 
 import pickle
 import time
@@ -30,7 +31,6 @@ class SUT:
         self,
         model_path=None,
         dtype="bfloat16",
-        device="cpu",
         batch_size=None,
         total_sample_count=24576,
         dataset_path=None,
@@ -42,27 +42,22 @@ class SUT:
     ):
 
         self.model_path = model_path or f"Meta-Llama-3.1-405B-Instruct{'-FP8' if dtype == 'float8' else ''}"
-        self.device = device
 
         if not batch_size:
-            if device == "cpu":
-                batch_size = 1
-            else:
-                batch_size = 32  # Reduce to 8 if using 4 GPUs, 16 for 8.
+            batch_size = 1
         self.batch_size = batch_size
 
         self.dtype = dtype
         self.tensor_parallel_size = tensor_parallel_size
 
-        if "cuda" in self.device:
-            assert torch.cuda.is_available(), "torch gpu is not available, exiting..."
+        if not torch.cuda.is_available():
+            assert False, "torch gpu is not available, exiting..."
 
         self.dataset_path = dataset_path
         self.data_object = Dataset(
             self.model_path,
             dataset_path=self.dataset_path,
             total_sample_count=total_sample_count,
-            device=self.device,
             dtype=dtype
         )
         self.qsl = lg.ConstructQSL(
@@ -82,7 +77,7 @@ class SUT:
             "min_tokens": 20
         }
         self.sampling_params = SamplingParams(**gen_kwargs)
-        self.sampling_params.all_stop_token_ids.add(self.model.get_tokenizer().eos_token_id)
+        # self.sampling_params.all_stop_token_ids.add(self.model.get_tokenizer().eos_token_id)
 
         self.num_workers = workers
         self.worker_threads = [None] * self.num_workers
@@ -121,15 +116,12 @@ class SUT:
             input_ids_tensor = [self.data_object.input_ids[q.index][:256] for q in qitem]
             
             tik2 = time.time()
-            print(f"Input {input_ids_tensor}")
             outputs = self.model.generate(
                 prompt_token_ids=input_ids_tensor, sampling_params = self.sampling_params
             )
             pred_output_tokens = []
             for output in outputs:
                 pred_output_tokens.append(list(output.outputs[0].token_ids))
-            print(f"Output {outputs[0].outputs[0].text}")
-            print(f"Output {pred_output_tokens}")
             tik3 = time.time()
 
             processed_output = self.data_object.postProcess(
@@ -165,7 +157,6 @@ class SUT:
         print("Loading model...")
         self.model = LLM(self.model_path, dtype=self.dtype, tensor_parallel_size=self.tensor_parallel_size,)
         print("Loaded model")
-        self.device = torch.device(self.device)
 
     def get_sut(self):
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
@@ -201,21 +192,22 @@ class SUTServer(SUT):
         self,
         model_path=None,
         dtype="bfloat16",
-        device="cpu",
         total_sample_count=24576,
         dataset_path=None,
         batch_size=None,
         workers=1,
+        tensor_parallel_size=1
     ):
 
         super().__init__(
             model_path=model_path,
             dtype=dtype,
-            device=device,
             total_sample_count=total_sample_count,
             dataset_path=dataset_path,
             workers=workers,
+            tensor_parallel_size=tensor_parallel_size,
         )
+        self.request_id = 0
 
         self.first_token_queue = queue.Queue()
 
@@ -232,16 +224,15 @@ class SUTServer(SUT):
         async for request_output in results_generator:
             output_response = request_output
             if first:
-                first_tokens = output_response[0].outputs[0].token_ids
+                first_tokens = list(output_response.outputs[0].token_ids)
                 response_data = array.array("B", np.array(first_tokens, np.int32).tobytes())
                 bi = response_data.buffer_info()
                 response = [lg.QuerySampleResponse(qitem.id, bi[0], bi[1])]
                 lg.FirstTokenComplete(response)
+                first = False
 
         outputs = output_response
-        pred_output_tokens = []
-        for output in outputs:
-            pred_output_tokens.append(output.outputs[0].token_ids)
+        pred_output_tokens = list(output_response.outputs[0].token_ids)
         n_tokens = len(pred_output_tokens)
         response_array = array.array(
             "B", np.array(pred_output_tokens, np.int32).tobytes()
@@ -264,14 +255,14 @@ class SUTServer(SUT):
             if qitem is None:
                 break
 
-            input_ids_tensor = self.data_object.input_ids[qitem.index]
-            input_masks_tensor = self.data_object.attention_masks[qitem.index]
+            input_ids_tensor = TokensPrompt(prompt_token_ids=self.data_object.input_ids[qitem.index][:256])
 
             # TODO: This PoC is super slow with significant overhead. Best to
             # create a patch to `generate`
             results_generator = self.model.generate(
-                prompt_token_ids=input_ids_tensor, sampling_params = self.sampling_params
+                prompt=input_ids_tensor, sampling_params = self.sampling_params, request_id = str(self.request_id)
             )
+            self.request_id += 1
             asyncio.run(self.stream_output(qitem, results_generator))
 
     def issue_queries(self, query_samples):
@@ -291,4 +282,3 @@ class SUTServer(SUT):
         self.engine_args = AsyncEngineArgs(self.model_path, dtype=self.dtype, tensor_parallel_size=self.tensor_parallel_size)
         self.model = AsyncLLMEngine.from_engine_args(self.engine_args)
         print("Loaded model")
-        self.device = torch.device(self.device)

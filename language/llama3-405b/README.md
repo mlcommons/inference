@@ -64,16 +64,17 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 
 ## Get Model
 ### MLCommons Members Download
-MLCommons hosts the model and preprocessed dataset for download **exclusively by MLCommons Members**. You must first agree to the [confidentiality notice](https://llama2.mlcommons.org) using your organizational email address, then you will receive a link to a directory containing Rclone download instructions. _If you cannot access the form but you are part of a MLCommons Member organization, submit the [MLCommons subscription form](https://mlcommons.org/community/subscribe/) with your organizational email address and [associate a Google account](https://accounts.google.com/SignUpWithoutGmail) with your organizational email address._
+
+TODO: Host model and grant access to submitters
 
 
 ### External Download
-+ First go to [llama2-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
++ First go to [llama3-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
 + Requires Git Large Files Storage
 ```
 export CHECKPOINT_PATH=${PWD}/Llama-2-70b-chat-hf
 git lfs install
-git clone https://huggingface.co/meta-llama/Llama-2-70b-chat-hf ${CHECKPOINT_PATH}
+git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT_PATH}
 
 ```
 
@@ -94,35 +95,7 @@ rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5ee
 ```
 You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
-```
-rclone copy mlc-inference:mlcommons-inference-wg-public/open_orca ./open_orca -P
-```
-
-### Unprocessed
-
-You can also download and process the dataset yourself following the command below:
-
-```
-# First get the `open-orca` parquet from huggingface
-export OPENORCA_DATASET=${PWD}/open-orca
-git clone https://huggingface.co/datasets/Open-Orca/OpenOrca ${OPENORCA_DATASET}
-
-export OPENORCA_PARQUET=${OPENORCA_DATASET}/1M-GPT4-Augmented.parquet
-EXPORT_DIR=${PWD}/processed-openorca
-export DATASET_PATH=${PWD}/processed-data.pkl
-
-# Process the dataset according the Taskforce's agreed criteria
-python3 processorca.py --dataset_pq_path=${OPENORCA_PARQUET} --model_dir=${CHECKPOINT_PATH} --seqlen_limit=1024 --export_dir=${EXPORT_DIR} --num_total_samples=24576
-
-mv ${EXPORT_DIR}/open_orca_gpt4_tokenized_llama.sampled_24576.pkl ${DATASET_PATH}
-```
-
-The script will perform the following steps on the original open_orca GPT4 dataset:
-- filter out all queries with non-ascii characters, except for normal unicode quotes and hyphens.
-- filter out all queries with out-of-bound input/output sequence lengths
-- filter out all queries with expected answers shorter than 2 words (known to cause issues for Llama2)
-- filter out all queries with prompts that generate bad output texts using Llama2 models
-- sample equally from the sub-dataset (i.e. COT, NIV, FLAN, T0) and form the final dataset.
+**TODO: Host dataset and grant access to submitters**
 
 ## Run Performance Benchmarks
 
@@ -130,38 +103,27 @@ The script will perform the following steps on the original open_orca GPT4 datas
 ```
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
-                --mlperf-conf mlperf.conf \
+                --dtype float16 \
                 --user-conf user.conf \
                 --total-sample-count 24576 \
-                --device cpu \
                 --dataset-path ${DATASET_PATH} \
-                --output-log-dir offline-logs
+                --output-log-dir output \
+                --tensor-parallel-size ${GPU_COUNT} \
+                --vllm
 
-```
-
-For a GPU-based run:
-```
-python3 -u main.py --scenario Offline \
-        --model-path ${CHECKPOINT_PATH} \
-        --mlperf-conf mlperf.conf \
-        --user-conf user.conf \
-        --total-sample-count 24576 \
-        --dataset-path ${DATASET_PATH} \
-        --output-log-dir offline-logs \
-        --dtype float32 \
-        --device cuda:0 2>&1 | tee offline_performance_log.log
 ```
 
 ### Server
 ```
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
-                --mlperf-conf mlperf.conf \
+                --dtype float16 \
                 --user-conf user.conf \
                 --total-sample-count 24576 \
-                --device cpu \
                 --dataset-path ${DATASET_PATH} \
-                --output-log-dir server-logs
+                --output-log-dir output \
+                --tensor-parallel-size ${GPU_COUNT} \
+                --vllm
 ```
 
 The ServerSUT was not tested for GPU runs.
@@ -178,12 +140,13 @@ mkdir -p "run_outputs"  # The script will dump all the outputs to 'run_outputs'.
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
                 --accuracy \
-                --mlperf-conf mlperf.conf \
+                --dtype float16 \
                 --user-conf user.conf \
                 --total-sample-count 24576 \
                 --dataset-path ${DATASET_PATH} \
-                --output-log-dir ${OUTPUT_LOG_DIR} \
-                --device cpu
+                --output-log-dir output \
+                --tensor-parallel-size ${GPU_COUNT} \
+                --vllm
 
 
 ACCURACY_LOG_FILE=${OUTPUT_LOG_DIR}/mlperf_log_accuracy.json
@@ -215,12 +178,13 @@ OUTPUT_LOG_DIR=server-accuracy-logs
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
                 --accuracy \
-                --mlperf-conf mlperf.conf \
+                --dtype float16 \
                 --user-conf user.conf \
                 --total-sample-count 24576 \
                 --dataset-path ${DATASET_PATH} \
-                --output-log-dir ${OUTPUT_LOG_DIR} \
-                --device cpu
+                --output-log-dir output \
+                --tensor-parallel-size ${GPU_COUNT} \
+                --vllm
 
 
 ACCURACY_LOG_FILE=${OUTPUT_LOG_DIR}/mlperf_log_accuracy.json
@@ -236,9 +200,3 @@ The ServerSUT was not tested for GPU runs.
 ## Accuracy Target
 Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets (normalized to a 0-100
 scale from a 0.0-1.0 scale):
-- Rouge1: 44.4312
-- Rouge2: 22.0352
-- RougeL: 28.6162
-- Tokens per sample: 294.45
-
-This was run on a DGX-H100 node. Total runtime was ~4.5 days.

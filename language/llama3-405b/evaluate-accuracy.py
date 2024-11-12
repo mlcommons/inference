@@ -25,7 +25,7 @@ def get_args():
         help="verbose messages")
     parser.add_argument(
         "--dtype",
-        default="int64",
+        default="int32",
         help="dtype of the accuracy log",
         choices=["int32", "int64", "float"],
     )
@@ -37,7 +37,7 @@ def get_groundtruth(processed_dataset_file):
     import pandas as pd
 
     data = pd.read_pickle(processed_dataset_file)
-    ground_truths = data["output"]
+    ground_truths = data["ref_output"]
     return ground_truths
 
 

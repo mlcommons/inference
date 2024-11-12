@@ -27,13 +27,11 @@ class Dataset:
         total_sample_count=24576,
         perf_count_override=None,
         dataset_path=None,
-        device="cpu",
         dtype="bfloat16"
     ):
         self.model_name = model_name or f"Meta-Llama-3.1-405B-Instruct{'-FP8' if dtype == 'float8' else ''}"
         self.dataset_path = dataset_path
         self.max_length = 1024
-        self.device = device
 
         # self.total_sample_count = total_sample_count
 
@@ -124,6 +122,8 @@ if __name__ == "__main__":
         dataset_path="dataset/mlperf_llama3.1_405b_dataset_8318_processed_fp16_eval.pkl"
     )
     # print(data_object.input)
-    print(data_object.input_ids)
+    print(data_object.processed_data)
+    print(data_object.processed_data.columns)
+    print(data_object.processed_data["ref_output"])
     # print(data_object.input_lens)
     input("...")

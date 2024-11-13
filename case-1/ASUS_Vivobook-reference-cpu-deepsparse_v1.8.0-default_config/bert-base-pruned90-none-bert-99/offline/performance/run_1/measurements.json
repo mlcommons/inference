@@ -1,0 +1,7 @@
+{
+  "starting_weights_filename": "https://huggingface.co/bert-base-uncased",
+  "retraining": "no",
+  "input_data_types": "fp32",
+  "weight_data_types": "fp32",
+  "weight_transformations": "unstructured pruning"
+}

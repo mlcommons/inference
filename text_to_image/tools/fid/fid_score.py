@@ -44,8 +44,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 import pathlib
 import os
 import sys
-sys.path.insert("..", 0)
-from inception import InceptionV3  # noqa: E402
+from .inception import InceptionV3  # noqa: E402
 
 
 try:

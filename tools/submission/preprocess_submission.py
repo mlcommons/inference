@@ -84,7 +84,6 @@ def delete_empty_dirs(src):
     """
     if not os.path.isdir(src):
         return False
-
     if all([delete_empty_dirs(os.path.join(src, file))
            for file in os.listdir(src)]):
         log.info("Removing empty dir: (%s)", src)
@@ -532,13 +531,16 @@ def main():
     if not args.nodelete_empty_dirs:
         delete_empty_dirs(os.path.join(src_dir))
 
+    run_dir = os.getcwd()
     os.chdir(src_dir)
 
     infer_scenario_results(args, config)
+    os.chdir(run_dir)
 
     if not args.nodelete_empty_dirs:
         delete_empty_dirs(os.path.join(src_dir))
 
+    
     return 0
 
 

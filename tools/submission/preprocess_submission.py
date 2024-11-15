@@ -540,7 +540,6 @@ def main():
     if not args.nodelete_empty_dirs:
         delete_empty_dirs(os.path.join(src_dir))
 
-    
     return 0
 
 

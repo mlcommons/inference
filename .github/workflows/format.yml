@@ -18,6 +18,7 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.head_ref }}
           repository: ${{ github.event.pull_request.head.repo.full_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Set up Python ${{ env.python_version }}
         uses: actions/setup-python@v3
         with:

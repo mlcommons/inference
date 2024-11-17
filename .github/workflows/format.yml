@@ -3,7 +3,7 @@ name: "format"
 on:
   pull_request:
     branches: [ master ]
-    types: [opened, closed, synchronize]
+    types: [opened, synchronize]
 
 
 env:
@@ -13,9 +13,10 @@ jobs:
   format-code:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.head_ref }}
       - name: Set up Python ${{ env.python_version }}
         uses: actions/setup-python@v3
         with:
@@ -41,9 +42,8 @@ jobs:
         run: |
           HAS_CHANGES=$(git diff --staged --name-only)
           if [ ${#HAS_CHANGES} -gt 0 ]; then
-            git checkout -B "${{ github.head_ref }}"
             git config --global user.email "${{ github.actor }}@users.noreply.github.com"
             git config --global user.name "${{ github.actor }}"
             git commit -m '[Automated Commit] Format Codebase'
-            git push origin "${{ github.head_ref }}"
+            git push
           fi

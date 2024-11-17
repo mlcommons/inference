@@ -68,6 +68,11 @@ SUPPORTED_PROFILES = {
         "backend": "pytorch-dist",
         "model-name": "stable-diffusion-xl",
     },
+    "stable-diffusion-xl-migraphx": {
+        "dataset": "coco-1024",
+        "backend": "migraphx",
+        "model-name": "stable-diffusion-xl",
+    }
 }
 
 SCENARIO_MAP = {
@@ -111,7 +116,7 @@ def get_args():
         action="store_true",
         help="enable finding peak performance pass",
     )
-    parser.add_argument("--backend", help="Name of the backend")
+    parser.add_argument("--backend", help="Name of the backend", default="migraphx")
     parser.add_argument("--model-name", help="Name of the model")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--qps", type=int, help="target qps")
@@ -192,6 +197,11 @@ def get_backend(backend, **kwargs):
         from backend_pytorch import BackendPytorch
 
         backend = BackendPytorch(**kwargs)
+        
+    elif backend == "migraphx":
+        from backend_migraphx import BackendMIGraphX
+
+        backend = BackendMIGraphX(**kwargs)
 
     elif backend == "debug":
         from backend_debug import BackendDebug
@@ -240,14 +250,18 @@ class RunnerBase:
         # preprocess the prompts:
         qitem.inputs = [
             {
-                "input_tokens": ds.preprocess(input['input_tokens'], ds.pipe_tokenizer),
-                "input_tokens_2": ds.preprocess(input['input_tokens_2'], ds.pipe_tokenizer_2),
-                "latents": torch.tensor(input['latents']).half(),
+                # "input_tokens": ds.preprocess(input['input_tokens'], ds.pipe_tokenizer),
+                # "input_tokens_2": ds.preprocess(input['input_tokens_2'], ds.pipe_tokenizer_2),
+                "caption": input['caption'],
+                "latents": torch.tensor(input['latents']).half(),  #.half()
             }
             for input in qitem.inputs
         ]
-        
+        # 
         try:
+            # log.info(f"[Yalu] qitem.inputs[0]['caption'] -> {qitem.inputs[0].get('caption')}")
+            # log.info(f"[Yalu] qitem.inputs[0]['latents'] -> {qitem.inputs[0].get('latents')}")
+            # log.info(f"[Yalu] qitem.inputs length -> {len(qitem.inputs)}")
             results = self.model.predict(qitem.inputs)
             processed_results = self.post_process(
                 results, qitem.content_id, qitem.inputs, self.result_dict
@@ -338,6 +352,7 @@ def initialize():
         latent_dtype=dtype,
         latent_device=args.device,
         latent_framework=args.latent_framework,
+        pipe_type=args.backend,
         **kwargs,
     )
 

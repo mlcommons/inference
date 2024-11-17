@@ -74,6 +74,11 @@ SUPPORTED_PROFILES = {
         "backend": "pytorch-dist",
         "model-name": "stable-diffusion-xl",
     },
+    "stable-diffusion-migraphx": {
+        "dataset": "coco-1024",
+        "backend": "migraphx",
+        "model-name": "stable-diffusion-xl",
+    },
 }
 
 SCENARIO_MAP = {
@@ -109,7 +114,7 @@ def get_args():
         action="store_true",
         help="enable finding peak performance pass",
     )
-    parser.add_argument("--backend", help="Name of the backend")
+    parser.add_argument("--backend", help="Name of the backend", default="migraphx")
     parser.add_argument("--model-name", help="Name of the model")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--qps", type=int, help="target qps")
@@ -193,6 +198,11 @@ def get_backend(backend, **kwargs):
         from backend_pytorch import BackendPytorch
 
         backend = BackendPytorch(**kwargs)
+        
+    elif backend == "migraphx":
+        from backend_migraphx import BackendMIGraphX
+        
+        backend = BackendMIGraphX(**kwargs)
 
     elif backend == "debug":
         from backend_debug import BackendDebug
@@ -277,26 +287,40 @@ class QDL:
 
     # Send inference request to one host, receive the inference result
     # then calls loadgen to verify the inference result
-    def request_validate(self, url, query_samples):
+    def request_validate(self, url, query_samples, backend="migraphx"):
         # turn query_samples into list of json: 
         indexes = [q.index for q in query_samples]
         ids = [q.id for q in query_samples]
         data, label = self.ds.get_samples(indexes)
         
-        data = [
-            {
-                'input_tokens': d['input_tokens'],
-                'input_tokens_2': d['input_tokens_2'],
-                'latents': d['latents'].tolist()  # Convert tensor to a list
-            }
-            for d in data
-        ]
+        if backend == "migraphx":
+            data = [
+                {
+                    'caption': d['caption'],
+                    'latents': d['latents'].tolist()  # Convert tensor to a list
+                }
+                for d in data
+            ]
+        else:
+            data = [
+                {
+                    'input_tokens': d['input_tokens'],
+                    'input_tokens_2': d['input_tokens_2'],
+                    'latents': d['latents'].tolist()  # Convert tensor to a list
+                }
+                for d in data
+            ]
         
         '''
         data[0]:
         {
             'input_tokens': <class 'transformers.tokenization_utils_base.BatchEncoding'>, 
             'input_tokens_2': <class 'transformers.tokenization_utils_base.BatchEncoding'>, 
+            'latents': <class 'torch.Tensor'>  
+        }
+        or
+        {
+            'caption': <class 'str'>
             'latents': <class 'torch.Tensor'>  
         }
         '''
@@ -376,6 +400,15 @@ class QDL:
                 'latents': [list converted from tensor]
             }
         }
+        or
+        {
+            'index': 1, 
+            'id': 1, 
+            'data': {
+                'caption': "this is a prompt",
+                'latents': [list converted from tensor]
+            }
+        }
         '''
         
 
@@ -438,6 +471,7 @@ def main(args):
         latent_dtype=dtype,
         latent_device=args.device,
         latent_framework=args.latent_framework,
+        pipe_type=args.backend,
         **kwargs,
     )
     count = ds.get_item_count()

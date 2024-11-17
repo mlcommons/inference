@@ -76,11 +76,16 @@ SUPPORTED_PROFILES = {
         "backend": "pytorch-dist",
         "model-name": "stable-diffusion-xl",
     },
+    "stable-diffusion-xl-migraphx": {
+        "dataset": "coco-1024",
+        "backend": "migraphx",
+        "model-name": "stable-diffusion-xl",
+    },
 }
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sut-server', default=['http://t004-005:8008', 'http://t004-006:8008'], nargs='+', help='A list of server address & port')
+    parser.add_argument('--sut-server', default=['http://t004-005:8008', "http://t006-001:8008"], nargs='+', help='A list of server address & port') #'http://t004-006:8008'
     parser.add_argument("--dataset", choices=SUPPORTED_DATASETS.keys(), help="dataset")
     parser.add_argument("--dataset-path", required=True, help="path to the dataset")
     parser.add_argument(
@@ -104,7 +109,7 @@ def get_args():
         action="store_true",
         help="enable finding peak performance pass",
     )
-    parser.add_argument("--backend", help="Name of the backend")
+    parser.add_argument("--backend", help="Name of the backend", default="migraphx")
     parser.add_argument("--model-name", help="Name of the model")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--qps", type=int, help="target qps")

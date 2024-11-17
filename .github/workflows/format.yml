@@ -1,10 +1,8 @@
 # Automatic code formatting
 name: "format"
 on:
-  pull_request:
-    branches: [ master ]
-    types: [opened, closed, synchronize]
-
+  push:
+    branches: [ "master", "dev" ]
 
 env:
   python_version: "3.9"
@@ -13,37 +11,38 @@ jobs:
   format-code:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
       - name: Set up Python ${{ env.python_version }}
         uses: actions/setup-python@v3
         with:
           python-version: ${{ env.python_version }}
 
-      - name: Install dependencies
+      - name: Format modified python files
         run: |
           python3 -m pip install autopep8
+          for FILE in $(git diff --name-only ${{ github.event.before }} | grep -E '.*\.py$')
+          do
+            autopep8 --in-place -a $FILE
+            git add $FILE
+          done
 
-      - name: Grant permissions
+      - name: Format modified C++ files
         run: |
-          chmod +x "${GITHUB_WORKSPACE}/.github/scripts/format-cpp.sh"
-          chmod +x "${GITHUB_WORKSPACE}/.github/scripts/format-py.sh"
-      
-      - name: Format Codebase
-        run: |
-          git remote add upstream ${{ github.event.pull_request.base.repo.clone_url }}
-          git fetch upstream ${{ github.event.pull_request.base.ref }}
-          ".github/scripts/format-cpp.sh" "upstream" "${{ github.event.pull_request.base.ref }}"
-          ".github/scripts/format-py.sh" "upstream" "${{ github.event.pull_request.base.ref }}"
+          for FILE in $(git diff --name-only ${{ github.event.before }} | grep -E '.*\.(cc|cpp|h|hpp)$')
+          do
+            clang-format -i -style=file $FILE
+            git add $FILE
+          done
 
       - name: Commit
         run: |
           HAS_CHANGES=$(git diff --staged --name-only)
           if [ ${#HAS_CHANGES} -gt 0 ]; then
-            git checkout -B "${{ github.head_ref }}"
-            git config --global user.email "${{ github.actor }}@users.noreply.github.com"
-            git config --global user.name "${{ github.actor }}"
+            git config --global user.name mlcommons-bot
+            git config --global user.email "mlcommons-bot@users.noreply.github.com"
             git commit -m '[Automated Commit] Format Codebase'
-            git push origin "${{ github.head_ref }}"
+            git push
           fi

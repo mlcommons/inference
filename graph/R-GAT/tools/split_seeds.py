@@ -14,12 +14,14 @@ class SeedSplitter(object):
         use_label_2K=True,
         random_seed=42,
         validation_frac=0.01,
+        calibration=False
     ):
         self.path = path
         self.dataset_size = dataset_size
         self.use_label_2K = use_label_2K
         self.random_seed = random_seed
         self.validation_frac = validation_frac
+        self.calibration = calibration
         self.paper_nodes_num = {
             "tiny": 100000,
             "small": 1000000,
@@ -48,6 +50,12 @@ class SeedSplitter(object):
         path = osp.join(self.path, self.dataset_size, "processed")
         torch.save(train_idx, osp.join(path, "train_idx.pt"))
         torch.save(val_idx, osp.join(path, "val_idx.pt"))
+
+        if self.calibration and self.dataset_size == "full":
+            n_calibration = 5000
+            calibration_idx = shuffled_index[:n_calibration].numpy().tolist()
+            with open(osp.join(path, "calibration.txt"), "w+") as f:
+                f.writelines([f"{idx}\n" for idx in calibration_idx])
 
 
 if __name__ == "__main__":
@@ -82,6 +90,11 @@ if __name__ == "__main__":
         default=0.005,
         help="Fraction of labeled vertices to be used for validation.",
     )
+    parser.add_argument(
+        "--calibration",
+        action="store_true",
+        help="Save calibration dataset",
+    )
 
     args = parser.parse_args()
     splitter = SeedSplitter(
@@ -90,4 +103,5 @@ if __name__ == "__main__":
         use_label_2K=(args.num_classes == 2983),
         random_seed=args.random_seed,
         validation_frac=args.validation_frac,
+        calibration=args.calibration,
     )

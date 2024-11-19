@@ -30,12 +30,11 @@ The `run_verification.py` found in each test directory will copy the test files 
 
 | model | Required Compliance Tests
 | ---- | ---- |
-| resnet50-v1.5 | [TEST01](./TEST01/), [TEST04](./TEST04/), [TEST05](./TEST05/) |
-| retinanet 800x800 | [TEST01](./TEST01/), [TEST05](./TEST05/) |
-| bert | [TEST01](./TEST01/), [TEST05](./TEST05/) |
-| dlrm-v2 | [TEST01](./TEST01/), [TEST05](./TEST05/) |
-| 3d-unet | [TEST01](./TEST01/), [TEST05](./TEST05/) |
-| rnnt | [TEST01](./TEST01/), [TEST05](./TEST05/) |
+| resnet50-v1.5 | [TEST01](./TEST01/), [TEST04](./TEST04/) |
+| retinanet 800x800 | [TEST01](./TEST01/) |
+| bert | [TEST01](./TEST01/) |
+| dlrm-v2 | [TEST01](./TEST01/) |
+| 3d-unet | [TEST01](./TEST01/) |
 | gpt-j | - |
 | stable-diffusion-xl | [TEST01](./TEST01/), [TEST04](./TEST04/) |
 | Llama2-70b | [TEST06](./TEST06/) |

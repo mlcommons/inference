@@ -188,6 +188,7 @@ MODEL_CONFIG = {
             "sample_index_rng_seed": 198141574272810017,
             "schedule_rng_seed": 7575108116881280410,
         },
+        # not required for v5.0+
         "test05_seeds": {
             # TODO: Update random seeds
             "qsl_rng_seed": 2376919268182438552,
@@ -2880,7 +2881,7 @@ def check_compliance_dir(
     compliance_perf_pass = True
     compliance_perf_dir_pass = True
     compliance_acc_pass = True
-    test_list = ["TEST01", "TEST04", "TEST05"]
+    test_list = ["TEST01", "TEST04"]
 
     if model in [
         "bert-99",
@@ -2899,7 +2900,7 @@ def check_compliance_dir(
     ]:
         test_list.remove("TEST04")
 
-    if model in [
+    if config.version in ["v4.0", "v4.1"] and model not in [
         "gptj-99",
         "gptj-99.9",
         "llama2-70b-99",
@@ -2907,7 +2908,7 @@ def check_compliance_dir(
         "stable-diffusion-xl",
         "mixtral-8x7b",
     ]:
-        test_list.remove("TEST05")
+        test_list.append("TEST05")
 
     if model in [
         "gptj-99",

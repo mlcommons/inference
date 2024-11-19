@@ -1,0 +1,7 @@
+{
+    "input_data_types": "int32",
+    "retraining": "No",
+    "starting_weights_filename": "Hugginface model weights hosted by MLCommons",
+    "weight_data_types": "fp8",
+    "weight_transformations": "quantization, affine fusion"
+}

@@ -1,0 +1,54 @@
+================================================
+MLPerf Results Summary
+================================================
+SUT name : llama2-70b-Offline-SUT
+Scenario : Offline
+Mode     : PerformanceOnly
+Samples per second: 110.131
+Tokens per second: 32124.3
+Result is : VALID
+  Min duration satisfied : Yes
+  Min queries satisfied : Yes
+  Early stopping satisfied: Yes
+
+================================================
+Additional Stats
+================================================
+Min latency (ns)                : 5919235535
+Max latency (ns)                : 2677834692933
+Mean latency (ns)               : 1359127547677
+50.00 percentile latency (ns)   : 1359118467960
+90.00 percentile latency (ns)   : 2420457060330
+95.00 percentile latency (ns)   : 2553128627168
+97.00 percentile latency (ns)   : 2606121189890
+99.00 percentile latency (ns)   : 2645357324765
+99.90 percentile latency (ns)   : 2662421810902
+
+
+================================================
+Test Parameters Used
+================================================
+samples_per_query : 274560
+target_qps : 104
+ttft_latency (ns): 2000000000
+tpot_latency (ns): 200000000
+max_async_queries : 1
+min_duration (ms): 2400000
+max_duration (ms): 0
+min_query_count : 1
+max_query_count : 0
+qsl_rng_seed : 3066443479025735752
+sample_index_rng_seed : 10688027786191513374
+schedule_rng_seed : 14962580496156340209
+accuracy_log_rng_seed : 0
+accuracy_log_probability : 0
+accuracy_log_sampling_target : 0
+print_timestamps : 0
+performance_issue_unique : 0
+performance_issue_same : 0
+performance_issue_same_index : 0
+performance_sample_count : 24576
+
+No warnings encountered during test.
+
+No errors encountered during test.

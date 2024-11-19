@@ -406,22 +406,40 @@ def main():
 
     # dataset to use
     dataset_class, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
-    ds = dataset_class(
-        data_path=args.dataset_path,
-        name=args.dataset,
-        pre_process=pre_proc,
-        count=count,
-        threads=args.threads,
-        # pipe_tokenizer=model.pipe.tokenizer,
-        # pipe_tokenizer_2=model.pipe.tokenizer_2,
-        pipe_tokenizer=models[0].pipe.tokenizer,
-        pipe_tokenizer_2=models[0].pipe.tokenizer_2,
-        latent_dtype=dtype,
-        latent_device=args.device,
-        latent_framework=args.latent_framework,
-        pipe_type=args.backend,
-        **kwargs,
-    )
+    
+    if args.backend == 'migraphx': 
+        ds = dataset_class(
+            data_path=args.dataset_path,
+            name=args.dataset,
+            pre_process=pre_proc,
+            count=count,
+            threads=args.threads,
+            # pipe_tokenizer=model.pipe.tokenizer,
+            # pipe_tokenizer_2=model.pipe.tokenizer_2,
+            pipe_tokenizer=models[0].pipe.tokenizer,
+            pipe_tokenizer_2=models[0].pipe.tokenizer_2,
+            latent_dtype=dtype,
+            latent_device=args.device,
+            latent_framework=args.latent_framework,
+            pipe_type=args.backend,
+            **kwargs,
+        )
+    else: 
+        ds = dataset_class(
+            data_path=args.dataset_path,
+            name=args.dataset,
+            pre_process=pre_proc,
+            count=count,
+            threads=args.threads,
+            pipe_tokenizer=models[0].pipe.tokenizer,
+            pipe_tokenizer_2=models[0].pipe.tokenizer_2,
+            pipe_tokenizer_2=models[0].pipe.tokenizer_2,
+            latent_dtype=dtype,
+            latent_device=args.device,
+            latent_framework=args.latent_framework,
+            pipe_type=args.backend,
+            **kwargs,
+        )
     final_results = {
         # "runtime": model.name(),
         # "version": model.version(),

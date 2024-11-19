@@ -8,6 +8,7 @@ on:
 
 env:
   python_version: "3.9"
+  HEAD_REF: ${{ github.head_ref }}
 
 jobs:
   format-code:
@@ -41,9 +42,9 @@ jobs:
         run: |
           HAS_CHANGES=$(git diff --staged --name-only)
           if [ ${#HAS_CHANGES} -gt 0 ]; then
-            git checkout -B "${{ github.head_ref }}"
+            git checkout -B "$HEAD_REF"
             git config --global user.email "${{ github.actor }}@users.noreply.github.com"
             git config --global user.name "${{ github.actor }}"
             git commit -m '[Automated Commit] Format Codebase'
-            git push origin "${{ github.head_ref }}"
+            git push origin "$HEAD_REF"
           fi

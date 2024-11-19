@@ -1,3 +1,4 @@
+
 """
 mlperf inference benchmarking tool
 """
@@ -21,13 +22,15 @@ import mlperf_loadgen as lg
 import numpy as np
 import torch
 
+import subprocess
+from py_demo_server_lon import main as server_main
+
 import dataset
 import coco
 
-# import torchvision.transforms as T
-# transform_im = T.ToPILImage()
-
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# from sut_over_network_demo import main as 
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -44,6 +47,13 @@ SUPPORTED_DATASETS = {
     )
 }
 
+
+SCENARIO_MAP = {
+    "SingleStream": lg.TestScenario.SingleStream,
+    "MultiStream": lg.TestScenario.MultiStream,
+    "Server": lg.TestScenario.Server,
+    "Offline": lg.TestScenario.Offline,
+}
 
 SUPPORTED_PROFILES = {
     "defaults": {
@@ -66,37 +76,24 @@ SUPPORTED_PROFILES = {
         "backend": "pytorch-dist",
         "model-name": "stable-diffusion-xl",
     },
-    # ? Yalu Ouyang modification: Oct 16 2024
-    "stable-diffusion-xl-mgx": {
+    "stable-diffusion-xl-migraphx": {
         "dataset": "coco-1024",
         "backend": "migraphx",
         "model-name": "stable-diffusion-xl",
     },
 }
 
-SCENARIO_MAP = {
-    "SingleStream": lg.TestScenario.SingleStream,
-    "MultiStream": lg.TestScenario.MultiStream,
-    "Server": lg.TestScenario.Server,
-    "Offline": lg.TestScenario.Offline,
-}
-
-
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", 
-                        default="coco-1024",
-                        choices=SUPPORTED_DATASETS.keys(), help="dataset")
-    parser.add_argument("--dataset-path", 
-                        default="coco2014",help="path to the dataset")
+    parser.add_argument('--sut-server', default=['http://t004-005:8008', "http://t006-001:8008"], nargs='+', help='A list of server address & port') #'http://t004-006:8008'
+    parser.add_argument("--dataset", choices=SUPPORTED_DATASETS.keys(), help="dataset")
+    parser.add_argument("--dataset-path", required=True, help="path to the dataset")
     parser.add_argument(
-        "--profile", 
-        default="stable-diffusion-xl-mgx",
-        choices=SUPPORTED_PROFILES.keys(), help="standard profiles"
+        "--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles"
     )
     parser.add_argument(
         "--scenario",
-        default="Offline",
+        default="SingleStream",
         help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())),
     )
     parser.add_argument(
@@ -112,17 +109,15 @@ def get_args():
         action="store_true",
         help="enable finding peak performance pass",
     )
-    parser.add_argument("--backend", default='migraphx', help="Name of the backend")
+    parser.add_argument("--backend", help="Name of the backend", default="migraphx")
     parser.add_argument("--model-name", help="Name of the model")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--qps", type=int, help="target qps")
-    parser.add_argument("--model-path", 
-        default="/work1/zixian/youyang1/models/sdxl-1.0-base",
-        help="Path to model weights")
+    parser.add_argument("--model-path", help="Path to model weights")
 
     parser.add_argument(
         "--dtype",
-        default="fp16",
+        default="fp32",
         choices=["fp32", "fp16", "bf16"],
         help="dtype of the model",
     )
@@ -137,6 +132,12 @@ def get_args():
         default="torch",
         choices=["torch", "numpy"],
         help="framework to load the latents",
+    )
+    
+    parser.add_argument (
+        "--multi-node", 
+        default=False, 
+        help="Set to True to use multi-node runs. Look into py_demo_server_lon for more information. "
     )
 
     # file to use mlperf rules compliant parameters
@@ -153,9 +154,6 @@ def get_args():
     parser.add_argument(
         "--audit_conf", default="audit.config", help="config for LoadGen audit settings"
     )
-    parser.add_argument(
-        "--gpu-num", default=4, type=int, help="number of gpus to use"
-    )
     # arguments to save images
     # pass this argument for official submission
     # parser.add_argument("--output-images", action="store_true", help="Store a subset of the generated images")
@@ -167,7 +165,7 @@ def get_args():
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--debug", action="store_true", help="debug")
     parser.add_argument(
-        "--performance-sample-count", type=int, help="performance sample count", default=1000
+        "--performance-sample-count", type=int, help="performance sample count", default=5000
     )
     parser.add_argument(
         "--max-latency", type=float, help="mlperf max latency in pct tile"
@@ -195,6 +193,7 @@ def get_args():
     if args.scenario not in SCENARIO_MAP:
         parser.error("valid scanarios:" + str(list(SCENARIO_MAP.keys())))
     return args
+
 
 
 def get_backend(backend, **kwargs):
@@ -347,9 +346,9 @@ class QueueRunner(RunnerBase):
             worker.join()
 
 
-def main():
+def main(): 
+    
     args = get_args()
-
     log.info(args)
 
     # find backend
@@ -406,7 +405,6 @@ def main():
 
     # dataset to use
     dataset_class, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
-    
     if args.backend == 'migraphx': 
         ds = dataset_class(
             data_path=args.dataset_path,
@@ -660,4 +658,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    
+    args = get_args()
+    if args.multi_node: 
+        server_main ()
+    else: 
+        main()

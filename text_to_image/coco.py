@@ -46,6 +46,7 @@ class Coco(dataset.Dataset):
         self.img_dir = os.path.abspath(f"{data_path}/validation/data/")
         self.name = name
         
+
         if backend == 'migraphx': 
             self.pipe_tokenizer = pipe_tokenizer
             self.pipe_tokenizer_2 = pipe_tokenizer_2
@@ -68,6 +69,7 @@ class Coco(dataset.Dataset):
                 lambda x: self.preprocess(x, pipe_tokenizer_2)
             )
         
+
         self.latent_dtype = latent_dtype
         self.latent_device = latent_device if torch.cuda.is_available() else "cpu"
         if latent_framework == "torch":

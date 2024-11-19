@@ -205,9 +205,13 @@ class PostProcessWaymo:
                     results[1][idx][detection][1],
                     results[1][idx][detection][2],
                     results[2][idx][detection],
-                    results[3][idx][detection],
+                    results[3][idx][detection][0],
+                    results[3][idx][detection][1],
+                    results[3][idx][detection][2],
+                    results[3][idx][detection][3],
                     results[4][idx][detection],
-                    results[5][idx]
+                    results[5][idx][detection],
+                    results[6][idx]
                 ])
         return processed_results
 

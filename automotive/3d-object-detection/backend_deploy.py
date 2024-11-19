@@ -63,7 +63,7 @@ class BackendDeploy(backend.Backend):
 
     def predict(self, inputs):
         # TODO: implement predict
-        dimensions, locations, rotation_y, class_labels, class_scores, ids = [], [], [], [], [], []
+        dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids = [], [], [], [], [], [], []
         with torch.inference_mode():
             device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
             format_results = {}
@@ -126,8 +126,9 @@ class BackendDeploy(backend.Backend):
                     rotation_y.append(format_result['rotation_y'])
                     class_labels.append(format_result['class'])
                     class_scores.append(format_result['score'])
+                    box2d.append(format_result['bbox'])
                     ids.append(format_results['idx'])
             #return Boxes, Classes, Scores # Change to desired output
-        return dimensions, locations, rotation_y, class_labels, class_scores, ids
+        return dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids
         
 

@@ -192,3 +192,109 @@ def limit_period(val, offset=0.5, period=np.pi):
     """
     limited_val = val - np.floor(val / period + offset) * period
     return limited_val
+
+def iou3d_camera(bboxes1, bboxes2):
+    '''
+    bboxes1: (n, 7), (x, y, z, w, l, h, theta)
+    bboxes2: (m, 7)
+    return: (n, m)
+    '''
+    rows = len(bboxes1)
+    cols = len(bboxes2)
+    if rows*cols == 0:
+        return torch.empty((rows, cols))
+    # 1. height overlap
+    bboxes1_bottom, bboxes2_bottom = bboxes1[:, 1] - bboxes1[:, 4], bboxes2[:, 1] -  bboxes2[:, 4] # (n, ), (m, )
+    bboxes1_top, bboxes2_top = bboxes1[:, 1], bboxes2[:, 1] # (n, ), (m, )
+    bboxes_bottom = torch.maximum(bboxes1_bottom[:, None], bboxes2_bottom[None, :]) # (n, m) 
+    bboxes_top = torch.minimum(bboxes1_top[:, None], bboxes2_top[None, :])
+    height_overlap =  torch.clamp(bboxes_top - bboxes_bottom, min=0)
+
+    # 2. bev overlap
+    bboxes1_x1y1 = bboxes1[:, [0, 2]] - bboxes1[:, [3, 5]] / 2
+    bboxes1_x2y2 = bboxes1[:, [0, 2]] + bboxes1[:, [3, 5]] / 2
+    bboxes2_x1y1 = bboxes2[:, [0, 2]] - bboxes2[:, [3, 5]] / 2
+    bboxes2_x2y2 = bboxes2[:, [0, 2]] + bboxes2[:, [3, 5]] / 2
+    bboxes1_bev = torch.cat([bboxes1_x1y1, bboxes1_x2y2, bboxes1[:, 6:]], dim=-1)
+    bboxes2_bev = torch.cat([bboxes2_x1y1, bboxes2_x2y2, bboxes2[:, 6:]], dim=-1)
+    bev_overlap = (rotated_box_iou(bboxes1_bev, bboxes2_bev)).to(device=height_overlap.device) # (n, m)
+
+    # 3. overlap and volume
+    overlap = height_overlap * bev_overlap
+    volume1 = bboxes1[:, 3] * bboxes1[:, 4] * bboxes1[:, 5]
+    volume2 = bboxes2[:, 3] * bboxes2[:, 4] * bboxes2[:, 5]
+    volume = volume1[:, None] + volume2[None, :] # (n, m)
+
+    # 4. iou
+    iou = overlap / (volume - overlap + 1e-8)
+
+    return iou
+
+def boxes_overlap_bev(boxes_a, boxes_b):
+    """Calculate boxes Overlap in the bird view.
+
+    Args:
+        boxes_a (torch.Tensor): Input boxes a with shape (M, 5).
+        boxes_b (torch.Tensor): Input boxes b with shape (N, 5).
+
+    Returns:
+        ans_overlap (torch.Tensor): Overlap result with shape (M, N).
+    """
+    ans_overlap = boxes_a.new_zeros(
+        torch.Size((boxes_a.shape[0], boxes_b.shape[0])))
+    if ans_overlap.size(0)*ans_overlap.size(1) == 0:
+        return ans_overlap
+    boxes_overlap_bev_gpu(boxes_a.contiguous(), boxes_b.contiguous(), ans_overlap)
+
+    return ans_overlap
+
+import shapely.geometry
+
+def rotated_box_iou(boxes1, boxes2):
+    """
+    Calculates IoU for rotated bounding boxes.
+
+    Args:
+        boxes1 (torch.Tensor): Tensor of shape (N, 5) representing rotated boxes in format (x_center, y_center, width, height, angle).
+        boxes2 (torch.Tensor): Tensor of shape (M, 5) representing rotated boxes in the same format.
+
+    Returns:
+        torch.Tensor: IoU matrix of shape (N, M).
+    """
+
+    # Convert boxes to polygons
+    polygons1 = boxes_to_polygons(boxes1)
+    polygons2 = boxes_to_polygons(boxes2)
+
+    # Calculate IoU for each pair of polygons
+    ious = torch.zeros((boxes1.shape[0], boxes2.shape[0]))
+    overlaps = torch.zeros((boxes1.shape[0], boxes2.shape[0]))
+    for i in range(boxes1.shape[0]):
+        for j in range(boxes2.shape[0]):
+            intersection = polygon_intersection(polygons1[i], polygons2[j])
+            union = polygon_union(polygons1[i], polygons2[j])
+            ious[i, j] = intersection / union
+            overlaps[i, j] = intersection
+
+    return overlaps
+
+def boxes_to_polygons(boxes):
+    # Implementation to convert boxes to polygons
+    polygons = []
+    for box in boxes:
+        x_min = box[0]
+        y_min = box[1]
+        x_max = box[2]
+        y_max = box[3]
+        polygon = shapely.geometry.Polygon([(x_min, y_min), (x_max, y_min), (x_max, y_max), (x_min, y_max)])
+        polygon = shapely.affinity.rotate(polygon, -1*box[4], use_radians=True)
+        polygons.append(polygon)
+    return polygons
+
+
+def polygon_intersection(polygon1, polygon2):
+    return shapely.intersection(polygon1, polygon2).area
+
+def polygon_union(polygon1, polygon2):
+    # Implementation to calculate union area of polygons
+    return shapely.union(polygon1, polygon2).area

@@ -44,7 +44,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 import pathlib
 import os
 import sys
-from .inception import InceptionV3  # noqa: E402
+from .inception import InceptionV3
 
 
 try:

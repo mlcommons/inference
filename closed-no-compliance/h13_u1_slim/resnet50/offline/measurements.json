@@ -1,0 +1,7 @@
+{
+    "retraining": "no",
+    "input_data_types": "float8",
+    "weight_data_types": "float8",
+    "starting_weights_filename": "https://zenodo.org/record/4735647/files/resnet50_v1.onnx",
+    "weight_transformations": "quantized"
+}

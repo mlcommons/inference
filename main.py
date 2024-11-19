@@ -122,6 +122,7 @@ def define_env(env):
         if not categories:
             if model.lower() == "bert-99.9":
                 categories = ["Datacenter"]
+
             elif (
                 "dlrm" in model.lower()
                 or "llama2" in model.lower()
@@ -148,7 +149,7 @@ def define_env(env):
                 scenarios = [
                     scenario for scenario in scenarios if scenario in fixed_scenarios]
 
-            content += f'{pre_space}=== "{category.lower()}"\n\n'
+            content += f"{pre_space}=== \"{category.lower()}\"\n\n"
 
             cur_space = pre_space + "    "
             scenarios_string = ", ".join(scenarios)
@@ -173,6 +174,7 @@ def define_env(env):
 
                     # minimum system requirements
                     content += get_min_system_requirements(
+
                         cur_space2, model, implementation, device
                     )
 
@@ -235,12 +237,19 @@ def define_env(env):
                                 extra_docker_input_string,
                             )
 
+                            common_info = get_common_info(
+                                spaces + 16,
+                                implementation
+                            )
+
                             if (
                                 execution_env == "Native"
                             ):  # Native implementation steps through virtual environment
                                 content += f"{cur_space3}####### Setup a virtual environment for Python\n"
                                 content += get_venv_command(spaces + 16)
                                 content += f"{cur_space3}####### Performance Estimation for Offline Scenario\n"
+
+                                content += common_info
 
                                 content += setup_run_cmd.replace(
                                     "--docker ", "")
@@ -256,6 +265,9 @@ def define_env(env):
                                     device,
                                     setup_tips,
                                 )
+
+                                content += common_info
+
                                 content += docker_info
 
                                 content += setup_run_cmd
@@ -373,7 +385,8 @@ def define_env(env):
                                 extra_input_string,
                             )
                             content += run_cmd
-                            content += run_suffix
+
+                        content += run_suffix
 
         readme_prefix = get_readme_prefix(
             spaces, model, implementation, extra_variation_tags
@@ -473,6 +486,24 @@ def define_env(env):
 {pre_space}export CM_SCRIPT_EXTRA_CMD=\"--adr.python.name=mlperf\"
 {pre_space}```\n"""
 
+    # contains run command information which is common to both docker and
+    # native runs
+    def get_common_info(spaces, implementation):
+        info = ""
+        pre_space = ""
+        for i in range(1, spaces):
+            pre_space = pre_space + " "
+        pre_space += " "
+        # pre_space = "                "
+        info += f"\n{pre_space}!!! tip\n\n"
+        info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
+        if implementation.lower() == "reference":
+            info += f"{pre_space}    - Add `--adr.mlperf-implementation.tags=_branch.master,_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the official MLPerf Inference implementation in a custom fork.\n\n"
+            info += f"{pre_space}    - Add `--adr.inference-src.tags=_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the model config accuracy script in the submission checker within a custom fork.\n\n"
+            info += f"{pre_space}    - Add `--adr.inference-src.version=custom` if you are using the modified MLPerf Inference code or accuracy script on submission checker within a custom fork.\n\n"
+
+        return info
+
     def get_docker_info(spaces, model, implementation,
                         device, setup_tips=True):
         info = ""
@@ -487,7 +518,6 @@ def define_env(env):
             if model == "sdxl":
                 info += f"{pre_space}    - `--env.CM_MLPERF_MODEL_SDXL_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
 
-            info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"
@@ -498,6 +528,10 @@ def define_env(env):
             if model == "sdxl":
                 info += f"\n{pre_space}!!! tip\n\n"
                 info += f"{pre_space}    - `--env.CM_MLPERF_MODEL_SDXL_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
+
+        # return empty string if nothing is filled inside the tip
+        if info == f"\n{pre_space}!!! tip\n\n":
+            return ""
 
         return info
 

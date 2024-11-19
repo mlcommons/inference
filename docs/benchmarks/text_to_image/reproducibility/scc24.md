@@ -59,10 +59,10 @@ or supporting multi-node execution) useful for the community and [MLCommons](htt
 
 ### Generate actual submission tree
 
+
 ```bash
 cm run script --tags=generate,inference,submission \
    --clean \
-   --preprocess_submission=yes \
    --run-checker \
    --tar=yes \
    --env.CM_TAR_OUTFILE=submission.tar.gz \

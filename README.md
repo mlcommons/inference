@@ -232,4 +232,12 @@ Description of test cases:
 
 **Case-8**: system_meta.json absent in results folder
 
+**Closed**:
+
+**Closed-no-compliance**:
+
+**closed-power**:
+
+**closed-failed-power-logs**:
+
 </details>

@@ -1,0 +1,7 @@
+{
+    "input_data_types": "fp16",
+    "retraining": "No",
+    "starting_weights_filename": "model_weights",
+    "weight_data_types": "int8",
+    "weight_transformations": "affine fusion"
+}

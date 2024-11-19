@@ -85,7 +85,7 @@ SUPPORTED_PROFILES = {
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sut-server', default=['http://t004-005:8008', "http://t006-001:8008"], nargs='+', help='A list of server address & port') #'http://t004-006:8008'
+    parser.add_argument('--sut-server', default=['http://t004-005:8008', 'http://t004-006:8008'], nargs='+', help='A list of server address & port')
     parser.add_argument("--dataset", choices=SUPPORTED_DATASETS.keys(), help="dataset")
     parser.add_argument("--dataset-path", required=True, help="path to the dataset")
     parser.add_argument(
@@ -193,7 +193,6 @@ def get_args():
     if args.scenario not in SCENARIO_MAP:
         parser.error("valid scanarios:" + str(list(SCENARIO_MAP.keys())))
     return args
-
 
 
 def get_backend(backend, **kwargs):
@@ -350,6 +349,24 @@ def main():
     
     args = get_args()
     log.info(args)
+    
+    # Define the command and arguments
+    # command = ['python', 'script_to_run.py', '--num', '10', '--text', 'Hello, world!']
+    
+    server_main (args)
+    
+    # command = ['python', 
+    #            'py_demo_server_lon.py', 
+    #            '--sut-server http://t007-001:8888 http://t006-001:8888',
+    #            '--dataset=coco-1024', 
+    #            '--dataset-path=/work1/zixian/ziw081/inference/text_to_image/coco2014',
+    #            '--profile=stable-diffusion-xl-pytorch',
+    #            '--dtype=fp16',
+    #            '--device=cuda',
+    #            '--time=30',
+    #            '--scenario=Offline',
+    #            '--max-batchsize=4'
+    #         ]
 
     # find backend
     
@@ -378,6 +395,7 @@ def main():
                     batch_size=args.max_batchsize
                 ) 
                 for i in np.arange (args.gpu_num)]
+
     
     log.info(f"Zixian: Returned from get_backends")
     

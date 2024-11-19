@@ -203,6 +203,7 @@ def get_backend(backend, **kwargs):
 
         backend = BackendMIGraphX(**kwargs)
 
+
     elif backend == "debug":
         from backend_debug import BackendDebug
 
@@ -243,50 +244,91 @@ class RunnerBase:
         self.post_process.start()
 
     def run_one_item(self, qitem: Item):
+        
+        args = get_args()
+        local_backend = args.backend 
         # print("in run_one_item")
         # run the prediction
         processed_results = []
         
-        # preprocess the prompts:
-        qitem.inputs = [
-            {
-                # "input_tokens": ds.preprocess(input['input_tokens'], ds.pipe_tokenizer),
-                # "input_tokens_2": ds.preprocess(input['input_tokens_2'], ds.pipe_tokenizer_2),
-                "caption": input['caption'],
-                "latents": torch.tensor(input['latents']).half(),  #.half()
-            }
-            for input in qitem.inputs
-        ]
-        # 
-        try:
-            # log.info(f"[Yalu] qitem.inputs[0]['caption'] -> {qitem.inputs[0].get('caption')}")
-            # log.info(f"[Yalu] qitem.inputs[0]['latents'] -> {qitem.inputs[0].get('latents')}")
-            # log.info(f"[Yalu] qitem.inputs length -> {len(qitem.inputs)}")
-            results = self.model.predict(qitem.inputs)
-            processed_results = self.post_process(
-                results, qitem.content_id, qitem.inputs, self.result_dict
-            )
-            if self.take_accuracy:
-                self.post_process.add_results(processed_results)
-            self.result_timing.append(time.time() - qitem.start)
-        except Exception as ex:  # pylint: disable=broad-except
-            src = [self.ds.get_item_loc(i) for i in qitem.content_id]
-            log.error("thread: failed on contentid=%s, %s", src, ex)
-            print("thread: failed on contentid=%s, %s", src, ex)
-            # since post_process will not run, fake empty responses
-            processed_results = [[]] * len(qitem.query_id)
-        finally:
-            response_array_refs = []
-            response = []
-            for idx, query_id in enumerate(qitem.query_id):
-                response_array = array.array(
-                    "B", np.array(processed_results[idx], np.uint8).tobytes()
+        if local_backend == 'migraphx': 
+            qitem.inputs = [
+                {
+                    # "input_tokens": ds.preprocess(input['input_tokens'], ds.pipe_tokenizer),
+                    # "input_tokens_2": ds.preprocess(input['input_tokens_2'], ds.pipe_tokenizer_2),
+                    "caption": input['caption'],
+                    "latents": torch.tensor(input['latents']).half(),  #.half()
+                }
+                for input in qitem.inputs
+            ]
+            # 
+            try:
+                results = self.model.predict(qitem.inputs)
+                processed_results = self.post_process(
+                    results, qitem.content_id, qitem.inputs, self.result_dict
                 )
-                # response_array_refs.append(response_array)
-                # bi = response_array.buffer_info()
-                # response.append({'query_id': query_id, 'data': bi[0], 'size': bi[1]})
-                response.append({'query_id': query_id, 'data': response_array.tolist()})
-            return response  # Return the response instead of calling QuerySamplesComplete
+                if self.take_accuracy:
+                    self.post_process.add_results(processed_results)
+                self.result_timing.append(time.time() - qitem.start)
+            except Exception as ex:  # pylint: disable=broad-except
+                src = [self.ds.get_item_loc(i) for i in qitem.content_id]
+                log.error("thread: failed on contentid=%s, %s", src, ex)
+                print("thread: failed on contentid=%s, %s", src, ex)
+                # since post_process will not run, fake empty responses
+                processed_results = [[]] * len(qitem.query_id)
+            finally:
+                response_array_refs = []
+                response = []
+                for idx, query_id in enumerate(qitem.query_id):
+                    response_array = array.array(
+                        "B", np.array(processed_results[idx], np.uint8).tobytes()
+                    )
+                    # response_array_refs.append(response_array)
+                    # bi = response_array.buffer_info()
+                    # response.append({'query_id': query_id, 'data': bi[0], 'size': bi[1]})
+                    response.append({'query_id': query_id, 'data': response_array.tolist()})
+                return response  # Return the response instead of calling QuerySamplesComplete
+
+        else: 
+            
+        
+            # preprocess the prompts:
+            qitem.inputs = [
+                {
+                    "input_tokens": ds.preprocess(input['input_tokens'], ds.pipe_tokenizer),
+                    "input_tokens_2": ds.preprocess(input['input_tokens_2'], ds.pipe_tokenizer_2),
+                    "latents": torch.tensor(input['latents']).half(),
+                }
+                for input in qitem.inputs
+            ]
+            
+            try:
+
+                results = self.model.predict(qitem.inputs)
+                processed_results = self.post_process(
+                    results, qitem.content_id, qitem.inputs, self.result_dict
+                )
+                if self.take_accuracy:
+                    self.post_process.add_results(processed_results)
+                self.result_timing.append(time.time() - qitem.start)
+            except Exception as ex:  # pylint: disable=broad-except
+                src = [self.ds.get_item_loc(i) for i in qitem.content_id]
+                log.error("thread: failed on contentid=%s, %s", src, ex)
+                print("thread: failed on contentid=%s, %s", src, ex)
+                # since post_process will not run, fake empty responses
+                processed_results = [[]] * len(qitem.query_id)
+            finally:
+                response_array_refs = []
+                response = []
+                for idx, query_id in enumerate(qitem.query_id):
+                    response_array = array.array(
+                        "B", np.array(processed_results[idx], np.uint8).tobytes()
+                    )
+                    # response_array_refs.append(response_array)
+                    # bi = response_array.buffer_info()
+                    # response.append({'query_id': query_id, 'data': bi[0], 'size': bi[1]})
+                    response.append({'query_id': query_id, 'data': response_array.tolist()})
+                return response  # Return the response instead of calling QuerySamplesComplete
 
     def enqueue(self, query_samples):
         try:

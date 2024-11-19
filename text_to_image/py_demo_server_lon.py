@@ -114,7 +114,9 @@ def get_args():
         action="store_true",
         help="enable finding peak performance pass",
     )
-    parser.add_argument("--backend", help="Name of the backend", default="migraphx")
+
+    parser.add_argument("--backend", help="Name of the backend", default="pytorch")
+
     parser.add_argument("--model-name", help="Name of the model")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--qps", type=int, help="target qps")
@@ -198,7 +200,7 @@ def get_backend(backend, **kwargs):
         from backend_pytorch import BackendPytorch
 
         backend = BackendPytorch(**kwargs)
-        
+
     elif backend == "migraphx":
         from backend_migraphx import BackendMIGraphX
         
@@ -287,7 +289,8 @@ class QDL:
 
     # Send inference request to one host, receive the inference result
     # then calls loadgen to verify the inference result
-    def request_validate(self, url, query_samples, backend="migraphx"):
+
+    def request_validate(self, url, query_samples, backend="pytorch"):
         # turn query_samples into list of json: 
         indexes = [q.index for q in query_samples]
         ids = [q.id for q in query_samples]
@@ -310,6 +313,7 @@ class QDL:
                 }
                 for d in data
             ]
+
         
         '''
         data[0]:

@@ -45,7 +45,6 @@ class Coco(dataset.Dataset):
         self.preprocessed_dir = os.path.abspath(f"{data_path}/preprocessed/")
         self.img_dir = os.path.abspath(f"{data_path}/validation/data/")
         self.name = name
-        
 
         if backend == 'migraphx': 
             self.pipe_tokenizer = pipe_tokenizer

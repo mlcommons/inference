@@ -33,36 +33,6 @@ NANO_SEC = 1e9
 MILLI_SEC = 1000
 
 SUPPORTED_DATASETS = {
-    "igbh-glt-tiny": (
-        igbh.IGBH,
-        dataset.preprocess,
-        igbh.PostProcessIGBH(),
-        {"dataset_size": "tiny", "use_label_2K": True},
-    ),
-    "igbh-glt-small": (
-        igbh.IGBH,
-        dataset.preprocess,
-        igbh.PostProcessIGBH(),
-        {"dataset_size": "small", "use_label_2K": True},
-    ),
-    "igbh-glt-medium": (
-        igbh.IGBH,
-        dataset.preprocess,
-        igbh.PostProcessIGBH(),
-        {"dataset_size": "medium", "use_label_2K": True},
-    ),
-    "igbh-glt-large": (
-        igbh.IGBH,
-        dataset.preprocess,
-        igbh.PostProcessIGBH(),
-        {"dataset_size": "large", "use_label_2K": True},
-    ),
-    "igbh-glt": (
-        igbh.IGBH,
-        dataset.preprocess,
-        igbh.PostProcessIGBH(),
-        {"dataset_size": "full", "use_label_2K": True},
-    ),
     "igbh-dgl-tiny": (
         dgl_igbh.IGBH,
         dataset.preprocess,
@@ -98,33 +68,8 @@ SUPPORTED_DATASETS = {
 
 SUPPORTED_PROFILES = {
     "defaults": {
-        "dataset": "igbh-glt-tiny",
-        "backend": "glt",
-        "model-name": "rgat",
-    },
-    "debug-glt": {
-        "dataset": "igbh-glt-tiny",
-        "backend": "glt",
-        "model-name": "rgat",
-    },
-    "rgat-glt-small": {
-        "dataset": "igbh-glt-small",
-        "backend": "glt",
-        "model-name": "rgat",
-    },
-    "rgat-glt-medium": {
-        "dataset": "igbh-glt-medium",
-        "backend": "glt",
-        "model-name": "rgat",
-    },
-    "rgat-glt-large": {
-        "dataset": "igbh-glt-large",
-        "backend": "glt",
-        "model-name": "rgat",
-    },
-    "rgat-glt-full": {
-        "dataset": "igbh-glt",
-        "backend": "glt",
+        "dataset": "igbh-dgl-tiny",
+        "backend": "dgl",
         "model-name": "rgat",
     },
     "debug-dgl": {
@@ -283,10 +228,7 @@ def get_args():
 
 
 def get_backend(backend, **kwargs):
-    if backend == "glt":
-        from backend_glt import BackendGLT
-        backend = BackendGLT(**kwargs)
-    elif backend == "dgl":
+    if backend == "dgl":
         from backend_dgl import BackendDGL
         backend = BackendDGL(**kwargs)
     else:

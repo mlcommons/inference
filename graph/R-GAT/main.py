@@ -455,7 +455,6 @@ def main():
     log_settings.log_output = log_output_settings
 
     settings = lg.TestSettings()
-    settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
     settings.FromConfig(user_conf, args.model_name, args.scenario)
     settings.scenario = scenario
     settings.mode = lg.TestMode.PerformanceOnly

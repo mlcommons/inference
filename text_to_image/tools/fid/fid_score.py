@@ -356,6 +356,10 @@ def compute_fid(
         imgs, model, batch_size, dims, device, num_workers
     )
 
+    # Ensure dimensions match before calculating FID
+    assert s1.shape == s2.shape, f"Covariance shapes mismatch: {s1.shape} vs {s2.shape}"
+    assert m1.shape == m2.shape, f"Mean shapes mismatch: {m1.shape} vs {m2.shape}"
+
     fid_value = calculate_frechet_distance(m1, s1, m2, s2)
 
     return fid_value

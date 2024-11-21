@@ -136,6 +136,7 @@ def change_folder_name_in_path(path, old_folder_name, new_folder_name):
     new_path = os.path.join(*path_parts)
     return new_path
 
+
 def clean_model_dir(model_results_dir):
     model_measurements_dir = change_folder_name_in_path(
         model_results_dir, "results", "measurements")

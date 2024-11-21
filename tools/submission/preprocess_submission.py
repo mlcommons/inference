@@ -136,7 +136,6 @@ def change_folder_name_in_path(path, old_folder_name, new_folder_name):
     new_path = os.path.join(*path_parts)
     return new_path
 
-
 def clean_model_dir(model_results_dir):
     model_measurements_dir = change_folder_name_in_path(
         model_results_dir, "results", "measurements")
@@ -144,18 +143,25 @@ def clean_model_dir(model_results_dir):
         model_results_dir, "results", "compliance")
 
     print(f"rmtree {model_results_dir}")
-    shutil.rmtree(model_results_dir)
-    shutil.rmtree(model_measurements_dir)
-    shutil.rmtree(model_compliance_dir)
+    if os.path.exists(model_results_dir):
+        shutil.rmtree(model_results_dir)
+    if os.path.exists(model_measurements_dir):
+        shutil.rmtree(model_measurements_dir)
+    if os.path.exists(model_compliance_dir):
+        shutil.rmtree(model_compliance_dir)
+
     sut_results_dir = os.path.dirname(model_results_dir)
-    if not os.listdir(sut_results_dir):
+    if os.path.exists(sut_results_dir) and not os.listdir(sut_results_dir):
         # clean sut dir
         sut = os.path.basename(sut_results_dir)
         log.info(
             f"No benchmark results remaining for {sut}. rmtree {sut_results_dir}")
-        shutil.rmtree(sut_results_dir)
-        shutil.rmtree(os.path.dirname(model_measurements_dir))
-        shutil.rmtree(os.path.dirname(model_compliance_dir))
+        if os.path.exists(sut_results_dir):
+            shutil.rmtree(sut_results_dir)
+        if os.path.exists(os.path.dirname(model_measurements_dir)):
+            shutil.rmtree(os.path.dirname(model_measurements_dir))
+        if os.path.exists(os.path.dirname(model_compliance_dir)):
+            shutil.rmtree(os.path.dirname(model_compliance_dir))
 
 
 def clean_invalid_results(args, log_path, config, system_desc, system_json,
@@ -200,7 +206,7 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                 ranging_path = os.path.join(
                     scenario_path, "performance", "ranging")
                 try:
-                    ranging_r = get_performance_metric(
+                    ranging_r = checker.get_performance_metric(
                         config,
                         mlperf_model,
                         ranging_path,
@@ -224,9 +230,13 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                 if not power_is_valid:
                     log.warning(
                         f"Power result is invalid for {system_desc}: {model} {scenario} scenario in {division} division. Removing...")
-                    shutil.rmtree(power_path)
-                    shutil.rmtree(ranging_path)
-                    shutil.rmtree(os.path.join(perf_path, "spl.txt"))
+                    if os.path.exists(power_path):
+                        shutil.rmtree(power_path)
+                    if os.path.exists(ranging_path):
+                        shutil.rmtree(ranging_path)
+                    spl_path = os.path.join(perf_path, "spl.txt")
+                    if os.path.exists(spl_path):
+                        os.remove(spl_path)
 
             compliance_is_valid = True
             if is_closed_or_network:
@@ -253,9 +263,12 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                     scenario_path, "results", "compliance")
                 log.warning(
                     f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing...")
-                shutil.rmtree(scenario_path)
-                shutil.rmtree(scenario_measurements_path)
-                shutil.rmtree(scenario_compliance_path)
+                if os.path.exists(scenario_path):
+                    shutil.rmtree(scenario_path)
+                if os.path.exists(scenario_measurements_path):
+                    shutil.rmtree(scenario_measurements_path)
+                if os.path.exists(scenario_compliance_path):
+                    shutil.rmtree(scenario_compliance_path)
             elif division in ["closed", "network"]:
                 model_results_path = os.path.dirname(scenario_path)
                 model_measurements_path = change_folder_name_in_path(
@@ -279,10 +292,12 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                     if not perf_is_valid:
                         log.warning(
                             f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} and open divisions. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing it...")
-                        shutil.rmtree(scenario_path)
+                        if os.path.exists(scenario_path):
+                            shutil.rmtree(scenario_path)
                         scenario_measurements_path = change_folder_name_in_path(
                             scenario_path, "results", "measurements")
-                        shutil.rmtree(scenario_measurements_path)
+                        if os.path.exists(scenario_measurements_path):
+                            shutil.rmtree(scenario_measurements_path)
                     if not os.path.exists(target_results_path):
                         shutil.copytree(
                             model_results_path, target_results_path)
@@ -311,9 +326,11 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                 clean_model_dir(model_results_path)
             else:  # delete this result
                 # delete other scenario results too
-                shutil.rmtree(scenario_path)
+                if os.path.exists(scenario_path):
+                    shutil.rmtree(scenario_path)
                 # delete other scenario results too
-                shutil.rmtree(scenario_measurements_path)
+                if os.path.exists(scenario_measurements_path):
+                    shutil.rmtree(scenario_measurements_path)
                 log.warning(
                     f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing it...")
 

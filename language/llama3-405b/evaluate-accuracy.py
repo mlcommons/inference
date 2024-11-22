@@ -1,15 +1,21 @@
 import argparse
 from transformers import AutoTokenizer
 import nltk
-import evaluate
+from multiprocessing import Pool, cpu_count
+from tqdm import tqdm
 import numpy as np
+import pandas as pd
 import json
+import re
+from rouge_score import rouge_scorer
 
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--checkpoint-path", required=True, help="Path to Llama2-70b-hf-chat checkpoint"
+        "--checkpoint-path",
+        default="meta-llama/Meta-Llama-3-8B",
+        help="Path to Llama3-405b-hf-chat checkpoint"
     )
     parser.add_argument(
         "--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json"
@@ -17,7 +23,7 @@ def get_args():
     parser.add_argument(
         "--dataset-file",
         required=True,
-        help="path to processed openorca validation set",
+        help="path to processed dataset set",
     )
     parser.add_argument(
         "--verbose",
@@ -25,7 +31,7 @@ def get_args():
         help="verbose messages")
     parser.add_argument(
         "--dtype",
-        default="int32",
+        default="int64",
         help="dtype of the accuracy log",
         choices=["int32", "int64", "float"],
     )
@@ -33,11 +39,65 @@ def get_args():
     return args
 
 
-def get_groundtruth(processed_dataset_file):
-    import pandas as pd
+scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
+def rouge(label, pred):
+    score = scorer.score(label, pred)
+    return {
+        'rougeL': 100 * score['rougeL'].fmeasure,
+    }
+
+
+def niah_em(label, pred):
+    label_uuids = re.findall(
+        r'[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}', label)
+    pred_uuids = re.findall(r'[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}', pred)
+    
+    if len(pred_uuids) == 0:
+        return {'exact_match': 0.0}
+
+    # https://github.com/hsiehjackson/RULER/blob/main/scripts/eval/synthetic/constants.py#L28
+    score = sum([
+        sum([1.0 if r.lower() in pred.lower() else 0.0 for r in ref]) / len(ref)
+        for pred, ref in zip(pred_uuids, label_uuids)
+    ]) / len(pred_uuids) * 100
+
+    return {'exact_match': round(score, 2)}
+
+
+def qa_em(label, pred):
+    answer_substring = pred
+
+    if 'Answer: ' in pred:
+        last_answer_index = pred.rfind("Answer: ")
+        if last_answer_index == -1:
+            return {'exact_match': 0.0}
+
+        answer_substring = pred[last_answer_index + len("Answer: "):]
+
+    if answer_substring in label:
+        return {'exact_match': 100.0}
+
+    normalized_answer = re.sub(r'\s+', '', answer_substring).lower()
+    label_entries = [re.sub(r'\s+', '', entry).lower()
+                     for entry in label.split('|')]
+
+    match_found = any(entry in normalized_answer for entry in label_entries)
+    return {'exact_match': 100.0 if match_found else 0.0}
+
+
+metrics = {
+    fn.__name__: fn
+    for fn in [rouge, niah_em, qa_em]
+}
+
+
+def get_groundtruth(processed_dataset_file, return_metrics=True):
     data = pd.read_pickle(processed_dataset_file)
-    ground_truths = data["ref_output"]
+    ground_truths = data["gt_output"]
+    if return_metrics:
+        metrics = data["metric"]
+        return ground_truths, metrics
     return ground_truths
 
 
@@ -52,12 +112,30 @@ def postprocess_text(preds, targets):
     return preds, targets
 
 
+def process_item(item):
+    pred, target, metric = item
+    metric_fn = metrics[metric]
+    metric_eval = metric_fn(target, pred)
+    return metric_eval
+
+
+def run_evaluation(preds, targets, metrics, n_process=None):
+    n_process = cpu_count() if n_process is None else n_process
+    with Pool(n_process) as pool:
+        accuracies = list(
+            tqdm(
+                pool.imap(
+                    process_item, zip(
+                        preds, targets, metrics)), total=len(preds)))
+    df = pd.DataFrame({"accuracy": accuracies, "metric": metrics})
+    return df.accuracy.apply(pd.Series).describe().loc["mean"].to_dict()
+
+
 def main():
 
     args = get_args()
     dataset_path = args.dataset_file
     checkpoint_path = args.checkpoint_path
-    metric = evaluate.load("rouge")
     nltk.download("punkt")
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -67,9 +145,10 @@ def main():
         use_fast=False,
     )
 
-    targets = get_groundtruth(args.dataset_file)
+    targets, metrics = get_groundtruth(args.dataset_file)
 
     target_required = []
+    metrics_required = []
     preds_token_ids = []
 
     eval_dtype = np.int64
@@ -89,8 +168,8 @@ def main():
             continue
 
         seen.add(qsl_idx)
-        target = targets[qsl_idx]
-        target_required.append(target)
+        target_required.append(targets[qsl_idx])
+        metrics_required.append(metrics[qsl_idx])
         pred = np.frombuffer(bytes.fromhex(pred["data"]), eval_dtype)
 
         gen_tok_len += len(pred)
@@ -102,10 +181,8 @@ def main():
 
     preds, targets = postprocess_text(preds_decoded_text, target_required)
 
-    result = metric.compute(
-        predictions=preds, references=targets, use_stemmer=True, use_aggregator=False
-    )
-    result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
+    result = run_evaluation(preds, targets, metrics)
+    result = dict(result)
     prediction_lens = [len(pred) for pred in preds]
     gen_num = len(preds)
 

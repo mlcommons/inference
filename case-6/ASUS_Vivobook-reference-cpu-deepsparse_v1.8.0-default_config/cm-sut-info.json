@@ -1,0 +1,8 @@
+{
+    "hardware_name": "ASUS_Vivobook",
+    "implementation": "reference",
+    "device": "cpu",
+    "framework": "deepsparse",
+    "framework_version": "1.8.0",
+    "run_config": "default_config"
+}

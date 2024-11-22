@@ -22,7 +22,7 @@ import mlperf_loadgen as lg
 from dataset import Dataset
 
 logging.basicConfig(level=logging.INFO)
-log = logging.getLogger("Llama-70B-SUT")
+log = logging.getLogger("Llama-405B-SUT")
 
 
 
@@ -32,7 +32,7 @@ class SUT:
         model_path=None,
         dtype="bfloat16",
         batch_size=None,
-        total_sample_count=24576,
+        total_sample_count=8312,
         dataset_path=None,
         use_cached_outputs=False,
         # Set this to True *only for test accuracy runs* in case your prior
@@ -73,8 +73,8 @@ class SUT:
             "top_p": 1,
             "top_k": 1,
             "seed": 42,
-            "max_tokens": 256,
-            "min_tokens": 20
+            "max_tokens": 20000,
+            "min_tokens": 2
         }
         self.sampling_params = SamplingParams(**gen_kwargs)
         # self.sampling_params.all_stop_token_ids.add(self.model.get_tokenizer().eos_token_id)
@@ -113,7 +113,7 @@ class SUT:
 
             tik1 = time.time()
 
-            input_ids_tensor = [self.data_object.input_ids[q.index][:256] for q in qitem]
+            input_ids_tensor = [self.data_object.input_ids[q.index] for q in qitem]
             
             tik2 = time.time()
             outputs = self.model.generate(
@@ -146,17 +146,17 @@ class SUT:
 
         with self.sample_counter_lock:
             self.sample_counter += len(qitem)
-            print(f"Samples run: {self.sample_counter}")
+            log.info(f"Samples run: {self.sample_counter}")
             if tik1:
-                print(f"\tBatchMaker time: {tik2 - tik1}")
-                print(f"\tInference time: {tik3 - tik2}")
-                print(f"\tPostprocess time: {tok - tik3}")
-                print(f"\t==== Total time: {tok - tik1}")
+                log.info(f"\tBatchMaker time: {tik2 - tik1}")
+                log.info(f"\tInference time: {tik3 - tik2}")
+                log.info(f"\tPostprocess time: {tok - tik3}")
+                log.info(f"\t==== Total time: {tok - tik1}")
 
     def load_model(self):
-        print("Loading model...")
+        log.info("Loading model...")
         self.model = LLM(self.model_path, dtype=self.dtype, tensor_parallel_size=self.tensor_parallel_size,)
-        print("Loaded model")
+        log.info("Loaded model")
 
     def get_sut(self):
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
@@ -174,11 +174,11 @@ class SUT:
         list_prompts_tokens = []
         list_prompts_attn_masks = []
 
-        print(f"IssueQuery started with {len(query_samples)} samples")
+        log.info(f"IssueQuery started with {len(query_samples)} samples")
         while len(query_samples) > 0:
             self.query_queue.put(query_samples[: self.batch_size])
             query_samples = query_samples[self.batch_size:]
-        print(f"IssueQuery done")
+        log.info(f"IssueQuery done")
 
     def flush_queries(self):
         pass
@@ -192,7 +192,7 @@ class SUTServer(SUT):
         self,
         model_path=None,
         dtype="bfloat16",
-        total_sample_count=24576,
+        total_sample_count=8312,
         dataset_path=None,
         batch_size=None,
         workers=1,
@@ -255,7 +255,7 @@ class SUTServer(SUT):
             if qitem is None:
                 break
 
-            input_ids_tensor = TokensPrompt(prompt_token_ids=self.data_object.input_ids[qitem.index][:256])
+            input_ids_tensor = TokensPrompt(prompt_token_ids=self.data_object.input_ids[qitem.index])
 
             # TODO: This PoC is super slow with significant overhead. Best to
             # create a patch to `generate`
@@ -279,6 +279,7 @@ class SUTServer(SUT):
         self.ft_response_thread.join()
     
     def load_model(self):
+        log.info("Loading model")
         self.engine_args = AsyncEngineArgs(self.model_path, dtype=self.dtype, tensor_parallel_size=self.tensor_parallel_size)
         self.model = AsyncLLMEngine.from_engine_args(self.engine_args)
-        print("Loaded model")
+        log.info("Loaded model")

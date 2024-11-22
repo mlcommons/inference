@@ -105,7 +105,7 @@ python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 24576 \
+                --total-sample-count 8312 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \
@@ -119,7 +119,7 @@ python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 24576 \
+                --total-sample-count 8312 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \
@@ -142,7 +142,7 @@ python -u main.py --scenario Offline \
                 --accuracy \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 24576 \
+                --total-sample-count 8312 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \
@@ -180,7 +180,7 @@ python -u main.py --scenario Server \
                 --accuracy \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 24576 \
+                --total-sample-count 8312 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \

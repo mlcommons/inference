@@ -155,3 +155,33 @@ Add the `--accuracy` to the command to run the benchmark
 ```bash
 python3 main.py --dataset igbh --dataset-path igbh/ --accuracy --model-path model/ [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
 ```
+
+### Docker run
+**CPU:**
+Build docker image
+```bash
+docker build . -f dockerfile.cpu -t rgat-cpu
+```
+Run docker container:
+```bash
+docker run --rm -it -v $(pwd):/root rgat-cpu
+```
+Run benchmark inside the docker container:
+```bash
+python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full --device cpu [--model-path <path_to_ckpt>] [--in-memory] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
+```
+
+
+**GPU:**
+Build docker image
+```bash
+docker build . -f dockerfile.gpu -t rgat-gpu
+```
+Run docker container:
+```bash
+docker run --rm -it -v $(pwd):/root --gpus all rgat-gpu
+```
+Run benchmark inside the docker container:
+```bash
+python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full --device gpu [--model-path <path_to_ckpt>] [--in-memory] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
+```

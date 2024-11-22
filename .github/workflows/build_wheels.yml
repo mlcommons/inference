@@ -74,7 +74,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest, macos-13]
 
     steps:
       - uses: actions/checkout@v3
@@ -115,11 +115,17 @@ jobs:
         with:
           name: wheels-ubuntu-latest
           path: wheels
-      # Download the built wheels from macOS
-      - name: Download macOS wheels
+      # Download the built wheels from macOS-latest
+      - name: Download macOS-latest wheels
         uses: actions/download-artifact@v4
         with:
           name: wheels-macos-latest
+          path: wheels
+      # Download the built wheels from macOS-13 (x86)
+      - name: Download macOS-13 (x86) wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: wheels-macos-13
           path: wheels
       # Download the built wheels from Windows
       - name: Download Windows wheels

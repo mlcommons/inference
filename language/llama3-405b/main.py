@@ -77,7 +77,7 @@ def get_args():
     parser.add_argument(
         "--total-sample-count",
         type=int,
-        default=24576,
+        default=8312,
         help="Number of samples to use in benchmark.",
     )
     parser.add_argument(
@@ -103,7 +103,7 @@ def get_args():
     parser.add_argument(
         "--tensor-parallel-size",
         type=int,
-        default=1,
+        default=8,
         help="Number of workers to process queries",
     )
     parser.add_argument("--vllm", action="store_true", help="vllm mode")

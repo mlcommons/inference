@@ -1,5 +1,5 @@
-CHECKPOINT_PATH="${CHECKPOINT_PATH:-meta-llama/Llama-2-70b-chat-hf}"
-DATASET_PATH="${DATASET_PATH:-open-orca-val-set.pkl}"
+CHECKPOINT_PATH="${CHECKPOINT_PATH:Meta-Llama-3.1-405B-Instruct}"
+DATASET_PATH="${DATASET_PATH:mlperf_llama3.1_405b_dataset_8318.pkl}"
 
 mkdir -p "run_outputs"
 
@@ -8,11 +8,10 @@ python3 -u main.py --scenario Offline \
         --accuracy \
         --mlperf-conf mlperf.conf \
         --user-conf user.conf \
-        --total-sample-count 24576 \
+        --total-sample-count 8312 \
         --dataset-path ${DATASET_PATH} \
         --output-log-dir offline_accuracy_loadgen_logs \
-        --dtype float32 \
-        --device cuda:0 2>&1 | tee offline_accuracy_log.log
+        --dtype float32 | tee offline_accuracy_log.log
 
 python3 evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
         --mlperf-accuracy-file offline_accuracy_loadgen_logs/mlperf_log_accuracy.json \

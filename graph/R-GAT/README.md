@@ -1,6 +1,6 @@
-# MLPerf™ Inference Benchmarks for Text to Image
+# MLPerf™ Inference Benchmark for Graph Neural Network
 
-This is the reference implementation for MLPerf Inference text to image. The reference implementation currently uses Deep Graph Library (DGL), and pytorch as the backbone of the model.
+This is the reference implementation for MLPerf Inference Graph Neural Network. The reference implementation currently uses Deep Graph Library (DGL), and pytorch as the backbone of the model.
 
 ## Supported Models
 

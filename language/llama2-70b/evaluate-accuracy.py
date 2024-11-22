@@ -47,7 +47,8 @@ def rouge(label, pred):
 
 
 def niah_em(label, pred):
-    label_uuids = re.findall(r'[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}', label)
+    label_uuids = re.findall(
+        r'[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}', label)
     pred_uuids = re.findall(r'[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}', pred)
 
     # https://github.com/hsiehjackson/RULER/blob/main/scripts/eval/synthetic/constants.py#L28
@@ -73,7 +74,8 @@ def qa_em(label, pred):
         return {'exact_match': 100.0}
 
     normalized_answer = re.sub(r'\s+', '', answer_substring).lower()
-    label_entries = [re.sub(r'\s+', '', entry).lower() for entry in label.split('|')]
+    label_entries = [re.sub(r'\s+', '', entry).lower()
+                     for entry in label.split('|')]
 
     match_found = any(entry in normalized_answer for entry in label_entries)
     return {'exact_match': 100.0 if match_found else 0.0}
@@ -85,7 +87,7 @@ metrics = {
 }
 
 
-def get_groundtruth(processed_dataset_file, return_metrics = True):
+def get_groundtruth(processed_dataset_file, return_metrics=True):
     data = pd.read_pickle(processed_dataset_file)
     ground_truths = data["gt_output"]
     if return_metrics:
@@ -104,6 +106,7 @@ def postprocess_text(preds, targets):
 
     return preds, targets
 
+
 def process_item(item):
     pred, target, metric = item
     metric_fn = metrics[metric]
@@ -111,10 +114,14 @@ def process_item(item):
     return metric_eval
 
 
-def run_evaluation(preds, targets, metrics, n_process = None):
+def run_evaluation(preds, targets, metrics, n_process=None):
     n_process = cpu_count() if n_process is None else n_process
     with Pool(n_process) as pool:
-        accuracies = list(tqdm(pool.imap(process_item, zip(preds, targets, metrics)), total=len(preds)))
+        accuracies = list(
+            tqdm(
+                pool.imap(
+                    process_item, zip(
+                        preds, targets, metrics)), total=len(preds)))
     df = pd.DataFrame({"accuracy": accuracies, "metric": metrics})
     return df.groupby(by="metric", axis=1).mean()
 

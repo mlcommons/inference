@@ -25,7 +25,6 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("Llama-405B-SUT")
 
 
-
 class SUT:
     def __init__(
         self,
@@ -113,11 +112,12 @@ class SUT:
 
             tik1 = time.time()
 
-            input_ids_tensor = [self.data_object.input_ids[q.index] for q in qitem]
-            
+            input_ids_tensor = [
+                self.data_object.input_ids[q.index] for q in qitem]
+
             tik2 = time.time()
             outputs = self.model.generate(
-                prompt_token_ids=input_ids_tensor, sampling_params = self.sampling_params
+                prompt_token_ids=input_ids_tensor, sampling_params=self.sampling_params
             )
             pred_output_tokens = []
             for output in outputs:
@@ -155,7 +155,11 @@ class SUT:
 
     def load_model(self):
         log.info("Loading model...")
-        self.model = LLM(self.model_path, dtype=self.dtype, tensor_parallel_size=self.tensor_parallel_size,)
+        self.model = LLM(
+            self.model_path,
+            dtype=self.dtype,
+            tensor_parallel_size=self.tensor_parallel_size,
+        )
         log.info("Loaded model")
 
     def get_sut(self):
@@ -218,14 +222,15 @@ class SUTServer(SUT):
             worker = threading.Thread(target=self.process_queries)
             worker.start()
             self.worker_threads[j] = worker
-    
+
     async def stream_output(self, qitem, results_generator):
         first = True
         async for request_output in results_generator:
             output_response = request_output
             if first:
                 first_tokens = list(output_response.outputs[0].token_ids)
-                response_data = array.array("B", np.array(first_tokens, np.int32).tobytes())
+                response_data = array.array(
+                    "B", np.array(first_tokens, np.int32).tobytes())
                 bi = response_data.buffer_info()
                 response = [lg.QuerySampleResponse(qitem.id, bi[0], bi[1])]
                 lg.FirstTokenComplete(response)
@@ -246,7 +251,6 @@ class SUTServer(SUT):
                 n_tokens)]
         lg.QuerySamplesComplete(response)
 
-
     def process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic"""
         while True:
@@ -255,12 +259,14 @@ class SUTServer(SUT):
             if qitem is None:
                 break
 
-            input_ids_tensor = TokensPrompt(prompt_token_ids=self.data_object.input_ids[qitem.index])
+            input_ids_tensor = TokensPrompt(
+                prompt_token_ids=self.data_object.input_ids[qitem.index])
 
             # TODO: This PoC is super slow with significant overhead. Best to
             # create a patch to `generate`
             results_generator = self.model.generate(
-                prompt=input_ids_tensor, sampling_params = self.sampling_params, request_id = str(self.request_id)
+                prompt=input_ids_tensor, sampling_params=self.sampling_params, request_id=str(
+                    self.request_id)
             )
             self.request_id += 1
             asyncio.run(self.stream_output(qitem, results_generator))
@@ -277,9 +283,12 @@ class SUTServer(SUT):
 
         self.first_token_queue.put(None)
         self.ft_response_thread.join()
-    
+
     def load_model(self):
         log.info("Loading model")
-        self.engine_args = AsyncEngineArgs(self.model_path, dtype=self.dtype, tensor_parallel_size=self.tensor_parallel_size)
+        self.engine_args = AsyncEngineArgs(
+            self.model_path,
+            dtype=self.dtype,
+            tensor_parallel_size=self.tensor_parallel_size)
         self.model = AsyncLLMEngine.from_engine_args(self.engine_args)
         log.info("Loaded model")

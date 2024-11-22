@@ -38,7 +38,6 @@ class Dataset:
         self.total_sample_count = min(len(self.input_ids), total_sample_count)
         self.perf_count = perf_count_override or self.total_sample_count
 
-
     def load_processed_dataset(self):
         if not os.path.isfile(self.dataset_path):
             log.warn(

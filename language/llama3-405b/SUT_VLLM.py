@@ -37,7 +37,7 @@ class SUT:
         # Set this to True *only for test accuracy runs* in case your prior
         # session was killed partway through
         workers=1,
-        tensor_parallel_size=1
+        tensor_parallel_size=8
     ):
 
         self.model_path = model_path or f"Meta-Llama-3.1-405B-Instruct{'-FP8' if dtype == 'float8' else ''}"
@@ -102,7 +102,6 @@ class SUT:
 
     def process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic"""
-
         while True:
             qitem = self.query_queue.get()
             if qitem is None:
@@ -200,7 +199,7 @@ class SUTServer(SUT):
         dataset_path=None,
         batch_size=None,
         workers=1,
-        tensor_parallel_size=1
+        tensor_parallel_size=8
     ):
 
         super().__init__(
@@ -216,7 +215,6 @@ class SUTServer(SUT):
         self.first_token_queue = queue.Queue()
 
     def start(self):
-
         # Create worker threads
         for j in range(self.num_workers):
             worker = threading.Thread(target=self.process_queries)

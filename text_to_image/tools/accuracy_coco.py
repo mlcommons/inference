@@ -311,8 +311,8 @@ def compute_accuracy_low_memory(
 
     fid_score = calculate_frechet_distance(m1, s1, m2, s2)
 
-    result_dict["FID_SCORE"] = fid_score
-    result_dict["CLIP_SCORE"] = np.mean(clip_scores)
+    result_dict["FID_SCORE"] = f"{fid_score}"
+    result_dict["CLIP_SCORE"] = f"{np.mean(clip_scores)}"
     print(f"Accuracy Results: {result_dict}")
 
     with open(output_file, "w") as fp:

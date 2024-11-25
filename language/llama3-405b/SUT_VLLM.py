@@ -72,7 +72,7 @@ class SUT:
             "top_p": 1,
             "top_k": 1,
             "seed": 42,
-            "max_tokens": 20000,
+            "max_tokens": 512,
             "min_tokens": 2
         }
         self.sampling_params = SamplingParams(**gen_kwargs)

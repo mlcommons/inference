@@ -49,11 +49,13 @@ class BackendDeploy(backend.Backend):
 
 
     def load(self):
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         PaintArgs = namedtuple('PaintArgs', ['training_path', 'model_path', 'cam_sync'])
         painting_args = PaintArgs(os.path.join(self.data_root, 'training'), self.segmentor_path, False)
         self.painter = Painter(painting_args)
         self.segmentor = self.painter.model
-        model = PointPillars(nclasses=self.detection_classes, painted=True)
+        model = PointPillars(nclasses=self.detection_classes, painted=True).to(device=device)
+        model.eval()
         checkpoint = torch.load(self.lidar_detector_path)
         model.load_state_dict(checkpoint["model_state_dict"])
         self.lidar_detector = model
@@ -69,14 +71,12 @@ class BackendDeploy(backend.Backend):
             format_results = {}
             model_input = inputs[0]
             batched_pts = model_input['pts']
-            #batched_images = data_dict['batched_images'][0]
             scores_from_cam = []
             for i in range(len(model_input['images'])):
                 segmentation_score = self.segmentor(model_input['images'][i].to(device))[0]
                 scores_from_cam.append(self.painter.get_score(segmentation_score).cpu())
             points = self.painter.augment_lidar_class_scores_both(scores_from_cam, batched_pts, model_input['calib_info'])
-            batch_results = self.lidar_detector(batched_pts=[points], 
-                                    mode='val')
+            batch_results = self.lidar_detector(batched_pts=[points.to(device=device)], mode='val')
             for j, result in enumerate(batch_results):
                     format_result = {
                         'class': [],
@@ -97,7 +97,6 @@ class BackendDeploy(backend.Backend):
                     
                     calib_info = change_calib_device(calib_info, False)
                     result_filter = keep_bbox_from_image_range(result, calib_info, 5, image_info, False)
-                    #result_filter = keep_bbox_from_lidar_range(result_filter, pcd_limit_range)
                     
                     lidar_bboxes = result_filter['lidar_bboxes']
                     labels, scores = result_filter['labels'], result_filter['scores']

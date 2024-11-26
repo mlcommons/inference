@@ -189,9 +189,6 @@ class PostProcessWaymo:
 
     def __call__(self, results, content_id, inputs, result_dict):
         self.content_ids.extend(content_id)
-        #import pdb
-        #pdb.set_trace()
-        # TODO: Postprocess results
         processed_results = []
         for idx in range(len(content_id)):
             processed_results.append([])

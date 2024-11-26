@@ -1,3 +1,6 @@
+import ncnn
+import numpy as np
+import resnet50_v1_pnnx
 import os
 import torch
 import torchvision.models as models
@@ -22,12 +25,11 @@ mod.save("resnet50_v1.pt")
 os.system("pnnx resnet50_v1.pt inputshape=[1,3,224,224] fp16=0")
 
 # pnnx inference
-import resnet50_v1_pnnx
+
 b = resnet50_v1_pnnx.test_inference()
 
 # ncnn inference
-import numpy as np
-import ncnn
+
 with ncnn.Net() as net:
     net.opt.use_fp16_packed = False
     net.opt.use_fp16_storage = False

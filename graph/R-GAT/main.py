@@ -23,6 +23,8 @@ import torch
 
 import dataset
 import igbh
+import dgl_utilities.feature_fetching as dgl_igbh
+
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -31,68 +33,123 @@ NANO_SEC = 1e9
 MILLI_SEC = 1000
 
 SUPPORTED_DATASETS = {
-    "igbh-tiny": (
+    "igbh-glt-tiny": (
         igbh.IGBH,
         dataset.preprocess,
         igbh.PostProcessIGBH(),
         {"dataset_size": "tiny", "use_label_2K": True},
     ),
-    "igbh-small": (
+    "igbh-glt-small": (
         igbh.IGBH,
         dataset.preprocess,
         igbh.PostProcessIGBH(),
         {"dataset_size": "small", "use_label_2K": True},
     ),
-    "igbh-medium": (
+    "igbh-glt-medium": (
         igbh.IGBH,
         dataset.preprocess,
         igbh.PostProcessIGBH(),
         {"dataset_size": "medium", "use_label_2K": True},
     ),
-    "igbh-large": (
+    "igbh-glt-large": (
         igbh.IGBH,
         dataset.preprocess,
         igbh.PostProcessIGBH(),
         {"dataset_size": "large", "use_label_2K": True},
     ),
-    "igbh": (
+    "igbh-glt": (
         igbh.IGBH,
         dataset.preprocess,
         igbh.PostProcessIGBH(),
         {"dataset_size": "full", "use_label_2K": True},
-    )
+    ),
+    "igbh-dgl-tiny": (
+        dgl_igbh.IGBH,
+        dataset.preprocess,
+        igbh.PostProcessIGBH(),
+        {"dataset_size": "tiny", "use_label_2K": True},
+    ),
+    "igbh-dgl-small": (
+        dgl_igbh.IGBH,
+        dataset.preprocess,
+        igbh.PostProcessIGBH(),
+        {"dataset_size": "small", "use_label_2K": True},
+    ),
+    "igbh-dgl-medium": (
+        dgl_igbh.IGBH,
+        dataset.preprocess,
+        igbh.PostProcessIGBH(),
+        {"dataset_size": "medium", "use_label_2K": True},
+    ),
+    "igbh-dgl-large": (
+        dgl_igbh.IGBH,
+        dataset.preprocess,
+        igbh.PostProcessIGBH(),
+        {"dataset_size": "large", "use_label_2K": True},
+    ),
+    "igbh-dgl": (
+        dgl_igbh.IGBH,
+        dataset.preprocess,
+        igbh.PostProcessIGBH(),
+        {"dataset_size": "full", "use_label_2K": True},
+    ),
 }
 
 
 SUPPORTED_PROFILES = {
     "defaults": {
-        "dataset": "igbh-tiny",
-        "backend": "pytorch",
+        "dataset": "igbh-glt-tiny",
+        "backend": "glt",
         "model-name": "rgat",
     },
-    "debug": {
-        "dataset": "igbh-tiny",
-        "backend": "pytorch",
+    "debug-glt": {
+        "dataset": "igbh-glt-tiny",
+        "backend": "glt",
         "model-name": "rgat",
     },
-    "rgat-pytorch-small": {
-        "dataset": "igbh-small",
-        "backend": "pytorch",
+    "rgat-glt-small": {
+        "dataset": "igbh-glt-small",
+        "backend": "glt",
         "model-name": "rgat",
     },
-    "rgat-pytorch-medium": {
-        "dataset": "igbh-medium",
-        "backend": "pytorch",
+    "rgat-glt-medium": {
+        "dataset": "igbh-glt-medium",
+        "backend": "glt",
         "model-name": "rgat",
     },
-    "rgat-pytorch-large": {
-        "dataset": "igbh-large",
-        "backend": "pytorch",
+    "rgat-glt-large": {
+        "dataset": "igbh-glt-large",
+        "backend": "glt",
         "model-name": "rgat",
     },
-    "rgat-pytorch-full": {
-        "dataset": "igbh",
-        "backend": "pytorch",
+    "rgat-glt-full": {
+        "dataset": "igbh-glt",
+        "backend": "glt",
+        "model-name": "rgat",
+    },
+    "debug-dgl": {
+        "dataset": "igbh-dgl-tiny",
+        "backend": "dgl",
+        "model-name": "rgat",
+    },
+    "rgat-dgl-small": {
+        "dataset": "igbh-dgl-small",
+        "backend": "dgl",
+        "model-name": "rgat",
+    },
+    "rgat-dgl-medium": {
+        "dataset": "igbh-dgl-medium",
+        "backend": "dgl",
+        "model-name": "rgat",
+    },
+    "rgat-dgl-large": {
+        "dataset": "igbh-dgl-large",
+        "backend": "dgl",
+        "model-name": "rgat",
+    },
+    "rgat-dgl-full": {
+        "dataset": "igbh-dgl",
+        "backend": "dgl",
         "model-name": "rgat",
     },
 }
@@ -108,17 +165,32 @@ SCENARIO_MAP = {
 def get_args():
     parser = argparse.ArgumentParser()
     # Dataset arguments
-    parser.add_argument("--dataset", choices=SUPPORTED_DATASETS.keys(), help="dataset")
-    parser.add_argument("--dataset-path", required=True, help="path to the dataset")
-    parser.add_argument("--in-memory", action="store_true", help="path to the dataset")
-    parser.add_argument("--layout", default="COO", choices=["CSC", "CSR", "COO"], help="path to the dataset")
+    parser.add_argument(
+        "--dataset",
+        choices=SUPPORTED_DATASETS.keys(),
+        help="dataset")
+    parser.add_argument(
+        "--dataset-path",
+        required=True,
+        help="path to the dataset")
+    parser.add_argument(
+        "--in-memory",
+        action="store_true",
+        help="path to the dataset")
+    parser.add_argument(
+        "--layout",
+        default="COO",
+        choices=["CSC", "CSR", "COO"],
+        help="path to the dataset",
+    )
     parser.add_argument(
         "--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles"
     )
     parser.add_argument(
         "--scenario",
         default="SingleStream",
-        help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())),
+        help="mlperf benchmark scenario, one of " +
+        str(list(SCENARIO_MAP.keys())),
     )
     parser.add_argument(
         "--max-batchsize",
@@ -127,7 +199,10 @@ def get_args():
         help="max batch size in a single inference",
     )
     parser.add_argument("--threads", default=1, type=int, help="threads")
-    parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
+    parser.add_argument(
+        "--accuracy",
+        action="store_true",
+        help="enable accuracy pass")
     parser.add_argument(
         "--find-peak-performance",
         action="store_true",
@@ -168,12 +243,16 @@ def get_args():
         "--audit_conf", default="audit.config", help="config for LoadGen audit settings"
     )
 
-    # below will override mlperf rules compliant settings - don't use for official submission
+    # below will override mlperf rules compliant settings - don't use for
+    # official submission
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--debug", action="store_true", help="debug")
     parser.add_argument(
-        "--performance-sample-count", type=int, help="performance sample count", default=5000
+        "--performance-sample-count",
+        type=int,
+        help="performance sample count",
+        default=5000,
     )
     parser.add_argument(
         "--max-latency", type=float, help="mlperf max latency in pct tile"
@@ -204,9 +283,12 @@ def get_args():
 
 
 def get_backend(backend, **kwargs):
-    if backend == "pytorch":
-        from backend_pytorch import BackendPytorch
-        backend = BackendPytorch(**kwargs)
+    if backend == "glt":
+        from backend_glt import BackendGLT
+        backend = BackendGLT(**kwargs)
+    elif backend == "dgl":
+        from backend_dgl import BackendDGL
+        backend = BackendDGL(**kwargs)
     else:
         raise ValueError("unknown backend: " + backend)
     return backend
@@ -279,10 +361,9 @@ class RunnerBase:
         else:
             bs = self.max_batchsize
             for i in range(0, len(idx), bs):
-                samples = self.ds.get_samples(idx[i : i + bs])
+                samples = self.ds.get_samples(idx[i: i + bs])
                 self.run_one_item(
-                    Item(query_id[i : i + bs], idx[i : i + bs], samples)
-                )
+                    Item(query_id[i: i + bs], idx[i: i + bs], samples))
 
     def finish(self):
         pass
@@ -296,7 +377,9 @@ class QueueRunner(RunnerBase):
         self.result_dict = {}
 
         for _ in range(self.threads):
-            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
+            worker = threading.Thread(
+                target=self.handle_tasks, args=(
+                    self.tasks,))
             worker.daemon = True
             self.workers.append(worker)
             worker.start()
@@ -356,8 +439,8 @@ def main():
         device=args.device,
         ckpt_path=args.model_path,
         batch_size=args.max_batchsize,
-        igbh_dataset=ds.igbh_dataset,
-        layout=args.layout
+        igbh=ds,
+        layout=args.layout,
     )
 
     # --count applies to accuracy mode only and can be used to limit the number of images
@@ -389,7 +472,6 @@ def main():
         sys.exit(1)
 
     audit_config = os.path.abspath(args.audit_conf)
-    
 
     if args.output:
         output_dir = os.path.abspath(args.output)
@@ -402,7 +484,7 @@ def main():
     count = ds.get_item_count()
 
     # warmup
-    warmup_samples = torch.Tensor([0]).to(torch.int64).to(backend.device)
+    warmup_samples = torch.Tensor([0]).to(torch.int64)
     for i in range(5):
         _ = backend.predict(warmup_samples)
 
@@ -458,7 +540,8 @@ def main():
         settings.multi_stream_samples_per_query = args.samples_per_query
     if args.max_latency:
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
-        settings.multi_stream_expected_latency_ns = int(args.max_latency * NANO_SEC)
+        settings.multi_stream_expected_latency_ns = int(
+            args.max_latency * NANO_SEC)
 
     performance_sample_count = (
         args.performance_sample_count

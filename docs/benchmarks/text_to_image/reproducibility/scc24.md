@@ -46,11 +46,11 @@ or supporting multi-node execution) useful for the community and [MLCommons](htt
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python
     
-{{ mlperf_inference_implementation_readme (4, "sdxl", "reference", extra_variation_tags=",_short,_scc24-base", devices=["ROCm", "CUDA"],scenarios=["Offline"],categories=["Datacenter"], setup_tips=False, skip_test_query_count=True, extra_input_string="--precision=float16") }}
+{{ mlperf_inference_implementation_readme (4, "sdxl", "reference", extra_variation_tags=",_short,_scc24-base", devices=["ROCm", "CUDA"],fixed_scenarios=["Offline"],categories=["Datacenter"], setup_tips=False, skip_test_query_count=True, extra_input_string="--precision=float16") }}
 
 === "Nvidia"
     ## Nvidia MLPerf Implementation
-{{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia", extra_variation_tags=",_short,_scc24-base", scenarios=["Offline"],categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
+{{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia", extra_variation_tags=",_short,_scc24-base", fixed_scenarios=["Offline"],categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
 
 !!! info
     Once the above run is successful, you can change `_scc24-base` to `_scc24-main` to run the main variant.
@@ -59,10 +59,10 @@ or supporting multi-node execution) useful for the community and [MLCommons](htt
 
 ### Generate actual submission tree
 
+
 ```bash
 cm run script --tags=generate,inference,submission \
    --clean \
-   --preprocess_submission=yes \
    --run-checker \
    --tar=yes \
    --env.CM_TAR_OUTFILE=submission.tar.gz \
@@ -80,17 +80,17 @@ cm run script --tags=generate,inference,submission \
 
 ### Push Results to GitHub
 
-Fork the repository URL at [https://github.com/gateoverflow/cm4mlperf-inference](https://github.com/gateoverflow/cm4mlperf-inference). 
+Fork the `mlperf-inference-results-scc24` branch of the repository URL at [https://github.com/mlcommons/cm4mlperf-inference](https://github.com/mlcommons/cm4mlperf-inference). 
 
 Run the following command after **replacing `--repo_url` with your GitHub fork URL**.
 
 ```bash
 cm run script --tags=push,github,mlperf,inference,submission \
-   --repo_url=https://github.com/gateoverflow/cm4mlperf-inference \
+   --repo_url=https://github.com/<myfork>/cm4mlperf-inference \
    --repo_branch=mlperf-inference-results-scc24 \
    --commit_message="Results on system <HW Name>" \
    --quiet
 ```
 
 Once uploaded give a Pull Request to the origin repository. Github action will be running there and once 
-finished you can see your submitted results at [https://gateoverflow.github.io/cm4mlperf-inference](https://gateoverflow.github.io/cm4mlperf-inference).
+finished you can see your submitted results at [https://docs.mlcommons.org/cm4mlperf-inference](https://docs.mlcommons.org/cm4mlperf-inference).

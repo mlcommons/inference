@@ -41,6 +41,7 @@ def get_args():
 
 scorer = rouge_scorer.RougeScorer(['rougeL'], use_stemmer=True)
 
+
 def rouge(label, pred):
     score = scorer.score(label, pred)
     return {
@@ -52,7 +53,7 @@ def niah_em(label, pred):
     label_uuids = re.findall(
         r'[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}', label)
     pred_uuids = re.findall(r'[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}', pred)
-    
+
     if len(pred_uuids) == 0:
         return {'exact_match': 0.0}
 

@@ -93,7 +93,15 @@ rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5ee
 ```
 You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
-**TODO: Host dataset and grant access to submitters**
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama3.1_405b_dataset_8313_processed_fp16_eval.pkl ./ -P
+```
+
+You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
+
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama3.1_405b_calibration_dataset_512_processed_fp16_eval.pkl ./ -P
+```
 
 ## Run Performance Benchmarks
 

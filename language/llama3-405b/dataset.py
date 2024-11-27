@@ -80,16 +80,6 @@ class Dataset:
         output_seq = out_tokens
         assert len(query_id_list) == len(output_seq)
 
-        # Save outputs
-        if not os.path.exists("run_outputs"):
-            os.makedirs("run_outputs")
-        fname = "q" + "_".join([str(i) for i in query_id_list])
-        fname = f"run_outputs/{fname}.pkl"
-        with open(fname, mode="wb") as f:
-            d = {"query_ids": query_id_list, "outputs": output_seq}
-            log.info(f"Saving outputs to {fname}")
-            pickle.dump(d, f)
-
         return np.asarray(output_seq, dtype=np.int32)
 
     def LoadSamplesToRam(self, sample_list):

@@ -152,17 +152,6 @@ if [ -e ${ACCURACY_LOG_FILE} ]; then
         python evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
                 --mlperf-accuracy-file ${ACCURACY_LOG_FILE} --dataset-file ${DATASET_PATH} --dtype int32
 fi
-
-# Optional: Create a pickled pandas DataFrame that is the original dataset with extra columns with output data from the
-# accuracy run. The following columns will be added:
-# - "gen_output_tok_id": A list of ints representing the tokenized output sequence.
-# - "gen_output_text": A str representing the untokenized output sequence.
-# - "gen_output_tok_len": An int representing the number of output tokens.
-# - "rouge1": The rouge1 score for this sample
-# - "rouge2": The rouge2 score for this sample
-# - "rougeL": The rougeL score for this sample
-# This file will by default be saved to 'full_output.pkl'. You can modify this with --output-pkl-path.
-python consolidate_results.py --dataset-path ${DATASET_PATH} --model-dir ${CHECKPOINT_PATH}
 ```
 
 For the GPU run - The above steps have been automated in `run_accuracy.sh`. You can also modify this script to use

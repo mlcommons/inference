@@ -1354,7 +1354,8 @@ def check_performance_dir(
                        [model][scenario]]
         )
 
-    if model in ["llama2-70b-99", "llama2-70b-99.9", "mixtral-8x7b", "llama3-405b-99", "llama3-405b-99.9"]:
+    if model in ["llama2-70b-99", "llama2-70b-99.9",
+                 "mixtral-8x7b", "llama3-405b-99", "llama3-405b-99.9"]:
         llama_constraint, is_valid = extra_check_llm(
             mlperf_log, scenario_fixed, model)
 
@@ -3016,7 +3017,8 @@ def check_compliance_dir(
         test_list.remove("TEST01")
         test_list.remove("TEST04")
 
-    if model in ["llama2-70b-99", "llama2-70b-99.9", "mixtral-8x7b", "llama3-405b-99", "llama3-405b-99.9"]:
+    if model in ["llama2-70b-99", "llama2-70b-99.9",
+                 "mixtral-8x7b", "llama3-405b-99", "llama3-405b-99.9"]:
         test_list.append("TEST06")
 
     if test_list and not os.path.exists(compliance_dir):

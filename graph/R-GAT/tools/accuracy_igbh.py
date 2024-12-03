@@ -26,7 +26,7 @@ def get_args():
         action="store_true",
         help="verbose messages")
     parser.add_argument(
-        "--output-file", default="coco-results.json", help="path to output file"
+        "--output-file", default="results.json", help="path to output file"
     )
     parser.add_argument(
         "--dtype",
@@ -49,7 +49,7 @@ def load_labels(base_path, dataset_size, use_label_2K = True):
     label_file = (
         "node_label_19.npy" if not use_label_2K else "node_label_2K.npy"
     )
-    paper_lbl_path = os.path.join(base_path, "paper", label_file)
+    paper_lbl_path = os.path.join(base_path, dataset_size, "processed", "paper", label_file)
 
     if dataset_size in ["large", "full"]:
         paper_node_labels = torch.from_numpy(
@@ -65,6 +65,8 @@ def load_labels(base_path, dataset_size, use_label_2K = True):
     val_idx = torch.load(
                 os.path.join(
                     base_path,
+                    dataset_size,
+                    "processed",
                 "val_idx.pt"))
     return labels, val_idx
 

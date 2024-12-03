@@ -43,8 +43,8 @@ SUPPORTED_DATASETS = {
 SUPPORTED_PROFILES = {
     "defaults": {
         "dataset": "waymo",
-        "backend": "pytorch", # TODO: model backend
-        "model-name": "", # TODO: model name
+        "backend": "pytorch", 
+        "model-name": "pointpainting",
     },
 }
 
@@ -85,7 +85,9 @@ def get_args():
     parser.add_argument("--model-name", help="Name of the model")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--qps", type=int, help="target qps")
-    parser.add_argument("--model-path", help="Path to model weights")
+    parser.add_argument("--lidar-path", help="Path to model weights")
+    parser.add_argument("--segmentor-path", help="Path to model weights")
+
 
     parser.add_argument(
         "--dtype",
@@ -201,9 +203,8 @@ class RunnerBase:
         processed_results = []
         try:
             results = self.model.predict(qitem.inputs)
-            processed_results = self.post_process(
-                results, qitem.content_id, qitem.inputs, self.result_dict
-            )
+            processed_results = self.post_process(results, qitem.content_id, qitem.inputs, self.result_dict)
+
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
             self.result_timing.append(time.time() - qitem.start)
@@ -216,9 +217,8 @@ class RunnerBase:
             response_array_refs = []
             response = []
             for idx, query_id in enumerate(qitem.query_id):
-                response_array = array.array(
-                    "B", np.array(processed_results[idx], np.uint8).tobytes()
-                )
+                response_array = array.array("B", np.array(processed_results[idx], np.float32).tobytes())
+
                 response_array_refs.append(response_array)
                 bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
@@ -295,6 +295,11 @@ def main():
     # find backend
     backend = get_backend(
         # TODO: pass model, inference and backend arguments
+        args.backend,
+        lidar_detector_path=args.lidar_path,
+        segmentor_path=args.segmentor_path,
+        data_path=args.dataset_path
+
     )
     if args.dtype == "fp16":
         dtype = torch.float16
@@ -315,10 +320,8 @@ def main():
 
     # dataset to use
     dataset_class, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
-    ds = dataset_class(
-       # TODO: pass dataset arguments
-        **kwargs,
-    )
+    ds = dataset_class(data_root=args.dataset_path, split='val', painted=True, cam_sync=False)
+
     final_results = {
         "runtime": model.name(),
         "version": model.version(),
@@ -355,7 +358,8 @@ def main():
     ds.load_query_samples([0])
     for i in range(5):
         input = ds.get_samples([0])
-        _ = backend.predict(input)
+        _ = backend.predict(input[0])
+
 
     scenario = SCENARIO_MAP[args.scenario]
     runner_map = {
@@ -428,7 +432,7 @@ def main():
     lg.StartTestWithLogSettings(sut, qsl, settings, log_settings, audit_config)
 
     if args.accuracy:
-        post_proc.finalize(result_dict, ds, output_dir=args.output)
+        post_proc.finalize(result_dict, ds)
         final_results["accuracy_results"] = result_dict
 
     runner.finish()

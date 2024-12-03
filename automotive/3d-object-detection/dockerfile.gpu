@@ -1,11 +1,11 @@
-ARG FROM_IMAGE_NAME=nvcr.io/nvidia/pytorch:23.08-py3
+ARG FROM_IMAGE_NAME=pytorch/pytorch:2.0.1-cuda11.7-cudnn8-devel
 FROM ${FROM_IMAGE_NAME}
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # apt dependencies
 RUN apt-get update
-RUN apt-get install -y ffmpeg libsm6 libxext6
+RUN apt-get install -y ffmpeg libsm6 libxext6 git
 
 # install LDM
 COPY . /diffusion
@@ -19,3 +19,13 @@ RUN cd /tmp && \
     pip install pybind11 && \
     CFLAGS="-std=c++14" python setup.py install && \
     rm -rf mlperf
+
+RUN pip install tqdm
+RUN pip install numba
+RUN pip install opencv-python
+RUN pip install open3d
+RUN pip install tensorboard
+RUN pip install scikit-image
+RUN pip install ninja
+RUN pip install visdom
+RUN pip install shapely

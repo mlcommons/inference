@@ -12,7 +12,6 @@ import numpy as np
 import torch
 
 
-
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("dataset")
 
@@ -58,7 +57,7 @@ def preprocess(list_data):
         batched_pts_list.append(torch.from_numpy(pts))
         batched_gt_bboxes_list.append(torch.from_numpy(gt_bboxes_3d))
         batched_labels_list.append(torch.from_numpy(gt_labels))
-        batched_names_list.append(gt_names) # List(str)
+        batched_names_list.append(gt_names)  # List(str)
         batched_difficulty_list.append(torch.from_numpy(difficulty))
         batched_img_list.append(image_info)
         batched_calib_list.append(calib_info)
@@ -71,8 +70,7 @@ def preprocess(list_data):
         batched_difficulty=batched_difficulty_list,
         batched_img_info=batched_img_list,
         batched_calib_info=batched_calib_list,
-        batched_images = batched_images
+        batched_images=batched_images
     )
 
     return rt_data_dict
-

@@ -17,16 +17,32 @@ from waymo import Waymo
 from tools.evaluate import do_eval
 # pylint: disable=missing-docstring
 CLASSES = Waymo.CLASSES
-LABEL2CLASSES = {v:k for k, v in CLASSES.items()}
+LABEL2CLASSES = {v: k for k, v in CLASSES.items()}
+
 
 def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json")
-    parser.add_argument("--waymo-dir", required=True, help="waymo dataset directory")
-    parser.add_argument("--verbose", action="store_true", help="verbose messages")
-    parser.add_argument("--output-file", default="openimages-results.json", help="path to output file")
-    parser.add_argument("--use-inv-map", action="store_true", help="use inverse label map")
+    parser.add_argument(
+        "--mlperf-accuracy-file",
+        required=True,
+        help="path to mlperf_log_accuracy.json")
+    parser.add_argument(
+        "--waymo-dir",
+        required=True,
+        help="waymo dataset directory")
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="verbose messages")
+    parser.add_argument(
+        "--output-file",
+        default="openimages-results.json",
+        help="path to output file")
+    parser.add_argument(
+        "--use-inv-map",
+        action="store_true",
+        help="use inverse label map")
     args = parser.parse_args()
     return args
 
@@ -42,7 +58,11 @@ def main():
     seen = set()
     no_results = 0
 
-    val_dataset = Waymo(data_root=args.waymo_dir, split='val', painted=True, cam_sync=False)
+    val_dataset = Waymo(
+        data_root=args.waymo_dir,
+        split='val',
+        painted=True,
+        cam_sync=False)
 
     for j in results:
         idx = j['qsl_idx']
@@ -54,17 +74,18 @@ def main():
         # reconstruct from mlperf accuracy log
         # what is written by the benchmark is an array of float32's:
         # id, box[0], box[1], box[2], box[3], score, detection_class
-        # note that id is a index into instances_val2017.json, not the actual image_id
+        # note that id is a index into instances_val2017.json, not the actual
+        # image_id
         data = np.frombuffer(bytes.fromhex(j['data']), np.float32)
 
         for i in range(0, len(data), 14):
-            dimension = [float(x) for x in data[i:i+3]]
-            location = [float(x) for x in data[i+3:i+6]]
-            rotation_y = float(data[i+6])
-            bbox = [float(x) for x in data[i+7:i+11]]
-            label = int(data[i+11])
-            score = float(data[i+12])
-            image_idx = int(data[i+13])
+            dimension = [float(x) for x in data[i:i + 3]]
+            location = [float(x) for x in data[i + 3:i + 6]]
+            rotation_y = float(data[i + 6])
+            bbox = [float(x) for x in data[i + 7:i + 11]]
+            label = int(data[i + 11])
+            score = float(data[i + 12])
+            image_idx = int(data[i + 13])
             if image_idx not in detections:
                 detections[image_idx] = {
                     'name': [],
@@ -74,7 +95,7 @@ def main():
                     'bbox': [],
                     'score': []
                 }
-                
+
             detections[image_idx]['name'].append(LABEL2CLASSES[label])
             detections[image_idx]['dimensions'].append(dimension)
             detections[image_idx]['location'].append(location)
@@ -87,8 +108,13 @@ def main():
         json.dump(detections, fp, sort_keys=True, indent=4)
     format_results = {}
     for key in detections.keys():
-        format_results[key] = {k:np.array(v) for k, v in detections[key].items()}
-    map_stats = do_eval(format_results, val_dataset.data_infos, CLASSES, cam_sync=False)
+        format_results[key] = {k: np.array(v)
+                               for k, v in detections[key].items()}
+    map_stats = do_eval(
+        format_results,
+        val_dataset.data_infos,
+        CLASSES,
+        cam_sync=False)
 
     print(map_stats)
     if args.verbose:

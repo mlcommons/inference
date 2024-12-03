@@ -16,17 +16,14 @@
 # limitations under the License.
 
 
+from global_vars import *
+from pathlib import Path
+import torch
+import argparse
 import os
 import sys
+
 sys.path.insert(0, os.getcwd())
-
-import argparse
-import torch
-
-from pathlib import Path
-
-from global_vars import *
-
 
 
 __doc__ = """
@@ -50,21 +47,28 @@ def get_args():
     """
     Args used for converting PyTorch/TorchScript to ONNX model
     """
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
 
-    parser.add_argument("--model",
-                        default="build/model/3dunet_kits19_pytorch.ptc",
-                        help="Path to the PyTorch model")
-    parser.add_argument("--output_name",
-                        default="3dunet_kits19_128x128x128.onnx",
-                        help="Name of output model")
-    parser.add_argument("--dynamic_bs_output_name",
-                        default="3dunet_kits19_128x128x128_dynbatch.onnx",
-                        help="Name of output model")
-    parser.add_argument("--output_dir",
-                        default="build/model",
-                        help="Directory to save output model")
+    parser.add_argument(
+        "--model",
+        default="build/model/3dunet_kits19_pytorch.ptc",
+        help="Path to the PyTorch model",
+    )
+    parser.add_argument(
+        "--output_name",
+        default="3dunet_kits19_128x128x128.onnx",
+        help="Name of output model",
+    )
+    parser.add_argument(
+        "--dynamic_bs_output_name",
+        default="3dunet_kits19_128x128x128_dynbatch.onnx",
+        help="Name of output model",
+    )
+    parser.add_argument(
+        "--output_dir", default="build/model", help="Directory to save output model"
+    )
 
     args = parser.parse_args()
 
@@ -85,11 +89,13 @@ def main():
 
     output_path = Path(args.output_dir, args.output_name).absolute()
     dynamic_bs_output_path = Path(
-        args.output_dir, args.dynamic_bs_output_name).absolute()
+        args.output_dir, args.dynamic_bs_output_name
+    ).absolute()
 
     print("Loading PyTorch model...")
-    assert Path(model_path).is_file(
-    ), "Cannot find the model file {:}!".format(model_path)
+    assert Path(model_path).is_file(), "Cannot find the model file {:}!".format(
+        model_path
+    )
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     model = torch.jit.load(model_path, map_location=device)
@@ -100,24 +106,45 @@ def main():
     output_channels = 3
     depth, height, width = ROI_SHAPE
 
-    dummy_input = torch.rand(
-        [batchsize, input_channels, height, width, depth]).float().to(device)
-    dummy_output = torch.rand(
-        [batchsize, output_channels, height, width, depth]).float().to(device)
+    dummy_input = (
+        torch.rand([batchsize, input_channels, height,
+                   width, depth]).float().to(device)
+    )
+    dummy_output = (
+        torch.rand([batchsize, output_channels, height, width, depth])
+        .float()
+        .to(device)
+    )
 
     # using opset version 12
-    torch.onnx.export(model, dummy_input, output_path, opset_version=12,
-                      do_constant_folding=False, input_names=['input'], output_names=['output'],
-                      example_outputs=dummy_output)
+    torch.onnx.export(
+        model,
+        dummy_input,
+        output_path,
+        opset_version=12,
+        do_constant_folding=False,
+        input_names=["input"],
+        output_names=["output"],
+        example_outputs=dummy_output,
+    )
 
-    torch.onnx.export(model, dummy_input, dynamic_bs_output_path, opset_version=12,
-                      do_constant_folding=False, input_names=['input'], output_names=['output'],
-                      dynamic_axes={"input": {0: "batch_size"},
-                                    "output": {0: "batch_size"}},
-                      example_outputs=dummy_output)
+    torch.onnx.export(
+        model,
+        dummy_input,
+        dynamic_bs_output_path,
+        opset_version=12,
+        do_constant_folding=False,
+        input_names=["input"],
+        output_names=["output"],
+        dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
+        example_outputs=dummy_output,
+    )
 
-    print("Successfully exported model:\n  {}\nand\n  {}".format(
-        output_path, dynamic_bs_output_path))
+    print(
+        "Successfully exported model:\n  {}\nand\n  {}".format(
+            output_path, dynamic_bs_output_path
+        )
+    )
 
 
 if __name__ == "__main__":

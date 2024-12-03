@@ -88,6 +88,7 @@ def get_args():
     parser.add_argument("--lidar-path", help="Path to model weights")
     parser.add_argument("--segmentor-path", help="Path to model weights")
 
+
     parser.add_argument(
         "--dtype",
         default="fp32",
@@ -203,6 +204,7 @@ class RunnerBase:
         try:
             results = self.model.predict(qitem.inputs)
             processed_results = self.post_process(results, qitem.content_id, qitem.inputs, self.result_dict)
+
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
             self.result_timing.append(time.time() - qitem.start)
@@ -216,6 +218,7 @@ class RunnerBase:
             response = []
             for idx, query_id in enumerate(qitem.query_id):
                 response_array = array.array("B", np.array(processed_results[idx], np.float32).tobytes())
+
                 response_array_refs.append(response_array)
                 bi = response_array.buffer_info()
                 response.append(lg.QuerySampleResponse(query_id, bi[0], bi[1]))
@@ -296,6 +299,7 @@ def main():
         lidar_detector_path=args.lidar_path,
         segmentor_path=args.segmentor_path,
         data_path=args.dataset_path
+
     )
     if args.dtype == "fp16":
         dtype = torch.float16
@@ -317,6 +321,7 @@ def main():
     # dataset to use
     dataset_class, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
     ds = dataset_class(data_root=args.dataset_path, split='val', painted=True, cam_sync=False)
+
     final_results = {
         "runtime": model.name(),
         "version": model.version(),
@@ -354,6 +359,7 @@ def main():
     for i in range(5):
         input = ds.get_samples([0])
         _ = backend.predict(input[0])
+
 
     scenario = SCENARIO_MAP[args.scenario]
     runner_map = {

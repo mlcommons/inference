@@ -10,6 +10,7 @@ import numpy as np
 from tools.process import keep_bbox_from_image_range
 from waymo import Waymo
 
+
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("backend-pytorch")
 
@@ -41,6 +42,7 @@ class BackendDeploy(backend.Backend):
         CLASSES = Waymo.CLASSES
         self.LABEL2CLASSES = {v:k for k, v in CLASSES.items()}
 
+
     def version(self):
         return torch.__version__
 
@@ -59,6 +61,7 @@ class BackendDeploy(backend.Backend):
         checkpoint = torch.load(self.lidar_detector_path)
         model.load_state_dict(checkpoint["model_state_dict"])
         self.lidar_detector = model
+
         return self
 
     
@@ -130,4 +133,3 @@ class BackendDeploy(backend.Backend):
             #return Boxes, Classes, Scores # Change to desired output
         return dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids
         
-

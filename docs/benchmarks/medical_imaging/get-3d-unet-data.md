@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Medical Imaging using 3d-unet (KiTS 2019 kidney tumor segmentation task)
 
 ## Dataset
@@ -7,9 +12,14 @@ The benchmark implementation run command will automatically download the validat
 === "Validation"
     3d-unet validation run uses the KiTS19 dataset performing [KiTS 2019](https://kits19.grand-challenge.org/) kidney tumor segmentation task
 
-    ### Get Validation Dataset
+    ### Get Validation Dataset(Original)
     ```
-    cm run script --tags=get,dataset,kits19,validation -j
+    cm run script --tags=get,dataset,kits19,_validation -j
+    ```
+
+    ### Get Validation Dataset(Preprocessed)
+    ```
+    cm run script --tags=get,dataset,kits19,preprocessed -j
     ```
 
 ## Model

@@ -63,12 +63,13 @@ class _3DUNET_PyTorch_SUT(BASE_3DUNET_SUT):
             preprocessed_data_dir: str or PosixPath
                 path to directory containing preprocessed data
             performance_count: int
-                number of query samples guaranteed to fit in memory                
+                number of query samples guaranteed to fit in memory
         """
         super().__init__(preprocessed_data_dir, performance_count)
         print("Loading PyTorch model...")
-        assert Path(model_path).is_file(
-        ), "Cannot find the model file {:}!".format(model_path)
+        assert Path(model_path).is_file(), "Cannot find the model file {:}!".format(
+            model_path
+        )
         self.device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = torch.jit.load(model_path, map_location=self.device)
@@ -98,4 +99,5 @@ def get_sut(model_path, preprocessed_data_dir, performance_count):
     """
     Redirect the call for instantiating SUT to PyTorch/TorchScript specific SUT
     """
-    return _3DUNET_PyTorch_SUT(model_path, preprocessed_data_dir, performance_count)
+    return _3DUNET_PyTorch_SUT(
+        model_path, preprocessed_data_dir, performance_count)

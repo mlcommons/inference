@@ -88,8 +88,7 @@ class Waymo(dataset.Dataset):
             input['images'][i] = image_transform(input['images'][i]).unsqueeze(0)
         return input
 
-    def get_item_count(self):
-        return len(self.data_infos)
+
 
     def get_list(self):
         raise NotImplementedError("Dataset:get_list")
@@ -176,6 +175,7 @@ class Waymo(dataset.Dataset):
         return input_batch
 
 
+
 class PostProcessWaymo:
     def __init__(
         self, # Postprocess parameters
@@ -211,6 +211,7 @@ class PostProcessWaymo:
                     results[6][idx]
                 ])
         return processed_results
+
 
     def start(self):
         self.results = []

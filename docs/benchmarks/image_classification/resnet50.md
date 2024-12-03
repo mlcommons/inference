@@ -1,4 +1,11 @@
+---
+hide:
+  - toc
+---
+
+
 # Image Classification using ResNet50 
+
 
 === "MLCommons-Python"
     ## MLPerf Reference Implementation in Python

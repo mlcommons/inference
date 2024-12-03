@@ -1,5 +1,3 @@
-
-
 ## Reference implementation fo automotive 3D detection benchmark
 
 ## TODO: Instructions for dataset download after it is uploaded somewhere appropriate

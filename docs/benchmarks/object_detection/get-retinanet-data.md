@@ -1,3 +1,8 @@
+---
+hide:
+  - toc
+---
+
 # Object Detection using Retinanet
 
 ## Dataset

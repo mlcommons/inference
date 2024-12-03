@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
+FROM nvcr.io/nvidia/pytorch:24.07-py3
 SHELL ["/bin/bash", "-c"]
 
 ENV LC_ALL=C.UTF-8

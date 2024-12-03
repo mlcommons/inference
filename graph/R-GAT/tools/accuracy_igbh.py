@@ -30,8 +30,8 @@ def get_args():
     )
     parser.add_argument(
         "--dtype",
-        default="int32",
-        choices=["float32", "int32", "int64"],
+        default="uint8",
+        choices=["uint8","float32", "int32", "int64"],
         help="data type of the label",
     )
     args = parser.parse_args()
@@ -77,7 +77,7 @@ def get_labels(labels, val_idx, id_list):
 
 if __name__ == "__main__":
     args = get_args()
-    dtype_map = {"float32": np.float32, "int32": np.int32, "int64": np.int64}
+    dtype_map = {"uint8": np.uint8,"float32": np.float32, "int32": np.int32, "int64": np.int64}
 
     with open(args.mlperf_accuracy_file, "r") as f:
         mlperf_results = json.load(f)

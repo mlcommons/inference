@@ -23,6 +23,7 @@ from base_SUT import BASE_3DUNET_SUT
 import onnxruntime
 import os
 
+
 class _3DUNET_ONNXRuntime_SUT(BASE_3DUNET_SUT):
     """
     A class to represent SUT (System Under Test) for MLPerf.
@@ -56,17 +57,24 @@ class _3DUNET_ONNXRuntime_SUT(BASE_3DUNET_SUT):
             preprocessed_data_dir: str or PosixPath
                 path to directory containing preprocessed data
             performance_count: int
-                number of query samples guaranteed to fit in memory            
+                number of query samples guaranteed to fit in memory
         """
         super().__init__(preprocessed_data_dir, performance_count)
         print("Loading ONNX model...")
-        assert Path(model_path).is_file(
-        ), "Cannot find the model file {:}!".format(model_path)
+        assert Path(model_path).is_file(), "Cannot find the model file {:}!".format(
+            model_path
+        )
         opt = onnxruntime.SessionOptions()
-        if len(onnxruntime.get_all_providers()) > 1 and os.environ.get("USE_GPU", "yes").lower() not in [ "0", "false", "off", "no" ]:
-            self.sess = onnxruntime.InferenceSession(model_path, opt, providers=["CUDAExecutionProvider"])
+        if len(onnxruntime.get_all_providers()) > 1 and os.environ.get(
+            "USE_GPU", "yes"
+        ).lower() not in ["0", "false", "off", "no"]:
+            self.sess = onnxruntime.InferenceSession(
+                model_path, opt, providers=["CUDAExecutionProvider"]
+            )
         else:
-            self.sess = onnxruntime.InferenceSession(model_path, opt, providers=["CPUExecutionProvider"])
+            self.sess = onnxruntime.InferenceSession(
+                model_path, opt, providers=["CPUExecutionProvider"]
+            )
 
     def do_infer(self, input_tensor):
         """
@@ -79,4 +87,5 @@ def get_sut(model_path, preprocessed_data_dir, performance_count):
     """
     Redirect the call for instantiating SUT to ONNX Runtime specific SUT
     """
-    return _3DUNET_ONNXRuntime_SUT(model_path, preprocessed_data_dir, performance_count)
+    return _3DUNET_ONNXRuntime_SUT(
+        model_path, preprocessed_data_dir, performance_count)

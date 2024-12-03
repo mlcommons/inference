@@ -1,36 +1,27 @@
+---
+hide:
+  - toc
+---
+
 # Recommendation using DLRM v2
 
-## Dataset
-
-The benchmark implementation run command will automatically download the validation and calibration datasets and do the necessary preprocessing. In case you want to download only the datasets, you can use the below commands.
-
-=== "Validation"
-    DLRM validation run uses the Criteo dataset (Day 23).
-
-    ### Get Validation Dataset
-    ```
-    cm run script --tags=get,dataset,criteo,validation -j
-    ```
-## Model
-The benchmark implementation run command will automatically download the required model and do the necessary conversions. In case you want to only download the official model, you can use the below commands.
-
-Get the Official MLPerf DLRM v2 Model
-
-=== "Pytorch"
-
-    ### Pytorch
-    ```
-    cm run script --tags=get,ml-model,dlrm_v2,_pytorch -j
-    ```
-
-## Benchmark Implementations
 === "MLCommons-Python"
-    ### MLPerf Reference Implementation in Python
-    
-{{ mlperf_inference_implementation_readme (4, "dlrm_v2-99.9", "reference") }}
+    ## MLPerf Reference Implementation in Python
+
+{{ mlperf_inference_implementation_readme (4, "dlrm-v2-99", "reference") }}
+
+{{ mlperf_inference_implementation_readme (4, "dlrm-v2-99.9", "reference") }}
 
 === "Nvidia"
-    ### Nvidia MLPerf Implementation
-    
-{{ mlperf_inference_implementation_readme (4, "dlrm_v2-99.9", "nvidia") }}
+    ## Nvidia MLPerf Implementation
 
+{{ mlperf_inference_implementation_readme (4, "dlrm-v2-99", "nvidia") }}
+
+{{ mlperf_inference_implementation_readme (4, "dlrm-v2-99.9", "nvidia") }}
+
+=== "Intel"
+    ## Intel MLPerf Implementation
+    
+{{ mlperf_inference_implementation_readme (4, "dlrm-v2-99", "intel") }}
+
+{{ mlperf_inference_implementation_readme (4, "dlrm-v2-99.9", "intel") }}

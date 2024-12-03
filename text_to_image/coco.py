@@ -38,7 +38,8 @@ class Coco(dataset.Dataset):
         **kwargs,
     ):
         super().__init__()
-        self.captions_df = pd.read_csv(f"{data_path}/captions/captions.tsv", sep="\t")
+        self.captions_df = pd.read_csv(
+            f"{data_path}/captions/captions.tsv", sep="\t")
         self.image_size = image_size
         self.preprocessed_dir = os.path.abspath(f"{data_path}/preprocessed/")
         self.img_dir = os.path.abspath(f"{data_path}/validation/data/")
@@ -116,7 +117,10 @@ class Coco(dataset.Dataset):
         return len(self.captions_df)
 
     def get_img(self, id):
-        img = Image.open(self.img_dir + "/" + self.captions_df.loc[id]["file_name"])
+        img = Image.open(
+            self.img_dir +
+            "/" +
+            self.captions_df.loc[id]["file_name"])
         return self.image_to_tensor(img)
 
     def get_imgs(self, id_list):
@@ -137,7 +141,11 @@ class Coco(dataset.Dataset):
 
 class PostProcessCoco:
     def __init__(
-        self, device="cpu", dtype="uint8", statistics_path=os.path.join(os.path.dirname(__file__), "tools", "val2014.npz")
+        self,
+        device="cpu",
+        dtype="uint8",
+        statistics_path=os.path.join(
+            os.path.dirname(__file__), "tools", "val2014.npz"),
     ):
         self.results = []
         self.good = 0
@@ -159,27 +167,33 @@ class PostProcessCoco:
     def __call__(self, results, ids, expected=None, result_dict=None):
         self.content_ids.extend(ids)
         return [
-            (t.cpu().permute(1, 2, 0).float().numpy() * 255).round().astype(self.numpy_dtype)
+            (t.cpu().permute(1, 2, 0).float().numpy() * 255)
+            .round()
+            .astype(self.numpy_dtype)
             for t in results
         ]
-    
+
     def save_images(self, ids, ds):
         info = []
         idx = {}
-        for i, id in enumerate(self.content_ids):
-            if id in ids:
-                idx[id] = i
+        for i, image_id in enumerate(self.content_ids):
+            if image_id in ids:
+                idx[image_id] = i
         if not os.path.exists("images/"):
             os.makedirs("images/", exist_ok=True)
-        for id in ids:
-            caption = ds.get_caption(id)
-            generated = Image.fromarray(self.results[idx[id]])
-            image_path_tmp = f"images/{self.content_ids[idx[id]]}.png"
+        for image_id in ids:
+            if not idx.get(image_id):
+                print(
+                    f"image id {image_id} is missing in the results. Hence not saved.")
+                continue
+            caption = ds.get_caption(image_id)
+            generated = Image.fromarray(self.results[idx[image_id]])
+            image_path_tmp = f"images/{self.content_ids[idx[image_id]]}.png"
             generated.save(image_path_tmp)
-            info.append((self.content_ids[idx[id]], caption))
+            info.append((self.content_ids[idx[image_id]], caption))
         with open("images/captions.txt", "w+") as f:
-            for id, caption in info:
-                f.write(f"{id}  {caption}\n")
+            for image_id, caption in info:
+                f.write(f"{image_id}  {caption}\n")
 
     def start(self):
         self.results = []
@@ -195,7 +209,10 @@ class PostProcessCoco:
                 100 * clip.get_clip_score(caption, generated).item()
             )
 
-        fid_score = compute_fid(self.results, self.statistics_path, self.device)
+        fid_score = compute_fid(
+            self.results,
+            self.statistics_path,
+            self.device)
         result_dict["FID_SCORE"] = fid_score
         result_dict["CLIP_SCORE"] = np.mean(self.clip_scores)
 

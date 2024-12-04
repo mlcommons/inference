@@ -1,6 +1,8 @@
-# MLPerf™ Inference Benchmarks for Text to Image
+# MLPerf™ Inference Benchmark for Graph Neural Network
 
-This is the reference implementation for MLPerf Inference text to image. Two implementations are currently supported, Graphlearn for Pytorch (GLT) and Deep Graph Library (DGL), both using pytorch as the backbone of the model.
+This is the reference implementation for MLPerf Inference Graph Neural Network. The reference implementation currently uses Deep Graph Library (DGL), and pytorch as the backbone of the model.
+
+**Hardware requirements:** The minimun requirements to run this benchmark are ~600GB of RAM and ~2.3TB of disk. This requires to create a memory map for the graph features and not load them to memory all at once. If you want to load all the features to ram, you will need ~3TB and can be done by using the flag `--in-memory`
 
 ## Supported Models
 
@@ -13,7 +15,7 @@ This is the reference implementation for MLPerf Inference text to image. Two imp
 | Data | Description | Task |
 | ---- | ---- | ---- |
 | IGBH | Illinois Graph Benchmark Heterogeneous is a graph dataset consisting of one heterogeneous graph with 547,306,935 nodes and 5,812,005,639 edges. Node types: Author, Conference, FoS, Institute, Journal, Paper. A subset of 1% of the paper nodes are randomly choosen as the validation dataset using the [split seeds script](tools/split_seeds.py). The validation dataset will be used as the input queries for the SUT, however the whole dataset is needed to run the benchmarks, since all the graph connections are needed to achieve the quality target. | Node Classification |
-| IGBH (calibration) | We sampled x nodes from the training paper nodes of the IGBH for the calibration dataset | Node Classification |
+| IGBH (calibration) | We sampled 5000 nodes from the training paper nodes of the IGBH for the calibration dataset. We provide the [Node ids](../../calibration/IGBH/calibration.txt) and the [script](tools/split_seeds.py) to generate them (using the `--calibration` flag). | Node Classification |
 
 ## Automated command to run the benchmark via MLCommons CM
 
@@ -29,11 +31,21 @@ export MODEL_PATH=$PWD/inference/graph/R-GAT/model/
 ```
 ### Clone the repository
 ```bash
-git clone --recurse-submodules https://github.com/mlcommmons/inference.git --depth 1
+git clone --recurse-submodules https://github.com/mlcommons/inference.git --depth 1
 ```
 Finally copy the `mlperf.conf` file to the stable diffusion folder
 ```bash
 cp $ROOT_INFERENCE/mlperf.conf $GRAPH_FOLDER
+```
+
+### Install pytorch
+**For NVIDIA GPU based runs:**
+```bash
+pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cu121
+```
+**For CPU based runs:**
+```bash
+pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cpu
 ```
 
 ### Install requirements (only for running without using docker)
@@ -56,20 +68,31 @@ pip install torch-geometric torch-scatter torch-sparse -f https://data.pyg.org/w
 ```
 
 ### Install DGL
+**For NVIDIA GPU based runs:**
 ```bash
 pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/cu121/repo.html
 ```
-
-### Install graphlearn for pytorch (Only for GLT implementation)
-
-Follow instalation instructions at: https://github.com/alibaba/graphlearn-for-pytorch.git
-
-### Download model
-
-TODO: fix a ckpt url
+**For CPU based runs:**
 ```bash
-mkdir -p $MODEL_PATH
-wget <checkpoint url>
+pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/repo.html
+```
+
+### Download model using Rclone
+
+To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
+To install Rclone on Linux/macOS/BSD systems, run:
+```
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+Once Rclone is installed, run the following command to authenticate with the bucket:
+```
+rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
+```
+You can then navigate in the terminal to your desired download directory and run the following commands to download the checkpoints:
+
+**`fp32`**
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/R-GAT/RGAT.pt $MODEL_PATH -P
 ```
 
 ### Download and setup dataset
@@ -87,11 +110,6 @@ cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size tiny
 ```
 
-**Compress graph (optional, only for GLT implementation)**
-```bash
-cd $GRAPH_FOLDER
-python3 tools/compress_graph.py --path igbh --dataset_size tiny --layout <CSC or CSR>
-```
 
 #### Full Dataset
 **Warning:** This script will download 2.2TB of data 
@@ -106,14 +124,10 @@ cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size full
 ```
 
-**Compress graph (optional, only for GLT implementation)**
-```bash
-cd $GRAPH_FOLDER
-python3 tools/compress_graph.py --path igbh --dataset_size tiny --layout <CSC or CSR>
-```
 
 #### Calibration dataset
-TODO
+
+The calibration dataset contains 5000 nodes from the training paper nodes of the IGBH dataset. We provide the [Node ids](../../calibration/IGBH/calibration.txt) and the [script](tools/split_seeds.py) to generate them (using the `--calibration` flag). 
 
 
 ### Run the benchmark
@@ -121,8 +135,6 @@ TODO
 ```bash
 # Go to the benchmark folder
 cd $GRAPH_FOLDER
-# Run the benchmark GLT
-python3 main.py --dataset igbh-glt-tiny --dataset-path igbh/ --profile debug-glt [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
 
 # Run the benchmark DGL
 python3 main.py --dataset igbh-dgl-tiny --dataset-path igbh/ --profile debug-dgl [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
@@ -132,8 +144,6 @@ python3 main.py --dataset igbh-dgl-tiny --dataset-path igbh/ --profile debug-dgl
 ```bash
 # Go to the benchmark folder
 cd $GRAPH_FOLDER
-# Run the benchmark GLT
-python3 main.py --dataset igbh-glt --dataset-path igbh/ --profile rgat-glt-full [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
 
 # Run the benchmark DGL
 python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
@@ -146,4 +156,34 @@ Not implemented yet
 Add the `--accuracy` to the command to run the benchmark
 ```bash
 python3 main.py --dataset igbh --dataset-path igbh/ --accuracy --model-path model/ [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
+```
+
+### Docker run
+**CPU:**
+Build docker image
+```bash
+docker build . -f dockerfile.cpu -t rgat-cpu
+```
+Run docker container:
+```bash
+docker run --rm -it -v $(pwd):/root rgat-cpu
+```
+Run benchmark inside the docker container:
+```bash
+python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full --device cpu [--model-path <path_to_ckpt>] [--in-memory] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
+```
+
+
+**GPU:**
+Build docker image
+```bash
+docker build . -f dockerfile.gpu -t rgat-gpu
+```
+Run docker container:
+```bash
+docker run --rm -it -v $(pwd):/root --gpus all rgat-gpu
+```
+Run benchmark inside the docker container:
+```bash
+python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full --device gpu [--model-path <path_to_ckpt>] [--in-memory] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```

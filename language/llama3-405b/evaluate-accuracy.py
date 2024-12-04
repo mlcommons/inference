@@ -182,7 +182,7 @@ def main():
 
     preds, targets = postprocess_text(preds_decoded_text, target_required)
 
-    result = run_evaluation(preds, targets, metrics)
+    result = run_evaluation(preds, targets, metrics_required)
     result = dict(result)
     prediction_lens = [len(pred) for pred in preds]
     gen_num = len(preds)

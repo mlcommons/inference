@@ -250,6 +250,7 @@ class RunnerBase:
             log.error("thread: failed on contentid=%s, %s", src, ex)
             # since post_process will not run, fake empty responses
             processed_results = [[]] * len(qitem.query_id)
+            raise
         finally:
             response_array_refs = []
             response = []
@@ -402,19 +403,21 @@ def main():
     #
     count = ds.get_item_count()
 
-    # warmup
-    syntetic_str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit"
-    latents_pt = torch.rand(ds.latents.shape, dtype=dtype).to(args.device)
-    warmup_samples = [
-        {
-            "input_tokens": ds.preprocess(syntetic_str, model.pipe.tokenizer),
-            "input_tokens_2": ds.preprocess(syntetic_str, model.pipe.tokenizer_2),
-            "latents": latents_pt,
-        }
-        for _ in range(args.max_batchsize)
-    ]
-    for i in range(5):
-        _ = backend.predict(warmup_samples)
+    if os.environ.get('FORCE_NO_WARMUP', '').lower() not in [
+            "yes", "true", "1"]:
+        # warmup
+        syntetic_str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit"
+        latents_pt = torch.rand(ds.latents.shape, dtype=dtype).to(args.device)
+        warmup_samples = [
+            {
+                "input_tokens": ds.preprocess(syntetic_str, model.pipe.tokenizer),
+                "input_tokens_2": ds.preprocess(syntetic_str, model.pipe.tokenizer_2),
+                "latents": latents_pt,
+            }
+            for _ in range(args.max_batchsize)
+        ]
+        for i in range(5):
+            _ = backend.predict(warmup_samples)
 
     scenario = SCENARIO_MAP[args.scenario]
     runner_map = {

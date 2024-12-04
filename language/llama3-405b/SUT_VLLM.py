@@ -33,10 +33,8 @@ class SUT:
         batch_size=None,
         total_sample_count=8312,
         dataset_path=None,
-        use_cached_outputs=False,
         # Set this to True *only for test accuracy runs* in case your prior
         # session was killed partway through
-        workers=1,
         tensor_parallel_size=8
     ):
 
@@ -78,78 +76,59 @@ class SUT:
         self.sampling_params = SamplingParams(**gen_kwargs)
         # self.sampling_params.all_stop_token_ids.add(self.model.get_tokenizer().eos_token_id)
 
-        self.num_workers = workers
-        self.worker_threads = [None] * self.num_workers
-        self.query_queue = queue.Queue()
-
-        self.use_cached_outputs = use_cached_outputs
         self.sample_counter = 0
-        self.sample_counter_lock = threading.Lock()
 
     def start(self):
         # Create worker threads
-        for j in range(self.num_workers):
-            worker = threading.Thread(target=self.process_queries)
-            worker.start()
-            self.worker_threads[j] = worker
+        pass
 
     def stop(self):
-        for _ in range(self.num_workers):
-            self.query_queue.put(None)
+        pass
 
-        for worker in self.worker_threads:
-            worker.join()
-
-    def process_queries(self):
+    def process_queries(self, qitem):
         """Processor of the queued queries. User may choose to add batching logic"""
-        while True:
-            qitem = self.query_queue.get()
-            if qitem is None:
-                break
+        query_ids = [q.index for q in qitem]
 
-            query_ids = [q.index for q in qitem]
+        tik1 = time.time()
 
-            tik1 = time.time()
+        input_ids_tensor = [
+            self.data_object.input_ids[q.index] for q in qitem]
 
-            input_ids_tensor = [
-                self.data_object.input_ids[q.index] for q in qitem]
+        tik2 = time.time()
+        outputs = self.model.generate(
+            prompt_token_ids=input_ids_tensor, sampling_params=self.sampling_params
+        )
+        pred_output_tokens = []
+        for output in outputs:
+            pred_output_tokens.append(list(output.outputs[0].token_ids))
+        tik3 = time.time()
 
-            tik2 = time.time()
-            outputs = self.model.generate(
-                prompt_token_ids=input_ids_tensor, sampling_params=self.sampling_params
-            )
-            pred_output_tokens = []
-            for output in outputs:
-                pred_output_tokens.append(list(output.outputs[0].token_ids))
-            tik3 = time.time()
-
-            processed_output = self.data_object.postProcess(
-                pred_output_tokens,
-                query_id_list=query_ids,
-            )
-            for i in range(len(qitem)):
-                n_tokens = processed_output[i].shape[0]
-                response_array = array.array(
-                    "B", processed_output[i].tobytes())
-                bi = response_array.buffer_info()
-                response = [
-                    lg.QuerySampleResponse(
-                        qitem[i].id,
-                        bi[0],
-                        bi[1],
-                        n_tokens)]
-                lg.QuerySamplesComplete(response)
+        processed_output = self.data_object.postProcess(
+            pred_output_tokens,
+            query_id_list=query_ids,
+        )
+        for i in range(len(qitem)):
+            n_tokens = processed_output[i].shape[0]
+            response_array = array.array(
+                "B", processed_output[i].tobytes())
+            bi = response_array.buffer_info()
+            response = [
+                lg.QuerySampleResponse(
+                    qitem[i].id,
+                    bi[0],
+                    bi[1],
+                    n_tokens)]
+            lg.QuerySamplesComplete(response)
 
         tok = time.time()
 
-        with self.sample_counter_lock:
-            self.sample_counter += len(qitem)
-            log.info(f"Samples run: {self.sample_counter}")
-            if tik1:
-                log.info(f"\tBatchMaker time: {tik2 - tik1}")
-                log.info(f"\tInference time: {tik3 - tik2}")
-                log.info(f"\tPostprocess time: {tok - tik3}")
-                log.info(f"\t==== Total time: {tok - tik1}")
+        self.sample_counter += len(qitem)
+        log.info(f"Samples run: {self.sample_counter}")
+        if tik1:
+            log.info(f"\tBatchMaker time: {tik2 - tik1}")
+            log.info(f"\tInference time: {tik3 - tik2}")
+            log.info(f"\tPostprocess time: {tok - tik3}")
+            log.info(f"\t==== Total time: {tok - tik1}")
 
     def load_model(self):
         log.info("Loading model...")
@@ -171,14 +150,9 @@ class SUT:
         raise NotImplementedError
 
     def issue_queries(self, query_samples):
-        """Receives samples from loadgen and adds them to queue. Users may choose to batch here"""
-
-        list_prompts_tokens = []
-        list_prompts_attn_masks = []
-
         log.info(f"IssueQuery started with {len(query_samples)} samples")
         while len(query_samples) > 0:
-            self.query_queue.put(query_samples[: self.batch_size])
+            self.process_queries(query_samples[: self.batch_size])
             query_samples = query_samples[self.batch_size:]
         log.info(f"IssueQuery done")
 
@@ -197,28 +171,19 @@ class SUTServer(SUT):
         total_sample_count=8312,
         dataset_path=None,
         batch_size=None,
-        workers=1,
         tensor_parallel_size=8
     ):
-
         super().__init__(
             model_path=model_path,
             dtype=dtype,
             total_sample_count=total_sample_count,
             dataset_path=dataset_path,
-            workers=workers,
             tensor_parallel_size=tensor_parallel_size,
         )
         self.request_id = 0
 
-        self.first_token_queue = queue.Queue()
-
     def start(self):
-        # Create worker threads
-        for j in range(self.num_workers):
-            worker = threading.Thread(target=self.process_queries)
-            worker.start()
-            self.worker_threads[j] = worker
+        pass
 
     async def stream_output(self, qitem, results_generator):
         first = True
@@ -248,38 +213,24 @@ class SUTServer(SUT):
                 n_tokens)]
         lg.QuerySamplesComplete(response)
 
-    def process_queries(self):
-        """Processor of the queued queries. User may choose to add batching logic"""
-        while True:
+    def process_queries(self, qitem):
+        input_ids_tensor = TokensPrompt(
+            prompt_token_ids=self.data_object.input_ids[qitem.index])
 
-            qitem = self.query_queue.get()
-            if qitem is None:
-                break
-
-            input_ids_tensor = TokensPrompt(
-                prompt_token_ids=self.data_object.input_ids[qitem.index])
-
-            # TODO: This PoC is super slow with significant overhead. Best to
-            # create a patch to `generate`
-            results_generator = self.model.generate(
-                prompt=input_ids_tensor, sampling_params=self.sampling_params, request_id=str(
-                    self.request_id)
-            )
-            self.request_id += 1
-            asyncio.run(self.stream_output(qitem, results_generator))
+        # TODO: This PoC is super slow with significant overhead. Best to
+        # create a patch to `generate`
+        results_generator = self.model.generate(
+            prompt=input_ids_tensor, sampling_params=self.sampling_params, request_id=str(
+                self.request_id)
+        )
+        self.request_id += 1
+        asyncio.run(self.stream_output(qitem, results_generator))
 
     def issue_queries(self, query_samples):
-        self.query_queue.put(query_samples[0])
+        self.process_queries(query_samples[0])
 
     def stop(self):
-        for _ in range(self.num_workers):
-            self.query_queue.put(None)
-
-        for worker in self.worker_threads:
-            worker.join()
-
-        self.first_token_queue.put(None)
-        self.ft_response_thread.join()
+        pass
 
     def load_model(self):
         log.info("Loading model")

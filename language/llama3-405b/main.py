@@ -168,7 +168,6 @@ def main():
             batch_size=args.batch_size,
             dataset_path=args.dataset_path,
             total_sample_count=args.total_sample_count,
-            workers=args.num_workers,
             tensor_parallel_size=args.tensor_parallel_size
         )
     else:
@@ -178,7 +177,6 @@ def main():
             batch_size=args.batch_size,
             dataset_path=args.dataset_path,
             total_sample_count=args.total_sample_count,
-            workers=args.num_workers,
         )
 
     # Start sut before loadgen starts

@@ -1,0 +1,60 @@
+# Automatic code formatting
+name: "Code formatting"
+on:
+  push:
+    branches:
+    - "**"
+
+env:
+  python_version: "3.9"
+
+jobs:
+  format-code:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+      - name: Set up Python ${{ env.python_version }}
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ env.python_version }}
+
+      - name: Format modified python files
+        env:
+          filter: ${{ github.event.before }}
+        run: |
+          python3 -m pip install autopep8
+          for FILE in $(git diff --name-only $filter | grep -E '.*\.py$')
+          do
+            # Check if the file still exists in the working tree
+            if [ -f "$FILE" ]; then
+              autopep8 --in-place -a "$FILE"
+              git add "$FILE"
+            fi
+          done
+
+      - name: Format modified C++ files
+        env:
+          filter: ${{ github.event.before }}
+        run: |
+          for FILE in $(git diff --name-only $filter | grep -E '.*\.(cc|cpp|h|hpp)$')
+          do
+            # Check if the file still exists in the working tree
+            if [ -f "$FILE" ]; then
+              clang-format -i -style=file $FILE
+              git add $FILE
+            fi
+          done
+
+      - name: Commit and push changes
+        run: |
+          HAS_CHANGES=$(git diff --staged --name-only)
+          if [ ${#HAS_CHANGES} -gt 0 ]; then
+            git config --global user.name mlcommons-bot
+            git config --global user.email "mlcommons-bot@users.noreply.github.com"
+            # Commit changes
+            git commit -m '[Automated Commit] Format Codebase'
+            git push
+          fi 

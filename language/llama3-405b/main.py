@@ -46,7 +46,7 @@ def get_args():
     parser.add_argument(
         "--model-path",
         type=str,
-        default="meta-llama/Llama-2-70b-chat-hf",
+        default="Meta-Llama-3.1-405B-Instruct",
         help="Model name",
     )
     parser.add_argument("--dataset-path", type=str, default=None, help="")
@@ -110,7 +110,7 @@ def get_args():
     parser.add_argument(
         "--api-model-name",
         type=str,
-        default="meta-llama/Llama-2-70b-chat-hf",
+        default="Meta-Llama-3.1-405B-Instruct",
         help="Model name(specified in llm server)",
     )
     parser.add_argument(

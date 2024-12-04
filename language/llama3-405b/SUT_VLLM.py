@@ -41,7 +41,6 @@ class SUT:
     ):
 
         self.model_path = model_path or f"Meta-Llama-3.1-405B-Instruct{'-FP8' if dtype == 'float8' else ''}"
-        os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
 
         if not batch_size:
             batch_size = 1

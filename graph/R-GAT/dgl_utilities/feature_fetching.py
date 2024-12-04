@@ -405,7 +405,7 @@ class Features:
 
         assert shape[0] is not None
         return torch.from_numpy(np.memmap(osp.join(self.path, self.dataset_size,
-                                "processed", node, "node_feat.npy"), dtype="float32", mode='r', shape=shape))
+                                "processed", node, "node_feat.npy"), dtype="float32", mode='r', shape=tuple(shape)))
 
     def load(self, node):
         if self.in_memory:

@@ -80,7 +80,7 @@ class Dataset:
         output_seq = out_tokens
         assert len(query_id_list) == len(output_seq)
 
-        return np.asarray(output_seq, dtype=np.int32)
+        return [np.asarray(out, dtype=np.int32) for out in output_seq]
 
     def LoadSamplesToRam(self, sample_list):
         pass

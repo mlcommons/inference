@@ -403,7 +403,8 @@ def main():
     #
     count = ds.get_item_count()
 
-    if os.environ.get('FORCE_NO_WARMUP', '').lower() not in [ "yes", "true", "1" ]:
+    if os.environ.get('FORCE_NO_WARMUP', '').lower() not in [
+            "yes", "true", "1"]:
         # warmup
         syntetic_str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit"
         latents_pt = torch.rand(ds.latents.shape, dtype=dtype).to(args.device)

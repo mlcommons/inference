@@ -1,6 +1,6 @@
 
 
-CHECKPOINT_PATH="${CHECKPOINT_PATH:-meta-llama/Llama-2-70b-chat-hf}"
+CHECKPOINT_PATH="${CHECKPOINT_PATH:Meta-Llama-3.1-405B-Instruct}"
 DATASET_PATH="${DATASET_PATH:-open-orca-val-set.pkl}"
 
 python -u main.py --scenario Server \

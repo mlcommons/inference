@@ -70,7 +70,7 @@ TODO: Host model and grant access to submitters
 + First go to [llama3-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
 + Requires Git Large Files Storage
 ```
-export CHECKPOINT_PATH=${PWD}/Llama-2-70b-chat-hf
+export CHECKPOINT_PATH=Meta-Llama-3.1-405B-Instruct
 git lfs install
 git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT_PATH}
 

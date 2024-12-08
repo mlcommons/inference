@@ -127,19 +127,18 @@ class SUT:
                 pred_output_tokens,
                 query_id_list=query_ids,
             )
-
-        for i in range(len(qitem)):
-            n_tokens = processed_output[i].shape[0]
-            response_array = array.array(
-                "B", processed_output[i].tobytes())
-            bi = response_array.buffer_info()
-            response = [
-                lg.QuerySampleResponse(
-                    qitem[i].id,
-                    bi[0],
-                    bi[1],
-                    n_tokens)]
-            lg.QuerySamplesComplete(response)
+            for i in range(len(qitem)):
+                n_tokens = processed_output[i].shape[0]
+                response_array = array.array(
+                    "B", processed_output[i].tobytes())
+                bi = response_array.buffer_info()
+                response = [
+                    lg.QuerySampleResponse(
+                        qitem[i].id,
+                        bi[0],
+                        bi[1],
+                        n_tokens)]
+                lg.QuerySamplesComplete(response)
 
         tok = time.time()
 

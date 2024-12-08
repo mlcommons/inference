@@ -387,7 +387,7 @@ class BackendPytorch(backend.Backend):
                     pooled_prompt_embeds,
                     negative_pooled_prompt_embeds,
                 ) = self.prepare_inputs(inputs, i)
-                with lock:
+                with self.lock:
                     generated = self.pipe(
                         prompt_embeds=prompt_embeds,
                         negative_prompt_embeds=negative_prompt_embeds,

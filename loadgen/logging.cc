@@ -812,7 +812,8 @@ void Logger::CollectTlsLoggerStats(TlsLogger* tls_logger) {
   if (max_entry_vector_size > kTlsLogReservedEntryCount) {
 #if USE_NEW_LOGGING_FORMAT
     std::stringstream msg;
-    msg << "Logging allocation detected:" << " tid: " << tls_logger->Tid()
+    msg << "Logging allocation detected:"
+        << " tid: " << tls_logger->Tid()
         << " reserved_entries: " << kTlsLogReservedEntryCount
         << " max_entries: " << max_entry_vector_size;
     MLPERF_LOG_WARNING((*this), "warning_generic_message", msg.str());

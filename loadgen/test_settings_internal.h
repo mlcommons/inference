@@ -82,6 +82,12 @@ struct TestSettingsInternal {
   uint64_t performance_sample_count;
 
   bool sample_concatenate_permutation;
+  bool use_token_latencies = false;
+  int64_t server_ttft_latency;
+  int64_t server_tpot_latency;
+
+  bool infer_token_latencies = false;
+  int64_t token_latency_scaling_factor;
 };
 
 /// \brief A namespace of collections of FindPeakPerformance helper functions,
@@ -96,7 +102,7 @@ TestSettingsInternal MidOfBoundaries(
     const TestSettingsInternal &lower_bound_settings,
     const TestSettingsInternal &upper_bound_settings) {
   TestSettingsInternal mid_settings = lower_bound_settings;
-if (scenario == TestScenario::Server) {
+  if (scenario == TestScenario::Server) {
     assert(lower_bound_settings.target_qps < upper_bound_settings.target_qps);
     mid_settings.target_qps =
         lower_bound_settings.target_qps +
@@ -116,7 +122,7 @@ if (scenario == TestScenario::Server) {
 template <TestScenario scenario>
 bool IsFinished(const TestSettingsInternal &lower_bound_settings,
                 const TestSettingsInternal &upper_bound_settings) {
-if (scenario == TestScenario::Server) {
+  if (scenario == TestScenario::Server) {
     uint8_t precision = lower_bound_settings.requested
                             .server_find_peak_qps_decimals_of_precision;
     double l =

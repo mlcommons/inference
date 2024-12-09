@@ -8,6 +8,7 @@ on:
 
 jobs:
   cla-check:
+    if: github.repository_owner == 'mlcommons'
     runs-on: ubuntu-latest
     steps:
       - name: "MLCommons CLA bot check"

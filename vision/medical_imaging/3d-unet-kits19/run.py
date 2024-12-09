@@ -16,15 +16,14 @@
 # limitations under the License.
 
 
+import mlperf_loadgen as lg
+from pathlib import Path
+import subprocess
+import argparse
 import os
 import sys
+
 sys.path.insert(0, os.getcwd())
-import argparse
-import subprocess
-
-from pathlib import Path
-
-import mlperf_loadgen as lg
 
 
 __doc__ = """
@@ -41,7 +40,7 @@ $(BACKEND): tensorflow, pytorch, or onnxruntime
 $(SCENARIO): Offline, SingleStream, MultiStream, or Server (Note: MultiStream may be deprecated)
 $(MODEL) should point to correct model for the chosen backend
 
-If run for the accuracy, DICE scores will be summarized and printed at the end of the test, and 
+If run for the accuracy, DICE scores will be summarized and printed at the end of the test, and
 inference results will be stored as NIFTI files.
 
 Performance run can be more specific as:
@@ -65,39 +64,52 @@ def get_args():
     """
     Args used for running 3D UNet KITS19
     """
-    parser = argparse.ArgumentParser(description=__doc__,
-                                     formatter_class=argparse.RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter
+    )
 
-    parser.add_argument("--backend",
-                        choices=["pytorch", "pytorch_checkpoint", "onnxruntime", "tensorflow"],
-                        default="pytorch",
-                        help="Backend")
-    parser.add_argument("--scenario",
-                        choices=["SingleStream", "Offline"],
-                        default="Offline",
-                        help="Scenario")
-    parser.add_argument("--accuracy",
-                        action="store_true",
-                        help="enable accuracy pass")
-    parser.add_argument("--mlperf_conf",
-                        default="build/mlperf.conf",
-                        help="mlperf rules config")
-    parser.add_argument("--user_conf",
-                        default="user.conf",
-                        help="user config for user LoadGen settings such as target QPS")
-    parser.add_argument("--audit_conf",
-                        default="audit.conf",
-                        help="audit config for LoadGen settings during compliance runs")
-    parser.add_argument("--model",
-                        default="build/model/3dunet_kits19_pytorch.ptc",
-                        help="Path to PyTorch, ONNX, or TF model")
-    parser.add_argument("--preprocessed_data_dir",
-                        default="build/preprocessed_data",
-                        help="path to preprocessed data")
-    parser.add_argument("--performance_count",
-                        type=int,
-                        default=None,
-                        help="performance count")
+    parser.add_argument(
+        "--backend",
+        choices=["pytorch", "pytorch_checkpoint", "onnxruntime", "tensorflow"],
+        default="pytorch",
+        help="Backend",
+    )
+    parser.add_argument(
+        "--scenario",
+        choices=["SingleStream", "Offline"],
+        default="Offline",
+        help="Scenario",
+    )
+    parser.add_argument(
+        "--accuracy",
+        action="store_true",
+        help="enable accuracy pass")
+    parser.add_argument(
+        "--mlperf_conf", default="build/mlperf.conf", help="mlperf rules config"
+    )
+    parser.add_argument(
+        "--user_conf",
+        default="user.conf",
+        help="user config for user LoadGen settings such as target QPS",
+    )
+    parser.add_argument(
+        "--audit_conf",
+        default="audit.conf",
+        help="audit config for LoadGen settings during compliance runs",
+    )
+    parser.add_argument(
+        "--model",
+        default="build/model/3dunet_kits19_pytorch.ptc",
+        help="Path to PyTorch, ONNX, or TF model",
+    )
+    parser.add_argument(
+        "--preprocessed_data_dir",
+        default="build/preprocessed_data",
+        help="path to preprocessed data",
+    )
+    parser.add_argument(
+        "--performance_count", type=int, default=None, help="performance count"
+    )
     args = parser.parse_args()
     return args
 
@@ -118,7 +130,7 @@ def main():
         "SingleStream": lg.TestScenario.SingleStream,
         "Offline": lg.TestScenario.Offline,
         "Server": lg.TestScenario.Server,
-        "MultiStream": lg.TestScenario.MultiStream
+        "MultiStream": lg.TestScenario.MultiStream,
     }
 
     args = get_args()
@@ -134,8 +146,10 @@ def main():
         from tensorflow_SUT import get_sut
     else:
         raise ValueError("Unknown backend: {:}".format(args.backend))
-    sut = get_sut(args.model, args.preprocessed_data_dir,
-                  args.performance_count)
+    sut = get_sut(
+        args.model,
+        args.preprocessed_data_dir,
+        args.performance_count)
 
     # setup LoadGen
     settings = lg.TestSettings()
@@ -148,7 +162,9 @@ def main():
         settings.mode = lg.TestMode.PerformanceOnly
 
     # set up mlperf logger
-    log_path = Path(os.environ.get("LOG_PATH", os.path.join("build", "logs"))).absolute()
+    log_path = Path(
+        os.environ.get("LOG_PATH", os.path.join("build", "logs"))
+    ).absolute()
     log_path.mkdir(parents=True, exist_ok=True)
     log_output_settings = lg.LogOutputSettings()
     log_output_settings.outdir = str(log_path)
@@ -158,10 +174,12 @@ def main():
 
     # start running test, from LoadGen
     print("Running Loadgen test...")
-    lg.StartTestWithLogSettings(sut.sut, sut.qsl.qsl, settings, log_settings, args.audit_conf)
+    lg.StartTestWithLogSettings(
+        sut.sut, sut.qsl.qsl, settings, log_settings, args.audit_conf
+    )
 
     # if needed check accuracy
-    if args.accuracy and not os.environ.get('SKIP_VERIFY_ACCURACY', False):
+    if args.accuracy and not os.environ.get("SKIP_VERIFY_ACCURACY", False):
         print("Checking accuracy...")
         cmd = f"python3 accuracy_kits.py --preprocessed_data_dir={args.preprocessed_data_dir} --log_file={os.path.join(log_path, 'mlperf_log_accuracy.json')}"
         subprocess.check_call(cmd, shell=True)

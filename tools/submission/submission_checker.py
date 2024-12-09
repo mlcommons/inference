@@ -988,6 +988,7 @@ class Config:
                 "mixtral-8x7b",
                 "llama3-405b-99",
                 "llama3-405b-99.9",
+                "rgat",
             ]
             and self.version not in ["v4.0", "v4.1"]
         )

@@ -90,7 +90,7 @@ TIME_DELTA_TOLERANCE = 800  # in milliseconds
 
 def _normalize(path: str) -> str:
     allparts: List[str] = []
-    while True:
+    while 1:
         parts = os.path.split(path)
         if parts[0] == path:  # sentinel for absolute paths
             allparts.insert(0, parts[0])

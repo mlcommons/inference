@@ -33,36 +33,6 @@ NANO_SEC = 1e9
 MILLI_SEC = 1000
 
 SUPPORTED_DATASETS = {
-    "igbh-glt-tiny": (
-        igbh.IGBH,
-        dataset.preprocess,
-        igbh.PostProcessIGBH(),
-        {"dataset_size": "tiny", "use_label_2K": True},
-    ),
-    "igbh-glt-small": (
-        igbh.IGBH,
-        dataset.preprocess,
-        igbh.PostProcessIGBH(),
-        {"dataset_size": "small", "use_label_2K": True},
-    ),
-    "igbh-glt-medium": (
-        igbh.IGBH,
-        dataset.preprocess,
-        igbh.PostProcessIGBH(),
-        {"dataset_size": "medium", "use_label_2K": True},
-    ),
-    "igbh-glt-large": (
-        igbh.IGBH,
-        dataset.preprocess,
-        igbh.PostProcessIGBH(),
-        {"dataset_size": "large", "use_label_2K": True},
-    ),
-    "igbh-glt": (
-        igbh.IGBH,
-        dataset.preprocess,
-        igbh.PostProcessIGBH(),
-        {"dataset_size": "full", "use_label_2K": True},
-    ),
     "igbh-dgl-tiny": (
         dgl_igbh.IGBH,
         dataset.preprocess,
@@ -98,33 +68,8 @@ SUPPORTED_DATASETS = {
 
 SUPPORTED_PROFILES = {
     "defaults": {
-        "dataset": "igbh-glt-tiny",
-        "backend": "glt",
-        "model-name": "rgat",
-    },
-    "debug-glt": {
-        "dataset": "igbh-glt-tiny",
-        "backend": "glt",
-        "model-name": "rgat",
-    },
-    "rgat-glt-small": {
-        "dataset": "igbh-glt-small",
-        "backend": "glt",
-        "model-name": "rgat",
-    },
-    "rgat-glt-medium": {
-        "dataset": "igbh-glt-medium",
-        "backend": "glt",
-        "model-name": "rgat",
-    },
-    "rgat-glt-large": {
-        "dataset": "igbh-glt-large",
-        "backend": "glt",
-        "model-name": "rgat",
-    },
-    "rgat-glt-full": {
-        "dataset": "igbh-glt",
-        "backend": "glt",
+        "dataset": "igbh-dgl-tiny",
+        "backend": "dgl",
         "model-name": "rgat",
     },
     "debug-dgl": {
@@ -227,11 +172,6 @@ def get_args():
         choices=["gpu", "cpu"],
         help="device to run the benchmark",
     )
-
-    # file to use mlperf rules compliant parameters
-    parser.add_argument(
-        "--mlperf_conf", default="mlperf.conf", help="mlperf rules config"
-    )
     # file for user LoadGen settings such as target QPS
     parser.add_argument(
         "--user_conf",
@@ -283,10 +223,7 @@ def get_args():
 
 
 def get_backend(backend, **kwargs):
-    if backend == "glt":
-        from backend_glt import BackendGLT
-        backend = BackendGLT(**kwargs)
-    elif backend == "dgl":
+    if backend == "dgl":
         from backend_dgl import BackendDGL
         backend = BackendDGL(**kwargs)
     else:
@@ -461,11 +398,6 @@ def main():
         "cmdline": str(args),
     }
 
-    mlperf_conf = os.path.abspath(args.mlperf_conf)
-    if not os.path.exists(mlperf_conf):
-        log.error("{} not found".format(mlperf_conf))
-        sys.exit(1)
-
     user_conf = os.path.abspath(args.user_conf)
     if not os.path.exists(user_conf):
         log.error("{} not found".format(user_conf))
@@ -513,7 +445,6 @@ def main():
     log_settings.log_output = log_output_settings
 
     settings = lg.TestSettings()
-    settings.FromConfig(mlperf_conf, args.model_name, args.scenario)
     settings.FromConfig(user_conf, args.model_name, args.scenario)
     settings.scenario = scenario
     settings.mode = lg.TestMode.PerformanceOnly

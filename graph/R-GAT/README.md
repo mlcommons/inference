@@ -19,7 +19,7 @@ This is the reference implementation for MLPerf Inference Graph Neural Network. 
 
 ## Automated command to run the benchmark via MLCommons CM
 
-TODO
+Please check the official inference documentation [here](https://docs.mlcommons.org/inference/benchmarks/graph/rgat/)
  
 ## Setup
 Set the following helper variables

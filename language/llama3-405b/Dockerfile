@@ -22,7 +22,7 @@ ENV TZ=US/Pacific
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN rm -rf /var/lib/apt/lists/* && rm /etc/apt/sources.list.d/* \
+RUN rm -rf /var/lib/apt/lists/* && rm -rf /etc/apt/sources.list.d/* \
  && apt update \
  && apt install -y --no-install-recommends build-essential autoconf \
         libtool git ccache curl wget pkg-config sudo ca-certificates \
@@ -46,3 +46,6 @@ RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.5.2-0-Linux-x86
 ENV PATH="$PATH:/opt/miniconda3/bin"
 RUN conda create -n llama3-405b python=3.10
 RUN chmod -R 777 /opt/miniconda3
+
+# Set the env variable for vLLM
+ENV VLLM_WORKER_MULTIPROC_METHOD=spawn

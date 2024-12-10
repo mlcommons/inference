@@ -31,13 +31,14 @@ def get_args():
     parser.add_argument(
         "--dtype",
         default="uint8",
-        choices=["uint8","float32", "int32", "int64"],
+        choices=["uint8", "float32", "int32", "int64"],
         help="data type of the label",
     )
     args = parser.parse_args()
     return args
 
-def load_labels(base_path, dataset_size, use_label_2K = True):
+
+def load_labels(base_path, dataset_size, use_label_2K=True):
     # load labels
     paper_nodes_num = {
         "tiny": 100000,
@@ -49,7 +50,12 @@ def load_labels(base_path, dataset_size, use_label_2K = True):
     label_file = (
         "node_label_19.npy" if not use_label_2K else "node_label_2K.npy"
     )
-    paper_lbl_path = os.path.join(base_path, dataset_size, "processed", "paper", label_file)
+    paper_lbl_path = os.path.join(
+        base_path,
+        dataset_size,
+        "processed",
+        "paper",
+        label_file)
 
     if dataset_size in ["large", "full"]:
         paper_node_labels = torch.from_numpy(
@@ -63,11 +69,11 @@ def load_labels(base_path, dataset_size, use_label_2K = True):
             torch.long)
     labels = paper_node_labels
     val_idx = torch.load(
-                os.path.join(
-                    base_path,
-                    dataset_size,
-                    "processed",
-                "val_idx.pt"))
+        os.path.join(
+            base_path,
+            dataset_size,
+            "processed",
+            "val_idx.pt"))
     return labels, val_idx
 
 
@@ -77,7 +83,11 @@ def get_labels(labels, val_idx, id_list):
 
 if __name__ == "__main__":
     args = get_args()
-    dtype_map = {"uint8": np.uint8,"float32": np.float32, "int32": np.int32, "int64": np.int64}
+    dtype_map = {
+        "uint8": np.uint8,
+        "float32": np.float32,
+        "int32": np.int32,
+        "int64": np.int64}
 
     with open(args.mlperf_accuracy_file, "r") as f:
         mlperf_results = json.load(f)
@@ -97,7 +107,8 @@ if __name__ == "__main__":
         # get ground truth
         label = get_labels(labels, val_idx, idx)
         # get prediction
-        data = int(np.frombuffer(bytes.fromhex(result["data"]), dtype_map[args.dtype])[0])
+        data = int(np.frombuffer(bytes.fromhex(
+            result["data"]), dtype_map[args.dtype])[0])
         if label == data:
             good += 1
         total += 1
@@ -106,7 +117,5 @@ if __name__ == "__main__":
     results["number_correct_samples"] = good
     results["performance_sample_count"] = total
 
-
     with open(args.output_file, "w") as fp:
         json.dump(results, fp)
-    

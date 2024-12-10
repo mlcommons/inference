@@ -14,7 +14,7 @@ set(mlperf_loadgen_VERSION_MINOR "${CMAKE_MATCH_2}")
 set(mlperf_loadgen_VERSION_PATCH "${CMAKE_MATCH_3}")
 
 # Check if the version format was parsed correctly
-if(NOT mlperf_loadgen_VERSION_MAJOR OR NOT mlperf_loadgen_VERSION_MINOR OR NOT mlperf_loadgen_VERSION_PATCH)
+if(NOT DEFINED mlperf_loadgen_VERSION_MAJOR OR NOT DEFINED mlperf_loadgen_VERSION_MINOR OR NOT DEFINED mlperf_loadgen_VERSION_PATCH)
     message(FATAL_ERROR "Version format in VERSION.txt is incorrect. Expected format: MAJOR.MINOR.PATCH")
 endif()
 

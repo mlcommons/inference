@@ -10,30 +10,60 @@
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3-405b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
  
-## Prepare environment
+## Prepare Environment
 
-Copy the mlperf.conf file to this folder.
-```
-cp ../../mlperf.conf .
+### Local Environment Run 
+
+The following steps were tested in Ubuntu 22.04 with python 3.10
+
+- **Prerrequisite for GPU runs:** Install Nvidia Driver and cuda 12.1.
+
+The following links contain the commands for installing the [NVIDIA Driver](https://developer.nvidia.com/datacenter-driver-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=22.04&target_type=deb_local) and [Cuda](https://developer.nvidia.com/cuda-12-1-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=22.04&target_type=deb_local)
+
+- **Prerrequisite:** Install conda.
+
+```bash
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.5.2-0-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm ~/miniconda3/miniconda.sh
+~/miniconda3/bin/conda init
 ```
 
-For a CPU-only run:
-
+- Set the following helper variables
+```bash
+export ROOT=$PWD/inference
+export LLAMA_FOLDER=$PWD/inference/language/llama3-405b
+export LOADGEN_FOLDER=$PWD/inference/loadgen
+export DATASET_FOLDER=$PWD/inference/language/llama3-405b/dataset
 ```
-conda create -n llama3-405b python=3.9
+
+- Clone the inference repository:
+```bash
+git clone --recurse-submodules https://github.com/mlcommons/inference.git \
+ --depth 1
+```
+
+- Create a conda environment:
+```bash
+conda create -y -n llama3-405b python=3.10
 conda activate llama3-405b
+conda install -y -c conda-forge libstdcxx-ng=12
+```
 
+- Install requirements and loadgen:
+```bash
+cd $LLAMA_FOLDER
 # Install packages
 pip install -r requirements.txt
-
-export CUR_DIR=${PWD}
-cd <inference-repo-root>/loadgen
-
-
-python -m pip install .
 ```
 
-For a GPU-based run:
+```bash
+cd $LOADGEN_FOLDER
+CFLAGS="-std=c++14" python setup.py install
+```
+
+### Docker Run 
 
 A dockerfile is provided, along with scripts to help launch it. First, add any docker volume mounts you want in
 `launch.sh`. There is a section at the top of the file that looks like:
@@ -94,12 +124,17 @@ rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5ee
 You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
 ```
+# It is recommended to download the dataset inside the $DATASET_FOLDER location that was previously setted
+# mkdir $DATASET_FOLDER
+# cd $DATASET_FOLDER
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama3.1_405b_dataset_8313_processed_fp16_eval.pkl ./ -P
 ```
 
 You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
 
 ```
+# It is recommended to download the dataset inside the $DATASET_FOLDER location that was previously setted
+# cd $DATASET_FOLDER
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama3.1_405b_calibration_dataset_512_processed_fp16_eval.pkl ./ -P
 ```
 

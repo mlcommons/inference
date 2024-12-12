@@ -1,4 +1,4 @@
-"""A checker for MLPerf Inference submissions from v4.0 onwards (for checking older submissions please use the submission checker from the respective release)
+"""A checker for MLPerf Inference submissions from v4.1 onwards (for checking older submissions please use the submission checker from the respective release)
 """
 
 from __future__ import division
@@ -196,13 +196,11 @@ MODEL_CONFIG = {
             "resnet50": "resnet",
         },
         "seeds": {
-            # TODO: Update random seeds
             "qsl_rng_seed": 3066443479025735752,
             "sample_index_rng_seed": 10688027786191513374,
             "schedule_rng_seed": 14962580496156340209,
         },
         "test05_seeds": {
-            # TODO: Update random seeds
             "qsl_rng_seed": 16799458546791641818,
             "sample_index_rng_seed": 5453809927556429288,
             "schedule_rng_seed": 5435552105434836064,
@@ -220,8 +218,7 @@ MODEL_CONFIG = {
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
             "stable-diffusion-xl": {"Server": 20000000000},
-            # TODO: Mixtral metrics
-            # "mixtral-8x7b" : {"Server": 20000000000}
+            "mixtral-8x7b": {"Server": 20000000000}
         },
         "min-queries": {
             "resnet": {
@@ -260,7 +257,6 @@ MODEL_CONFIG = {
             "retinanet",
             "bert-99",
             "bert-99.9",
-            # TODO: remove dlrm?
             "dlrm-v2-99",
             "dlrm-v2-99.9",
             "3d-unet-99",
@@ -273,7 +269,7 @@ MODEL_CONFIG = {
             "mixtral-8x7b",
             "llama3-405b",
             "rgat",
-            # TODO: add automotive
+            # TODO: add automotive?
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
@@ -296,6 +292,7 @@ MODEL_CONFIG = {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
             "retinanet": ["SingleStream", "MultiStream", "Offline"],
             "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["SingleStream", "Offline"],
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
             "gptj-99": ["SingleStream", "Offline"],
@@ -306,8 +303,8 @@ MODEL_CONFIG = {
         "required-scenarios-datacenter-edge": {
             "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
             "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "bert-99": ["SingleStream", "Offline", "Server"],
-            "bert-99.9": ["Offline", "Server"],
+            "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["SingleStream", "Offline"],
             "dlrm-v2-99": ["Offline", "Server"],
             "dlrm-v2-99.9": ["Offline", "Server"],
             "3d-unet-99": ["SingleStream", "Offline"],
@@ -436,10 +433,11 @@ MODEL_CONFIG = {
             "rgat": 788379
 
         },
-        # TODO: Update this list.
+        # model_mapping.json is expected in the root directory of the
+        # submission folder for open submissions and so the below dictionary is
+        # not really needed
         "model_mapping": {
             # map model names to the official mlperf model class
-            "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
             "resnet50": "resnet",
         },
@@ -449,23 +447,19 @@ MODEL_CONFIG = {
             "sample_index_rng_seed": 10688027786191513374,
             "schedule_rng_seed": 14962580496156340209,
         },
-        "test05_seeds": {
-            # TODO: Update random seeds
-            "qsl_rng_seed": 16799458546791641818,
-            "sample_index_rng_seed": 5453809927556429288,
-            "schedule_rng_seed": 5435552105434836064,
-        },
         "ignore_errors": [],
         "latency-constraint": {
             "resnet": {"Server": 15000000},
             "retinanet": {"Server": 100000000},
-            "bert-99": {"Server": 130000000},
-            "bert-99.9": {"Server": 130000000},
             "dlrm-v2-99": {"Server": 60000000},
             "dlrm-v2-99.9": {"Server": 60000000},
             "gptj-99": {"Server": 20000000000},
             "gptj-99.9": {"Server": 20000000000},
             "stable-diffusion-xl": {"Server": 20000000000},
+            "llama2-70b-99": {"Server": 20000000000},
+            "llama2-70b-99.9": {"Server": 20000000000},
+            "mixtral-8x7b": {"Server": 20000000000},
+            "llama3-405b": {"Server": 60000000000}
         },
         "min-queries": {
             "resnet": {
@@ -480,8 +474,8 @@ MODEL_CONFIG = {
                 "Server": 270336,
                 "Offline": 1,
             },
-            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Offline": 1},
             "dlrm-v2-99": {"Server": 270336, "Offline": 1},
             "dlrm-v2-99.9": {"Server": 270336, "Offline": 1},
             "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
@@ -497,7 +491,7 @@ MODEL_CONFIG = {
             },
             "mixtral-8x7b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama3-405b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "rgat": {"SingleStream": 1024, "Server": 270336, "Offline": 1}
+            "rgat": {"SingleStream": 1024, "Offline": 1}
         },
     },
 }
@@ -605,17 +599,15 @@ RESULT_FIELD = {
 }
 
 RESULT_FIELD_NEW = {
-    "v4.0": {
-        "Offline": "result_samples_per_second",
-        "SingleStream": "early_stopping_latency_ss",
-        "MultiStreamLegacy": "effective_samples_per_query",
-        "MultiStream": "early_stopping_latency_ms",
-        "Server": "result_scheduled_samples_per_sec",
-    },
     "v4.1": {
         "Offline": "result_samples_per_second",
         "SingleStream": "early_stopping_latency_ss",
-        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_completed_samples_per_sec",
+    },
+    "v5.0": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_completed_samples_per_sec",
     },

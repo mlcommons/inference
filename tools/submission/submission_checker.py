@@ -605,17 +605,15 @@ RESULT_FIELD = {
 }
 
 RESULT_FIELD_NEW = {
-    "v4.0": {
-        "Offline": "result_samples_per_second",
-        "SingleStream": "early_stopping_latency_ss",
-        "MultiStreamLegacy": "effective_samples_per_query",
-        "MultiStream": "early_stopping_latency_ms",
-        "Server": "result_scheduled_samples_per_sec",
-    },
     "v4.1": {
         "Offline": "result_samples_per_second",
         "SingleStream": "early_stopping_latency_ss",
-        "MultiStreamLegacy": "effective_samples_per_query",
+        "MultiStream": "early_stopping_latency_ms",
+        "Server": "result_completed_samples_per_sec",
+    },
+    "v5.0": {
+        "Offline": "result_samples_per_second",
+        "SingleStream": "early_stopping_latency_ss",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_completed_samples_per_sec",
     },

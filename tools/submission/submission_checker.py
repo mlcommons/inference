@@ -1,4 +1,4 @@
-"""A checker for MLPerf Inference submissions from v4.0 onwards (for checking older submissions please use the submission checker from the respective release)
+"""A checker for MLPerf Inference submissions from v4.1 onwards (for checking older submissions please use the submission checker from the respective release)
 """
 
 from __future__ import division
@@ -196,13 +196,11 @@ MODEL_CONFIG = {
             "resnet50": "resnet",
         },
         "seeds": {
-            # TODO: Update random seeds
             "qsl_rng_seed": 3066443479025735752,
             "sample_index_rng_seed": 10688027786191513374,
             "schedule_rng_seed": 14962580496156340209,
         },
         "test05_seeds": {
-            # TODO: Update random seeds
             "qsl_rng_seed": 16799458546791641818,
             "sample_index_rng_seed": 5453809927556429288,
             "schedule_rng_seed": 5435552105434836064,
@@ -220,8 +218,7 @@ MODEL_CONFIG = {
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
             "stable-diffusion-xl": {"Server": 20000000000},
-            # TODO: Mixtral metrics
-            # "mixtral-8x7b" : {"Server": 20000000000}
+            "mixtral-8x7b" : {"Server": 20000000000}
         },
         "min-queries": {
             "resnet": {
@@ -295,6 +292,7 @@ MODEL_CONFIG = {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
             "retinanet": ["SingleStream", "MultiStream", "Offline"],
             "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["SingleStream", "Offline"],
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
             "gptj-99": ["SingleStream", "Offline"],
@@ -306,7 +304,7 @@ MODEL_CONFIG = {
             "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
             "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
             "bert-99": ["SingleStream", "Offline"],
-            "bert-99.9": ["Offline"],
+            "bert-99.9": ["SingleStream", "Offline"],
             "dlrm-v2-99": ["Offline", "Server"],
             "dlrm-v2-99.9": ["Offline", "Server"],
             "3d-unet-99": ["SingleStream", "Offline"],
@@ -453,13 +451,15 @@ MODEL_CONFIG = {
         "latency-constraint": {
             "resnet": {"Server": 15000000},
             "retinanet": {"Server": 100000000},
-            "bert-99": {"Server": 130000000},
-            "bert-99.9": {"Server": 130000000},
             "dlrm-v2-99": {"Server": 60000000},
             "dlrm-v2-99.9": {"Server": 60000000},
             "gptj-99": {"Server": 20000000000},
             "gptj-99.9": {"Server": 20000000000},
             "stable-diffusion-xl": {"Server": 20000000000},
+            "llama2-70b-99": {"Server": 20000000000},
+            "llama2-70b-99.9": {"Server": 20000000000},
+            "mixtral-8x7b" : {"Server": 20000000000},
+            "llama3-405b": {"Server": 60000000000}
         },
         "min-queries": {
             "resnet": {

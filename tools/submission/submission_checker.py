@@ -260,7 +260,6 @@ MODEL_CONFIG = {
             "retinanet",
             "bert-99",
             "bert-99.9",
-            # TODO: remove dlrm?
             "dlrm-v2-99",
             "dlrm-v2-99.9",
             "3d-unet-99",
@@ -273,7 +272,7 @@ MODEL_CONFIG = {
             "mixtral-8x7b",
             "llama3-405b",
             "rgat",
-            # TODO: add automotive
+            # TODO: add automotive?
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
@@ -306,8 +305,8 @@ MODEL_CONFIG = {
         "required-scenarios-datacenter-edge": {
             "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
             "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "bert-99": ["SingleStream", "Offline", "Server"],
-            "bert-99.9": ["Offline", "Server"],
+            "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["Offline"],
             "dlrm-v2-99": ["Offline", "Server"],
             "dlrm-v2-99.9": ["Offline", "Server"],
             "3d-unet-99": ["SingleStream", "Offline"],
@@ -436,10 +435,9 @@ MODEL_CONFIG = {
             "rgat": 788379
 
         },
-        # TODO: Update this list.
+        # model_mapping.json is expected in the root directory of the submission folder for open submissions and so the below dictionary is not really needed
         "model_mapping": {
             # map model names to the official mlperf model class
-            "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
             "resnet50": "resnet",
         },
@@ -448,12 +446,6 @@ MODEL_CONFIG = {
             "qsl_rng_seed": 3066443479025735752,
             "sample_index_rng_seed": 10688027786191513374,
             "schedule_rng_seed": 14962580496156340209,
-        },
-        "test05_seeds": {
-            # TODO: Update random seeds
-            "qsl_rng_seed": 16799458546791641818,
-            "sample_index_rng_seed": 5453809927556429288,
-            "schedule_rng_seed": 5435552105434836064,
         },
         "ignore_errors": [],
         "latency-constraint": {
@@ -480,8 +472,8 @@ MODEL_CONFIG = {
                 "Server": 270336,
                 "Offline": 1,
             },
-            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "bert-99": {"SingleStream": 1024, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Offline": 1},
             "dlrm-v2-99": {"Server": 270336, "Offline": 1},
             "dlrm-v2-99.9": {"Server": 270336, "Offline": 1},
             "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
@@ -497,7 +489,7 @@ MODEL_CONFIG = {
             },
             "mixtral-8x7b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama3-405b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "rgat": {"SingleStream": 1024, "Server": 270336, "Offline": 1}
+            "rgat": {"SingleStream": 1024, "Offline": 1}
         },
     },
 }

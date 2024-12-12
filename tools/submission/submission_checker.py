@@ -435,7 +435,9 @@ MODEL_CONFIG = {
             "rgat": 788379
 
         },
-        # model_mapping.json is expected in the root directory of the submission folder for open submissions and so the below dictionary is not really needed
+        # model_mapping.json is expected in the root directory of the
+        # submission folder for open submissions and so the below dictionary is
+        # not really needed
         "model_mapping": {
             # map model names to the official mlperf model class
             "mobilenet": "resnet",
@@ -1621,7 +1623,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )

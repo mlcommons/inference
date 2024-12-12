@@ -218,7 +218,7 @@ MODEL_CONFIG = {
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
             "stable-diffusion-xl": {"Server": 20000000000},
-            "mixtral-8x7b" : {"Server": 20000000000}
+            "mixtral-8x7b": {"Server": 20000000000}
         },
         "min-queries": {
             "resnet": {
@@ -458,7 +458,7 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": {"Server": 20000000000},
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
-            "mixtral-8x7b" : {"Server": 20000000000},
+            "mixtral-8x7b": {"Server": 20000000000},
             "llama3-405b": {"Server": 60000000000}
         },
         "min-queries": {
@@ -1623,7 +1623,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                ) and scenario in ["SingleStream"]:
+                    ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )

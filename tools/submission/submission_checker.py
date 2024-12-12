@@ -827,7 +827,8 @@ class Config:
         self.version = version
         self.models = self.base["models"]
         self.seeds = self.base["seeds"]
-        self.test05_seeds = self.base["test05_seeds"]
+        if self.base.get("test05_seeds"):
+            self.test05_seeds = self.base["test05_seeds"]
         self.accuracy_target = self.base["accuracy-target"]
         self.accuracy_delta_perc = self.base["accuracy-delta-perc"]
         self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
@@ -968,7 +969,7 @@ def get_args():
     parser.add_argument("--input", required=True, help="submission directory")
     parser.add_argument(
         "--version",
-        default="v4.1",
+        default="v5.0",
         choices=list(MODEL_CONFIG.keys()),
         help="mlperf version",
     )

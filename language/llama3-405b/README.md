@@ -9,7 +9,55 @@
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3-405b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
- 
+
+## Get Model
+### MLCommons Members Download
+
+TODO: Host model and grant access to submitters
+
+
+### External Download
++ First go to [llama3-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
++ Requires Git Large Files Storage
+```
+export CHECKPOINT_PATH=Meta-Llama-3.1-405B-Instruct
+git lfs install
+git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT_PATH}
+
+```
+
+## Get Dataset
+
+### Preprocessed
+
+You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
+
+To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
+To install Rclone on Linux/macOS/BSD systems, run:
+```
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+Once Rclone is installed, run the following command to authenticate with the bucket:
+```
+rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
+```
+You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
+
+```
+# It is recommended to download the dataset inside the $DATASET_FOLDER location that was previously setted
+# mkdir $DATASET_FOLDER
+# cd $DATASET_FOLDER
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama3.1_405b_dataset_8313_processed_fp16_eval.pkl ./ -P
+```
+
+You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
+
+```
+# It is recommended to download the dataset inside the $DATASET_FOLDER location that was previously setted
+# cd $DATASET_FOLDER
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama3.1_405b_calibration_dataset_512_processed_fp16_eval.pkl ./ -P
+```
+
 ## Prepare Environment
 
 ### Local Environment Run 
@@ -84,59 +132,9 @@ MOUNTS=(
     /raid/data:/raid/data
 )
 ```
-Once you have added all your mounts, launch the container with `bash launch.sh`.
+Once you have added all your mounts, build and launch the container with `bash launch.sh`.
 
-Inside the container, set up the environment with `bash build.sh`. This will install all the dependencies from the
-CPU-only setup, as well as any GPU versions for applicable libraries like PyTorch.
-
-
-## Get Model
-### MLCommons Members Download
-
-TODO: Host model and grant access to submitters
-
-
-### External Download
-+ First go to [llama3-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
-+ Requires Git Large Files Storage
-```
-export CHECKPOINT_PATH=Meta-Llama-3.1-405B-Instruct
-git lfs install
-git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT_PATH}
-
-```
-
-## Get Dataset
-
-### Preprocessed
-
-You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
-
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
-You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
-
-```
-# It is recommended to download the dataset inside the $DATASET_FOLDER location that was previously setted
-# mkdir $DATASET_FOLDER
-# cd $DATASET_FOLDER
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama3.1_405b_dataset_8313_processed_fp16_eval.pkl ./ -P
-```
-
-You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
-
-```
-# It is recommended to download the dataset inside the $DATASET_FOLDER location that was previously setted
-# cd $DATASET_FOLDER
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama3.1_405b_calibration_dataset_512_processed_fp16_eval.pkl ./ -P
-```
+Follow the instructions in the next section to run the benchmark inside the container
 
 ## Run Performance Benchmarks
 

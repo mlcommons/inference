@@ -27,11 +27,4 @@ for _mount in ${MOUNTS[@]}; do
 done
 
 set -x
-nvidia-docker run -it --rm --net=host --runtime=nvidia --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
-  --cap-add=SYS_PTRACE --cap-add=SYS_ADMIN --cap-add=DAC_READ_SEARCH \
-  --security-opt seccomp=unconfined \
-  -w $PWD \
-  --env-file `pwd`/.docker_env \
-  ${MOUNT_FLAGS[*]} \
-  llm/gpubringup \
-  bash ./with_the_same_user
+docker run --rm -it -v $(pwd):/root/workspace --gpus all llm/gpubringup

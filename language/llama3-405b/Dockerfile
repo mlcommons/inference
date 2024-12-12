@@ -47,5 +47,28 @@ ENV PATH="$PATH:/opt/miniconda3/bin"
 RUN conda create -n llama3-405b python=3.10
 RUN chmod -R 777 /opt/miniconda3
 
+COPY requirements.txt requirements.txt
+RUN  chmod 777 ~/.bashrc
+RUN . ~/.bashrc
+RUN conda init && source /opt/miniconda3/etc/profile.d/conda.sh && conda activate llama3-405b && pip install -r requirements.txt
+
+RUN cd /tmp && \
+    conda init && \
+    source /opt/miniconda3/etc/profile.d/conda.sh && \
+    conda activate llama3-405b && \
+    git clone --recursive https://github.com/mlcommons/inference && \
+    cd inference/loadgen && \
+    pip install pybind11 && \
+    CFLAGS="-std=c++14" python3 setup.py install
+
+RUN rm -rf mlperf \
+    rm requirements.txt
+
+RUN conda init && \
+    source /opt/miniconda3/etc/profile.d/conda.sh && \
+    conda activate llama3-405b && \
+    conda install -y -c conda-forge libstdcxx-ng=12
 # Set the env variable for vLLM
 ENV VLLM_WORKER_MULTIPROC_METHOD=spawn
+RUN echo "conda activate llama3-405b" >> /root/.bashrc
+WORKDIR /root/workspace

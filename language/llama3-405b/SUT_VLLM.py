@@ -31,7 +31,7 @@ class SUT:
         model_path=None,
         dtype="bfloat16",
         batch_size=None,
-        total_sample_count=8312,
+        total_sample_count=8313,
         dataset_path=None,
         use_cached_outputs=False,
         # Set this to True *only for test accuracy runs* in case your prior
@@ -194,7 +194,7 @@ class SUTServer(SUT):
         self,
         model_path=None,
         dtype="bfloat16",
-        total_sample_count=8312,
+        total_sample_count=8313,
         dataset_path=None,
         batch_size=None,
         workers=1,

@@ -47,7 +47,7 @@ pip install tqdm
 ```
 cd $HOME
 mkdir ./mlcommons && cd ./mlcommons
-git clone --recurse-submodules https://github.com/mlcommons/training.git
+git clone --recurse-submodules https://github.com/mlcommons/inference.git
 ```
 2. Download pre-trained model weights (see links available above)
 ```

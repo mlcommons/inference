@@ -160,39 +160,72 @@ def main():
         ],
     ]
 
-    filter_scenarios = {
-        "datacenter": {
-            "resnet": ["Server", "Offline"],
-            "retinanet": ["Server", "Offline"],
-            "rnnt": ["Server", "Offline"],
-            "bert-99": ["Server", "Offline"],
-            "bert-99.9": ["Server", "Offline"],
-            "dlrm-v2-99": ["Server", "Offline"],
-            "dlrm-v2-99.9": ["Server", "Offline"],
-            "3d-unet-99": ["Offline"],
-            "3d-unet-99.9": ["Offline"],
-            "gptj-99": ["Server", "Offline"],
-            "gptj-99.9": ["Server", "Offline"],
-            "stable-diffusion-xl": ["Server", "Offline"],
-            "llama2-70b-99": ["Server", "Offline"],
-            "llama2-70b-99.9": ["Server", "Offline"],
-            "mixtral-8x7b": ["Server", "Offline"],
-        },
-        "edge": {
-            "resnet": ["SingleStream", "MultiStream", "Offline"],
-            "retinanet": ["SingleStream", "MultiStream", "Offline"],
-            "rnnt": ["SingleStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "bert-99.9": [],
-            "dlrm-v2-99": [],
-            "dlrm-v2-99.9": [],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-            "gptj-99": ["SingleStream", "Offline"],
-            "gptj-99.9": ["SingleStream", "Offline"],
-            "stable-diffusion-xl": ["SingleStream", "Offline"],
-        },
-    }
+    if args.version == "4.1":
+        filter_scenarios = {
+            "datacenter": {
+                "resnet": ["Server", "Offline"],
+                "retinanet": ["Server", "Offline"],
+                "rnnt": ["Server", "Offline"],
+                "bert-99": ["Server", "Offline"],
+                "bert-99.9": ["Server", "Offline"],
+                "dlrm-v2-99": ["Server", "Offline"],
+                "dlrm-v2-99.9": ["Server", "Offline"],
+                "3d-unet-99": ["Offline"],
+                "3d-unet-99.9": ["Offline"],
+                "gptj-99": ["Server", "Offline"],
+                "gptj-99.9": ["Server", "Offline"],
+                "stable-diffusion-xl": ["Server", "Offline"],
+                "llama2-70b-99": ["Server", "Offline"],
+                "llama2-70b-99.9": ["Server", "Offline"],
+                "mixtral-8x7b": ["Server", "Offline"],
+            },
+            "edge": {
+                "resnet": ["SingleStream", "MultiStream", "Offline"],
+                "retinanet": ["SingleStream", "MultiStream", "Offline"],
+                "rnnt": ["SingleStream", "Offline"],
+                "bert-99": ["SingleStream", "Offline"],
+                "bert-99.9": [],
+                "dlrm-v2-99": [],
+                "dlrm-v2-99.9": [],
+                "3d-unet-99": ["SingleStream", "Offline"],
+                "3d-unet-99.9": ["SingleStream", "Offline"],
+                "gptj-99": ["SingleStream", "Offline"],
+                "gptj-99.9": ["SingleStream", "Offline"],
+                "stable-diffusion-xl": ["SingleStream", "Offline"],
+            },
+        }
+    else:
+        filter_scenarios = {
+            "datacenter": {
+                "resnet": ["Server", "Offline"],
+                "retinanet": ["Server", "Offline"],
+                "rnnt": ["Server", "Offline"],
+                "dlrm-v2-99": ["Server", "Offline"],
+                "dlrm-v2-99.9": ["Server", "Offline"],
+                "3d-unet-99": ["Offline"],
+                "3d-unet-99.9": ["Offline"],
+                "gptj-99": ["Server", "Offline"],
+                "gptj-99.9": ["Server", "Offline"],
+                "stable-diffusion-xl": ["Server", "Offline"],
+                "llama2-70b-99": ["Server", "Offline"],
+                "llama2-70b-99.9": ["Server", "Offline"],
+                "mixtral-8x7b": ["Server", "Offline"],
+                "rgat": ["Offline"],
+                "llama3-405b": ["Offline", "Server"]
+            },
+            "edge": {
+                "resnet": ["SingleStream", "MultiStream", "Offline"],
+                "retinanet": ["SingleStream", "MultiStream", "Offline"],
+                "rnnt": ["SingleStream", "Offline"],
+                "bert-99": ["SingleStream", "Offline"],
+                "bert-99.9": ["SingleStream", "Offline"],
+                "3d-unet-99": ["SingleStream", "Offline"],
+                "3d-unet-99.9": ["SingleStream", "Offline"],
+                "gptj-99": ["SingleStream", "Offline"],
+                "gptj-99.9": ["SingleStream", "Offline"],
+                "stable-diffusion-xl": ["SingleStream", "Offline"],
+            },
+        }
 
     def MakeWorksheet(df, index, filter_dict, sheet_name, outjsondata=[]):
         for key, value in filter_dict.items():

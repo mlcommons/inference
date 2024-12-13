@@ -677,7 +677,7 @@ LLM_LATENCY_LIMITS = {
 }
 
 ACC_PATTERN = {
-    "acc": r"^accuracy=([\d\.]+).*",
+    "acc": r"^(?:\{\"accuracy|accuracy)[\": ]*=?\s*([\d\.]+).*",
     "AUC": r"^AUC=([\d\.]+).*",
     "mAP": r"^mAP=([\d\.]+).*",
     "bleu": r"^BLEU\:\s*([\d\.]+).*",

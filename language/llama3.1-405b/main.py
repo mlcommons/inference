@@ -136,8 +136,8 @@ def main():
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
     # mlperf.conf is automatically loaded by the loadgen
-    # settings.FromConfig(args.mlperf_conf, "llama3-405b", args.scenario)
-    settings.FromConfig(args.user_conf, "llama3-405b", args.scenario)
+    # settings.FromConfig(args.mlperf_conf, "llama3-1-405b", args.scenario)
+    settings.FromConfig(args.user_conf, "llama3-1-405b", args.scenario)
 
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly

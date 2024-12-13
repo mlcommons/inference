@@ -429,7 +429,7 @@ MODEL_CONFIG = {
             "llama2-70b-99.9": 24576,
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
-            "llama3-405b": 8312,
+            "llama3-405b": 8313,
             "rgat": 788379
 
         },
@@ -579,8 +579,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "llama2-70b-99.9": 24576,
     "stable-diffusion-xl": 5000,
     "mixtral-8x7b": 15000,
-    "llama3-405b": 8312,
-    "llama2-405b-99.9": 8312,
+    "llama3-405b": 8313,
     "rgat": 788379,
 }
 

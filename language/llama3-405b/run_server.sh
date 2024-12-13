@@ -8,7 +8,7 @@ python -u main.py --scenario Server \
 	--batch-size 16 \
 	--dtype float16 \
 	--user-conf user.conf \
-	--total-sample-count 8312 \
+	--total-sample-count 8313 \
 	--dataset-path ${DATASET_PATH} \
 	--output-log-dir output \
 	--tensor-parallel-size ${GPU_COUNT} \

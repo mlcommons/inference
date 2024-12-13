@@ -66,7 +66,7 @@ pip install -e .
 ### Docker Run
 
 A dockerfile is provided, along with scripts to help launch it. First, add any docker volume mounts you want in
-`launch.sh`. There is a section at the top of the file that looks like:
+`launch_docker.sh`. There is a section at the top of the file that looks like:
 ```
 # Add any volume mounts here with the following syntax
 # /path/to/src:/path/to/dir/in/container
@@ -145,7 +145,7 @@ python -u main.py --scenario Offline \
                 --batch-size 16 \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 8312 \
+                --total-sample-count 8313 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \
@@ -160,7 +160,7 @@ python -u main.py --scenario Server \
                 --batch-size 16 \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 8312 \
+                --total-sample-count 8313 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \
@@ -184,7 +184,7 @@ python -u main.py --scenario Offline \
                 --accuracy \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 8312 \
+                --total-sample-count 8313 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \
@@ -212,7 +212,7 @@ python -u main.py --scenario Server \
                 --accuracy \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 8312 \
+                --total-sample-count 8313 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \

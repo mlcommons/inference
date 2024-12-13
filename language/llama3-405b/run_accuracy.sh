@@ -9,7 +9,7 @@ python3 -u main.py --scenario Offline \
         --accuracy \
         --mlperf-conf mlperf.conf \
         --user-conf user.conf \
-        --total-sample-count 8312 \
+        --total-sample-count 8313 \
         --dataset-path ${DATASET_PATH} \
         --output-log-dir offline_accuracy_loadgen_logs \
         --dtype float32 | tee offline_accuracy_log.log

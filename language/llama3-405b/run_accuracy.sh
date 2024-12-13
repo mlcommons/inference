@@ -5,6 +5,7 @@ mkdir -p "run_outputs"
 
 python3 -u main.py --scenario Offline \
         --model-path ${CHECKPOINT_PATH} \
+        --batch-size 16 \
         --accuracy \
         --mlperf-conf mlperf.conf \
         --user-conf user.conf \
@@ -17,5 +18,3 @@ python3 evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
         --mlperf-accuracy-file offline_accuracy_loadgen_logs/mlperf_log_accuracy.json \
         --dataset-file ${DATASET_PATH} \
         --dtype int32
-
-python3 consolidate_results.py --dataset-path ${DATASET_PATH} --model-dir ${CHECKPOINT_PATH}

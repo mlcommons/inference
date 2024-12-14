@@ -10,31 +10,30 @@
 - [ ] Single-stream
 - [ ] Multi-stream
 - [ ] Server
-- [ ] Offline
+- [X] Offline
 
 ---
 
 #### **3. Applicable Compliance Tests**
-- [ ] Compliance tests identified for all applicable categories and scenarios.
-- [ ] Confirm **TEST04** is not applicable if processing times vary significantly for different inputs.
+- [X] TEST01
 
 ---
 
 #### **4. Latency Threshold for Server Scenarios**
-- [ ] Documented latency threshold for the **Server** scenario.  
+- [X] Documented latency threshold for the **Server** scenario.  
   *(99% of samples must be processed within the specified latency threshold.)*
 
 ---
 
 #### **5. Validation Dataset: Unique Samples**
-- [ ] Number of **unique samples** in the validation dataset specified.
-- [ ] QSL size documented.  
+- [X] Number of **unique samples** in the validation dataset specified.
+- [X] QSL size documented.  
   *(Ensure QSL size overflows the system cache.)*
 
 ---
 
 #### **6. Equal Issue Mode Applicability**
-- [ ] Documented whether **Equal Issue Mode** is applicable.  
+- [X] Documented whether **Equal Issue Mode** is applicable.  
   *(Relevant if sample processing times are inconsistent across inputs.)*
 
 ---
@@ -62,21 +61,21 @@
 ---
 
 #### **10. Test Runs with Smaller Input Sets**
-- [ ] Verified the reference implementation can perform test runs with a smaller subset of inputs for:
-  - [ ] Performance runs
-  - [ ] Accuracy runs
+- [X] Verified the reference implementation can perform test runs with a smaller subset of inputs for:
+  - [X] Performance runs
+  - [X] Accuracy runs
 
 ---
 
 #### **11. Dataset and Reference Model Instructions**
-- [ ] Clear instructions provided for:
-  - [ ] Downloading the dataset and reference model.
-  - [ ] Using the dataset and model for the benchmark.
+- [X] Clear instructions provided for:
+  - [X] Downloading the dataset and reference model.
+  - [X] Using the dataset and model for the benchmark.
 
 ---
 
 #### **12. CPU-Only and Recommended GPU Requirements**
-- [ ] Documented whether the reference implementation can run on **CPUs only**.
+- [X] Documented whether the reference implementation can run on **CPUs only**.
 - [ ] Minimum GPU requirements specified:
   - [ ] Number of GPUs
   - [ ] Required GPU memory
@@ -84,14 +83,14 @@
 ---
 
 #### **13. System Memory and Storage Requirements**
-- [ ] Recommended system requirements documented:
-  - [ ] **System RAM** (e.g., units of 256 GB RAM).
-  - [ ] **Storage** (e.g., units of 500 GB storage).
+- [X] Recommended system requirements documented:
+  - [X] **System RAM** (e.g., units of 256 GB RAM).
+  - [X] **Storage** (e.g., units of 500 GB storage).
 
 ---
 
 #### **14. Submission Checker Modifications**
-- [ ] All necessary changes made to the **submission checker** to validate the benchmark.
+- [X] All necessary changes made to the **submission checker** to validate the benchmark.
 
 ---
 

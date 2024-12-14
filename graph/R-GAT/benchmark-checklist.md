@@ -1,7 +1,7 @@
 
 #### **1. Applicable Categories**
 - [ ] Edge
-- [ ] Datacenter
+- [X] Datacenter
 - [ ] Both
 
 ---

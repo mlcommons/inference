@@ -1,27 +1,21 @@
 
 #### **1. Applicable Categories**
-- [ ] Edge
-- [X] Datacenter
-- [ ] Both
+- Datacenter
 
 ---
 
 #### **2. Applicable Scenarios for Each Category**
-- [ ] Single-stream
-- [ ] Multi-stream
-- [ ] Server
-- [X] Offline
+- Offline
 
 ---
 
 #### **3. Applicable Compliance Tests**
-- [X] TEST01
+- TEST01
 
 ---
 
 #### **4. Latency Threshold for Server Scenarios**
-- [X] Documented latency threshold for the **Server** scenario.  
-  *(99% of samples must be processed within the specified latency threshold.)*
+- Not applicable
 
 ---
 

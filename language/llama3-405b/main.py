@@ -77,7 +77,7 @@ def get_args():
     parser.add_argument(
         "--total-sample-count",
         type=int,
-        default=8312,
+        default=8313,
         help="Number of samples to use in benchmark.",
     )
     parser.add_argument(

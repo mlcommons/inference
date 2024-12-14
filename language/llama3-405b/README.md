@@ -9,34 +9,64 @@
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3-405b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
- 
+
 ## Prepare environment
 
-Copy the mlperf.conf file to this folder.
-```
-cp ../../mlperf.conf .
+### Local Environment Run
+
+The following steps were tested in Ubuntu 22.04 with python 3.10
+
+- **Prerrequisite for GPU runs:** Install Nvidia Driver and cuda 12.1.
+
+The following links contain the commands for installing the [NVIDIA Driver](https://developer.nvidia.com/datacenter-driver-downloads?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=22.04&target_type=deb_local) and [Cuda](https://developer.nvidia.com/cuda-12-1-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=Ubuntu&target_version=22.04&target_type=deb_local)
+
+- **Prerrequisite:** Install conda.
+
+```bash
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.5.2-0-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm ~/miniconda3/miniconda.sh
+~/miniconda3/bin/conda init
 ```
 
-For a CPU-only run:
-
+- Set the following helper variables
+```bash
+export ROOT=$PWD/inference
+export LLAMA_FOLDER=$PWD/inference/language/llama3-405b
+export LOADGEN_FOLDER=$PWD/inference/loadgen
+export DATASET_FOLDER=$PWD/inference/language/llama3-405b/dataset
 ```
-conda create -n llama3-405b python=3.9
+
+- Clone the inference repository:
+```bash
+git clone --recurse-submodules https://github.com/mlcommons/inference.git \
+ --depth 1
+```
+
+- Create a conda environment:
+```bash
+conda create -y -n llama3-405b python=3.10
 conda activate llama3-405b
+conda install -y -c conda-forge libstdcxx-ng=12
+```
 
+- Install requirements and loadgen:
+```bash
+cd $LLAMA_FOLDER
 # Install packages
 pip install -r requirements.txt
-
-export CUR_DIR=${PWD}
-cd <inference-repo-root>/loadgen
-
-
-python -m pip install .
 ```
 
-For a GPU-based run:
+```bash
+cd $LOADGEN_FOLDER
+pip install -e .
+```
+
+### Docker Run
 
 A dockerfile is provided, along with scripts to help launch it. First, add any docker volume mounts you want in
-`launch.sh`. There is a section at the top of the file that looks like:
+`launch_docker.sh`. There is a section at the top of the file that looks like:
 ```
 # Add any volume mounts here with the following syntax
 # /path/to/src:/path/to/dir/in/container
@@ -54,10 +84,13 @@ MOUNTS=(
     /raid/data:/raid/data
 )
 ```
-Once you have added all your mounts, launch the container with `bash launch.sh`.
+Once you have added all your mounts, build and launch the container with `bash launch.sh`.
 
-Inside the container, set up the environment with `bash build.sh`. This will install all the dependencies from the
-CPU-only setup, as well as any GPU versions for applicable libraries like PyTorch.
+Now install all the dependencies:
+```
+pip install -r requirements.txt
+pip install -e ../../loadgen
+```
 
 
 ## Get Model
@@ -73,7 +106,7 @@ TODO: Host model and grant access to submitters
 export CHECKPOINT_PATH=Meta-Llama-3.1-405B-Instruct
 git lfs install
 git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT_PATH}
-
+cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ```
 
 ## Get Dataset
@@ -109,9 +142,10 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama
 ```
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
+                --batch-size 16 \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 8312 \
+                --total-sample-count 8313 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \
@@ -123,9 +157,10 @@ python -u main.py --scenario Offline \
 ```
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
+                --batch-size 16 \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 8312 \
+                --total-sample-count 8313 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \
@@ -145,10 +180,11 @@ mkdir -p "run_outputs"  # The script will dump all the outputs to 'run_outputs'.
 
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
+                --batch-size 16 \
                 --accuracy \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 8312 \
+                --total-sample-count 8313 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \
@@ -172,10 +208,11 @@ OUTPUT_LOG_DIR=server-accuracy-logs
 
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
+                --batch-size 16 \
                 --accuracy \
                 --dtype float16 \
                 --user-conf user.conf \
-                --total-sample-count 8312 \
+                --total-sample-count 8313 \
                 --dataset-path ${DATASET_PATH} \
                 --output-log-dir output \
                 --tensor-parallel-size ${GPU_COUNT} \
@@ -193,5 +230,12 @@ The ServerSUT was not tested for GPU runs.
 
 
 ## Accuracy Target
-Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets (normalized to a 0-100
-scale from a 0.0-1.0 scale):
+Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets:
+```
+{
+        'rougeL': 21.6666,
+        'exact_match': 90.1335,
+        'tokens_per_sample': 684.68,
+}
+```
+The accuracy target is 99% for rougeL and exact_match, and 90% for tokens_per_sample

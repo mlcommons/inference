@@ -69,11 +69,8 @@ Documented whether **Equal Issue Mode** is applicable in
 
 ---
 
-#### **12. Recommended System Requirements to run the reference implementation**
-- Can run without GPUs: yes
-- Recommended GPU memory: 8GB
-- **System RAM** : 512 GB
-- **Storage**: 2.3 TB
+#### **12. Documentation of Recommended System Requirements to run the reference implementation**
+- [X] Added [here](https://github.com/mlcommons/inference/blob/docs/docs/system_requirements.yml#L44)
 
 ---
 

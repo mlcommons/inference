@@ -157,6 +157,17 @@ The currently valid [MLPerf Inference Benchmarks](index_gh.md) as of MLPerf infe
 - **High accuracy variant**: Yes
 - **Submission Category**: Datacenter
 
+## Graph Neural Networks
+### [R-GAT](benchmarks/graph/rgat.md)
+- **Dataset**: Illinois Graph Benchmark Heterogeneous validation dataset
+    - **Dataset Size**: 788,379
+    - **QSL Size**: 788,379
+- **Number of Parameters**: 
+- **Reference Model Accuracy**: ACC = ?
+- **Server Scenario Latency Constraint**: N/A
+- **Equal Issue mode**: True
+- **High accuracy variant**: No
+- **Submission Category**: Datacenter
 ---
 
 ## Submission Categories

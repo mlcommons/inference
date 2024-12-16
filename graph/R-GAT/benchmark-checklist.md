@@ -43,7 +43,6 @@ Documented whether **Equal Issue Mode** is applicable in
 
 #### **8. Reference Model Details**
 - [ ] Reference model details updated in [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)  
-  *Example: Parameters: 25.6M, FLOPs: 3.8B, Datatype: fp16.*
 
 ---
 
@@ -71,17 +70,17 @@ Documented whether **Equal Issue Mode** is applicable in
 ---
 
 #### **12. CPU-Only and Recommended GPU Requirements**
-- [X] Documented whether the reference implementation can run on **CPUs only**.
-- [ ] Minimum GPU requirements specified:
-  - [ ] Number of GPUs
-  - [ ] Required GPU memory
+- Can run without GPUs: yes
+- Minimum GPU requirements:
+  - Number of GPUs: 1
+  - Recommended GPU memory: 8GB
 
 ---
 
 #### **13. System Memory and Storage Requirements**
-- [X] Recommended system requirements documented:
-  - [X] **System RAM** (e.g., units of 256 GB RAM).
-  - [X] **Storage** (e.g., units of 500 GB storage).
+- Recommended system requirements:
+  - **System RAM** : 512 GB
+  - **Storage**: 2.3 TB
 
 ---
 

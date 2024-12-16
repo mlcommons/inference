@@ -20,14 +20,14 @@
 ---
 
 #### **5. Validation Dataset: Unique Samples**
-- [X] Number of **unique samples** in the validation dataset specified.
-- [X] QSL size documented.  
+- [] Number of **unique samples** in the validation dataset specified.
+- [] QSL size documented.  
   *(Ensure QSL size overflows the system cache.)*
 
 ---
 
 #### **6. Equal Issue Mode Applicability**
-- [X] Documented whether **Equal Issue Mode** is applicable.  
+- [X] Documented whether **Equal Issue Mode** is applicable in the [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf#L42) 
   *(Relevant if sample processing times are inconsistent across inputs.)*
 
 ---

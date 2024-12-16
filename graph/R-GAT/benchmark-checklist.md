@@ -42,7 +42,7 @@ Documented whether **Equal Issue Mode** is applicable in
 ---
 
 #### **8. Reference Model Details**
-[ ] Reference model details updated in [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)  
+- [ ] Reference model details updated in [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)  
   *Example: Parameters: 25.6M, FLOPs: 3.8B, Datatype: fp16.*
 
 ---
@@ -52,7 +52,7 @@ Documented whether **Equal Issue Mode** is applicable in
   - [ ] Performance runs
   - [ ] Accuracy runs
   - [ ] Compliance runs  
-- [ ] Valid log files are generated for all runs.
+- [ ] Valid log files passing the submission checker are generated for all runs.
 
 ---
 

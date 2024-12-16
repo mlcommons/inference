@@ -41,3 +41,10 @@ retinanet:
       system_memory: 8
       accelerator_memory: 8
       disk_storage: 200
+rgat:
+  reference:
+    fp32:
+      system_memory: 512
+      accelerator_memory: 8
+      disk_storage: 2300
+

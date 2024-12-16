@@ -80,7 +80,7 @@ Documented whether **Equal Issue Mode** is applicable in
 ---
 
 #### **14. Sample Log Files**
-- [ ] Include sample logs for all applicable scenario runs:
+- [ ] Include sample logs for all the applicable scenario runs:
   - [ ] `mlperf_log_summary.txt`
   - [ ] `mlperf_log_detail.txt`  
-- [ ] Ensure sample logs successfully pass the submission checker and represent compliant runs.
+- [ ] Ensure sample logs successfully pass the submission checker and applicable compliance runs.

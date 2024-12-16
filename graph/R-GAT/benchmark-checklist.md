@@ -69,27 +69,20 @@ Documented whether **Equal Issue Mode** is applicable in
 
 ---
 
-#### **12. CPU-Only and Recommended GPU Requirements**
+#### **12. Recommended System Requirements to run the reference implementation**
 - Can run without GPUs: yes
-- Minimum GPU requirements:
-  - Number of GPUs: 1
-  - Recommended GPU memory: 8GB
+- Recommended GPU memory: 8GB
+- **System RAM** : 512 GB
+- **Storage**: 2.3 TB
 
 ---
 
-#### **13. System Memory and Storage Requirements**
-- Recommended system requirements:
-  - **System RAM** : 512 GB
-  - **Storage**: 2.3 TB
-
----
-
-#### **14. Submission Checker Modifications**
+#### **13. Submission Checker Modifications**
 - [X] All necessary changes made to the **submission checker** to validate the benchmark.
 
 ---
 
-#### **15. Sample Log Files**
+#### **14. Sample Log Files**
 - [ ] Include sample logs for all applicable scenario runs:
   - [ ] `mlperf_log_summary.txt`
   - [ ] `mlperf_log_detail.txt`  

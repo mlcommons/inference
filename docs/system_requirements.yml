@@ -44,7 +44,7 @@ retinanet:
 rgat:
   reference:
     fp32:
-      system_memory: 512
+      system_memory: 768
       accelerator_memory: 8
       disk_storage: 2300
 

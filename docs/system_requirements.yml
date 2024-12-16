@@ -1,0 +1,6 @@
+# All memory requirements in GB
+resnet:
+  fp32:
+    system_memory: 8
+    gpu_memory: 4
+    disk_storage: 25

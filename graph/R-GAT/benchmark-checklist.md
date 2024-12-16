@@ -20,9 +20,8 @@
 ---
 
 #### **5. Validation Dataset: Unique Samples**
-- [] Number of **unique samples** in the validation dataset specified.
-- [] QSL size documented.  
-  *(Ensure QSL size overflows the system cache.)*
+- [] Number of **unique samples** in the validation dataset and the QSL size specified in the [inference policies benchmark section](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#41-benchmarks) and also in the [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf)
+  *(Ensure QSL size overflows the system cache if possible.)*
 
 ---
 

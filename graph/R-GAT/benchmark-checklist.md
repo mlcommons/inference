@@ -20,13 +20,18 @@
 ---
 
 #### **5. Validation Dataset: Unique Samples**
-- [] Number of **unique samples** in the validation dataset and the QSL size specified in the [inference policies benchmark section](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#41-benchmarks) and also in the [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf)
+Number of **unique samples** in the validation dataset and the QSL size specified in 
+- [ ] [inference policies benchmark section](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#41-benchmarks)
+- [X] [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf)
+- [X] [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)
   *(Ensure QSL size overflows the system cache if possible.)*
 
 ---
 
 #### **6. Equal Issue Mode Applicability**
-- [X] Documented whether **Equal Issue Mode** is applicable in the [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf#L42) 
+Documented whether **Equal Issue Mode** is applicable in 
+- [X] [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf#L42)
+- [X] [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)
   *(Relevant if sample processing times are inconsistent across inputs.)*
 
 ---
@@ -37,9 +42,7 @@
 ---
 
 #### **8. Reference Model Details**
-- [ ] Number of parameters of the model documented.
-- [ ] FLOPs (Floating Point Operations) specified.
-- [ ] Data type used for determining reference accuracy detailed.  
+[ ] Reference model details updated in [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)  
   *Example: Parameters: 25.6M, FLOPs: 3.8B, Datatype: fp16.*
 
 ---

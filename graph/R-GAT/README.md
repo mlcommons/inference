@@ -116,7 +116,7 @@ cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size tiny
 ```
 
-**CM command**
+**CM Command**
 ```
 cm run script --tags=get,dataset,igbh,_debug -j
 ```

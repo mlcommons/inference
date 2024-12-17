@@ -155,6 +155,21 @@ cd $GRAPH_FOLDER
 python3 main.py --dataset igbh-dgl-tiny --dataset-path igbh/ --profile debug-dgl [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
 
+##### Debug Run using CM
+```
+cm run script --tags=run-mlperf,inference,_submission,_short,_r5.0-dev \
+   --model=rgat \
+   --implementation=reference \
+   --framework=pytorch \
+   --category=edge \
+   --scenario=Offline \
+   --execution_mode=test \
+   --device=<cpu or cuda> \
+   --quiet \
+   --test_query_count=10 \
+   --docker
+```
+
 #### Local run
 ```bash
 # Go to the benchmark folder
@@ -163,6 +178,27 @@ cd $GRAPH_FOLDER
 # Run the benchmark DGL
 python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
+
+##### Local Run using CM
+```
+cm run script --tags=run-mlperf,inference,_submission,_full,_r5.0-dev \
+   --model=rgat \
+   --implementation=reference \
+   --framework=pytorch \
+   --category=edge \
+   --scenario=Offline \
+   --execution_mode=test \
+   --device=<>cpu or cuda> \
+   --quiet \
+   --test_query_count=10 \
+   --docker
+```
+
+- Number of threads could be adjusted using `--threads=#`, where # is the desired number of threads. This option works only if the implementation in use supports threading.
+- Batch size could be adjusted using `--batch_size=#`, where # is the desired batch size. This option works only if the implementation in use is supporting the given batch size.
+- Add `--env.CM_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.
+- Add `--env.CM_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.
+
 #### Run using docker
 
 Not implemented yet

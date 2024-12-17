@@ -194,7 +194,7 @@ MODEL_CONFIG = {
             "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
             "resnet50": "resnet",
-            "llama3-1-405b": "llama3.1-405b"
+            "llama3_1-405b": "llama3.1-405b"
         },
         "seeds": {
             "qsl_rng_seed": 3066443479025735752,

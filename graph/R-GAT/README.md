@@ -95,6 +95,12 @@ You can then navigate in the terminal to your desired download directory and run
 rclone copy mlc-inference:mlcommons-inference-wg-public/R-GAT/RGAT.pt $MODEL_PATH -P
 ```
 
+### Download model through CM (Collective Minds)
+
+```
+cm run script --tags=get,ml-model,rgat -j
+```
+
 ### Download and setup dataset
 #### Debug Dataset
 
@@ -110,6 +116,10 @@ cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size tiny
 ```
 
+**CM command**
+```
+cm run script --tags=get,dataset,igbh,_debug -j
+```
 
 #### Full Dataset
 **Warning:** This script will download 2.2TB of data 
@@ -122,6 +132,11 @@ cd $GRAPH_FOLDER
 ```bash
 cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size full
+```
+
+**CM Command**
+```
+cm run script --tags=get,dataset,igbh,_full -j
 ```
 
 

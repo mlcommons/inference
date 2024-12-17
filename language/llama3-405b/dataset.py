@@ -24,7 +24,7 @@ class Dataset:
     def __init__(
         self,
         model_name=None,
-        total_sample_count=8312,
+        total_sample_count=8313,
         perf_count_override=None,
         dataset_path=None,
         dtype="bfloat16"

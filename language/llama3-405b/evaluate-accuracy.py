@@ -141,7 +141,7 @@ def main():
 
     tokenizer = AutoTokenizer.from_pretrained(
         checkpoint_path,
-        model_max_length=2048,
+        model_max_length=22000,
         padding_side="left",
         use_fast=False,
     )

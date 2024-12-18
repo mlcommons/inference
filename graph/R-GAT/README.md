@@ -181,9 +181,12 @@ docker build . -f dockerfile.gpu -t rgat-gpu
 ```
 Run docker container:
 ```bash
-docker run --rm -it -v $(pwd):/root --gpus all rgat-gpu
+docker run --rm -it -v $(pwd):/workspace/root --gpus all rgat-gpu
 ```
-Run benchmark inside the docker container:
+Go inside the root folder and run benchmark inside the docker container:
 ```bash
+cd root
 python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full --device gpu [--model-path <path_to_ckpt>] [--in-memory] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
+
+**NOTE:** For official submissions, this benchmark is required to run in equal issue mode. Please make sure that the flag `rgat.*.sample_concatenate_permutation` is set to one in the [mlperf.conf](../../loadgen/mlperf.conf) file when loadgen is built.

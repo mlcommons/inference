@@ -501,7 +501,7 @@ def define_env(env):
         info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
         if model == "rgat":
             info += f"{pre_space}    - Add `--env.CM_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.\n\n"
-            info += f"{pre_space}    - Add `--env.CM_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.\n\n"  
+            info += f"{pre_space}    - Add `--env.CM_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.\n\n"
         if implementation.lower() == "reference":
             info += f"{pre_space}    - Add `--adr.mlperf-implementation.tags=_branch.master,_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the official MLPerf Inference implementation in a custom fork.\n\n"
             info += f"{pre_space}    - Add `--adr.inference-src.tags=_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the model config accuracy script in the submission checker within a custom fork.\n\n"

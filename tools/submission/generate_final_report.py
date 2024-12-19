@@ -211,7 +211,7 @@ def main():
                 "llama2-70b-99.9": ["Server", "Offline"],
                 "mixtral-8x7b": ["Server", "Offline"],
                 "rgat": ["Offline"],
-                "llama3-405b": ["Offline", "Server"]
+                "llama3.1-405b": ["Offline", "Server"]
             },
             "edge": {
                 "resnet": ["SingleStream", "MultiStream", "Offline"],

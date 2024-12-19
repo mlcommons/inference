@@ -15,7 +15,7 @@ def get_args():
     parser.add_argument(
         "--checkpoint-path",
         default="meta-llama/Meta-Llama-3-8B",
-        help="Path to Llama3-405b-hf-chat checkpoint"
+        help="Path to Llama3.1-405b-hf-chat checkpoint"
     )
     parser.add_argument(
         "--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json"

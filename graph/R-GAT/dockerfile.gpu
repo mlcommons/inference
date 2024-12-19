@@ -26,6 +26,8 @@ RUN apt install -y --no-install-recommends rsync
 # Upgrade pip
 RUN python3 -m pip install --upgrade pip
 
+RUN pip install torch-geometric torch-scatter torch-sparse -f https://pytorch-geometric.com/whl/torch-2.1.0+cu121.html
+RUN pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/cu121/repo.html
 
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
@@ -34,10 +36,6 @@ RUN cd /tmp && \
     cd inference/loadgen && \
     pip install pybind11 && \
     CFLAGS="-std=c++14" python3 setup.py install
-
-RUN export TORCH_VERSION=$(python -c "import torch; print(torch.__version__)")
-RUN pip install torch-geometric torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-${TORCH_VERSION}.html
-RUN pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/cu121/repo.html
 
 # Clean up
 RUN rm -rf mlperf \

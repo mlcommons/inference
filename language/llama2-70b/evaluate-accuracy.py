@@ -134,7 +134,8 @@ def main():
                 aggregated_results[k] = []
             aggregated_results[k].extend(v)
 
-    final_result = {k: round(np.mean(v) * 100, 4) for k, v in aggregated_results.items()}
+    final_result = {k: round(np.mean(v) * 100, 4)
+                    for k, v in aggregated_results.items()}
 
     prediction_lens = [len(pred) for pred in preds]
     gen_num = len(preds)
@@ -152,4 +153,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

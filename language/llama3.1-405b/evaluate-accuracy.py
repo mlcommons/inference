@@ -15,7 +15,7 @@ def get_args():
     parser.add_argument(
         "--checkpoint-path",
         default="meta-llama/Meta-Llama-3-8B",
-        help="Path to Llama3-405b-hf-chat checkpoint"
+        help="Path to Llama3.1-405b-hf-chat checkpoint"
     )
     parser.add_argument(
         "--mlperf-accuracy-file", required=True, help="path to mlperf_log_accuracy.json"
@@ -141,7 +141,7 @@ def main():
 
     tokenizer = AutoTokenizer.from_pretrained(
         checkpoint_path,
-        model_max_length=2048,
+        model_max_length=22000,
         padding_side="left",
         use_fast=False,
     )

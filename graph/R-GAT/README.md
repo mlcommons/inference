@@ -19,7 +19,7 @@ This is the reference implementation for MLPerf Inference Graph Neural Network. 
 
 ## Automated command to run the benchmark via MLCommons CM
 
-TODO
+Please check the official inference documentation [here](https://docs.mlcommons.org/inference/benchmarks/graph/rgat/)
  
 ## Setup
 Set the following helper variables
@@ -95,6 +95,12 @@ You can then navigate in the terminal to your desired download directory and run
 rclone copy mlc-inference:mlcommons-inference-wg-public/R-GAT/RGAT.pt $MODEL_PATH -P
 ```
 
+### Download model through CM (Collective Minds)
+
+```
+cm run script --tags=get,ml-model,rgat -j
+```
+
 ### Download and setup dataset
 #### Debug Dataset
 
@@ -110,6 +116,10 @@ cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size tiny
 ```
 
+**CM Command**
+```
+cm run script --tags=get,dataset,igbh,_debug -j
+```
 
 #### Full Dataset
 **Warning:** This script will download 2.2TB of data 
@@ -122,6 +132,11 @@ cd $GRAPH_FOLDER
 ```bash
 cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size full
+```
+
+**CM Command**
+```
+cm run script --tags=get,dataset,igbh,_full -j
 ```
 
 
@@ -140,6 +155,21 @@ cd $GRAPH_FOLDER
 python3 main.py --dataset igbh-dgl-tiny --dataset-path igbh/ --profile debug-dgl [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
 
+##### Debug Run using CM
+```
+cm run script --tags=run-mlperf,inference,_submission,_short,_r5.0-dev \
+   --model=rgat \
+   --implementation=reference \
+   --framework=pytorch \
+   --category=edge \
+   --scenario=Offline \
+   --execution_mode=test \
+   --device=<cpu or cuda> \
+   --quiet \
+   --test_query_count=10 \
+   --docker
+```
+
 #### Local run
 ```bash
 # Go to the benchmark folder
@@ -148,6 +178,27 @@ cd $GRAPH_FOLDER
 # Run the benchmark DGL
 python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
+
+##### Local Run using CM
+```
+cm run script --tags=run-mlperf,inference,_submission,_full,_r5.0-dev \
+   --model=rgat \
+   --implementation=reference \
+   --framework=pytorch \
+   --category=edge \
+   --scenario=Offline \
+   --execution_mode=test \
+   --device=<>cpu or cuda> \
+   --quiet \
+   --test_query_count=10 \
+   --docker
+```
+
+- Number of threads could be adjusted using `--threads=#`, where # is the desired number of threads. This option works only if the implementation in use supports threading.
+- Batch size could be adjusted using `--batch_size=#`, where # is the desired batch size. This option works only if the implementation in use is supporting the given batch size.
+- Add `--env.CM_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.
+- Add `--env.CM_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.
+
 #### Run using docker
 
 Not implemented yet
@@ -181,9 +232,12 @@ docker build . -f dockerfile.gpu -t rgat-gpu
 ```
 Run docker container:
 ```bash
-docker run --rm -it -v $(pwd):/root --gpus all rgat-gpu
+docker run --rm -it -v $(pwd):/workspace/root --gpus all rgat-gpu
 ```
-Run benchmark inside the docker container:
+Go inside the root folder and run benchmark inside the docker container:
 ```bash
+cd root
 python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full --device gpu [--model-path <path_to_ckpt>] [--in-memory] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
+
+**NOTE:** For official submissions, this benchmark is required to run in equal issue mode. Please make sure that the flag `rgat.*.sample_concatenate_permutation` is set to one in the [mlperf.conf](../../loadgen/mlperf.conf) file when loadgen is built.

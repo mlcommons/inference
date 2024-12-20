@@ -31,7 +31,7 @@ class SUT:
         model_path=None,
         dtype="bfloat16",
         batch_size=None,
-        total_sample_count=8312,
+        total_sample_count=8313,
         dataset_path=None,
         use_cached_outputs=False,
         # Set this to True *only for test accuracy runs* in case your prior
@@ -140,16 +140,16 @@ class SUT:
                         n_tokens)]
                 lg.QuerySamplesComplete(response)
 
-        tok = time.time()
+            tok = time.time()
 
-        with self.sample_counter_lock:
-            self.sample_counter += len(qitem)
-            log.info(f"Samples run: {self.sample_counter}")
-            if tik1:
-                log.info(f"\tBatchMaker time: {tik2 - tik1}")
-                log.info(f"\tInference time: {tik3 - tik2}")
-                log.info(f"\tPostprocess time: {tok - tik3}")
-                log.info(f"\t==== Total time: {tok - tik1}")
+            with self.sample_counter_lock:
+                self.sample_counter += len(qitem)
+                log.info(f"Samples run: {self.sample_counter}")
+                if tik1:
+                    log.info(f"\tBatchMaker time: {tik2 - tik1}")
+                    log.info(f"\tInference time: {tik3 - tik2}")
+                    log.info(f"\tPostprocess time: {tok - tik3}")
+                    log.info(f"\t==== Total time: {tok - tik1}")
 
     def load_model(self):
         log.info("Loading model...")
@@ -194,7 +194,7 @@ class SUTServer(SUT):
         self,
         model_path=None,
         dtype="bfloat16",
-        total_sample_count=8312,
+        total_sample_count=8313,
         dataset_path=None,
         batch_size=None,
         workers=1,

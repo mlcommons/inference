@@ -239,7 +239,8 @@ def define_env(env):
 
                             common_info = get_common_info(
                                 spaces + 16,
-                                implementation
+                                implementation,
+                                model.lower()
                             )
 
                             if (
@@ -488,7 +489,7 @@ def define_env(env):
 
     # contains run command information which is common to both docker and
     # native runs
-    def get_common_info(spaces, implementation):
+    def get_common_info(spaces, implementation, model):
         info = ""
         pre_space = ""
         for i in range(1, spaces):
@@ -496,7 +497,11 @@ def define_env(env):
         pre_space += " "
         # pre_space = "                "
         info += f"\n{pre_space}!!! tip\n\n"
+        info += f"{pre_space}    - Number of threads could be adjusted using `--threads=#`, where `#` is the desired number of threads. This option works only if the implementation in use supports threading.\n\n"
         info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
+        if model == "rgat":
+            info += f"{pre_space}    - Add `--env.CM_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.\n\n"
+            info += f"{pre_space}    - Add `--env.CM_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.\n\n"
         if implementation.lower() == "reference":
             info += f"{pre_space}    - Add `--adr.mlperf-implementation.tags=_branch.master,_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the official MLPerf Inference implementation in a custom fork.\n\n"
             info += f"{pre_space}    - Add `--adr.inference-src.tags=_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the model config accuracy script in the submission checker within a custom fork.\n\n"

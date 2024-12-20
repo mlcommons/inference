@@ -8,7 +8,7 @@ This is the reference implementation for MLPerf Inference Graph Neural Network. 
 
 | model | accuracy | dataset | model source | precision | notes |
 | ---- | ---- | ---- | ---- | ---- | ---- |
-| RGAT | - | IGBH | [Illiois Graph Benchmark](https://github.com/IllinoisGraphBenchmark/IGB-Datasets/) | fp32 | - |
+| RGAT | 0.7286 | IGBH | [Illiois Graph Benchmark](https://github.com/IllinoisGraphBenchmark/IGB-Datasets/) | fp32 | - |
 
 ## Dataset
 
@@ -207,6 +207,12 @@ Not implemented yet
 Add the `--accuracy` to the command to run the benchmark
 ```bash
 python3 main.py --dataset igbh --dataset-path igbh/ --accuracy --model-path model/ [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
+```
+
+**NOTE:** For official submissions you should submit the results of the accuracy run in a file called `accuracy.txt` with the following format:
+```
+accuracy=<accuracy>%, good=<number_of_good_samples>, total=<number_of_total_samples>
+hash=<hash>
 ```
 
 ### Docker run

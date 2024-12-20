@@ -194,6 +194,7 @@ MODEL_CONFIG = {
             "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
             "resnet50": "resnet",
+            "llama3_1-405b": "llama3.1-405b"
         },
         "seeds": {
             "qsl_rng_seed": 3066443479025735752,
@@ -267,7 +268,7 @@ MODEL_CONFIG = {
             "llama2-70b-99.9",
             "stable-diffusion-xl",
             "mixtral-8x7b",
-            "llama3-405b",
+            "llama3.1-405b",
             "rgat",
             # TODO: add automotive?
         ],
@@ -284,7 +285,7 @@ MODEL_CONFIG = {
             "llama2-70b-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["Server", "Offline"],
             "mixtral-8x7b": ["Server", "Offline"],
-            "llama3-405b": ["Server", "Offline"],
+            "llama3.1-405b": ["Server", "Offline"],
             "rgat": ["Offline"],
         },
         "optional-scenarios-datacenter": {},
@@ -315,7 +316,7 @@ MODEL_CONFIG = {
             "llama2-70b-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
             "mixtral-8x7b": ["Server", "Offline"],
-            "llama3-405b": ["Server", "Offline"],
+            "llama3.1-405b": ["Server", "Offline"],
             "rgat": ["Offline"],
         },
         "optional-scenarios-datacenter-edge": {},
@@ -389,7 +390,7 @@ MODEL_CONFIG = {
                 "mbxp_accuracy",
                 60.12 * 0.99,
             ),
-            "llama3-405b": (
+            "llama3.1-405b": (
                 "ROUGEL",
                 21.6666 * 0.99,
                 "exact_match",
@@ -409,7 +410,7 @@ MODEL_CONFIG = {
             "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
-            "llama3-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
+            "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
         },
         "accuracy-delta-perc": {
             "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}
@@ -429,7 +430,7 @@ MODEL_CONFIG = {
             "llama2-70b-99.9": 24576,
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
-            "llama3-405b": 8313,
+            "llama3.1-405b": 8313,
             "rgat": 788379
 
         },
@@ -459,7 +460,7 @@ MODEL_CONFIG = {
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
             "mixtral-8x7b": {"Server": 20000000000},
-            "llama3-405b": {"Server": 60000000000}
+            "llama3.1-405b": {"Server": 60000000000}
         },
         "min-queries": {
             "resnet": {
@@ -490,7 +491,7 @@ MODEL_CONFIG = {
                 "Offline": 1,
             },
             "mixtral-8x7b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama3-405b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama3.1-405b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "rgat": {"SingleStream": 1024, "Offline": 1}
         },
     },
@@ -579,7 +580,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "llama2-70b-99.9": 24576,
     "stable-diffusion-xl": 5000,
     "mixtral-8x7b": 15000,
-    "llama3-405b": 8313,
+    "llama3.1-405b": 8313,
     "rgat": 788379,
 }
 
@@ -656,7 +657,7 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
         },
-        "llama3-405b": {
+        "llama3.1-405b": {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
         },
@@ -671,7 +672,7 @@ LLM_LATENCY_LIMITS = {
         "conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}
     },
     "mixtral-8x7b": {"conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}},
-    "llama3-405b": {
+    "llama3.1-405b": {
         "conversational": {"ttft": 6000 * 1000000, "tpot": 175 * 1000000}
     },
 }
@@ -956,7 +957,8 @@ class Config:
                 "llama2-70b-99",
                 "llama2-70b-99.9",
                 "mixtral-8x7b",
-                "llama3-405b",
+                "llama3.1-405b",
+                "rgat",
             ]
             and self.version not in ["v4.0", "v4.1"]
         )
@@ -1324,7 +1326,7 @@ def check_performance_dir(
         )
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
-                 "mixtral-8x7b", "llama3-405b"]:
+                 "mixtral-8x7b", "llama3.1-405b"]:
         llama_constraint, is_valid = extra_check_llm(
             mlperf_log, scenario_fixed, model)
 
@@ -1864,7 +1866,7 @@ def check_results_dir(
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
-            "llama3-405b": {
+            "llama3.1-405b": {
                 "SingleStream": "Latency (ms)",
                 "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
@@ -2949,7 +2951,7 @@ def check_compliance_dir(
         "llama2-70b-99",
         "llama2-70b-99.9",
         "mixtral-8x7b",
-        "llama3-405b",
+        "llama3.1-405b",
         "rgat",
     ]:
         test_list.remove("TEST04")
@@ -2970,7 +2972,7 @@ def check_compliance_dir(
         "llama2-70b-99",
         "llama2-70b-99.9",
         "mixtral-8x7b",
-        "llama3-405b",
+        "llama3.1-405b",
     ]:
         test_list.remove("TEST01")
 
@@ -2979,7 +2981,7 @@ def check_compliance_dir(
         test_list.remove("TEST04")
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
-                 "mixtral-8x7b", "llama3-405b"]:
+                 "mixtral-8x7b", "llama3.1-405b"]:
         test_list.append("TEST06")
 
     if test_list and not os.path.exists(compliance_dir):

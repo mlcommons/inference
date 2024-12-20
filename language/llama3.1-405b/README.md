@@ -1,13 +1,13 @@
-# Reference Implementation for llama3-405b
+# Reference Implementation for llama3.1-405b
 
-**Basic implementation for llama3-405b. Few noteworthy items:**
+**Basic implementation for llama3.1-405b. Few noteworthy items:**
 
 + Streamer for communicating with loadgen has quite some overhead. This is only meant to provide functional implementation
 + For custom/optimized implementations of this benchmark it is important to include the :
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
         - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
 
-Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3-405b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3.1-405b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
 
 ## Prepare environment
@@ -33,9 +33,9 @@ rm ~/miniconda3/miniconda.sh
 - Set the following helper variables
 ```bash
 export ROOT=$PWD/inference
-export LLAMA_FOLDER=$PWD/inference/language/llama3-405b
+export LLAMA_FOLDER=$PWD/inference/language/llama3.1-405b
 export LOADGEN_FOLDER=$PWD/inference/loadgen
-export DATASET_FOLDER=$PWD/inference/language/llama3-405b/dataset
+export DATASET_FOLDER=$PWD/inference/language/llama3.1-405b/dataset
 ```
 
 - Clone the inference repository:
@@ -46,8 +46,8 @@ git clone --recurse-submodules https://github.com/mlcommons/inference.git \
 
 - Create a conda environment:
 ```bash
-conda create -y -n llama3-405b python=3.10
-conda activate llama3-405b
+conda create -y -n llama3.1-405b python=3.10
+conda activate llama3.1-405b
 conda install -y -c conda-forge libstdcxx-ng=12
 ```
 
@@ -100,7 +100,7 @@ TODO: Host model and grant access to submitters
 
 
 ### External Download
-+ First go to [llama3-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
++ First go to [llama3.1-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
 + Requires Git Large Files Storage
 ```
 export CHECKPOINT_PATH=Meta-Llama-3.1-405B-Instruct
@@ -127,13 +127,13 @@ rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5ee
 You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama3.1_405b_dataset_8313_processed_fp16_eval.pkl ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_llama3.1_405b_dataset_8313_processed_fp16_eval.pkl ./ -P
 ```
 
 You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
 
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_405b/mlperf_llama3.1_405b_calibration_dataset_512_processed_fp16_eval.pkl ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_llama3.1_405b_calibration_dataset_512_processed_fp16_eval.pkl ./ -P
 ```
 
 ## Run Performance Benchmarks

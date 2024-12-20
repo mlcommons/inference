@@ -137,12 +137,13 @@ def main():
     final_result = {k: round(np.mean(v) * 100, 4) for k, v in aggregated_results.items()}
 
     prediction_lens = [len(pred) for pred in preds]
+    gen_num = len(preds)
 
     final_result.update({
         "gen_len": np.sum(prediction_lens),
-        "gen_num": len(preds),
+        "gen_num": gen_num,
         "gen_tok_len": gen_tok_len,
-        "tokens_per_sample": round(gen_tok_len / len(preds), 1),
+        "tokens_per_sample": round(gen_tok_len / gen_num, 1),
     })
 
     print("\nResults\n")

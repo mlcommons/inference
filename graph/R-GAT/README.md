@@ -19,7 +19,7 @@ This is the reference implementation for MLPerf Inference Graph Neural Network. 
 
 ## Automated command to run the benchmark via MLCommons CM
 
-Please check the official inference documentation [here](https://docs.mlcommons.org/inference/benchmarks/graph/rgat/)
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/graph/rgat/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
  
 ## Setup
 Set the following helper variables
@@ -33,10 +33,7 @@ export MODEL_PATH=$PWD/inference/graph/R-GAT/model/
 ```bash
 git clone --recurse-submodules https://github.com/mlcommons/inference.git --depth 1
 ```
-Finally copy the `mlperf.conf` file to the stable diffusion folder
-```bash
-cp $ROOT_INFERENCE/mlperf.conf $GRAPH_FOLDER
-```
+
 
 ### Install pytorch
 **For NVIDIA GPU based runs:**
@@ -77,6 +74,14 @@ pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/cu121/repo.html
 pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/repo.html
 ```
 
+
+### Download model through CM (Collective Minds)
+
+```
+pip install cm4mlops
+cm run script --tags=get,ml-model,rgat --outdirname=<path_to_download>
+```
+
 ### Download model using Rclone
 
 To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
@@ -95,14 +100,15 @@ You can then navigate in the terminal to your desired download directory and run
 rclone copy mlc-inference:mlcommons-inference-wg-public/R-GAT/RGAT.pt $MODEL_PATH -P
 ```
 
-### Download model through CM (Collective Minds)
 
-```
-cm run script --tags=get,ml-model,rgat -j
-```
 
 ### Download and setup dataset
 #### Debug Dataset
+
+**CM Command**
+```
+cm run script --tags=get,dataset,igbh,_debug --outdirname=<path to download>
+```
 
 **Download Dataset**
 ```bash
@@ -116,13 +122,16 @@ cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size tiny
 ```
 
-**CM Command**
-```
-cm run script --tags=get,dataset,igbh,_debug -j
-```
+
 
 #### Full Dataset
-**Warning:** This script will download 2.2TB of data 
+**Warning:** This script will download 2.2TB of data
+
+**CM Command**
+```
+cm run script --tags=get,dataset,igbh,_full --outdirname=<path to download>
+```
+
 ```bash
 cd $GRAPH_FOLDER
 ./tools/download_igbh_full.sh igbh/
@@ -132,11 +141,6 @@ cd $GRAPH_FOLDER
 ```bash
 cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size full
-```
-
-**CM Command**
-```
-cm run script --tags=get,dataset,igbh,_full -j
 ```
 
 
@@ -155,20 +159,6 @@ cd $GRAPH_FOLDER
 python3 main.py --dataset igbh-dgl-tiny --dataset-path igbh/ --profile debug-dgl [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
 
-##### Debug Run using CM
-```
-cm run script --tags=run-mlperf,inference,_submission,_short,_r5.0-dev \
-   --model=rgat \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=edge \
-   --scenario=Offline \
-   --execution_mode=test \
-   --device=<cpu or cuda> \
-   --quiet \
-   --test_query_count=10 \
-   --docker
-```
 
 #### Local run
 ```bash
@@ -178,26 +168,6 @@ cd $GRAPH_FOLDER
 # Run the benchmark DGL
 python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
-
-##### Local Run using CM
-```
-cm run script --tags=run-mlperf,inference,_submission,_full,_r5.0-dev \
-   --model=rgat \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=edge \
-   --scenario=Offline \
-   --execution_mode=test \
-   --device=<>cpu or cuda> \
-   --quiet \
-   --test_query_count=10 \
-   --docker
-```
-
-- Number of threads could be adjusted using `--threads=#`, where # is the desired number of threads. This option works only if the implementation in use supports threading.
-- Batch size could be adjusted using `--batch_size=#`, where # is the desired batch size. This option works only if the implementation in use is supporting the given batch size.
-- Add `--env.CM_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.
-- Add `--env.CM_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.
 
 #### Run using docker
 

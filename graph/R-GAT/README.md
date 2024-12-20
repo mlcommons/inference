@@ -20,6 +20,8 @@ This is the reference implementation for MLPerf Inference Graph Neural Network. 
 ## Automated command to run the benchmark via MLCommons CM
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/graph/rgat/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do `pip install cm4mlops` and then use `cm` commands for downloading the model and datasets using the commands given in the later sections.
  
 ## Setup
 Set the following helper variables
@@ -78,7 +80,6 @@ pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/repo.html
 ### Download model through CM (Collective Minds)
 
 ```
-pip install cm4mlops
 cm run script --tags=get,ml-model,rgat --outdirname=<path_to_download>
 ```
 

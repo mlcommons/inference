@@ -119,5 +119,6 @@ if __name__ == "__main__":
 
     with open(args.output_file, "w") as fp:
         fp.write("accuracy={:.3f}%, good={}, total={}".format(
-            100.0 * results["accuracy"], results["number_correct_samples"], results["performance_sample_count"]
+            100.0 *
+            results["accuracy"], results["number_correct_samples"], results["performance_sample_count"]
         ))

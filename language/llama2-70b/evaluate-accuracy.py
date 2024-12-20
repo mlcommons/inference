@@ -4,6 +4,7 @@ import nltk
 import evaluate
 import numpy as np
 import json
+from multiprocessing import Pool, cpu_count
 
 
 def get_args():
@@ -52,12 +53,21 @@ def postprocess_text(preds, targets):
     return preds, targets
 
 
+def compute_rouge_chunk(chunk):
+    """Compute ROUGE scores for a chunk of predictions and references."""
+    metric = evaluate.load("rouge")
+    preds, targets = chunk
+    result = metric.compute(
+        predictions=preds, references=targets, use_stemmer=True, use_aggregator=False
+    )
+    return result
+
+
 def main():
 
     args = get_args()
     dataset_path = args.dataset_file
     checkpoint_path = args.checkpoint_path
-    metric = evaluate.load("rouge")
     nltk.download("punkt")
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -102,24 +112,43 @@ def main():
 
     preds, targets = postprocess_text(preds_decoded_text, target_required)
 
-    result = metric.compute(
-        predictions=preds, references=targets, use_stemmer=True, use_aggregator=False
-    )
-    result = {k: round(np.mean(v) * 100, 4) for k, v in result.items()}
-    prediction_lens = [len(pred) for pred in preds]
-    gen_num = len(preds)
+    # Split data into chunks for parallel processing
+    num_chunks = cpu_count()  # Number of parallel processes
+    chunk_size = len(preds) // num_chunks + (len(preds) % num_chunks > 0)
 
-    result = {
-        **result,
+    chunks = [
+        (preds[i:i + chunk_size], targets[i:i + chunk_size])
+        for i in range(0, len(preds), chunk_size)
+    ]
+
+    # Use multiprocessing Pool to compute ROUGE scores in parallel
+    with Pool(num_chunks) as pool:
+        results_list = pool.map(compute_rouge_chunk, chunks)
+
+    # Aggregate results from all chunks
+    aggregated_results = {}
+
+    for result in results_list:
+        for k, v in result.items():
+            if k not in aggregated_results:
+                aggregated_results[k] = []
+            aggregated_results[k].extend(v)
+
+    final_result = {k: round(np.mean(v) * 100, 4) for k, v in aggregated_results.items()}
+
+    prediction_lens = [len(pred) for pred in preds]
+
+    final_result.update({
         "gen_len": np.sum(prediction_lens),
-        "gen_num": gen_num,
+        "gen_num": len(preds),
         "gen_tok_len": gen_tok_len,
-        "tokens_per_sample": round(gen_tok_len / gen_num, 1),
-    }
+        "tokens_per_sample": round(gen_tok_len / len(preds), 1),
+    })
 
     print("\nResults\n")
-    print(result)
+    print(final_result)
 
 
 if __name__ == "__main__":
     main()
+

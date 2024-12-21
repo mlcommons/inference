@@ -1,0 +1,42 @@
+ARG FROM_IMAGE_NAME=nvcr.io/nvidia/pytorch:23.04-py3
+FROM ${FROM_IMAGE_NAME}
+
+SHELL ["/bin/bash", "-c"]
+
+ENV LC_ALL=C.UTF-8
+ENV LANG=C.UTF-8
+
+ENV TZ=US/Pacific
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN rm -rf /var/lib/apt/lists/* && rm -rf /etc/apt/sources.list.d/* \
+ && apt update \
+ && apt install -y --no-install-recommends build-essential autoconf \
+        libtool git ccache curl wget pkg-config sudo ca-certificates \
+        automake libssl-dev bc python3-dev python3-pip google-perftools \
+        gdb libglib2.0-dev clang sshfs libre2-dev libboost-dev \
+        libnuma-dev numactl sysstat sshpass ntpdate less iputils-ping \
+ && apt -y autoremove \
+ && apt remove -y cmake \
+ && apt install -y --no-install-recommends pkg-config zip g++ zlib1g-dev \
+        unzip libarchive-dev
+RUN apt install -y --no-install-recommends rsync
+
+# Upgrade pip
+RUN python3 -m pip install --upgrade pip
+
+RUN pip install torch-geometric torch-scatter torch-sparse -f https://pytorch-geometric.com/whl/torch-2.1.0+cu121.html
+RUN pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/cu121/repo.html
+
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+RUN cd /tmp && \
+    git clone --recursive https://github.com/mlcommons/inference && \
+    cd inference/loadgen && \
+    pip install pybind11 && \
+    CFLAGS="-std=c++14" python3 setup.py install
+
+# Clean up
+RUN rm -rf mlperf \
+    rm requirements.txt

@@ -1,0 +1,67 @@
+FROM ubuntu:22.04
+
+ENV PYTHON_VERSION=3.10
+ENV LANG C.UTF-8
+ENV LC_ALL C.UTF-8
+ENV PATH /opt/anaconda3/bin:$PATH
+
+WORKDIR /root
+ENV HOME /root
+
+RUN apt-get update
+
+RUN apt-get install -y --no-install-recommends \
+      git \
+      build-essential \
+      software-properties-common \
+      ca-certificates \
+      wget \
+      curl \
+      htop \
+      zip \
+      unzip
+
+
+
+# Install conda
+RUN arch=$(uname -m) && \
+    if [ "$arch" = "x86_64" ]; then \
+    MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-py310_24.9.2-0-Linux-x86_64.sh"; \
+    elif [ "$arch" = "aarch64" ]; then \
+    MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-py310_24.9.2-0-Linux-aarch64.sh"; \
+    else \
+    echo "Unsupported architecture: $arch"; \
+    exit 1; \
+    fi && \
+    cd /opt && \
+    wget --quiet $MINICONDA_URL -O miniconda.sh && \
+    bash ./miniconda.sh -b -p /opt/anaconda3 && \
+    rm miniconda.sh && \
+    /opt/anaconda3/bin/conda clean -a && \
+    ln -s /opt/anaconda3/etc/profile.d/conda.sh /etc/profile.d/conda.sh && \
+    echo ". /opt/anaconda3/etc/profile.d/conda.sh" >> ~/.bashrc && \
+    echo "conda activate base" >> ~/.bashrc && \
+    conda config --set always_yes yes --set changeps1 no
+
+
+# Install requirements
+RUN conda install -c conda-forge libstdcxx-ng
+RUN pip install --upgrade pip
+RUN pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0 --index-url https://download.pytorch.org/whl/cpu
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+RUN cd /tmp && \
+    git clone --recursive https://github.com/mlcommons/inference && \
+    cd inference/loadgen && \
+    pip install pybind11 && \
+    CFLAGS="-std=c++14" python3 setup.py install
+
+RUN export TORCH_VERSION=$(python -c "import torch; print(torch.__version__)")
+RUN pip install torch-geometric torch-scatter torch-sparse -f https://data.pyg.org/whl/torch-${TORCH_VERSION}.html
+RUN pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/repo.html
+# Clean up
+RUN rm -rf mlperf \
+    rm requirements.txt
+
+
+ENTRYPOINT ["/bin/bash"]

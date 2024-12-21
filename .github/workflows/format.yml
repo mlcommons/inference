@@ -29,7 +29,7 @@ jobs:
           for FILE in $(git diff --name-only $filter | grep -E '.*\.py$')
           do
             # Check if the file still exists in the working tree
-            if [ -f "$FILE" ]; then
+            if [ -f "$FILE" ] && [ "$FILE" != "tools/submission/power/power_checker.py" ]; then
               autopep8 --in-place -a "$FILE"
               git add "$FILE"
             fi

@@ -7,7 +7,6 @@ on:
     branches:
       - master
       - loadgen-release
-      - dev
     paths:
       - loadgen/**
 

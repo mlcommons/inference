@@ -1,0 +1,42 @@
+name: Reset Current Branch to Upstream After Squash Merge
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to reset (leave blank for current branch)'
+        required: false
+        default: 'dev'
+
+jobs:
+  reset-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect Current Branch
+        if: ${{ inputs.branch == '' }}
+        run: echo "branch=$(git rev-parse --abbrev-ref HEAD)" >> $GITHUB_ENV
+
+      - name: Use Input Branch
+        if: ${{ inputs.branch != '' }}
+        run: echo "branch=${{ inputs.branch }}" >> $GITHUB_ENV
+
+      - name: Add Upstream Remote
+        run: |
+          git remote add upstream https://github.com/mlcommons/inference.git
+          git fetch upstream
+      - name: Reset Branch to Upstream
+        run: |
+          git checkout ${{ env.branch }}
+          git reset --hard upstream/${{ env.branch }}
+        if: success()
+
+      - name: Force Push to Origin
+        run: |
+          git push origin ${{ env.branch }} --force-with-lease
+        if: success()

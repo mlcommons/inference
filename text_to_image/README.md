@@ -1,9 +1,11 @@
 # MLPerf™ Inference Benchmarks for Text to Image
 
-This is the reference implementation for MLPerf Inference text to image.
+## Automated command to run the benchmark via MLCommons CM
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/text_to_image/sdxl) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
+You can also do `pip install cm4mlops` and then use `cm` commands for downloading the model and datasets using the commands given in the later sections.
+ 
 ## Supported Models
 
 | model | accuracy | dataset | model source | precision | notes |
@@ -53,10 +55,8 @@ We host two checkpoints (fp32 and fp16) that are a snapshot of the [Hugging Face
 The following MLCommons CM commands can be used to programmatically download the model checkpoints.
 
 ```
-pip install cmind
-cm pull repo mlcommons@ck
-cm run script --tags=get,ml-model,sdxl,_fp16,_rclone -j
-cm run script --tags=get,ml-model,sdxl,_fp32,_rclone -j
+cm run script --tags=get,ml-model,sdxl,_fp16,_rclone --outdirname=$MODEL_PATH
+cm run script --tags=get,ml-model,sdxl,_fp32,_rclone --outdirname-$MODEL_PATH
 ```
 #### Manual method
 
@@ -95,7 +95,17 @@ mv <path_to_download>/stable_diffusion_fp16.zip .
 unzip stable_diffusion_fp16.zip
 ```
 
-### Download dataset
+### Download validation dataset
+
+#### CM METHOD
+The following MLCommons CM commands can be used to programmatically download the validation dataset.
+
+```
+cm run script --tags=get,dataset,coco2014,_validation,_full --outdirname=coco2014
+```
+
+
+#### MANUAL METHOD
 ```bash
 cd $SD_FOLDER/tools
 ./download-coco-2014.sh -n <number_of_workers>
@@ -107,7 +117,17 @@ cd $SD_FOLDER/tools
 ```
 If the file [captions.tsv](coco2014/captions/captions.tsv) can be found in the script, it will be used to download the target dataset subset, otherwise it will be generated. We recommend you to have this file for consistency.
 
-#### Calibration dataset
+### Download Calibration dataset
+
+#### CM METHOD
+The following MLCommons CM commands can be used to programmatically download the calibration dataset.
+
+```
+cm run script --tags=get,dataset,coco2014,_calibration --outdirname=coco2014
+```
+
+
+#### MANUAL METHOD
 
 We provide a script to download the calibration captions and images. To download only the captions:
 ```bash

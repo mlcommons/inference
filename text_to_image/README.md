@@ -127,9 +127,10 @@ cm run script --tags=get,dataset,coco2014,_calibration --outdirname=coco2014
 We provide a script to download the calibration captions and images. To download only the captions:
 ```bash
 cd $SD_FOLDER/tools
-./download-coco-2014-calibration.sh
+./download-coco-2014-calibration.sh -n <number_of_workers>
 ```
-To download only the captions and images:
+
+To download both the captions and images:
 ```bash
 cd $SD_FOLDER/tools
 ./download-coco-2014-calibration.sh -i -n <number_of_workers>

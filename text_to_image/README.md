@@ -78,11 +78,11 @@ cd $MODEL_PATH
 
 **`fp32`**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp32 ./stable_diffusion_fp32 -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp32 $MODEL_PATH -P
 ```
 **`fp16`**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp16 ./stable_diffusion_fp16 -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp16 $MODEL_PATH -P
 ```
 
 ### Download validation dataset
@@ -112,7 +112,7 @@ cd $SD_FOLDER/tools
 ```
 If the file [captions.tsv](coco2014/captions/captions.tsv) can be found in the script, it will be used to download the target dataset subset, otherwise it will be generated. We recommend you to have this file for consistency.
 
-### Download Calibration dataset
+### Download Calibration dataset (only if you are doing quantization)
 
 #### CM METHOD
 The following MLCommons CM commands can be used to programmatically download the calibration dataset.

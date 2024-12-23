@@ -176,10 +176,10 @@ python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full 
 
 ### Evaluate the accuracy
 ```bash
-cm run script --tags=process,mlperf,accuracy,_igbh --result_dir=<Path to directory where files are generated after benchmark run>
+cm run script --tags=process,mlperf,accuracy,_igbh --result_dir=<Path to directory where files are generated after the benchmark run>
 ```
 
-Please click [here](https://github.com/mlcommons/inference/blob/dev/graph/R-GAT/tools/accuracy_igbh.py) to view the python script for evaluating accuracy for the igbh dataset.
+Please click [here](https://github.com/mlcommons/inference/blob/dev/graph/R-GAT/tools/accuracy_igbh.py) to view the Python script for evaluating accuracy for the IGBH dataset.
 
 #### Run using docker
 

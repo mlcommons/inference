@@ -94,6 +94,11 @@ The following MLCommons CM commands can be used to programmatically download the
 cm run script --tags=get,dataset,coco2014,_validation,_full --outdirname=coco2014
 ```
 
+For debugging you can download only a part of all the images in the dataset
+```
+cm run script --tags=get,dataset,coco2014,_validation,_size.50 --outdirname=coco2014
+```
+
 
 #### MANUAL METHOD
 ```bash

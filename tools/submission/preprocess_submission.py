@@ -51,7 +51,7 @@ def get_args():
 
     parser.add_argument(
         "--version",
-        default="v4.1",
+        default="v5.0",
         choices=list(checker.MODEL_CONFIG.keys()),
         help="mlperf version",
     )

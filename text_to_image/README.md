@@ -56,6 +56,8 @@ The following MLCommons CM commands can be used to programmatically download the
 
 ```
 cm run script --tags=get,ml-model,sdxl,_fp16,_rclone --outdirname=$MODEL_PATH
+```
+```
 cm run script --tags=get,ml-model,sdxl,_fp32,_rclone --outdirname-$MODEL_PATH
 ```
 #### Manual method

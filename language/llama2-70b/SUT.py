@@ -5,8 +5,14 @@ import array
 import torch
 from torch.nn.functional import pad
 from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaForCausalLM
+# from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaForCausalLM  # original
+from transformers import AutoModelForCausalLM, AutoTokenizer  # Use ceva_modeling_llama
+from ceva_modeling_llama import LlamaForCausalLM, LlamaDecoderLayer  # Use ceva_modeling_llama
 from transformers.generation.streamers import BaseStreamer
+
+from liteml.ailabs_liteml.retrainer import RetrainerConfig, RetrainerModel
+from liteml.ailabs_shared.load_config import load_config
+from utils import get_calibration_loader
 
 import pickle
 import time
@@ -94,10 +100,12 @@ class SUT:
         # Set this to True *only for test accuracy runs* in case your prior
         # session was killed partway through
         workers=1,
+        liteml_config_path=None,
     ):
 
         self.model_path = model_path or "meta-llama/Llama-2-70b-chat-hf"
         self.device = device
+        self.liteml_config_path = liteml_config_path
 
         if not batch_size:
             if device == "cpu":
@@ -296,6 +304,11 @@ class SUT:
 
         self.tokenizer.pad_token = self.tokenizer.eos_token
         print("Loaded tokenizer")
+        
+        conf = self.process_liteml_config()
+        if conf is not None:
+            with torch.no_grad():
+                self.model = RetrainerModel(self.model, config=RetrainerConfig(conf))
 
     def get_sut(self):
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
@@ -324,6 +337,21 @@ class SUT:
 
     def __del__(self):
         pass
+
+    def process_liteml_config(self):
+        if self.liteml_config_path is not None:
+            conf = load_config(self.liteml_config_path)
+            if conf['QAT']['data_quantization']['quantization_mode'] == 'static':
+                # Add calibration loader
+                calib_loader = get_calibration_loader(self.tokenizer, seq_len=1024)
+                conf["QAT"]["data_quantization"][
+                    "calibration_loader"
+                ] = calib_loader
+                conf["QAT"]["data_quantization"][
+                    "calibration_loader_key"
+                ] = lambda model, x: model(x.cuda())
+            return conf
+        return None
 
 
 class SUTServer(SUT):

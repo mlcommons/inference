@@ -27,7 +27,7 @@ for _mount in ${MOUNTS[@]}; do
 done
 
 set -x
-nvidia-docker run -it --rm --net=host --runtime=nvidia --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
+docker run -it --rm --net=host --runtime=nvidia --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 \
   --cap-add=SYS_PTRACE --cap-add=SYS_ADMIN --cap-add=DAC_READ_SEARCH \
   --security-opt seccomp=unconfined \
   -w $PWD \

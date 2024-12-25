@@ -1,0 +1,146 @@
+QAT:
+    fully_quantized: False
+    device: 'cuda'
+    data_quantization:
+      status: On
+      bits: 8
+      custom_bits: {}
+      symmetric: On
+      per_channel: True
+      quantization_mode: static
+      observer: 'MovingAverage'
+    weights_quantization:
+      status: On
+      bits: 8
+      custom_bits: {}
+      symmetric: On
+      per_channel: False
+      quant_and_freeze: True
+
+
+    custom_quantization:
+      - source_module: torch.nn.Linear
+        destination_module: LinearQuant
+        params:
+          act_quantizer:
+            act_dynamic: True
+            observer: MinMax
+
+      - source_module: LiteMLMatmul
+        source_name: matmul_qkt
+        destination_module: QuantMatmul
+        params:
+          quantizer_in1: # per token per head
+            act_bits: 8
+            act_symmetric: On
+            dims: !!python/tuple [ 0, -1, -3 ]
+            act_dynamic: True
+            observer: MinMax
+          quantizer_in2: # per tensor per head
+            act_bits: 8
+            act_symmetric: On
+            dims: !!python/tuple [ 0, -1, -2, -3 ]
+            act_dynamic: False
+            observer: MovingAverage
+
+      - source_module: LiteMLMatmul
+        source_name: matmul_pv
+        destination_module: QuantMatmulOutputQuant
+        params:
+          quantizer_in1: # per token
+            act_bits: 8
+            act_symmetric: On
+            dims: !!python/tuple [ 0, -1, -3 ]
+            act_dynamic: True
+            observer: MinMax
+          quantizer_in2: # per tensor
+            act_bits: 8
+            act_symmetric: On
+            dims: !!python/tuple [ 0, -1, -2, -3 ]
+            act_dynamic: False
+            observer: MovingAverage
+          quantizer_out:
+            act_bits: 16
+            act_symmetric: On
+            dims: !!python/tuple [0, -1, -2, -3]  # per tensor
+
+      - source_module: LiteMLMul
+        destination_module: QuantMul
+        params:
+          quantizer_in1:
+            act_bits: 16
+            act_per_channel: False
+            dims: !!python/tuple []
+          quantizer_in2:
+            act_bits: 16
+            act_per_channel: False
+            dims: !!python/tuple []
+
+      - source_module: LiteMLAdd
+        source_name: add_1
+        destination_module: QuantAddCommonScalePerToken
+        params:
+          quantizer:
+            act_bits: 16
+            act_dynamic: True
+            observer: MinMax
+
+      - source_module: LiteMLAdd
+        source_name: add_2
+        destination_module: QuantAddCommonScalePerToken
+        params:
+          quantizer:
+            act_bits: 16
+            act_dynamic: True
+            observer: MinMax
+
+      - source_module: LiteMLAdd
+        source_name: rotary_add_q
+        destination_module: QuantAdd
+        params:
+          quantizer_in1:
+            act_bits: 16
+            dims: !!python/tuple []
+          quantizer_in2:
+            act_bits: 16
+            dims: !!python/tuple []
+
+      - source_module: LiteMLAdd
+        source_name: rotary_add_k
+        destination_module: QuantAdd
+        params:
+          quantizer_in1:
+            act_bits: 16
+            dims: !!python/tuple []
+          quantizer_in2:
+            act_bits: 16
+            dims: !!python/tuple []
+
+      - source_module: LiteMLAdd
+        source_name: add_mask
+        destination_module: QuantAddSoftmaxMask
+        params:
+          quantizer_in1:
+            act_bits: 16
+            dims: !!python/tuple []
+          quantizer_in2:
+            act_bits: 16
+            dims: !!python/tuple []
+
+      - source_module: torch.nn.SiLU
+        destination_module: SingleInputQuantActivation
+        params:
+          quantizer:
+            dim: !!python/tuple []
+
+      - source_module: LlamaRMSNorm
+        destination_module: QuantRMSNorm
+        params:
+          weights_quantizer:
+            dims: !!python/tuple []  # scale per tensor
+            weight_bits: 16
+          act_quantizer:
+            dims: !!python/tuple [-1]
+            act_dynamic: True
+            observer: MinMax
+            act_bits: 16

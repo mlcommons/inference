@@ -120,6 +120,12 @@ def get_args():
         default=None,
         help="Specify an api endpoint call to use api mode",
     )
+    parser.add_argument(
+        "--liteml-config",
+        type=str,
+        default=None,
+        help="Path for LiteML config file",
+    )
 
     args = parser.parse_args()
     return args
@@ -192,6 +198,7 @@ def main():
             total_sample_count=args.total_sample_count,
             device=args.device,
             workers=args.num_workers,
+            liteml_config_path=args.liteml_config
         )
 
     # Start sut before loadgen starts

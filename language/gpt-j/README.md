@@ -2,7 +2,8 @@
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/gpt-j) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
-You can also do pip install cm4mlops and then use cm commands for downloading the model and datasets using the commands given in the later sections.
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/gpt-j/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
 
 
 ### Setup Instructions
@@ -78,8 +79,7 @@ Please download the fine-tuned GPT-J checkpoint using the instructions below. Th
 The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
 
 ```
-pip install cm4mlops
-cm run script --tags=get,ml-model,gptj,_pytorch,_rclone -j --outdirname=<path/to/desired/output-directory>
+cm run script --tags=get,ml-model,gptj,_pytorch,_rclone --outdirname=<path/to/desired/output-directory>
 ```
 
 #### Manual method

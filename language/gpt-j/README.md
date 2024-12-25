@@ -2,6 +2,9 @@
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/gpt-j) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
+You can also do pip install cm4mlops and then use cm commands for downloading the model and datasets using the commands given in the later sections.
+
+
 ### Setup Instructions
 
 ```bash

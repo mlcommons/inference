@@ -79,7 +79,7 @@ The following MLCommons CM commands can be used to programmatically download the
 
 ```
 pip install cm4mlops
-cm run script --tags=get,ml-model,gptj,_pytorch,_rclone -j --outdirname=$MODEL_PATH
+cm run script --tags=get,ml-model,gptj,_pytorch,_rclone -j --outdirname=<path/to/desired/output-directory>
 ```
 
 #### Manual method

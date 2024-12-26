@@ -149,6 +149,10 @@ python3 tools/split_seeds.py --path igbh --dataset_size full
 
 The calibration dataset contains 5000 nodes from the training paper nodes of the IGBH dataset. We provide the [Node ids](../../calibration/IGBH/calibration.txt) and the [script](tools/split_seeds.py) to generate them (using the `--calibration` flag). 
 
+**CM Command**
+```
+cm run script --tags=get,dataset,igbh,_full,_calibration --outdirname=<path to download>
+```
 
 ### Run the benchmark
 #### Debug Run
@@ -169,6 +173,13 @@ cd $GRAPH_FOLDER
 # Run the benchmark DGL
 python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
+
+### Evaluate the accuracy
+```bash
+cm run script --tags=process,mlperf,accuracy,_igbh --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/mlcommons/inference/blob/dev/graph/R-GAT/tools/accuracy_igbh.py) to view the Python script for evaluating accuracy for the IGBH dataset.
 
 #### Run using docker
 

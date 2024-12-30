@@ -1132,8 +1132,9 @@ def find_error_in_detail_log(config, fname):
                 is_valid = False
     return is_valid
 
+
 def get_accuracy_values(config, model):
-    
+
     patterns = []
     acc_targets = []
     acc_types = []
@@ -1165,8 +1166,9 @@ def check_accuracy_dir(config, model, path, verbose):
     result_acc = {}
     hash_val = None
     target = config.get_accuracy_target(model)
-    #acc_upper_limit = config.get_accuracy_upper_limit(model)
-    patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = get_accuracy_values(config, model)
+    # acc_upper_limit = config.get_accuracy_upper_limit(model)
+    patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = get_accuracy_values(
+        config, model)
     acc_limit_check = True
 
     acc_seen = [False for _ in acc_targets]
@@ -1637,7 +1639,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -2812,7 +2814,7 @@ def check_compliance_perf_dir(test_dir):
                     test_perf_path,
                     diff)
                 is_valid = False
-    
+
     return is_valid
 
 
@@ -2861,7 +2863,8 @@ def check_compliance_acc_dir(test_dir, model, config):
                     is_valid = False
                 elif not acc_passed:
                     target = config.get_accuracy_target(model)
-                    patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = get_accuracy_values(config, model)
+                    patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = get_accuracy_values(
+                        config, model)
                     acc_limit_check = True
 
                     acc_seen = [False for _ in acc_targets]

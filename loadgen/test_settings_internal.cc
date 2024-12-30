@@ -523,11 +523,11 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   std::map<std::string, std::string> kv;
   static int configCount = 0;
 
-  if (conf_type == 0) {
-    if (configCount == 0 || ((configCount==1) && (conf_type == 2))) {
+  if (conf_type == 1) {
+    if (configCount == 0) {
       // Only allow userConf as the single configFile and loadgen loads the
       // mlperfConf automatically for perf and accuracy runs
-      FromConfig("", model, scenario, true);
+      FromConfig("", model, scenario, 0);
     }
 
     else {
@@ -585,7 +585,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   std::unique_ptr<std::istream> fss;
   std::string line;
 
-  if (conf_type=0) {
+  if (conf_type != 0) {
     // dirt simple config parser
     fss = std::make_unique<std::ifstream>(path);
     if (!static_cast<std::ifstream *>(fss.get())->is_open()) {
@@ -690,7 +690,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
         break;
     }
   }
-  if (conf_type=0) {
+
+  if (conf_type == 0) {
     lookupkv(model, scenario, "qsl_rng_seed", &qsl_rng_seed, nullptr);
     lookupkv(model, scenario, "sample_index_rng_seed", &sample_index_rng_seed,
              nullptr);
@@ -778,11 +779,11 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   if (lookupkv(model, scenario, "print_timestamps", &val, nullptr))
     print_timestamps = (val == 0) ? false : true;
 
-  //keys that are used in audit.conf
+  // keys that are used in audit.conf
   lookupkv(model, scenario, "accuracy_log_rng_seed", &accuracy_log_rng_seed,
-             nullptr);
+           nullptr);
   lookupkv(model, scenario, "accuracy_log_sampling_target",
-             &accuracy_log_sampling_target, nullptr);
+           &accuracy_log_sampling_target, nullptr);
   return 0;
 }
 

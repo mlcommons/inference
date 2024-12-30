@@ -351,7 +351,8 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
            pybind11::arg("conf_type") = 1,
            "This function configures settings from the given user "
            "configuration file, model, and scenario. The conf_type flag "
-           "should be set to 1 for loading user.conf or else only the default mlperf_conf file "
+           "should be set to 1 for loading user.conf or else only the default "
+           "mlperf_conf file "
            "will be loaded by the loadgen.");
 
   pybind11::enum_<LoggingMode>(m, "LoggingMode")

@@ -691,6 +691,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
         break;
     }
   }
+
   if (conf_type == 0) {
     lookupkv(model, scenario, "qsl_rng_seed", &qsl_rng_seed, nullptr);
     lookupkv(model, scenario, "sample_index_rng_seed", &sample_index_rng_seed,

@@ -524,11 +524,11 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   std::map<std::string, std::string> kv;
   static int configCount = 0;
 
-  if (conf_type == 0) {
-    if (configCount == 0 || ((configCount == 1) && (conf_type == 2))) {
+  if (conf_type == 1) {
+    if (configCount == 0) {
       // Only allow userConf as the single configFile and loadgen loads the
       // mlperfConf automatically for perf and accuracy runs
-      FromConfig("", model, scenario, true);
+      FromConfig("", model, scenario, 0);
     }
 
     else {

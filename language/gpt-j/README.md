@@ -79,7 +79,7 @@ Please download the fine-tuned GPT-J checkpoint using the instructions below. Th
 The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
 
 ```
-cm run script --tags=get,ml-model,gptj,_pytorch,_rclone --outdirname=<path/to/desired/output-directory>
+cm run script --tags=get,ml-model,gptj,_pytorch,_rclone ---outdirname =./model -P
 ```
 
 #### Manual method

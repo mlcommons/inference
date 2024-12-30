@@ -586,7 +586,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   std::unique_ptr<std::istream> fss;
   std::string line;
 
-  if (conf_type = 0) {
+  if (conf_type != 0) {
     // dirt simple config parser
     fss = std::make_unique<std::ifstream>(path);
     if (!static_cast<std::ifstream *>(fss.get())->is_open()) {
@@ -691,7 +691,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
         break;
     }
   }
-  if (conf_type = 0) {
+  if (conf_type == 0) {
     lookupkv(model, scenario, "qsl_rng_seed", &qsl_rng_seed, nullptr);
     lookupkv(model, scenario, "sample_index_rng_seed", &sample_index_rng_seed,
              nullptr);

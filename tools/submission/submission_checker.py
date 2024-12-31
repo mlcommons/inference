@@ -431,7 +431,7 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
             "llama3.1-405b": 8313,
-            "rgat": 10000
+            "rgat": 788379
 
         },
         # model_mapping.json is expected in the root directory of the

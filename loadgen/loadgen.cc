@@ -1228,7 +1228,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     RemoveValue(&audit_scenario, ' ');
     const std::string generic_model = "*";
     test_settings.FromConfig(audit_config_filename, generic_model,
-                             audit_scenario);
+                             audit_scenario, 2);
   }
   if (test_settings.test05) {
     // If the configuration indicates we are running test05,

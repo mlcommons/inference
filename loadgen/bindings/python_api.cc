@@ -348,10 +348,11 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::token_latency_scaling_factor)
       .def("FromConfig", &TestSettings::FromConfig, pybind11::arg("path"),
            pybind11::arg("model"), pybind11::arg("scenario"),
-           pybind11::arg("is_mlperf_conf") = false,
+           pybind11::arg("conf_type") = 1,
            "This function configures settings from the given user "
-           "configuration file, model, and scenario. The is_mlperf_conf flag "
-           "should be set to false or else only the default mlperf_conf file "
+           "configuration file, model, and scenario. The conf_type flag "
+           "should be set to 1 for loading user.conf or else only the default "
+           "mlperf_conf file "
            "will be loaded by the loadgen.");
 
   pybind11::enum_<LoggingMode>(m, "LoggingMode")

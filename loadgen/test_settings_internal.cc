@@ -520,15 +520,15 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
 }  // namespace loadgen
 
 int TestSettings::FromConfig(const std::string &path, const std::string &model,
-                             const std::string &scenario, bool is_mlperf_conf) {
+                             const std::string &scenario, int conf_type) {
   std::map<std::string, std::string> kv;
   static int configCount = 0;
 
-  if (!is_mlperf_conf) {
+  if (conf_type == 1) {
     if (configCount == 0) {
       // Only allow userConf as the single configFile and loadgen loads the
-      // mlperfConf automatically
-      FromConfig("", model, scenario, true);
+      // mlperfConf automatically for perf and accuracy runs
+      FromConfig("", model, scenario, 0);
     }
 
     else {
@@ -586,7 +586,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   std::unique_ptr<std::istream> fss;
   std::string line;
 
-  if (!is_mlperf_conf) {
+  if (conf_type != 0) {
     // dirt simple config parser
     fss = std::make_unique<std::ifstream>(path);
     if (!static_cast<std::ifstream *>(fss.get())->is_open()) {
@@ -691,20 +691,17 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
         break;
     }
   }
-  if (is_mlperf_conf) {
+
+  if (conf_type == 0) {
     lookupkv(model, scenario, "qsl_rng_seed", &qsl_rng_seed, nullptr);
     lookupkv(model, scenario, "sample_index_rng_seed", &sample_index_rng_seed,
              nullptr);
     lookupkv(model, scenario, "schedule_rng_seed", &schedule_rng_seed, nullptr);
-    lookupkv(model, scenario, "accuracy_log_rng_seed", &accuracy_log_rng_seed,
-             nullptr);
-    lookupkv(model, scenario, "accuracy_log_probability", nullptr,
-             &accuracy_log_probability, 0.01);
-    lookupkv(model, scenario, "accuracy_log_sampling_target",
-             &accuracy_log_sampling_target, nullptr);
     if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
                  nullptr))
       sample_concatenate_permutation = (val == 1) ? true : false;
+    lookupkv(model, scenario, "accuracy_log_probability", nullptr,
+             &accuracy_log_probability, 0.01);
     if (lookupkv(model, scenario, "test05", &val, nullptr))
       test05 = (val == 1) ? true : false;
     lookupkv(model, scenario, "test05_qsl_rng_seed", &test05_qsl_rng_seed,
@@ -715,8 +712,10 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
              &test05_schedule_rng_seed, nullptr);
   }
 
-  // keys that can be overriden in user.conf but will make the results eligibale
-  // only for open submission keys to measure token metrics
+  // keys that can be overriden in user.conf but will make the results eligible
+  // only for open submissions
+
+  // keys to measure token metrics
   if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)) {
     use_token_latencies = (val == 1) ? true : false;
   }
@@ -781,6 +780,11 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   if (lookupkv(model, scenario, "print_timestamps", &val, nullptr))
     print_timestamps = (val == 0) ? false : true;
 
+  // keys that are used in audit.conf
+  lookupkv(model, scenario, "accuracy_log_rng_seed", &accuracy_log_rng_seed,
+           nullptr);
+  lookupkv(model, scenario, "accuracy_log_sampling_target",
+           &accuracy_log_sampling_target, nullptr);
   return 0;
 }
 

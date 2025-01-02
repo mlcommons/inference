@@ -163,7 +163,7 @@ The currently valid [MLPerf Inference Benchmarks](index_gh.md) as of MLPerf infe
     - **Dataset Size**: 788,379
     - **QSL Size**: 788,379
 - **Number of Parameters**: 
-- **Reference Model Accuracy**: ACC = ?
+- **Reference Model Accuracy**: ACC = 72.86%
 - **Server Scenario Latency Constraint**: N/A
 - **Equal Issue mode**: True
 - **High accuracy variant**: No

@@ -55,7 +55,8 @@ The below CM command will launch the SUT server
 
 ```
 cm run script --tags=generate-run-cmds,inference --model=bert-99 --backend=pytorch  \
---mode=performance --device=cuda --quiet --test_query_count=1000 --network=sut
+--mode=performance --device=cuda --quiet --test_query_count=1000 --network=sut  \
+--outdirname=results/bert-99-performance
 ```
 
 Once the SUT server is launched, the below command can be run on the loadgen node to do issue queries to the SUT nodes. In this command `-sut_servers` has just the localhost address - it can be changed to a comma-separated list of any hostname/IP in the network. 
@@ -64,7 +65,8 @@ Once the SUT server is launched, the below command can be run on the loadgen nod
 ```
 cm run script --tags=generate-run-cmds,inference --model=bert-99 --backend=pytorch  --rerun \
 --mode=performance --device=cuda --quiet --test_query_count=1000  \
---sut_servers,=http://localhost:8000 --network=lon
+--sut_servers,=http://localhost:8000 --network=lon \
+--outdirname=results/bert-99-performance-lon
 ```
 
 If you are not using CM, just add `--network=lon` along with your normal run command on the SUT side.

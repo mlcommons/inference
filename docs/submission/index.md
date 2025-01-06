@@ -3,22 +3,7 @@ hide:
   - toc
 ---
 
-```mermaid
-flowchart LR
-    classDef hidden fill:none,stroke:none;
-    subgraph Generation [Submission Generation]
-      direction TB
-      A[populate system details] --> B[generate submission structure]
-      B --> C[truncate-accuracy-logs]
-      C --> D{Infer low talency results and/or filter out invalid results}
-      D -- yes --> E[preprocess-mlperf-inference-submission]
-      D -- no --> F[run-mlperf-inference-submission-checker]
-      E --> F
-    end
-    Input((MLPerf Inference Results folder)) --> Generation
-    Generation --  Submission TAR file --> H[Upload to Submission Server]
-    H --> Output((Receive validation email))
-```
+
 
 Click [here](https://youtu.be/eI1Hoecc3ho) to view the recording of the workshop: Streamlining your MLPerf Inference results using CM.
 
@@ -79,6 +64,23 @@ Click [here](https://docs.google.com/presentation/d/1cmbpZUpVr78EIrhzyMBnnWnjJrD
 Once all the results across all the models are ready you can use the following command to generate a valid submission tree compliant with the [MLPerf requirements](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc#inference-1).
 
 ## Generate actual submission tree
+
+```mermaid
+flowchart LR
+    classDef hidden fill:none,stroke:none;
+    subgraph Generation [Submission Generation]
+      direction TB
+      A[populate system details] --> B[generate submission structure]
+      B --> C[truncate-accuracy-logs]
+      C --> D{Infer low talency results and/or filter out invalid results}
+      D -- yes --> E[preprocess-mlperf-inference-submission]
+      D -- no --> F[run-mlperf-inference-submission-checker]
+      E --> F
+    end
+    Input((MLPerf Inference Results folder)) --> Generation
+    Generation --  Submission TAR file --> H[Upload to Submission Server]
+    H --> Output((Receive validation email))
+```
 
 === "Docker run"
     ### Docker run

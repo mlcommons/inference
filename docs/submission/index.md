@@ -70,89 +70,90 @@ Once all the results across all the models are ready you can use the following c
 
     === "Using Local Folder Sync"
 
-```mermaid
-flowchart LR
-    classDef hidden fill:none,stroke:none;
-    subgraph Generation1 [Submission Generation SUT-1]
-        direction TB
-        A3[populate system details] --> B3[generate submission structure]
-        B3 --> C3[truncate-accuracy-logs]
-        C3 --> D3{Infer low talency results and/or filter out invalid results}
-        D3 -- yes --> E3[preprocess-mlperf-inference-submission]
-        D3 -- no --> F3[run-mlperf-inference-submission-checker]
-        E3 --> F3
-    end
-    
-    subgraph Generation2 [Submission Generation SUT-2]
-        direction TB
-    end
+        ```mermaid
+        flowchart LR
+            classDef hidden fill:none,stroke:none;
+            subgraph Generation1 [Submission Generation SUT-1]
+                direction TB
+                A3[populate system details] --> B3[generate submission structure]
+                B3 --> C3[truncate-accuracy-logs]
+                C3 --> D3{Infer low talency results and/or filter out invalid results}
+                D3 -- yes --> E3[preprocess-mlperf-inference-submission]
+                D3 -- no --> F3[run-mlperf-inference-submission-checker]
+                E3 --> F3
+            end
 
-    subgraph GenerationN [Submission Generation SUT-N]
-        direction TB
-    end
+            subgraph Generation2 [Submission Generation SUT-2]
+                direction TB
+            end
 
-    Input1((MLPerf Inference Results folder SUT1)) --> Generation1 --> T1[Submission Tree 1]
-    Input2((MLPerf Inference Results folder SUT2)) --> Generation2 --> T2[Submission Tree 2]
-    Input3((MLPerf Inference Results folder SUTN)) --> GenerationN --> TN[Submission Tree N]
+            subgraph GenerationN [Submission Generation SUT-N]
+                direction TB
+            end
 
-    subgraph LargeCircle [ ]
-        direction TB
-        Generation1
-        Generation2
-        GenerationN
-    end
+            Input1((MLPerf Inference Results folder SUT1)) --> Generation1 --> T1[Submission Tree 1]
+            Input2((MLPerf Inference Results folder SUT2)) --> Generation2 --> T2[Submission Tree 2]
+            Input3((MLPerf Inference Results folder SUTN)) --> GenerationN --> TN[Submission Tree N]
 
-    T1 --> Sync((Sync locally with rsync on SUT-1))
-    T2 --> Sync
-    TN --> Sync
+            subgraph LargeCircle [ ]
+                direction TB
+                Generation1
+                Generation2
+                GenerationN
+            end
 
-    Sync --> finalsubcheck[run-mlperf-inference-submission-checker]
+            T1 --> Sync((Sync locally with rsync on SUT-1))
+            T2 --> Sync
+            TN --> Sync
 
-    finalsubcheck --> tar[Submission Tar File] --> upload[Upload result to submission server] --> output((Receive vlidation email))
-```
+            Sync --> finalsubcheck[run-mlperf-inference-submission-checker]
+
+            finalsubcheck --> tar[Submission Tar File] --> upload[Upload result to submission server] --> output((Receive vlidation email))
+        ```
 
     === "Using a Github repo"
 
-```mermaid
-flowchart LR
-    classDef hidden fill:none,stroke:none;
-
-    subgraph Generation1 [Submission Generation SUT-1]
-      direction TB
-      A3[populate system details] --> B3[generate submission structure]
-      B3 --> C3[truncate-accuracy-logs]
-      C3 --> D3{Infer low talency results and/or filter out invalid results}
-      D3 -- yes --> E3[preprocess-mlperf-inference-submission]
-      D3 -- no --> F3[run-mlperf-inference-submission-checker]
-      E3 --> F3
-    end
-    
-    subgraph Generation2 [Submission Generation SUT-2]
-      direction TB
-    end
-
-    subgraph GenerationN [Submission Generation SUT-N]
-      direction TB
-    end
-
-    Input1((MLPerf Inference Results folder SUT1)) --> Generation1 --> T1[Submission Tree 1]
-    Input2((MLPerf Inference Results folder SUT2)) --> Generation2 --> T2[Submission Tree 2]
-    Input3((MLPerf Inference Results folder SUTN)) --> GenerationN --> TN[Submission Tree N]
-
-    subgraph LargeCircle [ ]
-      direction TB
-      Generation1
-      Generation2
-      GenerationN
-    end
-
-    T1 --> Sync((Upload the submission tree to GitHub repo))
-    T2 --> Sync
-    TN --> Sync
-
-    Sync --> clone[Clone the repo to SUT1] --> tar[Submission Tar File] --> upload[Upload result to submission server] --> output((Receive vlidation email))
-```
-
+        ```mermaid
+        flowchart LR
+            classDef hidden fill:none,stroke:none;
+        
+            subgraph Generation1 [Submission Generation SUT-1]
+                direction TB
+                A3[populate system details] --> B3[generate submission structure]
+                B3 --> C3[truncate-accuracy-logs]
+                C3 --> D3{Infer low talency results and/or filter out invalid results}
+                D3 -- yes --> E3[preprocess-mlperf-inference-submission]
+                D3 -- no --> F3[run-mlperf-inference-submission-checker]
+                E3 --> F3
+            end
+                
+            subgraph Generation2 [Submission Generation SUT-2]
+                direction TB
+            end
+        
+            subgraph GenerationN [Submission Generation SUT-N]
+                direction TB
+            end
+        
+            Input1((MLPerf Inference Results folder SUT1)) --> Generation1 --> T1[Submission Tree 1]
+            Input2((MLPerf Inference Results folder SUT2)) --> Generation2 --> T2[Submission Tree 2]
+            Input3((MLPerf Inference Results folder SUTN)) --> GenerationN --> TN[Submission Tree N]
+        
+            subgraph LargeCircle [ ]
+                direction TB
+                Generation1
+                Generation2
+                GenerationN
+            end
+        
+            T1 --> Sync((Upload the submission tree to GitHub repo))
+            T2 --> Sync
+            TN --> Sync
+        
+            Sync --> clone[Clone the repo to SUT1] --> tar[Submission Tar File] --> upload[Upload result to submission server] --> output((Receive vlidation email))
+        ```
+        
+## Command to generate actual submission tree        
 === "Docker run"
     ### Docker run
     === "Closed"

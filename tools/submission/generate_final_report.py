@@ -63,14 +63,6 @@ def main():
     df.rename(columns={"Model": "UsedModel"}, inplace=True)
     df.rename(columns={"MlperfModel": "Model"}, inplace=True)
 
-    # Replace low latency names
-    def SubLowLatencyModel(model, mlperf_model):
-        if model in ["llama2-70b-low-latency-99", "llama2-70b-low-latency-99.9"]:
-            return model
-        else:
-            return mlperf_model
-    df["Model"] = df.apply(lambda x: SubLowLatencyModel(x["UsedModel"], x["Model"]), axis = 1)
-
     # fix issues with raw data
     df["host_processor_core_count"] = df["host_processor_core_count"].apply(
         lambda x: 2 if x == "2 (big); 4 (LITTLE)" else x

@@ -194,7 +194,6 @@ MODEL_CONFIG = {
             "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
             "resnet50": "resnet",
-            "llama3_1-405b": "llama3.1-405b"
         },
         "seeds": {
             "qsl_rng_seed": 3066443479025735752,
@@ -439,8 +438,12 @@ MODEL_CONFIG = {
         # not really needed
         "model_mapping": {
             # map model names to the official mlperf model class
+            "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
             "resnet50": "resnet",
+            "llama2-70b-low-latency-99": "llama2-70b-99",
+            "llama2-70b-low-latency-99.9": "llama2-70b-99.9",
+            "llama3_1-405b": "llama3.1-405b",
         },
         "seeds": {
             # TODO: Update random seeds
@@ -666,9 +669,11 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
 
 LLM_LATENCY_LIMITS = {
     "llama2-70b-99": {
+        "low-latency": {"ttft": 450 * 1000000, "tpot": 40 * 1000000},
         "conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}
     },
     "llama2-70b-99.9": {
+        "low-latency": {"ttft": 450 * 1000000, "tpot": 40 * 1000000},
         "conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}
     },
     "mixtral-8x7b": {"conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}},
@@ -883,6 +888,11 @@ class Config:
         # map again
         mlperf_model = self.base["model_mapping"].get(model, model)
         return mlperf_model
+    
+    def get_llm_constraint(self, model_name):
+        if model_name in ["llama2-70b-low-latency-99", "llama2-70b-low-latency-99.9"]:
+            return "low-latency"
+        return None
 
     def get_required(self, model):
         model = self.get_mlperf_model(model)
@@ -1249,29 +1259,35 @@ def check_accuracy_dir(config, model, path, verbose):
     return is_valid, result_acc
 
 
-def extra_check_llm(mlperf_log, scenario, model):
+def extra_check_llm(mlperf_log, scenario, model, llm_constraint):
     if mlperf_log["requested_use_token_latencies"]:
         if scenario == "Offline":
             # For offline no further checks are necessary
-            return None, True
+            return True
         else:
-            for constraint, limits in LLM_LATENCY_LIMITS[model].items():
-                if (
-                    mlperf_log["result_first_token_99.00_percentile_latency_ns"]
-                    < limits["ttft"]
-                    and mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
-                    < limits["tpot"]
-                ):
-                    return constraint, True
+            if llm_constraint is None:
+                llm_constraint = "conversational"
+            limits = LLM_LATENCY_LIMITS[model][llm_constraint]
+            if (
+                mlperf_log["result_first_token_99.00_percentile_latency_ns"]
+                < limits["ttft"]
+                and mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
+                < limits["tpot"]
+            ):
+                return True
     else:
         log.error(
             f"use_token_latencies flag needs to be enabled for Llama2 benchmark")
-        return None, False
+        return False
 
     log.error(
-        f'Failed Llama2 extra check for TTFT and TPOT. TTFT 99-tile: {mlperf_log["result_first_token_99.00_percentile_latency_ns"]}, TPOT 99-tile: {mlperf_log["result_time_per_output_token_99.00_percentile_ns"]}'
+        'Failed extra check for TTFT and TPOT. Obtained: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f. Required: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f',
+        mlperf_log["result_first_token_99.00_percentile_latency_ns"],
+        mlperf_log["result_time_per_output_token_99.00_percentile_ns"],
+        limits["ttft"],
+        limits["tpot"]
     )
-    return None, False
+    return False
 
 
 def get_performance_metric(
@@ -1309,7 +1325,7 @@ def get_performance_metric(
 
 
 def check_performance_dir(
-        config, model, path, scenario_fixed, division, system_json):
+        config, model, path, scenario_fixed, division, system_json, llm_constraint = None):
     is_valid = False
     rt = {}
 
@@ -1341,8 +1357,9 @@ def check_performance_dir(
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
                  "mixtral-8x7b", "llama3.1-405b"]:
-        llama_constraint, is_valid = extra_check_llm(
-            mlperf_log, scenario_fixed, model)
+        llm_is_valid = extra_check_llm(
+            mlperf_log, scenario_fixed, model, llm_constraint)
+        is_valid = (llm_is_valid and is_valid)
 
     latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
     latency_mean = mlperf_log["result_mean_latency_ns"]
@@ -2182,6 +2199,7 @@ def check_results_dir(
                     mlperf_model = config.get_mlperf_model(
                         model_name, extra_model_mapping
                     )
+                    llm_constraint = config.get_llm_constraint(model_name)
 
                     if is_closed_or_network and mlperf_model not in config.models:
                         # for closed/network divisions we want the model name to match.
@@ -2399,6 +2417,7 @@ def check_results_dir(
                                     scenario_fixed,
                                     division,
                                     system_json,
+                                    llm_constraint
                                 )
                                 if is_inferred:
                                     inferred = 1
@@ -3018,6 +3037,8 @@ def check_compliance_dir(
                 compliance_perf_dir = os.path.join(
                     compliance_dir, test, "performance", "run_1"
                 )
+                # WARNING: LLMs for now only have TEST06, so for no llm_constraint is 
+                # not needed to call
                 compliance_perf_valid, r, is_inferred = check_performance_dir(
                     config, model, compliance_perf_dir, scenario, division, system_json
                 )

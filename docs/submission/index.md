@@ -96,13 +96,12 @@ cm docker script --tags=generate,inference,submission \
             --quiet
 ```
 
-=== "Multi-SUT submission"
 
-     If there are multiple SUTs, the same process needs to be repeated on each of them. One we have Submission folders on all the SUTs, we need to sync them to make a single submission folder
+If there are multiple SUTs, the same process needs to be repeated on each of them. One we have Submission folders on all the SUTs, we need to sync them to make a single submission folder
 
-    === "Sync Locally"
+=== "Sync Locally"
 
-        ```mermaid
+    ```mermaid
         flowchart LR
             classDef hidden fill:none,stroke:none;
             subgraph Generation1 [Submission Generation SUT-1]
@@ -141,11 +140,11 @@ cm docker script --tags=generate,inference,submission \
             Sync --> finalsubcheck[run-mlperf-inference-submission-checker]
 
             finalsubcheck --> tar[Submission Tar File] --> upload[Upload result to submission server] --> output((Receive vlidation email))
-        ```
+    ```
 
-    === "Sync via a Github repo"
+=== "Sync via a Github repo"
 
-        ```mermaid
+    ```mermaid
         flowchart LR
             classDef hidden fill:none,stroke:none;
         
@@ -183,7 +182,7 @@ cm docker script --tags=generate,inference,submission \
             TN --> Sync
         
             Sync --> clone[Clone the repo to SUT1] --> tar[Submission Tar File] --> upload[Upload result to submission server] --> output((Receive vlidation email))
-        ```
+    ```
         
 ## Command to generate actual submission tree        
 === "Docker run"

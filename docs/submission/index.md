@@ -59,9 +59,9 @@ Click [here](https://docs.google.com/presentation/d/1cmbpZUpVr78EIrhzyMBnnWnjJrD
     ```
 
 
-Once all the results across all the models are ready you can use the following command to generate a valid submission tree compliant with the [MLPerf requirements](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc#inference-1).
+Once all the results across all the models are ready you can use the following the below section to generate a valid submission tree compliant with the [MLPerf requirements](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc#inference-1).
 
-## Generate actual submission tree
+## Generate submission folder
 
 The submission generation flow is explained in the below diagram
 
@@ -80,7 +80,7 @@ flowchart LR
     Generation --> Output((Submission Folder <br> SUT1))
 ```
 
-### Command to generate actual submission folder
+### Command to generate submission folder
 
 ```bash
 cm run script --tags=generate,inference,submission \

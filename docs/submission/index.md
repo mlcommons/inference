@@ -83,9 +83,10 @@ flowchart LR
     Generation --> Output((Submission Folder SUT1))
 ```
 
-## Command to generate actual submission folder        
+## Command to generate actual submission folder
+
 ```bash
-        cm docker script --tags=generate,inference,submission \
+cm docker script --tags=generate,inference,submission \
             --clean \
             --preprocess_submission=yes \
             --run-checker \
@@ -97,7 +98,7 @@ flowchart LR
 
 === "Multi-SUT submission"
 
-If there are multiple SUTs, the same process needs to be repeated on each of them. One we have Submission folders on all the SUTs, we need to sync them to make a single submission folder
+    If there are multiple SUTs, the same process needs to be repeated on each of them. One we have Submission folders on all the SUTs, we need to sync them to make a single submission folder
 
     === "Sync Locally"
 

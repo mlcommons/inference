@@ -3,13 +3,22 @@ hide:
   - toc
 ---
 
-<p align="center">
-  <img src="../img/submission-flow.png" alt="Submission Generation Flow">
-</p>
-
-<p align="center"><em>Figure: MLPerf Inference Submission Generation Flow</em></p>
-
-<!--![Submission Generation Flow](../img/submission-flow.png)-->
+```mermaid
+flowchart LR
+    classDef hidden fill:none,stroke:none;
+    subgraph Generation [Submission Generation]
+      direction TB
+      A[populate system details] --> B[generate submission structure]
+      B --> C[truncate-accuracy-logs]
+      C --> D{Infer low talency results and/or filter out invalid results}
+      D --> yes --> E[preprocess-mlperf-inference-submission]
+      D --> no --> F[run-mlperf-inference-submission-checker]
+      E --> F
+    end
+    Input((MLPerf Inference Results folder)) --> Generation
+    Generation --  Submission TAR file --> H[Upload to Submission Server]
+    H --> Output((Receive validation email))
+```
 
 Click [here](https://youtu.be/eI1Hoecc3ho) to view the recording of the workshop: Streamlining your MLPerf Inference results using CM.
 

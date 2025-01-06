@@ -66,9 +66,39 @@ Once all the results across all the models are ready you can use the following c
 
 ## Generate actual submission tree
 
+The submission generation flow is explained in the below diagram
+
+```mermaid
+flowchart LR
+    subgraph Generation [Submission Generation SUT1]
+      direction TB
+      A[populate system details] --> B[generate submission structure]
+      B --> C[truncate-accuracy-logs]
+      C --> D{Infer low talency results and/or filter out invalid results}
+      D --> yes --> E[preprocess-mlperf-inference-submission]
+      D --> no --> F[run-mlperf-inference-submission-checker]
+      E --> F
+    end
+    Input((MLPerf Inference Results SUT1)) --> Generation
+    Generation --> Output((Submission Folder SUT1))
+```
+## Command to generate actual submission folder        
+```bash
+        cm docker script --tags=generate,inference,submission \
+            --clean \
+            --preprocess_submission=yes \
+            --run-checker \
+            --submitter=MLCommons \
+            --division=closed \
+            --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
+            --quiet
+        ```
+
 === "Multi-SUT submission"
 
-    === "Using Local Folder Sync"
+If there are multiple SUTs, the same process needs to be repeated on each of them. One we have Submission folders on all the SUTs, we need to sync them to make a single submission folder
+
+    === "Sync Locally"
 
         ```mermaid
         flowchart LR
@@ -111,7 +141,7 @@ Once all the results across all the models are ready you can use the following c
             finalsubcheck --> tar[Submission Tar File] --> upload[Upload result to submission server] --> output((Receive vlidation email))
         ```
 
-    === "Using a Github repo"
+    === "Sync via a Github repo"
 
         ```mermaid
         flowchart LR

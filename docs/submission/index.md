@@ -98,7 +98,7 @@ cm docker script --tags=generate,inference,submission \
 
 === "Multi-SUT submission"
 
-    If there are multiple SUTs, the same process needs to be repeated on each of them. One we have Submission folders on all the SUTs, we need to sync them to make a single submission folder
+     If there are multiple SUTs, the same process needs to be repeated on each of them. One we have Submission folders on all the SUTs, we need to sync them to make a single submission folder
 
     === "Sync Locally"
 

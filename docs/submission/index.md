@@ -82,6 +82,7 @@ flowchart LR
     Input((MLPerf Inference Results SUT1)) --> Generation
     Generation --> Output((Submission Folder SUT1))
 ```
+
 ## Command to generate actual submission folder        
 ```bash
         cm docker script --tags=generate,inference,submission \
@@ -92,7 +93,7 @@ flowchart LR
             --division=closed \
             --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
             --quiet
-        ```
+```
 
 === "Multi-SUT submission"
 

@@ -83,18 +83,33 @@ flowchart LR
     Generation --> Output((Submission Folder SUT1))
 ```
 
-## Command to generate actual submission folder
+### Command to generate actual submission folder
 
 ```bash
-cm docker script --tags=generate,inference,submission \
-            --clean \
-            --preprocess_submission=yes \
-            --run-checker \
-            --submitter=MLCommons \
-            --division=closed \
-            --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
-            --quiet
+cm run script --tags=generate,inference,submission \
+  --clean \
+  --preprocess_submission=yes \
+  --run-checker=yes \
+  --submitter=MLCommons \
+  --division=closed \
+  --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
+  --quiet
 ```
+* Use `--hw_name="My system name"` to give a meaningful system name. Examples can be seen [here](https://github.com/mlcommons/inference_results_v3.0/tree/main/open/cTuning/systems)
+
+* Use `--submitter=<Your name>` if your organization is an official MLCommons member and would like to submit under your organization
+
+* Use `--hw_notes_extra` option to add additional notes like `--hw_notes_extra="Result taken by NAME" `
+
+* Use `--results_dir` option to specify the results folder.  It is automatically taken from CM cache for MLPerf automation based runs
+
+* Use `--submission_dir` option to specify the submission folder.
+
+* Use `--division=open` for open division submission 
+
+* Use `--category` option to specify the category for which submission is generated(datacenter/edge). By default, the category is taken from `system_meta.json` file located in the SUT root directory.
+
+* Use `--submission_base_dir` to specify the directory to which the outputs from preprocess submission script and final submission is added. No need to provide `--submission_dir` along with this. For `docker run`, use `--submission_base_dir` instead of `--submission_dir`.
 
 
 If there are multiple SUTs, the same process needs to be repeated on each of them. One we have Submission folders on all the SUTs, we need to sync them to make a single submission folder
@@ -103,43 +118,18 @@ If there are multiple SUTs, the same process needs to be repeated on each of the
 
     ```mermaid
         flowchart LR
-            classDef hidden fill:none,stroke:none;
-            subgraph Generation1 [Submission Generation SUT-1]
-                direction TB
-                A3[populate system details] --> B3[generate submission structure]
-                B3 --> C3[truncate-accuracy-logs]
-                C3 --> D3{Infer low talency results and/or filter out invalid results}
-                D3 -- yes --> E3[preprocess-mlperf-inference-submission]
-                D3 -- no --> F3[run-mlperf-inference-submission-checker]
-                E3 --> F3
+            subgraph SUT1 [Submission Generation SUT1]
+              A[Submission Folder SUT1]
             end
-
-            subgraph Generation2 [Submission Generation SUT-2]
-                direction TB
+            subgraph SUT2 [Submission Generation SUT2]
+              B[Submission Folder SUT2]
             end
-
-            subgraph GenerationN [Submission Generation SUT-N]
-                direction TB
+            subgraph SUT3 [Submission Generation SUT3]
+              C[Submission Folder SUT3]
             end
-
-            Input1((MLPerf Inference Results folder SUT1)) --> Generation1 --> T1[Submission Tree 1]
-            Input2((MLPerf Inference Results folder SUT2)) --> Generation2 --> T2[Submission Tree 2]
-            Input3((MLPerf Inference Results folder SUTN)) --> GenerationN --> TN[Submission Tree N]
-
-            subgraph LargeCircle [ ]
-                direction TB
-                Generation1
-                Generation2
-                GenerationN
-            end
-
-            T1 --> Sync((Sync locally with rsync on SUT-1))
-            T2 --> Sync
-            TN --> Sync
-
-            Sync --> finalsubcheck[run-mlperf-inference-submission-checker]
-
-            finalsubcheck --> tar[Submission Tar File] --> upload[Upload result to submission server] --> output((Receive vlidation email))
+            SUT2 --> SUT1
+            SUT3 --> SUT1
+           
     ```
 
 === "Sync via a Github repo"
@@ -249,17 +239,6 @@ If there are multiple SUTs, the same process needs to be repeated on each of the
             --quiet
         ```
 
-* Use `--hw_name="My system name"` to give a meaningful system name. Examples can be seen [here](https://github.com/mlcommons/inference_results_v3.0/tree/main/open/cTuning/systems)
-
-* Use `--submitter=<Your name>` if your organization is an official MLCommons member and would like to submit under your organization
-
-* Use `--hw_notes_extra` option to add additional notes like `--hw_notes_extra="Result taken by NAME" `
-
-* Use `--results_dir` option to specify the results folder for Non CM based benchmarks
-
-* Use `--category` option to specify the category for which submission is generated(datacenter/edge). By default, the category is taken from `system_meta.json` file located in the SUT root directory.
-
-* Use `--submission_base_dir` to specify the directory to which outputs from preprocess submission script and final submission is to be dumped. No need to provide `--submission_dir` along with this. For `docker run`, use `--submission_base_dir` instead of `--submission_dir`.
 
 The above command should generate "submission.tar.gz" if there are no submission checker issues and you can upload it to the [MLCommons Submission UI](https://submissions-ui.mlcommons.org/submission).
 

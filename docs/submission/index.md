@@ -11,8 +11,8 @@ flowchart LR
       A[populate system details] --> B[generate submission structure]
       B --> C[truncate-accuracy-logs]
       C --> D{Infer low talency results and/or filter out invalid results}
-      D --> yes --> E[preprocess-mlperf-inference-submission]
-      D --> no --> F[run-mlperf-inference-submission-checker]
+      D -- yes --> E[preprocess-mlperf-inference-submission]
+      D -- no --> F[run-mlperf-inference-submission-checker]
       E --> F
     end
     Input((MLPerf Inference Results folder)) --> Generation

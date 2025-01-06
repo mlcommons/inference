@@ -1,7 +1,0 @@
-{
-    "input_data_types": "int8",
-    "retraining": "No",
-    "starting_weights_filename": "224_224_160_dyanmic_bs.onnx",
-    "weight_data_types": "int8",
-    "weight_transformations": "quantization, affine fusion"
-}

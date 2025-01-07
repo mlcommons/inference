@@ -13,11 +13,6 @@ Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/l
  
 ## Prepare environment
 
-Copy the mlperf.conf file to this folder.
-```
-cp ../../mlperf.conf .
-```
-
 For a CPU-only run:
 
 ```
@@ -136,7 +131,6 @@ wget https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_1
 ```
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 15000 \
                 --device cpu \
@@ -149,7 +143,6 @@ For a GPU-based run:
 ```
 python3 -u main.py --scenario Offline \
         --model-path ${CHECKPOINT_PATH} \
-        --mlperf-conf mlperf.conf \
         --user-conf user.conf \
         --total-sample-count 15000 \
         --dataset-path ${DATASET_PATH} \
@@ -162,7 +155,6 @@ python3 -u main.py --scenario Offline \
 ```
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 15000 \
                 --device cpu \
@@ -184,7 +176,6 @@ mkdir -p "run_outputs"  # The script will dump all the outputs to 'run_outputs'.
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
                 --accuracy \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 15000 \
                 --dataset-path ${DATASET_PATH} \
@@ -221,7 +212,6 @@ OUTPUT_LOG_DIR=server-accuracy-logs
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
                 --accuracy \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 15000 \
                 --dataset-path ${DATASET_PATH} \

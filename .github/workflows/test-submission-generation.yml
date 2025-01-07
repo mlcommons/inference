@@ -42,13 +42,11 @@ jobs:
       continue-on-error: true
       run: |
         if [ "${{ matrix.case }}" == "closed" ]; then
-          extra_run_args=" --env.CM_MLPERF_SUBMISSION_CHECKER_EXTRA_ARGS="--skip-extra-accuracy-files-check""
           description="Test submission - contains closed edge and datacenter"
         elif [ "${{ matrix.case }}" == "closed-power" ]; then
-          extra_run_args=" --env.CM_MLPERF_SUBMISSION_CHECKER_EXTRA_ARGS="--skip-extra-accuracy-files-check""
           description="Test submission - contains closed-power edge and datacenter results"
         fi
         # Dynamically set the log group to simulate a dynamic step name
         echo "::group::$description"
-        cm ${{ matrix.action }} script --tags=generate,inference,submission  --version=v5.0 --clean --preprocess_submission=yes --results_dir=$PWD/submission_generation_tests/${{ matrix.case }}/ --run-checker --submitter=MLCommons --tar=yes --env.CM_TAR_OUTFILE=submission.tar.gz --division=${{ matrix.division }} --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes --quiet $extra_run_args
-  
+        cm ${{ matrix.action }} script --tags=generate,inference,submission  --adr.compiler.tags=gcc --version=v5.0 --clean --preprocess_submission=yes --submission_base_dir=mysubmissions --results_dir=$PWD/submission_generation_tests/${{ matrix.case }}/ --run-checker --submitter=MLCommons --tar=yes --division=${{ matrix.division }} --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes --quiet $extra_run_args
+        cm ${{ matrix.action }} script --tags=run,submission,checker --submitter_id_off=mysubmitter_id --tar=yes --submission_dir=mysubmissions/submissions --submission_tar_file=mysubmission.tar.gz

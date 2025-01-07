@@ -1,7 +1,0 @@
-{
-    "input_data_types": "int32",
-    "retraining": "No",
-    "starting_weights_filename": "bert_large_v1_1_fake_quant.onnx",
-    "weight_data_types": "int8",
-    "weight_transformations": "quantization, affine fusion"
-}

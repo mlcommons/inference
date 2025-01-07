@@ -190,7 +190,7 @@ Once you have all the results on the system, you can upload them to the MLCommon
     You can do the following command to generate the final submission tar file and then upload to the [MLCommons Submission UI](https://submissions-ui.mlcommons.org/submission). 
     ```
     cm run script --tags=run,submission,checker \
-    --submitter_id=<> \
+    --submission_dir=<Path to the submission folder> \
     --tar=yes \
     --submission_tar_file=mysubmission.tar.gz
     ```

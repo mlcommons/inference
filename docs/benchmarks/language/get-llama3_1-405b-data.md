@@ -37,5 +37,5 @@ Get the Official MLPerf LLAMA3.1-405b Model
   
 !!! tip
 
-    Downloading llama3_1-405B model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [llama3-405B](https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct) model. 
+    Downloading llama3.1-405B model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [llama3.1-405B](https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct) model. 
 

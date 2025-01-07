@@ -265,8 +265,8 @@ MODEL_CONFIG = {
             "gptj-99.9",
             "llama2-70b-99",
             "llama2-70b-99.9",
-            "llama2-70b-low-latency-99",
-            "llama2-70b-low-latency-99.9",
+            "llama2-70b-interactive-99",
+            "llama2-70b-interactive-99.9",
             "stable-diffusion-xl",
             "mixtral-8x7b",
             "llama3.1-405b",
@@ -284,8 +284,8 @@ MODEL_CONFIG = {
             "gptj-99.9": ["Server", "Offline"],
             "llama2-70b-99": ["Server", "Offline"],
             "llama2-70b-99.9": ["Server", "Offline"],
-            "llama2-70b-low-latency-99": ["Server", "Offline"],
-            "llama2-70b-low-latency-99.9": ["Server", "Offline"],
+            "llama2-70b-interactive-99": ["Server", "Offline"],
+            "llama2-70b-interactive-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["Server", "Offline"],
             "mixtral-8x7b": ["Server", "Offline"],
             "llama3.1-405b": ["Server", "Offline"],
@@ -317,8 +317,8 @@ MODEL_CONFIG = {
             "gptj-99.9": ["SingleStream", "Offline", "Server"],
             "llama2-70b-99": ["Server", "Offline"],
             "llama2-70b-99.9": ["Server", "Offline"],
-            "llama2-70b-low-latency-99": ["Server", "Offline"],
-            "llama2-70b-low-latency-99.9": ["Server", "Offline"],
+            "llama2-70b-interactive-99": ["Server", "Offline"],
+            "llama2-70b-interactive-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
             "mixtral-8x7b": ["Server", "Offline"],
             "llama3.1-405b": ["Server", "Offline"],
@@ -375,7 +375,7 @@ MODEL_CONFIG = {
                 "TOKENS_PER_SAMPLE",
                 294.45 * 0.9,
             ),
-            "llama2-70b-low-latency-99": (
+            "llama2-70b-interactive-99": (
                 "ROUGE1",
                 44.4312 * 0.99,
                 "ROUGE2",
@@ -385,7 +385,7 @@ MODEL_CONFIG = {
                 "TOKENS_PER_SAMPLE",
                 294.45 * 0.9,
             ),
-            "llama2-70b-low-latency-99.9": (
+            "llama2-70b-interactive-99.9": (
                 "ROUGE1",
                 44.4312 * 0.999,
                 "ROUGE2",
@@ -434,8 +434,8 @@ MODEL_CONFIG = {
             ),
             "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
-            "llama2-70b-low-latency-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
-            "llama2-70b-low-latency-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
+            "llama2-70b-interactive-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
+            "llama2-70b-interactive-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
             "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
         },
@@ -455,8 +455,8 @@ MODEL_CONFIG = {
             "gptj-99.9": 13368,
             "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
-            "llama2-70b-low-latency-99": 24576,
-            "llama2-70b-low-latency-99.9": 24576,
+            "llama2-70b-interactive-99": 24576,
+            "llama2-70b-interactive-99.9": 24576,
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
             "llama3.1-405b": 8313,
@@ -490,8 +490,8 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": {"Server": 20000000000},
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
-            "llama2-70b-low-latency-99": {"Server": 20000000000},
-            "llama2-70b-low-latency-99.9": {"Server": 20000000000},
+            "llama2-70b-interactive-99": {"Server": 20000000000},
+            "llama2-70b-interactive-99.9": {"Server": 20000000000},
             "mixtral-8x7b": {"Server": 20000000000},
             "llama3.1-405b": {"Server": 60000000000}
         },
@@ -518,8 +518,8 @@ MODEL_CONFIG = {
             "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama2-70b-low-latency-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama2-70b-low-latency-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-interactive-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-interactive-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "stable-diffusion-xl": {
                 "SingleStream": 1024,
                 "Server": 270336,
@@ -613,8 +613,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "gptj-99.9": 13368,
     "llama2-70b-99": 24576,
     "llama2-70b-99.9": 24576,
-    "llama2-70b-low-latency-99": 24576,
-    "llama2-70b-low-latency-99.9": 24576,
+    "llama2-70b-interactive-99": 24576,
+    "llama2-70b-interactive-99.9": 24576,
     "stable-diffusion-xl": 5000,
     "mixtral-8x7b": 15000,
     "llama3.1-405b": 8313,
@@ -682,11 +682,11 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
         },
-        "llama2-70b-low-latency-99": {
+        "llama2-70b-interactive-99": {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
         },
-        "llama2-70b-low-latency-99.9": {
+        "llama2-70b-interactive-99.9": {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
         },
@@ -716,10 +716,10 @@ LLM_LATENCY_LIMITS = {
     "llama2-70b-99.9": {
         "ttft": 2000 * 1000000, "tpot": 200 * 1000000
     },
-    "llama2-70b-low-latency-99": {
+    "llama2-70b-interactive-99": {
         "ttft": 450 * 1000000, "tpot": 40 * 1000000
     },
-    "llama2-70b-low-latency-99.9": {
+    "llama2-70b-interactive-99.9": {
         "ttft": 450 * 1000000, "tpot": 40 * 1000000
     },
     "mixtral-8x7b": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000},
@@ -1007,8 +1007,8 @@ class Config:
                 "gptj-99.9",
                 "llama2-70b-99",
                 "llama2-70b-99.9",
-                "llama2-70b-low-latency-99",
-                "llama2-70b-low-latency-99.9",
+                "llama2-70b-interactive-99",
+                "llama2-70b-interactive-99.9",
                 "mixtral-8x7b",
                 "llama3.1-405b",
                 "rgat",
@@ -1397,7 +1397,7 @@ def check_performance_dir(
         )
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
-                 "llama2-70b-low-latency-99", "llama2-70b-low-latency-99.9",
+                 "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
                  "mixtral-8x7b", "llama3.1-405b"]:
         llm_is_valid = extra_check_llm(
             mlperf_log, scenario_fixed, model)
@@ -1933,13 +1933,13 @@ def check_results_dir(
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
-            "llama2-70b-low-latency-99": {
+            "llama2-70b-interactive-99": {
                 "SingleStream": "Latency (ms)",
                 "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
-            "llama2-70b-low-latency-99.9": {
+            "llama2-70b-interactive-99.9": {
                 "SingleStream": "Latency (ms)",
                 "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
@@ -3037,8 +3037,8 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "llama2-70b-low-latency-99",
-        "llama2-70b-low-latency-99.9",
+        "llama2-70b-interactive-99",
+        "llama2-70b-interactive-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
         "rgat",
@@ -3060,8 +3060,8 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "llama2-70b-low-latency-99",
-        "llama2-70b-low-latency-99.9",
+        "llama2-70b-interactive-99",
+        "llama2-70b-interactive-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
     ]:
@@ -3072,7 +3072,7 @@ def check_compliance_dir(
         test_list.remove("TEST04")
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
-                 "llama2-70b-low-latency-99", "llama2-70b-low-latency-99.9",
+                 "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
                  "mixtral-8x7b", "llama3.1-405b"]:
         test_list.append("TEST06")
 

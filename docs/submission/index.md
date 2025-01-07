@@ -101,7 +101,7 @@ cm run script --tags=generate,inference,submission \
 
     * Use `--results_dir` option to specify the results folder.  It is automatically taken from CM cache for MLPerf automation based runs
 
-    * Use `--submission_dir` option to specify the submission folder.
+    * Use `--submission_dir` option to specify the submission folder. (You can avoid this if you're pushing to github or only running a single SUT and CM will use its cache folder)
 
     * Use `--division=open` for open division submission 
 
@@ -174,16 +174,25 @@ If there are multiple systems where MLPerf results are collected, the same proce
 
 ## Upload the final submission
     
+!!! warning
+    If you are using GitHub for consolidating your results, make sure that you have run the [`push-to-github` command](#__tabbed_2_2) on the same system to ensure results are synced as is on the GitHub repository.
+
+Once you have all the results on the system, you can upload them to the MLCommons submission server as follows:
 
 === "via CLI"
     You can do the following command which will run the submission checker and upload the results to the MLCommons submission server
     ```
-    cm run script --tags=run,submission,checker --submitter_id=<>
+    cm run script --tags=run,submission,checker \
+    --submitter_id=<> \
+    --submission_dir=<Path to the submission folder>
     ```
 === "via Browser"
     You can do the following command to generate the final submission tar file and then upload to the [MLCommons Submission UI](https://submissions-ui.mlcommons.org/submission). 
     ```
-    cm run script --tags=run,submission,checker --submitter_id=<> --tar=yes --submission_tar_file=mysubmission.tar.gz
+    cm run script --tags=run,submission,checker \
+    --submitter_id=<> \
+    --tar=yes \
+    --submission_tar_file=mysubmission.tar.gz
     ```
     
 ```mermaid

@@ -9,6 +9,11 @@
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3.1-405b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
+## Automated command to run the benchmark via MLCommons CM
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3_1-405b/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do pip install cm4mlops and then use cm commands for downloading the model and datasets using the commands given in the later sections.
 
 ## Prepare environment
 
@@ -109,6 +114,15 @@ git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT
 cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ```
 
+### Download model through CM (Collective Minds)
+
+```
+cm run script --tags=get,ml-model,llama3 --outdirname=<path_to_download> --hf_token=<huggingface access token> -j
+```
+
+**Note:**
+Downloading llama3.1-405B model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [llama3.1-405B](https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct) model. 
+
 ## Get Dataset
 
 ### Preprocessed
@@ -135,6 +149,19 @@ You can also download the calibration dataset from the Cloudflare R2 bucket by r
 ```
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_llama3.1_405b_calibration_dataset_512_processed_fp16_eval.pkl ./ -P
 ```
+
+**CM Command**
+
+Validation Dataset:
+```
+cm run script --tags=get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
+```
+
+Calibration Dataset:
+```
+cm run script --tags=get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
+```
+
 
 ## Run Performance Benchmarks
 
@@ -169,7 +196,6 @@ python -u main.py --scenario Server \
 
 The ServerSUT was not tested for GPU runs.
 
-
 ## Run Accuracy Benchmarks
 
 ### Offline
@@ -201,7 +227,6 @@ fi
 For the GPU run - The above steps have been automated in `run_accuracy.sh`. You can also modify this script to use
 `--device cpu` to adapt it to a CPU-only run.
 
-
 ### Server
 ```
 OUTPUT_LOG_DIR=server-accuracy-logs
@@ -218,7 +243,6 @@ python -u main.py --scenario Server \
                 --tensor-parallel-size ${GPU_COUNT} \
                 --vllm
 
-
 ACCURACY_LOG_FILE=${OUTPUT_LOG_DIR}/mlperf_log_accuracy.json
 if [ -e ${ACCURACY_LOG_FILE} ]; then
         python evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
@@ -228,6 +252,13 @@ fi
 
 The ServerSUT was not tested for GPU runs.
 
+### Evaluate the accuracy
+
+```
+cm run script --tags=process,mlperf,accuracy,_dataset_llama3 --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/anandhu-eng/inference/blob/patch-14/language/llama3.1-405b/evaluate-accuracy.py) to view the Python script for evaluating accuracy for the Llama3 dataset.
 
 ## Accuracy Target
 Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets:

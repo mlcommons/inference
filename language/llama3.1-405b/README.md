@@ -9,6 +9,9 @@
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3.1-405b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
+## Automated command to run the benchmark via MLCommons CM
+
+Please check the official inference documentation [here]()
 
 ## Prepare environment
 
@@ -109,6 +112,12 @@ git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT
 cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ```
 
+### Download model through CM (Collective Minds)
+
+```
+cm run script --tags=get,ml-model,llama3 -j
+```
+
 ## Get Dataset
 
 ### Preprocessed
@@ -136,6 +145,19 @@ You can also download the calibration dataset from the Cloudflare R2 bucket by r
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_llama3.1_405b_calibration_dataset_512_processed_fp16_eval.pkl ./ -P
 ```
 
+**CM Command**
+
+Validation Dataset:
+```
+cm run script --tags=get,dataset,mlperf,inference,llama3,_validation -j
+```
+
+Calibration Dataset:
+```
+cm run script --tags=get,dataset,mlperf,inference,llama3,_calibration -j
+```
+
+
 ## Run Performance Benchmarks
 
 ### Offline
@@ -151,6 +173,21 @@ python -u main.py --scenario Offline \
                 --tensor-parallel-size ${GPU_COUNT} \
                 --vllm
 
+```
+
+**Offline run using CM**
+```
+cm run script --tags=run-mlperf,inference,_find-performance,_short,_r5.0-dev \
+   --model=llama3_1-405b \
+   --implementation=reference \
+   --framework=pytorch \
+   --category=datacenter \
+   --scenario=Offline \
+   --execution_mode=test \
+   --device=<cpu or cuda> \
+   --quiet \
+   --test_query_count=10 \
+   --docker
 ```
 
 ### Server
@@ -169,6 +206,20 @@ python -u main.py --scenario Server \
 
 The ServerSUT was not tested for GPU runs.
 
+**Server run using CM**
+```
+cm run script --tags=run-mlperf,inference,_find-performance,_short,_r5.0-dev \
+   --model=llama3_1-405b \
+   --implementation=reference \
+   --framework=pytorch \
+   --category=datacenter \
+   --scenario=Server \
+   --execution_mode=test \
+   --device=<cpu or cuda> \
+   --quiet \
+   --test_query_count=10 \
+   --docker
+```
 
 ## Run Accuracy Benchmarks
 
@@ -201,6 +252,20 @@ fi
 For the GPU run - The above steps have been automated in `run_accuracy.sh`. You can also modify this script to use
 `--device cpu` to adapt it to a CPU-only run.
 
+**Offline run using CM**
+
+```
+cm run script --tags=run-mlperf,inference,_accuracy-only,_full,_r5.0-dev \
+   --model=llama3_1-405b \
+   --implementation=reference \
+   --framework=pytorch \
+   --category=datacenter \
+   --scenario=Offline \
+   --execution_mode=test \
+   --device=<cpu or cuda> \
+   --quiet \
+   --docker
+```
 
 ### Server
 ```
@@ -218,7 +283,6 @@ python -u main.py --scenario Server \
                 --tensor-parallel-size ${GPU_COUNT} \
                 --vllm
 
-
 ACCURACY_LOG_FILE=${OUTPUT_LOG_DIR}/mlperf_log_accuracy.json
 if [ -e ${ACCURACY_LOG_FILE} ]; then
         python evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
@@ -228,6 +292,36 @@ fi
 
 The ServerSUT was not tested for GPU runs.
 
+**Server run using CM**
+
+```
+cm run script --tags=run-mlperf,inference,_accuracy-only,_full,_r5.0-dev \
+   --model=llama3_1-405b \
+   --implementation=reference \
+   --framework=pytorch \
+   --category=datacenter \
+   --scenario=Server \
+   --execution_mode=test \
+   --device=<cpu or cuda> \
+   --quiet \
+   --docker
+```
+
+## Full run using CM
+
+```
+cm run script --tags=run-mlperf,inference,_submission,_full,_r5.0-dev \
+   --model=llama3_1-405b \
+   --implementation=reference \
+   --framework=pytorch \
+   --category=datacenter \
+   --scenario=Offline \
+   --execution_mode=test \
+   --device=<cpu or cuda> \
+   --quiet \
+   --test_query_count=10 \
+   --docker
+```
 
 ## Accuracy Target
 Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets:

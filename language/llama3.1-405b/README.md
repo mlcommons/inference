@@ -143,6 +143,11 @@ You can then navigate in the terminal to your desired download directory and run
 ```
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_llama3.1_405b_dataset_8313_processed_fp16_eval.pkl ./ -P
 ```
+**CM Command**
+
+```
+cm run script --tags=get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
+```
 
 You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
 
@@ -151,13 +156,6 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_lla
 ```
 
 **CM Command**
-
-Validation Dataset:
-```
-cm run script --tags=get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
-```
-
-Calibration Dataset:
 ```
 cm run script --tags=get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
 ```
@@ -252,13 +250,11 @@ fi
 
 The ServerSUT was not tested for GPU runs.
 
-### Evaluate the accuracy
-
+### Evaluate the accuracy using CM
+You can also evaulate the accuracy from the generated accuracy log by using the following CM command
 ```
-cm run script --tags=process,mlperf,accuracy,_dataset_llama3 --result_dir=<Path to directory where files are generated after the benchmark run>
+cm run script --tags=process,mlperf,accuracy,_dataset_llama3 --result_dir=<Path to accuracy log directory>
 ```
-
-Please click [here](https://github.com/anandhu-eng/inference/blob/patch-14/language/llama3.1-405b/evaluate-accuracy.py) to view the Python script for evaluating accuracy for the Llama3 dataset.
 
 ## Accuracy Target
 Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets:

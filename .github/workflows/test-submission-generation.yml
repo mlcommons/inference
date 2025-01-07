@@ -1,0 +1,54 @@
+# This workflow will test the submission generation using MLPerf Automation 
+
+name: CM based Submission Generation
+
+on:
+  pull_request:
+    branches: [ "master", "dev" ]
+    paths:
+      - '.github/workflows/test-submission-generation.yml'
+      - '**'  
+      - '!**.md'
+jobs:
+  submission_generation:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [ "3.12" ]
+        division: ["closed", "open", "closed-open"]
+        category: ["datacenter", "edge"]
+        case: ["closed", "closed-power"]
+        action: ["run", "docker"]
+        exclude:
+          - os: macos-latest
+          - os: windows-latest
+          - category: "edge"
+            
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install cm4mlops
+    - name: Pull repo where test cases are uploaded
+      run: |
+        git clone -b submission-generation-examples https://github.com/mlcommons/inference.git submission_generation_examples
+    - name: Run Submission Generation - ${{ matrix.case }} ${{ matrix.action }} ${{ matrix.category }} ${{ matrix.division }} 
+      continue-on-error: true
+      run: |
+        if [ "${{ matrix.case }}" == "closed" ]; then
+          extra_run_args=" --env.CM_MLPERF_SUBMISSION_CHECKER_EXTRA_ARGS="--skip-extra-accuracy-files-check""
+          description="Test submission - contains closed edge and datacenter"
+        elif [ "${{ matrix.case }}" == "closed-power" ]; then
+          extra_run_args=" --env.CM_MLPERF_SUBMISSION_CHECKER_EXTRA_ARGS="--skip-extra-accuracy-files-check""
+          description="Test submission - contains closed-power edge and datacenter results"
+        fi
+        # Dynamically set the log group to simulate a dynamic step name
+        echo "::group::$description"
+        cm ${{ matrix.action }} script --tags=generate,inference,submission  --version=v5.0 --clean --preprocess_submission=yes --results_dir=$PWD/submission_generation_tests/${{ matrix.case }}/ --run-checker --submitter=MLCommons --tar=yes --env.CM_TAR_OUTFILE=submission.tar.gz --division=${{ matrix.division }} --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes --quiet $extra_run_args
+  

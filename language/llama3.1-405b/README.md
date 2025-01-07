@@ -117,8 +117,11 @@ cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ### Download model through CM (Collective Minds)
 
 ```
-cm run script --tags=get,ml-model,llama3 --outdirname=<path_to_download> -j
+cm run script --tags=get,ml-model,llama3 --outdirname=<path_to_download> --hf_token=<huggingface access token> -j
 ```
+
+**Note:**
+Downloading llama3.1-405B model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [llama3.1-405B](https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct) model. 
 
 ## Get Dataset
 

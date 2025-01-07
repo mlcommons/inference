@@ -114,10 +114,10 @@ git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT
 cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ```
 
-### Download model through CM (Collective Minds)
+### Download model through CM (Collective Mind)
 
 ```
-cm run script --tags=get,ml-model,llama3 --outdirname=<path_to_download> --hf_token=<huggingface access token> -j
+cm run script --tags=get,ml-model,llama3 --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
 ```
 
 **Note:**

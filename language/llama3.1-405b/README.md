@@ -11,7 +11,9 @@ Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/l
 
 ## Automated command to run the benchmark via MLCommons CM
 
-Please check the official inference documentation [here]()
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3_1-405b/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do pip install cm4mlops and then use cm commands for downloading the model and datasets using the commands given in the later sections.
 
 ## Prepare environment
 
@@ -115,7 +117,7 @@ cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ### Download model through CM (Collective Minds)
 
 ```
-cm run script --tags=get,ml-model,llama3 -j
+cm run script --tags=get,ml-model,llama3 --outdirname=<path_to_download> -j
 ```
 
 ## Get Dataset
@@ -149,12 +151,12 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_lla
 
 Validation Dataset:
 ```
-cm run script --tags=get,dataset,mlperf,inference,llama3,_validation -j
+cm run script --tags=get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
 ```
 
 Calibration Dataset:
 ```
-cm run script --tags=get,dataset,mlperf,inference,llama3,_calibration -j
+cm run script --tags=get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
 ```
 
 
@@ -175,21 +177,6 @@ python -u main.py --scenario Offline \
 
 ```
 
-**Offline run using CM**
-```
-cm run script --tags=run-mlperf,inference,_find-performance,_short,_r5.0-dev \
-   --model=llama3_1-405b \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=datacenter \
-   --scenario=Offline \
-   --execution_mode=test \
-   --device=<cpu or cuda> \
-   --quiet \
-   --test_query_count=10 \
-   --docker
-```
-
 ### Server
 ```
 python -u main.py --scenario Server \
@@ -205,21 +192,6 @@ python -u main.py --scenario Server \
 ```
 
 The ServerSUT was not tested for GPU runs.
-
-**Server run using CM**
-```
-cm run script --tags=run-mlperf,inference,_find-performance,_short,_r5.0-dev \
-   --model=llama3_1-405b \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=datacenter \
-   --scenario=Server \
-   --execution_mode=test \
-   --device=<cpu or cuda> \
-   --quiet \
-   --test_query_count=10 \
-   --docker
-```
 
 ## Run Accuracy Benchmarks
 
@@ -252,21 +224,6 @@ fi
 For the GPU run - The above steps have been automated in `run_accuracy.sh`. You can also modify this script to use
 `--device cpu` to adapt it to a CPU-only run.
 
-**Offline run using CM**
-
-```
-cm run script --tags=run-mlperf,inference,_accuracy-only,_full,_r5.0-dev \
-   --model=llama3_1-405b \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=datacenter \
-   --scenario=Offline \
-   --execution_mode=test \
-   --device=<cpu or cuda> \
-   --quiet \
-   --docker
-```
-
 ### Server
 ```
 OUTPUT_LOG_DIR=server-accuracy-logs
@@ -292,36 +249,13 @@ fi
 
 The ServerSUT was not tested for GPU runs.
 
-**Server run using CM**
+### Evaluate the accuracy
 
 ```
-cm run script --tags=run-mlperf,inference,_accuracy-only,_full,_r5.0-dev \
-   --model=llama3_1-405b \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=datacenter \
-   --scenario=Server \
-   --execution_mode=test \
-   --device=<cpu or cuda> \
-   --quiet \
-   --docker
+cm run script --tags=process,mlperf,accuracy,_dataset_llama3 --result_dir=<Path to directory where files are generated after the benchmark run>
 ```
 
-## Full run using CM
-
-```
-cm run script --tags=run-mlperf,inference,_submission,_full,_r5.0-dev \
-   --model=llama3_1-405b \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=datacenter \
-   --scenario=Offline \
-   --execution_mode=test \
-   --device=<cpu or cuda> \
-   --quiet \
-   --test_query_count=10 \
-   --docker
-```
+Please click [here](https://github.com/anandhu-eng/inference/blob/patch-14/language/llama3.1-405b/evaluate-accuracy.py) to view the Python script for evaluating accuracy for the Llama3 dataset.
 
 ## Accuracy Target
 Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets:

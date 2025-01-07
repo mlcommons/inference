@@ -406,11 +406,11 @@ def infer_scenario_results(args, config):
 
                         if mlperf_model not in config.required:
                             log.warning(f"""Division {division}, submitter {submitter}, system {system_id_json} has invalid """
-                                      f"""MLPerf model ({mlperf_model}) corresponding to given model ({model}). """
-                                      f"""Valid ones for MLPerf inference version ({config.version}) in ({system_type}) """
-                                      f"""category are [{config.required.keys()}]. Removing...""")
+                                        f"""MLPerf model ({mlperf_model}) corresponding to given model ({model}). """
+                                        f"""Valid ones for MLPerf inference version ({config.version}) in ({system_type}) """
+                                        f"""category are [{config.required.keys()}]. Removing...""")
                             clean_model_dir(os.path.join(
-                                    log_path, system_desc, model))
+                                log_path, system_desc, model))
                             continue
 
                         required_scenarios = config.get_required(mlperf_model)

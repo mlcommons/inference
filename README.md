@@ -10,7 +10,7 @@ pip install cm4mlops
 ### Generate the submission tree
 ```
 cm run script --tags=generate,mlperf,inference,submission \
---results_dir=submission-tests/closed \
+--results_dir=submission-examples/closed \
 --run_checker=yes  \
 --submission_dir=my_submissions  \
 --quiet \

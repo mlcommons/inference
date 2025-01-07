@@ -1,6 +1,6 @@
 ### Clone the Repo
 ```
-git clone -b submission-generation-tests https://github.com/mlcommons/inference.git submission-tests --depth 1
+git clone -b submission-generation-examples https://github.com/mlcommons/inference.git submission-generation-examples --depth 1
 ```
 ### Install cm4mlops
 ```

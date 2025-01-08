@@ -120,7 +120,13 @@ def get_args():
         default=None,
         help="Specify an api endpoint call to use api mode",
     )
-
+    parser.add_argument(
+        "--lg-model-name",
+        type=str,
+        default="llama2-70b",
+        choices=["llama2-70b", "llama2-70b-interactive"],
+        help="Model name(specified in llm server)",
+    )
     args = parser.parse_args()
     return args
 
@@ -146,8 +152,8 @@ def main():
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
     # mlperf.conf is automatically loaded by the loadgen
-    # settings.FromConfig(args.mlperf_conf, "llama2-70b", args.scenario)
-    settings.FromConfig(args.user_conf, "llama2-70b", args.scenario)
+    # settings.FromConfig(args.mlperf_conf, args.lg_model_name, args.scenario)
+    settings.FromConfig(args.user_conf, args.lg_model_name, args.scenario)
 
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly

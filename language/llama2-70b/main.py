@@ -152,7 +152,6 @@ def main():
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
     # mlperf.conf is automatically loaded by the loadgen
-    # settings.FromConfig(args.mlperf_conf, args.lg_model_name, args.scenario)
     settings.FromConfig(args.user_conf, args.lg_model_name, args.scenario)
 
     if args.accuracy:

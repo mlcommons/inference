@@ -1,9 +1,10 @@
 # Automatic code formatting
 name: "Code formatting"
 on:
-  push:
+  pull_request_target:
+    types: [opened, synchronize]
     branches:
-      - "**"
+      - "master"
 
 env:
   python_version: "3.9"
@@ -11,19 +12,17 @@ env:
 jobs:
   format-code:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-      - name: Retrieve secrets from Keeper
-        id: ksecrets
-        uses: Keeper-Security/ksm-action@master
-        with:
-          keeper-secret-config: ${{ secrets.KSM_CONFIG }}
-          secrets: |-
-            v2h4jKiZlJywDSoKzRMnRw/field/Access Token > env:PAT  # Fetch PAT and store in environment variable
-
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python ${{ env.python_version }}
         uses: actions/setup-python@v3
@@ -32,7 +31,7 @@ jobs:
 
       - name: Format modified Python files
         env:
-          filter: ${{ github.event.before }}
+          filter: ${{ github.event.pull_request.base.sha }}
         run: |
           python3 -m pip install autopep8
           for FILE in $(git diff --name-only $filter | grep -E '.*\.py$')
@@ -46,7 +45,7 @@ jobs:
 
       - name: Format modified C++ files
         env:
-          filter: ${{ github.event.before }}
+          filter: ${{ github.event.pull_request.base.sha }}
         run: |
           for FILE in $(git diff --name-only $filter | grep -E '.*\.(cc|cpp|h|hpp)$')
           do
@@ -58,15 +57,29 @@ jobs:
           done
 
       - name: Commit and push changes
-        env:
-          PAT: ${{ env.PAT }}  # Use PAT fetched from Keeper
         run: |
           HAS_CHANGES=$(git diff --staged --name-only)
           if [ ${#HAS_CHANGES} -gt 0 ]; then
-            git config --global user.name mlcommons-bot
-            git config --global user.email "mlcommons-bot@users.noreply.github.com"
+            git config --global user.name github-actions[bot]
+            git config --global user.email github-actions[bot]@users.noreply.github.com
             # Commit changes
             git commit -m '[Automated Commit] Format Codebase'
-            # Use the PAT to push changes
-            git push https://x-access-token:${PAT}@github.com/${{ github.repository }} HEAD:${{ github.ref_name }}
+            # Use GITHUB_TOKEN to push changes
+            git push
           fi
+
+      - name: Trigger CLA check
+        if: success()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'cla.yml',
+              ref: 'master',
+              inputs: {
+                pr_number: context.issue.number.toString()
+              }
+            })

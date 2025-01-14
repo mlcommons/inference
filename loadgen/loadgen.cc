@@ -323,7 +323,8 @@ std::vector<QueryMetadata> GenerateQueries(
       size_t pad_size =
           (loaded_samples.size() - samples_per_query % loaded_samples.size());
       samples_per_query += pad_size;
-    } else if ((scenario != TestScenario::Offline) && (min_queries % loaded_samples.size() != 0)) {
+    } else if ((scenario != TestScenario::Offline) &&
+               (min_queries % loaded_samples.size() != 0)) {
       // In Server, SingleStream, MultiStream mode, the min_queries should be
       // padded
       size_t pad_size =

@@ -697,9 +697,6 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     lookupkv(model, scenario, "sample_index_rng_seed", &sample_index_rng_seed,
              nullptr);
     lookupkv(model, scenario, "schedule_rng_seed", &schedule_rng_seed, nullptr);
-    if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
-                 nullptr))
-      sample_concatenate_permutation = (val == 1) ? true : false;
     lookupkv(model, scenario, "accuracy_log_probability", nullptr,
              &accuracy_log_probability, 0.01);
     if (lookupkv(model, scenario, "test05", &val, nullptr))
@@ -759,6 +756,9 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, scenario, "performance_issue_same_index",
            &performance_issue_same_index, nullptr);
 
+  if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
+            nullptr))
+      sample_concatenate_permutation = (val == 1) ? true : false;
   if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
     server_coalesce_queries = (val == 0) ? false : true;
   if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))

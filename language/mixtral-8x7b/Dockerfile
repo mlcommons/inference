@@ -1,4 +1,4 @@
-# Copyright (c) 2023, NVIDIA CORPORATION.  All rights reserved.
+# Copyright (c) 2024, NVIDIA CORPORATION.  All rights reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM nvidia/cuda:11.8.0-cudnn8-devel-ubuntu20.04
+FROM nvcr.io/nvidia/pytorch:24.07-py3
 SHELL ["/bin/bash", "-c"]
 
 ENV LC_ALL=C.UTF-8
@@ -22,7 +22,7 @@ ENV TZ=US/Pacific
 ENV DEBIAN_FRONTEND=noninteractive
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-RUN rm -rf /var/lib/apt/lists/* && rm /etc/apt/sources.list.d/* \
+RUN rm -rf /var/lib/apt/lists/* && rm -rf /etc/apt/sources.list.d/* \
  && apt update \
  && apt install -y --no-install-recommends build-essential autoconf \
         libtool git ccache curl wget pkg-config sudo ca-certificates \
@@ -44,5 +44,5 @@ WORKDIR /tmp
 RUN wget https://repo.anaconda.com/miniconda/Miniconda3-py310_23.5.2-0-Linux-x86_64.sh \
     && bash Miniconda3-* -b -p /opt/miniconda3
 ENV PATH="$PATH:/opt/miniconda3/bin"
-RUN conda create -n llama2-70b python=3.10
+RUN conda create -n llm python=3.10
 RUN chmod -R 777 /opt/miniconda3

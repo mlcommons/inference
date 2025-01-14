@@ -444,9 +444,9 @@ MODEL_CONFIG = {
         },
         "seeds": {
             # TODO: Update random seeds
-            "qsl_rng_seed": 3066443479025735752,
-            "sample_index_rng_seed": 10688027786191513374,
-            "schedule_rng_seed": 14962580496156340209,
+            "qsl_rng_seed": 6023615788873153749,
+            "sample_index_rng_seed": 15036839855038426416,
+            "schedule_rng_seed": 9933818062894767841,
         },
         "ignore_errors": [],
         "latency-constraint": {

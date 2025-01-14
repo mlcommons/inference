@@ -69,6 +69,7 @@ def main():
     dataset_path = args.dataset_file
     checkpoint_path = args.checkpoint_path
     nltk.download("punkt")
+    nltk.download("punkt_tab")
 
     tokenizer = AutoTokenizer.from_pretrained(
         checkpoint_path,

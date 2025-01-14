@@ -3,7 +3,7 @@ name: "Code formatting"
 on:
   push:
     branches:
-    - "**"
+      - "**"
 
 env:
   python_version: "3.9"
@@ -12,16 +12,25 @@ jobs:
   format-code:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Retrieve secrets from Keeper
+        id: ksecrets
+        uses: Keeper-Security/ksm-action@master
+        with:
+          keeper-secret-config: ${{ secrets.KSM_CONFIG }}
+          secrets: |-
+            v2h4jKiZlJywDSoKzRMnRw/field/Access Token > env:PAT  # Fetch PAT and store in environment variable
+
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
       - name: Set up Python ${{ env.python_version }}
         uses: actions/setup-python@v3
         with:
           python-version: ${{ env.python_version }}
 
-      - name: Format modified python files
+      - name: Format modified Python files
         env:
           filter: ${{ github.event.before }}
         run: |
@@ -29,7 +38,7 @@ jobs:
           for FILE in $(git diff --name-only $filter | grep -E '.*\.py$')
           do
             # Check if the file still exists in the working tree
-            if [ -f "$FILE" ]; then
+            if [ -f "$FILE" ] && [ "$FILE" != "tools/submission/power/power_checker.py" ]; then
               autopep8 --in-place -a "$FILE"
               git add "$FILE"
             fi
@@ -49,6 +58,8 @@ jobs:
           done
 
       - name: Commit and push changes
+        env:
+          PAT: ${{ env.PAT }}  # Use PAT fetched from Keeper
         run: |
           HAS_CHANGES=$(git diff --staged --name-only)
           if [ ${#HAS_CHANGES} -gt 0 ]; then
@@ -56,5 +67,6 @@ jobs:
             git config --global user.email "mlcommons-bot@users.noreply.github.com"
             # Commit changes
             git commit -m '[Automated Commit] Format Codebase'
-            git push
-          fi 
+            # Use the PAT to push changes
+            git push https://x-access-token:${PAT}@github.com/${{ github.repository }} HEAD:${{ github.ref_name }}
+          fi

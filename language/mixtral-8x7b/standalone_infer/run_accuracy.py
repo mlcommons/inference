@@ -59,7 +59,8 @@ def calculate_rouge_score(model_outputs, ref_outputs):
     m_result = metric.compute(
         predictions=m_preds, references=m_targets, use_stemmer=True, use_aggregator=False
     )
-    m_rouge_result = {k: round(np.mean(v) * 100, 4) for k, v in m_result.items()}
+    m_rouge_result = {k: round(np.mean(v) * 100, 4)
+                      for k, v in m_result.items()}
 
     return m_rouge_result
 
@@ -101,29 +102,34 @@ def maybe_remove_comma(x: str) -> str:
 def try_float(x: str):
     try:
         ret = float(x)
-    except:
+    except BaseException:
         ret = None
     return ret
 
+
 def postprocess_golang(code: str) -> str:
-    multi_line_imports = re.compile(r"^import \(\n(.+)((?:\n.+)+)\n\)", re.MULTILINE)
+    multi_line_imports = re.compile(
+        r"^import \(\n(.+)((?:\n.+)+)\n\)", re.MULTILINE)
     line_imports = re.compile(r"^import \".*\"")
     func_main = re.compile(r"^func main.*^}", re.MULTILINE | re.DOTALL)
 
-    code = code.replace("package main", "") # Remove package main
+    code = code.replace("package main", "")  # Remove package main
     code = multi_line_imports.sub("", code)
     code = line_imports.sub("", code)
     code = func_main.sub("", code)
 
     return code
 
+
 def postprocess_scala(code: str) -> str:
     code = code.replace("object Main extends App {", "")
     code = "".join(code.splitlines(True)[:-1])
     return code
 
+
 def postprocess_python(code: str) -> str:
     return code.lstrip()
+
 
 def worker(inp_queue, out_queue):
     while True:
@@ -143,7 +149,7 @@ def worker(inp_queue, out_queue):
         try:
             solution = solution[:solution.index("```")]
         except ValueError:
-            #Happens when a code block isn't closed properly
+            # Happens when a code block isn't closed properly
             pass
 
         if problem["lang"] == "go":
@@ -153,15 +159,22 @@ def worker(inp_queue, out_queue):
         elif problem["lang"] == "scala":
             solution = postprocess_scala(solution)
 
-        # Mixtral likes escaping underscores for some reason, so let's remove these
-        solution = solution.replace("\_", "_")
+        # Mixtral likes escaping underscores for some reason, so let's remove
+        # these
+        solution = solution.replace("\\_", "_")
 
         # The evaluation script evaluates `code = prompt + solution + tests`
-        # But Mixtral regenerates the prompt in its output, so we should remove this
+        # But Mixtral regenerates the prompt in its output, so we should remove
+        # this
         problem["prompt"] = ""
 
         result = checker(problem, solution, timeout=20.0)
-        out_queue.put((key, problem["lang"], result["passed"], result["result"], problem["response"]))
+        out_queue.put(
+            (key,
+             problem["lang"],
+             result["passed"],
+                result["result"],
+                problem["response"]))
 
 
 def convert_pickle(df: pd.DataFrame, result_keys: dict):
@@ -193,7 +206,8 @@ def evaluate_mbxp(n_works: int, df: pd.DataFrame, result_keys: dict):
     n_problems = 0
 
     for lang, problems in by_lang.items():
-        if lang not in ["cpp", "python", "php", "javascript", "ruby", "typescript"]:
+        if lang not in ["cpp", "python", "php",
+                        "javascript", "ruby", "typescript"]:
             raise RuntimeError(f"{lang} not in supported list.")
 
         n_problems += len(problems)
@@ -213,7 +227,10 @@ def evaluate_mbxp(n_works: int, df: pd.DataFrame, result_keys: dict):
     lang_counts = {}
     for i in tqdm(range(n_problems)):
         key, lang, passed, result, response = out_queue.get()
-        passes[key] = {"passed": passed, "result": result, "response": response}
+        passes[key] = {
+            "passed": passed,
+            "result": result,
+            "response": response}
         n_passed += passed
 
         lang_passed.setdefault(lang, 0)
@@ -244,7 +261,8 @@ def evaluate_openorca(df: pd.DataFrame, result_keys: dict):
     score = calculate_rouge_score(gen_output, gt_output)
     gen_token_len = df[result_keys['length']].tolist()
     gen_token_per_sample = sum(gen_token_len) / len(gen_token_len)
-    print(f"OpenOrca score: {score}, gen_token_per_sample: {gen_token_per_sample}")
+    print(
+        f"OpenOrca score: {score}, gen_token_per_sample: {gen_token_per_sample}")
     return score
 
 
@@ -266,13 +284,18 @@ def evaluate_gsm8k(df: pd.DataFrame, result_keys: dict):
     em = correct / total
     gen_token_len = df[result_keys['length']].tolist()
     gen_token_per_sample = sum(gen_token_len) / len(gen_token_len)
-    print(f"EM: {em}, correct: {correct} / {total}, gen_token_per_sample: {gen_token_per_sample}")
+    print(
+        f"EM: {em}, correct: {correct} / {total}, gen_token_per_sample: {gen_token_per_sample}")
     return em
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--n_workers", type=int, default=10, help="The number of processes to use")
+    parser.add_argument(
+        "--n_workers",
+        type=int,
+        default=10,
+        help="The number of processes to use")
     parser.add_argument("--results_path", type=str, default="mixtral_8x7b_15000_greedy_reference_fp16_mintoken2.pkl",
                         help="The path to the results file pickle file")
     parser.add_argument("--result_key", type=str, default="ref_output",
@@ -307,9 +330,9 @@ if __name__ == "__main__":
     """
 
     df = pd.read_pickle(args.results_path)
-    df_gsm8k = df[df['dataset']=="GSM8K"].copy()
+    df_gsm8k = df[df['dataset'] == "GSM8K"].copy()
     evaluate_gsm8k(df_gsm8k, result_keys)
-    df_openorca = df[df['dataset']=="OpenOrca"].copy()
+    df_openorca = df[df['dataset'] == "OpenOrca"].copy()
     evaluate_openorca(df_openorca, result_keys)
-    df_mbxp = df[df['dataset']=="MBXP"].copy()
+    df_mbxp = df[df['dataset'] == "MBXP"].copy()
     evaluate_mbxp(args.n_workers, df_mbxp, result_keys)

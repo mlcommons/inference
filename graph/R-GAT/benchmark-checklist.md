@@ -48,11 +48,11 @@ Documented whether **Equal Issue Mode** is applicable in
 ---
 
 #### **9. Reference Implementation Dataset Coverage**
-- [ ] Reference implementation successfully processes the entire validation dataset during:
-  - [ ] Performance runs
-  - [ ] Accuracy runs
-  - [ ] Compliance runs  
-- [ ] Valid log files passing the submission checker are generated for all runs.
+- [X] Reference implementation successfully processes the entire validation dataset during:
+  - [X] Performance runs
+  - [X] Accuracy runs
+  - [X] Compliance runs  
+- [X] Valid log files passing the submission checker are generated for all runs - [link](https://github.com/mlcommons/mlperf_inference_unofficial_submissions_v5.0/tree/main/closed/MLCommons/results/mlc-server-reference-gpu-pytorch_v2.4.0-cu124/rgat/offline/performance/run_1).
 
 ---
 
@@ -81,7 +81,8 @@ Documented whether **Equal Issue Mode** is applicable in
 ---
 
 #### **14. Sample Log Files**
-- [ ] Include sample logs for all the applicable scenario runs:
-  - [ ] `mlperf_log_summary.txt`
-  - [ ] `mlperf_log_detail.txt`  
-- [ ] Ensure sample logs successfully pass the submission checker and applicable compliance runs.
+- [X] Include sample logs for all the applicable scenario runs:
+  - [X] Offline 
+    - [X] [`mlperf_log_summary.txt`](https://github.com/mlcommons/mlperf_inference_unofficial_submissions_v5.0/blob/main/closed/MLCommons/results/mlc-server-reference-gpu-pytorch_v2.4.0-cu124/rgat/offline/performance/run_1/mlperf_log_summary.txt)
+    - [X] [`mlperf_log_detail.txt`](https://github.com/mlcommons/mlperf_inference_unofficial_submissions_v5.0/blob/main/closed/MLCommons/results/mlc-server-reference-gpu-pytorch_v2.4.0-cu124/rgat/offline/performance/run_1/mlperf_log_detail.txt)  
+- [X] Ensure sample logs successfully pass the submission checker and applicable compliance runs. [Link](https://htmlpreview.github.io/?https://github.com/mlcommons/mlperf_inference_unofficial_submissions_v5.0/blob/refs/heads/auto-update/closed/MLCommons/results/mlc-server-reference-gpu-pytorch_v2.4.0-cu124/summary.html)

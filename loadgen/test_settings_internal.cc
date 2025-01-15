@@ -757,8 +757,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
            &performance_issue_same_index, nullptr);
 
   if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
-            nullptr))
-      sample_concatenate_permutation = (val == 1) ? true : false;
+               nullptr))
+    sample_concatenate_permutation = (val == 1) ? true : false;
   if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
     server_coalesce_queries = (val == 0) ? false : true;
   if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))

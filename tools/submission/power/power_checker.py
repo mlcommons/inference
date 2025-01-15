@@ -39,7 +39,7 @@ class CheckerWarning(Exception):
     pass
 
 
-SUPPORTED_VERSION = ["1.10.0"]
+SUPPORTED_VERSION = ["1.11.1"]
 SUPPORTED_MODEL = {
     "YokogawaWT210": 8,
     "YokogawaWT500": 35,
@@ -214,7 +214,7 @@ def ptd_messages_check(sd: SessionDescriptor) -> None:
 
     assert (
         version in SUPPORTED_VERSION
-    ), f"PTD version {version!r} is not supported. Supported versions are 1.10.0"
+    ), f"PTD version {version!r} is not supported. Supported versions are {SUPPORTED_VERSION}"
     assert (
         power_meter_model in SUPPORTED_MODEL.keys()
     ), f"Power meter {power_meter_model!r} is not supported. Only {', '.join(SUPPORTED_MODEL.keys())} are supported."

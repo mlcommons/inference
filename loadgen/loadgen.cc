@@ -323,7 +323,8 @@ std::vector<QueryMetadata> GenerateQueries(
       size_t pad_size =
           (loaded_samples.size() - samples_per_query % loaded_samples.size());
       samples_per_query += pad_size;
-    } else if (min_queries % loaded_samples.size() != 0) {
+    } else if ((scenario != TestScenario::Offline) &&
+               (min_queries % loaded_samples.size() != 0)) {
       // In Server, SingleStream, MultiStream mode, the min_queries should be
       // padded
       size_t pad_size =
@@ -1228,7 +1229,7 @@ void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     RemoveValue(&audit_scenario, ' ');
     const std::string generic_model = "*";
     test_settings.FromConfig(audit_config_filename, generic_model,
-                             audit_scenario);
+                             audit_scenario, 2);
   }
   if (test_settings.test05) {
     // If the configuration indicates we are running test05,

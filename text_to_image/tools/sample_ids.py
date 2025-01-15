@@ -20,7 +20,7 @@ def get_args():
         default=10,
         help="Dataset download location")
     parser.add_argument(
-        "--seed", "-s", type=int, default=633994880, help="Dataset download location"
+        "--seed", "-s", type=int, default=265673710, help="Dataset download location"
     )
     args = parser.parse_args()
     return args

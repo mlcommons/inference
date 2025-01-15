@@ -28,7 +28,7 @@ def define_env(env):
         content = ""
 
         execution_envs = ["Docker", "Native"]
-        code_version = "r4.1-dev"
+        code_version = "r5.0-dev"
         implementation_run_options = []
 
         if model == "rnnt":
@@ -50,6 +50,8 @@ def define_env(env):
                     frameworks = ["Onnxruntime", "Pytorch"]
                 elif "bert" in model.lower():
                     frameworks = ["Pytorch", "Deepsparse"]
+                elif "llama3" in model.lower():
+                    frameworks = ["Pytorch"]
                 else:
                     frameworks = ["Pytorch"]
 
@@ -127,6 +129,7 @@ def define_env(env):
                 "dlrm" in model.lower()
                 or "llama2" in model.lower()
                 or "mixtral" in model.lower()
+                or "llama3" in model.lower()
             ):
                 categories = ["Datacenter"]
             else:
@@ -239,7 +242,8 @@ def define_env(env):
 
                             common_info = get_common_info(
                                 spaces + 16,
-                                implementation
+                                implementation,
+                                model.lower()
                             )
 
                             if (
@@ -488,7 +492,7 @@ def define_env(env):
 
     # contains run command information which is common to both docker and
     # native runs
-    def get_common_info(spaces, implementation):
+    def get_common_info(spaces, implementation, model):
         info = ""
         pre_space = ""
         for i in range(1, spaces):
@@ -496,7 +500,12 @@ def define_env(env):
         pre_space += " "
         # pre_space = "                "
         info += f"\n{pre_space}!!! tip\n\n"
+        info += f"{pre_space}    - Number of threads could be adjusted using `--threads=#`, where `#` is the desired number of threads. This option works only if the implementation in use supports threading.\n\n"
         info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
+        info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
+        if model == "rgat":
+            info += f"{pre_space}    - Add `--env.CM_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.\n\n"
+            info += f"{pre_space}    - Add `--env.CM_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.\n\n"
         if implementation.lower() == "reference":
             info += f"{pre_space}    - Add `--adr.mlperf-implementation.tags=_branch.master,_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the official MLPerf Inference implementation in a custom fork.\n\n"
             info += f"{pre_space}    - Add `--adr.inference-src.tags=_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the model config accuracy script in the submission checker within a custom fork.\n\n"
@@ -517,7 +526,9 @@ def define_env(env):
 
             if model == "sdxl":
                 info += f"{pre_space}    - `--env.CM_MLPERF_MODEL_SDXL_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
-
+            elif "llama3" in model.lower():
+                info += f"{pre_space}    - `--env.CM_MLPERF_MODEL_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
+                info += f"{pre_space}    - `--env.CM_MLPERF_DATASET_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"

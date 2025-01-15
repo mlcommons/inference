@@ -39,9 +39,12 @@ nav:
           - IndySCC24: benchmarks/language/reproducibility/indyscc24-bert.md
       - GPT-J: benchmarks/language/gpt-j.md
       - LLAMA2-70B: benchmarks/language/llama2-70b.md
+      - LLAMA3-405B: benchmarks/language/llama3_1-405b.md
       - MIXTRAL-8x7B: benchmarks/language/mixtral-8x7b.md
     - Recommendation:
       - DLRM-v2: benchmarks/recommendation/dlrm-v2.md
+    - Graph Neural Networks:
+      - R-GAT: benchmarks/graph/rgat.md
   - Install CM:
     - install/index.md
   - Submission:

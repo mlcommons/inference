@@ -118,4 +118,7 @@ if __name__ == "__main__":
     results["performance_sample_count"] = total
 
     with open(args.output_file, "w") as fp:
-        json.dump(results, fp)
+        fp.write("accuracy={:.3f}%, good={}, total={}".format(
+            100.0 *
+            results["accuracy"], results["number_correct_samples"], results["performance_sample_count"]
+        ))

@@ -157,7 +157,9 @@ def get_backend(backend, **kwargs):
         from backend_deploy import BackendDeploy
 
         backend = BackendDeploy(**kwargs)
-
+    elif backend == 'onnx':
+        from backend_onnx import BackendOnnx
+        backend = BackendOnnx(**kwargs)
     elif backend == "debug":
         from backend_debug import BackendDebug
 

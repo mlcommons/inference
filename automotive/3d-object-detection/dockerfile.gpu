@@ -29,3 +29,4 @@ RUN pip install scikit-image
 RUN pip install ninja
 RUN pip install visdom
 RUN pip install shapely
+RUN pip install onnxruntime

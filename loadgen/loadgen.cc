@@ -421,7 +421,7 @@ std::vector<QueryMetadata> GenerateQueries(
     }
   }
 
-  LogDetail([count = queries.size(), spq = settings.samples_per_query,
+  LogDetail([count = queries.size(), spq = samples_per_query,
              duration = timestamp.count()](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT
     MLPERF_LOG(detail, "generated_query_count", count);

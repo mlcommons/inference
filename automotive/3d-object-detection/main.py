@@ -35,7 +35,7 @@ SUPPORTED_DATASETS = {
         waymo.Waymo,
         dataset.preprocess,
         waymo.PostProcessWaymo(),
-        {} #"image_size": [3, 1024, 1024]},
+        {}  # "image_size": [3, 1024, 1024]},
     )
 }
 
@@ -43,7 +43,7 @@ SUPPORTED_DATASETS = {
 SUPPORTED_PROFILES = {
     "defaults": {
         "dataset": "waymo",
-        "backend": "pytorch", 
+        "backend": "pytorch",
         "model-name": "pointpainting",
     },
 }
@@ -58,15 +58,22 @@ SCENARIO_MAP = {
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", choices=SUPPORTED_DATASETS.keys(), help="dataset")
-    parser.add_argument("--dataset-path", required=True, help="path to the dataset")
+    parser.add_argument(
+        "--dataset",
+        choices=SUPPORTED_DATASETS.keys(),
+        help="dataset")
+    parser.add_argument(
+        "--dataset-path",
+        required=True,
+        help="path to the dataset")
     parser.add_argument(
         "--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles"
     )
     parser.add_argument(
         "--scenario",
         default="SingleStream",
-        help="mlperf benchmark scenario, one of " + str(list(SCENARIO_MAP.keys())),
+        help="mlperf benchmark scenario, one of " +
+        str(list(SCENARIO_MAP.keys())),
     )
     parser.add_argument(
         "--max-batchsize",
@@ -75,7 +82,10 @@ def get_args():
         help="max batch size in a single inference",
     )
     parser.add_argument("--threads", default=1, type=int, help="threads")
-    parser.add_argument("--accuracy", action="store_true", help="enable accuracy pass")
+    parser.add_argument(
+        "--accuracy",
+        action="store_true",
+        help="enable accuracy pass")
     parser.add_argument(
         "--find-peak-performance",
         action="store_true",
@@ -87,7 +97,6 @@ def get_args():
     parser.add_argument("--qps", type=int, help="target qps")
     parser.add_argument("--lidar-path", help="Path to model weights")
     parser.add_argument("--segmentor-path", help="Path to model weights")
-
 
     parser.add_argument(
         "--dtype",
@@ -117,7 +126,8 @@ def get_args():
         "--audit_conf", default="audit.config", help="config for LoadGen audit settings"
     )
 
-    # below will override mlperf rules compliant settings - don't use for official submission
+    # below will override mlperf rules compliant settings - don't use for
+    # official submission
     parser.add_argument("--time", type=int, help="time to scan in seconds")
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--debug", action="store_true", help="debug")
@@ -205,7 +215,8 @@ class RunnerBase:
         processed_results = []
         try:
             results = self.model.predict(qitem.inputs)
-            processed_results = self.post_process(results, qitem.content_id, qitem.inputs, self.result_dict)
+            processed_results = self.post_process(
+                results, qitem.content_id, qitem.inputs, self.result_dict)
 
             if self.take_accuracy:
                 self.post_process.add_results(processed_results)
@@ -219,7 +230,8 @@ class RunnerBase:
             response_array_refs = []
             response = []
             for idx, query_id in enumerate(qitem.query_id):
-                response_array = array.array("B", np.array(processed_results[idx], np.float32).tobytes())
+                response_array = array.array("B", np.array(
+                    processed_results[idx], np.float32).tobytes())
 
                 response_array_refs.append(response_array)
                 bi = response_array.buffer_info()
@@ -235,9 +247,9 @@ class RunnerBase:
         else:
             bs = self.max_batchsize
             for i in range(0, len(idx), bs):
-                data, label = self.ds.get_samples(idx[i : i + bs])
+                data, label = self.ds.get_samples(idx[i: i + bs])
                 self.run_one_item(
-                    Item(query_id[i : i + bs], idx[i : i + bs], data, label)
+                    Item(query_id[i: i + bs], idx[i: i + bs], data, label)
                 )
 
     def finish(self):
@@ -252,7 +264,9 @@ class QueueRunner(RunnerBase):
         self.result_dict = {}
 
         for _ in range(self.threads):
-            worker = threading.Thread(target=self.handle_tasks, args=(self.tasks,))
+            worker = threading.Thread(
+                target=self.handle_tasks, args=(
+                    self.tasks,))
             worker.daemon = True
             self.workers.append(worker)
             worker.start()
@@ -322,7 +336,11 @@ def main():
 
     # dataset to use
     dataset_class, pre_proc, post_proc, kwargs = SUPPORTED_DATASETS[args.dataset]
-    ds = dataset_class(data_root=args.dataset_path, split='val', painted=True, cam_sync=False)
+    ds = dataset_class(
+        data_root=args.dataset_path,
+        split='val',
+        painted=True,
+        cam_sync=False)
 
     final_results = {
         "runtime": model.name(),
@@ -361,7 +379,6 @@ def main():
     for i in range(5):
         input = ds.get_samples([0])
         _ = backend.predict(input[0])
-
 
     scenario = SCENARIO_MAP[args.scenario]
     runner_map = {
@@ -414,7 +431,8 @@ def main():
         settings.multi_stream_samples_per_query = args.samples_per_query
     if args.max_latency:
         settings.server_target_latency_ns = int(args.max_latency * NANO_SEC)
-        settings.multi_stream_expected_latency_ns = int(args.max_latency * NANO_SEC)
+        settings.multi_stream_expected_latency_ns = int(
+            args.max_latency * NANO_SEC)
 
     performance_sample_count = (
         args.performance_sample_count

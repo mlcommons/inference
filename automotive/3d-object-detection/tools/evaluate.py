@@ -27,17 +27,25 @@ def get_score_thresholds(tp_scores, total_num_valid_gt, num_sample_pts=41):
         cur_recall = pts_ind / (num_sample_pts - 1)
     return score_thresholds
 
+
 def convert_calib(calib, cuda):
     result = {}
     if cuda:
         device = 'cuda'
     else:
-        device='cpu'
-    result['R0_rect'] = torch.from_numpy(calib['R0_rect']).to(device=device, dtype=torch.float)
+        device = 'cpu'
+    result['R0_rect'] = torch.from_numpy(
+        calib['R0_rect']).to(
+        device=device,
+        dtype=torch.float)
     for i in range(5):
-        result['P' + str(i)] = torch.from_numpy(calib['P' + str(i)]).to(device=device, dtype=torch.float)
-        result['Tr_velo_to_cam_' + str(i)] = torch.from_numpy(calib['Tr_velo_to_cam_' + str(i)]).to(device=device, dtype=torch.float)
+        result['P' + str(i)] = torch.from_numpy(calib['P' + str(i)]
+                                                ).to(device=device, dtype=torch.float)
+        result['Tr_velo_to_cam_' +
+               str(i)] = torch.from_numpy(calib['Tr_velo_to_cam_' +
+                                                str(i)]).to(device=device, dtype=torch.float)
     return result
+
 
 def do_eval(det_results, gt_results, CLASSES, cam_sync=False):
     '''
@@ -50,7 +58,7 @@ def do_eval(det_results, gt_results, CLASSES, cam_sync=False):
     ious = {
         'bbox_3d': []
     }
-    #ids = list(sorted([g['image']['image_idx'] for g in gt_results]))
+    # ids = list(sorted([g['image']['image_idx'] for g in gt_results]))
     if cam_sync:
         annos_label = 'cam_sync_annos'
     else:
@@ -66,13 +74,18 @@ def do_eval(det_results, gt_results, CLASSES, cam_sync=False):
         gt_dimensions = gt_result['dimensions'].astype(np.float32)
         gt_rotation_y = gt_result['rotation_y'].astype(np.float32)
         det_location = det_result['location'].astype(np.float32).reshape(-1, 3)
-        det_dimensions = det_result['dimensions'].astype(np.float32).reshape(-1, 3)
+        det_dimensions = det_result['dimensions'].astype(
+            np.float32).reshape(-1, 3)
         det_rotation_y = det_result['rotation_y'].astype(np.float32)
 
         # 1.3, 3dbboxes iou
-        gt_bboxes3d = np.concatenate([gt_location, gt_dimensions, gt_rotation_y[:, None]], axis=-1)
-        det_bboxes3d = np.concatenate([det_location, det_dimensions, det_rotation_y[:, None]], axis=-1)
-        iou3d_v = iou3d_camera(torch.from_numpy(gt_bboxes3d).cuda(), torch.from_numpy(det_bboxes3d).cuda())
+        gt_bboxes3d = np.concatenate(
+            [gt_location, gt_dimensions, gt_rotation_y[:, None]], axis=-1)
+        det_bboxes3d = np.concatenate(
+            [det_location, det_dimensions, det_rotation_y[:, None]], axis=-1)
+        iou3d_v = iou3d_camera(
+            torch.from_numpy(gt_bboxes3d).cuda(),
+            torch.from_numpy(det_bboxes3d).cuda())
         ious['bbox_3d'].append(iou3d_v.cpu().numpy())
 
     MIN_IOUS = {
@@ -95,8 +108,9 @@ def do_eval(det_results, gt_results, CLASSES, cam_sync=False):
                 total_gt_ignores, total_det_ignores, total_dc_bboxes, total_scores = [], [], [], []
                 for id in range(len(gt_results)):
                     gt_result = gt_results[id][annos_label]
-                    det_result = det_results[gt_results[id]['image']['image_idx']]
-                    
+                    det_result = det_results[gt_results[id]
+                                             ['image']['image_idx']]
+
                     # 1.1 gt bbox property
                     cur_gt_names = gt_result['name']
                     cur_difficulty = gt_result['difficulty']
@@ -111,14 +125,14 @@ def do_eval(det_results, gt_results, CLASSES, cam_sync=False):
                             valid_class = 0
                         else:
                             valid_class = -1
-                        
+
                         if valid_class == 1 and not ignore:
                             gt_ignores.append(0)
                         elif valid_class == 0 or (valid_class == 1 and ignore):
                             gt_ignores.append(1)
                         else:
                             gt_ignores.append(-1)
-                        
+
                         if cur_gt_name == 'DontCare':
                             dc_bboxes.append(gt_result['bbox'][j])
                     total_gt_ignores.append(gt_ignores)
@@ -129,7 +143,8 @@ def do_eval(det_results, gt_results, CLASSES, cam_sync=False):
                     if len(cur_det_names) == 0:
                         cur_det_heights = np.empty_like(det_result['bbox'])
                     else:
-                        cur_det_heights = det_result['bbox'][:, 3] - det_result['bbox'][:, 1]
+                        cur_det_heights = det_result['bbox'][:,
+                                                             3] - det_result['bbox'][:, 1]
                     det_ignores = []
                     for j, cur_det_name in enumerate(cur_det_names):
                         if cur_det_heights[j] < MIN_HEIGHT[difficulty]:
@@ -155,16 +170,19 @@ def do_eval(det_results, gt_results, CLASSES, cam_sync=False):
                             continue
                         match_id, match_score = -1, -1
                         for k in range(mm):
-                            if not assigned[k] and det_ignores[k] >= 0 and cur_eval_ious[j, k] > CLS_MIN_IOU and scores[k] > match_score:
+                            if not assigned[k] and det_ignores[k] >= 0 and cur_eval_ious[j,
+                                                                                         k] > CLS_MIN_IOU and scores[k] > match_score:
                                 match_id = k
                                 match_score = scores[k]
                         if match_id != -1:
                             assigned[match_id] = True
                             if det_ignores[match_id] == 0 and gt_ignores[j] == 0:
                                 tp_scores.append(match_score)
-                total_num_valid_gt = np.sum([np.sum(np.array(gt_ignores) == 0) for gt_ignores in total_gt_ignores])
-                score_thresholds = get_score_thresholds(tp_scores, total_num_valid_gt)    
-            
+                total_num_valid_gt = np.sum(
+                    [np.sum(np.array(gt_ignores) == 0) for gt_ignores in total_gt_ignores])
+                score_thresholds = get_score_thresholds(
+                    tp_scores, total_num_valid_gt)
+
                 # 3. draw PR curve and calculate mAP
                 tps, fns, fps, total_aos = [], [], [], []
 
@@ -183,9 +201,11 @@ def do_eval(det_results, gt_results, CLASSES, cam_sync=False):
                                 continue
                             match_id, match_iou = -1, -1
                             for k in range(mm):
-                                if not assigned[k] and det_ignores[k] >= 0 and scores[k] >= score_threshold and cur_eval_ious[j, k] > CLS_MIN_IOU:
-    
-                                    if det_ignores[k] == 0 and cur_eval_ious[j, k] > match_iou:
+                                if not assigned[k] and det_ignores[k] >= 0 and scores[
+                                        k] >= score_threshold and cur_eval_ious[j, k] > CLS_MIN_IOU:
+
+                                    if det_ignores[k] == 0 and cur_eval_ious[j,
+                                                                             k] > match_iou:
                                         match_iou = cur_eval_ious[j, k]
                                         match_id = k
                                     elif det_ignores[k] == 1 and match_iou == -1:
@@ -198,24 +218,29 @@ def do_eval(det_results, gt_results, CLASSES, cam_sync=False):
                             else:
                                 if gt_ignores[j] == 0:
                                     fn += 1
-                            
+
                         for k in range(mm):
                             if det_ignores[k] == 0 and scores[k] >= score_threshold and not assigned[k]:
                                 fp += 1
-                        
-                        # In case 2d bbox evaluation, we should consider dontcare bboxes
+
+                        # In case 2d bbox evaluation, we should consider
+                        # dontcare bboxes
                         if eval_type == 'bbox_2d':
                             dc_bboxes = total_dc_bboxes[i]
-                            det_bboxes = det_results[gt_results[i]['image']['image_idx']]['bbox']
+                            det_bboxes = det_results[gt_results[i]
+                                                     ['image']['image_idx']]['bbox']
                             if len(dc_bboxes) > 0:
-                                ious_dc_det = iou2d(torch.from_numpy(det_bboxes), torch.from_numpy(dc_bboxes), metric=1).numpy().T
+                                ious_dc_det = iou2d(
+                                    torch.from_numpy(det_bboxes),
+                                    torch.from_numpy(dc_bboxes),
+                                    metric=1).numpy().T
                                 for j in range(len(dc_bboxes)):
                                     for k in range(len(det_bboxes)):
                                         if det_ignores[k] == 0 and scores[k] >= score_threshold and not assigned[k]:
                                             if ious_dc_det[j, k] > CLS_MIN_IOU:
                                                 fp -= 1
                                                 assigned[k] = True
-                            
+
                     tps.append(tp)
                     fns.append(fn)
                     fps.append(fp)
@@ -228,12 +253,10 @@ def do_eval(det_results, gt_results, CLASSES, cam_sync=False):
                 precisions = tps / (tps + fps)
                 for i in range(len(score_thresholds)):
                     precisions[i] = np.max(precisions[i:])
-                
+
                 sums_AP = 0
                 for i in range(0, len(score_thresholds), 4):
                     sums_AP += precisions[i]
                 mAP = sums_AP / 11 * 100
                 eval_ap_results[cls].append(mAP)
     return eval_ap_results
-
-    

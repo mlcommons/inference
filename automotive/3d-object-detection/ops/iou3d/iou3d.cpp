@@ -15,24 +15,25 @@ All Rights Reserved 2019-2020.
 #include <cstdint>
 #include <vector>
 
-#define CHECK_CUDA(x) \
+#define CHECK_CUDA(x)                                                          \
   TORCH_CHECK(x.device().is_cuda(), #x, " must be a CUDAtensor ")
-#define CHECK_CONTIGUOUS(x) \
+#define CHECK_CONTIGUOUS(x)                                                    \
   TORCH_CHECK(x.is_contiguous(), #x, " must be contiguous ")
-#define CHECK_INPUT(x) \
-  CHECK_CUDA(x);       \
+#define CHECK_INPUT(x)                                                         \
+  CHECK_CUDA(x);                                                               \
   CHECK_CONTIGUOUS(x)
 
 #define DIVUP(m, n) ((m) / (n) + ((m) % (n) > 0))
 
-#define CHECK_ERROR(ans) \
+#define CHECK_ERROR(ans)                                                       \
   { gpuAssert((ans), __FILE__, __LINE__); }
 inline void gpuAssert(cudaError_t code, const char *file, int line,
                       bool abort = true) {
   if (code != cudaSuccess) {
     fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file,
             line);
-    if (abort) exit(code);
+    if (abort)
+      exit(code);
   }
 }
 
@@ -93,8 +94,8 @@ int boxes_iou_bev_gpu(at::Tensor boxes_a, at::Tensor boxes_b,
   return 1;
 }
 
-int nms_gpu(at::Tensor boxes, at::Tensor keep,
-	    float nms_overlap_thresh, int device_id) {
+int nms_gpu(at::Tensor boxes, at::Tensor keep, float nms_overlap_thresh,
+            int device_id) {
   // params boxes: (N, 5) [x1, y1, x2, y2, ry]
   // params keep: (N)
 
@@ -142,13 +143,14 @@ int nms_gpu(at::Tensor boxes, at::Tensor keep,
     }
   }
   delete[] remv_cpu;
-  if (cudaSuccess != cudaGetLastError()) printf("Error!\n");
+  if (cudaSuccess != cudaGetLastError())
+    printf("Error!\n");
 
   return num_to_keep;
 }
 
-int nms_normal_gpu(at::Tensor boxes, at::Tensor keep,
-                   float nms_overlap_thresh, int device_id) {
+int nms_normal_gpu(at::Tensor boxes, at::Tensor keep, float nms_overlap_thresh,
+                   int device_id) {
   // params boxes: (N, 5) [x1, y1, x2, y2, ry]
   // params keep: (N)
 
@@ -196,7 +198,8 @@ int nms_normal_gpu(at::Tensor boxes, at::Tensor keep,
     }
   }
   delete[] remv_cpu;
-  if (cudaSuccess != cudaGetLastError()) printf("Error!\n");
+  if (cudaSuccess != cudaGetLastError())
+    printf("Error!\n");
 
   return num_to_keep;
 }

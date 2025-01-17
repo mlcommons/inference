@@ -1,9 +1,11 @@
-# This file is modified from https://github.com/open-mmlab/mmdetection3d/blob/master/mmdet3d/ops/voxel/voxelize.py
+# This file is modified from
+# https://github.com/open-mmlab/mmdetection3d/blob/master/mmdet3d/ops/voxel/voxelize.py
 
 import torch
 import torch.nn as nn
 import numpy as np
 import numba
+
 
 @numba.jit(nopython=True)
 def _points_to_voxel_reverse_kernel(points,
@@ -52,6 +54,7 @@ def _points_to_voxel_reverse_kernel(points,
             voxels[voxelidx, num] = points[i]
             num_points_per_voxel[voxelidx] += 1
     return voxel_num
+
 
 @numba.jit(nopython=True)
 def _points_to_voxel_kernel(points,
@@ -104,14 +107,15 @@ def _points_to_voxel_kernel(points,
             num_points_per_voxel[voxelidx] += 1
     return voxel_num
 
+
 def points_to_voxel(points,
-                     voxel_size,
-                     coors_range,
-                     max_points=35,
-                     reverse_index=True,
-                     max_voxels=20000):
+                    voxel_size,
+                    coors_range,
+                    max_points=35,
+                    reverse_index=True,
+                    max_voxels=20000):
     """convert kitti points(N, >=3) to voxels. This version calculate
-    everything in one loop. now it takes only 4.2ms(complete point cloud) 
+    everything in one loop. now it takes only 4.2ms(complete point cloud)
     with jit and 3.2ghz cpu.(don't calculate other features)
     Note: this function in ubuntu seems faster than windows 10.
 
@@ -123,7 +127,7 @@ def points_to_voxel(points,
             format: xyzxyz, minmax
         max_points: int. indicate maximum points contained in a voxel.
         reverse_index: boolean. indicate whether return reversed coordinates.
-            if points has xyz format and reverse_index is True, output 
+            if points has xyz format and reverse_index is True, output
             coordinates will be zyx format, but points in features always
             xyz format.
         max_voxels: int. indicate maximum voxels this function create.
@@ -166,6 +170,7 @@ def points_to_voxel(points,
     #     voxels[:, :, :3].sum(axis=1, keepdims=True)/num_points_per_voxel.reshape(-1, 1, 1)
     return voxels, coors, num_points_per_voxel
 
+
 class Voxelization(nn.Module):
 
     def __init__(self,
@@ -202,7 +207,7 @@ class Voxelization(nn.Module):
 
         point_cloud_range = torch.tensor(
             point_cloud_range, dtype=torch.float32)
-    
+
         voxel_size = torch.tensor(voxel_size, dtype=torch.float32)
         grid_size = (point_cloud_range[3:] -
                      point_cloud_range[:3]) / voxel_size
@@ -222,17 +227,19 @@ class Voxelization(nn.Module):
         else:
             max_voxels = self.max_voxels[1]
         voxel_parts = points_to_voxel(input.detach().cpu().numpy(),
-            self.voxel_size,
-            self.point_cloud_range,
-            self.max_num_points,
-            reverse_index=False,
-            max_voxels=max_voxels)
-        #return _Voxelization.apply(input, self.voxel_size, self.point_cloud_range,
+                                      self.voxel_size,
+                                      self.point_cloud_range,
+                                      self.max_num_points,
+                                      reverse_index=False,
+                                      max_voxels=max_voxels)
+        # return _Voxelization.apply(input, self.voxel_size, self.point_cloud_range,
         #                           self.max_num_points, max_voxels,
         #                          self.deterministic)
         voxels = torch.from_numpy(voxel_parts[0]).to(device=input.device)
         coors = torch.from_numpy(voxel_parts[1]).to(device=input.device)
-        num_points_per_voxel = torch.from_numpy(voxel_parts[2]).to(device=input.device)
+        num_points_per_voxel = torch.from_numpy(
+            voxel_parts[2]).to(
+            device=input.device)
         return voxels, coors, num_points_per_voxel
 
     def __repr__(self):

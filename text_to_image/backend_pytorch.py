@@ -5,6 +5,7 @@ import logging
 import backend
 from diffusers import StableDiffusionXLPipeline
 from diffusers import EulerDiscreteScheduler
+import threading
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("backend-pytorch")
@@ -24,6 +25,7 @@ class BackendPytorch(backend.Backend):
     ):
         super(BackendPytorch, self).__init__()
         self.model_path = model_path
+        self.lock = threading.Lock()
         if model_id == "xl":
             self.model_id = "stabilityai/stable-diffusion-xl-base-1.0"
         else:
@@ -385,15 +387,16 @@ class BackendPytorch(backend.Backend):
                     pooled_prompt_embeds,
                     negative_pooled_prompt_embeds,
                 ) = self.prepare_inputs(inputs, i)
-                generated = self.pipe(
-                    prompt_embeds=prompt_embeds,
-                    negative_prompt_embeds=negative_prompt_embeds,
-                    pooled_prompt_embeds=pooled_prompt_embeds,
-                    negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
-                    guidance_scale=self.guidance,
-                    num_inference_steps=self.steps,
-                    output_type="pt",
-                    latents=latents_input,
-                ).images
+                with self.lock:
+                    generated = self.pipe(
+                        prompt_embeds=prompt_embeds,
+                        negative_prompt_embeds=negative_prompt_embeds,
+                        pooled_prompt_embeds=pooled_prompt_embeds,
+                        negative_pooled_prompt_embeds=negative_pooled_prompt_embeds,
+                        guidance_scale=self.guidance,
+                        num_inference_steps=self.steps,
+                        output_type="pt",
+                        latents=latents_input,
+                    ).images
                 images.extend(generated)
         return images

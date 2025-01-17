@@ -73,11 +73,8 @@ class BackendOnnx(backend.Backend):
     
 
     def predict(self, inputs):
-        # TODO: implement predict
         dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids = [], [], [], [], [], [], []
         with torch.inference_mode():
-            device = torch.device("cpu")
-            format_results = {}
             model_input = inputs[0]
             batched_pts = model_input['pts']
             scores_from_cam = []
@@ -134,9 +131,8 @@ class BackendOnnx(backend.Backend):
                         format_result['location'].append(camera_bbox[:3])
                         format_result['rotation_y'].append(camera_bbox[6].item())
                         format_result['score'].append(score.item())
-                        format_results['idx'] = idx
+                        format_result['idx'] = idx
                     
-                    #write_label(format_result, os.path.join(saved_submit_path, f'{idx:06d}.txt'))
 
                     if len(format_result['dimensions']) > 0:
                         format_result['dimensions'] = torch.stack(format_result['dimensions'])
@@ -147,7 +143,7 @@ class BackendOnnx(backend.Backend):
                     class_labels.append(format_result['class'])
                     class_scores.append(format_result['score'])
                     box2d.append(format_result['bbox'])
-                    ids.append(format_results['idx'])
-            #return Boxes, Classes, Scores # Change to desired output
+                    ids.append(format_result['idx'])
+
         return dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids
         

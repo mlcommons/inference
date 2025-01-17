@@ -192,6 +192,23 @@ class PostProcessWaymo:
         for idx in range(len(content_id)):
             processed_results.append([])
             detection_num = len(results[0][idx])
+            if detection_num == 0:
+                processed_results[idx].append([
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                -1,
+                results[6][idx]
+                ])
             for detection in range(0, detection_num):
                 processed_results[idx].append([
                     results[0][idx][detection][0],

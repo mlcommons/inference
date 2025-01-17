@@ -74,13 +74,13 @@ def main():
                     'bbox': [],
                     'score': []
                 }
-                
-            detections[image_idx]['name'].append(LABEL2CLASSES[label])
-            detections[image_idx]['dimensions'].append(dimension)
-            detections[image_idx]['location'].append(location)
-            detections[image_idx]['rotation_y'].append(rotation_y)
-            detections[image_idx]['bbox'].append(bbox)
-            detections[image_idx]['score'].append(score)
+            if dimension[0] > 0:
+                detections[image_idx]['name'].append(LABEL2CLASSES[label])
+                detections[image_idx]['dimensions'].append(dimension)
+                detections[image_idx]['location'].append(location)
+                detections[image_idx]['rotation_y'].append(rotation_y)
+                detections[image_idx]['bbox'].append(bbox)
+                detections[image_idx]['score'].append(score)
             image_ids.add(image_idx)
 
     with open(args.output_file, "w") as fp:

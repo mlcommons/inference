@@ -78,13 +78,11 @@ class BackendDeploy(backend.Backend):
         return self
 
     def predict(self, inputs):
-        # TODO: implement predict
         dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids = [
-        ], [], [], [], [], [], []
+            ], [], [], [], [], [], []
         with torch.inference_mode():
             device = torch.device(
-                "cuda:0" if torch.cuda.is_available() else "cpu")
-            format_results = {}
+    "cuda:0" if torch.cuda.is_available() else "cpu")
             model_input = inputs[0]
             batched_pts = model_input['pts']
             scores_from_cam = []
@@ -124,32 +122,29 @@ class BackendDeploy(backend.Backend):
                 bboxes2d, camera_bboxes = result_filter['bboxes2d'], result_filter['camera_bboxes']
                 for lidar_bbox, label, score, bbox2d, camera_bbox in \
                         zip(lidar_bboxes, labels, scores, bboxes2d, camera_bboxes):
-                    format_result['class'].append(label.item())
-                    format_result['truncated'].append(0.0)
-                    format_result['occluded'].append(0)
-                    alpha = camera_bbox[6] - \
-                        np.arctan2(camera_bbox[0], camera_bbox[2])
-                    format_result['alpha'].append(alpha.item())
-                    format_result['bbox'].append(bbox2d.tolist())
-                    format_result['dimensions'].append(camera_bbox[3:6])
-                    format_result['location'].append(camera_bbox[:3])
-                    format_result['rotation_y'].append(camera_bbox[6].item())
-                    format_result['score'].append(score.item())
-                    format_results['idx'] = idx
+                        format_result['class'].append(label.item())
+                        format_result['truncated'].append(0.0)
+                        format_result['occluded'].append(0)
+                        alpha = camera_bbox[6] - \
+                            np.arctan2(camera_bbox[0], camera_bbox[2])
+                        format_result['alpha'].append(alpha.item())
+                        format_result['bbox'].append(bbox2d.tolist())
+                        format_result['dimensions'].append(camera_bbox[3:6])
+                        format_result['location'].append(camera_bbox[:3])
+                        format_result['rotation_y'].append(
+                            camera_bbox[6].item())
+                        format_result['score'].append(score.item())
+                        format_result['idx'] = idx
 
-                # write_label(format_result, os.path.join(saved_submit_path, f'{idx:06d}.txt'))
 
-                if len(format_result['dimensions']) > 0:
-                    format_result['dimensions'] = torch.stack(
-                        format_result['dimensions'])
-                    format_result['location'] = torch.stack(
-                        format_result['location'])
-                dimensions.append(format_result['dimensions'])
-                locations.append(format_result['location'])
-                rotation_y.append(format_result['rotation_y'])
-                class_labels.append(format_result['class'])
-                class_scores.append(format_result['score'])
-                box2d.append(format_result['bbox'])
-                ids.append(format_results['idx'])
-            # return Boxes, Classes, Scores # Change to desired output
+                    if len(format_result['dimensions']) > 0:
+                        format_result['dimensions'] = torch.stack(format_result['dimensions'])
+                        format_result['location'] = torch.stack(format_result['location'])
+                    dimensions.append(format_result['dimensions'])
+                    locations.append(format_result['location'])
+                    rotation_y.append(format_result['rotation_y'])
+                    class_labels.append(format_result['class'])
+                    class_scores.append(format_result['score'])
+                    box2d.append(format_result['bbox'])
+                    ids.append(format_result['idx'])
         return dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids

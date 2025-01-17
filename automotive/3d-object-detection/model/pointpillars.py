@@ -321,7 +321,7 @@ class PointPillars(nn.Module):
             cur_bbox_dir_cls_pred = bbox_dir_cls_pred[score_inds]
             
             # 3.2 nms core
-            keep_inds = ml3d.ops.nms(cur_bbox_pred2d, cur_bbox_cls_pred, self.nms_thr)
+            keep_inds = ml3d.ops.nms(cur_bbox_pred2d.cpu(), cur_bbox_cls_pred.cpu(), self.nms_thr)
 
             cur_bbox_cls_pred = cur_bbox_cls_pred[keep_inds]
             cur_bbox_pred = cur_bbox_pred[keep_inds]

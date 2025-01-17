@@ -89,6 +89,7 @@ def main():
     for key in detections.keys():
         format_results[key] = {k:np.array(v) for k, v in detections[key].items()}
     map_stats = do_eval(format_results, val_dataset.data_infos, CLASSES, cam_sync=False)
+    map_stats['Total'] = np.mean(list(map_stats.values()))
 
     print(map_stats)
     if args.verbose:

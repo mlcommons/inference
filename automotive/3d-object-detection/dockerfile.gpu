@@ -1,4 +1,4 @@
-ARG FROM_IMAGE_NAME=pytorch/pytorch:2.0.1-cuda11.7-cudnn8-devel
+ARG FROM_IMAGE_NAME=pytorch/pytorch:2.2.2-cuda11.8-cudnn8-devel
 FROM ${FROM_IMAGE_NAME}
 
 ENV DEBIAN_FRONTEND=noninteractive

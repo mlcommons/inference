@@ -1,3 +1,4 @@
+import onnxruntime as ort
 import argparse
 import model.segmentation as network
 import os
@@ -9,9 +10,6 @@ import copy
 import sys
 from tqdm import tqdm
 sys.path.append('..')
-import model.segmentation as network
-import argparse
-import onnxruntime as ort
 
 
 def get_calib_from_file(calib_file):
@@ -36,6 +34,7 @@ def get_calib_from_file(calib_file):
 
     return data
 
+
 def to_numpy(tensor):
     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
@@ -56,11 +55,13 @@ class Painter:
             model = ort.InferenceSession(checkpoint_file)
             self.input_image_name = model.get_inputs()[0].name
         else:
-            model = network.modeling.__dict__['deeplabv3plus_resnet50'](num_classes=19, output_stride=16)
+            model = network.modeling.__dict__['deeplabv3plus_resnet50'](
+                num_classes=19, output_stride=16)
             checkpoint = torch.load(checkpoint_file)
             model.load_state_dict(checkpoint["model_state"])
             model.eval()
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            device = torch.device(
+                'cuda' if torch.cuda.is_available() else 'cpu')
             model.to(device)
         self.model = model
         self.cam_sync = args.cam_sync

@@ -197,7 +197,7 @@ class Waymo(dataset.Dataset):
         input_tensor = preprocess(input_image)
         input_batch = input_tensor.unsqueeze(0)
         return input_batch
-    
+
     def get_item_count(self):
         return len(self.data_infos)
 
@@ -221,20 +221,20 @@ class PostProcessWaymo:
             detection_num = len(results[0][idx])
             if detection_num == 0:
                 processed_results[idx].append([
-                -1,
-                -1,
-                -1,
-                -1,
-                -1,
-                -1,
-                -1,
-                -1,
-                -1,
-                -1,
-                -1,
-                -1,
-                -1,
-                results[6][idx]
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    results[6][idx]
                 ])
             for detection in range(0, detection_num):
                 processed_results[idx].append([

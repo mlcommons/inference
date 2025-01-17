@@ -78,9 +78,11 @@ class BackendDeploy(backend.Backend):
         return self
 
     def predict(self, inputs):
-        dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids = [], [], [], [], [], [], []
+        dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids = [
+            ], [], [], [], [], [], []
         with torch.inference_mode():
-            device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            device = torch.device(
+    "cuda:0" if torch.cuda.is_available() else "cpu")
             model_input = inputs[0]
             batched_pts = model_input['pts']
             scores_from_cam = []
@@ -123,12 +125,14 @@ class BackendDeploy(backend.Backend):
                         format_result['class'].append(label.item())
                         format_result['truncated'].append(0.0)
                         format_result['occluded'].append(0)
-                        alpha = camera_bbox[6] - np.arctan2(camera_bbox[0], camera_bbox[2])
+                        alpha = camera_bbox[6] - \
+                            np.arctan2(camera_bbox[0], camera_bbox[2])
                         format_result['alpha'].append(alpha.item())
                         format_result['bbox'].append(bbox2d.tolist())
                         format_result['dimensions'].append(camera_bbox[3:6])
                         format_result['location'].append(camera_bbox[:3])
-                        format_result['rotation_y'].append(camera_bbox[6].item())
+                        format_result['rotation_y'].append(
+                            camera_bbox[6].item())
                         format_result['score'].append(score.item())
                         format_result['idx'] = idx
 

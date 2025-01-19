@@ -515,11 +515,14 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("performance_issue_same : ", performance_issue_same);
   summary("performance_issue_same_index : ", performance_issue_same_index);
   summary("performance_sample_count : ", performance_sample_count);
-  if (sample_concatenate_permutation){
-    summary("WARNING: sample_concatenate_permutation was set to true. \n"
-            "Generated samples per query might be different as the one in the setting.\n"
-            "Check the generated_samples_per_query line in the detailed log for the real\n"
-            "samples_per_query value");
+  if (sample_concatenate_permutation) {
+    summary(
+        "WARNING: sample_concatenate_permutation was set to true. \n"
+        "Generated samples per query might be different as the one in the "
+        "setting.\n"
+        "Check the generated_samples_per_query line in the detailed log for "
+        "the real\n"
+        "samples_per_query value");
   }
 }
 

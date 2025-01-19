@@ -112,7 +112,7 @@ class BackendDeploy(backend.Backend):
                 calib_info = model_input['calib_info']
                 image_info = model_input['image_info']
                 idx = model_input['image_info']['image_idx']
-
+                format_result['idx'] = idx
                 calib_info = change_calib_device(calib_info, False)
                 result_filter = keep_bbox_from_image_range(
                     result, calib_info, 5, image_info, False)
@@ -121,30 +121,27 @@ class BackendDeploy(backend.Backend):
                 labels, scores = result_filter['labels'], result_filter['scores']
                 bboxes2d, camera_bboxes = result_filter['bboxes2d'], result_filter['camera_bboxes']
                 for lidar_bbox, label, score, bbox2d, camera_bbox in \
-                        zip(lidar_bboxes, labels, scores, bboxes2d, camera_bboxes):
-                        format_result['class'].append(label.item())
-                        format_result['truncated'].append(0.0)
-                        format_result['occluded'].append(0)
-                        alpha = camera_bbox[6] - \
-                            np.arctan2(camera_bbox[0], camera_bbox[2])
-                        format_result['alpha'].append(alpha.item())
-                        format_result['bbox'].append(bbox2d.tolist())
-                        format_result['dimensions'].append(camera_bbox[3:6])
-                        format_result['location'].append(camera_bbox[:3])
-                        format_result['rotation_y'].append(
-                            camera_bbox[6].item())
-                        format_result['score'].append(score.item())
-                        format_result['idx'] = idx
+                    zip(lidar_bboxes, labels, scores, bboxes2d, camera_bboxes):
+                    format_result['class'].append(label.item())
+                    format_result['truncated'].append(0.0)
+                    format_result['occluded'].append(0)
+                    alpha = camera_bbox[6] - np.arctan2(camera_bbox[0], camera_bbox[2])
+                    format_result['alpha'].append(alpha.item())
+                    format_result['bbox'].append(bbox2d.tolist())
+                    format_result['dimensions'].append(camera_bbox[3:6])
+                    format_result['location'].append(camera_bbox[:3])
+                    format_result['rotation_y'].append(camera_bbox[6].item())
+                    format_result['score'].append(score.item())
 
 
-                    if len(format_result['dimensions']) > 0:
-                        format_result['dimensions'] = torch.stack(format_result['dimensions'])
-                        format_result['location'] = torch.stack(format_result['location'])
-                    dimensions.append(format_result['dimensions'])
-                    locations.append(format_result['location'])
-                    rotation_y.append(format_result['rotation_y'])
-                    class_labels.append(format_result['class'])
-                    class_scores.append(format_result['score'])
-                    box2d.append(format_result['bbox'])
-                    ids.append(format_result['idx'])
+                if len(format_result['dimensions']) > 0:
+                    format_result['dimensions'] = torch.stack(format_result['dimensions'])
+                    format_result['location'] = torch.stack(format_result['location'])
+                dimensions.append(format_result['dimensions'])
+                locations.append(format_result['location'])
+                rotation_y.append(format_result['rotation_y'])
+                class_labels.append(format_result['class'])
+                class_scores.append(format_result['score'])
+                box2d.append(format_result['bbox'])
+                ids.append(format_result['idx'])
         return dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids

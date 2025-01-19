@@ -112,7 +112,7 @@ class BackendOnnx(backend.Backend):
                     calib_info = model_input['calib_info']
                     image_info = model_input['image_info']
                     idx = model_input['image_info']['image_idx']
-                    
+                    format_result['idx'] = idx
                     calib_info = change_calib_device(calib_info, False)
                     result_filter = keep_bbox_from_image_range(result, calib_info, 5, image_info, False)
                     
@@ -131,7 +131,6 @@ class BackendOnnx(backend.Backend):
                         format_result['location'].append(camera_bbox[:3])
                         format_result['rotation_y'].append(camera_bbox[6].item())
                         format_result['score'].append(score.item())
-                        format_result['idx'] = idx
                     
 
                     if len(format_result['dimensions']) > 0:

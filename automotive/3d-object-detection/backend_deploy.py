@@ -79,10 +79,10 @@ class BackendDeploy(backend.Backend):
 
     def predict(self, inputs):
         dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids = [
-            ], [], [], [], [], [], []
+        ], [], [], [], [], [], []
         with torch.inference_mode():
             device = torch.device(
-    "cuda:0" if torch.cuda.is_available() else "cpu")
+                "cuda:0" if torch.cuda.is_available() else "cpu")
             model_input = inputs[0]
             batched_pts = model_input['pts']
             scores_from_cam = []
@@ -121,11 +121,12 @@ class BackendDeploy(backend.Backend):
                 labels, scores = result_filter['labels'], result_filter['scores']
                 bboxes2d, camera_bboxes = result_filter['bboxes2d'], result_filter['camera_bboxes']
                 for lidar_bbox, label, score, bbox2d, camera_bbox in \
-                    zip(lidar_bboxes, labels, scores, bboxes2d, camera_bboxes):
+                        zip(lidar_bboxes, labels, scores, bboxes2d, camera_bboxes):
                     format_result['class'].append(label.item())
                     format_result['truncated'].append(0.0)
                     format_result['occluded'].append(0)
-                    alpha = camera_bbox[6] - np.arctan2(camera_bbox[0], camera_bbox[2])
+                    alpha = camera_bbox[6] - \
+                        np.arctan2(camera_bbox[0], camera_bbox[2])
                     format_result['alpha'].append(alpha.item())
                     format_result['bbox'].append(bbox2d.tolist())
                     format_result['dimensions'].append(camera_bbox[3:6])
@@ -133,10 +134,11 @@ class BackendDeploy(backend.Backend):
                     format_result['rotation_y'].append(camera_bbox[6].item())
                     format_result['score'].append(score.item())
 
-
                 if len(format_result['dimensions']) > 0:
-                    format_result['dimensions'] = torch.stack(format_result['dimensions'])
-                    format_result['location'] = torch.stack(format_result['location'])
+                    format_result['dimensions'] = torch.stack(
+                        format_result['dimensions'])
+                    format_result['location'] = torch.stack(
+                        format_result['location'])
                 dimensions.append(format_result['dimensions'])
                 locations.append(format_result['location'])
                 rotation_y.append(format_result['rotation_y'])

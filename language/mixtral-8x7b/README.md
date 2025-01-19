@@ -10,7 +10,7 @@
 
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/mixtral-8x7b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
- 
+
 ## Prepare environment
 
 For a CPU-only run:
@@ -234,11 +234,11 @@ Recreating the enviroment for evaluating the quality metrics can be quite tediou
 ```bash
 docker build . -f Dockerfile.eval -t evaluation
 ```
-2. Run the docker in interactive mode and with 
+2. Run the docker in interactive mode and with
 ```bash
-sudo docker run -it -v $(pwd):/eval -t evaluation
+docker run -it --rm --net=host --runtime=nvidia --ipc=host -v $PWD:$PWD -w $PWD evaluation
 ```
-3. 
+3.
 ```bash
 cd eval
 python -u evaluate-accuracy.py --checkpoint-path [path_to_model_checkpoint] \

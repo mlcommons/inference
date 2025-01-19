@@ -79,10 +79,10 @@ class BackendDeploy(backend.Backend):
 
     def predict(self, inputs):
         dimensions, locations, rotation_y, box2d, class_labels, class_scores, ids = [
-            ], [], [], [], [], [], []
+        ], [], [], [], [], [], []
         with torch.inference_mode():
             device = torch.device(
-    "cuda:0" if torch.cuda.is_available() else "cpu")
+                "cuda:0" if torch.cuda.is_available() else "cpu")
             model_input = inputs[0]
             batched_pts = model_input['pts']
             scores_from_cam = []

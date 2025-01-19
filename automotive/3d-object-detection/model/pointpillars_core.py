@@ -7,8 +7,10 @@ from tools.process import limit_period
 import math
 import open3d.ml.torch as ml3d
 
+
 class PillarLayer(nn.Module):
-    def __init__(self, voxel_size, point_cloud_range, max_num_points, max_voxels):
+    def __init__(self, voxel_size, point_cloud_range,
+                 max_num_points, max_voxels):
         super().__init__()
         self.voxel_layer = Voxelization(voxel_size=voxel_size,
                                         point_cloud_range=point_cloud_range,
@@ -33,16 +35,21 @@ class PillarLayer(nn.Module):
             pillars.append(voxels_out)
             coors.append(coors_out.long())
             npoints_per_pillar.append(num_points_per_voxel_out)
-        
-        pillars = torch.cat(pillars, dim=0) # (p1 + p2 + ... + pb, num_points, c)
-        npoints_per_pillar = torch.cat(npoints_per_pillar, dim=0) # (p1 + p2 + ... + pb, )
+
+        # (p1 + p2 + ... + pb, num_points, c)
+        pillars = torch.cat(pillars, dim=0)
+        npoints_per_pillar = torch.cat(
+            npoints_per_pillar,
+            dim=0)  # (p1 + p2 + ... + pb, )
         coors_batch = []
         for i, cur_coors in enumerate(coors):
             coors_batch.append(F.pad(cur_coors, (1, 0), value=i))
-        coors_batch = torch.cat(coors_batch, dim=0) # (p1 + p2 + ... + pb, 1 + 3)
+        # (p1 + p2 + ... + pb, 1 + 3)
+        coors_batch = torch.cat(coors_batch, dim=0)
 
         return pillars, coors_batch, npoints_per_pillar
-    
+
+
 class PillarEncoder(nn.Module):
     def __init__(self, voxel_size, point_cloud_range, in_channel, out_channel):
         super().__init__()
@@ -278,6 +285,7 @@ class Head(nn.Module):
         bbox_dir_cls_pred = self.conv_dir_cls(x)
         return bbox_cls_pred, bbox_pred, bbox_dir_cls_pred
 
+
 class PointPillarsPre(nn.Module):
     def __init__(self,
                  nclasses=3,
@@ -464,7 +472,6 @@ class PointPillarsPos(nn.Module):
         self.score_thr = 0.1
         self.max_num = 50
 
-
     def nms_filter(self, bbox_pred, bbox_cls_pred, bbox_dir_cls_pred):
         # 3. nms
         bbox_pred2d_xy = bbox_pred[:, [0, 1]]
@@ -472,7 +479,6 @@ class PointPillarsPos(nn.Module):
         bbox_pred2d = torch.cat([bbox_pred2d_xy - bbox_pred2d_lw / 2,
                                  bbox_pred2d_xy + bbox_pred2d_lw / 2,
                                  bbox_pred[:, 6:]], dim=-1)  # (n_anchors, 5)
-
 
         ret_bboxes, ret_labels, ret_scores = [], [], []
         for i in range(self.nclasses):

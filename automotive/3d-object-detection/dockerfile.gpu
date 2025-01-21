@@ -1,4 +1,4 @@
-ARG FROM_IMAGE_NAME=pytorch/pytorch:2.0.1-cuda11.7-cudnn8-devel
+ARG FROM_IMAGE_NAME=pytorch/pytorch:2.2.2-cuda11.8-cudnn8-devel
 FROM ${FROM_IMAGE_NAME}
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -20,12 +20,12 @@ RUN cd /tmp && \
     CFLAGS="-std=c++14" python setup.py install && \
     rm -rf mlperf
 
-RUN pip install tqdm
-RUN pip install numba
-RUN pip install opencv-python
-RUN pip install open3d
-RUN pip install tensorboard
-RUN pip install scikit-image
-RUN pip install ninja
-RUN pip install visdom
-RUN pip install shapely
+RUN pip install tqdm==4.65.0
+RUN pip install numba==0.60.0
+RUN pip install opencv-python==4.11.0.86
+RUN pip install open3d==0.19.0
+RUN pip install scikit-image==0.25.0
+RUN pip install ninja==1.11.1
+RUN pip install shapely==2.0.6
+RUN pip install tensorboard==2.18.0
+RUN pip install onnxruntime==1.20.1

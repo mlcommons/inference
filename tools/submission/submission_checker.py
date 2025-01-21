@@ -194,7 +194,6 @@ MODEL_CONFIG = {
             "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
             "resnet50": "resnet",
-            "llama3_1-405b": "llama3.1-405b"
         },
         "seeds": {
             "qsl_rng_seed": 3066443479025735752,
@@ -266,6 +265,8 @@ MODEL_CONFIG = {
             "gptj-99.9",
             "llama2-70b-99",
             "llama2-70b-99.9",
+            "llama2-70b-interactive-99",
+            "llama2-70b-interactive-99.9",
             "stable-diffusion-xl",
             "mixtral-8x7b",
             "llama3.1-405b",
@@ -283,6 +284,8 @@ MODEL_CONFIG = {
             "gptj-99.9": ["Server", "Offline"],
             "llama2-70b-99": ["Server", "Offline"],
             "llama2-70b-99.9": ["Server", "Offline"],
+            "llama2-70b-interactive-99": ["Server", "Offline"],
+            "llama2-70b-interactive-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["Server", "Offline"],
             "mixtral-8x7b": ["Server", "Offline"],
             "llama3.1-405b": ["Server", "Offline"],
@@ -314,6 +317,8 @@ MODEL_CONFIG = {
             "gptj-99.9": ["SingleStream", "Offline", "Server"],
             "llama2-70b-99": ["Server", "Offline"],
             "llama2-70b-99.9": ["Server", "Offline"],
+            "llama2-70b-interactive-99": ["Server", "Offline"],
+            "llama2-70b-interactive-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
             "mixtral-8x7b": ["Server", "Offline"],
             "llama3.1-405b": ["Server", "Offline"],
@@ -370,6 +375,26 @@ MODEL_CONFIG = {
                 "TOKENS_PER_SAMPLE",
                 294.45 * 0.9,
             ),
+            "llama2-70b-interactive-99": (
+                "ROUGE1",
+                44.4312 * 0.99,
+                "ROUGE2",
+                22.0352 * 0.99,
+                "ROUGEL",
+                28.6162 * 0.99,
+                "TOKENS_PER_SAMPLE",
+                294.45 * 0.9,
+            ),
+            "llama2-70b-interactive-99.9": (
+                "ROUGE1",
+                44.4312 * 0.999,
+                "ROUGE2",
+                22.0352 * 0.999,
+                "ROUGEL",
+                28.6162 * 0.999,
+                "TOKENS_PER_SAMPLE",
+                294.45 * 0.9,
+            ),
             "stable-diffusion-xl": (
                 "CLIP_SCORE",
                 31.68631873,
@@ -378,17 +403,17 @@ MODEL_CONFIG = {
             ),
             "mixtral-8x7b": (
                 "ROUGE1",
-                45.4911 * 0.99,
+                45.5989 * 0.99,
                 "ROUGE2",
-                23.2829 * 0.99,
+                23.3526 * 0.99,
                 "ROUGEL",
-                30.3615 * 0.99,
+                30.4608 * 0.99,
                 "TOKENS_PER_SAMPLE",
-                145.9 * 0.9,
+                144.84 * 0.9,
                 "gsm8k_accuracy",
-                73.78 * 0.99,
+                73.66 * 0.99,
                 "mbxp_accuracy",
-                60.12 * 0.99,
+                60.16 * 0.99,
             ),
             "llama3.1-405b": (
                 "ROUGEL",
@@ -409,6 +434,8 @@ MODEL_CONFIG = {
             ),
             "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
+            "llama2-70b-interactive-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
+            "llama2-70b-interactive-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
             "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
         },
@@ -428,6 +455,8 @@ MODEL_CONFIG = {
             "gptj-99.9": 13368,
             "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
+            "llama2-70b-interactive-99": 24576,
+            "llama2-70b-interactive-99.9": 24576,
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
             "llama3.1-405b": 8313,
@@ -439,14 +468,16 @@ MODEL_CONFIG = {
         # not really needed
         "model_mapping": {
             # map model names to the official mlperf model class
+            "ssd-resnet34": "retinanet",
             "mobilenet": "resnet",
             "resnet50": "resnet",
+            "llama3_1-405b": "llama3.1-405b",
         },
         "seeds": {
             # TODO: Update random seeds
-            "qsl_rng_seed": 3066443479025735752,
-            "sample_index_rng_seed": 10688027786191513374,
-            "schedule_rng_seed": 14962580496156340209,
+            "qsl_rng_seed": 6023615788873153749,
+            "sample_index_rng_seed": 15036839855038426416,
+            "schedule_rng_seed": 9933818062894767841,
         },
         "ignore_errors": [],
         "latency-constraint": {
@@ -459,6 +490,8 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": {"Server": 20000000000},
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
+            "llama2-70b-interactive-99": {"Server": 20000000000},
+            "llama2-70b-interactive-99.9": {"Server": 20000000000},
             "mixtral-8x7b": {"Server": 20000000000},
             "llama3.1-405b": {"Server": 60000000000}
         },
@@ -485,6 +518,8 @@ MODEL_CONFIG = {
             "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-interactive-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-interactive-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "stable-diffusion-xl": {
                 "SingleStream": 1024,
                 "Server": 270336,
@@ -578,6 +613,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "gptj-99.9": 13368,
     "llama2-70b-99": 24576,
     "llama2-70b-99.9": 24576,
+    "llama2-70b-interactive-99": 24576,
+    "llama2-70b-interactive-99.9": 24576,
     "stable-diffusion-xl": 5000,
     "mixtral-8x7b": 15000,
     "llama3.1-405b": 8313,
@@ -645,6 +682,14 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
         },
+        "llama2-70b-interactive-99": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama2-70b-interactive-99.9": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
         "gptj-99": {
             "Offline": "result_inferred_tokens_per_second",
             "Server": "result_inferred_completed_tokens_per_second",
@@ -666,14 +711,20 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
 
 LLM_LATENCY_LIMITS = {
     "llama2-70b-99": {
-        "conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}
+        "ttft": 2000 * 1000000, "tpot": 200 * 1000000
     },
     "llama2-70b-99.9": {
-        "conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}
+        "ttft": 2000 * 1000000, "tpot": 200 * 1000000
     },
-    "mixtral-8x7b": {"conversational": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000}},
+    "llama2-70b-interactive-99": {
+        "ttft": 450 * 1000000, "tpot": 40 * 1000000
+    },
+    "llama2-70b-interactive-99.9": {
+        "ttft": 450 * 1000000, "tpot": 40 * 1000000
+    },
+    "mixtral-8x7b": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000},
     "llama3.1-405b": {
-        "conversational": {"ttft": 6000 * 1000000, "tpot": 175 * 1000000}
+        "ttft": 6000 * 1000000, "tpot": 175 * 1000000
     },
 }
 
@@ -956,6 +1007,8 @@ class Config:
                 "gptj-99.9",
                 "llama2-70b-99",
                 "llama2-70b-99.9",
+                "llama2-70b-interactive-99",
+                "llama2-70b-interactive-99.9",
                 "mixtral-8x7b",
                 "llama3.1-405b",
                 "rgat",
@@ -1133,21 +1186,18 @@ def find_error_in_detail_log(config, fname):
     return is_valid
 
 
-def check_accuracy_dir(config, model, path, verbose):
-    is_valid = False
-    all_accuracy_valid = True
-    acc = None
-    result_acc = {}
-    hash_val = None
-    target = config.get_accuracy_target(model)
-    acc_upper_limit = config.get_accuracy_upper_limit(model)
+def get_accuracy_values(config, model):
+
     patterns = []
     acc_targets = []
     acc_types = []
+    acc_limits = []
+    up_patterns = []
+    acc_limit_check = False
+
+    target = config.get_accuracy_target(model)
+    acc_upper_limit = config.get_accuracy_upper_limit(model)
     if acc_upper_limit is not None:
-        acc_limits = []
-        up_patterns = []
-        acc_limit_check = True
         for i in range(0, len(acc_upper_limit), 2):
             acc_type, acc_target = acc_upper_limit[i: i + 2]
             acc_limits.append(acc_target)
@@ -1158,6 +1208,22 @@ def check_accuracy_dir(config, model, path, verbose):
         patterns.append(ACC_PATTERN[acc_type])
         acc_targets.append(acc_target)
         acc_types.append(acc_type)
+
+    return patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit
+
+
+def check_accuracy_dir(config, model, path, verbose):
+    is_valid = False
+    all_accuracy_valid = True
+    acc = None
+    result_acc = {}
+    hash_val = None
+    target = config.get_accuracy_target(model)
+    # acc_upper_limit = config.get_accuracy_upper_limit(model)
+    patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = get_accuracy_values(
+        config, model)
+    acc_limit_check = True
+
     acc_seen = [False for _ in acc_targets]
 
     with open(os.path.join(path, "accuracy.txt"), "r", encoding="utf-8") as f:
@@ -1185,6 +1251,7 @@ def check_accuracy_dir(config, model, path, verbose):
                 if acc:
                     result_acc[acc_type] = acc
                 acc = None
+
             if acc_upper_limit is not None:
                 for i, (pattern, acc_limit) in enumerate(
                         zip(up_patterns, acc_limits)):
@@ -1239,25 +1306,29 @@ def extra_check_llm(mlperf_log, scenario, model):
     if mlperf_log["requested_use_token_latencies"]:
         if scenario == "Offline":
             # For offline no further checks are necessary
-            return None, True
+            return True
         else:
-            for constraint, limits in LLM_LATENCY_LIMITS[model].items():
-                if (
-                    mlperf_log["result_first_token_99.00_percentile_latency_ns"]
-                    < limits["ttft"]
-                    and mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
-                    < limits["tpot"]
-                ):
-                    return constraint, True
+            limits = LLM_LATENCY_LIMITS[model]
+            if (
+                mlperf_log["result_first_token_99.00_percentile_latency_ns"]
+                < limits["ttft"]
+                and mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
+                < limits["tpot"]
+            ):
+                return True
     else:
         log.error(
             f"use_token_latencies flag needs to be enabled for Llama2 benchmark")
-        return None, False
+        return False
 
     log.error(
-        f'Failed Llama2 extra check for TTFT and TPOT. TTFT 99-tile: {mlperf_log["result_first_token_99.00_percentile_latency_ns"]}, TPOT 99-tile: {mlperf_log["result_time_per_output_token_99.00_percentile_ns"]}'
+        'Failed extra check for TTFT and TPOT. Obtained: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f. Required: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f',
+        mlperf_log["result_first_token_99.00_percentile_latency_ns"],
+        mlperf_log["result_time_per_output_token_99.00_percentile_ns"],
+        limits["ttft"],
+        limits["tpot"]
     )
-    return None, False
+    return False
 
 
 def get_performance_metric(
@@ -1326,9 +1397,11 @@ def check_performance_dir(
         )
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
+                 "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
                  "mixtral-8x7b", "llama3.1-405b"]:
-        llama_constraint, is_valid = extra_check_llm(
+        llm_is_valid = extra_check_llm(
             mlperf_log, scenario_fixed, model)
+        is_valid = (llm_is_valid and is_valid)
 
     latency_99_percentile = mlperf_log["result_99.00_percentile_latency_ns"]
     latency_mean = mlperf_log["result_mean_latency_ns"]
@@ -1341,7 +1414,7 @@ def check_performance_dir(
     samples_per_query = mlperf_log["effective_samples_per_query"]
     min_duration = mlperf_log["effective_min_duration_ms"]
     equal_issue_used_check = (
-        mlperf_log["effective_sample_concatenate_permutation"] == "true"
+        mlperf_log["effective_sample_concatenate_permutation"] == True
     )
     if not config.requires_equal_issue(model, division):
         equal_issue_used_check = True
@@ -1625,7 +1698,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -1855,6 +1928,18 @@ def check_results_dir(
                 "Server": "Tokens/s",
             },
             "llama2-70b-99.9": {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama2-70b-interactive-99": {
+                "SingleStream": "Latency (ms)",
+                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama2-70b-interactive-99.9": {
                 "SingleStream": "Latency (ms)",
                 "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
@@ -2384,7 +2469,7 @@ def check_results_dir(
                                     perf_path,
                                     scenario_fixed,
                                     division,
-                                    system_json,
+                                    system_json
                                 )
                                 if is_inferred:
                                     inferred = 1
@@ -2849,13 +2934,11 @@ def check_compliance_acc_dir(test_dir, model, config):
                     is_valid = False
                 elif not acc_passed:
                     target = config.get_accuracy_target(model)
-                    patterns = []
-                    acc_types = []
-                    for i in range(0, len(target), 2):
-                        acc_type = target[i: i + 2]
-                        acc_types.append(acc_type)
-                        patterns.append(ACC_PATTERN[acc_type[0]])
-                    acc_seen = [False for _ in acc_type]
+                    patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit = get_accuracy_values(
+                        config, model)
+                    acc_limit_check = True
+
+                    acc_seen = [False for _ in acc_targets]
                     acc_baseline = {acc_type: 0 for acc_type in acc_types}
                     acc_compliance = {acc_type: 0 for acc_type in acc_types}
                     with open(
@@ -2898,6 +2981,10 @@ def check_compliance_acc_dir(test_dir, model, config):
                             if delta_perc <= required_delta_perc:
                                 is_valid = True
                             else:
+                                log.error(
+                                    "Compliance test accuracy check (non-deterministic mode) in %s failed",
+                                    test_dir,
+                                )
                                 is_valid = False
                                 break
         elif "TEST06" in test_dir:
@@ -2950,6 +3037,8 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
+        "llama2-70b-interactive-99",
+        "llama2-70b-interactive-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
         "rgat",
@@ -2971,6 +3060,8 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
+        "llama2-70b-interactive-99",
+        "llama2-70b-interactive-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
     ]:
@@ -2981,6 +3072,7 @@ def check_compliance_dir(
         test_list.remove("TEST04")
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
+                 "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
                  "mixtral-8x7b", "llama3.1-405b"]:
         test_list.append("TEST06")
 

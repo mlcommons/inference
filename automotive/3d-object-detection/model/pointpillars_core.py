@@ -18,7 +18,6 @@ class PillarLayer(nn.Module):
                                         max_voxels=max_voxels)
         self.point_cloud_range = point_cloud_range
         self.voxel_size = voxel_size
-        # test = voxel_grid(size=voxel_size, start=point_cloud_range[:2], end=point_cloud_range[3:5])
 
     @torch.no_grad()
     def forward(self, batched_pts):
@@ -33,9 +32,6 @@ class PillarLayer(nn.Module):
         for i, pts in enumerate(batched_pts):
             voxels_out, coors_out, num_points_per_voxel_out = self.voxel_layer(
                 pts)
-            # import pdb
-            # pdb.set_trace()
-            # test = voxel_grid(pos=pts, size=self.voxel_size, start=self.point_cloud_range[:3], end=self.point_cloud_range[3:])
             # voxels_out: (max_voxel, num_points, c), coors_out: (max_voxel, 3)
             # num_points_per_voxel_out: (max_voxel, )
             pillars.append(voxels_out)
@@ -474,9 +470,9 @@ class PointPillarsPos(nn.Module):
     def __init__(self, nclasses=3):
         super().__init__()
         self.nclasses = nclasses
-        self.nms_thr = 0.01
+        self.nms_thr = 0.25
         self.score_thr = 0.1
-        self.max_num = 50
+        self.max_num = 500
 
     def nms_filter(self, bbox_pred, bbox_cls_pred, bbox_dir_cls_pred):
         # 3. nms

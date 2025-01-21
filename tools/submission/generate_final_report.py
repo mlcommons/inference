@@ -147,6 +147,8 @@ def main():
             "stable-diffusion-xl",
             "llama2-70b-99",
             "llama2-70b-99.9",
+            "llama2-70b-interactive-99",
+            "llama2-70b-interactive-99.9",
             "mixtral-8x7b",
         ],
         ["SingleStream", "MultiStream", "Server", "Offline"],
@@ -209,6 +211,8 @@ def main():
                 "stable-diffusion-xl": ["Server", "Offline"],
                 "llama2-70b-99": ["Server", "Offline"],
                 "llama2-70b-99.9": ["Server", "Offline"],
+                "llama2-70b-interactive-99": ["Server", "Offline"],
+                "llama2-70b-interactive-99.9": ["Server", "Offline"],
                 "mixtral-8x7b": ["Server", "Offline"],
                 "rgat": ["Offline"],
                 "llama3.1-405b": ["Offline", "Server"]

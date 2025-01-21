@@ -470,9 +470,9 @@ class PointPillarsPos(nn.Module):
     def __init__(self, nclasses=3):
         super().__init__()
         self.nclasses = nclasses
-        self.nms_thr = 0.01
+        self.nms_thr = 0.25
         self.score_thr = 0.1
-        self.max_num = 50
+        self.max_num = 500
 
     def nms_filter(self, bbox_pred, bbox_cls_pred, bbox_dir_cls_pred):
         # 3. nms

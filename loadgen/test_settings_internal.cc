@@ -515,20 +515,29 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
   summary("performance_issue_same : ", performance_issue_same);
   summary("performance_issue_same_index : ", performance_issue_same_index);
   summary("performance_sample_count : ", performance_sample_count);
+  if (sample_concatenate_permutation) {
+    summary(
+        "WARNING: sample_concatenate_permutation was set to true. \n"
+        "Generated samples per query might be different as the one in the "
+        "setting.\n"
+        "Check the generated_samples_per_query line in the detailed log for "
+        "the real\n"
+        "samples_per_query value");
+  }
 }
 
 }  // namespace loadgen
 
 int TestSettings::FromConfig(const std::string &path, const std::string &model,
-                             const std::string &scenario, bool is_mlperf_conf) {
+                             const std::string &scenario, int conf_type) {
   std::map<std::string, std::string> kv;
   static int configCount = 0;
 
-  if (!is_mlperf_conf) {
+  if (conf_type == 1) {
     if (configCount == 0) {
       // Only allow userConf as the single configFile and loadgen loads the
-      // mlperfConf automatically
-      FromConfig("", model, scenario, true);
+      // mlperfConf automatically for perf and accuracy runs
+      FromConfig("", model, scenario, 0);
     }
 
     else {
@@ -586,7 +595,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   std::unique_ptr<std::istream> fss;
   std::string line;
 
-  if (!is_mlperf_conf) {
+  if (conf_type != 0) {
     // dirt simple config parser
     fss = std::make_unique<std::ifstream>(path);
     if (!static_cast<std::ifstream *>(fss.get())->is_open()) {
@@ -691,20 +700,14 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
         break;
     }
   }
-  if (is_mlperf_conf) {
+
+  if (conf_type == 0) {
     lookupkv(model, scenario, "qsl_rng_seed", &qsl_rng_seed, nullptr);
     lookupkv(model, scenario, "sample_index_rng_seed", &sample_index_rng_seed,
              nullptr);
     lookupkv(model, scenario, "schedule_rng_seed", &schedule_rng_seed, nullptr);
-    lookupkv(model, scenario, "accuracy_log_rng_seed", &accuracy_log_rng_seed,
-             nullptr);
     lookupkv(model, scenario, "accuracy_log_probability", nullptr,
              &accuracy_log_probability, 0.01);
-    lookupkv(model, scenario, "accuracy_log_sampling_target",
-             &accuracy_log_sampling_target, nullptr);
-    if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
-                 nullptr))
-      sample_concatenate_permutation = (val == 1) ? true : false;
     if (lookupkv(model, scenario, "test05", &val, nullptr))
       test05 = (val == 1) ? true : false;
     lookupkv(model, scenario, "test05_qsl_rng_seed", &test05_qsl_rng_seed,
@@ -715,8 +718,10 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
              &test05_schedule_rng_seed, nullptr);
   }
 
-  // keys that can be overriden in user.conf but will make the results eligibale
-  // only for open submission keys to measure token metrics
+  // keys that can be overriden in user.conf but will make the results eligible
+  // only for open submissions
+
+  // keys to measure token metrics
   if (lookupkv(model, scenario, "use_token_latencies", &val, nullptr)) {
     use_token_latencies = (val == 1) ? true : false;
   }
@@ -760,6 +765,9 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, scenario, "performance_issue_same_index",
            &performance_issue_same_index, nullptr);
 
+  if (lookupkv(model, scenario, "sample_concatenate_permutation", &val,
+               nullptr))
+    sample_concatenate_permutation = (val == 1) ? true : false;
   if (lookupkv(model, "Server", "coalesce_queries", &val, nullptr))
     server_coalesce_queries = (val == 0) ? false : true;
   if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))
@@ -781,6 +789,11 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   if (lookupkv(model, scenario, "print_timestamps", &val, nullptr))
     print_timestamps = (val == 0) ? false : true;
 
+  // keys that are used in audit.conf
+  lookupkv(model, scenario, "accuracy_log_rng_seed", &accuracy_log_rng_seed,
+           nullptr);
+  lookupkv(model, scenario, "accuracy_log_sampling_target",
+           &accuracy_log_sampling_target, nullptr);
   return 0;
 }
 

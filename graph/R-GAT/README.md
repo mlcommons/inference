@@ -2,7 +2,7 @@
 
 This is the reference implementation for MLPerf Inference Graph Neural Network. The reference implementation currently uses Deep Graph Library (DGL), and pytorch as the backbone of the model.
 
-**Hardware requirements:** The minimun requirements to run this benchmark are ~600GB of RAM and ~2.3TB of disk. This requires to create a memory map for the graph features and not load them to memory all at once. If you want to load all the features to ram, you will need ~3TB and can be done by using the flag `--in-memory`
+**Hardware requirements:** The minimun requirements to run this benchmark are ~600GB of RAM and ~2.3TB of disk. This requires to create a memory map for the graph features and not load them to memory all at once.
 
 ## Supported Models
 
@@ -19,7 +19,9 @@ This is the reference implementation for MLPerf Inference Graph Neural Network. 
 
 ## Automated command to run the benchmark via MLCommons CM
 
-Please check the official inference documentation [here](https://docs.mlcommons.org/inference/benchmarks/graph/rgat/)
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/graph/rgat/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do `pip install cm4mlops` and then use `cm` commands for downloading the model and datasets using the commands given in the later sections.
  
 ## Setup
 Set the following helper variables
@@ -33,10 +35,7 @@ export MODEL_PATH=$PWD/inference/graph/R-GAT/model/
 ```bash
 git clone --recurse-submodules https://github.com/mlcommons/inference.git --depth 1
 ```
-Finally copy the `mlperf.conf` file to the stable diffusion folder
-```bash
-cp $ROOT_INFERENCE/mlperf.conf $GRAPH_FOLDER
-```
+
 
 ### Install pytorch
 **For NVIDIA GPU based runs:**
@@ -77,6 +76,13 @@ pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/cu121/repo.html
 pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/repo.html
 ```
 
+
+### Download model through CM (Collective Minds)
+
+```
+cm run script --tags=get,ml-model,rgat --outdirname=<path_to_download>
+```
+
 ### Download model using Rclone
 
 To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
@@ -95,14 +101,15 @@ You can then navigate in the terminal to your desired download directory and run
 rclone copy mlc-inference:mlcommons-inference-wg-public/R-GAT/RGAT.pt $MODEL_PATH -P
 ```
 
-### Download model through CM (Collective Minds)
 
-```
-cm run script --tags=get,ml-model,rgat -j
-```
 
 ### Download and setup dataset
 #### Debug Dataset
+
+**CM Command**
+```
+cm run script --tags=get,dataset,igbh,_debug --outdirname=<path to download>
+```
 
 **Download Dataset**
 ```bash
@@ -116,13 +123,16 @@ cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size tiny
 ```
 
-**CM Command**
-```
-cm run script --tags=get,dataset,igbh,_debug -j
-```
+
 
 #### Full Dataset
-**Warning:** This script will download 2.2TB of data 
+**Warning:** This script will download 2.2TB of data
+
+**CM Command**
+```
+cm run script --tags=get,dataset,igbh,_full --outdirname=<path to download>
+```
+
 ```bash
 cd $GRAPH_FOLDER
 ./tools/download_igbh_full.sh igbh/
@@ -134,16 +144,15 @@ cd $GRAPH_FOLDER
 python3 tools/split_seeds.py --path igbh --dataset_size full
 ```
 
-**CM Command**
-```
-cm run script --tags=get,dataset,igbh,_full -j
-```
-
 
 #### Calibration dataset
 
 The calibration dataset contains 5000 nodes from the training paper nodes of the IGBH dataset. We provide the [Node ids](../../calibration/IGBH/calibration.txt) and the [script](tools/split_seeds.py) to generate them (using the `--calibration` flag). 
 
+**CM Command**
+```
+cm run script --tags=get,dataset,igbh,_full,_calibration --outdirname=<path to download>
+```
 
 ### Run the benchmark
 #### Debug Run
@@ -152,23 +161,9 @@ The calibration dataset contains 5000 nodes from the training paper nodes of the
 cd $GRAPH_FOLDER
 
 # Run the benchmark DGL
-python3 main.py --dataset igbh-dgl-tiny --dataset-path igbh/ --profile debug-dgl [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
+python3 main.py --dataset igbh-dgl-tiny --dataset-path igbh/ --profile debug-dgl [--model-path <path_to_ckpt>] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
 
-##### Debug Run using CM
-```
-cm run script --tags=run-mlperf,inference,_submission,_short,_r5.0-dev \
-   --model=rgat \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=edge \
-   --scenario=Offline \
-   --execution_mode=test \
-   --device=<cpu or cuda> \
-   --quiet \
-   --test_query_count=10 \
-   --docker
-```
 
 #### Local run
 ```bash
@@ -176,28 +171,15 @@ cm run script --tags=run-mlperf,inference,_submission,_short,_r5.0-dev \
 cd $GRAPH_FOLDER
 
 # Run the benchmark DGL
-python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
+python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full [--model-path <path_to_ckpt>] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
 
-##### Local Run using CM
-```
-cm run script --tags=run-mlperf,inference,_submission,_full,_r5.0-dev \
-   --model=rgat \
-   --implementation=reference \
-   --framework=pytorch \
-   --category=edge \
-   --scenario=Offline \
-   --execution_mode=test \
-   --device=<>cpu or cuda> \
-   --quiet \
-   --test_query_count=10 \
-   --docker
+### Evaluate the accuracy
+```bash
+cm run script --tags=process,mlperf,accuracy,_igbh --result_dir=<Path to directory where files are generated after the benchmark run>
 ```
 
-- Number of threads could be adjusted using `--threads=#`, where # is the desired number of threads. This option works only if the implementation in use supports threading.
-- Batch size could be adjusted using `--batch_size=#`, where # is the desired batch size. This option works only if the implementation in use is supporting the given batch size.
-- Add `--env.CM_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.
-- Add `--env.CM_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.
+Please click [here](https://github.com/mlcommons/inference/blob/dev/graph/R-GAT/tools/accuracy_igbh.py) to view the Python script for evaluating accuracy for the IGBH dataset.
 
 #### Run using docker
 
@@ -206,7 +188,7 @@ Not implemented yet
 #### Accuracy run
 Add the `--accuracy` to the command to run the benchmark
 ```bash
-python3 main.py --dataset igbh --dataset-path igbh/ --accuracy --model-path model/ [--model-path <path_to_ckpt>] [--in-memory] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
+python3 main.py --dataset igbh --dataset-path igbh/ --accuracy --model-path model/ [--model-path <path_to_ckpt>] [--device <cpu or gpu>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>] [--layout <COO, CSC or CSR>]
 ```
 
 **NOTE:** For official submissions you should submit the results of the accuracy run in a file called `accuracy.txt` with the following format:
@@ -227,7 +209,7 @@ docker run --rm -it -v $(pwd):/root rgat-cpu
 ```
 Run benchmark inside the docker container:
 ```bash
-python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full --device cpu [--model-path <path_to_ckpt>] [--in-memory] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
+python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full --device cpu [--model-path <path_to_ckpt>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
 
 
@@ -243,7 +225,7 @@ docker run --rm -it -v $(pwd):/workspace/root --gpus all rgat-gpu
 Go inside the root folder and run benchmark inside the docker container:
 ```bash
 cd root
-python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full --device gpu [--model-path <path_to_ckpt>] [--in-memory] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
+python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full --device gpu [--model-path <path_to_ckpt>] [--dtype <fp16 or fp32>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
 
 **NOTE:** For official submissions, this benchmark is required to run in equal issue mode. Please make sure that the flag `rgat.*.sample_concatenate_permutation` is set to one in the [mlperf.conf](../../loadgen/mlperf.conf) file when loadgen is built.

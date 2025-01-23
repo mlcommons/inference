@@ -323,6 +323,8 @@ class COCO:
                                 y[sk],
                                 linewidth=3,
                                 color=c)
+
+
 >>>>>> > 6bc50d8f7c0ee1c553aabe2d40c9534e7529b620
                     plt.plot(
                         x[v > 0],

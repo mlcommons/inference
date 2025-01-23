@@ -13,15 +13,16 @@ Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/l
 
 ## Supported Models
 
-| model | framework | accuracy | dataset | model link | model source | precision | notes |
-| ----- | --------- | -------- | ------- | ---------- | ------------ | --------- | ----- |
-| BERT-Large | TensorFlow | f1_score=90.874% | SQuAD v1.1 validation set | [from zenodo](https://zenodo.org/record/3733868) [from zenodo](https://zenodo.org/record/3939747) | [BERT-Large](https://github.com/google-research/bert), trained with [NVIDIA DeepLearningExamples](https://github.com/NVIDIA/DeepLearningExamples/tree/master/TensorFlow/LanguageModeling/BERT) | fp32 | |
-| BERT-Large | PyTorch | f1_score=90.874% | SQuAD v1.1 validation set | [from zenodo](https://zenodo.org/record/3733896) | [BERT-Large](https://github.com/google-research/bert), trained with [NVIDIA DeepLearningExamples](https://github.com/NVIDIA/DeepLearningExamples/tree/master/TensorFlow/LanguageModeling/BERT), converted with [bert_tf_to_pytorch.py](bert_tf_to_pytorch.py) | fp32 | |
-| BERT-Large | ONNX | f1_score=90.874% | SQuAD v1.1 validation set | [from zenodo](https://zenodo.org/record/3733910) | [BERT-Large](https://github.com/google-research/bert), trained with [NVIDIA DeepLearningExamples](https://github.com/NVIDIA/DeepLearningExamples/tree/master/TensorFlow/LanguageModeling/BERT), converted with [bert_tf_to_pytorch.py](bert_tf_to_pytorch.py) | fp32 | |
-| BERT-Large | ONNX | f1_score=90.067% | SQuAD v1.1 validation set | [from zenodo](https://zenodo.org/record/3750364) | Fine-tuned based on the PyTorch model and converted with [bert_tf_to_pytorch.py](bert_tf_to_pytorch.py) | int8, symetrically per-tensor quantized without bias | See [MLPerf INT8 BERT Finetuning.pdf](MLPerf INT8 BERT Finetuning.pdf) for details about the fine-tuning process |
-| BERT-Large | PyTorch | f1_score=90.633% | SQuAD v1.1 validation set | [from zenodo](https://zenodo.org/record/4792496) | Fine-tuned based on [Huggingface bert-large-uncased pretrained model](https://huggingface.co/bert-large-uncased) | int8, symetrically per-tensor quantized without bias | See README.md at Zenodo link for details about the fine-tuning process |
+| model      | framework  | accuracy         | dataset                   | model link                                                                                        | model source                                                                                                                                                                                                                                                  | precision                                            | notes                                                                                                            |
+| ---------- | ---------- | ---------------- | ------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| BERT-Large | TensorFlow | f1_score=90.874% | SQuAD v1.1 validation set | [from zenodo](https://zenodo.org/record/3733868) [from zenodo](https://zenodo.org/record/3939747) | [BERT-Large](https://github.com/google-research/bert), trained with [NVIDIA DeepLearningExamples](https://github.com/NVIDIA/DeepLearningExamples/tree/master/TensorFlow/LanguageModeling/BERT)                                                                | fp32                                                 |                                                                                                                  |
+| BERT-Large | PyTorch    | f1_score=90.874% | SQuAD v1.1 validation set | [from zenodo](https://zenodo.org/record/3733896)                                                  | [BERT-Large](https://github.com/google-research/bert), trained with [NVIDIA DeepLearningExamples](https://github.com/NVIDIA/DeepLearningExamples/tree/master/TensorFlow/LanguageModeling/BERT), converted with [bert_tf_to_pytorch.py](bert_tf_to_pytorch.py) | fp32                                                 |                                                                                                                  |
+| BERT-Large | ONNX       | f1_score=90.874% | SQuAD v1.1 validation set | [from zenodo](https://zenodo.org/record/3733910)                                                  | [BERT-Large](https://github.com/google-research/bert), trained with [NVIDIA DeepLearningExamples](https://github.com/NVIDIA/DeepLearningExamples/tree/master/TensorFlow/LanguageModeling/BERT), converted with [bert_tf_to_pytorch.py](bert_tf_to_pytorch.py) | fp32                                                 |                                                                                                                  |
+| BERT-Large | ONNX       | f1_score=90.067% | SQuAD v1.1 validation set | [from zenodo](https://zenodo.org/record/3750364)                                                  | Fine-tuned based on the PyTorch model and converted with [bert_tf_to_pytorch.py](bert_tf_to_pytorch.py)                                                                                                                                                       | int8, symetrically per-tensor quantized without bias | See [MLPerf INT8 BERT Finetuning.pdf](MLPerf INT8 BERT Finetuning.pdf) for details about the fine-tuning process |
+| BERT-Large | PyTorch    | f1_score=90.633% | SQuAD v1.1 validation set | [from zenodo](https://zenodo.org/record/4792496)                                                  | Fine-tuned based on [Huggingface bert-large-uncased pretrained model](https://huggingface.co/bert-large-uncased)                                                                                                                                              | int8, symetrically per-tensor quantized without bias | See README.md at Zenodo link for details about the fine-tuning process                                           |
 
 ## Disclaimer
+
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
 
 ## Commands
@@ -45,7 +46,7 @@ Please run the following commands:
 - The script [tf_freeze_bert.py] freezes the TensorFlow model into pb file.
 - The script [bert_tf_to_pytorch.py] converts the TensorFlow model into the PyTorch `BertForQuestionAnswering` module in [HuggingFace Transformers](https://github.com/huggingface/transformers) and also exports the model to [ONNX](https://github.com/onnx/onnx) format.
 
-## Loadgen over the Network 
+## Loadgen over the Network
 
 ```
 pip install cm4mlops
@@ -55,22 +56,19 @@ The below CM command will launch the SUT server
 
 ```
 cm run script --tags=generate-run-cmds,inference --model=bert-99 --backend=pytorch  \
---mode=performance --device=cuda --quiet --test_query_count=1000 --network=sut  \
---outdirname=results/bert-99-performance
+--mode=performance --device=cuda --quiet --test_query_count=1000 --network=sut
 ```
 
-Once the SUT server is launched, the below command can be run on the loadgen node to do issue queries to the SUT nodes. In this command `-sut_servers` has just the localhost address - it can be changed to a comma-separated list of any hostname/IP in the network. 
-
+Once the SUT server is launched, the below command can be run on the loadgen node to do issue queries to the SUT nodes. In this command `-sut_servers` has just the localhost address - it can be changed to a comma-separated list of any hostname/IP in the network.
 
 ```
 cm run script --tags=generate-run-cmds,inference --model=bert-99 --backend=pytorch  --rerun \
 --mode=performance --device=cuda --quiet --test_query_count=1000  \
---sut_servers,=http://localhost:8000 --network=lon \
---outdirname=results/bert-99-performance-lon
+--sut_servers,=http://localhost:8000 --network=lon
 ```
 
 If you are not using CM, just add `--network=lon` along with your normal run command on the SUT side.
-On the loadgen node, add `--network=lon` option and `--sut_server <IP1> <IP2>` to the normal command to connect to SUT nodes at IP addresses IP1, IP2 etc. 
+On the loadgen node, add `--network=lon` option and `--sut_server <IP1> <IP2>` to the normal command to connect to SUT nodes at IP addresses IP1, IP2 etc.
 
 Loadgen over the network works for `onnxruntime` and `pytorch` backends.
 

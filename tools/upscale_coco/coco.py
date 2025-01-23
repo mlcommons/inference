@@ -317,15 +317,12 @@ class COCO:
                     v = kp[2::3]
                     for sk in sks:
                         if np.all(v[sk] > 0):
-<<<<<<< HEAD
                             plt.plot(x[sk], y[sk], linewidth=3, color=c)
-=======
                             plt.plot(
                                 x[sk],
                                 y[sk],
                                 linewidth=3,
                                 color=c)
->>>>>>> 6bc50d8f7c0ee1c553aabe2d40c9534e7529b620
                     plt.plot(
                         x[v > 0],
                         y[v > 0],

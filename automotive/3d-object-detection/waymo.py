@@ -78,10 +78,6 @@ class Waymo(dataset.Dataset):
         self.painted = painted
         self.cam_sync = cam_sync
         self.point_range_filter = [-74.88, -74.88, -2, 74.88, 74.88, 4]
-        if painted or cam_sync:
-            info_file = f'painted_waymo_infos_{split}.pkl'
-        else:
-            info_file = f'waymo_infos_{split}.pkl'
         self.data_infos = read_pickle(os.path.join(data_root, info_file))
         self.sorted_ids = range(len(self.data_infos))
 
@@ -202,6 +198,9 @@ class Waymo(dataset.Dataset):
         input_batch = input_tensor.unsqueeze(0)
         return input_batch
 
+    def get_item_count(self):
+        return len(self.data_infos)
+
 
 class PostProcessWaymo:
     def __init__(
@@ -220,6 +219,23 @@ class PostProcessWaymo:
         for idx in range(len(content_id)):
             processed_results.append([])
             detection_num = len(results[0][idx])
+            if detection_num == 0:
+                processed_results[idx].append([
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    -1,
+                    results[6][idx]
+                ])
             for detection in range(0, detection_num):
                 processed_results[idx].append([
                     results[0][idx][detection][0],

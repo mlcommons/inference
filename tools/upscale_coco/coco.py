@@ -318,8 +318,10 @@ class COCO:
                     for sk in sks:
                         if np.all(v[sk] > 0):
                             plt.plot(x[sk], y[sk], linewidth=3, color=c)
-<<<<<<< HEAD
-=======
+
+
+<< << << < HEAD
+== == == =
                             plt.plot(
                                 x[sk],
                                 y[sk],
@@ -328,7 +330,7 @@ class COCO:
 
 
 >>>>>> > 6bc50d8f7c0ee1c553aabe2d40c9534e7529b620
->>>>>>> 686c8a394a8454629fae7a2924ea8532952b9b2f
+>>>>>> > 686c8a394a8454629fae7a2924ea8532952b9b2f
                     plt.plot(
                         x[v > 0],
                         y[v > 0],

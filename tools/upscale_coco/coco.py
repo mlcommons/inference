@@ -317,7 +317,12 @@ class COCO:
                     v = kp[2::3]
                     for sk in sks:
                         if np.all(v[sk] > 0):
-                            plt.plot(x[sk], y[sk], linewidth=3, color=c,label=f"keypoint {sk}")
+                            plt.plot(
+                                x[sk],
+                                y[sk],
+                                linewidth=3,
+                                color=c,
+                                label=f"keypoint {sk}")
                     plt.plot(
                         x[v > 0],
                         y[v > 0],
@@ -336,7 +341,7 @@ class COCO:
                         markeredgecolor=c,
                         markeredgewidth=2,
                     )
-                    
+
             p = PatchCollection(
                 polygons,
                 facecolor=color,

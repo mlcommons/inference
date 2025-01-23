@@ -321,8 +321,7 @@ class COCO:
                                 x[sk],
                                 y[sk],
                                 linewidth=3,
-                                color=c,
-                                label=f"keypoint {sk}")
+                                color=c)
                     plt.plot(
                         x[v > 0],
                         y[v > 0],

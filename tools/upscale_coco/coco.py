@@ -336,10 +336,7 @@ class COCO:
                         markeredgecolor=c,
                         markeredgewidth=2,
                     )
-                    plt.xlabel("X Coordinate")
-                    plt.ylabel("Y Coordinate") 
-                    print("Script is running correctly!")  
-                    plt.show()             
+                    
             p = PatchCollection(
                 polygons,
                 facecolor=color,

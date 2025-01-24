@@ -80,7 +80,7 @@ cd $MODEL_PATH
 
 **`fp32`**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp32 $MODEL_PATH -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp32 ./stable_diffusion_fp32 -P
 ```
 **`fp16`**
 ```

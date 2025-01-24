@@ -36,6 +36,7 @@ For power submissions please use [SPEC PTD 1.11.1](https://github.com/mlcommons/
 | llama3.1-405b | [language/llama3-405b](https://github.com/mlcommons/inference/tree/master/language/llama3.1-405b) | pytorch | LongBench, LongDataCollections, Ruler, GovReport | datacenter |
 | mixtral-8x7b | [language/mixtral-8x7b](https://github.com/mlcommons/inference/tree/master/language/mixtral-8x7b) | pytorch | OpenOrca, MBXP, GSM8K | datacenter |
 | rgat | [graph/rgat](https://github.com/mlcommons/inference/tree/master/graph/R-GAT) | pytorch | IGBH | datacenter |
+| pointpainting | [automotive/3d-object-detection](https://github.com/mlcommons/inference/tree/master/automotive/3d-object-detection) | pytorch, onnx | Waymo Open Dataset | edge |
 
 * Framework here is given for the reference implementation. Submitters are free to use their own frameworks to run the benchmark.
 

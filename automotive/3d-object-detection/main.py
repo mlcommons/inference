@@ -110,11 +110,7 @@ def get_args():
         choices=["cuda", "cpu"],
         help="device to run the benchmark",
     )
-
-    # file to use mlperf rules compliant parameters
-    parser.add_argument(
-        "--mlperf_conf", default="mlperf.conf", help="mlperf rules config"
-    )
+    
     # file for user LoadGen settings such as target QPS
     parser.add_argument(
         "--user_conf",
@@ -349,11 +345,6 @@ def main():
         "args": vars(args),
         "cmdline": str(args),
     }
-
-    mlperf_conf = os.path.abspath(args.mlperf_conf)
-    if not os.path.exists(mlperf_conf):
-        log.error("{} not found".format(mlperf_conf))
-        sys.exit(1)
 
     user_conf = os.path.abspath(args.user_conf)
     if not os.path.exists(user_conf):

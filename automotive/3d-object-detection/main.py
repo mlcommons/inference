@@ -110,7 +110,7 @@ def get_args():
         choices=["cuda", "cpu"],
         help="device to run the benchmark",
     )
-    
+
     # file for user LoadGen settings such as target QPS
     parser.add_argument(
         "--user_conf",

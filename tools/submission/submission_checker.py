@@ -426,7 +426,7 @@ MODEL_CONFIG = {
                 684.68 * 0.9,
             ),
             "rgat": ("acc", 0.7286 * 0.99),
-            "pointpainting":  ("acc", 0.5425 * 0.999),
+            "pointpainting": ("mAP", 0.5425 * 0.999),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -735,7 +735,7 @@ LLM_LATENCY_LIMITS = {
 ACC_PATTERN = {
     "acc": r"^(?:\{\"accuracy|accuracy)[\": ]*=?\s*([\d\.]+).*",
     "AUC": r"^AUC=([\d\.]+).*",
-    "mAP": r"^mAP=([\d\.]+).*",
+    "mAP": r".*'(?:mAP|Total)':\s*([\d\.]+)",
     "bleu": r"^BLEU\:\s*([\d\.]+).*",
     "F1": r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
     "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",

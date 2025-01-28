@@ -249,12 +249,14 @@ class SUT:
                     input_dataset.append(
                         self.data_object.dataset_names[q.index])
 
-                batch_ids = self.tokenizer.batch_encode_plus(batch_texts, return_tensors="pt", padding=True)
+                batch_ids = self.tokenizer.batch_encode_plus(
+                    batch_texts, return_tensors="pt", padding=True)
                 batch_ids = batch_ids.to(self.device)
 
                 tik2 = time.time()
                 _, length = batch_ids.input_ids.shape
-                out = self.model.generate(**batch_ids, num_return_sequences=1, **gen_kwargs)
+                out = self.model.generate(
+                    **batch_ids, num_return_sequences=1, **gen_kwargs)
                 pred_output_tokens = out
                 tik3 = time.time()
 

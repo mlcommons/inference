@@ -286,11 +286,15 @@ def main():
     if os.path.exists("ids.json"):
         with open("ids.json", "r") as f:
             id_dict = json.load(f)
+    else:
+        id_dict = {}
     cur_keys = id_dict.keys()
     cur_ids = id_dict.values()
-    new_keys = list(
-        set(pd.unique(df["Unique ID (e.g. for Audit)"])) - set(cur_keys))
-    max_cur_id = max(cur_ids)
+    new_keys = [ a for a in pd.unique(df["Unique ID (e.g. for Audit)"]) if a not in cur_keys]
+    if cur_ids:
+        max_cur_id = max(cur_ids)
+    else:
+        max_cur_id = 0
     id_dict_new = {
         key: 1 + value + max_cur_id
         for (value, key) in enumerate(new_keys)
@@ -304,7 +308,7 @@ def main():
         axis=1,
     )
     with open("ids.json", "w") as f:
-        f.write(json.dumps(id_dict))
+        f.write(json.dumps(id_dict, indent=4))
 
     for category in ["closed", "open", "network"]:
         for suite in ["datacenter", "edge"]:

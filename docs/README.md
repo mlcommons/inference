@@ -1,4 +1,4 @@
-# Documentation Website for MLPerf Inference using the unified CM interface
+# Documentation Website for MLPerf Inference using the unified MLC interface
 
 ## Commands to get the website running locally
 ```

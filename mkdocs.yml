@@ -45,7 +45,7 @@ nav:
       - DLRM-v2: benchmarks/recommendation/dlrm-v2.md
     - Graph Neural Networks:
       - R-GAT: benchmarks/graph/rgat.md
-  - Install CM:
+  - Install MLCFlow:
     - install/index.md
   - Submission:
     - Submission Generation: submission/index.md

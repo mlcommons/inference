@@ -194,8 +194,8 @@ def define_env(env):
                             continue  # Nvidia implementation only supports execution through docker
                         content += f'{cur_space2}=== "{execution_env}"\n'
                         content += f"{cur_space3}###### {execution_env} Environment\n\n"
-                        # ref to cm installation
-                        content += f"{cur_space3}Please refer to the [installation page](site:inference/install/) to install CM for running the automated benchmark commands.\n\n"
+                        # ref to MLCFlow installation
+                        content += f"{cur_space3}Please refer to the [installation page](site:inference/install/) to install MLCFlow for running the automated benchmark commands.\n\n"
                         test_query_count = get_test_query_count(
 
                             model, implementation, device.lower()
@@ -285,12 +285,12 @@ def define_env(env):
                                 content += f"{cur_space3}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for {scenario_text}.\n\n"
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
-                                content += f"{cur_space3}* `--docker_cm_repo=<Custom CM GitHub repo URL in username@repo format>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
-                                content += f"{cur_space3}* `--docker_cm_repo_branch=<Custom CM GitHub repo Branch>`: to checkout a custom branch of the cloned cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_cm_repo=<Custom MLC GitHub repo URL in username@repo format>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_cm_repo_branch=<Custom MLC GitHub repo Branch>`: to checkout a custom branch of the cloned cm4mlops repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"
 
                                 if implementation.lower() == "nvidia":
-                                    content += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPUs with supported configs in CM are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`. For other GPUs, default configuration as per the GPU memory will be used.\n"
+                                    content += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPUs with supported configs in MLC are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`. For other GPUs, default configuration as per the GPU memory will be used.\n"
 
                                 if device.lower() not in ["cuda"]:
                                     content += f"{cur_space3}* `--docker_os=ubuntu`: ubuntu and rhel are supported. \n"
@@ -324,7 +324,7 @@ def define_env(env):
                         run_suffix += f"{cur_space3}* Use `--division=closed` to do a closed division submission which includes compliance runs\n\n"
                         run_suffix += f"{cur_space3}* Use `--rerun` to do a rerun even when a valid run exists\n"
                         if implementation.lower() == "nvidia":
-                            run_suffix += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPUs with supported configs in CM are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`. For other GPUs, default configuration as per the GPU memory will be used.\n"
+                            run_suffix += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPUs with supported configs in MLC are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`. For other GPUs, default configuration as per the GPU memory will be used.\n"
                         run_suffix += f"{cur_space3}</details>\n\n"
 
                         if (
@@ -478,7 +478,7 @@ def define_env(env):
             pre_space = " " * spaces
             return f"""\n
 {pre_space}```bash
-{pre_space}cm run script --tags=run,vllm-server \\
+{pre_space}mlcr run,vllm-server \\
 {indent}--model=nm-testing/Llama-2-70b-chat-hf-FP8 \\
 {indent}--vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8 \\
 {indent}--quiet
@@ -488,8 +488,8 @@ def define_env(env):
         pre_space = " " * spaces
         return f"""\n
 {pre_space}```bash
-{pre_space}cm run script --tags=install,python-venv --name=mlperf
-{pre_space}export CM_SCRIPT_EXTRA_CMD=\"--adr.python.name=mlperf\"
+{pre_space}mlcr install,python-venv --name=mlperf
+{pre_space}export MLC_SCRIPT_EXTRA_CMD=\"--adr.python.name=mlperf\"
 {pre_space}```\n"""
 
     # contains run command information which is common to both docker and
@@ -507,8 +507,8 @@ def define_env(env):
         if implementation.lower() == "reference":
             info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
-            info += f"{pre_space}    - Add `--env.CM_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.\n\n"
-            info += f"{pre_space}    - Add `--env.CM_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.\n\n"
+            info += f"{pre_space}    - Add `--env.MLC_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.\n\n"
+            info += f"{pre_space}    - Add `--env.MLC_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.\n\n"
         if implementation.lower() == "reference":
             info += f"{pre_space}    - Add `--adr.mlperf-implementation.tags=_branch.master,_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the official MLPerf Inference implementation in a custom fork.\n\n"
             info += f"{pre_space}    - Add `--adr.inference-src.tags=_repo.<CUSTOM_INFERENCE_REPO_LINK>` if you are modifying the model config accuracy script in the submission checker within a custom fork.\n\n"
@@ -528,10 +528,10 @@ def define_env(env):
             info += f"\n{pre_space}!!! tip\n\n"
 
             if model == "sdxl":
-                info += f"{pre_space}    - `--env.CM_MLPERF_MODEL_SDXL_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
+                info += f"{pre_space}    - `--env.MLC_MLPERF_MODEL_SDXL_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
             elif "llama3" in model.lower():
-                info += f"{pre_space}    - `--env.CM_MLPERF_MODEL_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
-                info += f"{pre_space}    - `--env.CM_MLPERF_DATASET_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
+                info += f"{pre_space}    - `--env.MLC_MLPERF_MODEL_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
+                info += f"{pre_space}    - `--env.MLC_MLPERF_DATASET_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"
@@ -541,7 +541,7 @@ def define_env(env):
         else:
             if model == "sdxl":
                 info += f"\n{pre_space}!!! tip\n\n"
-                info += f"{pre_space}    - `--env.CM_MLPERF_MODEL_SDXL_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
+                info += f"{pre_space}    - `--env.MLC_MLPERF_MODEL_SDXL_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
 
         # return empty string if nothing is filled inside the tip
         if info == f"\n{pre_space}!!! tip\n\n":
@@ -674,7 +674,7 @@ def define_env(env):
                     f" \\\n{pre_space} {extra_docker_input_string} {extra_input_string}"
                 )
             if "bert" in model.lower() and framework == "deepsparse":
-                docker_cmd_suffix += f"\\\n{pre_space} --env.CM_MLPERF_NEURALMAGIC_MODEL_ZOO_STUB=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
+                docker_cmd_suffix += f"\\\n{pre_space} --env.MLC_MLPERF_NEURALMAGIC_MODEL_ZOO_STUB=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     docker_cmd_suffix += f" \\\n{pre_space} --tp_size=2"
@@ -696,7 +696,7 @@ def define_env(env):
 
             docker_setup_cmd = f"""\n
 {f_pre_space}```bash
-{f_pre_space}cm run script --tags=run-mlperf,inference,_find-performance,{full_ds_needed_tag}_{code_version}{scenario_variation_tag}{extra_variation_tags} \\
+{f_pre_space}mlcr run-mlperf,inference,_find-performance,{full_ds_needed_tag}_{code_version}{scenario_variation_tag}{extra_variation_tags} \\
 {pre_space} --model={model} \\
 {pre_space} --implementation={implementation} \\
 {pre_space} --framework={framework} \\
@@ -714,7 +714,7 @@ def define_env(env):
                 cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
             if "bert" in model.lower() and framework == "deepsparse":
-                cmd_suffix += f"\\\n{pre_space} --env.CM_MLPERF_NEURALMAGIC_MODEL_ZOO_STUB=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
+                cmd_suffix += f"\\\n{pre_space} --env.MLC_MLPERF_NEURALMAGIC_MODEL_ZOO_STUB=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
@@ -729,7 +729,7 @@ def define_env(env):
 
             run_cmd = f"""\n
 {f_pre_space}```bash
-{f_pre_space}cm run script --tags=run-mlperf,inference,_{code_version}{scenario_variation_tag}{extra_variation_tags} \\
+{f_pre_space}mlcr run-mlperf,inference,_{code_version}{scenario_variation_tag}{extra_variation_tags} \\
 {pre_space} --model={model} \\
 {pre_space} --implementation={implementation} \\
 {pre_space} --framework={framework} \\

@@ -14,7 +14,7 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset
     ```
-    cm run script --tags=get,dataset,coco2014,_validation -j
+    mlcr get,dataset,coco2014,_validation -j
     ```
 
 ## Model
@@ -26,6 +26,6 @@ Get the Official MLPerf Stable Diffusion Model
 
     ### Pytorch
     ```
-    cm run script --tags=get,ml-model,sdxl,_pytorch -j
+    mlcr get,ml-model,sdxl,_pytorch -j
     ```
 

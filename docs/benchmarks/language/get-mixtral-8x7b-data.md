@@ -12,7 +12,7 @@ The benchmark implementation run command will automatically download the preproc
 
     ### Get Validation Dataset
     ```
-    cm run script --tags=get,dataset-mixtral,openorca-mbxp-gsm8k-combined -j
+    mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined -j
     ```
 
 ## Model
@@ -24,5 +24,5 @@ Get the Official MLPerf MIXTRAL-8x7b Model
 
     ### Pytorch
     ```
-    cm run script --tags=get,ml-model,mixtral -j
+    mlcr get,ml-model,mixtral -j
     ```

@@ -14,7 +14,7 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset
     ```
-    cm run script --tags=get,dataset,criteo,_validation -j
+    mlcr get,dataset,criteo,_validation -j
     ```
 ## Model
 The benchmark implementation run command will automatically download the required model and do the necessary conversions. In case you want to only download the official model, you can use the below commands.
@@ -25,6 +25,6 @@ Get the Official MLPerf DLRM v2 Model
 
     ### Pytorch
     ```
-    cm run script --tags=get,ml-model,dlrm,_pytorch -j
+    mlcr get,ml-model,dlrm,_pytorch -j
     ```
 

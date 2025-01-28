@@ -288,7 +288,8 @@ def main():
             id_dict = json.load(f)
     cur_keys = id_dict.keys()
     cur_ids = id_dict.values()
-    new_keys = list(set(pd.unique(df["Unique ID (e.g. for Audit)"])) - set(cur_keys))
+    new_keys = list(
+        set(pd.unique(df["Unique ID (e.g. for Audit)"])) - set(cur_keys))
     max_cur_id = max(cur_ids)
     id_dict_new = {
         key: 1 + value + max_cur_id

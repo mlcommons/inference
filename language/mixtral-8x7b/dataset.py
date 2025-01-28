@@ -86,8 +86,7 @@ class Dataset:
             self.dataset_names.append(dataset)
         print("Finished loading dataset.")
 
-    
-    def remove_trailing_twos(self, lst, eos = 2):
+    def remove_trailing_twos(self, lst, eos=2):
         count = 0
         for num in reversed(lst):
             if num == eos or num == 0:
@@ -96,13 +95,11 @@ class Dataset:
                 break
         return lst[:-count] if count > 0 else lst
 
-    
-    def mbxp_stop(self, lst, stop_tokens = [13, 13940, 28832, 13]):
+    def mbxp_stop(self, lst, stop_tokens=[13, 13940, 28832, 13]):
         for i in range(len(lst) - len(stop_tokens) + 1):
-            if (lst[i:i+len(stop_tokens)] == stop_tokens).all():
-                return lst[:i+len(stop_tokens)]
+            if (lst[i:i + len(stop_tokens)] == stop_tokens).all():
+                return lst[:i + len(stop_tokens)]
         return lst
-
 
     def postProcess(
         self,

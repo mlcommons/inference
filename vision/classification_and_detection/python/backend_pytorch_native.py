@@ -25,7 +25,7 @@ class BackendPytorchNative(backend.Backend):
         return "NCHW"
 
     def load(self, model_path, inputs=None, outputs=None):
-        self.model = torch.load(model_path)
+        self.model = torch.load(model_path, weights_only=False)
         self.model.eval()
         # find inputs from the model if not passed in by config
         if inputs:

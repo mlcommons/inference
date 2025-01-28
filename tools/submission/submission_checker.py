@@ -426,7 +426,7 @@ MODEL_CONFIG = {
                 684.68 * 0.9,
             ),
             "rgat": ("acc", 0.7286 * 0.99),
-            "pointpainting":  ("acc", 0.5425 * 0.999),
+            "pointpainting": ("acc", 0.5425 * 0.999),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -1702,7 +1702,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                ) and scenario in ["SingleStream"]:
+                    ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )

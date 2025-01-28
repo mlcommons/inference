@@ -290,7 +290,9 @@ def main():
         id_dict = {}
     cur_keys = id_dict.keys()
     cur_ids = id_dict.values()
-    new_keys = [ a for a in pd.unique(df["Unique ID (e.g. for Audit)"]) if a not in cur_keys]
+    new_keys = [
+        a for a in pd.unique(
+            df["Unique ID (e.g. for Audit)"]) if a not in cur_keys]
     if cur_ids:
         max_cur_id = max(cur_ids)
     else:

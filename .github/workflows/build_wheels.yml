@@ -132,6 +132,7 @@ jobs:
         with:
           name: wheels-windows-latest
           path: wheels
+      # Publish
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

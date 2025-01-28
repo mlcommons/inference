@@ -67,6 +67,7 @@ class Dataset:
         processed_data = pd.read_pickle(self.dataset_path)
 
         input_tokens = processed_data["tok_input"]
+        self.input_texts = processed_data["input"].to_list()
 
         self.input_ids = []
         self.input_lens = []
@@ -85,12 +86,31 @@ class Dataset:
             self.dataset_names.append(dataset)
         print("Finished loading dataset.")
 
+    
+    def remove_trailing_twos(self, lst, eos = 2):
+        count = 0
+        for num in reversed(lst):
+            if num == eos or num == 0:
+                count += 1
+            else:
+                break
+        return lst[:-count] if count > 0 else lst
+
+    
+    def mbxp_stop(self, lst, stop_tokens = [13, 13940, 28832, 13]):
+        for i in range(len(lst) - len(stop_tokens) + 1):
+            if (lst[i:i+len(stop_tokens)] == stop_tokens).all():
+                return lst[:i+len(stop_tokens)]
+        return lst
+
+
     def postProcess(
         self,
         out_tokens,
-        input_seq_lens=None,
+        length=None,
         query_id_list=None,
         sample_index_list=None,
+        dataset_list=None,
     ):
         """Postprocesses output prediction"""
 
@@ -106,13 +126,14 @@ class Dataset:
         """
         # Everything is padded to max_len (1024), so prune the input and parse
         # to numpy
-        output_seq = out_tokens[:, 1024:].cpu().numpy()
+        output_seq = out_tokens[:, length:].cpu().numpy()
         aux_seq = []
         assert len(query_id_list) == output_seq.shape[0]
         for i in range(len(output_seq)):
             aux = output_seq[i]
-            while len(output_seq[i]) <= 1:
-                aux = np.append(aux, self.tokenizer.eos_token_id)
+            aux = self.remove_trailing_twos(aux)
+            if (dataset_list[i] == "MBXP"):
+                aux = self.mbxp_stop(aux)
             aux_seq.append(aux)
         output_seq = np.stack(aux_seq)
 

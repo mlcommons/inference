@@ -424,6 +424,7 @@ MODEL_CONFIG = {
                 684.68 * 0.9,
             ),
             "rgat": ("acc", 0.7286 * 0.99),
+            "pointpainting": ("mAP", 0.5425 * 0.999),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (

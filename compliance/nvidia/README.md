@@ -41,3 +41,4 @@ The `run_verification.py` found in each test directory will copy the test files 
 | Llama3.1-405b | [TEST06](./TEST06/) |
 | mixtral-8x7b | [TEST06](./TEST06/) |
 | R-GAT | [TEST01](./TEST01/) |
+| PointPainting | [TEST01](./TEST01/) [TEST04](./TEST04/) |

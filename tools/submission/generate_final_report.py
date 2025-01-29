@@ -150,6 +150,7 @@ def main():
             "llama2-70b-interactive-99",
             "llama2-70b-interactive-99.9",
             "mixtral-8x7b",
+            "pointpainting",
         ],
         ["SingleStream", "MultiStream", "Server", "Offline"],
         [
@@ -228,6 +229,7 @@ def main():
                 "gptj-99": ["SingleStream", "Offline"],
                 "gptj-99.9": ["SingleStream", "Offline"],
                 "stable-diffusion-xl": ["SingleStream", "Offline"],
+                "pointpainting": ["SingleStream"],
             },
         }
 

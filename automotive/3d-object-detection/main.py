@@ -92,7 +92,10 @@ def get_args():
         help="enable finding peak performance pass",
     )
     parser.add_argument("--backend", help="Name of the backend")
-    parser.add_argument("--model-name", help="Name of the model")
+    parser.add_argument(
+        "--model-name",
+        help="Name of the model",
+        default="pointpainting")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--qps", type=int, help="target qps")
     parser.add_argument("--lidar-path", help="Path to model weights")
@@ -128,7 +131,7 @@ def get_args():
     parser.add_argument("--count", type=int, help="dataset items to use")
     parser.add_argument("--debug", action="store_true", help="debug")
     parser.add_argument(
-        "--performance-sample-count", type=int, help="performance sample count", default=5000
+        "--performance-sample-count", type=int, help="performance sample count", default=1024
     )
     parser.add_argument(
         "--max-latency", type=float, help="mlperf max latency in pct tile"

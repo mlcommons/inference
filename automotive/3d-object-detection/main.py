@@ -92,7 +92,7 @@ def get_args():
         help="enable finding peak performance pass",
     )
     parser.add_argument("--backend", help="Name of the backend")
-    parser.add_argument("--model-name", help="Name of the model")
+    parser.add_argument("--model-name", help="Name of the model", default="pointpainting")
     parser.add_argument("--output", default="output", help="test results")
     parser.add_argument("--qps", type=int, help="target qps")
     parser.add_argument("--lidar-path", help="Path to model weights")

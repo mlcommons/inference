@@ -142,7 +142,10 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                 continue
 
             # process results
-            for directory in ["results", "compliance"]:
+            required_dirs = [
+                "results", "compliance"] if division in [
+                "closed", "network"] else ["results"]
+            for directory in required_dirs:
 
                 log_path = os.path.join(division, submitter, directory)
                 if not os.path.exists(log_path):

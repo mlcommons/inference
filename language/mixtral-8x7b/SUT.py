@@ -30,11 +30,12 @@ logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("Mixtral-8x7B-Instruct-v0.1")
 
 gen_kwargs = {
-    "early_stopping": True,
-    "max_new_tokens": 1024,
+    # "min_new_tokens": 1,
     "min_new_tokens": 2,
-    "num_beams": 1,
+    "max_new_tokens": 1024,
     "do_sample": False,
+    "temperature": None,
+    "top_p": None,
 }
 
 
@@ -238,80 +239,32 @@ class SUT:
                 input_masks_tensor = []
                 input_len = []
                 input_dataset = []
+                batch_texts = []
+                datasets = []
                 for q in qitem:
-                    input_ids_tensor.append(
-                        pad(
-                            self.data_object.input_ids[q.index],
-                            (
-                                max_seq_len -
-                                self.data_object.input_lens[q.index],
-                                0,
-                                0,
-                                0,
-                            ),
-                            value=self.tokenizer.pad_token_id,
-                        )
-                    )
-                    input_masks_tensor.append(
-                        pad(
-                            self.data_object.attention_masks[q.index],
-                            (
-                                max_seq_len -
-                                self.data_object.input_lens[q.index],
-                                0,
-                                0,
-                                0,
-                            ),
-                            value=0,
-                        )
-                    )
+                    batch_texts.append(self.data_object.input_texts[q.index])
                     input_len.append(self.data_object.input_lens[q.index])
-
                     # In case we predict code generation, we can specify an
                     # additional stop sequence
                     input_dataset.append(
                         self.data_object.dataset_names[q.index])
-                input_ids_tensor = torch.cat(input_ids_tensor)
-                input_masks_tensor = torch.cat(input_masks_tensor)
 
-                assert input_ids_tensor.shape == input_masks_tensor.shape
-                assert input_ids_tensor.shape[0] <= self.batch_size
+                batch_ids = self.tokenizer.batch_encode_plus(
+                    batch_texts, return_tensors="pt", padding=True)
+                batch_ids = batch_ids.to(self.device)
 
                 tik2 = time.time()
-                logits_processor = LogitsProcessorList(
-                    [StopAfterSequence(
-                        self.tokenizer.eos_token_id, device=self.device)]
-                )
-                for i in range(len(input_ids_tensor)):
-                    ids, masks, dataset = (
-                        input_ids_tensor[i: i + 1],
-                        input_masks_tensor[i: i + 1],
-                        input_dataset[i],
-                    )
-                    pred_output_tokens = []
-                    if dataset == "MBXP":
-                        out = self.model.generate(
-                            input_ids=ids,
-                            attention_mask=masks,
-                            pad_token_id=self.tokenizer.pad_token_id,
-                            logits_processor=logits_processor,
-                            **gen_kwargs,
-                        )
-                    else:
-                        out = self.model.generate(
-                            input_ids=ids,
-                            attention_mask=masks,
-                            pad_token_id=self.tokenizer.pad_token_id,
-                            **gen_kwargs,
-                        )
-                    pred_output_tokens.append(out)
-                pred_output_tokens = torch.cat(pred_output_tokens)
+                _, length = batch_ids.input_ids.shape
+                out = self.model.generate(
+                    **batch_ids, num_return_sequences=1, **gen_kwargs)
+                pred_output_tokens = out
                 tik3 = time.time()
 
                 processed_output = self.data_object.postProcess(
                     pred_output_tokens,
-                    input_seq_lens=input_len,
+                    length=length,
                     query_id_list=query_ids,
+                    dataset_list=input_dataset,
                 )
 
             for i in range(len(qitem)):
@@ -342,10 +295,7 @@ class SUT:
 
     def load_model(self):
         self.model = AutoModelForCausalLM.from_pretrained(
-            self.model_path,
-            device_map="auto",
-            low_cpu_mem_usage=True,
-            torch_dtype=self.amp_dtype,
+            self.model_path, device_map="auto", trust_remote_code=True
         )
         print("Loaded model")
 
@@ -362,10 +312,7 @@ class SUT:
             pass
 
         self.tokenizer = AutoTokenizer.from_pretrained(
-            self.model_path,
-            model_max_length=1024,
-            padding_side="left",
-            use_fast=False,
+            self.model_path, padding_side="left", trust_remote_code=True
         )
 
         self.tokenizer.pad_token = self.tokenizer.eos_token

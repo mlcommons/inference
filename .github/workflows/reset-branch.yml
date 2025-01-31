@@ -1,5 +1,4 @@
 name: Reset Current Branch to Upstream After Squash Merge
-
 on:
   workflow_dispatch:
     inputs:

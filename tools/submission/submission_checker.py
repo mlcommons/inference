@@ -271,7 +271,7 @@ MODEL_CONFIG = {
             "mixtral-8x7b",
             "llama3.1-405b",
             "rgat",
-            # TODO: add automotive?
+            "pointpainting",
         ],
         "required-scenarios-datacenter": {
             "resnet": ["Server", "Offline"],
@@ -302,6 +302,7 @@ MODEL_CONFIG = {
             "gptj-99": ["SingleStream", "Offline"],
             "gptj-99.9": ["SingleStream", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline"],
+            "pointpainting": ["SingleStream"],
         },
         "optional-scenarios-edge": {},
         "required-scenarios-datacenter-edge": {
@@ -323,6 +324,7 @@ MODEL_CONFIG = {
             "mixtral-8x7b": ["Server", "Offline"],
             "llama3.1-405b": ["Server", "Offline"],
             "rgat": ["Offline"],
+            "pointpainting": ["SingleStream"],
         },
         "optional-scenarios-datacenter-edge": {},
         "accuracy-target": {
@@ -424,6 +426,7 @@ MODEL_CONFIG = {
                 684.68 * 0.9,
             ),
             "rgat": ("acc", 0.7286 * 0.99),
+            "pointpainting": ("mAP", 0.5425 * 0.999),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -460,8 +463,8 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
             "llama3.1-405b": 8313,
-            "rgat": 788379
-
+            "rgat": 788379,
+            "pointpainting": 1024,
         },
         # model_mapping.json is expected in the root directory of the
         # submission folder for open submissions and so the below dictionary is
@@ -527,7 +530,8 @@ MODEL_CONFIG = {
             },
             "mixtral-8x7b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama3.1-405b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "rgat": {"SingleStream": 1024, "Offline": 1}
+            "rgat": {"SingleStream": 1024, "Offline": 1},
+            "pointpainting": {"SingleStream": 1024},
         },
     },
 }
@@ -731,7 +735,7 @@ LLM_LATENCY_LIMITS = {
 ACC_PATTERN = {
     "acc": r"^(?:\{\"accuracy|accuracy)[\": ]*=?\s*([\d\.]+).*",
     "AUC": r"^AUC=([\d\.]+).*",
-    "mAP": r"^mAP=([\d\.]+).*",
+    "mAP": r".*'(?:mAP|Total)':\s*([\d\.]+)",
     "bleu": r"^BLEU\:\s*([\d\.]+).*",
     "F1": r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
     "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",

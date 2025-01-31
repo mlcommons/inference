@@ -36,6 +36,7 @@ for f in *.tar.gz; do tar -xzvf "$f"; done
 
 ## Running with docker
 Build the container and mount the inference repo and Waymo dataset directory.
+Build the container and mount the inference repo and Waymo dataset directory.
 ```
 docker build -t auto_inference -f dockerfile.gpu .
 

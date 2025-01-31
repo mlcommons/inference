@@ -41,18 +41,26 @@ docker build -t auto_inference -f dockerfile.gpu .
 
 docker run --gpus=all -it -v <directory to inference repo>/inference/:/inference -v <path to waymo dataset>/waymo:/waymo --rm auto_inference
 ```
-### Run with GPU
+### Run performance mode with Pytorch
 ```
 cd /inference/automotive/3d-object-detection
-python main.py --dataset waymo --dataset-path /waymo/kitti_format/ --lidar-path <checkpoint_path>/pp_ep36.pth --segmentor-path <checkpoint_path>/best_deeplabv3plus_resnet50_waymo_os16.pth --mlperf_conf /inference/mlperf.conf
+python main.py --dataset waymo --dataset-path /waymo/kitti_format/ --lidar-path <checkpoint_path>/pp_ep36.pth --segmentor-path <checkpoint_path>/best_deeplabv3plus_resnet50_waymo_os16.pth
 ```
 
-### Run with CPU and ONNX
+### Run performance mode with ONNX
 ```
-python main.py --dataset waymo --dataset-path /waymo/kitti_format/ --lidar-path <checkpoint_path>/pp.onnx --segmentor-path <checkpoint_path>/deeplabv3+.onnx --mlperf_conf /inference/mlperf.conf
+python main.py --dataset waymo --dataset-path /waymo/kitti_format/ --lidar-path <checkpoint_path>/pp.onnx --segmentor-path <checkpoint_path>/deeplabv3+.onnx --mlperf_conf /inference/mlperf.conf --backend onnx
 ```
 
-### Run the accuracy checker
+### Accuracy run
+
+Add the accuracy flag
+```
+cd /inference/automotive/3d-object-detection
+python main.py --dataset waymo --dataset-path /waymo/kitti_format/ --lidar-path <checkpoint_path>/pp_ep36.pth --segmentor-path <checkpoint_path>/best_deeplabv3plus_resnet50_waymo_os16.pth --accuracy
+```
+
+### Run the accuracy checker on the accuracy run log
 ```
 python accuracy_waymo.py --mlperf-accuracy-file <path to accuracy file>/mlperf_log_accuracy.json --waymo-dir /waymo/kitti_format/
 ```

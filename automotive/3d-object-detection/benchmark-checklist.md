@@ -22,7 +22,7 @@
 
 #### **5. Validation Dataset: Unique Samples**
 Number of **unique samples** in the validation dataset and the QSL size specified in 
-- [ ] [inference policies benchmark section](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#41-benchmarks)
+- [X] [inference policies benchmark section](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#41-benchmarks)
 - [X] [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf)
 - [ ] [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)
   *(Ensure QSL size overflows the system cache if possible.)*
@@ -38,7 +38,7 @@ Documented whether **Equal Issue Mode** is applicable in
 ---
 
 #### **7. Expected Accuracy and `accuracy.txt` Contents**
-- [ ] Detailed expected accuracy and the required contents of the `accuracy.txt` file.
+- [X] Detailed expected accuracy and the required contents of the `accuracy.txt` file [here](https://github.com/mlcommons/mlperf_inference_unofficial_submissions_v5.0/blob/auto-update/open/MLCommons/results/mlc-server-reference-gpu-pytorch_v2.2.2-cu124/pointpainting/singlestream/accuracy/accuracy.txt).
 
 ---
 
@@ -47,19 +47,21 @@ Documented whether **Equal Issue Mode** is applicable in
 
 ---
 
-#### **9. Reference Implementation Dataset Coverage**
-- [ ] Reference implementation successfully processes the entire validation dataset during:
+#### **9. Reference Implementation Test Coverage**
+- [ ] Reference implementation successfully runs the entire validation dataset during:
   - [ ] Performance runs
   - [ ] Accuracy runs
   - [ ] Compliance runs  
-- [ ] Valid log files passing the submission checker are generated for all runs.
+- [X] Log files passing the submission checker are generated for all Divisions.
+  - [X] Closed
+  - [X] Open  
 
 ---
 
 #### **10. Test Runs with Smaller Input Sets**
-- [ ] Verified the reference implementation can perform test runs with a smaller subset of inputs for:
-  - [ ] Performance runs
-  - [ ] Accuracy runs
+- [X] Verified the reference implementation can perform test runs with a smaller subset of inputs for:
+  - [X] Performance runs
+  - [X] Accuracy runs
 
 ---
 

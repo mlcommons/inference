@@ -1,7 +1,38 @@
-## Reference implementation fo automotive 3D detection benchmark
+# MLPerf™ Inference Benchmark for Graph Neural Network
 
-## Dataset and model checkpoints
-Contact MLCommons support for accessing the Waymo Open Dataset along with the model checkpoints for the reference implementation. You will need to accept a license agreement and will be given directions to download the data. You will need to place the kitti_format folder under a directory named waymo. There are four total checkpoints 2 for pytorch and 2 for onnx.
+This is the reference implementation for the MLPerf automotive 3D detection benchmark. The reference uses Pytorch as a backend. Additionally we provide an implementation using ONNX.
+
+## Downloading the dataset and model checkpoints
+Contact MLCommons support for accessing the Waymo Open Dataset along with the model checkpoints for the reference implementation. You will need to accept a license agreement and will be given directions to download the data with rclone. You will need to place the kitti_format folder under a directory named waymo. There are four total checkpoints 2 for pytorch and 2 for onnx.
+
+After downloading, the structure of the data should look like below:
+
+```bash
+├── waymo
+│   ├── best_deeplabv3plus_resnet50_waymo_os16.pth
+│   ├── deeplabv3+.onnx
+│   ├── kitti_format
+│   │   ├── ImageSets
+│   │   ├── painted_waymo_infos_test.pkl
+│   │   ├── painted_waymo_infos_train.pkl
+│   │   ├── painted_waymo_infos_trainval.pkl
+│   │   ├── painted_waymo_infos_val.pkl
+│   │   ├── testing
+│   │   ├── testing_3d_camera_only_detection
+│   │   ├── training
+│   │   ├── waymo_infos_test.pkl
+│   │   ├── waymo_infos_train.pkl
+│   │   ├── waymo_infos_trainval.pkl
+│   │   └── waymo_infos_val.pkl
+│   ├── pp_ep36.pth
+│   ├── pp.onnx
+```
+Within the training folder is the validation data used for the dataset. Extract all the compressed files in the training folder.
+
+```
+cd <your path to waymo>/waymo/kitti_format/training
+for f in *.tar.gz; do tar -xzvf "$f"; done
+```
 
 ## Running with docker
 Build the container and mount the inference repo and Waymo dataset directory.

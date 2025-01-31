@@ -23,15 +23,15 @@ These reporitories are per inference round.
 ## Nvidia Implementation
 | Benchmark            |  Test Type | 
 |----------------------|-----------|
-| resnet50            | Full   |     
-| retinanet           | Full        |
-| 3d-unet             | Full         |
+| resnet50            | Full       |     
+| retinanet           | Full       |
+| 3d-unet             | Full       |
 | bert               |  Full       |
-| gptj               |  Full        |               
-| llama2-70b         |     -        |
-| mixtral-8x7b       |     -        |
+| gptj               |  Full       |               
+| llama2-70b         |     -       |
+| mixtral-8x7b       |     -       |
 | llama3.1-405b      |     -      |
 | rgat               |   NA       |
 | pointpainting      |   NA       |
-| stable-diffusion-xl | TBD       |
-| dlrm_v2            |  TBD         |
+| stable-diffusion-xl | Full      |
+| dlrm_v2            |  TBD       |

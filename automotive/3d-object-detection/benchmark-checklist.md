@@ -48,13 +48,11 @@ Documented whether **Equal Issue Mode** is applicable in
 ---
 
 #### **9. Reference Implementation Test Coverage**
-- [ ] Reference implementation successfully runs the entire validation dataset during:
-  - [ ] Performance runs
-  - [ ] Accuracy runs
-  - [ ] Compliance runs  
-- [X] Log files passing the submission checker are generated for all Divisions.
-  - [X] Closed
-  - [X] Open  
+- [X] Reference implementation successfully does:
+  - [X] Performance runs
+  - [X] Accuracy runs
+  - [X] Compliance runs  
+
 
 ---
 
@@ -66,9 +64,9 @@ Documented whether **Equal Issue Mode** is applicable in
 ---
 
 #### **11. Dataset and Reference Model Instructions**
-- [ ] Clear instructions provided for:
-  - [ ] Downloading the dataset and reference model.
-  - [ ] Using the dataset and model for the benchmark.
+- [X] Clear instructions provided for:
+  - [X] Downloading the dataset and reference model.
+  - [X] Using the dataset and model for the benchmark.
 
 ---
 
@@ -86,4 +84,6 @@ Documented whether **Equal Issue Mode** is applicable in
 - [ ] Include sample logs for all the applicable scenario runs:
   - [ ] `mlperf_log_summary.txt`
   - [ ] `mlperf_log_detail.txt`  
-- [ ] Ensure sample logs successfully pass the submission checker and applicable compliance runs.
+- [X] Log files passing the submission checker are generated for all Divisions.
+  - [X] Closed
+  - [X] Open  

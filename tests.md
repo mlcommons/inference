@@ -14,6 +14,16 @@ These reporitories are per inference round.
 
 [![MLPerf inference R-GAT](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-rgat.yml/badge.svg)](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-rgat.yml)
 
+[![MLPerf inference DLRM-v2](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-mlperf-inference-dlrm.yml/badge.svg)](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-mlperf-inference-dlrm.yml)
+
+[![MLPerf inference GPT-J](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-mlperf-inference-gptj.yml/badge.svg)](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-mlperf-inference-gptj.yml)
+
+[![MLPerf inference LLAMA2-70B](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-mlperf-inference-llama2.yml/badge.svg)](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-mlperf-inference-llama2.yml)
+
+[![MLPerf inference MIXTRAL-8x7B](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-mlperf-inference-mixtral.yml/badge.svg)](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-mlperf-inference-mixtral.yml)
+
+[![MLPerf inference SDXL](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-mlperf-inference-sdxl.yaml/badge.svg)](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-mlperf-inference-sdxl.yaml)
+
 
 
 ## Reference Implementation

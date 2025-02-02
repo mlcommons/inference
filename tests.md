@@ -50,8 +50,8 @@ These reporitories are per inference round.
 | 3d-unet             | Full       |
 | bert               |  Full       |
 | gptj               |  Full       |               
-| llama2-70b         |     -       |
-| mixtral-8x7b       |     -       |
+| llama2-70b         |   TBD       |
+| mixtral-8x7b       |   TBD       |
 | llama3.1-405b      |     -      |
 | rgat               |   NA       |
 | pointpainting      |   NA       |

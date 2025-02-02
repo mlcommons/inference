@@ -4,6 +4,18 @@ The below tables lists the actively tests being carried out by MLCommons for the
 
 These reporitories are per inference round.
 
+[![MLPerf Inference Nvidia implementations](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-nvidia-mlperf-inference-implementations.yml/badge.svg)](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-nvidia-mlperf-inference-implementations.yml)
+
+[![MLPerf inference ResNet50](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-resnet50.yml/badge.svg)](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-resnet50.yml)
+
+[![MLPerf inference retinanet](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-retinanet.yml/badge.svg)](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-retinanet.yml)
+
+[![MLPerf inference bert (deepsparse, tf, onnxruntime, pytorch)](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-bert-deepsparse-tf-onnxruntime-pytorch.yml/badge.svg)](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-bert-deepsparse-tf-onnxruntime-pytorch.yml)
+
+[![MLPerf inference R-GAT](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-rgat.yml/badge.svg)](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-rgat.yml)
+
+
+
 ## Reference Implementation
 | Benchmark            | CPU/GPU | Test Type | 
 |----------------------|---------|-----------|

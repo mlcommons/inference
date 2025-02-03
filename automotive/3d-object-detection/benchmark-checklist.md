@@ -24,7 +24,7 @@
 Number of **unique samples** in the validation dataset and the QSL size specified in 
 - [X] [inference policies benchmark section](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#41-benchmarks)
 - [X] [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf)
-- [ ] [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)
+- [X] [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)
   *(Ensure QSL size overflows the system cache if possible.)*
 
 ---
@@ -32,7 +32,7 @@ Number of **unique samples** in the validation dataset and the QSL size specifie
 #### **6. Equal Issue Mode Applicability**
 Documented whether **Equal Issue Mode** is applicable in 
 - [X] [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf)
-- [ ] [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)
+- [X] [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)
   *(Relevant if sample processing times are inconsistent across inputs.)*
 
 ---

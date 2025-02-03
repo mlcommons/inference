@@ -30,8 +30,9 @@ nav:
           - SCC24: benchmarks/text_to_image/reproducibility/scc24.md
     - 2D Object Detection:
       - RetinaNet: benchmarks/object_detection/retinanet.md
-    - 3D Object Detection:
-      - PointPainting: benchmarks/3d_object_detection/pointpainting.md
+    - Automotive:
+      - 3D Object Detection:
+        - PointPainting: benchmarks/automotive/3d_object_detection/pointpainting.md
     - Medical Imaging:
       - 3d-unet: benchmarks/medical_imaging/3d-unet.md
     - Language Processing:

@@ -86,7 +86,7 @@ flowchart LR
 mlcr generate,inference,submission \
   --clean \
   --preprocess_submission=yes \
-  --run-checker=yes \
+  --run_checker=yes \
   --submitter=MLCommons \
   --division=closed \
   --env.MLC_DETERMINE_MEMORY_CONFIGURATION=yes \

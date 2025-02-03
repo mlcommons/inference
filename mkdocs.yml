@@ -28,8 +28,11 @@ nav:
         - Run Commands: benchmarks/text_to_image/sdxl.md
         - Reproducibility:
           - SCC24: benchmarks/text_to_image/reproducibility/scc24.md
-    - Object Detection:
+    - 2D Object Detection:
       - RetinaNet: benchmarks/object_detection/retinanet.md
+    - Automotive:
+      - 3D Object Detection:
+        - PointPainting: benchmarks/automotive/3d_object_detection/pointpainting.md
     - Medical Imaging:
       - 3d-unet: benchmarks/medical_imaging/3d-unet.md
     - Language Processing:

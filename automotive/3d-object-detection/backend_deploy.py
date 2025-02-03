@@ -71,7 +71,9 @@ class BackendDeploy(backend.Backend):
             painted=True).to(
             device=device)
         model.eval()
-        checkpoint = torch.load(self.lidar_detector_path, map_location=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+        checkpoint = torch.load(
+            self.lidar_detector_path, map_location=torch.device(
+                'cuda' if torch.cuda.is_available() else 'cpu'))
         model.load_state_dict(checkpoint["model_state_dict"])
         self.lidar_detector = model
 

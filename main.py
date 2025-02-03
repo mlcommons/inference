@@ -126,7 +126,8 @@ def define_env(env):
         if not categories:
             if model.lower() == "bert-99.9":
                 categories = ["Datacenter"]
-
+            elif model.lower() in ["pointpainting"]:
+                categories = ["Edge"]
             elif (
                 "dlrm" in model.lower()
                 or "llama2" in model.lower()
@@ -148,6 +149,8 @@ def define_env(env):
                 if model.lower() in [
                         "resnet50", "retinanet"] and not "MultiStream" in scenarios:  # MultiStream was duplicating
                     scenarios.append("MultiStream")
+                if model.lower() in ["pointpainting"]:
+                    scenarios.remove("Offline")
             elif category == "Datacenter":
                 scenarios = ["Offline", "Server"]
             if fixed_scenarios:
@@ -229,7 +232,7 @@ def define_env(env):
                                 implementation,
                                 framework.lower(),
                                 category.lower(),
-                                "Offline",
+                                "SingleStream" if model.lower() in ["pointpainting"] else "Offline",
                                 device.lower(),
                                 "test",
                                 test_query_count,
@@ -307,7 +310,7 @@ def define_env(env):
                                 implementation,
                                 framework.lower(),
                                 category.lower(),
-                                "Offline",
+                                "SingleStream" if model.lower() in ["pointpainting"] else "Offline",
                                 device.lower(),
                                 "test",
                                 test_query_count,
@@ -448,6 +451,8 @@ def define_env(env):
                     device_memory = "24GB(fp32), 16GB(fp16)"
                 elif "gptj" in model:
                     device_memory = "80GB(fp32). 40GB(fp16)"
+                elif "pointpainting" in model:
+                    device_memory = "To be updated"
                 else:
                     device_memory = "8GB"
             min_sys_req_content += f"{spaces}* **Device Memory**: {device_memory}\n\n"
@@ -460,6 +465,8 @@ def define_env(env):
             disk_space = "100GB"
         elif "retinanet" in model:
             disk_space = "200GB"
+        elif "pointpainting" in model:
+            disk_space = "To be updated"
         else:
             disk_space = "50GB"
         min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"
@@ -502,9 +509,15 @@ def define_env(env):
         pre_space += " "
         # pre_space = "                "
         info += f"\n{pre_space}!!! tip\n\n"
-        info += f"{pre_space}    - Number of threads could be adjusted using `--threads=#`, where `#` is the desired number of threads. This option works only if the implementation in use supports threading.\n\n"
-        info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
-        if implementation.lower() == "reference":
+        info += f"{pre_space}    - Compliance runs can be enabled by adding `--compliance=yes`.\n\n"
+        if model.lower() not in ["pointpainting"]:
+            info += f"{pre_space}    - Number of threads could be adjusted using `--threads=#`, where `#` is the desired number of threads. This option works only if the implementation in use supports threading.\n\n"
+            info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
+        elif model.lower() in ["pointpainting"]:
+            info += f"{pre_space}    - The maximum duration for a performance run can be disabled by using `--env.MLC_MLPERF_USE_MAX_DURATION=no`.\n\n"
+            info += f"{pre_space}    - In valid execution mode, the query count for performance mode can be adjusted using `--env.MLC_MLPERF_LOADGEN_QUERY_COUNT=<query_count>`.\n\n"
+            
+        if implementation.lower() == "reference" and model.lower() not in ["pointpainting"]:
             info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
             info += f"{pre_space}    - Add `--env.MLC_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.\n\n"
@@ -605,6 +618,8 @@ def define_env(env):
             extra_content += f"{f_pre_space}    * `--precision=bfloat16` can give better performance \n"
         if "gptj" in model and implementation == "reference":
             extra_content += f"{f_pre_space}    * `--beam-size=1` Beam size of 4 is mandatory for a closed division submission but reducing the beam size can help in running the model on GPUs with lower device memory\n"
+        if "pointpainting" in model and implementation == "reference":
+            extra_content += f"{f_pre_space}    * Tjhe `pointpillars_checkpoint_path`, `deeplab_resnet50_path` and `waymo_path` do not need to be provided inside the Docker container as they are already registered in the MLC cache.\n"
         if extra_content:
             extra_content = f"{f_pre_space}!!! tip\n\n" + extra_content
 
@@ -688,6 +703,11 @@ def define_env(env):
 
             if "dlrm-v2" in model.lower() and implementation == "nvidia":
                 docker_cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
+            
+            if "pointpainting" in model.lower() and implementation == "reference":
+                docker_cmd_suffix += f" \\\n{pre_space} --pointpillars_checkpoint_path=<PATH_TO_POINTPILLAR_MODEL>"
+                docker_cmd_suffix += f" \\\n{pre_space} --deeplab_resnet50_path=<PATH_TO_SEGMENTOR MODEL>"
+                docker_cmd_suffix += f" \\\n{pre_space} --waymo_path=<PATH_TO_WAYMO_DATASET_FOLDER>"
 
             if "short" in extra_variation_tags:
                 full_ds_needed_tag = ""
@@ -723,6 +743,11 @@ def define_env(env):
                     cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
                     cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"
                     cmd_suffix += f" \\\n{pre_space} --adr.mlperf-implementation.tags=_repo.https://github.com/neuralmagic/inference,_branch.vllm"
+
+            if "pointpainting" in model.lower() and implementation == "reference":
+                cmd_suffix += f" \\\n{pre_space} --pointpillars_checkpoint_path=<PATH_TO_POINTPILLAR_MODEL>"
+                cmd_suffix += f" \\\n{pre_space} --deeplab_resnet50_path=<PATH_TO_SEGMENTOR MODEL>"
+                cmd_suffix += f" \\\n{pre_space} --waymo_path=<PATH_TO_WAYMO_DATASET_FOLDER>"
 
             if "dlrm-v2" in model and implementation == "nvidia":
                 cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"

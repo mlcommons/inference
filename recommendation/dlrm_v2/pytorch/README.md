@@ -102,13 +102,13 @@ framework | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
 N/A | pytorch | <2GB | -
  pytorch | 97.31GB | -
 
-#### CM method
+#### MLC method
 
-The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
+The following MLCommons MLC commands can be used to programmatically download the model checkpoint. 
 
 ```
-pip install cm4mlops
-cm run script --tags=get,ml-model,dlrm,_pytorch,_weight_sharded,_rclone -j
+pip install mlc-scripts
+mlcr get,ml-model,dlrm,_pytorch,_weight_sharded,_rclone -j
 ```
 
 #### Manual method

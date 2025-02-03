@@ -189,7 +189,7 @@ def main():
         if args.gpu:
             free_mem = int(
                 os.environ.get(
-                    "CM_CUDA_DEVICE_PROP_GLOBAL_MEMORY", get_gpu_memory_info()
+                    "MLC_CUDA_DEVICE_PROP_GLOBAL_MEMORY", get_gpu_memory_info()
                 )
             ) / (1024**3)
         else:

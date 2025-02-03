@@ -232,7 +232,8 @@ def define_env(env):
                                 implementation,
                                 framework.lower(),
                                 category.lower(),
-                                "SingleStream" if model.lower() in ["pointpainting"] else "Offline",
+                                "SingleStream" if model.lower() in [
+                                    "pointpainting"] else "Offline",
                                 device.lower(),
                                 "test",
                                 test_query_count,
@@ -310,7 +311,8 @@ def define_env(env):
                                 implementation,
                                 framework.lower(),
                                 category.lower(),
-                                "SingleStream" if model.lower() in ["pointpainting"] else "Offline",
+                                "SingleStream" if model.lower() in [
+                                    "pointpainting"] else "Offline",
                                 device.lower(),
                                 "test",
                                 test_query_count,
@@ -516,8 +518,9 @@ def define_env(env):
         elif model.lower() in ["pointpainting"]:
             info += f"{pre_space}    - The maximum duration for a performance run can be disabled by using `--env.MLC_MLPERF_USE_MAX_DURATION=no`.\n\n"
             info += f"{pre_space}    - In valid execution mode, the query count for performance mode can be adjusted using `--env.MLC_MLPERF_LOADGEN_QUERY_COUNT=<query_count>`.\n\n"
-            
-        if implementation.lower() == "reference" and model.lower() not in ["pointpainting"]:
+
+        if implementation.lower() == "reference" and model.lower() not in [
+                "pointpainting"]:
             info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
             info += f"{pre_space}    - Add `--env.MLC_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.\n\n"
@@ -703,7 +706,7 @@ def define_env(env):
 
             if "dlrm-v2" in model.lower() and implementation == "nvidia":
                 docker_cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
-            
+
             if "pointpainting" in model.lower() and implementation == "reference":
                 docker_cmd_suffix += f" \\\n{pre_space} --pointpillars_checkpoint_path=<PATH_TO_POINTPILLAR_MODEL>"
                 docker_cmd_suffix += f" \\\n{pre_space} --deeplab_resnet50_path=<PATH_TO_SEGMENTOR MODEL>"

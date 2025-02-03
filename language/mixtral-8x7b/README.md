@@ -250,6 +250,8 @@ python -u evaluate-accuracy.py --checkpoint-path [path_to_model_checkpoint] \
 
 ## Accuracy Target
 
+**WARNING:** The full accuracy target was only verified with the standalone script. The reference implementation matches in a subset of the dataset, but hasn't been fully confirm.
+
 Reference scores:
 Open Orca:
 ```json

@@ -31,7 +31,7 @@ jobs:
         python3 -m pip install mlc-scripts
     - name: Download Imagenet Calibration
       run: |
-        mlcr get,dataset,imagenet,_calibration --outdirname=.
+        mlcr get,dataset,imagenet,_calibration --outdirname=. --quiet
 
   download-openimages:
     runs-on: ubuntu-latest
@@ -51,7 +51,7 @@ jobs:
         python3 -m pip install mlc-scripts
     - name: Download Openimages Calibration
       run: |
-        mlcr get,dataset,openimages,_calibration --outdirname=.
+        mlcr get,dataset,openimages,_calibration --outdirname=. --quiet
 
   download-igbh:
     runs-on: ubuntu-latest
@@ -71,4 +71,4 @@ jobs:
         python3 -m pip install mlc-scripts
     - name: Download IGBH Calibration
       run: |
-        mlcr get,dataset,igbh,_calibration --outdirname=.
+        mlcr get,dataset,igbh,_calibration --outdirname=. --quiet

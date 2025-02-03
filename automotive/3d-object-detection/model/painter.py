@@ -57,7 +57,7 @@ class Painter:
         else:
             model = network.modeling.__dict__['deeplabv3plus_resnet50'](
                 num_classes=19, output_stride=16)
-            checkpoint = torch.load(checkpoint_file)
+            checkpoint = torch.load(checkpoint_file, map_location=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
             model.load_state_dict(checkpoint["model_state"])
             model.eval()
             device = torch.device(

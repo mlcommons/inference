@@ -22,6 +22,10 @@ def get_args():
         choices=["tiny", "small", "medium", "large", "full"]
     )
     parser.add_argument(
+        "--no-memmap",
+        action="store_true",
+        help="do not use memmap even for large/full size variants")
+    parser.add_argument(
         "--verbose",
         action="store_true",
         help="verbose messages")
@@ -38,7 +42,7 @@ def get_args():
     return args
 
 
-def load_labels(base_path, dataset_size, use_label_2K=True):
+def load_labels(base_path, dataset_size, use_label_2K=True, no_memmap=False):
     # load labels
     paper_nodes_num = {
         "tiny": 100000,
@@ -57,16 +61,12 @@ def load_labels(base_path, dataset_size, use_label_2K=True):
         "paper",
         label_file)
 
-    if dataset_size in ["large", "full"]:
-        paper_node_labels = torch.from_numpy(
-            np.memmap(
-                paper_lbl_path, dtype="float32", mode="r", shape=(paper_nodes_num[dataset_size])
-            )
-        ).to(torch.long)
+    if dataset_size in ["large", "full"] and not no_memmap:
+        mmap_mode = 'r'
     else:
-        paper_node_labels = torch.from_numpy(
-            np.load(paper_lbl_path)).to(
-            torch.long)
+        mmap_mode = None
+
+    paper_node_labels = torch.from_numpy(np.load(paper_lbl_path, mmap_mode=mmap_mode)).to(torch.long)
     labels = paper_node_labels
     val_idx = torch.load(
         os.path.join(
@@ -92,7 +92,7 @@ if __name__ == "__main__":
     with open(args.mlperf_accuracy_file, "r") as f:
         mlperf_results = json.load(f)
 
-    labels, val_idx = load_labels(args.dataset_path, args.dataset_size)
+    labels, val_idx = load_labels(args.dataset_path, args.dataset_size, no_memmap=args.no_memmap)
     results = {}
 
     seen = set()

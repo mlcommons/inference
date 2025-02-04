@@ -119,7 +119,6 @@ class FirstTokenStreamer(BaseStreamer):
             self.first_token.put((value, self.response_ids[0]))
 
             self.is_first_token = False
-        
 
         self.tokens_cache.append(value)
 
@@ -413,7 +412,7 @@ class SUTServer(SUT):
 
             batch_texts = [self.data_object.input_texts[qitem.index]]
             batch_ids = self.tokenizer.batch_encode_plus(
-                    batch_texts, return_tensors="pt", padding=True)
+                batch_texts, return_tensors="pt", padding=True)
             batch_ids = batch_ids.to(self.device)
             _, length = batch_ids.input_ids.shape
 
@@ -427,7 +426,6 @@ class SUTServer(SUT):
                 response_ids=[qitem.id],
             )
 
-            
             _ = self.model.generate(
                 **batch_ids,
                 num_return_sequences=1,

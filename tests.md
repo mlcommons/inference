@@ -4,8 +4,10 @@ The below tables lists the actively tests being carried out by MLCommons for the
 
 These reporitories are per inference round.
 
+## Nvidia implementation - full runs
 [![MLPerf Inference Nvidia implementations](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-nvidia-mlperf-inference-implementations.yml/badge.svg)](https://github.com/GATEOverflow/mlperf-automations/actions/workflows/test-nvidia-mlperf-inference-implementations.yml)
 
+## Reference implementation - short runs
 [![MLPerf inference ResNet50](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-resnet50.yml/badge.svg)](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-resnet50.yml)
 
 [![MLPerf inference retinanet](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-retinanet.yml/badge.svg)](https://github.com/mlcommons/mlperf-automations/actions/workflows/test-mlperf-inference-retinanet.yml)

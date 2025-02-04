@@ -30,7 +30,7 @@ Number of **unique samples** in the validation dataset and the QSL size specifie
 
 #### **6. Equal Issue Mode Applicability**
 Documented whether **Equal Issue Mode** is applicable in 
-- [X] [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf#L42)
+- [X] [mlperf.conf](https://github.com/mlcommons/inference/blob/master/loadgen/mlperf.conf#L50)
 - [X] [Inference benchmark docs](https://github.com/mlcommons/inference/blob/docs/docs/index.md)
   *(Relevant if sample processing times are inconsistent across inputs.)*
 

@@ -177,8 +177,8 @@ The currently valid [MLPerf Inference Benchmarks](index_gh.md) as of MLPerf infe
 - **Dataset**: Waymo
     - **Dataset Size**: 39,986
     - **QSL Size**: 1,024
-- **Number of Parameters**: 
-- **FLOPs**: 
+- **Number of Parameters**: 44 million
+- **FLOPs**: 3 trillion
 - **Reference Model Accuracy (fp32)**:  mAP: 54.25%
 - **Required Accuracy (Closed Division)**:
     - mAP: 54.25%

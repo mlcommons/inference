@@ -2,8 +2,12 @@
 
 This is the reference implementation for the MLPerf automotive 3D detection benchmark. The reference uses Pytorch as a backend. Additionally we provide an implementation using ONNX.
 
+| model | accuracy | dataset | model source | precision | notes |
+| ---- | ---- | ---- | ---- | ---- | ---- |
+| PointPainting | 0.5425 mAP | Waymo Open Dataset | https://github.com/rod409/pp | fp32 | Single-Stream 99.9 percentile |
+
 ## Downloading the dataset and model checkpoints
-Contact MLCommons support for accessing the Waymo Open Dataset along with the model checkpoints for the reference implementation. You will need to accept a license agreement and will be given directions to download the data with rclone. You will need to place the kitti_format folder under a directory named waymo. There are four total checkpoints 2 for pytorch and 2 for onnx.
+Contact [MLCommons](https://waymo.mlcommons.org/) support for accessing the Waymo Open Dataset along with the model checkpoints for the reference implementation. You will need to accept a license agreement and will be given directions to download the data with rclone. You will need to place the kitti_format folder under a directory named waymo. There are four total checkpoints 2 for pytorch and 2 for onnx.
 
 After downloading, the structure of the data should look like below:
 
@@ -52,6 +56,8 @@ python main.py --dataset waymo --dataset-path /waymo/kitti_format/ --lidar-path 
 ```
 python main.py --dataset waymo --dataset-path /waymo/kitti_format/ --lidar-path <checkpoint_path>/pp.onnx --segmentor-path <checkpoint_path>/deeplabv3+.onnx --mlperf_conf /inference/mlperf.conf --backend onnx
 ```
+> [!Note]
+> The minimum number of queries needed to be run is 6636. To get the best latency, users are encouraged to run a larger number of samples.
 
 ### Accuracy run
 

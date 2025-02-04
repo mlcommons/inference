@@ -28,7 +28,7 @@ def define_env(env):
         content = ""
 
         execution_envs = ["Docker", "Native"]
-        code_version = "r4.1-dev"
+        code_version = "r5.0-dev"
         implementation_run_options = []
 
         if model == "rnnt":
@@ -36,8 +36,6 @@ def define_env(env):
 
         if implementation == "reference":
             # Tip
-            if model != "rnnt":
-                code_version = "r5.0-dev"
             if "99.9" not in model and implementation_tips:
                 content += f"\n{pre_space}!!! tip\n\n"
                 content += f"{pre_space}    - MLCommons reference implementations are only meant to provide a rules compliant reference implementation for the submitters and in most cases are not best performing. If you want to benchmark any system, it is advisable to use the vendor MLPerf implementation for that system like Nvidia, Intel etc.\n\n"

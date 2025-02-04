@@ -119,7 +119,7 @@ class FirstTokenStreamer(BaseStreamer):
             self.first_token.put((value, self.response_ids[0]))
 
             self.is_first_token = False
-            return
+        
 
         self.tokens_cache.append(value)
 
@@ -356,6 +356,7 @@ class SUTServer(SUT):
         total_sample_count=24576,
         dataset_path=None,
         workers=1,
+        **kwargs,
     ):
 
         super().__init__(
@@ -408,9 +409,13 @@ class SUTServer(SUT):
             if qitem is None:
                 break
 
-            input_ids_tensor = self.data_object.input_ids[qitem.index]
-            input_masks_tensor = self.data_object.attention_masks[qitem.index]
-            dataset = self.data_object.dataset_names[qitem.index]
+            input_dataset = [self.data_object.dataset_names[qitem.index]]
+
+            batch_texts = [self.data_object.input_texts[qitem.index]]
+            batch_ids = self.tokenizer.batch_encode_plus(
+                    batch_texts, return_tensors="pt", padding=True)
+            batch_ids = batch_ids.to(self.device)
+            _, length = batch_ids.input_ids.shape
 
             # TODO: This PoC is super slow with significant overhead. Best to
             # create a patch to `generate`
@@ -422,32 +427,24 @@ class SUTServer(SUT):
                 response_ids=[qitem.id],
             )
 
-            logits_processor = LogitsProcessorList(
-                [StopAfterSequence(
-                    self.tokenizer.eos_token_id, device=self.device)]
+            
+            _ = self.model.generate(
+                **batch_ids,
+                num_return_sequences=1,
+                streamer=tokens_streamer,
+                **gen_kwargs,
             )
-            if dataset == "MBXP":
-                _ = self.model.generate(
-                    input_ids=input_ids_tensor,
-                    attention_mask=input_masks_tensor,
-                    pad_token_id=self.tokenizer.pad_token_id,
-                    streamer=tokens_streamer,
-                    logits_processor=logits_processor,
-                    **gen_kwargs,
-                )
-            else:
-                _ = self.model.generate(
-                    input_ids=input_ids_tensor,
-                    attention_mask=input_masks_tensor,
-                    pad_token_id=self.tokenizer.pad_token_id,
-                    streamer=tokens_streamer,
-                    **gen_kwargs,
-                )
 
             output_tokens = tokens_streamer.get_out_tokens()
-            n_tokens = len(output_tokens)
+            processed_output = self.data_object.postProcess(
+                torch.tensor([output_tokens], dtype=torch.int64),
+                length=0,
+                query_id_list=[qitem.index],
+                dataset_list=input_dataset,
+            )
+            n_tokens = len(processed_output[0])
             response_array = array.array(
-                "B", np.array(output_tokens, np.int32).tobytes()
+                "B", np.array(processed_output[0], np.int32).tobytes()
             )
             bi = response_array.buffer_info()
             response = [

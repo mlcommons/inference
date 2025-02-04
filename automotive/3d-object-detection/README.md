@@ -1,4 +1,4 @@
-# MLPerf™ Inference Benchmark for Graph Neural Network
+# MLPerf™ Inference Benchmark for Automotive 3D Object Detection
 
 This is the reference implementation for the MLPerf automotive 3D detection benchmark. The reference uses Pytorch as a backend. Additionally we provide an implementation using ONNX.
 

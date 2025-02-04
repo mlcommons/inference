@@ -66,7 +66,11 @@ def load_labels(base_path, dataset_size, use_label_2K=True, no_memmap=False):
     else:
         mmap_mode = None
 
-    paper_node_labels = torch.from_numpy(np.load(paper_lbl_path, mmap_mode=mmap_mode)).to(torch.long)
+    paper_node_labels = torch.from_numpy(
+        np.load(
+            paper_lbl_path,
+            mmap_mode=mmap_mode)).to(
+        torch.long)
     labels = paper_node_labels
     val_idx = torch.load(
         os.path.join(
@@ -92,7 +96,8 @@ if __name__ == "__main__":
     with open(args.mlperf_accuracy_file, "r") as f:
         mlperf_results = json.load(f)
 
-    labels, val_idx = load_labels(args.dataset_path, args.dataset_size, no_memmap=args.no_memmap)
+    labels, val_idx = load_labels(
+        args.dataset_path, args.dataset_size, no_memmap=args.no_memmap)
     results = {}
 
     seen = set()

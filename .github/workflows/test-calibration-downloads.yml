@@ -91,4 +91,4 @@ jobs:
         python3 -m pip install mlc-scripts
     - name: Download SQUAD Calibration
       run: |
-        mlcr get,dataset,squad,_calibration --outdirname=. --quiet
+        mlcr get,dataset,squad,_calib1 --outdirname=. --quiet

@@ -502,7 +502,8 @@ def define_env(env):
         info += f"\n{pre_space}!!! tip\n\n"
         info += f"{pre_space}    - Number of threads could be adjusted using `--threads=#`, where `#` is the desired number of threads. This option works only if the implementation in use supports threading.\n\n"
         info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
-        info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
+        if implementation.lower() == "reference":
+            info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
             info += f"{pre_space}    - Add `--env.CM_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.\n\n"
             info += f"{pre_space}    - Add `--env.CM_ML_MODEL_RGAT_CHECKPOINT_PATH=<Path to R-GAT model checkpoint>` if you have already downloaded the model. The path will be automatically mounted when using docker run.\n\n"

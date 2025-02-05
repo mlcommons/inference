@@ -1,0 +1,74 @@
+name: Test for the downloads of calibration datasets
+on:
+  pull_request:
+    branches: [ "master", "dev" ]
+    paths:
+      - vision/classification_and_detection/**
+      - language/**
+      - recommendation/**
+      - .github/workflows/test-calibration-downloads.yml
+      - '!**.md'
+
+env:
+  PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+
+jobs:
+  download-imagenet:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9" ]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python3 -m pip install mlc-scripts
+    - name: Download Imagenet Calibration
+      run: |
+        mlcr get,dataset,imagenet,_calibration --outdirname=. --quiet
+  download-openimages:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9" ]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python3 -m pip install mlc-scripts
+    - name: Download Openimages Calibration
+      run: |
+        mlcr get,dataset,openimages,_calibration --outdirname=. --quiet
+  # The igbh calibration dataset generation requires downloading the full igbh which is not feasible in GH runners
+  # provided by github
+  #
+  # download-igbh:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python-version: [ "3.9" ]
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #   - name: Set up Python ${{ matrix.python-version }}
+  #     uses: actions/setup-python@v3
+  #     with:
+  #       python-version: ${{ matrix.python-version }}
+  #   - name: Install dependencies
+  #     run: |
+  #       python3 -m pip install mlc-scripts
+  #   - name: Download IGBH Calibration
+  #     run: |
+  #       mlcr get,dataset,igbh,_calibration --outdirname=. --quiet

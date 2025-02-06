@@ -59,8 +59,6 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [ "3.9" ]
-        exclude:
-          - python-version: "3.9"
 
     steps:
     - uses: actions/checkout@v4
@@ -71,9 +69,9 @@ jobs:
     - name: Install dependencies
       run: |
         python3 -m pip install mlc-scripts
-    - name: Download IGBH Calibration
-      run: |
-        mlcr get,dataset,igbh,_calibration --outdirname=. --quiet
+    # - name: Download IGBH Calibration
+    #   run: |
+    #     mlcr get,dataset,igbh,_calibration --outdirname=. --quiet
   
   download-squad:
     runs-on: ubuntu-latest

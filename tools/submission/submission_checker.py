@@ -746,8 +746,8 @@ ACC_PATTERN = {
     "ROUGELSUM": r".*'rougeLsum':\s([\d.]+).*",
     "GEN_LEN": r".*'gen_len':\s([\d.]+).*",
     "TOKENS_PER_SAMPLE": r".*'tokens_per_sample':\s([\d.]+).*",
-    "CLIP_SCORE": r".*'CLIP_SCORE':\s.([\d.]+).*",
-    "FID_SCORE": r".*'FID_SCORE':\s.([\d.]+).*",
+    "CLIP_SCORE": r".*'CLIP_SCORE':\s+'?([\d.]+).*",
+    "FID_SCORE": r".*'FID_SCORE':\s+'?([\d.]+).*",
     "gsm8k_accuracy": r".*'gsm8k':\s([\d.]+).*",
     "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
     "exact_match": r".*'exact_match':\s([\d.]+).*"

@@ -2407,7 +2407,7 @@ def check_results_dir(
                                 .replace('"', "")
                                 .replace("{", "")
                                 .replace("}", "")
-                            )
+                            ).strip()
                             if mlperf_model in REQUIRED_ACC_BENCHMARK:
                                 if (
                                         config.version
@@ -2425,7 +2425,7 @@ def check_results_dir(
                                             missing_files,
                                         )
                                         accuracy_is_valid = False
-                            if not accuracy_is_valid and not is_closed_or_network:
+                            if not accuracy_is_valid and acc and not is_closed_or_network:
                                 if debug:
                                     log.warning(
                                         "%s, accuracy not valid but taken for open",

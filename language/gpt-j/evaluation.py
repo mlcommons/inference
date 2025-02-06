@@ -56,6 +56,7 @@ def main():
     dataset_path = args.dataset_file
     metric = evaluate.load("rouge")
     nltk.download("punkt")
+    nltk.download('punkt_tab')
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,

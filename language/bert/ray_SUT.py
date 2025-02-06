@@ -42,7 +42,7 @@ except ImportError:
     raise Exception("Error importing local modules")
 
 # Adjustable Parameters
-# Note. num_samples (called "test_query_count" in CM) must be a multiple
+# Note. num_samples (called "test_query_count" in MLC) must be a multiple
 # of batch_size
 BATCH_SIZE = 16
 

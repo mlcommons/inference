@@ -1,10 +1,10 @@
 # MLPerf™ Inference Benchmarks for Text to Image
 
-## Automated command to run the benchmark via MLCommons CM
+## Automated command to run the benchmark via MLCFlow
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/text_to_image/sdxl) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
-You can also do `pip install cm4mlops` and then use `cm` commands for downloading the model and datasets using the commands given in the later sections.
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
  
 ## Supported Models
 
@@ -50,15 +50,15 @@ CFLAGS="-std=c++14" python setup.py install
 
 We host two checkpoints (fp32 and fp16) that are a snapshot of the [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) pipeline at the time of the release of the benchmark. Download them and move them to your model path.
 
-#### CM method
+#### MLC method
 
-The following MLCommons CM commands can be used to programmatically download the model checkpoints.
+The following MLCommons MLC commands can be used to programmatically download the model checkpoints.
 
 ```
-cm run script --tags=get,ml-model,sdxl,_fp16,_rclone --outdirname=$MODEL_PATH
+mlcr get,ml-model,sdxl,_fp16,_rclone --outdirname=$MODEL_PATH
 ```
 ```
-cm run script --tags=get,ml-model,sdxl,_fp32,_rclone --outdirname-$MODEL_PATH
+mlcr get,ml-model,sdxl,_fp32,_rclone --outdirname-$MODEL_PATH
 ```
 #### Manual method
 
@@ -89,16 +89,16 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp16 $M
 
 ### Download validation dataset
 
-#### CM METHOD
-The following MLCommons CM commands can be used to programmatically download the validation dataset.
+#### MLC METHOD
+The following MLCommons MLC commands can be used to programmatically download the validation dataset.
 
 ```
-cm run script --tags=get,dataset,coco2014,_validation,_full --outdirname=coco2014
+mlcr get,dataset,coco2014,_validation,_full --outdirname=coco2014
 ```
 
 For debugging you can download only a part of all the images in the dataset
 ```
-cm run script --tags=get,dataset,coco2014,_validation,_size.50 --outdirname=coco2014
+mlcr get,dataset,coco2014,_validation,_size.50 --outdirname=coco2014
 ```
 
 
@@ -116,11 +116,11 @@ If the file [captions.tsv](coco2014/captions/captions.tsv) can be found in the s
 
 ### Download Calibration dataset (only if you are doing quantization)
 
-#### CM METHOD
-The following MLCommons CM commands can be used to programmatically download the calibration dataset.
+#### MLC METHOD
+The following MLCommons MLC commands can be used to programmatically download the calibration dataset.
 
 ```
-cm run script --tags=get,dataset,coco2014,_calibration --outdirname=coco2014
+mlcr get,dataset,coco2014,_calibration --outdirname=coco2014
 ```
 
 

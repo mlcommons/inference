@@ -14,7 +14,7 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset
     ```
-    cm run script --tags=get,dataset,openorca,validation -j
+    mlcr get,dataset,openorca,validation -j
     ```
 
 ## Model
@@ -26,7 +26,7 @@ Get the Official MLPerf LLAMA2-70b Model
 
     ### Pytorch
     ```
-    cm run script --tags=get,ml-model,llama2-70b,_pytorch -j
+    mlcr get,ml-model,llama2-70b,_pytorch -j
     ```
   
 !!! tip

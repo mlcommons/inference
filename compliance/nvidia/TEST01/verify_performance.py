@@ -89,9 +89,9 @@ def main():
         if re.match("Scenario", line):
             test_mode = line.split(": ", 1)[1].strip()
             continue
-
         if test_mode == "SingleStream":
-            if re.match(".*Early stopping 90th percentile estimate", line):
+            if re.match(
+                    ".*Early stopping (90th|99.9th) percentile estimate", line):
                 test_score = line.split(": ", 1)[1].strip()
                 continue
 

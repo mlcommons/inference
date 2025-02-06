@@ -1,4 +1,4 @@
-name: Auto-Update Dev Branch from Master
+name: Auto-Update Dev Branches from Master
 
 on:
   push:
@@ -6,8 +6,12 @@ on:
       - master  # Trigger workflow on commits to 'dev' branch
 
 jobs:
-  update-main:
+  update-dev:
+    strategy:
+      matrix: 
+        branch: [ "dev", "docs" ]
     runs-on: ubuntu-latest
+    
     permissions:
       contents: write  # Required to push to protected branches
 
@@ -15,7 +19,7 @@ jobs:
       - name: Checkout Main Branch
         uses: actions/checkout@v4
         with:
-          ref: dev
+          ref: ${{ matrix.branch }}
           fetch-depth: 0
           ssh-key: ${{ secrets.DEPLOY_KEY }}
 
@@ -24,11 +28,12 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-      - name: Merge auto-update into dev
+      - name: Merge auto-update into ${{ matrix.branch }}
         run: |
           git fetch origin master:master
           git merge --no-ff master -m "Auto-merge updates from master branch"
 
-      - name: Push Changes to Main
+      - name: Push Changes to ${{ matrix.branch }}
         run: |
-          git push origin dev
+          git push origin ${{ matrix.branch }}
+     

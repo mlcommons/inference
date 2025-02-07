@@ -14,7 +14,7 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Full Dataset
     ```
-    cm run script --tags=get,dataset,igbh,_full -j
+    mlcr get,dataset,igbh,_full -j
     ```
 
 === "Debug Dataset"
@@ -22,7 +22,7 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Full Dataset
     ```
-    cm run script --tags=get,dataset,igbh,_debug -j
+    mlcr get,dataset,igbh,_debug -j
     ```
 
 ## Model
@@ -34,6 +34,6 @@ Get the Official MLPerf R-GAT Model
 
     ### PyTorch
     ```
-    cm run script --tags=get,ml-model,rgat -j
+    mlcr get,ml-model,rgat -j
     ```
 

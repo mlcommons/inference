@@ -3,6 +3,7 @@ MLPerf Inference is a benchmark suite for measuring how fast systems can run mod
 
 Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.02549) for a detailed description of the benchmarks along with the motivation and guiding principles behind the benchmark suite. If you use any part of this benchmark (e.g., reference implementations, submissions, etc.), please cite the following:
 
+
 ```
 @misc{reddi2019mlperf,
     title={MLPerf Inference Benchmark},

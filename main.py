@@ -747,7 +747,7 @@ def define_env(env):
                 cmd_suffix += f"\\\n{pre_space} --nm_model_zoo_stub=zoo:cv/classification/resnet_v1-50/pytorch/sparseml/imagenet/pruned85_quant-none-vnni"
             if "bert" in model.lower() and framework == "deepsparse":
                 cmd_suffix += f"\\\n{pre_space} --nm_model_zoo_stub=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
-           
+
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"

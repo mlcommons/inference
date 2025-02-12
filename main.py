@@ -47,7 +47,7 @@ def define_env(env):
 
             if not frameworks:
                 if model.lower() == "resnet50":
-                    frameworks = ["Onnxruntime", "Tensorflow", "Deepsparse"]
+                    frameworks = ["Onnxruntime", "Tensorflow"]
                 elif model.lower() == "retinanet":
                     frameworks = ["Onnxruntime", "Pytorch"]
                 elif "bert" in model.lower():

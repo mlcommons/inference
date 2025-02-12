@@ -47,7 +47,7 @@ def define_env(env):
 
             if not frameworks:
                 if model.lower() == "resnet50":
-                    frameworks = ["Onnxruntime", "Tensorflow"]
+                    frameworks = ["Onnxruntime", "Tensorflow", "Deepsparse"]
                 elif model.lower() == "retinanet":
                     frameworks = ["Onnxruntime", "Pytorch"]
                 elif "bert" in model.lower():
@@ -289,8 +289,8 @@ def define_env(env):
                                 content += f"{cur_space3}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for {scenario_text}.\n\n"
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
-                                content += f"{cur_space3}* `--docker_cm_repo=<Custom MLC GitHub repo URL in username@repo format>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
-                                content += f"{cur_space3}* `--docker_cm_repo_branch=<Custom MLC GitHub repo Branch>`: to checkout a custom branch of the cloned cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_mlc_repo=<Custom MLC GitHub repo URL in username@repo format>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_mlc_repo_branch=<Custom MLC GitHub repo Branch>`: to checkout a custom branch of the cloned cm4mlops repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"
 
                                 if implementation.lower() == "nvidia":
@@ -332,6 +332,11 @@ def define_env(env):
                             run_suffix += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPUs with supported configs in MLC are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`. For other GPUs, default configuration as per the GPU memory will be used.\n"
                         run_suffix += f"{cur_space3}</details>\n\n"
 
+                        if (
+                            "bert" in model.lower()
+                            and framework.lower() == "deepsparse"
+                        ):
+                            run_suffix += "You can use any model from [NeuralMagic sparse zoo](https://sparsezoo.neuralmagic.com/?modelSet=computer_vision&architectures=resnet_v1) (trained on Imagenet dataset) as --nm_model_zoo_stub"
                         if (
                             "bert" in model.lower()
                             and framework.lower() == "deepsparse"
@@ -691,8 +696,10 @@ def define_env(env):
                 docker_cmd_suffix += (
                     f" \\\n{pre_space} {extra_docker_input_string} {extra_input_string}"
                 )
+            if "resnet50" in model.lower() and framework == "deepsparse":
+                docker_cmd_suffix += f"\\\n{pre_space} --nm_model_zoo_stub=zoo:cv/classification/resnet_v1-50/pytorch/sparseml/imagenet/pruned85_quant-none-vnni"
             if "bert" in model.lower() and framework == "deepsparse":
-                docker_cmd_suffix += f"\\\n{pre_space} --env.MLC_MLPERF_NEURALMAGIC_MODEL_ZOO_STUB=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
+                docker_cmd_suffix += f"\\\n{pre_space} --nm_model_zoo_stub=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     docker_cmd_suffix += f" \\\n{pre_space} --tp_size=2"
@@ -736,8 +743,11 @@ def define_env(env):
             if execution_mode == "test" and not skip_test_query_count:
                 cmd_suffix += f" \\\n {pre_space} --test_query_count={test_query_count}"
 
+            if "resnet50" in model.lower() and framework == "deepsparse":
+                cmd_suffix += f"\\\n{pre_space} --nm_model_zoo_stub=zoo:cv/classification/resnet_v1-50/pytorch/sparseml/imagenet/pruned85_quant-none-vnni"
             if "bert" in model.lower() and framework == "deepsparse":
-                cmd_suffix += f"\\\n{pre_space} --env.MLC_MLPERF_NEURALMAGIC_MODEL_ZOO_STUB=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
+                cmd_suffix += f"\\\n{pre_space} --nm_model_zoo_stub=zoo:nlp/question_answering/mobilebert-none/pytorch/huggingface/squad/base_quant-none"
+           
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"

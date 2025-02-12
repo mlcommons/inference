@@ -5,6 +5,8 @@ hide:
 
 Click [here](https://docs.google.com/presentation/d/1cmbpZUpVr78EIrhzyMBnnWnjJrD-mZ2vmSb-yETkTA8/edit?usp=sharing) to view the proposal slide for Common Automation for MLPerf Inference Submission Generation through MLCFlow.
 
+Please refer to the [installation page](site:inference/install/) to install MLCFlow for automating the submission generation. In a typical development environment `pip install mlc-scripts` should be enough.
+
 === "Custom automation based MLPerf results"
     If you have not followed the `mlcr` commands under the individual model pages in the [benchmarks](../index.md) directory, please make sure that the result directory is structured in the following way. You can see the real examples for the expected folder structure [here](https://github.com/mlcommons/inference/tree/submission-generation-examples).
     ```

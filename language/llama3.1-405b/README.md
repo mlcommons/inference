@@ -7,8 +7,6 @@
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
         - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
 
-Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3.1-405b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
-
 ## Automated command to run the benchmark via MLFlow
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3_1-405b/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
@@ -99,12 +97,15 @@ pip install -e ../../loadgen
 
 
 ## Get Model
-### MLCommons Members Download
+### MLCommons Members Download (Recommended for official submission)
 
-TODO: Host model and grant access to submitters
+You need to request for access to [MLcommons](http://llama3-1.mlcommons.org/) and you'll receive an email with the download instructions. You can download the model automatically via the below command
+```
+mlcr get,ml-model,llama3 --outdirname=${CHECKPOINT_PATH} -j
+```
 
 
-### External Download
+### External Download (Not recommended for official submission)
 + First go to [llama3.1-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
 + Requires Git Large Files Storage
 ```
@@ -114,10 +115,10 @@ git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT
 cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ```
 
-### Download model through MLC (Collective Mind)
+### Download huggingface model through MLC
 
 ```
-mlcr get,ml-model,llama3 --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
+mlcr get,ml-model,llama3,_hf --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
 ```
 
 **Note:**

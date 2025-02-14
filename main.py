@@ -526,6 +526,7 @@ def define_env(env):
 
         if implementation.lower() == "reference" and model.lower() not in [
                 "pointpainting"]:
+
             info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
             info += f"{pre_space}    - Add `--env.MLC_DATASET_IGBH_PATH=<Path to IGBH dataset>` if you have already downloaded the dataset. The path will be automatically mounted when using docker run.\n\n"

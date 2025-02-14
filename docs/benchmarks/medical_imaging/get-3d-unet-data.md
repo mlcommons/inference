@@ -14,12 +14,12 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset(Original)
     ```
-    cm run script --tags=get,dataset,kits19,_validation -j
+    mlcr get,dataset,kits19,_validation -j
     ```
 
     ### Get Validation Dataset(Preprocessed)
     ```
-    cm run script --tags=get,dataset,kits19,preprocessed -j
+    mlcr get,dataset,kits19,preprocessed -j
     ```
 
 ## Model
@@ -31,18 +31,18 @@ Get the Official MLPerf 3d-unet Model
 
     ### Pytorch
     ```
-    cm run script --tags=get,ml-model,3d-unet,_pytorch -j
+    mlcr get,ml-model,3d-unet,_pytorch -j
     ```
 === "Onnx"
 
     ### Onnx
     ```
-    cm run script --tags=get,ml-model,3d-unet,_onnx -j
+    mlcr get,ml-model,3d-unet,_onnx -j
     ```
 === "Tensorflow"
 
     ### Tensorflow
     ```
-    cm run script --tags=get,ml-model,3d-unet,_tensorflow -j
+    mlcr get,ml-model,3d-unet,_tensorflow -j
     ```
 

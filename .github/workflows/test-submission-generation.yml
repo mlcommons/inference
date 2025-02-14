@@ -1,6 +1,6 @@
 # This workflow will test the submission generation using MLPerf Automation 
 
-name: CM based Submission Generation
+name: MLC based Submission Generation
 
 on:
   pull_request:
@@ -34,7 +34,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        pip install cm4mlops
+        pip install mlc-scripts
     - name: Pull repo where test cases are uploaded
       run: |
         git clone -b submission-generation-examples https://github.com/mlcommons/inference.git submission_generation_examples
@@ -48,5 +48,5 @@ jobs:
         fi
         # Dynamically set the log group to simulate a dynamic step name
         echo "::group::$description"
-        cm ${{ matrix.action }} script --tags=generate,inference,submission  --adr.compiler.tags=gcc --version=v5.0 --clean --preprocess_submission=yes --submission_base_dir=mysubmissions --results_dir=$PWD/submission_generation_tests/${{ matrix.case }}/ --run-checker --submitter=MLCommons --tar=yes --division=${{ matrix.division }} --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes --quiet
-        cm ${{ matrix.action }} script --tags=run,submission,checker --submitter_id_off=mysubmitter_id --tar=yes --submission_dir=mysubmissions/submissions --submission_tar_file=mysubmission.tar.gz
+        mlc ${{ matrix.action }} script --tags=generate,inference,submission  --adr.compiler.tags=gcc --version=v5.0 --clean --preprocess_submission=yes --submission_base_dir=mysubmissions --results_dir=$PWD/submission_generation_tests/${{ matrix.case }}/ --run-checker --submitter=MLCommons --tar=yes --division=${{ matrix.division }} --env.MLC_DETERMINE_MEMORY_CONFIGURATION=yes --quiet
+        mlc ${{ matrix.action }} script --tags=run,submission,checker --submitter_id_off=mysubmitter_id --tar=yes --submission_dir=mysubmissions/submissions --submission_tar_file=mysubmission.tar.gz

@@ -14,7 +14,7 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset
     ```
-    cm run script --tags=get,dataset,squad,validation -j
+    mlcr get,dataset,squad,validation -j
     ```
 
 ## Model
@@ -26,18 +26,18 @@ Get the Official MLPerf Bert-Large Model
 
     ### Pytorch
     ```
-    cm run script --tags=get,ml-model,bert-large,_pytorch -j
+    mlcr get,ml-model,bert-large,_pytorch -j
     ```
 === "Onnx"
 
     ### Onnx
     ```
-    cm run script --tags=get,ml-model,bert-large,_onnx -j
+    mlcr get,ml-model,bert-large,_onnx -j
     ```
 === "Tensorflow"
 
     ### Tensorflow
     ```
-    cm run script --tags=get,ml-model,bert-large,_tensorflow -j
+    mlcr get,ml-model,bert-large,_tensorflow -j
     ```
 

@@ -11,6 +11,7 @@ on:
     paths:
       - loadgen/**
 
+
 jobs:
   update_version:
     name: Update version only on ubuntu but used by windows and macos
@@ -133,6 +134,7 @@ jobs:
         with:
           name: wheels-windows-latest
           path: wheels
+      # Publish
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

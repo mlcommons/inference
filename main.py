@@ -328,6 +328,7 @@ def define_env(env):
                         run_suffix += f"{cur_space3}<summary> Please click here to see more options for the RUN command</summary>\n\n"
                         run_suffix += f"{cur_space3}* Use `--division=closed` to do a closed division submission which includes compliance runs\n\n"
                         run_suffix += f"{cur_space3}* Use `--rerun` to do a rerun even when a valid run exists\n"
+                        run_suffix += f"{cur_space3}* Use `--compliance` to do the compliance runs (only applicable for closed division) once the valid runs are successful\n"
                         if implementation.lower() == "nvidia":
                             run_suffix += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPUs with supported configs in MLC are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`. For other GPUs, default configuration as per the GPU memory will be used.\n"
                         run_suffix += f"{cur_space3}</details>\n\n"

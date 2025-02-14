@@ -12,14 +12,17 @@ theme:
     - content.code.copy
     - navigation.expand
     - navigation.sections
-    - navigation.indexes
     - navigation.instant
     - navigation.tabs
+    - navigation.path
     - navigation.tabs.sticky
     - navigation.top
+    - navigation.prune
     - toc.follow
+    - toc.integrate
 nav:
   - Home:
+      - index.md
       - Image Classification:
           - ResNet50: benchmarks/image_classification/resnet50.md
       - Text to Image:

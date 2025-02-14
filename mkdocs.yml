@@ -20,7 +20,6 @@ theme:
     - toc.follow
 nav:
   - Home:
-      - index.md
       - Image Classification:
           - ResNet50: benchmarks/image_classification/resnet50.md
       - Text to Image:

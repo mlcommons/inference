@@ -11,6 +11,7 @@ theme:
     - content.tabs.link
     - content.code.copy
     - navigation.expand
+    - navigation.indexes
     - navigation.sections
     - navigation.instant
     - navigation.tabs
@@ -19,7 +20,7 @@ theme:
     - navigation.top
     - navigation.prune
     - toc.follow
-    - toc.integrate
+   
 nav:
   - Home:
       - index.md

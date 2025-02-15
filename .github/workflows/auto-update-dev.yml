@@ -7,6 +7,7 @@ on:
 
 jobs:
   update-dev:
+    if: github.repository_owner == 'mlcommons'
     strategy:
       matrix: 
         branch: [ "dev", "docs" ]

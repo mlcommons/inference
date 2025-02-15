@@ -54,6 +54,8 @@ nav:
     - install/index.md
   - Submission:
     - Submission Generation: submission/index.md
+  - Power:
+    - power/index.md
   - Release Notes:
     - What's New: changelog/index.md
     - Changelog: changelog/changelog.md

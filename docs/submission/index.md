@@ -73,7 +73,7 @@ flowchart LR
       direction TB
       A[populate system details] --> B[generate submission structure]
       B --> C[truncate-accuracy-logs]
-      C --> D{Infer low talency results <br>and/or<br> filter out invalid results}
+      C --> D{Infer low latency results <br>and/or<br> filter out invalid results}
       D --> yes --> E[preprocess-mlperf-inference-submission]
       D --> no --> F[run-mlperf-inference-submission-checker]
       E --> F

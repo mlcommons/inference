@@ -335,7 +335,7 @@ def define_env(env):
                         run_suffix += f"{cur_space3}</details>\n\n"
 
                         if (
-                            "bert" in model.lower()
+                            "resnet50" in model.lower()
                             and framework.lower() == "deepsparse"
                         ):
                             run_suffix += "You can use any model from [NeuralMagic sparse zoo](https://sparsezoo.neuralmagic.com/?modelSet=computer_vision&architectures=resnet_v1) (trained on Imagenet dataset) as --nm_model_zoo_stub"

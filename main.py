@@ -343,6 +343,11 @@ def define_env(env):
                             "bert" in model.lower()
                             and framework.lower() == "deepsparse"
                         ):
+                            run_suffix += "You can use any model from [NeuralMagic sparse zoo](https://sparsezoo.neuralmagic.com/?modelSet=computer_vision&architectures=resnet_v1) (trained on Imagenet dataset) as --nm_model_zoo_stub"
+                        if (
+                            "bert" in model.lower()
+                            and framework.lower() == "deepsparse"
+                        ):
                             run_suffix += f"{cur_space3}<details>\n"
                             run_suffix += f"{cur_space3}<summary> Please click here to view available generic model stubs for bert deepsparse</summary>\n\n"
                             run_suffix += f"{cur_space3}* **obert-large-pruned95_quant-none-vnni:** zoo:nlp/question_answering/obert-large/pytorch/huggingface/squad/pruned95_quant-none-vnni\n\n"

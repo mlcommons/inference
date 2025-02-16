@@ -190,7 +190,7 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
             log.warning(e)
             accuracy_is_valid = False
 
-        if not is_closed_or_network:#open division
+        if not is_closed_or_network:  # open division
             accuracy_is_valid = True
 
         perf_path = os.path.join(scenario_path, "performance", "run_1")

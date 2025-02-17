@@ -635,7 +635,7 @@ def define_env(env):
         if "gptj" in model and implementation == "reference":
             extra_content += f"{f_pre_space}    * `--beam-size=1` Beam size of 4 is mandatory for a closed division submission but reducing the beam size can help in running the model on GPUs with lower device memory\n"
         if "pointpainting" in model and implementation == "reference":
-            extra_content += f"{f_pre_space}    * Tjhe `pointpainting_checkpoint_path`, `deeplab_resnet50_path` and `waymo_path` do not need to be provided inside the Docker container as they are already registered in the MLC cache.\n"
+            extra_content += f"{f_pre_space}    * The `pointpainting_checkpoint_path`, `deeplab_resnet50_path` and `waymo_path` do not need to be provided inside the Docker container as they are already registered in the MLC cache.\n"
         if extra_content:
             extra_content = f"{f_pre_space}!!! tip\n\n" + extra_content
 

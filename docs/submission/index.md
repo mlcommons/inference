@@ -184,7 +184,7 @@ Once you have all the results on the system, you can upload them to the MLCommon
 === "via CLI"
     You can do the following command which will run the submission checker and upload the results to the MLCommons submission server
     ```
-    mlcr run,submission,checker \
+    mlcr run,submission,checker,inference \
     --submitter_id=<> \
     --submission_dir=<Path to the submission folder>
     ```

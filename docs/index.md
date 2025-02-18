@@ -1,8 +1,3 @@
----
-hide:
-  - toc
----
-
 # MLPerf Inference Benchmarks
 
 ## Overview

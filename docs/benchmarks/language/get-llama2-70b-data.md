@@ -26,10 +26,10 @@ Get the Official MLPerf LLAMA2-70b Model
 
     ### Pytorch
     ```
-    mlcr get,ml-model,llama2-70b,_pytorch -j
+    mlcr get,ml-model,llama2-70b,_pytorch -j --outdirname=<My download path>
     ```
   
 !!! tip
 
-    Downloading llama2-70B model from Hugging Face will prompt you to enter the Hugging Face username and password. Please note that the password required is the [**access token**](https://huggingface.co/settings/tokens) generated for your account. Additionally, ensure that your account has access to the [llama2-70B](https://huggingface.co/meta-llama/Llama-2-70b-chat-hf) model.
+    [Access Request Link](https://llama2.mlcommons.org/) for MLCommons members
 

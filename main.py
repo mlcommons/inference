@@ -335,6 +335,11 @@ def define_env(env):
                         run_suffix += f"{cur_space3}</details>\n\n"
 
                         if (
+                            "resnet50" in model.lower()
+                            and framework.lower() == "deepsparse"
+                        ):
+                            run_suffix += f"{cur_space3}You can use any model from [NeuralMagic sparse zoo](https://sparsezoo.neuralmagic.com/?modelSet=computer_vision&architectures=resnet_v1) (trained on Imagenet dataset) as --nm_model_zoo_stub"
+                        if (
                             "bert" in model.lower()
                             and framework.lower() == "deepsparse"
                         ):
@@ -630,7 +635,7 @@ def define_env(env):
         if "gptj" in model and implementation == "reference":
             extra_content += f"{f_pre_space}    * `--beam-size=1` Beam size of 4 is mandatory for a closed division submission but reducing the beam size can help in running the model on GPUs with lower device memory\n"
         if "pointpainting" in model and implementation == "reference":
-            extra_content += f"{f_pre_space}    * Tjhe `pointpillars_checkpoint_path`, `deeplab_resnet50_path` and `waymo_path` do not need to be provided inside the Docker container as they are already registered in the MLC cache.\n"
+            extra_content += f"{f_pre_space}    * The `pointpainting_checkpoint_path`, `deeplab_resnet50_path` and `waymo_path` do not need to be provided inside the Docker container as they are already registered in the MLC cache.\n"
         if extra_content:
             extra_content = f"{f_pre_space}!!! tip\n\n" + extra_content
 
@@ -718,7 +723,7 @@ def define_env(env):
                 docker_cmd_suffix += f" \\\n{pre_space} --criteo_day23_raw_data_path=<PATH_TO_CRITEO_DAY23_RAW_DATA>"
 
             if "pointpainting" in model.lower() and implementation == "reference":
-                docker_cmd_suffix += f" \\\n{pre_space} --pointpillars_checkpoint_path=<PATH_TO_POINTPILLAR_MODEL>"
+                docker_cmd_suffix += f" \\\n{pre_space} --pointpainting_checkpoint_path=<PATH_TO_POINTPAINTING_MODEL>"
                 docker_cmd_suffix += f" \\\n{pre_space} --deeplab_resnet50_path=<PATH_TO_SEGMENTOR MODEL>"
                 docker_cmd_suffix += f" \\\n{pre_space} --waymo_path=<PATH_TO_WAYMO_DATASET_FOLDER>"
 
@@ -761,7 +766,7 @@ def define_env(env):
                     cmd_suffix += f" \\\n{pre_space} --adr.mlperf-implementation.tags=_repo.https://github.com/neuralmagic/inference,_branch.vllm"
 
             if "pointpainting" in model.lower() and implementation == "reference":
-                cmd_suffix += f" \\\n{pre_space} --pointpillars_checkpoint_path=<PATH_TO_POINTPILLAR_MODEL>"
+                cmd_suffix += f" \\\n{pre_space} --pointpainting_checkpoint_path=<PATH_TO_POINTPAINTING_MODEL>"
                 cmd_suffix += f" \\\n{pre_space} --deeplab_resnet50_path=<PATH_TO_SEGMENTOR MODEL>"
                 cmd_suffix += f" \\\n{pre_space} --waymo_path=<PATH_TO_WAYMO_DATASET_FOLDER>"
 

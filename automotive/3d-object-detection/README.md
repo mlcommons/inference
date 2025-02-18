@@ -6,6 +6,30 @@ This is the reference implementation for the MLPerf automotive 3D detection benc
 | ---- | ---- | ---- | ---- | ---- | ---- |
 | PointPainting | 0.5425 mAP | Waymo Open Dataset | https://github.com/rod409/pp | fp32 | Single-Stream 99.9 percentile |
 
+## Automated command to run the benchmark via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/automotive/3d_object_detection/pointpainting/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+
+### Download model through MLCFlow Automation
+
+> [!Note]
+> By default, the waymo dataset is downloaded from the mlcommons official drive. One has to accept the [MLCommons Waymo Open Dataset EULA](https://waymo.mlcommons.org/) to access the dataset files.
+
+```
+mlcr get,ml-model,pointpainting --outdirname=<path_to_download> -j
+```
+
+### Download dataset through MLCFlow Automation
+
+> [!Note]
+> By default, the waymo dataset is downloaded from the mlcommons official drive. One has to accept the [MLCommons Waymo Open Dataset EULA](https://waymo.mlcommons.org/) to access the dataset files.
+
+```
+mlcr get,dataset,waymo --outdirname=<path_to_download> -j
+```
+
 ## Downloading the dataset and model checkpoints
 Contact [MLCommons](https://waymo.mlcommons.org/) support for accessing the Waymo Open Dataset along with the model checkpoints for the reference implementation. You will need to accept a license agreement and will be given directions to download the data with rclone. You will need to place the kitti_format folder under a directory named waymo. There are four total checkpoints 2 for pytorch and 2 for onnx.
 
@@ -66,6 +90,12 @@ Add the accuracy flag
 cd /inference/automotive/3d-object-detection
 python main.py --dataset waymo --dataset-path /waymo/kitti_format/ --lidar-path <checkpoint_path>/pp_ep36.pth --segmentor-path <checkpoint_path>/best_deeplabv3plus_resnet50_waymo_os16.pth --accuracy
 ```
+### Evaluate the accuracy through MLCFlow Automation
+```bash
+mlcr process,mlperf,accuracy,_waymo --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/mlcommons/inference/blob/master/automotive/3d-object-detection/accuracy_waymo.py) to view the Python script for evaluating accuracy for the Waymo dataset.
 
 ### Run the accuracy checker on the accuracy run log
 ```

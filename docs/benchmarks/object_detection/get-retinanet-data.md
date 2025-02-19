@@ -14,13 +14,13 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset
     ```
-    cm run script --tags=get,dataset,openimages,_validation -j
+    mlcr get,dataset,openimages,_validation -j
     ```
 === "Calibration"
     Retinanet calibration dataset consist of 500 images selected from the OpenImages v6 dataset.
 
     ```
-    cm run script --tags=get,dataset,openimages,_calibration -j
+    mlcr get,dataset,openimages,_calibration -j
     ```
 
 ## Model
@@ -32,12 +32,12 @@ Get the Official MLPerf Retinanet Model
 
     ### Pytorch
     ```
-    cm run script --tags=get,ml-model,retinanet,_pytorch -j
+    mlcr get,ml-model,retinanet,_pytorch -j
     ```
 === "Onnx"
 
     ### Onnx
     ```
-    cm run script --tags=get,ml-model,retinanet,_onnx -j
+    mlcr get,ml-model,retinanet,_onnx -j
     ```
 

@@ -33,7 +33,7 @@ Please run the following commands:
 - `make launch_docker`: launch docker container with an interaction session.
 - `python3 run.py --backend=[tf|pytorch|onnxruntime|tf_estimator] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy] [--quantized]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console.
 
-* ENV variable `CM_MAX_NUM_THREADS` can be used to control the number of parallel threads issuing queries.
+* ENV variable `MLC_MAX_NUM_THREADS` can be used to control the number of parallel threads issuing queries.
 
 ## Details
 
@@ -48,13 +48,13 @@ Please run the following commands:
 ## Loadgen over the Network 
 
 ```
-pip install cm4mlops
+pip install mlc-scripts
 ```
 
-The below CM command will launch the SUT server
+The below MLC command will launch the SUT server
 
 ```
-cm run script --tags=generate-run-cmds,inference --model=bert-99 --backend=pytorch  \
+mlcr generate-run-cmds,inference --model=bert-99 --backend=pytorch  \
 --mode=performance --device=cuda --quiet --test_query_count=1000 --network=sut
 ```
 
@@ -62,12 +62,12 @@ Once the SUT server is launched, the below command can be run on the loadgen nod
 
 
 ```
-cm run script --tags=generate-run-cmds,inference --model=bert-99 --backend=pytorch  --rerun \
+mlcr generate-run-cmds,inference --model=bert-99 --backend=pytorch  --rerun \
 --mode=performance --device=cuda --quiet --test_query_count=1000  \
 --outdirname=results/bert-99-performance-lon
 ```
 
-If you are not using CM, just add `--network=lon` along with your normal run command on the SUT side.
+If you are not using MLC, just add `--network=lon` along with your normal run command on the SUT side.
 On the loadgen node, add `--network=lon` option and `--sut_server <IP1> <IP2>` to the normal command to connect to SUT nodes at IP addresses IP1, IP2 etc. 
 
 Loadgen over the network works for `onnxruntime` and `pytorch` backends.

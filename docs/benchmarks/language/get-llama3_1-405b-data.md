@@ -13,14 +13,14 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset
     ```
-    cm run script --tags=get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
+    mlcr get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
     ```
     
 === "Calibration"
 
     ### Get Calibration Dataset
     ```
-    cm run script --tags=get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
+    mlcr get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
     ```
 
 ## Model
@@ -32,10 +32,9 @@ Get the Official MLPerf LLAMA3.1-405b Model
 
     ### Pytorch
     ```
-    cm run script --tags=get,ml-model,llama3 --outdirname=<path to download> --hf_token=<huggingface access token> -j
+    mlcr get,ml-model,llama3 --outdirname=<path to download>  -j
     ```
   
 !!! tip
 
-    Downloading llama3.1-405B model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [llama3.1-405B](https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct) model. 
-
+    [Access Request Link](https://llama3-1.mlcommons.org/) for MLCommons members

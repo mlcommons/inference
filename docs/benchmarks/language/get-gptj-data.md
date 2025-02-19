@@ -14,7 +14,7 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset
     ```
-    cm run script --tags=get,dataset,cnndm,validation -j
+    mlcr get,dataset,cnndm,validation -j
     ```
 
 ## Model
@@ -26,5 +26,5 @@ Get the Official MLPerf GPT-J Model
 
     ### Pytorch
     ```
-    cm run script --tags=get,ml-model,gptj,_pytorch -j
+    mlcr get,ml-model,gptj,_pytorch -j
     ```

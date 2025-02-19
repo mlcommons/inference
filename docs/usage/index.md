@@ -3,4 +3,4 @@ hide:
   - toc
 ---
 
-# Using CM for MLPerf Inference
+# Using MLC for MLPerf Inference

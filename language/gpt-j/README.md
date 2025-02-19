@@ -74,12 +74,12 @@ python prepare-calibration.py --calibration-list-file calibration-list.txt --out
 ### Download GPT-J model
 Please download the fine-tuned GPT-J checkpoint using the instructions below. The download_gptj.py only downloads the default huggingface model which is not fine-tuned on CNN-Daily mail dataset. 
 
-#### CM method
+#### MLC method
 
-The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
+The following MLCommons MLC commands can be used to programmatically download the model checkpoint. 
 
 ```
-cm run script --tags=get,ml-model,gptj,_pytorch,_rclone ---outdirname =./model -P
+mlcr get,ml-model,gptj,_pytorch,_rclone ---outdirname =./model -P
 ```
 
 #### Manual method
@@ -142,13 +142,13 @@ Intel expressly disclaims the accuracy, adequacy, or completeness of any data, d
 ## Loadgen over the Network 
 
 ```
-pip install cm4mlops
+pip install mlc-scripts
 ```
 
-The below CM command will launch the SUT server
+The below MLC command will launch the SUT server
 
 ```
-cm run script --tags=run-mlperf,inference,_performance-only --model=gptj-99  \
+mlcr run-mlperf,inference,_performance-only --model=gptj-99  \
 --backend=pytorch   --device=cuda --beam_size=1 --precision=bfloat16 \
 --network=sut --rerun --quiet --adr.compiler.tags=gcc 
 ```
@@ -159,7 +159,7 @@ In our experimentation, we found out that in addition to memory occupied by the 
 Once the SUT server is launched, the below command can be run on the loadgen node to do issue queries to the SUT nodes. In this command `-sut_servers` has just the localhost address - it can be changed to a comma-separated list of any hostname/IP in the network. 
 
 ```
-cm run script --tags=run-mlperf,inference,_performance-only --model=gptj-99 \
+mlcr run-mlperf,inference,_performance-only --model=gptj-99 \
 --backend=pytorch  --test_query_count=30  \
 --network=lon  --rerun --quiet --scenario=Offline \
 --sut_servers,=http://localhost:8000 --adr.compiler.tags=gcc

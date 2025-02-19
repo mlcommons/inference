@@ -11,44 +11,52 @@ theme:
     - content.tabs.link
     - content.code.copy
     - navigation.expand
-    - navigation.sections
     - navigation.indexes
+    - navigation.sections
     - navigation.instant
     - navigation.tabs
+    - navigation.path
     - navigation.tabs.sticky
     - navigation.top
+    - navigation.prune
     - toc.follow
+   
 nav:
   - Home:
-    - index.md
-    - Image Classification:
-      - ResNet50: benchmarks/image_classification/resnet50.md
-    - Text to Image:
-      - Stable Diffusion:
-        - Run Commands: benchmarks/text_to_image/sdxl.md
-        - Reproducibility:
-          - SCC24: benchmarks/text_to_image/reproducibility/scc24.md
-    - Object Detection:
-      - RetinaNet: benchmarks/object_detection/retinanet.md
-    - Medical Imaging:
-      - 3d-unet: benchmarks/medical_imaging/3d-unet.md
-    - Language Processing:
-      - Bert-Large:
-        - Run Commands: benchmarks/language/bert.md
-        - Reproducibility:
-          - IndySCC24: benchmarks/language/reproducibility/indyscc24-bert.md
-      - GPT-J: benchmarks/language/gpt-j.md
-      - LLAMA2-70B: benchmarks/language/llama2-70b.md
-      - LLAMA3-405B: benchmarks/language/llama3_1-405b.md
-      - MIXTRAL-8x7B: benchmarks/language/mixtral-8x7b.md
-    - Recommendation:
-      - DLRM-v2: benchmarks/recommendation/dlrm-v2.md
-    - Graph Neural Networks:
-      - R-GAT: benchmarks/graph/rgat.md
-  - Install CM:
+      - index.md
+      - Image Classification:
+          - ResNet50: benchmarks/image_classification/resnet50.md
+      - Text to Image:
+          - Stable Diffusion:
+              - Run Commands: benchmarks/text_to_image/sdxl.md
+              - Reproducibility:
+                  - SCC24: benchmarks/text_to_image/reproducibility/scc24.md
+      - 2D Object Detection:
+          - RetinaNet: benchmarks/object_detection/retinanet.md
+      - Automotive:
+          - 3D Object Detection:
+              - PointPainting: benchmarks/automotive/3d_object_detection/pointpainting.md
+      - Medical Imaging:
+          - 3d-unet: benchmarks/medical_imaging/3d-unet.md
+      - Language Processing:
+        - Bert-Large:
+          - Run Commands: benchmarks/language/bert.md
+          - Reproducibility:
+            - IndySCC24: benchmarks/language/reproducibility/indyscc24-bert.md
+        - GPT-J: benchmarks/language/gpt-j.md
+        - LLAMA2-70B: benchmarks/language/llama2-70b.md
+        - LLAMA3-405B: benchmarks/language/llama3_1-405b.md
+        - MIXTRAL-8x7B: benchmarks/language/mixtral-8x7b.md
+      - Recommendation:
+        - DLRM-v2: benchmarks/recommendation/dlrm-v2.md
+      - Graph Neural Networks:
+        - R-GAT: benchmarks/graph/rgat.md
+  - Install MLCFlow:
     - install/index.md
   - Submission:
     - Submission Generation: submission/index.md
+  - Power:
+    - power/index.md
   - Release Notes:
     - What's New: changelog/index.md
     - Changelog: changelog/changelog.md

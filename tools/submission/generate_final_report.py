@@ -19,10 +19,10 @@ def get_args():
         '--input',
         required=True,
         help='results csv from checker')
-    parser.add_argument('--version', default='4.1', help='mlperf version')
+    parser.add_argument('--version', default='5.0', help='mlperf version')
     parser.add_argument(
         '--repository',
-        default='submissions_inference_4.1',
+        default='submissions_inference_5.0',
         help='mlperf repository')
     parser.add_argument(
         '--repository-owner',

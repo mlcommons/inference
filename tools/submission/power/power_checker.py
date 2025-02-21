@@ -262,12 +262,13 @@ def ptd_messages_check(sd: SessionDescriptor) -> None:
     initial_amps = get_initial_range(1, msgs[2]["reply"])
     initial_volts = get_initial_range(3, msgs[2]["reply"])
 
-    initial_amps_command = get_command_by_value_and_number("SR,A", 3)
+    # sometimes the SR,A,Auto comes from 3rd or 4th response
+    initial_amps_command_3 = get_command_by_value_and_number("SR,A", 3)
+    initial_amps_command_4 = get_command_by_value_and_number("SR,A", 4)
     initial_volts_command = get_command_by_value_and_number("SR,V", 3)
-
-    assert (
-        initial_amps_command == f"SR,A,{initial_amps}"
-    ), f"Do not set Amps range as initial. Expected 'SR,A,{initial_amps}', got {initial_amps_command!r}."
+    assert (initial_amps_command_3 == f"SR,A,{initial_amps}") or (
+        initial_amps_command_4 == f"SR,A,{initial_amps}"
+    ), f"Do not set Amps range as initial. Expected 'SR,A,{initial_amps}', got {initial_amps_command_3!r} and {initial_amps_command_4!r}."
     assert (
         initial_volts_command == f"SR,V,{initial_volts}"
     ), f"Do not set Volts range as initial. Expected 'SR,V,{initial_volts}', got {initial_volts_command!r}."
@@ -706,33 +707,33 @@ def check_ptd_config(server_sd: SessionDescriptor) -> None:
     """
     ptd_config = server_sd.json_object["ptd_config"]
 
-    dev_num = ptd_config["device_type"]
-    assert (
-        dev_num in SUPPORTED_MODEL.values()
-    ), f"Device number {dev_num} is not supported. Supported numbers are " + ", ".join(
-        [str(i) for i in set(SUPPORTED_MODEL.values())]
-    )
+    for analyzer in ptd_config:
+        dev_num = analyzer["device_type"]
+        assert dev_num in SUPPORTED_MODEL.values(), (
+            f"Device number {dev_num} is not supported. Supported numbers are "
+            + ", ".join([str(i) for i in set(SUPPORTED_MODEL.values())])
+        )
 
-    if dev_num == 77:
-        channels = ""
-        command = ptd_config["command"]
+        if dev_num == 77:
+            channels = ""
+            command = analyzer["command"]
 
-        for i in range(len(command)):
-            if command[i] == "-c":
-                channels = command[i + 1]
-                break
+            for i in range(len(command)):
+                if command[i] == "-c":
+                    channels = command[i + 1]
+                    break
 
-        dev_name = ""
-        for name, num in SUPPORTED_MODEL.items():
-            if num == dev_num:
-                dev_name = name
-                break
+            dev_name = ""
+            for name, num in SUPPORTED_MODEL.items():
+                if num == dev_num:
+                    dev_name = name
+                    break
 
-        assert (
-            len(channels.split(",")) == 2
-            and ptd_config["channel"]
-            and len(ptd_config["channel"]) == 2
-        ), f"Expected multichannel mode for {dev_name}, but got 1-channel."
+            assert (
+                len(channels.split(",")) == 2
+                and analyzer["channel"]
+                and len(analyzer["channel"]) == 2
+            ), f"Expected multichannel mode for {dev_name}, but got 1-channel."
 
 
 def debug_check(server_sd: SessionDescriptor) -> None:

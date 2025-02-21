@@ -169,6 +169,10 @@ struct TestSettings {
   /// StartTest() will be used to call IssueQuery(). See also
   /// mlperf::RegisterIssueQueryThread().
   uint64_t server_num_issue_query_threads = 0;
+  /// \brief If this flag is set to true, LoadGen the time between samples genera-
+  /// ted by LoadGen in the server scenario is set to constant. Otherwise, the 
+  /// time between samples follows an exponential distribution
+  bool server_constant_gen = false;
   /**@}*/
 
   // ==================================

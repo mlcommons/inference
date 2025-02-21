@@ -85,6 +85,7 @@ struct TestSettingsInternal {
   bool use_token_latencies = false;
   int64_t server_ttft_latency;
   int64_t server_tpot_latency;
+  bool server_constant_gen;
 
   bool infer_token_latencies = false;
   int64_t token_latency_scaling_factor;

@@ -207,6 +207,13 @@ auto ScheduleDistribution<TestScenario::Server>(double qps) {
   };
 }
 
+auto ScheduleConstantDistribution(double qps){
+  return [dist = std::uniform_real_distribution<>(1.0 / qps)](auto& gen) mutable {
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        std::chrono::duration<double>(dist(gen)));
+  };
+}
+
 /// \brief Selects samples for the accuracy mode.
 template <TestMode mode>
 auto SampleDistribution(size_t sample_count, size_t stride, std::mt19937* rng) {
@@ -310,8 +317,9 @@ std::vector<QueryMetadata> GenerateQueries(
   auto sample_distribution_equal_issue = SampleDistributionEqualIssue(
       min_queries, loaded_samples.size(), &sample_rng);
 
-  auto schedule_distribution =
-      ScheduleDistribution<scenario>(settings.target_qps);
+  TestScenario temp_scenario = scenario;
+  auto schedule_distribution = ScheduleDistribution<scenario>(settings.target_qps);
+  auto schedule_constant_distribution = ScheduleConstantDistribution(settings.target_qps);
 
   // When sample_concatenate_permutation is turned on, pad to a multiple of the
   // complete dataset to ensure fairness.
@@ -397,7 +405,11 @@ std::vector<QueryMetadata> GenerateQueries(
     }
     queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
     prev_timestamp = timestamp;
-    timestamp += schedule_distribution(schedule_rng);
+    if (settings.server_constant_gen && (scenario == TestScenario::Server)){
+      timestamp += schedule_constant_distribution(schedule_rng);
+    } else {
+      timestamp += schedule_distribution(schedule_rng);
+    }
     // In equal_issue mode, the min_queries will be bumped up by a multiple of
     // the dataset size if the test time has not met the threshold.
     if (enable_equal_issue && (queries.size() >= min_queries) &&

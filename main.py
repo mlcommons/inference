@@ -28,11 +28,13 @@ def define_env(env):
         content = ""
 
         execution_envs = ["Docker", "Native"]
-        code_version = "r4.1-dev"
+        code_version = "r5.0-dev"
         implementation_run_options = []
 
         if model == "rnnt":
             code_version = "r4.0"
+        elif implementation == "intel":
+            code_version = "r4.1-dev"
 
         if implementation == "reference":
             # Tip

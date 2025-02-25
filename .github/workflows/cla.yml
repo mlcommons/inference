@@ -23,7 +23,7 @@ jobs:
           path-to-signatures: 'cla-bot/v1/cla.json'
           # branch should not be protected
           branch: 'main'
-          allowlist: user1,bot*,github-actions[bot]
+          allowlist: user1,bot*,github-actions,github-actions[bot]
           remote-organization-name: mlcommons
           remote-repository-name: systems
           

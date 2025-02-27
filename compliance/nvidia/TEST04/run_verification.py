@@ -57,16 +57,12 @@ def main():
     verify_performance_binary = os.path.join(
         os.path.dirname(__file__), "verify_performance.py"
     )
-    verify_performance_command = (
-        "python3 "
-        + verify_performance_binary
-        + " -r "
-        + results_dir
-        + "/performance/run_1/mlperf_log_summary.txt"
-        + " -t "
-        + compliance_dir
-        + "/mlperf_log_summary.txt | tee verify_performance.txt"
-    )
+    verify_performance_command = [
+        sys.executable,  
+        verify_performance_binary,
+        "-r", os.path.join(results_dir, "performance", "run_1", "mlperf_log_summary.txt"),
+        "-t", os.path.join(compliance_dir, "mlperf_log_summary.txt"),
+    ]
     try:
         os.system(verify_performance_command)
     except Exception:
@@ -75,11 +71,9 @@ def main():
             verify_performance_command)
 
     # check if verify performance script passes
-    performance_pass_command = "grep PASS verify_performance.txt"
     try:
-        performance_pass = "TEST PASS" in subprocess.check_output(
-            performance_pass_command, shell=True
-        ).decode("utf-8")
+        with open("verify_performance.txt", "r") as file:
+            performance_pass = "PASS" in file.read()
     except Exception:
         performance_pass = False
 

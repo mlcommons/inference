@@ -152,6 +152,7 @@ def main():
             "llama3.1-405b",
             "mixtral-8x7b",
             "pointpainting",
+            "rgat",
         ],
         ["SingleStream", "MultiStream", "Server", "Offline"],
         [

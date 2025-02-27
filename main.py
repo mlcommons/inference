@@ -28,11 +28,13 @@ def define_env(env):
         content = ""
 
         execution_envs = ["Docker", "Native"]
-        code_version = "r4.1-dev"
+        code_version = "r5.0-dev"
         implementation_run_options = []
 
         if model == "rnnt":
             code_version = "r4.0"
+        elif implementation == "intel":
+            code_version = "r4.1-dev"
 
         if implementation == "reference":
             # Tip
@@ -339,12 +341,7 @@ def define_env(env):
                             and framework.lower() == "deepsparse"
                         ):
                             run_suffix += f"{cur_space3}You can use any model from [NeuralMagic sparse zoo](https://sparsezoo.neuralmagic.com/?modelSet=computer_vision&architectures=resnet_v1) (trained on Imagenet dataset) as --nm_model_zoo_stub"
-                        if (
-                            "bert" in model.lower()
-                            and framework.lower() == "deepsparse"
-                        ):
-                            run_suffix += "You can use any model from [NeuralMagic sparse zoo](https://sparsezoo.neuralmagic.com/?modelSet=computer_vision&architectures=resnet_v1) (trained on Imagenet dataset) as --nm_model_zoo_stub"
-                        if (
+                        elif (
                             "bert" in model.lower()
                             and framework.lower() == "deepsparse"
                         ):

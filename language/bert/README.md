@@ -52,8 +52,14 @@ mlcr get,ml-model,bert-large,_tensorflow --outdirname=<path_to_download> -j
 
 ### Download dataset through MLCFlow Automation
 
+**Validation**
 ```
 mlcr get,dataset,squad,validation  --outdirname=<path_to_download> -j
+```
+
+**Calibration**
+```
+mlcr get,dataset,squad,_calib1 --outdirname=<path_to_download> -j
 ```
 
 ## Commands

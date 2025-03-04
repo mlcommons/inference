@@ -52,23 +52,23 @@ jobs:
     - name: Download Openimages Calibration
       run: |
         mlcr get,dataset,openimages,_calibration --outdirname=. --quiet
+        
+  # download-igbh:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       python-version: [ "3.9" ]
 
-  download-igbh:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [ "3.9" ]
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python3 -m pip install mlc-scripts
+  #   steps:
+  #   - uses: actions/checkout@v4
+  #   - name: Set up Python ${{ matrix.python-version }}
+  #     uses: actions/setup-python@v3
+  #     with:
+  #       python-version: ${{ matrix.python-version }}
+  #   - name: Install dependencies
+  #     run: |
+  #       python3 -m pip install mlc-scripts
     # - name: Download IGBH Calibration
     #   run: |
     #     mlcr get,dataset,igbh,_calibration --outdirname=. --quiet
@@ -92,3 +92,103 @@ jobs:
     - name: Download SQUAD Calibration
       run: |
         mlcr get,dataset,squad,_calib1 --outdirname=. --quiet
+
+  download-llama3_1-405b-dataset:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9" ]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python3 -m pip install mlc-scripts
+    - name: Download llama3.1-405b Calibration dataset
+      run: |
+        mlcr get,dataset,mlperf,inference,llama3,_calibration --outdirname=. --quiet
+
+  download-openorca:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9" ]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python3 -m pip install mlc-scripts
+    - name: Download OpenOrca Calibration
+      run: |
+        mlcr get,dataset,preprocessed,openorca,_calibration --outdirname=. --quiet
+
+  download-openorca-mbxp-gsm8k-combined-mixtral:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9" ]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python3 -m pip install mlc-scripts
+    - name: Download openorca-mbxp-gsm8k-combined Calibration for Mixtral
+      run: |
+        mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_calibration --outdirname=. --quiet
+
+  download-kits19:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9" ]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python3 -m pip install mlc-scripts
+    - name: Download Kits19 Calibration
+      run: |
+        mlcr get,dataset,kits19,_calibration --outdirname=. --quiet
+
+  download-coco2014:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.9" ]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        python3 -m pip install mlc-scripts
+    - name: Download COCO2014 Calibration
+      run: |
+        mlcr get,dataset,coco2014,_calibration --outdirname=. --quiet

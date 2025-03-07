@@ -1914,50 +1914,38 @@ def check_results_dir(
             notes = notes + system_json.get("sw_notes")
         special_unit_dict = {
             "gptj-99": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "gptj-99.9": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-99": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-99.9": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-interactive-99": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-interactive-99.9": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
-                "Offline": "Tokens/s",
-                "Server": "Tokens/s",
-            },
-            "mixtral-8x7b": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama3.1-405b": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "mixtral-8x7b": {
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama3.1-405b": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
@@ -1977,7 +1965,7 @@ def check_results_dir(
         if config.version == "v4.0":
             unit = unit_dict[scenario_fixed]
         else:
-            unit = special_unit_dict.get(mlperf_model, unit_dict)[scenario_fixed]
+            unit = special_unit_dict.get(mlperf_model, unit_dict).get(scenario_fixed, unit_dict[scenario_fixed])
         power_unit = power_unit_dict[scenario_fixed]
 
         if (power_metric <= 0) or (

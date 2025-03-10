@@ -1977,7 +1977,7 @@ def check_results_dir(
         if config.version == "v4.0":
             unit = unit_dict[scenario_fixed]
         else:
-            unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
+            unit = special_unit_dict.get(mlperf_model, unit_dict)[scenario_fixed]
         power_unit = power_unit_dict[scenario_fixed]
 
         if (power_metric <= 0) or (

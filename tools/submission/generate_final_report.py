@@ -19,10 +19,10 @@ def get_args():
         '--input',
         required=True,
         help='results csv from checker')
-    parser.add_argument('--version', default='4.1', help='mlperf version')
+    parser.add_argument('--version', default='5.0', help='mlperf version')
     parser.add_argument(
         '--repository',
-        default='submissions_inference_4.1',
+        default='submissions_inference_5.0',
         help='mlperf repository')
     parser.add_argument(
         '--repository-owner',
@@ -149,8 +149,10 @@ def main():
             "llama2-70b-99.9",
             "llama2-70b-interactive-99",
             "llama2-70b-interactive-99.9",
+            "llama3.1-405b",
             "mixtral-8x7b",
             "pointpainting",
+            "rgat",
         ],
         ["SingleStream", "MultiStream", "Server", "Offline"],
         [

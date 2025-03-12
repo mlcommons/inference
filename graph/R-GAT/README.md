@@ -181,6 +181,10 @@ mlcr process,mlperf,accuracy,_igbh --result_dir=<Path to directory where files a
 
 Please click [here](https://github.com/mlcommons/inference/blob/dev/graph/R-GAT/tools/accuracy_igbh.py) to view the Python script for evaluating accuracy for the IGBH dataset.
 
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 
+
 #### Run using docker
 
 Not implemented yet

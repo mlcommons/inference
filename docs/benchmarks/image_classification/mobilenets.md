@@ -23,10 +23,10 @@ Mobilenet models are not official MLPerf models and so cannot be used for a Clos
     mlcr run,mobilenet-models,_tflite,_mobilenet-v2 \
      --adr.compiler.tags=gcc
     ```
-=== "Mobilenet-V2"
-    ### Mobilenet V2
+=== "Mobilenet-V3"
+    ### Mobilenet V3
     ```bash
-    mlcr run,mobilenet-models,_tflite,_mobilenet-v2 \
+    mlcr run,mobilenet-models,_tflite,_mobilenet-v3 \
      --adr.compiler.tags=gcc
     ```
 === "Mobilenets"
@@ -39,6 +39,12 @@ Mobilenet models are not official MLPerf models and so cannot be used for a Clos
     ### Efficientnet
     ```bash
     mlcr run,mobilenet-models,_tflite,_efficientnet \
+     --adr.compiler.tags=gcc
+    ```
+=== "Mobilenets and Efficientnet"
+    ### Mobilenets and Efficientnet
+    ```bash
+    mlcr run,mobilenet-models,_tflite \
      --adr.compiler.tags=gcc
     ```
 
@@ -55,7 +61,7 @@ Mobilenet models are not official MLPerf models and so cannot be used for a Clos
     mlcr run,mobilenet-models,_tflite,_armnn,_mobilenet-v2 \
      --adr.compiler.tags=gcc
     ```
-=== "Mobilenet-V2"
+=== "Mobilenet-V3"
     ### Mobilenet V2
     ```bash
     mlcr run,mobilenet-models,_tflite,_armnn,_mobilenet-v2 \
@@ -73,4 +79,11 @@ Mobilenet models are not official MLPerf models and so cannot be used for a Clos
     mlcr run,mobilenet-models,_tflite,_armnn,_efficientnet \
      --adr.compiler.tags=gcc
     ```
+=== "Mobilenets and Efficientnet"
+    ### Mobilenets and Efficientnet
+    ```bash
+    mlcr run,mobilenet-models,_tflite,_armnn \
+     --adr.compiler.tags=gcc
+    ```
+
 

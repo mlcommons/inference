@@ -6,8 +6,11 @@ This model performing KiTS19 dataset for kidney tumor segmentation task is propo
 
 [3D-UNet BraTS19 model](https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-brats19), which has been used for MLPerf-Inference v0.7 and v1.0, is the valid model for the submissions until the end of year 2021. Please use BraTS19 model for v.1.1 submission.
 
+## Automated command to run the benchmark via MLCFlow
+
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/medical_imaging/3d-unet/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
 
 ## Prerequisites
 
@@ -28,6 +31,45 @@ If you would like to run on NVIDIA GPU, you will need:
 ## Disclaimer
 This benchmark app is a reference implementation that is not meant to be the fastest implementation possible.
 This benchmark app is built by refactoring lots of codes from [MLPerf-Training 3D-UNet](https://github.com/mlcommons/training/blob/master/image_segmentation/pytorch) and [MLPerf-Inference 3D-UNet BraTS](https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet)
+
+
+### Download model through MLCFlow Automation
+
+**PyTorch**
+```
+mlcr get,ml-model,3d-unet,_pytorch --outdirname=<path_to_download> -j
+```
+
+**Onnx**
+```
+mlcr get,ml-model,3d-unet,_onnx --outdirname=<path_to_download> -j
+```
+
+**TensorFlow**
+```
+mlcr get,ml-model,3d-unet,_tensorflow --outdirname=<path_to_download> -j
+```
+
+### Download dataset through MLCFlow Automation
+
+#### Unprocessed dataset
+
+**Validation**
+```
+mlcr get,dataset,kits19,_validation --outdirname=<path_to_download> -j
+```
+
+**Calibration**
+```
+mlcr get,dataset,kits19,_calibration --outdirname=<path_to_download> -j
+```
+
+#### Preprocessed dataset
+
+```
+mlcr get,dataset,kits19,preprocessed --outdirname=<path_to_download> -j
+```
+
 
 ## Commands
 
@@ -51,6 +93,17 @@ Other useful commands:
 - `make download_models`: manually download all the models (pytorch, ONNX, tensorflow)
 - `python3 run.py --backend=[tensorflow|pytorch|pytorch_checkpoint|onnxruntime] --scenario=[Offline|SingleStream|MultiStream|Server] [--accuracy] --model=[path/to/model]`: run the harness inside the docker container. Performance or Accuracy results will be printed in console
 - `python3 accuracy_kits.py --log_file=<LOADGEN_LOG>`: compute accuracy from a LoadGen accuracy JSON log file
+
+### Evaluate the accuracy through MLCFlow Automation
+```bash
+mlcr process,mlperf,accuracy,_kits --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/mlcommons/inference/blob/master/vision/medical_imaging/3d-unet-kits19/accuracy_kits.py) to view the Python script for evaluating accuracy for the Waymo dataset.
+
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 
 
 ## Details
 

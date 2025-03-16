@@ -17,15 +17,30 @@ The benchmark implementation run command will automatically download the validat
     mlcr get,dataset,coco2014,_validation -j
     ```
 
+=== "Calibration"
+
+    ### Get COCO2014 Calibration Dataset
+    ```
+    mlcr get,dataset,coco2014,_calibration -j
+    ```
+
+- `--outdirname=<PATH_TO_DOWNLOAD_COCO2014_DATASET>` could be provided to download the dataset to a specific location.
+
 ## Model
 The benchmark implementation run command will automatically download the required model and do the necessary conversions. In case you want to only download the official model, you can use the below commands.
 
 Get the Official MLPerf Stable Diffusion Model
 
 === "Pytorch"
+    === "FP 16"
+        ### Pytorch
+        ```
+        mlcr get,ml-model,sdxl,_pytorch,_fp16 -j
+        ```
+    === "FP 32"
+        ### Pytorch
+        ```
+        mlcr get,ml-model,sdxl,_pytorch,_fp32 -j
+        ```
 
-    ### Pytorch
-    ```
-    mlcr get,ml-model,sdxl,_pytorch -j
-    ```
-
+- `--outdirname=<PATH_TO_DOWNLOAD_SDXL_MODEL>` could be provided to download the model to a specific location.

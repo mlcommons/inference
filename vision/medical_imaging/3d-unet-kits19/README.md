@@ -67,7 +67,7 @@ mlcr get,dataset,kits19,_calibration --outdirname=<path_to_download> -j
 #### Preprocessed dataset
 
 ```
-mlcr get,dataset,kits19,preprocessed, --outdirname=<path_to_download> -j
+mlcr get,dataset,kits19,preprocessed --outdirname=<path_to_download> -j
 ```
 
 

@@ -456,8 +456,7 @@ void TestSettingsInternal::LogEffectiveSettings() const {
                s.performance_sample_count);
     MLPERF_LOG(detail, "effective_sample_concatenate_permutation",
                s.sample_concatenate_permutation);
-    MLPERF_LOG(detail, "effective_server_constant_gen",
-               s.server_constant_gen);
+    MLPERF_LOG(detail, "effective_server_constant_gen", s.server_constant_gen);
 #else
     detail("");
     detail("Effective Settings:");

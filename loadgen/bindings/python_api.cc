@@ -25,10 +25,10 @@ limitations under the License.
 #include "../system_under_test.h"
 #include "../test_settings.h"
 #include "pybind11/functional.h"
+#include "pybind11/numpy.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"
-#include "pybind11/numpy.h"
 
 namespace mlperf {
 
@@ -137,8 +137,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 class GroupedQuerySampleLibraryTrampoline : public QuerySampleLibrary {
  public:
   GroupedQuerySampleLibraryTrampoline(
-      std::string name,
-      size_t performance_sample_count,
+      std::string name, size_t performance_sample_count,
       LoadSamplesToRamCallback load_samples_to_ram_cb,
       UnloadSamplesFromRamCallback unload_samples_from_ram_cb,
       pybind11::array_t<size_t>& group_sizes)
@@ -146,22 +145,21 @@ class GroupedQuerySampleLibraryTrampoline : public QuerySampleLibrary {
         performance_sample_count_(performance_sample_count),
         load_samples_to_ram_cb_(load_samples_to_ram_cb),
         unload_samples_from_ram_cb_(unload_samples_from_ram_cb) {
+    total_sample_count_ = 0;
+    if (group_sizes.ndim() != 1) {
+      throw std::runtime_error("Group sizes should be a 1D Numpy array");
+    }
+    auto buffer = group_sizes.request();
+    size_t* ptr = (size_t*)buffer.ptr;
 
-      total_sample_count_ = 0;
-      if(group_sizes.ndim() != 1){
-        throw std::runtime_error("Group sizes should be a 1D Numpy array");
-      }
-      auto buffer = group_sizes.request();
-      size_t* ptr = (size_t*)buffer.ptr;
-
-      for(ssize_t i = 0; i < group_sizes.shape()[0]; i++){
-        group_sizes_.push_back(ptr[i]);
-        total_sample_count_ += ptr[i];
-        for(ssize_t j = 0; j < ptr[i]; j++){
-          group_idx_.push_back(i);
-        }
+    for (ssize_t i = 0; i < group_sizes.shape()[0]; i++) {
+      group_sizes_.push_back(ptr[i]);
+      total_sample_count_ += ptr[i];
+      for (ssize_t j = 0; j < ptr[i]; j++) {
+        group_idx_.push_back(i);
       }
     }
+  }
   ~GroupedQuerySampleLibraryTrampoline() override = default;
 
   const std::string& Name() override { return name_; }
@@ -190,7 +188,6 @@ class GroupedQuerySampleLibraryTrampoline : public QuerySampleLibrary {
   LoadSamplesToRamCallback load_samples_to_ram_cb_;
   UnloadSamplesFromRamCallback unload_samples_from_ram_cb_;
 };
-
 
 // A QDL that allows defining callbacks for
 // IssueQuery, FlushQueries, and Name methods.
@@ -289,13 +286,13 @@ void DestroyQDL(uintptr_t qdl) {
 }
 
 uintptr_t ConstructGroupedQSL(
-    pybind11::array_t<size_t>& group_sizes,
-    size_t performance_sample_count,
+    pybind11::array_t<size_t>& group_sizes, size_t performance_sample_count,
     LoadSamplesToRamCallback load_samples_to_ram_cb,
     UnloadSamplesFromRamCallback unload_samples_from_ram_cb) {
-  GroupedQuerySampleLibraryTrampoline* qsl = new GroupedQuerySampleLibraryTrampoline(
-      "PyQSL", performance_sample_count,
-      load_samples_to_ram_cb, unload_samples_from_ram_cb, group_sizes);
+  GroupedQuerySampleLibraryTrampoline* qsl =
+      new GroupedQuerySampleLibraryTrampoline(
+          "PyQSL", performance_sample_count, load_samples_to_ram_cb,
+          unload_samples_from_ram_cb, group_sizes);
   return reinterpret_cast<uintptr_t>(qsl);
 }
 
@@ -330,9 +327,9 @@ void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
                     audit_config_filename);
 }
 
-void StartTestWithGroupedTest(
-  uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings,
-               const std::string& audit_config_filename){
+void StartTestWithGroupedTest(uintptr_t sut, uintptr_t qsl,
+                              mlperf::TestSettings test_settings,
+                              const std::string& audit_config_filename) {
   pybind11::gil_scoped_release gil_releaser;
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
@@ -403,8 +400,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::server_max_async_queries)
       .def_readwrite("server_num_issue_query_threads",
                      &TestSettings::server_num_issue_query_threads)
-      .def_readwrite("server_constant_gen",
-                     &TestSettings::server_constant_gen)
+      .def_readwrite("server_constant_gen", &TestSettings::server_constant_gen)
       .def_readwrite("offline_expected_qps",
                      &TestSettings::offline_expected_qps)
       .def_readwrite("min_duration_ms", &TestSettings::min_duration_ms)

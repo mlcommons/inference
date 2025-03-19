@@ -264,6 +264,7 @@ auto SampleDistributionEqualIssue(size_t sample_count, size_t set_size,
 /// the QPS as scheduled is equal to the QPS as requested.
 template <TestScenario scenario, TestMode mode>
 std::vector<QueryMetadata> GenerateQueries(
+    QuerySampleLibrary* qsl,
     const TestSettingsInternal& settings,
     const LoadableSampleSet& loaded_sample_set, SequenceGen* sequence_gen,
     ResponseDelegate* response_delegate) {
@@ -347,6 +348,29 @@ std::vector<QueryMetadata> GenerateQueries(
   // Choose a single sample to repeat when in performance_issue_same mode
   QuerySampleIndex same_sample = settings.performance_issue_same_index;
 
+  // Variables for handling group test
+  QuerySampleIndex global_idx = 0;
+  std::vector<size_t> groups;
+  std::vector<size_t> groups_first;
+  size_t number_of_groups = 0;
+  size_t g, group_size;
+
+  if (settings.use_grouped_qsl) {
+    size_t current_idx = 0;
+    while (current_idx < loaded_samples.size())
+    {
+      size_t current_group = qsl->GroupOf(loaded_samples[current_idx]);
+      groups.push_back(current_group);
+      groups_first.push_back(current_idx);
+      current_idx += qsl->GroupSize(loaded_samples[current_idx]);
+      number_of_groups++;
+    }
+    
+  }
+
+  auto grouped_sample_distribution = SampleDistribution<mode>(
+      number_of_groups, sample_stride, &sample_rng);
+
   while (prev_timestamp < gen_duration || queries.size() < min_queries) {
     if (kIsMultiStream) {
       QuerySampleIndex sample_i = settings.performance_issue_unique
@@ -393,6 +417,9 @@ std::vector<QueryMetadata> GenerateQueries(
           assert(remainder == 0);
         }
       }
+    } else if (settings.use_grouped_qsl) {
+      g = grouped_sample_distribution(sample_rng);
+      group_size = qsl->GroupSize(loaded_samples[groups_first[g]]);
     } else {
       for (auto& s : samples) {
         s = loaded_samples[settings.performance_issue_unique
@@ -403,10 +430,21 @@ std::vector<QueryMetadata> GenerateQueries(
                                : sample_distribution(sample_rng)];
       }
     }
-    queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
+    if (!settings.use_grouped_qsl) {
+      queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
+    } else {
+      for (size_t i = 0; i < group_size; i++){
+        samples[0] = loaded_samples[groups_first[g]+i];
+        queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
+      }
+    }
     prev_timestamp = timestamp;
     if (settings.server_constant_gen && (scenario == TestScenario::Server)){
-      timestamp += schedule_constant_distribution(schedule_rng);
+      if(!settings.use_grouped_qsl){
+        timestamp += schedule_constant_distribution(schedule_rng);
+      } else {
+        timestamp += group_size * schedule_constant_distribution(schedule_rng);
+      }
     } else {
       timestamp += schedule_distribution(schedule_rng);
     }
@@ -453,7 +491,8 @@ std::vector<QueryMetadata> GenerateQueries(
 //       no longer generates queries on the fly. Should we reduce the
 //       use of templates?
 template <TestScenario scenario, TestMode mode>
-PerformanceResult IssueQueries(SystemUnderTest* sut,
+PerformanceResult IssueQueries(SystemUnderTest* sut, 
+                               QuerySampleLibrary* qsl,
                                const TestSettingsInternal& settings,
                                const LoadableSampleSet& loaded_sample_set,
                                SequenceGen* sequence_gen) {
@@ -469,7 +508,7 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
   // Generate queries.
   auto sequence_id_start = sequence_gen->CurrentSampleId();
   std::vector<QueryMetadata> queries = GenerateQueries<scenario, mode>(
-      settings, loaded_sample_set, sequence_gen, &response_logger);
+      qsl, settings, loaded_sample_set, sequence_gen, &response_logger);
 
   // Calculated expected number of queries
   uint64_t expected_queries =
@@ -644,12 +683,35 @@ std::vector<LoadableSampleSet> GenerateLoadableSets(
   // Generate indices for all available samples in the QSL.
   const size_t qsl_total_count = qsl->TotalSampleCount();
   std::vector<QuerySampleIndex> samples(qsl_total_count);
-  for (size_t i = 0; i < qsl_total_count; i++) {
-    samples[i] = static_cast<QuerySampleIndex>(i);
-  }
+  std::vector<QuerySampleIndex> groupIdx(qsl_total_count);
+  if (!settings.use_grouped_qsl){
+    for (size_t i = 0; i < qsl_total_count; i++) {
+      samples[i] = static_cast<QuerySampleIndex>(i);
+    }
 
-  // Randomize the order of the samples.
-  std::shuffle(samples.begin(), samples.end(), qsl_rng);
+    // Randomize the order of the samples.
+    std::shuffle(samples.begin(), samples.end(), qsl_rng);
+  } else {
+    // If using grouped qsl, we randomized the groups.
+    // The samples within a group mantain their order.
+    size_t number_of_groups = qsl->NumberOfGroups();
+    size_t acumCount = 0, idx = 0;
+    std::vector<QuerySampleIndex> groups(number_of_groups);
+    std::vector<QuerySampleIndex> acumSizes(number_of_groups);
+    for (size_t i = 0; i < number_of_groups; i++) {
+      groups[i] = static_cast<QuerySampleIndex>(i);
+      acumSizes[i] = acumCount;
+      acumCount += qsl->GroupSize(i);
+    }
+    std::shuffle(groups.begin(), groups.end(), qsl_rng);
+    for (size_t i = 0; i < number_of_groups; i++) {
+      for (size_t j = 0; j < qsl->GroupSize(groups[i]); j++) {
+        samples[idx] = acumSizes[groups[i]] + j;
+        groupIdx[idx] = groups[i];
+        idx++;
+      }
+    }
+  }
 
   // Partition the samples into loadable sets.
   const size_t set_size = settings.performance_sample_count;
@@ -659,12 +721,30 @@ std::vector<LoadableSampleSet> GenerateLoadableSets(
   std::vector<QuerySampleIndex> loadable_set;
   loadable_set.reserve(set_size + set_padding);
 
-  for (auto s : samples) {
-    loadable_set.push_back(s);
-    if (loadable_set.size() == set_size) {
-      result.push_back({std::move(loadable_set), set_size});
-      loadable_set.clear();
-      loadable_set.reserve(set_size + set_padding);
+  if (!settings.use_grouped_qsl){
+    for (auto s : samples) {
+      loadable_set.push_back(s);
+      if (loadable_set.size() == set_size) {
+        result.push_back({std::move(loadable_set), set_size});
+        loadable_set.clear();
+        loadable_set.reserve(set_size + set_padding);
+      }
+    }
+  } else {
+    size_t idx = 0;
+    size_t number_of_groups = qsl->NumberOfGroups();
+    for (size_t i = 0; i < number_of_groups; i++) {
+      size_t group_size = qsl->GroupSize(groupIdx[idx]);
+      if (loadable_set.size() + group_size < set_size) {
+        for (size_t j = 0; j < group_size; j++) {
+          loadable_set.push_back(samples[idx]);
+          idx++;
+        }
+      } else {
+        result.push_back({std::move(loadable_set), loadable_set.size()});
+        loadable_set.clear();
+        loadable_set.reserve(set_size + set_padding);
+      }
     }
   }
 
@@ -771,7 +851,7 @@ std::pair<PerformanceSummary, PerformanceSummary> FindBoundaries(
   LoadSamplesToRam(qsl, performance_set.set);
 
   PerformanceResult u_pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
-      sut, u_settings, performance_set, sequence_gen));
+      sut, qsl, u_settings, performance_set, sequence_gen));
   PerformanceSummary u_perf_summary{sut->Name(), u_settings, std::move(u_pr)};
 
   qsl->UnloadSamplesFromRam(performance_set.set);
@@ -823,7 +903,7 @@ PerformanceSummary FindPeakPerformanceBinarySearch(
   });
 
   PerformanceResult m_pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
-      sut, m_settings, performance_set, sequence_gen));
+      sut, qsl, m_settings, performance_set, sequence_gen));
   PerformanceSummary m_perf_summary{sut->Name(), m_settings, std::move(m_pr)};
 
   std::string tmp;
@@ -868,7 +948,7 @@ void RunPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   }
 
   PerformanceResult pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
-      sut, settings, performance_set, sequence_gen));
+      sut, qsl, settings, performance_set, sequence_gen));
 
   // Measure PerfClock/system_clock timer durations for comparison vs
   // external timer.
@@ -991,7 +1071,7 @@ void FindPeakPerformanceMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
   LoadSamplesToRam(qsl, base_performance_set.set);
 
   PerformanceResult base_pr(IssueQueries<scenario, TestMode::PerformanceOnly>(
-      sut, base_settings, base_performance_set, sequence_gen));
+      sut, qsl, base_settings, base_performance_set, sequence_gen));
   PerformanceSummary base_perf_summary{sut->Name(), base_settings,
                                        std::move(base_pr)};
 
@@ -1113,7 +1193,7 @@ void RunAccuracyMode(SystemUnderTest* sut, QuerySampleLibrary* qsl,
     }
 
     PerformanceResult pr(IssueQueries<scenario, TestMode::AccuracyOnly>(
-        sut, settings, loadable_set, sequence_gen));
+        sut, qsl, settings, loadable_set, sequence_gen));
 
     {
       auto tracer = MakeScopedTracer(

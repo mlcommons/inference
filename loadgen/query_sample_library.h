@@ -66,6 +66,9 @@ class QuerySampleLibrary {
   ///   * A previously unloaded sample will not be unloaded again.
   virtual void UnloadSamplesFromRam(
       const std::vector<QuerySampleIndex>& samples) = 0;
+  virtual size_t GroupSize(size_t i) = 0;
+  virtual size_t GroupOf(size_t i) = 0;
+  virtual size_t NumberOfGroups() = 0;
 };
 
 /// @}

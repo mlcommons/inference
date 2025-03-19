@@ -88,6 +88,9 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   const std::string& Name() override { return name_; }
   size_t TotalSampleCount() override { return total_sample_count_; }
   size_t PerformanceSampleCount() override { return performance_sample_count_; }
+  size_t GroupSize(size_t i) override { return 1; }
+  size_t GroupOf(size_t i) override { return i; }
+  size_t NumberOfGroups() override { return total_sample_count_; }
 
   void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
     (*load_samples_to_ram_cb_)(client_data_, samples.data(), samples.size());

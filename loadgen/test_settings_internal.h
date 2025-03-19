@@ -89,6 +89,7 @@ struct TestSettingsInternal {
 
   bool infer_token_latencies = false;
   int64_t token_latency_scaling_factor;
+  bool use_grouped_qsl = false;
 };
 
 /// \brief A namespace of collections of FindPeakPerformance helper functions,

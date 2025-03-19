@@ -55,7 +55,8 @@ TestSettingsInternal::TestSettingsInternal(
       server_tpot_latency(requested.server_tpot_latency),
       server_constant_gen(requested.server_constant_gen),
       infer_token_latencies(requested.infer_token_latencies),
-      token_latency_scaling_factor(requested.token_latency_scaling_factor) {
+      token_latency_scaling_factor(requested.token_latency_scaling_factor),
+      use_grouped_qsl(requested.use_grouped_qsl) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -744,6 +745,10 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   if (infer_token_latencies) {
     lookupkv(model, scenario, "token_latency_scaling_factor",
              &token_latency_scaling_factor, nullptr, 1);
+  }
+  // use_grouped_qsl
+  if (lookupkv(model, scenario, "use_grouped_qsl", &val, nullptr)) {
+    use_grouped_qsl = (val == 1) ? true : false;
   }
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,

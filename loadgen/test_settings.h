@@ -239,6 +239,9 @@ struct TestSettings {
   uint64_t test05_sample_index_rng_seed = 0;
   uint64_t test05_schedule_rng_seed = 0;
 
+  /// \brief Flag to use a grouped qsl when running the benchmark test
+  bool use_grouped_qsl = false;
+
   /// \brief Load mlperf parameter config from file.
   int FromConfig(const std::string &path, const std::string &model,
                  const std::string &scenario, int conf_type = 1);

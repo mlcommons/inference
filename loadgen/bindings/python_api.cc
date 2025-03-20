@@ -113,6 +113,7 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   size_t TotalSampleCount() override { return total_sample_count_; }
   size_t PerformanceSampleCount() override { return performance_sample_count_; }
   size_t GroupSize(size_t i) override { return 1; }
+  size_t GroupOf(size_t i) override { return i; }
   size_t NumberOfGroups() override { return total_sample_count_; }
 
   void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
@@ -157,7 +158,7 @@ class GroupedQuerySampleLibraryTrampoline : public QuerySampleLibrary {
       for(ssize_t i = 0; i < group_sizes.shape()[0]; i++){
         group_sizes_.push_back(ptr[i]);
         total_sample_count_ += ptr[i];
-        for(ssize_t j = 0; j < ptr[i]; j++){
+        for(size_t j = 0; j < ptr[i]; j++){
           group_idx_.push_back(i);
         }
       }
@@ -330,7 +331,7 @@ void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
                     audit_config_filename);
 }
 
-void StartTestWithGroupedTest(
+void StartTestWithGroupedQSL(
   uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings,
                const std::string& audit_config_filename){
   pybind11::gil_scoped_release gil_releaser;
@@ -339,7 +340,7 @@ void StartTestWithGroupedTest(
   GroupedQuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<GroupedQuerySampleLibraryTrampoline*>(qsl);
   LogSettings default_log_settings;
-  assert(TestSettings.use_grouped_qsl);
+  assert(test_settings.use_grouped_qsl);
   mlperf::StartTest(sut_cast, qsl_cast, test_settings, default_log_settings,
                     audit_config_filename);
 }
@@ -551,7 +552,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         "Destroy the object created by ConstructQDL.");
 
   m.def("ConstructGroupedQSL", &py::ConstructGroupedQSL,
-        "Construct the query sample library.");
+        "Construct grouped query sample library.");
   m.def("DestroyGroupedQSL", &py::DestroyQSL,
         "Destroy the object created by ConstructGroupedQSL.");
 
@@ -577,6 +578,9 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         "IssueQuery calls have finished.",
         pybind11::arg("responses"),
         pybind11::arg("response_cb") = ResponseCallback{});
+  m.def("StartTestWithGroupedQSL", &py::StartTestWithGroupedQSL,
+        "Run tests on a SUT created by ConstructSUT() and a QSL created by"
+        "ConstructGroupedQSL");
 }
 
 }  // namespace py

@@ -208,7 +208,7 @@ auto ScheduleDistribution<TestScenario::Server>(double qps) {
 }
 
 auto ScheduleConstantDistribution(double qps){
-  return [dist = std::uniform_real_distribution<>(1.0 / qps)](auto& gen) mutable {
+  return [dist = std::uniform_real_distribution<>(1.0 / qps, 1.0 / qps)](auto& gen) mutable {
     return std::chrono::duration_cast<std::chrono::nanoseconds>(
         std::chrono::duration<double>(dist(gen)));
   };
@@ -349,11 +349,10 @@ std::vector<QueryMetadata> GenerateQueries(
   QuerySampleIndex same_sample = settings.performance_issue_same_index;
 
   // Variables for handling group test
-  QuerySampleIndex global_idx = 0;
   std::vector<size_t> groups;
   std::vector<size_t> groups_first;
   size_t number_of_groups = 0;
-  size_t g, group_size;
+  size_t g = 0, group_size = 1;
 
   if (settings.use_grouped_qsl) {
     size_t current_idx = 0;
@@ -362,10 +361,9 @@ std::vector<QueryMetadata> GenerateQueries(
       size_t current_group = qsl->GroupOf(loaded_samples[current_idx]);
       groups.push_back(current_group);
       groups_first.push_back(current_idx);
-      current_idx += qsl->GroupSize(loaded_samples[current_idx]);
+      current_idx += qsl->GroupSize(current_group);
       number_of_groups++;
     }
-    
   }
 
   auto grouped_sample_distribution = SampleDistribution<mode>(
@@ -419,7 +417,7 @@ std::vector<QueryMetadata> GenerateQueries(
       }
     } else if (settings.use_grouped_qsl) {
       g = grouped_sample_distribution(sample_rng);
-      group_size = qsl->GroupSize(loaded_samples[groups_first[g]]);
+      group_size = qsl->GroupSize(qsl->GroupOf(groups_first[g]));
     } else {
       for (auto& s : samples) {
         s = loaded_samples[settings.performance_issue_unique
@@ -430,23 +428,24 @@ std::vector<QueryMetadata> GenerateQueries(
                                : sample_distribution(sample_rng)];
       }
     }
+    prev_timestamp = timestamp;
     if (!settings.use_grouped_qsl) {
       queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
     } else {
       for (size_t i = 0; i < group_size; i++){
         samples[0] = loaded_samples[groups_first[g]+i];
         queries.emplace_back(samples, timestamp, response_delegate, sequence_gen);
+        timestamp += schedule_constant_distribution(schedule_rng);
       }
+      prev_timestamp = timestamp - schedule_constant_distribution(schedule_rng);
     }
-    prev_timestamp = timestamp;
-    if (settings.server_constant_gen && (scenario == TestScenario::Server)){
-      if(!settings.use_grouped_qsl){
+
+    if (!settings.use_grouped_qsl){
+      if (settings.server_constant_gen && (scenario == TestScenario::Server)){
         timestamp += schedule_constant_distribution(schedule_rng);
       } else {
-        timestamp += group_size * schedule_constant_distribution(schedule_rng);
+        timestamp += schedule_distribution(schedule_rng);
       }
-    } else {
-      timestamp += schedule_distribution(schedule_rng);
     }
     // In equal_issue mode, the min_queries will be bumped up by a multiple of
     // the dataset size if the test time has not met the threshold.
@@ -455,6 +454,7 @@ std::vector<QueryMetadata> GenerateQueries(
         (scenario != TestScenario::Offline)) {
       min_queries += loaded_samples.size();
     }
+    
   }
 
   // See if we need to create a "remainder" query for offline+accuracy to

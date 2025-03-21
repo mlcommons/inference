@@ -25,6 +25,7 @@ limitations under the License.
 #include "../system_under_test.h"
 #include "../test_settings.h"
 #include "pybind11/functional.h"
+#include "pybind11/numpy.h"
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 #include "pybind11/stl_bind.h"
@@ -109,8 +110,10 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   ~QuerySampleLibraryTrampoline() override = default;
 
   const std::string& Name() override { return name_; }
-  size_t TotalSampleCount() { return total_sample_count_; }
-  size_t PerformanceSampleCount() { return performance_sample_count_; }
+  size_t TotalSampleCount() override { return total_sample_count_; }
+  size_t PerformanceSampleCount() override { return performance_sample_count_; }
+  size_t GroupSize(size_t i) override { return 1; }
+  size_t NumberOfGroups() override { return total_sample_count_; }
 
   void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
@@ -124,6 +127,62 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
 
  private:
   std::string name_;
+  size_t total_sample_count_;
+  size_t performance_sample_count_;
+  LoadSamplesToRamCallback load_samples_to_ram_cb_;
+  UnloadSamplesFromRamCallback unload_samples_from_ram_cb_;
+};
+
+// Forwards QuerySampleLibrary calls to relevant callbacks.
+class GroupedQuerySampleLibraryTrampoline : public QuerySampleLibrary {
+ public:
+  GroupedQuerySampleLibraryTrampoline(
+      std::string name, size_t performance_sample_count,
+      LoadSamplesToRamCallback load_samples_to_ram_cb,
+      UnloadSamplesFromRamCallback unload_samples_from_ram_cb,
+      pybind11::array_t<size_t>& group_sizes)
+      : name_(std::move(name)),
+        performance_sample_count_(performance_sample_count),
+        load_samples_to_ram_cb_(load_samples_to_ram_cb),
+        unload_samples_from_ram_cb_(unload_samples_from_ram_cb) {
+    total_sample_count_ = 0;
+    if (group_sizes.ndim() != 1) {
+      throw std::runtime_error("Group sizes should be a 1D Numpy array");
+    }
+    auto buffer = group_sizes.request();
+    size_t* ptr = (size_t*)buffer.ptr;
+
+    for (ssize_t i = 0; i < group_sizes.shape()[0]; i++) {
+      group_sizes_.push_back(ptr[i]);
+      total_sample_count_ += ptr[i];
+      for (ssize_t j = 0; j < ptr[i]; j++) {
+        group_idx_.push_back(i);
+      }
+    }
+  }
+  ~GroupedQuerySampleLibraryTrampoline() override = default;
+
+  const std::string& Name() override { return name_; }
+  size_t TotalSampleCount() override { return total_sample_count_; }
+  size_t PerformanceSampleCount() override { return performance_sample_count_; }
+  size_t GroupSize(size_t i) override { return group_sizes_[i]; }
+  size_t GroupOf(size_t i) override { return group_idx_[i]; }
+  size_t NumberOfGroups() override { return group_sizes_.size(); }
+
+  void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
+    pybind11::gil_scoped_acquire gil_acquirer;
+    load_samples_to_ram_cb_(samples);
+  }
+  void UnloadSamplesFromRam(
+      const std::vector<QuerySampleIndex>& samples) override {
+    pybind11::gil_scoped_acquire gil_acquirer;
+    unload_samples_from_ram_cb_(samples);
+  }
+
+ private:
+  std::string name_;
+  std::vector<size_t> group_sizes_;
+  std::vector<size_t> group_idx_;
   size_t total_sample_count_;
   size_t performance_sample_count_;
   LoadSamplesToRamCallback load_samples_to_ram_cb_;
@@ -226,6 +285,23 @@ void DestroyQDL(uintptr_t qdl) {
   delete qdl_cast;
 }
 
+uintptr_t ConstructGroupedQSL(
+    pybind11::array_t<size_t>& group_sizes, size_t performance_sample_count,
+    LoadSamplesToRamCallback load_samples_to_ram_cb,
+    UnloadSamplesFromRamCallback unload_samples_from_ram_cb) {
+  GroupedQuerySampleLibraryTrampoline* qsl =
+      new GroupedQuerySampleLibraryTrampoline(
+          "PyQSL", performance_sample_count, load_samples_to_ram_cb,
+          unload_samples_from_ram_cb, group_sizes);
+  return reinterpret_cast<uintptr_t>(qsl);
+}
+
+void DestroyGroupedQSL(uintptr_t qdl) {
+  QueryDispatchLibraryTrampoline* qdl_cast =
+      reinterpret_cast<QueryDispatchLibraryTrampoline*>(qdl);
+  delete qdl_cast;
+}
+
 void StartTest(uintptr_t sut, uintptr_t qsl, mlperf::TestSettings test_settings,
                const std::string& audit_config_filename) {
   pybind11::gil_scoped_release gil_releaser;
@@ -248,6 +324,20 @@ void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
   QuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
   mlperf::StartTest(sut_cast, qsl_cast, test_settings, log_settings,
+                    audit_config_filename);
+}
+
+void StartTestWithGroupedTest(uintptr_t sut, uintptr_t qsl,
+                              mlperf::TestSettings test_settings,
+                              const std::string& audit_config_filename) {
+  pybind11::gil_scoped_release gil_releaser;
+  SystemUnderTestTrampoline* sut_cast =
+      reinterpret_cast<SystemUnderTestTrampoline*>(sut);
+  GroupedQuerySampleLibraryTrampoline* qsl_cast =
+      reinterpret_cast<GroupedQuerySampleLibraryTrampoline*>(qsl);
+  LogSettings default_log_settings;
+  assert(TestSettings.use_grouped_qsl);
+  mlperf::StartTest(sut_cast, qsl_cast, test_settings, default_log_settings,
                     audit_config_filename);
 }
 
@@ -310,6 +400,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
                      &TestSettings::server_max_async_queries)
       .def_readwrite("server_num_issue_query_threads",
                      &TestSettings::server_num_issue_query_threads)
+      .def_readwrite("server_constant_gen", &TestSettings::server_constant_gen)
       .def_readwrite("offline_expected_qps",
                      &TestSettings::offline_expected_qps)
       .def_readwrite("min_duration_ms", &TestSettings::min_duration_ms)
@@ -340,6 +431,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("test05_schedule_rng_seed",
                      &TestSettings::test05_schedule_rng_seed)
       .def_readwrite("use_token_latencies", &TestSettings::use_token_latencies)
+      .def_readwrite("use_grouped_qsl", &TestSettings::use_grouped_qsl)
       .def_readwrite("ttft_latency", &TestSettings::server_ttft_latency)
       .def_readwrite("tpot_latency", &TestSettings::server_tpot_latency)
       .def_readwrite("infer_token_latencies",
@@ -453,6 +545,11 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
         "the network.");
   m.def("DestroyQDL", &py::DestroyQDL,
         "Destroy the object created by ConstructQDL.");
+
+  m.def("ConstructGroupedQSL", &py::ConstructGroupedQSL,
+        "Construct the query sample library.");
+  m.def("DestroyGroupedQSL", &py::DestroyQSL,
+        "Destroy the object created by ConstructGroupedQSL.");
 
   m.def("StartTest", &py::StartTest,
         "Run tests on a SUT created by ConstructSUT() with the provided QSL. "

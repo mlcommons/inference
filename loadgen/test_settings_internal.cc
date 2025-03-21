@@ -53,8 +53,10 @@ TestSettingsInternal::TestSettingsInternal(
       use_token_latencies(requested.use_token_latencies),
       server_ttft_latency(requested.server_ttft_latency),
       server_tpot_latency(requested.server_tpot_latency),
+      server_constant_gen(requested.server_constant_gen),
       infer_token_latencies(requested.infer_token_latencies),
-      token_latency_scaling_factor(requested.token_latency_scaling_factor) {
+      token_latency_scaling_factor(requested.token_latency_scaling_factor),
+      use_grouped_qsl(requested.use_grouped_qsl) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -305,6 +307,8 @@ void LogRequestedTestSettings(const TestSettings &s) {
                    s.server_max_async_queries);
         MLPERF_LOG(detail, "requested_server_num_issue_query_threads",
                    s.server_num_issue_query_threads);
+        MLPERF_LOG(detail, "requested_server_constant_gen",
+                   s.server_constant_gen);
         break;
       case TestScenario::Offline:
         MLPERF_LOG(detail, "requested_offline_expected_qps",
@@ -452,6 +456,7 @@ void TestSettingsInternal::LogEffectiveSettings() const {
                s.performance_sample_count);
     MLPERF_LOG(detail, "effective_sample_concatenate_permutation",
                s.sample_concatenate_permutation);
+    MLPERF_LOG(detail, "effective_server_constant_gen", s.server_constant_gen);
 #else
     detail("");
     detail("Effective Settings:");
@@ -740,6 +745,10 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     lookupkv(model, scenario, "token_latency_scaling_factor",
              &token_latency_scaling_factor, nullptr, 1);
   }
+  // use_grouped_qsl
+  if (lookupkv(model, scenario, "use_grouped_qsl", &val, nullptr)) {
+    use_grouped_qsl = (val == 1) ? true : false;
+  }
   // keys that apply to SingleStream
   lookupkv(model, "SingleStream", "target_latency_percentile", nullptr,
            &single_stream_target_latency_percentile, 0.01);
@@ -772,6 +781,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
     server_coalesce_queries = (val == 0) ? false : true;
   if (lookupkv(model, "Server", "max_async_queries", &val, nullptr))
     server_max_async_queries = int(val);
+  if (lookupkv(model, "Server", "constant_gen", &val, nullptr))
+    server_constant_gen = (val == 0) ? false : true;
 
   lookupkv(model, scenario, "min_duration", &min_duration_ms, nullptr);
   lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);

@@ -340,7 +340,7 @@ void StartTestWithGroupedQSL(
   GroupedQuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<GroupedQuerySampleLibraryTrampoline*>(qsl);
   LogSettings default_log_settings;
-  assert(test_settings.use_grouped_qsl);
+  assert(TestSettings.use_grouped_qsl);
   mlperf::StartTest(sut_cast, qsl_cast, test_settings, default_log_settings,
                     audit_config_filename);
 }

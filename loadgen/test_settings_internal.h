@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "logging.h"
 #include "test_settings.h"
+#include "query_sample_library.h"
 
 namespace mlperf {
 

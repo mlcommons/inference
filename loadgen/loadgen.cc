@@ -417,7 +417,7 @@ std::vector<QueryMetadata> GenerateQueries(
       }
     } else if (settings.use_grouped_qsl) {
       g = grouped_sample_distribution(sample_rng);
-      group_size = qsl->GroupSize(qsl->GroupOf(groups_first[g]));
+      group_size = qsl->GroupSize(qsl->GroupOf(loaded_samples[groups_first[g]]));
     } else {
       for (auto& s : samples) {
         s = loaded_samples[settings.performance_issue_unique
@@ -639,6 +639,19 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
           queries[i].all_samples_done_time);
     }
   }
+  std::vector<size_t> group_sizes;
+  std::vector<QuerySampleIndex> sample_index;
+  if (settings.use_grouped_qsl){
+    for (size_t i = 0; i < queries.size(); i++){
+      for (auto s: queries[i].GetSampleIndices()){
+        sample_index.push_back(s);
+      }
+    }
+  }
+
+  for (size_t i = 0; i < qsl->NumberOfGroups(); i++) {
+    group_sizes.push_back(qsl->GroupSize(i));
+  }
 
   return PerformanceResult{
       std::move(sample_latencies),
@@ -649,7 +662,10 @@ PerformanceResult IssueQueries(SystemUnderTest* sut,
       final_query_issued_time,
       final_query_all_samples_done_time,
       TokenPerformanceResults{first_token_latencies, time_per_output_token_arr,
-                              tokens_per_sample}};
+                              tokens_per_sample},
+      std::move(group_sizes),
+      std::move(sample_index)
+      };
 }
 
 void LoadSamplesToRam(QuerySampleLibrary* qsl,

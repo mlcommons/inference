@@ -342,6 +342,9 @@ void LogRequestedTestSettings(const TestSettings &s) {
                s.performance_sample_count_override);
     MLPERF_LOG(detail, "requested_sample_concatenate_permutation",
                s.sample_concatenate_permutation);
+    MLPERF_LOG(detail, "requested_server_constant_gen",
+               s.server_constant_gen);
+    MLPERF_LOG(detail, "requested_use_grouped_qsl", s.use_grouped_qsl);
     // Token latencies specific values
     if (s.use_token_latencies) {
       MLPERF_LOG(detail, "requested_use_token_latencies",
@@ -458,6 +461,7 @@ void TestSettingsInternal::LogEffectiveSettings() const {
                s.sample_concatenate_permutation);
     MLPERF_LOG(detail, "effective_server_constant_gen",
                s.server_constant_gen);
+    MLPERF_LOG(detail, "effective_use_grouped_qsl", s.use_grouped_qsl);
 #else
     detail("");
     detail("Effective Settings:");
@@ -531,7 +535,6 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
         "samples_per_query value");
   }
 }
-
 }  // namespace loadgen
 
 int TestSettings::FromConfig(const std::string &path, const std::string &model,

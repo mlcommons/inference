@@ -461,8 +461,6 @@ def define_env(env):
             elif implementation.lower() == "reference":
                 if "dlrm" in model:
                     device_memory = "2x80GB"
-                elif "llama2-70b" in model:
-                    device_memory = "8x80GB"
                 elif "mixtral" in model:
                     device_memory = "4x80GB"
                 elif "sdxl" in model:
@@ -472,7 +470,7 @@ def define_env(env):
                 else:
                     device_memory = "To be updated"
             min_sys_req_content += f"{spaces}* **Device Memory**: {device_memory}\n\n"
-            
+
         if implementation.lower() == "reference":
             # disk space
             ds = {

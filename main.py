@@ -452,7 +452,7 @@ def define_env(env):
                     device_memory = "24GB"
                 elif "llama2-70b" in model:
                     device_memory = "2x80GB"
-                if "mixtral" in model:
+                elif "mixtral" in model:
                     device_memory = "80GB"
                 elif "sdxl" in model or "gptj" in model:
                     device_memory = "16GB"

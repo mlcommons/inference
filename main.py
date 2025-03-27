@@ -475,23 +475,23 @@ def define_env(env):
             # disk space
             ds = {
                 "dlrm": "500GB",
-                "pointpainting": "500GB", 
+                "pointpainting": "500GB",
                 "llama2-70b": "600GB",
-                "llama3_1-405b": "2.2TB", 
+                "llama3_1-405b": "2.2TB",
                 "mixtral": "100GB",
-                "retinanet": "200GB", 
+                "retinanet": "200GB",
                 "gptj": "50GB",
                 "resnet50": "50GB",
-                "sdxl": "50GB", 
+                "sdxl": "50GB",
                 "3d-unet": "60GB",
-                "rgat": "2.3TB", 
-                "bert": "50GB" 
+                "rgat": "2.3TB",
+                "bert": "50GB"
             }
             disk_space = "To be updated"
             for key in ds:
-                if key in model:  
+                if key in model:
                     disk_space = ds[key]
-                    break  
+                    break
 
             min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"
         # System memory

@@ -437,6 +437,8 @@ def define_env(env):
         return p_range
 
     def get_min_system_requirements(spaces, model, implementation, device):
+        if implementation.lower() not in ['reference', 'nvidia']:
+            return ""
         model = model.lower()
         min_sys_req_content = ""
         min_sys_req_content += f"{spaces}<details>\n"
@@ -448,12 +450,14 @@ def define_env(env):
             if implementation.lower() == "nvidia":
                 if "dlrm" in model:
                     device_memory = "24GB"
-                elif "llama2-70b" in model or "mixtral" in model:
+                elif "llama2-70b" in model:
+                    device_memory = "2x80GB"
+                if "mixtral" in model:
                     device_memory = "80GB"
                 elif "sdxl" in model or "gptj" in model:
                     device_memory = "16GB"
                 else:
-                    device_memory = "8GB"
+                    device_memory = "To be updated"
             elif implementation.lower() == "reference":
                 if "dlrm" in model:
                     device_memory = "2x80GB"
@@ -465,25 +469,33 @@ def define_env(env):
                     device_memory = "24GB(fp32), 16GB(fp16)"
                 elif "gptj" in model:
                     device_memory = "80GB(fp32). 40GB(fp16)"
-                elif "pointpainting" in model:
-                    device_memory = "To be updated"
                 else:
-                    device_memory = "8GB"
+                    device_memory = "To be updated"
             min_sys_req_content += f"{spaces}* **Device Memory**: {device_memory}\n\n"
-        # disk space
-        if "dlrm" in model:
-            disk_space = "500GB"
-        elif "llama2-70b" in model:
-            disk_space = "700GB"
-        elif "mixtral" in model:
-            disk_space = "100GB"
-        elif "retinanet" in model:
-            disk_space = "200GB"
-        elif "pointpainting" in model:
+            
+        if implementation.lower() == "reference":
+            # disk space
+            ds = {
+                "dlrm": "500GB",
+                "pointpainting": "500GB", 
+                "llama2-70b": "600GB",
+                "llama3_1-405b": "2.2TB", 
+                "mixtral": "100GB",
+                "retinanet": "200GB", 
+                "gptj": "50GB",
+                "resnet50": "50GB",
+                "sdxl": "50GB", 
+                "3d-unet": "60GB",
+                "rgat": "2.3TB", 
+                "bert": "50GB" 
+            }
             disk_space = "To be updated"
-        else:
-            disk_space = "50GB"
-        min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"
+            for key in ds:
+                if key in model:  
+                    disk_space = ds[key]
+                    break  
+
+            min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"
         # System memory
         if "dlrm" in model:
             system_memory = "512GB"

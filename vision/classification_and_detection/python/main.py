@@ -646,7 +646,9 @@ def main():
         model = backend.load(
             args.model,
             inputs=args.inputs,
-            outputs=args.outputs)
+            # outputs=args.output,
+            num_threads=args.threads
+            )
     final_results = {
         "runtime": model.name(),
         "version": model.version(),

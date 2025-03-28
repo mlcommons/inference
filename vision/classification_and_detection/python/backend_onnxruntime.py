@@ -26,7 +26,14 @@ class BackendOnnxruntime(backend.Backend):
 
     def load(self, model_path, inputs=None, outputs=None):
         """Load model and find input/outputs from the model file."""
+        print("************************************************************")
+        print(">>> Value of num_threads: ", num_threads)
+        print("************************************************************")
+        os.environ["OMP_NUM_THREADS"] = str(num_threads)
+        os.environ["OPENBLAS_NUM_THREADS"] = str(num_threads)
+        os.environ["MKL_NUM_THREADS"] = str(num_threads)
         opt = rt.SessionOptions()
+        opt.intra_op_num_threads = int(num_threads)
 
         # By default all optimizations are enabled
         # https://onnxruntime.ai/docs/performance/graph-optimizations.html

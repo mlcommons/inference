@@ -477,7 +477,7 @@ def define_env(env):
                 "dlrm": "500GB",
                 "pointpainting": "500GB",
                 "llama2-70b": "600GB",
-                "llama3_1-405b": "2.2TB",
+                "llama3_1-405b": "2.3TB",
                 "mixtral": "100GB",
                 "retinanet": "200GB",
                 "gptj": "50GB",

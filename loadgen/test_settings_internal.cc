@@ -509,6 +509,7 @@ void TestSettingsInternal::LogSummary(AsyncSummary &summary) const {
     summary("ttft_latency (ns): ", server_ttft_latency);
     summary("tpot_latency (ns): ", server_tpot_latency);
   }
+  summary("target_latency_percentile : ", target_latency_percentile);
   summary("max_async_queries : ", max_async_queries);
   summary("min_duration (ms): ", min_duration.count());
   summary("max_duration (ms): ", max_duration.count());

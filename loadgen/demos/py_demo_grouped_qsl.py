@@ -74,7 +74,7 @@ def main(argv):
     #     1024, 128, load_samples_to_ram, unload_samples_from_ram
     # )
     mlperf_loadgen.StartTestWithGroupedQSL(sut, qsl, settings, "")
-    mlperf_loadgen.DestroyQSL(qsl)
+    mlperf_loadgen.DestroyGroupedQSL(qsl)
     mlperf_loadgen.DestroySUT(sut)
 
 

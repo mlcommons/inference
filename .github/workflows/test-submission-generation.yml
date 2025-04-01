@@ -24,8 +24,7 @@ jobs:
         exclude:
           - os: macos-latest
           - os: windows-latest
-          - category: "edge"
-            
+          - category: "edge"       
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}

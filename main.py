@@ -694,7 +694,7 @@ def define_env(env):
             )
 
         rerun = "--rerun" if execution_mode == "test" else ""
-        
+
         run_cmd_extra = get_run_cmd_extra(
             f_pre_space,
             model,

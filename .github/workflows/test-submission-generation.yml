@@ -9,6 +9,7 @@ on:
       - '.github/workflows/test-submission-generation.yml'
       - '**'  
       - '!**.md'
+      
 jobs:
   submission_generation:
     runs-on: ${{ matrix.os }}

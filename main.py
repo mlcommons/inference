@@ -693,6 +693,8 @@ def define_env(env):
                 f"\\\n{pre_space} --server_target_qps=<SERVER_TARGET_QPS>"
             )
 
+        rerun = "--rerun" if execution_mode == "test" else ""
+        
         run_cmd_extra = get_run_cmd_extra(
             f_pre_space,
             model,
@@ -750,7 +752,7 @@ def define_env(env):
 {pre_space} --framework={framework} \\
 {pre_space} --category={category} {scenario_option} \\
 {pre_space} --execution_mode=test \\
-{pre_space} --device={device} {docker_cmd_suffix}
+{pre_space} --device={device} {docker_cmd_suffix} {rerun}
 {f_pre_space}```\n"""
 
             return docker_setup_cmd + run_cmd_extra
@@ -796,7 +798,7 @@ def define_env(env):
 {pre_space} --framework={framework} \\
 {pre_space} --category={category} {scenario_option} \\
 {pre_space} --execution_mode={execution_mode} \\
-{pre_space} --device={device} {cmd_suffix}
+{pre_space} --device={device} {cmd_suffix} {rerun}
 {f_pre_space}```\n"""
 
             return run_cmd + run_cmd_extra

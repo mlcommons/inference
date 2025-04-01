@@ -38,8 +38,7 @@ jobs:
     - name: Pull repo where test cases are uploaded
       run: |
         git clone -b submission-generation-examples https://github.com/mlcommons/inference.git submission_generation_examples
-    - name: Run Submission Generation - ${{ matrix.case }} ${{ matrix.action }} ${{ matrix.category }} ${{ matrix.division }} 
-      continue-on-error: true
+    - name: Run Submission Generation - ${{ matrix.case }} ${{ matrix.action }} ${{ matrix.category }} ${{ matrix.division }}
       run: |
         if [ "${{ matrix.case }}" == "closed" ]; then
           description="Test submission - contains closed edge and datacenter"

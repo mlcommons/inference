@@ -129,6 +129,83 @@ void DestroyQSL(void* qsl) {
   delete qsl_cast;
 }
 
+namespace {
+
+// 
+class GroupedQuerySampleLibraryTrampoline : public QuerySampleLibrary {
+ public:
+  GroupedQuerySampleLibraryTrampoline(
+      ClientData client_data,
+      std::string name,
+      size_t performance_sample_count,
+      LoadSamplesToRamCallback load_samples_to_ram_cb,
+      UnloadSamplesFromRamCallback unload_samples_from_ram_cb,
+      std::vector<size_t>& group_sizes)
+      : name_(std::move(name)),
+        performance_sample_count_(performance_sample_count),
+        load_samples_to_ram_cb_(load_samples_to_ram_cb),
+        unload_samples_from_ram_cb_(unload_samples_from_ram_cb) {
+
+      total_sample_count_ = 0;
+
+      for(ssize_t i = 0; i < group_sizes.size(); i++){
+        group_sizes_.push_back(group_sizes[i]);
+        total_sample_count_ += group_sizes[i];
+        for(size_t j = 0; j < group_sizes[i]; j++){
+          group_idx_.push_back(i);
+        }
+      }
+    }
+  ~GroupedQuerySampleLibraryTrampoline() override = default;
+
+  const std::string& Name() override { return name_; }
+  size_t TotalSampleCount() override { return total_sample_count_; }
+  size_t PerformanceSampleCount() override { return performance_sample_count_; }
+  size_t GroupSize(size_t i) override { return group_sizes_[i]; }
+  size_t GroupOf(size_t i) override { return group_idx_[i]; }
+  size_t NumberOfGroups() override { return group_sizes_.size(); }
+
+  void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
+    (*load_samples_to_ram_cb_)(client_data_, samples.data(), samples.size());
+  }
+  void UnloadSamplesFromRam(
+      const std::vector<QuerySampleIndex>& samples) override {
+    (*unload_samples_from_ram_cb_)(client_data_, samples.data(),
+                                   samples.size());
+  }
+
+ private:
+  std::string name_;
+  ClientData client_data_;
+  std::vector<size_t> group_sizes_;
+  std::vector<size_t> group_idx_;
+  size_t total_sample_count_;
+  size_t performance_sample_count_;
+  LoadSamplesToRamCallback load_samples_to_ram_cb_;
+  UnloadSamplesFromRamCallback unload_samples_from_ram_cb_;
+};
+
+} // namespace
+
+void* ConstructGroupedQSL(ClientData client_data, const char* name, size_t name_length,
+                   size_t total_sample_count, size_t performance_sample_count,
+                   LoadSamplesToRamCallback load_samples_to_ram_cb,
+                   UnloadSamplesFromRamCallback unload_samples_from_ram_cb,
+                   std::vector<size_t>& group_sizes) {
+  GroupedQuerySampleLibraryTrampoline* qsl = new GroupedQuerySampleLibraryTrampoline(
+      client_data, std::string(name, name_length), total_sample_count,
+      performance_sample_count, load_samples_to_ram_cb,
+      unload_samples_from_ram_cb, group_sizes);
+  return reinterpret_cast<void*>(qsl);
+}
+
+void DestroyGroupedQSL(void* qsl) {
+  GroupedQuerySampleLibraryTrampoline* qsl_cast =
+      reinterpret_cast<GroupedQuerySampleLibraryTrampoline*>(qsl);
+  delete qsl_cast;
+}
+
+
 // mlperf::c::StartTest just forwards to mlperf::StartTest after doing the
 // proper cast.
 void StartTest(void* sut, void* qsl, const TestSettings& settings,
@@ -137,6 +214,18 @@ void StartTest(void* sut, void* qsl, const TestSettings& settings,
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   QuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
+  LogSettings default_log_settings;
+  mlperf::StartTest(sut_cast, qsl_cast, settings, default_log_settings,
+                    audit_config_filename);
+}
+
+void StartTestWithGroupedQSL(void* sut, void* qsl, const TestSettings& settings,
+               const std::string& audit_config_filename = "audit.config") {
+  SystemUnderTestTrampoline* sut_cast =
+      reinterpret_cast<SystemUnderTestTrampoline*>(sut);
+  GroupedQuerySampleLibraryTrampoline* qsl_cast =
+      reinterpret_cast<GroupedQuerySampleLibraryTrampoline*>(qsl);
+  assert(settings.use_grouped_qsl);
   LogSettings default_log_settings;
   mlperf::StartTest(sut_cast, qsl_cast, settings, default_log_settings,
                     audit_config_filename);

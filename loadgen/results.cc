@@ -146,6 +146,50 @@ void PerformanceSummary::ProcessTokenLatencies() {
   }
 }
 
+void PerformanceSummary::ProcessGroupLatencies(){
+  if (pr.sample_latencies.empty() || pr.group_sizes.empty() || (!settings.use_grouped_qsl) || (group_latencies_processed)) {
+    return;
+  }
+  sample_count = pr.sample_latencies.size();
+  std::vector<size_t> group_initial_idx;
+  std::vector<QuerySampleLatency> group_latencies;
+  size_t acum_group_idx = 0;
+
+  for(size_t i = 0; i < pr.group_sizes.size(); i++){
+    group_initial_idx.push_back(acum_group_idx);
+    acum_group_idx += pr.group_sizes[i];
+  }
+  size_t i = 0;
+  QuerySampleLatency accumulated_sample_latency = 0;
+
+  while (i < pr.sample_index.size()) {
+    auto sample_index = pr.sample_index[i];
+    auto low = std::lower_bound (group_initial_idx.begin(), group_initial_idx.end(), sample_index);
+    size_t idx = low - group_initial_idx.begin();
+    if (group_initial_idx[idx] == sample_index){
+      group_count++;
+      QuerySampleLatency q = 0;
+      for (size_t j = 0; j < pr.group_sizes[idx]; j++){
+        q += pr.sample_latencies[i + j];
+      }
+      group_latencies.push_back(q);
+      accumulated_sample_latency += q;
+      i += pr.group_sizes[idx];
+    } else {
+      i = pr.sample_index.size();
+    }
+  }
+  std::sort(group_latencies.begin(), group_latencies.end());
+  group_latency_min = group_latencies.front();
+  group_latency_max = group_latencies.back();
+  group_latency_mean = accumulated_sample_latency / group_count;
+
+  for (auto& lp : group_latency_percentiles) {
+    lp.query_latency = group_latencies[group_count * lp.percentile];
+  }
+  group_latencies_processed = true;
+};
+
 bool PerformanceSummary::EarlyStopping(
     std::string* recommendation, int64_t queries_issued,
     std::vector<QuerySampleLatency>* sample_latencies,
@@ -380,6 +424,9 @@ bool PerformanceSummary::PerfConstraintsMet(std::string* recommendation) {
 }
 
 void PerformanceSummary::LogSummary(AsyncSummary& summary) {
+  if (settings.use_grouped_qsl) {
+    ProcessGroupLatencies();
+  }
   ProcessLatencies();
 
   summary(
@@ -478,6 +525,15 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
                 DoubleToString(tps_as_completed));
         break;
     }
+  }
+
+  if (settings.use_grouped_qsl) {
+    double gps_as_completed =
+            group_count / pr.final_query_all_samples_done_time;
+    summary("Groups per second: ", group_count / pr.max_latency);
+    summary("Completed tokens per second: ",
+            DoubleToString(gps_as_completed));
+        
   }
 
   std::string min_duration_recommendation;
@@ -630,6 +686,17 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
     }
   }
 
+  if (settings.use_grouped_qsl) {
+    summary("Min group latency (ns)          : ", group_latency_min);
+    summary("Max group latency (ns)          : ", group_latency_max);
+    summary("Mean group latency (ns)         : ", group_latency_mean);
+    for (auto& lp : group_latency_percentiles) {
+      summary(
+          DoubleToString(lp.percentile * 100) + " group percentile latency (ns)   : ",
+          lp.query_latency);
+    }
+  }
+
   summary(
       "\n"
       "================================================\n"
@@ -640,6 +707,9 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
 
 void PerformanceSummary::LogDetail(AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT
+  if (settings.use_grouped_qsl) {
+    ProcessGroupLatencies();
+  }
   ProcessLatencies();
 
   // General validity checking
@@ -848,8 +918,23 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
         break;
       }
     }
-#endif
   }
+
+  if(settings.use_grouped_qsl) {
+    MLPERF_LOG(detail, "result_group_min_latency_ns",
+                 group_latency_min);
+    MLPERF_LOG(detail, "result_group_max_latency_ns",
+                group_latency_max);
+    MLPERF_LOG(detail, "result_group_mean_latency_ns",
+                group_latency_mean);
+    for (auto& lp : group_latency_percentiles) {
+      MLPERF_LOG(detail,
+                  "result_group_" + DoubleToString(lp.percentile * 100) +
+                      "_percentile_latency_ns",
+                  lp.query_latency);
+    }
+  }
+#endif
 }
 }  // namespace loadgen
 }  // namespace mlperf

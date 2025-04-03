@@ -169,6 +169,10 @@ struct TestSettings {
   /// StartTest() will be used to call IssueQuery(). See also
   /// mlperf::RegisterIssueQueryThread().
   uint64_t server_num_issue_query_threads = 0;
+  /// \brief If this flag is set to true, LoadGen the time between samples genera-
+  /// ted by LoadGen in the server scenario is set to constant. Otherwise, the 
+  /// time between samples follows an exponential distribution
+  bool server_constant_gen = false;
   /**@}*/
 
   // ==================================
@@ -234,6 +238,9 @@ struct TestSettings {
   uint64_t test05_qsl_rng_seed = 0;
   uint64_t test05_sample_index_rng_seed = 0;
   uint64_t test05_schedule_rng_seed = 0;
+
+  /// \brief Flag to use a grouped qsl when running the benchmark test
+  bool use_grouped_qsl = false;
 
   /// \brief Load mlperf parameter config from file.
   int FromConfig(const std::string &path, const std::string &model,

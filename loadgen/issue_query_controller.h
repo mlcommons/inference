@@ -110,6 +110,8 @@ class QueryMetadata {
   /// \brief Set a coalesced query back to its original state.
   void Decoalesce();
 
+  std::vector<QuerySampleIndex> GetSampleIndices();
+
  public:
   std::vector<QuerySample> query_to_send;
   const std::chrono::nanoseconds scheduled_delta;

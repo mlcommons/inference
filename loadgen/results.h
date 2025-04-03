@@ -44,6 +44,8 @@ struct PerformanceResult {
   double final_query_issued_time;            // seconds from start.
   double final_query_all_samples_done_time;  // seconds from start.
   TokenPerformanceResults token_results;
+  std::vector<size_t> group_sizes;
+  std::vector<QuerySampleIndex> sample_index;
 };
 
 /// \brief Wraps PerformanceResult with relevant context to change how
@@ -99,6 +101,15 @@ struct PerformanceSummary {
   PercentileEntry tpot_percentiles[6] = {{.50}, {.90}, {.95},
                                          {.97}, {.99}, {.999}};
 
+  // Set by ProcessGroupLatencies
+  size_t group_count = 0;
+  bool group_latencies_processed = false;
+  QuerySampleLatency group_latency_min = 0;
+  QuerySampleLatency group_latency_max = 0;
+  QuerySampleLatency group_latency_mean = 0;
+
+  PercentileEntry group_latency_percentiles[6] = {{.50}, {.90}, {.95},
+                                                  {.97}, {.99}, {.999}};
 #if defined(_WIN32) || defined(WIN32) || defined(_WIN64) || defined(WIN64)
   // MSVC complains if there is no explicit constructor.
   // (target_latency_percentile above depends on construction with settings)
@@ -109,6 +120,7 @@ struct PerformanceSummary {
 #endif
   void ProcessLatencies();
   void ProcessTokenLatencies();
+  void ProcessGroupLatencies();
 
   bool MinDurationMet(std::string* recommendation);
   bool EarlyStopping(std::string* recommendation, int64_t queries_issued,

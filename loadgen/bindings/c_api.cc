@@ -13,6 +13,7 @@ limitations under the License.
 #include "c_api.h"
 
 #include <string>
+#include <cassert>
 
 #include "../loadgen.h"
 #include "../query_sample.h"
@@ -148,7 +149,7 @@ class GroupedQuerySampleLibraryTrampoline : public QuerySampleLibrary {
 
       total_sample_count_ = 0;
 
-      for(ssize_t i = 0; i < group_sizes.size(); i++){
+      for(size_t i = 0; i < group_sizes.size(); i++){
         group_sizes_.push_back(group_sizes[i]);
         total_sample_count_ += group_sizes[i];
         for(size_t j = 0; j < group_sizes[i]; j++){
@@ -193,7 +194,7 @@ void* ConstructGroupedQSL(ClientData client_data, const char* name, size_t name_
                    UnloadSamplesFromRamCallback unload_samples_from_ram_cb,
                    std::vector<size_t>& group_sizes) {
   GroupedQuerySampleLibraryTrampoline* qsl = new GroupedQuerySampleLibraryTrampoline(
-      client_data, std::string(name, name_length), total_sample_count,
+      client_data, std::string(name, name_length),
       performance_sample_count, load_samples_to_ram_cb,
       unload_samples_from_ram_cb, group_sizes);
   return reinterpret_cast<void*>(qsl);

@@ -1304,7 +1304,7 @@ def check_accuracy_dir(config, model, path, verbose):
         is_valid = False
         log.error(
             "%s has loadgen errors, number of errors: %s", path, mlperf_log.num_errors()
-        )        
+        )
 
     return is_valid, result_acc
 
@@ -1708,7 +1708,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -1971,7 +1971,9 @@ def check_results_dir(
         if config.version == "v4.0":
             unit = unit_dict[scenario_fixed]
         else:
-            unit = special_unit_dict.get(mlperf_model, unit_dict).get(scenario_fixed, unit_dict[scenario_fixed])
+            unit = special_unit_dict.get(
+                mlperf_model, unit_dict).get(
+                scenario_fixed, unit_dict[scenario_fixed])
         power_unit = power_unit_dict[scenario_fixed]
 
         if (power_metric <= 0) or (

@@ -314,7 +314,7 @@ class AsyncLog {
   QuerySampleLatency GetMaxLatencySoFar();
   void SetUseTokens(bool use_tokens);
   void SetNeedsFirstToken(bool needs_first_token);
-  size_t GetErrorCount(){ return log_error_count_; };
+  size_t GetErrorCount() { return log_error_count_; };
 
  private:
   void WriteAccuracyHeaderLocked();

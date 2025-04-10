@@ -2087,6 +2087,8 @@ def check_results_dir(
             if filter_submitter and submitter != filter_submitter:
                 continue
             results_path = os.path.join(division, submitter, "results")
+            measurements_path = os.path.join(division, submitter, "measurements")
+            systems_path = os.path.join(division, submitter, "systems")
             if not os.path.exists(results_path):
                 continue
 
@@ -2189,6 +2191,35 @@ def check_results_dir(
                 if os.path.exists(model_mapping_path):
                     with open(model_mapping_path) as fp:
                         extra_model_mapping = json.load(fp)
+
+            measurement_diff = list(set(list_dir(measurements_path)) - set(list_dir(results_path)))
+            systems_diff = list(
+                set(
+                    [
+                        system_file.replace(".json", "")
+                        for system_file in list_files(systems_path)
+                        if system_file.endswith(".json")
+                    ]
+                )
+                - set(list_dir(results_path))
+            )
+            if len(measurement_diff) > 0:
+                log.error(
+                    "%s/%s/measurements has the following directories with no results: %s",
+                    division,
+                    submitter,
+                    measurement_diff,
+                )
+                results[os.path.join(results_path)] = None
+
+            if len(systems_diff) > 0:
+                log.error(
+                    "%s/%s/systems has the following files with no results: %s",
+                    division,
+                    submitter,
+                    [(s + ".json") for s in systems_diff],
+                )
+                results[os.path.join(results_path)] = None
 
             for system_desc in list_dir(results_path):
                 # we are looking at

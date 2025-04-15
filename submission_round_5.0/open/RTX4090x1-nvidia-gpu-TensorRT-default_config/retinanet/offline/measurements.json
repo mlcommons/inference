@@ -1,0 +1,7 @@
+{
+  "starting_weights_filename": "https://zenodo.org/record/6617981/files/resnext50_32x4d_fpn.pth",
+  "retraining": "no",
+  "input_data_types": "int8",
+  "weight_data_types": "int8",
+  "weight_transformations": "quantization, affine fusion"
+}

@@ -1,0 +1,7 @@
+{
+  "starting_weights_filename": "https://zenodo.org/record/5597155/files/3dunet_kits19_128x128x128.onnx",
+  "retraining": "no",
+  "input_data_types": "int8",
+  "weight_data_types": "int8",
+  "weight_transformations": "quantization, affine fusion"
+}

@@ -1,0 +1,7 @@
+{
+    "input_data_types": "int8",
+    "retraining": "No",
+    "starting_weights_filename": "retinanet_model_10.pth",
+    "weight_data_types": "int8",
+    "weight_transformations": "quantization, affine fusion"
+}

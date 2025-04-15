@@ -1,0 +1,7 @@
+{
+    "input_data_types": "int32",
+    "retraining": "No",
+    "starting_weights_filename": "pytorch_model-00001-of-00003.bin, pytorch_model-00002-of-00003.bin, pytorch_model-00003-of-00003.bin",
+    "weight_data_types": "fp8",
+    "weight_transformations": "quantization, affine fusion"
+}

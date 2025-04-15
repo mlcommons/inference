@@ -1,21 +1,29 @@
+# MLPerf Inference Submission Generation Example
+
+## Prerequisites
+
 ### Clone the Repo
-```
+```bash
 git clone -b submission-generation-examples https://github.com/mlcommons/inference.git submission-examples --depth 1
 ```
-### Install cm4mlops
-```
-pip install cm4mlops
+
+### Install mlc-scripts
+```bash
+pip install mlc-scripts
 ```
 
-### Generate the submission tree
-```
-cm run script --tags=generate,mlperf,inference,submission \
---results_dir=submission-examples/closed \
+## Generate the Submission Tree
+
+### Basic Command(submission_round_4.1)
+```bash
+mlc run script --tags=generate,mlperf,inference,submission \
+--results_dir=submission-examples/submission_round_4.1/closed \
 --run_checker=yes  \
---submission_dir=my_submissions  \
+--submission_dir=my_4.1_submissions  \
 --quiet \
 --submitter=MLCommons \
 --division=closed \
+--version=v4.1 \
 --clean
 ```
 

@@ -848,8 +848,9 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
         break;
       }
     }
-#endif
   }
+  MLPERF_LOG(detail, "num_errors", detail.async_log().GetErrorCount());
+#endif
 }
 }  // namespace loadgen
 }  // namespace mlperf

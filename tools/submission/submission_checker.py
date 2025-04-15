@@ -1302,6 +1302,9 @@ def check_accuracy_dir(config, model, path, verbose):
     fname = os.path.join(path, "mlperf_log_detail.txt")
     if not find_error_in_detail_log(config, fname):
         is_valid = False
+        log.error(
+            "%s has loadgen errors, number of errors: %s", path, mlperf_log.num_errors()
+        )
 
     return is_valid, result_acc
 
@@ -1434,6 +1437,9 @@ def check_performance_dir(
     fname = os.path.join(path, "mlperf_log_detail.txt")
     if not find_error_in_detail_log(config, fname):
         is_valid = False
+        log.error(
+            "%s has loadgen errors, number of errors: %s", path, mlperf_log.num_errors()
+        )
 
     required_performance_sample_count = config.get_performance_sample_count(
         model)

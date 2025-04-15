@@ -22,64 +22,45 @@ jobs:
         python-version: [ "3.12" ]
         division: ["closed", "open", "closed-open"]
         category: ["datacenter", "edge"]
-        case: ["closed"]
+        round: ["4.1", "5.0"]
+        case: ["closed", "closed-power", "open", "closed-edge"]
         action: ["run", "docker"]
         exclude:
           - os: macos-latest
           - os: windows-latest
           - category: "edge"       
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        pip install mlc-scripts
-    - name: Pull repo where test cases are uploaded
-      run: |
-        git clone -b submission-generation-examples https://github.com/mlcommons/inference.git submission_generation_examples
-    - name: Run Submission Generation - round-4.1 ${{ matrix.case }} ${{ matrix.action }} ${{ matrix.category }} ${{ matrix.division }}
-      run: |
-        if [ "${{ matrix.case }}" == "closed" ]; then
-          description="Test submission - contains closed edge and datacenter"
-        elif [ "${{ matrix.case }}" == "closed-power" ]; then
-          description="Test submission - contains closed-power edge and datacenter results"
-        fi
-        # Dynamically set the log group to simulate a dynamic step name
-        echo "::group::$description"
-        mlc ${{ matrix.action }} script --tags=generate,inference,submission  --adr.compiler.tags=gcc --version=v4.1 --clean --preprocess_submission=yes --submission_base_dir=mysubmissions --results_dir=$PWD/submission_generation_examples/submission_round_4.1/${{ matrix.case }}/ --run_checker --submitter=MLCommons --tar=yes --division=${{ matrix.division }} --env.MLC_DETERMINE_MEMORY_CONFIGURATION=yes --quiet
-        mlc ${{ matrix.action }} script --tags=run,inference,submission,checker --submitter_id_off=mysubmitter_id --tar=yes --submission_dir=mysubmissions/mlperf_submission --submission_tar_file=mysubmission.tar.gz --quiet --src_version=v4.1
-  
-  submission_generation_r5_0:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [ "3.12" ]
-        division: ["closed", "open", "closed-open"]
-        category: ["datacenter", "edge"]
-        case: ["closed"]
-        action: ["run", "docker"]
-        exclude:
-          - os: macos-latest
-          - os: windows-latest
-          - category: "edge"       
+          - round: "4.1"
+          - case: "closed-edge"
         include:
-        - os: ubuntu-latest
-          python-version: "3.12"
-          division: closed
-          category: edge
-          case: closed-edge
-          action: run
-        - os: ubuntu-latest
-          python-version: "3.12"
-          division: closed
-          category: edge
-          case: closed-edge
-          action: docker
+          - os: ubuntu-latest
+            python-version: "3.12"
+            division: "closed"
+            category: "edge"
+            round: "5.0"
+            case: "closed-edge"
+            action: "run"
+          - os: ubuntu-latest
+            python-version: "3.12"
+            division: "closed"
+            category: "edge"
+            round: "5.0"
+            case: "closed-edge"
+            action: "docker"
+          - os: ubuntu-latest
+            python-version: "3.12"
+            division: "open"
+            category: "edge"
+            round: "5.0"
+            case: "closed-edge"
+            action: "run"
+          - os: ubuntu-latest
+            python-version: "3.12"
+            division: "open"
+            category: "edge"
+            round: "5.0"
+            case: "closed-edge"
+            action: "docker"
+            
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python ${{ matrix.python-version }}
@@ -92,7 +73,7 @@ jobs:
     - name: Pull repo where test cases are uploaded
       run: |
         git clone -b submission-generation-examples https://github.com/mlcommons/inference.git submission_generation_examples
-    - name: Run Submission Generation - round-5.0 ${{ matrix.case }} ${{ matrix.action }} ${{ matrix.category }} ${{ matrix.division }}
+    - name: Run Submission Generation - round-${{ matrix.round }} ${{ matrix.case }} ${{ matrix.action }} ${{ matrix.category }} ${{ matrix.division }}
       run: |
         if [ "${{ matrix.case }}" == "closed" ]; then
           description="Test submission - contains closed edge and datacenter"
@@ -101,5 +82,5 @@ jobs:
         fi
         # Dynamically set the log group to simulate a dynamic step name
         echo "::group::$description"
-        mlc ${{ matrix.action }} script --tags=generate,inference,submission  --adr.compiler.tags=gcc --version=v5.0 --clean --preprocess_submission=yes --submission_base_dir=mysubmissions --results_dir=$PWD/submission_generation_examples/submission_round_5.0/${{ matrix.case }}/ --run_checker --submitter=MLCommons --tar=yes --division=${{ matrix.division }} --env.MLC_DETERMINE_MEMORY_CONFIGURATION=yes --quiet
-        mlc ${{ matrix.action }} script --tags=run,inference,submission,checker --submitter_id_off=mysubmitter_id --tar=yes --submission_dir=mysubmissions/mlperf_submission --submission_tar_file=mysubmission.tar.gz --quiet --src_version=v5.0
+        mlc ${{ matrix.action }} script --tags=generate,inference,submission  --adr.compiler.tags=gcc --version=v${{ matrix.round }} --clean --preprocess_submission=yes --submission_base_dir=mysubmissions --results_dir=$PWD/submission_generation_examples/submission_round_${{ matrix.round }}/${{ matrix.case }}/ --run_checker --submitter=MLCommons --tar=yes --division=${{ matrix.division }} --env.MLC_DETERMINE_MEMORY_CONFIGURATION=yes --quiet
+        mlc ${{ matrix.action }} script --tags=run,inference,submission,checker --submitter_id_off=mysubmitter_id --tar=yes --submission_dir=mysubmissions/mlperf_submission --submission_tar_file=mysubmission.tar.gz --quiet --src_version=v${{ matrix.round }}

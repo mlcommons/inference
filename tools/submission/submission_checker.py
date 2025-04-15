@@ -876,6 +876,7 @@ class Config:
         extra_model_benchmark_map,
         ignore_uncommited=False,
         skip_power_check=False,
+        skip_all_systems_with_results=False,
     ):
         self.base = MODEL_CONFIG.get(version)
         self.extra_model_benchmark_map = extra_model_benchmark_map
@@ -894,6 +895,7 @@ class Config:
         self.optional = None
         self.ignore_uncommited = ignore_uncommited
         self.skip_power_check = skip_power_check
+        self.skip_all_systems_with_results = skip_all_systems_with_results
 
     def set_type(self, submission_type):
         if submission_type == "datacenter":
@@ -1084,6 +1086,11 @@ def get_args():
         "--skip-extra-accuracy-files-check",
         action="store_true",
         help="skips the check of extra accuracy files like the images folder of SDXL",
+    )
+    parser.add_argument(
+        "--skip-all-systems-have-results-check",
+        action="store_true",
+        help="skips the check that all the systems in the systems and measurements folder should have results",
     )
     parser.add_argument(
         "--scenarios-to-skip",
@@ -2192,34 +2199,35 @@ def check_results_dir(
                     with open(model_mapping_path) as fp:
                         extra_model_mapping = json.load(fp)
 
-            measurement_diff = list(set(list_dir(measurements_path)) - set(list_dir(results_path)))
-            systems_diff = list(
-                set(
-                    [
-                        system_file.replace(".json", "")
-                        for system_file in list_files(systems_path)
-                        if system_file.endswith(".json")
-                    ]
+            if not config.skip_all_systems_with_results:
+                measurement_diff = list(set(list_dir(measurements_path)) - set(list_dir(results_path)))
+                systems_diff = list(
+                    set(
+                        [
+                            system_file.replace(".json", "")
+                            for system_file in list_files(systems_path)
+                            if system_file.endswith(".json")
+                        ]
+                    )
+                    - set(list_dir(results_path))
                 )
-                - set(list_dir(results_path))
-            )
-            if len(measurement_diff) > 0:
-                log.error(
-                    "%s/%s/measurements has the following directories with no results: %s",
-                    division,
-                    submitter,
-                    measurement_diff,
-                )
-                results[os.path.join(results_path)] = None
+                if len(measurement_diff) > 0:
+                    log.error(
+                        "%s/%s/measurements has the following directories with no results: %s",
+                        division,
+                        submitter,
+                        measurement_diff,
+                    )
+                    results[os.path.join(results_path)] = None
 
-            if len(systems_diff) > 0:
-                log.error(
-                    "%s/%s/systems has the following files with no results: %s",
-                    division,
-                    submitter,
-                    [(s + ".json") for s in systems_diff],
-                )
-                results[os.path.join(results_path)] = None
+                if len(systems_diff) > 0:
+                    log.error(
+                        "%s/%s/systems has the following files with no results: %s",
+                        division,
+                        submitter,
+                        [(s + ".json") for s in systems_diff],
+                    )
+                    results[os.path.join(results_path)] = None
 
             for system_desc in list_dir(results_path):
                 # we are looking at
@@ -3165,6 +3173,7 @@ def main():
         args.extra_model_benchmark_map,
         ignore_uncommited=args.submission_exceptions,
         skip_power_check=args.skip_power_check,
+        skip_all_systems_with_results = args.skip_all_systems_have_results_check
     )
 
     if args.scenarios_to_skip:

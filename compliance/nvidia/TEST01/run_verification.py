@@ -73,9 +73,9 @@ def main():
     )
 
     args = parser.parse_args()
-    
+
     q = '"' if os_type == 'Windows' else "'"
-    
+
     print("Parsing arguments.")
     results_dir = args.results_dir
     compliance_dir = args.compliance_dir

@@ -102,10 +102,10 @@ def main():
         + args.dtype
         + unixmode
         + " -r "
-        + results_dir
+        + f"{results_dir}"
         + "/accuracy/mlperf_log_accuracy.json"
         + " -t "
-        + compliance_dir
+        + f"{compliance_dir}"
         + "/mlperf_log_accuracy.json | tee verify_accuracy.txt"
     )
     try:
@@ -132,10 +132,10 @@ def main():
         "python3 "
         + verify_performance_binary
         + " -r "
-        + results_dir
+        + f"{results_dir}"
         + "/performance/run_1/mlperf_log_summary.txt"
         + " -t "
-        + compliance_dir
+        + f"{compliance_dir}"
         + "/mlperf_log_summary.txt | tee verify_performance.txt"
     )
     try:

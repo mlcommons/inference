@@ -22,6 +22,10 @@ import json
 
 import numpy as np
 
+import platform
+
+os_type = platform.system()
+
 sys.path.append(os.getcwd())
 
 dtype_map = {
@@ -69,7 +73,9 @@ def main():
     )
 
     args = parser.parse_args()
-
+    
+    q = '"' if os_type == 'Windows' else "'"
+    
     print("Parsing arguments.")
     results_dir = args.results_dir
     compliance_dir = args.compliance_dir
@@ -102,10 +108,10 @@ def main():
         + args.dtype
         + unixmode
         + " -r "
-        + f"{results_dir}"
+        + f"""{q}{results_dir}{q}"""
         + "/accuracy/mlperf_log_accuracy.json"
         + " -t "
-        + f"{compliance_dir}"
+        + f"""{q}{compliance_dir}{q}"""
         + "/mlperf_log_accuracy.json | tee verify_accuracy.txt"
     )
     try:
@@ -132,10 +138,10 @@ def main():
         "python3 "
         + verify_performance_binary
         + " -r "
-        + f"{results_dir}"
+        + f"""{q}{results_dir}{q}"""
         + "/performance/run_1/mlperf_log_summary.txt"
         + " -t "
-        + f"{compliance_dir}"
+        + f"""{q}{compliance_dir}{q}"""
         + "/mlperf_log_summary.txt | tee verify_performance.txt"
     )
     try:

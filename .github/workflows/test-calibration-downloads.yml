@@ -1,6 +1,6 @@
 name: Test for the downloads of calibration datasets
 on:
-  pull_request:
+  pull_request_target:
     branches: [ "master", "dev" ]
     paths:
       - vision/classification_and_detection/**

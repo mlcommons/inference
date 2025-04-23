@@ -103,16 +103,16 @@ def main():
     # run verify accuracy
     verify_accuracy_command = (
         "python3 "
-        + verify_accuracy_binary
+        + f"""{q}{verify_accuracy_binary}{q}"""
         + " --dtype "
         + args.dtype
         + unixmode
         + " -r "
-        + f"""{q}{results_dir}{q}"""
-        + "/accuracy/mlperf_log_accuracy.json"
+        + f"""{q}{results_dir}"""
+        + f"""/accuracy/mlperf_log_accuracy.json{q}"""
         + " -t "
-        + f"""{q}{compliance_dir}{q}"""
-        + "/mlperf_log_accuracy.json | tee verify_accuracy.txt"
+        + f"""{q}{compliance_dir}"""
+        + f"""/mlperf_log_accuracy.json{q} | tee verify_accuracy.txt"""
     )
     try:
         os.system(verify_accuracy_command)
@@ -136,13 +136,13 @@ def main():
     )
     verify_performance_command = (
         "python3 "
-        + verify_performance_binary
+        + f"""{q}{verify_performance_binary}{q}"""
         + " -r "
-        + f"""{q}{results_dir}{q}"""
-        + "/performance/run_1/mlperf_log_summary.txt"
+        + f"""{q}{results_dir}"""
+        + f"""/performance/run_1/mlperf_log_summary.txt{q}"""
         + " -t "
-        + f"""{q}{compliance_dir}{q}"""
-        + "/mlperf_log_summary.txt | tee verify_performance.txt"
+        + f"""{q}{compliance_dir}"""
+        + f"""/mlperf_log_summary.txt{q} | tee verify_performance.txt"""
     )
     try:
         os.system(verify_performance_command)

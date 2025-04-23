@@ -188,6 +188,7 @@ jobs:
 
   download-waymo:
     runs-on: ubuntu-latest
+    needs: fetch-secret
     strategy:
       fail-fast: false
       matrix:

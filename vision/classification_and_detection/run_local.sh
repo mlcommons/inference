@@ -19,7 +19,7 @@ while [ -n "$1" ]; do
     shift
 done
 
-cmd="python3 python/main.py --profile $profile $common_opt --model \"$model_path\" $dataset \
+cmd="python3 python/main.py --profile $profile $common_opt --model \"$model_path\" \"$dataset\" \
     --output \"$OUTPUT_DIR\" $EXTRA_OPS ${ARGS}"
 
 if [[ $EXTRA_OPS == *"tpu"* ]]; then

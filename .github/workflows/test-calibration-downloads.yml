@@ -13,6 +13,20 @@ env:
   PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
 
 jobs:
+  fetch-secret:
+    runs-on: ubuntu-latest
+    outputs:
+      gdrive_secret: ${{ steps.op-load-secret.outputs.GDRIVE_SERVICE_ACCOUNT_KEY }}
+    steps:
+      - name: Load secret from 1Password
+        id: op-load-secret
+        uses: 1password/load-secrets-action@v2
+        with:
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          GDRIVE_SERVICE_ACCOUNT_KEY: op://hzsgi4viq4fcpg4qxf33kbtqie/r36cu66kuueeh2zx6tdjbl7qlu/credential
+
   download-imagenet:
     runs-on: ubuntu-latest
     strategy:
@@ -185,6 +199,11 @@ jobs:
       uses: actions/setup-python@v3
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Set RCLONE Service account env var from secret
+      shell: bash
+      run: |
+        echo "::add-mask::${{ needs.fetch-secret.outputs.gdrive_secret }}"
+        echo "RCLONE_CONFIG_MLC_WAYMO_SERVICE_ACCOUNT_CREDENTIALS=${{ needs.fetch-secret.outputs.gdrive_secret }}" >> $GITHUB_ENV
     - name: Install dependencies
       run: |
         python3 -m pip install mlc-scripts

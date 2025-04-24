@@ -20,8 +20,16 @@ import os
 import sys
 import re
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "tools", "submission")))
-from log_parser import MLPerfLog #noqa
+sys.path.append(
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "tools",
+            "submission")))
+from log_parser import MLPerfLog  # noqa
 
 RESULT_FIELD = {
     "Offline": "result_samples_per_second",
@@ -30,10 +38,11 @@ RESULT_FIELD = {
     "Server": "result_completed_samples_per_sec",
 }
 
+
 def result_log(file_path):
     score, target_latency = 0, None
     score = float(mlperf_log[RESULT_FIELD[scenario]])
-    
+
     mlperf_log = MLPerfLog(file_path)
     scenario = mlperf_log["effective_scenario"]
 
@@ -44,25 +53,37 @@ def result_log(file_path):
         sys.exit("TEST FAIL: Invalid results in {}".format(file_path))
 
     if mlperf_log.has_error():
-        print("WARNING: {} ERROR reported in {}".format(line.split()[0], file_path))
+        print(
+            "WARNING: {} ERROR reported in {}".format(
+                line.split()[0],
+                file_path))
 
     res = float(mlperf_log[RESULT_FIELD[scenario]])
     if scenario == "Server":
         target_latency = mlperf_log["effective_target_latency_ns"]
-    
-    return scenario, score, target_latency
 
+    return scenario, score, target_latency
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r", "--reference_log_details", help="Path to reference performance log_details file.", required=True)
-    parser.add_argument("-t", "--test_log_details", help="Path to test performance log_details file.", required=True)
+    parser.add_argument(
+        "-r",
+        "--reference_log_details",
+        help="Path to reference performance log_details file.",
+        required=True)
+    parser.add_argument(
+        "-t",
+        "--test_log_details",
+        help="Path to test performance log_details file.",
+        required=True)
     args = parser.parse_args()
 
     print("Verifying performance.")
-    ref_scenario, ref_score, ref_target_latency = parse_result_log(args.reference_log_details)
-    test_scenario, test_score, test_target_latency = parse_result_log(args.test_log_details)
+    ref_scenario, ref_score, ref_target_latency = parse_result_log(
+        args.reference_log_details)
+    test_scenario, test_score, test_target_latency = parse_result_log(
+        args.test_log_details)
 
     if test_scenario != ref_scenario:
         sys.exit("TEST FAIL: Test and reference scenarios do not match!")
@@ -74,13 +95,16 @@ def main():
     print(f"Test score = {test_score}")
 
     threshold = 0.10
-    if (ref_scenario == "SingleStream" and ref_score <= 200000) or (ref_scenario == "MultiStream" and ref_score <= 1600000):
+    if (ref_scenario == "SingleStream" and ref_score <= 200000) or (
+            ref_scenario == "MultiStream" and ref_score <= 1600000):
         threshold = 0.20
 
-    if ref_score * (1 - threshold) <= test_score <= ref_score * (1 + threshold):
+    if ref_score * (1 - threshold) <= test_score <= ref_score * \
+            (1 + threshold):
         print("TEST PASS")
     else:
         print("TEST FAIL: Test score invalid")
+
 
 if __name__ == "__main__":
     main()

@@ -39,6 +39,9 @@ def get_args():
     parser.add_argument("--noinfer-low-accuracy-results",
                         help="do not infer low accuracy results if a high accuracy result is present",
                         default=False, action="store_true")
+    parser.add_argument("--noinfer-scenario-results",
+                        help="do not infer offline/multistream results from singlestream/multistream",
+                        default=False, action="store_true")
     parser.add_argument("--nodelete-empty-dirs",
                         help="do not delete empty dirs in submission tree",
                         default=False, action="store_true")
@@ -186,6 +189,10 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
         except Exception as e:
             log.warning(e)
             accuracy_is_valid = False
+
+        if not is_closed_or_network:  # open division
+            accuracy_is_valid = True
+
         perf_path = os.path.join(scenario_path, "performance", "run_1")
         try:
             perf_is_valid, r, is_inferred = checker.check_performance_dir(
@@ -345,7 +352,8 @@ def infer_scenario_results(args, config):
        If SS and MS exists and offline is not existing, offline is inferred from MS.
     """
     filter_submitter = args.submitter
-    noinfer_low_accuracy_results = args.noinfer_low_accuracy_results
+    infer_low_accuracy_results = not args.noinfer_low_accuracy_results
+    infer_scenario_results = not args.noinfer_scenario_results
 
     for division in sorted(
             list_dir(".")):  # process closed and network before open
@@ -450,10 +458,12 @@ def infer_scenario_results(args, config):
                                         not os.path.exists(offline_scenario_path):
 
                                     # infer both the scenarios from SS
-                                    tobeinferredpaths = [offline_scenario_path]
-                                    if "MultiStream" in all_scenarios:
-                                        tobeinferredpaths.append(
-                                            multistream_scenario_path)
+                                    if infer_scenario_results:
+                                        tobeinferredpaths = [
+                                            offline_scenario_path]
+                                        if "MultiStream" in all_scenarios:
+                                            tobeinferredpaths.append(
+                                                multistream_scenario_path)
 
                                     for tobeinferredpath in tobeinferredpaths:
                                         inferred_scenario = os.path.basename(
@@ -499,7 +509,7 @@ def infer_scenario_results(args, config):
                                         shutil.copytree(
                                             scenario_path, tobeinferredpath)
 
-                if not noinfer_low_accuracy_results:
+                if infer_low_accuracy_results:
                     for system_desc in list_dir(log_path):
                         for model in list_dir(log_path, system_desc):
                             if model.endswith("-99.9"):

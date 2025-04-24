@@ -82,7 +82,7 @@ class bert_QDL:
 
         max_num_threads = int(
             os.environ.get(
-                "CM_MAX_NUM_THREADS",
+                "MLC_MAX_NUM_THREADS",
                 os.cpu_count()))
 
         for i in range(len(query_samples)):

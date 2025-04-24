@@ -13,29 +13,39 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset
     ```
-    cm run script --tags=get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
+    mlcr get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
     ```
     
 === "Calibration"
 
     ### Get Calibration Dataset
     ```
-    cm run script --tags=get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
+    mlcr get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
     ```
+
+- `--outdirname=<PATH_TO_DOWNLOAD_LLAMA3_405B_DATASET>` could be provided to download the dataset to a specific location.
 
 ## Model
 The benchmark implementation run command will automatically download the required model and do the necessary conversions. In case you want to only download the official model, you can use the below commands.
 
-Get the Official MLPerf LLAMA3.1-405b Model
-
 === "Pytorch"
 
-    ### Pytorch
-    ```
-    cm run script --tags=get,ml-model,llama3 --outdirname=<path to download> --hf_token=<huggingface access token> -j
-    ```
-  
-!!! tip
+    === "From MLCOMMONS Google Drive"
 
-    Downloading llama3.1-405B model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [llama3.1-405B](https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct) model. 
+        > **Note:**  One has to accept the [MLCommons Llama 3.1 License Confidentiality Notice](http://llama3-1.mlcommons.org/) to access the model files in MLCOMMONS Google Drive. 
 
+        ### Get the Official MLPerf LLAMA3.1-405B model from MLCOMMONS Google Drive
+        ```
+        mlcr get,ml-model,llama3 -j
+        ```
+
+    === "From Hugging Face repo"
+
+        > **Note:** Access to the HuggingFace model could be requested [here](https://ai.meta.com/resources/models-and-libraries/llama-downloads/).
+
+        ### Get model from HuggingFace repo
+        ```
+        mlcr get,ml-model,llama3,_hf --hf_token=<huggingface access token> -j
+        ```
+
+- `--outdirname=<PATH_TO_DOWNLOAD_LLAMA3_405B_MODEL>` could be provided to download the model to a specific location.

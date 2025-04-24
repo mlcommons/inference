@@ -9,13 +9,9 @@
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama2-70b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
  
 ## Prepare environment
-
-Copy the mlperf.conf file to this folder.
-```
-cp ../../mlperf.conf .
-```
 
 For a CPU-only run:
 
@@ -69,8 +65,12 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 ### MLCommons Members Download
 MLCommons hosts the model and preprocessed dataset for download **exclusively by MLCommons Members**. You must first agree to the [confidentiality notice](https://llama2.mlcommons.org) using your organizational email address, then you will receive a link to a directory containing Rclone download instructions. _If you cannot access the form but you are part of a MLCommons Member organization, submit the [MLCommons subscription form](https://mlcommons.org/community/subscribe/) with your organizational email address and [associate a Google account](https://accounts.google.com/SignUpWithoutGmail) with your organizational email address._
 
+Once you have the access, you can download the model automatically via the below command
+```
+mlcr get,ml-model,llama2 --outdirname=${CHECKPOINT_PATH} -j
+```
 
-### External Download
+### External Download (Not recommended for official submission)
 + First go to [llama2-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
 + Requires Git Large Files Storage
 ```
@@ -181,7 +181,6 @@ mkdir -p "run_outputs"  # The script will dump all the outputs to 'run_outputs'.
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
                 --accuracy \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 24576 \
                 --dataset-path ${DATASET_PATH} \
@@ -218,7 +217,6 @@ OUTPUT_LOG_DIR=server-accuracy-logs
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
                 --accuracy \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 24576 \
                 --dataset-path ${DATASET_PATH} \
@@ -255,7 +253,6 @@ In order to run interactive category, it is sufficient to set the flag `--lg-mod
 ```
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 24576 \
                 --device cpu \

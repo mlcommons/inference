@@ -85,6 +85,7 @@ def main():
     test_scenario, test_score, test_target_latency = parse_result_log(
         args.test_log_details)
 
+
     if test_scenario != ref_scenario:
         sys.exit("TEST FAIL: Test and reference scenarios do not match!")
 

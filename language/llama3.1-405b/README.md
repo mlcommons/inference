@@ -7,13 +7,11 @@
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
         - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
 
-Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3.1-405b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
-
-## Automated command to run the benchmark via MLCommons CM
+## Automated command to run the benchmark via MLFlow
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3_1-405b/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
-You can also do pip install cm4mlops and then use cm commands for downloading the model and datasets using the commands given in the later sections.
+You can also do pip install mlc-scripts and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
 
 ## Prepare environment
 
@@ -99,12 +97,15 @@ pip install -e ../../loadgen
 
 
 ## Get Model
-### MLCommons Members Download
+### MLCommons Members Download (Recommended for official submission)
 
-TODO: Host model and grant access to submitters
+You need to request for access to [MLcommons](http://llama3-1.mlcommons.org/) and you'll receive an email with the download instructions. You can download the model automatically via the below command
+```
+mlcr get,ml-model,llama3 --outdirname=${CHECKPOINT_PATH} -j
+```
 
 
-### External Download
+### External Download (Not recommended for official submission)
 + First go to [llama3.1-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
 + Requires Git Large Files Storage
 ```
@@ -114,10 +115,10 @@ git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT
 cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ```
 
-### Download model through CM (Collective Mind)
+### Download huggingface model through MLC
 
 ```
-cm run script --tags=get,ml-model,llama3 --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
+mlcr get,ml-model,llama3,_hf --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
 ```
 
 **Note:**
@@ -143,10 +144,10 @@ You can then navigate in the terminal to your desired download directory and run
 ```
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_llama3.1_405b_dataset_8313_processed_fp16_eval.pkl ./ -P
 ```
-**CM Command**
+**MLC Command**
 
 ```
-cm run script --tags=get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
+mlcr get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
 ```
 
 You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
@@ -155,9 +156,9 @@ You can also download the calibration dataset from the Cloudflare R2 bucket by r
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_llama3.1_405b_calibration_dataset_512_processed_fp16_eval.pkl ./ -P
 ```
 
-**CM Command**
+**MLC Command**
 ```
-cm run script --tags=get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
+mlcr get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
 ```
 
 
@@ -250,10 +251,10 @@ fi
 
 The ServerSUT was not tested for GPU runs.
 
-### Evaluate the accuracy using CM
-You can also evaulate the accuracy from the generated accuracy log by using the following CM command
+### Evaluate the accuracy using MLCFlow
+You can also evaulate the accuracy from the generated accuracy log by using the following MLC command
 ```
-cm run script --tags=process,mlperf,accuracy,_dataset_llama3 --result_dir=<Path to accuracy log directory>
+mlcr process,mlperf,accuracy,_dataset_llama3 --result_dir=<Path to accuracy log directory>
 ```
 
 ## Accuracy Target

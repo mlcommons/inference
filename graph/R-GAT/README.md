@@ -17,11 +17,11 @@ This is the reference implementation for MLPerf Inference Graph Neural Network. 
 | IGBH | Illinois Graph Benchmark Heterogeneous is a graph dataset consisting of one heterogeneous graph with 547,306,935 nodes and 5,812,005,639 edges. Node types: Author, Conference, FoS, Institute, Journal, Paper. A subset of 1% of the paper nodes are randomly choosen as the validation dataset using the [split seeds script](tools/split_seeds.py). The validation dataset will be used as the input queries for the SUT, however the whole dataset is needed to run the benchmarks, since all the graph connections are needed to achieve the quality target. | Node Classification |
 | IGBH (calibration) | We sampled 5000 nodes from the training paper nodes of the IGBH for the calibration dataset. We provide the [Node ids](../../calibration/IGBH/calibration.txt) and the [script](tools/split_seeds.py) to generate them (using the `--calibration` flag). | Node Classification |
 
-## Automated command to run the benchmark via MLCommons CM
+## Automated command to run the benchmark via MLCFlow
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/graph/rgat/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
-You can also do `pip install cm4mlops` and then use `cm` commands for downloading the model and datasets using the commands given in the later sections.
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
  
 ## Setup
 Set the following helper variables
@@ -77,10 +77,10 @@ pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/repo.html
 ```
 
 
-### Download model through CM (Collective Minds)
+### Download model through MLCFlow Automation
 
 ```
-cm run script --tags=get,ml-model,rgat --outdirname=<path_to_download>
+mlcr get,ml-model,rgat --outdirname=<path_to_download>
 ```
 
 ### Download model using Rclone
@@ -106,9 +106,9 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/R-GAT/RGAT.pt $MODEL_PAT
 ### Download and setup dataset
 #### Debug Dataset
 
-**CM Command**
+**MLC Command**
 ```
-cm run script --tags=get,dataset,igbh,_debug --outdirname=<path to download>
+mlcr get,dataset,igbh,_debug --outdirname=<path to download>
 ```
 
 **Download Dataset**
@@ -128,9 +128,9 @@ python3 tools/split_seeds.py --path igbh --dataset_size tiny
 #### Full Dataset
 **Warning:** This script will download 2.2TB of data
 
-**CM Command**
+**MLC Command**
 ```
-cm run script --tags=get,dataset,igbh,_full --outdirname=<path to download>
+mlcr get,dataset,igbh,_full --outdirname=<path to download>
 ```
 
 ```bash
@@ -149,9 +149,9 @@ python3 tools/split_seeds.py --path igbh --dataset_size full
 
 The calibration dataset contains 5000 nodes from the training paper nodes of the IGBH dataset. We provide the [Node ids](../../calibration/IGBH/calibration.txt) and the [script](tools/split_seeds.py) to generate them (using the `--calibration` flag). 
 
-**CM Command**
+**MLC Command**
 ```
-cm run script --tags=get,dataset,igbh,_full,_calibration --outdirname=<path to download>
+mlcr get,dataset,igbh,_full,_calibration --outdirname=<path to download>
 ```
 
 ### Run the benchmark
@@ -176,7 +176,7 @@ python3 main.py --dataset igbh-dgl --dataset-path igbh/ --profile rgat-dgl-full 
 
 ### Evaluate the accuracy
 ```bash
-cm run script --tags=process,mlperf,accuracy,_igbh --result_dir=<Path to directory where files are generated after the benchmark run>
+mlcr process,mlperf,accuracy,_igbh --result_dir=<Path to directory where files are generated after the benchmark run>
 ```
 
 Please click [here](https://github.com/mlcommons/inference/blob/dev/graph/R-GAT/tools/accuracy_igbh.py) to view the Python script for evaluating accuracy for the IGBH dataset.

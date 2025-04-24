@@ -735,19 +735,19 @@ LLM_LATENCY_LIMITS = {
 ACC_PATTERN = {
     "acc": r"^(?:\{\"accuracy|accuracy)[\": ]*=?\s*([\d\.]+).*",
     "AUC": r"^AUC=([\d\.]+).*",
-    "mAP": r".*'(?:mAP|Total)':\s*([\d\.]+)",
+    "mAP": r".*(?:mAP=|'Total':)\s*([\d.]+)",
     "bleu": r"^BLEU\:\s*([\d\.]+).*",
     "F1": r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
     "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
     "DICE": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
-    "ROUGE1": r".*'rouge1':\s([\d.]+).*",
-    "ROUGE2": r".*'rouge2':\s([\d.]+).*",
-    "ROUGEL": r".*'rougeL':\s([\d.]+).*",
+    "ROUGE1": r".*'rouge1':\s+'?([\d.]+)'?.*",
+    "ROUGE2": r".*'rouge2':\s+'?([\d.]+)'?.*",
+    "ROUGEL": r".*'rougeL':\s+'?([\d.]+)'?.*",
     "ROUGELSUM": r".*'rougeLsum':\s([\d.]+).*",
     "GEN_LEN": r".*'gen_len':\s([\d.]+).*",
     "TOKENS_PER_SAMPLE": r".*'tokens_per_sample':\s([\d.]+).*",
-    "CLIP_SCORE": r".*'CLIP_SCORE':\s([\d.]+).*",
-    "FID_SCORE": r".*'FID_SCORE':\s([\d.]+).*",
+    "CLIP_SCORE": r".*'CLIP_SCORE':\s+'?([\d.]+).*",
+    "FID_SCORE": r".*'FID_SCORE':\s+'?([\d.]+).*",
     "gsm8k_accuracy": r".*'gsm8k':\s([\d.]+).*",
     "mbxp_accuracy": r".*'mbxp':\s([\d.]+).*",
     "exact_match": r".*'exact_match':\s([\d.]+).*"
@@ -876,6 +876,7 @@ class Config:
         extra_model_benchmark_map,
         ignore_uncommited=False,
         skip_power_check=False,
+        skip_all_systems_with_results=False,
     ):
         self.base = MODEL_CONFIG.get(version)
         self.extra_model_benchmark_map = extra_model_benchmark_map
@@ -894,6 +895,7 @@ class Config:
         self.optional = None
         self.ignore_uncommited = ignore_uncommited
         self.skip_power_check = skip_power_check
+        self.skip_all_systems_with_results = skip_all_systems_with_results
 
     def set_type(self, submission_type):
         if submission_type == "datacenter":
@@ -1084,6 +1086,11 @@ def get_args():
         "--skip-extra-accuracy-files-check",
         action="store_true",
         help="skips the check of extra accuracy files like the images folder of SDXL",
+    )
+    parser.add_argument(
+        "--skip-all-systems-have-results-check",
+        action="store_true",
+        help="skips the check that all the systems in the systems and measurements folder should have results",
     )
     parser.add_argument(
         "--scenarios-to-skip",
@@ -1302,6 +1309,9 @@ def check_accuracy_dir(config, model, path, verbose):
     fname = os.path.join(path, "mlperf_log_detail.txt")
     if not find_error_in_detail_log(config, fname):
         is_valid = False
+        log.error(
+            "%s has loadgen errors, number of errors: %s", path, mlperf_log.num_errors()
+        )
 
     return is_valid, result_acc
 
@@ -1434,6 +1444,9 @@ def check_performance_dir(
     fname = os.path.join(path, "mlperf_log_detail.txt")
     if not find_error_in_detail_log(config, fname):
         is_valid = False
+        log.error(
+            "%s has loadgen errors, number of errors: %s", path, mlperf_log.num_errors()
+        )
 
     required_performance_sample_count = config.get_performance_sample_count(
         model)
@@ -1914,50 +1927,38 @@ def check_results_dir(
             notes = notes + system_json.get("sw_notes")
         special_unit_dict = {
             "gptj-99": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "gptj-99.9": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-99": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-99.9": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-interactive-99": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-interactive-99.9": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
-                "Offline": "Tokens/s",
-                "Server": "Tokens/s",
-            },
-            "mixtral-8x7b": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama3.1-405b": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "mixtral-8x7b": {
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama3.1-405b": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
@@ -1977,7 +1978,9 @@ def check_results_dir(
         if config.version == "v4.0":
             unit = unit_dict[scenario_fixed]
         else:
-            unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
+            unit = special_unit_dict.get(
+                mlperf_model, unit_dict).get(
+                scenario_fixed, unit_dict[scenario_fixed])
         power_unit = power_unit_dict[scenario_fixed]
 
         if (power_metric <= 0) or (
@@ -2091,6 +2094,8 @@ def check_results_dir(
             if filter_submitter and submitter != filter_submitter:
                 continue
             results_path = os.path.join(division, submitter, "results")
+            measurements_path = os.path.join(division, submitter, "measurements")
+            systems_path = os.path.join(division, submitter, "systems")
             if not os.path.exists(results_path):
                 continue
 
@@ -2193,6 +2198,36 @@ def check_results_dir(
                 if os.path.exists(model_mapping_path):
                     with open(model_mapping_path) as fp:
                         extra_model_mapping = json.load(fp)
+
+            if not config.skip_all_systems_with_results:
+                measurement_diff = list(set(list_dir(measurements_path)) - set(list_dir(results_path)))
+                systems_diff = list(
+                    set(
+                        [
+                            system_file.replace(".json", "")
+                            for system_file in list_files(systems_path)
+                            if system_file.endswith(".json")
+                        ]
+                    )
+                    - set(list_dir(results_path))
+                )
+                if len(measurement_diff) > 0:
+                    log.error(
+                        "%s/%s/measurements has the following directories with no results: %s",
+                        division,
+                        submitter,
+                        measurement_diff,
+                    )
+                    results[os.path.join(results_path)] = None
+
+                if len(systems_diff) > 0:
+                    log.error(
+                        "%s/%s/systems has the following files with no results: %s",
+                        division,
+                        submitter,
+                        [(s + ".json") for s in systems_diff],
+                    )
+                    results[os.path.join(results_path)] = None
 
             for system_desc in list_dir(results_path):
                 # we are looking at
@@ -2407,7 +2442,7 @@ def check_results_dir(
                                 .replace('"', "")
                                 .replace("{", "")
                                 .replace("}", "")
-                            )
+                            ).strip()
                             if mlperf_model in REQUIRED_ACC_BENCHMARK:
                                 if (
                                         config.version
@@ -2425,7 +2460,7 @@ def check_results_dir(
                                             missing_files,
                                         )
                                         accuracy_is_valid = False
-                            if not accuracy_is_valid and not is_closed_or_network:
+                            if not accuracy_is_valid and acc and not is_closed_or_network:
                                 if debug:
                                     log.warning(
                                         "%s, accuracy not valid but taken for open",
@@ -3138,6 +3173,7 @@ def main():
         args.extra_model_benchmark_map,
         ignore_uncommited=args.submission_exceptions,
         skip_power_check=args.skip_power_check,
+        skip_all_systems_with_results = args.skip_all_systems_have_results_check
     )
 
     if args.scenarios_to_skip:

@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# Copyright 2018-2022 The MLPerf Authors. All Rights Reserved.
+# Copyright 2018-2025 The MLPerf Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -56,13 +56,13 @@ def result_log(file_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-r", "--reference_log", help="Path to reference performance log_details file.", required=True)
-    parser.add_argument("-t", "--test_log", help="Path to test performance log_details file.", required=True)
+    parser.add_argument("-r", "--reference_log_details", help="Path to reference performance log_details file.", required=True)
+    parser.add_argument("-t", "--test_log_details", help="Path to test performance log_details file.", required=True)
     args = parser.parse_args()
 
     print("Verifying performance.")
-    ref_scenario, ref_score, ref_target_latency = parse_result_log(args.reference_summary)
-    test_scenario, test_score, test_target_latency = parse_result_log(args.test_summary)
+    ref_scenario, ref_score, ref_target_latency = parse_result_log(args.reference_log_details)
+    test_scenario, test_score, test_target_latency = parse_result_log(args.test_log_details)
 
     if test_scenario != ref_scenario:
         sys.exit("TEST FAIL: Test and reference scenarios do not match!")

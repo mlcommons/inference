@@ -65,7 +65,7 @@ class BackendPytorchNative(backend.Backend):
         os.environ["MASTER_ADDR"] = "localhost"
         os.environ["MASTER_PORT"] = "29500"
         if self.use_gpu:
-            self.device: torch.device = torch.device(f"cuda:0")
+            self.device: torch.device = torch.device(f"cuda")
             self.dist_backend = "nccl"
             # torch.cuda.set_device(self.device)
         else:

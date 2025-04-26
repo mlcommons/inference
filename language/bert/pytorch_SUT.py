@@ -61,7 +61,7 @@ class BERT_PyTorch_SUT:
 
         self.network = args.network
         self.dev = (
-            torch.device("cuda:0") if torch.cuda.is_available(
+            torch.device("cuda") if torch.cuda.is_available(
             ) else torch.device("cpu")
         )
         self.version = transformers.__version__

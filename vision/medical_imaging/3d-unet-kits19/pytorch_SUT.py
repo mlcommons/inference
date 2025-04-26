@@ -71,7 +71,7 @@ class _3DUNET_PyTorch_SUT(BASE_3DUNET_SUT):
             model_path
         )
         self.device = torch.device(
-            "cuda:0" if torch.cuda.is_available() else "cpu")
+            "cuda" if torch.cuda.is_available() else "cpu")
         self.model = torch.jit.load(model_path, map_location=self.device)
         self.model.eval()
 

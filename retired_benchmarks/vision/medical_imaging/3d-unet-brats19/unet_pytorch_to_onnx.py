@@ -77,7 +77,7 @@ def main():
     width = 224
     depth = 160
     channels = 4
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dummy_input = torch.rand(
         [1, channels, height, width, depth]).float().to(device)
     torch.onnx.export(

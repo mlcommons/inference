@@ -12,7 +12,7 @@ python3 -u main.py --scenario Offline \
         --dataset-path ${DATASET_PATH} \
         --output-log-dir offline_accuracy_loadgen_logs \
         --dtype float32 \
-        --device cuda:0 2>&1 | tee offline_accuracy_log.log
+        --device cuda 2>&1 | tee offline_accuracy_log.log
 
 python3 evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
         --mlperf-accuracy-file offline_accuracy_loadgen_logs/mlperf_log_accuracy.json \

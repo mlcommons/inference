@@ -2094,7 +2094,8 @@ def check_results_dir(
             if filter_submitter and submitter != filter_submitter:
                 continue
             results_path = os.path.join(division, submitter, "results")
-            measurements_path = os.path.join(division, submitter, "measurements")
+            measurements_path = os.path.join(
+                division, submitter, "measurements")
             systems_path = os.path.join(division, submitter, "systems")
             if not os.path.exists(results_path):
                 continue
@@ -2200,7 +2201,8 @@ def check_results_dir(
                         extra_model_mapping = json.load(fp)
 
             if not config.skip_all_systems_with_results:
-                measurement_diff = list(set(list_dir(measurements_path)) - set(list_dir(results_path)))
+                measurement_diff = list(
+                    set(list_dir(measurements_path)) - set(list_dir(results_path)))
                 systems_diff = list(
                     set(
                         [
@@ -3173,7 +3175,7 @@ def main():
         args.extra_model_benchmark_map,
         ignore_uncommited=args.submission_exceptions,
         skip_power_check=args.skip_power_check,
-        skip_all_systems_with_results = args.skip_all_systems_have_results_check
+        skip_all_systems_with_results=args.skip_all_systems_have_results_check
     )
 
     if args.scenarios_to_skip:

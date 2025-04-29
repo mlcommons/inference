@@ -877,6 +877,7 @@ class Config:
         ignore_uncommited=False,
         skip_power_check=False,
         skip_all_systems_with_results=False,
+        skip_calibration_check=False
     ):
         self.base = MODEL_CONFIG.get(version)
         self.extra_model_benchmark_map = extra_model_benchmark_map
@@ -896,6 +897,7 @@ class Config:
         self.ignore_uncommited = ignore_uncommited
         self.skip_power_check = skip_power_check
         self.skip_all_systems_with_results = skip_all_systems_with_results
+        self.skip_calibration_check = skip_calibration_check
 
     def set_type(self, submission_type):
         if submission_type == "datacenter":
@@ -1091,6 +1093,11 @@ def get_args():
         "--skip-all-systems-have-results-check",
         action="store_true",
         help="skips the check that all the systems in the systems and measurements folder should have results",
+    )
+    parser.add_argument(
+        "--skip-calibration-check",
+        action="store_true",
+        help="skips the check that the calibration documentation should exist",
     )
     parser.add_argument(
         "--scenarios-to-skip",
@@ -2229,6 +2236,20 @@ def check_results_dir(
                     )
                     results[os.path.join(results_path)] = None
 
+            #  Check for calibration documentation
+            if not config.skip_calibration_check and division not in ["open"]:
+                calibration_path_root = os.path.join(division, submitter, "calibration.md")
+                calibration_path_doc = os.path.join(division, submitter, "documentation", "calibration.md")
+                if not (os.path.exists(calibration_path_root)) and (not os.path.exists(calibration_path_doc)):
+                    log.error(
+                        "%s/%s: has not calibration file. One of %s or %s is required",
+                        division,
+                        submitter,
+                        calibration_path_root,
+                        calibration_path_doc
+                    )
+                    results[os.path.join(results_path)] = None
+
             for system_desc in list_dir(results_path):
                 # we are looking at
                 # ./$division/$submitter/results/$system_desc, ie
@@ -3173,7 +3194,8 @@ def main():
         args.extra_model_benchmark_map,
         ignore_uncommited=args.submission_exceptions,
         skip_power_check=args.skip_power_check,
-        skip_all_systems_with_results = args.skip_all_systems_have_results_check
+        skip_all_systems_with_results = args.skip_all_systems_have_results_check,
+        skip_calibration_check = args.skip_calibration_check
     )
 
     if args.scenarios_to_skip:

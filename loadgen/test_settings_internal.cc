@@ -54,7 +54,8 @@ TestSettingsInternal::TestSettingsInternal(
       server_ttft_latency(requested.server_ttft_latency),
       server_tpot_latency(requested.server_tpot_latency),
       infer_token_latencies(requested.infer_token_latencies),
-      token_latency_scaling_factor(requested.token_latency_scaling_factor) {
+      token_latency_scaling_factor(requested.token_latency_scaling_factor),
+      disable_early_stopping(requested.disable_early_stopping) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -755,7 +756,9 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
            &server_target_latency_percentile, 0.01);
   lookupkv(model, "Server", "target_latency", &server_target_latency_ns,
            nullptr, 1000 * 1000);
-
+  if (lookupkv(model, "Server", "disable_early_stopping", &val, nullptr)){
+    disable_early_stopping = (val == 1) ? true : false;
+  };
   // keys that can be overriden in user.conf (the provided values still need to
   // pass the submission checker rules)
   if (lookupkv(model, scenario, "performance_issue_unique", &val, nullptr))

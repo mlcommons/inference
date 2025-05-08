@@ -489,20 +489,22 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
   bool min_duration_met = MinDurationMet(&min_duration_recommendation);
   bool min_queries_met = MinQueriesMet() && MinSamplesMet();
   bool early_stopping_met = true;
-  if (!settings.use_token_latencies) {
-    early_stopping_met = EarlyStopping(
-        &early_stopping_recommendation, pr.queries_issued, &pr.sample_latencies,
-        &pr.query_latencies, settings.target_latency);
-  } else {
-    early_stopping_met =
-        EarlyStopping(&early_stopping_tpot_recommendation, pr.queries_issued,
-                      &pr.token_results.time_per_output_token_arr,
-                      &pr.query_latencies,
-                      std::chrono::nanoseconds(settings.server_tpot_latency)) &&
-        EarlyStopping(&early_stopping_ttft_recommendation, pr.queries_issued,
-                      &pr.token_results.first_token_latencies,
-                      &pr.query_latencies,
-                      std::chrono::nanoseconds(settings.server_ttft_latency));
+  if (!settings.disable_early_stopping){
+    if (!settings.use_token_latencies) {
+      early_stopping_met = EarlyStopping(
+          &early_stopping_recommendation, pr.queries_issued, &pr.sample_latencies,
+          &pr.query_latencies, settings.target_latency);
+    } else {
+      early_stopping_met =
+          EarlyStopping(&early_stopping_tpot_recommendation, pr.queries_issued,
+                        &pr.token_results.time_per_output_token_arr,
+                        &pr.query_latencies,
+                        std::chrono::nanoseconds(settings.server_tpot_latency)) &&
+          EarlyStopping(&early_stopping_ttft_recommendation, pr.queries_issued,
+                        &pr.token_results.first_token_latencies,
+                        &pr.query_latencies,
+                        std::chrono::nanoseconds(settings.server_ttft_latency));
+    }
   }
   bool perf_constraints_met =
       PerfConstraintsMet(&perf_constraints_recommendation);
@@ -515,7 +517,11 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
   }
   summary("  Min duration satisfied : ", min_duration_met ? "Yes" : "NO");
   summary("  Min queries satisfied : ", min_queries_met ? "Yes" : "NO");
-  summary("  Early stopping satisfied: ", early_stopping_met ? "Yes" : "NO");
+  if(settings.disable_early_stopping){
+    summary("  Early stopping satisfied: Disabled");
+  } else{
+    summary("  Early stopping satisfied: ", early_stopping_met ? "Yes" : "NO");
+  }
 
   if (!all_constraints_met) {
     summary("Recommendations:");
@@ -540,9 +546,9 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
       summary(early_stopping_recommendation);
     } else {
       summary("TTFT Early Stopping Result:");
-      summary(early_stopping_ttft_recommendation);
+      summary(settings.disable_early_stopping ? "Disabled" : early_stopping_ttft_recommendation);
       summary("TPOT Early Stopping Result:");
-      summary(early_stopping_tpot_recommendation);
+      summary(settings.disable_early_stopping ? "Disabled" : early_stopping_tpot_recommendation);
     }
   }
 

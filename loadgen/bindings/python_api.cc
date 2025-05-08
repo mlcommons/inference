@@ -344,6 +344,7 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("tpot_latency", &TestSettings::server_tpot_latency)
       .def_readwrite("infer_token_latencies",
                      &TestSettings::infer_token_latencies)
+      .def_readwrite("disable_early_stopping", &TestSettings::disable_early_stopping)
       .def_readwrite("token_latency_scaling_factor",
                      &TestSettings::token_latency_scaling_factor)
       .def("FromConfig", &TestSettings::FromConfig, pybind11::arg("path"),

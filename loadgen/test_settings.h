@@ -271,6 +271,8 @@ struct TestSettings {
   /// \brief Infer token latencies
   bool infer_token_latencies = false;
   uint64_t token_latency_scaling_factor;
+  /// \brief Disable early stopping (for LLM benchmarks)
+  bool disable_early_stopping = false;
   /**@}*/
 };
 

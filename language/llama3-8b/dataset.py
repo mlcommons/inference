@@ -54,6 +54,7 @@ class Dataset:
         self.input = self.processed_data.input.tolist()
         self.input_ids = self.processed_data.tok_input.tolist()
         self.input_lens = [len(x) for x in self.input_ids]
+        self.targets = self.processed_data.output.tolist()
         del self.processed_data
         log.info("Finished loading dataset.")
 

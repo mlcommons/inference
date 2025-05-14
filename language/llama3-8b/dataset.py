@@ -92,8 +92,9 @@ class Dataset:
     def __del__(self):
         pass
 
+
 if __name__ == "__main__":
-    ds = Dataset(dataset_path = "data/cnn_eval.json")
+    ds = Dataset(dataset_path="data/cnn_eval.json")
     queries = [12, 34, 13367, 0]
     input_ids = [ds.input_ids[q] for q in queries]
     input_lens = [ds.input_lens[q] for q in queries]
@@ -109,4 +110,3 @@ if __name__ == "__main__":
     print(input_lens[3])
     print(input_ids[3])
     print("-------------------------------------------------------")
-

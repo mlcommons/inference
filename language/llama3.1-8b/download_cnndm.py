@@ -7,6 +7,7 @@ import numpy as np
 from transformers import AutoTokenizer
 from datasets import load_dataset, concatenate_datasets
 
+
 def get_args():
     parser = ArgumentParser()
     parser.add_argument(
@@ -48,6 +49,7 @@ def get_args():
 
     return parser.parse_args()
 
+
 args = get_args()
 model_id = args.model_id
 dataset_id = args.dataset_id
@@ -88,7 +90,8 @@ def preprocess_function(sample, padding="max_length"):
         x = dict()
         x["instruction"] = instruction_template
         x["input"] = sample[text_column][i]
-        x["tok_input"] = tokenizer.encode(instruction_template.format(x["input"]))
+        x["tok_input"] = tokenizer.encode(
+            instruction_template.format(x["input"]))
         x["output"] = sample[summary_column][i]
         inputs.append(x)
     model_inputs = dict()

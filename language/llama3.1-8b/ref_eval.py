@@ -17,7 +17,8 @@ def rouge(label, pred):
 
 
 def niah_em(label, pred):
-    label_uuids = re.findall(r'[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}', label)
+    label_uuids = re.findall(
+        r'[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}', label)
     pred_uuids = re.findall(r'[\w]{8}-[\w]{4}-[\w]{4}-[\w]{4}-[\w]{12}', pred)
 
     # https://github.com/hsiehjackson/RULER/blob/main/scripts/eval/synthetic/constants.py#L28
@@ -43,7 +44,8 @@ def qa_em(label, pred):
         return {'exact_match': 100.0}
 
     normalized_answer = re.sub(r'\s+', '', answer_substring).lower()
-    label_entries = [re.sub(r'\s+', '', entry).lower() for entry in label.split('|')]
+    label_entries = [re.sub(r'\s+', '', entry).lower()
+                     for entry in label.split('|')]
 
     match_found = any(entry in normalized_answer for entry in label_entries)
     return {'exact_match': 100.0 if match_found else 0.0}
@@ -63,7 +65,12 @@ def process_row(row):
 
 def run_evaluation(df):
     with Pool(cpu_count()) as pool:
-        accuracies = list(tqdm(pool.imap(process_row, df.to_dict('records')), total=len(df)))
+        accuracies = list(
+            tqdm(
+                pool.imap(
+                    process_row,
+                    df.to_dict('records')),
+                total=len(df)))
 
     df['accuracy'] = accuracies
     return df
@@ -74,7 +81,7 @@ if __name__ == '__main__':
     df = pd.read_pickle(fname)
 
     df = run_evaluation(df)
-    #df.to_pickle(str(fname).replace(".pkl", "_eval.pkl"))
+    # df.to_pickle(str(fname).replace(".pkl", "_eval.pkl"))
     print(f"WROTE: {str(fname).replace('.pkl', '_eval.pkl')}")
 
     accuracy = df.accuracy.apply(pd.Series)

@@ -40,7 +40,7 @@ class SUT:
         tensor_parallel_size=8
     ):
 
-        self.model_path = model_path or f"meta-llama/Meta-Llama-3-8B-Instruct{'-FP8' if dtype == 'float8' else ''}"
+        self.model_path = model_path or f"meta-llama/Meta-Llama-3-8B{'-FP8' if dtype == 'float8' else ''}"
 
         if not batch_size:
             batch_size = 1

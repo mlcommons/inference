@@ -1,4 +1,4 @@
-CHECKPOINT_PATH="${CHECKPOINT_PATH:meta-llama/Meta-Llama-3-8B-Instruct}"
+CHECKPOINT_PATH="${CHECKPOINT_PATH:meta-llama/Meta-Llama-3-8B}"
 DATASET_PATH="${DATASET_PATH:cnn_eval.json}"
 
 python -u main.py --scenario Offline \

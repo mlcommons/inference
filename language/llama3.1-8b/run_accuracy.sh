@@ -1,4 +1,4 @@
-CHECKPOINT_PATH="${CHECKPOINT_PATH:meta-llama/Meta-Llama-3-8B}"
+CHECKPOINT_PATH="${CHECKPOINT_PATH:meta-llama/Meta-Llama-3.1-8B}"
 DATASET_PATH="${DATASET_PATH:cnn_eval.json}"
 
 mkdir -p "run_outputs"

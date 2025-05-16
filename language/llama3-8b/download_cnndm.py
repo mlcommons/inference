@@ -71,7 +71,7 @@ dataset = load_dataset(dataset_id, name=dataset_config)
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 tokenizer.padding_side = "left"
 tokenizer.pad_token = tokenizer.eos_token
-tokenizer.model_max_length = 2048
+tokenizer.model_max_length = 8000
 
 
 instruction_template = "In very brief sentences, summarize the following news article. Only return the summary.\nArticle: {}\nSummary: "

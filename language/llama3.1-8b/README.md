@@ -109,9 +109,9 @@ mlcr get,ml-model,llama3 --outdirname=${CHECKPOINT_PATH} -j
 + First go to [llama3-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
 + Requires Git Large Files Storage
 ```
-export CHECKPOINT_PATH=meta-llama/Meta-Llama-3-8B
+export CHECKPOINT_PATH=meta-llama/Llama-3.1-8B
 git lfs install
-git clone https://huggingface.co/meta-llama/Meta-Llama-3-8B ${CHECKPOINT_PATH}
+git clone https://huggingface.co/meta-llama/Llama-3.1-8B ${CHECKPOINT_PATH}
 cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ```
 
@@ -122,7 +122,7 @@ mlcr get,ml-model,llama3,_hf --outdirname=${CHECKPOINT_PATH} --hf_token=<hugging
 ```
 
 **Note:**
-Downloading llama3-8b model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [llama3-8b](https://huggingface.co/meta-llama/Meta-Llama-3-8B) model. 
+Downloading llama3-8b model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [llama3.1-8b](https://huggingface.co/meta-llama/Llama-3.1-8B) model. 
 
 ## Get Dataset
 

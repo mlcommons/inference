@@ -29,7 +29,7 @@ class Dataset:
         dataset_path=None,
         dtype="bfloat16"
     ):
-        self.model_name = model_name or f"meta-llama/Meta-Llama-3-8B"
+        self.model_name = model_name or f"meta-llama/Llama-3.1-8B"
         self.dataset_path = dataset_path
 
         # self.total_sample_count = total_sample_count
@@ -91,22 +91,3 @@ class Dataset:
 
     def __del__(self):
         pass
-
-
-if __name__ == "__main__":
-    ds = Dataset(dataset_path="data/cnn_eval.json")
-    queries = [12, 34, 13367, 0]
-    input_ids = [ds.input_ids[q] for q in queries]
-    input_lens = [ds.input_lens[q] for q in queries]
-    print(input_lens[0])
-    print(input_ids[0])
-    print("-------------------------------------------------------")
-    print(input_lens[1])
-    print(input_ids[1])
-    print("-------------------------------------------------------")
-    print(input_lens[2])
-    print(input_ids[2])
-    print("-------------------------------------------------------")
-    print(input_lens[3])
-    print(input_ids[3])
-    print("-------------------------------------------------------")

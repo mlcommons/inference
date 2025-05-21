@@ -12,7 +12,7 @@ def get_args():
     parser.add_argument(
         "--model-id",
         type=str,
-        default="meta-llama/Llama-3.1-8B",
+        default="meta-llama/Meta-Llama-3.1-8B-Instruct",
         help="Model ID to get the tokenizer",
     )
     parser.add_argument(

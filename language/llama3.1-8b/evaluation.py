@@ -36,7 +36,7 @@ def get_args():
     )
     parser.add_argument(
         "--model-name",
-        default="meta-llama/Llama-3.1-8B",
+        default="meta-llama/Meta-Llama-3.1-8B-Instruct",
         help="Model name")
     parser.add_argument(
         "--total-sample-count",

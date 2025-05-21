@@ -46,7 +46,7 @@ def get_args():
     parser.add_argument(
         "--model-path",
         type=str,
-        default="meta-llama/Meta-Llama-3.1-8B",
+        default="meta-llama/Meta-Llama-3.1-8B-Instruct",
         help="Model name",
     )
     parser.add_argument("--dataset-path", type=str, default=None, help="")
@@ -110,7 +110,7 @@ def get_args():
     parser.add_argument(
         "--api-model-name",
         type=str,
-        default="meta-llama/Meta-Llama-3.1-8B",
+        default="meta-llama/Meta-Llama-3.1-8B-Instruct",
         help="Model name(specified in llm server)",
     )
     parser.add_argument(
@@ -118,6 +118,13 @@ def get_args():
         type=str,
         default=None,
         help="Specify an api endpoint call to use api mode",
+    )
+    parser.add_argument(
+        "--lg-model-name",
+        type=str,
+        default="llama3_1-8b",
+        choices=["llama3_1-8b"],
+        help="Model name(specified in llm server)",
     )
 
     args = parser.parse_args()
@@ -137,7 +144,7 @@ def main():
     settings.scenario = scenario_map[args.scenario.lower()]
     # mlperf.conf is automatically loaded by the loadgen
     # settings.FromConfig(args.mlperf_conf, "llama3_1-8b", args.scenario)
-    settings.FromConfig(args.user_conf, "llama3_1-8b", args.scenario)
+    settings.FromConfig(args.user_conf, args.lg_model_name, args.scenario)
 
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly

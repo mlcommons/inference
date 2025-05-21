@@ -29,7 +29,7 @@ class Dataset:
         dataset_path=None,
         dtype="bfloat16"
     ):
-        self.model_name = model_name or f"meta-llama/Llama-3.1-8B"
+        self.model_name = model_name or f"meta-llama/Llama-3.1-8B-Instruct"
         self.dataset_path = dataset_path
 
         # self.total_sample_count = total_sample_count

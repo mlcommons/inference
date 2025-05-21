@@ -40,7 +40,7 @@ class SUT:
         tensor_parallel_size=8
     ):
 
-        self.model_path = model_path or f"meta-llama/Meta-Llama-3.1-8B"
+        self.model_path = model_path or f"meta-llama/Meta-Llama-3.1-8B-Instruct"
 
         if not batch_size:
             batch_size = 1
@@ -113,6 +113,10 @@ class SUT:
 
             input_ids_tensor = [
                 self.data_object.input_ids[q.index] for q in qitem]
+            input_text_tensor = [
+                self.data_object.input[q.index] for q in qitem]
+            for in_text in input_text_tensor:
+                log.info(f"Input: {in_text}")
 
             tik2 = time.time()
             outputs = self.model.generate(
@@ -121,6 +125,7 @@ class SUT:
             pred_output_tokens = []
             for output in outputs:
                 pred_output_tokens.append(list(output.outputs[0].token_ids))
+                log.info(f"Output: {output.outputs[0].text}")
             tik3 = time.time()
 
             processed_output = self.data_object.postProcess(

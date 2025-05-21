@@ -68,12 +68,12 @@ class SUT:
 
         self.load_model()
         gen_kwargs = {
-            "temperature": 1,
+            "temperature": 0.0,
             "top_p": 1,
             "top_k": 1,
             "seed": 42,
-            "max_tokens": 2000,
-            "min_tokens": 2
+            "max_tokens": 128,
+            "min_tokens": 1
         }
         self.sampling_params = SamplingParams(**gen_kwargs)
         # self.sampling_params.all_stop_token_ids.add(self.model.get_tokenizer().eos_token_id)
@@ -113,10 +113,10 @@ class SUT:
 
             input_ids_tensor = [
                 self.data_object.input_ids[q.index] for q in qitem]
-            input_text_tensor = [
-                self.data_object.input[q.index] for q in qitem]
-            for in_text in input_text_tensor:
-                log.info(f"Input: {in_text}")
+            # input_text_tensor = [
+            #     self.data_object.input[q.index] for q in qitem]
+            # for in_text in input_text_tensor:
+            #     log.info(f"Input: {in_text}")
 
             tik2 = time.time()
             outputs = self.model.generate(
@@ -125,7 +125,7 @@ class SUT:
             pred_output_tokens = []
             for output in outputs:
                 pred_output_tokens.append(list(output.outputs[0].token_ids))
-                log.info(f"Output: {output.outputs[0].text}")
+                # log.info(f"Output: {output.outputs[0].text}")
             tik3 = time.time()
 
             processed_output = self.data_object.postProcess(

@@ -149,8 +149,10 @@ def main():
             "llama2-70b-99.9",
             "llama2-70b-interactive-99",
             "llama2-70b-interactive-99.9",
+            "llama3.1-405b",
             "mixtral-8x7b",
             "pointpainting",
+            "rgat",
         ],
         ["SingleStream", "MultiStream", "Server", "Offline"],
         [

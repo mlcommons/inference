@@ -63,14 +63,18 @@ def load_labels(base_path, dataset_size, use_label_2K=True, no_memmap=False):
 
     if dataset_size in ["large", "full"] and not no_memmap:
         mmap_mode = 'r'
+        paper_node_labels = torch.from_numpy(
+            np.memmap(
+                paper_lbl_path, dtype="float32", mode=mmap_mode, shape=(paper_nodes_num[dataset_size])
+            )
+        ).to(torch.long)
     else:
         mmap_mode = None
-
-    paper_node_labels = torch.from_numpy(
-        np.load(
-            paper_lbl_path,
-            mmap_mode=mmap_mode)).to(
-        torch.long)
+        paper_node_labels = torch.from_numpy(
+            np.load(
+                paper_lbl_path,
+                mmap_mode=mmap_mode)).to(
+            torch.long)
     labels = paper_node_labels
     val_idx = torch.load(
         os.path.join(

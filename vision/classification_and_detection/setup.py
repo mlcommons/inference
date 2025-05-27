@@ -100,7 +100,7 @@ setup(
         "pybind11",
         "Cython",
         "pycocotools",
-        "mlperf_loadgen",
+        "mlcommons_loadgen",
         "opencv-python-headless",
     ],
 )

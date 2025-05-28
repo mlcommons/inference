@@ -1,6 +1,6 @@
-# Reference Implementation for llama3-8b
+# Reference Implementation for llama3.1-8b
 
-**Basic implementation for llama3-8b. Few noteworthy items:**
+**Basic implementation for llama3.1-8b. Few noteworthy items:**
 
 + Streamer for communicating with loadgen has quite some overhead. This is only meant to provide functional implementation
 + For custom/optimized implementations of this benchmark it is important to include the :
@@ -36,9 +36,9 @@ rm ~/miniconda3/miniconda.sh
 - Set the following helper variables
 ```bash
 export ROOT=$PWD/inference
-export LLAMA_FOLDER=$PWD/inference/language/llama3-8b
+export LLAMA_FOLDER=$PWD/inference/language/llama3.1-8b
 export LOADGEN_FOLDER=$PWD/inference/loadgen
-export DATASET_FOLDER=$PWD/inference/language/llama3-8b/dataset
+export DATASET_FOLDER=$PWD/inference/language/llama3.1-8b/dataset
 ```
 
 - Clone the inference repository:
@@ -49,8 +49,8 @@ git clone --recurse-submodules https://github.com/mlcommons/inference.git \
 
 - Create a conda environment:
 ```bash
-conda create -y -n llama3-8b python=30
-conda activate llama3-8b
+conda create -y -n llama3.1-8b python=3.10
+conda activate llama3.1-8b
 conda install -y -c conda-forge libstdcxx-ng=12
 ```
 
@@ -99,14 +99,14 @@ pip install -e ../../loadgen
 ## Get Model
 ### MLCommons Members Download (Recommended for official submission)
 
-You need to request for access to [MLcommons](http://llama3-1.mlcommons.org/) and you'll receive an email with the download instructions. You can download the model automatically via the below command
+You need to request for access to [MLCommons](http://llama3-1.mlcommons.org/) and you'll receive an email with the download instructions. You can download the model automatically via the below command
 ```
-mlcr get,ml-model,llama3 --outdirname=${CHECKPOINT_PATH} -j
+mlcr get,ml-model,llama3.1-8b --outdirname=${CHECKPOINT_PATH} -j
 ```
 
 
 ### External Download (Not recommended for official submission)
-+ First go to [llama3-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
++ First go to [llama3.1-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
 + Requires Git Large Files Storage
 ```
 export CHECKPOINT_PATH=meta-llama/Llama-3.1-8B-Instruct
@@ -118,11 +118,11 @@ cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ### Download huggingface model through MLC
 
 ```
-mlcr get,ml-model,llama3,_hf --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
+mlcr get,ml-model,llama3.1-8b,_hf --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
 ```
 
 **Note:**
-Downloading llama3-8b model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) model. 
+Downloading llama3.1-8b model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [Llama-3.1-8B-Instruct](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct) model. 
 
 ## Get Dataset
 
@@ -143,23 +143,23 @@ You can then navigate in the terminal to your desired download directory and run
 
 **TODO**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_8b/{TODO} ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/{TODO} ./ -P
 ```
 **MLC Command**
 
 ```
-mlcr get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
+mlcr get,dataset,mlperf,inference,llama3.1-8b,_validation --outdirname=<path to download> -j
 ```
 
 You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
 
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3_8b/{TODO} ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_eval.json ./ -P
 ```
 
 **MLC Command**
 ```
-mlcr get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
+mlcr get,dataset,mlperf,inference,llama3.1-8b,_calibration --outdirname=<path to download> -j
 ```
 
 
@@ -219,8 +219,8 @@ python -u main.py --scenario Offline \
 
 ACCURACY_LOG_FILE=${OUTPUT_LOG_DIR}/mlperf_log_accuracy.json
 if [ -e ${ACCURACY_LOG_FILE} ]; then
-        python evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
-                --mlperf-accuracy-file ${ACCURACY_LOG_FILE} --dataset-file ${DATASET_PATH} --dtype int32
+        python evaluation.py --mlperf-accuracy-file ${ACCURACY_LOG_FILE} \
+                --dataset-file ${DATASET_PATH} --dtype int32
 fi
 ```
 
@@ -245,8 +245,8 @@ python -u main.py --scenario Server \
 
 ACCURACY_LOG_FILE=${OUTPUT_LOG_DIR}/mlperf_log_accuracy.json
 if [ -e ${ACCURACY_LOG_FILE} ]; then
-        python evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
-                --mlperf-accuracy-file ${ACCURACY_LOG_FILE} --dataset-file ${DATASET_PATH} --dtype int32
+        python evaluation.py --mlperf-accuracy-file ${ACCURACY_LOG_FILE} \
+                --dataset-file ${DATASET_PATH} --dtype int32
 fi
 ```
 
@@ -255,16 +255,20 @@ The ServerSUT was not tested for GPU runs.
 ### Evaluate the accuracy using MLCFlow
 You can also evaulate the accuracy from the generated accuracy log by using the following MLC command
 ```
-mlcr process,mlperf,accuracy,_dataset_llama3 --result_dir=<Path to accuracy log directory>
+mlcr process,mlperf,accuracy,_dataset_llama3.1-8b --result_dir=<Path to accuracy log directory>
 ```
 
 ## Accuracy Target
 Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets:
 ```
+# TODO: Update to final values
 {
-        'rougeL': 21.6666,
-        'exact_match': 90.1335,
-        'tokens_per_sample': 684.68,
+        'rouge1': 37.9869,
+        'rouge2': 15.0351,
+        'rougeL': 23.7094,
+        'rougeLsum': 34.7967,
+        'gen_len': 7981387,
+        'gen_num': 13000,
 }
 ```
 The accuracy target is 99% for rougeL and exact_match, and 90% for tokens_per_sample

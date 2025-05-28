@@ -12,9 +12,10 @@ python3 -u main.py --scenario Offline \
         --total-sample-count 13368 \
         --dataset-path ${DATASET_PATH} \
         --output-log-dir offline_accuracy_loadgen_logs \
-        --dtype float32 | tee offline_accuracy_log.log
+        --dtype float16 \
+        --vllm | tee offline_accuracy_log.log
 
-python3 evaluate-accuracy.py --checkpoint-path ${CHECKPOINT_PATH} \
+python3 evaluation.py \
         --mlperf-accuracy-file offline_accuracy_loadgen_logs/mlperf_log_accuracy.json \
         --dataset-file ${DATASET_PATH} \
         --dtype int32

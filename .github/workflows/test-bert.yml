@@ -5,7 +5,7 @@ name: Test for MLPerf inference bert submission generation using MLC script auto
 
 on:
   pull_request:
-    branches: [ "master", "dev" ]
+    branches: [ "master_off", "dev_off" ]
     paths:
       - language/bert/**
       - tools/submission/**

@@ -281,8 +281,6 @@ MODEL_CONFIG = {
             "gptj-99.9",
             "llama2-70b-99",
             "llama2-70b-99.9",
-            "llama2-70b-interactive-99",
-            "llama2-70b-interactive-99.9",
             "stable-diffusion-xl",
             "mixtral-8x7b",
             "llama3.1-405b",
@@ -300,14 +298,15 @@ MODEL_CONFIG = {
             "gptj-99.9": ["Server", "Offline"],
             "llama2-70b-99": ["Server", "Offline"],
             "llama2-70b-99.9": ["Server", "Offline"],
-            "llama2-70b-interactive-99": ["Server", "Offline"],
-            "llama2-70b-interactive-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["Server", "Offline"],
             "mixtral-8x7b": ["Server", "Offline"],
             "llama3.1-405b": ["Server", "Offline"],
             "rgat": ["Offline"],
         },
-        "optional-scenarios-datacenter": {},
+        "optional-scenarios-datacenter": {
+            "llama2-70b-99": ["Interactive"],
+            "llama2-70b-99.9": ["Interactive"],
+        },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
             "retinanet": ["SingleStream", "MultiStream", "Offline"],
@@ -334,8 +333,6 @@ MODEL_CONFIG = {
             "gptj-99.9": ["SingleStream", "Offline", "Server"],
             "llama2-70b-99": ["Server", "Offline"],
             "llama2-70b-99.9": ["Server", "Offline"],
-            "llama2-70b-interactive-99": ["Server", "Offline"],
-            "llama2-70b-interactive-99.9": ["Server", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
             "mixtral-8x7b": ["Server", "Offline"],
             "llama3.1-405b": ["Server", "Offline"],
@@ -393,26 +390,6 @@ MODEL_CONFIG = {
                 "TOKENS_PER_SAMPLE",
                 294.45 * 0.9,
             ),
-            "llama2-70b-interactive-99": (
-                "ROUGE1",
-                44.4312 * 0.99,
-                "ROUGE2",
-                22.0352 * 0.99,
-                "ROUGEL",
-                28.6162 * 0.99,
-                "TOKENS_PER_SAMPLE",
-                294.45 * 0.9,
-            ),
-            "llama2-70b-interactive-99.9": (
-                "ROUGE1",
-                44.4312 * 0.999,
-                "ROUGE2",
-                22.0352 * 0.999,
-                "ROUGEL",
-                28.6162 * 0.999,
-                "TOKENS_PER_SAMPLE",
-                294.45 * 0.9,
-            ),
             "stable-diffusion-xl": (
                 "CLIP_SCORE",
                 31.68631873,
@@ -453,8 +430,6 @@ MODEL_CONFIG = {
             ),
             "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
-            "llama2-70b-interactive-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
-            "llama2-70b-interactive-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
             "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
             "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
         },
@@ -474,8 +449,6 @@ MODEL_CONFIG = {
             "gptj-99.9": 13368,
             "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
-            "llama2-70b-interactive-99": 24576,
-            "llama2-70b-interactive-99.9": 24576,
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
             "llama3.1-405b": 8313,
@@ -495,8 +468,6 @@ MODEL_CONFIG = {
             "gptj-99.9": 13368,
             "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
-            "llama2-70b-interactive-99": 24576,
-            "llama2-70b-interactive-99.9": 24576,
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
             "llama3.1-405b": 8313,
@@ -530,8 +501,6 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": {"Server": 20000000000},
             "llama2-70b-99": {"Server": 20000000000},
             "llama2-70b-99.9": {"Server": 20000000000},
-            "llama2-70b-interactive-99": {"Server": 20000000000},
-            "llama2-70b-interactive-99.9": {"Server": 20000000000},
             "mixtral-8x7b": {"Server": 20000000000},
             "llama3.1-405b": {"Server": 60000000000}
         },
@@ -558,8 +527,6 @@ MODEL_CONFIG = {
             "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama2-70b-interactive-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama2-70b-interactive-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "stable-diffusion-xl": {
                 "SingleStream": 1024,
                 "Server": 270336,
@@ -654,8 +621,6 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "gptj-99.9": 13368,
     "llama2-70b-99": 24576,
     "llama2-70b-99.9": 24576,
-    "llama2-70b-interactive-99": 24576,
-    "llama2-70b-interactive-99.9": 24576,
     "stable-diffusion-xl": 5000,
     "mixtral-8x7b": 15000,
     "llama3.1-405b": 8313,
@@ -723,14 +688,6 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
         },
-        "llama2-70b-interactive-99": {
-            "Offline": "result_tokens_per_second",
-            "Server": "result_completed_tokens_per_second",
-        },
-        "llama2-70b-interactive-99.9": {
-            "Offline": "result_tokens_per_second",
-            "Server": "result_completed_tokens_per_second",
-        },
         "gptj-99": {
             "Offline": "result_inferred_tokens_per_second",
             "Server": "result_inferred_completed_tokens_per_second",
@@ -752,20 +709,30 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
 
 LLM_LATENCY_LIMITS = {
     "llama2-70b-99": {
-        "ttft": 2000 * 1000000, "tpot": 200 * 1000000
+        "Server": {
+            "ttft": 2000 * 1000000, "tpot": 200 * 1000000
+        },
+        "Interactive": {
+            "ttft": 450 * 1000000, "tpot": 40 * 1000000
+        },
     },
     "llama2-70b-99.9": {
-        "ttft": 2000 * 1000000, "tpot": 200 * 1000000
+        "Server": {
+            "ttft": 2000 * 1000000, "tpot": 200 * 1000000
+        },
+        "Interactive": {
+            "ttft": 450 * 1000000, "tpot": 40 * 1000000
+        },
     },
-    "llama2-70b-interactive-99": {
-        "ttft": 450 * 1000000, "tpot": 40 * 1000000
+    "mixtral-8x7b": {
+        "Server": {
+            "ttft": 2000 * 1000000, "tpot": 200 * 1000000
+        },
     },
-    "llama2-70b-interactive-99.9": {
-        "ttft": 450 * 1000000, "tpot": 40 * 1000000
-    },
-    "mixtral-8x7b": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000},
     "llama3.1-405b": {
-        "ttft": 6000 * 1000000, "tpot": 175 * 1000000
+        "Server": {
+            "ttft": 6000 * 1000000, "tpot": 175 * 1000000
+        },
     },
 }
 
@@ -1058,8 +1025,6 @@ class Config:
                 "gptj-99.9",
                 "llama2-70b-99",
                 "llama2-70b-99.9",
-                "llama2-70b-interactive-99",
-                "llama2-70b-interactive-99.9",
                 "mixtral-8x7b",
                 "llama3.1-405b",
                 "rgat",
@@ -1381,7 +1346,7 @@ def extra_check_llm(mlperf_log, scenario, model):
             # For offline no further checks are necessary
             return True
         else:
-            limits = LLM_LATENCY_LIMITS[model]
+            limits = LLM_LATENCY_LIMITS[model][scenario]
             if (
                 mlperf_log["result_first_token_99.00_percentile_latency_ns"]
                 < limits["ttft"]
@@ -1431,7 +1396,7 @@ def get_performance_metric(
 
     inferred = False
     if scenario_fixed != scenario:
-        inferred, res = get_inferred_result(
+        inferred, res, _ = get_inferred_result(
             scenario_fixed, scenario, res, mlperf_log, config, False
         )
 
@@ -1470,7 +1435,6 @@ def check_performance_dir(
         )
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
-                 "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
                  "mixtral-8x7b", "llama3.1-405b"]:
         llm_is_valid = extra_check_llm(
             mlperf_log, scenario_fixed, model)
@@ -1639,9 +1603,10 @@ def check_performance_dir(
 
     inferred = False
     if scenario_fixed != scenario:
-        inferred, res = get_inferred_result(
+        inferred, res, inferred_valid = get_inferred_result(
             scenario_fixed, scenario, res, mlperf_log, config, True
         )
+        is_valid &= inferred_valid
 
     is_network_system, is_network_mode_valid = is_system_over_network(
         division, system_json, path
@@ -1664,6 +1629,7 @@ def get_inferred_result(
 ):
 
     inferred = False
+    is_valid = True
     # Check if current scenario (and version) uses early stopping
     uses_early_stopping = config.uses_early_stopping(scenario)
 
@@ -1703,7 +1669,10 @@ def get_inferred_result(
             res = (early_stopping_latency_ms * samples_per_query) / MS_TO_NS
         else:
             res = (latency_99_percentile * samples_per_query) / MS_TO_NS
-    return inferred, res
+    
+    if (scenario_fixed in ["Interactive"]) and scenario not in ["Server"]:
+        is_valid = False
+    return inferred, res, is_valid
 
 
 def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
@@ -1996,30 +1965,27 @@ def check_results_dir(
             "llama2-70b-99": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
+                "Interactive": "Tokens/s",
             },
             "llama2-70b-99.9": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
-            },
-            "llama2-70b-interactive-99": {
-                "Offline": "Tokens/s",
-                "Server": "Tokens/s",
-            },
-            "llama2-70b-interactive-99.9": {
-                "Offline": "Tokens/s",
-                "Server": "Tokens/s",
+                "Interactive": "Tokens/s",
             },
             "llama3.1-405b": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
+                "Interactive": "Tokens/s",
             },
             "mixtral-8x7b": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
+                "Interactive": "Tokens/s",
             },
             "llama3.1-405b": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
+                "Interactive": "Tokens/s",
             },
         }
         unit_dict = {
@@ -2027,12 +1993,14 @@ def check_results_dir(
             "MultiStream": "Latency (ms)",
             "Offline": "Samples/s",
             "Server": "Queries/s",
+            "Interactive": "Queries/s",
         }
         power_unit_dict = {
             "SingleStream": "millijoules",
             "MultiStream": "millijoules",
             "Offline": "Watts",
             "Server": "Watts",
+            "Interactive": "Watts",
         }
         if config.version == "v4.0":
             unit = unit_dict[scenario_fixed]
@@ -3149,8 +3117,6 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "llama2-70b-interactive-99",
-        "llama2-70b-interactive-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
         "rgat",
@@ -3172,8 +3138,6 @@ def check_compliance_dir(
         "gptj-99.9",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "llama2-70b-interactive-99",
-        "llama2-70b-interactive-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
     ]:
@@ -3184,7 +3148,6 @@ def check_compliance_dir(
         test_list.remove("TEST04")
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
-                 "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
                  "mixtral-8x7b", "llama3.1-405b"]:
         test_list.append("TEST06")
 

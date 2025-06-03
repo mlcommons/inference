@@ -9,44 +9,10 @@ on:
       - '.github/workflows/test-submission-generation.yml'
       - '**'  
       - '!**.md'
+      
 jobs:
-  submission_generation:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [ "3.12" ]
-        division: ["closed", "open", "closed-open"]
-        category: ["datacenter", "edge"]
-        case: ["closed"]
-        action: ["run", "docker"]
-        exclude:
-          - os: macos-latest
-          - os: windows-latest
-          - category: "edge"
-            
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        pip install mlc-scripts
-    - name: Pull repo where test cases are uploaded
-      run: |
-        git clone -b submission-generation-examples https://github.com/mlcommons/inference.git submission_generation_examples
-    - name: Run Submission Generation - ${{ matrix.case }} ${{ matrix.action }} ${{ matrix.category }} ${{ matrix.division }} 
-      continue-on-error: true
-      run: |
-        if [ "${{ matrix.case }}" == "closed" ]; then
-          description="Test submission - contains closed edge and datacenter"
-        elif [ "${{ matrix.case }}" == "closed-power" ]; then
-          description="Test submission - contains closed-power edge and datacenter results"
-        fi
-        # Dynamically set the log group to simulate a dynamic step name
-        echo "::group::$description"
-        mlc ${{ matrix.action }} script --tags=generate,inference,submission  --adr.compiler.tags=gcc --version=v5.0 --clean --preprocess_submission=yes --submission_base_dir=mysubmissions --results_dir=$PWD/submission_generation_tests/${{ matrix.case }}/ --run-checker --submitter=MLCommons --tar=yes --division=${{ matrix.division }} --env.MLC_DETERMINE_MEMORY_CONFIGURATION=yes --quiet
-        mlc ${{ matrix.action }} script --tags=run,submission,checker --submitter_id_off=mysubmitter_id --tar=yes --submission_dir=mysubmissions/submissions --submission_tar_file=mysubmission.tar.gz
+  run-tests:
+    uses: mlcommons/mlperf-automations/.github/workflows/test-mlperf-inference-submission-generation.yml@dev
+    with:
+      ref: ${{ github.event.pull_request.head.ref }}
+      repo-url: ${{ github.event.pull_request.head.repo.html_url }}

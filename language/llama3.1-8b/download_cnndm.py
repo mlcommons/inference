@@ -74,9 +74,9 @@ tokenizer.pad_token = tokenizer.eos_token
 tokenizer.model_max_length = 8000
 
 
-instruction_template = "In very brief sentences, summarize the following news article. Only return the summary.\nArticle: {}\nSummary: "
+instruction_template = {"llama": ("In very brief sentences, summarize the following news article. Only return the summary.\nArticle: {input}\nSummary: ")}
 
-prompt_length = len(tokenizer(instruction_template)["input_ids"])
+prompt_length = len(tokenizer(instruction_template["llama"])["input_ids"])
 max_sample_length = tokenizer.model_max_length - prompt_length
 
 
@@ -88,7 +88,7 @@ def preprocess_function(sample, padding="max_length"):
         x = dict()
         x["instruction"] = instruction_template
         x["input"] = sample[text_column][i]
-        x["tok_input"] = tokenizer.encode(instruction_template.format(x["input"]))
+        x["tok_input"] = tokenizer.encode(instruction_template["llama"].format_map(x))
         x["output"] = sample[summary_column][i]
         inputs.append(x)
     model_inputs = dict()

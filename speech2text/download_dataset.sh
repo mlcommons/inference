@@ -23,7 +23,7 @@ mkdir -p ${LIBRISPEECH_DIR}
 
 cd ${WORKSPACE_DIR}
 
-# Downloads all Librispeech dev and test paritions
+# Downloads all Librispeech dev paritions
 python ${UTILS_DIR}/download_librispeech.py \
     ${UTILS_DIR}/inference_librispeech.csv \
     ${LIBRISPEECH_DIR} \
@@ -33,8 +33,6 @@ python ${UTILS_DIR}/download_librispeech.py \
 mkdir -p ${LIBRISPEECH_DIR}/all-all
 cp -r ${LIBRISPEECH_DIR}/dev-clean/* \
       ${LIBRISPEECH_DIR}/dev-other/* \
-      ${LIBRISPEECH_DIR}/test-clean/* \
-      ${LIBRISPEECH_DIR}/test-other/* \
       ${LIBRISPEECH_DIR}/all-all/
 
 # Coverts original Librispeech flac to wav and creates manifest file

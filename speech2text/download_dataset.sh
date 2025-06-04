@@ -30,19 +30,19 @@ python ${UTILS_DIR}/download_librispeech.py \
     -e ${DATA_DIR}
 
 # Consolidates all Librispeech paritions into common dir
-mkdir -p ${LIBRISPEECH_DIR}/all-all
+mkdir -p ${LIBRISPEECH_DIR}/dev-all
 cp -r ${LIBRISPEECH_DIR}/dev-clean/* \
       ${LIBRISPEECH_DIR}/dev-other/* \
-      ${LIBRISPEECH_DIR}/all-all/
+      ${LIBRISPEECH_DIR}/dev-all/
 
 # Coverts original Librispeech flac to wav and creates manifest file
 python ${UTILS_DIR}/convert_librispeech.py \
-   --input_dir ${LIBRISPEECH_DIR}/all-all \
-   --dest_dir ${DATA_DIR}/all-all \
-   --output_json ${DATA_DIR}/all-all.json
+   --input_dir ${LIBRISPEECH_DIR}/dev-all \
+   --dest_dir ${DATA_DIR}/dev-all \
+   --output_json ${DATA_DIR}/dev-all.json
 
 # Repackages Librispeech samples into samples approaching 30s
-python utils/repackage_librispeech.py --manifest ${DATA_DIR}/all-all.json \
+python utils/repackage_librispeech.py --manifest ${DATA_DIR}/dev-all.json \
 	                              --data_dir ${DATA_DIR} \
-				      --output_dir ${DATA_DIR}/all-all-repack \
-				      --output_json /data/all-all-repack.json
+				      --output_dir ${DATA_DIR}/dev-all-repack \
+				      --output_json /data/dev-all-repack.json

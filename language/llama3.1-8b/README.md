@@ -141,9 +141,8 @@ rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5ee
 ```
 You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
-**TODO**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/{TODO} ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_eval.json ./ -P
 ```
 **MLC Command**
 

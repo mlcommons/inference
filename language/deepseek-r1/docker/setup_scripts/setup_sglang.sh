@@ -86,7 +86,8 @@ VIRTUAL_ENV=$VENV_DIR uv pip install \
     httpx \
     requests \
     torch==2.6.0 \
-    sglang[all]==0.4.6.post5 
+    sglang[all]==0.4.6.post5 \
+    sgl_kernel
 
 # Verify SGLang installation
 if python3 -c "import sglang" 2>/dev/null; then
@@ -96,10 +97,6 @@ else
     echo "Error: SGLang installation failed"
     exit 1
 fi
-
-# Install sgl-kernel for optimizations
-echo "Installing sgl-kernel..."
-VIRTUAL_ENV=$VENV_DIR uv pip install sgl-kernel --no-deps --force-reinstall || echo "Warning: sgl-kernel installation failed"
 
 # Verify sgl_kernel installation
 if python3 -c "import sgl_kernel" 2>/dev/null; then
@@ -112,7 +109,7 @@ fi
 if python3 -c "import torch" 2>/dev/null; then
     TORCH_VERSION=$(python3 -c "import torch; print(torch.__version__)")
     echo "PyTorch is available: version $TORCH_VERSION"
-    
+
     # Check CUDA availability
     if python3 -c "import torch; print('CUDA available:', torch.cuda.is_available())" 2>/dev/null; then
         GPU_COUNT=$(python3 -c "import torch; print('GPU count:', torch.cuda.device_count())" 2>/dev/null || echo "GPU count: 0")
@@ -159,4 +156,4 @@ echo "The backend will show a progress bar during server startup."
 echo ""
 echo "Server logs will be saved to: /work/logs/sglang_server_*.log"
 echo ""
-echo "Ready for SGLang inference and MLPerf runs." 
+echo "Ready for SGLang inference and MLPerf runs."

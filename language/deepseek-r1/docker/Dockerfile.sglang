@@ -26,6 +26,8 @@ RUN apt-get update && apt-get install -y \
     pybind11-dev \
     pkg-config \
     sudo \
+    libnuma-dev \
+    htop \
     && rm -rf /var/lib/apt/lists/*
 
 # Set Python 3.10 as default
@@ -68,4 +70,4 @@ WORKDIR /work
 ENV PATH="/work:${PATH}"
 
 # Set default command
-CMD ["/bin/bash"] 
+CMD ["/bin/bash"]

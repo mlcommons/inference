@@ -1,0 +1,10 @@
+*.pyc
+.nvimrc.lua
+__pycache__/
+.venv/
+build/
+data/
+mlperf_results/
+remove_dev_files.sh
+.cursor
+.venv_*

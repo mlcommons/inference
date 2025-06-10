@@ -108,11 +108,9 @@ def main():
         + args.dtype
         + unixmode
         + " -r "
-        + f"""{q}{results_dir}"""
-        + f"""/accuracy/mlperf_log_accuracy.json{q}"""
+        + f"""{q}{os.path.join(results_dir, "accuracy", "mlperf_log_accuracy.json")}{q}"""
         + " -t "
-        + f"""{q}{compliance_dir}"""
-        + f"""/mlperf_log_accuracy.json{q} | tee verify_accuracy.txt"""
+        + f"""{q}{os.path.join(compliance_dir, "mlperf_log_accuracy.json")}{q} | tee verify_accuracy.txt"""
     )
     try:
         os.system(verify_accuracy_command)
@@ -138,11 +136,9 @@ def main():
         "python3 "
         + f"""{q}{verify_performance_binary}{q}"""
         + " -r "
-        + f"""{q}{results_dir}"""
-        + f"""/performance/run_1/mlperf_log_summary.txt{q}"""
+        + f"""{q}{os.path.join(results_dir, "performance", "run_1", "mlperf_log_summary.txt")}{q}"""
         + " -t "
-        + f"""{q}{compliance_dir}"""
-        + f"""/mlperf_log_summary.txt{q} | tee verify_performance.txt"""
+        + f"""{q}{os.path.join(compliance_dir, "mlperf_log_summary.txt")}{q} | tee verify_performance.txt"""
     )
     try:
         os.system(verify_performance_command)

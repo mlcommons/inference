@@ -9,11 +9,21 @@ hide:
 
 > **Note:** By default, the waymo dataset is downloaded from the mlcommons official drive. One has to accept the [MLCommons Waymo Open Dataset EULA](https://waymo.mlcommons.org/) to access the dataset files. 
 
-The benchmark implementation run command will automatically download the preprocessed dataset. In case you want to download only the datasets, you can use the below command.
+The benchmark implementation run command will automatically download the preprocessed dataset. In case you want to download only the datasets, you can use the below commands.
 
-```bash
-mlcr get,dataset,waymo -j
-```
+=== "Validation"
+
+    ### Get Validation Dataset
+    ```
+    mlcr get,dataset,waymo -j
+    ```
+    
+=== "Calibration"
+
+    ### Get Calibration Dataset
+    ```
+    mlcr get,dataset,waymo,calibration -j
+    ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_WAYMO_DATASET>` could be provided to download the dataset to a specific location.
 

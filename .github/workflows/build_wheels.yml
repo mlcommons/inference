@@ -1,5 +1,4 @@
 name: Build loadgen wheels and release them into PYPI
-
 on:
   release:
     types: [published]

@@ -7,6 +7,9 @@
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
         - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
 
+
+## Automated command to run the benchmark via MLCFlow
+
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama2-70b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
 You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
@@ -65,9 +68,11 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 ### MLCommons Members Download
 MLCommons hosts the model and preprocessed dataset for download **exclusively by MLCommons Members**. You must first agree to the [confidentiality notice](https://llama2.mlcommons.org) using your organizational email address, then you will receive a link to a directory containing Rclone download instructions. _If you cannot access the form but you are part of a MLCommons Member organization, submit the [MLCommons subscription form](https://mlcommons.org/community/subscribe/) with your organizational email address and [associate a Google account](https://accounts.google.com/SignUpWithoutGmail) with your organizational email address._
 
-Once you have the access, you can download the model automatically via the below command
+
+### Download model through MLCFlow Automation
+
 ```
-mlcr get,ml-model,llama2 --outdirname=${CHECKPOINT_PATH} -j
+mlcr get,ml-model,llama2-70b,_pytorch -j --outdirname=<Download path> -j
 ```
 
 ### External Download (Not recommended for official submission)
@@ -81,6 +86,34 @@ git clone https://huggingface.co/meta-llama/Llama-2-70b-chat-hf ${CHECKPOINT_PAT
 ```
 
 ## Get Dataset
+
+### Download Preprocessed dataset through MLCFlow Automation
+
+**Validation**
+
+```
+mlcr get,dataset,preprocessed,openorca,_validation --outdirname=<path_to_download> -j
+```
+
+**Calibration**
+
+```
+mlcr get,dataset,preprocessed,openorca,_calibration --outdirname=<path_to_download> -j
+```
+
+### Download Unprocessed dataset through MLCFlow Automation
+
+**Validation**
+
+```
+mlcr get,dataset,openorca,_validation --outdirname=<path_to_download> -j
+```
+
+**Calibration**
+
+```
+mlcr get,dataset,openorca,_calibration --outdirname=<path_to_download> -j
+```
 
 ### Preprocessed
 
@@ -243,6 +276,18 @@ scale from a 0.0-1.0 scale):
 - Tokens per sample: 294.45
 
 This was run on a DGX-H100 node. Total runtime was ~4.5 days.
+
+### Evaluate the accuracy through MLCFlow Automation
+```bash
+mlcr process,mlperf,accuracy,_openorca --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/mlcommons/inference/blob/master/language/llama2-70b/evaluate-accuracy.py) to view the Python script for evaluating accuracy for the Waymo dataset.
+
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 
+
 
 # Run llama2-70b-interactive benchmark
 

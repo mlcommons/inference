@@ -61,7 +61,7 @@ def main():
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
     #settings.FromConfig(args.mlperf_conf, "whisper", args.scenario)
-    #settings.FromConfig(args.user_conf, "whisper", args.scenario)
+    settings.FromConfig(args.user_conf, "whisper", args.scenario)
 
     if args.accuracy:
         settings.mode = lg.TestMode.AccuracyOnly

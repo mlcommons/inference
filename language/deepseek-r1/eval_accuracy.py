@@ -135,17 +135,52 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
 
     # Load MLPerf log
     try:
-        mlperf_results = []
+        # First, check if this is a JSON array format or newline-delimited JSON
         with open(mlperf_log_file, 'r') as f:
-            for line_num, line in enumerate(f, 1):
-                line = line.strip()
-                if not line:  # Skip empty lines
-                    continue
+            first_line = f.readline().strip()
+            
+        if first_line == '[':
+            # JSON array format - load the entire file
+            logger.info("Detected JSON array format")
+            with open(mlperf_log_file, 'r') as f:
                 try:
-                    mlperf_results.append(json.loads(line))
+                    mlperf_results = json.load(f)
                 except json.JSONDecodeError as e:
-                    logger.warning(f"Failed to parse line {line_num}: {e}")
-                    continue
+                    # If full file parsing fails, try to parse line by line, skipping brackets
+                    logger.warning(f"Failed to parse as complete JSON array: {e}")
+                    logger.info("Attempting line-by-line parsing")
+                    mlperf_results = []
+                    with open(mlperf_log_file, 'r') as f2:
+                        for line_num, line in enumerate(f2, 1):
+                            line = line.strip()
+                            # Skip empty lines, opening/closing brackets
+                            if not line or line == '[' or line == ']':
+                                continue
+                            # Remove trailing comma if present
+                            if line.endswith(','):
+                                line = line[:-1]
+                            try:
+                                mlperf_results.append(json.loads(line))
+                            except json.JSONDecodeError as e:
+                                logger.warning(f"Failed to parse line {line_num}: {e}")
+                                continue
+        else:
+            # Newline-delimited JSON format
+            logger.info("Detected newline-delimited JSON format")
+            mlperf_results = []
+            with open(mlperf_log_file, 'r') as f:
+                # Reset to beginning since we read the first line
+                f.seek(0)
+                for line_num, line in enumerate(f, 1):
+                    line = line.strip()
+                    if not line:  # Skip empty lines
+                        continue
+                    try:
+                        mlperf_results.append(json.loads(line))
+                    except json.JSONDecodeError as e:
+                        logger.warning(f"Failed to parse line {line_num}: {e}")
+                        continue
+                        
         logger.info(f"Loaded {len(mlperf_results)} MLPerf results")
     except Exception as e:
         raise RuntimeError(f"Failed to load MLPerf log file: {e}")

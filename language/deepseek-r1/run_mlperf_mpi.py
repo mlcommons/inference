@@ -1,4 +1,37 @@
 #!/usr/bin/env python3
+from eval_accuracy import process_dataframe, print_evaluation_results, process_and_save_dataframe, process_mlperf_log_accuracy
+from utils.data_utils import (
+    load_dataset, save_results,
+    generate_timestamped_filename
+)
+from utils.validation import (
+    validate_runner_args, ValidationError,
+    validate_dataset_extended
+)
+from utils.backend_registry import (
+    uses_chat_template, get_backend_instance, detect_backend,
+    validate_runner_for_backend
+)
+from utils.runner_utils import create_base_argument_parser, print_runner_header
+from utils import (
+    StandardTokenizer,
+    validate_dataset,
+    process_inference_results
+)
+from mlperf import (
+    OfflineSUT, ServerSUT, BaseSUT,
+    DistributedQuerySampleLibrary,
+    prepare_mlperf_dataset,
+    process_mlperf_results,
+    create_mlperf_output_dataframe
+)
+from backends.pytorch_backend import PyTorchBackend
+from transformers import AutoTokenizer
+import torch.distributed as dist
+import torch
+import pandas as pd
+import numpy as np
+import mlperf_loadgen as lg
 import argparse
 import json
 import logging
@@ -11,41 +44,6 @@ import time
 
 # Disable tokenizers parallelism to avoid forking issues
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-import mlperf_loadgen as lg
-import numpy as np
-import pandas as pd
-import torch
-import torch.distributed as dist
-from transformers import AutoTokenizer
-
-from backends.pytorch_backend import PyTorchBackend
-from mlperf import (
-    OfflineSUT, ServerSUT, BaseSUT,
-    DistributedQuerySampleLibrary,
-    prepare_mlperf_dataset,
-    process_mlperf_results,
-    create_mlperf_output_dataframe
-)
-from utils import (
-    StandardTokenizer,
-    validate_dataset,
-    process_inference_results
-)
-from utils.runner_utils import create_base_argument_parser, print_runner_header
-from utils.backend_registry import (
-    uses_chat_template, get_backend_instance, detect_backend,
-    validate_runner_for_backend
-)
-from utils.validation import (
-    validate_runner_args, ValidationError,
-    validate_dataset_extended
-)
-from utils.data_utils import (
-    load_dataset, save_results,
-    generate_timestamped_filename
-)
-from eval_accuracy import process_dataframe, print_evaluation_results, process_and_save_dataframe, process_mlperf_log_accuracy
 
 
 # Configure logging - only for rank 0
@@ -119,7 +117,7 @@ class DistributedOfflineSUT(BaseSUT):
         batch_size = self.backend.config['batch_size']
 
         for i in range(0, len(query_samples), batch_size):
-            batch_samples = query_samples[i:i+batch_size]
+            batch_samples = query_samples[i:i + batch_size]
 
             # Prepare batch tokens
             batch_tokens = []
@@ -141,10 +139,12 @@ class DistributedOfflineSUT(BaseSUT):
 
             # Generate using distributed backend
             # This will broadcast to all ranks internally
-            generated_tokens = self.backend.generate_batch_distributed(batch_tokens)
+            generated_tokens = self.backend.generate_batch_distributed(
+                batch_tokens)
 
             # Process results and send to LoadGen
-            for j, (sample_id, tokens) in enumerate(zip(batch_ids, generated_tokens)):
+            for j, (sample_id, tokens) in enumerate(
+                    zip(batch_ids, generated_tokens)):
                 # Create a copy of tokens before numpy conversion
                 tokens_copy = tokens.copy()
 
@@ -219,7 +219,8 @@ class DistributedOfflineSUT(BaseSUT):
                     # Decode tokens to get text output
                     output_text = ''
                     if self.backend.tokenizer:
-                        output_text = self.backend.tokenizer.decode(tokens, skip_special_tokens=True)
+                        output_text = self.backend.tokenizer.decode(
+                            tokens, skip_special_tokens=True)
 
                     ordered_results.append({
                         'model_output': output_text,
@@ -228,14 +229,14 @@ class DistributedOfflineSUT(BaseSUT):
                     })
                 else:
                     # Result exists but no tokens - this is an error
-                    raise RuntimeError(f"No tokens in result for dataset index {i}, sample_id {sample_id}")
+                    raise RuntimeError(
+                        f"No tokens in result for dataset index {i}, sample_id {sample_id}")
             else:
                 # No result for this index - this is an error
-                raise RuntimeError(f"No result for dataset index {i}, sample_id {sample_id}")
+                raise RuntimeError(
+                    f"No result for dataset index {i}, sample_id {sample_id}")
 
         return ordered_results
-
-
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
@@ -247,44 +248,45 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
     # Dataset arguments
     parser.add_argument("--input-file", type=str,
-                       default="data/final_output.pkl",
-                       help="Input pickle file with prompts")
+                        default="data/final_output.pkl",
+                        help="Input pickle file with prompts")
 
     # MLPerf configuration
     parser.add_argument("--mlperf-conf", type=str, default="/inference/mlperf.conf",
-                       help="Path to MLPerf configuration file")
+                        help="Path to MLPerf configuration file")
 
     parser.add_argument("--user-conf", type=str, default="mlperf/user.conf",
-                       help="Path to user configuration file")
+                        help="Path to user configuration file")
 
     parser.add_argument("--mode", type=str, default="offline",
-                       choices=["offline", "server"],
-                       help="MLPerf scenario mode (only offline supported for distributed)")
+                        choices=["offline", "server"],
+                        help="MLPerf scenario mode (only offline supported for distributed)")
 
     parser.add_argument("--accuracy", action="store_true",
-                       help="Run accuracy mode instead of performance")
+                        help="Run accuracy mode instead of performance")
 
     # Output configuration
     parser.add_argument("--output-dir", type=str, default="mlperf_results",
-                       help="Directory for MLPerf output logs")
+                        help="Directory for MLPerf output logs")
 
     parser.add_argument("--log-dir", type=str, default=None,
-                       help="Directory for detailed logs")
+                        help="Directory for detailed logs")
 
     parser.add_argument("--output-file", type=str, default=None,
-                       help="Output pickle file path (auto-generated if not specified)")
+                        help="Output pickle file path (auto-generated if not specified)")
 
-    # Note: --no-chat-template is removed (chat template usage determined by backend registry)
+    # Note: --no-chat-template is removed (chat template usage determined by
+    # backend registry)
 
     return parser
 
 
 def configure_loadgen(scenario: str,
-                     accuracy_mode: bool,
-                     mlperf_conf: Optional[str] = None,
-                     user_conf: Optional[str] = None,
-                     log_dir: Optional[str] = None,
-                     model_name: str = "deepseek-r1") -> lg.TestSettings:
+                      accuracy_mode: bool,
+                      mlperf_conf: Optional[str] = None,
+                      user_conf: Optional[str] = None,
+                      log_dir: Optional[str] = None,
+                      model_name: str = "deepseek-r1") -> lg.TestSettings:
     """Configure LoadGen test settings.
 
     Args:
@@ -324,11 +326,11 @@ def configure_loadgen(scenario: str,
 
 
 def run_loadgen_test(sut: DistributedOfflineSUT,
-                    qsl: DistributedQuerySampleLibrary,
-                    settings: lg.TestSettings,
-                    log_settings: lg.LogSettings,
-                    rank: int,
-                    logger) -> None:
+                     qsl: DistributedQuerySampleLibrary,
+                     settings: lg.TestSettings,
+                     log_settings: lg.LogSettings,
+                     rank: int,
+                     logger) -> None:
     """Run LoadGen test (only on rank 0).
 
     Args:
@@ -386,7 +388,8 @@ def main():
     # Validate mode for distributed
     if args.mode != "offline":
         if rank == 0:
-            logger.error("Only offline mode is supported for distributed execution")
+            logger.error(
+                "Only offline mode is supported for distributed execution")
         sys.exit(1)
 
     # Create output directories (only rank 0)
@@ -397,7 +400,8 @@ def main():
         if args.log_dir:
             log_dir = Path(args.log_dir)
         else:
-            log_dir = output_dir / args.mode / ("accuracy" if args.accuracy else "performance")
+            log_dir = output_dir / args.mode / \
+                ("accuracy" if args.accuracy else "performance")
         log_dir.mkdir(parents=True, exist_ok=True)
 
         # Determine output file path
@@ -405,15 +409,18 @@ def main():
             output_file_base = args.output_file
         else:
             mode_str = "accuracy" if args.accuracy else "performance"
-            output_file_base = str(log_dir / f"{backend_name}_mlperf_{args.mode}_{mode_str}_output.pkl")
+            output_file_base = str(
+                log_dir / f"{backend_name}_mlperf_{args.mode}_{mode_str}_output.pkl")
 
         # Generate the actual filename with timestamp
-        actual_output_file = generate_timestamped_filename(output_file_base, add_timestamp=True)
+        actual_output_file = generate_timestamped_filename(
+            output_file_base, add_timestamp=True)
 
         # Ensure the parent directory of the output file exists
         output_file_parent = Path(actual_output_file).parent
         output_file_parent.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Ensured output file directory exists: {output_file_parent}")
+        logger.info(
+            f"Ensured output file directory exists: {output_file_parent}")
 
         logger.info("=" * 80)
         logger.info("MLPerf Inference Benchmark Runner (Distributed PyTorch)")
@@ -425,7 +432,8 @@ def main():
         logger.info(f"Input file: {args.input_file}")
         logger.info(f"Output directory: {output_dir}")
         logger.info(f"Output file: {actual_output_file}")
-        logger.info(f"Chat template: {'enabled' if use_chat_template else 'disabled'} (from registry)")
+        logger.info(
+            f"Chat template: {'enabled' if use_chat_template else 'disabled'} (from registry)")
         logger.info("=" * 80)
     else:
         log_dir = None
@@ -460,7 +468,8 @@ def main():
             tokenized_prompts = dataset_info['tokenized_prompts']
             processed_strings = dataset_info['processed_strings']
 
-            logger.info(f"Loaded {len(tokenized_prompts)} prompts from dataset")
+            logger.info(
+                f"Loaded {len(tokenized_prompts)} prompts from dataset")
 
         # Create SUT
         sut = DistributedOfflineSUT(
@@ -511,7 +520,8 @@ def main():
             if rank == 0:
                 # Run test (only rank 0)
                 logger.info("Running test...")
-                run_loadgen_test(sut, qsl, settings, log_settings, rank, logger)
+                run_loadgen_test(
+                    sut, qsl, settings, log_settings, rank, logger)
                 logger.info("Completed test...")
 
                 # Ensure all queries are flushed and async operations complete
@@ -524,7 +534,8 @@ def main():
                     dist.broadcast_object_list(exit_signal, src=0)
             else:
                 # Non-rank 0 processes participate in distributed generation
-                # They wait for signals from rank 0 and participate in generate_batch_distributed
+                # They wait for signals from rank 0 and participate in
+                # generate_batch_distributed
                 while True:
                     # First, check if we should exit
                     # We use a separate broadcast to signal exit
@@ -536,7 +547,8 @@ def main():
                         break
                     elif exit_check[0] == "generate":
                         # Signal to participate in generation
-                        # The actual batch tokens will be broadcast inside generate_batch_distributed
+                        # The actual batch tokens will be broadcast inside
+                        # generate_batch_distributed
                         backend.generate_batch_distributed(None)
                     # If exit_check[0] is None, continue waiting
         finally:
@@ -563,9 +575,11 @@ def main():
 
                     try:
                         # Get results from SUT (if available)
-                        logger.info("Retrieving results from distributed SUT...")
+                        logger.info(
+                            "Retrieving results from distributed SUT...")
                         sut_results = sut.get_results()
-                        logger.info(f"Retrieved {len(sut_results)} results from distributed SUT")
+                        logger.info(
+                            f"Retrieved {len(sut_results)} results from distributed SUT")
 
                         # Process results using new utility
                         processed_results = process_mlperf_results(
@@ -597,11 +611,19 @@ def main():
                         mlperf_log_file = log_dir / "mlperf_log_accuracy.json"
 
                         if mlperf_log_file.exists():
-                            logger.info(f"Found MLPerf log accuracy file: {mlperf_log_file}")
-                            logger.info("Using MLPerf log for accuracy evaluation...")
+                            logger.info(
+                                f"Found MLPerf log accuracy file: {mlperf_log_file}")
+                            logger.info(
+                                "Using MLPerf log for accuracy evaluation...")
 
-                            # For PyTorch backend (only one supported in MPI), get model path
-                            checkpoint_path = str(backend.model_path) if hasattr(backend, 'model_path') else backend.config.get('model_name', 'deepseek-ai/DeepSeek-R1')
+                            # For PyTorch backend (only one supported in MPI),
+                            # get model path
+                            checkpoint_path = str(
+                                backend.model_path) if hasattr(
+                                backend,
+                                'model_path') else backend.config.get(
+                                'model_name',
+                                'deepseek-ai/DeepSeek-R1')
 
                             # Process MLPerf log accuracy
                             df_evaluated, evaluated_file = process_mlperf_log_accuracy(
@@ -612,10 +634,13 @@ def main():
                                 base_filename="mlperf_accuracy_evaluated.pkl"
                             )
 
-                            logger.info(f"MLPerf accuracy evaluation saved to: {evaluated_file}")
+                            logger.info(
+                                f"MLPerf accuracy evaluation saved to: {evaluated_file}")
                         else:
-                            logger.info("No MLPerf log accuracy file found, using standard DataFrame evaluation...")
-                            raise RuntimeError("No MLPerf log accuracy file found, using standard DataFrame evaluation...")
+                            logger.info(
+                                "No MLPerf log accuracy file found, using standard DataFrame evaluation...")
+                            raise RuntimeError(
+                                "No MLPerf log accuracy file found, using standard DataFrame evaluation...")
 
     except KeyboardInterrupt:
         if rank == 0:

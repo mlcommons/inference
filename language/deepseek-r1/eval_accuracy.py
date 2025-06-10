@@ -45,11 +45,11 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
-                               dataset_file: Union[str, Path],
-                               checkpoint_path: str,
-                               dtype: str = "int32",
-                               output_dir: Optional[Union[str, Path]] = None,
-                               base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
+                                dataset_file: Union[str, Path],
+                                checkpoint_path: str,
+                                dtype: str = "int32",
+                                output_dir: Optional[Union[str, Path]] = None,
+                                base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
     """Process MLPerf log accuracy file and evaluate results.
 
     Args:
@@ -68,7 +68,8 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
     dataset_file = Path(dataset_file)
 
     if not mlperf_log_file.exists():
-        raise FileNotFoundError(f"MLPerf log file not found: {mlperf_log_file}")
+        raise FileNotFoundError(
+            f"MLPerf log file not found: {mlperf_log_file}")
     if not dataset_file.exists():
         raise FileNotFoundError(f"Dataset file not found: {dataset_file}")
 
@@ -86,7 +87,8 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
         )
         logger.info("Tokenizer loaded successfully")
     except Exception as e:
-        raise RuntimeError(f"Failed to load tokenizer from {checkpoint_path}: {e}")
+        raise RuntimeError(
+            f"Failed to load tokenizer from {checkpoint_path}: {e}")
 
     # Load ground truth dataset
     try:
@@ -99,14 +101,20 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
             elif 'ground_truth' in dataset_df.columns:
                 ground_truths = dataset_df['ground_truth'].tolist()
             else:
-                raise ValueError("Dataset must contain 'gt_output' or 'ground_truth' column")
+                raise ValueError(
+                    "Dataset must contain 'gt_output' or 'ground_truth' column")
 
             # Get other required columns with fallbacks
             if 'dataset' in dataset_df.columns:
                 datasets = dataset_df['dataset'].tolist()
             elif 'metric' in dataset_df.columns:
                 # Infer dataset from metric names
-                datasets = [metric.replace('_em', '').replace('_', '') for metric in dataset_df['metric'].tolist()]
+                datasets = [
+                    metric.replace(
+                        '_em',
+                        '').replace(
+                        '_',
+                        '') for metric in dataset_df['metric'].tolist()]
             else:
                 datasets = ['unknown'] * len(ground_truths)
 
@@ -138,7 +146,7 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
         # First, check if this is a JSON array format or newline-delimited JSON
         with open(mlperf_log_file, 'r') as f:
             first_line = f.readline().strip()
-            
+
         if first_line == '[':
             # JSON array format - load the entire file
             logger.info("Detected JSON array format")
@@ -146,8 +154,10 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
                 try:
                     mlperf_results = json.load(f)
                 except json.JSONDecodeError as e:
-                    # If full file parsing fails, try to parse line by line, skipping brackets
-                    logger.warning(f"Failed to parse as complete JSON array: {e}")
+                    # If full file parsing fails, try to parse line by line,
+                    # skipping brackets
+                    logger.warning(
+                        f"Failed to parse as complete JSON array: {e}")
                     logger.info("Attempting line-by-line parsing")
                     mlperf_results = []
                     with open(mlperf_log_file, 'r') as f2:
@@ -162,7 +172,8 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
                             try:
                                 mlperf_results.append(json.loads(line))
                             except json.JSONDecodeError as e:
-                                logger.warning(f"Failed to parse line {line_num}: {e}")
+                                logger.warning(
+                                    f"Failed to parse line {line_num}: {e}")
                                 continue
         else:
             # Newline-delimited JSON format
@@ -180,7 +191,7 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
                     except json.JSONDecodeError as e:
                         logger.warning(f"Failed to parse line {line_num}: {e}")
                         continue
-                        
+
         logger.info(f"Loaded {len(mlperf_results)} MLPerf results")
     except Exception as e:
         raise RuntimeError(f"Failed to load MLPerf log file: {e}")
@@ -220,7 +231,8 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
             questions_required.append(questions[qsl_idx])
 
         except Exception as e:
-            logger.warning(f"Error processing entry with qsl_idx {qsl_idx}: {e}")
+            logger.warning(
+                f"Error processing entry with qsl_idx {qsl_idx}: {e}")
             continue
 
     if not preds_token_ids:
@@ -271,7 +283,11 @@ def validate_dataframe(df: pd.DataFrame) -> None:
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input must be a pandas DataFrame")
 
-    required_cols = ['model_output', 'dataset', 'ground_truth', 'tok_model_output_len']
+    required_cols = [
+        'model_output',
+        'dataset',
+        'ground_truth',
+        'tok_model_output_len']
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         raise ValueError(f"Missing required columns: {missing_cols}")
@@ -390,7 +406,8 @@ def parse_code(text: str) -> Optional[str]:
 # Answer Evaluation Functions
 # =============================================================================
 
-def evaluate_multiple_choice(parsed: Optional[str], ground_truth: str, valid_options: str) -> bool:
+def evaluate_multiple_choice(
+        parsed: Optional[str], ground_truth: str, valid_options: str) -> bool:
     """Evaluate multiple choice answer."""
     if not parsed or not ground_truth:
         return False
@@ -414,10 +431,12 @@ def evaluate_math500(parsed: Optional[str], ground_truth: str) -> bool:
 
     # Use sys.path approach for proper module importing
     workspace_path = os.path.dirname(os.path.abspath(__file__))
-    prm800k_module_path = os.path.join(workspace_path, "submodules", "prm800k", "prm800k")
+    prm800k_module_path = os.path.join(
+        workspace_path, "submodules", "prm800k", "prm800k")
 
     if not os.path.exists(prm800k_module_path):
-        raise FileNotFoundError(f"PRM800K module not found at: {prm800k_module_path}")
+        raise FileNotFoundError(
+            f"PRM800K module not found at: {prm800k_module_path}")
 
     # Save current directory and sys.path
     original_cwd = os.getcwd()
@@ -427,10 +446,10 @@ def evaluate_math500(parsed: Optional[str], ground_truth: str) -> bool:
         # Add prm800k module path to sys.path
         if prm800k_module_path not in sys.path:
             sys.path.insert(0, prm800k_module_path)
-        
+
         # Change directory as some imports might use relative paths
         os.chdir(prm800k_module_path)
-        
+
         # Now import should work
         from grading.grader import grade_answer
         result = grade_answer(given_answer=parsed, ground_truth=ground_truth)
@@ -622,7 +641,8 @@ def process_row(row: pd.Series) -> Dict[str, Any]:
     }
 
 
-def process_livecodebench_parallel(df: pd.DataFrame, group_indices: pd.Index) -> Tuple[int, int]:
+def process_livecodebench_parallel(
+        df: pd.DataFrame, group_indices: pd.Index) -> Tuple[int, int]:
     """Process LiveCodeBench items in parallel."""
     # Prepare work items
     work_items = []
@@ -726,7 +746,8 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 # Unified Evaluation Utilities
 # =============================================================================
 
-def print_evaluation_results(df_evaluated: pd.DataFrame, logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
+def print_evaluation_results(df_evaluated: pd.DataFrame,
+                             logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """Print evaluation results in a unified format.
 
     Args:
@@ -762,8 +783,8 @@ def print_evaluation_results(df_evaluated: pd.DataFrame, logger: Optional[loggin
 
 
 def process_and_save_dataframe(df: pd.DataFrame,
-                              output_dir: Optional[Union[str, Path]] = None,
-                              base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
+                               output_dir: Optional[Union[str, Path]] = None,
+                               base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
     """Process dataframe for evaluation and save the results.
 
     Args:
@@ -779,7 +800,8 @@ def process_and_save_dataframe(df: pd.DataFrame,
 
     # Determine output path
     if output_dir is None:
-        # Try to infer from existing path info in the dataframe or use current directory
+        # Try to infer from existing path info in the dataframe or use current
+        # directory
         output_dir = Path.cwd()
     else:
         output_dir = Path(output_dir)

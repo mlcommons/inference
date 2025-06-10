@@ -69,11 +69,15 @@ class ServerSUT(BaseSUT):
         self.dataset_strings = dataset_strings
 
         # Determine backend type using registry
-        self.backend_name = getattr(backend, 'backend_name', type(backend).__name__.lower())
+        self.backend_name = getattr(
+            backend,
+            'backend_name',
+            type(backend).__name__.lower())
         self.uses_text_prompts = uses_text_input(self.backend_name)
 
         if self.uses_text_prompts and dataset_strings is None:
-            raise ValueError(f"Backend {self.backend_name} requires text prompts but dataset_strings was not provided")
+            raise ValueError(
+                f"Backend {self.backend_name} requires text prompts but dataset_strings was not provided")
 
         # Async event loop and thread
         self.loop = None
@@ -90,8 +94,6 @@ class ServerSUT(BaseSUT):
         # Results storage
         self.all_results: Dict[int, Dict[str, Any]] = {}
         self.results_lock = asyncio.Lock()
-
-
 
     def issue_queries(self, query_samples: List[lg.QuerySample]) -> None:
         """Issue queries in streaming mode with batching."""
@@ -123,7 +125,8 @@ class ServerSUT(BaseSUT):
         try:
             # Verify streaming support
             if not supports_streaming():
-                raise RuntimeError(f"Backend {self.backend_name} does not support streaming required for server mode")
+                raise RuntimeError(
+                    f"Backend {self.backend_name} does not support streaming required for server mode")
 
             # Prepare prompt based on backend type
             if self.uses_text_prompts:
@@ -155,8 +158,10 @@ class ServerSUT(BaseSUT):
             task.add_done_callback(self._remove_task_from_active)
 
         except Exception as e:
-            logger.error(f"Error starting stream for query {query_info.query_id}: {e}")
-            raise RuntimeError(f"Failed to start streaming for query {query_info.query_id}: {e}")
+            logger.error(
+                f"Error starting stream for query {query_info.query_id}: {e}")
+            raise RuntimeError(
+                f"Failed to start streaming for query {query_info.query_id}: {e}")
 
     def _remove_task_from_active(self, task: asyncio.Task) -> None:
         """Remove a completed task from the active set."""
@@ -181,7 +186,8 @@ class ServerSUT(BaseSUT):
                     state.accumulated_tokens.extend(chunk.token_ids)
 
                 # Report first token immediately for TTFT measurement
-                if not state.first_token_sent and (chunk.token or chunk.token_ids):
+                if not state.first_token_sent and (
+                        chunk.token or chunk.token_ids):
                     state.first_token_time = current_time - state.start_time
                     state.first_token_sent = True
 
@@ -197,35 +203,43 @@ class ServerSUT(BaseSUT):
 
         except asyncio.CancelledError:
             # Task was cancelled, clean up gracefully
-            logger.debug(f"Stream processing cancelled for query {state.query_info.query_id}")
-            # Close the async generator properly (assume aclose exists in our containerized environment)
+            logger.debug(
+                f"Stream processing cancelled for query {state.query_info.query_id}")
+            # Close the async generator properly (assume aclose exists in our
+            # containerized environment)
             try:
                 await state.stream_gen.aclose()
             except Exception:
                 pass
             raise
         except Exception as e:
-            logger.error(f"Error processing stream for query {state.query_info.query_id}: {e}")
-            raise RuntimeError(f"Stream processing failed for query {state.query_info.query_id}: {e}")
+            logger.error(
+                f"Error processing stream for query {state.query_info.query_id}: {e}")
+            raise RuntimeError(
+                f"Stream processing failed for query {state.query_info.query_id}: {e}")
         finally:
             # Clean up active stream
             async with self.active_streams_lock:
                 self.active_streams.pop(state.query_info.query_id, None)
 
-    async def _send_first_token_response(self, state: StreamingQueryState) -> None:
+    async def _send_first_token_response(
+            self, state: StreamingQueryState) -> None:
         """Send first token notification to LoadGen for TTFT measurement."""
-        logger.debug(f"First token received for query {state.query_info.query_id} at {state.first_token_time:.3f}s")
+        logger.debug(
+            f"First token received for query {state.query_info.query_id} at {state.first_token_time:.3f}s")
 
         # Convert first tokens to proper format for LoadGen
         if state.accumulated_tokens:
-            output_tokens = np.ascontiguousarray(state.accumulated_tokens, dtype=np.int32)
+            output_tokens = np.ascontiguousarray(
+                state.accumulated_tokens, dtype=np.int32)
         else:
             # If no token IDs available, encode the text
             if hasattr(self.backend, 'tokenizer') and state.accumulated_text:
                 tokens = self.backend.tokenizer.encode(state.accumulated_text)
                 output_tokens = np.ascontiguousarray(tokens, dtype=np.int32)
             else:
-                raise RuntimeError(f"No token IDs available for first token response for query {state.query_info.query_id}")
+                raise RuntimeError(
+                    f"No token IDs available for first token response for query {state.query_info.query_id}")
 
         output_seq_len = len(output_tokens)
         output_toks_ptr = output_tokens.ctypes.data if output_seq_len > 0 else 0
@@ -248,22 +262,25 @@ class ServerSUT(BaseSUT):
             if state.accumulated_tokens:
                 # Create a copy of tokens before numpy conversion
                 tokens_to_send = state.accumulated_tokens.copy()
-                token_array = np.array(state.accumulated_tokens, dtype=np.int32)
+                token_array = np.array(
+                    state.accumulated_tokens, dtype=np.int32)
             else:
                 # If no tokens, encode the text
-                if hasattr(self.backend, 'tokenizer') and state.accumulated_text:
-                    tokens = self.backend.tokenizer.encode(state.accumulated_text)
+                if hasattr(self.backend,
+                           'tokenizer') and state.accumulated_text:
+                    tokens = self.backend.tokenizer.encode(
+                        state.accumulated_text)
                     # Create a copy of tokens before numpy conversion
                     tokens_to_send = tokens.copy()
                     token_array = np.array(tokens, dtype=np.int32)
                 else:
-                    raise RuntimeError(f"No tokens or tokenizer available for query {state.query_info.query_id}")
+                    raise RuntimeError(
+                        f"No tokens or tokenizer available for query {state.query_info.query_id}")
 
             # Validate we have tokens
             if len(token_array) == 0:
-                raise RuntimeError(f"No tokens generated for query {state.query_info.query_id}")
-
-
+                raise RuntimeError(
+                    f"No tokens generated for query {state.query_info.query_id}")
 
             # Create LoadGen response
             response = lg.QuerySampleResponse(
@@ -287,11 +304,14 @@ class ServerSUT(BaseSUT):
                 }
                 self.all_results[state.query_info.query_id] = state.query_info.result
 
-            logger.debug(f"Sent {len(token_array)} tokens to LoadGen for query {state.query_info.query_id}")
+            logger.debug(
+                f"Sent {len(token_array)} tokens to LoadGen for query {state.query_info.query_id}")
 
         except Exception as e:
-            logger.error(f"Error sending final response for query {state.query_info.query_id}: {e}")
-            raise RuntimeError(f"Failed to send final response for query {state.query_info.query_id}: {e}")
+            logger.error(
+                f"Error sending final response for query {state.query_info.query_id}: {e}")
+            raise RuntimeError(
+                f"Failed to send final response for query {state.query_info.query_id}: {e}")
 
     def flush_queries(self) -> None:
         """Wait for all active streams to complete."""
@@ -313,13 +333,16 @@ class ServerSUT(BaseSUT):
 
             async with self.active_streams_lock:
                 if self.active_streams:
-                    logger.warning(f"Timeout: {len(self.active_streams)} streams still active")
+                    logger.warning(
+                        f"Timeout: {len(self.active_streams)} streams still active")
 
         # Run the wait task in the event loop
         if self.loop and not self.loop.is_closed():
-            future = asyncio.run_coroutine_threadsafe(wait_for_streams(), self.loop)
+            future = asyncio.run_coroutine_threadsafe(
+                wait_for_streams(), self.loop)
             try:
-                future.result(timeout=310)  # Slightly longer than internal timeout
+                # Slightly longer than internal timeout
+                future.result(timeout=310)
             except Exception as e:
                 logger.error(f"Error waiting for streams to complete: {e}")
 
@@ -352,7 +375,8 @@ class ServerSUT(BaseSUT):
                     tasks_to_cancel = list(self.active_tasks)
 
                 if tasks_to_cancel:
-                    logger.info(f"Cancelling {len(tasks_to_cancel)} active streaming tasks...")
+                    logger.info(
+                        f"Cancelling {len(tasks_to_cancel)} active streaming tasks...")
                     for task in tasks_to_cancel:
                         task.cancel()
 
@@ -365,7 +389,8 @@ class ServerSUT(BaseSUT):
                     self.active_tasks.clear()
 
             # Run the cancellation in the event loop
-            future = asyncio.run_coroutine_threadsafe(cancel_all_tasks(), self.loop)
+            future = asyncio.run_coroutine_threadsafe(
+                cancel_all_tasks(), self.loop)
             try:
                 future.result(timeout=10.0)  # Give tasks time to cancel
             except Exception as e:
@@ -405,10 +430,12 @@ class ServerSUT(BaseSUT):
         # Only process results for samples that were actually queried
         # Sort by index to maintain dataset order
         queried_indices = sorted(index_to_result.keys())
-        
-        logger.info(f"Retrieving results for {len(queried_indices)} queried samples")
 
-        # Process results in order of dataset indices using stored backend results
+        logger.info(
+            f"Retrieving results for {len(queried_indices)} queried samples")
+
+        # Process results in order of dataset indices using stored backend
+        # results
         for i in queried_indices:
             result = index_to_result[i]
 
@@ -416,7 +443,8 @@ class ServerSUT(BaseSUT):
             tokens = result['tokens']
             output_text = result.get('text', '')
             if not output_text and self.backend.tokenizer:
-                output_text = self.backend.tokenizer.decode(result['tokens'], skip_special_tokens=True)
+                output_text = self.backend.tokenizer.decode(
+                    result['tokens'], skip_special_tokens=True)
 
             ordered_results.append({
                 'model_output': output_text,

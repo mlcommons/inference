@@ -44,11 +44,15 @@ class OfflineSUT(BaseSUT):
         self.dataset_strings = dataset_strings
 
         # Determine backend type using registry
-        self.backend_name = getattr(backend, 'backend_name', type(backend).__name__.lower())
+        self.backend_name = getattr(
+            backend,
+            'backend_name',
+            type(backend).__name__.lower())
         self.uses_text_prompts = uses_text_input(self.backend_name)
 
         if self.uses_text_prompts and dataset_strings is None:
-            raise ValueError(f"Backend {self.backend_name} requires text prompts but dataset_strings was not provided")
+            raise ValueError(
+                f"Backend {self.backend_name} requires text prompts but dataset_strings was not provided")
 
         # Async event loop and thread
         self.loop = None
@@ -122,12 +126,15 @@ class OfflineSUT(BaseSUT):
             # Prepare prompts for batch processing (like run_eval.py)
             if self.uses_text_prompts:
                 # Use text prompts for vLLM and SGLang
-                prompts = [self.dataset_strings[sample.index] for sample in query_samples]
+                prompts = [self.dataset_strings[sample.index]
+                           for sample in query_samples]
                 futures = self.backend.generate_async(text_prompts=prompts)
             else:
                 # Use tokenized prompts for other backends
-                prompts = [self.dataset[sample.index] for sample in query_samples]
-                futures = self.backend.generate_async(tokenized_prompts=prompts)
+                prompts = [self.dataset[sample.index]
+                           for sample in query_samples]
+                futures = self.backend.generate_async(
+                    tokenized_prompts=prompts)
 
             logger.info(f"Got {len(futures)} futures from backend")
 
@@ -136,7 +143,8 @@ class OfflineSUT(BaseSUT):
             indexed_futures = [(i, future) for i, future in enumerate(futures)]
             completed_indices = set()
 
-            # Use asyncio.wait with FIRST_COMPLETED to handle out-of-order completion
+            # Use asyncio.wait with FIRST_COMPLETED to handle out-of-order
+            # completion
             pending = {future for _, future in indexed_futures}
 
             while pending:
@@ -153,12 +161,14 @@ class OfflineSUT(BaseSUT):
                             break
 
                     if original_idx is None:
-                        logger.error("Could not find original index for completed future")
+                        logger.error(
+                            "Could not find original index for completed future")
                         continue
 
                     # Check for duplicate completion
                     if original_idx in completed_indices:
-                        logger.warning(f"Prompt {original_idx} completed multiple times!")
+                        logger.warning(
+                            f"Prompt {original_idx} completed multiple times!")
                         continue
 
                     try:
@@ -174,36 +184,44 @@ class OfflineSUT(BaseSUT):
                         await self._send_result_to_loadgen(sample, result)
 
                     except Exception as e:
-                        logger.error(f"Error processing prompt {original_idx}: {type(e).__name__}: {e}")
+                        logger.error(
+                            f"Error processing prompt {original_idx}: {type(e).__name__}: {e}")
                         # Raise the error instead of handling empty responses
-                        raise RuntimeError(f"Backend failed to generate tokens for prompt {original_idx}: {e}")
+                        raise RuntimeError(
+                            f"Backend failed to generate tokens for prompt {original_idx}: {e}")
 
             # Verify all results are populated
             if len(completed_indices) != len(futures):
                 missing_count = len(futures) - len(completed_indices)
-                raise RuntimeError(f"Missing results: completed {len(completed_indices)} != {len(futures)} total ({missing_count} missing)")
+                raise RuntimeError(
+                    f"Missing results: completed {len(completed_indices)} != {len(futures)} total ({missing_count} missing)")
 
             for i, result in enumerate(results):
                 if result is None:
                     raise RuntimeError(f"Missing result for prompt {i}")
 
-            logger.info(f"Completed all {len(completed_indices)} prompts successfully")
+            logger.info(
+                f"Completed all {len(completed_indices)} prompts successfully")
 
         except Exception as e:
-            logger.error(f"Error during batch processing: {type(e).__name__}: {e}")
+            logger.error(
+                f"Error during batch processing: {type(e).__name__}: {e}")
             import traceback
             traceback.print_exc()
             raise  # Re-raise instead of sending empty responses
 
-    async def _send_result_to_loadgen(self, sample: lg.QuerySample, result: Dict[str, Any]):
+    async def _send_result_to_loadgen(
+            self, sample: lg.QuerySample, result: Dict[str, Any]):
         """Send a single result to LoadGen."""
         try:
             # Validate that tokens exist - raise error if missing
             tokens = result.get('tokens')
             if tokens is None:
-                raise ValueError(f"Backend result missing 'tokens' key for query {sample.id}")
+                raise ValueError(
+                    f"Backend result missing 'tokens' key for query {sample.id}")
             if not isinstance(tokens, (list, tuple)) or len(tokens) == 0:
-                raise ValueError(f"Backend returned empty or invalid tokens for query {sample.id}: {tokens}")
+                raise ValueError(
+                    f"Backend returned empty or invalid tokens for query {sample.id}: {tokens}")
 
             # Create a copy of tokens before numpy conversion
             tokens_copy = tokens.copy()
@@ -229,12 +247,15 @@ class OfflineSUT(BaseSUT):
             # Send response to LoadGen
             lg.QuerySamplesComplete([response])
 
-            logger.debug(f"Sent {n_tokens} tokens to LoadGen for query {sample.id}")
+            logger.debug(
+                f"Sent {n_tokens} tokens to LoadGen for query {sample.id}")
 
         except Exception as e:
-            logger.error(f"Error sending result to LoadGen for query {sample.id}: {e}")
+            logger.error(
+                f"Error sending result to LoadGen for query {sample.id}: {e}")
             # Raise the error instead of sending empty response
-            raise RuntimeError(f"Failed to send result to LoadGen for query {sample.id}: {e}")
+            raise RuntimeError(
+                f"Failed to send result to LoadGen for query {sample.id}: {e}")
 
     def _run_event_loop(self):
         """Run the async event loop in a separate thread."""
@@ -282,7 +303,8 @@ class OfflineSUT(BaseSUT):
         # Sort by index to maintain dataset order
         queried_indices = sorted(self.index_to_id.keys())
 
-        logger.info(f"Retrieving results for {len(queried_indices)} queried samples")
+        logger.info(
+            f"Retrieving results for {len(queried_indices)} queried samples")
 
         # Process results in order of dataset indices using stored results
         for i in queried_indices:
@@ -296,7 +318,8 @@ class OfflineSUT(BaseSUT):
                 tokens = result['tokens']
                 output_text = result.get('text', '')
                 if not output_text and self.backend.tokenizer:
-                    output_text = self.backend.tokenizer.decode(result['tokens'], skip_special_tokens=True)
+                    output_text = self.backend.tokenizer.decode(
+                        result['tokens'], skip_special_tokens=True)
 
                 ordered_results.append({
                     'model_output': output_text,
@@ -305,6 +328,7 @@ class OfflineSUT(BaseSUT):
                 })
             else:
                 # No backend result for this sample
-                raise RuntimeError(f"No backend result stored for dataset index {i}, sample_id {sample_id}")
+                raise RuntimeError(
+                    f"No backend result stored for dataset index {i}, sample_id {sample_id}")
 
         return ordered_results

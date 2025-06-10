@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+from eval_accuracy import process_dataframe, print_evaluation_results, process_and_save_dataframe, process_mlperf_log_accuracy
+from utils import (
+    validate_runner_for_backend, uses_text_input, uses_chat_template,
+    load_dataset, save_results, print_runner_header, StandardTokenizer,
+    get_backend_instance, create_base_argument_parser,
+    setup_output_paths, validate_runner_args, handle_runner_error,
+    validate_dataset_extended, generate_timestamped_filename
+)
+from mlperf import (
+    OfflineSUT, ServerSUT, BaseSUT,
+    QuerySampleLibrary,
+    prepare_mlperf_dataset,
+    process_mlperf_results,
+    create_mlperf_output_dataframe
+)
+from backends import BaseBackend
+import pandas as pd
+import numpy as np
+import mlperf_loadgen as lg
 import argparse
 import json
 import logging
@@ -10,26 +29,6 @@ from typing import Dict, List, Union, Optional, Any
 # Disable tokenizers parallelism to avoid forking issues
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-import mlperf_loadgen as lg
-import numpy as np
-import pandas as pd
-
-from backends import BaseBackend
-from mlperf import (
-    OfflineSUT, ServerSUT, BaseSUT,
-    QuerySampleLibrary,
-    prepare_mlperf_dataset,
-    process_mlperf_results,
-    create_mlperf_output_dataframe
-)
-from utils import (
-    validate_runner_for_backend, uses_text_input, uses_chat_template,
-    load_dataset, save_results, print_runner_header, StandardTokenizer,
-    get_backend_instance, create_base_argument_parser,
-    setup_output_paths, validate_runner_args, handle_runner_error,
-    validate_dataset_extended, generate_timestamped_filename
-)
-from eval_accuracy import process_dataframe, print_evaluation_results, process_and_save_dataframe, process_mlperf_log_accuracy
 
 # Configure logging
 logging.basicConfig(
@@ -47,39 +46,39 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
     # Scenario selection (no backend argument, auto-detected)
     parser.add_argument("--mode", type=str, default="offline",
-                       choices=["offline", "server"],
-                       help="MLPerf scenario mode")
+                        choices=["offline", "server"],
+                        help="MLPerf scenario mode")
 
     # MLPerf configuration
     parser.add_argument("--mlperf-conf", type=str, default="/inference/mlperf.conf",
-                       help="Path to MLPerf configuration file")
+                        help="Path to MLPerf configuration file")
 
     parser.add_argument("--user-conf", type=str, default="mlperf/user.conf",
-                       help="Path to user configuration file")
+                        help="Path to user configuration file")
 
     parser.add_argument("--scenario", type=str, default=None,
-                       choices=["Offline", "Server"],
-                       help="MLPerf scenario (overrides --mode)")
+                        choices=["Offline", "Server"],
+                        help="MLPerf scenario (overrides --mode)")
 
     parser.add_argument("--accuracy", action="store_true",
-                       help="Run accuracy mode instead of performance")
+                        help="Run accuracy mode instead of performance")
 
     # Output configuration
     parser.add_argument("--output-dir", type=str, default="mlperf_results",
-                       help="Directory for MLPerf output logs")
+                        help="Directory for MLPerf output logs")
 
     parser.add_argument("--log-dir", type=str, default=None,
-                       help="Directory for detailed logs")
+                        help="Directory for detailed logs")
 
     return parser
 
 
 def configure_loadgen(scenario: str,
-                     accuracy_mode: bool,
-                     mlperf_conf: Optional[str] = None,
-                     user_conf: Optional[str] = None,
-                     log_dir: Optional[str] = None,
-                     model_name: str = "deepseek-r1") -> lg.TestSettings:
+                      accuracy_mode: bool,
+                      mlperf_conf: Optional[str] = None,
+                      user_conf: Optional[str] = None,
+                      log_dir: Optional[str] = None,
+                      model_name: str = "deepseek-r1") -> lg.TestSettings:
     """Configure LoadGen test settings.
 
     Args:
@@ -119,9 +118,9 @@ def configure_loadgen(scenario: str,
 
 
 def run_loadgen_test(sut: Union[OfflineSUT, ServerSUT],
-                    qsl: QuerySampleLibrary,
-                    settings: lg.TestSettings,
-                    log_settings: lg.LogSettings) -> None:
+                     qsl: QuerySampleLibrary,
+                     settings: lg.TestSettings,
+                     log_settings: lg.LogSettings) -> None:
     """Run LoadGen test.
 
     Args:
@@ -162,7 +161,8 @@ def main():
         if args.log_dir:
             log_dir = Path(args.log_dir)
         else:
-            log_dir = output_dir / args.mode / ("accuracy" if args.accuracy else "performance")
+            log_dir = output_dir / args.mode / \
+                ("accuracy" if args.accuracy else "performance")
         log_dir.mkdir(parents=True, exist_ok=True)
 
         # Set up output paths with mode information
@@ -170,17 +170,21 @@ def main():
         if args.output_file is None:
             # Create output file path in the log directory
             mode_str = "accuracy" if args.accuracy else "performance"
-            output_file_base = str(log_dir / f"{backend_name}_mlperf_{args.mode}_{mode_str}_output.pkl")
+            output_file_base = str(
+                log_dir / f"{backend_name}_mlperf_{args.mode}_{mode_str}_output.pkl")
         else:
             output_file_base = args.output_file
 
-        # Generate the actual filename with timestamp that will be used for saving
-        actual_output_file = generate_timestamped_filename(output_file_base, add_timestamp=True)
+        # Generate the actual filename with timestamp that will be used for
+        # saving
+        actual_output_file = generate_timestamped_filename(
+            output_file_base, add_timestamp=True)
 
         # Ensure the parent directory of the output file exists
         output_file_parent = Path(actual_output_file).parent
         output_file_parent.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Ensured output file directory exists: {output_file_parent}")
+        logger.info(
+            f"Ensured output file directory exists: {output_file_parent}")
 
         logger.info("=" * 80)
         logger.info("MLPerf Inference Benchmark Runner (Async Pattern)")
@@ -220,13 +224,14 @@ def main():
         # For backends that use text prompts, we pass the processed strings
         # For tokenized backends, we pass the tokenized prompts
         if uses_text_prompts:
-            logger.info(f"Backend {backend_name} will use text prompts directly")
+            logger.info(
+                f"Backend {backend_name} will use text prompts directly")
             dataset_for_sut = tokenized_prompts
             strings_for_sut = processed_strings
         else:
             logger.info(f"Backend {backend_name} will use tokenized prompts")
             dataset_for_sut = tokenized_prompts
-            strings_for_sut = processed_strings # This is what gets used for generation now
+            strings_for_sut = processed_strings  # This is what gets used for generation now
 
         # Create backend using registry
         logger.info(f"Initializing {backend_name} backend...")
@@ -315,7 +320,8 @@ def main():
             try:
                 # Get results from SUT - must have valid results
                 if not sut_results:
-                    raise RuntimeError("No results available from SUT - backend failed to generate tokens")
+                    raise RuntimeError(
+                        "No results available from SUT - backend failed to generate tokens")
 
                 # Process results using new utility
                 processed_results = process_mlperf_results(
@@ -347,16 +353,19 @@ def main():
                 mlperf_log_file = log_dir / "mlperf_log_accuracy.json"
 
                 if mlperf_log_file.exists():
-                    logger.info(f"Found MLPerf log accuracy file: {mlperf_log_file}")
+                    logger.info(
+                        f"Found MLPerf log accuracy file: {mlperf_log_file}")
                     logger.info("Using MLPerf log for accuracy evaluation...")
 
                     # Get checkpoint path from backend configuration
                     backend_config = get_backend_instance(backend_name).config
 
                     # Determine checkpoint path based on backend type
-                    if hasattr(get_backend_instance(backend_name), 'model_path'):
+                    if hasattr(get_backend_instance(
+                            backend_name), 'model_path'):
                         # PyTorch backend has model_path
-                        checkpoint_path = str(get_backend_instance(backend_name).model_path)
+                        checkpoint_path = str(
+                            get_backend_instance(backend_name).model_path)
                     elif 'model' in backend_config:
                         # Other backends use model name directly
                         checkpoint_path = backend_config['model']
@@ -376,10 +385,13 @@ def main():
                         base_filename="mlperf_accuracy_evaluated.pkl"
                     )
 
-                    logger.info(f"MLPerf accuracy evaluation saved to: {evaluated_file}")
+                    logger.info(
+                        f"MLPerf accuracy evaluation saved to: {evaluated_file}")
                 else:
-                    logger.info("No MLPerf log accuracy file found, using standard DataFrame evaluation...")
-                    raise RuntimeError("No MLPerf log accuracy file found, using standard DataFrame evaluation...")
+                    logger.info(
+                        "No MLPerf log accuracy file found, using standard DataFrame evaluation...")
+                    raise RuntimeError(
+                        "No MLPerf log accuracy file found, using standard DataFrame evaluation...")
 
         # Ensure clean exit
         gc.collect()

@@ -1,3 +1,17 @@
+from utils.validation import require_initialized, BackendNotInitializedError
+from utils.backend_registry import get_backend_config
+from .utils import get_cache_directory
+from .base_backend import BaseBackend
+from transformers import AutoTokenizer
+import torch.distributed as dist
+import torch
+from pathlib import Path
+import asyncio
+from typing import Any, Dict, List, Optional
+import logging
+import json
+from ref_dsinfer.inference.model import Transformer, ModelArgs
+from safetensors.torch import load_model
 import os
 import sys
 
@@ -5,23 +19,6 @@ import sys
 ref_dsinfer_path = os.environ.get(
     'REF_DSINFER_PATH', '/opt/ref_dsinfer/inference')
 sys.path.append(ref_dsinfer_path)
-
-from safetensors.torch import load_model
-from ref_dsinfer.inference.model import Transformer, ModelArgs
-import json
-import logging
-from typing import Any, Dict, List, Optional
-import asyncio
-from pathlib import Path
-
-import torch
-import torch.distributed as dist
-from transformers import AutoTokenizer
-
-from .base_backend import BaseBackend
-from .utils import get_cache_directory
-from utils.backend_registry import get_backend_config
-from utils.validation import require_initialized, BackendNotInitializedError
 
 
 logger = logging.getLogger(__name__)
@@ -115,8 +112,10 @@ class PyTorchBackend(BaseBackend):
         with torch.device(self.config['device']):
             self.model = Transformer(self.model_args)
 
-        # Load tokenizer (only rank 0 needs it for MLPerf, but all ranks need it for run_eval_mpi)
-        self.tokenizer = AutoTokenizer.from_pretrained(str(self.model_path), revision=self.config['model_revision'])
+        # Load tokenizer (only rank 0 needs it for MLPerf, but all ranks need
+        # it for run_eval_mpi)
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            str(self.model_path), revision=self.config['model_revision'])
 
         # Load model weights
         checkpoint_file = self.model_path / \
@@ -133,7 +132,8 @@ class PyTorchBackend(BaseBackend):
         """Sample from logits with temperature."""
         logits = logits / max(temperature, 1e-5)
         probs = torch.softmax(logits, dim=-1)
-        return probs.div_(torch.empty_like(probs).exponential_(1)).argmax(dim=-1)
+        return probs.div_(torch.empty_like(
+            probs).exponential_(1)).argmax(dim=-1)
 
     @torch.inference_mode()
     def _generate_batch(
@@ -222,7 +222,8 @@ class PyTorchBackend(BaseBackend):
         return completion_tokens
 
     @require_initialized
-    def generate(self, tokenized_prompts: List[List[int]], **kwargs) -> List[Dict[str, Any]]:
+    def generate(
+            self, tokenized_prompts: List[List[int]], **kwargs) -> List[Dict[str, Any]]:
         """
         Generate responses for a list of pre-tokenized prompts.
 
@@ -265,7 +266,8 @@ class PyTorchBackend(BaseBackend):
         return results
 
     @require_initialized
-    def generate_batch_distributed(self, batch_tokens: List[List[int]]) -> List[List[int]]:
+    def generate_batch_distributed(
+            self, batch_tokens: List[List[int]]) -> List[List[int]]:
         """
         Generate tokens for a batch in distributed mode.
 
@@ -296,7 +298,8 @@ class PyTorchBackend(BaseBackend):
             return []
 
     @require_initialized
-    def generate_async(self, tokenized_prompts: List[List[int]], **kwargs) -> List[asyncio.Future]:
+    def generate_async(
+            self, tokenized_prompts: List[List[int]], **kwargs) -> List[asyncio.Future]:
         """
         Generate responses asynchronously.
 
@@ -331,7 +334,8 @@ class PyTorchBackend(BaseBackend):
         return futures
 
     @require_initialized
-    def generate_batch_distributed_async(self, batch_tokens: List[List[int]]) -> asyncio.Future:
+    def generate_batch_distributed_async(
+            self, batch_tokens: List[List[int]]) -> asyncio.Future:
         """
         Generate tokens for a batch in distributed mode asynchronously.
 

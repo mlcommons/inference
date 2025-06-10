@@ -482,7 +482,7 @@ MODEL_CONFIG = {
             "rgat": 788379,
             "pointpainting": 1024,
         },
-        "dataset-size" : {
+        "dataset-size": {
             "resnet": 50000,
             "retinanet": 24781,
             "bert-99": 10833,
@@ -1023,7 +1023,7 @@ class Config:
         if model not in self.min_queries:
             raise ValueError("model not known: " + model)
         return self.min_queries[model].get(scenario)
-    
+
     def get_dataset_size(self, model):
         model = self.get_mlperf_model(model)
         if model not in self.dataset_size:
@@ -2292,9 +2292,12 @@ def check_results_dir(
 
             #  Check for calibration documentation
             if not config.skip_calibration_check and division not in ["open"]:
-                calibration_path_root = os.path.join(division, submitter, "calibration.md")
-                calibration_path_doc = os.path.join(division, submitter, "documentation", "calibration.md")
-                if not (os.path.exists(calibration_path_root)) and (not os.path.exists(calibration_path_doc)):
+                calibration_path_root = os.path.join(
+                    division, submitter, "calibration.md")
+                calibration_path_doc = os.path.join(
+                    division, submitter, "documentation", "calibration.md")
+                if not (os.path.exists(calibration_path_root)) and (
+                        not os.path.exists(calibration_path_doc)):
                     log.error(
                         "%s/%s: has not calibration file. One of %s or %s is required",
                         division,
@@ -3248,8 +3251,8 @@ def main():
         args.extra_model_benchmark_map,
         ignore_uncommited=args.submission_exceptions,
         skip_power_check=args.skip_power_check,
-        skip_all_systems_with_results = args.skip_all_systems_have_results_check,
-        skip_calibration_check = args.skip_calibration_check
+        skip_all_systems_with_results=args.skip_all_systems_have_results_check,
+        skip_calibration_check=args.skip_calibration_check
     )
 
     if args.scenarios_to_skip:

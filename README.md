@@ -21,7 +21,7 @@ Please see [here](https://docs.mlcommons.org/inference/benchmarks/) for the MLPe
 
 For submissions, please use the master branch and any commit since the [5.1 seed release (soon to be released)]() although it is best to use the latest commit in the [master branch](https://github.com/mlcommons/inference).
 
-For power submissions please use [SPEC PTD 1.11.1](https://github.com/mlcommons/power) (needs special access) and any commit of the power-dev repository after the [code-freeze](https://github.com/mlcommons/power-dev/commit/65eedd4a60b5c50ac44cbae061d2a428e9fb190a)
+For power submissions please use [SPEC PTD 1.11.1](https://github.com/mlcommons/power) (needs special access) and any commit of the power-dev repository after the [code-freeze](https://github.com/mlcommons/power-dev/commit/c4b3ad8202fbd8ac28d77149e5e7aeadb725bbf2)
 
 
 | model | reference app | framework | dataset | category

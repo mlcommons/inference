@@ -1,4 +1,4 @@
-"""A checker for MLPerf Inference submissions from v4.1 onwards (for checking older submissions please use the submission checker from the respective release)
+"""A checker for MLPerf Inference submissions from v5.0 onwards (for checking older submissions please use the submission checker from the respective release)
 """
 
 from __future__ import division
@@ -25,248 +25,6 @@ log = logging.getLogger("main")
 submission_checker_dir = os.path.dirname(os.path.realpath(__file__))
 
 MODEL_CONFIG = {
-    "v4.1": {
-        "models": [
-            "resnet",
-            "retinanet",
-            "bert-99",
-            "bert-99.9",
-            "dlrm-v2-99",
-            "dlrm-v2-99.9",
-            "3d-unet-99",
-            "3d-unet-99.9",
-            "gptj-99",
-            "gptj-99.9",
-            "llama2-70b-99",
-            "llama2-70b-99.9",
-            "stable-diffusion-xl",
-            "mixtral-8x7b",
-        ],
-        "required-scenarios-datacenter": {
-            "resnet": ["Server", "Offline"],
-            "retinanet": ["Server", "Offline"],
-            "bert-99": ["Server", "Offline"],
-            "bert-99.9": ["Server", "Offline"],
-            "dlrm-v2-99": ["Server", "Offline"],
-            "dlrm-v2-99.9": ["Server", "Offline"],
-            "3d-unet-99": ["Offline"],
-            "3d-unet-99.9": ["Offline"],
-            "gptj-99": ["Server", "Offline"],
-            "gptj-99.9": ["Server", "Offline"],
-            "llama2-70b-99": ["Server", "Offline"],
-            "llama2-70b-99.9": ["Server", "Offline"],
-            "stable-diffusion-xl": ["Server", "Offline"],
-            "mixtral-8x7b": ["Server", "Offline"],
-        },
-        "optional-scenarios-datacenter": {},
-        "required-scenarios-edge": {
-            "resnet": ["SingleStream", "MultiStream", "Offline"],
-            "retinanet": ["SingleStream", "MultiStream", "Offline"],
-            "bert-99": ["SingleStream", "Offline"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-            "gptj-99": ["SingleStream", "Offline"],
-            "gptj-99.9": ["SingleStream", "Offline"],
-            "stable-diffusion-xl": ["SingleStream", "Offline"],
-        },
-        "optional-scenarios-edge": {},
-        "required-scenarios-datacenter-edge": {
-            "resnet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
-            "bert-99": ["SingleStream", "Offline", "Server"],
-            "bert-99.9": ["Offline", "Server"],
-            "dlrm-v2-99": ["Offline", "Server"],
-            "dlrm-v2-99.9": ["Offline", "Server"],
-            "3d-unet-99": ["SingleStream", "Offline"],
-            "3d-unet-99.9": ["SingleStream", "Offline"],
-            "gptj-99": ["SingleStream", "Offline", "Server"],
-            "gptj-99.9": ["SingleStream", "Offline", "Server"],
-            "llama2-70b-99": ["Server", "Offline"],
-            "llama2-70b-99.9": ["Server", "Offline"],
-            "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
-            "mixtral-8x7b": ["Server", "Offline"]
-        },
-        "optional-scenarios-datacenter-edge": {},
-        "accuracy-target": {
-            "resnet": ("acc", 76.46 * 0.99),
-            "retinanet": ("mAP", 37.55 * 0.99),
-            "bert-99": ("F1", 90.874 * 0.99),
-            "bert-99.9": ("F1", 90.874 * 0.999),
-            "dlrm-v2-99": ("AUC", 80.31 * 0.99),
-            "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
-            "3d-unet-99": ("DICE", 0.86170 * 0.99),
-            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
-
-            "gptj-99": (
-                "ROUGE1",
-                42.9865 * 0.99,
-                "ROUGE2",
-                20.1235 * 0.99,
-                "ROUGEL",
-                29.9881 * 0.99,
-                "GEN_LEN",
-                4016878 * 0.9,
-            ),
-            "gptj-99.9": (
-                "ROUGE1",
-                42.9865 * 0.999,
-                "ROUGE2",
-                20.1235 * 0.999,
-                "ROUGEL",
-                29.9881 * 0.999,
-                "GEN_LEN",
-                4016878 * 0.9,
-            ),
-            "llama2-70b-99": (
-                "ROUGE1",
-                44.4312 * 0.99,
-                "ROUGE2",
-                22.0352 * 0.99,
-                "ROUGEL",
-                28.6162 * 0.99,
-                "TOKENS_PER_SAMPLE",
-                294.45 * 0.9,
-            ),
-            "llama2-70b-99.9": (
-                "ROUGE1",
-                44.4312 * 0.999,
-                "ROUGE2",
-                22.0352 * 0.999,
-                "ROUGEL",
-                28.6162 * 0.999,
-                "TOKENS_PER_SAMPLE",
-                294.45 * 0.9,
-            ),
-            "stable-diffusion-xl": (
-                "CLIP_SCORE",
-                31.68631873,
-                "FID_SCORE",
-                23.01085758,
-            ),
-            "mixtral-8x7b": (
-                "ROUGE1",
-                45.4911 * 0.99,
-                "ROUGE2",
-                23.2829 * 0.99,
-                "ROUGEL",
-                30.3615 * 0.99,
-                "TOKENS_PER_SAMPLE",
-                145.9 * 0.9,
-                "gsm8k_accuracy",
-                73.78 * 0.99,
-                "mbxp_accuracy",
-                60.12 * 0.99,
-            ),
-        },
-        "accuracy-upper-limit": {
-            "stable-diffusion-xl": (
-                "CLIP_SCORE",
-                31.81331801,
-                "FID_SCORE",
-                23.95007626,
-            ),
-            "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
-            "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
-            "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
-        },
-        "accuracy-delta-perc": {
-            "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}
-        },
-        "performance-sample-count": {
-            "resnet": 1024,
-            "retinanet": 64,
-            "bert-99": 10833,
-            "bert-99.9": 10833,
-            "dlrm-v2-99": 204800,
-            "dlrm-v2-99.9": 204800,
-            "3d-unet-99": 43,
-            "3d-unet-99.9": 43,
-            "gptj-99": 13368,
-            "gptj-99.9": 13368,
-            "llama2-70b-99": 24576,
-            "llama2-70b-99.9": 24576,
-            "stable-diffusion-xl": 5000,
-            "mixtral-8x7b": 15000,
-        },
-        "dataset-size": {
-            "resnet": 50000,
-            "retinanet": 24781,
-            "bert-99": 10833,
-            "bert-99.9": 10833,
-            "dlrm-v2-99": 204800,
-            "dlrm-v2-99.9": 204800,
-            "3d-unet-99": 43,
-            "3d-unet-99.9": 43,
-            "gptj-99": 13368,
-            "gptj-99.9": 13368,
-            "llama2-70b-99": 24576,
-            "llama2-70b-99.9": 24576,
-            "stable-diffusion-xl": 5000,
-            "mixtral-8x7b": 15000,
-        },
-        # TODO: Update this list.
-        "model_mapping": {
-            # map model names to the official mlperf model class
-            "ssd-resnet34": "retinanet",
-            "mobilenet": "resnet",
-            "resnet50": "resnet",
-        },
-        "seeds": {
-            "qsl_rng_seed": 3066443479025735752,
-            "sample_index_rng_seed": 10688027786191513374,
-            "schedule_rng_seed": 14962580496156340209,
-        },
-        "test05_seeds": {
-            "qsl_rng_seed": 16799458546791641818,
-            "sample_index_rng_seed": 5453809927556429288,
-            "schedule_rng_seed": 5435552105434836064,
-        },
-        "ignore_errors": [],
-        "latency-constraint": {
-            "resnet": {"Server": 15000000},
-            "retinanet": {"Server": 100000000},
-            "bert-99": {"Server": 130000000},
-            "bert-99.9": {"Server": 130000000},
-            "dlrm-v2-99": {"Server": 60000000},
-            "dlrm-v2-99.9": {"Server": 60000000},
-            "gptj-99": {"Server": 20000000000},
-            "gptj-99.9": {"Server": 20000000000},
-            "llama2-70b-99": {"Server": 20000000000},
-            "llama2-70b-99.9": {"Server": 20000000000},
-            "stable-diffusion-xl": {"Server": 20000000000},
-            "mixtral-8x7b": {"Server": 20000000000}
-        },
-        "min-queries": {
-            "resnet": {
-                "SingleStream": 1024,
-                "MultiStream": 270336,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "retinanet": {
-                "SingleStream": 1024,
-                "MultiStream": 270336,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "bert-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "bert-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "dlrm-v2-99": {"Server": 270336, "Offline": 1},
-            "dlrm-v2-99.9": {"Server": 270336, "Offline": 1},
-            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
-            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
-            "gptj-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "gptj-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "stable-diffusion-xl": {
-                "SingleStream": 1024,
-                "Server": 270336,
-                "Offline": 1,
-            },
-            "mixtral-8x7b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-        },
-    },
     "v5.0": {
         "models": [
             "resnet",
@@ -571,6 +329,271 @@ MODEL_CONFIG = {
             "pointpainting": {"SingleStream": 1024},
         },
     },
+    "v5.1": {
+        "models": [
+            "retinanet",
+            "bert-99",
+            "bert-99.9",
+            "dlrm-v2-99",
+            "dlrm-v2-99.9",
+            "3d-unet-99",
+            "3d-unet-99.9",
+            "llama3.1-8b",
+            "llama2-70b-99",
+            "llama2-70b-99.9",
+            "stable-diffusion-xl",
+            "mixtral-8x7b",
+            "llama3.1-405b",
+            "rgat",
+            "pointpainting",
+            "deepseek-r1",
+            "whisper"
+        ],
+        "required-scenarios-datacenter": {
+            "retinanet": ["Server", "Offline"],
+            "dlrm-v2-99": ["Server", "Offline"],
+            "dlrm-v2-99.9": ["Server", "Offline"],
+            "3d-unet-99": ["Offline"],
+            "3d-unet-99.9": ["Offline"],
+            "llama3.1-8b": ["Server", "Offline"],
+            "llama2-70b-99": ["Server", "Offline"],
+            "llama2-70b-99.9": ["Server", "Offline"],
+            "stable-diffusion-xl": ["Server", "Offline"],
+            "mixtral-8x7b": ["Server", "Offline"],
+            "llama3.1-405b": ["Server", "Offline"],
+            "rgat": ["Offline"],
+            "deepseek-r1": ["Server", "Offline"],
+            "whisper": ["Offline"],
+        },
+        "optional-scenarios-datacenter": {
+            "llama2-70b-99": ["Interactive"],
+            "llama2-70b-99.9": ["Interactive"],
+            "llama3.1-405b": ["Interactive"],
+            "deepseek-r1": ["Interactive"],
+        },
+        "required-scenarios-edge": {
+            "retinanet": ["SingleStream", "MultiStream", "Offline"],
+            "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["SingleStream", "Offline"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "llama3.1-8b": ["SingleStream", "Offline"],
+            "stable-diffusion-xl": ["SingleStream", "Offline"],
+            "pointpainting": ["SingleStream"],
+            "whisper": ["Offline"],
+        },
+        "optional-scenarios-edge": {},
+        "required-scenarios-datacenter-edge": {
+            "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
+            "bert-99": ["SingleStream", "Offline"],
+            "bert-99.9": ["SingleStream", "Offline"],
+            "dlrm-v2-99": ["Offline", "Server"],
+            "dlrm-v2-99.9": ["Offline", "Server"],
+            "3d-unet-99": ["SingleStream", "Offline"],
+            "3d-unet-99.9": ["SingleStream", "Offline"],
+            "llama3.1-8b": ["SingleStream", "Offline", "Server"],
+            "llama2-70b-99": ["Server", "Offline"],
+            "llama2-70b-99.9": ["Server", "Offline"],
+            "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
+            "mixtral-8x7b": ["Server", "Offline"],
+            "llama3.1-405b": ["Server", "Offline"],
+            "rgat": ["Offline"],
+            "pointpainting": ["SingleStream"],
+            "deepseek-r1": ["SingleStream", "Server", "Offline"],
+            "whisper": ["Offline"],
+        },
+        "optional-scenarios-datacenter-edge": {},
+        "accuracy-target": {
+            "retinanet": ("mAP", 37.55 * 0.99),
+            "bert-99": ("F1", 90.874 * 0.99),
+            "bert-99.9": ("F1", 90.874 * 0.999),
+            "dlrm-v2-99": ("AUC", 80.31 * 0.99),
+            "dlrm-v2-99.9": ("AUC", 80.31 * 0.999),
+            "3d-unet-99": ("DICE", 0.86170 * 0.99),
+            "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
+
+            "llama3.1-8b": (
+                "ROUGE1",
+                38.7792 * 0.99,
+                "ROUGE2",
+                15.9075 * 0.99,
+                "ROUGEL",
+                24.4957 * 0.99,
+                "ROUGELSUM",
+                35.793 * 0.99,
+                "GEN_LEN",
+                8167644 * 0.9,
+            ),
+            "llama2-70b-99": (
+                "ROUGE1",
+                44.4312 * 0.99,
+                "ROUGE2",
+                22.0352 * 0.99,
+                "ROUGEL",
+                28.6162 * 0.99,
+                "TOKENS_PER_SAMPLE",
+                294.45 * 0.9,
+            ),
+            "llama2-70b-99.9": (
+                "ROUGE1",
+                44.4312 * 0.999,
+                "ROUGE2",
+                22.0352 * 0.999,
+                "ROUGEL",
+                28.6162 * 0.999,
+                "TOKENS_PER_SAMPLE",
+                294.45 * 0.9,
+            ),
+            "stable-diffusion-xl": (
+                "CLIP_SCORE",
+                31.68631873,
+                "FID_SCORE",
+                23.01085758,
+            ),
+            "mixtral-8x7b": (
+                "ROUGE1",
+                45.5989 * 0.99,
+                "ROUGE2",
+                23.3526 * 0.99,
+                "ROUGEL",
+                30.4608 * 0.99,
+                "TOKENS_PER_SAMPLE",
+                144.84 * 0.9,
+                "gsm8k_accuracy",
+                73.66 * 0.99,
+                "mbxp_accuracy",
+                60.16 * 0.99,
+            ),
+            "llama3.1-405b": (
+                "ROUGEL",
+                21.6666 * 0.99,
+                "exact_match",
+                90.1335 * 0.99,
+                "TOKENS_PER_SAMPLE",
+                684.68 * 0.9,
+            ),
+            "rgat": ("acc", 0.7286 * 0.99),
+            "pointpainting": ("mAP", 0.5425 * 0.999),
+            "deepseek-r1": ("exact_match", 0.99 * 81.9132),
+            # TODO: Final whisper metric
+            "whisper": ("WER", 3.9 * 0.99),
+        },
+        "accuracy-upper-limit": {
+            "stable-diffusion-xl": (
+                "CLIP_SCORE",
+                31.81331801,
+                "FID_SCORE",
+                23.95007626,
+            ),
+            "llama2-70b-99": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
+            "llama2-70b-99.9": ("TOKENS_PER_SAMPLE", 294.45 * 1.1),
+            "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
+            "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
+            "llama3.1-8b": ("GEN_LEN", 8167644 * 0.9)
+        },
+        "accuracy-delta-perc": {
+            "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}
+        },
+        "performance-sample-count": {
+            "retinanet": 64,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-v2-99": 204800,
+            "dlrm-v2-99.9": 204800,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+            "llama3.1-8b": 13368,
+            "llama2-70b-99": 24576,
+            "llama2-70b-99.9": 24576,
+            "stable-diffusion-xl": 5000,
+            "mixtral-8x7b": 15000,
+            "llama3.1-405b": 8313,
+            "rgat": 788379,
+            "pointpainting": 1024,
+            "deepseek-r1": 4388,
+            # TODO: Final whisper sample count
+            "whisper": 1,
+        },
+        "dataset-size" : {
+            "retinanet": 24781,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-v2-99": 204800,
+            "dlrm-v2-99.9": 204800,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+            "llama3.1-8b": 13368,
+            "llama2-70b-99": 24576,
+            "llama2-70b-99.9": 24576,
+            "stable-diffusion-xl": 5000,
+            "mixtral-8x7b": 15000,
+            "llama3.1-405b": 8313,
+            "rgat": 788379,
+            "pointpainting": 39987,
+            "deepseek-r1": 4388,
+            # TODO: Final whisper sample count
+            "whisper": 1,
+        },
+        # model_mapping.json is expected in the root directory of the
+        # submission folder for open submissions and so the below dictionary is
+        # not really needed
+        "model_mapping": {
+            # map model names to the official mlperf model class
+            "ssd-resnet34": "retinanet",
+            "mobilenet": "resnet",
+            "resnet50": "resnet",
+            "llama3_1-405b": "llama3.1-405b",
+            "llama3_1-8b": "llama3.1-8b",
+        },
+        "seeds": {
+            # TODO: Update random seeds
+            "qsl_rng_seed": 6023615788873153749,
+            "sample_index_rng_seed": 15036839855038426416,
+            "schedule_rng_seed": 9933818062894767841,
+        },
+        "ignore_errors": [],
+        "latency-constraint": {
+            "retinanet": {"Server": 100000000},
+            "dlrm-v2-99": {"Server": 60000000},
+            "dlrm-v2-99.9": {"Server": 60000000},
+            "llama3.1-8b": {"Server": 20000000000},
+            "stable-diffusion-xl": {"Server": 20000000000},
+            "llama2-70b-99": {"Server": 20000000000},
+            "llama2-70b-99.9": {"Server": 20000000000},
+            "mixtral-8x7b": {"Server": 20000000000},
+            "llama3.1-405b": {"Server": 60000000000},
+            "deepseek-r1": {"Server": 60000000000},
+            "whisper": {"Server": 60000000000},
+        },
+        "min-queries": {
+            "retinanet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "bert-99": {"SingleStream": 1024, "Offline": 1},
+            "bert-99.9": {"SingleStream": 1024, "Offline": 1},
+            "dlrm-v2-99": {"Server": 270336, "Offline": 1},
+            "dlrm-v2-99.9": {"Server": 270336, "Offline": 1},
+            "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
+            "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
+            "llama3.1-8b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "stable-diffusion-xl": {
+                "SingleStream": 1024,
+                "Server": 270336,
+                "Offline": 1,
+            },
+            "mixtral-8x7b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama3.1-405b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "rgat": {"SingleStream": 1024, "Offline": 1},
+            "pointpainting": {"SingleStream": 1024},
+            "deepseek-r1": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "whisper": {"SingleStream": 1024, "Offline": 1},
+        },
+    },
 }
 
 VALID_DIVISIONS = ["open", "closed", "network"]
@@ -593,7 +616,7 @@ REQUIRED_ACC_FILES = [
 ]
 REQUIRED_ACC_BENCHMARK = {
     "stable-diffusion-xl": {
-        "v4.0": {
+        "v5.0": {
             "images": [
                 "4459",
                 "4015",
@@ -607,18 +630,19 @@ REQUIRED_ACC_BENCHMARK = {
                 "95",
             ]
         },
-        "v4.1": {
+        "v5.1": {
             "images": [
-                "4655",
-                "2569",
-                "1303",
-                "109",
-                "4509",
-                "3009",
-                "2179",
-                "1826",
-                "2094",
-                "3340",
+                # TODO: Set final images
+                "4459",
+                "4015",
+                "2705",
+                "1682",
+                "4048",
+                "4683",
+                "3757",
+                "1578",
+                "3319",
+                "95",
             ]
         },
     }
@@ -641,7 +665,6 @@ REQUIRED_TEST01_ACC_FILES = REQUIRED_TEST01_ACC_FILES_1 + [
 ]
 
 OFFLINE_MIN_SPQ_SINCE_V4 = {
-    "resnet": 24576,
     "retinanet": 24576,
     "bert-99": 10833,
     "bert-99.9": 10833,
@@ -650,16 +673,16 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "3d-unet-99": 43,
     "3d-unet-99.9": 43,
     "rnnt": 2513,
-    "gptj-99": 13368,
-    "gptj-99.9": 13368,
+    "llama3.1-8b": 13368,
     "llama2-70b-99": 24576,
     "llama2-70b-99.9": 24576,
-    "llama2-70b-interactive-99": 24576,
-    "llama2-70b-interactive-99.9": 24576,
     "stable-diffusion-xl": 5000,
     "mixtral-8x7b": 15000,
     "llama3.1-405b": 8313,
     "rgat": 788379,
+    "deepseek-r1": 4388,
+    # TODO: Set final SPQ
+    "whisper": 1,
 }
 
 SCENARIO_MAPPING = {
@@ -677,13 +700,13 @@ RESULT_FIELD = {
 }
 
 RESULT_FIELD_NEW = {
-    "v4.1": {
+    "v5.0": {
         "Offline": "result_samples_per_second",
         "SingleStream": "early_stopping_latency_ss",
         "MultiStream": "early_stopping_latency_ms",
         "Server": "result_completed_samples_per_sec",
     },
-    "v5.0": {
+    "v5.1": {
         "Offline": "result_samples_per_second",
         "SingleStream": "early_stopping_latency_ss",
         "MultiStream": "early_stopping_latency_ms",
@@ -692,28 +715,6 @@ RESULT_FIELD_NEW = {
 }
 
 RESULT_FIELD_BENCHMARK_OVERWRITE = {
-    "v4.1": {
-        "llama2-70b-99": {
-            "Offline": "result_tokens_per_second",
-            "Server": "result_completed_tokens_per_second",
-        },
-        "llama2-70b-99.9": {
-            "Offline": "result_tokens_per_second",
-            "Server": "result_completed_tokens_per_second",
-        },
-        "gptj-99": {
-            "Offline": "result_inferred_tokens_per_second",
-            "Server": "result_inferred_completed_tokens_per_second",
-        },
-        "gptj-99.9": {
-            "Offline": "result_inferred_tokens_per_second",
-            "Server": "result_inferred_completed_tokens_per_second",
-        },
-        "mixtral-8x7b": {
-            "Offline": "result_tokens_per_second",
-            "Server": "result_completed_tokens_per_second",
-        },
-    },
     "v5.0": {
         "llama2-70b-99": {
             "Offline": "result_tokens_per_second",
@@ -748,29 +749,82 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Server": "result_completed_tokens_per_second",
         },
     },
+    "v5.1": {
+        "llama2-70b-99": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama2-70b-99.9": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-8b": {
+            "Offline": "result_inferred_tokens_per_second",
+            "Server": "result_inferred_completed_tokens_per_second",
+        },
+        "mixtral-8x7b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-405b": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "deepseek-r1": {
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+    },
 }
 
 LLM_LATENCY_LIMITS = {
     "llama2-70b-99": {
-        "ttft": 2000 * 1000000, "tpot": 200 * 1000000
+        "Server": {
+            "ttft": 2000 * 1000000, "tpot": 200 * 1000000
+        },
+        "Interactive": {
+            "ttft": 450 * 1000000, "tpot": 40 * 1000000
+        },
     },
     "llama2-70b-99.9": {
-        "ttft": 2000 * 1000000, "tpot": 200 * 1000000
+        "Server": {
+            "ttft": 2000 * 1000000, "tpot": 200 * 1000000
+        },
+        "Interactive": {
+            "ttft": 450 * 1000000, "tpot": 40 * 1000000
+        },
     },
-    "llama2-70b-interactive-99": {
-        "ttft": 450 * 1000000, "tpot": 40 * 1000000
+    "mixtral-8x7b": {
+        "Server": {
+            "ttft": 2000 * 1000000, "tpot": 200 * 1000000
+        }
     },
-    "llama2-70b-interactive-99.9": {
-        "ttft": 450 * 1000000, "tpot": 40 * 1000000
-    },
-    "mixtral-8x7b": {"ttft": 2000 * 1000000, "tpot": 200 * 1000000},
     "llama3.1-405b": {
-        "ttft": 6000 * 1000000, "tpot": 175 * 1000000
+        "Server": {
+            "ttft": 6000 * 1000000, "tpot": 175 * 1000000
+        },
+        "Interactive": {
+            "ttft": 4500 * 1000000, "tpot": 80 * 1000000
+        },
     },
+    "llama3.1-8b": {
+        "Server": {
+            "ttft": 2000 * 1000000, "tpot": 100 * 1000000
+        }
+    },
+    "deepseek-r1": {
+        "Server": {
+            "ttft": 2000 * 1000000, "tpot": 80 * 1000000
+        },
+        "Interactive": {
+            "ttft": 40 * 1000000, "tpot": 40 * 1000000
+        },
+    }
 }
 
 ACC_PATTERN = {
     "acc": r"^(?:\{\"accuracy|accuracy)[\": ]*=?\s*([\d\.]+).*",
+    "meanAcc": r".*'mean-accuracy':\s+'?([\d.]+)'?.*",
     "AUC": r"^AUC=([\d\.]+).*",
     "mAP": r".*(?:mAP=|'Total':)\s*([\d.]+)",
     "bleu": r"^BLEU\:\s*([\d\.]+).*",
@@ -1058,13 +1112,12 @@ class Config:
                 "gptj-99.9",
                 "llama2-70b-99",
                 "llama2-70b-99.9",
-                "llama2-70b-interactive-99",
-                "llama2-70b-interactive-99.9",
                 "mixtral-8x7b",
                 "llama3.1-405b",
+                "llama3.1-8b",
+                "deepseek-r1"
                 "rgat",
             ]
-            and self.version not in ["v4.0", "v4.1"]
         )
 
 
@@ -1072,6 +1125,7 @@ def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="submission directory")
+    # TODO: update to version v5.1
     parser.add_argument(
         "--version",
         default="v5.0",
@@ -1381,7 +1435,7 @@ def extra_check_llm(mlperf_log, scenario, model):
             # For offline no further checks are necessary
             return True
         else:
-            limits = LLM_LATENCY_LIMITS[model]
+            limits = LLM_LATENCY_LIMITS[model][scenario]
             if (
                 mlperf_log["result_first_token_99.00_percentile_latency_ns"]
                 < limits["ttft"]
@@ -1431,7 +1485,7 @@ def get_performance_metric(
 
     inferred = False
     if scenario_fixed != scenario:
-        inferred, res = get_inferred_result(
+        inferred, res, _ = get_inferred_result(
             scenario_fixed, scenario, res, mlperf_log, config, False
         )
 
@@ -1471,7 +1525,7 @@ def check_performance_dir(
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
                  "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
-                 "mixtral-8x7b", "llama3.1-405b"]:
+                 "mixtral-8x7b", "llama3.1-405b", "llama3.1-8b", "deepseek-r1"]:
         llm_is_valid = extra_check_llm(
             mlperf_log, scenario_fixed, model)
         is_valid = (llm_is_valid and is_valid)
@@ -1639,9 +1693,10 @@ def check_performance_dir(
 
     inferred = False
     if scenario_fixed != scenario:
-        inferred, res = get_inferred_result(
+        inferred, res, inferred_valid = get_inferred_result(
             scenario_fixed, scenario, res, mlperf_log, config, True
         )
+        is_valid &= inferred_valid
 
     is_network_system, is_network_mode_valid = is_system_over_network(
         division, system_json, path
@@ -1664,6 +1719,7 @@ def get_inferred_result(
 ):
 
     inferred = False
+    is_valid = True
     # Check if current scenario (and version) uses early stopping
     uses_early_stopping = config.uses_early_stopping(scenario)
 
@@ -1703,7 +1759,9 @@ def get_inferred_result(
             res = (early_stopping_latency_ms * samples_per_query) / MS_TO_NS
         else:
             res = (latency_99_percentile * samples_per_query) / MS_TO_NS
-    return inferred, res
+    if (scenario_fixed in ["Interactive"]) and scenario not in ["Server"]:
+        is_valid = False
+    return inferred, res, is_valid
 
 
 def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
@@ -1985,54 +2043,49 @@ def check_results_dir(
             notes = notes + ". " if notes else ""
             notes = notes + system_json.get("sw_notes")
         special_unit_dict = {
-            "gptj-99": {
-                "Offline": "Tokens/s",
-                "Server": "Tokens/s",
-            },
-            "gptj-99.9": {
+            "llama3.1-8b": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-99": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
+                "Interactive": "Tokens/s",
             },
             "llama2-70b-99.9": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
-            },
-            "llama2-70b-interactive-99": {
-                "Offline": "Tokens/s",
-                "Server": "Tokens/s",
-            },
-            "llama2-70b-interactive-99.9": {
-                "Offline": "Tokens/s",
-                "Server": "Tokens/s",
-            },
-            "llama3.1-405b": {
-                "Offline": "Tokens/s",
-                "Server": "Tokens/s",
+                "Interactive": "Tokens/s",
             },
             "mixtral-8x7b": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
+                "Interactive": "Tokens/s",
             },
             "llama3.1-405b": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
+                "Interactive": "Tokens/s",
             },
+            "deepseek-r1": {
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+                "Interactive": "Tokens/s",
+            }
         }
         unit_dict = {
             "SingleStream": "Latency (ms)",
             "MultiStream": "Latency (ms)",
             "Offline": "Samples/s",
             "Server": "Queries/s",
+            "Interactive": "Queries/s",
         }
         power_unit_dict = {
             "SingleStream": "millijoules",
             "MultiStream": "millijoules",
             "Offline": "Watts",
             "Server": "Watts",
+            "Interactive": "Watts",
         }
         if config.version == "v4.0":
             unit = unit_dict[scenario_fixed]
@@ -2915,10 +2968,6 @@ def check_measurement_dir(
                 log.error("%s is having empty %s", measurement_dir, i)
                 is_valid = False
 
-    if config.version in ["v4.0", "v4.1"]:
-        system_file_prefix = system_desc
-    else:
-        system_file_prefix = "model-info"
     for i in files:
         if i.startswith(system_desc) and i.endswith(
                 "_" + scenario + ".json"):
@@ -3150,37 +3199,24 @@ def check_compliance_dir(
         "3d-unet-99.9",
         "retinanet",
         "rnnt",
-        "gptj-99",
-        "gptj-99.9",
+        "llama3.1-8b",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "llama2-70b-interactive-99",
-        "llama2-70b-interactive-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
         "rgat",
+        "deepseek-r1",
+        "whisper",
     ]:
         test_list.remove("TEST04")
 
-    if config.version in ["v4.0", "v4.1"] and model not in [
-        "gptj-99",
-        "gptj-99.9",
-        "llama2-70b-99",
-        "llama2-70b-99.9",
-        "stable-diffusion-xl",
-        "mixtral-8x7b",
-    ]:
-        test_list.append("TEST05")
-
     if model in [
-        "gptj-99",
-        "gptj-99.9",
+        "llama3.1-8b",
         "llama2-70b-99",
         "llama2-70b-99.9",
-        "llama2-70b-interactive-99",
-        "llama2-70b-interactive-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
+        "deepseek-r1",
     ]:
         test_list.remove("TEST01")
 
@@ -3189,8 +3225,7 @@ def check_compliance_dir(
         test_list.remove("TEST04")
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
-                 "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
-                 "mixtral-8x7b", "llama3.1-405b"]:
+                 "mixtral-8x7b", "llama3.1-405b", "llama3.1-8b", "deepseek-r1"]:
         test_list.append("TEST06")
 
     if test_list and not os.path.exists(compliance_dir):

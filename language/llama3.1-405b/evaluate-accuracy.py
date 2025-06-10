@@ -35,6 +35,8 @@ def get_args():
         help="dtype of the accuracy log",
         choices=["int32", "int64", "float"],
     )
+    parser.add_argument('--mock-dataset-for-testing', action='store_true',
+                        help='Use mock dataset for CI testing')
     args = parser.parse_args()
     return args
 

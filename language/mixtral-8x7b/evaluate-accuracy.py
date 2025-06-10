@@ -35,6 +35,8 @@ def get_args():
         help="dtype of the accuracy log",
         choices=["int32", "int64", "float"],
     )
+    parser.add_argument('--mock-dataset-for-testing', action='store_true',
+                        help='Use mock dataset for CI testing')
     args = parser.parse_args()
     return args
 
@@ -130,8 +132,17 @@ def main():
         use_fast=False,
     )
 
-    data = get_groundtruth(args.dataset_file)
-    query_types, gt_outputs = data["dataset"], data["gt_output"]
+    if args.mock_dataset_for_testing:
+        # Create a minimal mock dataset for testing
+        dataset = [
+            {"prompt": "What is the capital of France?", "response": "The capital of France is Paris.", "ground_truth": "Paris"},
+            {"prompt": "What is 2+2?", "response": "2+2 equals 4.", "ground_truth": "4"},
+            {"prompt": "Explain quantum computing", "response": "Quantum computing uses quantum bits or qubits...", "ground_truth": "Quantum computing uses quantum mechanics..."}
+        ]
+    else:
+        # Original dataset loading code
+        data = get_groundtruth(args.dataset_file)
+        query_types, gt_outputs = data["dataset"], data["gt_output"]
 
     target_required_GSM8K = []
     target_required_OpenOrca = []

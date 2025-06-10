@@ -1,0 +1,100 @@
+name: Test LLM Accuracy Scripts
+
+on:
+  pull_request:
+    branches: [ "master", "dev" ]
+    paths:
+      - 'language/**/*evaluate-accuracy.py'
+      - 'language/**/*eval_accuracy.py'
+      - '.github/workflows/llm_accuracy_script_test.yml'
+      - '!**.md'
+  push:
+    branches: [ "master", "dev" ]
+    paths:
+      - 'language/**/*evaluate-accuracy.py'
+      - 'language/**/*eval_accuracy.py'
+      - '.github/workflows/llm_accuracy_script_test.yml'
+      - '!**.md'
+  workflow_dispatch:
+
+jobs:
+  test-llama3-accuracy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install rouge-scorer pandas tqdm nltk
+        python -m nltk.downloader punkt
+    
+    - name: Create test fixtures directory
+      run: mkdir -p tests/fixtures/llama3
+    
+    - name: Generate sample accuracy log for Llama3.1
+      run: |
+        cat > tests/fixtures/llama3/mlperf_log_accuracy.json << 'EOL'
+        {"qsl_idx": 0, "data": {"prompt": "What is the capital of France?", "response": "The capital of France is Paris."}, "ground_truth": "Paris"}
+        {"qsl_idx": 1, "data": {"prompt": "What is 2+2?", "response": "2+2 equals 4."}, "ground_truth": "4"}
+        {"qsl_idx": 2, "data": {"prompt": "Identify the UUID: 12345678-1234-1234-1234-123456789012", "response": "The UUID is 12345678-1234-1234-1234-123456789012"}, "ground_truth": "12345678-1234-1234-1234-123456789012"}
+        EOL
+    
+    - name: Generate sample dataset for Llama3.1
+      run: |
+        cat > tests/fixtures/llama3/sample_dataset.pkl << 'EOL'
+        dummy_pickle_content
+        EOL
+    
+    - name: Test Llama3.1 accuracy script
+      run: |
+        cd language/llama3.1-405b
+        python evaluate-accuracy.py --checkpoint-path dummy-model-path \
+          --mlperf-accuracy-file ../../tests/fixtures/llama3/mlperf_log_accuracy.json \
+          --dataset-file ../../tests/fixtures/llama3/sample_dataset.pkl \
+          --dtype int32 \
+          --mock-dataset-for-testing
+    
+  test-mixtral-accuracy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install pandas tqdm
+    
+    - name: Create test fixtures directory
+      run: mkdir -p tests/fixtures/mixtral
+    
+    - name: Generate sample accuracy log for Mixtral
+      run: |
+        cat > tests/fixtures/mixtral/mlperf_log_accuracy.json << 'EOL'
+        {"qsl_idx": 0, "data": {"prompt": "What is the capital of France?", "response": "The capital of France is Paris."}, "ground_truth": "Paris"}
+        {"qsl_idx": 1, "data": {"prompt": "What is 2+2?", "response": "2+2 equals 4."}, "ground_truth": "4"}
+        {"qsl_idx": 2, "data": {"prompt": "Explain quantum computing", "response": "Quantum computing uses quantum bits or qubits..."}, "ground_truth": "Quantum computing uses quantum mechanics..."}
+        EOL
+    
+    - name: Generate sample dataset for Mixtral
+      run: |
+        cat > tests/fixtures/mixtral/sample_dataset.pkl << 'EOL'
+        dummy_pickle_content
+        EOL
+    
+    - name: Test Mixtral accuracy script
+      run: |
+        cd language/mixtral-8x7b
+        python evaluate-accuracy.py --checkpoint-path dummy-model-path \
+          --mlperf-accuracy-file ../../tests/fixtures/mixtral/mlperf_log_accuracy.json \
+          --dataset-file ../../tests/fixtures/mixtral/sample_dataset.pkl \
+          --dtype int32 \
+          --mock-dataset-for-testing

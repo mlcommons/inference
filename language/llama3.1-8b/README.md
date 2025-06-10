@@ -141,9 +141,16 @@ rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5ee
 ```
 You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
+#### Full dataset (datacenter) 
 ```
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_eval.json ./ -P
 ```
+
+#### 5000 samples (edge)
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/sample_cnn_eval_5000.json ./ -P
+```
+
 **MLC Command**
 
 ```
@@ -260,14 +267,13 @@ mlcr process,mlperf,accuracy,_dataset_llama3.1-8b --result_dir=<Path to accuracy
 ## Accuracy Target
 Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets:
 ```
-# TODO: Update to final values
 {
-        'rouge1': 37.9869,
-        'rouge2': 15.0351,
-        'rougeL': 23.7094,
-        'rougeLsum': 34.7967,
-        'gen_len': 7981387,
-        'gen_num': 13000,
+        'rouge1': 38.7792,
+        'rouge2': 15.9075,
+        'rougeL': 24.4957,
+        'rougeLsum': 35.793,
+        'gen_len': 8167644,
+        'gen_num': 13368,
 }
 ```
 The accuracy target is 99% for rougeL and exact_match, and 90% for tokens_per_sample

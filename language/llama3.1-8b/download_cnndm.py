@@ -87,14 +87,22 @@ def preprocess_function(sample, padding="max_length"):
     # create list of samples
     inputs = []
 
+    if n_samples:
+        import random
+        random.seed(42)
+        ind = random.sample(range(0, 13368), n_samples)
+    else:
+        ind = list(range(0, len(sample[text_column])))
+
     for i in range(0, len(sample[text_column])):
-        x = dict()
-        x["instruction"] = instruction_template
-        x["input"] = sample[text_column][i]
-        x["tok_input"] = tokenizer.encode(
-            instruction_template["llama"].format_map(x))
-        x["output"] = sample[summary_column][i]
-        inputs.append(x)
+        if i in ind:
+            x = dict()
+            x["instruction"] = instruction_template
+            x["input"] = sample[text_column][i]
+            x["tok_input"] = tokenizer.encode(
+                instruction_template["llama"].format_map(x))
+            x["output"] = sample[summary_column][i]
+            inputs.append(x)
     model_inputs = dict()
     model_inputs["text"] = inputs
 
@@ -108,15 +116,12 @@ tokenized_dataset = dataset.map(
 
 # save dataset to disk
 if n_samples is None:
-    with open(os.path.join(save_dataset_path, "cnn_eval.json"), "w") as write_f:
-        json.dump(
-            tokenized_dataset["validation"]["text"], write_f, indent=4, ensure_ascii=False
-        )
+    file = "cnn_eval.json"
 else:
-    with open(os.path.join(save_dataset_path, f"sample_cnn_eval_{n_samples}.json"), "w") as write_f:
-        json.dump(
-            tokenized_dataset["validation"]["text"][:n_samples], write_f, indent=4, ensure_ascii=False
-        )
+    file = f"sample_cnn_eval_{n_samples}.json"
 
-
+with open(os.path.join(save_dataset_path, file), "w") as write_f:
+    json.dump(
+        tokenized_dataset["validation"]["text"], write_f, indent=4, ensure_ascii=False
+    )
 print("Dataset saved in ", save_dataset_path)

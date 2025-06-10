@@ -188,6 +188,22 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": 5000,
             "mixtral-8x7b": 15000,
         },
+        "dataset-size": {
+            "resnet": 50000,
+            "retinanet": 24781,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-v2-99": 204800,
+            "dlrm-v2-99.9": 204800,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+            "gptj-99": 13368,
+            "gptj-99.9": 13368,
+            "llama2-70b-99": 24576,
+            "llama2-70b-99.9": 24576,
+            "stable-diffusion-xl": 5000,
+            "mixtral-8x7b": 15000,
+        },
         # TODO: Update this list.
         "model_mapping": {
             # map model names to the official mlperf model class
@@ -465,6 +481,27 @@ MODEL_CONFIG = {
             "llama3.1-405b": 8313,
             "rgat": 788379,
             "pointpainting": 1024,
+        },
+        "dataset-size" : {
+            "resnet": 50000,
+            "retinanet": 24781,
+            "bert-99": 10833,
+            "bert-99.9": 10833,
+            "dlrm-v2-99": 204800,
+            "dlrm-v2-99.9": 204800,
+            "3d-unet-99": 43,
+            "3d-unet-99.9": 43,
+            "gptj-99": 13368,
+            "gptj-99.9": 13368,
+            "llama2-70b-99": 24576,
+            "llama2-70b-99.9": 24576,
+            "llama2-70b-interactive-99": 24576,
+            "llama2-70b-interactive-99.9": 24576,
+            "stable-diffusion-xl": 5000,
+            "mixtral-8x7b": 15000,
+            "llama3.1-405b": 8313,
+            "rgat": 788379,
+            "pointpainting": 39987,
         },
         # model_mapping.json is expected in the root directory of the
         # submission folder for open submissions and so the below dictionary is
@@ -876,6 +913,8 @@ class Config:
         extra_model_benchmark_map,
         ignore_uncommited=False,
         skip_power_check=False,
+        skip_all_systems_with_results=False,
+        skip_calibration_check=False
     ):
         self.base = MODEL_CONFIG.get(version)
         self.extra_model_benchmark_map = extra_model_benchmark_map
@@ -888,12 +927,15 @@ class Config:
         self.accuracy_delta_perc = self.base["accuracy-delta-perc"]
         self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
         self.performance_sample_count = self.base["performance-sample-count"]
+        self.dataset_size = self.base["dataset-size"]
         self.latency_constraint = self.base.get("latency-constraint", {})
         self.min_queries = self.base.get("min-queries", {})
         self.required = None
         self.optional = None
         self.ignore_uncommited = ignore_uncommited
         self.skip_power_check = skip_power_check
+        self.skip_all_systems_with_results = skip_all_systems_with_results
+        self.skip_calibration_check = skip_calibration_check
 
     def set_type(self, submission_type):
         if submission_type == "datacenter":
@@ -981,6 +1023,12 @@ class Config:
         if model not in self.min_queries:
             raise ValueError("model not known: " + model)
         return self.min_queries[model].get(scenario)
+    
+    def get_dataset_size(self, model):
+        model = self.get_mlperf_model(model)
+        if model not in self.dataset_size:
+            raise ValueError("model not known: " + model)
+        return self.dataset_size[model]
 
     def get_delta_perc(self, model, metric):
         if model in self.accuracy_delta_perc:
@@ -1000,10 +1048,9 @@ class Config:
     def uses_early_stopping(self, scenario):
         return scenario in ["Server", "SingleStream", "MultiStream"]
 
-    def requires_equal_issue(self, model, division):
+    def requires_equal_issue(self, model):
         return (
-            division in ["closed", "network"]
-            and model
+            model
             in [
                 "3d-unet-99",
                 "3d-unet-99.9",
@@ -1084,6 +1131,16 @@ def get_args():
         "--skip-extra-accuracy-files-check",
         action="store_true",
         help="skips the check of extra accuracy files like the images folder of SDXL",
+    )
+    parser.add_argument(
+        "--skip-all-systems-have-results-check",
+        action="store_true",
+        help="skips the check that all the systems in the systems and measurements folder should have results",
+    )
+    parser.add_argument(
+        "--skip-calibration-check",
+        action="store_true",
+        help="skips the check that the calibration documentation should exist",
     )
     parser.add_argument(
         "--scenarios-to-skip",
@@ -1302,6 +1359,18 @@ def check_accuracy_dir(config, model, path, verbose):
     fname = os.path.join(path, "mlperf_log_detail.txt")
     if not find_error_in_detail_log(config, fname):
         is_valid = False
+        log.error(
+            "%s has loadgen errors, number of errors: %s", path, mlperf_log.num_errors()
+        )
+
+    # check the whole dataset was used in the accuracy run
+    mlperf_log = MLPerfLog(fname)
+    qsl_total_count = mlperf_log["qsl_reported_total_count"]
+    expected_qsl_total_count = config.get_dataset_size(model)
+    if qsl_total_count != expected_qsl_total_count:
+        log.error(
+            "%s accurcy run does not cover all dataset, accuracy samples: %s, dataset size: %s", path, qsl_total_count, expected_qsl_total_count
+        )
 
     return is_valid, result_acc
 
@@ -1420,7 +1489,7 @@ def check_performance_dir(
     equal_issue_used_check = (
         mlperf_log["effective_sample_concatenate_permutation"] == True
     )
-    if not config.requires_equal_issue(model, division):
+    if not config.requires_equal_issue(model):
         equal_issue_used_check = True
     if not equal_issue_used_check:
         log.error(
@@ -1434,6 +1503,9 @@ def check_performance_dir(
     fname = os.path.join(path, "mlperf_log_detail.txt")
     if not find_error_in_detail_log(config, fname):
         is_valid = False
+        log.error(
+            "%s has loadgen errors, number of errors: %s", path, mlperf_log.num_errors()
+        )
 
     required_performance_sample_count = config.get_performance_sample_count(
         model)
@@ -1702,7 +1774,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -1914,50 +1986,38 @@ def check_results_dir(
             notes = notes + system_json.get("sw_notes")
         special_unit_dict = {
             "gptj-99": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "gptj-99.9": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-99": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-99.9": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-interactive-99": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama2-70b-interactive-99.9": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
-                "Offline": "Tokens/s",
-                "Server": "Tokens/s",
-            },
-            "mixtral-8x7b": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
             "llama3.1-405b": {
-                "SingleStream": "Latency (ms)",
-                "MultiStream": "Latency (ms)",
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "mixtral-8x7b": {
+                "Offline": "Tokens/s",
+                "Server": "Tokens/s",
+            },
+            "llama3.1-405b": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
             },
@@ -1977,7 +2037,9 @@ def check_results_dir(
         if config.version == "v4.0":
             unit = unit_dict[scenario_fixed]
         else:
-            unit = special_unit_dict.get(model_name, unit_dict)[scenario_fixed]
+            unit = special_unit_dict.get(
+                mlperf_model, unit_dict).get(
+                scenario_fixed, unit_dict[scenario_fixed])
         power_unit = power_unit_dict[scenario_fixed]
 
         if (power_metric <= 0) or (
@@ -2091,6 +2153,8 @@ def check_results_dir(
             if filter_submitter and submitter != filter_submitter:
                 continue
             results_path = os.path.join(division, submitter, "results")
+            measurements_path = os.path.join(division, submitter, "measurements")
+            systems_path = os.path.join(division, submitter, "systems")
             if not os.path.exists(results_path):
                 continue
 
@@ -2193,6 +2257,50 @@ def check_results_dir(
                 if os.path.exists(model_mapping_path):
                     with open(model_mapping_path) as fp:
                         extra_model_mapping = json.load(fp)
+
+            if not config.skip_all_systems_with_results:
+                measurement_diff = list(set(list_dir(measurements_path)) - set(list_dir(results_path)))
+                systems_diff = list(
+                    set(
+                        [
+                            system_file.replace(".json", "")
+                            for system_file in list_files(systems_path)
+                            if system_file.endswith(".json")
+                        ]
+                    )
+                    - set(list_dir(results_path))
+                )
+                if len(measurement_diff) > 0:
+                    log.error(
+                        "%s/%s/measurements has the following directories with no results: %s",
+                        division,
+                        submitter,
+                        measurement_diff,
+                    )
+                    results[os.path.join(results_path)] = None
+
+                if len(systems_diff) > 0:
+                    log.error(
+                        "%s/%s/systems has the following files with no results: %s",
+                        division,
+                        submitter,
+                        [(s + ".json") for s in systems_diff],
+                    )
+                    results[os.path.join(results_path)] = None
+
+            #  Check for calibration documentation
+            if not config.skip_calibration_check and division not in ["open"]:
+                calibration_path_root = os.path.join(division, submitter, "calibration.md")
+                calibration_path_doc = os.path.join(division, submitter, "documentation", "calibration.md")
+                if not (os.path.exists(calibration_path_root)) and (not os.path.exists(calibration_path_doc)):
+                    log.error(
+                        "%s/%s: has not calibration file. One of %s or %s is required",
+                        division,
+                        submitter,
+                        calibration_path_root,
+                        calibration_path_doc
+                    )
+                    results[os.path.join(results_path)] = None
 
             for system_desc in list_dir(results_path):
                 # we are looking at
@@ -3138,6 +3246,8 @@ def main():
         args.extra_model_benchmark_map,
         ignore_uncommited=args.submission_exceptions,
         skip_power_check=args.skip_power_check,
+        skip_all_systems_with_results = args.skip_all_systems_have_results_check,
+        skip_calibration_check = args.skip_calibration_check
     )
 
     if args.scenarios_to_skip:

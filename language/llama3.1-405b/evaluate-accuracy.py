@@ -151,7 +151,10 @@ def main():
 
     if args.mock_dataset_for_testing:
         # Create mock data for testing
-        targets = ["Paris", "12345678-1234-1234-1234-123456789012", "Answer: 42"]
+        targets = [
+            "Paris",
+            "12345678-1234-1234-1234-123456789012",
+            "Answer: 42"]
         metrics = ["rouge", "niah_em", "qa_em"]
     else:
         targets, metrics = get_groundtruth(args.dataset_file)

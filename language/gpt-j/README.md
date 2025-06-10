@@ -1,9 +1,28 @@
 # GPT-J Reference Implementation
 
-Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/gpt-j) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+## Automated command to run the benchmark via MLCFlow
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/gpt-j/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+
+### Download model through MLCFlow Automation
+
+```
+mlcr get,ml-model,gptj,_pytorch --outdirname=<path_to_download> -j
+```
+
+### Download dataset through MLCFlow Automation
+
+**Validation Dataset**
+```
+mlcr get,dataset,cnndm,_validation --outdirname=<path_to_download> -j
+```
+
+**Calibration Dataset**
+```
+mlcr get,dataset,cnndm,_calibration --outdirname=<path_to_download> -j
+```
 
 
 ### Setup Instructions
@@ -113,6 +132,13 @@ Evaluates the ROGUE scores from the accuracy logs. Only applicable when specifyi
 python evaluation.py --mlperf-accuracy-file ./build/logs/mlperf_log_accuracy.json --dataset-file ./data/cnn_eval.json
 ```
 
+### Evaluate the accuracy through MLCFlow Automation
+```bash
+mlcr process,mlperf,accuracy,_cnndm --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/mlcommons/inference/blob/master/language/gpt-j/evaluation.py) to view the Python script for evaluating accuracy for the cnndm dataset.
+
 ### Reference Model - ROUGE scores
 The following are the rouge scores obtained when evaluating the GPT-J fp32 model on the entire validation set (13368 samples) using beam search, beam_size=4
 
@@ -121,6 +147,10 @@ ROUGE 1 - 42.9865
 ROUGE 2 - 20.1235
 
 ROUGE L - 29.9881
+
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 
 
 ### License:
 Apache License Version 2.0.

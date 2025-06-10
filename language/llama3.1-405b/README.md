@@ -7,11 +7,12 @@
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
         - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
 
-## Automated command to run the benchmark via MLFlow
+## Automated command to run the benchmark via MLCFlow
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3_1-405b/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
-You can also do pip install mlc-scripts and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+
 
 ## Prepare environment
 
@@ -99,12 +100,27 @@ pip install -e ../../loadgen
 ## Get Model
 ### MLCommons Members Download (Recommended for official submission)
 
+
 MLCommons hosts the model for download **exclusively by MLCommons Members**. You must first agree to the [confidentiality notice](https://llama3-1.mlcommons.org) using your organizational email address, then you will receive a link to a directory containing Rclone download instructions. _If you cannot access the form but you are part of a MLCommons Member organization, submit the [MLCommons subscription form](https://mlcommons.org/community/subscribe/) with your organizational email address and [associate a Google account](https://accounts.google.com/SignUpWithoutGmail) with your organizational email address._
+
+
+### Download model through MLCFlow Automation
+
+**From MLCOMMONS Google Drive**
+
 
 ```
 mlcr get,ml-model,llama3 --outdirname=${CHECKPOINT_PATH} -j
 ```
 
+**From HuggingFace**
+
+```
+mlcr get,ml-model,llama3,_hf --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
+```
+
+**Note:**
+Downloading llama3.1-405B model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [llama3.1-405B](https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct) model. 
 
 ### External Download (Not recommended for official submission)
 + First go to [llama3.1-request-link](https://ai.meta.com/resources/models-and-libraries/llama-downloads/) and make a request, sign in to HuggingFace (if you don't have account, you'll need to create one). **Please note your authentication credentials** as you may be required to provide them when cloning below.
@@ -116,16 +132,22 @@ git clone https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct ${CHECKPOINT
 cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ```
 
-### Download huggingface model through MLC
-
-```
-mlcr get,ml-model,llama3,_hf --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
-```
-
-**Note:**
-Downloading llama3.1-405B model from Hugging Face will require an [**access token**](https://huggingface.co/settings/tokens) which could be generated for your account. Additionally, ensure that your account has access to the [llama3.1-405B](https://huggingface.co/meta-llama/Llama-3.1-405B-Instruct) model. 
 
 ## Get Dataset
+
+### Download dataset through MLCFlow Automation
+
+**Validation**
+
+```
+mlcr get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
+```
+
+**Calibration**
+
+```
+mlcr get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
+```
 
 ### Preprocessed
 
@@ -145,21 +167,11 @@ You can then navigate in the terminal to your desired download directory and run
 ```
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_llama3.1_405b_dataset_8313_processed_fp16_eval.pkl ./ -P
 ```
-**MLC Command**
-
-```
-mlcr get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
-```
 
 You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
 
 ```
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_405b/mlperf_llama3.1_405b_calibration_dataset_512_processed_fp16_eval.pkl ./ -P
-```
-
-**MLC Command**
-```
-mlcr get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
 ```
 
 
@@ -268,3 +280,7 @@ Running the GPU implementation in FP16 precision resulted in the following FP16 
 }
 ```
 The accuracy target is 99% for rougeL and exact_match, and 90% for tokens_per_sample
+
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 

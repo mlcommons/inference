@@ -164,3 +164,15 @@ Add the `--accuracy` to the command to run the benchmark
 ```bash
 python3 main.py --dataset "coco-1024" --dataset-path coco2014 --profile stable-diffusion-xl-pytorch --accuracy --model-path model/ [--dtype <fp32, fp16 or bf16>] [--device <cuda or cpu>] [--time <time>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
+
+### Evaluate the accuracy through MLCFlow Automation
+```bash
+mlcr process,mlperf,accuracy,_coco2014 --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/mlcommons/inference/blob/master/text_to_image/tools/accuracy_coco.py) to view the Python script for evaluating accuracy for the Waymo dataset.
+
+
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 

@@ -514,7 +514,7 @@ MODEL_CONFIG = {
             # TODO: Final whisper sample count
             "whisper": 1,
         },
-        "dataset-size" : {
+        "dataset-size": {
             "retinanet": 24781,
             "bert-99": 10833,
             "bert-99.9": 10833,
@@ -1832,7 +1832,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                ) and scenario in ["SingleStream"]:
+                    ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )

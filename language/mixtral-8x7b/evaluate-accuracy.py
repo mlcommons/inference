@@ -135,9 +135,15 @@ def main():
     if args.mock_dataset_for_testing:
         # Create a minimal mock dataset for testing
         dataset = [
-            {"prompt": "What is the capital of France?", "response": "The capital of France is Paris.", "ground_truth": "Paris"},
-            {"prompt": "What is 2+2?", "response": "2+2 equals 4.", "ground_truth": "4"},
-            {"prompt": "Explain quantum computing", "response": "Quantum computing uses quantum bits or qubits...", "ground_truth": "Quantum computing uses quantum mechanics..."}
+            {"prompt": "What is the capital of France?",
+             "response": "The capital of France is Paris.",
+             "ground_truth": "Paris"},
+            {"prompt": "What is 2+2?",
+             "response": "2+2 equals 4.",
+             "ground_truth": "4"},
+            {"prompt": "Explain quantum computing",
+             "response": "Quantum computing uses quantum bits or qubits...",
+             "ground_truth": "Quantum computing uses quantum mechanics..."}
         ]
     else:
         # Original dataset loading code

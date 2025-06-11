@@ -331,6 +331,7 @@ MODEL_CONFIG = {
     },
     "v5.1": {
         "models": [
+            "resnet",
             "retinanet",
             "bert-99",
             "bert-99.9",
@@ -372,6 +373,7 @@ MODEL_CONFIG = {
             "deepseek-r1": ["Interactive"],
         },
         "required-scenarios-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline"],
             "retinanet": ["SingleStream", "MultiStream", "Offline"],
             "bert-99": ["SingleStream", "Offline"],
             "bert-99.9": ["SingleStream", "Offline"],
@@ -384,6 +386,7 @@ MODEL_CONFIG = {
         },
         "optional-scenarios-edge": {},
         "required-scenarios-datacenter-edge": {
+            "resnet": ["SingleStream", "MultiStream", "Offline", "Server"],
             "retinanet": ["SingleStream", "Offline", "MultiStream", "Server"],
             "bert-99": ["SingleStream", "Offline"],
             "bert-99.9": ["SingleStream", "Offline"],
@@ -404,6 +407,7 @@ MODEL_CONFIG = {
         },
         "optional-scenarios-datacenter-edge": {},
         "accuracy-target": {
+            "resnet": ("acc", 76.46 * 0.99),
             "retinanet": ("mAP", 37.55 * 0.99),
             "bert-99": ("F1", 90.874 * 0.99),
             "bert-99.9": ("F1", 90.874 * 0.999),
@@ -495,6 +499,7 @@ MODEL_CONFIG = {
             "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}
         },
         "performance-sample-count": {
+            "resnet": 1024,
             "retinanet": 64,
             "bert-99": 10833,
             "bert-99.9": 10833,
@@ -515,6 +520,7 @@ MODEL_CONFIG = {
             "whisper": 1,
         },
         "dataset-size": {
+            "resnet": 50000,
             "retinanet": 24781,
             "bert-99": 10833,
             "bert-99.9": 10833,
@@ -553,6 +559,7 @@ MODEL_CONFIG = {
         },
         "ignore_errors": [],
         "latency-constraint": {
+            "resnet": {"Server": 15000000},
             "retinanet": {"Server": 100000000},
             "dlrm-v2-99": {"Server": 60000000},
             "dlrm-v2-99.9": {"Server": 60000000},
@@ -566,6 +573,12 @@ MODEL_CONFIG = {
             "whisper": {"Server": 60000000000},
         },
         "min-queries": {
+            "resnet": {
+                "SingleStream": 1024,
+                "MultiStream": 270336,
+                "Server": 270336,
+                "Offline": 1,
+            },
             "retinanet": {
                 "SingleStream": 1024,
                 "MultiStream": 270336,

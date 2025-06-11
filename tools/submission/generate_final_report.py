@@ -133,6 +133,7 @@ def main():
     columns_order = [
         ["Result"],
         [
+            "resnet",
             "retinanet",
             "bert-99",
             "bert-99.9",
@@ -162,41 +163,7 @@ def main():
         ],
     ]
 
-    if args.version == "4.1":
-        filter_scenarios = {
-            "datacenter": {
-                "resnet": ["Server", "Offline"],
-                "retinanet": ["Server", "Offline"],
-                "rnnt": ["Server", "Offline"],
-                "bert-99": ["Server", "Offline"],
-                "bert-99.9": ["Server", "Offline"],
-                "dlrm-v2-99": ["Server", "Offline"],
-                "dlrm-v2-99.9": ["Server", "Offline"],
-                "3d-unet-99": ["Offline"],
-                "3d-unet-99.9": ["Offline"],
-                "gptj-99": ["Server", "Offline"],
-                "gptj-99.9": ["Server", "Offline"],
-                "stable-diffusion-xl": ["Server", "Offline"],
-                "llama2-70b-99": ["Server", "Offline"],
-                "llama2-70b-99.9": ["Server", "Offline"],
-                "mixtral-8x7b": ["Server", "Offline"],
-            },
-            "edge": {
-                "resnet": ["SingleStream", "MultiStream", "Offline"],
-                "retinanet": ["SingleStream", "MultiStream", "Offline"],
-                "rnnt": ["SingleStream", "Offline"],
-                "bert-99": ["SingleStream", "Offline"],
-                "bert-99.9": [],
-                "dlrm-v2-99": [],
-                "dlrm-v2-99.9": [],
-                "3d-unet-99": ["SingleStream", "Offline"],
-                "3d-unet-99.9": ["SingleStream", "Offline"],
-                "gptj-99": ["SingleStream", "Offline"],
-                "gptj-99.9": ["SingleStream", "Offline"],
-                "stable-diffusion-xl": ["SingleStream", "Offline"],
-            },
-        }
-    else:
+    if args.version == "5.0":
         filter_scenarios = {
             "datacenter": {
                 "resnet": ["Server", "Offline"],
@@ -234,6 +201,47 @@ def main():
                 "rgat": [],
                 "stable-diffusion-xl": ["SingleStream", "Offline"],
                 "pointpainting": ["SingleStream"],
+            },
+        }
+    else:
+        filter_scenarios = {
+            "datacenter": {
+                "resnet": ["Server", "Offline"],
+                "retinanet": ["Server", "Offline"],
+                "bert-99": [],
+                "bert-99.9": [],
+                "dlrm-v2-99": ["Server", "Offline"],
+                "dlrm-v2-99.9": ["Server", "Offline"],
+                "3d-unet-99": ["Offline"],
+                "3d-unet-99.9": ["Offline"],
+                "stable-diffusion-xl": ["Server", "Offline"],
+                "llama2-70b-99": ["Server", "Offline", "Interactive"],
+                "llama2-70b-99.9": ["Server", "Offline", "Interactive"],
+                "mixtral-8x7b": ["Server", "Offline"],
+                "rgat": ["Offline"],
+                "llama3.1-405b": ["Offline", "Server"],
+                "pointpainting": [],
+                "llama3.1-8b": ["Server", "Offline"],
+                "deepseek-r1": ["Server", "Offline"],
+                "whisper": ["Offline"],
+            },
+            "edge": {
+                "resnet": ["SingleStream", "MultiStream", "Offline"],
+                "retinanet": ["SingleStream", "MultiStream", "Offline"],
+                "bert-99": ["SingleStream", "Offline"],
+                "bert-99.9": ["SingleStream", "Offline"],
+                "dlrm-v2-99": [],
+                "dlrm-v2-99.9": [],
+                "3d-unet-99": ["SingleStream", "Offline"],
+                "3d-unet-99.9": ["SingleStream", "Offline"],
+                "llama2-70b-99": [],
+                "llama2-70b-99.9": [],
+                "llama3.1-405b": [],
+                "rgat": [],
+                "stable-diffusion-xl": ["SingleStream", "Offline"],
+                "pointpainting": ["SingleStream"],
+                "llama3.1-8b": ["SingleStream", "Offline"],
+                "whisper": ["Offline"],
             },
         }
 

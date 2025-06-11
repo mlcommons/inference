@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# Copyright 2018-2022 The MLPerf Authors. All Rights Reserved.
+# Copyright 2018-2025 The MLPerf Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,140 +13,94 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # =============================================================================
+
 import json
 import argparse
 import os
 import sys
 import re
 
-sys.path.append(os.getcwd())
+sys.path.append(
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "tools",
+            "submission")))
+from log_parser import MLPerfLog  # noqa
+
+RESULT_FIELD = {
+    "Offline": "result_samples_per_second",
+    "SingleStream": "early_stopping_latency_ss",
+    "MultiStream": "early_stopping_latency_ms",
+    "Server": "result_completed_samples_per_sec",
+}
+
+
+def result_log(file_path):
+    score, target_latency = 0, None
+    score = float(mlperf_log[RESULT_FIELD[scenario]])
+
+    mlperf_log = MLPerfLog(file_path)
+    scenario = mlperf_log["effective_scenario"]
+
+    if not (
+        "result_validity" in mlperf_log.get_keys()
+        and mlperf_log["result_validity"] == "VALID"
+    ):
+        sys.exit("TEST FAIL: Invalid results in {}".format(file_path))
+
+    if mlperf_log.has_error():
+        print(
+            "WARNING: {} ERROR reported in {}".format(
+                line.split()[0],
+                file_path))
+
+    res = float(mlperf_log[RESULT_FIELD[scenario]])
+    if scenario == "Server":
+        target_latency = mlperf_log["effective_target_latency_ns"]
+
+    return scenario, score, target_latency
 
 
 def main():
-    # Parse arguments to identify the path to the accuracy logs from
-    #   the accuracy and performance runs
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--reference_summary",
         "-r",
-        help="Specifies the path to the summary log for the performance run.",
-        default="",
-    )
+        "--reference_log_details",
+        help="Path to reference performance log_details file.",
+        required=True)
     parser.add_argument(
-        "--test_summary",
         "-t",
-        help="Specifies the path to the summary log for this test.",
-        default="",
-    )
+        "--test_log_details",
+        help="Path to test performance log_details file.",
+        required=True)
     args = parser.parse_args()
 
     print("Verifying performance.")
-    ref_file = open(args.reference_summary, "r")
-    test_file = open(args.test_summary, "r")
-    ref_score = 0
-    test_score = 0
-    ref_mode = ""
-    test_mode = ""
+    ref_scenario, ref_score, ref_target_latency = parse_result_log(
+        args.reference_log_details)
+    test_scenario, test_score, test_target_latency = parse_result_log(
+        args.test_log_details)
 
-    for line in ref_file:
-        if re.match("Scenario", line):
-            ref_mode = line.split(": ", 1)[1].strip()
-            continue
+    if test_scenario != ref_scenario:
+        sys.exit("TEST FAIL: Test and reference scenarios do not match!")
 
-        if ref_mode == "SingleStream":
-            if re.match(
-                    ".*Early stopping (90th|90.0th|99.9th) percentile estimate", line):
-                ref_score = line.split(": ", 1)[1].strip()
-                continue
+    if ref_mode == "Server" and test_target_latency != ref_target_latency:
+        sys.exit("TEST FAIL: Server target latency mismatch")
 
-        if ref_mode == "MultiStream":
-            if re.match(
-                    ".*Early stopping (99th|99.0th) percentile estimate", line):
-                ref_score = line.split(": ", 1)[1].strip()
-                continue
-
-        if ref_mode == "Server":
-            if re.match("Completed samples per second", line):
-                ref_score = line.split(": ", 1)[1].strip()
-                continue
-            if re.match("target_latency (ns)", line):
-                ref_target_latency = line.split(": ", 1)[1].strip()
-                continue
-
-        if ref_mode == "Offline":
-            if re.match("Samples per second", line):
-                ref_score = line.split(": ", 1)[1].strip()
-                continue
-
-        if re.match("Result is", line):
-            valid = line.split(": ", 1)[1].strip()
-            if valid == "INVALID":
-                sys.exit("TEST FAIL: Reference results are invalid")
-
-        if re.match("\\d+ ERROR", line):
-            error = line.split(" ", 1)[0].strip()
-            print("WARNING: " + error + " ERROR reported in reference results")
-
-    for line in test_file:
-        if re.match("Scenario", line):
-            test_mode = line.split(": ", 1)[1].strip()
-            continue
-        if test_mode == "SingleStream":
-            if re.match(
-                    ".*Early stopping (90th|90.0th|99.9th) percentile estimate", line):
-                test_score = line.split(": ", 1)[1].strip()
-                continue
-
-        if test_mode == "MultiStream":
-            if re.match(
-                    ".*Early stopping (99th|99.0th) percentile estimate", line):
-                test_score = line.split(": ", 1)[1].strip()
-                continue
-
-        if test_mode == "Server":
-            if re.match("Completed samples per second", line):
-                test_score = line.split(": ", 1)[1].strip()
-                continue
-            if re.match("target_latency (ns)", line):
-                test_target_latency = line.split(": ", 1)[1].strip()
-                if test_target_latency != ref_target_latency:
-                    print("TEST FAIL: Server target latency mismatch")
-                    sys.exit()
-                continue
-
-        if test_mode == "Offline":
-            if re.match("Samples per second", line):
-                test_score = line.split(": ", 1)[1].strip()
-                continue
-
-        if re.match("Result is", line):
-            valid = line.split(": ", 1)[1].strip()
-            if valid == "INVALID":
-                sys.exit("TEST FAIL: Test results are invalid")
-
-        if re.match("\\d+ ERROR", line):
-            error = line.split(" ", 1)[0].strip()
-            print("WARNING: " + error + " ERROR reported in test results")
-
-    if test_mode != ref_mode:
-        sys.exit("Test and reference scenarios do not match!")
-
-    print("reference score = {}".format(ref_score))
-    print("test score = {}".format(test_score))
+    print(f"Reference score = {ref_score}")
+    print(f"Test score = {test_score}")
 
     threshold = 0.10
-
-    # In single-/multi-stream mode, latencies can be very short for high performance systems
-    # and run-to-run variation due to external disturbances (OS) can be significant.
-    # In this case we relax pass threshold to 20%
-    if (ref_mode == "SingleStream" and float(ref_score) <= 200000) or (
-        ref_mode == "MultiStream" and float(ref_score) <= 1600000
-    ):
+    if (ref_scenario == "SingleStream" and ref_score <= 200000) or (
+            ref_scenario == "MultiStream" and ref_score <= 1600000):
         threshold = 0.20
 
-    if float(test_score) < float(ref_score) * (1 + threshold) and float(
-        test_score
-    ) > float(ref_score) * (1 - threshold):
+    if ref_score * (1 - threshold) <= test_score <= ref_score * \
+            (1 + threshold):
         print("TEST PASS")
     else:
         print("TEST FAIL: Test score invalid")

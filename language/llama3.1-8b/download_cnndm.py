@@ -20,31 +20,36 @@ def get_args():
         "--dataset-id",
         type=str,
         default="cnn_dailymail",
-        help="Model ID to get the tokenizer",
+        help="Dataset ID",
     )
     parser.add_argument(
         "--dataset-config",
         type=str,
         default="3.0.0",
-        help="Model ID to get the tokenizer",
+        help="Dataset version",
     )
     parser.add_argument(
         "--text-column",
         type=str,
         default="article",
-        help="Model ID to get the tokenizer",
+        help="Column containing the full text",
     )
     parser.add_argument(
         "--summary-column",
         type=str,
         default="highlights",
-        help="Model ID to get the tokenizer",
+        help="Column containing the summarized text",
     )
     parser.add_argument(
         "--n-samples",
         type=int,
         default=None,
-        help="Model ID to get the tokenizer",
+        help="Number of samples ",
+    )
+    parser.add_argument(
+        "--calibration",
+        action="store_true",
+        help="Use calibration instruction",
     )
 
     return parser.parse_args()
@@ -57,6 +62,7 @@ dataset_config = args.dataset_config
 text_column = args.text_column
 summary_column = args.summary_column
 n_samples = args.n_samples
+instruction = ("calibration_llama" if args.calibration else "llama")
 
 
 save_dataset_path = os.environ.get("DATASET_CNNDM_PATH", "data")
@@ -76,10 +82,15 @@ tokenizer.pad_token = tokenizer.eos_token
 tokenizer.model_max_length = 8000
 
 
-instruction_template = {"llama": (
-    "In very brief sentences, summarize the following news article. Only return the summary.\nArticle: {input}\nSummary: ")}
 
-prompt_length = len(tokenizer(instruction_template["llama"])["input_ids"])
+instruction_template = {
+    "llama": (
+    "In very brief sentences, summarize the following news article. Only return the summary.\nArticle: {input}\nSummary: "),
+    "calibration_llama": (
+    "Summarize the following news article in 128 tokens. Please output the summary only, without any other text.\n\nArticle:\n{input}\n\nSummary:")
+}
+
+prompt_length = len(tokenizer(instruction_template[instruction])["input_ids"])
 max_sample_length = tokenizer.model_max_length - prompt_length
 
 
@@ -100,7 +111,7 @@ def preprocess_function(sample, padding="max_length"):
             x["instruction"] = instruction_template
             x["input"] = sample[text_column][i]
             x["tok_input"] = tokenizer.encode(
-                instruction_template["llama"].format_map(x))
+                instruction_template[instruction].format_map(x))
             x["output"] = sample[summary_column][i]
             inputs.append(x)
     model_inputs = dict()

@@ -66,11 +66,12 @@ class SGLangBackend(BaseBackend):
 
         # Log monitoring
         self._log_monitor = None
-        
+
         # Shared semaphore for async concurrency control
         self._async_semaphore = None
 
-        # Configure logging to suppress httpx INFO logs (only show warnings/errors)
+        # Configure logging to suppress httpx INFO logs (only show
+        # warnings/errors)
         import logging
         logging.getLogger("httpx").setLevel(logging.WARNING)
         logging.getLogger("openai").setLevel(logging.WARNING)
@@ -128,7 +129,8 @@ class SGLangBackend(BaseBackend):
             cmd.append('flashinfer')
 
         if self.config['enable_dp_attention']:
-            cmd.extend(['--enable-dp-attention', '--dp', str(self.config['dp'])])
+            cmd.extend(['--enable-dp-attention',
+                       '--dp', str(self.config['dp'])])
 
         # Add performance settings
         cmd.extend([
@@ -175,7 +177,8 @@ class SGLangBackend(BaseBackend):
             # Update progress indicator every 0.5 seconds
             if time.time() - last_progress_update >= 0.5:
                 last_progress_update = time.time()
-                progress_idx = (progress_idx + 1) % len(TerminalDisplay.PROGRESS_CHARS)
+                progress_idx = (
+                    progress_idx + 1) % len(TerminalDisplay.PROGRESS_CHARS)
                 minutes = elapsed // 60
                 seconds = elapsed % 60
                 # Use carriage return to stay on the same line
@@ -192,7 +195,8 @@ class SGLangBackend(BaseBackend):
                     if response.status_code == 200:
                         # Health check passed, now try a warmup query
                         print(f"\r{' '*80}\r", end='', flush=True)
-                        print(f"\n[SGLANG] Health check passed, running warmup query...")
+                        print(
+                            f"\n[SGLANG] Health check passed, running warmup query...")
 
                         # Try to send a simple warmup query using OpenAI client
                         try:
@@ -210,7 +214,8 @@ class SGLangBackend(BaseBackend):
                             # Send a simple warmup request
                             warmup_response = warmup_client.chat.completions.create(
                                 model=self.config['served_model_name'],
-                                messages=[{"role": "user", "content": "Hello"}],
+                                messages=[
+                                    {"role": "user", "content": "Hello"}],
                                 temperature=0.0,
                                 max_tokens=10,
                                 seed=self.config['seed']
@@ -218,23 +223,28 @@ class SGLangBackend(BaseBackend):
 
                             # Check if we got a valid response
                             if warmup_response.choices[0].message.content:
-                                print(f"[SGLANG] ✓ Warmup query successful! Response: {warmup_response.choices[0].message.content[:50]}...")
+                                print(
+                                    f"[SGLANG] ✓ Warmup query successful! Response: {warmup_response.choices[0].message.content[:50]}...")
 
                                 # Stop log monitoring
                                 if self._log_monitor:
                                     self._log_monitor.stop()
                                     self._log_monitor = None
 
-                                print(f"\n[SGLANG] " + "="*60)
-                                print(f"[SGLANG] ✓ SERVER READY! (startup took {elapsed}s)")
-                                print(f"[SGLANG] " + "="*60)
+                                print(f"\n[SGLANG] " + "=" * 60)
+                                print(
+                                    f"[SGLANG] ✓ SERVER READY! (startup took {elapsed}s)")
+                                print(f"[SGLANG] " + "=" * 60)
                                 return True
                             else:
-                                print(f"[SGLANG] Warmup query returned empty response, retrying...")
+                                print(
+                                    f"[SGLANG] Warmup query returned empty response, retrying...")
 
                         except Exception as warmup_error:
-                            print(f"[SGLANG] Warmup query failed: {warmup_error}, retrying...")
-                            # Continue waiting, the server might not be fully ready yet
+                            print(
+                                f"[SGLANG] Warmup query failed: {warmup_error}, retrying...")
+                            # Continue waiting, the server might not be fully
+                            # ready yet
 
                 except requests.exceptions.RequestException:
                     pass
@@ -246,9 +256,11 @@ class SGLangBackend(BaseBackend):
                     self._log_monitor = None
                 # Clear progress line
                 print(f"\r{' '*80}\r", end='', flush=True)
-                print(f"\n[SGLANG] ✗ Server process died with exit code: {self.server_process.returncode}")
+                print(
+                    f"\n[SGLANG] ✗ Server process died with exit code: {self.server_process.returncode}")
                 if self.server_log_file:
-                    print(f"[SGLANG] Check server logs at: {self.server_log_file}")
+                    print(
+                        f"[SGLANG] Check server logs at: {self.server_log_file}")
                 return False
 
             time.sleep(0.1)  # Check every 100ms for smoother progress
@@ -264,17 +276,21 @@ class SGLangBackend(BaseBackend):
 
     def _start_server(self) -> None:
         """Start the SGLang server as a subprocess."""
-        print(f"\n[SGLANG] Starting SGLang server for {self.config['model']}...")
+        print(
+            f"\n[SGLANG] Starting SGLang server for {self.config['model']}...")
         print(f"[SGLANG] Configuration:")
         print(f"[SGLANG]   - Port: {self.port}")
-        print(f"[SGLANG]   - Tensor Parallel: {self.config['tensor_parallel_size']}")
-        print(f"[SGLANG]   - Context Length: {self.config['context_length']:,} tokens")
+        print(
+            f"[SGLANG]   - Tensor Parallel: {self.config['tensor_parallel_size']}")
+        print(
+            f"[SGLANG]   - Context Length: {self.config['context_length']:,} tokens")
         print(f"[SGLANG]   - dtype: {self.config['dtype']}")
 
         # Create log file for server output
         log_dir = Path("/work/logs")
         log_dir.mkdir(exist_ok=True)
-        self.server_log_file = log_dir / f"sglang_server_{self.port}_{int(time.time())}.log"
+        self.server_log_file = log_dir / \
+            f"sglang_server_{self.port}_{int(time.time())}.log"
 
         cmd = self._build_server_command()
         print(f"\n[SGLANG] Command: {' '.join(cmd)}")
@@ -315,7 +331,10 @@ class SGLangBackend(BaseBackend):
                 except subprocess.TimeoutExpired:
                     # Force kill if not stopped
                     print("[SGLANG] Server didn't stop gracefully, forcing...")
-                    os.killpg(os.getpgid(self.server_process.pid), signal.SIGKILL)
+                    os.killpg(
+                        os.getpgid(
+                            self.server_process.pid),
+                        signal.SIGKILL)
                     self.server_process.wait()
                     print("[SGLANG] Server force stopped")
             except ProcessLookupError:
@@ -332,7 +351,8 @@ class SGLangBackend(BaseBackend):
         try:
             # Load tokenizer for string conversion
             print(f"[SGLANG] Loading tokenizer: {self.config['tokenizer']}...")
-            self.tokenizer = AutoTokenizer.from_pretrained(self.config['tokenizer'], revision=self.config['model_revision'])
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                self.config['tokenizer'], revision=self.config['model_revision'])
 
             # Start SGLang server (with log monitoring)
             self._start_server()
@@ -341,7 +361,8 @@ class SGLangBackend(BaseBackend):
             base_url = f"http://localhost:{self.port}/v1"
             api_key = self.config['api_key'] or "dummy-key"
 
-            print(f"[SGLANG] Creating OpenAI clients with base URL: {base_url}")
+            print(
+                f"[SGLANG] Creating OpenAI clients with base URL: {base_url}")
 
             # Configure timeout settings
             timeout_config = httpx.Timeout(
@@ -371,10 +392,12 @@ class SGLangBackend(BaseBackend):
             )
 
             print(f"[SGLANG] Created asynchronous OpenAI client")
-            
+
             # Create shared semaphore for async concurrency control
-            self._async_semaphore = asyncio.Semaphore(self.config['max_running_requests'])
-            print(f"[SGLANG] Created async semaphore with limit: {self.config['max_running_requests']}")
+            self._async_semaphore = asyncio.Semaphore(
+                self.config['max_running_requests'])
+            print(
+                f"[SGLANG] Created async semaphore with limit: {self.config['max_running_requests']}")
 
             # Server readiness was already verified by health endpoint in _wait_for_server_ready()
             # No need to check models endpoint
@@ -403,17 +426,18 @@ class SGLangBackend(BaseBackend):
             raise
 
     @require_initialized
-    def generate(self, 
-                tokenized_prompts: Optional[List[List[int]]] = None,
-                text_prompts: Optional[List[str]] = None,
-                **kwargs) -> List[Dict[str, Any]]:
+    def generate(self,
+                 tokenized_prompts: Optional[List[List[int]]] = None,
+                 text_prompts: Optional[List[str]] = None,
+                 **kwargs) -> List[Dict[str, Any]]:
         """Generate responses synchronously."""
         # Check if server process is still alive
         self._check_server_alive()
 
         # Check if client is properly initialized
         if self.client is None:
-            raise RuntimeError("SGLang client is not initialized. Server may have failed to start.")
+            raise RuntimeError(
+                "SGLang client is not initialized. Server may have failed to start.")
 
         # Validate prompts using centralized validation
         validate_prompts_input(
@@ -436,7 +460,8 @@ class SGLangBackend(BaseBackend):
         results = []
 
         # Process prompts with progress bar
-        for prompt in tqdm(prompt_strings, desc="SGLang sync inference", unit="prompt"):
+        for prompt in tqdm(
+                prompt_strings, desc="SGLang sync inference", unit="prompt"):
             try:
                 completion = self.client.chat.completions.create(
                     model=self.config['served_model_name'],
@@ -452,7 +477,8 @@ class SGLangBackend(BaseBackend):
 
                 # Validate response is not empty
                 if not generated_text:
-                    raise RuntimeError(f"Empty response received from SGLang server for prompt: {prompt[:100]}...")
+                    raise RuntimeError(
+                        f"Empty response received from SGLang server for prompt: {prompt[:100]}...")
 
                 # Tokenize the output to get token IDs
                 tokens = self.tokenizer.encode(generated_text)
@@ -464,15 +490,18 @@ class SGLangBackend(BaseBackend):
 
             except Exception as e:
                 print(f"\nError generating completion: {e}")
-                raise RuntimeError(f"SGLang backend failed to generate tokens for prompt: {prompt[:100]}...")
+                raise RuntimeError(
+                    f"SGLang backend failed to generate tokens for prompt: {prompt[:100]}...")
 
         return results
 
-    async def _async_generate_single(self, prompt: str, idx: int, semaphore: asyncio.Semaphore) -> Tuple[int, Dict[str, Any]]:
+    async def _async_generate_single(
+            self, prompt: str, idx: int, semaphore: asyncio.Semaphore) -> Tuple[int, Dict[str, Any]]:
         """Generate a single response asynchronously with semaphore control."""
         # Check if async client is properly initialized
         if self.async_client is None:
-            raise RuntimeError(f"SGLang async client is not initialized for prompt {idx}")
+            raise RuntimeError(
+                f"SGLang async client is not initialized for prompt {idx}")
 
         async with semaphore:
             try:
@@ -490,7 +519,8 @@ class SGLangBackend(BaseBackend):
 
                 # Validate response is not empty
                 if not generated_text:
-                    raise RuntimeError(f"Empty response received from SGLang server for prompt: {prompt[:100]}...")
+                    raise RuntimeError(
+                        f"Empty response received from SGLang server for prompt: {prompt[:100]}...")
 
                 # Tokenize the output to get token IDs
                 tokens = self.tokenizer.encode(generated_text)
@@ -499,20 +529,22 @@ class SGLangBackend(BaseBackend):
 
             except Exception as e:
                 print(f"\nError generating completion for prompt {idx}: {e}")
-                raise RuntimeError(f"SGLang backend failed to generate tokens for prompt {idx}: {e}")
+                raise RuntimeError(
+                    f"SGLang backend failed to generate tokens for prompt {idx}: {e}")
 
     @require_initialized
-    def generate_async(self, 
-                      tokenized_prompts: Optional[List[List[int]]] = None,
-                      text_prompts: Optional[List[str]] = None,
-                      **kwargs) -> List[asyncio.Future]:
+    def generate_async(self,
+                       tokenized_prompts: Optional[List[List[int]]] = None,
+                       text_prompts: Optional[List[str]] = None,
+                       **kwargs) -> List[asyncio.Future]:
         """Generate responses asynchronously using shared semaphore."""
         # Check if server process is still alive
         self._check_server_alive()
 
         # Check if client is properly initialized
         if self.async_client is None:
-            raise RuntimeError("SGLang async client is not initialized. Server may have failed to start.")
+            raise RuntimeError(
+                "SGLang async client is not initialized. Server may have failed to start.")
 
         # Validate prompts using centralized validation
         validate_prompts_input(
@@ -542,44 +574,49 @@ class SGLangBackend(BaseBackend):
         futures = []
         for idx, prompt in enumerate(prompt_strings):
             # Create a task for each prompt using the shared semaphore
-            task = asyncio.create_task(self._async_generate_single(prompt, idx, self._async_semaphore))
-            
+            task = asyncio.create_task(
+                self._async_generate_single(
+                    prompt, idx, self._async_semaphore))
+
             # Create a future that will hold the result
             future = asyncio.Future()
-            
+
             # Setup callback to extract just the result (not the index)
             def make_callback(future_obj, expected_idx):
                 def callback(task_obj):
                     try:
                         idx, result = task_obj.result()
                         if idx != expected_idx:
-                            future_obj.set_exception(Exception(f"Index mismatch: expected {expected_idx}, got {idx}"))
+                            future_obj.set_exception(
+                                Exception(f"Index mismatch: expected {expected_idx}, got {idx}"))
                         else:
                             future_obj.set_result(result)
                     except Exception as e:
                         future_obj.set_exception(e)
                 return callback
-            
+
             task.add_done_callback(make_callback(future, idx))
             futures.append(future)
 
         return futures
 
-    async def generate_stream(self, 
-                            tokenized_prompts: Optional[List[List[int]]] = None,
-                            text_prompts: Optional[List[str]] = None,
-                            **kwargs) -> List[AsyncIterator[StreamingChunk]]:
+    async def generate_stream(self,
+                              tokenized_prompts: Optional[List[List[int]]] = None,
+                              text_prompts: Optional[List[str]] = None,
+                              **kwargs) -> List[AsyncIterator[StreamingChunk]]:
         """Generate responses for a list of prompts with streaming."""
         if not self.is_initialized:
-            raise RuntimeError("Backend not initialized. Call initialize() first.")
-            
+            raise RuntimeError(
+                "Backend not initialized. Call initialize() first.")
+
         # Check if server process is still alive
         self._check_server_alive()
-        
+
         # Check if async client is properly initialized
         if self.async_client is None:
-            raise RuntimeError("SGLang async client is not initialized. Server may have failed to start.")
-        
+            raise RuntimeError(
+                "SGLang async client is not initialized. Server may have failed to start.")
+
         # Validate prompts
         validate_prompts_input(
             backend_name='sglang',
@@ -587,7 +624,7 @@ class SGLangBackend(BaseBackend):
             text_prompts=text_prompts,
             input_type='text'
         )
-        
+
         # SGLang prefers text prompts
         if text_prompts is None:
             # Convert tokenized prompts to strings
@@ -597,8 +634,9 @@ class SGLangBackend(BaseBackend):
             ]
         else:
             prompt_strings = text_prompts
-            
-        async def stream_single_prompt(prompt: str) -> AsyncIterator[StreamingChunk]:
+
+        async def stream_single_prompt(
+                prompt: str) -> AsyncIterator[StreamingChunk]:
             try:
                 stream = await self.async_client.chat.completions.create(
                     model=self.config['served_model_name'],
@@ -609,14 +647,14 @@ class SGLangBackend(BaseBackend):
                     seed=self.config.get('seed'),
                     stream=True
                 )
-                
+
                 async for chunk in stream:
                     if not chunk.choices:
                         continue
-                        
+
                     delta = chunk.choices[0].delta
                     finish_reason = chunk.choices[0].finish_reason
-                    
+
                     if delta.content:
                         yield StreamingChunk(
                             token=delta.content,
@@ -635,7 +673,7 @@ class SGLangBackend(BaseBackend):
             except Exception as e:
                 print(f"[SGLANG] Streaming error for prompt: {e}")
                 raise
-        
+
         return [stream_single_prompt(prompt) for prompt in prompt_strings]
 
     def shutdown(self) -> None:
@@ -650,7 +688,7 @@ class SGLangBackend(BaseBackend):
         # Close clients
         self.client = None
         self.async_client = None
-        
+
         # Clear async semaphore
         self._async_semaphore = None
 

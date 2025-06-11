@@ -16,8 +16,8 @@ from .utils import (
 
 __all__ = [
     # SUTs
-    'BaseSUT', 
-    'OfflineSUT', 
+    'BaseSUT',
+    'OfflineSUT',
     'ServerSUT',
     # QSL
     'QuerySampleLibrary',
@@ -26,4 +26,4 @@ __all__ = [
     'prepare_mlperf_dataset',
     'process_mlperf_results',
     'create_mlperf_output_dataframe'
-] 
+]

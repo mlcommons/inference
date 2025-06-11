@@ -3,7 +3,7 @@
 source ./run_common.sh
 
 common_opt=""
-dataset="--dataset-path $DATA_DIR"
+dataset="--dataset-path \"$DATA_DIR\""
 OUTPUT_DIR=${OUTPUT_DIR:-`pwd`/output/$name}
 if [ ! -d "$OUTPUT_DIR" ]; then
     mkdir -p "$OUTPUT_DIR"

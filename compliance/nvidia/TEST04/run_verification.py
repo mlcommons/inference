@@ -19,6 +19,10 @@ import shutil
 import subprocess
 import argparse
 
+import platform
+
+os_type = platform.system()
+
 sys.path.append(os.getcwd())
 
 
@@ -48,6 +52,8 @@ def main():
 
     args = parser.parse_args()
 
+    q = '"' if os_type == 'Windows' else "'"
+
     print("Parsing arguments.")
     results_dir = args.results_dir
     compliance_dir = args.compliance_dir
@@ -59,13 +65,11 @@ def main():
     )
     verify_performance_command = (
         "python3 "
-        + verify_performance_binary
+        + f"""{q}{verify_performance_binary}{q}"""
         + " -r "
-        + results_dir
-        + "/performance/run_1/mlperf_log_summary.txt"
+        + f"""{q}{os.path.join(results_dir, "performance", "run_1", "mlperf_log_summary.txt")}{q}"""
         + " -t "
-        + compliance_dir
-        + "/mlperf_log_summary.txt | tee verify_performance.txt"
+        + f"""{q}{os.path.join(compliance_dir, "mlperf_log_summary.txt"}{q} | tee verify_performance.txt"""
     )
     try:
         os.system(verify_performance_command)

@@ -17,6 +17,32 @@ Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.025
 
 Please see [here](https://docs.mlcommons.org/inference/benchmarks/) for the MLPerf inference documentation website which includes automated commands to run MLPerf inference benchmarks using different implementations.
 
+## MLPerf Inference v5.1 (submission deadline July 25, 2025)
+
+For submissions, please use the master branch and any commit since the [5.1 seed release (soon to be released)]() although it is best to use the latest commit in the [master branch](https://github.com/mlcommons/inference).
+
+For power submissions please use [SPEC PTD 1.11.1](https://github.com/mlcommons/power) (needs special access) and any commit of the power-dev repository after the [code-freeze](https://github.com/mlcommons/power-dev/commit/c4b3ad8202fbd8ac28d77149e5e7aeadb725bbf2)
+
+
+| model | reference app | framework | dataset | category
+| ---- | ---- | ---- | ---- | ---- |
+| retinanet 800x800 | [vision/classification_and_detection](https://github.com/mlcommons/inference/tree/master/vision/classification_and_detection) | pytorch, onnx | openimages resized to 800x800| edge,datacenter |
+| bert | [language/bert](https://github.com/mlcommons/inference/tree/master/language/bert) | tensorflow, pytorch, onnx | squad-1.1 | edge |
+| dlrm-v2 | [recommendation/dlrm_v2](https://github.com/mlcommons/inference/tree/master/recommendation/dlrm_v2/pytorch) | pytorch | Multihot Criteo Terabyte | datacenter |
+| 3d-unet | [vision/medical_imaging/3d-unet-kits19](https://github.com/mlcommons/inference/tree/master/vision/medical_imaging/3d-unet-kits19) | pytorch, tensorflow, onnx | KiTS19 | datacenter |
+| stable-diffusion-xl | [text_to_image](https://github.com/mlcommons/inference/tree/master/text_to_image) | pytorch | COCO 2014| edge,datacenter |
+| llama2-70b | [language/llama2-70b](https://github.com/mlcommons/inference/tree/master/language/llama2-70b) | pytorch | OpenOrca | datacenter |
+| llama3.1-405b | [language/llama3-405b](https://github.com/mlcommons/inference/tree/master/language/llama3.1-405b) | pytorch | LongBench, LongDataCollections, Ruler, GovReport | datacenter |
+| mixtral-8x7b | [language/mixtral-8x7b](https://github.com/mlcommons/inference/tree/master/language/mixtral-8x7b) | pytorch | OpenOrca, MBXP, GSM8K | datacenter |
+| rgat | [graph/rgat](https://github.com/mlcommons/inference/tree/master/graph/R-GAT) | pytorch | IGBH | datacenter |
+| pointpainting | [automotive/3d-object-detection](https://github.com/mlcommons/inference/tree/master/automotive/3d-object-detection) | pytorch, onnx | Waymo Open Dataset | edge |
+| llama3.1-8b | [language/llama3.1-8b](https://github.com/mlcommons/inference/tree/master/language/llama3.1-8b)| pytorch | CNN-Daily Mail | edge,datacenter |
+| deepseek-r1 | [language/deepseek-r1](https://github.com/mlcommons/inference/tree/master/language/deepseek-r1)| pytorch | mlperf_deepseek_r1 | datacenter |
+| whisper | [speech2text](https://github.com/mlcommons/inference/tree/master/speech2text)| pytorch | LibriSpeech | edge,datacenter |
+
+* Framework here is given for the reference implementation. Submitters are free to use their own frameworks to run the benchmark.
+
+
 ## MLPerf Inference v5.0 (submission deadline February 28, 2025)
 
 For submissions, please use the master branch and any commit since the [5.0 seed release](https://github.com/mlcommons/inference/commit/5d83ed5de438ffb55bca4cdb2966fba90a9dbca6) although it is best to use the latest commit in the [master branch](https://github.com/mlcommons/inference).

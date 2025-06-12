@@ -82,12 +82,11 @@ tokenizer.pad_token = tokenizer.eos_token
 tokenizer.model_max_length = 8000
 
 
-
 instruction_template = {
     "llama": (
-    "In very brief sentences, summarize the following news article. Only return the summary.\nArticle: {input}\nSummary: "),
+        "In very brief sentences, summarize the following news article. Only return the summary.\nArticle: {input}\nSummary: "),
     "calibration_llama": (
-    "Summarize the following news article in 128 tokens. Please output the summary only, without any other text.\n\nArticle:\n{input}\n\nSummary:")
+        "Summarize the following news article in 128 tokens. Please output the summary only, without any other text.\n\nArticle:\n{input}\n\nSummary:")
 }
 
 prompt_length = len(tokenizer(instruction_template[instruction])["input_ids"])

@@ -151,6 +151,11 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_eval.jso
 rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/sample_cnn_eval_5000.json ./ -P
 ```
 
+#### Calibration
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_dailymail_calibration.json ./ -P
+```
+
 **MLC Command**
 
 ```

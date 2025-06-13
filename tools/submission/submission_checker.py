@@ -690,6 +690,8 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "llama3.1-8b": 13368,
     "llama2-70b-99": 24576,
     "llama2-70b-99.9": 24576,
+    "llama2-70b-interactive-99": 24576,
+    "llama2-70b-interactive-99.9": 24576,
     "stable-diffusion-xl": 5000,
     "mixtral-8x7b": 15000,
     "llama3.1-405b": 8313,

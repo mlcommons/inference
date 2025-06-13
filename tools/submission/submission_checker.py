@@ -3234,9 +3234,8 @@ def check_compliance_dir(
     ]:
         test_list.remove("TEST01")
 
-    if model in ["stable-diffusion-xl"] and config.version in ["v4.0"]:
+    if model in ["llama2-70b-interactive-99", "llama2-70b-interactive-99.9"] and config.version in ["v5.0"]:
         test_list.remove("TEST01")
-        test_list.remove("TEST04")
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
                  "mixtral-8x7b", "llama3.1-405b", "llama3.1-8b", "deepseek-r1"]:

@@ -46,11 +46,6 @@ def get_args():
         default=None,
         help="Number of samples ",
     )
-    parser.add_argument(
-        "--calibration",
-        action="store_true",
-        help="Use calibration instruction",
-    )
 
     return parser.parse_args()
 
@@ -62,7 +57,7 @@ dataset_config = args.dataset_config
 text_column = args.text_column
 summary_column = args.summary_column
 n_samples = args.n_samples
-instruction = ("calibration_llama" if args.calibration else "llama")
+instruction = "llama"
 
 
 save_dataset_path = os.environ.get("DATASET_CNNDM_PATH", "data")
@@ -84,8 +79,6 @@ tokenizer.model_max_length = 8000
 
 instruction_template = {
     "llama": (
-        "In very brief sentences, summarize the following news article. Only return the summary.\nArticle: {input}\nSummary: "),
-    "calibration_llama": (
         "Summarize the following news article in 128 tokens. Please output the summary only, without any other text.\n\nArticle:\n{input}\n\nSummary:")
 }
 

@@ -834,7 +834,7 @@ LLM_LATENCY_LIMITS = {
             "ttft": 2000 * 1000000, "tpot": 80 * 1000000
         }
     }
-    
+
 }
 
 ACC_PATTERN = {

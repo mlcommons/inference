@@ -370,7 +370,7 @@ MODEL_CONFIG = {
             "llama2-70b-99": ["Interactive"],
             "llama2-70b-99.9": ["Interactive"],
             "llama3.1-405b": ["Interactive"],
-            "deepseek-r1": ["Interactive"],
+            "llama3.1-8b": ["Interactive"],
         },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
@@ -479,8 +479,7 @@ MODEL_CONFIG = {
             "rgat": ("acc", 0.7286 * 0.99),
             "pointpainting": ("mAP", 0.5425 * 0.999),
             "deepseek-r1": ("exact_match", 0.99 * 81.9132),
-            # TODO: Final whisper metric
-            "whisper": ("WER", 3.9 * 0.99),
+            "whisper": ("WER", 2.0671 * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -516,8 +515,7 @@ MODEL_CONFIG = {
             "rgat": 788379,
             "pointpainting": 1024,
             "deepseek-r1": 4388,
-            # TODO: Final whisper sample count
-            "whisper": 1,
+            "whisper": 1633,
         },
         "dataset-size": {
             "resnet": 50000,
@@ -537,8 +535,7 @@ MODEL_CONFIG = {
             "rgat": 788379,
             "pointpainting": 39987,
             "deepseek-r1": 4388,
-            # TODO: Final whisper sample count
-            "whisper": 1,
+            "whisper": 1633,
         },
         # model_mapping.json is expected in the root directory of the
         # submission folder for open submissions and so the below dictionary is
@@ -570,7 +567,6 @@ MODEL_CONFIG = {
             "mixtral-8x7b": {"Server": 20000000000},
             "llama3.1-405b": {"Server": 60000000000},
             "deepseek-r1": {"Server": 60000000000},
-            "whisper": {"Server": 60000000000},
         },
         "min-queries": {
             "resnet": {
@@ -697,8 +693,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "llama3.1-405b": 8313,
     "rgat": 788379,
     "deepseek-r1": 4388,
-    # TODO: Set final SPQ
-    "whisper": 1,
+    "whisper": 1633,
 }
 
 SCENARIO_MAPPING = {
@@ -790,6 +785,9 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Offline": "result_tokens_per_second",
             "Server": "result_completed_tokens_per_second",
         },
+        "whisper": {
+            "Offline": "result_tokens_per_second",
+        }
     },
 }
 
@@ -826,16 +824,17 @@ LLM_LATENCY_LIMITS = {
     "llama3.1-8b": {
         "Server": {
             "ttft": 2000 * 1000000, "tpot": 100 * 1000000
+        },
+        "Interactive": {
+            "ttft": 500 * 1000000, "tpot": 30 * 1000000
         }
     },
     "deepseek-r1": {
         "Server": {
             "ttft": 2000 * 1000000, "tpot": 80 * 1000000
-        },
-        "Interactive": {
-            "ttft": 40 * 1000000, "tpot": 40 * 1000000
-        },
+        }
     }
+    
 }
 
 ACC_PATTERN = {

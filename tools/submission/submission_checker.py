@@ -3234,7 +3234,8 @@ def check_compliance_dir(
     ]:
         test_list.remove("TEST01")
 
-    if model in ["llama2-70b-interactive-99", "llama2-70b-interactive-99.9"] and config.version in ["v5.0"]:
+    if model in ["llama2-70b-interactive-99",
+                 "llama2-70b-interactive-99.9"] and config.version in ["v5.0"]:
         test_list.remove("TEST01")
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",

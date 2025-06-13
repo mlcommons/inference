@@ -678,6 +678,7 @@ REQUIRED_TEST01_ACC_FILES = REQUIRED_TEST01_ACC_FILES_1 + [
 ]
 
 OFFLINE_MIN_SPQ_SINCE_V4 = {
+    "resnet": 24576,
     "retinanet": 24576,
     "bert-99": 10833,
     "bert-99.9": 10833,

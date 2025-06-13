@@ -173,7 +173,8 @@ def validate_backend(backend: str) -> None:
             f"Unknown backend '{backend}'. Supported backends: {', '.join(supported_backends)}")
 
 
-def _get_compatibility_error_message(backend: str, runner_type: str, compatible: List[str]) -> str:
+def _get_compatibility_error_message(
+        backend: str, runner_type: str, compatible: List[str]) -> str:
     """
     Generate error message for incompatible backend/runner combinations.
 
@@ -401,7 +402,8 @@ def get_backend_instance(backend_name: Optional[str] = None):
     return backend_class()
 
 
-def is_backend_compatible_with_runner(backend_name: Optional[str] = None, runner_type: str = None) -> bool:
+def is_backend_compatible_with_runner(
+        backend_name: Optional[str] = None, runner_type: str = None) -> bool:
     """Check if a backend is compatible with a specific runner type.
 
     Args:
@@ -441,7 +443,8 @@ def get_backend_env_vars(backend_name: Optional[str] = None) -> Dict[str, str]:
     # Get static env vars
     env_vars = BACKEND_REGISTRY[backend_name]['env_vars'].copy()
 
-    # Handle dynamic env vars (e.g., OMP_NUM_THREADS based on tensor_parallel_size)
+    # Handle dynamic env vars (e.g., OMP_NUM_THREADS based on
+    # tensor_parallel_size)
     if backend_name == 'vllm':
         config = get_backend_config(backend_name)
         env_vars['OMP_NUM_THREADS'] = str(

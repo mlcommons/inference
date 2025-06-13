@@ -148,9 +148,9 @@ class VLLMBackend(BaseBackend):
 
     @require_initialized
     def generate(self,
-                tokenized_prompts: Optional[List[List[int]]] = None,
-                text_prompts: Optional[List[str]] = None,
-                **kwargs) -> List[Dict[str, Any]]:
+                 tokenized_prompts: Optional[List[List[int]]] = None,
+                 text_prompts: Optional[List[str]] = None,
+                 **kwargs) -> List[Dict[str, Any]]:
         """Generate responses synchronously using LLM.generate().
 
         Note: vLLM backend only accepts text_prompts parameter.
@@ -177,11 +177,14 @@ class VLLMBackend(BaseBackend):
             if not completion.text:
                 # Get the corresponding prompt for context
                 prompt_idx = outputs.index(output)
-                prompt_preview = text_prompts[prompt_idx][:100] if len(text_prompts[prompt_idx]) > 100 else text_prompts[prompt_idx]
-                raise RuntimeError(f"Empty response received from vLLM for prompt: {prompt_preview}...")
+                prompt_preview = text_prompts[prompt_idx][:100] if len(
+                    text_prompts[prompt_idx]) > 100 else text_prompts[prompt_idx]
+                raise RuntimeError(
+                    f"Empty response received from vLLM for prompt: {prompt_preview}...")
 
             results.append({
-                'tokens': list(completion.token_ids),  # Convert tuple to list for .copy() compatibility
+                # Convert tuple to list for .copy() compatibility
+                'tokens': list(completion.token_ids),
                 'text': completion.text,
                 'finish_reason': completion.finish_reason
             })
@@ -190,9 +193,9 @@ class VLLMBackend(BaseBackend):
 
     @require_initialized
     def generate_async(self,
-                      tokenized_prompts: Optional[List[List[int]]] = None,
-                      text_prompts: Optional[List[str]] = None,
-                      **kwargs) -> List[asyncio.Future]:
+                       tokenized_prompts: Optional[List[List[int]]] = None,
+                       text_prompts: Optional[List[str]] = None,
+                       **kwargs) -> List[asyncio.Future]:
         """Generate responses asynchronously, returning futures immediately.
 
         Note: vLLM backend only accepts text_prompts parameter.
@@ -245,11 +248,14 @@ class VLLMBackend(BaseBackend):
             if not completion.text:
                 # Get the corresponding prompt for context
                 prompt_idx = outputs.index(output)
-                prompt_preview = text_prompts[prompt_idx][:100] if len(text_prompts[prompt_idx]) > 100 else text_prompts[prompt_idx]
-                raise RuntimeError(f"Empty response received from vLLM for prompt: {prompt_preview}...")
+                prompt_preview = text_prompts[prompt_idx][:100] if len(
+                    text_prompts[prompt_idx]) > 100 else text_prompts[prompt_idx]
+                raise RuntimeError(
+                    f"Empty response received from vLLM for prompt: {prompt_preview}...")
 
             results.append({
-                'tokens': list(completion.token_ids),  # Convert tuple to list for .copy() compatibility
+                # Convert tuple to list for .copy() compatibility
+                'tokens': list(completion.token_ids),
                 'text': completion.text,
                 'finish_reason': completion.finish_reason
             })
@@ -265,7 +271,8 @@ class VLLMBackend(BaseBackend):
             # Access internal executor to ensure proper cleanup
             if self.llm.llm_engine is not None:
                 try:
-                    # This helps cleanup vLLM's internal Ray/multiprocessing resources
+                    # This helps cleanup vLLM's internal Ray/multiprocessing
+                    # resources
                     del self.llm.llm_engine.model_executor
                 except Exception as e:
                     print(f"Warning: Failed to cleanup model executor: {e}")

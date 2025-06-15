@@ -53,7 +53,7 @@ class BackendPytorch(backend.Backend):
                 self.outputs.append(i.name)
 
         # prepare the backend
-        device = "CUDA:0" if torch.cuda.is_available() else "CPU"
+        device = "cuda" if torch.cuda.is_available() else "CPU"
         self.sess = caffe2.python.onnx.backend.prepare(self.model, device)
         return self
 

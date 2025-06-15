@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master  # Trigger workflow on commits to 'master' branch
-      
 
 jobs:
   update-dev:

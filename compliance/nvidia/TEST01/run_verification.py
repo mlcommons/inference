@@ -95,19 +95,14 @@ def main():
         os.path.dirname(__file__), "verify_accuracy.py"
     )
     # run verify accuracy
-    verify_accuracy_command = (
-        "python3 "
-        + verify_accuracy_binary
-        + " --dtype "
-        + args.dtype
-        + unixmode
-        + " -r "
-        + results_dir
-        + "/accuracy/mlperf_log_accuracy.json"
-        + " -t "
-        + compliance_dir
-        + "/mlperf_log_accuracy.json | tee verify_accuracy.txt"
-    )
+    verify_accuracy_command = [
+        sys.executable,  
+        verify_accuracy_binary,
+        "--dtype", args.dtype,
+        unixmode,
+        "-r", os.path.join(results_dir, "accuracy", "mlperf_log_accuracy.json"),
+        "-t", os.path.join(compliance_dir, "mlperf_log_accuracy.json"),
+    ]
     try:
         os.system(verify_accuracy_command)
     except Exception:
@@ -115,12 +110,9 @@ def main():
             "Exception occurred trying to execute:\n  " +
             verify_accuracy_command)
     # check if verify accuracy script passes
-
-    accuracy_pass_command = "grep PASS verify_accuracy.txt"
     try:
-        accuracy_pass = "TEST PASS" in subprocess.check_output(
-            accuracy_pass_command, shell=True
-        ).decode("utf-8")
+        with open("verify_accuracy.txt", "r") as file:
+            accuracy_pass = "PASS" in file.read()
     except Exception:
         accuracy_pass = False
 
@@ -128,16 +120,13 @@ def main():
     verify_performance_binary = os.path.join(
         os.path.dirname(__file__), "verify_performance.py"
     )
-    verify_performance_command = (
-        "python3 "
-        + verify_performance_binary
-        + " -r "
-        + results_dir
-        + "/performance/run_1/mlperf_log_summary.txt"
-        + " -t "
-        + compliance_dir
-        + "/mlperf_log_summary.txt | tee verify_performance.txt"
-    )
+    verify_performance_command = [
+        sys.executable,  
+        verify_performance_binary,
+        "-r", os.path.join(results_dir, "performance", "run_1", "mlperf_log_summary.txt"),
+        "-t", os.path.join(compliance_dir, "mlperf_log_summary.txt"),
+    ]
+
     try:
         os.system(verify_performance_command)
     except Exception:
@@ -146,11 +135,9 @@ def main():
             verify_performance_command)
 
     # check if verify performance script passes
-    performance_pass_command = "grep PASS verify_performance.txt"
     try:
-        performance_pass = "TEST PASS" in subprocess.check_output(
-            performance_pass_command, shell=True
-        ).decode("utf-8")
+        with open("verify_performance.txt", "r") as file:
+            performance_pass = "PASS" in file.read()
     except Exception:
         performance_pass = False
 

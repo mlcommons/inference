@@ -65,5 +65,6 @@ def extract(fpath, dest_folder):
 
     with tarfile.open(fpath, mode) as tar:
         members = tar.getmembers()
-        for member in tqdm.tqdm(iterable=members, total=len(members), leave=True):
+        for member in tqdm.tqdm(
+                iterable=members, total=len(members), leave=True):
             tar.extract(path=dest_folder, member=member)

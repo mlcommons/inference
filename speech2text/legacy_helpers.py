@@ -16,6 +16,7 @@
 from enum import Enum
 from typing import List
 
+
 def __levenshtein(a: List, b: List) -> int:
     """Calculates the Levenshtein distance between a and b.
     """
@@ -36,6 +37,7 @@ def __levenshtein(a: List, b: List) -> int:
             current[j] = min(add, delete, change)
 
     return current[n]
+
 
 def __whisper_decoder_predictions_tensor(tensor, labels):
     """
@@ -58,6 +60,6 @@ def __whisper_decoder_predictions_tensor(tensor, labels):
 def __gather_predictions(predictions_list: list, labels: list) -> list:
     results = []
     for prediction in predictions_list:
-        results += __whisper_decoder_predictions_tensor(prediction, labels=labels)
+        results += __whisper_decoder_predictions_tensor(
+            prediction, labels=labels)
     return results
-

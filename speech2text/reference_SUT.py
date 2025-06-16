@@ -43,26 +43,58 @@ import mlperf_loadgen as lg
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("SUT")
 
+
 def get_start_cores(start_cores="0"):
     start_cores = start_cores.split(",")
     start_cores = list(map(int, start_cores))
     return start_cores
 
+
 cores_per_inst = int(os.environ.get("CORES_PER_INST", "1"))
 num_numa_nodes = int(os.environ.get("NUM_NUMA_NODES", "1"))
-nodes_per_inst = int(os.environ["NUM_NUMA_NODES"])/int(os.environ["NUM_INSTS"])
+nodes_per_inst = int(os.environ["NUM_NUMA_NODES"]
+                     ) / int(os.environ["NUM_INSTS"])
 insts_per_node = int(os.environ["INSTS_PER_NODE"])
-start_cores    = os.environ["START_CORES"]
+start_cores = os.environ["START_CORES"]
 
 precision = torch.float32
 n_mels = 128
 sample_rate = 16000
 model_path = "openai/whisper-large-v3"
 
-labels = [" ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "'"]
+labels = [
+    " ",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+    "'"]
 labels_dict = {}
 for i in range(len(labels)):
     labels_dict[labels[i]] = i
+
 
 class Instance(mp.Process):
     def __init__(
@@ -123,7 +155,7 @@ class Instance(mp.Process):
             self.total_sample_count
         )
 
-        dtype="bfloat16"
+        dtype = "bfloat16"
         print(f"Precision: {dtype}")
         model = LLM(
             model=model_path,
@@ -162,7 +194,7 @@ class Instance(mp.Process):
 
         if qitem_list is None:
             return False
-        
+
         prompt_list = []
         for qitem in qitem_list:
             prompt = self.qsl[qitem.index]
@@ -177,7 +209,8 @@ class Instance(mp.Process):
 
         start_time = time.time()
         outputs = self.model.generate(prompt_list, self.sampling_params)
-        print(f"Sample number: {self.num_samples} | Step time {time.time()-start_time:.3f}s")
+        print(
+            f"Sample number: {self.num_samples} | Step time {time.time()-start_time:.3f}s")
 
         for output in outputs:
             request_id = int(output.request_id)
@@ -188,7 +221,7 @@ class Instance(mp.Process):
 
         self.num_samples += len(results)
 
-        for i,result in enumerate(results):
+        for i, result in enumerate(results):
             # Whisper outputs space in the front and capitalizes things
             result = result.lower().strip()
             transcript = []
@@ -204,6 +237,7 @@ class Instance(mp.Process):
             print(f"Finished {qid[i]}")
         return True
 
+
 class vllmSUT:
     def __init__(self, dataset_dir,
                  manifest_filepath, perf_count, num_workers=1, device="cpu"):
@@ -211,21 +245,21 @@ class vllmSUT:
         self.dataset_path = dataset_dir
         self.manifest_filepath = manifest_filepath
         self.device = device
-        self.batch_size = 16 
+        self.batch_size = 16
         self.total_sample_count = perf_count
         self.num_workers = num_workers
         self.worker_threads = [None] * self.num_workers
 
         dataset_vocab = labels
 
-        #self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+        # self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
 
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         self.qsl = AudioQSL(dataset_dir,
-                                    manifest_filepath,
-                                    dataset_vocab,
-                                    sample_rate,
-                                    perf_count)
+                            manifest_filepath,
+                            dataset_vocab,
+                            sample_rate,
+                            perf_count)
         self.query_queue = mp.JoinableQueue()
         self.output_queue = mp.Queue()
         self.alive_counter = mp.Value("i", 0)
@@ -235,10 +269,20 @@ class vllmSUT:
     def start(self):
         node_start_cores = get_start_cores(start_cores)
         core_lists = []
-        if insts_per_node>0:
+        if insts_per_node > 0:
             for i in range(num_numa_nodes):
                 for j in range(insts_per_node):
-                    core_lists.append(list(range(node_start_cores[i]+j*cores_per_inst, node_start_cores[i]+(j+1)*cores_per_inst)))
+                    core_lists.append(
+                        list(
+                            range(
+                                node_start_cores[i] +
+                                j *
+                                cores_per_inst,
+                                node_start_cores[i] +
+                                (
+                                    j +
+                                    1) *
+                                cores_per_inst)))
 
         for j in range(self.num_workers):
             core_list = core_lists[j]
@@ -253,18 +297,19 @@ class vllmSUT:
                 rank=j,
                 dtype=precision,
                 core_list=tuple(core_list),
-                node_list=tuple([math.floor(j*nodes_per_inst)]),
-                input_queue = self.query_queue,
-                output_queue = self.output_queue,
-                cond_var = self.cond_var,
-                alive_counter = self.alive_counter,
-                sample_counter = self.sample_counter
+                node_list=tuple([math.floor(j * nodes_per_inst)]),
+                input_queue=self.query_queue,
+                output_queue=self.output_queue,
+                cond_var=self.cond_var,
+                alive_counter=self.alive_counter,
+                sample_counter=self.sample_counter
             )
             worker.start()
             self.worker_threads[j] = worker
 
         with self.cond_var:
-            self.cond_var.wait_for(lambda: self.alive_counter.value == self.num_workers)
+            self.cond_var.wait_for(
+                lambda: self.alive_counter.value == self.num_workers)
 
         log.info(f"Starting Loadgen response thread")
         response_thread = threading.Thread(target=self.response_loadgen)
@@ -276,11 +321,12 @@ class vllmSUT:
         for query_sample in query_samples:
             # Continuous batching
             self.query_queue.put([query_sample])
-        if len(query_sample_list)>0:
+        if len(query_sample_list) > 0:
             self.query_queue.put(query_sample_list)
 
     def flush_queries(self):
         pass
+
     def response_loadgen(self):
         keep_alive = True
         while keep_alive:
@@ -293,12 +339,12 @@ class vllmSUT:
                 response = lg.QuerySampleResponse(qid, bi[0],
                                                   bi[1] * response_array.itemsize)
                 lg.QuerySamplesComplete([response])
+
     def stop(self):
         for i in range(self.num_workers):
             self.query_queue.put(None)
         for worker in self.worker_threads:
             worker.kill()
-
 
     def __del__(self):
         lg.DestroySUT(self.sut)

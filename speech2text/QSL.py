@@ -30,6 +30,7 @@ from manifest import Manifest
 Manifest_Global = None
 max_duration = float(os.environ.get("MAX_DURATION", "30.0"))
 
+
 def load_sample_from_file(index):
     global Manifest
     sample = Manifest_Global[index]
@@ -43,12 +44,18 @@ def load_sample_from_file(index):
     duration = sample['duration']
     return prompt
 
+
 class AudioQSL:
     def __init__(self, dataset_dir, manifest_filepath, labels,
                  sample_rate=16000, perf_count=None, skip_qsl=False):
         global Manifest_Global
         m_paths = [manifest_filepath]
-        self.manifest = Manifest(dataset_dir, m_paths, labels, len(labels), max_duration=max_duration)
+        self.manifest = Manifest(
+            dataset_dir,
+            m_paths,
+            labels,
+            len(labels),
+            max_duration=max_duration)
         Manifest_Global = self.manifest
         self.sample_rate = sample_rate
         self.count = len(self.manifest)
@@ -59,15 +66,15 @@ class AudioQSL:
             self.qsl = None
         else:
             self.qsl = lg.ConstructQSL(self.count, perf_count,
-                                    self.load_query_samples,
-                                    self.unload_query_samples)
+                                       self.load_query_samples,
+                                       self.unload_query_samples)
 
         print(
             "Dataset loaded with {0:.2f} hours. Filtered {1:.2f} hours. Number of samples: {2}".format(
                 self.manifest.duration / 3600,
                 self.manifest.filtered_duration / 3600,
                 self.count))
-    
+
     def load_query_samples(self, sample_list):
         pass
 
@@ -83,6 +90,8 @@ class AudioQSL:
 
 # We have no problem fitting all data in memory, so we do that, in
 # order to speed up execution of the benchmark.
+
+
 class AudioQSLInMemory(AudioQSL):
     def __init__(self, dataset_dir, manifest_filepath, labels,
                  sample_rate=16000, perf_count=None, skip_qsl=True):
@@ -104,5 +113,6 @@ class AudioQSLInMemory(AudioQSL):
     def unload_query_samples(self, sample_list):
         for sample_id in sample_list:
             del self.sample_id_to_sample[sample_id]
+
     def __del__(self):
         print("FInished destroying no QSL")

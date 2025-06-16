@@ -16,6 +16,7 @@ import json
 import string
 import os
 
+
 class Manifest(object):
     def __init__(self, data_dir, manifest_paths, labels, blank_index, max_duration=None, pad_to_max=False,
                  min_duration=None, sort_by_duration=False, max_utts=0,

@@ -68,7 +68,8 @@ def preprocess(data, input_dir, dest_dir, target_sr=None, speed=None,
     return output_dict
 
 
-def parallel_preprocess(dataset, input_dir, dest_dir, target_sr, speed, overwrite, parallel):
+def parallel_preprocess(dataset, input_dir, dest_dir,
+                        target_sr, speed, overwrite, parallel):
     with multiprocessing.Pool(parallel) as p:
         func = functools.partial(preprocess,
                                  input_dir=input_dir, dest_dir=dest_dir,

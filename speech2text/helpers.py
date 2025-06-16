@@ -16,6 +16,7 @@
 from typing import List
 from legacy_helpers import __levenshtein
 
+
 def compute_wer_with_concatenation(prediction, reference):
     """
     Compute WER considering concatenated words as correct matches using kaldialign
@@ -46,7 +47,6 @@ def compute_wer_with_concatenation(prediction, reference):
         ref_concat = ref_words[i]
         hyp_concat = hyp_words[j]
 
-
         # Try concatenating up to 3 words
         ref_match_len = 1
         hyp_match_len = 1
@@ -54,7 +54,7 @@ def compute_wer_with_concatenation(prediction, reference):
 
         for k in range(1, 4):
             if i + k <= len(ref_words):
-                ref_concat = ''.join(ref_words[i:i+k])
+                ref_concat = ''.join(ref_words[i:i + k])
                 if ref_concat == hyp_words[j]:
                     ref_match_len = k
                     hyp_match_len = 1
@@ -62,7 +62,7 @@ def compute_wer_with_concatenation(prediction, reference):
                     break
 
             if j + k <= len(hyp_words):
-                hyp_concat = ''.join(hyp_words[j:j+k])
+                hyp_concat = ''.join(hyp_words[j:j + k])
                 if hyp_concat == ref_words[i]:
                     ref_match_len = 1
                     hyp_match_len = k
@@ -71,8 +71,8 @@ def compute_wer_with_concatenation(prediction, reference):
 
         if match_found:
             # Add concatenated match
-            alignment.append((' '.join(ref_words[i:i+ref_match_len]),
-                            ' '.join(hyp_words[j:j+hyp_match_len])))
+            alignment.append((' '.join(ref_words[i:i + ref_match_len]),
+                              ' '.join(hyp_words[j:j + hyp_match_len])))
             i += ref_match_len
             j += hyp_match_len
 
@@ -91,14 +91,18 @@ def compute_wer_with_concatenation(prediction, reference):
         j += 1
 
     # Calculate WER using kaldialign
-    ref_aligned = [x[0].replace(" ", "") for x in alignment if x[0] is not None]
-    hyp_aligned = [x[1].replace(" ", "") for x in alignment if x[1] is not None]
+    ref_aligned = [x[0].replace(" ", "")
+                   for x in alignment if x[0] is not None]
+    hyp_aligned = [x[1].replace(" ", "")
+                   for x in alignment if x[1] is not None]
     distance = __levenshtein(ref_aligned, hyp_aligned)
     wer = distance / len(ref_words) if ref_words else 0
 
     return distance, len(ref_words) if ref_words else 0
 
-def expand_concatenations(words_list: List, reference_dict: dict, reference_list: List):
+
+def expand_concatenations(
+        words_list: List, reference_dict: dict, reference_list: List):
     """
     Finds matching compound words in 'words_list' which exist as keys in 'reference_dict', if any.
     If found, the compound word will be separated using reference_dict if the substitution reduces
@@ -113,21 +117,26 @@ def expand_concatenations(words_list: List, reference_dict: dict, reference_list
     score = __levenshtein(words_list, reference_list)
 
     # Searches each word in 'word_list' for separability using the reference list. Once all options are
-    # considered, the modified 'word_list' is returned. Length of 'word_list' can grow, but not contract.
+    # considered, the modified 'word_list' is returned. Length of 'word_list'
+    # can grow, but not contract.
     i = 0
     words_length = len(words_list)
     while i < words_length:
         if words_list[i] in reference_dict.keys():
-            words_candidate = words_list[:i] + reference_dict[words_list[i]] + words_list[i + 1:]
+            words_candidate = words_list[:i] + \
+                reference_dict[words_list[i]] + words_list[i + 1:]
 
-            # If levenshtein distance reduced, cache new word_list and resume search
-            candidate_levenshtein = __levenshtein(words_candidate, reference_list)
+            # If levenshtein distance reduced, cache new word_list and resume
+            # search
+            candidate_levenshtein = __levenshtein(
+                words_candidate, reference_list)
             if candidate_levenshtein < score:
                 words_list = words_candidate
                 words_length = len(words_list)
                 score = candidate_levenshtein
         i += 1
     return words_list
+
 
 def get_expanded_wordlist(words_list: List, reference_list: List):
     """
@@ -141,7 +150,8 @@ def get_expanded_wordlist(words_list: List, reference_list: List):
         List of words modified from 'word_list' after expanding referenced compound words
     """
 
-    # If levenshtein distance < 2, there cannot be any compound word separation issues.
+    # If levenshtein distance < 2, there cannot be any compound word
+    # separation issues.
     if __levenshtein(words_list, reference_list) < 2:
         return words_list
 
@@ -153,9 +163,12 @@ def get_expanded_wordlist(words_list: List, reference_list: List):
 
     # Adding three-word compounding candidates to checklist
     for i in range(len(reference_list) - 2):
-        compound = reference_list[i] + reference_list[i + 1] + reference_list[i + 2]
-        checklist[compound] = [reference_list[i], reference_list[i + 1], reference_list[i + 2]]
+        compound = reference_list[i] + \
+            reference_list[i + 1] + reference_list[i + 2]
+        checklist[compound] = [reference_list[i],
+                               reference_list[i + 1], reference_list[i + 2]]
 
     # All compiled candidates will be checked, and after checking for minimal Levenshtein
-    # distance, the modified list (or original if compounding not found) is directly returned 
+    # distance, the modified list (or original if compounding not found) is
+    # directly returned
     return expand_concatenations(words_list, checklist, reference_list)

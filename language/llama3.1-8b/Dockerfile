@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 FROM nvcr.io/nvidia/pytorch:24.07-py3
 SHELL ["/bin/bash", "-c"]
 

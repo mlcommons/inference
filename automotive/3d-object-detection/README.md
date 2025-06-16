@@ -31,7 +31,9 @@ mlcr get,dataset,waymo --outdirname=<path_to_download> -j
 ```
 
 ## Downloading the dataset and model checkpoints
-Contact [MLCommons](https://waymo.mlcommons.org/) support for accessing the Waymo Open Dataset along with the model checkpoints for the reference implementation. You will need to accept a license agreement and will be given directions to download the data with rclone. You will need to place the kitti_format folder under a directory named waymo. There are four total checkpoints 2 for pytorch and 2 for onnx.
+MLCommons hosts the dataset and model checkpoints for download **exclusively by MLCommons Members**. You must first agree to the [confidentiality notice](https://waymo.mlcommons.org) using your organizational email address, then you will receive a link to a directory containing Rclone download instructions. _If you cannot access the form but you are part of a MLCommons Member organization, submit the [MLCommons subscription form](https://mlcommons.org/community/subscribe/) with your organizational email address and [associate a Google account](https://accounts.google.com/SignUpWithoutGmail) with your organizational email address._
+
+Once you download the dataset and model checkpoints, you will need to place the kitti_format folder under a directory named waymo. There are four total checkpoints 2 for pytorch and 2 for onnx.
 
 After downloading, the structure of the data should look like below:
 
@@ -101,3 +103,7 @@ Please click [here](https://github.com/mlcommons/inference/blob/master/automotiv
 ```
 python accuracy_waymo.py --mlperf-accuracy-file <path to accuracy file>/mlperf_log_accuracy.json --waymo-dir /waymo/kitti_format/
 ```
+
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 

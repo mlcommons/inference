@@ -28,13 +28,42 @@ from helpers import compute_wer_with_concatenation, get_expanded_wordlist
 
 
 max_duration = float(os.environ.get("MAX_DURATION", "30.0"))
-labels = [" ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "'"]
+labels = [
+    " ",
+    "a",
+    "b",
+    "c",
+    "d",
+    "e",
+    "f",
+    "g",
+    "h",
+    "i",
+    "j",
+    "k",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "q",
+    "r",
+    "s",
+    "t",
+    "u",
+    "v",
+    "w",
+    "x",
+    "y",
+    "z",
+    "'"]
 dtype_map = {
     "int8": 'b',
     "int16": 'h',
     "int32": 'l',
     "int64": 'q',
 }
+
 
 def word_error_rate(hypotheses: List[str], references: List[str]) -> float:
     """
@@ -61,37 +90,53 @@ def word_error_rate(hypotheses: List[str], references: List[str]) -> float:
         r = normalizer(r)
         h_list = h.split()
         r_list = r.split()
-        scores_clip, words_clip = compute_wer_with_concatenation(h_list, r_list)
+        scores_clip, words_clip = compute_wer_with_concatenation(
+            h_list, r_list)
         scores += scores_clip
         words += words_clip
     wer = scores / words
     return wer, scores, words
+
 
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--log_dir", required=True)
     parser.add_argument("--dataset_dir", required=True)
     parser.add_argument("--manifest", required=True)
-    parser.add_argument("--output_dtype", default="int64", choices=dtype_map.keys(), help="Output data type")
+    parser.add_argument(
+        "--output_dtype",
+        default="int64",
+        choices=dtype_map.keys(),
+        help="Output data type")
     args = parser.parse_args()
     return args
 
+
 def main():
     args = get_args()
-    manifest = Manifest(args.dataset_dir, [args.manifest], labels, len(labels), max_duration=max_duration)
+    manifest = Manifest(args.dataset_dir,
+                        [args.manifest],
+                        labels,
+                        len(labels),
+                        max_duration=max_duration)
     with open(os.path.join(args.log_dir, "mlperf_log_accuracy.json")) as fh:
         results = json.load(fh)
     hypotheses = []
     references = []
     for result in results:
-        hypotheses.append(array.array(dtype_map[args.output_dtype], bytes.fromhex(result["data"])).tolist())
+        hypotheses.append(array.array(
+            dtype_map[args.output_dtype], bytes.fromhex(result["data"])).tolist())
         references.append(manifest[result["qsl_idx"]]["transcript"])
 
     references = __gather_predictions([references], labels=labels)
     hypotheses = __gather_predictions([hypotheses], labels=labels)
 
     wer, _, _ = word_error_rate(hypotheses=hypotheses, references=references)
-    print("Word Error Rate: {:}%, accuracy={:}%".format(wer * 100, (1 - wer) * 100))
+    print(
+        "Word Error Rate: {:}%, accuracy={:}%".format(
+            wer * 100,
+         (1 - wer) * 100))
+
 
 if __name__ == '__main__':
     main()

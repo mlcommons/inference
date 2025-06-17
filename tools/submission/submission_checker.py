@@ -356,21 +356,21 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": ["Server", "Offline"],
             "3d-unet-99": ["Offline"],
             "3d-unet-99.9": ["Offline"],
-            "llama3.1-8b": ["Server", "Offline"],
-            "llama2-70b-99": ["Server", "Offline"],
-            "llama2-70b-99.9": ["Server", "Offline"],
+            "llama3.1-8b": ["Offline"],
+            "llama2-70b-99": ["Offline"],
+            "llama2-70b-99.9": ["Offline"],
             "stable-diffusion-xl": ["Server", "Offline"],
             "mixtral-8x7b": ["Server", "Offline"],
-            "llama3.1-405b": ["Server", "Offline"],
+            "llama3.1-405b": ["Offline"],
             "rgat": ["Offline"],
             "deepseek-r1": ["Server", "Offline"],
             "whisper": ["Offline"],
         },
         "optional-scenarios-datacenter": {
-            "llama2-70b-99": ["Interactive"],
-            "llama2-70b-99.9": ["Interactive"],
-            "llama3.1-405b": ["Interactive"],
-            "llama3.1-8b": ["Interactive"],
+            "llama2-70b-99": ["Interactive", "Server"],
+            "llama2-70b-99.9": ["Interactive", "Server"],
+            "llama3.1-405b": ["Interactive", "Server"],
+            "llama3.1-8b": ["Interactive", "Server"],
         },
         "required-scenarios-edge": {
             "resnet": ["SingleStream", "MultiStream", "Offline"],
@@ -2470,6 +2470,7 @@ def check_results_dir(
                         list(required_scenarios)
                         + list(config.get_optional(mlperf_model))
                     )
+                    optional_scenarios = config.get_optional(mlperf_model)
                     for scenario in list_dir(
                             results_path, system_desc, model_name):
                         # some submissions in v0.5 use lower case scenarios -
@@ -2736,6 +2737,7 @@ def check_results_dir(
                                     systems[division][key][system_id] += 1
 
                                 required_scenarios.discard(scenario_fixed)
+                                optional_scenarios.discard(scenario_fixed)
                             else:
                                 log.error("%s has issues", perf_path)
                                 errors += 1
@@ -2801,6 +2803,7 @@ def check_results_dir(
                     # Discard scenarios that we want to skip
                     for scenario in scenarios_to_skip:
                         required_scenarios.discard(scenario)
+                        optional_scenarios.discard(scenario)
 
                     if required_scenarios:
                         name = os.path.join(
@@ -2818,6 +2821,13 @@ def check_results_dir(
                                 name,
                                 required_scenarios,
                             )
+
+                    if "Server" in optional_scenarios and "Interactive" in optional_scenarios:
+                        results[name] = None
+                        log.error(
+                            "%s does not have all required scenarios, one of [Server, Interactive] is required",
+                            name
+                        )
 
     return results, systems
 

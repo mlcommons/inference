@@ -348,7 +348,7 @@ MODEL_CONFIG = {
             "rgat",
             "pointpainting",
             "deepseek-r1",
-            "whisper"
+            "whisper",
         ],
         "required-scenarios-datacenter": {
             "retinanet": ["Server", "Offline"],
@@ -1129,7 +1129,7 @@ class Config:
                 "mixtral-8x7b",
                 "llama3.1-405b",
                 "llama3.1-8b",
-                "deepseek-r1"
+                "deepseek-r1",
                 "rgat",
             ]
         )
@@ -2084,7 +2084,7 @@ def check_results_dir(
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
                 "Interactive": "Tokens/s",
-            }
+            },
         }
         unit_dict = {
             "SingleStream": "Latency (ms)",

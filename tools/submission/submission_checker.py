@@ -550,9 +550,9 @@ MODEL_CONFIG = {
         },
         "seeds": {
             # TODO: Update random seeds
-            "qsl_rng_seed": 6023615788873153749,
-            "sample_index_rng_seed": 15036839855038426416,
-            "schedule_rng_seed": 9933818062894767841,
+            "qsl_rng_seed": 1780908523862526354,
+            "sample_index_rng_seed": 14771362308971278857,
+            "schedule_rng_seed": 18209322760996052031,
         },
         "ignore_errors": [],
         "latency-constraint": {
@@ -641,17 +641,16 @@ REQUIRED_ACC_BENCHMARK = {
         },
         "v5.1": {
             "images": [
-                # TODO: Set final images
-                "4459",
-                "4015",
-                "2705",
-                "1682",
-                "4048",
-                "4683",
-                "3757",
-                "1578",
-                "3319",
-                "95",
+                "2747",
+                "2235",
+                "2165",
+                "1515",
+                "1538",
+                "1367",
+                "2419",
+                "4629",
+                "3657",
+                "4532",
             ]
         },
     }
@@ -1140,10 +1139,9 @@ def get_args():
     """Parse commandline."""
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True, help="submission directory")
-    # TODO: update to version v5.1
     parser.add_argument(
         "--version",
-        default="v5.0",
+        default="v5.1",
         choices=list(MODEL_CONFIG.keys()),
         help="mlperf version",
     )

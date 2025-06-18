@@ -58,7 +58,7 @@ The following MLCommons MLC commands can be used to programmatically download th
 mlcr get,ml-model,sdxl,_fp16,_rclone --outdirname=$MODEL_PATH
 ```
 ```
-mlcr get,ml-model,sdxl,_fp32,_rclone --outdirname-$MODEL_PATH
+mlcr get,ml-model,sdxl,_fp32,_rclone --outdirname=$MODEL_PATH
 ```
 #### Manual method
 

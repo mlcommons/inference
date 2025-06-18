@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 
-# #/bin/bash
+#!/bin/bash
 
 export WORKSPACE_DIR=/workspace
 export DATA_DIR=/data
@@ -21,14 +21,28 @@ export LIBRISPEECH_DIR=${DATA_DIR}/LibriSpeech
 export UTILS_DIR=${WORKSPACE_DIR}/utils
 mkdir -p ${LIBRISPEECH_DIR}
 
-#### Librispeech dev-other ####
+cd ${WORKSPACE_DIR}
+
+# Downloads all Librispeech dev paritions
 python ${UTILS_DIR}/download_librispeech.py \
-    ${UTILS_DIR}/librispeech-inference_other.csv \
+    ${UTILS_DIR}/inference_librispeech.csv \
     ${LIBRISPEECH_DIR} \
     -e ${DATA_DIR}
 
-cd ${WORKSPACE_DIR}
+# Consolidates all Librispeech paritions into common dir
+mkdir -p ${LIBRISPEECH_DIR}/dev-all
+cp -r ${LIBRISPEECH_DIR}/dev-clean/* \
+      ${LIBRISPEECH_DIR}/dev-other/* \
+      ${LIBRISPEECH_DIR}/dev-all/
+
+# Coverts original Librispeech flac to wav and creates manifest file
 python ${UTILS_DIR}/convert_librispeech.py \
-    --input_dir ${LIBRISPEECH_DIR}/dev-other \
-    --dest_dir ${DATA_DIR}/dev-other-wav \
-    --output_json ${DATA_DIR}/dev-other-wav.json
+   --input_dir ${LIBRISPEECH_DIR}/dev-all \
+   --dest_dir ${DATA_DIR}/dev-all \
+   --output_json ${DATA_DIR}/dev-all.json
+
+# Repackages Librispeech samples into samples approaching 30s
+python utils/repackage_librispeech.py --manifest ${DATA_DIR}/dev-all.json \
+	                              --data_dir ${DATA_DIR} \
+				      --output_dir ${DATA_DIR}/dev-all-repack \
+				      --output_json /data/dev-all-repack.json

@@ -24,7 +24,7 @@
 echo "Time Start: $(date +%s)"
 export WORKSPACE_DIR="/workspace"
 export DATA_DIR="/data"
-export MANIFEST_FILE="${DATA_DIR}/dev-other-wav.json"
+export MANIFEST_FILE="${DATA_DIR}/dev-all-repack.json"
 export RUN_LOGS=${WORKSPACE_DIR}/run_output
 export SCENARIO="Offline"
 

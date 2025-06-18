@@ -135,16 +135,29 @@ export LIBRISPEECH_DIR=${DATA_DIR}/LibriSpeech
 export UTILS_DIR=${WORKSPACE_DIR}/utils
 mkdir -p ${LIBRISPEECH_DIR}
 
-#### Librispeech dev-other ####
-python3 ${UTILS_DIR}/download_librispeech.py \
-    ${UTILS_DIR}/librispeech-inference_other.csv \
+# Downloads all Librispeech dev paritions
+python ${UTILS_DIR}/download_librispeech.py \
+    ${UTILS_DIR}/inference_librispeech.csv \
     ${LIBRISPEECH_DIR} \
     -e ${DATA_DIR}
 
-python3 ${UTILS_DIR}/convert_librispeech.py \
-    --input_dir ${LIBRISPEECH_DIR}/dev-other \
-    --dest_dir ${DATA_DIR}/dev-other-wav \
-    --output_json ${DATA_DIR}/dev-other-wav.json
+# Consolidates all Librispeech paritions into common dir
+mkdir -p ${LIBRISPEECH_DIR}/dev-all
+cp -r ${LIBRISPEECH_DIR}/dev-clean/* \
+      ${LIBRISPEECH_DIR}/dev-other/* \
+      ${LIBRISPEECH_DIR}/dev-all/
+
+# Coverts original Librispeech flac to wav and creates manifest file
+python ${UTILS_DIR}/convert_librispeech.py \
+   --input_dir ${LIBRISPEECH_DIR}/dev-all \
+   --dest_dir ${DATA_DIR}/dev-all \
+   --output_json ${DATA_DIR}/dev-all.json
+
+# Repackages Librispeech samples into samples approaching 30s
+python utils/repackage_librispeech.py --manifest ${DATA_DIR}/dev-all.json \
+	                              --data_dir ${DATA_DIR} \
+				      --output_dir ${DATA_DIR}/dev-all-repack \
+				      --output_json /data/dev-all-repack.json
 ```
 
 ## Docker Run
@@ -170,7 +183,7 @@ Setup the environment variables
 cd $WHISPER_FOLDER
 export WORKSPACE_DIR="/workspace"
 export DATA_DIR="/data"
-export MANIFEST_FILE="${DATA_DIR}/dev-other-wav.json"
+export MANIFEST_FILE="${DATA_DIR}/dev-all-repack.json"
 export RUN_LOGS=${WORKSPACE_DIR}/run_output
 export SCENARIO="Offline"
 

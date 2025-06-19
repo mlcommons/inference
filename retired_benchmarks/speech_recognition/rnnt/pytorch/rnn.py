@@ -65,7 +65,7 @@ class LstmDrop(torch.nn.Module):
         """
         super(LstmDrop, self).__init__()
         self.dev = (
-            torch.device("cuda:0")
+            torch.device("cuda")
             if torch.cuda.is_available()
             and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
             else torch.device("cpu")
@@ -111,7 +111,7 @@ class StackTime(torch.nn.Module):
         super().__init__()
         self.factor = int(factor)
         self.dev = (
-            torch.device("cuda:0")
+            torch.device("cuda")
             if torch.cuda.is_available()
             and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
             else torch.device("cpu")

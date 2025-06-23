@@ -88,7 +88,7 @@ def main():
     if test_scenario != ref_scenario:
         sys.exit("TEST FAIL: Test and reference scenarios do not match!")
 
-    if ref_mode == "Server" and test_target_latency != ref_target_latency:
+    if ref_scenario == "Server" and test_target_latency != ref_target_latency:
         sys.exit("TEST FAIL: Server target latency mismatch")
 
     print(f"Reference score = {ref_score}")

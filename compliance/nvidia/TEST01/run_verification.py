@@ -133,10 +133,10 @@ def main():
         + verify_performance_binary
         + " -r "
         + results_dir
-        + "/performance/run_1/mlperf_log_summary.txt"
+        + "/performance/run_1/mlperf_log_detail.txt"
         + " -t "
         + compliance_dir
-        + "/mlperf_log_summary.txt | tee verify_performance.txt"
+        + "/mlperf_log_detail.txt | tee verify_performance.txt"
     )
     try:
         os.system(verify_performance_command)

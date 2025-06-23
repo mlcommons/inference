@@ -41,10 +41,10 @@ RESULT_FIELD = {
 
 def parse_result_log(file_path):
     score, target_latency = 0, None
-    score = float(mlperf_log[RESULT_FIELD[scenario]])
 
     mlperf_log = MLPerfLog(file_path)
     scenario = mlperf_log["effective_scenario"]
+    score = float(mlperf_log[RESULT_FIELD[scenario]])
 
     if not (
         "result_validity" in mlperf_log.get_keys()

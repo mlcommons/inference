@@ -39,7 +39,7 @@ RESULT_FIELD = {
 }
 
 
-def result_log(file_path):
+def parse_result_log(file_path):
     score, target_latency = 0, None
     score = float(mlperf_log[RESULT_FIELD[scenario]])
 

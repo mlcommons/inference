@@ -58,7 +58,7 @@ The following MLCommons MLC commands can be used to programmatically download th
 mlcr get,ml-model,sdxl,_fp16,_rclone --outdirname=$MODEL_PATH
 ```
 ```
-mlcr get,ml-model,sdxl,_fp32,_rclone --outdirname-$MODEL_PATH
+mlcr get,ml-model,sdxl,_fp32,_rclone --outdirname=$MODEL_PATH
 ```
 #### Manual method
 
@@ -175,4 +175,4 @@ Please click [here](https://github.com/mlcommons/inference/blob/master/text_to_i
 
 ## Automated command for submission generation via MLCFlow
 
-Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow.

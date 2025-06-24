@@ -181,8 +181,9 @@ Setup the environment variables
 
 ```bash
 cd $WHISPER_FOLDER
-export WORKSPACE_DIR="/workspace"
-export DATA_DIR="/data"
+export WORKSPACE_DIR=.
+export DATA_DIR=${WORKSPACE_DIR}/data
+export MODEL_PATH=${WORKSPACE_DIR}/model
 export MANIFEST_FILE="${DATA_DIR}/dev-all-repack.json"
 export RUN_LOGS=${WORKSPACE_DIR}/run_output
 export SCENARIO="Offline"
@@ -202,6 +203,7 @@ export START_CORES=$(lscpu | grep "NUMA node.* CPU.*" | awk "{print \$4}" | cut 
 ```bash
 python reference_mlperf.py \
     --dataset_dir ${DATA_DIR} \
+    --model_path ${MODEL_DIR} \
     --manifest ${MANIFEST_FILE} \
     --scenario ${SCENARIO} \
     --log_dir ${RUN_LOGS} \
@@ -213,10 +215,12 @@ python reference_mlperf.py \
 ```bash
 python reference_mlperf.py \
     --dataset_dir ${DATA_DIR} \
+    --model_path ${MODEL_DIR} \
     --manifest ${MANIFEST_FILE} \
     --scenario ${SCENARIO} \
     --log_dir ${RUN_LOGS} \
     --num_workers ${NUM_INSTS} \
+    --accuracy
 ```
 
 ## Accuracy Target

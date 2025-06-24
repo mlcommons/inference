@@ -9,7 +9,7 @@
 
 ## Automated command to run the benchmark via MLFlow
 
-Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3_1-8b/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/llama3_1-8b/) (TBD) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
 You can also do pip install mlc-scripts and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
 
@@ -101,7 +101,7 @@ pip install -e ../../loadgen
 
 You need to request for access to [MLCommons](http://llama3-1.mlcommons.org/) and you'll receive an email with the download instructions. You can download the model automatically via the below command
 ```
-mlcr get,ml-model,llama3.1-8b --outdirname=${CHECKPOINT_PATH} -j
+TBD
 ```
 
 
@@ -118,7 +118,7 @@ cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ### Download huggingface model through MLC
 
 ```
-mlcr get,ml-model,llama3.1-8b,_hf --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
+mlcr get,ml-model,llama3,_meta-llama/Llama-3.1-8B-Instruct,_hf --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j
 ```
 
 **Note:**
@@ -159,7 +159,7 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_dailymai
 **MLC Command**
 
 ```
-mlcr get,dataset,mlperf,inference,llama3.1-8b,_validation --outdirname=<path to download> -j
+TBD
 ```
 
 You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
@@ -170,7 +170,7 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_eval.jso
 
 **MLC Command**
 ```
-mlcr get,dataset,mlperf,inference,llama3.1-8b,_calibration --outdirname=<path to download> -j
+TBD
 ```
 
 
@@ -266,7 +266,7 @@ The ServerSUT was not tested for GPU runs.
 ### Evaluate the accuracy using MLCFlow
 You can also evaulate the accuracy from the generated accuracy log by using the following MLC command
 ```
-mlcr process,mlperf,accuracy,_dataset_llama3.1-8b --result_dir=<Path to accuracy log directory>
+TBD
 ```
 
 ## Accuracy Target

@@ -444,6 +444,7 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
       }
       case TestScenario::Offline: {
         double tokens_per_second = token_count / pr.max_latency;
+        summary("Tokens           : ", token_count);
         summary("Tokens per second: ", tokens_per_second);
         break;
       }

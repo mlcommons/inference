@@ -281,4 +281,4 @@ Running the GPU implementation in FP16 precision resulted in the following FP16 
         'gen_num': 13368,
 }
 ```
-The accuracy target is 99% for rougeL and exact_match, and 90% for tokens_per_sample
+The accuracy target is 99% for rouge1, rouge2, rougeL and rougeLsum, and 90% for gen_len

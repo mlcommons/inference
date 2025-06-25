@@ -24,6 +24,7 @@ MAX_DURATION = 30.0
 PAD_DURATION = 0.5
 SR = 16000
 
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", required=True)
@@ -33,9 +34,11 @@ def get_args():
     args = parser.parse_args()
     return args
 
+
 def get_source_name(fname):
     basename_list, _ = os.path.splitext(fname)
     return "-".join(basename_list.split("-")[:2])
+
 
 def prepare_clip(current_entry, new_fname):
     pad_audio = np.zeros(int(PAD_DURATION * SR))
@@ -50,6 +53,7 @@ def prepare_clip(current_entry, new_fname):
     new_audio = np.concatenate(new_audio)
     new_json = get_sample_json(new_audio, new_transcript, new_fname)
     return new_audio, new_json
+
 
 def get_sample_json(audio, transcript, fname):
     json_file = {
@@ -73,6 +77,7 @@ def get_sample_json(audio, transcript, fname):
     }
     return json_file
 
+
 def main():
     args = get_args()
     with open(args.manifest, "r") as manifest:
@@ -84,15 +89,22 @@ def main():
     for data in json_data:
         original_fname = data["files"][0]["fname"]
         original_transcript = data["transcript"]
-        original_audio = librosa.load(os.path.join(args.data_dir, original_fname), sr=SR)[0]
-        original_json = get_sample_json(original_audio, original_transcript, original_fname)
+        original_audio = librosa.load(
+            os.path.join(
+                args.data_dir,
+                original_fname),
+            sr=SR)[0]
+        original_json = get_sample_json(
+            original_audio, original_transcript, original_fname)
 
-        source_name = get_source_name(os.path.basename(os.path.basename(original_fname)))
+        source_name = get_source_name(
+            os.path.basename(
+                os.path.basename(original_fname)))
         if source_name not in catalog:
             catalog[source_name] = []
-        
+
         catalog[source_name].append((original_audio, original_json))
-    
+
     full_json = []
     for key in catalog.keys():
         index = 0
@@ -100,13 +112,17 @@ def main():
         current_duration = 0
         for entry in catalog[key]:
             clip_duration = entry[1]["original_duration"]
-            
-            # Only considering clips <=30s.  If single clip duration > 30s, ignore.
+
+            # Only considering clips <=30s.  If single clip duration > 30s,
+            # ignore.
             if clip_duration > 30:
                 continue
-            # If new clip would extend compiled entry to >30s, flush the existing entry
-            if (len(current_entry) > 0) and (current_duration + PAD_DURATION + clip_duration > 30):
-                new_fname = os.path.join(args.output_dir, key + "_" + str(index) + ".wav")
+            # If new clip would extend compiled entry to >30s, flush the
+            # existing entry
+            if (len(current_entry) > 0) and (
+                    current_duration + PAD_DURATION + clip_duration > 30):
+                new_fname = os.path.join(
+                    args.output_dir, key + "_" + str(index) + ".wav")
                 new_audio, new_json = prepare_clip(current_entry, new_fname)
                 sf.write(new_fname, new_audio, SR)
                 full_json.append(new_json)
@@ -120,9 +136,11 @@ def main():
             if len(current_entry) > 1:
                 current_duration += PAD_DURATION
 
-        # After all key clips are processed, if a remaining entry has content, exports it.
+        # After all key clips are processed, if a remaining entry has content,
+        # exports it.
         if len(current_entry) > 0:
-            new_fname = os.path.join(args.output_dir, key + "_" + str(index) + ".wav")
+            new_fname = os.path.join(
+                args.output_dir, key + "_" + str(index) + ".wav")
             new_audio, new_json = prepare_clip(current_entry, new_fname)
             sf.write(new_fname, new_audio, SR)
             full_json.append(new_json)

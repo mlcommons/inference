@@ -79,12 +79,35 @@ sudo apt-get install -y --no-install-recommends \
 cd $LOADGEN_FOLDER
 pip install -e .
 ```
+```bash
+git clone https://github.com/vllm-project/vllm vllm-cpu && \
+cd vllm-cpu && \
+git checkout main && \
+git log -n1 && \
+pip3 install --break-system-packages -r requirements/cpu.txt && \
+VLLM_TARGET_DEVICE=cpu pip install --break-system-packages . --no-build-isolation
+```
 
 
 ## Get Model
-### MLCommons Members Download
+### MLCommons Download
 
-**TODO:** Host model in MLC cloud bucket
+You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
+
+To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
+To install Rclone on Linux/macOS/BSD systems, run:
+```
+sudo -v ; curl https://rclone.org/install.sh | sudo bash
+```
+Once Rclone is installed, run the following command to authenticate with the bucket:
+```
+rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
+```
+You can then navigate in the terminal to your desired download directory and run the following command to download the model:
+
+```
+rclone copy mlc-inference:mlcommons-inference-wg-public/Whisper/model/ ./ -P
+```
 
 ### External Download (Not recommended for official submission)
 
@@ -100,23 +123,11 @@ cd ${CHECKPOINT_PATH} && git checkout 06f233fe06e710322aca913c1bc4249a0d71fce1
 
 ### Preprocessed
 
-**TODO:** Host preprocessed dataset in MLC cloud bucket
+Download and install rclone as decribed in the [MLCommons Download section](#mlcommons-download)
 
-You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
-
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
 You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
-
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/{TODO} ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/Whisper/dataset/ ./ -P
 ```
 
 ### Unprocessed
@@ -157,7 +168,7 @@ python ${UTILS_DIR}/convert_librispeech.py \
 python utils/repackage_librispeech.py --manifest ${DATA_DIR}/dev-all.json \
 	                              --data_dir ${DATA_DIR} \
 				      --output_dir ${DATA_DIR}/dev-all-repack \
-				      --output_json /data/dev-all-repack.json
+				      --output_json ${WORKSPACE_DIR}/data/dev-all-repack.json
 ```
 
 ## Docker Run
@@ -203,11 +214,11 @@ export START_CORES=$(lscpu | grep "NUMA node.* CPU.*" | awk "{print \$4}" | cut 
 ```bash
 python reference_mlperf.py \
     --dataset_dir ${DATA_DIR} \
-    --model_path ${MODEL_DIR} \
+    --model_path ${MODEL_PATH} \
     --manifest ${MANIFEST_FILE} \
     --scenario ${SCENARIO} \
     --log_dir ${RUN_LOGS} \
-    --num_workers ${NUM_INSTS} \
+    --num_workers ${NUM_INSTS}
 ```
 
 ### Run Accuracy
@@ -215,7 +226,7 @@ python reference_mlperf.py \
 ```bash
 python reference_mlperf.py \
     --dataset_dir ${DATA_DIR} \
-    --model_path ${MODEL_DIR} \
+    --model_path ${MODEL_PATH} \
     --manifest ${MANIFEST_FILE} \
     --scenario ${SCENARIO} \
     --log_dir ${RUN_LOGS} \

@@ -808,6 +808,18 @@ LLM_LATENCY_LIMITS = {
             "ttft": 450 * 1000000, "tpot": 40 * 1000000
         },
     },
+    "llama2-70b-interactive-99": {
+        "Server": {
+            "ttft": 450 * 1000000, "tpot": 40 * 1000000
+        },
+    },
+    # for v5.0
+    "llama2-70b-interactive-99.9": {
+        "Server": {
+            "ttft": 450 * 1000000, "tpot": 40 * 1000000
+        },
+    },
+    # for v5.0
     "mixtral-8x7b": {
         "Server": {
             "ttft": 2000 * 1000000, "tpot": 200 * 1000000

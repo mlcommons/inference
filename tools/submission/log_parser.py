@@ -128,6 +128,8 @@ class MLPerfLog:
 
     def num_errors(self):
         """Get number of errors in the log."""
+        if "num_errors" in self.keys:
+            return self.__getitem__("num_errors")
         count = 0
         for message in self.messages:
             if message["metadata"]["is_error"]:

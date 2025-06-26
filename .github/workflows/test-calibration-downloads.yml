@@ -13,26 +13,6 @@ env:
   PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
 
 jobs:
-  download-imagenet:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: [ "3.9" ]
-
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
-      run: |
-        python3 -m pip install mlc-scripts
-    - name: Download Imagenet Calibration
-      run: |
-        mlcr get,dataset,imagenet,_calibration --outdirname=. --quiet
-
   download-openimages:
     runs-on: ubuntu-latest
     strategy:

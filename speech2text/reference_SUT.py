@@ -158,7 +158,7 @@ class Instance(mp.Process):
         dtype = "bfloat16"
         print(f"Precision: {dtype}")
         model = LLM(
-            model=model_path,
+            model=self.model_path,
             dtype=dtype,
             skip_tokenizer_init=False,
             trust_remote_code=True,
@@ -240,7 +240,7 @@ class Instance(mp.Process):
 
 class vllmSUT:
     def __init__(self, dataset_dir,
-                 manifest_filepath, perf_count, num_workers=1, device="cpu"):
+                 manifest_filepath, perf_count, model_path="openai/whisper-large-v3", num_workers=1, device="cpu"):
         self.model_path = model_path
         self.dataset_path = dataset_dir
         self.manifest_filepath = manifest_filepath

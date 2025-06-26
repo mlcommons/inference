@@ -121,6 +121,10 @@ cd ${CHECKPOINT_PATH} && git checkout 06f233fe06e710322aca913c1bc4249a0d71fce1
 
 ## Get Dataset
 
+### Publication/Attribution
+["OpenSLR LibriSpeech Corpus"](http://www.openslr.org/12/) provides over 1000 hours of speech data in the form of raw audio.
+We use dev-clean and dev-other splits, which are approximately 10 hours.
+
 ### Preprocessed
 
 Download and install rclone as decribed in the [MLCommons Download section](#mlcommons-download)

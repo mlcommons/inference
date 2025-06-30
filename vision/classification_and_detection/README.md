@@ -2,8 +2,11 @@
 
 This is the reference implementation for MLPerf Inference Classification and Object Detection benchmarks
 
-## Automated Run Commands
-Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+## Automated command to run the benchmark via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
 
 ### ResNet50
 
@@ -71,6 +74,55 @@ This benchmark app is a reference implementation that is not meant to be the fas
 It is written in python which might make it less suitable for lite models like mobilenet or large number of cpu's.
 There is a [C++ implementation](https://github.com/mlcommons/cm4mlops/tree/mlperf-inference/script/app-mlperf-inference-mlcommons-cpp) available which currently supports onnxruntime backend for CPUs and Nvidia GPUs.
 
+### Download model through MLCFlow Automation
+
+
+```
+mlcr get,ml-model,pointpainting --outdirname=<path_to_download> -j
+```
+
+### Download dataset through MLCFlow Automation
+
+#### Imagenet Dataset (Preprocessed)
+
+```
+mlcr get,dataset,image-classification,imagenet,preprocessed,_pytorch --outdirname=<path_to_download> -j
+```
+
+#### Imagenet Dataset (Unprocessed)
+
+**Validation**
+
+```
+mlcr get,dataset,imagenet,validation --outdirname=<path_to_download> -j
+```
+
+**Calibration**
+
+```
+mlcr get,dataset,imagenet,calibration --outdirname=<path_to_download> -j
+```
+
+#### Openimages Dataset (Preprocessed)
+
+```
+get,dataset,object-detection,open-images,openimages,preprocessed,_validation --outdirname=<path_to_download> -j 
+```
+
+#### Openimages Dataset (Unprocessed)
+
+**Validation**
+
+```
+mlcr get,dataset,openimages,original,_validation --outdirname=<path_to_download> -j  
+```
+
+**Calibration**
+
+```
+mlcr get,dataset,openimages,original,_calibration --outdirname=<path_to_download> -j 
+```
+
 ## Tools for preparing datasets and validating accuracy
 The reference implementation includes all required pre-processing of datasets.
 It also includes a ```--accuracy``` option to validate accuracy as required by mlperf.
@@ -89,10 +141,28 @@ python upscale_coco.py --inputs /data/coco/ --outputs /data/coco-1200 --size 120
 to come.
 
 ### Validate accuracy for resnet50 and mobilenet benchmarks
-The tool is [here](tools/accuracy-imagenet.py). You can run it like:
+
+The tool is [here](tools/accuracy-imagenet.py). 
+
+#### Evaluate the accuracy through MLCFlow Automation
+```bash
+mlcr process,mlperf,accuracy,_imagenet --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+#### Manual method
 ```
 python tools/accuracy-imagenet.py --mlperf-accuracy-file mlperf_log_accuracy.json --imagenet-val-file /data/imagenet2012/val_map.txt
 ```
+
+### Validate accuracy for retinanet
+
+### Evaluate the accuracy through MLCFlow Automation
+```bash
+mlcr process,mlperf,accuracy,_openimages --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/mlcommons/inference/blob/master/vision/classification_and_detection/tools/accuracy-openimages.py) to view the Python script for evaluating accuracy for the Waymo dataset.
+
 
 ### Validate accuracy for ssd-mobilenet and ssd-resnet34 benchmarks
 The tool is [here](tools/accuracy-coco.py). You can run it like:
@@ -275,6 +345,10 @@ comma separated list of which latencies (in seconds) we try to reach in the 99 p
 ```--max-batchsize MAX_BATCHSIZE```
 maximum batchsize we generate to backend (default: 128).
 
+
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 
 
 ## License
 

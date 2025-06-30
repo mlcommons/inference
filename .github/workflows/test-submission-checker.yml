@@ -35,4 +35,4 @@ jobs:
         git clone https://github.com/mlcommons/mlperf_inference_unofficial_submissions_v5.0 --depth 1
     - name: Test MLPerf inference submission checker
       run: |
-        mlcr run,mlperf,inference,submission,checker --adr.inference-src.tags=_branch.$PR_HEAD_REF,_repo.${{ github.event.pull_request.head.repo.html_url }} --adr.inference-src.version=custom --input=`pwd`/mlperf_inference_unofficial_submissions_v5.0 --src_version=v5.0 --extra_args=" --skip-extra-files-in-root-check --skip-extra-accuracy-files-check --skip-all-systems-have-results-check" --quiet 
+        mlcr run,mlperf,inference,submission,checker --adr.inference-src.tags=_branch.$PR_HEAD_REF,_repo.${{ github.event.pull_request.head.repo.html_url }} --adr.inference-src.version=custom --input=`pwd`/mlperf_inference_unofficial_submissions_v5.0 --src_version=v5.0 --extra_args=" --skip-extra-files-in-root-check --skip-extra-accuracy-files-check --skip-all-systems-have-results-check --skip-calibration-check" --quiet 

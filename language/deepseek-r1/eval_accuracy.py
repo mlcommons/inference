@@ -45,11 +45,11 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
-                                dataset_file: Union[str, Path],
-                                checkpoint_path: str,
-                                dtype: str = "int32",
-                                output_dir: Optional[Union[str, Path]] = None,
-                                base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
+                               dataset_file: Union[str, Path],
+                               checkpoint_path: str,
+                               dtype: str = "int32",
+                               output_dir: Optional[Union[str, Path]] = None,
+                               base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
     """Process MLPerf log accuracy file and evaluate results.
 
     Args:
@@ -68,8 +68,7 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
     dataset_file = Path(dataset_file)
 
     if not mlperf_log_file.exists():
-        raise FileNotFoundError(
-            f"MLPerf log file not found: {mlperf_log_file}")
+        raise FileNotFoundError(f"MLPerf log file not found: {mlperf_log_file}")
     if not dataset_file.exists():
         raise FileNotFoundError(f"Dataset file not found: {dataset_file}")
 
@@ -81,14 +80,14 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
     try:
         tokenizer = AutoTokenizer.from_pretrained(
             checkpoint_path,
+            revision='56d4cbbb4d29f4355bab4b9a39ccb717a14ad5ad',
             model_max_length=22000,
             padding_side="left",
             use_fast=False,
         )
         logger.info("Tokenizer loaded successfully")
     except Exception as e:
-        raise RuntimeError(
-            f"Failed to load tokenizer from {checkpoint_path}: {e}")
+        raise RuntimeError(f"Failed to load tokenizer from {checkpoint_path}: {e}")
 
     # Load ground truth dataset
     try:
@@ -101,20 +100,14 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
             elif 'ground_truth' in dataset_df.columns:
                 ground_truths = dataset_df['ground_truth'].tolist()
             else:
-                raise ValueError(
-                    "Dataset must contain 'gt_output' or 'ground_truth' column")
+                raise ValueError("Dataset must contain 'gt_output' or 'ground_truth' column")
 
             # Get other required columns with fallbacks
             if 'dataset' in dataset_df.columns:
                 datasets = dataset_df['dataset'].tolist()
             elif 'metric' in dataset_df.columns:
                 # Infer dataset from metric names
-                datasets = [
-                    metric.replace(
-                        '_em',
-                        '').replace(
-                        '_',
-                        '') for metric in dataset_df['metric'].tolist()]
+                datasets = [metric.replace('_em', '').replace('_', '') for metric in dataset_df['metric'].tolist()]
             else:
                 datasets = ['unknown'] * len(ground_truths)
 
@@ -154,10 +147,8 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
                 try:
                     mlperf_results = json.load(f)
                 except json.JSONDecodeError as e:
-                    # If full file parsing fails, try to parse line by line,
-                    # skipping brackets
-                    logger.warning(
-                        f"Failed to parse as complete JSON array: {e}")
+                    # If full file parsing fails, try to parse line by line, skipping brackets
+                    logger.warning(f"Failed to parse as complete JSON array: {e}")
                     logger.info("Attempting line-by-line parsing")
                     mlperf_results = []
                     with open(mlperf_log_file, 'r') as f2:
@@ -172,8 +163,7 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
                             try:
                                 mlperf_results.append(json.loads(line))
                             except json.JSONDecodeError as e:
-                                logger.warning(
-                                    f"Failed to parse line {line_num}: {e}")
+                                logger.warning(f"Failed to parse line {line_num}: {e}")
                                 continue
         else:
             # Newline-delimited JSON format
@@ -231,8 +221,7 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
             questions_required.append(questions[qsl_idx])
 
         except Exception as e:
-            logger.warning(
-                f"Error processing entry with qsl_idx {qsl_idx}: {e}")
+            logger.warning(f"Error processing entry with qsl_idx {qsl_idx}: {e}")
             continue
 
     if not preds_token_ids:
@@ -283,11 +272,7 @@ def validate_dataframe(df: pd.DataFrame) -> None:
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input must be a pandas DataFrame")
 
-    required_cols = [
-        'model_output',
-        'dataset',
-        'ground_truth',
-        'tok_model_output_len']
+    required_cols = ['model_output', 'dataset', 'ground_truth', 'tok_model_output_len']
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         raise ValueError(f"Missing required columns: {missing_cols}")
@@ -406,8 +391,7 @@ def parse_code(text: str) -> Optional[str]:
 # Answer Evaluation Functions
 # =============================================================================
 
-def evaluate_multiple_choice(
-        parsed: Optional[str], ground_truth: str, valid_options: str) -> bool:
+def evaluate_multiple_choice(parsed: Optional[str], ground_truth: str, valid_options: str) -> bool:
     """Evaluate multiple choice answer."""
     if not parsed or not ground_truth:
         return False
@@ -431,12 +415,10 @@ def evaluate_math500(parsed: Optional[str], ground_truth: str) -> bool:
 
     # Use sys.path approach for proper module importing
     workspace_path = os.path.dirname(os.path.abspath(__file__))
-    prm800k_module_path = os.path.join(
-        workspace_path, "submodules", "prm800k", "prm800k")
+    prm800k_module_path = os.path.join(workspace_path, "submodules", "prm800k", "prm800k")
 
     if not os.path.exists(prm800k_module_path):
-        raise FileNotFoundError(
-            f"PRM800K module not found at: {prm800k_module_path}")
+        raise FileNotFoundError(f"PRM800K module not found at: {prm800k_module_path}")
 
     # Save current directory and sys.path
     original_cwd = os.getcwd()
@@ -641,8 +623,7 @@ def process_row(row: pd.Series) -> Dict[str, Any]:
     }
 
 
-def process_livecodebench_parallel(
-        df: pd.DataFrame, group_indices: pd.Index) -> Tuple[int, int]:
+def process_livecodebench_parallel(df: pd.DataFrame, group_indices: pd.Index) -> Tuple[int, int]:
     """Process LiveCodeBench items in parallel."""
     # Prepare work items
     work_items = []
@@ -746,8 +727,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 # Unified Evaluation Utilities
 # =============================================================================
 
-def print_evaluation_results(df_evaluated: pd.DataFrame,
-                             logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
+def print_evaluation_results(df_evaluated: pd.DataFrame, logger: Optional[logging.Logger] = None) -> Dict[str, Any]:
     """Print evaluation results in a unified format.
 
     Args:
@@ -783,8 +763,8 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
 
 
 def process_and_save_dataframe(df: pd.DataFrame,
-                               output_dir: Optional[Union[str, Path]] = None,
-                               base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
+                              output_dir: Optional[Union[str, Path]] = None,
+                              base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
     """Process dataframe for evaluation and save the results.
 
     Args:
@@ -800,8 +780,7 @@ def process_and_save_dataframe(df: pd.DataFrame,
 
     # Determine output path
     if output_dir is None:
-        # Try to infer from existing path info in the dataframe or use current
-        # directory
+        # Try to infer from existing path info in the dataframe or use current directory
         output_dir = Path.cwd()
     else:
         output_dir = Path(output_dir)
@@ -834,11 +813,42 @@ def process_and_save_dataframe(df: pd.DataFrame,
 # Main Function
 # =============================================================================
 
+def detect_file_type(file_path: Union[str, Path]) -> str:
+    """Detect whether file is MLPerf JSON or pickle format.
+
+    Returns:
+        "mlperf_json" or "pickle"
+    """
+    file_path = Path(file_path)
+
+    # Check by extension first
+    if file_path.suffix.lower() == '.json':
+        return "mlperf_json"
+    elif file_path.suffix.lower() in ['.pkl', '.pickle']:
+        return "pickle"
+
+    # Try to detect by content
+    try:
+        # Try reading as JSON first
+        with open(file_path, 'r') as f:
+            first_char = f.read(1)
+            if first_char in ['[', '{']:
+                # Likely JSON
+                return "mlperf_json"
+    except:
+        pass
+
+    # Default to pickle
+    return "pickle"
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Evaluate model outputs with parallel LiveCodeBench processing")
+        description="Evaluate model outputs - supports both pickle DataFrames and MLPerf JSON logs")
     parser.add_argument("--input-file", required=True,
-                        help="Input pickle file")
+                        help="Input file (pickle DataFrame or MLPerf JSON log)")
+    parser.add_argument("--dataset-file",
+                        help="Dataset file with ground truth (required for MLPerf JSON input, auto-detected if not provided)")
     parser.add_argument(
         "--output-file", help="Output pickle file (defaults to <input-file>_evaluated.pkl)")
     parser.add_argument("--verbose", action="store_true",
@@ -852,30 +862,65 @@ def main():
     if not os.path.exists(args.input_file):
         raise FileNotFoundError(f"Input file not found: {args.input_file}")
 
+    input_path = Path(args.input_file)
+
+    # Detect file type
+    file_type = detect_file_type(input_path)
+    logger.info(f"Detected input file type: {file_type}")
+
     # Determine output file path
     if args.output_file:
         output_path = Path(args.output_file)
         output_dir = output_path.parent
         output_filename = output_path.name
     else:
-        input_path = Path(args.input_file)
         output_dir = input_path.parent
         output_filename = input_path.stem + "_evaluated.pkl"
 
     logger.info(f"Processing: {args.input_file}")
 
-    # Load and process data
-    with open(args.input_file, 'rb') as f:
-        df = pickle.load(f)
+    if file_type == "mlperf_json":
+        # Handle MLPerf JSON format
+        logger.info("Processing MLPerf accuracy log JSON file")
 
-    logger.info(f"Loaded {len(df)} rows")
+        # Find or validate dataset file
+        if args.dataset_file:
+            dataset_file = Path(args.dataset_file)
+            if not dataset_file.exists():
+                raise FileNotFoundError(f"Specified dataset file not found: {dataset_file}")
+        else:
+            # Try to auto-detect dataset file
+            raise FileNotFoundError("Please specify dataset file when input-file is mlperf_accuracy_log.json")
 
-    # Process and save with unified function
-    df_evaluated, saved_file_path = process_and_save_dataframe(
-        df,
-        output_dir=output_dir,
-        base_filename=output_filename
-    )
+        # Use default checkpoint path from run_mlperf.py
+        checkpoint_path = "deepseek-ai/DeepSeek-R1"
+        logger.info(f"Using default checkpoint path: {checkpoint_path}")
+
+        # Process MLPerf log
+        df_evaluated, saved_file_path = process_mlperf_log_accuracy(
+            mlperf_log_file=input_path,
+            dataset_file=dataset_file,
+            checkpoint_path=checkpoint_path,
+            output_dir=output_dir,
+            base_filename=output_filename
+        )
+
+    else:
+        # Handle pickle DataFrame format
+        logger.info("Processing pickle DataFrame file")
+
+        # Load and process data
+        with open(args.input_file, 'rb') as f:
+            df = pickle.load(f)
+
+        logger.info(f"Loaded {len(df)} rows")
+
+        # Process and save with unified function
+        df_evaluated, saved_file_path = process_and_save_dataframe(
+            df,
+            output_dir=output_dir,
+            base_filename=output_filename
+        )
 
     # Print evaluation results with unified function
     print_evaluation_results(df_evaluated, logger)

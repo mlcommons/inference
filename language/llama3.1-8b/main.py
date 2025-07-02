@@ -39,7 +39,7 @@ def get_args():
     parser.add_argument(
         "--scenario",
         type=str,
-        choices=["Offline", "Server"],
+        choices=["Offline", "Server", "SingleStream"],
         default="Offline",
         help="Scenario",
     )
@@ -123,7 +123,7 @@ def get_args():
         "--lg-model-name",
         type=str,
         default="llama3_1-8b",
-        choices=["llama3_1-8b"],
+        choices=["llama3_1-8b", "llama3_1-8b-edge"],
         help="Model name(specified in llm server)",
     )
 
@@ -134,6 +134,7 @@ def get_args():
 scenario_map = {
     "offline": lg.TestScenario.Offline,
     "server": lg.TestScenario.Server,
+    "singlestream": lg.TestScenario.SingleStream,
 }
 
 
@@ -164,7 +165,7 @@ def main():
     else:
         raise NotImplementedError
 
-    sut_map = {"offline": SUT, "server": SUTServer}
+    sut_map = {"offline": SUT, "server": SUTServer, "singlesteam": SUT}
 
     sut_cls = sut_map[args.scenario.lower()]
 

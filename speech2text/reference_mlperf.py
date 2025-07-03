@@ -48,6 +48,7 @@ def get_args():
         default="audit.conf",
         help="audit config for LoadGen settings during compliance runs")
     parser.add_argument("--dataset_dir", required=True)
+    parser.add_argument("--model_path", default="openai/whisper-large-v3")
     parser.add_argument("--manifest", required=True)
     parser.add_argument("--perf_count", type=int, default=None)
     parser.add_argument("--log_dir", required=True)
@@ -72,6 +73,7 @@ def main():
     sut = vllmSUT(args.dataset_dir,
                   args.manifest,
                   args.perf_count,
+                  args.model_path,
                   num_workers=args.num_workers,
                   device="cpu")
     sut.start()

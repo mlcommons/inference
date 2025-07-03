@@ -24,8 +24,8 @@ source mlc/bin/activate
 
 === "Use custom fork/branch of the MLC-Scripts repository"
     ```bash
-     pip install mlcflow && mlc pull repo --url=mlcommons@cm4mlops --branch=mlperf-inference
+     pip install mlcflow && mlc pull repo --url=mlcommons@mlperf-automations --branch=dev
     ```
-    Here, `repo` is in the format `githubUsername@githubRepo`.
+    Here, `repo` is in the format `githubUsername@githubRepo` or you can give any URL
 
 Now, you are ready to use the `mlcr` commands to run MLPerf inference as given in the [benchmarks](../index.md) page

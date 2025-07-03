@@ -65,7 +65,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--input-file", type=str, default=None,
                         help="Path to dataset file(.pkl)")
-    
+
     # Output configuration
     parser.add_argument("--output-dir", type=str, default="mlperf_results",
                         help="Directory for MLPerf output logs")

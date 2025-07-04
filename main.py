@@ -33,13 +33,15 @@ def define_env(env):
 
         if model == "rnnt":
             code_version = "r4.0"
+        if "gpt" in model:
+            code_version = "r5.0-dev"
         elif implementation == "intel":
             code_version = "r4.1-dev"
 
         if implementation == "reference":
             # Tip
-            if model != "rnnt":
-                code_version = "r5.0-dev"
+            if model not in ["rnnt", "gptj-99", "gptj-99.9"]:
+                code_version = "r5.1-dev"
             if "99.9" not in model and implementation_tips:
                 content += f"\n{pre_space}!!! tip\n\n"
                 content += f"{pre_space}    - MLCommons reference implementations are only meant to provide a rules compliant reference implementation for the submitters and in most cases are not best performing. If you want to benchmark any system, it is advisable to use the vendor MLPerf implementation for that system like Nvidia, Intel etc.\n\n"
@@ -54,8 +56,12 @@ def define_env(env):
                     frameworks = ["Onnxruntime", "Pytorch"]
                 elif "bert" in model.lower():
                     frameworks = ["Pytorch", "Deepsparse"]
-                elif "llama3" in model.lower():
-                    frameworks = ["Pytorch"]
+                elif "whisper" in model.lower():
+                    frameworks = ["vLLM"]
+                elif "deepseek" in model.lower():
+                    frameworks = ["vLLM", "Pytorch", "SGLang"]
+                elif "llama3_1-8b" in model.lower():
+                    frameworks = ["vLLM"]
                 else:
                     frameworks = ["Pytorch"]
 
@@ -130,12 +136,7 @@ def define_env(env):
                 categories = ["Datacenter"]
             elif model.lower() in ["pointpainting"]:
                 categories = ["Edge"]
-            elif (
-                "dlrm" in model.lower()
-                or "llama2" in model.lower()
-                or "mixtral" in model.lower()
-                or "llama3" in model.lower()
-            ):
+            elif model.lower() in ["bert-99.9", "dlrm", "llama2", "mixtral", "llama3", "deepseek-r1"]:
                 categories = ["Datacenter"]
             else:
                 categories = ["Edge", "Datacenter"]
@@ -153,8 +154,12 @@ def define_env(env):
                     scenarios.append("MultiStream")
                 if model.lower() in ["pointpainting"]:
                     scenarios.remove("Offline")
+                if model.lower() in ["whisper"]:
+                    scenarios.remove("SingleStream")
             elif category == "Datacenter":
                 scenarios = ["Offline", "Server"]
+                if model.lower() in ["whisper"]:
+                    scenarios.remove("Server")
             if fixed_scenarios:
                 scenarios = [
                     scenario for scenario in scenarios if scenario in fixed_scenarios]
@@ -164,7 +169,7 @@ def define_env(env):
             cur_space = pre_space + "    "
             scenarios_string = ", ".join(scenarios)
 
-            content += f"{cur_space}### {category} category \n\n{cur_space} In the {category.lower()} category, {model} has {scenarios_string} scenarios and all the scenarios are mandatory for a closed division submission.\n\n"
+            content += f"""{cur_space}### {category} category \n\n{cur_space} In the {category.lower()} category, {model} has {scenarios_string} scenario{"s" if len(scenarios)>1 else ""} and {"all of the scenarios are" if len(scenarios)>1 else "the scenario is"}  mandatory for a closed division submission.\n\n"""
 
             for framework in frameworks:
                 cur_space1 = cur_space + "    "
@@ -539,7 +544,7 @@ def define_env(env):
             info += f"{pre_space}    - In valid execution mode, the query count for performance mode can be adjusted using `--env.MLC_MLPERF_LOADGEN_QUERY_COUNT=<query_count>`.\n\n"
 
         if implementation.lower() == "reference" and model.lower() not in [
-                "pointpainting"]:
+                "pointpainting", "llama3_1-8b",  "deepseek-r1", "whisper"]:
 
             info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
@@ -568,6 +573,10 @@ def define_env(env):
             elif "llama3" in model.lower():
                 info += f"{pre_space}    - `--env.MLC_MLPERF_MODEL_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
                 info += f"{pre_space}    - `--env.MLC_MLPERF_DATASET_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
+            elif model.lower() in ["llama3_1-8b", "whisper", "deepseek-r1"]:
+                info += f"{pre_space}    - `--env.MLC_USE_ML_MODEL_FROM_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
+                info += f"{pre_space}    - `--env.MLC_USE_DATASET_FROM_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
+            
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"

@@ -81,6 +81,7 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
     try:
         tokenizer = AutoTokenizer.from_pretrained(
             checkpoint_path,
+            revision='56d4cbbb4d29f4355bab4b9a39ccb717a14ad5ad',
             model_max_length=22000,
             padding_side="left",
             use_fast=False,
@@ -771,8 +772,8 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
     results = {
         # 'evaluated': int(evaluated),
         # 'correct': int(correct),
-        'mean-accuracy': float(accuracy),
-        'mean-output-tok-len': mean_output_len,
+        'exact_match': float(accuracy),
+        'TOKENS_PER_SAMPLE': mean_output_len,
         'num-samples': len(df_evaluated),
     }
 
@@ -834,11 +835,42 @@ def process_and_save_dataframe(df: pd.DataFrame,
 # Main Function
 # =============================================================================
 
+def detect_file_type(file_path: Union[str, Path]) -> str:
+    """Detect whether file is MLPerf JSON or pickle format.
+
+    Returns:
+        "mlperf_json" or "pickle"
+    """
+    file_path = Path(file_path)
+
+    # Check by extension first
+    if file_path.suffix.lower() == '.json':
+        return "mlperf_json"
+    elif file_path.suffix.lower() in ['.pkl', '.pickle']:
+        return "pickle"
+
+    # Try to detect by content
+    try:
+        # Try reading as JSON first
+        with open(file_path, 'r') as f:
+            first_char = f.read(1)
+            if first_char in ['[', '{']:
+                # Likely JSON
+                return "mlperf_json"
+    except BaseException:
+        pass
+
+    # Default to pickle
+    return "pickle"
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Evaluate model outputs with parallel LiveCodeBench processing")
+        description="Evaluate model outputs - supports both pickle DataFrames and MLPerf JSON logs")
     parser.add_argument("--input-file", required=True,
-                        help="Input pickle file")
+                        help="Input file (pickle DataFrame or MLPerf JSON log)")
+    parser.add_argument("--dataset-file",
+                        help="Dataset file with ground truth (required for MLPerf JSON input, auto-detected if not provided)")
     parser.add_argument(
         "--output-file", help="Output pickle file (defaults to <input-file>_evaluated.pkl)")
     parser.add_argument("--verbose", action="store_true",
@@ -852,30 +884,67 @@ def main():
     if not os.path.exists(args.input_file):
         raise FileNotFoundError(f"Input file not found: {args.input_file}")
 
+    input_path = Path(args.input_file)
+
+    # Detect file type
+    file_type = detect_file_type(input_path)
+    logger.info(f"Detected input file type: {file_type}")
+
     # Determine output file path
     if args.output_file:
         output_path = Path(args.output_file)
         output_dir = output_path.parent
         output_filename = output_path.name
     else:
-        input_path = Path(args.input_file)
         output_dir = input_path.parent
         output_filename = input_path.stem + "_evaluated.pkl"
 
     logger.info(f"Processing: {args.input_file}")
 
-    # Load and process data
-    with open(args.input_file, 'rb') as f:
-        df = pickle.load(f)
+    if file_type == "mlperf_json":
+        # Handle MLPerf JSON format
+        logger.info("Processing MLPerf accuracy log JSON file")
 
-    logger.info(f"Loaded {len(df)} rows")
+        # Find or validate dataset file
+        if args.dataset_file:
+            dataset_file = Path(args.dataset_file)
+            if not dataset_file.exists():
+                raise FileNotFoundError(
+                    f"Specified dataset file not found: {dataset_file}")
+        else:
+            # Try to auto-detect dataset file
+            raise FileNotFoundError(
+                "Please specify dataset file when input-file is mlperf_accuracy_log.json")
 
-    # Process and save with unified function
-    df_evaluated, saved_file_path = process_and_save_dataframe(
-        df,
-        output_dir=output_dir,
-        base_filename=output_filename
-    )
+        # Use default checkpoint path from run_mlperf.py
+        checkpoint_path = "deepseek-ai/DeepSeek-R1"
+        logger.info(f"Using default checkpoint path: {checkpoint_path}")
+
+        # Process MLPerf log
+        df_evaluated, saved_file_path = process_mlperf_log_accuracy(
+            mlperf_log_file=input_path,
+            dataset_file=dataset_file,
+            checkpoint_path=checkpoint_path,
+            output_dir=output_dir,
+            base_filename=output_filename
+        )
+
+    else:
+        # Handle pickle DataFrame format
+        logger.info("Processing pickle DataFrame file")
+
+        # Load and process data
+        with open(args.input_file, 'rb') as f:
+            df = pickle.load(f)
+
+        logger.info(f"Loaded {len(df)} rows")
+
+        # Process and save with unified function
+        df_evaluated, saved_file_path = process_and_save_dataframe(
+            df,
+            output_dir=output_dir,
+            base_filename=output_filename
+        )
 
     # Print evaluation results with unified function
     print_evaluation_results(df_evaluated, logger)

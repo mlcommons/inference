@@ -772,8 +772,8 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
     results = {
         # 'evaluated': int(evaluated),
         # 'correct': int(correct),
-        'mean-accuracy': float(accuracy),
-        'mean-output-tok-len': mean_output_len,
+        'exact_match': float(accuracy),
+        'TOKENS_PER_SAMPLE': mean_output_len,
         'num-samples': len(df_evaluated),
     }
 

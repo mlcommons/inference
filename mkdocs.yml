@@ -46,11 +46,15 @@ nav:
         - GPT-J: benchmarks/language/gpt-j.md
         - LLAMA2-70B: benchmarks/language/llama2-70b.md
         - LLAMA3-405B: benchmarks/language/llama3_1-405b.md
+        - LLAMA3-8B: benchmarks/language/llama3_1-8b.md
         - MIXTRAL-8x7B: benchmarks/language/mixtral-8x7b.md
+        - DeepSeek-R1: benchmarks/language/deepseek-r1.md
       - Recommendation:
         - DLRM-v2: benchmarks/recommendation/dlrm-v2.md
       - Graph Neural Networks:
         - R-GAT: benchmarks/graph/rgat.md
+      - Speech to Text:
+        - Whisper: benchmarks/speech_to_text/whisper.md
   - Install MLCFlow:
     - install/index.md
   - Submission:

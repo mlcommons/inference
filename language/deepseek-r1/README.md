@@ -1,5 +1,11 @@
 # Mlperf Inference DeepSeek Reference Implementation
 
+## Automated command to run the benchmark via MLFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/deepseek-r1/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do pip install mlc-scripts and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+
 ## Model & Dataset Download
 
 > **Model**: [deepseek-ai/DeepSeek-R1](https://huggingface.co/deepseek-ai/DeepSeek-R1) (revision: `56d4cbbb4d29f4355bab4b9a39ccb717a14ad5ad`)
@@ -10,6 +16,14 @@
 ## Dataset Download
 
 ### Preprocessed
+
+**Using MLCFlow Automation**
+
+```
+mlcr get,dataset,whisper,_preprocessed,_mlc,_rclone --outdirname=<path to download> -j
+```
+
+**Using Native method**
 
 You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
 
@@ -29,6 +43,14 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/deepseek_r1/mlperf_deeps
 ```
 
 ### Calibration
+
+**Using MLCFlow Automation**
+
+```
+mlcr get,preprocessed,dataset,deepseek-r1,_calibration,_mlc,_rclone --outdirname=<path to download> -j
+```
+
+**Using Native method**
 
 Download and install Rclone as described in the previous section.
 
@@ -170,6 +192,14 @@ The following table shows which backends support different evaluation and MLPerf
 > **Note**: For PyTorch backend, use the `_mpi` versions with `torchrun`. For vLLM and SGLang backends, use the single-process versions without `_mpi`.
 
 ## Accuracy Evaluation
+
+**Using MLCFlow Automation**
+
+```
+TBD
+```
+
+**Using Native method**
 
 Accuracy evaluation is handled uniformly across all backends:
 

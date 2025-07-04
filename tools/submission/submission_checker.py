@@ -478,7 +478,7 @@ MODEL_CONFIG = {
             ),
             "rgat": ("acc", 0.7286 * 0.99),
             "pointpainting": ("mAP", 0.5425 * 0.999),
-            "deepseek-r1": ("exact_match", 0.99 * 81.9132, "TOKENS_PER_SAMPLE", 0.9 * 3949.648),
+            "deepseek-r1": ("exact_match", 0.99 * 81.6773, "TOKENS_PER_SAMPLE", 0.9 * 4043.449),
             "whisper": ("WER", 2.0671 * 0.99),
         },
         "accuracy-upper-limit": {
@@ -493,7 +493,7 @@ MODEL_CONFIG = {
             "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
             "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
             "llama3.1-8b": ("GEN_LEN", 8167644 * 1.1),
-            "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 3949.648)
+            "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 4043.449))
         },
         "accuracy-delta-perc": {
             "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}

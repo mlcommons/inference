@@ -544,7 +544,7 @@ def define_env(env):
             info += f"{pre_space}    - In valid execution mode, the query count for performance mode can be adjusted using `--env.MLC_MLPERF_LOADGEN_QUERY_COUNT=<query_count>`.\n\n"
 
         if implementation.lower() == "reference" and model.lower() not in [
-                "pointpainting", "llama3_1-8b",  "deepseek-r1", "whisper"]:
+                "pointpainting", "llama3_1-8b", "deepseek-r1", "whisper"]:
 
             info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
@@ -576,7 +576,7 @@ def define_env(env):
             elif model.lower() in ["llama3_1-8b", "whisper", "deepseek-r1"]:
                 info += f"{pre_space}    - `--env.MLC_USE_ML_MODEL_FROM_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
                 info += f"{pre_space}    - `--env.MLC_USE_DATASET_FROM_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
-            
+
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"

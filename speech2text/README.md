@@ -1,5 +1,11 @@
 # Reference Implementation for whisper-large-v3
 
+## Automated command to run the benchmark via MLFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/whisper/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do pip install mlc-scripts and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+
 ## Prepare environment
 
 ### Docker
@@ -92,6 +98,15 @@ VLLM_TARGET_DEVICE=cpu pip install --break-system-packages . --no-build-isolatio
 ## Get Model
 ### MLCommons Download
 
+**Official Model download using MLCFlow Automation**
+
+You can download the model automatically via the below command
+```
+mlcr get,ml-model,whisper,_rclone,_mlc --outdirname=<path_to_download> -j
+```
+
+**Official Model download using native method**
+
 You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
 
 To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
@@ -111,6 +126,15 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/Whisper/model/ ./ -P
 
 ### External Download (Not recommended for official submission)
 
+**External Model download using MLCFlow Automation**
+
+You can download the model automatically via the below command
+```
+TBD
+```
+
+**External Model download using native method**
+
 + Requires Git Large Files Storage
 ```bash
 export CHECKPOINT_PATH=whisper-large-v3
@@ -127,6 +151,13 @@ We use dev-clean and dev-other splits, which are approximately 10 hours.
 
 ### Preprocessed
 
+**Using MLCFlow Automation**
+```
+mlcr get,dataset,whisper,_preprocessed,_mlc,_rclone --outdirname=<path to download> -j
+```
+
+**Native method**
+
 Download and install rclone as decribed in the [MLCommons Download section](#mlcommons-download)
 
 You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
@@ -135,6 +166,13 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/Whisper/dataset/ ./ -P
 ```
 
 ### Unprocessed
+
+**Using MLCFlow Automation**
+```
+mlcr get,dataset,whisper,_unprocessed --outdirname=<path to download> -j
+```
+
+**Native method**
 
 If your are using docker, we provide a script to download and preprocess the dataset from the source. You can download it by running:
 ```bash
@@ -226,6 +264,14 @@ python reference_mlperf.py \
 ```
 
 ### Run Accuracy
+
+**Evaluate Accuracy using  MLCFlow Automation**
+
+```
+mlcr run,accuracy,mlperf,_librispeech_whisper,_int32 --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+**Evaluate Accuracy using native method**
 
 ```bash
 python reference_mlperf.py \

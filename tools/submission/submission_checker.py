@@ -493,7 +493,7 @@ MODEL_CONFIG = {
             "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
             "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
             "llama3.1-8b": ("GEN_LEN", 8167644 * 1.1),
-            "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 4043.449))
+            "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 4043.449)
         },
         "accuracy-delta-perc": {
             "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}

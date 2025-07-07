@@ -6,7 +6,6 @@ on:
       - master  # Trigger workflow on commits to 'dev' branch
   workflow_dispatch: {}
 
-
 jobs:
   update-dev:
     if: github.repository_owner == 'mlcommons'

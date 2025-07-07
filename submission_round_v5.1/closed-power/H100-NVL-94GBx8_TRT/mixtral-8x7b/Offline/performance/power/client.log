@@ -1,0 +1,54 @@
+client 2025-02-27 14:52:41,681 [INFO] Sending command to the server: 'mlcommons/power client v3'
+client 2025-02-27 14:52:41,681 [INFO] Got response: 'mlcommons/power server v3'
+client 2025-02-27 14:52:41,681 [INFO] Synchronizing with the server and with ntp2.css.fujitsu.com...
+client 2025-02-27 14:52:41,734 [INFO] NTP:offset = -0.001 s, delay = 0.023 s 
+client 2025-02-27 14:52:41,734 [INFO] Sending command to the server: 'time'
+client 2025-02-27 14:52:41,735 [INFO] Got response: '1740667961.7349834'
+client 2025-02-27 14:52:41,735 [INFO] The time difference between the client and the server is within range -0.254 ms..0.103 ms
+client 2025-02-27 14:52:41,735 [INFO] Sending command to the server: 'new,,a8c68047-68c9-4d68-b3ac-a644c2e8d5ca'
+client 2025-02-27 14:52:41,735 [INFO] Got response: 'OK 2025-02-27_23-52-41,83212cee-58b9-4a73-8f47-eb5b10881124'
+client 2025-02-27 14:52:41,735 [INFO] Session id is '2025-02-27_23-52-41'
+client 2025-02-27 14:52:41,735 [INFO] Sources: {"sources": {"__init__.py": "da39a3ee5e6b4b0d3255bfef95601890afd80709", "client.py": "33ca4f26368777ac06e01f9567b714a4b8063886", "lib/__init__.py": "da39a3ee5e6b4b0d3255bfef95601890afd80709", "lib/client.py": "ac2aa093c8e8bbc9569b9e2a3471bc64e58a2258", "lib/common.py": "611d8b29633d331eb19c9455ea3b5fa3284ed6df", "lib/external/__init__.py": "da39a3ee5e6b4b0d3255bfef95601890afd80709", "lib/external/ntplib.py": "4da8f970656505a40483206ef2b5d3dd5e81711d", "lib/server.py": "9bc9a3b6b9b716520658ac175913bcbbdb354336", "lib/source_hashes.py": "60a2e02193209e8d392803326208d5466342da18", "lib/summary.py": "602a9fedfa503e5544d27ab3b0067f235047efc3", "lib/time_sync.py": "80894ef2389e540781ff78de94db16aa4203a14e", "server.py": "c3f90f2f7eeb4db30727556d0c815ebc89b3d28b", "tests/unit/__init__.py": "da39a3ee5e6b4b0d3255bfef95601890afd80709", "tests/unit/test_server.py": "948c1995d4008bc2aa6c4046a34ffa3858d6d671", "tests/unit/test_source_hashes.py": "00468a2907583c593e6574a1f6b404e4651c221a"}, "modules": {"ptd_client_server.lib.client": "lib/client.py", "ptd_client_server.lib.common": "lib/common.py", "ptd_client_server.lib.external.ntplib": "lib/external/ntplib.py", "ptd_client_server.lib.source_hashes": "lib/source_hashes.py", "ptd_client_server.lib.summary": "lib/summary.py", "ptd_client_server.lib.time_sync": "lib/time_sync.py"}}
+client 2025-02-27 14:52:41,735 [INFO] Running workload in ranging mode
+client 2025-02-27 14:52:41,735 [INFO] Synchronizing with the server and with ntp2.css.fujitsu.com...
+client 2025-02-27 14:52:41,794 [INFO] NTP:offset = -0.006 s, delay = 0.032 s 
+client 2025-02-27 14:52:41,794 [INFO] Sending command to the server: 'time'
+client 2025-02-27 14:52:41,794 [INFO] Got response: '1740667961.7946997'
+client 2025-02-27 14:52:41,794 [INFO] The time difference between the client and the server is within range -0.237 ms..0.214 ms
+client 2025-02-27 14:52:41,794 [INFO] Sending command to the server: 'session,2025-02-27_23-52-41,start,ranging'
+client 2025-02-27 14:53:25,497 [INFO] Got response: 'OK'
+client 2025-02-27 14:53:25,497 [INFO] Sending command to the server: 'time'
+client 2025-02-27 14:53:25,498 [INFO] Got response: '1740668005.4980216'
+client 2025-02-27 14:53:25,498 [INFO] The time difference between the client and the server is within range -0.268 ms..0.095 ms
+client 2025-02-27 14:53:25,498 [INFO] Running the workload 'LOG_DIR=/work/build/power_logs_temp python3 -m code.main --benchmarks=mixtral-8x7b --scenarios=Offline --test_mode=PerformanceOnly --action="run_harness" \\\n\t\t2>&1 | tee -a /work/build/power_logs/2025.02.27-14.51.01/stdout.txt \\\n\t\t&& if [ ! -d /work/build/power_logs/2025.02.27-14.51.01/ranging_tmp ]; \\\n\t\t\tthen mkdir /work/build/power_logs/2025.02.27-14.51.01/ranging_tmp \\\n\t\t\t\t&& mv /work/build/power_logs_temp/* /work/build/power_logs/2025.02.27-14.51.01/ranging_tmp/ \\\n\t\t\t\t&& cp -v /work/build/power_logs/2025.02.27-14.51.01/ranging_tmp/*/*/*/mlperf_log_detail.txt /work/build/power_logs_temp/ \\\n\t\t\t\t&& cp -v /work/build/power_logs/2025.02.27-14.51.01/ranging_tmp/*/*/*/mlperf_log_summary.txt /work/build/power_logs_temp/; \\\n\t\t\telse mkdir /work/build/power_logs/2025.02.27-14.51.01/testing_tmp \\\n\t\t\t\t&& mv /work/build/power_logs_temp/* /work/build/power_logs/2025.02.27-14.51.01/testing_tmp/ \\\n\t\t\t\t&& cp -v /work/build/power_logs/2025.02.27-14.51.01/testing_tmp/*/*/*/mlperf_log_detail.txt /work/build/power_logs_temp/ \\\n\t\t\t\t&& cp -v /work/build/power_logs/2025.02.27-14.51.01/testing_tmp/*/*/*/mlperf_log_summary.txt /work/build/power_logs_temp/; fi; sleep 300'
+client 2025-02-27 15:48:14,407 [INFO] Sending command to the server: 'time'
+client 2025-02-27 15:48:14,408 [INFO] Got response: '1740671294.4081213'
+client 2025-02-27 15:48:14,408 [INFO] The time difference between the client and the server is within range -0.562 ms..0.352 ms
+client 2025-02-27 15:48:14,408 [INFO] Sending command to the server: 'session,2025-02-27_23-52-41,stop,ranging'
+client 2025-02-27 15:48:24,716 [INFO] Got response: 'OK'
+client 2025-02-27 15:48:24,716 [INFO] Sending command to the server: 'time'
+client 2025-02-27 15:48:24,716 [INFO] Got response: '1740671304.716655'
+client 2025-02-27 15:48:24,716 [INFO] The time difference between the client and the server is within range -0.221 ms..0.227 ms
+client 2025-02-27 15:48:24,719 [INFO] Copying loadgen logs from '/work/build/power_logs_temp' to '/work/build/power_logs/2025.02.27-14.51.01/2025-02-27_23-52-41/ranging'
+client 2025-02-27 15:48:24,720 [INFO] Running workload in testing mode
+client 2025-02-27 15:48:24,720 [INFO] Synchronizing with the server and with ntp2.css.fujitsu.com...
+client 2025-02-27 15:48:24,767 [INFO] NTP:offset = -0.001 s, delay = 0.023 s 
+client 2025-02-27 15:48:24,767 [INFO] Sending command to the server: 'time'
+client 2025-02-27 15:48:24,768 [INFO] Got response: '1740671304.7683098'
+client 2025-02-27 15:48:24,768 [INFO] The time difference between the client and the server is within range -0.617 ms..0.102 ms
+client 2025-02-27 15:48:24,768 [INFO] Sending command to the server: 'session,2025-02-27_23-52-41,start,testing'
+client 2025-02-27 15:48:46,373 [INFO] Got response: 'OK'
+client 2025-02-27 15:48:46,374 [INFO] Sending command to the server: 'time'
+client 2025-02-27 15:48:46,374 [INFO] Got response: '1740671326.3742657'
+client 2025-02-27 15:48:46,374 [INFO] The time difference between the client and the server is within range -0.255 ms..0.094 ms
+client 2025-02-27 15:48:46,374 [INFO] Running the workload 'LOG_DIR=/work/build/power_logs_temp python3 -m code.main --benchmarks=mixtral-8x7b --scenarios=Offline --test_mode=PerformanceOnly --action="run_harness" \\\n\t\t2>&1 | tee -a /work/build/power_logs/2025.02.27-14.51.01/stdout.txt \\\n\t\t&& if [ ! -d /work/build/power_logs/2025.02.27-14.51.01/ranging_tmp ]; \\\n\t\t\tthen mkdir /work/build/power_logs/2025.02.27-14.51.01/ranging_tmp \\\n\t\t\t\t&& mv /work/build/power_logs_temp/* /work/build/power_logs/2025.02.27-14.51.01/ranging_tmp/ \\\n\t\t\t\t&& cp -v /work/build/power_logs/2025.02.27-14.51.01/ranging_tmp/*/*/*/mlperf_log_detail.txt /work/build/power_logs_temp/ \\\n\t\t\t\t&& cp -v /work/build/power_logs/2025.02.27-14.51.01/ranging_tmp/*/*/*/mlperf_log_summary.txt /work/build/power_logs_temp/; \\\n\t\t\telse mkdir /work/build/power_logs/2025.02.27-14.51.01/testing_tmp \\\n\t\t\t\t&& mv /work/build/power_logs_temp/* /work/build/power_logs/2025.02.27-14.51.01/testing_tmp/ \\\n\t\t\t\t&& cp -v /work/build/power_logs/2025.02.27-14.51.01/testing_tmp/*/*/*/mlperf_log_detail.txt /work/build/power_logs_temp/ \\\n\t\t\t\t&& cp -v /work/build/power_logs/2025.02.27-14.51.01/testing_tmp/*/*/*/mlperf_log_summary.txt /work/build/power_logs_temp/; fi; sleep 300'
+client 2025-02-27 16:43:37,368 [INFO] Sending command to the server: 'time'
+client 2025-02-27 16:43:37,369 [INFO] Got response: '1740674617.369273'
+client 2025-02-27 16:43:37,369 [INFO] The time difference between the client and the server is within range -0.567 ms..0.163 ms
+client 2025-02-27 16:43:37,369 [INFO] Sending command to the server: 'session,2025-02-27_23-52-41,stop,testing'
+client 2025-02-27 16:43:47,536 [INFO] Got response: 'OK'
+client 2025-02-27 16:43:47,537 [INFO] Sending command to the server: 'time'
+client 2025-02-27 16:43:47,537 [INFO] Got response: '1740674627.537125'
+client 2025-02-27 16:43:47,537 [INFO] The time difference between the client and the server is within range -0.084 ms..0.250 ms
+client 2025-02-27 16:43:47,538 [INFO] Copying loadgen logs from '/work/build/power_logs_temp' to '/work/build/power_logs/2025.02.27-14.51.01/2025-02-27_23-52-41/run_1'
+client 2025-02-27 16:43:47,538 [INFO] Done runs

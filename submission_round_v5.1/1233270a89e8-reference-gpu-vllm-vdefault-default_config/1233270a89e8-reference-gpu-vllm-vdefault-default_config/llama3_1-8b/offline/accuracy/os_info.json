@@ -1,0 +1,30 @@
+{
+  "MLC_HOST_OS_TYPE": "linux",
+  "MLC_HOST_OS_BITS": "64",
+  "MLC_HOST_OS_FLAVOR": "ubuntu",
+  "MLC_HOST_OS_FLAVOR_LIKE": "debian",
+  "MLC_HOST_OS_VERSION": "22.04",
+  "MLC_HOST_OS_KERNEL_VERSION": "5.10.0-34-cloud-amd64",
+  "MLC_HOST_OS_GLIBC_VERSION": "2.35",
+  "MLC_HOST_OS_MACHINE": "x86_64",
+  "MLC_HOST_OS_PACKAGE_MANAGER": "apt",
+  "MLC_HOST_OS_PACKAGE_MANAGER_INSTALL_CMD": "DEBIAN_FRONTEND=noninteractive apt-get install -y",
+  "MLC_HOST_OS_PACKAGE_MANAGER_UPDATE_CMD": "apt-get update -y",
+  "+MLC_HOST_OS_DEFAULT_LIBRARY_PATH": [
+    "/usr/local/lib/x86_64-linux-gnu",
+    "/lib/x86_64-linux-gnu",
+    "/usr/lib/x86_64-linux-gnu",
+    "/usr/lib/x86_64-linux-gnu64",
+    "/usr/local/lib64",
+    "/lib64",
+    "/usr/lib64",
+    "/usr/local/lib",
+    "/lib",
+    "/usr/lib",
+    "/usr/x86_64-linux-gnu/lib64",
+    "/usr/x86_64-linux-gnu/lib"
+  ],
+  "MLC_HOST_PLATFORM_FLAVOR": "x86_64",
+  "MLC_HOST_PYTHON_BITS": "64",
+  "MLC_HOST_SYSTEM_NAME": "1233270a89e8"
+}

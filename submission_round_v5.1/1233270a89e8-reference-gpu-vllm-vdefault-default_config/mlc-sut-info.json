@@ -1,0 +1,7 @@
+{
+  "system_name": "1233270a89e8",
+  "implementation": "reference",
+  "device": "gpu",
+  "framework": "vllm",
+  "run_config": "default_config"
+}

@@ -1,0 +1,4 @@
+
+Results
+
+{'rouge1': '38.8286', 'rouge2': '15.964', 'rougeL': '24.5261', 'rougeLsum': '35.8828', 'gen_len': np.int64(8183389), 'gen_num': 13368}

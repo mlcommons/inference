@@ -1,0 +1,7 @@
+{
+    "starting_weights_filename": "mlc-inference:mlcommons-inference-wg-public/R-GAT/RGAT.pt",
+    "weight_transformations": "Yes",
+    "weight_data_types": "INT8",
+    "input_data_types": "INT8",
+    "retraining": "No"
+}

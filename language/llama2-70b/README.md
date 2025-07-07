@@ -291,7 +291,7 @@ Please see the [new docs site](https://docs.mlcommons.org/inference/submission/)
 
 # Run llama2-70b-interactive benchmark
 
-For official, Llama2-70b submissions it is also possible to submit in the interactive category. This sets a more strict latency requirements for Time to First Token (ttft) and Time per Output Token (tpot). Specifically, the interactive category requires loadgen to enforce `ttft <= 450ms` and `ttft <= 40ms`
+For official, Llama2-70b submissions it is also possible to submit in the interactive category. This sets a more strict latency requirements for Time to First Token (ttft) and Time per Output Token (tpot). Specifically, the interactive category requires loadgen to enforce `ttft <= 450ms` and `tpot <= 40ms`
 
 In order to run interactive category, it is sufficient to set the flag `--lg-model-name` as `llama2-70b-interactive` when calling the `main.py` to run the benchmark. For example, to run the server scenario in interactive mode:
 

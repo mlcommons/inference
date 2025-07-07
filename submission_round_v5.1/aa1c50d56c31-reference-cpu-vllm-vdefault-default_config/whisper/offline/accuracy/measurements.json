@@ -1,0 +1,7 @@
+{
+  "starting_weights_filename": "TBD",
+  "retraining": "no",
+  "input_data_types": "fp32",
+  "weight_data_types": "fp32",
+  "weight_transformations": "none"
+}

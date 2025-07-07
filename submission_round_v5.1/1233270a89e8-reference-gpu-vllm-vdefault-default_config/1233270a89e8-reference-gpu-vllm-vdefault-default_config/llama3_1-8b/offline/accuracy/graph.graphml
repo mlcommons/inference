@@ -1,0 +1,111 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <graph edgedefault="directed">
+    <node id="app-mlperf-inference,d775cac873ee4231 ( reference,_llama3_1-8b,_vllm,_cuda,_valid,_r5.1-dev_default,_float16,_offline )" />
+    <node id="detect,os" />
+    <node id="get,sys-utils-cm" />
+    <node id="get,python" />
+    <node id="get,mlcommons,inference,src,_branch.whisper-fix,_branch.master,_repo.https://github.com/anandhu-eng/inference" />
+    <node id="get-mlperf-inference-utils,e341e5f86d8342e5" />
+    <node id="get,mlperf,inference,src,_branch.whisper-fix,_repo.https://github.com/anandhu-eng/inference" />
+    <node id="get,mlperf,inference,utils" />
+    <node id="get-cuda-devices,7a3ede4d3558427a ( with-pycuda )" />
+    <node id="get,cuda,_toolkit" />
+    <node id="get,python3" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.pycuda )" />
+    <node id="get,generic-python-lib,_package.pycuda" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.numpy )" />
+    <node id="get,generic-python-lib,_package.numpy" />
+    <node id="get,cuda-devices,_with-pycuda" />
+    <node id="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" />
+    <node id="detect-cpu,586c8a43320142f7" />
+    <node id="detect,cpu" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.vllm )" />
+    <node id="get,generic-python-lib,_package.vllm" />
+    <node id="get,ml-model,llama3,_hf,_meta-llama/Llama-3.1-8B-Instruct" />
+    <node id="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" />
+    <node id="get-mlperf-inference-sut-configs,c2fbf72009e2445b" />
+    <node id="get,cache,dir,_name.mlperf-inference-sut-configs" />
+    <node id="get,sut,configs" />
+    <node id="get,mlcommons,inference,src,_branch.whisper-fix,_repo.https://github.com/anandhu-eng/inference" />
+    <node id="generate,user-conf,mlperf,inference,_wg-inference" />
+    <node id="get,loadgen,_wg-inference" />
+    <node id="get,mlcommons,inference,src" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.psutil )" />
+    <node id="get,generic-python-lib,_package.psutil" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.transformers )" />
+    <node id="get,generic-python-lib,_package.transformers" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.sentencepiece )" />
+    <node id="get,generic-python-lib,_package.sentencepiece" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.accelerate )" />
+    <node id="get,generic-python-lib,_package.accelerate" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.pybind11 )" />
+    <node id="get,generic-python-lib,_package.pybind11" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.nltk )" />
+    <node id="get,generic-python-lib,_package.nltk" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.evaluate )" />
+    <node id="get,generic-python-lib,_package.evaluate" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.absl-py )" />
+    <node id="get,generic-python-lib,_package.absl-py" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.rouge-score )" />
+    <node id="get,generic-python-lib,_package.rouge-score" />
+    <node id="get,dataset,cnndm,_validation,_datacenter,_llama3,_mlc,_rclone" />
+    <node id="benchmark-program,19f369ef47084895" />
+    <node id="benchmark-program-mlperf,cfff0132a8aa4018" />
+    <node id="benchmark-program,program" />
+    <node id="benchmark-mlperf" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_llama3_1-8b,_vllm,_cuda,_valid,_r5.1-dev_default,_float16,_offline )" target="detect,os" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_llama3_1-8b,_vllm,_cuda,_valid,_r5.1-dev_default,_float16,_offline )" target="get,sys-utils-cm" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_llama3_1-8b,_vllm,_cuda,_valid,_r5.1-dev_default,_float16,_offline )" target="get,python" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_llama3_1-8b,_vllm,_cuda,_valid,_r5.1-dev_default,_float16,_offline )" target="get,mlcommons,inference,src,_branch.whisper-fix,_branch.master,_repo.https://github.com/anandhu-eng/inference" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_llama3_1-8b,_vllm,_cuda,_valid,_r5.1-dev_default,_float16,_offline )" target="get,mlperf,inference,utils" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_llama3_1-8b,_vllm,_cuda,_valid,_r5.1-dev_default,_float16,_offline )" target="get,cuda-devices,_with-pycuda" />
+    <edge source="get-mlperf-inference-utils,e341e5f86d8342e5" target="get,mlperf,inference,src,_branch.whisper-fix,_repo.https://github.com/anandhu-eng/inference" />
+    <edge source="get-cuda-devices,7a3ede4d3558427a ( with-pycuda )" target="get,cuda,_toolkit" />
+    <edge source="get-cuda-devices,7a3ede4d3558427a ( with-pycuda )" target="get,python3" />
+    <edge source="get-cuda-devices,7a3ede4d3558427a ( with-pycuda )" target="get,generic-python-lib,_package.pycuda" />
+    <edge source="get-cuda-devices,7a3ede4d3558427a ( with-pycuda )" target="get,generic-python-lib,_package.numpy" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.pycuda )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.numpy )" target="get,python3" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="detect,os" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="detect,cpu" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,sys-utils-cm" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,python" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,generic-python-lib,_package.vllm" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,ml-model,llama3,_hf,_meta-llama/Llama-3.1-8B-Instruct" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="generate,user-conf,mlperf,inference,_wg-inference" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,loadgen,_wg-inference" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,mlcommons,inference,src,_branch.whisper-fix,_repo.https://github.com/anandhu-eng/inference" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,mlcommons,inference,src" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,generic-python-lib,_package.psutil" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,generic-python-lib,_package.transformers" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,generic-python-lib,_package.sentencepiece" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,generic-python-lib,_package.accelerate" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,generic-python-lib,_package.pybind11" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,generic-python-lib,_package.nltk" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,generic-python-lib,_package.evaluate" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,generic-python-lib,_package.absl-py" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,generic-python-lib,_package.rouge-score" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="get,dataset,cnndm,_validation,_datacenter,_llama3,_mlc,_rclone" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( cuda,_vllm,_offline,_llama3_1-8b,_float16 )" target="benchmark-mlperf" />
+    <edge source="detect-cpu,586c8a43320142f7" target="detect,os" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.vllm )" target="get,python3" />
+    <edge source="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" target="detect,os" />
+    <edge source="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" target="detect,cpu" />
+    <edge source="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" target="get,python" />
+    <edge source="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" target="get,sut,configs" />
+    <edge source="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" target="get,mlcommons,inference,src,_branch.whisper-fix,_repo.https://github.com/anandhu-eng/inference" />
+    <edge source="get-mlperf-inference-sut-configs,c2fbf72009e2445b" target="get,cache,dir,_name.mlperf-inference-sut-configs" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.psutil )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.transformers )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.sentencepiece )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.accelerate )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.pybind11 )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.nltk )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.evaluate )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.absl-py )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.rouge-score )" target="get,python3" />
+    <edge source="benchmark-program,19f369ef47084895" target="detect,cpu" />
+    <edge source="benchmark-program-mlperf,cfff0132a8aa4018" target="benchmark-program,program" />
+  </graph>
+</graphml>

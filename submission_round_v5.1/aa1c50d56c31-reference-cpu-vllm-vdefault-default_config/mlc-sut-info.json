@@ -1,0 +1,7 @@
+{
+  "system_name": "aa1c50d56c31",
+  "implementation": "reference",
+  "device": "cpu",
+  "framework": "vllm",
+  "run_config": "default_config"
+}

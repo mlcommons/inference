@@ -1,0 +1,7 @@
+{
+  "starting_weights_filename": "https://armi.in/files/resnet50_v1.onnx",
+  "retraining": "no",
+  "input_data_types": "int8",
+  "weight_data_types": "int8",
+  "weight_transformations": "no"
+}

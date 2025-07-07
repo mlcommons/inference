@@ -1,0 +1,7 @@
+{
+    "input_data_types": "int32",
+    "retraining": "No",
+    "starting_weights_filename": "Original Hugginface model weights",
+    "weight_data_types": "fp8",
+    "weight_transformations": "quantization, affine fusion"
+}

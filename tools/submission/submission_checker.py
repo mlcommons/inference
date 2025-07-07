@@ -992,10 +992,10 @@ class Config:
         self,
         version,
         extra_model_benchmark_map,
-        ignore_uncommited = False,
-        skip_power_check = False,
-        skip_all_systems_with_results = False,
-        skip_calibration_check = False
+        ignore_uncommited=False,
+        skip_power_check=False,
+        skip_all_systems_with_results=False,
+        skip_calibration_check=False
     ):
         self.base = MODEL_CONFIG.get(version)
         self.extra_model_benchmark_map = extra_model_benchmark_map

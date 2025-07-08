@@ -15,6 +15,14 @@ You can also do pip install mlc-scripts and then use `mlcr` commands for downloa
 
 ## Dataset Download
 
+The dataset is an ensemble of the datasets: AIME, MATH500, gpqa, MMLU-Pro, livecodebench(code_generation_lite). They are covered by the following licenses:
+
+- AIME: [CC0](https://creativecommons.org/public-domain/cc0/)
+- MATH500: [MIT](https://opensource.org/license/mit), based on [original paper](https://arxiv.org/pdf/2103.03874)
+- gpqa: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
+- MMLU-Pro: [MIT](https://opensource.org/license/mit)
+- livecodebench(code_generation_lite): [CC](https://creativecommons.org/share-your-work/cclicenses/)
+
 ### Preprocessed
 
 **Using MLCFlow Automation**

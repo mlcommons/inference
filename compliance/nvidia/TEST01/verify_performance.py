@@ -39,12 +39,12 @@ RESULT_FIELD = {
 }
 
 
-def result_log(file_path):
+def parse_result_log(file_path):
     score, target_latency = 0, None
-    score = float(mlperf_log[RESULT_FIELD[scenario]])
 
     mlperf_log = MLPerfLog(file_path)
     scenario = mlperf_log["effective_scenario"]
+    score = float(mlperf_log[RESULT_FIELD[scenario]])
 
     if not (
         "result_validity" in mlperf_log.get_keys()
@@ -88,7 +88,7 @@ def main():
     if test_scenario != ref_scenario:
         sys.exit("TEST FAIL: Test and reference scenarios do not match!")
 
-    if ref_mode == "Server" and test_target_latency != ref_target_latency:
+    if ref_scenario == "Server" and test_target_latency != ref_target_latency:
         sys.exit("TEST FAIL: Server target latency mismatch")
 
     print(f"Reference score = {ref_score}")

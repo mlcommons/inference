@@ -861,7 +861,7 @@ ACC_PATTERN = {
     "ROUGE1": r".*'rouge1':\s+'?([\d.]+)'?.*",
     "ROUGE2": r".*'rouge2':\s+'?([\d.]+)'?.*",
     "ROUGEL": r".*'rougeL':\s+'?([\d.]+)'?.*",
-    "ROUGELSUM": r".*'rougeLsum':\s([\d.]+).*",
+    "ROUGELSUM": r".*'rougeLsum':\s+'?([\d.]+)'?.*",
     "GEN_LEN": r".*'gen_len':\s([\d.]+).*",
     "TOKENS_PER_SAMPLE": r".*'tokens_per_sample':\s([\d.]+).*",
     "CLIP_SCORE": r".*'CLIP_SCORE':\s+'?([\d.]+).*",

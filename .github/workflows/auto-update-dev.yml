@@ -3,9 +3,8 @@ name: Auto-Update Dev Branches from Master
 on:
   push:
     branches:
-      - master  # Trigger workflow on commits to 'dev' branch
+      - master  # Trigger workflow on commits to 'master' branch
   workflow_dispatch: {}
-
 
 jobs:
   update-dev:

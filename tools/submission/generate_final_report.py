@@ -244,7 +244,7 @@ def main():
                 "rgat": [],
                 "stable-diffusion-xl": ["SingleStream", "Offline"],
                 "pointpainting": ["SingleStream"],
-                "llama3.1-8b": ["SingleStream", "Offline"],
+                "llama3.1-8b-edge": ["SingleStream", "Offline"],
                 "whisper": ["Offline"],
             },
         }

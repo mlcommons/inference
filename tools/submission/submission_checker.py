@@ -340,6 +340,7 @@ MODEL_CONFIG = {
             "3d-unet-99",
             "3d-unet-99.9",
             "llama3.1-8b",
+            "llama3.1-8b-edge",
             "llama2-70b-99",
             "llama2-70b-99.9",
             "stable-diffusion-xl",
@@ -379,7 +380,7 @@ MODEL_CONFIG = {
             "bert-99.9": ["SingleStream", "Offline"],
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
-            "llama3.1-8b": ["SingleStream", "Offline"],
+            "llama3.1-8b-edge": ["SingleStream", "Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline"],
             "pointpainting": ["SingleStream"],
             "whisper": ["Offline"],
@@ -394,18 +395,24 @@ MODEL_CONFIG = {
             "dlrm-v2-99.9": ["Offline", "Server"],
             "3d-unet-99": ["SingleStream", "Offline"],
             "3d-unet-99.9": ["SingleStream", "Offline"],
-            "llama3.1-8b": ["SingleStream", "Offline", "Server"],
-            "llama2-70b-99": ["Server", "Offline"],
-            "llama2-70b-99.9": ["Server", "Offline"],
+            "llama3.1-8b": ["Offline"],
+            "llama3.1-8b-edge": ["SingleStream", "Offline"],
+            "llama2-70b-99": ["Offline"],
+            "llama2-70b-99.9": ["Offline"],
             "stable-diffusion-xl": ["SingleStream", "Offline", "Server"],
             "mixtral-8x7b": ["Server", "Offline"],
-            "llama3.1-405b": ["Server", "Offline"],
+            "llama3.1-405b": ["Offline"],
             "rgat": ["Offline"],
             "pointpainting": ["SingleStream"],
             "deepseek-r1": ["SingleStream", "Server", "Offline"],
             "whisper": ["Offline"],
         },
-        "optional-scenarios-datacenter-edge": {},
+        "optional-scenarios-datacenter-edge": {
+            "llama2-70b-99": ["Interactive", "Server"],
+            "llama2-70b-99.9": ["Interactive", "Server"],
+            "llama3.1-405b": ["Interactive", "Server"],
+            "llama3.1-8b": ["Interactive", "Server"],
+        },
         "accuracy-target": {
             "resnet": ("acc", 76.46 * 0.99),
             "retinanet": ("mAP", 37.55 * 0.99),
@@ -417,6 +424,18 @@ MODEL_CONFIG = {
             "3d-unet-99.9": ("DICE", 0.86170 * 0.999),
 
             "llama3.1-8b": (
+                "ROUGE1",
+                38.7792 * 0.99,
+                "ROUGE2",
+                15.9075 * 0.99,
+                "ROUGEL",
+                24.4957 * 0.99,
+                "ROUGELSUM",
+                35.793 * 0.99,
+                "GEN_LEN",
+                8167644 * 0.9,
+            ),
+            "llama3.1-8b-edge": (
                 "ROUGE1",
                 38.7792 * 0.99,
                 "ROUGE2",
@@ -493,6 +512,7 @@ MODEL_CONFIG = {
             "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
             "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
             "llama3.1-8b": ("GEN_LEN", 8167644 * 1.1),
+            "llama3.1-8b-edge": ("GEN_LEN", 8167644 * 1.1),
             "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 4043.449)
         },
         "accuracy-delta-perc": {
@@ -508,6 +528,7 @@ MODEL_CONFIG = {
             "3d-unet-99": 43,
             "3d-unet-99.9": 43,
             "llama3.1-8b": 13368,
+            "llama3.1-8b-edge": 5000,
             "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
             "stable-diffusion-xl": 5000,
@@ -528,6 +549,7 @@ MODEL_CONFIG = {
             "3d-unet-99": 43,
             "3d-unet-99.9": 43,
             "llama3.1-8b": 13368,
+            "llama3.1-8b-edge": 5000,
             "llama2-70b-99": 24576,
             "llama2-70b-99.9": 24576,
             "stable-diffusion-xl": 5000,
@@ -548,6 +570,7 @@ MODEL_CONFIG = {
             "resnet50": "resnet",
             "llama3_1-405b": "llama3.1-405b",
             "llama3_1-8b": "llama3.1-8b",
+            "llama3_1-8b-edge": "llama3.1-8b-edge",
         },
         "seeds": {
             # TODO: Update random seeds
@@ -589,6 +612,7 @@ MODEL_CONFIG = {
             "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
             "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
             "llama3.1-8b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama3.1-8b-edge": {"SingleStream": 1024, "Offline": 1},
             "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "stable-diffusion-xl": {
@@ -684,6 +708,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "3d-unet-99.9": 43,
     "rnnt": 2513,
     "llama3.1-8b": 13368,
+    "llama3.1-8b-edge": 5000,
     "llama2-70b-99": 24576,
     "llama2-70b-99.9": 24576,
     "llama2-70b-interactive-99": 24576,
@@ -770,8 +795,11 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
             "Server": "result_completed_tokens_per_second",
         },
         "llama3.1-8b": {
-            "Offline": "result_inferred_tokens_per_second",
-            "Server": "result_inferred_completed_tokens_per_second",
+            "Offline": "result_tokens_per_second",
+            "Server": "result_completed_tokens_per_second",
+        },
+        "llama3.1-8b-edge": {
+            "Offline": "result_tokens_per_second",
         },
         "mixtral-8x7b": {
             "Offline": "result_tokens_per_second",
@@ -819,7 +847,6 @@ LLM_LATENCY_LIMITS = {
             "ttft": 450 * 1000000, "tpot": 40 * 1000000
         },
     },
-    # for v5.0
     "mixtral-8x7b": {
         "Server": {
             "ttft": 2000 * 1000000, "tpot": 200 * 1000000
@@ -1142,6 +1169,7 @@ class Config:
                 "mixtral-8x7b",
                 "llama3.1-405b",
                 "llama3.1-8b",
+                "llama3.1-8b-edge",
                 "deepseek-r1",
                 "rgat",
                 "whisper",
@@ -1552,7 +1580,7 @@ def check_performance_dir(
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
                  "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
-                 "mixtral-8x7b", "llama3.1-405b", "llama3.1-8b", "deepseek-r1"]:
+                 "mixtral-8x7b", "llama3.1-405b", "llama3.1-8b", "llama3.1-8b-edge", "deepseek-r1"]:
         llm_is_valid = extra_check_llm(
             mlperf_log, scenario_fixed, model)
         is_valid = (llm_is_valid and is_valid)
@@ -2073,6 +2101,9 @@ def check_results_dir(
             "llama3.1-8b": {
                 "Offline": "Tokens/s",
                 "Server": "Tokens/s",
+            },
+            "llama3.1-8b-edge": {
+                "Offline": "Tokens/s",
             },
             "llama2-70b-99": {
                 "Offline": "Tokens/s",
@@ -3237,6 +3268,7 @@ def check_compliance_dir(
         "retinanet",
         "rnnt",
         "llama3.1-8b",
+        "llama3.1-8b-edge",
         "llama2-70b-99",
         "llama2-70b-99.9",
         "mixtral-8x7b",
@@ -3249,6 +3281,7 @@ def check_compliance_dir(
 
     if model in [
         "llama3.1-8b",
+        "llama3.1-8b-edge"
         "llama2-70b-99",
         "llama2-70b-99.9",
         "mixtral-8x7b",

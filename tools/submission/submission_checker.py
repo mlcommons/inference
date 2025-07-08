@@ -1144,6 +1144,7 @@ class Config:
                 "llama3.1-8b",
                 "deepseek-r1",
                 "rgat",
+                "whisper",
             ]
         )
 

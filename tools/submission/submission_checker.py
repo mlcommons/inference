@@ -612,7 +612,7 @@ MODEL_CONFIG = {
             "3d-unet-99": {"SingleStream": 1024, "Offline": 1},
             "3d-unet-99.9": {"SingleStream": 1024, "Offline": 1},
             "llama3.1-8b": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
-            "llama3.1-8b-edge": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
+            "llama3.1-8b-edge": {"SingleStream": 1024, "Offline": 1},
             "llama2-70b-99": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "llama2-70b-99.9": {"SingleStream": 1024, "Server": 270336, "Offline": 1},
             "stable-diffusion-xl": {

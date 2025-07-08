@@ -38,7 +38,7 @@ For power submissions please use [SPEC PTD 1.11.1](https://github.com/mlcommons/
 | rgat | [graph/rgat](https://github.com/mlcommons/inference/tree/master/graph/R-GAT) | pytorch | IGBH | datacenter |
 | pointpainting | [automotive/3d-object-detection](https://github.com/mlcommons/inference/tree/master/automotive/3d-object-detection) | pytorch, onnx | Waymo Open Dataset | edge |
 | llama3.1-8b | [language/llama3.1-8b](https://github.com/mlcommons/inference/tree/master/language/llama3.1-8b)| pytorch | CNN-Daily Mail | edge,datacenter |
-| deepseek-r1 | [language/deepseek-r1](https://github.com/mlcommons/inference/tree/master/language/deepseek-r1)| pytorch | mlperf_deepseek_r1 | datacenter |
+| deepseek-r1 | [language/deepseek-r1](https://github.com/mlcommons/inference/tree/master/language/deepseek-r1)| pytorch | AIME, MATH500, gpqa, MMLU-Pro, livecodebench(code_generation_lite) | datacenter |
 | whisper | [speech2text](https://github.com/mlcommons/inference/tree/master/speech2text)| pytorch | LibriSpeech | edge,datacenter |
 
 * Framework here is given for the reference implementation. Submitters are free to use their own frameworks to run the benchmark.

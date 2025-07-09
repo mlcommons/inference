@@ -1,5 +1,7 @@
 site_name: MLPerf Inference Documentation
 repo_url: https://github.com/mlcommons/inference
+site_url: https://docs.mlcommons.org/inference
+
 theme:
   name: material
   logo: img/logo_v2.svg

@@ -1,0 +1,57 @@
+{
+    "TestScenario.Offline": {
+        "accuracy": 76.456,
+        "count": 1563,
+        "good_items": 38228,
+        "mean": 13.528697830091588,
+        "percentiles": {
+            "50.0": 15.497029066085815,
+            "80.0": 16.397869920730592,
+            "90.0": 16.545261430740357,
+            "95.0": 16.73752965927124,
+            "99.0": 17.670465126037595,
+            "99.9": 18.58139852094654
+        },
+        "qps": 38.49086250998872,
+        "took": 40.60704016685486,
+        "total_items": 50000
+    },
+    "args": {
+        "accuracy": true,
+        "audit_conf": "audit.config",
+        "backend": "onnxruntime",
+        "cache": 0,
+        "cache_dir": "/home/mlcuser/MLC/repos/local/cache/get-preprocessed-dataset-imagenet_bd3b1ac3",
+        "count": null,
+        "data_format": null,
+        "dataset": "imagenet",
+        "dataset_list": "/home/mlcuser/MLC/repos/local/cache/extract-file_imagenet-aux-da_5d253dd9/val.txt",
+        "dataset_path": "/home/mlcuser/MLC/repos/local/cache/get-preprocessed-dataset-imagenet_bd3b1ac3",
+        "debug": false,
+        "device": null,
+        "find_peak_performance": false,
+        "inputs": null,
+        "max_batchsize": 32,
+        "max_latency": null,
+        "model": "/home/mlcuser/MLC/repos/local/cache/download-file_ml-model-resnet_81f75a29/resnet50_v1.onnx",
+        "model_name": "resnet50",
+        "output": "/home/mlcuser/MLC/repos/local/cache/get-mlperf-inference-results-dir_426d7d65/valid_results/361d999f1365-reference-gpu-onnxruntime-v1.22.0-cu124/resnet50/offline/accuracy",
+        "outputs": [
+            "ArgMax:0"
+        ],
+        "performance_sample_count": null,
+        "preprocessed_dir": null,
+        "profile": "resnet50-onnxruntime",
+        "qps": null,
+        "samples_per_query": 8,
+        "scenario": "Offline",
+        "threads": 2,
+        "time": null,
+        "use_preprocessed_dataset": true,
+        "user_conf": "/home/mlcuser/MLC/repos/mlcommons@mlperf-automations/script/generate-mlperf-inference-user-conf/tmp/04c13b2da68944f2abb19f8ea477e861.conf"
+    },
+    "cmdline": "Namespace(dataset='imagenet', dataset_path='/home/mlcuser/MLC/repos/local/cache/get-preprocessed-dataset-imagenet_bd3b1ac3', dataset_list='/home/mlcuser/MLC/repos/local/cache/extract-file_imagenet-aux-da_5d253dd9/val.txt', data_format=None, profile='resnet50-onnxruntime', scenario='Offline', max_batchsize=32, model='/home/mlcuser/MLC/repos/local/cache/download-file_ml-model-resnet_81f75a29/resnet50_v1.onnx', output='/home/mlcuser/MLC/repos/local/cache/get-mlperf-inference-results-dir_426d7d65/valid_results/361d999f1365-reference-gpu-onnxruntime-v1.22.0-cu124/resnet50/offline/accuracy', inputs=None, outputs=['ArgMax:0'], backend='onnxruntime', device=None, model_name='resnet50', threads=2, qps=None, cache=0, cache_dir='/home/mlcuser/MLC/repos/local/cache/get-preprocessed-dataset-imagenet_bd3b1ac3', preprocessed_dir=None, use_preprocessed_dataset=True, accuracy=True, find_peak_performance=False, debug=False, user_conf='/home/mlcuser/MLC/repos/mlcommons@mlperf-automations/script/generate-mlperf-inference-user-conf/tmp/04c13b2da68944f2abb19f8ea477e861.conf', audit_conf='audit.config', time=None, count=None, performance_sample_count=None, max_latency=None, samples_per_query=8)",
+    "runtime": "onnxruntime",
+    "time": 1752060647,
+    "version": "1.22.0"
+}

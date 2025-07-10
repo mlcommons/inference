@@ -1,0 +1,7 @@
+{
+  "system_name": "14aae5651ab1",
+  "implementation": "reference",
+  "device": "gpu",
+  "framework": "onnxruntime v1.22.0",
+  "run_config": "cu124"
+}

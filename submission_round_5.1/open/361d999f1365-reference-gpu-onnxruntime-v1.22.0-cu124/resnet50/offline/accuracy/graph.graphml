@@ -1,0 +1,100 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <graph edgedefault="directed">
+    <node id="app-mlperf-inference,d775cac873ee4231 ( reference,_resnet50,_onnxruntime,_cuda,_valid,_r5.1-dev_default,_offline )" />
+    <node id="detect,os" />
+    <node id="get,sys-utils-cm" />
+    <node id="get,python" />
+    <node id="get,mlcommons,inference,src" />
+    <node id="get-mlperf-inference-utils,e341e5f86d8342e5" />
+    <node id="get,mlperf,inference,src" />
+    <node id="get,mlperf,inference,utils" />
+    <node id="get,dataset-aux,imagenet-aux" />
+    <node id="get-cuda-devices,7a3ede4d3558427a ( with-pycuda )" />
+    <node id="get,cuda,_toolkit" />
+    <node id="get,python3" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.pycuda )" />
+    <node id="get,generic-python-lib,_package.pycuda" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.numpy )" />
+    <node id="get,generic-python-lib,_package.numpy" />
+    <node id="get,cuda-devices,_with-pycuda" />
+    <node id="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" />
+    <node id="detect-cpu,586c8a43320142f7" />
+    <node id="detect,cpu" />
+    <node id="get,cuda,_cudnn" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( onnxruntime_gpu )" />
+    <node id="get,generic-python-lib,_onnxruntime_gpu" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( onnxruntime )" />
+    <node id="get,generic-python-lib,_onnxruntime" />
+    <node id="get,ml-model,image-classification,resnet50,raw,_fp32,_onnx" />
+    <node id="get,dataset,image-classification,imagenet,preprocessed,_-for.mobilenet,_NCHW,_full" />
+    <node id="get,dataset-aux,image-classification,imagenet-aux" />
+    <node id="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" />
+    <node id="get-mlperf-inference-sut-configs,c2fbf72009e2445b" />
+    <node id="get,cache,dir,_name.mlperf-inference-sut-configs" />
+    <node id="get,sut,configs" />
+    <node id="generate,user-conf,mlperf,inference,_wg-inference" />
+    <node id="get,loadgen,_wg-inference" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( package.psutil )" />
+    <node id="get,generic-python-lib,_package.psutil" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( opencv-python )" />
+    <node id="get,generic-python-lib,_opencv-python" />
+    <node id="get,generic-sys-util,_libgl" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( numpy )" />
+    <node id="get,generic-python-lib,_numpy" />
+    <node id="get-generic-python-lib,94b62a682bc44791 ( pycocotools )" />
+    <node id="get,generic-python-lib,_pycocotools" />
+    <node id="benchmark-program,19f369ef47084895" />
+    <node id="benchmark-program-mlperf,cfff0132a8aa4018" />
+    <node id="benchmark-program,program" />
+    <node id="benchmark-mlperf" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_resnet50,_onnxruntime,_cuda,_valid,_r5.1-dev_default,_offline )" target="detect,os" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_resnet50,_onnxruntime,_cuda,_valid,_r5.1-dev_default,_offline )" target="get,sys-utils-cm" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_resnet50,_onnxruntime,_cuda,_valid,_r5.1-dev_default,_offline )" target="get,python" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_resnet50,_onnxruntime,_cuda,_valid,_r5.1-dev_default,_offline )" target="get,mlcommons,inference,src" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_resnet50,_onnxruntime,_cuda,_valid,_r5.1-dev_default,_offline )" target="get,mlperf,inference,utils" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_resnet50,_onnxruntime,_cuda,_valid,_r5.1-dev_default,_offline )" target="get,dataset-aux,imagenet-aux" />
+    <edge source="app-mlperf-inference,d775cac873ee4231 ( reference,_resnet50,_onnxruntime,_cuda,_valid,_r5.1-dev_default,_offline )" target="get,cuda-devices,_with-pycuda" />
+    <edge source="get-mlperf-inference-utils,e341e5f86d8342e5" target="get,mlperf,inference,src" />
+    <edge source="get-cuda-devices,7a3ede4d3558427a ( with-pycuda )" target="get,cuda,_toolkit" />
+    <edge source="get-cuda-devices,7a3ede4d3558427a ( with-pycuda )" target="get,python3" />
+    <edge source="get-cuda-devices,7a3ede4d3558427a ( with-pycuda )" target="get,generic-python-lib,_package.pycuda" />
+    <edge source="get-cuda-devices,7a3ede4d3558427a ( with-pycuda )" target="get,generic-python-lib,_package.numpy" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.pycuda )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.numpy )" target="get,python3" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="detect,os" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="detect,cpu" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,sys-utils-cm" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,python" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,cuda,_cudnn" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,generic-python-lib,_onnxruntime_gpu" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,generic-python-lib,_onnxruntime" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,ml-model,image-classification,resnet50,raw,_fp32,_onnx" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,dataset,image-classification,imagenet,preprocessed,_-for.mobilenet,_NCHW,_full" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,dataset-aux,image-classification,imagenet-aux" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="generate,user-conf,mlperf,inference,_wg-inference" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,loadgen,_wg-inference" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,mlcommons,inference,src" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,generic-python-lib,_package.psutil" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,generic-python-lib,_opencv-python" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,generic-sys-util,_libgl" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,generic-python-lib,_numpy" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="get,generic-python-lib,_pycocotools" />
+    <edge source="app-mlperf-inference-mlcommons-python,ff149e9781fc4b65 ( onnxruntime,_offline,_cuda,_resnet50,_fp32 )" target="benchmark-mlperf" />
+    <edge source="detect-cpu,586c8a43320142f7" target="detect,os" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( onnxruntime_gpu )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( onnxruntime )" target="get,python3" />
+    <edge source="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" target="detect,os" />
+    <edge source="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" target="detect,cpu" />
+    <edge source="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" target="get,python" />
+    <edge source="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" target="get,sut,configs" />
+    <edge source="generate-mlperf-inference-user-conf,3af4475745964b93 ( wg-inference )" target="get,mlcommons,inference,src" />
+    <edge source="get-mlperf-inference-sut-configs,c2fbf72009e2445b" target="get,cache,dir,_name.mlperf-inference-sut-configs" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( package.psutil )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( opencv-python )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( numpy )" target="get,python3" />
+    <edge source="get-generic-python-lib,94b62a682bc44791 ( pycocotools )" target="get,python3" />
+    <edge source="benchmark-program,19f369ef47084895" target="detect,cpu" />
+    <edge source="benchmark-program-mlperf,cfff0132a8aa4018" target="benchmark-program,program" />
+  </graph>
+</graphml>

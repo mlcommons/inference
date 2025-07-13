@@ -1,0 +1,60 @@
+{
+    "TestScenario.Offline": {
+        "count": 24576,
+        "good_items": 0,
+        "mean": 0.24646644745371304,
+        "percentiles": {
+            "50.0": 0.2465198040008545,
+            "80.0": 0.2510991096496582,
+            "90.0": 0.253093957901001,
+            "95.0": 0.2547343373298645,
+            "99.0": 0.2581218481063843,
+            "99.9": 0.2628926694393159
+        },
+        "qps": 24.162081166574453,
+        "took": 1017.1309263706207,
+        "total_items": 24576
+    },
+    "args": {
+        "accuracy": false,
+        "audit_conf": "audit.config",
+        "backend": "onnxruntime",
+        "cache": 0,
+        "cache_dir": "/home/mlcuser/MLC/repos/local/cache/get-preprocessed-dataset-openimages_aeaec90d",
+        "count": null,
+        "data_format": null,
+        "dataset": "openimages-800-retinanet-onnx",
+        "dataset_list": "/home/mlcuser/MLC/repos/local/cache/get-preprocessed-dataset-openimages_aeaec90d/annotations/openimages-mlperf.json",
+        "dataset_path": "/home/mlcuser/MLC/repos/local/cache/get-preprocessed-dataset-openimages_aeaec90d",
+        "debug": false,
+        "device": null,
+        "find_peak_performance": false,
+        "inputs": [
+            "images"
+        ],
+        "max_batchsize": 1,
+        "max_latency": null,
+        "model": "/home/mlcuser/MLC/repos/local/cache/download-file_get-ml-model-mo_833148bf/resnext50_32x4d_fpn.onnx",
+        "model_name": "retinanet",
+        "output": "/home/mlcuser/MLC/repos/local/cache/get-mlperf-inference-results-dir_426d7d65/valid_results/a18cbc095633-reference-gpu-onnxruntime-v1.22.0-cu124/retinanet/offline/performance/run_1",
+        "outputs": [
+            "boxes",
+            "labels",
+            "scores"
+        ],
+        "performance_sample_count": null,
+        "preprocessed_dir": null,
+        "profile": "retinanet-onnxruntime",
+        "qps": null,
+        "samples_per_query": 8,
+        "scenario": "Offline",
+        "threads": 1,
+        "time": null,
+        "use_preprocessed_dataset": true,
+        "user_conf": "/home/mlcuser/MLC/repos/mlcommons@mlperf-automations/script/generate-mlperf-inference-user-conf/tmp/ef452e7edfef435287c531e8aaae5705.conf"
+    },
+    "cmdline": "Namespace(dataset='openimages-800-retinanet-onnx', dataset_path='/home/mlcuser/MLC/repos/local/cache/get-preprocessed-dataset-openimages_aeaec90d', dataset_list='/home/mlcuser/MLC/repos/local/cache/get-preprocessed-dataset-openimages_aeaec90d/annotations/openimages-mlperf.json', data_format=None, profile='retinanet-onnxruntime', scenario='Offline', max_batchsize=1, model='/home/mlcuser/MLC/repos/local/cache/download-file_get-ml-model-mo_833148bf/resnext50_32x4d_fpn.onnx', output='/home/mlcuser/MLC/repos/local/cache/get-mlperf-inference-results-dir_426d7d65/valid_results/a18cbc095633-reference-gpu-onnxruntime-v1.22.0-cu124/retinanet/offline/performance/run_1', inputs=['images'], outputs=['boxes', 'labels', 'scores'], backend='onnxruntime', device=None, model_name='retinanet', threads=1, qps=None, cache=0, cache_dir='/home/mlcuser/MLC/repos/local/cache/get-preprocessed-dataset-openimages_aeaec90d', preprocessed_dir=None, use_preprocessed_dataset=True, accuracy=False, find_peak_performance=False, debug=False, user_conf='/home/mlcuser/MLC/repos/mlcommons@mlperf-automations/script/generate-mlperf-inference-user-conf/tmp/ef452e7edfef435287c531e8aaae5705.conf', audit_conf='audit.config', time=None, count=None, performance_sample_count=None, max_latency=None, samples_per_query=8)",
+    "runtime": "onnxruntime",
+    "time": 1752365261,
+    "version": "1.22.0"
+}

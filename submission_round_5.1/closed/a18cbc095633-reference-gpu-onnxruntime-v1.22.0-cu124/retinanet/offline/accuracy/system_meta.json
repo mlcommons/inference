@@ -32,6 +32,6 @@
   "submitter": "MLCommons",
   "sw_notes": "",
   "system_name": "a18cbc095633",
-  "system_type": "edge",
-  "system_type_detail": "edge server"
+  "system_type": "datacenter",
+  "system_type_detail": "datacenter offline"
 }

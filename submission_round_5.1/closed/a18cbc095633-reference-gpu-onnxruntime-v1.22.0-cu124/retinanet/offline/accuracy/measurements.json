@@ -1,0 +1,7 @@
+{
+  "starting_weights_filename": "resnext50_32x4d_fpn.onnx",
+  "retraining": "no",
+  "input_data_types": "fp32",
+  "weight_data_types": "fp32",
+  "weight_transformations": "no"
+}

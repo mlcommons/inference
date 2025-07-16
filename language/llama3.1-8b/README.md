@@ -143,17 +143,17 @@ You can then navigate in the terminal to your desired download directory and run
 
 #### Full dataset (datacenter) 
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_eval.json ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/cnn_eval.json ./ -P
 ```
 
 #### 5000 samples (edge)
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/sample_cnn_eval_5000.json ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/sample_cnn_eval_5000.json ./ -P
 ```
 
 #### Calibration
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_dailymail_calibration.json ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/cnn_dailymail_calibration.json ./ -P
 ```
 
 **MLC Command**

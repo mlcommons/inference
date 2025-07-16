@@ -498,7 +498,7 @@ MODEL_CONFIG = {
             "rgat": ("acc", 0.7286 * 0.99),
             "pointpainting": ("mAP", 0.5425 * 0.999),
             "deepseek-r1": ("exact_match", 0.99 * 81.6773, "TOKENS_PER_SAMPLE", 0.9 * 4043.449),
-            "whisper": ("WER", 2.0671 * 0.99),
+            "whisper": ("ACCURACY", (100.0-2.0671) * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -883,7 +883,7 @@ ACC_PATTERN = {
     "mAP": r".*(?:mAP=|'Total':)\s*([\d.]+)",
     "bleu": r"^BLEU\:\s*([\d\.]+).*",
     "F1": r"^{[\"\']exact_match[\"\']\:\s*[\d\.]+,\s*[\"\']f1[\"\']\:\s*([\d\.]+)}",
-    "WER": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
+    "ACCURACY": r"Word Error Rate\:.*, accuracy=([0-9\.]+)%",
     "DICE": r"Accuracy\:\s*mean\s*=\s*([\d\.]+).*",
     "ROUGE1": r".*'rouge1':\s+'?([\d.]+)'?.*",
     "ROUGE2": r".*'rouge2':\s+'?([\d.]+)'?.*",

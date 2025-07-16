@@ -291,3 +291,9 @@ For official submissions, accuracy is required to be 99% of the reference accura
 Word Error Rate: 2.0671%, accuracy=97.9329%
 ```
 
+## FAQ
+
+Q: Whisper's native audio input duration is fixed at 30 seconds. Is it permitted to modify the loaded duration to match the sample's specific duration?
+
+A: No, it is not permitted to modify the loaded duration even if continuing to meet the model's accuracy threshold. Samples must be zero-padded to ensure consistent computation and accuracy criteria.
+

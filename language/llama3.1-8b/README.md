@@ -159,7 +159,7 @@ mlcr get,dataset,cnndm,_validation,_datacenter,_llama3,_mlc,_rclone --outdirname
 
 **Native method**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_eval.json ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/cnn_eval.json ./ -P
 ```
 
 #### 5000 samples (edge)
@@ -171,7 +171,7 @@ mlcr get,dataset,cnndm,_validation,_edge,_llama3,_mlc,_rclone --outdirname=<path
 
 **Native method**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/sample_cnn_eval_5000.json ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/sample_cnn_eval_5000.json ./ -P
 ```
 
 #### Calibration
@@ -183,7 +183,7 @@ mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_rclone --outdirname=<path to d
 
 **Native method**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_dailymail_calibration.json ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/cnn_dailymail_calibration.json ./ -P
 ```
 
 You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:

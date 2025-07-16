@@ -54,7 +54,7 @@ class BackendDeploy(backend.Backend):
         return "python-SUT"
 
     def load(self):
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         PaintArgs = namedtuple(
             'PaintArgs', [
                 'training_path', 'model_path', 'cam_sync'])
@@ -84,7 +84,7 @@ class BackendDeploy(backend.Backend):
         ], [], [], [], [], [], []
         with torch.inference_mode():
             device = torch.device(
-                "cuda:0" if torch.cuda.is_available() else "cpu")
+                "cuda" if torch.cuda.is_available() else "cpu")
             model_input = inputs[0]
             batched_pts = model_input['pts']
             scores_from_cam = []

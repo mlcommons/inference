@@ -55,7 +55,7 @@ class _3DUNET_PyTorch_SUT:
         )
         self.trainer.load_checkpoint_ram(params[0], False)
         self.device = torch.device(
-            "cuda:0" if torch.cuda.is_available() else "cpu")
+            "cuda" if torch.cuda.is_available() else "cpu")
 
         print("Constructing SUT...")
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)

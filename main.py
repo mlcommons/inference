@@ -67,7 +67,7 @@ def define_env(env):
 
         elif implementation == "nvidia":
             if model in ["retinanet", "resnet50",
-                         "3d-unet-99", "3d - unet - 99.9"]:
+                         "3d-unet-99", "3d-unet-99.9"]:
                 code_version = "r5.1-dev"
             if model in ["mixtral-8x7b"]:
                 return pre_space + "    WIP"

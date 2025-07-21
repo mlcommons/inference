@@ -53,7 +53,7 @@ def get_args():
         "--scenario",
         "-s",
         required=True,
-        choices=["Offline", "Server", "SingleStream", "MultiStream"],
+        choices=["Offline", "Server", "Interactive", "SingleStream", "MultiStream"],
     )
     args = parser.parse_args()
     return args

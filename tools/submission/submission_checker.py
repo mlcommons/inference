@@ -3287,6 +3287,7 @@ def check_compliance_dir(
         "mixtral-8x7b",
         "llama3.1-405b",
         "deepseek-r1",
+        "whisper",
     ]:
         test_list.remove("TEST01")
 

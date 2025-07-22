@@ -53,6 +53,7 @@ RUN pip install --break-system-packages torch==2.7.0 torchaudio==2.7.0 torchvisi
     pip install --break-system-packages pandas==2.2.2 toml==0.10.2 unidecode==1.3.8 inflect==7.3.1 librosa==0.10.2 py-libnuma==1.2 numpy==2.0.1 && \
     pip install --break-system-packages sox==1.5.0 && \
     pip install --break-system-packages setuptools-scm && \
+    pip install --break-system-packages transformers==4.52.4 && \
     pip install --break-system-packages -U openai-whisper
 
 WORKDIR /workspace
@@ -62,7 +63,7 @@ COPY ./ /workspace/
 RUN mkdir -p /workspace/third_party && cd /workspace/third_party && \
     git clone https://github.com/vllm-project/vllm vllm-cpu && \
     cd vllm-cpu && \
-    git checkout main && \
+    git checkout b124e1085b1bf977e3dac96d99ffd9d8ddfdb6cc && \
     git log -n1 && \
     pip3 install --break-system-packages -r requirements/cpu.txt && \
     VLLM_TARGET_DEVICE=cpu pip install --break-system-packages . --no-build-isolation

@@ -33,7 +33,7 @@ rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5ee
 You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/deepseek_r1/mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/deepseek_r1/datasets/mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl ./ -P
 ```
 
 ### Calibration
@@ -43,7 +43,7 @@ Download and install Rclone as described in the previous section.
 Then navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/deepseek_r1/mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/deepseek_r1/datasets/mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl ./ -P
 ```
 
 ## Docker

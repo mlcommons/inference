@@ -269,9 +269,6 @@ def process_mlperf_log_accuracy(mlperf_log_file: Union[str, Path],
         base_filename=base_filename
     )
 
-    # Print results using unified function
-    print_evaluation_results(df_evaluated, logger)
-
     return df_evaluated, saved_file_path
 
 
@@ -778,7 +775,7 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
     }
 
     result_str = json.dumps(results, indent=2)
-    logger.info(f"\nEvaluation Results: {result_str}")
+    print(f"\nEvaluation Results: {result_str}")
 
     return results
 

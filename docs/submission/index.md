@@ -179,6 +179,7 @@ If there are multiple systems where MLPerf results are collected, the same proce
     	"get,git,repo,_repo.https://github.com/anandhu-eng/test-sub"
   	]
 	}
+ 	[2025-07-23 17:41:20,515 module.py:2241 INFO] - Path to the submission directory: mysubmissions/mlperf_submission
  	```
     </details>
     

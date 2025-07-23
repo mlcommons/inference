@@ -159,7 +159,7 @@ If there are multiple systems where MLPerf results are collected, the same proce
        --quiet -j
     ```
 
-    The value of the `MLC_MLPERF_INFERENCE_SUBMISSION_DIR` environment variable from the output below can be used in the next step by passing it to the `--submission_dir` argument.
+    When you run the command, your output will include the `MLC_MLPERF_INFERENCE_SUBMISSION_DIR` environment variable. You can use its value from your output in the next step by passing it to the `--submission_dir` argument.
     <details>
   	<summary>Click to see the sample output</summary>
 	```

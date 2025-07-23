@@ -190,7 +190,7 @@ def define_env(env):
                     content += f"{cur_space1}=== \"{device}\"\n"
                     content += f"{cur_space2}##### {device} device\n\n"
 
-                    # minimum system requirements
+                    # get minimum system requirements
                     content += get_min_system_requirements(
 
                         cur_space2, model, implementation, device

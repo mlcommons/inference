@@ -162,7 +162,7 @@ If there are multiple systems where MLPerf results are collected, the same proce
     The value of the `MLC_MLPERF_INFERENCE_SUBMISSION_DIR` environment variable from the output below can be used in the next step by passing it to the `--submission_dir` argument.
     <details>
   	<summary>Click to see the sample output</summary>
-
+	```
   	[2025-07-23 16:36:56,399 module.py:2197 INFO] - {
   	"return": 0,
   	"env": {
@@ -179,6 +179,7 @@ If there are multiple systems where MLPerf results are collected, the same proce
     	"get,git,repo,_repo.https://github.com/anandhu-eng/test-sub"
   	]
 	}
+ 	```
     </details>
     
     ```mermaid

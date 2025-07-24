@@ -3290,12 +3290,18 @@ def check_compliance_dir(
     ]:
         test_list.remove("TEST01")
 
+    # TODO: Make interactive a scenario and remove these.
     if model in ["llama2-70b-interactive-99",
-                 "llama2-70b-interactive-99.9"] and config.version in ["v5.0"]:
+                 "llama2-70b-interactive-99.9",
+                 "llama3.1-8b-interactive",
+                 "llama3.1-405b-interactive"]:
         test_list.remove("TEST01")
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
-                 "mixtral-8x7b", "llama3.1-405b", "llama3.1-8b", "deepseek-r1"]:
+                 "mixtral-8x7b", "llama3.1-405b", "llama3.1-8b", "deepseek-r1",
+                 "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
+                 "llama3.1-8b-interactive", "llama3.1-405b-interactive",
+                 ]:
         test_list.append("TEST06")
 
     if test_list and not os.path.exists(compliance_dir):

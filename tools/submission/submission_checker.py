@@ -3281,12 +3281,12 @@ def check_compliance_dir(
 
     if model in [
         "llama3.1-8b",
-        "llama3.1-8b-edge"
+        "llama3.1-8b-edge",
         "llama2-70b-99",
         "llama2-70b-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
-        "deepseek-r1",
+        "deepseek-r1"
     ]:
         test_list.remove("TEST01")
 

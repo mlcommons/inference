@@ -17,7 +17,7 @@ Please see the [MLPerf Inference benchmark paper](https://arxiv.org/abs/1911.025
 
 Please see [here](https://docs.mlcommons.org/inference/benchmarks/) for the MLPerf inference documentation website which includes automated commands to run MLPerf inference benchmarks using different implementations.
 
-## MLPerf Inference v5.1 (submission deadline July 25, 2025)
+## MLPerf Inference v5.1 (submission deadline August 1, 2025)
 
 For submissions, please use the master branch and any commit since the [5.1 seed release (soon to be released)]() although it is best to use the latest commit in the [master branch](https://github.com/mlcommons/inference).
 

@@ -770,14 +770,12 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
         # 'evaluated': int(evaluated),
         # 'correct': int(correct),
         'exact_match': float(accuracy),
-        'TOKENS_PER_SAMPLE': mean_output_len,
+        'tokens_per_sample': mean_output_len,
         'num-samples': len(df_evaluated),
     }
-
-    result_str = json.dumps(results, indent=2)
-    print(f"\nEvaluation Results: {result_str}")
-
-    return results
+    
+    print("\nResults\n")
+    print(results)
 
 
 def process_and_save_dataframe(df: pd.DataFrame,

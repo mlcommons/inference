@@ -1,4 +1,4 @@
-# Mlperf Inference DeepSeek Reference Implementation
+# MLPerf Inference DeepSeek Reference Implementation
 
 ## Automated command to run the benchmark via MLFlow
 
@@ -13,6 +13,22 @@ You can also do pip install mlc-scripts and then use `mlcr` commands for downloa
 - DeepSeek-R1 model is automatically downloaded as part of setup
 - Checkpoint conversion is done transparently when needed.
 
+**Using the MLC R2 Downloader**
+
+Download the model using the MLCommons R2 Downloader:
+
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1-0528.uri
+```
+
+To specify a custom download directory, use the `-d` flag:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  -d /path/to/download/directory \
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1-0528.uri
+```
+
 ## Dataset Download
 
 The dataset is an ensemble of the datasets: AIME, MATH500, gpqa, MMLU-Pro, livecodebench(code_generation_lite). They are covered by the following licenses:
@@ -23,6 +39,26 @@ The dataset is an ensemble of the datasets: AIME, MATH500, gpqa, MMLU-Pro, livec
 - MMLU-Pro: [MIT](https://opensource.org/license/mit)
 - livecodebench(code_generation_lite): [CC](https://creativecommons.org/share-your-work/cclicenses/)
 
+### Preprocessed & Calibration
+
+**Using the MLC R2 Downloader**
+
+Download the full preprocessed dataset and calibration dataset using the MLCommons R2 Downloader:
+
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+-d ./ https://inference.mlcommons-storage.org/metadata/deepseek-r1-datasets-fp8-eval.uri
+```
+
+This will download the full preprocessed dataset file (`mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl`) and the calibration dataset file (`mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl`).
+
+To specify a custom download directory, use the `-d` flag:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  -d /path/to/download/directory \
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1-datasets-fp8-eval.uri
+```
+
 ### Preprocessed
 
 **Using MLCFlow Automation**
@@ -31,48 +67,12 @@ The dataset is an ensemble of the datasets: AIME, MATH500, gpqa, MMLU-Pro, livec
 mlcr get,dataset,whisper,_preprocessed,_mlc,_rclone --outdirname=<path to download> -j
 ```
 
-**Using Native method**
-
-Download the preprocessed dataset using the MLCommons downloader:
-
-```bash
-bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/metadata/deepseek-r1-datasets-fp8-eval.uri
-```
-
-This will download the dataset file `mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl`.
-
-To specify a custom download directory, use the `-d` flag:
-```bash
-bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  -d /path/to/download/directory \
-  https://inference.mlcommons-storage.org/metadata/deepseek-r1-datasets-fp8-eval.uri
-```
-
 ### Calibration
 
 **Using MLCFlow Automation**
 
 ```
 mlcr get,preprocessed,dataset,deepseek-r1,_calibration,_mlc,_rclone --outdirname=<path to download> -j
-```
-
-**Using Native method**
-
-Download the calibration dataset using the MLCommons downloader:
-
-```bash
-bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/metadata/deepseek-r1-0528.uri
-```
-
-This will download the calibration dataset file `mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl`.
-
-To specify a custom download directory, use the `-d` flag:
-```bash
-bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  -d /path/to/download/directory \
-  https://inference.mlcommons-storage.org/metadata/deepseek-r1-0528.uri
 ```
 
 ## Docker

@@ -1,6 +1,6 @@
 # MLPerf Inference DeepSeek Reference Implementation
 
-## Automated command to run the benchmark via MLFlow
+## Automated command to run the benchmark via MLCFlow
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/deepseek-r1/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 

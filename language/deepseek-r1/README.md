@@ -222,8 +222,8 @@ Pytorch reference scores:
 
 ```bash
 Evaluation Results: {
-  "mean-accuracy": 81.35825,
-  "mean-output-tok-len": 3886.227438,
+  "mean-accuracy": 81.3582,
+  "mean-output-tok-len": 3886.2274,
   "num-samples": 4388
 }
 ```

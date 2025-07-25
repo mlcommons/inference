@@ -111,16 +111,16 @@ Download the Whisper model using the MLCommons downloader:
 
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/whisper%2Fmodel.json
+  https://inference.mlcommons-storage.org/metadata/whisper-model.uri
 ```
 
-This will download the Whisper model files (~25GB).
+This will download the Whisper model files.
 
 To specify a custom download directory, use the `-d` flag:
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
   -d /path/to/download/directory \
-  https://inference.mlcommons-storage.org/whisper%2Fmodel.json
+  https://inference.mlcommons-storage.org/metadata/whisper-model.uri
 ```
 
 ### External Download (Not recommended for official submission)
@@ -161,16 +161,16 @@ Download the preprocessed dataset using the MLCommons downloader:
 
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/whisper%2Fdataset.json
+  https://inference.mlcommons-storage.org/metadata/whisper-dataset.uri
 ```
 
-This will download the LibriSpeech dataset files (~4.6GB).
+This will download the LibriSpeech dataset files.
 
 To specify a custom download directory, use the `-d` flag:
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
   -d /path/to/download/directory \
-  https://inference.mlcommons-storage.org/whisper%2Fdataset.json
+  https://inference.mlcommons-storage.org/metadata/whisper-dataset.uri
 ```
 
 ### Unprocessed

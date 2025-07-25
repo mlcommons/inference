@@ -149,9 +149,9 @@ mlcr get,dataset,cnndm,_validation,_datacenter,_llama3,_mlc,_rclone --outdirname
 **Native method**
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/llama3.1-8b%2Fcnn-eval.json
+  https://inference.mlcommons-storage.org/metadata/llama3-1-8b-cnn-eval.uri
 ```
-This will download `cnn_eval.json` (~267MB).
+This will download `cnn_eval.json`.
 
 #### 5000 samples (edge)
 
@@ -163,9 +163,9 @@ mlcr get,dataset,cnndm,_validation,_edge,_llama3,_mlc,_rclone --outdirname=<path
 **Native method**
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/llama3.1-8b%2Fsample-cnn-eval-5000.json
+  https://inference.mlcommons-storage.org/metadata/llama3-1-8b-sample-cnn-eval-5000.uri
 ```
-This will download `sample_cnn_eval_5000.json` (~95MB).
+This will download `sample_cnn_eval_5000.json`.
 
 #### Calibration
 
@@ -177,9 +177,9 @@ mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_rclone --outdirname=<path to d
 **Native method**
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/llama3.1-8b%2Fcnn-dailymail-calibration.json
+  https://inference.mlcommons-storage.org/metadata/llama3-1-8b-cnn-dailymail-calibration.uri
 ```
-This will download `cnn_dailymail_calibration.json` (~21MB).
+This will download `cnn_dailymail_calibration.json`.
 
 To specify a custom download directory for any of these, use the `-d` flag:
 ```bash

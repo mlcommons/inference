@@ -37,16 +37,16 @@ Download the preprocessed dataset using the MLCommons downloader:
 
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/deepseek-r1%2Fdataset.json
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1-datasets-fp8-eval.uri
 ```
 
-This will download the dataset file `mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl` (~163MB).
+This will download the dataset file `mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl`.
 
 To specify a custom download directory, use the `-d` flag:
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
   -d /path/to/download/directory \
-  https://inference.mlcommons-storage.org/deepseek-r1%2Fdataset.json
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1-datasets-fp8-eval.uri
 ```
 
 ### Calibration
@@ -63,7 +63,7 @@ Download the calibration dataset using the MLCommons downloader:
 
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/deepseek-r1%2Fcalibration.json
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1-0528.uri
 ```
 
 This will download the calibration dataset file `mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl`.
@@ -72,7 +72,7 @@ To specify a custom download directory, use the `-d` flag:
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
   -d /path/to/download/directory \
-  https://inference.mlcommons-storage.org/deepseek-r1%2Fcalibration.json
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1-0528.uri
 ```
 
 ## Docker

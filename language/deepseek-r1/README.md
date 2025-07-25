@@ -33,21 +33,20 @@ mlcr get,dataset,whisper,_preprocessed,_mlc,_rclone --outdirname=<path to downlo
 
 **Using Native method**
 
-You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
+Download the preprocessed dataset using the MLCommons downloader:
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  https://inference.mlcommons-storage.org/deepseek-r1%2Fdataset.json
 ```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
-You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
 
-```
-rclone copy mlc-inference:mlcommons-inference-wg-public/deepseek_r1/datasets/mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl ./ -P
+This will download the dataset file `mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl` (~163MB).
+
+To specify a custom download directory, use the `-d` flag:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  -d /path/to/download/directory \
+  https://inference.mlcommons-storage.org/deepseek-r1%2Fdataset.json
 ```
 
 ### Calibration
@@ -60,12 +59,20 @@ mlcr get,preprocessed,dataset,deepseek-r1,_calibration,_mlc,_rclone --outdirname
 
 **Using Native method**
 
-Download and install Rclone as described in the previous section.
+Download the calibration dataset using the MLCommons downloader:
 
-Then navigate in the terminal to your desired download directory and run the following command to download the dataset:
-
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  https://inference.mlcommons-storage.org/deepseek-r1%2Fcalibration.json
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/deepseek_r1/datasets/mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl ./ -P
+
+This will download the calibration dataset file `mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl`.
+
+To specify a custom download directory, use the `-d` flag:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  -d /path/to/download/directory \
+  https://inference.mlcommons-storage.org/deepseek-r1%2Fcalibration.json
 ```
 
 ## Docker

@@ -137,18 +137,7 @@ Downloading llama3.1-8b model from Hugging Face will require an [**access token*
 
 ### Preprocessed
 
-You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
-
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
-You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
+Download the preprocessed datasets using the MLCommons downloader:
 
 #### Full dataset (datacenter) 
 
@@ -158,9 +147,11 @@ mlcr get,dataset,cnndm,_validation,_datacenter,_llama3,_mlc,_rclone --outdirname
 ```
 
 **Native method**
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  https://inference.mlcommons-storage.org/llama3.1-8b%2Fcnn-eval.json
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/cnn_eval.json ./ -P
-```
+This will download `cnn_eval.json` (~267MB).
 
 #### 5000 samples (edge)
 
@@ -170,9 +161,11 @@ mlcr get,dataset,cnndm,_validation,_edge,_llama3,_mlc,_rclone --outdirname=<path
 ```
 
 **Native method**
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  https://inference.mlcommons-storage.org/llama3.1-8b%2Fsample-cnn-eval-5000.json
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/sample_cnn_eval_5000.json ./ -P
-```
+This will download `sample_cnn_eval_5000.json` (~95MB).
 
 #### Calibration
 
@@ -182,14 +175,17 @@ mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_rclone --outdirname=<path to d
 ```
 
 **Native method**
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  https://inference.mlcommons-storage.org/llama3.1-8b%2Fcnn-dailymail-calibration.json
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/cnn_dailymail_calibration.json ./ -P
-```
+This will download `cnn_dailymail_calibration.json` (~21MB).
 
-You can also download the calibration dataset from the Cloudflare R2 bucket by running the following command:
-
-```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_eval.json ./ -P
+To specify a custom download directory for any of these, use the `-d` flag:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  -d /path/to/download/directory \
+  <URI>
 ```
 
 

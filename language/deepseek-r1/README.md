@@ -116,7 +116,7 @@ The setup script creates a virtual environment and configures it differently bas
 
 ### PyTorch Backend (Distributed)
 
-> ⚠️ **IMPORTANT NOTE**: The PyTorch reference implementation takes approximately 8 days to run on an H200x8 system. This is because large max-OSL (32K) limits concurrency (max-BS=16), and unoptimized pytorch forward and decode logics.
+> ⚠️ **IMPORTANT NOTE**: The PyTorch reference implementation takes approximately upto 8 days to run on an H200x8 system. This is because large max-OSL (20K) limits concurrency (max-BS=16), and unoptimized pytorch forward and decode logics.
 
 PyTorch backend uses distributed execution with `torchrun` and `run_eval_mpi.py`:
 
@@ -222,8 +222,8 @@ Pytorch reference scores:
 
 ```bash
 Evaluation Results: {
-  "mean-accuracy": 81.67730173199635,
-  "mean-output-tok-len": 4043.449863263446,
+  "mean-accuracy": 81.3582,
+  "mean-output-tok-len": 3886.2274,
   "num-samples": 4388
 }
 ```

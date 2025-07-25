@@ -105,13 +105,12 @@ You can download the model automatically via the below command
 mlcr get,ml-model,whisper,_rclone,_mlc --outdirname=<path_to_download> -j
 ```
 
-**Official Model download using native method**
+**Official Model download using MLC R2 Downloader**
 
 Download the Whisper model using the MLCommons downloader:
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/metadata/whisper-model.uri
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d whisper/model https://inference.mlcommons-storage.org/metadata/whisper-model.uri
 ```
 
 This will download the Whisper model files.
@@ -155,13 +154,12 @@ We use dev-clean and dev-other splits, which are approximately 10 hours.
 mlcr get,dataset,whisper,_preprocessed,_mlc,_rclone --outdirname=<path to download> -j
 ```
 
-**Native method**
+**Using MLC R2 Downloader**
 
-Download the preprocessed dataset using the MLCommons downloader:
+Download the preprocessed dataset using the MLCommons R2 Downloader:
 
 ```bash
-bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
-  https://inference.mlcommons-storage.org/metadata/whisper-dataset.uri
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d whisper/dataset https://inference.mlcommons-storage.org/metadata/whisper-dataset.uri
 ```
 
 This will download the LibriSpeech dataset files.

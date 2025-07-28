@@ -98,7 +98,7 @@ mlcr generate,inference,submission \
   --submitter=MLCommons \
   --division=closed \
   --env.MLC_DETERMINE_MEMORY_CONFIGURATION=yes \
-  --quiet -j
+  --quiet
 ```
 !!! tip
     * Use `--hw_name="My system name"` to give a meaningful system name. Examples can be seen [here](https://github.com/mlcommons/inference_results_v3.0/tree/main/open/cTuning/systems)
@@ -156,29 +156,18 @@ If there are multiple systems where MLPerf results are collected, the same proce
     mlcr push,github,mlperf,inference,submission \
        --repo_url=https://github.com/mlcommons/mlperf_inference_submissions_v5.0 \
        --commit_message="Results on <HW name> added by <Name>" \
-       --quiet -j
+       --quiet
     ```
 
     The value of the `MLC_MLPERF_INFERENCE_SUBMISSION_DIR` environment variable from the output below can be used in the next step by passing it to the `--submission_dir` argument.
     <details>
   	<summary>Click to see the sample output</summary>
 	```
-  	[2025-07-23 16:36:56,399 module.py:2197 INFO] - {
-  	"return": 0,
-  	"env": {
-	"MLC_MLPERF_INFERENCE_SUBMISSION_DIR": "mysubmissions/mlperf_submission"
-  	},
-  	"new_env": {
-    	"MLC_MLPERF_INFERENCE_SUBMISSION_DIR": "mysubmissions/mlperf_submission"
-  	},
-  	"state": {},
-  	"new_state": {},
-  	"deps": [
-    	"get,python3",
-    	"get,generic-sys-util,_rsync",
-    	"get,git,repo,_repo.https://github.com/anandhu-eng/test-sub"
-  	]
-	}
+  	[2025-07-23 16:36:56,399 module.py:2197 INFO] - 
+    
+    Path to the locally synced submission directory: mysubmissions/mlperf_submission
+
+    
  	```
     </details>
     
@@ -215,7 +204,7 @@ Once you have all the results on the system, you can upload them to the MLCommon
     ```
     mlcr run,mlperf,submission,checker,inference \
     --submitter_id=<> \
-    --submission_dir=<Path to the submission folder> -j
+    --submission_dir=<Path to the submission folder>
     ``` 
     
 === "via Browser"

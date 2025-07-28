@@ -102,7 +102,7 @@ VLLM_TARGET_DEVICE=cpu pip install --break-system-packages . --no-build-isolatio
 
 You can download the model automatically via the below command
 ```
-mlcr get,ml-model,whisper,_rclone,_mlc --outdirname=<path_to_download> -j
+mlcr get,ml-model,whisper,_r2_downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
 **Official Model download using MLC R2 Downloader**
@@ -151,7 +151,7 @@ We use dev-clean and dev-other splits, which are approximately 10 hours.
 
 **Using MLCFlow Automation**
 ```
-mlcr get,dataset,whisper,_preprocessed,_mlc,_rclone --outdirname=<path to download> -j
+mlcr get,dataset,whisper,_preprocessed,_mlc,_r2_downloader --outdirname=<path to download> -j
 ```
 
 **Using MLC R2 Downloader**

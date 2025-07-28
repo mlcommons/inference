@@ -104,7 +104,7 @@ You need to request for access to [MLCommons](http://llama3-1.mlcommons.org/) an
 **Official Model download using MLCFlow Automation**
 You can download the model automatically via the below command
 ```
-TBD
+mlcr get,ml-model,llama3,_mlc,_8b,_r2_downloader --outdirname=<path to download> -j
 ```
 
 
@@ -143,7 +143,7 @@ Download the preprocessed datasets using the MLCommons downloader:
 
 **Using MLCFlow Automation**
 ```
-mlcr get,dataset,cnndm,_validation,_datacenter,_llama3,_mlc,_rclone --outdirname=<path to download> -j
+mlcr get,dataset,cnndm,_validation,_datacenter,_llama3,_mlc,_r2_downloader --outdirname=<path to download> -j
 ```
 
 **Native method**
@@ -157,7 +157,7 @@ This will download `cnn_eval.json`.
 
 **Using MLCFlow Automation**
 ```
-mlcr get,dataset,cnndm,_validation,_edge,_llama3,_mlc,_rclone --outdirname=<path to download> -j
+mlcr get,dataset,cnndm,_validation,_edge,_llama3,_mlc,_r2_downloader --outdirname=<path to download> -j
 ```
 
 **Native method**
@@ -171,7 +171,7 @@ This will download `sample_cnn_eval_5000.json`.
 
 **Using MLCFlow Automation**
 ```
-mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_rclone --outdirname=<path to download> -j
+mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_r2_downloader --outdirname=<path to download> -j
 ```
 
 **Native method**

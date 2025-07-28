@@ -64,7 +64,7 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 **Using MLCFlow Automation**
 
 ```
-mlcr get,dataset,whisper,_preprocessed,_mlc,_rclone --outdirname=<path to download> -j
+mlcr get,preprocessed,dataset,deepseek-r1,_validation,_mlc,_r2_downloader --outdirname=<path to download> -j
 ```
 
 ### Calibration
@@ -72,7 +72,7 @@ mlcr get,dataset,whisper,_preprocessed,_mlc,_rclone --outdirname=<path to downlo
 **Using MLCFlow Automation**
 
 ```
-mlcr get,preprocessed,dataset,deepseek-r1,_calibration,_mlc,_rclone --outdirname=<path to download> -j
+mlcr get,preprocessed,dataset,deepseek-r1,_calibration,_mlc,_r2_downloader --outdirname=<path to download> -j
 ```
 
 ## Docker
@@ -211,7 +211,7 @@ The following table shows which backends support different evaluation and MLPerf
 **Using MLCFlow Automation**
 
 ```
-TBD
+mlcr run,accuracy,mlperf,_dataset_deepseek-r1 --result_dir=<Path to directory where files are generated after the benchmark run>
 ```
 
 **Using Native method**

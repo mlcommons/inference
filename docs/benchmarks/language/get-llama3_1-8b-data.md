@@ -10,26 +10,27 @@ hide:
 The benchmark implementation run command will automatically download the validation and calibration datasets and do the necessary preprocessing. In case you want to download only the datasets, you can use the below commands.
 
 === "Validation"
-
+    
     === "Full dataset (Datacenter)"
 
         ### Get Validation Dataset
         ```
-        mlcr get,dataset,cnndm,_validation,_datacenter,_llama3,_mlc,_rclone --outdirname=<path to download> -j
+        mlcr get,dataset,cnndm,_validation,_datacenter,_llama3,_mlc,_r2_downloader --outdirname=<path to download> -j
         ```
-    
+
     === "5000 samples (Edge)"
 
         ### Get Validation Dataset
         ```
-        mlcr get,dataset,cnndm,_validation,_edge,_llama3,_mlc,_rclone --outdirname=<path to download> -j
+        mlcr get,dataset,cnndm,_validation,_edge,_llama3,_mlc,_r2_downloader --outdirname=<path to download> -j
         ```
 
 === "Calibration"
-
+        ```
+        
     ### Get Calibration Dataset
     ```
-    mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_rclone --outdirname=<path to download> -j
+    mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_r2_downloader    --outdirname=<path to download> -j
     ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_LLAMA3_405B_DATASET>` could be provided to download the dataset to a specific location.
@@ -39,13 +40,13 @@ The benchmark implementation run command will automatically download the require
 
 === "Pytorch"
 
-    === "From MLCOMMONS Google Drive"
+    === "From Cloudfare R2"
 
         > **Note:**  One has to accept the [MLCommons Llama 3.1 License Confidentiality Notice](http://llama3-1.mlcommons.org/) to access the model files in MLCOMMONS Google Drive. 
 
         ### Get the Official MLPerf LLAMA3.1-405B model from MLCOMMONS Cloudfare R2
         ```
-        TBD
+        mlcr get,ml-model,llama3,_mlc,_8b,_r2_downloader    --outdirname=<path to download> -j
         ```
 
     === "From Hugging Face repo"

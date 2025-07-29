@@ -157,7 +157,7 @@ This will download `cnn_eval.json`.
 
 **Using MLCFlow Automation**
 ```
-mlcr get,dataset,cnndm,_validation,_edge,_llama3,_mlc,_r2_downloader --outdirname=<path to download> -j
+mlcr get,dataset,cnndm,_validation,_edge,_llama3,_mlc,_r2-downloader --outdirname=<path to download> -j
 ```
 
 **Native method**
@@ -173,7 +173,7 @@ This will download `sample_cnn_eval_5000.json`.
 
 **Using MLCFlow Automation**
 ```
-mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_r2_downloader --outdirname=<path to download> -j
+mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_r2-downloader --outdirname=<path to download> -j
 ```
 
 **Native method**

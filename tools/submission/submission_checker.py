@@ -2865,7 +2865,7 @@ def check_results_dir(
                                 required_scenarios,
                             )
 
-                    if "Server" in optional_scenarios and "Interactive" in optional_scenarios:
+                    if is_closed_or_network and "Server" in optional_scenarios and "Interactive" in optional_scenarios:
                         results[name] = None
                         log.error(
                             "%s does not have all required scenarios, one of [Server, Interactive] is required",

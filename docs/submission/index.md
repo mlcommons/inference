@@ -159,7 +159,7 @@ If there are multiple systems where MLPerf results are collected, the same proce
        --quiet
     ```
 
-    The value of the `MLC_MLPERF_INFERENCE_SUBMISSION_DIR` environment variable from the output below can be used in the next step by passing it to the `--submission_dir` argument.
+    The path to the locally synced submission directory from the output below can be used in the next step by passing it to the `--submission_dir` argument.
     <details>
   	<summary>Click to see the sample output</summary>
 	```

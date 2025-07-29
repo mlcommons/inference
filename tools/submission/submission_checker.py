@@ -437,15 +437,15 @@ MODEL_CONFIG = {
             ),
             "llama3.1-8b-edge": (
                 "ROUGE1",
-                38.7792 * 0.99,
+                39.06 * 0.99,
                 "ROUGE2",
-                15.9075 * 0.99,
+                16.1147 * 0.99,
                 "ROUGEL",
-                24.4957 * 0.99,
+                24.6375 * 0.99,
                 "ROUGELSUM",
-                35.793 * 0.99,
+                36.124 * 0.99,
                 "GEN_LEN",
-                8167644 * 0.9,
+                3051113 * 0.9,
             ),
             "llama2-70b-99": (
                 "ROUGE1",
@@ -512,7 +512,7 @@ MODEL_CONFIG = {
             "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
             "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
             "llama3.1-8b": ("GEN_LEN", 8167644 * 1.1),
-            "llama3.1-8b-edge": ("GEN_LEN", 8167644 * 1.1),
+            "llama3.1-8b-edge": ("GEN_LEN", 3051113 * 1.1),
             "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 3886.2274)
         },
         "accuracy-delta-perc": {

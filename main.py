@@ -45,7 +45,7 @@ def define_env(env):
             if "99.9" not in model and implementation_tips:
                 content += f"\n{pre_space}!!! tip\n\n"
                 content += f"{pre_space}    - MLCommons reference implementations are only meant to provide a rules compliant reference implementation for the submitters and in most cases are not best performing. If you want to benchmark any system, it is advisable to use the vendor MLPerf implementation for that system like Nvidia, Intel etc.\n\n"
-                if model in [ "sdxl" ]:
+                if model in ["sdxl"]:
                     content += f"\n{pre_space}> **Note:** {model.upper()} reference implementation does not support multithreading.\n\n"
             if not devices:
                 devices = ["CPU", "CUDA", "ROCm"]

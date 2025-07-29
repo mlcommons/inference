@@ -64,7 +64,7 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 **Using MLCFlow Automation**
 
 ```
-mlcr get,preprocessed,dataset,deepseek-r1,_validation,_mlc,_r2_downloader --outdirname=<path to download> -j
+mlcr get,preprocessed,dataset,deepseek-r1,_validation,_mlc,_r2-downloader --outdirname=<path to download> -j
 ```
 
 ### Calibration
@@ -72,7 +72,7 @@ mlcr get,preprocessed,dataset,deepseek-r1,_validation,_mlc,_r2_downloader --outd
 **Using MLCFlow Automation**
 
 ```
-mlcr get,preprocessed,dataset,deepseek-r1,_calibration,_mlc,_r2_downloader --outdirname=<path to download> -j
+mlcr get,preprocessed,dataset,deepseek-r1,_calibration,_mlc,_r2-downloader --outdirname=<path to download> -j
 ```
 
 ## Docker

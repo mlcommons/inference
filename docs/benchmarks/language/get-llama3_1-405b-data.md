@@ -45,7 +45,7 @@ The benchmark implementation run command will automatically download the require
 
         ### Get the Official MLPerf LLAMA3.1-405B model from MLCOMMONS Cloudfare R2
         ```
-        mlcr get,ml-model,llama3,_mlc,_405b,_r2_downloader    --outdirname=<path to download> -j
+        mlcr get,ml-model,llama3,_mlc,_405b,_r2-downloader    --outdirname=<path to download> -j
 
     === "From Hugging Face repo"
 

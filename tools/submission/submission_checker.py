@@ -2185,7 +2185,7 @@ def check_results_dir(
                     inferred,
                     power_metric > 0,
                     unit,
-                    '"' + weight_data_types + '"',
+                    '"' + str(weight_data_types).replace("\"", "'") + '"',
                 )
             )
 

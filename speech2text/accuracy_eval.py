@@ -28,6 +28,7 @@ from helpers import compute_wer_with_concatenation, get_expanded_wordlist
 
 
 max_duration = float(os.environ.get("MAX_DURATION", "30.0"))
+
 labels = [
     " ",
     "a",
@@ -56,7 +57,25 @@ labels = [
     "x",
     "y",
     "z",
-    "'"]
+    "'", 
+    "0",
+    "1",
+    "2",
+    "3",
+    "4", 
+    "5",
+    "6",
+    "7",
+    "8",
+    "9",
+    "$",
+    "¢",
+    "£",
+    "€", 
+    "%",
+    "+",
+    "-"]
+
 dtype_map = {
     "int8": 'b',
     "int16": 'h',

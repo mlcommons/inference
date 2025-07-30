@@ -16,7 +16,7 @@ The benchmark implementation run command will automatically download the validat
     
         ### Get Preprocessed Validation Dataset
         ```
-        mlcr get,dataset,preprocessed,openorca,_validation -j
+        mlcr get,dataset,preprocessed,openorca,_validation,_mlcommons -j
         ```
 
     === "Calibration"
@@ -56,7 +56,17 @@ The benchmark implementation run command will automatically download the require
 
         ### Get the Official MLPerf LLAMA2-70B model from MLCOMMONS Google Drive
         ```
-        mlcr get,ml-model,llama2-70b,_pytorch -j
+        mlcr get,ml-model,llama2-70b,_rclone,_mlc,_70b -j
+        ```
+
+    === "From MLCOMMONS Cloudfare R2"
+
+        > **Note:**  One has to accept the [MLCommons Llama 2 License Confidentiality Notice](https://llama2.mlcommons.org/) to access the model files in MLCOMMONS Google Drive. 
+
+        ### Get the Official MLPerf LLAMA2-70B model from MLCOMMONS Cloudfare R2
+
+        ```
+        mlcr get,ml-model,llama2-70b,_mlc,_r2-downloader,_70b -j
         ```
 
     === "From Hugging Face repo"

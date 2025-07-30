@@ -38,6 +38,14 @@ The benchmark implementation run command will automatically download the require
         ```
         mlcr get,ml-model,llama3 -j
         ```
+    
+    === "From Cloudfare R2"
+
+        > **Note:**  One has to accept the [MLCommons Llama 3.1 License Confidentiality Notice](http://llama3-1.mlcommons.org/) to access the model files in MLCOMMONS Google Drive. 
+
+        ### Get the Official MLPerf LLAMA3.1-405B model from MLCOMMONS Cloudfare R2
+        ```
+        mlcr get,ml-model,llama3,_mlc,_405b,_r2-downloader    --outdirname=<path to download> -j
 
     === "From Hugging Face repo"
 

@@ -45,7 +45,8 @@ def define_env(env):
             if "99.9" not in model and implementation_tips:
                 content += f"\n{pre_space}!!! tip\n\n"
                 content += f"{pre_space}    - MLCommons reference implementations are only meant to provide a rules compliant reference implementation for the submitters and in most cases are not best performing. If you want to benchmark any system, it is advisable to use the vendor MLPerf implementation for that system like Nvidia, Intel etc.\n\n"
-
+                if model.lower() in ["sdxl"]:
+                    content += f"\n{pre_space}> **Note:** {model.upper()} reference implementation does not support multithreading.\n\n"
             if not devices:
                 devices = ["CPU", "CUDA", "ROCm"]
 
@@ -139,10 +140,10 @@ def define_env(env):
                 categories = ["Datacenter"]
             elif model.lower() in ["pointpainting"]:
                 categories = ["Edge"]
-            elif model.lower() in ["bert-99.9", "dlrm", "llama2", "mixtral", "llama3", "deepseek-r1"]:
+            elif model.lower() in ["bert-99.9", "dlrm", "llama2", "mixtral", "llama3_1-405b-99.9", "llama3_1-405b-99", "deepseek-r1"]:
                 categories = ["Datacenter"]
             else:
-                categories = ["Edge", "Datacenter"]
+                categories = ["Datacenter", "Edge"]
 
         # model name
         content += f"{pre_space}{model.upper()}\n\n"
@@ -159,6 +160,8 @@ def define_env(env):
                     scenarios.remove("Offline")
                 if model.lower() in ["whisper"]:
                     scenarios.remove("SingleStream")
+                if model.lower() == "llama3_1-8b":
+                    model = "llama3_1-8b-edge"
             elif category == "Datacenter":
                 scenarios = ["Offline", "Server"]
                 if model.lower() in ["whisper"]:
@@ -547,7 +550,7 @@ def define_env(env):
             info += f"{pre_space}    - In valid execution mode, the query count for performance mode can be adjusted using `--env.MLC_MLPERF_LOADGEN_QUERY_COUNT=<query_count>`.\n\n"
 
         if implementation.lower() == "reference" and model.lower() not in [
-                "pointpainting", "llama3_1-8b", "deepseek-r1", "whisper"]:
+                "pointpainting", "llama3_1-8b", "llama3_1-8b-edge", "deepseek-r1", "whisper"]:
 
             info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
@@ -573,10 +576,10 @@ def define_env(env):
 
             if model == "sdxl":
                 info += f"{pre_space}    - `--env.MLC_MLPERF_MODEL_SDXL_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
-            elif "llama3" in model.lower():
+            elif "llama3_1-405b" in model.lower():
                 info += f"{pre_space}    - `--env.MLC_MLPERF_MODEL_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
                 info += f"{pre_space}    - `--env.MLC_MLPERF_DATASET_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
-            elif model.lower() in ["llama3_1-8b", "whisper", "deepseek-r1"]:
+            elif model.lower() in ["llama3_1-8b", "llama3_1-8b-edge", "whisper", "deepseek-r1"]:
                 info += f"{pre_space}    - `--env.MLC_USE_ML_MODEL_FROM_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
                 info += f"{pre_space}    - `--env.MLC_USE_DATASET_FROM_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
 

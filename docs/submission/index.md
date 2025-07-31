@@ -159,7 +159,7 @@ If there are multiple systems where MLPerf results are collected, the same proce
        --quiet
     ```
 
-    The path to the locally synced submission directory from the output below can be used in the next step by passing it to the `--submission_dir` argument.
+    > **Note:** The path to the locally synced submission directory from the output below can be used in the next step by passing it to the `--submission_dir` argument.
     <details>
   	<summary>Click to see the sample output</summary>
 	```
@@ -204,7 +204,7 @@ Once you have all the results on the system, you can upload them to the MLCommon
     ```
     mlcr run,mlperf,submission,checker,inference \
     --submitter_id=<> \
-    --submission_dir=<Path to the submission folder> --quiet
+    --submission_dir=<Path to the locally synced submission directory> --quiet
     ``` 
     
 === "via Browser"

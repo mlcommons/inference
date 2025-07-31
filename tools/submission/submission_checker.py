@@ -1486,8 +1486,8 @@ def check_accuracy_dir(config, model, path, verbose):
 
 def extra_check_llm(mlperf_log, scenario, model):
     if mlperf_log["requested_use_token_latencies"]:
-        if scenario == "Offline":
-            # For offline no further checks are necessary
+        if scenario not in ["Server", "Interactive"]:
+            # For offline, singlestream and multistream no further checks are necessary
             return True
         else:
             limits = LLM_LATENCY_LIMITS[model][scenario]

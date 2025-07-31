@@ -868,6 +868,11 @@ LLM_LATENCY_LIMITS = {
             "ttft": 500 * 1000000, "tpot": 30 * 1000000
         }
     },
+    "llama3.1-8b-edge": {
+        "SingleStream": {
+            "ttft": 2000 * 1000000, "tpot": 100 * 1000000
+        },
+    },
     "deepseek-r1": {
         "Server": {
             "ttft": 2000 * 1000000, "tpot": 80 * 1000000

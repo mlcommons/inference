@@ -204,7 +204,7 @@ Once you have all the results on the system, you can upload them to the MLCommon
     ```
     mlcr run,mlperf,submission,checker,inference \
     --submitter_id=<> \
-    --submission_dir=<Path to the submission folder>
+    --submission_dir=<Path to the submission folder> --quiet
     ``` 
     
 === "via Browser"
@@ -213,7 +213,7 @@ Once you have all the results on the system, you can upload them to the MLCommon
     mlcr run,mlperf,submission,checker,inference \
     --submission_dir=<Path to the submission folder> \
     --tar=yes \
-    --submission_tar_file=mysubmission.tar.gz
+    --submission_tar_file=mysubmission.tar.gz --quiet
     ```
     
 ```mermaid

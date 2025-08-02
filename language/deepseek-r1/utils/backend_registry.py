@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Configuration constants
 MAX_ISL = 3136  # max input sequence length
-MAX_OSL = 32 * 1024  # max output sequence length
+MAX_OSL = 20 * 1000  # max output sequence length
 MAX_TEMPLATE_TOKS = 4  # max template tokens
 MODEL_REVISION = "56d4cbbb4d29f4355bab4b9a39ccb717a14ad5ad"
 

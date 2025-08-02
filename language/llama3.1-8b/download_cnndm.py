@@ -69,12 +69,22 @@ if not isExist:
     os.makedirs(save_dataset_path)
 
 # Load dataset from the hub
-dataset = load_dataset(dataset_id, name=dataset_config)
+dataset = load_dataset(dataset_id, name=dataset_config, split="validation")
 # Load tokenizer
 tokenizer = AutoTokenizer.from_pretrained(model_id)
 tokenizer.padding_side = "left"
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.model_max_length = 8000
+
+print(f"Dshape: {dataset.shape}; type(dataset)")
+ind = set(range(dataset.shape[0]))
+if n_samples:
+    import random
+    random.seed(42)
+    dataset = dataset.shuffle(seed=42)
+    dataset = dataset.flatten_indices()
+    dataset = dataset.take(n_samples)
+    ind = set(random.sample(range(0, 13368), n_samples))
 
 
 instruction_template = {
@@ -90,41 +100,34 @@ def preprocess_function(sample, padding="max_length"):
     # create list of samples
     inputs = []
 
-    if n_samples:
-        import random
-        random.seed(42)
-        ind = random.sample(range(0, 13368), n_samples)
-    else:
-        ind = list(range(0, len(sample[text_column])))
-
-    for i in range(0, len(sample[text_column])):
-        if i in ind:
-            x = dict()
-            x["instruction"] = instruction_template
-            x["input"] = sample[text_column][i]
-            x["tok_input"] = tokenizer.encode(
-                instruction_template[instruction].format_map(x))
-            x["output"] = sample[summary_column][i]
-            inputs.append(x)
+    #print(f"Num samples: {len(sample[text_column])}")
+    #for i in range(0, len(sample[text_column])):
+    x = dict()
+    x["instruction"] = instruction_template
+    x["input"] = sample[text_column]
+    x["tok_input"] = tokenizer.encode(
+        instruction_template[instruction].format_map(x)
+    )
+    x["output"] = sample[summary_column]
+    #inputs.append(x)
     model_inputs = dict()
-    model_inputs["text"] = inputs
+    model_inputs["text"] = x
 
     return model_inputs
 
 
 # process dataset
-tokenized_dataset = dataset.map(
-    preprocess_function, batched=True, remove_columns=list(dataset["train"].features)
-)
+tokenized_dataset = dataset.map(preprocess_function, batched=False)
 
 # save dataset to disk
 if n_samples is None:
     file = "cnn_eval.json"
 else:
-    file = f"sample_cnn_eval_{n_samples}.json"
+    file = f"cnn_eval_{n_samples}.json"
 
+print(f"Num of tokenized dataset: {len(tokenized_dataset['text'])}")
 with open(os.path.join(save_dataset_path, file), "w") as write_f:
     json.dump(
-        tokenized_dataset["validation"]["text"], write_f, indent=4, ensure_ascii=False
+        tokenized_dataset["text"], write_f, indent=4, ensure_ascii=False
     )
 print("Dataset saved in ", save_dataset_path)

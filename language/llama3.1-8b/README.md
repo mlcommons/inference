@@ -171,7 +171,7 @@ mlcr get,dataset,cnndm,_validation,_edge,_llama3,_mlc,_rclone --outdirname=<path
 
 **Native method**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/sample_cnn_eval_5000.json ./ -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/datasets/cnn_eval_5000.json ./ -P
 ```
 
 #### Calibration
@@ -200,7 +200,7 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/llama3.1_8b/cnn_eval.jso
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
                 --batch-size 16 \
-                --dtype float16 \
+                --dtype bfloat16 \
                 --user-conf user.conf \
                 --total-sample-count 13368 \
                 --dataset-path ${DATASET_PATH} \
@@ -215,7 +215,7 @@ python -u main.py --scenario Offline \
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
                 --batch-size 16 \
-                --dtype float16 \
+                --dtype bfloat16 \
                 --user-conf user.conf \
                 --total-sample-count 13368 \
                 --dataset-path ${DATASET_PATH} \
@@ -238,7 +238,7 @@ python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
                 --batch-size 16 \
                 --accuracy \
-                --dtype float16 \
+                --dtype bfloat16 \
                 --user-conf user.conf \
                 --total-sample-count 13368 \
                 --dataset-path ${DATASET_PATH} \
@@ -265,7 +265,7 @@ python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
                 --batch-size 16 \
                 --accuracy \
-                --dtype float16 \
+                --dtype bfloat16 \
                 --user-conf user.conf \
                 --total-sample-count 13368 \
                 --dataset-path ${DATASET_PATH} \
@@ -281,6 +281,34 @@ fi
 ```
 
 The ServerSUT was not tested for GPU runs.
+
+### Edge
+```
+OUTPUT_LOG_DIR=offline-accuracy-logs
+
+mkdir -p "run_outputs"  # The script will dump all the outputs to 'run_outputs'.
+
+python -u main.py --lg-model-name llama3_1-8b-edge \       
+                --scenario Offline \
+                --model-path ${CHECKPOINT_PATH} \
+                --batch-size 16 \
+                --accuracy \
+                --dtype bfloat16 \
+                --user-conf user.conf \
+                --total-sample-count 13368 \
+                --dataset-path ${DATASET_PATH} \
+                --output-log-dir output \
+                --tensor-parallel-size ${GPU_COUNT} \
+                --vllm
+
+
+ACCURACY_LOG_FILE=${OUTPUT_LOG_DIR}/mlperf_log_accuracy.json
+if [ -e ${ACCURACY_LOG_FILE} ]; then
+        python evaluation.py --mlperf-accuracy-file ${ACCURACY_LOG_FILE} \
+                --dataset-file ${DATASET_PATH} --dtype int32
+fi
+```
+
 
 ### Evaluate the accuracy using MLCFlow
 You can also evaulate the accuracy from the generated accuracy log by using the following MLC command
@@ -298,7 +326,8 @@ mlcr run,accuracy,mlperf,_cnndm_llama_3,_datacenter --result_dir=<Path to direct
 ```
 
 ## Accuracy Target
-Running the GPU implementation in FP16 precision resulted in the following FP16 accuracy targets:
+### Datacenter
+Running the GPU implementation in BF16 precision resulted in the following BF16 accuracy targets:
 ```
 {
         'rouge1': 38.7792,
@@ -310,3 +339,16 @@ Running the GPU implementation in FP16 precision resulted in the following FP16 
 }
 ```
 The accuracy target is 99% for rouge1, rouge2, rougeL and rougeLsum, and 90% for gen_len
+
+### Edge
+Running the GPU implementation in BF16 precision resulted in the following BF16 accuracy targets:
+```
+{
+        'rouge1': 39.06,
+        'rouge2': 16.1147,
+        'rougeL': 24.6375,
+        'rougeLsum': 36.124,
+        'gen_len': 3051113,
+        'gen_num': 5000,
+}
+```

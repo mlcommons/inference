@@ -70,7 +70,7 @@ def main():
 
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,
-        model_max_length=2048,
+        model_max_length=128000,
         padding_side="left",
         use_fast=False,
     )

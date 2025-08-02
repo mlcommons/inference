@@ -165,7 +165,7 @@ def main():
     else:
         raise NotImplementedError
 
-    sut_map = {"offline": SUT, "server": SUTServer, "singlestream": SUT}
+    sut_map = {"offline": SUT, "server": SUTServer, "singlestream": SUTServer}
 
     sut_cls = sut_map[args.scenario.lower()]
 

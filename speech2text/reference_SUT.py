@@ -215,14 +215,15 @@ class Instance(mp.Process):
         for output in outputs:
             request_id = int(output.request_id)
             vllm_text = output.outputs[0].text
-            results.append(vllm_text)
+            results.append((vllm_text, len(output.outputs[0].token_ids)))
             query_ids.append(self.query_idx_mapping[request_id])
             qid.append(self.qid_mapping[request_id])
 
         self.num_samples += len(results)
 
-        for i, result in enumerate(results):
+        for i, result_tuple in enumerate(results):
             # Whisper outputs space in the front and capitalizes things
+            result, n_tokens = result_tuple
             result = result.lower().strip()
             transcript = []
             for s in result:
@@ -233,7 +234,7 @@ class Instance(mp.Process):
             assert len(transcript) == 1
             response_array = array.array('q', transcript[0])
 
-            self.output_queue.put((qid[i], response_array))
+            self.output_queue.put((qid[i], n_tokens, response_array))
             print(f"Finished {qid[i]}")
         return True
 
@@ -330,14 +331,13 @@ class vllmSUT:
     def response_loadgen(self):
         keep_alive = True
         while keep_alive:
-            result = self.output_queue.get()
-            if result is None:
+            qid, n_tokens, response_array = self.output_queue.get()
+            if qid is None:
                 keep_alive = False
             else:
-                qid, response_array = result
                 bi = response_array.buffer_info()
                 response = lg.QuerySampleResponse(qid, bi[0],
-                                                  bi[1] * response_array.itemsize)
+                                                  bi[1] * response_array.itemsize, n_tokens)
                 lg.QuerySamplesComplete([response])
 
     def stop(self):

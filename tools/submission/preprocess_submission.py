@@ -224,7 +224,7 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                         power_is_valid,
                         power_metric,
                         power_efficiency,
-                    ) = check_power_dir(
+                    ) = checker.check_power_dir(
                         power_path,
                         ranging_path,
                         perf_path,
@@ -234,6 +234,7 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                         config,
                     )
                 except Exception as e:
+                    log.error(e)
                     power_is_valid = False
                 if not power_is_valid:
                     log.warning(

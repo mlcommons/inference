@@ -19,7 +19,7 @@ Let's think about this step by step.<|im_end|>
 
 ## Answer Extraction
 ```python
-# Remove reasoning, extract final answer
+# Extract final answer
 output = full_output.split('<|/thinking|>')[-1] if '<|/thinking|>' in full_output else full_output
 answer = re.search(r'####\s*(\d+)', output)
 final_answer = answer.group(1) if answer else output.strip()

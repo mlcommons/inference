@@ -2,7 +2,7 @@
 
 ## Tokenization
 ```python
-tokenizer = AutoTokenizer.from_pretrained(model_path)  # Use model's tokenizer
+tokenizer = AutoTokenizer.from_pretrained(model_path)
 max_length = 2048
 ```
 
@@ -20,6 +20,6 @@ Summarize this article:
 
 ## Verification
 ```bash
-# Check first token is 128000 (begin_of_text)
+# Verify first token
 python -c "print(tokenizer.encode('<|begin_of_text|>')[0])"
 ```

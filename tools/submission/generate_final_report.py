@@ -22,7 +22,7 @@ def get_args():
     parser.add_argument('--version', default='5.1', help='mlperf version')
     parser.add_argument(
         '--repository',
-        default='submissions_inference_5.1',
+        default='submissions_inference_v5.1',
         help='mlperf repository')
     parser.add_argument(
         '--repository-owner',

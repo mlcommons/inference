@@ -460,8 +460,10 @@ def infer_scenario_results(args, config):
 
                                     # infer both the scenarios from SS
                                     if infer_scenario_results:
-                                        tobeinferredpaths = [
-                                            offline_scenario_path]
+                                        tobeinferredpaths = []
+                                        if "Offline" in all_scenarios:
+                                            tobeinferredpaths.append(
+                                                offline_scenario_path)
                                         if "MultiStream" in all_scenarios:
                                             tobeinferredpaths.append(
                                                 multistream_scenario_path)

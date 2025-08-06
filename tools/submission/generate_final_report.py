@@ -142,6 +142,7 @@ def main():
             "3d-unet-99",
             "3d-unet-99.9",
             "llama3.1-8b",
+            "llama3.1-8b-edge",
             "llama2-70b-99",
             "llama2-70b-99.9",
             "stable-diffusion-xl",

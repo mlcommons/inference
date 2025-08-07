@@ -726,6 +726,7 @@ SCENARIO_MAPPING = {
     "multistream": "MultiStream",
     "server": "Server",
     "offline": "Offline",
+    "interactive": "Interactive",
 }
 
 RESULT_FIELD = {

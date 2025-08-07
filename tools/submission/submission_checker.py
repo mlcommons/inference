@@ -1487,7 +1487,8 @@ def check_accuracy_dir(config, model, path, verbose):
 def extra_check_llm(mlperf_log, scenario, model):
     if mlperf_log["requested_use_token_latencies"]:
         if scenario not in ["Server", "Interactive"]:
-            # For offline, singlestream and multistream no further checks are necessary
+            # For offline, singlestream and multistream no further checks are
+            # necessary
             return True
         else:
             limits = LLM_LATENCY_LIMITS[model][scenario]
@@ -1887,7 +1888,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )

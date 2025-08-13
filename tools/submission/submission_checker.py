@@ -801,6 +801,7 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
         },
         "llama3.1-8b-edge": {
             "Offline": "result_tokens_per_second",
+            "SingleStream": "result_90.00_percentile_latency_ns",
         },
         "mixtral-8x7b": {
             "Offline": "result_tokens_per_second",

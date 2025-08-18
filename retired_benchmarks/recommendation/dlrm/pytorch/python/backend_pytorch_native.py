@@ -22,7 +22,7 @@ class BackendPytorchNative(backend.Backend):
         self.ln_top = ln_top
 
         self.use_gpu = use_gpu and torch.cuda.is_available()
-        self.device = "cuda:0" if self.use_gpu else "cpu"
+        self.device = "cuda" if self.use_gpu else "cpu"
 
         ngpus = torch.cuda.device_count() if self.use_gpu else -1
         self.ndevices = min(ngpus, mini_batch_size, ln_emb.size)

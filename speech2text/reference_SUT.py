@@ -167,6 +167,8 @@ class Instance(mp.Process):
             max_model_len=448,
             max_num_batched_tokens=8194,
             gpu_memory_utilization=0.95,
+            kv_cache_dtype="fp8",
+            data_parallel_size=2,
             limit_mm_per_prompt={"audio": 1},
         )
         sampling_params = SamplingParams(

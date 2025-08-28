@@ -80,6 +80,7 @@ def main():
 
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario]
+    settings.use_token_latencies = True
     # settings.FromConfig(args.mlperf_conf, "whisper", args.scenario)
     settings.FromConfig(args.user_conf, "whisper", args.scenario)
 

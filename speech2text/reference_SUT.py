@@ -34,7 +34,7 @@ import torch.multiprocessing as mp
 from vllm import LLM, SamplingParams
 
 # Optimization packages
-from numa import schedule, memory
+#from numa import schedule, memory
 
 # Local python packages
 from QSL import AudioQSL, AudioQSLInMemory
@@ -140,10 +140,10 @@ class Instance(mp.Process):
 
     def run(self):
         node_list = tuple([math.floor(node) for node in self.node_list])
-        memory.set_membind_nodes(*node_list)
-        schedule.run_on_cpus(os.getpid(), *self.core_list)
-        print(f"Binding rank {self.rank} to nodes {node_list}")
-        print(f"Binding rank {self.rank} to cores {self.core_list}")
+        #memory.set_membind_nodes(*node_list)
+        #schedule.run_on_cpus(os.getpid(), *self.core_list)
+        #print(f"Binding rank {self.rank} to nodes {node_list}")
+        #print(f"Binding rank {self.rank} to cores {self.core_list}")
 
         dataset_vocab = labels
 
@@ -163,11 +163,10 @@ class Instance(mp.Process):
             skip_tokenizer_init=False,
             trust_remote_code=True,
             tensor_parallel_size=1,
-            max_num_seqs=64,
+            max_num_seqs=256,
             max_model_len=448,
-            max_num_batched_tokens=800,
+            max_num_batched_tokens=8194,
             gpu_memory_utilization=0.95,
-            num_scheduler_steps=1,
             limit_mm_per_prompt={"audio": 1},
         )
         sampling_params = SamplingParams(
@@ -210,7 +209,7 @@ class Instance(mp.Process):
         start_time = time.time()
         outputs = self.model.generate(prompt_list, self.sampling_params)
         print(
-            f"Sample number: {self.num_samples} | Step time {time.time()-start_time:.3f}s")
+            f"Sample number: {self.num_samples} Prompt: {len(prompt_list)} | Step time {time.time()-start_time:.3f}s")
 
         for output in outputs:
             request_id = int(output.request_id)
@@ -253,7 +252,8 @@ class vllmSUT:
 
         dataset_vocab = labels
 
-        # self.dev = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+        self.device = torch.device("cuda:0") if torch.cuda.is_available() and os.environ.get("USE_GPU", "").lower() not in  [ "no", "false" ]  else torch.device("cpu")
+        print(f"Device:{self.device}")
 
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)
         self.qsl = AudioQSL(dataset_dir,
@@ -318,10 +318,12 @@ class vllmSUT:
         response_thread.start()
 
     def issue_queries(self, query_samples):
-        query_sample_list = []
-        for query_sample in query_samples:
+        print(f"Issued queries: {len(query_samples)}\n\n")
+        query_sample_list = [ query_sample for query_sample in query_samples]
+        self.query_queue.put(query_sample_list)
+        #for query_sample in query_samples:
             # Continuous batching
-            self.query_queue.put([query_sample])
+        #    self.query_queue.put([query_sample])
         if len(query_sample_list) > 0:
             self.query_queue.put(query_sample_list)
 
@@ -332,6 +334,7 @@ class vllmSUT:
         keep_alive = True
         while keep_alive:
             qid, n_tokens, response_array = self.output_queue.get()
+            print(f"Response: {qid}, {n_tokens}")
             if qid is None:
                 keep_alive = False
             else:

@@ -22,6 +22,7 @@ hide:
 
 {{ mlperf_inference_implementation_readme (4, "3d-unet-99.9", "nvidia") }}
 
+<!--  
 === "Intel"
     ## Intel MLPerf Implementation
 
@@ -29,3 +30,4 @@ hide:
 
 
 {{ mlperf_inference_implementation_readme (4, "3d-unet-99.9", "intel") }}
+-->

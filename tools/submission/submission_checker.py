@@ -726,6 +726,7 @@ SCENARIO_MAPPING = {
     "multistream": "MultiStream",
     "server": "Server",
     "offline": "Offline",
+    "interactive": "Interactive",
 }
 
 RESULT_FIELD = {
@@ -800,6 +801,7 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
         },
         "llama3.1-8b-edge": {
             "Offline": "result_tokens_per_second",
+            "SingleStream": "result_90.00_percentile_latency_ns",
         },
         "mixtral-8x7b": {
             "Offline": "result_tokens_per_second",
@@ -1486,8 +1488,9 @@ def check_accuracy_dir(config, model, path, verbose):
 
 def extra_check_llm(mlperf_log, scenario, model):
     if mlperf_log["requested_use_token_latencies"]:
-        if scenario == "Offline":
-            # For offline no further checks are necessary
+        if scenario not in ["Server", "Interactive"]:
+            # For offline, singlestream and multistream no further checks are
+            # necessary
             return True
         else:
             limits = LLM_LATENCY_LIMITS[model][scenario]
@@ -1887,7 +1890,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )

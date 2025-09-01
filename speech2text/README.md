@@ -102,26 +102,24 @@ VLLM_TARGET_DEVICE=cpu pip install --break-system-packages . --no-build-isolatio
 
 You can download the model automatically via the below command
 ```
-mlcr get,ml-model,whisper,_rclone,_mlc --outdirname=<path_to_download> -j
+mlcr get,ml-model,whisper,_r2-downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
-**Official Model download using native method**
+**Official Model download using MLC R2 Downloader**
 
-You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
+Download the Whisper model using the MLCommons downloader:
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d whisper/model https://inference.mlcommons-storage.org/metadata/whisper-model.uri
 ```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
-You can then navigate in the terminal to your desired download directory and run the following command to download the model:
 
-```
-rclone copy mlc-inference:mlcommons-inference-wg-public/Whisper/model/ ./ -P
+This will download the Whisper model files.
+
+To specify a custom download directory, use the `-d` flag:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  -d /path/to/download/directory \
+  https://inference.mlcommons-storage.org/metadata/whisper-model.uri
 ```
 
 ### External Download (Not recommended for official submission)
@@ -153,16 +151,24 @@ We use dev-clean and dev-other splits, which are approximately 10 hours.
 
 **Using MLCFlow Automation**
 ```
-mlcr get,dataset,whisper,_preprocessed,_mlc,_rclone --outdirname=<path to download> -j
+mlcr get,dataset,whisper,_preprocessed,_mlc,_r2-downloader --outdirname=<path to download> -j
 ```
 
-**Native method**
+**Using MLC R2 Downloader**
 
-Download and install rclone as decribed in the [MLCommons Download section](#mlcommons-download)
+Download the preprocessed dataset using the MLCommons R2 Downloader:
 
-You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d whisper/dataset https://inference.mlcommons-storage.org/metadata/whisper-dataset.uri
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/Whisper/dataset/ ./ -P
+
+This will download the LibriSpeech dataset files.
+
+To specify a custom download directory, use the `-d` flag:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  -d /path/to/download/directory \
+  https://inference.mlcommons-storage.org/metadata/whisper-dataset.uri
 ```
 
 ### Unprocessed

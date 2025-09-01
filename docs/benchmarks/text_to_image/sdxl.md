@@ -16,7 +16,8 @@ hide:
     
 {{ mlperf_inference_implementation_readme (4, "sdxl", "nvidia") }}
 
+<!-- 
 === "Intel"
     ## Intel MLPerf Implementation
 {{ mlperf_inference_implementation_readme (4, "sdxl", "intel") }}
-
+-->

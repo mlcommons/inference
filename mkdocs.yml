@@ -29,10 +29,7 @@ nav:
       - Image Classification:
           - ResNet50: benchmarks/image_classification/resnet50.md
       - Text to Image:
-          - Stable Diffusion:
-              - Run Commands: benchmarks/text_to_image/sdxl.md
-              - Reproducibility:
-                  - SCC24: benchmarks/text_to_image/reproducibility/scc24.md
+          - Stable Diffusion: benchmarks/text_to_image/sdxl.md
       - 2D Object Detection:
           - RetinaNet: benchmarks/object_detection/retinanet.md
       - Automotive:
@@ -41,10 +38,7 @@ nav:
       - Medical Imaging:
           - 3d-unet: benchmarks/medical_imaging/3d-unet.md
       - Language Processing:
-        - Bert-Large:
-          - Run Commands: benchmarks/language/bert.md
-          - Reproducibility:
-            - IndySCC24: benchmarks/language/reproducibility/indyscc24-bert.md
+        - Bert-Large: benchmarks/language/bert.md
         - GPT-J: benchmarks/language/gpt-j.md
         - LLAMA2-70B: benchmarks/language/llama2-70b.md
         - LLAMA3-405B: benchmarks/language/llama3_1-405b.md

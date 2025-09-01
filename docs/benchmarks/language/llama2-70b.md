@@ -19,6 +19,7 @@ hide:
 
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99.9", "nvidia") }}
 
+<!-- 
 === "Neural Magic"
     ## Neural Magic MLPerf Implementation
     
@@ -32,3 +33,4 @@ hide:
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "amd") }}
 
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99.9", "amd") }}
+-->

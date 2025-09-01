@@ -17,6 +17,8 @@ hide:
     
 {{ mlperf_inference_implementation_readme (4, "resnet50", "nvidia") }}
 
+<!-->
+
 === "Intel"
     ## Intel MLPerf Implementation
     
@@ -31,3 +33,5 @@ hide:
     ## MLPerf Modular Implementation in C++
     
 {{ mlperf_inference_implementation_readme (4, "resnet50", "cpp") }}
+
+-->

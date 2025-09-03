@@ -22,10 +22,11 @@
 #/bin/bash
 
 echo "Time Start: $(date +%s)"
+export PREFIX=$1
 export WORKSPACE_DIR="./"
 export DATA_DIR="whisper/dataset"
 export MANIFEST_FILE="${DATA_DIR}/dev-all-repack.json"
-export RUN_LOGS=${WORKSPACE_DIR}/run_outputs/offline
+export RUN_LOGS=${WORKSPACE_DIR}/run_outputs/offline/${PREFIX}
 export SCENARIO="Offline"
 
 export NUM_CORES=$(($(lscpu | grep "Socket(s):" | awk '{print $2}') * $(lscpu | grep "Core(s) per socket:" | awk '{print $4}')))
@@ -50,6 +51,6 @@ python reference_mlperf.py \
     --manifest ${MANIFEST_FILE} \
     --scenario ${SCENARIO} \
     --log_dir ${RUN_LOGS} \
-    --num_workers ${NUM_INSTS} \
+    --num_workers ${NUM_INSTS} >& ${RUN_LOGS}/output.log
 
 echo "Time Stop: $(date +%s)"

@@ -29,6 +29,8 @@ export MANIFEST_FILE="${DATA_DIR}/dev-all-repack.json"
 export RUN_LOGS=${WORKSPACE_DIR}/run_outputs/offline/${PREFIX}
 export SCENARIO="Offline"
 
+mkdir -p ${RUN_LOGS}
+
 export NUM_CORES=$(($(lscpu | grep "Socket(s):" | awk '{print $2}') * $(lscpu | grep "Core(s) per socket:" | awk '{print $4}')))
 #export NUM_NUMA_NODES=$(lscpu | grep "NUMA node(s)" | awk '{print $NF}')
 export NUM_NUMA_NODES=1

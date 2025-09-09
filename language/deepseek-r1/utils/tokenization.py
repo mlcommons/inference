@@ -9,7 +9,7 @@ class StandardTokenizer:
     """Standard tokenizer for DeepSeek models."""
 
     # Standard configuration used across all runners
-    DEFAULT_MODEL = "deepseek-ai/DeepSeek-R1"
+    DEFAULT_MODEL = "deepseek-ai/DeepSeek-R1-0528"
     DEFAULT_MAX_LENGTH = 32 * 1024
 
     def __init__(self, model_name: str = None, max_length: int = None):

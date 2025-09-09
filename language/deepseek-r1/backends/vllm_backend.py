@@ -46,15 +46,15 @@ class VLLMBackend(BaseBackend):
     def _setup_environment(self) -> None:
         """Set up environment variables and cache directories."""
         # Use the utility function to get cache directory
-        cache_base = get_cache_directory()
+        #cache_base = get_cache_directory()
 
         # Use models subdirectory to match user's example paths
-        self.cache_dir = cache_base.parent / 'models'
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.config['model_cache_dir'] = str(self.cache_dir)
+        #self.cache_dir = cache_base.parent / 'models'
+        #self.cache_dir.mkdir(parents=True, exist_ok=True)
+        #self.config['model_cache_dir'] = str(self.cache_dir)
 
         # Set up HuggingFace cache environment variables
-        setup_huggingface_cache()
+        #setup_huggingface_cache()
 
         # Apply backend-specific environment variables from registry
         apply_backend_env_vars('vllm')
@@ -112,7 +112,7 @@ class VLLMBackend(BaseBackend):
     def initialize(self) -> None:
         """Initialize the vLLM backend with LLM class."""
         # Ensure model is cached locally
-        checkpoint_path = self._ensure_model_cached()
+        #checkpoint_path = self._ensure_model_cached()
 
         # Configure sampling parameters
         self.sampling_params = SamplingParams(

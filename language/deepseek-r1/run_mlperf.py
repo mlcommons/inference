@@ -374,7 +374,7 @@ def main():
                         checkpoint_path = backend_config['model_name']
                     else:
                         # Fallback to default
-                        checkpoint_path = "deepseek-ai/DeepSeek-R1"
+                        checkpoint_path = "deepseek-ai/DeepSeek-R1-0528"
 
                     # Process MLPerf log accuracy
                     df_evaluated, evaluated_file = process_mlperf_log_accuracy(

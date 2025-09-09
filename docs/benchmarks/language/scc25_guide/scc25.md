@@ -13,7 +13,7 @@ For a valid MLPerf inference submission, two types of runs are required: a perfo
 
 ## Scoring
 
-In the SCC, your first objective will be to get a valid MLPerf benchmark run. Traditionally running the reference MLPerf inference implementation (in Python) is easier compared to running Nvidia MLPerf inference implementation. Since for SCC25 we are having the Llama2-70b model, running the reference implementation needs around 600GB of VRAM and is tested only on 8xH100 Nvidia GPUs. If you have lower VRAM trying the vendow implementation like of Nvidia or AMD is the best option.  
+In the SCC, your first objective will be to get a valid MLPerf benchmark run. Traditionally running the reference MLPerf inference implementation (in Python) is easier compared to running Nvidia MLPerf inference implementation. Since for SCC25 we are having the Llama2-70b model, running the reference implementation needs around 600GB of VRAM and is tested only on 8xH100 Nvidia GPUs. If you have lower VRAM, trying the vendor implementation like of Nvidia or AMD is the best option.  
 
 MLCommons provides [automation](https://github.com/mlcommons/mlperf-automations/) to run the MLPerf inference benchmarks which you can make use of. Currently the automation supports the reference implementation as well as Nvidia implementation and this is useful for you to get a quick valid result as the automation produces the required final output. You can also use the manual steps by following the [reference](https://github.com/mlcommons/inference/tree/master/language/llama2-70b), [Nvidia](https://github.com/mlcommons/inference_results_v5.0/tree/main/closed/NVIDIA) or [AMD](https://github.com/mlcommons/inference_results_v5.0/tree/main/closed/AMD) implementation readmes.
 

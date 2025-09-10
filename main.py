@@ -28,6 +28,7 @@ def define_env(env):
         content = ""
 
         execution_envs = ["Docker", "Native"]
+        run_modes = ["performance-only", "accuracy-only"]
         code_version = "r5.0-dev"
         implementation_run_options = []
 
@@ -186,6 +187,7 @@ def define_env(env):
                     cur_space2 = cur_space1 + "    "
                     cur_space3 = cur_space2 + "    "
                     cur_space4 = cur_space3 + "    "
+                    cur_space5 = cur_space4 + "    "
 
                     content += f"{cur_space1}=== \"{device}\"\n"
                     content += f"{cur_space2}##### {device} device\n\n"
@@ -305,6 +307,8 @@ def define_env(env):
 
                                 if implementation.lower() == "nvidia":
                                     content += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPUs with supported configs in MLC are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`. For other GPUs, default configuration as per the GPU memory will be used.\n"
+                                    if "llama2-70b" in model.lower():
+                                        content += f"{cur_space3}* Add `--adr.llama2-model.tags=_pre-quantized` to use the Nvidia quantized models with the available in the MLC Storage. These models were quantized with three different configurations of tensor parallelism and pipeline parallelism: TP1–PP2, TP2–PP1, and TP1–PP1. The appropriate model will be automatically selected based on the values provided for `--tp_size` and `--pp_size` in run command. By default tp size of 2 and pp size of 1 would be used.\n"
 
                                 if device.lower() not in ["cuda"]:
                                     content += f"{cur_space3}* `--docker_os=ubuntu`: ubuntu and rhel are supported. \n"
@@ -373,25 +377,27 @@ def define_env(env):
 
                         for scenario in scenarios:
                             content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}###### {scenario}\n\n"
-                            run_cmd = mlperf_inference_run_command(
-                                spaces + 21,
-                                model,
-                                implementation,
-                                framework.lower(),
-                                category.lower(),
-                                scenario,
-                                device.lower(),
-                                final_run_mode,
-                                test_query_count,
-                                False,
-                                skip_test_query_count,
-                                scenarios,
-                                code_version,
-                                extra_variation_tags,
-                                extra_input_string,
-                            )
-                            content += run_cmd
-                            # content += run_suffix
+                            for run_mode in run_modes:
+                                content += f"{cur_space4}=== \"{run_mode}\"\n{cur_space5}###### {run_mode}\n\n"
+                                run_cmd = mlperf_inference_run_command(
+                                    spaces + 25,
+                                    model,
+                                    implementation,
+                                    framework.lower(),
+                                    category.lower(),
+                                    scenario,
+                                    device.lower(),
+                                    final_run_mode,
+                                    test_query_count,
+                                    False,
+                                    skip_test_query_count,
+                                    scenarios,
+                                    code_version,
+                                    extra_variation_tags + f",_{run_mode}",
+                                    extra_input_string,
+                                )
+                                content += run_cmd
+                                # content += run_suffix
 
                         if len(scenarios) > 1:
                             content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
@@ -481,7 +487,7 @@ def define_env(env):
             ds = {
                 "dlrm": "500GB",
                 "pointpainting": "500GB",
-                "llama2-70b": "600GB",
+                "llama2-70b": "900GB",
                 "llama3_1-405b": "2.3TB",
                 "mixtral": "100GB",
                 "retinanet": "200GB",
@@ -498,7 +504,12 @@ def define_env(env):
                     disk_space = ds[key]
                     break
 
+        if "llama2" in model.lower():
+            disk_space = f" 900GB for manual execution of {"reference" if implementation.lower() == "reference" else "vendor"} implementation and 1.5TB for automated run through MLC-Scripts"
+
+        if implementation.lower() == "reference" or "llama2" in model.lower():
             min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"
+
         # System memory
         if "dlrm" in model:
             system_memory = "512GB"

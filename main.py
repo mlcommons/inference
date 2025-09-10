@@ -28,7 +28,7 @@ def define_env(env):
         content = ""
 
         execution_envs = ["Docker", "Native"]
-        run_modes = ["find-performance", "accuracy-only"]
+        run_modes = ["performance-only", "accuracy-only"]
         code_version = "r5.0-dev"
         implementation_run_options = []
 

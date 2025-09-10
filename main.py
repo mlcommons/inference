@@ -505,7 +505,7 @@ def define_env(env):
                     break
 
         if "llama2" in model.lower():
-            disk_space = f" 900GB for manual execution of {"reference" if implementation.lower() == "reference" else "vendor"} implementation and 1.5TB for automated run through MLC-Scripts"
+            disk_space = f" 900GB for manual execution of {'reference' if implementation.lower() == 'reference' else 'vendor'} implementation and 1.5TB for automated run through MLC-Scripts"
 
         if implementation.lower() == "reference" or "llama2" in model.lower():
             min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"

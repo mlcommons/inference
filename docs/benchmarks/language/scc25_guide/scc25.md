@@ -87,11 +87,14 @@ mlcr generate,inference,submission,_wg-inference \
 ```
 
 * Use `--hw_name="My system name"` to give a meaningful system name.
+* At the end, a **.tar** file would be generated inside the current working directory.
 
+### Submit Results
 
-### Push Results to GitHub
+> **Note:**
+Further instructions on the final submission will be published as the deadline approaches.
 
-Fork the `mlperf-inference-results-scc25` branch of the repository URL at [mlperf-automations](https://github.com/mlcommons/mlperf-automations). 
+<!-- Fork the `mlperf-inference-results-scc25` branch of the repository URL at [mlperf-automations](https://github.com/mlcommons/mlperf-automations). 
 
 Run the following command after **replacing `--repo_url` with your GitHub fork URL**.
 
@@ -104,4 +107,4 @@ mlcr push,github,mlperf,inference,submission \
 ```
 
 Once uploaded give a Pull Request to the origin repository. Github action will be running there and once 
-finished you can see your submitted results at [https://docs.mlcommons.org/mlperf-automations](https://docs.mlcommons.org/mlperf-automations).
+finished you can see your submitted results at [https://docs.mlcommons.org/mlperf-automations](https://docs.mlcommons.org/mlperf-automations). -->

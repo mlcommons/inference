@@ -9,7 +9,7 @@ hide:
 
 This guide is designed for the [Student Cluster Competition 2025](https://sc25.supercomputing.org/students/student-cluster-competition/) to walk participants through running and optimizing the [MLPerf Inference Benchmark](https://arxiv.org/abs/1911.02549) using [Llama2 70b](https://github.com/mlcommons/inference/tree/master/language/llama2-70b) across various software and hardware configurations. The goal is to maximize system throughput (measured in Tokens per second) without compromising accuracy. Since the model performs poorly on CPUs, it is essential to run it on GPUs.
 
-For a valid MLPerf inference submission, two types of runs are required: a performance run and an accuracy run. In this competition, we focus on the `Offline` scenario, where throughput is the key metric—higher values are better. The official MLPerf inference benchmark for Llama2-70b requires processing a minimum of 24,576 samples in both performance and accuracy modes using the OpenOrca dataset. Setting up for Nvidia GPUs may take 2-3 hours but can be done offline. Your final output will be a tarball (`mlperf_submission.tar.gz`) containing MLPerf-compatible results, which you will submit to the SCC organizers for scoring.
+For a valid MLPerf Inference submission in this competition, you must run both a performance test and an accuracy test—**no compliance runs are required**. We use the **Offline** scenario, where throughput is the key metric (higher is better). For Llama 2-70B with the OpenOrca dataset (24,576 samples), the **performance run** must process an integer multiple of the full dataset (24,576 × *N* samples), while the **accuracy run** must process **exactly** the full dataset (24,576 samples). These requirements are taken care of by the MLPerf inference implementations. Setup for NVIDIA GPUs typically takes 2–3 hours and can be done offline. The final output is a tarball (`mlperf_submission.tar.gz`) containing MLPerf-compatible results which can be submitted to the organizers via a CLI command.
 
 ## Scoring
 
@@ -81,7 +81,6 @@ mlcr generate,inference,submission,_wg-inference \
    --division=open \
    --category=datacenter \
    --env.CM_DETERMINE_MEMORY_CONFIGURATION=yes \
-   --run_style=test \
    --quiet \
    --submitter=<Team Name>
 ```

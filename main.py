@@ -481,7 +481,7 @@ def define_env(env):
             ds = {
                 "dlrm": "500GB",
                 "pointpainting": "500GB",
-                "llama2-70b": "600GB",
+                "llama2-70b": "900GB",
                 "llama3_1-405b": "2.3TB",
                 "mixtral": "100GB",
                 "retinanet": "200GB",
@@ -497,8 +497,14 @@ def define_env(env):
                 if key in model:
                     disk_space = ds[key]
                     break
-
+                
+        if "llama2" in model.lower():
+            disk_space = f" 900GB for manual execution of {"reference" if implementation.lower() == "reference" else "vendor"} implementation and 1.5TB for automated run through MLC-Scripts"
+        
+        if implementation.lower() == "reference" or "llama2" in model.lower():
             min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"
+        
+
         # System memory
         if "dlrm" in model:
             system_memory = "512GB"

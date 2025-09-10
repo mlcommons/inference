@@ -393,7 +393,7 @@ def define_env(env):
                                     skip_test_query_count,
                                     scenarios,
                                     code_version,
-                                    extra_variation_tags+f",_{run_mode}",
+                                    extra_variation_tags + f",_{run_mode}",
                                     extra_input_string,
                                 )
                                 content += run_cmd
@@ -503,13 +503,12 @@ def define_env(env):
                 if key in model:
                     disk_space = ds[key]
                     break
-                
+
         if "llama2" in model.lower():
             disk_space = f" 900GB for manual execution of {"reference" if implementation.lower() == "reference" else "vendor"} implementation and 1.5TB for automated run through MLC-Scripts"
-        
+
         if implementation.lower() == "reference" or "llama2" in model.lower():
             min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"
-        
 
         # System memory
         if "dlrm" in model:

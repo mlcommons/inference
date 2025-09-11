@@ -68,7 +68,7 @@ def define_env(env):
 
         elif implementation == "nvidia":
             if model in ["retinanet", "resnet50",
-                         "3d-unet-99", "3d-unet-99.9"]:
+                         "3d-unet-99", "3d-unet-99.9", "llama2-70b-99", "llama2-70b-99.9"]:
                 code_version = "r5.1-dev"
             if model in ["mixtral-8x7b"]:
                 return pre_space + "    WIP"
@@ -594,9 +594,6 @@ def define_env(env):
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"
-                if "llama2" in model.lower():
-                    info += f"{pre_space}    - The dataset for NVIDIA's implementation of Llama2 is not publicly available. The user must fill [this](https://docs.google.com/forms/d/e/1FAIpQLSc_8VIvRmXM3I8KQaYnKf7gy27Z63BBoI_I1u02f4lw6rBp3g/viewform?pli=1&fbzx=-8842630989397184967) form and be verified as a MLCommons member to access the dataset.\n\n"
-                    info += f"{pre_space}    - `PATH_TO_PICKE_FILE` should be replaced with path to the downloaded pickle file.\n\n"
         else:
             if model == "sdxl":
                 info += f"\n{pre_space}!!! tip\n\n"
@@ -742,7 +739,6 @@ def define_env(env):
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     docker_cmd_suffix += f" \\\n{pre_space} --tp_size=2"
-                    docker_cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKLE_FILE>"
                 elif implementation == "neuralmagic":
                     docker_cmd_suffix += (
                         f" \\\n{pre_space} --api_server=http://localhost:8000"

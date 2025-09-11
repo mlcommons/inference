@@ -41,7 +41,7 @@ def define_env(env):
 
         if implementation == "reference":
             # Tip
-            if model not in ["rnnt", "gptj-99", "gptj-99.9"]:
+            if model not in ["rnnt", "gptj-99", "gptj-99.9", "llama2-70b-99", "llama2-70b-99.9"]:
                 code_version = "r5.1-dev"
             if "99.9" not in model and implementation_tips:
                 content += f"\n{pre_space}!!! tip\n\n"
@@ -68,7 +68,7 @@ def define_env(env):
 
         elif implementation == "nvidia":
             if model in ["retinanet", "resnet50",
-                         "3d-unet-99", "3d-unet-99.9"]:
+                         "3d-unet-99", "3d-unet-99.9", "llama2-70b-99", "llama2-70b-99.9"]:
                 code_version = "r5.1-dev"
             if model in ["mixtral-8x7b"]:
                 return pre_space + "    WIP"

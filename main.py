@@ -789,7 +789,6 @@ def define_env(env):
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
-                    cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
                 elif implementation == "neuralmagic":
                     cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
                     cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"

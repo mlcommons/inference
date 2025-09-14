@@ -65,7 +65,7 @@ or supporting multi-node execution) useful for the community and [MLCommons](htt
 
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "nvidia", fixed_scenarios=["Offline"], categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
 
-{{ mlperf_inference_implementation_readme (4, "llama2-70b-99.99", "nvidia", fixed_scenarios=["Offline"], categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
+{{ mlperf_inference_implementation_readme (4, "llama2-70b-99.9", "nvidia", fixed_scenarios=["Offline"], categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
 
 ## Submission Commands
 

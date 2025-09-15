@@ -15,6 +15,7 @@ hide:
     
 {{ mlperf_inference_implementation_readme (4, "retinanet", "nvidia") }}
 
+<!-- 
 === "Intel"
     ## Intel MLPerf Implementation
     
@@ -29,3 +30,4 @@ hide:
     ## MLPerf Modular Implementation in C++
     
 {{ mlperf_inference_implementation_readme (4, "retinanet", "cpp") }}
+ -->

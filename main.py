@@ -28,6 +28,7 @@ def define_env(env):
         content = ""
 
         execution_envs = ["Docker", "Native"]
+        run_modes = ["performance-only", "accuracy-only"]
         code_version = "r5.0-dev"
         implementation_run_options = []
 
@@ -67,7 +68,7 @@ def define_env(env):
 
         elif implementation == "nvidia":
             if model in ["retinanet", "resnet50",
-                         "3d-unet-99", "3d-unet-99.9"]:
+                         "3d-unet-99", "3d-unet-99.9", "llama2-70b-99", "llama2-70b-99.9"]:
                 code_version = "r5.1-dev"
             if model in ["mixtral-8x7b"]:
                 return pre_space + "    WIP"
@@ -186,6 +187,7 @@ def define_env(env):
                     cur_space2 = cur_space1 + "    "
                     cur_space3 = cur_space2 + "    "
                     cur_space4 = cur_space3 + "    "
+                    cur_space5 = cur_space4 + "    "
 
                     content += f"{cur_space1}=== \"{device}\"\n"
                     content += f"{cur_space2}##### {device} device\n\n"
@@ -305,6 +307,8 @@ def define_env(env):
 
                                 if implementation.lower() == "nvidia":
                                     content += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPUs with supported configs in MLC are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`. For other GPUs, default configuration as per the GPU memory will be used.\n"
+                                    if "llama2-70b" in model.lower():
+                                        content += f"{cur_space3}* Add `--adr.llama2-model.tags=_pre-quantized` to use the Nvidia quantized models with the available in the MLC Storage. These models were quantized with three different configurations of tensor parallelism and pipeline parallelism: TP1–PP2, TP2–PP1, and TP1–PP1. The appropriate model will be automatically selected based on the values provided for `--tp_size` and `--pp_size` in run command. By default tp size of 2 and pp size of 1 would be used.\n"
 
                                 if device.lower() not in ["cuda"]:
                                     content += f"{cur_space3}* `--docker_os=ubuntu`: ubuntu and rhel are supported. \n"
@@ -373,25 +377,27 @@ def define_env(env):
 
                         for scenario in scenarios:
                             content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}###### {scenario}\n\n"
-                            run_cmd = mlperf_inference_run_command(
-                                spaces + 21,
-                                model,
-                                implementation,
-                                framework.lower(),
-                                category.lower(),
-                                scenario,
-                                device.lower(),
-                                final_run_mode,
-                                test_query_count,
-                                False,
-                                skip_test_query_count,
-                                scenarios,
-                                code_version,
-                                extra_variation_tags,
-                                extra_input_string,
-                            )
-                            content += run_cmd
-                            # content += run_suffix
+                            for run_mode in run_modes:
+                                content += f"{cur_space4}=== \"{run_mode}\"\n{cur_space5}###### {run_mode}\n\n"
+                                run_cmd = mlperf_inference_run_command(
+                                    spaces + 25,
+                                    model,
+                                    implementation,
+                                    framework.lower(),
+                                    category.lower(),
+                                    scenario,
+                                    device.lower(),
+                                    final_run_mode,
+                                    test_query_count,
+                                    False,
+                                    skip_test_query_count,
+                                    scenarios,
+                                    code_version,
+                                    extra_variation_tags + f",_{run_mode}",
+                                    extra_input_string,
+                                )
+                                content += run_cmd
+                                # content += run_suffix
 
                         if len(scenarios) > 1:
                             content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
@@ -481,7 +487,7 @@ def define_env(env):
             ds = {
                 "dlrm": "500GB",
                 "pointpainting": "500GB",
-                "llama2-70b": "600GB",
+                "llama2-70b": "900GB",
                 "llama3_1-405b": "2.3TB",
                 "mixtral": "100GB",
                 "retinanet": "200GB",
@@ -498,7 +504,12 @@ def define_env(env):
                     disk_space = ds[key]
                     break
 
+        if "llama2" in model.lower():
+            disk_space = f" 900GB for manual execution of {'reference' if implementation.lower() == 'reference' else 'vendor'} implementation and 1.5TB for automated run through MLC-Scripts"
+
+        if implementation.lower() == "reference" or "llama2" in model.lower():
             min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"
+
         # System memory
         if "dlrm" in model:
             system_memory = "512GB"
@@ -583,9 +594,6 @@ def define_env(env):
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"
-                if "llama2" in model.lower():
-                    info += f"{pre_space}    - The dataset for NVIDIA's implementation of Llama2 is not publicly available. The user must fill [this](https://docs.google.com/forms/d/e/1FAIpQLSc_8VIvRmXM3I8KQaYnKf7gy27Z63BBoI_I1u02f4lw6rBp3g/viewform?pli=1&fbzx=-8842630989397184967) form and be verified as a MLCommons member to access the dataset.\n\n"
-                    info += f"{pre_space}    - `PATH_TO_PICKE_FILE` should be replaced with path to the downloaded pickle file.\n\n"
         else:
             if model == "sdxl":
                 info += f"\n{pre_space}!!! tip\n\n"
@@ -731,7 +739,6 @@ def define_env(env):
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     docker_cmd_suffix += f" \\\n{pre_space} --tp_size=2"
-                    docker_cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKLE_FILE>"
                 elif implementation == "neuralmagic":
                     docker_cmd_suffix += (
                         f" \\\n{pre_space} --api_server=http://localhost:8000"
@@ -779,7 +786,6 @@ def define_env(env):
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
-                    cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
                 elif implementation == "neuralmagic":
                     cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
                     cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"

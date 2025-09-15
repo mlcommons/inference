@@ -19,9 +19,11 @@ hide:
 
 {{ mlperf_inference_implementation_readme (4, "dlrm-v2-99.9", "nvidia") }}
 
+<!-- 
 === "Intel"
     ## Intel MLPerf Implementation
     
 {{ mlperf_inference_implementation_readme (4, "dlrm-v2-99", "intel") }}
 
 {{ mlperf_inference_implementation_readme (4, "dlrm-v2-99.9", "intel") }}
+-->

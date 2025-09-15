@@ -548,11 +548,35 @@ def define_env(env):
             pre_space = pre_space + " "
         pre_space += " "
         # pre_space = "                "
+
+        # provide batchsize examples for NVIDIA implementation
+        nv_batch_size_examples = {
+            "llama2-70b": "--batch_size.llama2-70b:1024",
+            "3d-unet": "--batch_size.3d-unet:2",
+            "dlrm-v2": "--batch_size.dlrm-v2:600000",
+            "gptj": "--batch_size.gptj:192",
+            "llama3.1-405b": "--batch_size.llama3.1-405b:128",
+            "mixtral-8x7b": "--batch_size.mixtral-8x7b:4096",
+            "resnet50": "--batch_size.resnet50:8",
+            "retinanet": "--batch_size.retinanet:8",
+            "rgat": "--batch_size.rgat:6144",
+            "sdxl": "--batch_size.sdxl:clip1:1##clip2:2##unet:2##vae:1"
+            # "llama3_1-8b": "--batch_size.llama3_1-8b:6000",
+            # "deepseek-r1": "--batch_size.deepseek-r1:6000",
+            # "deepseek-r1": "--batch_size.deepseek-r1:6000",
+        }
+        nv_batch_size_example_text = ""
+        if implementation.lower() == "nvidia":
+            for key, example in nv_batch_size_examples.items():
+                if key in model.lower():
+                    nv_batch_size_example_text = f"Example: `{example}`"
+                    break
+
         info += f"\n{pre_space}!!! tip\n\n"
         info += f"{pre_space}    - Compliance runs can be enabled by adding `--compliance=yes`.\n\n"
         if model.lower() not in ["pointpainting"]:
             info += f"{pre_space}    - Number of threads could be adjusted using `--threads=#`, where `#` is the desired number of threads. This option works only if the implementation in use supports threading.\n\n"
-            info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
+            info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size. {nv_batch_size_example_text}\n\n"
         elif model.lower() in ["pointpainting"]:
             info += f"{pre_space}    - The maximum duration for a performance run can be disabled by using `--env.MLC_MLPERF_USE_MAX_DURATION=no`.\n\n"
             info += f"{pre_space}    - In valid execution mode, the query count for performance mode can be adjusted using `--env.MLC_MLPERF_LOADGEN_QUERY_COUNT=<query_count>`.\n\n"

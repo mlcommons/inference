@@ -36,6 +36,12 @@ PS: For any query regarding the contribution, feel free to raise an issue in the
     If you encounter issues related to SCC, please submit them [here](https://github.com/mlcommons/inference/issues) with **scc-25** label
     with proper information about the command used, error logs and any additional usefull information to debug the issue.
 
+> **Note:**
+Downloading the models requires service account credentials to be supplied in the run command. These credentials will be shared with participants via their email addresses prior to the start of the competition. Add the following to the existing command described in the sections below:
+```
+--env.MLC_AUTH_USING_SERVICE_ACCOUNT=yes --env.CF_ACCESS_CLIENT_ID=<CF-Access-Client-Id> --env.CF_ACCESS_CLIENT_SECRET=<CF-Access-Client-Secret>
+```
+
 ## Artifacts to submit to the SCC committee
 
 You will need to submit the following files:

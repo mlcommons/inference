@@ -39,7 +39,7 @@ PS: For any query regarding the contribution, feel free to raise an issue in the
 > **Note:**
 Downloading the models requires service account credentials to be supplied in the run command. These credentials will be shared with participants via their email addresses prior to the start of the competition. Add the following to the existing command described in the sections below:
 ```
---env.MLC_AUTH_USING_SERVICE_ACCOUNT=yes --env.CF_ACCESS_CLIENT_ID=<CF-Access-Client-Id> --env.CF_ACCESS_CLIENT_SECRET=<CF-Access-Client-Secret>
+--use_service_account=yes --client_id=<CF-Access-Client-Id> --client_secret=<CF-Access-Client-Secret>
 ```
 
 ## Artifacts to submit to the SCC committee

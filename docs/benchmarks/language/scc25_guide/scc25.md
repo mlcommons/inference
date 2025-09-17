@@ -50,13 +50,6 @@ You will need to submit the following files:
 * `mlperf_submission.md` - description of your platform and some highlights of the MLPerf benchmark execution.
 * `<Team Name>` under which results are pushed to the github repository. 
 
-
-## SCC interview
-
-You are encouraged to highlight and explain the obtained MLPerf inference throughput on your system
-and describe any improvements and extensions to this benchmark (such as adding new hardware backend
-or supporting multi-node execution) useful for the community and [MLCommons](https://mlcommons.org).
-
 ## Run Commands
 
 === "MLCommons-Python"

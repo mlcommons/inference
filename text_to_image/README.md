@@ -1,9 +1,11 @@
 # MLPerf™ Inference Benchmarks for Text to Image
 
-This is the reference implementation for MLPerf Inference text to image.
+## Automated command to run the benchmark via MLCFlow
 
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/text_to_image/sdxl) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
 
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+ 
 ## Supported Models
 
 | model | accuracy | dataset | model source | precision | notes |
@@ -48,15 +50,15 @@ CFLAGS="-std=c++14" python setup.py install
 
 We host two checkpoints (fp32 and fp16) that are a snapshot of the [Hugging Face](https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0) pipeline at the time of the release of the benchmark. Download them and move them to your model path.
 
-#### CM method
+#### MLC method
 
-The following MLCommons CM commands can be used to programmatically download the model checkpoints.
+The following MLCommons MLC commands can be used to programmatically download the model checkpoints.
 
 ```
-pip install cmind
-cm pull repo mlcommons@ck
-cm run script --tags=get,ml-model,sdxl,_fp16,_rclone -j
-cm run script --tags=get,ml-model,sdxl,_fp32,_rclone -j
+mlcr get,ml-model,sdxl,_fp16,_rclone --outdirname=$MODEL_PATH
+```
+```
+mlcr get,ml-model,sdxl,_fp32,_rclone --outdirname=$MODEL_PATH
 ```
 #### Manual method
 
@@ -72,30 +74,35 @@ Once Rclone is installed, run the following command to authenticate with the buc
 rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
 ```
 You can then navigate in the terminal to your desired download directory and run the following commands to download the checkpoints:
+```
+cd $MODEL_PATH
+```
 
 **`fp32`**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp32 ./stable_diffusion_fp32 -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp32 $MODEL_PATH -P
 ```
 **`fp16`**
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp16 ./stable_diffusion_fp16 -P
+rclone copy mlc-inference:mlcommons-inference-wg-public/stable_diffusion_fp16 $MODEL_PATH -P
 ```
 
-#### Move to model path
+### Download validation dataset
 
-```bash
-mkdir $MODEL_PATH
-cd $MODEL_PATH
-# For fp32
-mv <path_to_download>/stable_diffusion_fp32.zip .
-unzip stable_diffusion_fp32.zip
-# For fp16
-mv <path_to_download>/stable_diffusion_fp16.zip .
-unzip stable_diffusion_fp16.zip
+#### MLC METHOD
+The following MLCommons MLC commands can be used to programmatically download the validation dataset.
+
+```
+mlcr get,dataset,coco2014,_validation,_full --outdirname=coco2014
 ```
 
-### Download dataset
+For debugging you can download only a part of all the images in the dataset
+```
+mlcr get,dataset,coco2014,_validation,_size.50 --outdirname=coco2014
+```
+
+
+#### MANUAL METHOD
 ```bash
 cd $SD_FOLDER/tools
 ./download-coco-2014.sh -n <number_of_workers>
@@ -107,14 +114,25 @@ cd $SD_FOLDER/tools
 ```
 If the file [captions.tsv](coco2014/captions/captions.tsv) can be found in the script, it will be used to download the target dataset subset, otherwise it will be generated. We recommend you to have this file for consistency.
 
-#### Calibration dataset
+### Download Calibration dataset (only if you are doing quantization)
+
+#### MLC METHOD
+The following MLCommons MLC commands can be used to programmatically download the calibration dataset.
+
+```
+mlcr get,dataset,coco2014,_calibration --outdirname=coco2014
+```
+
+
+#### MANUAL METHOD
 
 We provide a script to download the calibration captions and images. To download only the captions:
 ```bash
 cd $SD_FOLDER/tools
-./download-coco-2014-calibration.sh
+./download-coco-2014-calibration.sh -n <number_of_workers>
 ```
-To download only the captions and images:
+
+To download both the captions and images:
 ```bash
 cd $SD_FOLDER/tools
 ./download-coco-2014-calibration.sh -i -n <number_of_workers>
@@ -146,3 +164,15 @@ Add the `--accuracy` to the command to run the benchmark
 ```bash
 python3 main.py --dataset "coco-1024" --dataset-path coco2014 --profile stable-diffusion-xl-pytorch --accuracy --model-path model/ [--dtype <fp32, fp16 or bf16>] [--device <cuda or cpu>] [--time <time>] [--scenario <SingleStream, MultiStream, Server or Offline>]
 ```
+
+### Evaluate the accuracy through MLCFlow Automation
+```bash
+mlcr process,mlperf,accuracy,_coco2014 --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/mlcommons/inference/blob/master/text_to_image/tools/accuracy_coco.py) to view the Python script for evaluating accuracy for the Waymo dataset.
+
+
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow.

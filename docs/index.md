@@ -163,11 +163,28 @@ The currently valid [MLPerf Inference Benchmarks](index_gh.md) as of MLPerf infe
     - **Dataset Size**: 788,379
     - **QSL Size**: 788,379
 - **Number of Parameters**: 
-- **Reference Model Accuracy**: ACC = ?
+- **Reference Model Accuracy**: ACC = 72.86%
 - **Server Scenario Latency Constraint**: N/A
 - **Equal Issue mode**: True
 - **High accuracy variant**: No
 - **Submission Category**: Datacenter
+---
+
+## Automotive
+
+### 3D Object Detection
+#### [PointPainting](benchmarks/automotive/3d_object_detection/pointpainting.md)
+- **Dataset**: Waymo
+    - **Dataset Size**: 39,986
+    - **QSL Size**: 1,024
+- **Number of Parameters**: 44 million
+- **FLOPs**: 3 trillion
+- **Reference Model Accuracy (fp32)**:  mAP: 54.25%
+- **Required Accuracy (Closed Division)**:
+    - mAP: 54.25%
+- **Equal Issue mode**: False
+- **High accuracy variant**: Yes
+- **Submission Category**: Edge
 ---
 
 ## Submission Categories

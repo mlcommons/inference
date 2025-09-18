@@ -23,14 +23,14 @@ Additionally, significant bonus points will be awarded if your team enhances an 
 
 
 !!! info
-    Both MLPerf and CM automation are evolving projects.
+    Both MLPerf and MLC automation are evolving projects.
     If you encounter issues or have questions, please submit them [here](https://github.com/mlcommons/cm4mlops/issues)
 
 ## Artifacts to submit to the SCC committee
 
 You will need to submit the following files:
 
-* `mlperf_submission.run` - CM commands to run MLPerf inference benchmark saved to this file.
+* `mlperf_submission.run` - MLC commands to run MLPerf inference benchmark saved to this file.
 * `mlperf_submission.md` - description of your platform and some highlights of the MLPerf benchmark execution.
 * `<Team Name>` under which results are pushed to the github repository. 
 
@@ -61,7 +61,7 @@ or supporting multi-node execution) useful for the community and [MLCommons](htt
 
 
 ```bash
-cm run script --tags=generate,inference,submission \
+mlcr generate,inference,submission \
    --clean \
    --run-checker \
    --tar=yes \
@@ -85,7 +85,7 @@ Fork the `mlperf-inference-results-scc24` branch of the repository URL at [https
 Run the following command after **replacing `--repo_url` with your GitHub fork URL**.
 
 ```bash
-cm run script --tags=push,github,mlperf,inference,submission \
+mlcr push,github,mlperf,inference,submission \
    --repo_url=https://github.com/<myfork>/cm4mlperf-inference \
    --repo_branch=mlperf-inference-results-scc24 \
    --commit_message="Results on system <HW Name>" \

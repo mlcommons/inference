@@ -189,7 +189,7 @@ bool PerformanceSummary::EarlyStopping(
           std::to_string(queries_issued) + ").\n" + " * Would discard " +
           std::to_string(t - 1) + " highest latency queries.\n" +
           " * Early stopping " +
-          DoubleToString(target_latency_percentile.percentile * 100, 0) +
+          DoubleToString(target_latency_percentile.percentile * 100, 1) +
           "th percentile estimate: " + std::to_string(percentile_estimate);
       early_stopping_latency_ss = percentile_estimate;
 
@@ -202,7 +202,7 @@ bool PerformanceSummary::EarlyStopping(
       if (queries_issued < h_min + 1) {
         *recommendation +=
             "\n * Not enough queries processed for " +
-            DoubleToString(multi_stream_percentile * 100, 0) +
+            DoubleToString(multi_stream_percentile * 100, 1) +
             "th percentile\n" +
             " early stopping estimate (would need to process at\n least " +
             std::to_string(h_min + 1) + " total queries).";
@@ -218,7 +218,7 @@ bool PerformanceSummary::EarlyStopping(
         percentile_estimate = (*sample_latencies)[queries_issued - t];
         *recommendation +=
             "\n * Early stopping " +
-            DoubleToString(multi_stream_percentile * 100, 0) +
+            DoubleToString(multi_stream_percentile * 100, 1) +
             "th percentile estimate: " + std::to_string(percentile_estimate);
         early_stopping_latency_ms = percentile_estimate;
       }
@@ -273,7 +273,7 @@ bool PerformanceSummary::EarlyStopping(
           std::to_string(queries_issued) + ").\n" + " * Would discard " +
           std::to_string(t - 1) + " highest latency queries.\n" +
           " * Early stopping " +
-          DoubleToString(target_latency_percentile.percentile * 100, 0) +
+          DoubleToString(target_latency_percentile.percentile * 100, 1) +
           "th percentile estimate: " + std::to_string(percentile_estimate);
       early_stopping_latency_ms = percentile_estimate;
       break;
@@ -392,13 +392,13 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
 
   switch (settings.scenario) {
     case TestScenario::SingleStream: {
-      summary(DoubleToString(target_latency_percentile.percentile * 100, 0) +
+      summary(DoubleToString(target_latency_percentile.percentile * 100, 1) +
                   "th percentile latency (ns) : ",
               target_latency_percentile.sample_latency);
       break;
     }
     case TestScenario::MultiStream: {
-      summary(DoubleToString(target_latency_percentile.percentile * 100, 0) +
+      summary(DoubleToString(target_latency_percentile.percentile * 100, 1) +
                   "th percentile latency (ns) : ",
               target_latency_percentile.query_latency);
       break;
@@ -430,14 +430,14 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
     switch (settings.scenario) {
       case TestScenario::SingleStream: {
         summary(DoubleToString(token_target_latency_percentile.percentile * 100,
-                               0) +
+                               1) +
                     "th first token percentile latency (ns) : ",
                 token_target_latency_percentile.sample_latency);
         break;
       }
       case TestScenario::MultiStream: {
         summary(DoubleToString(token_target_latency_percentile.percentile * 100,
-                               0) +
+                               1) +
                     "th first token percentile latency (ns) : ",
                 token_target_latency_percentile.sample_latency);
         break;
@@ -848,8 +848,9 @@ void PerformanceSummary::LogDetail(AsyncDetail& detail) {
         break;
       }
     }
-#endif
   }
+  MLPERF_LOG(detail, "num_errors", detail.async_log().GetErrorCount());
+#endif
 }
 }  // namespace loadgen
 }  // namespace mlperf

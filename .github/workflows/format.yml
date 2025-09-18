@@ -3,7 +3,7 @@ name: "Code formatting"
 on:
   push:
     branches:
-    - "**"
+      - "**"
 
 env:
   python_version: "3.9"
@@ -11,17 +11,20 @@ env:
 jobs:
   format-code:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
       - name: Set up Python ${{ env.python_version }}
         uses: actions/setup-python@v3
         with:
           python-version: ${{ env.python_version }}
 
-      - name: Format modified python files
+      - name: Format modified Python files
         env:
           filter: ${{ github.event.before }}
         run: |
@@ -29,7 +32,7 @@ jobs:
           for FILE in $(git diff --name-only $filter | grep -E '.*\.py$')
           do
             # Check if the file still exists in the working tree
-            if [ -f "$FILE" ]; then
+            if [ -f "$FILE" ] && [ "$FILE" != "tools/submission/power/power_checker.py" ]; then
               autopep8 --in-place -a "$FILE"
               git add "$FILE"
             fi
@@ -52,9 +55,10 @@ jobs:
         run: |
           HAS_CHANGES=$(git diff --staged --name-only)
           if [ ${#HAS_CHANGES} -gt 0 ]; then
-            git config --global user.name mlcommons-bot
-            git config --global user.email "mlcommons-bot@users.noreply.github.com"
+            git config --global user.name github-actions[bot]
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
             # Commit changes
             git commit -m '[Automated Commit] Format Codebase'
+            # Use the GITHUB_TOKEN to push changes
             git push
-          fi 
+          fi

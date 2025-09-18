@@ -58,7 +58,7 @@ class GPTJ_QDL:
 
         max_num_threads = int(
             os.environ.get(
-                "CM_MAX_NUM_THREADS",
+                "MLC_MAX_NUM_THREADS",
                 os.cpu_count()))
         if self.scenario == "Offline":
             # Client sends multiple requests using threads

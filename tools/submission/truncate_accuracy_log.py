@@ -142,7 +142,10 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                 continue
 
             # process results
-            for directory in ["results", "compliance"]:
+            required_dirs = [
+                "results", "compliance"] if division in [
+                "closed", "network"] else ["results"]
+            for directory in required_dirs:
 
                 log_path = os.path.join(division, submitter, directory)
                 if not os.path.exists(log_path):
@@ -233,7 +236,7 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                 # get to work
                                 hash_val = get_hash(acc_log)
                                 with open(acc_txt, "a", encoding="utf-8") as f:
-                                    f.write("hash={0}\n".format(hash_val))
+                                    f.write("\nhash={0}\n".format(hash_val))
                                 truncate_file(acc_log)
                                 log.info("%s truncated", acc_log)
 

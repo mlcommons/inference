@@ -1,5 +1,4 @@
 name: Build loadgen wheels and release them into PYPI
-
 on:
   release:
     types: [published]
@@ -7,7 +6,6 @@ on:
     branches:
       - master
       - loadgen-release
-      - dev
     paths:
       - loadgen/**
 
@@ -69,6 +67,7 @@ jobs:
   
   build_wheels:
     name: Build wheels on ${{ matrix.os }}
+    if: github.repository_owner == 'mlcommons'
     needs: update_version
     runs-on: ${{ matrix.os }}
     strategy:
@@ -100,6 +99,7 @@ jobs:
           path: wheels
 
   publish_wheels:
+    if: github.repository_owner == 'mlcommons'
     needs: build_wheels  # Wait for the build_wheels job to complete
     runs-on: ubuntu-latest  # Only run this job on Linux
     environment: release
@@ -133,6 +133,7 @@ jobs:
         with:
           name: wheels-windows-latest
           path: wheels
+      # Publish
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:

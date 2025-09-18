@@ -1,0 +1,18 @@
+# This workflow will test the submission generation using MLPerf Automation 
+
+name: MLC based Submission Generation
+
+on:
+  pull_request:
+    branches: [ "master", "dev" ]
+    paths:
+      - '.github/workflows/test-submission-generation.yml'
+      - '**'  
+      - '!**.md'
+      
+jobs:
+  run-tests:
+    uses: mlcommons/mlperf-automations/.github/workflows/test-mlperf-inference-submission-generation.yml@dev
+    with:
+      ref: ${{ github.event.pull_request.head.ref }}
+      repo-url: ${{ github.event.pull_request.head.repo.html_url }}

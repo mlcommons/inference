@@ -1,11 +1,11 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Test for MLPerf inference bert submission generation using CM script automation
+name: Test for MLPerf inference bert submission generation using MLC script automation
 
 on:
   pull_request:
-    branches: [ "master", "dev" ]
+    branches: [ "master_off", "dev_off" ]
     paths:
       - language/bert/**
       - tools/submission/**
@@ -33,7 +33,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        python3 -m pip install cm4mlops
+        python3 -m pip install mlc-scripts
     - name: Test BERT and end to end submission generation
       run: |
-        cm run script --tags=run,mlperf,inference,generate-run-cmds,_submission,_short --quiet --submitter="MLCommons" --hw_name=default --model=bert-99 --implementation=reference --backend=${{ matrix.backend }} --device=cpu --scenario=Offline --adr.compiler.tags=gcc  --adr.inference-src.version=custom --adr.inference-src.tags=_repo.${{ github.event.pull_request.head.repo.html_url }},_branch.$PR_HEAD_REF --adr.inference-src-loadgen.tags=_branch.$PR_HEAD_REF,_repo.${{ github.event.pull_request.head.repo.html_url }} --adr.inference-src-loadgen.version=custom --adr.loadgen.version=custom
+        mlcr run,mlperf,inference,generate-run-cmds,_submission,_short --quiet --submitter="MLCommons" --hw_name=default --model=bert-99 --implementation=reference --backend=${{ matrix.backend }} --device=cpu --scenario=Offline --adr.compiler.tags=gcc  --adr.inference-src.version=custom --adr.inference-src.tags=_repo.${{ github.event.pull_request.head.repo.html_url }},_branch.$PR_HEAD_REF --adr.inference-src-loadgen.tags=_branch.$PR_HEAD_REF,_repo.${{ github.event.pull_request.head.repo.html_url }} --adr.inference-src-loadgen.version=custom --adr.loadgen.version=custom

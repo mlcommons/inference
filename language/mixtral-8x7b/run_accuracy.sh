@@ -6,7 +6,6 @@ mkdir -p "run_outputs"
 python3 -u main.py --scenario Offline \
         --model-path ${CHECKPOINT_PATH} \
         --accuracy \
-        --mlperf-conf mlperf.conf \
         --user-conf user.conf \
         --total-sample-count 15000 \
         --dataset-path ${DATASET_PATH} \

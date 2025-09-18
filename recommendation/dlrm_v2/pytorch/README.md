@@ -2,7 +2,11 @@
 
 This is the reference implementation for MLCommons Inference benchmarks.
 
+## Automated command to run the benchmark via MLCFlow
+
 Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/recommendation/dlrm-v2/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
 
 ### Supported Models
 
@@ -71,7 +75,13 @@ CFLAGS="-std=c++14" python setup.py develop --user
 
 ### Download preprocessed Dataset
 
-Download the preprocessed dataset using Rclone.
+#### Download dataset through MLCFlow Automation
+
+```
+mlcr get,preprocessed,dataset,criteo,_validation --outdirname=<path_to_download> -j
+```
+
+#### Download the preprocessed dataset using Rclone.
 
 To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
 To install Rclone on Linux/macOS/BSD systems, run:
@@ -102,13 +112,10 @@ framework | Size in bytes (`du *`) | MD5 hash (`md5sum *`)
 N/A | pytorch | <2GB | -
  pytorch | 97.31GB | -
 
-#### CM method
-
-The following MLCommons CM commands can be used to programmatically download the model checkpoint. 
+#### Download model through MLCFlow Automation
 
 ```
-pip install cm4mlops
-cm run script --tags=get,ml-model,dlrm,_pytorch,_weight_sharded,_rclone -j
+mlcr get,ml-model,get,ml-model,dlrm,_pytorch,_weight_sharded,_rclone --outdirname=<path_to_download> -j
 ```
 
 #### Manual method
@@ -312,6 +319,15 @@ In the reference implementation, each sample is mapped to 100-700 user-item pair
 
 ### Running accuracy script
 
+#### Evaluate the accuracy through MLCFlow Automation
+
+```bash
+mlcr process,mlperf,accuracy,_terabyte --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/mlcommons/inference/blob/master/recommendation/dlrm_v2/pytorch/tools/accuracy-dlrm.py) to view the Python script for evaluating accuracy for the Waymo dataset.
+
+
 To get the accuracy from a LoadGen accuracy json log file,
 
 1. If your SUT outputs the predictions and the ground truth labels in a packed format like the reference implementation then run
@@ -413,6 +429,10 @@ usage: main.py [-h]
 `--accuracy` perform inference on the entire dataset to validate achieved model accuracy/AUC metric.
 
 `--find-peak-performance` determine the maximum QPS for the Server, while not applicable to other scenarios.
+
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 
 
 ## License
 

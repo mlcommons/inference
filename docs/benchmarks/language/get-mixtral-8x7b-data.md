@@ -12,8 +12,17 @@ The benchmark implementation run command will automatically download the preproc
 
     ### Get Validation Dataset
     ```
-    cm run script --tags=get,dataset-mixtral,openorca-mbxp-gsm8k-combined -j
+    mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined -j
     ```
+
+=== "Calibration"
+    
+    ### Get Calibration Dataset
+    ```
+    mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_calibration -j
+    ```
+
+- `--outdirname=<PATH_TO_DOWNLOAD_MIXTRAL_DATASET>` could be provided to download the dataset to a specific location.
 
 ## Model
 The benchmark implementation run command will automatically download the required model and do the necessary conversions. In case you want to only download the official model, you can use the below commands.
@@ -24,5 +33,7 @@ Get the Official MLPerf MIXTRAL-8x7b Model
 
     ### Pytorch
     ```
-    cm run script --tags=get,ml-model,mixtral -j
+    mlcr get,ml-model,mixtral -j
     ```
+
+- `--outdirname=<PATH_TO_DOWNLOAD_MIXTRAL_MODEL>` could be provided to download the model to a specific location.

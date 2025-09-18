@@ -119,14 +119,10 @@ def get_args():
         required=True,
         help="path to the dataset")
     parser.add_argument(
-        "--in-memory",
-        action="store_true",
-        help="path to the dataset")
-    parser.add_argument(
         "--layout",
         default="COO",
         choices=["CSC", "CSR", "COO"],
-        help="path to the dataset",
+        help="layout of the dataset",
     )
     parser.add_argument(
         "--profile", choices=SUPPORTED_PROFILES.keys(), help="standard profiles"
@@ -363,7 +359,6 @@ def main():
     ds = dataset_class(
         data_path=args.dataset_path,
         name=args.dataset,
-        in_memory=args.in_memory,
         layout=args.layout,
         type=args.dtype,
         **kwargs,

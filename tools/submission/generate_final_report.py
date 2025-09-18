@@ -19,10 +19,10 @@ def get_args():
         '--input',
         required=True,
         help='results csv from checker')
-    parser.add_argument('--version', default='4.1', help='mlperf version')
+    parser.add_argument('--version', default='5.1', help='mlperf version')
     parser.add_argument(
         '--repository',
-        default='submissions_inference_4.1',
+        default='submissions_inference_v5.1',
         help='mlperf repository')
     parser.add_argument(
         '--repository-owner',
@@ -135,21 +135,25 @@ def main():
         [
             "resnet",
             "retinanet",
-            "3d-unet-99",
-            "3d-unet-99.9",
-            "rnnt",
             "bert-99",
             "bert-99.9",
             "dlrm-v2-99",
             "dlrm-v2-99.9",
-            "gptj-99",
-            "gptj-99.9",
-            "stable-diffusion-xl",
+            "3d-unet-99",
+            "3d-unet-99.9",
+            "llama3.1-8b",
+            "llama3.1-8b-edge",
             "llama2-70b-99",
             "llama2-70b-99.9",
+            "stable-diffusion-xl",
             "mixtral-8x7b",
+            "llama3.1-405b",
+            "rgat",
+            "pointpainting",
+            "deepseek-r1",
+            "whisper"
         ],
-        ["SingleStream", "MultiStream", "Server", "Offline"],
+        ["SingleStream", "MultiStream", "Server", "Offline", "Interactive"],
         [
             "Latency (ms)",
             "Samples/s",
@@ -160,14 +164,13 @@ def main():
         ],
     ]
 
-    if args.version == "4.1":
+    if args.version == "5.0":
         filter_scenarios = {
             "datacenter": {
                 "resnet": ["Server", "Offline"],
                 "retinanet": ["Server", "Offline"],
-                "rnnt": ["Server", "Offline"],
-                "bert-99": ["Server", "Offline"],
-                "bert-99.9": ["Server", "Offline"],
+                "bert-99": [],
+                "bert-99.9": [],
                 "dlrm-v2-99": ["Server", "Offline"],
                 "dlrm-v2-99.9": ["Server", "Offline"],
                 "3d-unet-99": ["Offline"],
@@ -177,21 +180,32 @@ def main():
                 "stable-diffusion-xl": ["Server", "Offline"],
                 "llama2-70b-99": ["Server", "Offline"],
                 "llama2-70b-99.9": ["Server", "Offline"],
+                "llama2-70b-interactive-99": ["Server", "Offline"],
+                "llama2-70b-interactive-99.9": ["Server", "Offline"],
                 "mixtral-8x7b": ["Server", "Offline"],
+                "rgat": ["Offline"],
+                "llama3.1-405b": ["Offline", "Server"],
+                "pointpainting": []
             },
             "edge": {
                 "resnet": ["SingleStream", "MultiStream", "Offline"],
                 "retinanet": ["SingleStream", "MultiStream", "Offline"],
-                "rnnt": ["SingleStream", "Offline"],
                 "bert-99": ["SingleStream", "Offline"],
-                "bert-99.9": [],
+                "bert-99.9": ["SingleStream", "Offline"],
                 "dlrm-v2-99": [],
                 "dlrm-v2-99.9": [],
                 "3d-unet-99": ["SingleStream", "Offline"],
                 "3d-unet-99.9": ["SingleStream", "Offline"],
+                "llama2-70b-99": [],
+                "llama2-70b-99.9": [],
+                "llama2-70b-interactive-99": [],
+                "llama2-70b-interactive-99.9": [],
+                "llama3.1-405b": [],
                 "gptj-99": ["SingleStream", "Offline"],
                 "gptj-99.9": ["SingleStream", "Offline"],
+                "rgat": [],
                 "stable-diffusion-xl": ["SingleStream", "Offline"],
+                "pointpainting": ["SingleStream"],
             },
         }
     else:
@@ -199,31 +213,40 @@ def main():
             "datacenter": {
                 "resnet": ["Server", "Offline"],
                 "retinanet": ["Server", "Offline"],
-                "rnnt": ["Server", "Offline"],
+                "bert-99": [],
+                "bert-99.9": [],
                 "dlrm-v2-99": ["Server", "Offline"],
                 "dlrm-v2-99.9": ["Server", "Offline"],
                 "3d-unet-99": ["Offline"],
                 "3d-unet-99.9": ["Offline"],
-                "gptj-99": ["Server", "Offline"],
-                "gptj-99.9": ["Server", "Offline"],
                 "stable-diffusion-xl": ["Server", "Offline"],
-                "llama2-70b-99": ["Server", "Offline"],
-                "llama2-70b-99.9": ["Server", "Offline"],
+                "llama2-70b-99": ["Server", "Offline", "Interactive"],
+                "llama2-70b-99.9": ["Server", "Offline", "Interactive"],
                 "mixtral-8x7b": ["Server", "Offline"],
                 "rgat": ["Offline"],
-                "llama3.1-405b": ["Offline", "Server"]
+                "llama3.1-405b": ["Server", "Offline", "Interactive"],
+                "pointpainting": [],
+                "llama3.1-8b": ["Server", "Offline", "Interactive"],
+                "deepseek-r1": ["Server", "Offline"],
+                "whisper": ["Offline"],
             },
             "edge": {
                 "resnet": ["SingleStream", "MultiStream", "Offline"],
                 "retinanet": ["SingleStream", "MultiStream", "Offline"],
-                "rnnt": ["SingleStream", "Offline"],
                 "bert-99": ["SingleStream", "Offline"],
                 "bert-99.9": ["SingleStream", "Offline"],
+                "dlrm-v2-99": [],
+                "dlrm-v2-99.9": [],
                 "3d-unet-99": ["SingleStream", "Offline"],
                 "3d-unet-99.9": ["SingleStream", "Offline"],
-                "gptj-99": ["SingleStream", "Offline"],
-                "gptj-99.9": ["SingleStream", "Offline"],
+                "llama2-70b-99": [],
+                "llama2-70b-99.9": [],
+                "llama3.1-405b": [],
+                "rgat": [],
                 "stable-diffusion-xl": ["SingleStream", "Offline"],
+                "pointpainting": ["SingleStream"],
+                "llama3.1-8b-edge": ["SingleStream", "Offline"],
+                "whisper": ["Offline"],
             },
         }
 
@@ -279,16 +302,34 @@ def main():
             "Unique ID (e.g. for Audit)"],
         inplace=True,
     )
-    id_dict = {
-        key: 1 + value
-        for (value, key) in enumerate(pd.unique(df["Unique ID (e.g. for Audit)"]))
+    if os.path.exists("ids.json"):
+        with open("ids.json", "r") as f:
+            id_dict = json.load(f)
+    else:
+        id_dict = {}
+    cur_keys = id_dict.keys()
+    cur_ids = id_dict.values()
+    new_keys = [
+        a for a in pd.unique(
+            df["Unique ID (e.g. for Audit)"]) if a not in cur_keys]
+    if cur_ids:
+        max_cur_id = max(cur_ids)
+    else:
+        max_cur_id = 0
+    id_dict_new = {
+        key: 1 + value + max_cur_id
+        for (value, key) in enumerate(new_keys)
     }
+    id_dict.update(id_dict_new)
+
     df["ID"] = df.apply(
         lambda x: "{}-{:04}".format(
             args.version, id_dict[x["Unique ID (e.g. for Audit)"]]
         ),
         axis=1,
     )
+    with open("ids.json", "w") as f:
+        f.write(json.dumps(id_dict, indent=4))
 
     for category in ["closed", "open", "network"]:
         for suite in ["datacenter", "edge"]:

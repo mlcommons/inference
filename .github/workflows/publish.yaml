@@ -2,7 +2,6 @@
 
 name: Publish site
 
-
 on:
   release:
     types: [published]
@@ -10,6 +9,8 @@ on:
     branches:
       - master
       - docs
+      - dev
+
 
 jobs:
 

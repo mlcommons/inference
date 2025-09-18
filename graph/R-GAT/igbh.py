@@ -131,7 +131,7 @@ class IGBHeteroDataset(object):
         self,
         path,
         dataset_size="tiny",
-        in_memory=True,
+        in_memory=False,
         use_label_2K=False,
         with_edges=True,
         layout: Literal["CSC", "CSR", "COO"] = "COO",

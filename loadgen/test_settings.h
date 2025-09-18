@@ -237,7 +237,7 @@ struct TestSettings {
 
   /// \brief Load mlperf parameter config from file.
   int FromConfig(const std::string &path, const std::string &model,
-                 const std::string &scenario, bool is_mlperf_conf = false);
+                 const std::string &scenario, int conf_type = 1);
   /**@}*/
 
   // ==================================

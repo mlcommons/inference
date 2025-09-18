@@ -9,14 +9,13 @@
         - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
 
 
-Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/mixtral-8x7b) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
- 
-## Prepare environment
+## Automated command to run the benchmark via MLCFlow
 
-Copy the mlperf.conf file to this folder.
-```
-cp ../../mlperf.conf .
-```
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/mixtral-8x7b/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do `pip install mlc-scripts` and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
+
+## Prepare environment
 
 For a CPU-only run:
 
@@ -71,6 +70,12 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 
 **Important Note:** Files and configurations of the model have changed, and might change in the future. If you are going to get the model from Hugging Face or any external source, use a version of the model that exactly matches the one in this [commit](https://huggingface.co/mistralai/Mixtral-8x7B-Instruct-v0.1/commit/a60832cb6c88d5cb6e507680d0e9996fbad77050). We strongly recommend to get the model following the steps in the next section:
 
+### Download model through MLCFlow Automation
+
+```
+mlcr get,ml-model,mixtral --outdirname=<path_to_download> -j
+```
+
 ### Get Checkpoint
 
 #### Using Rclone
@@ -91,6 +96,22 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/mixtral_8x7b/mixtral-8x7
 ```
 
 ## Get Dataset
+
+### Download Preprocessed dataset through MLCFlow Automation
+
+**Validation**
+
+```
+mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_validation --outdirname=<path to download> -j
+```
+
+**Calibration**
+
+```
+mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_calibration --outdirname=<path to download> -j
+```
+
+- Adding `_wget` tag to the run command will change the download tool from `rclone` to `wget`.
 
 ### Preprocessed
 
@@ -136,7 +157,6 @@ wget https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_1
 ```
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 15000 \
                 --device cpu \
@@ -149,7 +169,6 @@ For a GPU-based run:
 ```
 python3 -u main.py --scenario Offline \
         --model-path ${CHECKPOINT_PATH} \
-        --mlperf-conf mlperf.conf \
         --user-conf user.conf \
         --total-sample-count 15000 \
         --dataset-path ${DATASET_PATH} \
@@ -162,7 +181,6 @@ python3 -u main.py --scenario Offline \
 ```
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 15000 \
                 --device cpu \
@@ -184,7 +202,6 @@ mkdir -p "run_outputs"  # The script will dump all the outputs to 'run_outputs'.
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
                 --accuracy \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 15000 \
                 --dataset-path ${DATASET_PATH} \
@@ -221,7 +238,6 @@ OUTPUT_LOG_DIR=server-accuracy-logs
 python -u main.py --scenario Server \
                 --model-path ${CHECKPOINT_PATH} \
                 --accuracy \
-                --mlperf-conf mlperf.conf \
                 --user-conf user.conf \
                 --total-sample-count 15000 \
                 --dataset-path ${DATASET_PATH} \
@@ -238,17 +254,26 @@ fi
 
 The ServerSUT was not tested for GPU runs.
 
+## Accuracy Evaluation
+
+### Evaluate the accuracy through MLCFlow Automation
+```bash
+mlcr process,mlperf,accuracy,_openorca-gsm8k-mbxp-combined --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+Please click [here](https://github.com/mlcommons/inference/blob/master/language/mixtral-8x7b/evaluate-accuracy.py) to view the Python script for evaluating accuracy for the Waymo dataset.
+
 ### Evaluation
 Recreating the enviroment for evaluating the quality metrics can be quite tedious. Therefore we provide a dockerfile and recommend using docker for this task.
 1. Build the evaluation container
 ```bash
 docker build . -f Dockerfile.eval -t evaluation
 ```
-2. Run the docker in interactive mode and with 
+2. Run the docker in interactive mode and with
 ```bash
-sudo docker run -it -v $(pwd):/eval -t evaluation
+docker run -it --rm --net=host --runtime=nvidia --ipc=host -v $PWD:$PWD -w $PWD evaluation
 ```
-3. 
+3.
 ```bash
 cd eval
 python -u evaluate-accuracy.py --checkpoint-path [path_to_model_checkpoint] \
@@ -259,6 +284,8 @@ python -u evaluate-accuracy.py --checkpoint-path [path_to_model_checkpoint] \
 
 
 ## Accuracy Target
+
+**WARNING:** The full accuracy target was only verified with the standalone script. The reference implementation matches in a subset of the dataset, but hasn't been fully confirm.
 
 Reference scores:
 Open Orca:
@@ -277,3 +304,7 @@ For official submissions, 99% of each reference score is enforced. Additionally,
 ```json
 {'tokens_per_sample': 144.84}
 ```
+
+## Automated command for submission generation via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/submission/) for an automated way to generate submission through MLCFlow. 

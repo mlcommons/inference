@@ -19,6 +19,7 @@ hide:
 
 {{ mlperf_inference_implementation_readme (4, "bert-99.9", "nvidia") }}
 
+<!-- 
 === "Intel"
     ## Intel MLPerf Implementation
     
@@ -32,3 +33,4 @@ hide:
 {{ mlperf_inference_implementation_readme (4, "bert-99", "qualcomm") }}
 
 {{ mlperf_inference_implementation_readme (4, "bert-99.9", "qualcomm") }}
+ -->s

@@ -213,7 +213,7 @@ def define_env(env):
                         content += f'{cur_space2}=== "{execution_env}"\n'
                         content += f"{cur_space3}###### {execution_env} Environment\n\n"
                         # ref to MLCFlow installation
-                        content += f"{cur_space3}Please refer to the [installation page](site:inference/install/) to install MLCFlow for running the automated benchmark commands.\n\n"
+                        content += f"{cur_space3}Please refer to the [installation page](site:install/) to install MLCFlow for running the automated benchmark commands.\n\n"
                         test_query_count = get_test_query_count(
 
                             model, implementation, device.lower()

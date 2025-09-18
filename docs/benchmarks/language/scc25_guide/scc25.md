@@ -36,6 +36,12 @@ PS: For any query regarding the contribution, feel free to raise an issue in the
     If you encounter issues related to SCC, please submit them [here](https://github.com/mlcommons/inference/issues) with **scc-25** label
     with proper information about the command used, error logs and any additional usefull information to debug the issue.
 
+> **Note:**
+Downloading the models requires service account credentials to be supplied in the run command. These credentials will be shared with participants via their email addresses prior to the start of the competition. Add the following to the existing command described in the sections below:
+```
+--use_service_account=yes --client_id=<CF-Access-Client-Id> --client_secret=<CF-Access-Client-Secret>
+```
+
 ## Artifacts to submit to the SCC committee
 
 You will need to submit the following files:
@@ -43,13 +49,6 @@ You will need to submit the following files:
 * `mlperf_submission.run` - MLC commands to run MLPerf inference benchmark saved to this file.
 * `mlperf_submission.md` - description of your platform and some highlights of the MLPerf benchmark execution.
 * `<Team Name>` under which results are pushed to the github repository. 
-
-
-## SCC interview
-
-You are encouraged to highlight and explain the obtained MLPerf inference throughput on your system
-and describe any improvements and extensions to this benchmark (such as adding new hardware backend
-or supporting multi-node execution) useful for the community and [MLCommons](https://mlcommons.org).
 
 ## Run Commands
 

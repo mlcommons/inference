@@ -1,0 +1,9 @@
+pandas>=2.0.0
+datasets>=4.0.0
+tqdm>=4.66.0
+PyMuPDF>=1.23.0
+sentence-transformers~=5.1.0
+faiss-cpu
+langchain
+langchain-community
+langchain-huggingface

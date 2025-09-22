@@ -127,10 +127,9 @@ def process_url(args_tuple):
 def main():
     parser = argparse.ArgumentParser(description='Download FRAMES dataset from Hugging Face and convert URLs to PDFs')
     parser.add_argument('--tsv_path', default=None, help='Input TSV file (default: download FRAMES dataset)')
-    parser.add_argument('--download_frames', action='store_true', default=True, help='Download FRAMES dataset from Hugging Face (default: True)')
     parser.add_argument('--max_urls', type=int, default=None, help='Maximum number of URLs to process (default: all)')
     parser.add_argument('--output_pdf', default='doc_pdf', help='Output directory for PDFs (default: doc_pdf)')
-    parser.add_argument('--output_data', default='data', help='Output directory for dataset files (default: data)')
+    parser.add_argument('--output_data', default='data', help='Output directory for dataset file, if downloaded from Hugging Face (default: data)')
     parser.add_argument('--processes', type=int, default=10, help='Number of parallel processes (default: 10)')
     
     args = parser.parse_args()
@@ -140,7 +139,7 @@ def main():
     output_dir.mkdir(exist_ok=True)
     
     # Determine TSV file path
-    if args.tsv_path is None or args.download_frames:
+    if args.tsv_path is None:
         print("=== DOWNLOADING FRAMES DATASET ===")
         tsv_path = download_frames_dataset(args.output_data)
         if tsv_path is None:

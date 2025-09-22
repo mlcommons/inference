@@ -37,7 +37,7 @@ enroot start --root --rw \
     --mount $(pwd):/work my_sandbox
 
 ## Once inside sandbox, install dependancies via
-cd /work && ./setup.cfg
+cd /work && ./setup.sh
 ```
 
 ## Corpus creation

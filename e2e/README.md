@@ -97,5 +97,94 @@ The passages JSON has a schema as follows:
 }
 ```
 
+You may use the [`read_pdf.py`](./read_pdf.py) script. 
+```bash
+$ python3 read_pdf.py --help
+usage: read_pdf.py [-h] [--json-file JSON_FILE] [--max-files MAX_FILES] [--max-length MAX_LENGTH]
+                   [--overlap OVERLAP]
+                   input_dir output_dir
+
+Extract text from all PDFs in a directory
+
+positional arguments:
+  input_dir             Input directory containing PDF files
+  output_dir            Output directory for text files
+
+options:
+  -h, --help            show this help message and exit
+  --json-file JSON_FILE
+                        Output JSON file path for passages data (enables JSON creation)
+  --max-files MAX_FILES
+                        Maximum number of PDF files to process (default: all files)
+  --max-length MAX_LENGTH
+                        Maximum length of each passage in characters (default: 512)
+  --overlap OVERLAP     Overlap between passages in characters (default: 50)
+
+
+## Sample usage
+$ python3 read_pdf.py doc_pdf doc_txt_len256_overlap32 --max-length 256 --json-file doc_txt_fixed_len256_overlap32/passages.json --overlap 32
+```
+
 ### TODO Items for passage chunking:
-1. Chunking is done at a
+1. Chunking is done at a character level right now. We may need to do this at the token level directly to avoid truncation.
+2. Need to assess the quality of text extraction from the PyMuPDF package - right now, it seems like some texts are jumbled in order. 
+3. Passage size will directly affect vector operations. Need to study impact of passage len + overlap on vector size, ingestion time, lookup time, etc.
+
+## Single-shot lookup
+1. Embed query: `Query text` -> `Query Tokens` -> `Query vector`
+2. Perform vector similarity search, and return top-k documents. 
+3. Perform reranking using ColBERT (Late interaction and `MaxSim` scoring)
+
+Rerankers: Slow but accurate  
+Retrievers: Fast but less accurate
+
+## Multi-step lookup (TODO)
+Instead of a single step retrieval, we perform multiple steps. In each step, we give the LLM partial retrieved context, and the user query - and ask it to generate search queries. This helps in breaking down multi-step reasoning questions.
+
+Consider, as an example, the below query: 
+```none
+Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?
+```
+
+This is a classic multi-step reasoning. The logical deduction of a well-performing system is: 
+```
+- What year did New York City FC win their first MLS Cup title
+(retrieve docs regarding MLS cup winners)
+(say, answer is 2005)
+- Who won the French Open Mens Singles tournament in 2005?
+(retrieve 2005 French open document)
+```
+
+The flow now looks something like: 
+1. User query comes in
+2. Repeat 1..n times:  
+    1. Given to query rewriter, which gives at most k search queries.
+    2. For each query:
+        1. Encode into vector
+        2. Perform vector search and retrieve relevant documents
+3. Rerank retrieved documents, and choose top-n (call this filtered documents)
+4. Give filtered documents + user query to LLM generator
+
+The query rewriter may be thought of as an LLM with the following prompt: 
+```
+You are an expert at generating search queries to help answer complex questions using a collection of Wikipedia articles. 
+
+Given the following:
+- The user's original question.
+- Relevant facts or documents already gathered so far (if any).
+
+Your task:  
+Generate [k] concise, focused search queries that could be used to find specific information from Wikipedia to help answer the question.  
+- Make each query target a different aspect of the problem or missing information.  
+- Avoid duplicating information already in the context.  
+- Do not reference source filenames, document titles, or include any special characters.
+- Think step by step before writing each query.
+- List the missing pieces of information, then write k queries that could best retrieve them.
+
+[User Question:]
+{user_question}
+
+[Known Facts / Retrieved Documents:]
+{summarized_partial_context}
+
+```

@@ -10,6 +10,8 @@ import time
 import sys
 from tqdm import tqdm
 from datasets import load_dataset
+import getpass
+import re
 
 def download_frames_dataset(output_dir):
     """Download the FRAMES dataset from Hugging Face and save as TSV."""
@@ -133,6 +135,11 @@ def main():
     parser.add_argument('--processes', type=int, default=10, help='Number of parallel processes (default: 10)')
     
     args = parser.parse_args()
+
+    # Set XDG_RUNTIME_DIR for wkhtmltopdf
+    user = getpass.getuser()
+    xdg_runtime_dir = f"/tmp/runtime-{user}"
+    os.environ["XDG_RUNTIME_DIR"] = xdg_runtime_dir
     
     # Create output directories
     output_dir = Path(args.output_pdf)
@@ -148,17 +155,34 @@ def main():
         args.tsv_path = tsv_path
     else:
         print(f"Using provided TSV file: {args.tsv_path}")
-    
+
     # Load dataset
     df = pd.read_csv(args.tsv_path, sep='\t')
 
-    df['wiki_links'] = df['wiki_links'].apply(ast.literal_eval)
-    wiki_dict = df['wiki_links'].to_dict()
+    # df['wiki_links'] = df['wiki_links'].apply(ast.literal_eval)
+    # wiki_dict = df['wiki_links'].to_dict()
 
-    # Extract URLs from wiki_links column
+    def extract_wikipedia_links(item):
+        # List may itself have a single string with multiple links, comma separated
+        # Hence, we use regex matching 
+
+        # Convert string to proper list if needed
+        if isinstance(item, str):
+            item = ast.literal_eval(item)
+
+        # Results holder
+        links = []
+        for entry in item:
+            # Find all links, including in Markdown format, within the string
+            matches = re.findall(r'https://en\.wikipedia\.org/wiki/[^\s,\]]+', entry)
+            links.extend(matches)
+        return links
+
+    # Apply to all rows in df.wiki_links
     urls = set()
-    for url_list in df.wiki_links.to_list():
-        urls.update(url_list)
+    for item in df.wiki_links:
+        for link in extract_wikipedia_links(item):
+            urls.add(link)
 
     urls = list(urls)
     if args.max_urls:

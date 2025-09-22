@@ -115,7 +115,6 @@ def process_pdfs(input_dir, output_dir, json_file=None,
 
     successful = 0
     failed = 0
-    total_passages = 0
 
     # Initialize list to store passages data
     passages_data = []
@@ -144,7 +143,6 @@ def process_pdfs(input_dir, output_dir, json_file=None,
                     successful += 1
 
                     # Create passages data if requested
-                    passage_count = 0
                     if create_json and text.strip():
                         passages = split_into_passages(
                             text, max_passage_length, passage_overlap)
@@ -154,17 +152,14 @@ def process_pdfs(input_dir, output_dir, json_file=None,
                             if clean_passage:
                                 # Store: index, pdf_filename, passage_text
                                 passages_data.append({
-                                    'index': total_passages + passage_count,
+                                    'index': len(passages_data),
                                     'pdf_filename': pdf_file.name,
                                     'passage': clean_passage
                                 })
-                                passage_count += 1
-
-                        total_passages += passage_count
-
+                    
                     # Update progress bar with status
-                    if create_json and passage_count > 0:
-                        status = f"{total_passages} passages created (+ {passage_count})"
+                    if create_json:
+                        status = f"{len(passages_data)} passages created"
                         pbar.set_postfix({"Status": status})
 
                 except Exception as e:
@@ -175,8 +170,6 @@ def process_pdfs(input_dir, output_dir, json_file=None,
                 pbar.set_postfix(
                     {"Status": f"Failed {pdf_file.name[:30]}... (no text)"})
                 failed += 1
-
-            total_passages += passage_count
 
     finally:
         # Save JSON file if creating one
@@ -190,7 +183,7 @@ def process_pdfs(input_dir, output_dir, json_file=None,
     print(f"Successful: {successful}")
     print(f"Failed: {failed}")
     if create_json:
-        print(f"Total passages created: {total_passages}")
+        print(f"Total passages created: {len(passages_data)}")
         print(f"JSON file saved to: {json_file}")
 
 

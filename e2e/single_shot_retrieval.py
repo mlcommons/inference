@@ -47,3 +47,20 @@ if __name__ == "__main__":
         print(result.metadata)
         print("-" * 50)
     breakpoint()
+
+    top_k_passages = [result.page_content for result in results]
+
+    print(f"Reranking {len(results)} passages")
+    tic = time.time()
+    reranked_results = vector_store.rerank(args.query, top_k_passages)
+    toc = time.time()
+    print(f"Reranking took {toc - tic} seconds. Results are below:")
+
+    for result in reranked_results:
+        # print(result)
+        for r in results:
+            if r.page_content == result[0]:
+                print(f"{r.metadata}, score: {result[1]}")
+                break
+        print("-" * 50)
+    breakpoint()

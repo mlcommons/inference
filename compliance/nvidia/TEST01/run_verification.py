@@ -77,12 +77,14 @@ def main():
     unixmode = ""
     if args.unixmode:
         if os.name != "posix":
-            print("Warning: --unixmode not supported on this OS. Using Python fallback...")
+            print(
+                "Warning: --unixmode not supported on this OS. Using Python fallback...")
             unixmode = ""
         else:
             unixmode = " --unixmode"
             missing_binary = False
-            for binary in ["wc", "md5sum", "grep", "awk", "sed", "head", "tail"]:
+            for binary in ["wc", "md5sum", "grep",
+                           "awk", "sed", "head", "tail"]:
                 if shutil.which(binary) is None:
                     print(
                         "Error: This script requires the {:} commandline utility".format(
@@ -105,12 +107,12 @@ def main():
     verify_accuracy_command = (
         sys.executable + " "
         + verify_accuracy_binary
-        + " --dtype " 
+        + " --dtype "
         + args.dtype
         + unixmode_str
-        + " -r " 
+        + " -r "
         + os.path.join(results_dir, "accuracy", "mlperf_log_accuracy.json")
-        + " -t " 
+        + " -t "
         + os.path.join(compliance_dir, "mlperf_log_accuracy.json")
     )
     try:
@@ -124,7 +126,7 @@ def main():
             )
             # Write output to both console and file
             for line in process.stdout:
-                print(line, end="") 
+                print(line, end="")
                 f.write(line)
             process.wait()
     except Exception:
@@ -147,16 +149,17 @@ def main():
         sys.executable + " "
         + verify_performance_binary
         + " -r"
-        + os.path.join(results_dir, "performance", "run_1", "mlperf_log_detail.txt")
+        + os.path.join(results_dir, "performance",
+                       "run_1", "mlperf_log_detail.txt")
         + " -t"
         + os.path.join(compliance_dir, "mlperf_log_detail.txt")
     )
-    
+
     try:
         with open("verify_performance.txt", "w") as f:
-            process =subprocess.Popen(
+            process = subprocess.Popen(
                 verify_performance_command,
-                stdout=subprocess.PIPE, 
+                stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
                 shell=True,
@@ -164,7 +167,7 @@ def main():
             # Write output to both console and file
             for line in process.stdout:
                 print(line, end="")
-                f.write(line)  
+                f.write(line)
             process.wait()
     except Exception:
         print(

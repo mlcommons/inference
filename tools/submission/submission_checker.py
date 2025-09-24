@@ -3205,7 +3205,7 @@ def check_compliance_acc_dir(test_dir, model, config):
                             break
                         else:
                             required_delta_perc = config.get_delta_perc(
-                                model, acc_type[0]
+                                model, acc_type
                             )
                             delta_perc = (
                                 abs(

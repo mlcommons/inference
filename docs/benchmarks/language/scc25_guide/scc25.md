@@ -62,6 +62,8 @@ You will need to submit the following files:
 
 {{ mlperf_inference_implementation_readme (4, "llama2-70b-99", "nvidia", fixed_scenarios=["Offline"], categories=["Datacenter"], setup_tips=False, implementation_tips=False, skip_test_query_count=True) }}
 
+* If you want to download the official MLPerf model and dataset for Llama2-70b you can follow [this README](../get-llama2-70b-data.md).
+
 ## Submission Commands
 
 ### Generate actual submission tree

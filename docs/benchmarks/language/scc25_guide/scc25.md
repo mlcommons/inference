@@ -15,7 +15,7 @@ For a valid MLPerf Inference submission in this competition, you must run both a
 
 In the SCC, your first objective will be to get a valid MLPerf benchmark run. Traditionally running the reference MLPerf inference implementation (in Python) is easier compared to running Nvidia MLPerf inference implementation. Since for SCC25 we are having the Llama2-70b model, running the reference implementation needs around 600GB of VRAM and is tested only on 8xH100 Nvidia GPUs. If you have lower VRAM, trying the vendor implementation like of Nvidia or AMD is the best option.  
 
-MLCommons provides [automation](https://github.com/mlcommons/mlperf-automations/) to run the MLPerf inference benchmarks which you can make use of. Currently the automation supports the reference implementation as well as Nvidia implementation and this is useful for you to get a quick valid result as the automation produces the required final output. You can also use the manual steps by following the [reference](https://github.com/mlcommons/inference/tree/master/language/llama2-70b), [Nvidia](https://github.com/mlcommons/inference_results_v5.0/tree/main/closed/NVIDIA) or [AMD](https://github.com/mlcommons/inference_results_v5.0/tree/main/closed/AMD) implementation readmes.
+MLCommons provides [automation](https://github.com/mlcommons/mlperf-automations/) to run the MLPerf inference benchmarks which you can make use of. Currently the automation supports the reference implementation as well as Nvidia implementation and this is useful for you to get a quick valid result as the automation produces the required final output. You can also use the manual steps by following the [reference](https://github.com/mlcommons/inference/tree/master/language/llama2-70b), [Nvidia](https://github.com/mlcommons/inference_results_v5.0/tree/main/closed/NVIDIA) or [AMD](https://github.com/mlcommons/inference_results_v5.0/blob/main/closed/AMD/measurements/8xMI325X_2xEPYC_9575F/llama2-70b-99.9/Offline/README.md) implementation readmes.
 
 Once the initial run is successful, you'll have the opportunity to optimize the benchmark further by maximizing system utilization, applying quantization techniques, adjusting ML frameworks, experimenting with batch sizes, and more, all of which can earn you additional points.
 
@@ -36,6 +36,12 @@ PS: For any query regarding the contribution, feel free to raise an issue in the
     If you encounter issues related to SCC, please submit them [here](https://github.com/mlcommons/inference/issues) with **scc-25** label
     with proper information about the command used, error logs and any additional usefull information to debug the issue.
 
+> **Note:**
+Downloading the models requires service account credentials to be supplied in the run command. These credentials will be shared with participants via their email addresses prior to the start of the competition. Add the following to the existing command described in the sections below:
+```
+--use_service_account=yes --client_id=<CF-Access-Client-Id> --client_secret=<CF-Access-Client-Secret>
+```
+
 ## Artifacts to submit to the SCC committee
 
 You will need to submit the following files:
@@ -43,13 +49,6 @@ You will need to submit the following files:
 * `mlperf_submission.run` - MLC commands to run MLPerf inference benchmark saved to this file.
 * `mlperf_submission.md` - description of your platform and some highlights of the MLPerf benchmark execution.
 * `<Team Name>` under which results are pushed to the github repository. 
-
-
-## SCC interview
-
-You are encouraged to highlight and explain the obtained MLPerf inference throughput on your system
-and describe any improvements and extensions to this benchmark (such as adding new hardware backend
-or supporting multi-node execution) useful for the community and [MLCommons](https://mlcommons.org).
 
 ## Run Commands
 

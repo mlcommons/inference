@@ -210,7 +210,7 @@ def define_env(env):
                         content += f'{cur_space2}=== "{execution_env}"\n'
                         content += f"{cur_space3}###### {execution_env} Environment\n\n"
                         # ref to MLCFlow installation
-                        content += f"{cur_space3}Please refer to the [installation page](site:inference/install/) to install MLCFlow for running the automated benchmark commands.\n\n"
+                        content += f"{cur_space3}Please refer to the [installation page](site:install/) to install MLCFlow for running the automated benchmark commands.\n\n"
                         test_query_count = get_test_query_count(
 
                             model, implementation, device.lower()
@@ -786,7 +786,6 @@ def define_env(env):
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
-                    cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
                 elif implementation == "neuralmagic":
                     cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
                     cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"

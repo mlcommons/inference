@@ -201,7 +201,7 @@ def main():
         # calculate md5sum
         perf_md5sum = hashlib.md5(clean_line.encode("utf-8")).hexdigest()
 
-        # extract qsl idx 
+        # extract qsl idx
         fields = re.split(r": |,", line_content)
         qsl_idx = fields[3].strip()
 

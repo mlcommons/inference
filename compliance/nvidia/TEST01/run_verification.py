@@ -83,7 +83,8 @@ def main():
         else:
             unixmode = " --unixmode"
             missing_binary = False
-            for binary in ["wc", "md5sum", "grep","awk", "sed", "head", "tail"]:
+            for binary in ["wc", "md5sum", "grep",
+                           "awk", "sed", "head", "tail"]:
                 if shutil.which(binary) is None:
                     print(
                         "Error: This script requires the {:} commandline utility".format(

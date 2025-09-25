@@ -58,28 +58,38 @@ def main():
         os.path.dirname(__file__), "verify_performance.py"
     )
     verify_performance_command = (
-        "python3 "
+        sys.executable + " "
         + verify_performance_binary
-        + " -r "
-        + results_dir
-        + "/performance/run_1/mlperf_log_summary.txt"
-        + " -t "
-        + compliance_dir
-        + "/mlperf_log_summary.txt | tee verify_performance.txt"
+        + " -r"
+        + os.path.join(results_dir, "performance",
+                       "run_1", "mlperf_log_summary.txt")
+        + " -t"
+        + os.path.join(compliance_dir, "mlperf_log_summary.txt")
     )
+
     try:
-        os.system(verify_performance_command)
+        with open("verify_performance.txt", "w") as f:
+            process = subprocess.Popen(
+                verify_performance_command,
+                stdout=subprocess.PIPE,  # capture output
+                stderr=subprocess.STDOUT,
+                text=True,  # decode output as text
+                shell=True,
+            )
+            # Write output to both console and file
+            for line in process.stdout:
+                print(line, end="")  # console
+                f.write(line)        # file
+            process.wait()
     except Exception:
         print(
             "Exception occurred trying to execute:\n  " +
             verify_performance_command)
 
     # check if verify performance script passes
-    performance_pass_command = "grep PASS verify_performance.txt"
     try:
-        performance_pass = "TEST PASS" in subprocess.check_output(
-            performance_pass_command, shell=True
-        ).decode("utf-8")
+        with open("verify_performance.txt", "r") as file:
+            performance_pass = "TEST PASS" in file.read()
     except Exception:
         performance_pass = False
 

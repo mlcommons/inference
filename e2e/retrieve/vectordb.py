@@ -1,5 +1,10 @@
 import faiss
 import torch
+try:
+    import intel_extension_for_pytorch as ipex
+    XPU_AVAILABLE = torch.xpu.is_available() if hasattr(torch, 'xpu') else False
+except ImportError:
+    XPU_AVAILABLE = False
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -9,12 +14,33 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 class VectorDB:
     def __init__(self,
             retriever_model: str = None,
-            reranker_model: str = None
+            reranker_model: str = None,
+            device: str = "auto"
         ):
         self._retriever_model_name = retriever_model
         self._reranker_model_name = reranker_model
+        
+        # Determine device
+        if device == "auto":
+            if XPU_AVAILABLE:
+                self._device = "xpu"
+                print("Using XPU device for embeddings and reranking")
+            elif torch.cuda.is_available():
+                self._device = "cuda"
+                print("Using CUDA device for embeddings and reranking")
+            else:
+                self._device = "cpu"
+                print("Using CPU device for embeddings and reranking")
+        else:
+            self._device = device
 
-        self._embedding_model = HuggingFaceEmbeddings(model_name=self._retriever_model_name) # Embedding model == retriever model
+        # Initialize embedding model
+        model_kwargs = {'device': self._device}
+        
+        self._embedding_model = HuggingFaceEmbeddings(
+            model_name=self._retriever_model_name, # Embedding model == retriever model
+            model_kwargs=model_kwargs
+        )
         self._embedding_dimension = len(self._embedding_model.embed_query("hello world"))
 
         self._reranker_model = None
@@ -22,6 +48,9 @@ class VectorDB:
         if self._reranker_model_name:
             self._reranker_model = AutoModelForSequenceClassification.from_pretrained(self._reranker_model_name)
             self._reranker_tokenizer = AutoTokenizer.from_pretrained(self._reranker_model_name)
+            
+            # Move model to device
+            self._reranker_model = self._reranker_model.to(self._device)
             self._reranker_model.eval()
 
         # The index defines the algoriothm used for the similarity search
@@ -50,9 +79,10 @@ class VectorDB:
 
         with torch.no_grad():
             inputs = self._reranker_tokenizer(pairs, padding=True, return_tensors='pt', truncation=True, max_length=512)
+            inputs = {k: v.to(self._device) for k, v in inputs.items()}
             scores = self._reranker_model(**inputs).logits.view(-1).float()
         
-        scored_passages = list(zip(passages, scores.tolist()))
+        scored_passages = list(zip(passages, scores.cpu().tolist()))  
         # Sort by score descending
         scored_passages.sort(key=lambda x: x[1], reverse=True)
         

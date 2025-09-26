@@ -16,12 +16,13 @@ if __name__ == "__main__":
     args.add_argument("--vector_store", type=str, default="vector.db", help="Path to the vector store file\n"
                         "If provided, --passages will be ignored")
     args.add_argument("--query", type=str, default=DEFAULT_QUERY, help="Query to search for")
+    args.add_argument("--device", type=str, default="auto", help="Device to run the models on (e.g., 'cpu', 'cuda', 'xpu', or 'auto')")
     args.add_argument("--retriever_model", type=str, default="intfloat/e5-base-v2")
     args.add_argument("--reranker_model", type=str, default="colbert-ir/colbertv2.0", help="Model to use for reranking - unused for now")
     args.add_argument("--top_k", type=int, default=10)
     args = args.parse_args()
 
-    vector_store = VectorDB(retriever_model=args.retriever_model, reranker_model=args.reranker_model)
+    vector_store = VectorDB(retriever_model=args.retriever_model, reranker_model=args.reranker_model, device=args.device)
 
     if args.vector_store and os.path.exists(args.vector_store):
         # TODO: incremental ingestion using existing DB

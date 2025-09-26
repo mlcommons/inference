@@ -1,6 +1,7 @@
 import argparse
 import json
 import time
+import os
 from retrieve import VectorDB
 
 # Taken below from frames: https://huggingface.co/datasets/google/frames-benchmark
@@ -12,7 +13,7 @@ if __name__ == "__main__":
                         "all other keys will be metadata\n"
                         "Example: [{'index': int, 'pdf_filename': str, 'passage': str}]\n"
                         "Ignored if --vector_store is provided")
-    args.add_argument("--vector_store", type=str, default=None, help="Path to the vector store file\n"
+    args.add_argument("--vector_store", type=str, default="vector.db", help="Path to the vector store file\n"
                         "If provided, --passages will be ignored")
     args.add_argument("--query", type=str, default=DEFAULT_QUERY, help="Query to search for")
     args.add_argument("--retriever_model", type=str, default="intfloat/e5-base-v2")
@@ -20,10 +21,11 @@ if __name__ == "__main__":
     args.add_argument("--top_k", type=int, default=10)
     args = args.parse_args()
 
-    assert (args.vector_store is None) != (args.passages is None), "Exactly one of --vector_store or --passages must be provided"
     vector_store = VectorDB(retriever_model=args.retriever_model, reranker_model=args.reranker_model)
 
-    if args.vector_store:
+    if args.vector_store and os.path.exists(args.vector_store):
+        # TODO: incremental ingestion using existing DB
+        assert (args.vector_store is None) != (args.passages is None), "Exactly one of --vector_store or --passages must be provided"
         vector_store.from_serialized(args.vector_store)
     else:
         passage_data = json.load(open(args.passages))
@@ -34,7 +36,9 @@ if __name__ == "__main__":
         tic = time.time()
         vector_store.ingest(passage_list, passage_metadata)
         toc = time.time()
-        print(f"Ingestion of {len(passage_list)} passages took {toc - tic} seconds")
+        ingestion_speed = len(passage_list)/(toc-tic)
+        print(f"Ingestion of {len(passage_list)} passages took {toc - tic} seconds. {ingestion_speed:.2f} docs/sec")
+        vector_store.serialize(args.vector_store)
 
     print(f"Looking up top-{args.top_k} passages for query:\n\n{args.query}\n\n")
     tic = time.time()

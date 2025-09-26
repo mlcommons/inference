@@ -19,7 +19,8 @@ if __name__ == "__main__":
     args.add_argument("--device", type=str, default="auto", help="Device to run the models on (e.g., 'cpu', 'cuda', 'xpu', or 'auto')")
     args.add_argument("--retriever_model", type=str, default="intfloat/e5-base-v2")
     args.add_argument("--reranker_model", type=str, default="colbert-ir/colbertv2.0", help="Model to use for reranking - unused for now")
-    args.add_argument("--top_k", type=int, default=10)
+    args.add_argument("--top_k_retriever", type=int, default=50)
+    args.add_argument("--top_k_reranking", type=int, default=10)
     args = args.parse_args()
 
     vector_store = VectorDB(retriever_model=args.retriever_model, reranker_model=args.reranker_model, device=args.device)
@@ -41,9 +42,9 @@ if __name__ == "__main__":
         print(f"Ingestion of {len(passage_list)} passages took {toc - tic} seconds. {ingestion_speed:.2f} docs/sec")
         vector_store.serialize(args.vector_store)
 
-    print(f"Looking up top-{args.top_k} passages for query:\n\n{args.query}\n\n")
+    print(f"Looking up top-{args.top_k_retriever} passages for query:\n\n{args.query}\n\n")
     tic = time.time()
-    results = vector_store.lookup(args.query, k=args.top_k)
+    results = vector_store.lookup(args.query, k=args.top_k_retriever)
     toc = time.time()
     print(f"Lookup took {toc - tic} seconds. Results are below:")
 
@@ -61,7 +62,7 @@ if __name__ == "__main__":
     toc = time.time()
     print(f"Reranking took {toc - tic} seconds. Results are below:")
 
-    for result in reranked_results:
+    for result in reranked_results[:args.top_k_reranking]:
         # print(result)
         for r in results:
             if r.page_content == result[0]:

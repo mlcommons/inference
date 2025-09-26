@@ -4,6 +4,7 @@ import os
 import argparse
 import subprocess
 import ast
+import json
 from pathlib import Path
 from multiprocessing import Pool, cpu_count
 import time
@@ -242,11 +243,13 @@ def main():
     # Process with progress bar updates
     results = []
     failed_urls = []  # Track failed URLs for detailed reporting
+    url_mapping = {}  # Track filename -> URL mapping 
 
     with Pool(processes=args.processes) as pool:
         for result in pool.imap(process_url, process_args):
             success, filename, status, url = result
             results.append((success, filename))
+            url_mapping[filename] = url
 
             # Update progress bar with status
             if status == "Skipping":
@@ -264,6 +267,16 @@ def main():
             progress_bar.update(1)
 
     progress_bar.close()
+
+    # Save URL mapping to JSON file for ALL URLs (successful, failed, and skipped)
+    mapping_file = output_dir / "url_mapping.json"
+    try:
+        with open(mapping_file, 'w', encoding='utf-8') as f:
+            json.dump(url_mapping, f, indent=2, ensure_ascii=False)
+        print(f"URL mapping saved to: {mapping_file}")
+        print(f"Mapped {len(url_mapping)} total URLs (successful, failed, and skipped)")
+    except Exception as e:
+        print(f"Warning: Failed to save URL mapping: {e}")
 
     # Count results
     successful = sum(1 for success, _ in results if success)

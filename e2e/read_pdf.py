@@ -92,6 +92,19 @@ def process_pdfs(input_dir, output_dir, json_file=None,
     # Create output directory if it doesn't exist
     output_path.mkdir(parents=True, exist_ok=True)
 
+    # Load URL mapping if it exists (for tracking PDF -> original URL)
+    url_mapping = {}
+    mapping_file = input_path / "url_mapping.json"
+    if mapping_file.exists():
+        try:
+            with open(mapping_file, 'r', encoding='utf-8') as f:
+                url_mapping = json.load(f)
+            print(f"Loaded URL mapping for {len(url_mapping)} files from {mapping_file}")
+        except Exception as e:
+            print(f"Warning: Could not load URL mapping: {e}")
+    else:
+        print(f"No URL mapping file found at {mapping_file}")
+
     # Find all PDF files
     pdf_files = list(input_path.glob("*.pdf"))
 
@@ -150,10 +163,14 @@ def process_pdfs(input_dir, output_dir, json_file=None,
                             clean_passage = re.sub(
                                 r'\s+', ' ', passage.strip())
                             if clean_passage:
-                                # Store: index, pdf_filename, passage_text
+                                # Get original URL for this PDF
+                                original_url = url_mapping.get(pdf_file.name, "")
+                                
+                                # Store: index, pdf_filename, original_url, passage_text
                                 passages_data.append({
                                     'index': len(passages_data),
                                     'pdf_filename': pdf_file.name,
+                                    'original_url': original_url,
                                     'passage': clean_passage
                                 })
                     

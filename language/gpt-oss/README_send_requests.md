@@ -24,6 +24,11 @@ python send_requests.py --model-name openai/gpt-oss-120b --data-file /path/to/da
 python send_requests.py --model-name openai/gpt-oss-120b --max-tokens 50 --server-url http://localhost:8000
 ```
 
+### Custom concurrency level:
+```bash
+python send_requests.py --model-name openai/gpt-oss-120b --max-concurrency 64
+```
+
 ## Arguments
 
 - `--data-file`: Path to pickle file containing text data (default: `/home/mlperf_inference_storage/data/deepseek-r1/mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl`)
@@ -31,6 +36,7 @@ python send_requests.py --model-name openai/gpt-oss-120b --max-tokens 50 --serve
 - `--server-url`: SGLang server URL (default: `http://localhost:30000`)
 - `--max-samples`: Maximum number of samples to process (default: all)
 - `--max-tokens`: Maximum tokens to generate per request (default: 100)
+- `--max-concurrency`: Maximum number of concurrent requests (default: 128)
 - `--output`: Output file for responses (default: `responses.jsonl`)
 
 ## Output Format
@@ -63,7 +69,9 @@ pip install -r requirements.txt
 
 - The script loads text data from a pandas DataFrame in the pickle file
 - It uses the specified model's tokenizer to convert text to tokens
-- Sends tokenized input to SGLang server via `/generate` endpoint
+- Sends tokenized input to SGLang server via `/generate` endpoint in parallel using multiprocessing
 - Converts response tokens back to text using the same tokenizer
-- Responses are saved incrementally to avoid data loss
-- Progress is logged every 10 samples
+- Uses configurable concurrency (default: 128 concurrent requests)
+- Each process creates its own HTTP client to avoid connection issues
+- Results are maintained in order despite parallel processing
+- Progress is logged during processing

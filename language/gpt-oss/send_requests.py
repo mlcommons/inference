@@ -13,6 +13,8 @@ import argparse
 from typing import List, Dict, Any
 import logging
 from transformers import AutoTokenizer
+from multiprocessing import Pool
+from functools import partial
 
 # Set up logging
 logging.basicConfig(
@@ -94,27 +96,43 @@ def tokenize_all_inputs(data: pd.DataFrame, tokenizer, max_samples: int = None):
     return input_ids_list, text_inputs
 
 
-def send_requests_batch(client: SGLangClient, input_ids_list: List[List[int]], 
-                       text_inputs: List[str], max_tokens: int = 100) -> List[Dict[str, Any]]:
-    """Send all requests to SGLang server."""
-    num_samples = len(input_ids_list)
-    logger.info(f"Sending {num_samples} requests to server...")
+def send_single_request(args_tuple):
+    """Send a single request - used by multiprocessing pool."""
+    input_ids, max_tokens, server_url, sample_id = args_tuple
     
-    responses = []
+    # Create a new client for this process
+    client = SGLangClient(server_url)
+    
+    try:
+        response = client.send_request(input_ids, max_tokens=max_tokens)
+        return sample_id, response
+    except Exception as e:
+        logger.error(f"Request {sample_id} failed: {e}")
+        return sample_id, {"error": str(e)}
+
+
+def send_requests_parallel(input_ids_list: List[List[int]], server_url: str,
+                          max_tokens: int = 100, max_concurrency: int = 128) -> List[Dict[str, Any]]:
+    """Send all requests to SGLang server in parallel using multiprocessing."""
+    num_samples = len(input_ids_list)
+    logger.info(f"Sending {num_samples} requests to server with {max_concurrency} concurrent workers...")
+    
+    # Prepare arguments for multiprocessing
+    args_list = [
+        (input_ids, max_tokens, server_url, i) 
+        for i, input_ids in enumerate(input_ids_list)
+    ]
+    
     start_time = time.time()
     
-    for i, input_ids in enumerate(input_ids_list):
-        logger.info(f"Processing sample {i+1}/{num_samples} (token length: {len(input_ids)})")
-        
-        # Send request
-        response = client.send_request(input_ids, max_tokens=max_tokens)
-        responses.append(response)
-        
-        # Log progress
-        if (i + 1) % 10 == 0:
-            elapsed = time.time() - start_time
-            rate = (i + 1) / elapsed
-            logger.info(f"Processed {i+1}/{num_samples} samples ({rate:.2f} samples/sec)")
+    # Use multiprocessing pool
+    with Pool(processes=min(max_concurrency, num_samples)) as pool:
+        # Map the function to all arguments
+        results = pool.map(send_single_request, args_list)
+    
+    # Sort results by sample_id to maintain order
+    results.sort(key=lambda x: x[0])
+    responses = [result[1] for result in results]
     
     total_time = time.time() - start_time
     logger.info(f"Completed {num_samples} requests in {total_time:.2f} seconds")
@@ -170,16 +188,16 @@ def save_responses(responses: List[Dict[str, Any]], response_texts: List[str],
     logger.info(f"Responses saved to {output_file}")
 
 
-def process_requests(client: SGLangClient, data: pd.DataFrame, tokenizer,
+def process_requests(data: pd.DataFrame, tokenizer, server_url: str,
                     max_samples: int = None, max_tokens: int = 100,
-                    output_file: str = "responses.jsonl") -> None:
+                    max_concurrency: int = 128, output_file: str = "responses.jsonl") -> None:
     """Main processing function that handles tokenization, requests, and detokenization."""
     
     # Step 1: Tokenize all inputs
     input_ids_list, text_inputs = tokenize_all_inputs(data, tokenizer, max_samples)
     
-    # Step 2: Send all requests
-    responses = send_requests_batch(client, input_ids_list, text_inputs, max_tokens)
+    # Step 2: Send all requests in parallel
+    responses = send_requests_parallel(input_ids_list, server_url, max_tokens, max_concurrency)
     
     # Step 3: Detokenize all responses
     response_texts = detokenize_all_responses(responses, input_ids_list, tokenizer)
@@ -201,6 +219,8 @@ def main():
                         help="Maximum number of samples to process (default: all)")
     parser.add_argument("--max-tokens", type=int, default=100,
                         help="Maximum tokens to generate per request")
+    parser.add_argument("--max-concurrency", type=int, default=128,
+                        help="Maximum number of concurrent requests (default: 128)")
     parser.add_argument("--output", default="responses.jsonl",
                         help="Output file for responses")
 
@@ -212,12 +232,10 @@ def main():
     # Load tokenizer
     tokenizer = load_tokenizer(args.model_name)
 
-    # Create client
-    client = SGLangClient(args.server_url)
-
     # Test connection
     logger.info(f"Testing server connection to {args.server_url}...")
-    test_response = client.send_request([1, 2, 3], max_tokens=5)
+    test_client = SGLangClient(args.server_url)
+    test_response = test_client.send_request([1, 2, 3], max_tokens=5)
     if "error" in test_response:
         logger.error(f"Server connection failed: {test_response['error']}")
         logger.error("Make sure your SGLang server is running. Try:")
@@ -226,10 +244,11 @@ def main():
         return
     logger.info("Server connection successful")
 
-    # Process all requests in batches
-    process_requests(client, data, tokenizer,
+    # Process all requests in parallel
+    process_requests(data, tokenizer, args.server_url,
                     max_samples=args.max_samples,
                     max_tokens=args.max_tokens,
+                    max_concurrency=args.max_concurrency,
                     output_file=args.output)
 
 

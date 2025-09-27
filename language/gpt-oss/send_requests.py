@@ -44,7 +44,7 @@ class SGLangClient:
             response = self.session.post(
                 f"{self.base_url}/generate",
                 json=payload,
-                timeout=60
+                timeout=1200
             )
             if response.status_code == 200:
                 return response.json()

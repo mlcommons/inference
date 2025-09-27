@@ -95,7 +95,8 @@ def tokenize_all_inputs(data: pd.DataFrame, tokenizer,
         text_inputs,
         return_tensors="pt",
         padding=True,
-        truncation=True)
+        truncation=True,
+        padding_side="left")
     input_ids_list = [tokenized['input_ids'][i].tolist()
                       for i in range(num_samples)]
 
@@ -186,11 +187,10 @@ def save_responses(responses: List[Dict[str, Any]], response_texts: List[str],
 
             response_data = {
                 "sample_id": int(i),
-                "text_input": text_input[:200] + "..." if len(text_input) > 200 else text_input,
+                "text_input": text_input,
                 "input_length": len(text_input),
                 "token_length": len(input_ids),
-                # First 10 tokens for reference
-                "input_tokens": input_ids[:10],
+                "input_tokens": input_ids,
                 "response": response,
                 "response_text": response_text,
                 "timestamp": float(time.time())

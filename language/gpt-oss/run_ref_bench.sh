@@ -63,10 +63,11 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+set -x; 
 srun --nodes=1 \
     --output=$out_folder/server.log \
     --container-image=images/lmsysorg+sglang+v0.5.3rc1.sqsh \
-    --container-mounts=$(pwd):/$(pwd),$mlperf_storage:/home/mlperf_inference_storage,
+    --container-mounts=$(pwd):/$(pwd),$mlperf_storage:/home/mlperf_inference_storage \
     --container-name=sglang_server_$SLURM_JOB_ID \
     python3 -m sglang.launch_server \
     --model-path $model_name \
@@ -88,6 +89,7 @@ srun --nodes=1 \
     --attention-backend trtllm_mla \
     --moe-runner-backend flashinfer_trtllm \
     --stream-interval 10 &
+set +x;
 
 echo "Waiting for server to start on port 30000..."
 while ! srun --nodes=1 --overlap netstat -tulnp 2>/dev/null | grep -q ":30000"; do

@@ -96,7 +96,7 @@ def tokenize_all_inputs(data: pd.DataFrame, tokenizer,
         return_tensors="pt",
         padding=True,
         truncation=True,
-        padding_side="left")
+        padding_side="right")
     input_ids_list = [tokenized['input_ids'][i].tolist()
                       for i in range(num_samples)]
 

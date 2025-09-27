@@ -87,7 +87,7 @@ def tokenize_all_inputs(data: pd.DataFrame, tokenizer, max_samples: int = None):
     text_inputs = data['text_input'].tolist()[:num_samples]
     
     # Tokenize all texts at once
-    tokenized = tokenizer(text_inputs, return_tensors="pt", padding=False, truncation=True)
+    tokenized = tokenizer(text_inputs, return_tensors="pt", padding=True, truncation=True)
     input_ids_list = [tokenized['input_ids'][i].tolist() for i in range(num_samples)]
     
     logger.info(f"Tokenization complete. Token lengths: {[len(ids) for ids in input_ids_list[:5]]}...")

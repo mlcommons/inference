@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Script to send preprocessed deepseek-r1 requests to SGLang server.
+Script to send text requests to SGLang server with tokenization.
 """
 
 import numpy as np
+import pandas as pd
+import pickle
 import requests
 import json
 import time
 import argparse
 from typing import List, Dict, Any
 import logging
+from transformers import AutoTokenizer
 
 # Set up logging
 logging.basicConfig(
@@ -26,152 +29,172 @@ class SGLangClient:
     def send_request(
             self, input_ids: List[int], max_tokens: int = 100) -> Dict[str, Any]:
         """Send a single request to the SGLang server."""
-        # Try different payload formats for SGLang
-        payloads_to_try = [
-            # Format 1: Direct token IDs in messages
-            {
-                "model": "gpt-oss-120b",
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": input_ids
-                    }
-                ],
-                "max_tokens": max_tokens,
-                "temperature": 0.0,
-                "stream": False
-            },
-            # Format 2: Text-based content
-            {
-                "model": "gpt-oss-120b",
-                "messages": [
-                    {
-                        "role": "user",
-                        # Truncate for display
-                        "content": f"Token IDs: {input_ids[:10]}..."
-                    }
-                ],
-                "max_tokens": max_tokens,
-                "temperature": 0.0,
-                "stream": False
-            },
-            # Format 3: SGLang specific format
-            {
-                "text": input_ids,
-                "sampling_params": {
-                    "max_new_tokens": max_tokens,
-                    "temperature": 0.0
-                }
+        # SGLang format with input_ids
+        payload = {
+            "input_ids": input_ids,
+            "sampling_params": {
+                "max_new_tokens": max_tokens,
+                "temperature": 0.0
             }
-        ]
+        }
 
-        endpoints_to_try = [
-            "/v1/chat/completions",
-            "/generate",
-            "/v1/completions"
-        ]
-
-        for payload in payloads_to_try:
-            for endpoint in endpoints_to_try:
-                try:
-                    response = self.session.post(
-                        f"{self.base_url}{endpoint}",
-                        json=payload,
-                        timeout=60
-                    )
-                    if response.status_code == 200:
-                        return response.json()
-                    else:
-                        logger.debug(
-                            f"Endpoint {endpoint} returned {response.status_code}")
-                except requests.exceptions.RequestException as e:
-                    logger.debug(f"Request to {endpoint} failed: {e}")
-                    continue
-
-        return {"error": "All request formats failed"}
+        try:
+            response = self.session.post(
+                f"{self.base_url}/generate",
+                json=payload,
+                timeout=60
+            )
+            if response.status_code == 200:
+                return response.json()
+            else:
+                logger.error(f"Request failed with status {response.status_code}: {response.text}")
+                return {"error": f"HTTP {response.status_code}: {response.text}"}
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Request failed: {e}")
+            return {"error": str(e)}
 
 
-def load_preprocessed_data(data_dir: str) -> tuple:
-    """Load the preprocessed data files."""
-    input_ids_path = f"{data_dir}/input_ids_padded.npy"
-    input_lens_path = f"{data_dir}/input_lens.npy"
-
-    logger.info(f"Loading data from {data_dir}")
-    input_ids = np.load(input_ids_path)
-    input_lens = np.load(input_lens_path)
-
-    logger.info(f"Loaded {len(input_ids)} samples")
-    logger.info(f"Input shape: {input_ids.shape}")
-    logger.info(f"Lengths range: {input_lens.min()} - {input_lens.max()}")
-
-    return input_ids, input_lens
+def load_text_data(data_file: str) -> pd.DataFrame:
+    """Load the text data from pickle file."""
+    logger.info(f"Loading data from {data_file}")
+    with open(data_file, 'rb') as f:
+        data = pickle.load(f)
+    
+    logger.info(f"Loaded {len(data)} samples")
+    logger.info(f"Columns: {list(data.columns)}")
+    logger.info(f"First text input length: {len(data.iloc[0]['text_input'])}")
+    
+    return data
 
 
-def trim_padding(input_ids: np.ndarray, actual_length: int) -> List[int]:
-    """Trim padding from input_ids based on actual length."""
-    return input_ids[:actual_length].astype(int).tolist()
+def load_tokenizer(model_name: str):
+    """Load tokenizer for the specified model."""
+    logger.info(f"Loading tokenizer for {model_name}")
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        logger.info(f"Tokenizer loaded successfully")
+        return tokenizer
+    except Exception as e:
+        logger.error(f"Failed to load tokenizer: {e}")
+        raise
 
 
-def send_requests(client: SGLangClient, input_ids: np.ndarray, input_lens: np.ndarray,
-                  max_samples: int = None, max_tokens: int = 100,
-                  output_file: str = "responses.jsonl") -> None:
-    """Send requests to SGLang server and save responses."""
+def tokenize_all_inputs(data: pd.DataFrame, tokenizer, max_samples: int = None):
+    """Tokenize all text inputs at once."""
+    num_samples = min(len(data), max_samples) if max_samples else len(data)
+    logger.info(f"Tokenizing {num_samples} text inputs...")
+    
+    text_inputs = data['text_input'].tolist()[:num_samples]
+    
+    # Tokenize all texts at once
+    tokenized = tokenizer(text_inputs, return_tensors="pt", padding=False, truncation=True)
+    input_ids_list = [tokenized['input_ids'][i].tolist() for i in range(num_samples)]
+    
+    logger.info(f"Tokenization complete. Token lengths: {[len(ids) for ids in input_ids_list[:5]]}...")
+    return input_ids_list, text_inputs
 
-    num_samples = min(
-        len(input_ids),
-        max_samples) if max_samples else len(input_ids)
-    logger.info(f"Sending {num_samples} requests")
 
+def send_requests_batch(client: SGLangClient, input_ids_list: List[List[int]], 
+                       text_inputs: List[str], max_tokens: int = 100) -> List[Dict[str, Any]]:
+    """Send all requests to SGLang server."""
+    num_samples = len(input_ids_list)
+    logger.info(f"Sending {num_samples} requests to server...")
+    
     responses = []
     start_time = time.time()
+    
+    for i, input_ids in enumerate(input_ids_list):
+        logger.info(f"Processing sample {i+1}/{num_samples} (token length: {len(input_ids)})")
+        
+        # Send request
+        response = client.send_request(input_ids, max_tokens=max_tokens)
+        responses.append(response)
+        
+        # Log progress
+        if (i + 1) % 10 == 0:
+            elapsed = time.time() - start_time
+            rate = (i + 1) / elapsed
+            logger.info(f"Processed {i+1}/{num_samples} samples ({rate:.2f} samples/sec)")
+    
+    total_time = time.time() - start_time
+    logger.info(f"Completed {num_samples} requests in {total_time:.2f} seconds")
+    logger.info(f"Average rate: {num_samples/total_time:.2f} requests/sec")
+    
+    return responses
 
+
+def detokenize_all_responses(responses: List[Dict[str, Any]], input_ids_list: List[List[int]], 
+                           tokenizer) -> List[str]:
+    """Detokenize all responses at once."""
+    logger.info("Detokenizing responses...")
+    
+    response_texts = []
+    for i, (response, input_ids) in enumerate(zip(responses, input_ids_list)):
+        response_text = ""
+        if "error" not in response and "generated_text" in response:
+            try:
+                # Extract generated tokens (excluding input tokens)
+                generated_tokens = response["generated_text"][len(input_ids):]
+                response_text = tokenizer.decode(generated_tokens, skip_special_tokens=True)
+            except Exception as e:
+                logger.warning(f"Failed to decode response for sample {i+1}: {e}")
+        response_texts.append(response_text)
+    
+    logger.info("Detokenization complete")
+    return response_texts
+
+
+def save_responses(responses: List[Dict[str, Any]], response_texts: List[str], 
+                  text_inputs: List[str], input_ids_list: List[List[int]], 
+                  output_file: str) -> None:
+    """Save all responses to file."""
+    logger.info(f"Saving responses to {output_file}...")
+    
     with open(output_file, 'w') as f:
-        for i in range(num_samples):
-            # Trim padding based on actual length
-            actual_length = input_lens[i]
-            trimmed_input = trim_padding(input_ids[i], actual_length)
-
-            logger.info(
-                f"Processing sample {i+1}/{num_samples} (length: {actual_length})")
-
-            # Send request
-            response = client.send_request(
-                trimmed_input, max_tokens=max_tokens)
-
-            # Prepare response data
+        for i, (response, response_text, text_input, input_ids) in enumerate(
+            zip(responses, response_texts, text_inputs, input_ids_list)):
+            
             response_data = {
                 "sample_id": int(i),
-                "input_length": int(actual_length),
-                "input_tokens": trimmed_input[:10],  # First 10 tokens for reference
+                "text_input": text_input[:200] + "..." if len(text_input) > 200 else text_input,
+                "input_length": len(text_input),
+                "token_length": len(input_ids),
+                "input_tokens": input_ids[:10],  # First 10 tokens for reference
                 "response": response,
+                "response_text": response_text,
                 "timestamp": float(time.time())
             }
-
-            # Save to file immediately
+            
             f.write(json.dumps(response_data) + '\n')
-            f.flush()
-
-            responses.append(response_data)
-
-            # Log progress
-            if (i + 1) % 10 == 0:
-                elapsed = time.time() - start_time
-                rate = (i + 1) / elapsed
-                logger.info(
-                    f"Processed {i+1}/{num_samples} samples ({rate:.2f} samples/sec)")
-
-    total_time = time.time() - start_time
-    logger.info(
-        f"Completed {num_samples} requests in {total_time:.2f} seconds")
-    logger.info(f"Average rate: {num_samples/total_time:.2f} requests/sec")
+    
     logger.info(f"Responses saved to {output_file}")
+
+
+def process_requests(client: SGLangClient, data: pd.DataFrame, tokenizer,
+                    max_samples: int = None, max_tokens: int = 100,
+                    output_file: str = "responses.jsonl") -> None:
+    """Main processing function that handles tokenization, requests, and detokenization."""
+    
+    # Step 1: Tokenize all inputs
+    input_ids_list, text_inputs = tokenize_all_inputs(data, tokenizer, max_samples)
+    
+    # Step 2: Send all requests
+    responses = send_requests_batch(client, input_ids_list, text_inputs, max_tokens)
+    
+    # Step 3: Detokenize all responses
+    response_texts = detokenize_all_responses(responses, input_ids_list, tokenizer)
+    
+    # Step 4: Save all results
+    save_responses(responses, response_texts, text_inputs, input_ids_list, output_file)
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Send preprocessed requests to SGLang server")
-    parser.add_argument("--data-dir", default="/home/mlperf_inference_storage/preprocessed_data/deepseek-r1/",
-                        help="Directory containing preprocessed data")
+        description="Send text requests to SGLang server with tokenization")
+    parser.add_argument("--data-file", default="/home/mlperf_inference_storage/data/deepseek-r1/mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl",
+                        help="Path to pickle file containing text data")
+    parser.add_argument("--model-name", required=True,
+                        help="Model name for tokenizer (e.g., openai/gpt-oss-120b)")
     parser.add_argument("--server-url", default="http://localhost:30000",
                         help="SGLang server URL (default: http://localhost:30000)")
     parser.add_argument("--max-samples", type=int, default=None,
@@ -183,17 +206,17 @@ def main():
 
     args = parser.parse_args()
 
-    # Determine server URL
-    server_url = args.server_url
-
     # Load data
-    input_ids, input_lens = load_preprocessed_data(args.data_dir)
+    data = load_text_data(args.data_file)
+    
+    # Load tokenizer
+    tokenizer = load_tokenizer(args.model_name)
 
     # Create client
-    client = SGLangClient(server_url)
+    client = SGLangClient(args.server_url)
 
     # Test connection
-    logger.info(f"Testing server connection to {server_url}...")
+    logger.info(f"Testing server connection to {args.server_url}...")
     test_response = client.send_request([1, 2, 3], max_tokens=5)
     if "error" in test_response:
         logger.error(f"Server connection failed: {test_response['error']}")
@@ -203,11 +226,11 @@ def main():
         return
     logger.info("Server connection successful")
 
-    # Send requests
-    send_requests(client, input_ids, input_lens,
-                  max_samples=args.max_samples,
-                  max_tokens=args.max_tokens,
-                  output_file=args.output)
+    # Process all requests in batches
+    process_requests(client, data, tokenizer,
+                    max_samples=args.max_samples,
+                    max_tokens=args.max_tokens,
+                    output_file=args.output)
 
 
 if __name__ == "__main__":

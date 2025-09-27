@@ -1,31 +1,37 @@
 # SGLang Request Sender
 
-This script sends preprocessed deepseek-r1 requests to a running SGLang server.
+This script loads text data from a pickle file, tokenizes it using a specified model's tokenizer, sends requests to a running SGLang server, and converts responses back to text.
 
 ## Usage
 
+### Basic usage:
 ```bash
-python send_requests.py --server-url http://localhost:30000
+python send_requests.py --model-name openai/gpt-oss-120b
 ```
 
 ### Process only first 100 samples:
 ```bash
-python send_requests.py --max-samples 100 --auto-detect
+python send_requests.py --model-name openai/gpt-oss-120b --max-samples 100
 ```
 
-### Custom output file and max tokens:
+### Custom data file and output:
 ```bash
-python send_requests.py --output my_responses.jsonl --max-tokens 50 --auto-detect
+python send_requests.py --model-name openai/gpt-oss-120b --data-file /path/to/data.pkl --output my_responses.jsonl
+```
+
+### Custom max tokens and server URL:
+```bash
+python send_requests.py --model-name openai/gpt-oss-120b --max-tokens 50 --server-url http://localhost:8000
 ```
 
 ## Arguments
 
-- `--data-dir`: Directory containing preprocessed data (default: `/home/mlperf_inference_storage/preprocessed_data/deepseek-r1/`)
-- `--server-url`: SGLang server URL (e.g., `http://localhost:30000`)
-- `--max-samples`: Maximum number of samples to process (default: all 4388 samples)
+- `--data-file`: Path to pickle file containing text data (default: `/home/mlperf_inference_storage/data/deepseek-r1/mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl`)
+- `--model-name`: Model name for tokenizer (required, e.g., `openai/gpt-oss-120b`)
+- `--server-url`: SGLang server URL (default: `http://localhost:30000`)
+- `--max-samples`: Maximum number of samples to process (default: all)
 - `--max-tokens`: Maximum tokens to generate per request (default: 100)
 - `--output`: Output file for responses (default: `responses.jsonl`)
-- `--auto-detect`: Auto-detect server port
 
 ## Output Format
 
@@ -33,12 +39,15 @@ The script outputs a JSONL file where each line contains:
 ```json
 {
   "sample_id": 0,
+  "text_input": "Here are some example problems...",
   "input_length": 1283,
+  "token_length": 512,
   "input_tokens": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
   "response": {
-    "choices": [...],
+    "generated_text": [1, 2, 3, ...],
     "usage": {...}
   },
+  "response_text": "The answer is 6...",
   "timestamp": 1695821234.567
 }
 ```
@@ -52,7 +61,9 @@ pip install -r requirements.txt
 
 ## Notes
 
-- The script automatically trims padding from input sequences based on actual lengths
-- It tries multiple request formats to ensure compatibility with SGLang
+- The script loads text data from a pandas DataFrame in the pickle file
+- It uses the specified model's tokenizer to convert text to tokens
+- Sends tokenized input to SGLang server via `/generate` endpoint
+- Converts response tokens back to text using the same tokenizer
 - Responses are saved incrementally to avoid data loss
 - Progress is logged every 10 samples

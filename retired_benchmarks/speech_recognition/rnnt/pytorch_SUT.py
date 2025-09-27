@@ -55,7 +55,7 @@ class PytorchSUT:
         featurizer_config = config["input_eval"]
 
         self.dev = (
-            torch.device("cuda:0")
+            torch.device("cuda")
             if torch.cuda.is_available()
             and os.environ.get("USE_GPU", "").lower() not in ["no", "false"]
             else torch.device("cpu")

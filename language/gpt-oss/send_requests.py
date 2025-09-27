@@ -250,12 +250,6 @@ def main():
 
     args = parser.parse_args()
 
-    # Load data
-    data = load_text_data(args.data_file)
-
-    # Load tokenizer
-    tokenizer = load_tokenizer(args.model_name)
-
     # Test connection
     logger.info(f"Testing server connection to {args.server_url}...")
     test_client = SGLangClient(args.server_url)
@@ -268,7 +262,10 @@ def main():
         return
     logger.info("Server connection successful")
 
-    # Process all requests in parallel
+
+    data = load_text_data(args.data_file)
+    tokenizer = load_tokenizer(args.model_name)
+
     process_requests(data, tokenizer, args.server_url,
                      max_samples=args.max_samples,
                      max_tokens=args.max_tokens,

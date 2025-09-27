@@ -109,7 +109,7 @@ def load_preprocessed_data(data_dir: str) -> tuple:
 
 def trim_padding(input_ids: np.ndarray, actual_length: int) -> List[int]:
     """Trim padding from input_ids based on actual length."""
-    return input_ids[:actual_length].tolist()
+    return input_ids[:actual_length].astype(int).tolist()
 
 
 def send_requests(client: SGLangClient, input_ids: np.ndarray, input_lens: np.ndarray,
@@ -140,12 +140,11 @@ def send_requests(client: SGLangClient, input_ids: np.ndarray, input_lens: np.nd
 
             # Prepare response data
             response_data = {
-                "sample_id": i,
-                "input_length": actual_length,
-                # First 10 tokens for reference
-                "input_tokens": trimmed_input[:10],
+                "sample_id": int(i),
+                "input_length": int(actual_length),
+                "input_tokens": trimmed_input[:10],  # First 10 tokens for reference
                 "response": response,
-                "timestamp": time.time()
+                "timestamp": float(time.time())
             }
 
             # Save to file immediately

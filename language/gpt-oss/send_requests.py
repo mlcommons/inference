@@ -49,7 +49,8 @@ class SGLangClient:
             if response.status_code == 200:
                 return response.json()
             else:
-                logger.error(f"Request failed with status {response.status_code}: {response.text}")
+                logger.error(
+                    f"Request failed with status {response.status_code}: {response.text}")
                 return {"error": f"HTTP {response.status_code}: {response.text}"}
         except requests.exceptions.RequestException as e:
             logger.error(f"Request failed: {e}")
@@ -61,11 +62,11 @@ def load_text_data(data_file: str) -> pd.DataFrame:
     logger.info(f"Loading data from {data_file}")
     with open(data_file, 'rb') as f:
         data = pickle.load(f)
-    
+
     logger.info(f"Loaded {len(data)} samples")
     logger.info(f"Columns: {list(data.columns)}")
     logger.info(f"First text input length: {len(data.iloc[0]['text_input'])}")
-    
+
     return data
 
 
@@ -81,28 +82,35 @@ def load_tokenizer(model_name: str):
         raise
 
 
-def tokenize_all_inputs(data: pd.DataFrame, tokenizer, max_samples: int = None):
+def tokenize_all_inputs(data: pd.DataFrame, tokenizer,
+                        max_samples: int = None):
     """Tokenize all text inputs at once."""
     num_samples = min(len(data), max_samples) if max_samples else len(data)
     logger.info(f"Tokenizing {num_samples} text inputs...")
-    
+
     text_inputs = data['text_input'].tolist()[:num_samples]
-    
+
     # Tokenize all texts at once
-    tokenized = tokenizer(text_inputs, return_tensors="pt", padding=True, truncation=True)
-    input_ids_list = [tokenized['input_ids'][i].tolist() for i in range(num_samples)]
-    
-    logger.info(f"Tokenization complete. Token lengths: {[len(ids) for ids in input_ids_list[:5]]}...")
+    tokenized = tokenizer(
+        text_inputs,
+        return_tensors="pt",
+        padding=True,
+        truncation=True)
+    input_ids_list = [tokenized['input_ids'][i].tolist()
+                      for i in range(num_samples)]
+
+    logger.info(
+        f"Tokenization complete. Token lengths: {[len(ids) for ids in input_ids_list[:5]]}...")
     return input_ids_list, text_inputs
 
 
 def send_single_request(args_tuple):
     """Send a single request - used by multiprocessing pool."""
     input_ids, max_tokens, server_url, sample_id = args_tuple
-    
+
     # Create a new client for this process
     client = SGLangClient(server_url)
-    
+
     try:
         response = client.send_request(input_ids, max_tokens=max_tokens)
         return sample_id, response
@@ -112,40 +120,42 @@ def send_single_request(args_tuple):
 
 
 def send_requests_parallel(input_ids_list: List[List[int]], server_url: str,
-                          max_tokens: int = 100, max_concurrency: int = 128) -> List[Dict[str, Any]]:
+                           max_tokens: int = 100, max_concurrency: int = 128) -> List[Dict[str, Any]]:
     """Send all requests to SGLang server in parallel using multiprocessing."""
     num_samples = len(input_ids_list)
-    logger.info(f"Sending {num_samples} requests to server with {max_concurrency} concurrent workers...")
-    
+    logger.info(
+        f"Sending {num_samples} requests to server with {max_concurrency} concurrent workers...")
+
     # Prepare arguments for multiprocessing
     args_list = [
-        (input_ids, max_tokens, server_url, i) 
+        (input_ids, max_tokens, server_url, i)
         for i, input_ids in enumerate(input_ids_list)
     ]
-    
+
     start_time = time.time()
-    
+
     # Use multiprocessing pool
     with Pool(processes=min(max_concurrency, num_samples)) as pool:
         # Map the function to all arguments
         results = pool.map(send_single_request, args_list)
-    
+
     # Sort results by sample_id to maintain order
     results.sort(key=lambda x: x[0])
     responses = [result[1] for result in results]
-    
+
     total_time = time.time() - start_time
-    logger.info(f"Completed {num_samples} requests in {total_time:.2f} seconds")
+    logger.info(
+        f"Completed {num_samples} requests in {total_time:.2f} seconds")
     logger.info(f"Average rate: {num_samples/total_time:.2f} requests/sec")
-    
+
     return responses
 
 
-def detokenize_all_responses(responses: List[Dict[str, Any]], input_ids_list: List[List[int]], 
-                           tokenizer) -> List[str]:
+def detokenize_all_responses(responses: List[Dict[str, Any]], input_ids_list: List[List[int]],
+                             tokenizer) -> List[str]:
     """Detokenize all responses at once."""
     logger.info("Detokenizing responses...")
-    
+
     response_texts = []
     for i, (response, input_ids) in enumerate(zip(responses, input_ids_list)):
         response_text = ""
@@ -153,57 +163,71 @@ def detokenize_all_responses(responses: List[Dict[str, Any]], input_ids_list: Li
             try:
                 # Extract generated tokens (excluding input tokens)
                 generated_tokens = response["generated_text"][len(input_ids):]
-                response_text = tokenizer.decode(generated_tokens, skip_special_tokens=True)
+                response_text = tokenizer.decode(
+                    generated_tokens, skip_special_tokens=True)
             except Exception as e:
-                logger.warning(f"Failed to decode response for sample {i+1}: {e}")
+                logger.warning(
+                    f"Failed to decode response for sample {i+1}: {e}")
         response_texts.append(response_text)
-    
+
     logger.info("Detokenization complete")
     return response_texts
 
 
-def save_responses(responses: List[Dict[str, Any]], response_texts: List[str], 
-                  text_inputs: List[str], input_ids_list: List[List[int]], 
-                  output_file: str) -> None:
+def save_responses(responses: List[Dict[str, Any]], response_texts: List[str],
+                   text_inputs: List[str], input_ids_list: List[List[int]],
+                   output_file: str) -> None:
     """Save all responses to file."""
     logger.info(f"Saving responses to {output_file}...")
-    
+
     with open(output_file, 'w') as f:
         for i, (response, response_text, text_input, input_ids) in enumerate(
-            zip(responses, response_texts, text_inputs, input_ids_list)):
-            
+                zip(responses, response_texts, text_inputs, input_ids_list)):
+
             response_data = {
                 "sample_id": int(i),
                 "text_input": text_input[:200] + "..." if len(text_input) > 200 else text_input,
                 "input_length": len(text_input),
                 "token_length": len(input_ids),
-                "input_tokens": input_ids[:10],  # First 10 tokens for reference
+                # First 10 tokens for reference
+                "input_tokens": input_ids[:10],
                 "response": response,
                 "response_text": response_text,
                 "timestamp": float(time.time())
             }
-            
+
             f.write(json.dumps(response_data) + '\n')
-    
+
     logger.info(f"Responses saved to {output_file}")
 
 
 def process_requests(data: pd.DataFrame, tokenizer, server_url: str,
-                    max_samples: int = None, max_tokens: int = 100,
-                    max_concurrency: int = 128, output_file: str = "responses.jsonl") -> None:
+                     max_samples: int = None, max_tokens: int = 100,
+                     max_concurrency: int = 128, output_file: str = "responses.jsonl") -> None:
     """Main processing function that handles tokenization, requests, and detokenization."""
-    
+
     # Step 1: Tokenize all inputs
-    input_ids_list, text_inputs = tokenize_all_inputs(data, tokenizer, max_samples)
-    
+    input_ids_list, text_inputs = tokenize_all_inputs(
+        data, tokenizer, max_samples)
+
     # Step 2: Send all requests in parallel
-    responses = send_requests_parallel(input_ids_list, server_url, max_tokens, max_concurrency)
-    
+    responses = send_requests_parallel(
+        input_ids_list,
+        server_url,
+        max_tokens,
+        max_concurrency)
+
     # Step 3: Detokenize all responses
-    response_texts = detokenize_all_responses(responses, input_ids_list, tokenizer)
-    
+    response_texts = detokenize_all_responses(
+        responses, input_ids_list, tokenizer)
+
     # Step 4: Save all results
-    save_responses(responses, response_texts, text_inputs, input_ids_list, output_file)
+    save_responses(
+        responses,
+        response_texts,
+        text_inputs,
+        input_ids_list,
+        output_file)
 
 
 def main():
@@ -228,7 +252,7 @@ def main():
 
     # Load data
     data = load_text_data(args.data_file)
-    
+
     # Load tokenizer
     tokenizer = load_tokenizer(args.model_name)
 
@@ -246,10 +270,10 @@ def main():
 
     # Process all requests in parallel
     process_requests(data, tokenizer, args.server_url,
-                    max_samples=args.max_samples,
-                    max_tokens=args.max_tokens,
-                    max_concurrency=args.max_concurrency,
-                    output_file=args.output)
+                     max_samples=args.max_samples,
+                     max_tokens=args.max_tokens,
+                     max_concurrency=args.max_concurrency,
+                     output_file=args.output)
 
 
 if __name__ == "__main__":

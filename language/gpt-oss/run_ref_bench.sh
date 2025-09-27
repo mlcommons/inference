@@ -91,10 +91,34 @@ srun --nodes=1 \
     --stream-interval 10 &
 set +x;
 
+SERVER_PID=$!
+echo "Server launched with PID: $SERVER_PID"
+
 echo "Waiting for server to start on port 30000..."
+TIMEOUT=300  # 5 minutes timeout
+ELAPSED=0
 while ! srun --nodes=1 --overlap netstat -tulnp 2>/dev/null | grep -q ":30000"; do
-    echo "Server not ready yet, waiting..."
+    # Check if server process is still running
+    if ! kill -0 $SERVER_PID 2>/dev/null; then
+        echo "ERROR: Server process has died. Checking server logs..."
+        echo "Last 20 lines of server log:"
+        tail -20 $out_folder/server.log
+        echo "Server launch failed. Exiting."
+        exit 1
+    fi
+    
+    # Check for timeout
+    if [ $ELAPSED -ge $TIMEOUT ]; then
+        echo "ERROR: Server failed to start within $TIMEOUT seconds. Checking server logs..."
+        echo "Last 20 lines of server log:"
+        tail -20 $out_folder/server.log
+        echo "Timeout reached. Exiting."
+        exit 1
+    fi
+    
+    echo "Server not ready yet, waiting... (${ELAPSED}s/${TIMEOUT}s)"
     sleep 5
+    ELAPSED=$((ELAPSED + 5))
 done
 echo "Server is ready on port 30000!"
 

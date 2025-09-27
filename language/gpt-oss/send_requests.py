@@ -186,11 +186,11 @@ def save_responses(responses: List[Dict[str, Any]], response_texts: List[str],
 
             response_data = {
                 "sample_id": int(i),
-                "text_input": text_input,
+                "text_input": text_input[:200] + "..." if len(text_input) > 200 else text_input,
                 "input_length": len(text_input),
                 "token_length": len(input_ids),
                 # First 10 tokens for reference
-                "input_tokens": input_ids,
+                "input_tokens": input_ids[:10],
                 "response": response,
                 "response_text": response_text,
                 "timestamp": float(time.time())
@@ -261,6 +261,7 @@ def main():
             "  python -m sglang.launch_server --model-path openai/gpt-oss-120b --mem-fraction-static 0.98 --tp 8")
         return
     logger.info("Server connection successful")
+
 
     data = load_text_data(args.data_file)
     tokenizer = load_tokenizer(args.model_name)

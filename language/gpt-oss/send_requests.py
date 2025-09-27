@@ -262,7 +262,6 @@ def main():
         return
     logger.info("Server connection successful")
 
-
     data = load_text_data(args.data_file)
     tokenizer = load_tokenizer(args.model_name)
 

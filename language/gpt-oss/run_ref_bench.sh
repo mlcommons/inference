@@ -66,7 +66,7 @@ done
 set -x; 
 srun --nodes=1 \
     --output=$out_folder/server.log \
-    --container-image=images/lmsysorg+sglang+v0.5.3rc1.sqsh \
+    --container-image=./images/lmsysorg+sglang+v0.5.3rc1.sqsh \
     --container-mounts=$(pwd):/$(pwd),$mlperf_storage:/home/mlperf_inference_storage \
     --container-name=sglang_server_$SLURM_JOB_ID \
     python3 -m sglang.launch_server \
@@ -82,11 +82,11 @@ srun --nodes=1 \
     --kv-cache-dtype fp8_e4m3 \
     --chunked-prefill-size 16384 \
     --ep-size $tep_size \
-    --quantization modelopt_fp4  \
+    --quantization mxfp4  \
     --enable-flashinfer-allreduce-fusion \
     --enable-symm-mem  \
     --disable-radix-cache \
-    --attention-backend trtllm_mla \
+    --attention-backend trtllm_mha \
     --moe-runner-backend flashinfer_trtllm \
     --stream-interval 10 &
 set +x;
@@ -95,7 +95,7 @@ SERVER_PID=$!
 echo "Server launched with PID: $SERVER_PID"
 
 echo "Waiting for server to start on port 30000..."
-TIMEOUT=300  # 5 minutes timeout
+TIMEOUT=1200  # 20 minutes timeout
 ELAPSED=0
 while ! srun --nodes=1 --overlap netstat -tulnp 2>/dev/null | grep -q ":30000"; do
     # Check if server process is still running

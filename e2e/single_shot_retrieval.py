@@ -56,7 +56,6 @@ def run_evaluation(rag_db, dataset_path, top_k_retriever=50, top_k_reranking=10,
         if expected_urls:
             score = evaluate_query(rag_db, row['Prompt'], expected_urls, top_k_retriever, top_k_reranking)
             total_score += score
-            total_score += score
             valid_queries += 1
     
     if valid_queries > 0:
@@ -121,12 +120,7 @@ if __name__ == "__main__":
 
         print(f"Ingesting {len(passage_list)} passages from {args.passages}")
         tic = time.time()
-        
-        # Pass thread count for BM25
-        if args.retrieval_method == "bm25":
-            rag_db.ingest(passage_list, passage_metadata, num_threads=args.threads)
-        else:
-            rag_db.ingest(passage_list, passage_metadata)
+        rag_db.ingest(passage_list, passage_metadata, num_threads=args.threads)
             
         toc = time.time()
         ingestion_speed = len(passage_list)/(toc-tic)

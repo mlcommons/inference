@@ -46,27 +46,8 @@ class BM25DB(RagDB):
             result_item = results_data[0, i]
             score = scores[0, i]
             
-            # Handle different result formats from BM25S
-            if isinstance(result_item, dict) and 'id' in result_item:
-                # New format: {'id': index, 'text': content}
-                doc_idx = result_item['id']
-                # Use the text from the dictionary, not from our stored list
-                page_content = result_item.get('text', '')
-            elif isinstance(result_item, str):
-                # Old format: string content, find its index
-                doc_idx = None
-                for idx, passage in enumerate(self._passages_list):
-                    if passage == result_item:
-                        doc_idx = idx
-                        break
-                page_content = result_item if doc_idx is not None else ''
-            else:
-                # Old format: integer index
-                try:
-                    doc_idx = int(result_item)
-                    page_content = self._passages_list[doc_idx] if 0 <= doc_idx < len(self._passages_list) else ''
-                except (ValueError, TypeError):
-                    continue
+            doc_idx = result_item['id']
+            page_content = result_item.get('text', '')
             
             # Create result object if valid index found
             if doc_idx is not None and 0 <= doc_idx < len(self._passages_metadata):

@@ -45,7 +45,6 @@ class RagDB(abc.ABC):
         self._reranker_model = AutoModelForSequenceClassification.from_pretrained(self._reranker_model_name)
         self._reranker_tokenizer = AutoTokenizer.from_pretrained(self._reranker_model_name)
         
-        # Move model to device
         self._reranker_model = self._reranker_model.to(self._device)
         self._reranker_model.eval()
     
@@ -94,7 +93,7 @@ class RagDB(abc.ABC):
     def lookup_with_rerank(self, query: str, k: int, rerank_k: int = None) -> List[Any]:
         """Retrieve and rerank passages."""
         if rerank_k is None:
-            rerank_k = max(k * 3, 20)  # Default to 3x or 20, whichever is larger
+            rerank_k = k
             
         # Get initial results
         results = self.lookup(query, k=rerank_k)

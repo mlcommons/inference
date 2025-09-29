@@ -7,3 +7,4 @@ faiss-cpu
 langchain
 langchain-community
 langchain-huggingface
+bm25s

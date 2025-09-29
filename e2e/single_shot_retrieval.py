@@ -3,26 +3,18 @@ import json
 import time
 import os
 import pandas as pd
-from retrieve import VectorDB
+from retrieve import VectorDB, BM25DB
 
-def evaluate_query(vector_store, query, expected_urls, top_k_retriever=50, top_k_reranking=10):
+def evaluate_query(rag_db, query, expected_urls, top_k_retriever=50, top_k_reranking=10):
     """Evaluate a single query and return score (0-1)."""
-    # Get retrieval results
-    results = vector_store.lookup(query, k=top_k_retriever)
-    top_k_passages = [result.page_content for result in results]
+    # Get retrieval results with reranking
+    results = rag_db.lookup_with_rerank(query, k=top_k_reranking, rerank_k=top_k_retriever)
     
-    # Get reranking results  
-    reranked_results = vector_store.rerank(query, top_k_passages)
-    
-    # Extract URLs from top reranked results
+    # Extract URLs from results
     retrieved_urls = set()
-    for reranked_passage, score in reranked_results[:top_k_reranking]:
-        # Find the corresponding result metadata
-        for result in results:
-            if result.page_content == reranked_passage:
-                if 'original_url' in result.metadata and result.metadata['original_url']:
-                    retrieved_urls.add(result.metadata['original_url'])
-                break
+    for result in results:
+        if 'original_url' in result.metadata and result.metadata['original_url']:
+            retrieved_urls.add(result.metadata['original_url'])
     
     # Calculate score
     expected_set = set(url for url in expected_urls if url and url.strip())
@@ -40,10 +32,16 @@ def evaluate_query(vector_store, query, expected_urls, top_k_retriever=50, top_k
     
     return score
 
-def run_evaluation(vector_store, dataset_path, top_k_retriever=50, top_k_reranking=10):
+def run_evaluation(rag_db, dataset_path, top_k_retriever=50, top_k_reranking=10, max_queries=None):
     """Run evaluation on all queries in dataset."""
     df = pd.read_csv(dataset_path, sep='\t')
-    print(f"\nRunning evaluation on {len(df)} queries from dataset")
+    
+    # Limit number of queries if specified as a positive integer (not boolean)
+    if isinstance(max_queries, int) and not isinstance(max_queries, bool) and max_queries > 0:
+        df = df.head(max_queries)
+        print(f"\nRunning evaluation on {len(df)} queries (limited from {max_queries} requested)")
+    else:
+        print(f"\nRunning evaluation on {len(df)} queries from dataset")
     
     total_score = 0.0
     valid_queries = 0
@@ -56,7 +54,8 @@ def run_evaluation(vector_store, dataset_path, top_k_retriever=50, top_k_reranki
                 expected_urls.append(row[col].strip())
         
         if expected_urls:
-            score = evaluate_query(vector_store, row['Prompt'], expected_urls, top_k_retriever, top_k_reranking)
+            score = evaluate_query(rag_db, row['Prompt'], expected_urls, top_k_retriever, top_k_reranking)
+            total_score += score
             total_score += score
             valid_queries += 1
     
@@ -74,47 +73,80 @@ if __name__ == "__main__":
                         "'passage' will be the passage text\n"
                         "all other keys will be metadata\n"
                         "Example: [{'index': int, 'pdf_filename': str, 'passage': str}]\n"
-                        "Ignored if --vector_store is provided")
-    args.add_argument("--vector_store", type=str, default="vector.db", help="Path to the vector store file\n"
-                        "If provided, --passages will be ignored")
+                        "Ignored if --database is provided")
+    args.add_argument("--database", "--db", type=str, default=None, help="Path to the database file\n"
+                        "If provided, --passages will be ignored\n"
+                        "Default: 'bm25.db' for BM25, 'vector.db' for vector")
     args.add_argument("--query", type=str, default=DEFAULT_QUERY, help="Query to search for")
     args.add_argument("--dataset", type=str, default="data/frames_dataset.tsv")
     args.add_argument("--device", type=str, default="auto", help="Device to run the models on (e.g., 'cpu', 'cuda', 'xpu', or 'auto')")
-    args.add_argument("--eval", action="store_true", help="Run evaluation on dataset")
+    args.add_argument("--eval", nargs="?", const=True, type=lambda x: int(x) if x.isdigit() else True, 
+                     help="Run evaluation on dataset. Optionally specify number of queries to evaluate (e.g., --eval 100)")
     args.add_argument("--retriever_model", type=str, default="intfloat/e5-base-v2")
     args.add_argument("--reranker_model", type=str, default="colbert-ir/colbertv2.0", help="Model to use for reranking - unused for now")
+    args.add_argument("--retrieval_method", type=str, default="bm25", choices=["bm25", "vector"], 
+                      help="Retrieval method: 'bm25' for BM25 lexical search, 'vector' for dense vector search")
+    args.add_argument("--threads", type=int, default=4, help="Number of threads for BM25 retrieval (BM25 only). Indexing is single-threaded by default")
     args.add_argument("--top_k_retriever", type=int, default=50)
     args.add_argument("--top_k_reranking", type=int, default=10)
     args = args.parse_args()
 
-    vector_store = VectorDB(retriever_model=args.retriever_model, reranker_model=args.reranker_model, device=args.device)
-
-    if args.vector_store and os.path.exists(args.vector_store):
-        # TODO: incremental ingestion using existing DB
-        assert (args.vector_store is None) != (args.passages is None), "Exactly one of --vector_store or --passages must be provided"
-        vector_store.from_serialized(args.vector_store)
+    # Initialize the appropriate database class
+    if args.retrieval_method == "bm25":
+        db_class = BM25DB
     else:
+        db_class = VectorDB
+
+    # Set default database path based on database class if not provided
+    if args.database is None:
+        args.database = db_class.get_default_db_name()
+
+    # Create database instance
+    if args.retrieval_method == "bm25":
+        rag_db = db_class(reranker_model=args.reranker_model, device=args.device)
+    else:
+        rag_db = db_class(retriever_model=args.retriever_model, reranker_model=args.reranker_model, device=args.device)
+
+    if args.database and os.path.exists(args.database):
+        # Load existing database
+        print(f"Loading existing database from {args.database}")
+        rag_db.from_serialized(args.database)
+    else:
+        if not args.passages:
+            raise ValueError("Either --database (existing) or --passages (to create new) must be provided")
+            
         passage_data = json.load(open(args.passages))
         passage_list = [p.pop('passage') for p in passage_data]
         passage_metadata = [p for p in passage_data] # All keys except 'passage' are metadata
 
         print(f"Ingesting {len(passage_list)} passages from {args.passages}")
         tic = time.time()
-        vector_store.ingest(passage_list, passage_metadata)
+        
+        # Pass thread count for BM25
+        if args.retrieval_method == "bm25":
+            rag_db.ingest(passage_list, passage_metadata, num_threads=args.threads)
+        else:
+            rag_db.ingest(passage_list, passage_metadata)
+            
         toc = time.time()
         ingestion_speed = len(passage_list)/(toc-tic)
-        print(f"Ingestion of {len(passage_list)} passages took {toc - tic} seconds. {ingestion_speed:.2f} docs/sec")
-        vector_store.serialize(args.vector_store)
+        print(f"Ingestion of {len(passage_list)} passages took {toc - tic:.2f} seconds. {ingestion_speed:.2f} docs/sec")
+        
+        # Save the database
+        print(f"Saving database to {args.database}")
+        rag_db.serialize(args.database)
 
     # Run evaluation if requested
     if args.eval:
-        run_evaluation(vector_store, args.dataset, 
-                      top_k_retriever=args.top_k_retriever, top_k_reranking=args.top_k_reranking)
+        max_queries = args.eval if isinstance(args.eval, int) and not isinstance(args.eval, bool) and args.eval > 0 else None
+        run_evaluation(rag_db, args.dataset, 
+                      top_k_retriever=args.top_k_retriever, top_k_reranking=args.top_k_reranking,
+                      max_queries=max_queries)
         exit(0)  # Exit after evaluation
 
     print(f"Looking up top-{args.top_k_retriever} passages for query:\n\n{args.query}\n\n")
     tic = time.time()
-    results = vector_store.lookup(args.query, k=args.top_k_retriever)
+    results = rag_db.lookup(args.query, k=args.top_k_retriever)
     toc = time.time()
     print(f"Lookup took {toc - tic} seconds. Results are below:")
 
@@ -122,21 +154,18 @@ if __name__ == "__main__":
     for result in results:
         print(result.metadata)
         print("-" * 50)
-    breakpoint()
 
-    top_k_passages = [result.page_content for result in results]
+    # Show reranked results if reranker is available
+    if rag_db._reranker_model is not None:
+        print(f"\nReranking to top-{args.top_k_reranking}")
+        tic = time.time()
+        reranked_results = rag_db.lookup_with_rerank(args.query, k=args.top_k_reranking, rerank_k=args.top_k_retriever)
+        toc = time.time()
+        print(f"Reranking took {toc - tic} seconds. Results are below:")
 
-    print(f"Reranking {len(results)} passages")
-    tic = time.time()
-    reranked_results = vector_store.rerank(args.query, top_k_passages)
-    toc = time.time()
-    print(f"Reranking took {toc - tic} seconds. Results are below:")
-
-    for result in reranked_results[:args.top_k_reranking]:
-        # print(result)
-        for r in results:
-            if r.page_content == result[0]:
-                print(f"{r.metadata}, score: {result[1]}")
-                break
-        print("-" * 50)
-    breakpoint()
+        for i, result in enumerate(reranked_results, 1):
+            print(f"{i}. {result.metadata}")
+            print(f"   {result.page_content[:200]}...")
+            print("-" * 50)
+    else:
+        print("No reranker available - showing retrieval results only")

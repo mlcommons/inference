@@ -64,6 +64,7 @@ def run_evaluation(rag_db, dataset_path, top_k_retriever=50, top_k_reranking=10,
     else:
         print("No valid queries found!")
 
+
 # Taken below from frames: https://huggingface.co/datasets/google/frames-benchmark
 DEFAULT_QUERY = "Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?"
 if __name__ == "__main__":
@@ -72,7 +73,6 @@ if __name__ == "__main__":
                         "'passage' will be the passage text\n"
                         "all other keys will be metadata\n"
                         "Example: [{'index': int, 'pdf_filename': str, 'passage': str}]\n"
-                        "Ignored if --database is provided")
     args.add_argument("--database", "--db", type=str, default=None, help="Path to the database file\n"
                         "If provided, --passages will be ignored\n"
                         "Default: 'bm25.db' for BM25, 'vector.db' for vector")
@@ -86,6 +86,10 @@ if __name__ == "__main__":
     args.add_argument("--retrieval_method", type=str, default="bm25", choices=["bm25", "vector"], 
                       help="Retrieval method: 'bm25' for BM25 lexical search, 'vector' for dense vector search")
     args.add_argument("--threads", type=int, default=4, help="Number of threads for BM25 retrieval (BM25 only). Indexing is single-threaded by default")
+    args.add_argument("--bm25_k1", type=float, default=None, help="BM25 k1 parameter (term frequency saturation). Higher values = more weight on term frequency. Default: 1.5")
+    args.add_argument("--bm25_b", type=float, default=None, help="BM25 b parameter (document length normalization). 0=no normalization, 1=full normalization. Default: 0.75")
+    args.add_argument("--bm25_method", type=str, default=None, choices=["lucene", "bm25", "bm25+"], 
+                      help="BM25 variant: 'lucene' (default), 'bm25' (original), 'bm25+' (improved)")
     args.add_argument("--top_k_retriever", type=int, default=50)
     args.add_argument("--top_k_reranking", type=int, default=10)
     args = args.parse_args()
@@ -113,7 +117,7 @@ if __name__ == "__main__":
     else:
         if not args.passages:
             raise ValueError("Either --database (existing) or --passages (to create new) must be provided")
-            
+
         passage_data = json.load(open(args.passages))
         passage_list = [p.pop('passage') for p in passage_data]
         passage_metadata = [p for p in passage_data] # All keys except 'passage' are metadata
@@ -121,7 +125,6 @@ if __name__ == "__main__":
         print(f"Ingesting {len(passage_list)} passages from {args.passages}")
         tic = time.time()
         rag_db.ingest(passage_list, passage_metadata, num_threads=args.threads)
-            
         toc = time.time()
         ingestion_speed = len(passage_list)/(toc-tic)
         print(f"Ingestion of {len(passage_list)} passages took {toc - tic:.2f} seconds. {ingestion_speed:.2f} docs/sec")

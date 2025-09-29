@@ -15,12 +15,16 @@ class BM25DB(RagDB):
         """Get the default database filename for BM25DB."""
         return cls.DB_NAME
     
-    def __init__(self, reranker_model: str = None, device: str = "auto"):
+    def __init__(self, reranker_model: str = None, device: str = "auto", k1: float = None, b: float = None, method: str = None):
         super().__init__(reranker_model, device)
         self._bm25_retriever = None
         self._passages_list = []
         self._passages_metadata = []
         self._num_threads = 4
+        # Set defaults if not provided
+        self._k1 = k1 if k1 is not None else 1.5
+        self._b = b if b is not None else 0.75
+        self._method = method if method is not None else "lucene"
     
     def ingest(self, passages: List[str], metadatas: List[Dict[str, Any]], num_threads: int = 4):
         """Ingest passages using BM25 indexing."""
@@ -29,9 +33,9 @@ class BM25DB(RagDB):
         self._num_threads = num_threads
         
         corpus_tokens = bm25s.tokenize(passages, stopwords="en")
-        self._bm25_retriever = bm25s.BM25(corpus=passages)
+        self._bm25_retriever = bm25s.BM25(corpus=passages, k1=self._k1, b=self._b, method=self._method)
         self._bm25_retriever.index(corpus_tokens)
-    
+
     def lookup(self, query: str, k: int) -> List[Any]:
         """Retrieve top-k passages using BM25."""
         if self._bm25_retriever is None:
@@ -77,7 +81,9 @@ class BM25DB(RagDB):
             'passages_metadata': self._passages_metadata,
             'num_passages': len(self._passages_list),
             'num_threads': getattr(self, '_num_threads', 4),
-            'method': 'bm25'
+            'k1': self._k1,
+            'b': self._b,
+            'method': self._method
         }
         
         with open(db_path, 'wb') as f:
@@ -97,6 +103,23 @@ class BM25DB(RagDB):
         with open(db_path, "rb") as f:
             data = pickle.load(f)
         
+        # Check if BM25 parameters match current instance
+        saved_k1 = data.get('k1', 1.5)
+        saved_b = data.get('b', 0.75) 
+        saved_method = data.get('method', 'lucene')
+        
+        # Only warn about mismatches for explicitly specified parameters (not None)
+        mismatches = [saved_k1 != self._k1, saved_b != self._b, saved_method != self._method]
+
+        if any(mismatches):
+            print(f"WARNING: Explicitly specified BM25 parameters don't match database:")
+            for mismatch in mismatches:
+                print(f"  {mismatch}")
+            print(f"  Using database parameters. To use new parameters, recreate the database.")
+        
+        # Always use database parameters (whether there was a warning or not)
+        self._k1, self._b, self._method = saved_k1, saved_b, saved_method
+        
         self._passages_metadata = data['passages_metadata']
         self._num_threads = data.get('num_threads', 4)
         bm25_directory = data.get('bm25_directory', self.DATA_DIR)
@@ -105,3 +128,4 @@ class BM25DB(RagDB):
         self._passages_list = list(self._bm25_retriever.corpus)
         
         print(f"BM25 database loaded from {db_path} ({len(self._passages_list)} passages)")
+        print(f"BM25 parameters: k1={self._k1}, b={self._b}, method='{self._method}'")

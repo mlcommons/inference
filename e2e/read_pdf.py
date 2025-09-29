@@ -163,8 +163,9 @@ def process_pdfs(input_dir, output_dir, json_file=None,
                             clean_passage = re.sub(
                                 r'\s+', ' ', passage.strip())
                             if clean_passage:
-                                # Get original URL for this PDF
-                                original_url = url_mapping.get(pdf_file.name, "")
+                                # Get original URL for this PDF (using base name without extension)
+                                base_filename = pdf_file.name.rsplit('.', 1)[0] if '.' in pdf_file.name else pdf_file.name
+                                original_url = url_mapping.get(base_filename, "")
                                 
                                 # Store: index, pdf_filename, original_url, passage_text
                                 passages_data.append({

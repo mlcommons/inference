@@ -243,13 +243,15 @@ def main():
     # Process with progress bar updates
     results = []
     failed_urls = []  # Track failed URLs for detailed reporting
-    url_mapping = {}  # Track filename -> URL mapping 
+    url_mapping = {}  # Track base filename (without extension) -> URL mapping 
 
     with Pool(processes=args.processes) as pool:
         for result in pool.imap(process_url, process_args):
             success, filename, status, url = result
             results.append((success, filename))
-            url_mapping[filename] = url
+            # Store base filename without extension
+            base_filename = filename.rsplit('.', 1)[0] if '.' in filename else filename
+            url_mapping[base_filename] = url
 
             # Update progress bar with status
             if status == "Skipping":

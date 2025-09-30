@@ -68,6 +68,20 @@ class RagDB(abc.ABC):
         """Load the database from disk."""
         pass
     
+    def ingest_from_folder(self, folder_path: str, **kwargs):
+        """Ingest data from a folder. Default implementation raises NotImplementedError."""
+        raise NotImplementedError(f"Folder ingestion not supported for {self.__class__.__name__}")
+    
+    def ingest_from_file(self, file_path: str, **kwargs):
+        """Ingest data from a JSON file. Default implementation for JSON files."""
+        import json
+        
+        passage_data = json.load(open(file_path))
+        doc_list = [p.pop('passage') for p in passage_data]
+        passage_metadata = [p for p in passage_data]  # All keys except 'passage' are metadata
+        print(f"Ingesting {len(doc_list)} passages from JSON file {file_path}")
+        return self.ingest(doc_list, passage_metadata, **kwargs)
+
     def rerank(self, query: str, passages: List[str]):
         """Rerank passages using the reranker model."""
         if self._reranker_model is None:

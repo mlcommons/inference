@@ -21,10 +21,20 @@ class VectorDB(RagDB):
     def __init__(self,
             retriever_model: str = None,
             reranker_model: str = None,
-            device: str = "auto"
+            device: str = "auto",
+            **kwargs
         ):
         super().__init__(reranker_model, device)
         self._retriever_model_name = retriever_model
+        
+        # Ignore BM25-specific parameters
+        ignored_params = []
+        for param in ['k1', 'b', 'method', 'database', 'delta', 'backend', 'stopwords', 'show_progress', 
+                     'token_pattern', 'stemmer', 'lower', 'dtype', 'idf_method']:
+            if param in kwargs:
+                ignored_params.append(param)
+        if ignored_params:
+            print(f"VectorDB: Ignoring BM25-specific parameters: {ignored_params}")
 
         # Initialize embedding model
         model_kwargs = {'device': self.device}
@@ -47,10 +57,18 @@ class VectorDB(RagDB):
             docstore=self._docstore,
             index_to_docstore_id={}, # This will be populated as documents are added
         )
+        
+        # Keep track of ingested documents for consistency with BM25DB
+        self._doc_list = []
     
     def ingest(self, passages: List[str], metadatas: List[dict], **kwargs):
+        # Handle BM25-specific parameters gracefully
+        if 'num_threads' in kwargs:
+            print(f"Warning: num_threads parameter is not used in VectorDB, ignoring")
         self._vector_store.add_texts(passages, metadatas)
-
+        # Keep track of ingested documents
+        self._doc_list = passages
+    
     def lookup(self, query: str, k: int):
         results = self._vector_store.similarity_search(query, k=k)
         return results
@@ -67,3 +85,7 @@ class VectorDB(RagDB):
         self._vector_store = FAISS.deserialize_from_bytes(embeddings=self._embedding_model,
             serialized=data,
             allow_dangerous_deserialization=True) # <--- USE WITH CAUTION - Only deserialize files you trust
+        
+        # Update doc_list count based on loaded documents
+        num_docs = len(self._vector_store.index_to_docstore_id)
+        self._doc_list = [None] * num_docs  # Placeholder list to maintain count

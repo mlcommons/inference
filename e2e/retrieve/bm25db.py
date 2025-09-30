@@ -7,34 +7,161 @@ from .ragdb import RagDB
 class BM25DB(RagDB):
     """BM25 database implementation for lexical search."""
     
-    DATA_DIR = "bm25_data"
-    DB_NAME = "bm25.db"
-    
     @classmethod
     def get_default_db_name(cls) -> str:
         """Get the default database filename for BM25DB."""
-        return cls.DB_NAME
+        return "bm25.db"
     
-    def __init__(self, reranker_model: str = None, device: str = "auto", k1: float = None, b: float = None, method: str = None):
+    @staticmethod
+    def get_data_dir(db_name: str) -> str:
+        """Get data directory based on database name."""
+        base_name = Path(db_name).stem  # Remove .db extension if present
+        return f"{base_name}_data"
+    
+    @staticmethod
+    def get_db_path(db_name: str) -> str:
+        """Get database file path based on database name."""
+        base_name = Path(db_name).stem  # Remove .db extension if present
+        return f"{base_name}.db"
+    
+    def __init__(self, reranker_model: str = None, device: str = "auto", k1: float = None, b: float = None, method: str = None, 
+                 database: str = None, delta: float = None, idf_method: str = None, dtype: str = None, 
+                 backend: str = None, token_pattern: str = None, stopwords = None, stemmer = None, 
+                 lower: bool = None, show_progress: bool = None, **kwargs):
         super().__init__(reranker_model, device)
         self._bm25_retriever = None
-        self._passages_list = []
+        self._doc_list = []
         self._passages_metadata = []
         self._num_threads = 4
-        # Set defaults if not provided
+        
+        # Set database name (use default if not provided)
+        self._database_name = database if database is not None else "bm25"
+        
+        # Set BM25 parameters with defaults
         self._k1 = k1 if k1 is not None else 1.5
         self._b = b if b is not None else 0.75
         self._method = method if method is not None else "lucene"
+        self._delta = delta if delta is not None else 0.5
+        self._idf_method = idf_method if idf_method is not None else None  # Will default to method
+        self._dtype = dtype if dtype is not None else "float32"
+        self._backend = backend if backend is not None else "numpy"
+        
+        # Tokenization parameters
+        self._token_pattern = token_pattern if token_pattern is not None else r"(?u)\b\w\w+\b"
+        self._stopwords = stopwords if stopwords is not None else "en"  # Default to English stopwords
+        self._stemmer = stemmer  # None by default
+        self._lower = lower if lower is not None else True
+        self._show_progress = show_progress if show_progress is not None else True
+        
+        # Ignore vector-specific parameters
+        ignored_params = []
+        if 'retriever_model' in kwargs:
+            ignored_params.append('retriever_model')
+        if ignored_params:
+            print(f"BM25DB: Ignoring vector-specific parameters: {ignored_params}")
     
     def ingest(self, passages: List[str], metadatas: List[Dict[str, Any]], num_threads: int = 4):
         """Ingest passages using BM25 indexing."""
-        self._passages_list = passages
+        self._doc_list = passages
         self._passages_metadata = metadatas
         self._num_threads = num_threads
         
-        corpus_tokens = bm25s.tokenize(passages, stopwords="en")
-        self._bm25_retriever = bm25s.BM25(corpus=passages, k1=self._k1, b=self._b, method=self._method)
-        self._bm25_retriever.index(corpus_tokens)
+        # Tokenize with configurable parameters
+        corpus_tokens = bm25s.tokenize(
+            passages, 
+            stopwords=self._stopwords,
+            token_pattern=self._token_pattern,
+            stemmer=self._stemmer,
+            lower=self._lower,
+            show_progress=self._show_progress
+        )
+        
+        # Create BM25 retriever with configurable parameters
+        self._bm25_retriever = bm25s.BM25(
+            k1=self._k1, 
+            b=self._b, 
+            method=self._method,
+            delta=self._delta,
+            idf_method=self._idf_method,
+            dtype=self._dtype,
+            backend=self._backend
+        )
+        
+        # Index with configurable progress settings
+        self._bm25_retriever.index(corpus_tokens, show_progress=self._show_progress)
+    
+    def ingest_from_folder(self, folder_path: str, num_threads: int = 4):
+        """Ingest txt files from a folder."""
+        from pathlib import Path
+        import json
+        
+        folder_path = Path(folder_path)
+        
+        # Load URL mapping from doc_pdf folder
+        url_mapping_path = Path("doc_pdf") / "url_mapping.json"
+        url_mapping = {}
+        if url_mapping_path.exists():
+            try:
+                with open(url_mapping_path, 'r', encoding='utf-8') as f:
+                    url_mapping = json.load(f)
+            except Exception as e:
+                print(f"Warning: Could not load URL mapping: {e}")
+        
+        doc_list = []
+        passage_metadata = []
+        
+        # Process all .txt files in the folder
+        txt_files = list(folder_path.glob("*.txt"))
+        if not txt_files:
+            print(f"Warning: No .txt files found in {folder_path}")
+            return
+        
+        for txt_file in txt_files:
+            try:
+                # Read the file content
+                with open(txt_file, 'r', encoding='utf-8') as f:
+                    content = f.read().strip()
+                
+                if not content:
+                    continue
+                
+                # Get base filename without extension for URL lookup
+                base_filename = txt_file.stem
+                original_url = url_mapping.get(base_filename, "")
+                
+                # Create passage and metadata
+                doc_list.append(content)
+                metadata = {
+                    'pdf_filename': txt_file.name,
+                    'original_url': original_url,
+                    'base_filename': base_filename
+                }
+                passage_metadata.append(metadata)
+                
+            except Exception as e:
+                print(f"Warning: Could not read {txt_file}: {e}")
+                continue
+        
+        print(f"Loaded {len(doc_list)} documents from {folder_path}")
+        
+        # Call regular ingest method
+        self.ingest(doc_list, passage_metadata, num_threads)
+    
+    def ingest_from_source(self, source_path: str, **kwargs):
+        """Handle both file and folder ingestion for BM25DB."""
+        from pathlib import Path
+        
+        source_path = Path(source_path)
+        
+        if source_path.is_dir():
+            # Folder ingestion - BM25 specific
+            print(f"Ingesting documents from folder {source_path}")
+            return self.ingest_from_folder(source_path, **kwargs)
+        elif source_path.is_file():
+            # File ingestion - use base class implementation
+            return super().ingest_from_file(source_path, **kwargs)
+        else:
+            raise ValueError(f"Source path {source_path} is neither a file nor a directory")
 
     def lookup(self, query: str, k: int) -> List[Any]:
         """Retrieve top-k passages using BM25."""
@@ -50,8 +177,15 @@ class BM25DB(RagDB):
             result_item = results_data[0, i]
             score = scores[0, i]
             
-            doc_idx = result_item['id']
-            page_content = result_item.get('text', '')
+            # Handle different result formats from BM25S
+            if isinstance(result_item, dict):
+                # Dictionary format: {'id': idx, 'text': content}
+                doc_idx = int(result_item['id'])
+                page_content = result_item.get('text', '')
+            else:
+                # Index format: result_item is the document index (convert to int)
+                doc_idx = int(result_item)
+                page_content = self._doc_list[doc_idx] if doc_idx < len(self._doc_list) else ""
             
             # Create result object if valid index found
             if doc_idx is not None and 0 <= doc_idx < len(self._passages_metadata):
@@ -68,18 +202,19 @@ class BM25DB(RagDB):
         if self._bm25_retriever is None:
             raise ValueError("BM25 retriever not initialized")
         
-        # Save BM25 index to separate directory
-        bm25_dir = Path(self.DATA_DIR)
+        # Save BM25 index to separate directory based on database name
+        bm25_dir = Path(self.get_data_dir(path))
         self._bm25_retriever.save(str(bm25_dir))
         
-        # Save database file outside bm25_data
+        # Save database file
         db_path = Path(path)
         
         data = {
             'type': 'BM25DB',
             'bm25_directory': str(bm25_dir),
             'passages_metadata': self._passages_metadata,
-            'num_passages': len(self._passages_list),
+            'doc_list': self._doc_list,  # Save the actual document content
+            'num_passages': len(self._doc_list),
             'num_threads': getattr(self, '_num_threads', 4),
             'k1': self._k1,
             'b': self._b,
@@ -122,10 +257,20 @@ class BM25DB(RagDB):
         
         self._passages_metadata = data['passages_metadata']
         self._num_threads = data.get('num_threads', 4)
-        bm25_directory = data.get('bm25_directory', self.DATA_DIR)
+        # Use the data directory based on the database path, or fallback to saved directory
+        default_bm25_dir = self.get_data_dir(path)
+        bm25_directory = data.get('bm25_directory', default_bm25_dir)
         
-        self._bm25_retriever = bm25s.BM25.load(bm25_directory, load_corpus=True)
-        self._passages_list = list(self._bm25_retriever.corpus)
+        # Load BM25 without corpus to avoid the same issue we fixed in __init__
+        self._bm25_retriever = bm25s.BM25.load(bm25_directory, load_corpus=False)
         
-        print(f"BM25 database loaded from {db_path} ({len(self._passages_list)} passages)")
+        # Load doc_list from saved data if available, otherwise use fallback
+        if 'doc_list' in data:
+            self._doc_list = data['doc_list']
+        else:
+            # Fallback for older databases that didn't save doc_list
+            print("Warning: doc_list not found in database, using URLs as fallback")
+            self._doc_list = [metadata.get('original_url', '') for metadata in self._passages_metadata]
+        
+        print(f"BM25 database loaded from {db_path} ({len(self._doc_list)} passages)")
         print(f"BM25 parameters: k1={self._k1}, b={self._b}, method='{self._method}'")

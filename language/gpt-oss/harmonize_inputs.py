@@ -24,7 +24,7 @@ from openai_harmony import (
 )
 
 
-def create_math500_prompt(user_query):
+def create_math500_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
     """
     Creates a multi-shot prompt for mathematical problem solving using Harmony format.
 
@@ -38,7 +38,7 @@ def create_math500_prompt(user_query):
     # Create the system message with required channels
     system_message = (
         SystemContent.new()
-        .with_reasoning_effort(ReasoningEffort.HIGH)
+        .with_reasoning_effort(reasoning_effort)
         .with_conversation_start_date("2025-09-30")
         .with_required_channels(["analysis", "commentary", "final"])
     )
@@ -125,7 +125,7 @@ def create_math500_prompt(user_query):
     return convo, tokens
 
 
-def create_aime1983_prompt(user_query):
+def create_aime1983_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
     """
     Creates a zero-shot prompt for mathematical problem solving using Harmony format.
 
@@ -139,7 +139,7 @@ def create_aime1983_prompt(user_query):
     # Create the system message with required channels
     system_message = (
         SystemContent.new()
-        .with_reasoning_effort(ReasoningEffort.HIGH)
+        .with_reasoning_effort(reasoning_effort)
         .with_conversation_start_date("2025-09-30")
         .with_required_channels(["analysis", "commentary", "final"])
     )
@@ -169,7 +169,7 @@ def create_aime1983_prompt(user_query):
     return convo, tokens
 
 
-def create_livecodebench_prompt(user_query):
+def create_livecodebench_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
     """
     Creates a zero-shot prompt for livecodebench problem solving using Harmony format.
 
@@ -183,7 +183,7 @@ def create_livecodebench_prompt(user_query):
     # Create the system message with required channels
     system_message = (
         SystemContent.new()
-        .with_reasoning_effort(ReasoningEffort.HIGH)
+        .with_reasoning_effort(reasoning_effort)
         .with_conversation_start_date("2025-09-30")
         .with_required_channels(["analysis", "commentary", "final"])
     )
@@ -213,7 +213,7 @@ def create_livecodebench_prompt(user_query):
     return convo, tokens
 
 
-def create_mmlu_prompt(user_query):
+def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
     """
     Creates a multi-shot prompt for multiple choice question answering using Harmony format.
 
@@ -227,7 +227,7 @@ def create_mmlu_prompt(user_query):
     # Create the system message with required channels
     system_message = (
         SystemContent.new()
-        .with_reasoning_effort(ReasoningEffort.HIGH)
+        .with_reasoning_effort(reasoning_effort)
         .with_conversation_start_date("2025-09-30")
         .with_required_channels(["analysis", "commentary", "final"])
     )
@@ -314,7 +314,7 @@ def create_mmlu_prompt(user_query):
     return convo, tokens
 
 
-def create_gpqa_prompt(user_query):
+def create_gpqa_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
     """
     Creates a multi-shot prompt for organic chemistry and biochemistry question answering using Harmony format.
 
@@ -328,7 +328,7 @@ def create_gpqa_prompt(user_query):
     # Create the system message with required channels
     system_message = (
         SystemContent.new()
-        .with_reasoning_effort(ReasoningEffort.HIGH)
+        .with_reasoning_effort(reasoning_effort)
         .with_conversation_start_date("2025-09-30")
         .with_required_channels(["analysis", "commentary", "final"])
     )
@@ -425,8 +425,16 @@ if __name__ == "__main__":
                         help="Maximum number of rows to process (default: process all rows)")
     parser.add_argument("--output-file", type=str, required=True,
                         help="Output pickle file path to save the processed data as pandas DataFrame")
+    parser.add_argument("--reasoning-effort", type=str, default="high",
+                        help="Reasoning effort to use for the prompt")
     args = parser.parse_args()
     df = pd.read_pickle(args.data_file)
+
+    reasoning_effort = {
+        "high": ReasoningEffort.HIGH,
+        "medium": ReasoningEffort.MEDIUM,
+        "low": ReasoningEffort.LOW
+    }[args.reasoning_effort.lower()]
 
     # Apply row limit if specified
     if args.max_rows is not None:

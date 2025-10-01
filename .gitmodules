@@ -10,7 +10,3 @@
 [submodule "language/deepseek-r1/submodules/LiveCodeBench"]
 	path = language/deepseek-r1/submodules/LiveCodeBench
 	url = https://github.com/LiveCodeBench/LiveCodeBench
-[submodule "language/gpt-oss/deps/sglang"]
-	path = language/gpt-oss/deps/sglang
-	url = git@github.com:sgl-project/sglang.git
-	branch = main

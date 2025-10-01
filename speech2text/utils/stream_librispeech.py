@@ -20,8 +20,8 @@ import soundfile as sf
 import os
 import numpy as np
 
-DURATION = 4.0
-OVERLAP = 2.0
+DURATION = 6.0
+OVERLAP = 4.0
 PAD_DURATION = 0.0
 SR = 16000
 

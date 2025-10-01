@@ -61,6 +61,21 @@ class VectorDB(RagDB):
         # Keep track of ingested documents for consistency with BM25DB
         self._doc_list = []
     
+    def ingest_from_source(self, source_path: str, **kwargs):
+        """Handle both file and folder ingestion for VectorDB."""
+        from pathlib import Path
+        
+        source_path = Path(source_path)
+        
+        if source_path.is_dir():
+            # Folder ingestion - not supported for VectorDB yet
+            raise ValueError(f"VectorDB does not support folder ingestion yet. Please use a JSON file.")
+        elif source_path.is_file():
+            # File ingestion - use base class implementation
+            return super().ingest_from_file(source_path, **kwargs)
+        else:
+            raise ValueError(f"Source path {source_path} is neither a file nor a directory")
+    
     def ingest(self, passages: List[str], metadatas: List[dict], **kwargs):
         # Handle BM25-specific parameters gracefully
         if 'num_threads' in kwargs:

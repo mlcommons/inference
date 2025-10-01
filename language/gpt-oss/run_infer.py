@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 MODEL_NAME = "openai/gpt-oss-120b"
 tokenizer = None
 
+
 def get_tokenizer():
     """Get or initialize the tokenizer."""
     global tokenizer
@@ -195,25 +196,27 @@ def extract_response_ids(
 def detokenize_output_ids(response_ids: List[List[int]]) -> List[str]:
     """Detokenize output_ids back to text using AutoTokenizer."""
     logger.info("Detokenizing output_ids to text...")
-    
+
     tokenizer = get_tokenizer()
     detokenized_texts = []
-    
-    for i, token_ids in enumerate(tqdm(response_ids, desc="Detokenizing outputs", unit="output")):
+
+    for i, token_ids in enumerate(
+            tqdm(response_ids, desc="Detokenizing outputs", unit="output")):
         try:
             # Detokenize the token IDs back to text
             text = tokenizer.decode(token_ids, skip_special_tokens=True)
             detokenized_texts.append(text)
         except Exception as e:
-            logger.warning(f"Failed to detokenize output for sample {i+1}: {e}")
+            logger.warning(
+                f"Failed to detokenize output for sample {i+1}: {e}")
             detokenized_texts.append("")
-    
+
     logger.info("Output detokenization complete")
     return detokenized_texts
 
 
 def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]],
-                   detokenized_texts: List[str], tokenized_df: pd.DataFrame, 
+                   detokenized_texts: List[str], tokenized_df: pd.DataFrame,
                    output_file: str = None) -> pd.DataFrame:
     """Save all responses to DataFrame and optionally to pickle file."""
     logger.info("Processing responses and updating DataFrame...")
@@ -223,8 +226,10 @@ def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]
 
     # Overwrite existing columns with server response data
     result_df['ref_output'] = detokenized_texts  # Detokenized text output
-    result_df['tok_ref_output'] = response_ids  # Original output_ids from SGLang
-    result_df['tok_ref_output_len'] = [len(token_ids) for token_ids in response_ids]  # Length of output_ids
+    # Original output_ids from SGLang
+    result_df['tok_ref_output'] = response_ids
+    result_df['tok_ref_output_len'] = [
+        len(token_ids) for token_ids in response_ids]  # Length of output_ids
 
     # Calculate output token lengths for logging
     output_token_lengths = []
@@ -276,7 +281,7 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
 
     # Step 3: Extract response output_ids
     response_ids = extract_response_ids(responses, tokenized_df)
-    
+
     # Step 4: Detokenize output_ids to text for ref_output
     detokenized_texts = detokenize_output_ids(response_ids)
 

@@ -23,12 +23,26 @@ import logging
 from multiprocessing import Pool
 import pandas as pd
 from tqdm import tqdm
+from transformers import AutoTokenizer
 
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Initialize tokenizer
+MODEL_NAME = "openai/gpt-oss-120b"
+tokenizer = None
+
+def get_tokenizer():
+    """Get or initialize the tokenizer."""
+    global tokenizer
+    if tokenizer is None:
+        logger.info(f"Loading tokenizer for {MODEL_NAME}...")
+        tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        logger.info("Tokenizer loaded successfully")
+    return tokenizer
 
 
 class SGLangClient:
@@ -153,33 +167,54 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
     return responses
 
 
-def extract_response_texts(
-        responses: List[Dict[str, Any]], tokenized_df: pd.DataFrame) -> List[str]:
-    """Extract response texts from SGLang responses."""
-    logger.info("Extracting response texts...")
+def extract_response_ids(
+        responses: List[Dict[str, Any]], tokenized_df: pd.DataFrame) -> List[List[int]]:
+    """Extract response output_ids from SGLang responses."""
+    logger.info("Extracting response output_ids...")
 
-    response_texts = []
+    response_ids = []
     for i, (response, (_, row)) in enumerate(tqdm(zip(responses, tokenized_df.iterrows()),
                                                   total=len(responses),
                                                   desc="Extracting responses",
                                                   unit="response")):
-        response_text = ""
-        if "error" not in response and "text" in response:
+        response_id = []
+        if "error" not in response and "output_ids" in response:
             try:
-                # SGLang returns the generated text directly in the 'text'
+                # SGLang returns the generated token IDs in the 'output_ids'
                 # field
-                response_text = response["text"]
+                response_id = response["output_ids"]
             except Exception as e:
                 logger.warning(
                     f"Failed to extract response for sample {i+1}: {e}")
-        response_texts.append(response_text)
+        response_ids.append(response_id)
 
-    logger.info("Response text extraction complete")
-    return response_texts
+    logger.info("Response output_ids extraction complete")
+    return response_ids
 
 
-def save_responses(responses: List[Dict[str, Any]], response_texts: List[str],
-                   tokenized_df: pd.DataFrame, output_file: str = None) -> pd.DataFrame:
+def detokenize_output_ids(response_ids: List[List[int]]) -> List[str]:
+    """Detokenize output_ids back to text using AutoTokenizer."""
+    logger.info("Detokenizing output_ids to text...")
+    
+    tokenizer = get_tokenizer()
+    detokenized_texts = []
+    
+    for i, token_ids in enumerate(tqdm(response_ids, desc="Detokenizing outputs", unit="output")):
+        try:
+            # Detokenize the token IDs back to text
+            text = tokenizer.decode(token_ids, skip_special_tokens=True)
+            detokenized_texts.append(text)
+        except Exception as e:
+            logger.warning(f"Failed to detokenize output for sample {i+1}: {e}")
+            detokenized_texts.append("")
+    
+    logger.info("Output detokenization complete")
+    return detokenized_texts
+
+
+def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]],
+                   detokenized_texts: List[str], tokenized_df: pd.DataFrame, 
+                   output_file: str = None) -> pd.DataFrame:
     """Save all responses to DataFrame and optionally to pickle file."""
     logger.info("Processing responses and updating DataFrame...")
 
@@ -187,14 +222,14 @@ def save_responses(responses: List[Dict[str, Any]], response_texts: List[str],
     result_df = tokenized_df.copy()
 
     # Overwrite existing columns with server response data
-    result_df['ref_output'] = response_texts
-    result_df['tok_ref_output'] = response_texts  # Same as ref_output for now
-    result_df['tok_ref_output_len'] = [len(text) for text in response_texts]
+    result_df['ref_output'] = detokenized_texts  # Detokenized text output
+    result_df['tok_ref_output'] = response_ids  # Original output_ids from SGLang
+    result_df['tok_ref_output_len'] = [len(token_ids) for token_ids in response_ids]  # Length of output_ids
 
     # Calculate output token lengths for logging
     output_token_lengths = []
-    for i, (response, response_text) in enumerate(
-            zip(responses, response_texts)):
+    for i, (response, response_ids) in enumerate(
+            zip(responses, response_ids)):
         if "error" not in response and "meta_info" in response:
             try:
                 # Use the completion_tokens from meta_info
@@ -203,9 +238,9 @@ def save_responses(responses: List[Dict[str, Any]], response_texts: List[str],
             except Exception as e:
                 logger.warning(
                     f"Failed to calculate output tokens for sample {i+1}: {e}")
-                output_token_lengths.append(0)
+                output_token_lengths.append(len(response_ids))
         else:
-            output_token_lengths.append(0)
+            output_token_lengths.append(len(response_ids))
 
     logger.info(f"Updated DataFrame with shape: {result_df.shape}")
     logger.info(
@@ -239,13 +274,17 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
         max_tokens,
         max_concurrency)
 
-    # Step 3: Extract response texts
-    response_texts = extract_response_texts(responses, tokenized_df)
+    # Step 3: Extract response output_ids
+    response_ids = extract_response_ids(responses, tokenized_df)
+    
+    # Step 4: Detokenize output_ids to text for ref_output
+    detokenized_texts = detokenize_output_ids(response_ids)
 
-    # Step 4: Save all results and return DataFrame
+    # Step 5: Save all results and return DataFrame
     result_df = save_responses(
         responses,
-        response_texts,
+        response_ids,
+        detokenized_texts,
         tokenized_df,
         output_file)
 

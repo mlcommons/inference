@@ -100,3 +100,13 @@ python3 run_infer.py \
     --max-concurrency 4096 \
     --output out/mlperf_gptoss_inferred.pkl
 ```
+
+### Evaluate the responses
+We use the `deepseek-r1` evaluation environment to evaluate the model responses and calculate accuracy
+
+```bash
+cd $repo_root/language/deepseek-r1
+./launch_docker.sh --backend sglang
+setup.sh
+(.venv_sglang) $ python3 eval_accuracy.py --input-file mlperf_gptoss_inferred.pkl
+```

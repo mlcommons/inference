@@ -68,34 +68,36 @@ class SGLangClient:
 def load_tokenized_data(data_file: str) -> pd.DataFrame:
     """Load pre-tokenized data from pickle file produced by harmony-tokens.py."""
     logger.info(f"Loading tokenized data from {data_file}")
-    
+
     # Load DataFrame from pickle
     df = pd.read_pickle(data_file)
     logger.info(f"Loaded DataFrame with shape: {df.shape}")
-    
+
     # Check if tok_input column exists and has valid data
     if 'tok_input' in df.columns:
-        # Check for any None values in tok_input (indicating failed tokenization)
+        # Check for any None values in tok_input (indicating failed
+        # tokenization)
         failed_mask = df['tok_input'].isna()
         failed_count = failed_mask.sum()
-        
+
         if failed_count > 0:
             failed_indices = df[failed_mask].index.unique()
             error_msg = f"Found {failed_count} failed tokenized samples at indices: {failed_indices.tolist()}"
             logger.error(error_msg)
             raise AssertionError(error_msg)
-        
+
         # Check first sample
         first_tokens = df.iloc[0]['tok_input']
         if isinstance(first_tokens, list):
             logger.info(f"First sample token length: {len(first_tokens)}")
         else:
-            logger.warning("tok_input column exists but first sample is not a list")
-        
+            logger.warning(
+                "tok_input column exists but first sample is not a list")
+
         logger.info(f"All {len(df)} samples were successfully tokenized")
     else:
         logger.warning("No 'tok_input' column found in DataFrame")
-    
+
     return df
 
 
@@ -151,19 +153,21 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
     return responses
 
 
-def extract_response_texts(responses: List[Dict[str, Any]], tokenized_df: pd.DataFrame) -> List[str]:
+def extract_response_texts(
+        responses: List[Dict[str, Any]], tokenized_df: pd.DataFrame) -> List[str]:
     """Extract response texts from SGLang responses."""
     logger.info("Extracting response texts...")
 
     response_texts = []
-    for i, (response, (_, row)) in enumerate(tqdm(zip(responses, tokenized_df.iterrows()), 
-                                                 total=len(responses), 
-                                                 desc="Extracting responses", 
-                                                 unit="response")):
+    for i, (response, (_, row)) in enumerate(tqdm(zip(responses, tokenized_df.iterrows()),
+                                                  total=len(responses),
+                                                  desc="Extracting responses",
+                                                  unit="response")):
         response_text = ""
         if "error" not in response and "text" in response:
             try:
-                # SGLang returns the generated text directly in the 'text' field
+                # SGLang returns the generated text directly in the 'text'
+                # field
                 response_text = response["text"]
             except Exception as e:
                 logger.warning(
@@ -181,35 +185,40 @@ def save_responses(responses: List[Dict[str, Any]], response_texts: List[str],
 
     # Work with the original DataFrame
     result_df = tokenized_df.copy()
-    
+
     # Overwrite existing columns with server response data
     result_df['ref_output'] = response_texts
     result_df['tok_ref_output'] = response_texts  # Same as ref_output for now
     result_df['tok_ref_output_len'] = [len(text) for text in response_texts]
-    
+
     # Calculate output token lengths for logging
     output_token_lengths = []
-    for i, (response, response_text) in enumerate(zip(responses, response_texts)):
+    for i, (response, response_text) in enumerate(
+            zip(responses, response_texts)):
         if "error" not in response and "meta_info" in response:
             try:
                 # Use the completion_tokens from meta_info
-                output_token_lengths.append(response["meta_info"]["completion_tokens"])
+                output_token_lengths.append(
+                    response["meta_info"]["completion_tokens"])
             except Exception as e:
-                logger.warning(f"Failed to calculate output tokens for sample {i+1}: {e}")
+                logger.warning(
+                    f"Failed to calculate output tokens for sample {i+1}: {e}")
                 output_token_lengths.append(0)
         else:
             output_token_lengths.append(0)
-    
+
     logger.info(f"Updated DataFrame with shape: {result_df.shape}")
-    logger.info(f"Updated columns: ref_output, tok_ref_output, tok_ref_output_len")
-    logger.info(f"Average output token length: {sum(output_token_lengths)/len(output_token_lengths):.1f}")
-    
+    logger.info(
+        f"Updated columns: ref_output, tok_ref_output, tok_ref_output_len")
+    logger.info(
+        f"Average output token length: {sum(output_token_lengths)/len(output_token_lengths):.1f}")
+
     # Save to pickle file if output_file is provided
     if output_file:
         logger.info(f"Saving responses to {output_file}...")
         result_df.to_pickle(output_file)
         logger.info(f"Responses saved to {output_file}")
-    
+
     return result_df
 
 
@@ -239,7 +248,7 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
         response_texts,
         tokenized_df,
         output_file)
-    
+
     return result_df
 
 
@@ -278,16 +287,18 @@ def main():
 
     # Process requests and get result DataFrame
     result_df = process_requests(tokenized_df, args.server_url,
-                                max_samples=args.max_samples,
-                                max_tokens=args.max_tokens,
-                                max_concurrency=args.max_concurrency,
-                                output_file=args.output)
-    
+                                 max_samples=args.max_samples,
+                                 max_tokens=args.max_tokens,
+                                 max_concurrency=args.max_concurrency,
+                                 output_file=args.output)
+
     # Print summary
     logger.info(f"\nProcessing completed:")
     logger.info(f"  - Total samples processed: {len(result_df)}")
-    logger.info(f"  - Average input token length: {result_df['tok_input_len'].mean():.1f}")
-    logger.info(f"  - Average output text length: {result_df['tok_ref_output_len'].mean():.1f}")
+    logger.info(
+        f"  - Average input token length: {result_df['tok_input_len'].mean():.1f}")
+    logger.info(
+        f"  - Average output text length: {result_df['tok_ref_output_len'].mean():.1f}")
     if args.output:
         logger.info(f"  - Results saved to: {args.output}")
     else:

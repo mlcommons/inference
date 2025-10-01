@@ -169,7 +169,8 @@ def create_aime1983_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
     return convo, tokens
 
 
-def create_livecodebench_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
+def create_livecodebench_prompt(
+        user_query, reasoning_effort=ReasoningEffort.HIGH):
     """
     Creates a zero-shot prompt for livecodebench problem solving using Harmony format.
 

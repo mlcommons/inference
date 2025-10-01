@@ -69,11 +69,11 @@ class SUT:
         self.load_model()
         gen_kwargs = {
             "temperature": 1,
-            "top_p": 1,
+            "top_p": 0,
             "top_k": 1,
             "seed": 42,
             "max_tokens": 2000,
-            "min_tokens": 2
+            "min_tokens": 1
         }
         self.sampling_params = SamplingParams(**gen_kwargs)
         # self.sampling_params.all_stop_token_ids.add(self.model.get_tokenizer().eos_token_id)

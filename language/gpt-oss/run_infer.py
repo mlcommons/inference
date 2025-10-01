@@ -59,7 +59,8 @@ class SGLangClient:
             "input_ids": input_ids,
             "sampling_params": {
                 "max_new_tokens": max_tokens,
-                "temperature": 0.0
+                "temperature": 0.9,
+                "top_k": 1,
             }
         }
 

@@ -44,12 +44,12 @@ class BM25DB(RagDB):
         self._delta = delta if delta is not None else 0.5
         self._idf_method = idf_method if idf_method is not None else None  # Will default to method
         self._dtype = dtype if dtype is not None else "float32"
-        self._backend = backend if backend is not None else "numpy"
+        self._backend = backend if backend is not None else "numba"  # Default to numba for speed
         
         # Tokenization parameters
         self._token_pattern = token_pattern if token_pattern is not None else r"(?u)\b\w\w+\b"
         self._stopwords = stopwords if stopwords is not None else "en"  # Default to English stopwords
-        self._stemmer = stemmer  # None by default
+        self._stemmer = self._create_stemmer_func(stemmer)  # Create stemmer function
         self._lower = lower if lower is not None else True
         self._show_progress = show_progress if show_progress is not None else True
         
@@ -59,6 +59,74 @@ class BM25DB(RagDB):
             ignored_params.append('retriever_model')
         if ignored_params:
             print(f"BM25DB: Ignoring vector-specific parameters: {ignored_params}")
+    
+    def _create_stemmer_func(self, stemmer: str):
+        """Create stemmer function based on stemmer type."""
+        self._original_stemmer_type = stemmer  # Store for serialization
+        if stemmer is None:
+            return None
+        elif stemmer == "porter":
+            try:
+                from nltk.stem import PorterStemmer
+                stemmer_obj = PorterStemmer()
+                def porter_wrapper(tokens):
+                    if isinstance(tokens, list):
+                        return [stemmer_obj.stem(token) for token in tokens]
+                    else:
+                        return stemmer_obj.stem(tokens)
+                return porter_wrapper
+            except ImportError:
+                print("Warning: NLTK not available, falling back to no stemming")
+                return None
+        elif stemmer == "snowball":
+            try:
+                from nltk.stem import SnowballStemmer
+                stemmer_obj = SnowballStemmer("english")
+                def snowball_wrapper(tokens):
+                    if isinstance(tokens, list):
+                        return [stemmer_obj.stem(token) for token in tokens]
+                    else:
+                        return stemmer_obj.stem(tokens)
+                return snowball_wrapper
+            except ImportError:
+                print("Warning: NLTK not available, falling back to no stemming")
+                return None
+        elif stemmer == "lancaster":
+            try:
+                from nltk.stem import LancasterStemmer
+                stemmer_obj = LancasterStemmer()
+                def lancaster_wrapper(tokens):
+                    if isinstance(tokens, list):
+                        return [stemmer_obj.stem(token) for token in tokens]
+                    else:
+                        return stemmer_obj.stem(tokens)
+                return lancaster_wrapper
+            except ImportError:
+                print("Warning: NLTK not available, falling back to no stemming")
+                return None
+        elif stemmer == "pystemmer":
+            try:
+                import Stemmer
+                stemmer_obj = Stemmer.Stemmer("english")
+                def pystemmer_wrapper(tokens):
+                    if isinstance(tokens, list):
+                        return stemmer_obj.stemWords(tokens)  # Note: stemWords for list
+                    else:
+                        return stemmer_obj.stemWord(tokens)   # Note: stemWord for single
+                return pystemmer_wrapper
+            except ImportError:
+                print("Warning: PyStemmer not available, falling back to no stemming")
+                return None
+        else:
+            print(f"Warning: Unknown stemmer '{stemmer}', falling back to no stemming")
+            return None
+    
+    def _get_stemmer_type(self):
+        """Get the stemmer type for serialization."""
+        if self._stemmer is None:
+            return None
+        # Store the original stemmer type for reconstruction
+        return getattr(self, '_original_stemmer_type', None)
     
     def ingest(self, passages: List[str], metadatas: List[Dict[str, Any]], num_threads: int = 4):
         """Ingest passages using BM25 indexing."""
@@ -168,7 +236,11 @@ class BM25DB(RagDB):
         if self._bm25_retriever is None:
             raise ValueError("BM25 retriever not initialized. Call ingest() first.")
         
-        query_tokens = bm25s.tokenize([query], stopwords="en")
+        query_tokens = bm25s.tokenize([query], 
+                                     stopwords=self._stopwords,
+                                     token_pattern=self._token_pattern,
+                                     stemmer=self._stemmer,
+                                     lower=self._lower)
         results_data, scores = self._bm25_retriever.retrieve(query_tokens, k=k, n_threads=self._num_threads)
         
         results = []
@@ -218,7 +290,16 @@ class BM25DB(RagDB):
             'num_threads': getattr(self, '_num_threads', 4),
             'k1': self._k1,
             'b': self._b,
-            'method': self._method
+            'method': self._method,
+            'delta': self._delta,
+            'idf_method': self._idf_method,
+            'dtype': self._dtype,
+            'backend': self._backend,
+            'token_pattern': self._token_pattern,
+            'stopwords': self._stopwords,
+            'stemmer_type': self._get_stemmer_type(),  # Save stemmer type, not function
+            'lower': self._lower,
+            'show_progress': self._show_progress
         }
         
         with open(db_path, 'wb') as f:
@@ -254,6 +335,20 @@ class BM25DB(RagDB):
         
         # Always use database parameters (whether there was a warning or not)
         self._k1, self._b, self._method = saved_k1, saved_b, saved_method
+        
+        # Load all tokenization parameters
+        self._delta = data.get('delta', 0.5)
+        self._idf_method = data.get('idf_method', None)
+        self._dtype = data.get('dtype', 'float32')
+        self._backend = data.get('backend', 'numba')  # Default to numba for speed
+        self._token_pattern = data.get('token_pattern', r"(?u)\b\w\w+\b")
+        self._stopwords = data.get('stopwords', 'en')
+        self._lower = data.get('lower', True)
+        self._show_progress = data.get('show_progress', True)
+        
+        # Recreate stemmer function from saved type
+        stemmer_type = data.get('stemmer_type', None)
+        self._stemmer = self._create_stemmer_func(stemmer_type)
         
         self._passages_metadata = data['passages_metadata']
         self._num_threads = data.get('num_threads', 4)

@@ -96,6 +96,8 @@ if __name__ == "__main__":
                       help="BM25 backend: 'numpy' (default), 'numba' (faster), 'auto' (detect)")
     args.add_argument("--bm25_stopwords", type=str, default=None, help="Stopwords for BM25 tokenization. Default: 'en'")
     args.add_argument("--bm25_show_progress", action="store_true", help="Show progress bars during BM25 indexing")
+    args.add_argument("--bm25_stemmer", type=str, default=None, choices=["porter", "snowball", "lancaster", "pystemmer"],
+                      help="Stemmer for BM25 tokenization: 'porter' (balanced), 'snowball' (modern), 'lancaster' (aggressive), 'pystemmer' (fast C-based)")
     args.add_argument("--no-save", action="store_true", help="Skip saving database to disk (useful for optimization trials)")
     args.add_argument("--top_k_retriever", type=int, default=50)
     args.add_argument("--top_k_reranking", type=int, default=10)
@@ -123,7 +125,7 @@ if __name__ == "__main__":
     rag_db = db_class(retriever_model=args.retriever_model, reranker_model=args.reranker_model, device=args.device, 
                         k1=args.bm25_k1, b=args.bm25_b, method=args.bm25_method, database=db_base_name,
                         delta=args.bm25_delta, backend=args.bm25_backend, stopwords=args.bm25_stopwords, 
-                        show_progress=args.bm25_show_progress)
+                        show_progress=args.bm25_show_progress, stemmer=args.bm25_stemmer)
 
     if os.path.exists(db_file_path):
         # Load existing database

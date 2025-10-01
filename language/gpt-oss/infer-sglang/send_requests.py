@@ -1,20 +1,28 @@
 #!/usr/bin/env python3
 """
-Script to send text requests to SGLang server with tokenization.
+Script to send pre-tokenized requests to SGLang server.
+
+Usage:
+    python send_requests.py --input-tokens tokenized_data.pkl [options]
+
+Arguments:
+    --input-tokens     Path to pickle file containing pre-tokenized data from harmony-tokens.py
+    --server-url       SGLang server URL (default: http://umbriel-b200-145:30000)
+    --max-samples      Maximum number of samples to process (default: all)
+    --max-tokens       Maximum tokens to generate per request (default: 100)
+    --max-concurrency  Maximum number of concurrent requests (default: 128)
+    --output           Output pickle file for responses (optional)
 """
 
-import numpy as np
-import pandas as pd
-import pickle
 import requests
 import json
 import time
 import argparse
 from typing import List, Dict, Any
 import logging
-from transformers import AutoTokenizer
 from multiprocessing import Pool
-from functools import partial
+import pandas as pd
+from tqdm import tqdm
 
 # Set up logging
 logging.basicConfig(
@@ -57,52 +65,38 @@ class SGLangClient:
             return {"error": str(e)}
 
 
-def load_text_data(data_file: str) -> pd.DataFrame:
-    """Load the text data from pickle file."""
-    logger.info(f"Loading data from {data_file}")
-    with open(data_file, 'rb') as f:
-        data = pickle.load(f)
-
-    logger.info(f"Loaded {len(data)} samples")
-    logger.info(f"Columns: {list(data.columns)}")
-    logger.info(f"First text input length: {len(data.iloc[0]['text_input'])}")
-
-    return data
-
-
-def load_tokenizer(model_name: str):
-    """Load tokenizer for the specified model."""
-    logger.info(f"Loading tokenizer for {model_name}")
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        logger.info(f"Tokenizer loaded successfully")
-        return tokenizer
-    except Exception as e:
-        logger.error(f"Failed to load tokenizer: {e}")
-        raise
-
-
-def tokenize_all_inputs(data: pd.DataFrame, tokenizer,
-                        max_samples: int = None):
-    """Tokenize all text inputs at once."""
-    num_samples = min(len(data), max_samples) if max_samples else len(data)
-    logger.info(f"Tokenizing {num_samples} text inputs...")
-
-    text_inputs = data['text_input'].tolist()[:num_samples]
-
-    # Tokenize all texts at once
-    tokenized = tokenizer(
-        text_inputs,
-        return_tensors="pt",
-        padding=True,
-        truncation=True,
-        padding_side="right")
-    input_ids_list = [tokenized['input_ids'][i].tolist()
-                      for i in range(num_samples)]
-
-    logger.info(
-        f"Tokenization complete. Token lengths: {[len(ids) for ids in input_ids_list[:5]]}...")
-    return input_ids_list, text_inputs
+def load_tokenized_data(data_file: str) -> pd.DataFrame:
+    """Load pre-tokenized data from pickle file produced by harmony-tokens.py."""
+    logger.info(f"Loading tokenized data from {data_file}")
+    
+    # Load DataFrame from pickle
+    df = pd.read_pickle(data_file)
+    logger.info(f"Loaded DataFrame with shape: {df.shape}")
+    
+    # Check if tok_input column exists and has valid data
+    if 'tok_input' in df.columns:
+        # Check for any None values in tok_input (indicating failed tokenization)
+        failed_mask = df['tok_input'].isna()
+        failed_count = failed_mask.sum()
+        
+        if failed_count > 0:
+            failed_indices = df[failed_mask].index.unique()
+            error_msg = f"Found {failed_count} failed tokenized samples at indices: {failed_indices.tolist()}"
+            logger.error(error_msg)
+            raise AssertionError(error_msg)
+        
+        # Check first sample
+        first_tokens = df.iloc[0]['tok_input']
+        if isinstance(first_tokens, list):
+            logger.info(f"First sample token length: {len(first_tokens)}")
+        else:
+            logger.warning("tok_input column exists but first sample is not a list")
+        
+        logger.info(f"All {len(df)} samples were successfully tokenized")
+    else:
+        logger.warning("No 'tok_input' column found in DataFrame")
+    
+    return df
 
 
 def send_single_request(args_tuple):
@@ -120,25 +114,30 @@ def send_single_request(args_tuple):
         return sample_id, {"error": str(e)}
 
 
-def send_requests_parallel(input_ids_list: List[List[int]], server_url: str,
+def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
                            max_tokens: int = 100, max_concurrency: int = 128) -> List[Dict[str, Any]]:
     """Send all requests to SGLang server in parallel using multiprocessing."""
-    num_samples = len(input_ids_list)
+    num_samples = len(tokenized_df)
     logger.info(
         f"Sending {num_samples} requests to server with {max_concurrency} concurrent workers...")
 
     # Prepare arguments for multiprocessing
     args_list = [
-        (input_ids, max_tokens, server_url, i)
-        for i, input_ids in enumerate(input_ids_list)
+        (row['tok_input'], max_tokens, server_url, idx)
+        for idx, row in tokenized_df.iterrows()
     ]
 
     start_time = time.time()
 
-    # Use multiprocessing pool
+    # Use multiprocessing pool with progress bar
     with Pool(processes=min(max_concurrency, num_samples)) as pool:
-        # Map the function to all arguments
-        results = pool.map(send_single_request, args_list)
+        # Map the function to all arguments with progress bar
+        results = list(tqdm(
+            pool.imap(send_single_request, args_list),
+            total=len(args_list),
+            desc="Sending requests",
+            unit="request"
+        ))
 
     # Sort results by sample_id to maintain order
     results.sort(key=lambda x: x[0])
@@ -152,101 +151,113 @@ def send_requests_parallel(input_ids_list: List[List[int]], server_url: str,
     return responses
 
 
-def detokenize_all_responses(responses: List[Dict[str, Any]], input_ids_list: List[List[int]],
-                             tokenizer) -> List[str]:
-    """Detokenize all responses at once."""
-    logger.info("Detokenizing responses...")
+def extract_response_texts(responses: List[Dict[str, Any]], tokenized_df: pd.DataFrame) -> List[str]:
+    """Extract response texts from SGLang responses."""
+    logger.info("Extracting response texts...")
 
     response_texts = []
-    for i, (response, input_ids) in enumerate(zip(responses, input_ids_list)):
+    for i, (response, (_, row)) in enumerate(tqdm(zip(responses, tokenized_df.iterrows()), 
+                                                 total=len(responses), 
+                                                 desc="Extracting responses", 
+                                                 unit="response")):
         response_text = ""
-        if "error" not in response and "generated_text" in response:
+        if "error" not in response and "text" in response:
             try:
-                # Extract generated tokens (excluding input tokens)
-                generated_tokens = response["generated_text"][len(input_ids):]
-                response_text = tokenizer.decode(
-                    generated_tokens, skip_special_tokens=True)
+                # SGLang returns the generated text directly in the 'text' field
+                response_text = response["text"]
             except Exception as e:
                 logger.warning(
-                    f"Failed to decode response for sample {i+1}: {e}")
+                    f"Failed to extract response for sample {i+1}: {e}")
         response_texts.append(response_text)
 
-    logger.info("Detokenization complete")
+    logger.info("Response text extraction complete")
     return response_texts
 
 
 def save_responses(responses: List[Dict[str, Any]], response_texts: List[str],
-                   text_inputs: List[str], input_ids_list: List[List[int]],
-                   output_file: str) -> None:
-    """Save all responses to file."""
-    logger.info(f"Saving responses to {output_file}...")
+                   tokenized_df: pd.DataFrame, output_file: str = None) -> pd.DataFrame:
+    """Save all responses to DataFrame and optionally to pickle file."""
+    logger.info("Processing responses and updating DataFrame...")
 
-    with open(output_file, 'w') as f:
-        for i, (response, response_text, text_input, input_ids) in enumerate(
-                zip(responses, response_texts, text_inputs, input_ids_list)):
+    # Work with the original DataFrame
+    result_df = tokenized_df.copy()
+    
+    # Overwrite existing columns with server response data
+    result_df['ref_output'] = response_texts
+    result_df['tok_ref_output'] = response_texts  # Same as ref_output for now
+    result_df['tok_ref_output_len'] = [len(text) for text in response_texts]
+    
+    # Calculate output token lengths for logging
+    output_token_lengths = []
+    for i, (response, response_text) in enumerate(zip(responses, response_texts)):
+        if "error" not in response and "meta_info" in response:
+            try:
+                # Use the completion_tokens from meta_info
+                output_token_lengths.append(response["meta_info"]["completion_tokens"])
+            except Exception as e:
+                logger.warning(f"Failed to calculate output tokens for sample {i+1}: {e}")
+                output_token_lengths.append(0)
+        else:
+            output_token_lengths.append(0)
+    
+    logger.info(f"Updated DataFrame with shape: {result_df.shape}")
+    logger.info(f"Updated columns: ref_output, tok_ref_output, tok_ref_output_len")
+    logger.info(f"Average output token length: {sum(output_token_lengths)/len(output_token_lengths):.1f}")
+    
+    # Save to pickle file if output_file is provided
+    if output_file:
+        logger.info(f"Saving responses to {output_file}...")
+        result_df.to_pickle(output_file)
+        logger.info(f"Responses saved to {output_file}")
+    
+    return result_df
 
-            response_data = {
-                "sample_id": int(i),
-                "text_input": text_input,
-                "input_length": len(text_input),
-                "token_length": len(input_ids),
-                "input_tokens": input_ids,
-                "response": response,
-                "response_text": response_text,
-                "timestamp": float(time.time())
-            }
 
-            f.write(json.dumps(response_data) + '\n')
-
-    logger.info(f"Responses saved to {output_file}")
-
-
-def process_requests(data: pd.DataFrame, tokenizer, server_url: str,
+def process_requests(tokenized_df: pd.DataFrame, server_url: str,
                      max_samples: int = None, max_tokens: int = 100,
-                     max_concurrency: int = 128, output_file: str = "responses.jsonl") -> None:
-    """Main processing function that handles tokenization, requests, and detokenization."""
+                     max_concurrency: int = 128, output_file: str = None) -> pd.DataFrame:
+    """Main processing function that handles requests and response extraction."""
 
-    # Step 1: Tokenize all inputs
-    input_ids_list, text_inputs = tokenize_all_inputs(
-        data, tokenizer, max_samples)
+    # Step 1: Limit samples if specified
+    if max_samples is not None:
+        tokenized_df = tokenized_df.head(max_samples)
+        logger.info(f"Limited to first {max_samples} samples")
 
     # Step 2: Send all requests in parallel
     responses = send_requests_parallel(
-        input_ids_list,
+        tokenized_df,
         server_url,
         max_tokens,
         max_concurrency)
 
-    # Step 3: Detokenize all responses
-    response_texts = detokenize_all_responses(
-        responses, input_ids_list, tokenizer)
+    # Step 3: Extract response texts
+    response_texts = extract_response_texts(responses, tokenized_df)
 
-    # Step 4: Save all results
-    save_responses(
+    # Step 4: Save all results and return DataFrame
+    result_df = save_responses(
         responses,
         response_texts,
-        text_inputs,
-        input_ids_list,
+        tokenized_df,
         output_file)
+    
+    return result_df
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Send text requests to SGLang server with tokenization")
-    parser.add_argument("--data-file", default="/home/mlperf_inference_storage/data/deepseek-r1/mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl",
-                        help="Path to pickle file containing text data")
-    parser.add_argument("--model-name", required=True,
-                        help="Model name for tokenizer (e.g., openai/gpt-oss-120b)")
+        description="Send pre-tokenized requests to SGLang server")
+    parser.add_argument("--input-tokens", required=True,
+                        help="Path to pickle file containing pre-tokenized data from harmony-tokens.py")
     parser.add_argument("--server-url", default="http://localhost:30000",
                         help="SGLang server URL (default: http://localhost:30000)")
     parser.add_argument("--max-samples", type=int, default=None,
                         help="Maximum number of samples to process (default: all)")
     parser.add_argument("--max-tokens", type=int, default=100,
                         help="Maximum tokens to generate per request")
-    parser.add_argument("--max-concurrency", type=int, default=128,
+    parser.add_argument("--max-concurrency", type=int, default=256,
                         help="Maximum number of concurrent requests (default: 128)")
-    parser.add_argument("--output", default="responses.jsonl",
-                        help="Output file for responses")
+    parser.add_argument("--output", default=None,
+                        help="Output pickle file for responses (optional)")
 
     args = parser.parse_args()
 
@@ -262,14 +273,25 @@ def main():
         return
     logger.info("Server connection successful")
 
-    data = load_text_data(args.data_file)
-    tokenizer = load_tokenizer(args.model_name)
+    # Load pre-tokenized data
+    tokenized_df = load_tokenized_data(args.input_tokens)
 
-    process_requests(data, tokenizer, args.server_url,
-                     max_samples=args.max_samples,
-                     max_tokens=args.max_tokens,
-                     max_concurrency=args.max_concurrency,
-                     output_file=args.output)
+    # Process requests and get result DataFrame
+    result_df = process_requests(tokenized_df, args.server_url,
+                                max_samples=args.max_samples,
+                                max_tokens=args.max_tokens,
+                                max_concurrency=args.max_concurrency,
+                                output_file=args.output)
+    
+    # Print summary
+    logger.info(f"\nProcessing completed:")
+    logger.info(f"  - Total samples processed: {len(result_df)}")
+    logger.info(f"  - Average input token length: {result_df['tok_input_len'].mean():.1f}")
+    logger.info(f"  - Average output text length: {result_df['tok_ref_output_len'].mean():.1f}")
+    if args.output:
+        logger.info(f"  - Results saved to: {args.output}")
+    else:
+        logger.info("  - Results returned as DataFrame (not saved to file)")
 
 
 if __name__ == "__main__":

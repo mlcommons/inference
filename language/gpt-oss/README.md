@@ -69,7 +69,12 @@ Some queries may have multi-shot examples. For these, the `User` and `Assistant`
 SGLang docker image will be used: `lmsysorg/sglang:v0.5.3rc1`. Steps below are to be run in an environment from this image
 
 ### Preprocess the dataset
-
+```bash
+python3 harmonize_inputs.py \
+    --data-file mlperf_dsr1_fp8_ref_eval.pkl \
+    --num-processes 32 \
+    --output-file out/mlperf_gptoss_inputs.pkl
+```
 
 ### Run the server
 ```bash
@@ -87,3 +92,11 @@ python3 -m sglang.launch_server \
     --stream-interval 50
 ```
 
+### Run the inference
+```bash
+python3 run_infer.py \
+    --input-tokens out/mlperf_gptoss_inputs.pkl \
+    --max-tokens 20480 \
+    --max-concurrency 4096 \
+    --output out/mlperf_gptoss_inferred.pkl
+```

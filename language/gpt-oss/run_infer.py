@@ -226,10 +226,10 @@ def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]
     result_df = tokenized_df.copy()
 
     # Overwrite existing columns with server response data
-    result_df['ref_output'] = detokenized_texts  # Detokenized text output
+    result_df['model_output'] = detokenized_texts  # Detokenized text output
     # Original output_ids from SGLang
-    result_df['tok_ref_output'] = response_ids
-    result_df['tok_ref_output_len'] = [
+    result_df['tok_model_output'] = response_ids
+    result_df['tok_model_output_len'] = [
         len(token_ids) for token_ids in response_ids]  # Length of output_ids
 
     # Calculate output token lengths for logging
@@ -250,7 +250,7 @@ def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]
 
     logger.info(f"Updated DataFrame with shape: {result_df.shape}")
     logger.info(
-        f"Updated columns: ref_output, tok_ref_output, tok_ref_output_len")
+        f"Updated columns: model_output, tok_model_output, tok_model_output_len")
     logger.info(
         f"Average output token length: {sum(output_token_lengths)/len(output_token_lengths):.1f}")
 
@@ -283,7 +283,7 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
     # Step 3: Extract response output_ids
     response_ids = extract_response_ids(responses, tokenized_df)
 
-    # Step 4: Detokenize output_ids to text for ref_output
+    # Step 4: Detokenize output_ids to text for model_output
     detokenized_texts = detokenize_output_ids(response_ids)
 
     # Step 5: Save all results and return DataFrame
@@ -343,7 +343,7 @@ def main():
     logger.info(
         f"  - Average input token length: {result_df['tok_input_len'].mean():.1f}")
     logger.info(
-        f"  - Average output text length: {result_df['tok_ref_output_len'].mean():.1f}")
+        f"  - Average output text length: {result_df['tok_model_output_len'].mean():.1f}")
     if args.output:
         logger.info(f"  - Results saved to: {args.output}")
     else:

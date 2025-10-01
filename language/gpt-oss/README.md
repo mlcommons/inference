@@ -73,7 +73,8 @@ SGLang docker image will be used: `lmsysorg/sglang:v0.5.3rc1`. Steps below are t
 python3 harmonize_inputs.py \
     --data-file mlperf_dsr1_fp8_ref_eval.pkl \
     --num-processes 32 \
-    --output-file out/mlperf_gptoss_inputs.pkl
+    --output-file out/mlperf_gptoss_inputs.pkl \
+    --reasoning-effort low|medium|high
 ```
 
 ### Run the server

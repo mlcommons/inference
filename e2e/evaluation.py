@@ -75,12 +75,12 @@ def calculate_retrieval_metrics(expected_urls: List[str], retrieved_urls: List[s
     return metrics
 
 
-def evaluate_query(rag_db, query: str, expected_urls: List[str], 
+def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str], 
                          top_k_retriever: int = 50, top_k_reranking: int = 10,
                          verbose: bool = True, no_rerank: bool = False,
                          retrieval_strategy: str = "fixed_k", print_results: bool = False, **strategy_params) -> Dict[str, Any]:
     """
-    Evaluate a single query and return comprehensive metrics.
+    Evaluate a single retrieval query and return comprehensive retrieval metrics.
     
     Args:
         rag_db: RAG database instance
@@ -107,7 +107,7 @@ def evaluate_query(rag_db, query: str, expected_urls: List[str],
     
     # Step 2: Apply reranking if enabled and reranker is available
     if not no_rerank and hasattr(rag_db, '_reranker_model') and rag_db._reranker_model is not None:
-        # Extract text content for reranking (rerank expects strings, not document objects)
+        # Extract text content for reranking (rerank expects strings)
         passages = [result.page_content for result in results]
         scored_passages = rag_db.rerank(query, passages)
         
@@ -220,7 +220,7 @@ def run_evaluation(rag_db, dataset_path: str,
         
         if expected_urls:
             # Get comprehensive metrics for this query
-            metrics = evaluate_query(
+            metrics = evaluate_retrieval_query(
                 rag_db, row['Prompt'], expected_urls, 
                 top_k_retriever, top_k_reranking, verbose=True, no_rerank=no_rerank,
                 retrieval_strategy=retrieval_strategy, **strategy_params

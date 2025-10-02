@@ -4,7 +4,7 @@ import time
 import os
 import pandas as pd
 from retrieve import VectorDB, BM25DB
-from evaluation import evaluate_query, run_evaluation
+from evaluation import evaluate_retrieval_query, run_evaluation
 
 # Taken below from frames: https://huggingface.co/datasets/google/frames-benchmark
 DEFAULT_QUERY = "Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?"
@@ -129,11 +129,11 @@ if __name__ == "__main__":
         
         # Time the retrieval
         tic = time.time()
-        evaluate_query(rag_db, args.query, expected_urls=[], 
-                      top_k_retriever=args.top_k_retriever, top_k_reranking=args.top_k_reranking,
-                      verbose=False, no_rerank=getattr(args, 'no_rerank', False), 
-                      retrieval_strategy=args.retrieval_strategy, print_results=True,
-                      max_results=args.max_results, **strategy_params)
+        evaluate_retrieval_query(rag_db, args.query, expected_urls=[], 
+                                top_k_retriever=args.top_k_retriever, top_k_reranking=args.top_k_reranking,
+                                verbose=False, no_rerank=getattr(args, 'no_rerank', False), 
+                                retrieval_strategy=args.retrieval_strategy, print_results=True,
+                                max_results=args.max_results, **strategy_params)
         toc = time.time()
         
         print(f"\nLookup took {toc - tic:.3f} seconds")

@@ -4,7 +4,7 @@ import time
 import os
 import pandas as pd
 from retrieve import VectorDB, BM25DB
-from eval import evaluate_query, run_evaluation
+from evaluation import evaluate_query, run_evaluation
 
 # Taken below from frames: https://huggingface.co/datasets/google/frames-benchmark
 DEFAULT_QUERY = "Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?"
@@ -42,8 +42,14 @@ if __name__ == "__main__":
                       help="Stemmer for BM25 tokenization: 'porter' (balanced), 'snowball' (modern), 'lancaster' (aggressive), 'pystemmer' (fast C-based)")
     args.add_argument("--no-save", action="store_true", help="Skip saving database to disk (useful for optimization trials)")
     args.add_argument("--no-rerank", action="store_true", help="Skip reranking step for fair comparison between retrieval methods")
-    args.add_argument("--top_k_retriever", type=int, default=50)
+    args.add_argument("--retrieval_strategy", type=str, default="fixed_k", 
+                      choices=["fixed_k", "top_p", "relative"], 
+                      help="Retrieval strategy: 'fixed_k' (traditional), 'top_p' (nucleus sampling), 'relative' (score-based)")
+    args.add_argument("--top_k_retriever", type=int, default=25)
     args.add_argument("--top_k_reranking", type=int, default=10)
+    args.add_argument("--top_p", type=float, default=0.9, help="Top-p threshold for nucleus sampling (0.8-0.95)")
+    args.add_argument("--relative_ratio", type=float, default=0.75, help="Relative threshold ratio (0.7-0.9)")
+    args.add_argument("--max_results", type=int, default=100, help="Maximum results to consider for adaptive methods")
     args = args.parse_args()
 
     # Initialize the appropriate database class
@@ -57,12 +63,8 @@ if __name__ == "__main__":
         args.database = db_class.get_default_db_name()
     
     # Normalize database path: ensure .db extension for file operations
-    if args.retrieval_method == "bm25":
-        db_file_path = BM25DB.get_db_path(args.database)  # Always has .db extension
-        db_base_name = args.database.replace('.db', '') if args.database.endswith('.db') else args.database
-    else:
-        db_file_path = args.database if args.database.endswith('.db') else f"{args.database}.db"
-        db_base_name = args.database.replace('.db', '') if args.database.endswith('.db') else args.database
+    db_file_path = args.database if args.database.endswith('.db') else f"{args.database}.db"
+    db_base_name = args.database.replace('.db', '') if args.database.endswith('.db') else args.database
 
     # Create database instance (pass base name without .db)
     rag_db = db_class(retriever_model=args.retriever_model, reranker_model=args.reranker_model, device=args.device, 
@@ -95,13 +97,15 @@ if __name__ == "__main__":
         else:
             print("Skipping database save (--no-save specified)")
 
-    # Run evaluation if requested
+    # Run evaluation or single query lookup
     if args.eval:
         import json
         max_queries = args.eval if isinstance(args.eval, int) and not isinstance(args.eval, bool) and args.eval > 0 else None
         metrics = run_evaluation(rag_db, args.dataset, 
                       top_k_retriever=args.top_k_retriever, top_k_reranking=args.top_k_reranking,
-                      max_queries=max_queries, no_rerank=args.no_rerank)
+                      max_queries=max_queries, no_rerank=args.no_rerank,
+                      retrieval_strategy=args.retrieval_strategy, top_p=args.top_p, 
+                      relative_ratio=args.relative_ratio, max_results=args.max_results)
         
         # Save results for optimization
         results_data = {
@@ -113,29 +117,23 @@ if __name__ == "__main__":
             json.dump(results_data, f, indent=2)
         
         exit(0)  # Exit after evaluation
-
-    print(f"Looking up top-{args.top_k_retriever} passages for query:\n\n{args.query}\n\n")
-    tic = time.time()
-    results = rag_db.lookup(args.query, k=args.top_k_retriever)
-    toc = time.time()
-    print(f"Lookup took {toc - tic} seconds. Results are below:")
-
-    # Display which PDFs the top-k passages are from
-    for result in results:
-        print(result.metadata)
-        print("-" * 50)
-
-    # Show reranked results if reranker is available
-    if rag_db._reranker_model is not None:
-        print(f"\nReranking to top-{args.top_k_reranking}")
-        tic = time.time()
-        reranked_results = rag_db.lookup_with_rerank(args.query, k=args.top_k_reranking, rerank_k=args.top_k_retriever)
-        toc = time.time()
-        print(f"Reranking took {toc - tic} seconds. Results are below:")
-
-        for i, result in enumerate(reranked_results, 1):
-            print(f"{i}. {result.metadata}")
-            print(f"   {result.page_content[:200]}...")
-            print("-" * 50)
     else:
-        print("No reranker available - showing retrieval results only")
+        # Single query lookup - reuse evaluation code for consistency
+        import time
+        
+        strategy_params = {}
+        if args.retrieval_strategy == "top_p":
+            strategy_params["p"] = args.top_p
+        elif args.retrieval_strategy == "relative":
+            strategy_params["ratio"] = args.relative_ratio
+        
+        # Time the retrieval
+        tic = time.time()
+        evaluate_query(rag_db, args.query, expected_urls=[], 
+                      top_k_retriever=args.top_k_retriever, top_k_reranking=args.top_k_reranking,
+                      verbose=False, no_rerank=getattr(args, 'no_rerank', False), 
+                      retrieval_strategy=args.retrieval_strategy, print_results=True,
+                      max_results=args.max_results, **strategy_params)
+        toc = time.time()
+        
+        print(f"\nLookup took {toc - tic:.3f} seconds")

@@ -4,7 +4,7 @@ Retrieval Evaluation Metrics Module
 This module provides comprehensive retrieval evaluation metrics including:
 - Precision@k, Recall@k, F1@k
 - Mean Average Precision (MAP)
-- Legacy compatibility metrics
+- Comprehensive retrieval metrics
 
 Designed for reuse across different retrieval systems including multi-hop QA.
 """
@@ -77,7 +77,8 @@ def calculate_retrieval_metrics(expected_urls: List[str], retrieved_urls: List[s
 
 def evaluate_query(rag_db, query: str, expected_urls: List[str], 
                          top_k_retriever: int = 50, top_k_reranking: int = 10,
-                         verbose: bool = True, no_rerank: bool = False) -> Dict[str, Any]:
+                         verbose: bool = True, no_rerank: bool = False,
+                         retrieval_strategy: str = "fixed_k", print_results: bool = False, **strategy_params) -> Dict[str, Any]:
     """
     Evaluate a single query and return comprehensive metrics.
     
@@ -89,15 +90,39 @@ def evaluate_query(rag_db, query: str, expected_urls: List[str],
         top_k_reranking: Number of documents after reranking
         verbose: Whether to print detailed results
         no_rerank: Skip reranking step for fair comparison between retrieval methods
+        retrieval_strategy: Strategy for retrieval ("fixed_k", "top_p", "relative")
+        **strategy_params: Parameters for adaptive retrieval strategies
         
     Returns:
-        Dictionary containing all metrics plus legacy score
+        Dictionary containing all metrics
     """
-    # Get retrieval results (with or without reranking)
-    if no_rerank:
+    # Step 1: Always do the initial retrieval first
+    if retrieval_strategy == "fixed_k":
         results = rag_db.lookup(query, k=top_k_retriever)
     else:
-        results = rag_db.lookup_with_rerank(query, k=top_k_reranking, rerank_k=top_k_retriever)
+        from retrieve.filter import filter
+        max_results = strategy_params.pop("max_results", 100)
+        results = filter(rag_db, query, method=retrieval_strategy, 
+                       max_results=max_results, **strategy_params)
+    
+    # Step 2: Apply reranking if enabled and reranker is available
+    if not no_rerank and hasattr(rag_db, '_reranker_model') and rag_db._reranker_model is not None:
+        # Extract text content for reranking (rerank expects strings, not document objects)
+        passages = [result.page_content for result in results]
+        scored_passages = rag_db.rerank(query, passages)
+        
+        # Reconstruct document objects with reranked order
+        # scored_passages is [(text, score), ...] ordered by score
+        reranked_results = []
+        for text, score in scored_passages:
+            # Find the original document object for this text
+            for doc in results:
+                if doc.page_content == text:
+                    reranked_results.append(doc)
+                    break
+        
+        # Apply top_k_reranking limit AFTER reranking
+        results = reranked_results[:top_k_reranking]
     
     # Extract URLs from results in order (maintaining ranking)
     retrieved_urls = []
@@ -110,30 +135,52 @@ def evaluate_query(rag_db, query: str, expected_urls: List[str],
     
     # Calculate comprehensive metrics using deduplicated URLs (accurate MAP)
     expected_set = set(url for url in expected_urls if url and url.strip())
-    metrics = calculate_retrieval_metrics(list(expected_set), deduplicated_urls)    # Legacy score for backward compatibility (recall@10)
-    legacy_score = metrics.get('recall@10', 0.0)
+    metrics = calculate_retrieval_metrics(list(expected_set), deduplicated_urls)
     
     if verbose:
-        # Print detailed results
-        print(f"Query: {query[:100]}...")
+        print(f"Query: {query:50}")
+        # Remove duplicated urls from different passages of the same doc
+        matches = len(expected_set.intersection(set(deduplicated_urls)))
         print(f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:3])}{'...' if len(expected_set) > 3 else ''}")
         print(f"Retrieved ({len(retrieved_urls)}): {retrieved_urls[:3]}{'...' if len(retrieved_urls) > 3 else ''}")
-        
-        # Print key metrics (now calculated on deduplicated URLs)
-        matches = len(expected_set.intersection(set(deduplicated_urls)))
-        print(f"Matches: {matches}, Legacy Score: {legacy_score:.3f}")
+        print(f"Matches: {matches}")
         print(f"P@3: {metrics['precision@3']:.3f}, P@5: {metrics['precision@5']:.3f}, P@10: {metrics['precision@10']:.3f}")
         print(f"R@3: {metrics['recall@3']:.3f}, R@5: {metrics['recall@5']:.3f}, R@10: {metrics['recall@10']:.3f}")
         print(f"F1@10: {metrics['f1@10']:.3f}, MAP: {metrics['average_precision']:.3f}")
         print("-" * 80)
     
-    # Return metrics dict with legacy score for compatibility
-    return {'legacy_score': legacy_score, **metrics}
+    # Print detailed results for single query mode
+    if print_results:
+        print(f"\n{retrieval_strategy.upper()} lookup took time. {len(results)} results found:")
+        
+        # Display which PDFs the passages are from
+        for i, result in enumerate(results, 1):
+            print(f"{i}. {result.metadata}")
+            print("-" * 50)
+
+        # Show reranked results if reranker is available and reranking was used
+        if not no_rerank and rag_db._reranker_model is not None:
+            print(f"\nReranking to top-{top_k_reranking}")
+            print(f"Reranking results:")
+
+            for i, result in enumerate(results, 1):
+                print(f"{i}. {result.metadata}")
+                print(f"   {result.page_content[:200]}...")
+                print("-" * 50)
+        else:
+            if no_rerank:
+                print("No reranker used (--no-rerank specified)")
+            else:
+                print("No reranker available - showing retrieval results only")
+    
+    # Return metrics dict
+    return {**metrics}
 
 
 def run_evaluation(rag_db, dataset_path: str, 
                                top_k_retriever: int = 50, top_k_reranking: int = 10, 
-                               max_queries: Optional[int] = None, no_rerank: bool = False) -> Dict[str, float]:
+                               max_queries: Optional[int] = None, no_rerank: bool = False,
+                               retrieval_strategy: str = "fixed_k", **strategy_params) -> Dict[str, float]:
     """
     Run comprehensive evaluation on a dataset with detailed metrics reporting.
     
@@ -144,6 +191,8 @@ def run_evaluation(rag_db, dataset_path: str,
         top_k_reranking: Number of documents after reranking  
         max_queries: Maximum number of queries to evaluate (None = all)
         no_rerank: Skip reranking step for fair comparison between retrieval methods
+        retrieval_strategy: Strategy for retrieval ("fixed_k", "top_p", "relative")
+        **strategy_params: Parameters for adaptive retrieval strategies
         
     Returns:
         Dictionary of averaged metrics across all queries
@@ -173,7 +222,8 @@ def run_evaluation(rag_db, dataset_path: str,
             # Get comprehensive metrics for this query
             metrics = evaluate_query(
                 rag_db, row['Prompt'], expected_urls, 
-                top_k_retriever, top_k_reranking, verbose=True, no_rerank=no_rerank
+                top_k_retriever, top_k_reranking, verbose=True, no_rerank=no_rerank,
+                retrieval_strategy=retrieval_strategy, **strategy_params
             )
             
             # Accumulate metrics
@@ -192,8 +242,6 @@ def run_evaluation(rag_db, dataset_path: str,
         print(f"\n" + "="*60)
         print(f"EVALUATION RESULTS ({valid_queries} queries)")
         print(f"="*60)
-        print(f"Legacy Score (Recall@10):     {avg_metrics['legacy_score']:.3f}")
-        print(f"")
         print(f"PRECISION METRICS:")
         print(f"  Precision@1:                {avg_metrics['precision@1']:.3f}")
         print(f"  Precision@3:                {avg_metrics['precision@3']:.3f}")

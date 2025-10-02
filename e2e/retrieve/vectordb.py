@@ -72,6 +72,11 @@ class VectorDB(RagDB):
     def lookup(self, query: str, k: int):
         results = self._vector_store.similarity_search(query, k=k)
         return results
+    
+    def lookup_with_scores(self, query: str, k: int):
+        """Return results with similarity scores for score-based filtering."""
+        results_with_scores = self._vector_store.similarity_search_with_score(query, k=k)
+        return results_with_scores
 
     def serialize(self, path: str):
         data = self._vector_store.serialize_to_bytes()

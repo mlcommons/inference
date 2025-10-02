@@ -269,6 +269,42 @@ class BM25DB(RagDB):
         
         return results
     
+    def lookup_with_scores(self, query: str, k: int):
+        """Return results with BM25 scores for score-based filtering."""
+        if self._bm25_retriever is None:
+            raise ValueError("BM25 retriever not initialized. Call ingest() first.")
+        
+        query_tokens = bm25s.tokenize([query], 
+                                     stopwords=self._stopwords,
+                                     token_pattern=self._token_pattern,
+                                     stemmer=self._stemmer,
+                                     lower=self._lower)
+        results_data, scores = self._bm25_retriever.retrieve(query_tokens, k=k, n_threads=self._num_threads)
+        
+        results_with_scores = []
+        
+        for i in range(len(results_data[0])):
+            result_item = results_data[0, i]
+            score = float(scores[0, i])
+            
+            # Handle different result formats from BM25S
+            if isinstance(result_item, dict):
+                doc_idx = int(result_item['id'])
+                page_content = result_item.get('text', '')
+            else:
+                doc_idx = int(result_item)
+                page_content = self._doc_list[doc_idx] if doc_idx < len(self._doc_list) else ""
+            
+            # Create result object if valid index found
+            if doc_idx is not None and 0 <= doc_idx < len(self._passages_metadata):
+                result = type('Result', (), {
+                    'page_content': page_content,
+                    'metadata': self._passages_metadata[doc_idx]
+                })()
+                results_with_scores.append((result, score))
+        
+        return results_with_scores
+    
     def serialize(self, path: str):
         """Save BM25 index and metadata."""
         if self._bm25_retriever is None:

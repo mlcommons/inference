@@ -80,9 +80,9 @@ if __name__ == "__main__":
         if not args.ingest:
             raise ValueError("Either --database (existing) or --ingest (to create new) must be provided")
         
-        # Ingest data from source (file or folder)
+        # Ingest from file or folder
         tic = time.time()
-        rag_db.ingest_from_source(args.ingest, num_threads=args.threads)
+        rag_db.ingest_from_path(args.ingest, num_threads=args.threads)
         
         # Get number of passages for timing calculation
         num_passages = len(rag_db._doc_list)  # This should be available after ingestion

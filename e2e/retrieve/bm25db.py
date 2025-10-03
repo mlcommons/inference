@@ -159,21 +159,30 @@ class BM25DB(RagDB):
         self._bm25_retriever.index(corpus_tokens, show_progress=self._show_progress)
     
     def ingest_from_folder(self, folder_path: str, num_threads: int = 4):
-        """Ingest txt files from a folder."""
+        """Ingest whole txt files from a folder instead of passages"""
         from pathlib import Path
         import json
         
         folder_path = Path(folder_path)
         
-        # Load URL mapping from doc_pdf folder
-        url_mapping_path = Path("doc_pdf") / "url_mapping.json"
+        # Load URL mapping from various possible locations
         url_mapping = {}
-        if url_mapping_path.exists():
-            try:
-                with open(url_mapping_path, 'r', encoding='utf-8') as f:
-                    url_mapping = json.load(f)
-            except Exception as e:
-                print(f"Warning: Could not load URL mapping: {e}")
+        search_paths = [
+            folder_path / "url_mapping.json",  # In the same folder as documents
+        ]
+        
+        for url_mapping_path in search_paths:
+            if url_mapping_path.exists():
+                try:
+                    with open(url_mapping_path, 'r', encoding='utf-8') as f:
+                        mapping_data = json.load(f)
+                        url_mapping.update(mapping_data)
+                        print(f"Loaded {len(mapping_data)} URL mappings from {url_mapping_path}")
+                except Exception as e:
+                    print(f"Warning: Could not load URL mapping from {url_mapping_path}: {e}")
+        
+        if not url_mapping:
+            print("No URL mapping files found")
         
         doc_list = []
         passage_metadata = []

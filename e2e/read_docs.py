@@ -25,6 +25,7 @@ except ImportError as e:
     BeautifulSoup = None
 
 from text_splitter import split_into_passages, split_into_fixed_passages, create_passage_metadata
+from url_utils import load_url_mapping, get_base_filename
 
 
 class BaseDocumentExtractor(ABC):
@@ -210,25 +211,7 @@ class DocumentProcessor:
                 '.htm': HTMLExtractor(preserve_tables, preserve_lists),
             })
         
-        # URL mapping will be loaded when processing starts
         self.url_mapping = {}
-    
-    def _load_url_mapping(self, input_dir: str) -> Dict[str, str]:
-        """Load URL mapping from url_mapping.json in input directory."""
-        url_mapping = {}
-        
-        mapping_path = Path(input_dir) / "url_mapping.json"
-        if mapping_path.exists():
-            try:
-                with open(mapping_path, 'r', encoding='utf-8') as f:
-                    url_mapping = json.load(f)
-                    print(f"Loaded {len(url_mapping)} URL mappings from {mapping_path}")
-            except Exception as e:
-                print(f"Warning: Could not load URL mapping from {mapping_path}: {e}")
-        else:
-            print(f"No URL mapping file found at {mapping_path}")
-        
-        return url_mapping
     
     def get_supported_extensions(self) -> List[str]:
         """Get all supported file extensions."""
@@ -258,8 +241,7 @@ class DocumentProcessor:
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
-        # Load URL mapping for this input directory
-        self.url_mapping = self._load_url_mapping(input_dir)
+        self.url_mapping = load_url_mapping(input_dir)
 
         # Find all supported document files
         supported_extensions = self.get_supported_extensions()
@@ -273,40 +255,25 @@ class DocumentProcessor:
         document_files = sorted(document_files)
         
         if not document_files:
-            print(f"No supported document files found in {input_dir}")
-            print(f"Supported extensions: {supported_extensions}")
             return
         
-        # Limit files if specified
         if max_files:
             document_files = document_files[:max_files]
-
-        print(f"Processing {len(document_files)} document files...")
-        print(f"Supported extensions: {supported_extensions}")
         
-        # Track statistics by file type
-        stats = {ext: {'processed': 0, 'failed': 0} for ext in supported_extensions}
         all_passages = []
         passage_id = 0
 
-        # Process each document file
         for doc_file in tqdm(document_files, desc="Processing documents"):
             file_extension = doc_file.suffix.lower()
             
             if file_extension not in self.extractors:
-                print(f"Unsupported file type: {doc_file}")
                 continue
             
             extractor = self.extractors[file_extension]
-            
-            # Extract text using appropriate extractor
             text = extractor.extract_text(str(doc_file))
             
             if text is None:
-                stats[file_extension]['failed'] += 1
                 continue
-            
-            stats[file_extension]['processed'] += 1
             
             # Determine output filename (change extension to .txt)
             output_filename = doc_file.stem + ".txt"
@@ -324,12 +291,7 @@ class DocumentProcessor:
             
             # Add passages to collection if JSON output requested
             if json_file:
-                # Get base filename for URL lookup
-                base_filename = doc_file.name
-                if '.' in doc_file.name:
-                    base_filename = '.'.join(doc_file.name.split('.')[:-1])
-                
-                # Look up original URL
+                base_filename = get_base_filename(doc_file.name)
                 original_url = self.url_mapping.get(base_filename, "")
                 
                 for i, passage in enumerate(passages):
@@ -354,26 +316,6 @@ class DocumentProcessor:
                 json.dump(all_passages, f, indent=2, ensure_ascii=False)
             
             print(f"Saved {len(all_passages)} passages to {json_file}")
-
-        # Print statistics
-        print("\n" + "="*50)
-        print("PROCESSING STATISTICS")
-        print("="*50)
-        
-        total_processed = sum(stat['processed'] for stat in stats.values())
-        total_failed = sum(stat['failed'] for stat in stats.values())
-        
-        for ext, stat in stats.items():
-            if stat['processed'] > 0 or stat['failed'] > 0:
-                print(f"{ext.upper():>6} files: {stat['processed']:>4} processed, {stat['failed']:>4} failed")
-        
-        print("-" * 50)
-        print(f"{'TOTAL':>6} files: {total_processed:>4} processed, {total_failed:>4} failed")
-        
-        if json_file and all_passages:
-            print(f"{'':>6} passages: {len(all_passages):>4} total")
-        
-        print("="*50)
 
 
 def main():

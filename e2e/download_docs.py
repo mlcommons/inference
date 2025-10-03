@@ -1,32 +1,24 @@
 #!/usr/bin/env python3
 """
-Download Wikipedia pages as PDFs or HTML files.
+Download documents (PDF/HTML) from Wikipedia URLs with enhanced error handling.
 
-Unified downloader that can save web pages in multiple formats:
-- PDF: Uses wkhtmltopdf for high-quality PDF generation
-- HTML: Direct HTML download for better text extraction
-
-Includes URL extraction from FRAMES dataset, parallel processing, 
-progress tracking, and failure handling.
+This script provides a unified interface for downloading Wikipedia pages as either PDF or HTML files,
+with robust error handling, retry logic, and concurrent processing.
 """
 
-import pandas as pd
-import os
-import argparse
-import subprocess
-import ast
+import asyncio
 import json
-from pathlib import Path
-from multiprocessing import Pool, cpu_count
+import argparse
 import time
-import sys
-from tqdm import tqdm
-from datasets import load_dataset
-import getpass
-import re
-from typing import List, Tuple, Optional, Dict, Any
+import concurrent.futures
+from pathlib import Path
+from typing import List, Set, Tuple, Dict, Optional
 from abc import ABC, abstractmethod
-from urllib.parse import urlparse, unquote
+import re
+import urllib.parse
+import logging
+from collections import Counter
+from url_utils import save_url_mapping, get_base_filename
 
 try:
     import requests
@@ -149,8 +141,7 @@ class BaseDownloader(ABC):
                 success, filename, status, url = result
                 results.append((success, filename))
                 
-                # Store base filename without extension -> URL mapping
-                base_filename = filename.rsplit('.', 1)[0] if '.' in filename else filename
+                base_filename = get_base_filename(filename)
                 self.url_mapping[base_filename] = url
                 
                 # Update progress bar with status
@@ -210,14 +201,7 @@ class BaseDownloader(ABC):
     
     def save_url_mapping(self):
         """Save URL mapping to JSON file."""
-        mapping_file = self.output_dir / "url_mapping.json"
-        try:
-            with open(mapping_file, 'w', encoding='utf-8') as f:
-                json.dump(self.url_mapping, f, indent=2, ensure_ascii=False)
-            print(f"URL mapping saved to: {mapping_file}")
-            print(f"Mapped {len(self.url_mapping)} total URLs (successful, failed, and skipped)")
-        except Exception as e:
-            print(f"Warning: Failed to save URL mapping: {e}")
+        save_url_mapping(str(self.output_dir), self.url_mapping)
     
     def retry_failed_urls(self, failed_urls: List[Tuple[str, str, str]]) -> Dict[str, int]:
         """Retry downloading failed URLs, but skip certain types of permanent failures."""

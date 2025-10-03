@@ -18,7 +18,7 @@ import re
 import urllib.parse
 import logging
 from collections import Counter
-from url_utils import save_url_mapping, get_base_filename
+from utils import save_url_mapping, get_base_filename
 
 try:
     import requests

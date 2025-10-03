@@ -149,7 +149,7 @@ class BM25DB(RagDB):
     def ingest_from_folder(self, folder_path: str, num_threads: int = 4):
         """Ingest whole txt files from a folder instead of passages"""
         from pathlib import Path
-        from ..url_utils import load_url_mapping
+        from ..utils import load_url_mapping
         
         folder_path = Path(folder_path)
         url_mapping = load_url_mapping(str(folder_path))

@@ -25,7 +25,7 @@ except ImportError as e:
     BeautifulSoup = None
 
 from text_splitter import split_into_passages, split_into_fixed_passages, create_passage_metadata
-from url_utils import load_url_mapping, get_base_filename
+from utils import load_url_mapping, get_base_filename
 
 
 class BaseDocumentExtractor(ABC):

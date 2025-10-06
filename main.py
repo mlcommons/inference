@@ -301,7 +301,7 @@ def define_env(env):
                                 content += f"{cur_space3}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for {scenario_text}.\n\n"
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
-                                content += f"{cur_space3}* `--docker_privileged_mode`: to launch the container in privilegeed mode\n\n"
+                                content += f"{cur_space3}* `--docker_privileged`: to launch the container in privilegeed mode\n\n"
                                 content += f"{cur_space3}* `--docker_mlc_repo=<Custom MLC GitHub repo URL in username@repo format>`: to use a custom fork of mlperf-automations repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_mlc_repo_branch=<Custom MLC GitHub repo Branch>`: to checkout a custom branch of the cloned mlperf-automations repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"

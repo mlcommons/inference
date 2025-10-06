@@ -1,4 +1,4 @@
-7def define_env(env):
+def define_env(env):
 
     @env.macro
     def mlperf_inference_implementation_readme(

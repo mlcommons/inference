@@ -486,7 +486,7 @@ def define_env(env):
             # disk space
             ds = {
                 "dlrm": "500GB",
-                "pointpainting": "500GB",
+                "pointpainting": "950GB",
                 "llama2-70b": "900GB",
                 "llama3_1-405b": "2.3TB",
                 "mixtral": "100GB",

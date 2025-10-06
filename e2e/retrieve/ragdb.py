@@ -4,11 +4,18 @@ from typing import List, Dict, Any
 class RagDB(abc.ABC):
     """Base class for retrieval-augmented generation databases."""
     
-    def __init__(self, reranker_model: str = None, device: str = "auto"):
+    def __init__(self, reranker_model: str = None, device: str = "auto", benchmark: bool = False):
         self._reranker_model_name = reranker_model
         self._device = self._determine_device(device)
         self._reranker_model = None
         self._reranker_tokenizer = None
+        self._benchmark = benchmark
+        self._monitor = None
+        
+        # Initialize monitoring if benchmark mode enabled
+        if self._benchmark:
+            from ingestion_monitor import IngestionMonitor
+            self._monitor = IngestionMonitor()
         
         # Initialize reranker if specified
         if self._reranker_model_name:

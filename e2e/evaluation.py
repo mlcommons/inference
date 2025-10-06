@@ -96,7 +96,10 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
     Returns:
         Dictionary containing all metrics
     """
-    # Step 1: Always do the initial retrieval first
+    import time
+    
+    # Step 1: Time the initial retrieval
+    retrieval_start = time.perf_counter()
     if retrieval_strategy == "fixed_k":
         results = rag_db.lookup(query, k=top_k_retriever)
     else:
@@ -104,9 +107,12 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
         max_results = strategy_params.pop("max_results", 100)
         results = filter(rag_db, query, method=retrieval_strategy, 
                        max_results=max_results, **strategy_params)
+    retrieval_time = time.perf_counter() - retrieval_start
     
-    # Step 2: Apply reranking if enabled and reranker is available
+    # Step 2: Apply reranking if enabled and reranker is available  
+    reranking_time = 0.0
     if not no_rerank and hasattr(rag_db, '_reranker_model') and rag_db._reranker_model is not None:
+        reranking_start = time.perf_counter()
         # Extract text content for reranking (rerank expects strings)
         passages = [result.page_content for result in results]
         scored_passages = rag_db.rerank(query, passages)
@@ -123,6 +129,7 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
         
         # Apply top_k_reranking limit AFTER reranking
         results = reranked_results[:top_k_reranking]
+        reranking_time = time.perf_counter() - reranking_start
     
     # Extract URLs from results in order (maintaining ranking)
     retrieved_urls = []
@@ -173,8 +180,35 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
             else:
                 print("No reranker available - showing retrieval results only")
     
-    # Return metrics dict
-    return {**metrics}
+    # Calculate retrieval performance metrics
+    total_time = retrieval_time + reranking_time
+    docs_per_second = len(results) / total_time if total_time > 0 else 0
+    
+    # Add retrieval performance to metrics
+    retrieval_metrics = {
+        'retrieval_time': retrieval_time,
+        'reranking_time': reranking_time, 
+        'total_retrieval_time': total_time,
+        'retrieved_docs_count': len(results),
+        'docs_per_second': docs_per_second
+    }
+    
+    # Print retrieval performance if in benchmark mode and single query mode (not evaluation)
+    if hasattr(rag_db, '_benchmark') and rag_db._benchmark and print_results:
+        print(f"\n🔍 RETRIEVAL PERFORMANCE METRICS")
+        print("=" * 50)
+        print(f"📊 Query: '{query[:50]}{'...' if len(query) > 50 else ''}'")
+        print(f"⏱️  Retrieval time: {retrieval_time*1000:.2f}ms")
+        if reranking_time > 0:
+            print(f"🔄 Reranking time: {reranking_time*1000:.2f}ms")
+        print(f"🕐 Total time: {total_time*1000:.2f}ms")
+        print(f"📦 Documents retrieved: {len(results)}")
+        print(f"🚀 Retrieval speed: {docs_per_second:.1f} docs/sec")
+        print(f"💾 Time per query: {total_time:.4f}s")
+        print()
+    
+    # Return metrics dict with retrieval performance
+    return {**metrics, **retrieval_metrics}
 
 
 def run_evaluation(rag_db, dataset_path: str, 
@@ -209,6 +243,10 @@ def run_evaluation(rag_db, dataset_path: str,
     
     # Aggregate metrics collection
     total_metrics = {}
+    retrieval_times = []
+    reranking_times = []
+    total_times = []
+    docs_per_sec_list = []
     valid_queries = 0
     
     for idx, row in df.iterrows():
@@ -225,6 +263,13 @@ def run_evaluation(rag_db, dataset_path: str,
                 top_k_retriever, top_k_reranking, verbose=True, no_rerank=no_rerank,
                 retrieval_strategy=retrieval_strategy, **strategy_params
             )
+            
+            # Collect retrieval performance metrics for statistics
+            if 'retrieval_time' in metrics:
+                retrieval_times.append(metrics['retrieval_time'])
+                reranking_times.append(metrics['reranking_time'])
+                total_times.append(metrics['total_retrieval_time'])
+                docs_per_sec_list.append(metrics['docs_per_second'])
             
             # Accumulate metrics
             for metric_name, value in metrics.items():
@@ -262,6 +307,34 @@ def run_evaluation(rag_db, dataset_path: str,
         print(f"")
         print(f"RANKING METRICS:")
         print(f"  Mean Average Precision:     {avg_metrics['average_precision']:.3f}")
+        
+        # Add retrieval performance statistics if we have retrieval data
+        if retrieval_times and hasattr(rag_db, '_benchmark') and rag_db._benchmark:
+            import numpy as np
+            
+            print(f"")
+            print(f"🔍 RETRIEVAL PERFORMANCE STATISTICS:")
+            print(f"  Retrieval Time (ms):")
+            print(f"    Average:                  {np.mean(retrieval_times)*1000:.2f}ms")
+            print(f"    P50 (Median):             {np.percentile(retrieval_times, 50)*1000:.2f}ms")
+            print(f"    P99:                      {np.percentile(retrieval_times, 99)*1000:.2f}ms")
+            
+            if any(t > 0 for t in reranking_times):
+                print(f"  Reranking Time (ms):")
+                print(f"    Average:                  {np.mean(reranking_times)*1000:.2f}ms") 
+                print(f"    P50 (Median):             {np.percentile(reranking_times, 50)*1000:.2f}ms")
+                print(f"    P99:                      {np.percentile(reranking_times, 99)*1000:.2f}ms")
+            
+            print(f"  Total Query Time (ms):")
+            print(f"    Average:                  {np.mean(total_times)*1000:.2f}ms")
+            print(f"    P50 (Median):             {np.percentile(total_times, 50)*1000:.2f}ms")
+            print(f"    P99:                      {np.percentile(total_times, 99)*1000:.2f}ms")
+            
+            print(f"  Retrieval Throughput (docs/sec):")
+            print(f"    Average:                  {np.mean(docs_per_sec_list):.1f} docs/sec")
+            print(f"    P50 (Median):             {np.percentile(docs_per_sec_list, 50):.1f} docs/sec")
+            print(f"    P99:                      {np.percentile(docs_per_sec_list, 99):.1f} docs/sec")
+        
         print(f"="*60)
         
         return avg_metrics

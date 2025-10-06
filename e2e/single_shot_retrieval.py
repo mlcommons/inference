@@ -53,11 +53,12 @@ if __name__ == "__main__":
     args.add_argument("--top_p", type=float, default=0.9, help="Top-p threshold for nucleus sampling (0.8-0.95)")
     args.add_argument("--relative_ratio", type=float, default=0.75, help="Relative threshold ratio (0.7-0.9)")
     args.add_argument("--max_results", type=int, default=100, help="Maximum results to consider for adaptive methods")
-    args.add_argument("--seed", type=int, default=42, help="Random seed for reproducible results (default: 42)")
-    
-    args = args.parse_args()
+    args.add_argument("--seed", type=int, default=42, 
+                     help="Random seed for reproducible results (default: 42)")
+    args.add_argument("--benchmark", action="store_true",
+                     help="Run ingestion performance benchmarking")
 
-    # Set deterministic seeds for reproducible results
+    args = args.parse_args()    # Set deterministic seeds for reproducible results
     set_deterministic_seeds(args.seed)
 
     # Initialize the appropriate database class
@@ -78,7 +79,7 @@ if __name__ == "__main__":
     rag_db = db_class(retriever_model=args.retriever_model, reranker_model=args.reranker_model, device=args.device, 
                         k1=args.bm25_k1, b=args.bm25_b, method=args.bm25_method, database=db_base_name,
                         delta=args.bm25_delta, backend=args.bm25_backend, stopwords=args.bm25_stopwords, 
-                        show_progress=args.bm25_show_progress, stemmer=args.bm25_stemmer)
+                        show_progress=args.bm25_show_progress, stemmer=args.bm25_stemmer, benchmark=args.benchmark)
 
     if os.path.exists(db_file_path):
         # Load existing database

@@ -15,8 +15,8 @@ class BM25DB(RagDB):
     def __init__(self, reranker_model: str = None, device: str = "auto", k1: float = None, b: float = None, method: str = None, 
                  database: str = None, delta: float = None, idf_method: str = None, dtype: str = None, 
                  backend: str = None, token_pattern: str = None, stopwords = None, stemmer = None, 
-                 lower: bool = None, show_progress: bool = None, **kwargs):
-        super().__init__(reranker_model, device)
+                 lower: bool = None, show_progress: bool = None, benchmark: bool = False, **kwargs):
+        super().__init__(reranker_model, device, benchmark)
         self._bm25_retriever = None
         self._doc_list = []
         self._passages_metadata = []
@@ -117,39 +117,69 @@ class BM25DB(RagDB):
         return getattr(self, '_original_stemmer_type', None)
     
     def ingest(self, passages: List[str], metadatas: List[Dict[str, Any]], num_threads: int = 4):
-        """Ingest passages using BM25 indexing."""
+        """Ingest passages using BM25 indexing with performance monitoring."""
+        import time
+        
         self._doc_list = passages
         self._passages_metadata = metadatas
         self._num_threads = num_threads
+        total_chars = sum(len(passage) for passage in passages)
         
-        # Tokenize with configurable parameters
-        corpus_tokens = bm25s.tokenize(
-            passages, 
-            stopwords=self._stopwords,
-            token_pattern=self._token_pattern,
-            stemmer=self._stemmer,
-            lower=self._lower,
-            show_progress=self._show_progress
-        )
+        start_time = time.perf_counter()
         
-        # Create BM25 retriever with configurable parameters
+        # Unified tokenization with optional monitoring
+        corpus_tokens = self._track_component("bm25_tokenization", total_chars, len(passages),
+            lambda: bm25s.tokenize(passages, stopwords=self._stopwords, 
+                                 token_pattern=self._token_pattern, stemmer=self._stemmer,
+                                 lower=self._lower, show_progress=self._show_progress))
+        
+        # Create BM25 retriever
         self._bm25_retriever = bm25s.BM25(
-            k1=self._k1, 
-            b=self._b, 
-            method=self._method,
-            delta=self._delta,
-            idf_method=self._idf_method,
-            dtype=self._dtype,
-            backend=self._backend
+            k1=self._k1, b=self._b, method=self._method,
+            delta=self._delta, idf_method=self._idf_method,
+            dtype=self._dtype, backend=self._backend
         )
         
-        # Index with configurable progress settings
-        self._bm25_retriever.index(corpus_tokens, show_progress=self._show_progress)
+        # Unified indexing with optional monitoring
+        self._track_component("bm25_indexing", total_chars, len(passages),
+            lambda: self._bm25_retriever.index(corpus_tokens, show_progress=self._show_progress))
+        
+        # Report performance
+        self._report_performance(start_time, len(passages), total_chars, "BM25DB")
+    
+    def _track_component(self, name: str, total_chars: int, item_count: int, func):
+        """Execute function with optional component tracking."""
+        if self._benchmark and self._monitor:
+            with self._monitor.track_component(name, input_size_bytes=total_chars, 
+                                             items_count=item_count, text_only=True) as ctx:
+                result = func()
+                ctx.add_text_bytes(total_chars)
+                return result
+        else:
+            return func()
+    
+    def _report_performance(self, start_time: float, item_count: int, total_chars: int, db_type: str):
+        """Report performance metrics."""
+        if self._benchmark and self._monitor:
+            with self._monitor.track_ingestion() as ingestion_ctx:
+                ingestion_ctx.set_item_count(item_count)
+            print(f"\n=== {db_type} Performance ===")
+            self._monitor.print_summary()
+        else:
+            end_time = time.perf_counter()
+            total_time = end_time - start_time
+            docs_per_sec = item_count / total_time if total_time > 0 else 0
+            chars_per_sec = total_chars / total_time if total_time > 0 else 0
+            print(f"BM25 ingestion: {item_count} docs, {total_chars:,} chars in {total_time:.2f}s")
+            print(f"  Performance: {docs_per_sec:.1f} docs/sec, {chars_per_sec/1024:.1f} KB/sec")
     
     def ingest_from_folder(self, folder_path: str, num_threads: int = 4):
         """Ingest whole txt files from a folder instead of passages"""
         from pathlib import Path
-        from ..utils import load_url_mapping
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from utils import load_url_mapping
         
         folder_path = Path(folder_path)
         url_mapping = load_url_mapping(str(folder_path))

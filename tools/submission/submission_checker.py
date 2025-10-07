@@ -2267,8 +2267,6 @@ def check_results_dir(
             if filter_submitter and submitter != filter_submitter:
                 continue
             results_path = os.path.join(division, submitter, "results")
-            measurements_path = os.path.join(
-                division, submitter, "measurements")
             systems_path = os.path.join(division, submitter, "systems")
             if not os.path.exists(results_path):
                 continue
@@ -2374,8 +2372,6 @@ def check_results_dir(
                         extra_model_mapping = json.load(fp)
 
             if not config.skip_all_systems_with_results:
-                measurement_diff = list(
-                    set(list_dir(measurements_path)) - set(list_dir(results_path)))
                 systems_diff = list(
                     set(
                         [
@@ -2386,15 +2382,6 @@ def check_results_dir(
                     )
                     - set(list_dir(results_path))
                 )
-                if len(measurement_diff) > 0:
-                    log.error(
-                        "%s/%s/measurements has the following directories with no results: %s",
-                        division,
-                        submitter,
-                        measurement_diff,
-                    )
-                    results[os.path.join(results_path)] = None
-
                 if len(systems_diff) > 0:
                     log.error(
                         "%s/%s/systems has the following files with no results: %s",
@@ -2568,7 +2555,7 @@ def check_results_dir(
                         measurement_dir = os.path.join(
                             division,
                             submitter,
-                            "measurements",
+                            "results",
                             system_desc,
                             model_name,
                             scenario,
@@ -2797,7 +2784,7 @@ def check_results_dir(
                             compliance_dir = os.path.join(
                                 division,
                                 submitter,
-                                "compliance",
+                                "results",
                                 system_desc,
                                 model_name,
                                 scenario,
@@ -3039,16 +3026,10 @@ def check_measurement_dir(
                 log.error("%s is having empty %s", measurement_dir, i)
                 is_valid = False
 
-    for i in files:
-        if i.startswith(system_desc) and i.endswith(
-                "_" + scenario + ".json"):
-            system_file = i
-            end = len("_" + scenario + ".json")
-            break
-        elif i.startswith(system_desc) and i.endswith(".json"):
-            system_file = i
-            end = len(".json")
-            break
+    logging.info("%s", files)
+    if "measurements.json" in files:
+        system_file = "measurements.json"
+
 
     weight_data_types = None
     if system_file:
@@ -3064,15 +3045,7 @@ def check_measurement_dir(
                     log.error(
                         "%s, field %s is missing meaningful value", fname, k)
 
-        impl = system_file[len(system_desc) + 1: -end]
         code_dir = os.path.join(root, "code", model)
-        if os.path.isfile(code_dir):
-            with open(code_dir, "r") as f:
-                line = f.read()
-                code_dir = os.path.join(root, "code", line.strip(), impl)
-        else:
-            code_dir = os.path.join(root, "code", model, impl)
-
         if not os.path.exists(code_dir):
             # see if the code dir is per model
             if not os.path.exists(os.path.dirname(code_dir)):
@@ -3080,7 +3053,7 @@ def check_measurement_dir(
                 is_valid = False
 
     else:
-        log.error("%s is missing %s*.json", fname, system_desc)
+        log.error("%s is missing %s*.json", fname, system_file)
         is_valid = False
 
     return is_valid, weight_data_types

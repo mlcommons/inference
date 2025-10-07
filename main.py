@@ -618,6 +618,7 @@ def define_env(env):
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"
+                info += f"{pre_space}    - If you encounter an error related to ulimit or max locked memory during the run_harness step, please refer to the [this](https://github.com/mlcommons/mlperf-automations/issues/664) issue for details and resolution steps.\n\n"
         else:
             if model == "sdxl":
                 info += f"\n{pre_space}!!! tip\n\n"

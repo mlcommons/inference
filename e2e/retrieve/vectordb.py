@@ -24,15 +24,25 @@ class VectorDB(RagDB):
         self._retriever_model_name = retriever_model
         self._reranker_model_name = reranker_model
 
-        self._embedding_model = HuggingFaceEmbeddings(model_name=self._retriever_model_name) # Embedding model == retriever model
+        # Initialize embedding model with device configuration
+        model_kwargs = {'device': self._device}
+        encode_kwargs = {'normalize_embeddings': True}
+        
+        self._embedding_model = HuggingFaceEmbeddings(
+            model_name=self._retriever_model_name,
+            model_kwargs=model_kwargs,
+            encode_kwargs=encode_kwargs
+        )
         self._embedding_dimension = len(self._embedding_model.embed_query("hello world"))
+        
+        # Determine bytes per embedding element based on dtype (default float32 = 4 bytes)
+        # Could be float16 (2 bytes), float32 (4 bytes), or float64 (8 bytes)
+        import numpy as np
+        test_embedding = np.array(self._embedding_model.embed_query("test"))
+        self._embedding_bytes_per_element = test_embedding.itemsize
 
-        self._reranker_model = None
-        self._reranker_tokenizer = None
-        if self._reranker_model_name:
-            self._reranker_model = AutoModelForSequenceClassification.from_pretrained(self._reranker_model_name)
-            self._reranker_tokenizer = AutoTokenizer.from_pretrained(self._reranker_model_name)
-            self._reranker_model.eval()
+        # Reranker is already initialized in parent class if reranker_model is provided
+        # No need to initialize it again here
 
         # The index defines the algoriothm used for the similarity search
         self._index = faiss.IndexFlatL2(self._embedding_dimension)
@@ -50,56 +60,134 @@ class VectorDB(RagDB):
         # Keep track of ingested documents for consistency with BM25DB
         self._doc_list = []
     
+    def _calculate_index_output_size(self):
+        """Calculate the size of VectorDB output data (db file - metadata).
+        
+        Returns the total size in bytes of the serialized database file,
+        excluding configuration metadata overhead.
+        
+        The .db file contains:
+        - FAISS index (vectors)
+        - Passages (docstore)
+        - Metadata (small overhead)
+        
+        We estimate metadata size and subtract it from total file size.
+        """
+        from pathlib import Path
+        
+        # VectorDB uses serialize path, not _database_name like BM25
+        if not hasattr(self, '_serialize_path') or not self._serialize_path:
+            return 0
+        
+        db_path = Path(self._serialize_path)
+        if not db_path.exists():
+            return 0
+        
+        total_file_size = db_path.stat().st_size
+        return total_file_size
+    
     def ingest(self, passages: List[str], metadatas: List[dict], **kwargs):
         """Ingest passages with performance monitoring."""
-        import time
-        
         # Handle BM25-specific parameters gracefully
         if 'num_threads' in kwargs:
             print(f"Warning: num_threads parameter is not used in VectorDB, ignoring")
         
+        # Start timing (works for both benchmark and non-benchmark modes)
+        ingestion_start = self._start_ingestion_timer()
+        
+        # Auto-enable incremental indexing for scaling analysis when benchmarking
+        # and we have enough documents to make it meaningful
+        if (self._benchmark and self._monitor and len(passages) >= 500):
+            batch_size = max(1000, len(passages) // 10)  # 10 batches, minimum 1000 docs per batch
+            return self._ingest_incremental(passages, metadatas, batch_size, ingestion_start)
+        
         total_chars = sum(len(passage) for passage in passages)
-        start_time = time.perf_counter()
         
-        # Unified processing with optional monitoring
         embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
-                                          lambda: self._embedding_model.embed_documents(passages))
+                                          lambda: self._embedding_model.embed_documents(passages),
+                                          is_pipeline_input=True)
         
-        self._track_component("faiss_indexing", total_chars, len(passages),
+        # Calculate embedding size in bytes for accurate throughput measurement
+        embedding_bytes = len(passages) * self._embedding_dimension * self._embedding_bytes_per_element
+        self._track_component("faiss_indexing", embedding_bytes, len(passages),
                              lambda: self._vector_store.add_embeddings(
-                                 list(zip(passages, embeddings)), metadatas))
+                                 list(zip(passages, embeddings)), metadatas),
+                             is_pipeline_output=True)
         
-        # Report performance
-        self._report_performance(start_time, len(passages), total_chars, "VectorDB")
+        # Store ingestion metrics for later reporting (after serialization)
+        self._ingestion_start = ingestion_start
+        self._ingestion_item_count = len(passages)
+        self._ingestion_total_chars = total_chars
         
         # Keep track of ingested documents
-        self._doc_list = passages
+        self._doc_list.extend(passages)
     
-    def _track_component(self, name: str, total_chars: int, item_count: int, func):
-        """Execute function with optional component tracking."""
+    def _ingest_incremental(self, passages: List[str], metadatas: List[dict], batch_size: int, ingestion_start: float):
+        """Ingest in batches to study indexing scaling trends."""
+        import time
+        
+        print(f"🔬 Incremental indexing analysis: {len(passages)} docs in batches of {batch_size}")
+        
+        total_chars = sum(len(passage) for passage in passages)
+        
+        embeddings = self._track_component("embedding_generation", total_chars, len(passages),
+                                         lambda: self._embedding_model.embed_documents(passages),
+                                         is_pipeline_input=True)
+        
+        # Track total indexing time for benchmark component
+        indexing_component_start = time.perf_counter()
+        
+        # Now add to index in batches to track scaling
+        for i in range(0, len(passages), batch_size):
+            batch_end = min(i + batch_size, len(passages))
+            batch_passages = passages[i:batch_end]
+            batch_metadatas = metadatas[i:batch_end] if metadatas else [{}] * (batch_end - i)
+            batch_embeddings = embeddings[i:batch_end]
+            
+            # Track current DB size before adding this batch
+            db_size_before = len(self._doc_list)
+            
+            # Time just the indexing operation
+            indexing_start = time.perf_counter()
+            self._vector_store.add_embeddings(
+                list(zip(batch_passages, batch_embeddings)), 
+                batch_metadatas
+            )
+            indexing_end = time.perf_counter()
+            indexing_time = indexing_end - indexing_start
+            
+            # Track this batch's performance
+            self._monitor.track_incremental_indexing(
+                db_size_before=db_size_before,
+                batch_size=len(batch_passages),
+                indexing_time=indexing_time
+            )
+            
+            # Update our document list
+            self._doc_list.extend(batch_passages)
+            
+        indexing_component_end = time.perf_counter()
+        indexing_component_duration = indexing_component_end - indexing_component_start
+        
         if self._benchmark and self._monitor:
-            with self._monitor.track_component(name, input_size_bytes=total_chars, 
-                                             items_count=item_count, text_only=True) as ctx:
-                result = func()
-                ctx.add_text_bytes(total_chars)
-                return result
-        else:
-            return func()
-    
-    def _report_performance(self, start_time: float, item_count: int, total_chars: int, db_type: str):
-        """Report performance metrics."""
-        if self._benchmark and self._monitor:
-            with self._monitor.track_ingestion() as ingestion_ctx:
-                ingestion_ctx.set_item_count(item_count)
-            print(f"\n=== {db_type} Performance ===")
-            self._monitor.print_summary()
-        else:
-            end_time = time.perf_counter()
-            duration = end_time - start_time
-            docs_per_sec = item_count / duration if duration > 0 else 0
-            chars_per_sec = total_chars / duration if duration > 0 else 0
-            print(f"Vector ingestion: {item_count} docs, {total_chars:,} chars in {duration:.2f}s")
-            print(f"  Performance: {docs_per_sec:.1f} docs/sec, {chars_per_sec/1024:.1f} KB/sec")
+            embedding_bytes = len(passages) * self._embedding_dimension * self._embedding_bytes_per_element
+            from ingestion_monitor import ComponentMetrics
+            self._monitor.components["faiss_indexing"] = ComponentMetrics(
+                name="faiss_indexing",
+                duration=indexing_component_duration,
+                input_size_bytes=embedding_bytes,
+                output_size_bytes=embedding_bytes,  # Vectors stored in FAISS index
+                items_processed=len(passages),
+                throughput_mb_per_sec=(embedding_bytes / (1024 * 1024)) / indexing_component_duration if indexing_component_duration > 0 else 0,
+                throughput_items_per_sec=len(passages) / indexing_component_duration if indexing_component_duration > 0 else 0,
+                is_pipeline_input=False,
+                is_pipeline_output=True
+            )
+        
+        # Store ingestion metrics for later reporting (after serialization)
+        self._ingestion_start = ingestion_start
+        self._ingestion_item_count = len(passages)
+        self._ingestion_total_chars = total_chars
     
     def lookup(self, query: str, k: int):
         results = self._vector_store.similarity_search(query, k=k)
@@ -111,9 +199,10 @@ class VectorDB(RagDB):
 
         with torch.no_grad():
             inputs = self._reranker_tokenizer(pairs, padding=True, return_tensors='pt', truncation=True, max_length=512)
+            inputs = {k: v.to(self._device) for k, v in inputs.items()}
             scores = self._reranker_model(**inputs).logits.view(-1).float()
         
-        scored_passages = list(zip(passages, scores.tolist()))
+        scored_passages = list(zip(passages, scores.cpu().tolist()))
         # Sort by score descending
         scored_passages.sort(key=lambda x: x[1], reverse=True)
         
@@ -122,9 +211,23 @@ class VectorDB(RagDB):
 
 
     def serialize(self, path: str):
+        # Store path for output size calculation
+        self._serialize_path = path
+        
         data = self._vector_store.serialize_to_bytes()
         with open(path, "wb") as f:
             f.write(data)
+        
+        # Update output size after serialization (now file exists)
+        if self._benchmark and self._monitor:
+            self._monitor.set_output_size_callback("faiss_indexing", self._calculate_index_output_size)
+        
+        # Report performance after serialization if benchmarking
+        if self._benchmark and self._monitor and hasattr(self, '_ingestion_start'):
+            # Determine db_type based on whether incremental was used
+            db_type = "VectorDB (Incremental)" if hasattr(self._monitor, 'indexing_trend') and len(self._monitor.indexing_trend) > 0 else "VectorDB"
+            self._report_performance(self._ingestion_start, self._ingestion_item_count, 
+                                    self._ingestion_total_chars, db_type)
 
     def from_serialized(self, path: str):
         assert len(self._vector_store.index_to_docstore_id) == 0, "Vector store already has documents"

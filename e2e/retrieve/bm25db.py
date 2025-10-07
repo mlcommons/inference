@@ -116,22 +116,62 @@ class BM25DB(RagDB):
         # Store the original stemmer type for reconstruction
         return getattr(self, '_original_stemmer_type', None)
     
+    def _calculate_index_output_size(self):
+        """Calculate the size of BM25 output data (index + passages).
+        
+        Returns the total size in bytes of:
+        - BM25 index files (sparse matrix data and vocab)
+        - Raw passage text (uncompressed, excluding metadata)
+        
+        Excludes: BM25 configuration metadata, passage metadata
+        """
+        from pathlib import Path
+        
+        if not self._database_name:
+            return 0
+        
+        total_size = 0
+        
+        # 1. Get BM25 index files size
+        index_dir = Path(self.get_data_dir(self._database_name))
+        if index_dir.exists():
+            index_files = [
+                'data.csc.index.npy',       # Sparse matrix data
+                'indices.csc.index.npy',    # Sparse matrix indices
+                'indptr.csc.index.npy',     # Sparse matrix indptr
+                'vocab.index.json',         # Vocabulary
+                'params.index.json'         # Index parameters
+            ]
+            
+            for filename in index_files:
+                file_path = index_dir / filename
+                if file_path.exists():
+                    total_size += file_path.stat().st_size
+        
+        # 2. Get raw passage text size (uncompressed, exclude metadata)
+        if hasattr(self, '_doc_list'):
+            # Sum up the byte size of all passages (UTF-8 encoded)
+            for passage in self._doc_list:
+                total_size += len(passage.encode('utf-8'))
+        
+        return total_size
+    
     def ingest(self, passages: List[str], metadatas: List[Dict[str, Any]], num_threads: int = 4):
         """Ingest passages using BM25 indexing with performance monitoring."""
-        import time
+        
+        # Start unified timer (handles both benchmark and non-benchmark modes)
+        ingestion_start = self._start_ingestion_timer()
         
         self._doc_list = passages
         self._passages_metadata = metadatas
         self._num_threads = num_threads
         total_chars = sum(len(passage) for passage in passages)
         
-        start_time = time.perf_counter()
-        
-        # Unified tokenization with optional monitoring
         corpus_tokens = self._track_component("bm25_tokenization", total_chars, len(passages),
             lambda: bm25s.tokenize(passages, stopwords=self._stopwords, 
                                  token_pattern=self._token_pattern, stemmer=self._stemmer,
-                                 lower=self._lower, show_progress=self._show_progress))
+                                 lower=self._lower, show_progress=self._show_progress),
+            is_pipeline_input=True)
         
         # Create BM25 retriever
         self._bm25_retriever = bm25s.BM25(
@@ -140,40 +180,16 @@ class BM25DB(RagDB):
             dtype=self._dtype, backend=self._backend
         )
         
-        # Unified indexing with optional monitoring
         self._track_component("bm25_indexing", total_chars, len(passages),
-            lambda: self._bm25_retriever.index(corpus_tokens, show_progress=self._show_progress))
+            lambda: self._bm25_retriever.index(corpus_tokens, show_progress=self._show_progress),
+            is_pipeline_output=True)
         
-        # Report performance
-        self._report_performance(start_time, len(passages), total_chars, "BM25DB")
+        # Store ingestion metrics for later reporting (after serialization)
+        self._ingestion_start = ingestion_start
+        self._ingestion_item_count = len(passages)
+        self._ingestion_total_chars = total_chars
     
-    def _track_component(self, name: str, total_chars: int, item_count: int, func):
-        """Execute function with optional component tracking."""
-        if self._benchmark and self._monitor:
-            with self._monitor.track_component(name, input_size_bytes=total_chars, 
-                                             items_count=item_count, text_only=True) as ctx:
-                result = func()
-                ctx.add_text_bytes(total_chars)
-                return result
-        else:
-            return func()
-    
-    def _report_performance(self, start_time: float, item_count: int, total_chars: int, db_type: str):
-        """Report performance metrics."""
-        if self._benchmark and self._monitor:
-            with self._monitor.track_ingestion() as ingestion_ctx:
-                ingestion_ctx.set_item_count(item_count)
-            print(f"\n=== {db_type} Performance ===")
-            self._monitor.print_summary()
-        else:
-            end_time = time.perf_counter()
-            total_time = end_time - start_time
-            docs_per_sec = item_count / total_time if total_time > 0 else 0
-            chars_per_sec = total_chars / total_time if total_time > 0 else 0
-            print(f"BM25 ingestion: {item_count} docs, {total_chars:,} chars in {total_time:.2f}s")
-            print(f"  Performance: {docs_per_sec:.1f} docs/sec, {chars_per_sec/1024:.1f} KB/sec")
-    
-    def ingest_from_folder(self, folder_path: str, num_threads: int = 4):
+    def ingest_from_folder(self, folder_path: str, **kwargs):
         """Ingest whole txt files from a folder instead of passages"""
         from pathlib import Path
         import sys
@@ -222,7 +238,8 @@ class BM25DB(RagDB):
         print(f"Loaded {len(doc_list)} documents from {folder_path}")
         
         # Call regular ingest method
-        self.ingest(doc_list, passage_metadata, num_threads)
+        num_threads = kwargs.get('num_threads', 4)
+        self.ingest(doc_list, passage_metadata, num_threads=num_threads, **kwargs)
 
     def lookup(self, query: str, k: int) -> List[Any]:
         """Retrieve top-k passages using BM25."""
@@ -340,6 +357,14 @@ class BM25DB(RagDB):
         print(f"BM25 database saved to {db_path} ({db_size / (1024**2):.1f} MB)")
         print(f"BM25 index saved to {bm25_dir} ({bm25_size / (1024**2):.1f} MB)")
         print(f"Total: {total_size / (1024**2):.1f} MB")
+        
+        # Update output size and report performance if benchmarking
+        if self._benchmark and self._monitor:
+            self._monitor.set_output_size_callback("bm25_indexing", self._calculate_index_output_size)
+            # Report performance after serialization so we have accurate output size
+            if hasattr(self, '_ingestion_start'):
+                self._report_performance(self._ingestion_start, self._ingestion_item_count, 
+                                        self._ingestion_total_chars, "BM25DB")
 
     def from_serialized(self, path: str):
         """Load BM25 index and metadata."""

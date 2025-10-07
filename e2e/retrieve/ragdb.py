@@ -69,6 +69,60 @@ class RagDB(abc.ABC):
         self._reranker_model = self._reranker_model.to(self._device)
         self._reranker_model.eval()
     
+    def _track_component(self, name: str, total_chars: int, item_count: int, func, 
+                        is_pipeline_input: bool = False, is_pipeline_output: bool = False):
+        """Execute function with optional component tracking.
+        
+        Args:
+            name: Component name
+            total_chars: Input size in bytes
+            item_count: Number of items processed
+            func: Function to execute
+            is_pipeline_input: Mark as pipeline input for aggregation
+            is_pipeline_output: Mark as pipeline output for aggregation
+        """
+        if self._benchmark and self._monitor:
+            with self._monitor.track_component(name, input_size_bytes=total_chars, 
+                                             items_count=item_count, text_only=True,
+                                             is_pipeline_input=is_pipeline_input,
+                                             is_pipeline_output=is_pipeline_output) as ctx:
+                result = func()
+                ctx.add_text_bytes(total_chars)
+                return result
+        else:
+            return func()
+    
+    def _start_ingestion_timer(self):
+        """Start the ingestion timer. Works for both benchmark and non-benchmark modes."""
+        import time
+        if self._benchmark and self._monitor:
+            self._monitor.start_ingestion()
+        return time.perf_counter()
+    
+    def _report_performance(self, ingestion_start_time: float, item_count: int, total_chars: int, db_type: str):
+        """Report performance metrics with optional detailed breakdown.
+        
+        Args:
+            ingestion_start_time: Start time from _start_ingestion_timer() (used only in non-benchmark mode)
+            item_count: Number of items processed
+            total_chars: Total characters processed
+            db_type: Database type string for display
+        """
+        import time
+        
+        if self._benchmark and self._monitor:
+            with self._monitor.track_ingestion() as ingestion_ctx:
+                ingestion_ctx.set_item_count(item_count)
+            print(f"\n=== {db_type} Performance ===")
+            self._monitor.print_summary()
+        else:
+            end_time = time.perf_counter()
+            duration = end_time - ingestion_start_time
+            docs_per_sec = item_count / duration if duration > 0 else 0
+            chars_per_sec = total_chars / duration if duration > 0 else 0
+            print(f"{db_type} ingestion: {item_count} docs, {total_chars:,} chars in {duration:.2f}s")
+            print(f"  Performance: {docs_per_sec:.1f} docs/sec, {chars_per_sec/1024:.1f} KB/sec")
+    
     @abc.abstractmethod
     def ingest(self, passages: List[str], metadatas: List[Dict[str, Any]]):
         """Ingest passages and their metadata into the database."""

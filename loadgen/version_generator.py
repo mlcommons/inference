@@ -110,8 +110,13 @@ def generate_loadgen_version_definitions(cc_filename, loadgen_root):
     # Write the version into the function definition
     ofile.write(func_def("Version", f"\"{version_contents}\""))
 
-    date_time_now_local = datetime.datetime.now().isoformat()
-    date_time_now_utc = datetime.datetime.utcnow().isoformat()
+    if os.environ.get('SOURCE_DATE_EPOCH', False):
+        source_date_epoch = int(os.environ['SOURCE_DATE_EPOCH'])
+        date_time_now_local = datetime.datetime.fromtimestamp(source_date_epoch).isoformat()
+        date_time_now_utc = datetime.datetime.fromtimestamp(source_date_epoch, tz=datetime.timezone.utc).isoformat()
+    else:
+        date_time_now_local = datetime.datetime.now().isoformat()
+        date_time_now_utc = datetime.datetime.utcnow().isoformat()
     ofile.write(func_def("BuildDateLocal", '"' + date_time_now_local + '"'))
     ofile.write(func_def("BuildDateUtc", '"' + date_time_now_utc + '"'))
 

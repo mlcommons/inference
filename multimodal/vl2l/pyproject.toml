@@ -1,0 +1,13 @@
+[tool.ruff]
+lint.select = ["ALL"]
+lint.ignore = [
+  "ANN002",  # Missing type annotation for `*args`"
+  "ANN003",  # Missing type annotation for `**kwargs`
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.mypy]
+check_untyped_defs = true
+plugins = ['pydantic.mypy']

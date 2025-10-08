@@ -81,27 +81,18 @@ CFLAGS="-std=c++14" python setup.py develop --user
 mlcr get,preprocessed,dataset,criteo,_validation --outdirname=<path_to_download> -j
 ```
 
-#### Download the preprocessed dataset using Rclone.
+#### Download the preprocessed dataset using the MLCommons R2 Downloader (more information about the MLC R2 Downloader, including how to run it on Windows, can be found [here](https://inference.mlcommons-storage.org)).
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
 Prepare your dataset destination:
-```
+``` shell
 cd $HOME/mlcommons/inference/recommendation/dlrm_v2/pytorch/
 mkdir ./dataset && cd ./dataset
 mv <downloaded_file(s)> ./
 export DATA_DIR=./dataset
 ```
 Download the dataset
-```
-rclone copy mlc-inference:mlcommons-inference-wg-public/dlrm_preprocessed ./dataset  -P
+``` bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d ./dataset https://inference.mlcommons-storage.org/metadata/dlrm-v2-preprocessed-dataset.uri
 ```
 
 
@@ -120,21 +111,14 @@ mlcr get,ml-model,get,ml-model,dlrm,_pytorch,_weight_sharded,_rclone --outdirnam
 
 #### Manual method
 
-The above command automatically runs a set of Rclone commands to download the data from a Cloudflare R2 bucket. However, if you'd like to run the Rclone commands manually, you can do so as follows:
+The above command automatically runs a set of commands to download the data from a Cloudflare R2 bucket. However, if you'd like to run the commands manually, you can do so as follows:
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
+(More information about the MLC R2 Downloader, including how to run it on Windows, can be found [here](https://inference.mlcommons-storage.org))
+
 You can then navigate in the terminal to your desired download directory and run the following command to download the model weights:
 
-```
-rclone copy mlc-inference:mlcommons-inference-wg-public/model_weights ./model_weights -P
+``` bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/dlrm-v2-model-weights.uri
 ```
 
 #### (optional) 

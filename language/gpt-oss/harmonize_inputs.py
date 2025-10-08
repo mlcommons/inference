@@ -238,8 +238,7 @@ def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         DeveloperContent.new()
         .with_instructions(
             "You are an expert test-taker that answers multiple choice questions accurately. "
-            "Follow the format shown in the examples below. "
-            "The last line of your response should be in the following format: 'Answer: A/B/C/...' (e.g. 'Answer: A')."
+            "After your reasoning, provide your final answer on a new line in the format: 'Answer: X' where X is the letter choice."
         )
     )
 
@@ -256,7 +255,7 @@ def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         ),
         Message.from_role_and_content(
             Role.ASSISTANT,
-            "The characteristic of a ring R is the smallest positive integer n such that n·1_R = 0, or 0 if no such positive integer exists.\\n\\nFor the ring 2Z (even integers under addition and multiplication), we need to find the smallest positive integer n such that n·2 = 0 in 2Z. However, since 2Z contains all even integers, and n·2 is always even for any positive integer n, we have n·2 ≠ 0 for any positive n in 2Z.\\n\\nTherefore, the characteristic of 2Z is 0.\\n\\nAnswer: A"
+            "Answer: A"
         ).with_channel("final"),
 
         # Example 2: Linear Algebra - Transformations
@@ -266,7 +265,7 @@ def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         ),
         Message.from_role_and_content(
             Role.ASSISTANT,
-            "Let's compute ST and TS for a general polynomial p(x).\\n\\nFor ST: (ST)(p(x)) = S(T(p(x))) = S(xp(x)) = d/dx(xp(x)) = p(x) + xp'(x)\\n\\nFor TS: (TS)(p(x)) = T(S(p(x))) = T(p'(x)) = xp'(x)\\n\\nNow let's find ST - TS:\\n(ST - TS)(p(x)) = (p(x) + xp'(x)) - xp'(x) = p(x)\\n\\nSince (ST - TS)(p(x)) = p(x) for any polynomial p(x), we have ST - TS = I, where I is the identity transformation.\\n\\nAnswer: H"
+            "Answer: H"
         ).with_channel("final"),
 
         # Example 3: Number Theory - Diophantine Equations
@@ -276,7 +275,7 @@ def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         ),
         Message.from_role_and_content(
             Role.ASSISTANT,
-            "First, I need to find the general solution to 7m + 12n = 22.\\n\\nUsing the extended Euclidean algorithm: gcd(7,12) = 1, so solutions exist.\\nA particular solution is m₀ = 10, n₀ = -4 (since 7(10) + 12(-4) = 70 - 48 = 22).\\n\\nThe general solution is:\\nm = 10 + 12t\\nn = -4 - 7t\\nfor integer t.\\n\\nSo m + n = (10 + 12t) + (-4 - 7t) = 6 + 5t\\n\\nFor different values of t:\\nt = 0: m + n = 6\\nt = -1: m + n = 1\\nt = -2: m + n = -4\\nt = -3: m + n = -9\\nt = 1: m + n = 11\\n\\nThe greatest negative number is -4.\\n\\nAnswer: E"
+            "Answer: E"
         ).with_channel("final"),
 
         # Example 4: Differential Equations - Salt Tank Problem
@@ -286,7 +285,7 @@ def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         ),
         Message.from_role_and_content(
             Role.ASSISTANT,
-            "Let S(t) be the amount of salt at time t. The tank volume remains constant at 100L since inflow = outflow = 4 L/min.\\n\\nSalt enters at rate: 4 L/min × 0.02 g/L = 0.08 g/min\\nSalt leaves at rate: 4 L/min × S(t)/100 g/L = 0.04S(t) g/min\\n\\nDifferential equation: dS/dt = 0.08 - 0.04S(t)\\n\\nRearranging: dS/dt + 0.04S = 0.08\\n\\nThis is first-order linear. The integrating factor is e^(0.04t).\\n\\nSolution: S(t) = 2 + Ce^(-0.04t)\\n\\nUsing initial condition S(0) = 3:\\n3 = 2 + C, so C = 1\\n\\nTherefore: S(t) = 2 + e^(-0.04t)\\n\\nAt t = 100: S(100) = 2 + e^(-4) = 2 + e^-4\\n\\nAnswer: I"
+            "Answer: I"
         ).with_channel("final"),
 
         # Example 5: Basic Arithmetic - Division
@@ -296,7 +295,7 @@ def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         ),
         Message.from_role_and_content(
             Role.ASSISTANT,
-            "To find the number of teams when we know the total number of players and the number of players per team, we need to divide the total number of players by the number of players per team.\\n\\nTotal players = 30\\nPlayers per team = 5\\n\\nNumber of teams = Total players ÷ Players per team = 30 ÷ 5 = 6\\n\\nTherefore, we divide 30 by 5 to find 6 teams.\\n\\nAnswer: B"
+            "Answer: B"
         ).with_channel("final"),
 
         # The actual problem to solve
@@ -339,8 +338,7 @@ def create_gpqa_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         DeveloperContent.new()
         .with_instructions(
             "You are an expert in organic chemistry and biochemistry who answers scientific questions accurately. "
-            "Provide detailed explanations showing your reasoning, then conclude with the answer. "
-            "The last line of your response should be in the following format: 'Answer: A/B/C/D' (e.g. 'Answer: A')."
+            "After your reasoning, provide your final answer on a new line in the format: 'Answer: X' where X is the letter choice."
         )
     )
 
@@ -357,7 +355,7 @@ def create_gpqa_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         ),
         Message.from_role_and_content(
             Role.ASSISTANT,
-            "Explanation: The text describes the dystrophin gene and the FDA-approved oligonucleotide therapy that causes exon skipping by creating a functional, albeit shorter, dystrophin protein. Let me analyze each option:\\n\\n- Morpholino is bound to the pre-mRNA in an antisense orientation (C is involved)\\n- Every splicing mechanism creates the lariat molecule that is circular with a 3' tail and soon degraded (B is involved)\\n- The spliced RNA is polyadenylated at the 3' end with a polyA tail (A is involved)\\n- R-loops are triple helix structures of DNA and pre-mRNA that are a consequence of RNA transcription, not splicing and RNA maturation\\n\\nR-loops are not involved in the proposed exon-skipping therapy mechanism.\\n\\nAnswer: D"
+            "The text describes the dystrophin gene and the FDA-approved oligonucleotide therapy that causes exon skipping by creating a functional, albeit shorter, dystrophin protein. Morpholino is bound to the pre-mRNA in an antisense orientation. Every splicing mechanism creates the lariat molecule that is circular with a 3' tail and soon degraded. The spliced RNA is polyadenylated at the 3' end. R-loops are triple helix of DNA and the pre-mRNA and a consequence of the RNA transcription, not splicing and RNA maturation.\\n\\nAnswer: D"
         ).with_channel("final"),
 
         # Example 2: Stereochemistry - Optical Activity
@@ -367,7 +365,7 @@ def create_gpqa_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         ),
         Message.from_role_and_content(
             Role.ASSISTANT,
-            "Explanation: To exhibit optical activity, a compound must be chiral (lack a mirror plane of symmetry). Let me analyze each compound:\\n\\nOptically active (chiral) compounds:\\n- 1-methyl-4-(prop-1-en-2-yl)cyclohex-1-ene: has chiral center\\n- di(cyclohex-2-en-1-ylidene)methane: no plane of symmetry\\n- 3-(2-methylbut-1-en-1-ylidene)cyclohex-1-ene: chiral\\n- 8,8-dichlorobicyclo[4.2.0]octan-7-one: chiral bicyclic structure\\n\\nOptically inactive (achiral) compounds:\\n- 2,3,3,3-tetrafluoroprop-1-ene: has mirror plane\\n- 5-(5-methylhexan-2-ylidene)cyclopenta-1,3-diene: has mirror plane\\n- [1,1'-biphenyl]-3,3'-diol: has mirror plane\\n- cyclopent-2-en-1-one: has mirror plane\\n\\nTherefore, 4 compounds exhibit optical activity.\\n\\nAnswer: C"
+            "The compounds 1-methyl-4-(prop-1-en-2-yl)cyclohex-1-ene, 3-(2-methylbut-1-en-1-ylidene)cyclohex-1-ene, di(cyclohex-2-en-1-ylidene)methane, and 8,8-dichlorobicyclo[4.2.0]octan-7-one are chiral molecules and thus will be optically active.\\n\\nAnswer: C"
         ).with_channel("final"),
 
         # The actual problem to solve
@@ -428,6 +426,8 @@ if __name__ == "__main__":
                         help="Output pickle file path to save the processed data as pandas DataFrame")
     parser.add_argument("--reasoning-effort", type=str, default="high",
                         help="Reasoning effort to use for the prompt")
+    parser.add_argument("--dataset", type=str, default=None,
+                        help="Filter to only process rows from this dataset (e.g., 'gpqa', 'mmlu_pro', 'math500', 'aime1983', 'livecodebench')")
     args = parser.parse_args()
     df = pd.read_pickle(args.data_file)
 
@@ -436,6 +436,18 @@ if __name__ == "__main__":
         "medium": ReasoningEffort.MEDIUM,
         "low": ReasoningEffort.LOW
     }[args.reasoning_effort.lower()]
+
+    # Filter by dataset if specified
+    if args.dataset is not None:
+        original_len = len(df)
+        available_datasets = sorted(df['dataset'].unique().tolist())
+        df = df[df['dataset'] == args.dataset].copy()
+        print(f"Filtered to dataset '{args.dataset}': {len(df)} rows (from {original_len} total)")
+        if len(df) == 0:
+            print(f"ERROR: No rows found for dataset '{args.dataset}'")
+            print(f"Available datasets: {available_datasets}")
+            import sys
+            sys.exit(1)
 
     # Apply row limit if specified
     if args.max_rows is not None:

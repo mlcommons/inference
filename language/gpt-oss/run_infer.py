@@ -47,9 +47,11 @@ def get_tokenizer():
 
 
 class SGLangClient:
-    def __init__(self, base_url: str = "http://localhost:30000"):
+    def __init__(self, base_url: str = "http://localhost:30000", temperature: float = 0.001, top_k: int = 1):
         self.base_url = base_url
         self.session = requests.Session()
+        self.temperature = temperature
+        self.top_k = top_k
 
     def send_request(
             self, input_ids: List[int], max_tokens: int = 100) -> Dict[str, Any]:
@@ -59,8 +61,8 @@ class SGLangClient:
             "input_ids": input_ids,
             "sampling_params": {
                 "max_new_tokens": max_tokens,
-                "temperature": 0.9,
-                "top_k": 1,
+                "temperature": self.temperature,
+                "top_k": self.top_k,
             }
         }
 
@@ -119,10 +121,10 @@ def load_tokenized_data(data_file: str) -> pd.DataFrame:
 
 def send_single_request(args_tuple):
     """Send a single request - used by multiprocessing pool."""
-    input_ids, max_tokens, server_url, sample_id = args_tuple
+    input_ids, max_tokens, server_url, sample_id, temperature, top_k = args_tuple
 
     # Create a new client for this process
-    client = SGLangClient(server_url)
+    client = SGLangClient(server_url, temperature=temperature, top_k=top_k)
 
     try:
         response = client.send_request(input_ids, max_tokens=max_tokens)
@@ -133,7 +135,7 @@ def send_single_request(args_tuple):
 
 
 def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
-                           max_tokens: int = 100, max_concurrency: int = 128) -> List[Dict[str, Any]]:
+                           max_tokens: int = 100, max_concurrency: int = 128, temperature: float = 0.001, top_k: int = 1) -> List[Dict[str, Any]]:
     """Send all requests to SGLang server in parallel using multiprocessing."""
     num_samples = len(tokenized_df)
     logger.info(
@@ -141,7 +143,7 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
 
     # Prepare arguments for multiprocessing
     args_list = [
-        (row['tok_input'], max_tokens, server_url, idx)
+        (row['tok_input'], max_tokens, server_url, idx, temperature, top_k)
         for idx, row in tokenized_df.iterrows()
     ]
 
@@ -265,7 +267,7 @@ def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]
 
 def process_requests(tokenized_df: pd.DataFrame, server_url: str,
                      max_samples: int = None, max_tokens: int = 100,
-                     max_concurrency: int = 128, output_file: str = None) -> pd.DataFrame:
+                     max_concurrency: int = 128, output_file: str = None, temperature: float = 0.001, top_k: int = 1) -> pd.DataFrame:
     """Main processing function that handles requests and response extraction."""
 
     # Step 1: Limit samples if specified
@@ -278,7 +280,9 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
         tokenized_df,
         server_url,
         max_tokens,
-        max_concurrency)
+        max_concurrency,
+        temperature,
+        top_k)
 
     # Step 3: Extract response output_ids
     response_ids = extract_response_ids(responses, tokenized_df)
@@ -312,6 +316,10 @@ def main():
                         help="Maximum number of concurrent requests (default: 128)")
     parser.add_argument("--output", default=None,
                         help="Output pickle file for responses (optional)")
+    parser.add_argument("--temperature", type=float, default=0.001,
+                        help="Temperature for sampling (default: 0.001)")
+    parser.add_argument("--top-k", type=int, default=1,
+                        help="Top-k for sampling (default: 1)")
 
     args = parser.parse_args()
 
@@ -335,7 +343,9 @@ def main():
                                  max_samples=args.max_samples,
                                  max_tokens=args.max_tokens,
                                  max_concurrency=args.max_concurrency,
-                                 output_file=args.output)
+                                 output_file=args.output,
+                                 temperature=args.temperature,
+                                 top_k=args.top_k)
 
     # Print summary
     logger.info(f"\nProcessing completed:")

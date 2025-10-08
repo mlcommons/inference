@@ -1,6 +1,6 @@
 #!/bin/bash
 
-dp=1
+dp=2
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -18,7 +18,7 @@ python3 -m sglang.launch_server \
     --port 30000 \
     --tp-size=1 \
     --data-parallel-size=$dp \
-    --max-running-requests 256 \
+    --max-running-requests $((dp * 512)) \
     --mem-fraction-static 0.85 \
     --chunked-prefill-size 16384 \
     --ep-size=1 \

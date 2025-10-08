@@ -442,7 +442,8 @@ if __name__ == "__main__":
         original_len = len(df)
         available_datasets = sorted(df['dataset'].unique().tolist())
         df = df[df['dataset'] == args.dataset].copy()
-        print(f"Filtered to dataset '{args.dataset}': {len(df)} rows (from {original_len} total)")
+        print(
+            f"Filtered to dataset '{args.dataset}': {len(df)} rows (from {original_len} total)")
         if len(df) == 0:
             print(f"ERROR: No rows found for dataset '{args.dataset}'")
             print(f"Available datasets: {available_datasets}")

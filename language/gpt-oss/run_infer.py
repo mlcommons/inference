@@ -47,7 +47,8 @@ def get_tokenizer():
 
 
 class SGLangClient:
-    def __init__(self, base_url: str = "http://localhost:30000", temperature: float = 0.001, top_k: int = 1):
+    def __init__(self, base_url: str = "http://localhost:30000",
+                 temperature: float = 0.001, top_k: int = 1):
         self.base_url = base_url
         self.session = requests.Session()
         self.temperature = temperature

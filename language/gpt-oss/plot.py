@@ -26,21 +26,21 @@ def create_per_dataset_histogram(df, column_name, title, filename, output_dir):
     print(f"Creating {filename}...")
     print(f"  Datasets: {datasets}")
     print(f"  Total samples: {len(df)}")
-    
+
     # Determine grid layout
     n_datasets = len(datasets)
     n_cols = 3
     n_rows = (n_datasets + n_cols - 1) // n_cols
-    
+
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(18, 6 * n_rows))
     if n_datasets == 1:
         axes = np.array([axes])
     axes = axes.flatten()
-    
+
     for i, dataset in enumerate(datasets):
         ax = axes[i]
         dataset_data = df[df['dataset'] == dataset][column_name]
-        
+
         # Create histogram
         ax.hist(
             dataset_data,
@@ -49,7 +49,7 @@ def create_per_dataset_histogram(df, column_name, title, filename, output_dir):
             edgecolor='black',
             linewidth=0.5,
             color='skyblue' if 'OSL' in title else 'lightcoral')
-        
+
         ax.set_title(
             f'{dataset}\n(n={len(dataset_data)})',
             fontsize=12,
@@ -57,7 +57,7 @@ def create_per_dataset_histogram(df, column_name, title, filename, output_dir):
         ax.set_xlabel(title, fontsize=10)
         ax.set_ylabel('Frequency', fontsize=10)
         ax.grid(True, alpha=0.3)
-        
+
         # Add statistics
         mean_val = dataset_data.mean()
         median_val = dataset_data.median()
@@ -69,11 +69,11 @@ def create_per_dataset_histogram(df, column_name, title, filename, output_dir):
                 horizontalalignment='right',
                 bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8),
                 fontsize=9)
-    
+
     # Hide unused subplots
     for i in range(n_datasets, len(axes)):
         axes[i].set_visible(False)
-    
+
     plt.tight_layout()
     plt.savefig(f'{output_dir}/{filename}', dpi=300, bbox_inches='tight')
     print(f"  Saved to {output_dir}/{filename}")
@@ -84,9 +84,9 @@ def create_full_histogram(df, column_name, title, filename, output_dir):
     """Create a single histogram combining all datasets."""
     print(f"Creating {filename}...")
     print(f"  Total samples: {len(df)}")
-    
+
     plt.figure(figsize=(12, 8))
-    
+
     color = 'skyblue' if 'OSL' in title else 'lightcoral'
     plt.hist(
         df[column_name],
@@ -95,33 +95,39 @@ def create_full_histogram(df, column_name, title, filename, output_dir):
         edgecolor='black',
         linewidth=0.5,
         color=color)
-    
+
     plt.title(title, fontsize=14, fontweight='bold')
-    plt.xlabel(column_name.replace('tok_', '').replace('_len', '').upper(), fontsize=12)
+    plt.xlabel(
+        column_name.replace(
+            'tok_',
+            '').replace(
+            '_len',
+            '').upper(),
+        fontsize=12)
     plt.ylabel('Frequency', fontsize=12)
     plt.grid(True, alpha=0.3)
-    
+
     # Add statistics
     mean_val = df[column_name].mean()
     median_val = df[column_name].median()
     std_val = df[column_name].std()
     min_val = df[column_name].min()
     max_val = df[column_name].max()
-    
+
     stats_text = f'Total samples: {len(df)}\n'
     stats_text += f'Mean: {mean_val:.1f}\n'
     stats_text += f'Median: {median_val:.1f}\n'
     stats_text += f'Std: {std_val:.1f}\n'
     stats_text += f'Min: {min_val}\n'
     stats_text += f'Max: {max_val}'
-    
+
     plt.text(0.98, 0.98, stats_text,
              transform=plt.gca().transAxes,
              verticalalignment='top',
              horizontalalignment='right',
              fontsize=10,
              bbox=dict(boxstyle='round', facecolor='lightblue' if 'OSL' in title else 'lightcoral', alpha=0.8))
-    
+
     plt.tight_layout()
     plt.savefig(f'{output_dir}/{filename}', dpi=300, bbox_inches='tight')
     print(f"  Saved to {output_dir}/{filename}")
@@ -136,30 +142,31 @@ def main():
         '--output-dir',
         default='histograms',
         help='Output directory for plots')
-    
+
     args = parser.parse_args()
-    
+
     # Create output directory
     Path(args.output_dir).mkdir(exist_ok=True)
-    
+
     # Load data
     df = load_data(args.pkl_path)
-    
+
     # Filter for 100% accuracy
     df_100 = df[df['prompt_accuracy'] == 100.0]
-    print(f"\nFiltered {len(df_100)} rows with prompt_accuracy == 100 (out of {len(df)} total)\n")
-    
+    print(
+        f"\nFiltered {len(df_100)} rows with prompt_accuracy == 100 (out of {len(df)} total)\n")
+
     print("=" * 60)
     print("CREATING ISL HISTOGRAMS")
     print("=" * 60)
-    
+
     # 1. Per dataset ISL histogram
     create_per_dataset_histogram(
         df, 'tok_input_len',
         'Token Input Length (ISL)',
         '1_per_dataset_ISL.png',
         args.output_dir)
-    
+
     # 2. Per dataset ISL histogram (accuracy == 100)
     if len(df_100) > 0:
         create_per_dataset_histogram(
@@ -169,14 +176,14 @@ def main():
             args.output_dir)
     else:
         print("Skipping per-dataset ISL (acc==100): no data")
-    
+
     # 3. Full ISL histogram
     create_full_histogram(
         df, 'tok_input_len',
         'Token Input Length (ISL) - All Data',
         '3_full_ISL.png',
         args.output_dir)
-    
+
     # 4. Full ISL histogram (accuracy == 100)
     if len(df_100) > 0:
         create_full_histogram(
@@ -186,18 +193,18 @@ def main():
             args.output_dir)
     else:
         print("Skipping full ISL (acc==100): no data")
-    
+
     print("\n" + "=" * 60)
     print("CREATING OSL HISTOGRAMS")
     print("=" * 60)
-    
+
     # 5. Per dataset OSL histogram
     create_per_dataset_histogram(
         df, 'tok_model_output_len',
         'Token Output Length (OSL)',
         '5_per_dataset_OSL.png',
         args.output_dir)
-    
+
     # 6. Per dataset OSL histogram (accuracy == 100)
     if len(df_100) > 0:
         create_per_dataset_histogram(
@@ -207,14 +214,14 @@ def main():
             args.output_dir)
     else:
         print("Skipping per-dataset OSL (acc==100): no data")
-    
+
     # 7. Full OSL histogram
     create_full_histogram(
         df, 'tok_model_output_len',
         'Token Output Length (OSL) - All Data',
         '7_full_OSL.png',
         args.output_dir)
-    
+
     # 8. Full OSL histogram (accuracy == 100)
     if len(df_100) > 0:
         create_full_histogram(
@@ -224,7 +231,7 @@ def main():
             args.output_dir)
     else:
         print("Skipping full OSL (acc==100): no data")
-    
+
     print(f"\n{'=' * 60}")
     print(f"All histograms saved to {args.output_dir}/")
     print(f"{'=' * 60}")

@@ -78,21 +78,14 @@ mlcr get,ml-model,mixtral --outdirname=<path_to_download> -j
 
 ### Get Checkpoint
 
-#### Using Rclone
+#### Using the MLCommons R2 Downloader
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
-You can then navigate in the terminal to your desired download directory and run the following command to download the model checkpoint:
+(More information about the MLC R2 Downloader, including how to run it on Windows, can be found [here](https://inference.mlcommons-storage.org))
 
-```
-rclone copy mlc-inference:mlcommons-inference-wg-public/mixtral_8x7b/mixtral-8x7b-instruct-v0.1 ./mixtral-8x7b-instruct-v0.1 -P
+Navigate in the terminal to your desired download directory and run the following command to download the model checkpoint:
+
+``` bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/mixtral-8x7b-model-checkpoint.uri
 ```
 
 ## Get Dataset
@@ -115,17 +108,12 @@ mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_calibration --outdirname=
 
 ### Preprocessed
 
-#### Using Rclone
-We make many of the MLPerf infernce models and datasets available using Rclone. In order to keep compatibility, you can use Rclone to get the preprocessed dataset:
+#### Using the MLCommons R2 Downloader
+We make many of the MLPerf infernce models and datasets available using the MLC R2 Downloader (more information about the MLC R2 Downloader, including how to run it on Windows, can be found [here](https://inference.mlcommons-storage.org)). In order to keep compatibility, you can use the MLC R2 Downloader to get the preprocessed dataset:
 
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
+`cd` into the folder where you want to place the dataset and run:
 ```bash
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, cd into the folder where you want to place the dataset and run:
-```bash
-rclone copyurl https://inference.mlcommons-storage.org/mixtral_8x7b/09292024_mixtral_15k_mintoken2_v1.pkl ./ -a -P
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/mixtral-8x7b-validation-dataset.uri
 ```
 #### Using wget
 
@@ -138,10 +126,11 @@ wget https://inference.mlcommons-storage.org/mixtral_8x7b/09292024_mixtral_15k_m
 
 ### Calibration dataset
 
-#### Using Rclone
-Rclone is installed, cd into the folder where you want to place the dataset and run:
+#### Using the MLCommons R2 Downloader
+
+`cd` into the folder where you want to place the dataset and run:
 ```bash
-rclone copyurl https://inference.mlcommons-storage.org/mixtral_8x7b%2F2024.06.06_mixtral_15k_calibration_v4.pkl ./ -a -P
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/mixtral-8x7b-calibration-dataset.uri
 ```
 
 #### Using wget

@@ -1,5 +1,6 @@
 import faiss
 import torch
+import numpy as np
 from langchain_community.docstore.in_memory import InMemoryDocstore
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -17,12 +18,14 @@ class VectorDB(RagDB):
             retriever_model: str = None,
             reranker_model: str = None,
             device: str = "auto",
+            vector_index_method: str = "hnsw",
             benchmark: bool = False,
             **kwargs
         ):
         super().__init__(reranker_model, device, benchmark)
         self._retriever_model_name = retriever_model
         self._reranker_model_name = reranker_model
+        self._vector_index_method = vector_index_method
 
         # Initialize embedding model with device configuration
         model_kwargs = {'device': self._device}
@@ -44,8 +47,9 @@ class VectorDB(RagDB):
         # Reranker is already initialized in parent class if reranker_model is provided
         # No need to initialize it again here
 
-        # The index defines the algoriothm used for the similarity search
-        self._index = faiss.IndexFlatL2(self._embedding_dimension)
+        # The index defines the algorithm used for the similarity search
+        # Support multiple vector index types (currently FAISS-based)
+        self._index = self._create_vector_index(self._vector_index_method, self._embedding_dimension)
 
         # The docstore is used to store the documents and their metadata
         self._docstore = InMemoryDocstore()
@@ -59,6 +63,104 @@ class VectorDB(RagDB):
         
         # Keep track of ingested documents for consistency with BM25DB
         self._doc_list = []
+    
+    def _create_vector_index(self, method: str, dimension: int):
+        """Create a vector index based on the specified method.
+        
+        Currently uses FAISS backend, but abstracted to allow future support
+        for other vector databases (e.g., Milvus, Qdrant, Weaviate).
+        
+        Args:
+            method: Index method - 'flat', 'hnsw', or 'ivf'
+            dimension: Embedding dimension
+            
+        Returns:
+            Vector index object (FAISS index)
+            
+        Index Method Details:
+        
+        1. FLAT (IndexFlatL2):
+           - Exact brute-force search using L2 distance
+           - Pros: Perfect accuracy, simple
+           - Cons: O(N) search time, slow for large datasets
+           - Best for: Small datasets (<10K), when accuracy is critical
+        
+        2. HNSW (Hierarchical Navigable Small World):
+           - Graph-based approximate nearest neighbor search
+           - Pros: Very fast search O(log N), excellent recall, no training needed
+           - Cons: Higher memory usage (stores graph), slower indexing
+           - Best for: Most use cases, default choice
+        
+        3. IVF (Inverted File):
+           - Clustering-based approximate search
+           - Pros: Memory efficient, good for large datasets, faster than flat
+           - Cons: Requires training, slightly lower recall than HNSW
+           - Best for: Very large datasets (>1M), when memory is limited
+        """
+        if method == "flat":
+            return faiss.IndexFlatL2(dimension)
+        elif method == "hnsw":
+            # M: number of connections per layer (higher = better recall, more memory)
+            # efConstruction: quality of index construction (higher = better quality, slower build)
+            M = 32  # Default: 32, good balance
+            index = faiss.IndexHNSWFlat(dimension, M)
+            index.hnsw.efConstruction = 40  # Default: 40
+            index.hnsw.efSearch = 16  # Search-time parameter, can be adjusted later
+            return index
+        elif method == "ivf":
+            # nlist: number of clusters/cells (sqrt(N) is a good heuristic for N docs)
+            nlist = 100  # Will be adjusted based on dataset size during training
+            quantizer = faiss.IndexFlatL2(dimension)
+            index = faiss.IndexIVFFlat(quantizer, dimension, nlist)
+            # Note: IVF index needs training before use (will be done during ingest)
+            return index
+        else:
+            raise ValueError(f"Unknown vector index method: {method}. Choose 'flat', 'hnsw', or 'ivf'.")
+    
+    def _train_vector_index(self, index, embeddings: np.ndarray):
+        """Train IVF index on embeddings if needed.
+        
+        IVF (Inverted File Index) requires a one-time training phase to:
+        1. Cluster the embedding space into nlist regions using k-means
+        2. Build an inverted index mapping cluster_id -> vector_ids
+        
+        After training, search works by:
+        1. Finding the nprobe nearest cluster centroids to the query
+        2. Searching only within those clusters (much faster than full scan)
+        
+        Note: In incremental scenarios, this trains on the FIRST batch only.
+        Subsequent batches are assigned to existing clusters without retraining.
+        For production systems handling continuous data growth, consider:
+        - Periodic retraining when dataset size doubles
+        - Using all accumulated data for retraining
+        - Online clustering algorithms that adapt to new data
+        
+        Args:
+            index: FAISS index (only IVF types need training)
+            embeddings: Numpy array of embeddings to train on
+        """
+        import numpy as np
+        
+        # Convert embeddings to numpy array
+        embeddings_array = np.array(embeddings).astype('float32')
+        
+        # Adjust nlist (number of clusters) based on dataset size
+        # Rule of thumb: nlist = sqrt(N) to 4*sqrt(N)
+        n_samples = len(embeddings)
+        optimal_nlist = max(10, min(int(np.sqrt(n_samples) * 2), 1000))
+        
+        # Update nlist if different from default
+        if optimal_nlist != self._index.nlist:
+            print(f"Adjusting IVF nlist from {self._index.nlist} to {optimal_nlist} based on {n_samples} samples")
+            # Need to recreate index with new nlist
+            quantizer = faiss.IndexFlatL2(self._embedding_dimension)
+            self._index = faiss.IndexIVFFlat(quantizer, self._embedding_dimension, optimal_nlist)
+            # Update vector store's index
+            self._vector_store.index = self._index
+        
+        print(f"Training IVF index on {n_samples} samples...")
+        self._index.train(embeddings_array)
+        print(f"IVF index trained successfully with {self._index.nlist} clusters")
     
     def _calculate_index_output_size(self):
         """Calculate the size of VectorDB output data (db file - metadata).
@@ -109,6 +211,12 @@ class VectorDB(RagDB):
         
         # Calculate embedding size in bytes for accurate throughput measurement
         embedding_bytes = len(passages) * self._embedding_dimension * self._embedding_bytes_per_element
+        
+        # Train IVF index if needed (first time adding embeddings)
+        if self._vector_index_method == "ivf" and not self._index.is_trained:
+            self._train_vector_index(self._index, embeddings)
+        
+        # Add embeddings to vector store
         self._track_component("faiss_indexing", embedding_bytes, len(passages),
                              lambda: self._vector_store.add_embeddings(
                                  list(zip(passages, embeddings)), metadatas),
@@ -133,6 +241,10 @@ class VectorDB(RagDB):
         embeddings = self._track_component("embedding_generation", total_chars, len(passages),
                                          lambda: self._embedding_model.embed_documents(passages),
                                          is_pipeline_input=True)
+        
+        # Train IVF index if needed (before adding any embeddings)
+        if self._vector_index_method == "ivf" and not self._index.is_trained:
+            self._train_vector_index(self._index, embeddings)
         
         # Track total indexing time for benchmark component
         indexing_component_start = time.perf_counter()

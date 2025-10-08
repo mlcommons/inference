@@ -47,12 +47,17 @@ def get_tokenizer():
 
 
 class SGLangClient:
-    def __init__(self, base_url: str = "http://localhost:30000",
-                 temperature: float = 0.001, top_k: int = 1):
-        self.base_url = base_url
+    def __init__(self,
+            server_url: str = "http://localhost:30000",
+            temperature: float = 0.001,
+            top_k: int = 1,
+            timeout: int = 1200
+        ):
+        self.base_url = server_url
         self.session = requests.Session()
         self.temperature = temperature
         self.top_k = top_k
+        self.timeout = timeout
 
     def send_request(
             self, input_ids: List[int], max_tokens: int = 100) -> Dict[str, Any]:
@@ -71,7 +76,7 @@ class SGLangClient:
             response = self.session.post(
                 f"{self.base_url}/generate",
                 json=payload,
-                timeout=1200
+                timeout=self.timeout,
             )
             if response.status_code == 200:
                 return response.json()
@@ -122,10 +127,10 @@ def load_tokenized_data(data_file: str) -> pd.DataFrame:
 
 def send_single_request(args_tuple):
     """Send a single request - used by multiprocessing pool."""
-    input_ids, max_tokens, server_url, sample_id, temperature, top_k = args_tuple
+    input_ids, max_tokens, server_url, sample_id, temperature, top_k, timeout = args_tuple
 
     # Create a new client for this process
-    client = SGLangClient(server_url, temperature=temperature, top_k=top_k)
+    client = SGLangClient(server_url=server_url, temperature=temperature, top_k=top_k, timeout=timeout)
 
     try:
         response = client.send_request(input_ids, max_tokens=max_tokens)
@@ -136,7 +141,7 @@ def send_single_request(args_tuple):
 
 
 def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
-                           max_tokens: int = 100, max_concurrency: int = 128, temperature: float = 0.001, top_k: int = 1) -> List[Dict[str, Any]]:
+                           max_tokens: int = 100, max_concurrency: int = 128, temperature: float = 0.001, top_k: int = 1, timeout: int = 1200) -> List[Dict[str, Any]]:
     """Send all requests to SGLang server in parallel using multiprocessing."""
     num_samples = len(tokenized_df)
     logger.info(
@@ -144,15 +149,13 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
 
     # Prepare arguments for multiprocessing
     args_list = [
-        (row['tok_input'], max_tokens, server_url, idx, temperature, top_k)
+        (row['tok_input'], max_tokens, server_url, idx, temperature, top_k, timeout)
         for idx, row in tokenized_df.iterrows()
     ]
 
     start_time = time.time()
 
-    # Use multiprocessing pool with progress bar
     with Pool(processes=min(max_concurrency, num_samples)) as pool:
-        # Map the function to all arguments with progress bar
         results = list(tqdm(
             pool.imap(send_single_request, args_list),
             total=len(args_list),
@@ -239,16 +242,12 @@ def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]
     output_token_lengths = []
     for i, (response, response_ids) in enumerate(
             zip(responses, response_ids)):
-        if "error" not in response and "meta_info" in response:
-            try:
-                # Use the completion_tokens from meta_info
-                output_token_lengths.append(
-                    response["meta_info"]["completion_tokens"])
-            except Exception as e:
-                logger.warning(
-                    f"Failed to calculate output tokens for sample {i+1}: {e}")
-                output_token_lengths.append(len(response_ids))
-        else:
+        try:
+            output_token_length = response["meta_info"]["completion_tokens"] if "meta_info" in response else len(response_ids)
+            output_token_lengths.append(output_token_length)
+        except Exception as e:
+            logger.warning(
+                f"Failed to calculate output tokens for sample {i+1}: {e}")
             output_token_lengths.append(len(response_ids))
 
     logger.info(f"Updated DataFrame with shape: {result_df.shape}")
@@ -268,7 +267,8 @@ def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]
 
 def process_requests(tokenized_df: pd.DataFrame, server_url: str,
                      max_samples: int = None, max_tokens: int = 100,
-                     max_concurrency: int = 128, output_file: str = None, temperature: float = 0.001, top_k: int = 1) -> pd.DataFrame:
+                     max_concurrency: int = 128, output_file: str = None, temperature: float = 0.001, top_k: int = 1,
+                     timeout: int = 1200) -> pd.DataFrame:
     """Main processing function that handles requests and response extraction."""
 
     # Step 1: Limit samples if specified
@@ -283,7 +283,8 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
         max_tokens,
         max_concurrency,
         temperature,
-        top_k)
+        top_k,
+        timeout)
 
     # Step 3: Extract response output_ids
     response_ids = extract_response_ids(responses, tokenized_df)
@@ -321,13 +322,15 @@ def main():
                         help="Temperature for sampling (default: 0.001)")
     parser.add_argument("--top-k", type=int, default=1,
                         help="Top-k for sampling (default: 1)")
+    parser.add_argument("--timeout", type=int, default=1200,
+                        help="Timeout for requests (default: 1200)")
 
     args = parser.parse_args()
 
     # Test connection
     logger.info(f"Testing server connection to {args.server_url}...")
-    test_client = SGLangClient(args.server_url)
-    test_response = test_client.send_request([1, 2, 3], max_tokens=5)
+    test_client = SGLangClient(server_url=args.server_url, temperature=args.temperature, top_k=args.top_k, timeout=args.timeout)
+    test_response = test_client.send_request(input_ids=[1, 2, 3], max_tokens=5)
     if "error" in test_response:
         logger.error(f"Server connection failed: {test_response['error']}")
         logger.error("Make sure your SGLang server is running. Try:")
@@ -346,7 +349,8 @@ def main():
                                  max_concurrency=args.max_concurrency,
                                  output_file=args.output,
                                  temperature=args.temperature,
-                                 top_k=args.top_k)
+                                 top_k=args.top_k,
+                                 timeout=args.timeout)
 
     # Print summary
     logger.info(f"\nProcessing completed:")

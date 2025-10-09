@@ -1,3 +1,39 @@
+[project]
+name = "mlperf-inference-multimodal-vl2l"
+description = "The reference implementation for the vision-language-to-language (VL2L) benchmark in MLPerf Inference"
+readme = "README.md"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Intended Audience :: Developers",
+  "Operating System :: POSIX :: Linux",
+]
+requires-python = ">=3.14"
+dependencies = ["typer", "loguru", "pydantic", "mlcommons_loadgen"]
+dynamic = ["version"]
+
+[project.optional-dependencies]
+dev = ["mypy", "pytest"]
+
+[project.scripts]
+mlperf-inf-mm-vl2l = "mlperf_inference_multimodal_vl2l.cli:app"
+
+[project.urls]
+Homepage = "https://github.com/mlcommons/inference/multimodal/vl2l"
+
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm[simple]>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"mlperf_inference_multimodal_vl2l" = ["py.typed"]
+
+[tool.setuptools_scm]
+root = "../../"
+
 [tool.ruff]
 lint.select = ["ALL"]
 lint.ignore = [

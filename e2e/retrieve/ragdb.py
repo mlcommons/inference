@@ -37,6 +37,20 @@ class RagDB(abc.ABC):
         else:
             return device
     
+    @staticmethod
+    def get_data_dir(db_name: str) -> str:
+        """Get data directory based on database name."""
+        from pathlib import Path
+        base_name = Path(db_name).stem  # Remove .db extension if present
+        return f"{base_name}_data"
+    
+    @staticmethod
+    def get_db_path(db_name: str) -> str:
+        """Get database file path based on database name."""
+        from pathlib import Path
+        base_name = Path(db_name).stem  # Remove .db extension if present
+        return f"{base_name}.db"
+
     def _init_reranker(self):
         """Initialize the reranker model."""
         import torch
@@ -81,6 +95,25 @@ class RagDB(abc.ABC):
         passage_metadata = [p for p in passage_data]  # All keys except 'passage' are metadata
         print(f"Ingesting {len(doc_list)} passages from JSON file {file_path}")
         return self.ingest(doc_list, passage_metadata, **kwargs)
+
+    def ingest_from_path(self, source_path: str, **kwargs):
+        """Handle both file and folder ingestion.
+        
+        Default implementation that delegates to appropriate methods:
+        - Folders: calls ingest_from_folder() (may raise NotImplementedError if not overridden)
+        - Files: calls ingest_from_file() (default JSON implementation)
+        """
+        from pathlib import Path
+        
+        source_path = Path(source_path)
+        
+        if source_path.is_dir():
+            print(f"Ingesting documents from folder {source_path}")
+            return self.ingest_from_folder(source_path, **kwargs)
+        elif source_path.is_file():
+            return self.ingest_from_file(source_path, **kwargs)
+        else:
+            raise ValueError(f"Source path {source_path} is neither a file nor a directory")
 
     def rerank(self, query: str, passages: List[str]):
         """Rerank passages using the reranker model."""

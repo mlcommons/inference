@@ -8,3 +8,5 @@ langchain
 langchain-community
 langchain-huggingface
 bm25s
+beautifulsoup4>=4.12.0
+requests>=2.31.0

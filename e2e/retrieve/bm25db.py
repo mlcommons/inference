@@ -12,18 +12,6 @@ class BM25DB(RagDB):
         """Get the default database filename for BM25DB."""
         return "bm25.db"
     
-    @staticmethod
-    def get_data_dir(db_name: str) -> str:
-        """Get data directory based on database name."""
-        base_name = Path(db_name).stem  # Remove .db extension if present
-        return f"{base_name}_data"
-    
-    @staticmethod
-    def get_db_path(db_name: str) -> str:
-        """Get database file path based on database name."""
-        base_name = Path(db_name).stem  # Remove .db extension if present
-        return f"{base_name}.db"
-    
     def __init__(self, reranker_model: str = None, device: str = "auto", k1: float = None, b: float = None, method: str = None, 
                  database: str = None, delta: float = None, idf_method: str = None, dtype: str = None, 
                  backend: str = None, token_pattern: str = None, stopwords = None, stemmer = None, 
@@ -159,21 +147,12 @@ class BM25DB(RagDB):
         self._bm25_retriever.index(corpus_tokens, show_progress=self._show_progress)
     
     def ingest_from_folder(self, folder_path: str, num_threads: int = 4):
-        """Ingest txt files from a folder."""
+        """Ingest whole txt files from a folder instead of passages"""
         from pathlib import Path
-        import json
+        from ..utils import load_url_mapping
         
         folder_path = Path(folder_path)
-        
-        # Load URL mapping from doc_pdf folder
-        url_mapping_path = Path("doc_pdf") / "url_mapping.json"
-        url_mapping = {}
-        if url_mapping_path.exists():
-            try:
-                with open(url_mapping_path, 'r', encoding='utf-8') as f:
-                    url_mapping = json.load(f)
-            except Exception as e:
-                print(f"Warning: Could not load URL mapping: {e}")
+        url_mapping = load_url_mapping(str(folder_path))
         
         doc_list = []
         passage_metadata = []
@@ -214,22 +193,6 @@ class BM25DB(RagDB):
         
         # Call regular ingest method
         self.ingest(doc_list, passage_metadata, num_threads)
-    
-    def ingest_from_source(self, source_path: str, **kwargs):
-        """Handle both file and folder ingestion for BM25DB."""
-        from pathlib import Path
-        
-        source_path = Path(source_path)
-        
-        if source_path.is_dir():
-            # Folder ingestion - BM25 specific
-            print(f"Ingesting documents from folder {source_path}")
-            return self.ingest_from_folder(source_path, **kwargs)
-        elif source_path.is_file():
-            # File ingestion - use base class implementation
-            return super().ingest_from_file(source_path, **kwargs)
-        else:
-            raise ValueError(f"Source path {source_path} is neither a file nor a directory")
 
     def lookup(self, query: str, k: int) -> List[Any]:
         """Retrieve top-k passages using BM25."""

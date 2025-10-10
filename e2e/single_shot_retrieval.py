@@ -5,9 +5,12 @@ import os
 import pandas as pd
 from retrieve import VectorDB, BM25DB
 from evaluation import evaluate_retrieval_query, run_evaluation
+from utils import set_deterministic_seeds
 
 # Taken below from frames: https://huggingface.co/datasets/google/frames-benchmark
 DEFAULT_QUERY = "Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?"
+
+
 
 if __name__ == "__main__":
     args = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
@@ -50,7 +53,12 @@ if __name__ == "__main__":
     args.add_argument("--top_p", type=float, default=0.9, help="Top-p threshold for nucleus sampling (0.8-0.95)")
     args.add_argument("--relative_ratio", type=float, default=0.75, help="Relative threshold ratio (0.7-0.9)")
     args.add_argument("--max_results", type=int, default=100, help="Maximum results to consider for adaptive methods")
+    args.add_argument("--seed", type=int, default=42, help="Random seed for reproducible results (default: 42)")
+    
     args = args.parse_args()
+
+    # Set deterministic seeds for reproducible results
+    set_deterministic_seeds(args.seed)
 
     # Initialize the appropriate database class
     if args.retrieval_method == "bm25":
@@ -80,9 +88,9 @@ if __name__ == "__main__":
         if not args.ingest:
             raise ValueError("Either --database (existing) or --ingest (to create new) must be provided")
         
-        # Ingest data from source (file or folder)
+        # Ingest from file or folder
         tic = time.time()
-        rag_db.ingest_from_source(args.ingest, num_threads=args.threads)
+        rag_db.ingest_from_path(args.ingest, num_threads=args.threads)
         
         # Get number of passages for timing calculation
         num_passages = len(rag_db._doc_list)  # This should be available after ingestion

@@ -121,16 +121,32 @@ class IngestionMonitor:
             duration = end_time - start_time
             
             # Calculate throughput  
-            throughput_mb = (context.input_size_bytes / (1024 * 1024)) / duration if duration > 0 else 0
-            throughput_items = context.items_count / duration if duration > 0 else 0
+            total_input = context.input_size_bytes
+            total_output = 0 # Output will be set separately
+            total_items = context.items_count
+            total_duration = duration
             
-            # Store metrics
+            # Check if component already exists (accumulate metrics)
+            if component_name in self.components:
+                existing = self.components[component_name]
+                # Accumulate metrics
+                total_duration = existing.duration + duration
+                total_input = existing.input_size_bytes + context.input_size_bytes
+                total_output = existing.output_size_bytes + 0  
+                total_items = existing.items_processed + context.items_count
+                
+                is_pipeline_input = is_pipeline_input or existing.is_pipeline_input
+                is_pipeline_output = is_pipeline_output or existing.is_pipeline_output
+
+            throughput_mb = (total_input / (1024 * 1024)) / total_duration if total_duration > 0 else 0
+            throughput_items = total_items / total_duration if total_duration > 0 else 0
+
             self.components[component_name] = ComponentMetrics(
                 name=component_name,
-                duration=duration,
-                input_size_bytes=context.input_size_bytes,
-                output_size_bytes=0,  # Can be set later with set_output_size()
-                items_processed=context.items_count,
+                duration=total_duration,
+                input_size_bytes=total_input,
+                output_size_bytes=total_output,
+                items_processed=total_items,
                 throughput_mb_per_sec=throughput_mb,
                 throughput_items_per_sec=throughput_items,
                 is_pipeline_input=is_pipeline_input,
@@ -162,8 +178,7 @@ class IngestionMonitor:
     @contextmanager
     def track_ingestion(self):
         """Track overall ingestion performance."""
-        start_time = time.time()
-        self.ingestion_start_time = start_time
+        self.start_time = time.time()  # Set start_time for get_performance_report()
         
         class IngestionContext:
             def __init__(self):
@@ -177,8 +192,7 @@ class IngestionMonitor:
         try:
             yield context
         finally:
-            end_time = time.time()
-            self.total_ingestion_time = end_time - start_time
+            pass  # start_time is checked by get_performance_report()
             
     def track_incremental_indexing(self, db_size_before: int, batch_size: int, 
                                  indexing_time: float):
@@ -203,31 +217,6 @@ class IngestionMonitor:
         
         self.indexing_trend.append(trend_point)
         
-    def track_faiss_indexing(self, index, vectors_added: int, vector_bytes: int):
-        """Special tracking for FAISS indexing performance."""
-        component_name = "faiss_indexing"
-        
-        if hasattr(index, 'ntotal'):
-            index_size = index.ntotal
-        else:
-            index_size = vectors_added
-            
-        # Update or create FAISS metrics
-        if component_name in self.components:
-            metrics = self.components[component_name]
-            metrics.output_size_bytes = index_size * 384 * 4  # Assume 384-dim vectors
-        else:
-            # Create metrics if not tracked with context manager
-            self.components[component_name] = ComponentMetrics(
-                name=component_name,
-                duration=0.1,  # Placeholder
-                input_size_bytes=vector_bytes,
-                output_size_bytes=index_size * 384 * 4,
-                items_processed=vectors_added,
-                throughput_mb_per_sec=0,
-                throughput_items_per_sec=0
-            )
-            
     def get_performance_report(self) -> IngestionReport:
         """Generate comprehensive performance report."""
         # Calculate duration from when start_ingestion() was called
@@ -288,8 +277,22 @@ class IngestionMonitor:
         print(f"   Total duration: {report.total_duration:.2f}s")
         print(f"   Overall throughput: {report.overall_throughput_mb_per_sec:.2f} MB/s")
         print(f"   Items processed: {report.total_items:,}")
+        
+        # DEBUG: Show detailed breakdown of input data aggregation
+        input_components = [c for c in report.components if c.is_pipeline_input]
+        print(f"\n🔍 DEBUG: Input Data Breakdown (is_pipeline_input=True):")
+        print(f"   {'Component':<30} {'Input Size (MB)':<20} {'Items':<15}")
+        print(f"   {'-'*65}")
+        total_input_debug = 0
+        for comp in input_components:
+            input_mb = comp.input_size_bytes / (1024*1024)
+            total_input_debug += comp.input_size_bytes
+            print(f"   {comp.name:<30} {input_mb:>18.2f} MB {comp.items_processed:>12,}")
+        print(f"   {'-'*65}")
+        print(f"   {'TOTAL AGGREGATED INPUT':<30} {total_input_debug/(1024*1024):>18.2f} MB")
+        
         # Show input data size from report (aggregated from marked input components or first component)
-        print(f"   Input data size: {report.total_input_bytes / (1024*1024):.2f} MB")
+        print(f"\n   Input data size (from report): {report.total_input_bytes / (1024*1024):.2f} MB")
         
         # Show output size and expansion ratio if output data exists
         if report.total_output_bytes > 0:
@@ -305,7 +308,13 @@ class IngestionMonitor:
             percentage = (component.duration / report.total_duration) * 100 if report.total_duration > 0 else 0
             mb_processed = component.input_size_bytes / (1024*1024)
             avg_latency_ms = (component.duration * 1000 / component.items_processed) if component.items_processed > 0 else 0
-            print(f"   📈 {component.name}:")
+            pipeline_flags = []
+            if component.is_pipeline_input:
+                pipeline_flags.append("INPUT")
+            if component.is_pipeline_output:
+                pipeline_flags.append("OUTPUT")
+            flag_str = f" [{', '.join(pipeline_flags)}]" if pipeline_flags else ""
+            print(f"   📈 {component.name}{flag_str}:")
             print(f"      ⏱️  Duration: {component.duration:.3f}s ({percentage:.1f}% of total)")
             print(f"      🚀 Throughput: {component.throughput_mb_per_sec:.2f} MB/s")
             print(f"      📦 Items: {component.items_processed:,}")
@@ -347,41 +356,6 @@ class IngestionMonitor:
                     print(f"   {trend_desc}")
             print()
 
-# Example usage and integration helpers
-def benchmark_bm25_ingestion(bm25_db, documents: List[str]) -> IngestionReport:
-    """Benchmark BM25 ingestion with detailed component tracking."""
-    monitor = IngestionMonitor()
-    
-    # Calculate input size
-    input_size = sum(len(doc.encode('utf-8')) for doc in documents)
-    
-    with monitor.track_component("bm25_tokenization", input_size, len(documents)):
-        # Track tokenization if BM25DB exposes it
-        pass
-        
-    with monitor.track_component("bm25_indexing", input_size, len(documents)):
-        bm25_db.ingest_from_passages(documents)
-        
-    return monitor.get_performance_report()
-
-def benchmark_vector_ingestion(vector_db, documents: List[str]) -> IngestionReport:
-    """Benchmark Vector DB ingestion with detailed component tracking."""
-    monitor = IngestionMonitor()
-    
-    input_size = sum(len(doc.encode('utf-8')) for doc in documents)
-    
-    with monitor.track_component("embedding_generation", input_size, len(documents)):
-        # This would be tracked inside VectorDB if modified
-        pass
-        
-    with monitor.track_component("vector_indexing", input_size, len(documents)):
-        vector_db.ingest_from_passages(documents)
-        
-    # Track FAISS performance if accessible
-    if hasattr(vector_db, '_index') and vector_db._index:
-        monitor.track_faiss_indexing(vector_db._index, len(documents), input_size)
-        
-    return monitor.get_performance_report()
 
 if __name__ == "__main__":
     # Example usage

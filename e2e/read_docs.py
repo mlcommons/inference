@@ -331,12 +331,8 @@ class DocumentProcessor:
         
         # Initialize monitoring if benchmark mode enabled
         if self.benchmark:
-            try:
-                from ingestion_monitor import IngestionMonitor
-                self.monitor = IngestionMonitor()
-            except ImportError:
-                print("Warning: ingestion_monitor not available, benchmarking disabled")
-                self.benchmark = False
+            from ingestion_monitor import IngestionMonitor
+            self.monitor = IngestionMonitor()
     
     def get_supported_extensions(self) -> List[str]:
         """Get all supported file extensions."""
@@ -390,8 +386,7 @@ class DocumentProcessor:
 
         # Initialize monitoring if enabled
         if self.benchmark and self.monitor:
-            ingestion_ctx = self.monitor.track_ingestion().__enter__()
-            ingestion_ctx.set_item_count(len(document_files))
+            self.monitor.start_ingestion()
 
         for doc_file in tqdm(document_files, desc="Processing documents"):
             file_extension = doc_file.suffix.lower()
@@ -439,7 +434,8 @@ class DocumentProcessor:
         if self.benchmark and self.monitor:
             component_name = "html_parsing" if file_extension in ['.html', '.htm'] else "pdf_parsing"
             file_size = doc_file.stat().st_size
-            with self.monitor.track_component(component_name, input_size_bytes=file_size, items_count=1):
+            with self.monitor.track_component(component_name, input_size_bytes=file_size, 
+                                             items_count=1, is_pipeline_input=True):
                 return extractor.extract_text(str(doc_file))
         else:
             return extractor.extract_text(str(doc_file))

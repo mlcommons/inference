@@ -35,14 +35,21 @@ class VectorDB(RagDB):
         )
         self._embedding_dimension = len(self._embedding_model.embed_query("hello world"))
         
-        # Determine bytes per embedding element based on dtype (default float32 = 4 bytes)
-        # Could be float16 (2 bytes), float32 (4 bytes), or float64 (8 bytes)
-        import numpy as np
-        test_embedding = np.array(self._embedding_model.embed_query("test"))
-        self._embedding_bytes_per_element = test_embedding.itemsize
+        # Check the dtype of the embedding without using numpy
+        test_embedding_raw = self._embedding_model.embed_query("test")
+        
+        # Calculate dtype and itemsize from Python native list
+        if isinstance(test_embedding_raw, list) and len(test_embedding_raw) > 0:
+            test_element = test_embedding_raw[0]
+            embedding_dtype = type(test_element)
+            embedding_itemsize = test_element.__sizeof__()  # Size in bytes of one element
+            self._embedding_bytes_per_element = embedding_itemsize
+        else:
+            raise ValueError("Embedding query did not return a valid list of floats.")
 
-        # Reranker is already initialized in parent class if reranker_model is provided
-        # No need to initialize it again here
+        if self._benchmark:
+            print(f"   Embedding element type: {embedding_dtype}")
+            print(f"   Bytes per element: {embedding_itemsize}")
 
         # The index defines the algoriothm used for the similarity search
         self._index = faiss.IndexFlatL2(self._embedding_dimension)
@@ -171,6 +178,7 @@ class VectorDB(RagDB):
         
         if self._benchmark and self._monitor:
             embedding_bytes = len(passages) * self._embedding_dimension * self._embedding_bytes_per_element
+            
             from ingestion_monitor import ComponentMetrics
             self._monitor.components["faiss_indexing"] = ComponentMetrics(
                 name="faiss_indexing",

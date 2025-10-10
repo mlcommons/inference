@@ -15,8 +15,8 @@ class BM25DB(RagDB):
     def __init__(self, reranker_model: str = None, device: str = "auto", k1: float = None, b: float = None, method: str = None, 
                  database: str = None, delta: float = None, idf_method: str = None, dtype: str = None, 
                  backend: str = None, token_pattern: str = None, stopwords = None, stemmer = None, 
-                 lower: bool = None, show_progress: bool = None, **kwargs):
-        super().__init__(reranker_model, device)
+                 lower: bool = None, show_progress: bool = None, benchmark: bool = False, **kwargs):
+        super().__init__(reranker_model, device, benchmark)
         self._bm25_retriever = None
         self._doc_list = []
         self._passages_metadata = []
@@ -116,40 +116,86 @@ class BM25DB(RagDB):
         # Store the original stemmer type for reconstruction
         return getattr(self, '_original_stemmer_type', None)
     
+    def _calculate_index_output_size(self):
+        """Calculate the size of BM25 output data (index + passages).
+        
+        Returns the total size in bytes of:
+        - BM25 index files (sparse matrix data and vocab)
+        - Raw passage text (uncompressed, excluding metadata)
+        
+        Excludes: BM25 configuration metadata, passage metadata
+        """
+        from pathlib import Path
+        
+        if not self._database_name:
+            return 0
+        
+        total_size = 0
+        
+        # 1. Get BM25 index files size
+        index_dir = Path(self.get_data_dir(self._database_name))
+        if index_dir.exists():
+            index_files = [
+                'data.csc.index.npy',       # Sparse matrix data
+                'indices.csc.index.npy',    # Sparse matrix indices
+                'indptr.csc.index.npy',     # Sparse matrix indptr
+                'vocab.index.json',         # Vocabulary
+                'params.index.json'         # Index parameters
+            ]
+            
+            for filename in index_files:
+                file_path = index_dir / filename
+                if file_path.exists():
+                    total_size += file_path.stat().st_size
+        
+        # 2. Get raw passage text size (uncompressed, exclude metadata)
+        if hasattr(self, '_doc_list'):
+            # Sum up the byte size of all passages (UTF-8 encoded)
+            for passage in self._doc_list:
+                total_size += len(passage.encode('utf-8'))
+        
+        return total_size
+    
     def ingest(self, passages: List[str], metadatas: List[Dict[str, Any]], num_threads: int = 4):
-        """Ingest passages using BM25 indexing."""
+        """Ingest passages using BM25 indexing with performance monitoring."""
+        
+        # Start unified timer (handles both benchmark and non-benchmark modes)
+        ingestion_start = self._start_ingestion_timer()
+        
         self._doc_list = passages
         self._passages_metadata = metadatas
         self._num_threads = num_threads
+        total_chars = sum(len(passage) for passage in passages)
         
-        # Tokenize with configurable parameters
-        corpus_tokens = bm25s.tokenize(
-            passages, 
-            stopwords=self._stopwords,
-            token_pattern=self._token_pattern,
-            stemmer=self._stemmer,
-            lower=self._lower,
-            show_progress=self._show_progress
-        )
+        corpus_tokens = self._track_component("bm25_tokenization", total_chars, len(passages),
+            lambda: bm25s.tokenize(passages, stopwords=self._stopwords, 
+                                 token_pattern=self._token_pattern, stemmer=self._stemmer,
+                                 lower=self._lower, show_progress=self._show_progress),
+            is_pipeline_input=True)
         
-        # Create BM25 retriever with configurable parameters
+        # Create BM25 retriever
         self._bm25_retriever = bm25s.BM25(
-            k1=self._k1, 
-            b=self._b, 
-            method=self._method,
-            delta=self._delta,
-            idf_method=self._idf_method,
-            dtype=self._dtype,
-            backend=self._backend
+            k1=self._k1, b=self._b, method=self._method,
+            delta=self._delta, idf_method=self._idf_method,
+            dtype=self._dtype, backend=self._backend
         )
         
-        # Index with configurable progress settings
-        self._bm25_retriever.index(corpus_tokens, show_progress=self._show_progress)
+        self._track_component("bm25_indexing", total_chars, len(passages),
+            lambda: self._bm25_retriever.index(corpus_tokens, show_progress=self._show_progress),
+            is_pipeline_output=True)
+        
+        # Store ingestion metrics for later reporting (after serialization)
+        self._ingestion_start = ingestion_start
+        self._ingestion_item_count = len(passages)
+        self._ingestion_total_chars = total_chars
     
-    def ingest_from_folder(self, folder_path: str, num_threads: int = 4):
+    def ingest_from_folder(self, folder_path: str, **kwargs):
         """Ingest whole txt files from a folder instead of passages"""
         from pathlib import Path
-        from ..utils import load_url_mapping
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from utils import load_url_mapping
         
         folder_path = Path(folder_path)
         url_mapping = load_url_mapping(str(folder_path))
@@ -192,7 +238,8 @@ class BM25DB(RagDB):
         print(f"Loaded {len(doc_list)} documents from {folder_path}")
         
         # Call regular ingest method
-        self.ingest(doc_list, passage_metadata, num_threads)
+        num_threads = kwargs.get('num_threads', 4)
+        self.ingest(doc_list, passage_metadata, num_threads=num_threads, **kwargs)
 
     def lookup(self, query: str, k: int) -> List[Any]:
         """Retrieve top-k passages using BM25."""
@@ -310,6 +357,14 @@ class BM25DB(RagDB):
         print(f"BM25 database saved to {db_path} ({db_size / (1024**2):.1f} MB)")
         print(f"BM25 index saved to {bm25_dir} ({bm25_size / (1024**2):.1f} MB)")
         print(f"Total: {total_size / (1024**2):.1f} MB")
+        
+        # Update output size and report performance if benchmarking
+        if self._benchmark and self._monitor:
+            self._monitor.set_output_size_callback("bm25_indexing", self._calculate_index_output_size)
+            # Report performance after serialization so we have accurate output size
+            if hasattr(self, '_ingestion_start'):
+                self._report_performance(self._ingestion_start, self._ingestion_item_count, 
+                                        self._ingestion_total_chars, "BM25DB")
 
     def from_serialized(self, path: str):
         """Load BM25 index and metadata."""

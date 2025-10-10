@@ -304,7 +304,7 @@ class DocumentProcessor:
     """Unified document processor that handles both PDF and HTML files."""
     
     def __init__(self, preserve_tables: bool = True, preserve_lists: bool = True, 
-                 text_boundary: str = "sentence"):
+                 text_boundary: str = "sentence", benchmark: bool = False):
         """
         Initialize document processor.
         
@@ -312,6 +312,7 @@ class DocumentProcessor:
             preserve_tables: Whether to preserve table structure (HTML only)
             preserve_lists: Whether to preserve list structure (HTML only) 
             text_boundary: Text boundary optimization - "sentence" (default), "word", or "none"
+            benchmark: Enable performance monitoring
         """
         self.extractors = {
             '.pdf': PDFExtractor(),
@@ -325,6 +326,13 @@ class DocumentProcessor:
             })
         
         self.url_mapping = {}
+        self.benchmark = benchmark
+        self.monitor = None
+        
+        # Initialize monitoring if benchmark mode enabled
+        if self.benchmark:
+            from ingestion_monitor import IngestionMonitor
+            self.monitor = IngestionMonitor()
     
     def get_supported_extensions(self) -> List[str]:
         """Get all supported file extensions."""
@@ -376,50 +384,39 @@ class DocumentProcessor:
         all_passages = []
         passage_id = 0
 
+        # Initialize monitoring if enabled
+        if self.benchmark and self.monitor:
+            self.monitor.start_ingestion()
+
         for doc_file in tqdm(document_files, desc="Processing documents"):
             file_extension = doc_file.suffix.lower()
             
             if file_extension not in self.extractors:
                 continue
             
-            extractor = self.extractors[file_extension]
-            text = extractor.extract_text(str(doc_file))
-            
+            # Process single document with optional monitoring
+            text = self._process_document(doc_file, file_extension)
             if text is None:
                 continue
             
-            # Determine output filename (change extension to .txt)
-            output_filename = doc_file.stem + ".txt"
-            output_file_path = output_path / output_filename
-            
-            # Split into passages
-            if fixed_length:
-                passages = split_into_fixed_passages(text, fixed_length, fixed_overlap or 32)
-            else:
-                passages = split_into_passages(text, max_passage_length, passage_overlap)
+            # Split text into passages with optional monitoring
+            passages = self._process_text_chunking(text, fixed_length, fixed_overlap, 
+                                                 max_passage_length, passage_overlap)
             
             # Save text file
+            output_filename = doc_file.stem + ".txt"
+            output_file_path = output_path / output_filename
             with open(output_file_path, 'w', encoding='utf-8') as f:
                 f.write(text)
             
             # Add passages to collection if JSON output requested
             if json_file:
-                base_filename = get_base_filename(doc_file.name)
-                original_url = self.url_mapping.get(base_filename, "")
-                
-                for i, passage in enumerate(passages):
-                    passage_metadata = create_passage_metadata(
-                        doc_file.name, 
-                        passage_id,
-                        original_url=original_url
-                    )
-                    
-                    all_passages.append({
-                        **passage_metadata,
-                        'passage': passage,
-                    })
-                    passage_id += 1
+                passage_id = self._add_passages_to_collection(
+                    doc_file, passages, all_passages, passage_id)
 
+        # Finalize monitoring and report
+        self._report_processing_performance()
+        
         # Save JSON file if requested
         if json_file and all_passages:
             json_path = Path(json_file)
@@ -429,6 +426,62 @@ class DocumentProcessor:
                 json.dump(all_passages, f, indent=2, ensure_ascii=False)
             
             print(f"Saved {len(all_passages)} passages to {json_file}")
+    
+    def _process_document(self, doc_file: Path, file_extension: str) -> Optional[str]:
+        """Process a single document with optional monitoring."""
+        extractor = self.extractors[file_extension]
+        
+        if self.benchmark and self.monitor:
+            component_name = "html_parsing" if file_extension in ['.html', '.htm'] else "pdf_parsing"
+            file_size = doc_file.stat().st_size
+            with self.monitor.track_component(component_name, input_size_bytes=file_size, 
+                                             items_count=1, is_pipeline_input=True):
+                return extractor.extract_text(str(doc_file))
+        else:
+            return extractor.extract_text(str(doc_file))
+    
+    def _process_text_chunking(self, text: str, fixed_length: Optional[int], fixed_overlap: Optional[int],
+                              max_passage_length: int, passage_overlap: int) -> List[str]:
+        """Process text chunking with optional monitoring."""
+        def chunk_func():
+            if fixed_length:
+                return split_into_fixed_passages(text, fixed_length, fixed_overlap or 32)
+            else:
+                return split_into_passages(text, max_passage_length, passage_overlap)
+        
+        if self.benchmark and self.monitor:
+            text_size = len(text.encode('utf-8'))
+            with self.monitor.track_component("text_chunking", input_size_bytes=text_size, 
+                                             items_count=1, text_only=True) as ctx:
+                passages = chunk_func()
+                ctx.add_text_bytes(text_size)
+                return passages
+        else:
+            return chunk_func()
+    
+    def _add_passages_to_collection(self, doc_file: Path, passages: List[str], 
+                                   all_passages: List[Dict], passage_id: int) -> int:
+        """Add passages to collection and return updated passage_id."""
+        base_filename = get_base_filename(doc_file.name)
+        original_url = self.url_mapping.get(base_filename, "")
+        
+        for passage in passages:
+            passage_metadata = create_passage_metadata(
+                doc_file.name, passage_id, original_url=original_url)
+            
+            all_passages.append({
+                **passage_metadata,
+                'passage': passage,
+            })
+            passage_id += 1
+        
+        return passage_id
+    
+    def _report_processing_performance(self):
+        """Report processing performance if monitoring is enabled."""
+        if self.benchmark and self.monitor:
+            print("\n=== Document Processing Performance ===")
+            self.monitor.print_summary()
 
 
 def main():
@@ -457,13 +510,16 @@ def main():
     parser.add_argument("--text-boundary", choices=["sentence", "word", "none"], 
                        default="sentence",
                        help="Text boundary optimization: 'sentence' (default), 'word', or 'none'")
+    parser.add_argument("--benchmark", action="store_true",
+                       help="Enable performance monitoring and detailed component analysis")
 
     args = parser.parse_args()
 
     processor = DocumentProcessor(
         preserve_tables=not args.no_tables,
         preserve_lists=not args.no_lists,
-        text_boundary=args.text_boundary
+        text_boundary=args.text_boundary,
+        benchmark=args.benchmark
     )
     
     processor.process_documents(

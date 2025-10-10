@@ -67,14 +67,27 @@ class PDFExtractor(BaseDocumentExtractor):
 
 
 class HTMLExtractor(BaseDocumentExtractor):
-    """Extract text from HTML files using BeautifulSoup."""
+    """Extract text from HTML files using BeautifulSoup with focus on retrieval quality."""
     
-    def __init__(self, preserve_tables: bool = True, preserve_lists: bool = True):
-        self.preserve_tables = preserve_tables
-        self.preserve_lists = preserve_lists
+    def __init__(self, preserve_tables: bool = True, preserve_lists: bool = True, 
+                 text_boundary: str = "sentence"):
+        """
+        Initialize HTML extractor with configurable options.
         
+        Args:
+            preserve_tables: Whether to preserve table structure
+            preserve_lists: Whether to preserve list structure  
+            text_boundary: Text boundary optimization - "sentence" (default), "word", or "none"
+        """
         if BeautifulSoup is None:
             raise ImportError("BeautifulSoup is required for HTML processing. Install with: pip install beautifulsoup4")
+        
+        self.preserve_tables = preserve_tables
+        self.preserve_lists = preserve_lists
+        self.text_boundary = text_boundary
+        
+        if text_boundary not in ["sentence", "word", "none"]:
+            raise ValueError("text_boundary must be 'sentence', 'word', or 'none'")
     
     def extract_text(self, file_path: str) -> Optional[str]:
         """Extract text from a single HTML file."""
@@ -89,29 +102,31 @@ class HTMLExtractor(BaseDocumentExtractor):
             return None
     
     def extract_text_from_html(self, html_content: str) -> str:
-        """Extract text from HTML content with semantic preservation."""
-        soup = BeautifulSoup(html_content, 'html.parser')
+        """Extract clean text optimized for retrieval systems."""
+        # Use lxml parser for speed (fallback to html.parser if not available)
+        try:
+            soup = BeautifulSoup(html_content, 'lxml')
+        except:
+            soup = BeautifulSoup(html_content, 'html.parser')
         
-        # Remove script and style elements
+        # Remove noise elements completely
         for element in soup(['script', 'style', 'nav', 'header', 'footer']):
             element.decompose()
         
-        # Process the content
-        text_parts = []
+        # Remove Wikipedia-specific metadata and navigation
+        self._remove_wikipedia_metadata(soup)
         
-        # Extract main content (try common content containers first)
-        main_content = (soup.find('div', {'id': 'mw-content-text'}) or  # Wikipedia
-                       soup.find('main') or 
-                       soup.find('article') or
-                       soup.find('div', {'class': 'content'}) or
-                       soup.body or soup)
+        # Extract main content using priority order
+        main_content = self._find_main_content(soup)
         
+        # Get plain text with sentence separation
         if main_content:
-            text_parts.extend(self._extract_from_element(main_content))
+            text = main_content.get_text(separator=' ', strip=True)
+        else:
+            text = soup.get_text(separator=' ', strip=True)
         
-        # Join and clean up the text
-        full_text = ' '.join(text_parts)
-        return self._clean_text(full_text)
+        # Clean and normalize the text
+        return self._clean_text(text)
     
     def _extract_from_element(self, element) -> List[str]:
         """Extract text from an HTML element, preserving structure."""
@@ -180,17 +195,106 @@ class HTMLExtractor(BaseDocumentExtractor):
         return '\n'.join(items)
     
     def _clean_text(self, text: str) -> str:
-        """Clean and normalize extracted text."""
-        # Replace multiple whitespaces with single space
-        text = re.sub(r'\s+', ' ', text)
+        """Clean and normalize extracted text with configurable boundary optimization."""
+        # Basic normalization
+        import unicodedata
+        text = unicodedata.normalize('NFKC', text)
         
-        # Replace multiple newlines with double newline
-        text = re.sub(r'\n\s*\n\s*\n+', '\n\n', text)
+        # Replace various whitespace characters with standard space
+        text = re.sub(r'[\u00A0\u2000-\u200B\u2028\u2029]', ' ', text)
         
-        # Strip leading/trailing whitespace
-        text = text.strip()
+        # Clean up whitespace
+        text = text.strip().replace('\r', '\n')
+        text = re.sub(r' +', ' ', text)  # Multiple spaces -> single space
+        text = re.sub(r'\n+', '\n', text)  # Multiple newlines -> single newline
+        
+        # Remove empty lines and extra spacing
+        lines = [line.strip() for line in text.split('\n') if line.strip()]
+        text = '\n'.join(lines)
+        
+        # Apply boundary optimization based on setting
+        if self.text_boundary == "sentence":
+            text = self._optimize_sentence_boundaries(text)
+        elif self.text_boundary == "word":
+            text = self._optimize_word_boundaries(text)
+        # "none" - no boundary optimization
         
         return text
+    
+    def _optimize_sentence_boundaries(self, text: str) -> str:
+        """Optimize text for sentence-level splitting and retrieval."""
+        # Add space after sentence endings if missing
+        text = re.sub(r'([.!?])([A-Z])', r'\1 \2', text)
+        
+        # Handle common abbreviations that shouldn't split sentences
+        # (e.g., "Mr.", "Dr.", "etc.", "U.S.")
+        abbrev_pattern = r'\b(Mr|Mrs|Dr|Prof|etc|vs|Inc|Ltd|Corp|U\.S|U\.K|E\.g|I\.e)\.(\s+)([a-z])'
+        text = re.sub(abbrev_pattern, r'\1.\2\3', text, flags=re.IGNORECASE)
+        
+        return text
+    
+    def _optimize_word_boundaries(self, text: str) -> str:
+        """Optimize text for word-level processing and retrieval."""
+        # Ensure proper spacing around punctuation for better tokenization
+        text = re.sub(r'([.!?,:;])([A-Za-z])', r'\1 \2', text)
+        
+        # Handle hyphenated words - keep them as single tokens
+        text = re.sub(r'(\w+)-\s+(\w+)', r'\1-\2', text)
+        
+        # Normalize quotation marks and other punctuation
+        text = text.replace('"', '"').replace('"', '"')  # Smart quotes to regular quotes
+        text = text.replace(''', "'").replace(''', "'")  # Smart apostrophes to regular apostrophes
+        
+        # Ensure consistent spacing
+        text = re.sub(r'\s+', ' ', text)
+        
+        return text
+    
+    def _remove_wikipedia_metadata(self, soup):
+        """Remove Wikipedia-specific metadata and navigation elements."""
+        # Wikipedia-specific noise removal
+        selectors_to_remove = [
+            # Navigation and interface elements
+            '#mw-navigation', '.navbox', '.navigation-box', 
+            '.sidebar', '.infobox', '.ambox', '.tmbox',
+            # Edit links and metadata
+            '.mw-editsection', '.edit-section', '.editlink',
+            # References and citations (keep text but remove citation numbers)
+            'sup.reference', '.reference', '.citation',
+            # Disambiguation and hatnotes  
+            '.hatnote', '.dablink', '.rellink',
+            # Categories and external links boxes
+            '#catlinks', '.catlinks', '.external-links',
+            # Table of contents (often not needed for retrieval)
+            '#toc', '.toc',
+            # Image captions and metadata (keep main text)
+            '.thumbcaption .metadata', '.image-metadata'
+        ]
+        
+        for selector in selectors_to_remove:
+            for element in soup.select(selector):
+                element.decompose()
+    
+    def _find_main_content(self, soup):
+        """Find the main content area with fallback strategy."""
+        # Priority order for content detection
+        content_selectors = [
+            '#mw-content-text .mw-parser-output',  # Wikipedia main content
+            '#mw-content-text',                    # Wikipedia content wrapper
+            'main',                                # HTML5 main element
+            'article',                             # HTML5 article element
+            '.content',                            # Generic content class
+            '#content',                            # Generic content ID
+            'body'                                 # Last resort
+        ]
+        
+        for selector in content_selectors:
+            content = soup.select_one(selector)
+            if content:
+                return content
+        
+        # Final fallback
+        return soup
     
     def get_supported_extensions(self) -> List[str]:
         return ['.html', '.htm']
@@ -199,7 +303,16 @@ class HTMLExtractor(BaseDocumentExtractor):
 class DocumentProcessor:
     """Unified document processor that handles both PDF and HTML files."""
     
-    def __init__(self, preserve_tables: bool = True, preserve_lists: bool = True):
+    def __init__(self, preserve_tables: bool = True, preserve_lists: bool = True, 
+                 text_boundary: str = "sentence"):
+        """
+        Initialize document processor.
+        
+        Args:
+            preserve_tables: Whether to preserve table structure (HTML only)
+            preserve_lists: Whether to preserve list structure (HTML only) 
+            text_boundary: Text boundary optimization - "sentence" (default), "word", or "none"
+        """
         self.extractors = {
             '.pdf': PDFExtractor(),
         }
@@ -207,8 +320,8 @@ class DocumentProcessor:
         # Only add HTML extractor if BeautifulSoup is available
         if BeautifulSoup is not None:
             self.extractors.update({
-                '.html': HTMLExtractor(preserve_tables, preserve_lists),
-                '.htm': HTMLExtractor(preserve_tables, preserve_lists),
+                '.html': HTMLExtractor(preserve_tables, preserve_lists, text_boundary),
+                '.htm': HTMLExtractor(preserve_tables, preserve_lists, text_boundary),
             })
         
         self.url_mapping = {}
@@ -341,12 +454,16 @@ def main():
                        help="Don't preserve table structure (HTML only)")
     parser.add_argument("--no-lists", action="store_true", 
                        help="Don't preserve list structure (HTML only)")
+    parser.add_argument("--text-boundary", choices=["sentence", "word", "none"], 
+                       default="sentence",
+                       help="Text boundary optimization: 'sentence' (default), 'word', or 'none'")
 
     args = parser.parse_args()
 
     processor = DocumentProcessor(
         preserve_tables=not args.no_tables,
-        preserve_lists=not args.no_lists
+        preserve_lists=not args.no_lists,
+        text_boundary=args.text_boundary
     )
     
     processor.process_documents(

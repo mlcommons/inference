@@ -301,8 +301,9 @@ def define_env(env):
                                 content += f"{cur_space3}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for {scenario_text}.\n\n"
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
-                                content += f"{cur_space3}* `--docker_mlc_repo=<Custom MLC GitHub repo URL in username@repo format>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
-                                content += f"{cur_space3}* `--docker_mlc_repo_branch=<Custom MLC GitHub repo Branch>`: to checkout a custom branch of the cloned cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_privileged`: to launch the container in privileged mode\n\n"
+                                content += f"{cur_space3}* `--docker_mlc_repo=<Custom MLC GitHub repo URL in username@repo format>`: to use a custom fork of mlperf-automations repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_mlc_repo_branch=<Custom MLC GitHub repo Branch>`: to checkout a custom branch of the cloned mlperf-automations repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"
 
                                 if implementation.lower() == "nvidia":
@@ -486,7 +487,7 @@ def define_env(env):
             # disk space
             ds = {
                 "dlrm": "500GB",
-                "pointpainting": "500GB",
+                "pointpainting": "950GB",
                 "llama2-70b": "900GB",
                 "llama3_1-405b": "2.3TB",
                 "mixtral": "100GB",
@@ -548,11 +549,35 @@ def define_env(env):
             pre_space = pre_space + " "
         pre_space += " "
         # pre_space = "                "
+
+        # provide batchsize examples for NVIDIA implementation
+        nv_batch_size_examples = {
+            "llama2-70b": "--batch_size.llama2-70b:1024",
+            "3d-unet": "--batch_size.3d-unet:2",
+            "dlrm-v2": "--batch_size.dlrm-v2:600000",
+            "gptj": "--batch_size.gptj:192",
+            "llama3.1-405b": "--batch_size.llama3.1-405b:128",
+            "mixtral-8x7b": "--batch_size.mixtral-8x7b:4096",
+            "resnet50": "--batch_size.resnet50:8",
+            "retinanet": "--batch_size.retinanet:8",
+            "rgat": "--batch_size.rgat:6144",
+            "sdxl": "--batch_size.sdxl:clip1:1##clip2:2##unet:2##vae:1"
+            # "llama3_1-8b": "--batch_size.llama3_1-8b:6000",
+            # "deepseek-r1": "--batch_size.deepseek-r1:6000",
+            # "deepseek-r1": "--batch_size.deepseek-r1:6000",
+        }
+        nv_batch_size_example_text = ""
+        if implementation.lower() == "nvidia":
+            for key, example in nv_batch_size_examples.items():
+                if key in model.lower():
+                    nv_batch_size_example_text = f"Example: `{example}`"
+                    break
+
         info += f"\n{pre_space}!!! tip\n\n"
         info += f"{pre_space}    - Compliance runs can be enabled by adding `--compliance=yes`.\n\n"
         if model.lower() not in ["pointpainting"]:
             info += f"{pre_space}    - Number of threads could be adjusted using `--threads=#`, where `#` is the desired number of threads. This option works only if the implementation in use supports threading.\n\n"
-            info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
+            info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size. {nv_batch_size_example_text}\n\n"
         elif model.lower() in ["pointpainting"]:
             info += f"{pre_space}    - The maximum duration for a performance run can be disabled by using `--env.MLC_MLPERF_USE_MAX_DURATION=no`.\n\n"
             info += f"{pre_space}    - In valid execution mode, the query count for performance mode can be adjusted using `--env.MLC_MLPERF_LOADGEN_QUERY_COUNT=<query_count>`.\n\n"
@@ -594,6 +619,7 @@ def define_env(env):
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"
+                info += f"{pre_space}    - If you encounter an error related to ulimit or max locked memory during the run_harness step, please refer to the [this](https://github.com/mlcommons/mlperf-automations/issues/664) issue for details and resolution steps.\n\n"
         else:
             if model == "sdxl":
                 info += f"\n{pre_space}!!! tip\n\n"

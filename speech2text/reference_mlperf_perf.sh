@@ -22,18 +22,14 @@
 #/bin/bash
 
 echo "Time Start: $(date +%s)"
-export PREFIX=$1
-export WORKSPACE_DIR="./"
-export DATA_DIR="whisper/dataset"
+export WORKSPACE_DIR="/workspace"
+export DATA_DIR="/data"
 export MANIFEST_FILE="${DATA_DIR}/dev-all-repack.json"
-export RUN_LOGS=${WORKSPACE_DIR}/run_outputs/offline/${PREFIX}
+export RUN_LOGS=${WORKSPACE_DIR}/run_output
 export SCENARIO="Offline"
 
-mkdir -p ${RUN_LOGS}
-
 export NUM_CORES=$(($(lscpu | grep "Socket(s):" | awk '{print $2}') * $(lscpu | grep "Core(s) per socket:" | awk '{print $4}')))
-#export NUM_NUMA_NODES=$(lscpu | grep "NUMA node(s)" | awk '{print $NF}')
-export NUM_NUMA_NODES=1
+export NUM_NUMA_NODES=$(lscpu | grep "NUMA node(s)" | awk '{print $NF}')
 export CORES_PER_INST=$((${NUM_CORES} / ${NUM_NUMA_NODES}))
 export OMP_NUM_THREADS=${CORES_PER_INST}
 export INSTS_PER_NODE=1
@@ -41,18 +37,15 @@ export NUM_INSTS=$((${NUM_NUMA_NODES} * ${INSTS_PER_NODE}))
 
 export START_CORES=$(lscpu | grep "NUMA node.* CPU.*" | awk "{print \$4}" | cut -d "-" -f 1 | paste -s -d ',')
 
-echo "NUM_CORES: ${NUM_CORES}"
-echo "NUM_NUMA_NODES: ${NUM_NUMA_NODES}"
 echo "CORES_PER_INST: ${CORES_PER_INST}"
 echo "NUM_INSTS: ${NUM_INSTS}"
 echo "START_CORES: ${START_CORES}"
 
 python reference_mlperf.py \
-    --model_path whisper/model/ \
     --dataset_dir ${DATA_DIR} \
     --manifest ${MANIFEST_FILE} \
     --scenario ${SCENARIO} \
     --log_dir ${RUN_LOGS} \
-    --num_workers ${NUM_INSTS} >& ${RUN_LOGS}/output.log
+    --num_workers ${NUM_INSTS} 
 
 echo "Time Stop: $(date +%s)"

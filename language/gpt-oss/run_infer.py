@@ -48,11 +48,11 @@ def get_tokenizer():
 
 class SGLangClient:
     def __init__(self,
-            server_url: str = "http://localhost:30000",
-            temperature: float = 0.001,
-            top_k: int = 1,
-            timeout: int = 1200
-        ):
+                 server_url: str = "http://localhost:30000",
+                 temperature: float = 0.001,
+                 top_k: int = 1,
+                 timeout: int = 1200
+                 ):
         self.base_url = server_url
         self.session = requests.Session()
         self.temperature = temperature
@@ -130,7 +130,11 @@ def send_single_request(args_tuple):
     input_ids, max_tokens, server_url, sample_id, temperature, top_k, timeout = args_tuple
 
     # Create a new client for this process
-    client = SGLangClient(server_url=server_url, temperature=temperature, top_k=top_k, timeout=timeout)
+    client = SGLangClient(
+        server_url=server_url,
+        temperature=temperature,
+        top_k=top_k,
+        timeout=timeout)
 
     try:
         response = client.send_request(input_ids, max_tokens=max_tokens)
@@ -149,7 +153,8 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
 
     # Prepare arguments for multiprocessing
     args_list = [
-        (row['tok_input'], max_tokens, server_url, idx, temperature, top_k, timeout)
+        (row['tok_input'], max_tokens, server_url,
+         idx, temperature, top_k, timeout)
         for idx, row in tokenized_df.iterrows()
     ]
 
@@ -243,7 +248,8 @@ def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]
     for i, (response, response_ids) in enumerate(
             zip(responses, response_ids)):
         try:
-            output_token_length = response["meta_info"]["completion_tokens"] if "meta_info" in response else len(response_ids)
+            output_token_length = response["meta_info"]["completion_tokens"] if "meta_info" in response else len(
+                response_ids)
             output_token_lengths.append(output_token_length)
         except Exception as e:
             logger.warning(
@@ -329,7 +335,11 @@ def main():
 
     # Test connection
     logger.info(f"Testing server connection to {args.server_url}...")
-    test_client = SGLangClient(server_url=args.server_url, temperature=args.temperature, top_k=args.top_k, timeout=args.timeout)
+    test_client = SGLangClient(
+        server_url=args.server_url,
+        temperature=args.temperature,
+        top_k=args.top_k,
+        timeout=args.timeout)
     test_response = test_client.send_request(input_ids=[1, 2, 3], max_tokens=5)
     if "error" in test_response:
         logger.error(f"Server connection failed: {test_response['error']}")

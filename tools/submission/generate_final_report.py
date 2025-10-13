@@ -22,7 +22,7 @@ def get_args():
     parser.add_argument('--version', default='5.1', help='mlperf version')
     parser.add_argument(
         '--repository',
-        default='submissions_inference_5.1',
+        default='submissions_inference_v5.1',
         help='mlperf repository')
     parser.add_argument(
         '--repository-owner',
@@ -142,6 +142,7 @@ def main():
             "3d-unet-99",
             "3d-unet-99.9",
             "llama3.1-8b",
+            "llama3.1-8b-edge",
             "llama2-70b-99",
             "llama2-70b-99.9",
             "stable-diffusion-xl",
@@ -223,9 +224,9 @@ def main():
                 "llama2-70b-99.9": ["Server", "Offline", "Interactive"],
                 "mixtral-8x7b": ["Server", "Offline"],
                 "rgat": ["Offline"],
-                "llama3.1-405b": ["Offline", "Server"],
+                "llama3.1-405b": ["Server", "Offline", "Interactive"],
                 "pointpainting": [],
-                "llama3.1-8b": ["Server", "Offline"],
+                "llama3.1-8b": ["Server", "Offline", "Interactive"],
                 "deepseek-r1": ["Server", "Offline"],
                 "whisper": ["Offline"],
             },

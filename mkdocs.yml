@@ -29,10 +29,10 @@ nav:
       - Image Classification:
           - ResNet50: benchmarks/image_classification/resnet50.md
       - Text to Image:
-          - Stable Diffusion:
-              - Run Commands: benchmarks/text_to_image/sdxl.md
-              - Reproducibility:
-                  - SCC24: benchmarks/text_to_image/reproducibility/scc24.md
+          - Stable Diffusion: 
+            - Run Commands: benchmarks/text_to_image/sdxl.md
+            - External Use:
+              - SCC24 Guide: benchmarks/text_to_image/reproducibility/scc24.md
       - 2D Object Detection:
           - RetinaNet: benchmarks/object_detection/retinanet.md
       - Automotive:
@@ -41,18 +41,22 @@ nav:
       - Medical Imaging:
           - 3d-unet: benchmarks/medical_imaging/3d-unet.md
       - Language Processing:
-        - Bert-Large:
-          - Run Commands: benchmarks/language/bert.md
-          - Reproducibility:
-            - IndySCC24: benchmarks/language/reproducibility/indyscc24-bert.md
+        - Bert-Large: benchmarks/language/bert.md
         - GPT-J: benchmarks/language/gpt-j.md
-        - LLAMA2-70B: benchmarks/language/llama2-70b.md
+        - LLAMA2-70B: 
+          - Run Commands: benchmarks/language/llama2-70b.md
+          - External Use:
+            - SCC25 Guide: benchmarks/language/scc25_guide/scc25.md
         - LLAMA3-405B: benchmarks/language/llama3_1-405b.md
+        - LLAMA3-8B: benchmarks/language/llama3_1-8b.md
         - MIXTRAL-8x7B: benchmarks/language/mixtral-8x7b.md
+        - DeepSeek-R1: benchmarks/language/deepseek-r1.md
       - Recommendation:
         - DLRM-v2: benchmarks/recommendation/dlrm-v2.md
       - Graph Neural Networks:
         - R-GAT: benchmarks/graph/rgat.md
+      - Speech to Text:
+        - Whisper: benchmarks/speech_to_text/whisper.md
   - Install MLCFlow:
     - install/index.md
   - Submission:

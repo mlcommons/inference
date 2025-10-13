@@ -437,15 +437,15 @@ MODEL_CONFIG = {
             ),
             "llama3.1-8b-edge": (
                 "ROUGE1",
-                38.7792 * 0.99,
+                39.06 * 0.99,
                 "ROUGE2",
-                15.9075 * 0.99,
+                16.1147 * 0.99,
                 "ROUGEL",
-                24.4957 * 0.99,
+                24.6375 * 0.99,
                 "ROUGELSUM",
-                35.793 * 0.99,
+                36.124 * 0.99,
                 "GEN_LEN",
-                8167644 * 0.9,
+                3051113 * 0.9,
             ),
             "llama2-70b-99": (
                 "ROUGE1",
@@ -497,8 +497,8 @@ MODEL_CONFIG = {
             ),
             "rgat": ("acc", 0.7286 * 0.99),
             "pointpainting": ("mAP", 0.5425 * 0.999),
-            "deepseek-r1": ("exact_match", 0.99 * 81.6773, "TOKENS_PER_SAMPLE", 0.9 * 4043.449),
-            "whisper": ("ACCURACY", (100.0-2.0671) * 0.99),
+            "deepseek-r1": ("exact_match", 0.99 * 81.3582, "TOKENS_PER_SAMPLE", 0.9 * 3886.2274),
+            "whisper": ("ACCURACY", (100.0 - 2.0671) * 0.99),
         },
         "accuracy-upper-limit": {
             "stable-diffusion-xl": (
@@ -512,8 +512,8 @@ MODEL_CONFIG = {
             "mixtral-8x7b": ("TOKENS_PER_SAMPLE", 145.9 * 1.1),
             "llama3.1-405b": ("TOKENS_PER_SAMPLE", 684.68 * 1.1),
             "llama3.1-8b": ("GEN_LEN", 8167644 * 1.1),
-            "llama3.1-8b-edge": ("GEN_LEN", 8167644 * 1.1),
-            "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 4043.449)
+            "llama3.1-8b-edge": ("GEN_LEN", 3051113 * 1.1),
+            "deepseek-r1": ("TOKENS_PER_SAMPLE", 1.1 * 3886.2274)
         },
         "accuracy-delta-perc": {
             "stable-diffusion-xl": {"CLIP_SCORE": 1, "FID_SCORE": 2}
@@ -726,6 +726,7 @@ SCENARIO_MAPPING = {
     "multistream": "MultiStream",
     "server": "Server",
     "offline": "Offline",
+    "interactive": "Interactive",
 }
 
 RESULT_FIELD = {
@@ -800,6 +801,7 @@ RESULT_FIELD_BENCHMARK_OVERWRITE = {
         },
         "llama3.1-8b-edge": {
             "Offline": "result_tokens_per_second",
+            "SingleStream": "result_90.00_percentile_latency_ns",
         },
         "mixtral-8x7b": {
             "Offline": "result_tokens_per_second",
@@ -1486,8 +1488,9 @@ def check_accuracy_dir(config, model, path, verbose):
 
 def extra_check_llm(mlperf_log, scenario, model):
     if mlperf_log["requested_use_token_latencies"]:
-        if scenario == "Offline":
-            # For offline no further checks are necessary
+        if scenario not in ["Server", "Interactive"]:
+            # For offline, singlestream and multistream no further checks are
+            # necessary
             return True
         else:
             limits = LLM_LATENCY_LIMITS[model][scenario]
@@ -1864,7 +1867,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
     else:
         avg_power = sum(power_list) / len(power_list)
         power_duration = (power_end - power_begin).total_seconds()
-        if scenario_fixed in ["Offline", "Server"]:
+        if scenario_fixed in ["Offline", "Server", "Interactive"]:
             # In Offline and Server scenarios, the power metric is in W.
             power_metric = avg_power
             avg_power_efficiency = res / avg_power
@@ -1887,7 +1890,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                    ) and scenario in ["SingleStream"]:
+                ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -2185,7 +2188,7 @@ def check_results_dir(
                     inferred,
                     power_metric > 0,
                     unit,
-                    '"' + weight_data_types + '"',
+                    '"' + str(weight_data_types).replace("\"", "'") + '"',
                 )
             )
 
@@ -2865,7 +2868,7 @@ def check_results_dir(
                                 required_scenarios,
                             )
 
-                    if "Server" in optional_scenarios and "Interactive" in optional_scenarios:
+                    if is_closed_or_network and "Server" in optional_scenarios and "Interactive" in optional_scenarios:
                         results[name] = None
                         log.error(
                             "%s does not have all required scenarios, one of [Server, Interactive] is required",
@@ -3202,7 +3205,7 @@ def check_compliance_acc_dir(test_dir, model, config):
                             break
                         else:
                             required_delta_perc = config.get_delta_perc(
-                                model, acc_type[0]
+                                model, acc_type
                             )
                             delta_perc = (
                                 abs(
@@ -3281,21 +3284,27 @@ def check_compliance_dir(
 
     if model in [
         "llama3.1-8b",
-        "llama3.1-8b-edge"
+        "llama3.1-8b-edge",
         "llama2-70b-99",
         "llama2-70b-99.9",
         "mixtral-8x7b",
         "llama3.1-405b",
-        "deepseek-r1",
+        "deepseek-r1"
     ]:
         test_list.remove("TEST01")
 
+    # TODO: Make interactive a scenario and remove these.
     if model in ["llama2-70b-interactive-99",
-                 "llama2-70b-interactive-99.9"] and config.version in ["v5.0"]:
+                 "llama2-70b-interactive-99.9",
+                 "llama3.1-8b-interactive",
+                 "llama3.1-405b-interactive"]:
         test_list.remove("TEST01")
 
     if model in ["llama2-70b-99", "llama2-70b-99.9",
-                 "mixtral-8x7b", "llama3.1-405b", "llama3.1-8b", "deepseek-r1"]:
+                 "mixtral-8x7b", "llama3.1-405b", "llama3.1-8b", "deepseek-r1",
+                 "llama2-70b-interactive-99", "llama2-70b-interactive-99.9",
+                 "llama3.1-8b-interactive", "llama3.1-405b-interactive",
+                 ]:
         test_list.append("TEST06")
 
     if test_list and not os.path.exists(compliance_dir):

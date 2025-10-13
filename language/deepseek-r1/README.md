@@ -1,4 +1,10 @@
-# Mlperf Inference DeepSeek Reference Implementation
+# MLPerf Inference DeepSeek Reference Implementation
+
+## Automated command to run the benchmark via MLCFlow
+
+Please see the [new docs site](https://docs.mlcommons.org/inference/benchmarks/language/deepseek-r1/) for an automated way to run this benchmark across different available implementations and do an end-to-end submission with or without docker.
+
+You can also do pip install mlc-scripts and then use `mlcr` commands for downloading the model and datasets using the commands given in the later sections.
 
 ## Model & Dataset Download
 
@@ -6,6 +12,22 @@
 
 - DeepSeek-R1 model is automatically downloaded as part of setup
 - Checkpoint conversion is done transparently when needed.
+
+**Using the MLC R2 Downloader**
+
+Download the model using the MLCommons R2 Downloader:
+
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1-0528.uri
+```
+
+To specify a custom download directory, use the `-d` flag:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  -d /path/to/download/directory \
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1-0528.uri
+```
 
 ## Dataset Download
 
@@ -17,33 +39,40 @@ The dataset is an ensemble of the datasets: AIME, MATH500, gpqa, MMLU-Pro, livec
 - MMLU-Pro: [MIT](https://opensource.org/license/mit)
 - livecodebench(code_generation_lite): [CC](https://creativecommons.org/share-your-work/cclicenses/)
 
+### Preprocessed & Calibration
+
+**Using the MLC R2 Downloader**
+
+Download the full preprocessed dataset and calibration dataset using the MLCommons R2 Downloader:
+
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+-d ./ https://inference.mlcommons-storage.org/metadata/deepseek-r1-datasets-fp8-eval.uri
+```
+
+This will download the full preprocessed dataset file (`mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl`) and the calibration dataset file (`mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl`).
+
+To specify a custom download directory, use the `-d` flag:
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
+  -d /path/to/download/directory \
+  https://inference.mlcommons-storage.org/metadata/deepseek-r1-datasets-fp8-eval.uri
+```
+
 ### Preprocessed
 
-You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
-
-To run Rclone on Windows, you can download the executable [here](https://rclone.org/install/#windows).
-To install Rclone on Linux/macOS/BSD systems, run:
-```
-sudo -v ; curl https://rclone.org/install.sh | sudo bash
-```
-Once Rclone is installed, run the following command to authenticate with the bucket:
-```
-rclone config create mlc-inference s3 provider=Cloudflare access_key_id=f65ba5eef400db161ea49967de89f47b secret_access_key=fbea333914c292b854f14d3fe232bad6c5407bf0ab1bebf78833c2b359bdfd2b endpoint=https://c2686074cb2caf5cbaf6d134bdba8b47.r2.cloudflarestorage.com
-```
-You can then navigate in the terminal to your desired download directory and run the following command to download the dataset:
+**Using MLCFlow Automation**
 
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/deepseek_r1/mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl ./ -P
+mlcr get,preprocessed,dataset,deepseek-r1,_validation,_mlc,_r2-downloader --outdirname=<path to download> -j
 ```
 
 ### Calibration
 
-Download and install Rclone as described in the previous section.
-
-Then navigate in the terminal to your desired download directory and run the following command to download the dataset:
+**Using MLCFlow Automation**
 
 ```
-rclone copy mlc-inference:mlcommons-inference-wg-public/deepseek_r1/mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl ./ -P
+mlcr get,preprocessed,dataset,deepseek-r1,_calibration,_mlc,_r2-downloader --outdirname=<path to download> -j
 ```
 
 ## Docker
@@ -94,7 +123,7 @@ The setup script creates a virtual environment and configures it differently bas
 
 ### PyTorch Backend (Distributed)
 
-> ⚠️ **IMPORTANT NOTE**: The PyTorch reference implementation takes approximately 8 days to run on an H200x8 system. This is because large max-OSL (32K) limits concurrency (max-BS=16), and unoptimized pytorch forward and decode logics.
+> ⚠️ **IMPORTANT NOTE**: The PyTorch reference implementation takes approximately upto 8 days to run on an H200x8 system. This is because large max-OSL (20K) limits concurrency (max-BS=16), and unoptimized pytorch forward and decode logics.
 
 PyTorch backend uses distributed execution with `torchrun` and `run_eval_mpi.py`:
 
@@ -179,6 +208,14 @@ The following table shows which backends support different evaluation and MLPerf
 
 ## Accuracy Evaluation
 
+**Using MLCFlow Automation**
+
+```
+mlcr run,accuracy,mlperf,_dataset_deepseek-r1 --result_dir=<Path to directory where files are generated after the benchmark run>
+```
+
+**Using Native method**
+
 Accuracy evaluation is handled uniformly across all backends:
 
 ```bash
@@ -192,8 +229,8 @@ Pytorch reference scores:
 
 ```bash
 Evaluation Results: {
-  "mean-accuracy": 81.67730173199635,
-  "mean-output-tok-len": 4043.449863263446,
+  "mean-accuracy": 81.3582,
+  "mean-output-tok-len": 3886.2274,
   "num-samples": 4388
 }
 ```

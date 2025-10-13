@@ -616,11 +616,11 @@ void PerformanceSummary::LogSummary(AsyncSummary& summary) {
                 lp.sample_latency);
       }
       summary("");
-      summary("Min Time to Output Token (ns)                : ",
+      summary("Min Time per Output Token (ns)                : ",
               time_per_output_token_min);
-      summary("Max Time to Output Token (ns)                : ",
+      summary("Max Time per Output Token (ns)                : ",
               time_per_output_token_max);
-      summary("Mean Time to Output Token (ns)               : ",
+      summary("Mean Time per Output Token (ns)               : ",
               time_per_output_token_mean);
       for (auto& lp : tpot_percentiles) {
         summary(DoubleToString(lp.percentile * 100) +

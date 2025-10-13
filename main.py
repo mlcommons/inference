@@ -28,18 +28,21 @@ def define_env(env):
         content = ""
 
         execution_envs = ["Docker", "Native"]
+        run_modes = ["performance-only", "accuracy-only"]
         code_version = "r5.0-dev"
         implementation_run_options = []
 
         if model == "rnnt":
             code_version = "r4.0"
+        if "gpt" in model:
+            code_version = "r5.0-dev"
         elif implementation == "intel":
             code_version = "r4.1-dev"
 
         if implementation == "reference":
             # Tip
-            if model != "rnnt":
-                code_version = "r5.0-dev"
+            if model not in ["rnnt", "gptj-99", "gptj-99.9"]:
+                code_version = "r5.1-dev"
             if "99.9" not in model and implementation_tips:
                 content += f"\n{pre_space}!!! tip\n\n"
                 content += f"{pre_space}    - MLCommons reference implementations are only meant to provide a rules compliant reference implementation for the submitters and in most cases are not best performing. If you want to benchmark any system, it is advisable to use the vendor MLPerf implementation for that system like Nvidia, Intel etc.\n\n"
@@ -54,12 +57,19 @@ def define_env(env):
                     frameworks = ["Onnxruntime", "Pytorch"]
                 elif "bert" in model.lower():
                     frameworks = ["Pytorch", "Deepsparse"]
-                elif "llama3" in model.lower():
-                    frameworks = ["Pytorch"]
+                elif "whisper" in model.lower():
+                    frameworks = ["vLLM"]
+                elif "deepseek" in model.lower():
+                    frameworks = ["vLLM", "Pytorch", "SGLang"]
+                elif "llama3_1-8b" in model.lower():
+                    frameworks = ["vLLM"]
                 else:
                     frameworks = ["Pytorch"]
 
         elif implementation == "nvidia":
+            if model in ["retinanet", "resnet50",
+                         "3d-unet-99", "3d-unet-99.9", "llama2-70b-99", "llama2-70b-99.9"]:
+                code_version = "r5.1-dev"
             if model in ["mixtral-8x7b"]:
                 return pre_space + "    WIP"
             devices = ["CUDA"]
@@ -130,12 +140,7 @@ def define_env(env):
                 categories = ["Datacenter"]
             elif model.lower() in ["pointpainting"]:
                 categories = ["Edge"]
-            elif (
-                "dlrm" in model.lower()
-                or "llama2" in model.lower()
-                or "mixtral" in model.lower()
-                or "llama3" in model.lower()
-            ):
+            elif model.lower() in ["bert-99.9", "dlrm", "llama2", "mixtral", "llama3", "deepseek-r1"]:
                 categories = ["Datacenter"]
             else:
                 categories = ["Edge", "Datacenter"]
@@ -153,8 +158,12 @@ def define_env(env):
                     scenarios.append("MultiStream")
                 if model.lower() in ["pointpainting"]:
                     scenarios.remove("Offline")
+                if model.lower() in ["whisper"]:
+                    scenarios.remove("SingleStream")
             elif category == "Datacenter":
                 scenarios = ["Offline", "Server"]
+                if model.lower() in ["whisper"]:
+                    scenarios.remove("Server")
             if fixed_scenarios:
                 scenarios = [
                     scenario for scenario in scenarios if scenario in fixed_scenarios]
@@ -164,7 +173,7 @@ def define_env(env):
             cur_space = pre_space + "    "
             scenarios_string = ", ".join(scenarios)
 
-            content += f"{cur_space}### {category} category \n\n{cur_space} In the {category.lower()} category, {model} has {scenarios_string} scenarios and all the scenarios are mandatory for a closed division submission.\n\n"
+            content += f"""{cur_space}### {category} category \n\n{cur_space} In the {category.lower()} category, {model} has {scenarios_string} scenario{"s" if len(scenarios)>1 else ""} and {"all of the scenarios are" if len(scenarios)>1 else "the scenario is"}  mandatory for a closed division submission.\n\n"""
 
             for framework in frameworks:
                 cur_space1 = cur_space + "    "
@@ -178,11 +187,12 @@ def define_env(env):
                     cur_space2 = cur_space1 + "    "
                     cur_space3 = cur_space2 + "    "
                     cur_space4 = cur_space3 + "    "
+                    cur_space5 = cur_space4 + "    "
 
                     content += f"{cur_space1}=== \"{device}\"\n"
                     content += f"{cur_space2}##### {device} device\n\n"
 
-                    # minimum system requirements
+                    # get minimum system requirements
                     content += get_min_system_requirements(
 
                         cur_space2, model, implementation, device
@@ -200,7 +210,7 @@ def define_env(env):
                         content += f'{cur_space2}=== "{execution_env}"\n'
                         content += f"{cur_space3}###### {execution_env} Environment\n\n"
                         # ref to MLCFlow installation
-                        content += f"{cur_space3}Please refer to the [installation page](site:inference/install/) to install MLCFlow for running the automated benchmark commands.\n\n"
+                        content += f"{cur_space3}Please refer to the [installation page](site:install/) to install MLCFlow for running the automated benchmark commands.\n\n"
                         test_query_count = get_test_query_count(
 
                             model, implementation, device.lower()
@@ -291,12 +301,15 @@ def define_env(env):
                                 content += f"{cur_space3}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for {scenario_text}.\n\n"
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
-                                content += f"{cur_space3}* `--docker_mlc_repo=<Custom MLC GitHub repo URL in username@repo format>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
-                                content += f"{cur_space3}* `--docker_mlc_repo_branch=<Custom MLC GitHub repo Branch>`: to checkout a custom branch of the cloned cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_privileged`: to launch the container in privileged mode\n\n"
+                                content += f"{cur_space3}* `--docker_mlc_repo=<Custom MLC GitHub repo URL in username@repo format>`: to use a custom fork of mlperf-automations repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_mlc_repo_branch=<Custom MLC GitHub repo Branch>`: to checkout a custom branch of the cloned mlperf-automations repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"
 
                                 if implementation.lower() == "nvidia":
                                     content += f"{cur_space3}* `--gpu_name=<Name of the GPU>` : The GPUs with supported configs in MLC are `orin`, `rtx_4090`, `rtx_a6000`, `rtx_6000_ada`, `l4`, `t4`and `a100`. For other GPUs, default configuration as per the GPU memory will be used.\n"
+                                    if "llama2-70b" in model.lower():
+                                        content += f"{cur_space3}* Add `--adr.llama2-model.tags=_pre-quantized` to use the Nvidia quantized models with the available in the MLC Storage. These models were quantized with three different configurations of tensor parallelism and pipeline parallelism: TP1–PP2, TP2–PP1, and TP1–PP1. The appropriate model will be automatically selected based on the values provided for `--tp_size` and `--pp_size` in run command. By default tp size of 2 and pp size of 1 would be used.\n"
 
                                 if device.lower() not in ["cuda"]:
                                     content += f"{cur_space3}* `--docker_os=ubuntu`: ubuntu and rhel are supported. \n"
@@ -365,25 +378,27 @@ def define_env(env):
 
                         for scenario in scenarios:
                             content += f"{cur_space3}=== \"{scenario}\"\n{cur_space4}###### {scenario}\n\n"
-                            run_cmd = mlperf_inference_run_command(
-                                spaces + 21,
-                                model,
-                                implementation,
-                                framework.lower(),
-                                category.lower(),
-                                scenario,
-                                device.lower(),
-                                final_run_mode,
-                                test_query_count,
-                                False,
-                                skip_test_query_count,
-                                scenarios,
-                                code_version,
-                                extra_variation_tags,
-                                extra_input_string,
-                            )
-                            content += run_cmd
-                            # content += run_suffix
+                            for run_mode in run_modes:
+                                content += f"{cur_space4}=== \"{run_mode}\"\n{cur_space5}###### {run_mode}\n\n"
+                                run_cmd = mlperf_inference_run_command(
+                                    spaces + 25,
+                                    model,
+                                    implementation,
+                                    framework.lower(),
+                                    category.lower(),
+                                    scenario,
+                                    device.lower(),
+                                    final_run_mode,
+                                    test_query_count,
+                                    False,
+                                    skip_test_query_count,
+                                    scenarios,
+                                    code_version,
+                                    extra_variation_tags + f",_{run_mode}",
+                                    extra_input_string,
+                                )
+                                content += run_cmd
+                                # content += run_suffix
 
                         if len(scenarios) > 1:
                             content += f"{cur_space3}=== \"All Scenarios\"\n{cur_space4}###### All Scenarios\n\n"
@@ -472,8 +487,8 @@ def define_env(env):
             # disk space
             ds = {
                 "dlrm": "500GB",
-                "pointpainting": "500GB",
-                "llama2-70b": "600GB",
+                "pointpainting": "950GB",
+                "llama2-70b": "900GB",
                 "llama3_1-405b": "2.3TB",
                 "mixtral": "100GB",
                 "retinanet": "200GB",
@@ -490,7 +505,12 @@ def define_env(env):
                     disk_space = ds[key]
                     break
 
+        if "llama2" in model.lower():
+            disk_space = f" 900GB for manual execution of {'reference' if implementation.lower() == 'reference' else 'vendor'} implementation and 1.5TB for automated run through MLC-Scripts"
+
+        if implementation.lower() == "reference" or "llama2" in model.lower():
             min_sys_req_content += f"{spaces}* **Disk Space**: {disk_space}\n\n"
+
         # System memory
         if "dlrm" in model:
             system_memory = "512GB"
@@ -529,17 +549,41 @@ def define_env(env):
             pre_space = pre_space + " "
         pre_space += " "
         # pre_space = "                "
+
+        # provide batchsize examples for NVIDIA implementation
+        nv_batch_size_examples = {
+            "llama2-70b": "--batch_size.llama2-70b:1024",
+            "3d-unet": "--batch_size.3d-unet:2",
+            "dlrm-v2": "--batch_size.dlrm-v2:600000",
+            "gptj": "--batch_size.gptj:192",
+            "llama3.1-405b": "--batch_size.llama3.1-405b:128",
+            "mixtral-8x7b": "--batch_size.mixtral-8x7b:4096",
+            "resnet50": "--batch_size.resnet50:8",
+            "retinanet": "--batch_size.retinanet:8",
+            "rgat": "--batch_size.rgat:6144",
+            "sdxl": "--batch_size.sdxl:clip1:1##clip2:2##unet:2##vae:1"
+            # "llama3_1-8b": "--batch_size.llama3_1-8b:6000",
+            # "deepseek-r1": "--batch_size.deepseek-r1:6000",
+            # "deepseek-r1": "--batch_size.deepseek-r1:6000",
+        }
+        nv_batch_size_example_text = ""
+        if implementation.lower() == "nvidia":
+            for key, example in nv_batch_size_examples.items():
+                if key in model.lower():
+                    nv_batch_size_example_text = f"Example: `{example}`"
+                    break
+
         info += f"\n{pre_space}!!! tip\n\n"
         info += f"{pre_space}    - Compliance runs can be enabled by adding `--compliance=yes`.\n\n"
         if model.lower() not in ["pointpainting"]:
             info += f"{pre_space}    - Number of threads could be adjusted using `--threads=#`, where `#` is the desired number of threads. This option works only if the implementation in use supports threading.\n\n"
-            info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size.\n\n"
+            info += f"{pre_space}    - Batch size could be adjusted using `--batch_size=#`, where `#` is the desired batch size. This option works only if the implementation in use is supporting the given batch size. {nv_batch_size_example_text}\n\n"
         elif model.lower() in ["pointpainting"]:
             info += f"{pre_space}    - The maximum duration for a performance run can be disabled by using `--env.MLC_MLPERF_USE_MAX_DURATION=no`.\n\n"
             info += f"{pre_space}    - In valid execution mode, the query count for performance mode can be adjusted using `--env.MLC_MLPERF_LOADGEN_QUERY_COUNT=<query_count>`.\n\n"
 
         if implementation.lower() == "reference" and model.lower() not in [
-                "pointpainting"]:
+                "pointpainting", "llama3_1-8b", "deepseek-r1", "whisper"]:
 
             info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
@@ -568,12 +612,14 @@ def define_env(env):
             elif "llama3" in model.lower():
                 info += f"{pre_space}    - `--env.MLC_MLPERF_MODEL_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
                 info += f"{pre_space}    - `--env.MLC_MLPERF_DATASET_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
+            elif model.lower() in ["llama3_1-8b", "whisper", "deepseek-r1"]:
+                info += f"{pre_space}    - `--env.MLC_USE_ML_MODEL_FROM_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
+                info += f"{pre_space}    - `--env.MLC_USE_DATASET_FROM_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
+
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"
-                if "llama2" in model.lower():
-                    info += f"{pre_space}    - The dataset for NVIDIA's implementation of Llama2 is not publicly available. The user must fill [this](https://docs.google.com/forms/d/e/1FAIpQLSc_8VIvRmXM3I8KQaYnKf7gy27Z63BBoI_I1u02f4lw6rBp3g/viewform?pli=1&fbzx=-8842630989397184967) form and be verified as a MLCommons member to access the dataset.\n\n"
-                    info += f"{pre_space}    - `PATH_TO_PICKE_FILE` should be replaced with path to the downloaded pickle file.\n\n"
+                info += f"{pre_space}    - If you encounter an error related to ulimit or max locked memory during the run_harness step, please refer to the [this](https://github.com/mlcommons/mlperf-automations/issues/664) issue for details and resolution steps.\n\n"
         else:
             if model == "sdxl":
                 info += f"\n{pre_space}!!! tip\n\n"
@@ -719,7 +765,6 @@ def define_env(env):
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     docker_cmd_suffix += f" \\\n{pre_space} --tp_size=2"
-                    docker_cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKLE_FILE>"
                 elif implementation == "neuralmagic":
                     docker_cmd_suffix += (
                         f" \\\n{pre_space} --api_server=http://localhost:8000"
@@ -767,7 +812,6 @@ def define_env(env):
             if "llama2-70b" in model.lower():
                 if implementation == "nvidia":
                     cmd_suffix += f" \\\n{pre_space} --tp_size=<TP_SIZE>"
-                    cmd_suffix += f" \\\n{pre_space} --nvidia_llama2_dataset_file_path=<PATH_TO_PICKE_FILE>"
                 elif implementation == "neuralmagic":
                     cmd_suffix += f" \\\n{pre_space} --api_server=http://localhost:8000"
                     cmd_suffix += f" \\\n{pre_space} --vllm_model_name=nm-testing/Llama-2-70b-chat-hf-FP8"

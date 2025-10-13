@@ -23,18 +23,20 @@ from openai_harmony import (
     ReasoningEffort
 )
 
+MOD_PROMPT = "Do not repeat steps and output the final answer immediately once you have it. Once you have a candidate answer, do not spend more than ~100 tokens to verify it - instead, do a quick check and answer immediately. Avoid thinking for a long time. It is important to answer in as few tokens as possible."
 
-def create_math500_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
+
+def _create_base_messages(reasoning_effort, instructions):
     """
-    Creates a multi-shot prompt for mathematical problem solving using Harmony format.
-
+    Creates system and developer messages for a conversation.
+    
+    Args:
+        reasoning_effort: ReasoningEffort enum value
+        instructions: String containing developer instructions
+        
     Returns:
-        tuple: (conversation_object, token_list) ready for model completion
+        list: List containing system and developer messages
     """
-
-    # Load the Harmony encoding for gpt-oss models
-    enc = load_harmony_encoding(HarmonyEncodingName.HARMONY_GPT_OSS)
-
     # Create the system message with required channels
     system_message = (
         SystemContent.new()
@@ -44,85 +46,107 @@ def create_math500_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
     )
 
     # Create the developer message with instructions
-    developer_message = (
-        DeveloperContent.new()
-        .with_instructions(
-            "You are a math expert that solves problems step-by-step. "
-            "Always show your work clearly and put your final answer in \\boxed{answer} format. "
-            "Follow the format shown in the examples below."
-        )
-    )
+    developer_message = DeveloperContent.new().with_instructions(instructions)
 
-    # Create the conversation with multi-shot examples
-    messages = [
-        # System and developer setup
+    return [
         Message.from_role_and_content(Role.SYSTEM, system_message),
         Message.from_role_and_content(Role.DEVELOPER, developer_message),
-
-        # Example 1: Square areas and side lengths
-        Message.from_role_and_content(
-            Role.USER,
-            "The areas of three squares are 16, 49 and 169. What is the average (mean) of their side lengths?"
-        ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
-            "Since the areas of the three squares are 16, 49 and 169, then their side lengths are $\\sqrt{16}=4$, $\\sqrt{49}=7$ and $\\sqrt{169}=13$, respectively.\\n\\nThus, the average of their side lengths is $$\\frac{4+7+13}{3}=\\boxed{8}.$$"
-        ).with_channel("final"),
-
-        # Example 2: Floor function equation
-        Message.from_role_and_content(
-            Role.USER,
-            "Find all $x$ such that $\\lfloor \\lfloor 2x \\rfloor - 1/2 \\rfloor = \\lfloor x + 2 \\rfloor.$"
-        ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
-            "Observe that $\\lfloor 2x \\rfloor$ is an integer, so it follows that $\\lfloor \\lfloor 2x \\rfloor - 1/2 \\rfloor = \\lfloor 2x \\rfloor - 1$. Also, $\\lfloor x + 2 \\rfloor = \\lfloor x \\rfloor + 2$. Thus, our equation becomes $$\\lfloor 2x \\rfloor = \\lfloor x \\rfloor + 3.$$Let $n = \\lfloor x \\rfloor,$ so $n \\le x < n + 1.$\\n\\nIf $x < n + \\frac{1}{2},$ then $2n \\le x < 2n + 1,$ so $\\lfloor 2x \\rfloor = 2n,$ and\\n\\[2n = n + 3,\\]which means $n = 3.$\\n\\nIf $x \\ge n + \\frac{1}{2},$ then $2n + 1 \\le x < 2n + 2,$ so $\\lfloor 2x \\rfloor = 2n + 1,$ and\\n\\[2n + 1 = n + 3,\\]which means $n = 2.$\\n\\nTherefore, the set of solutions is $x \\in \\boxed{\\left[ \\frac{5}{2}, \\frac{7}{2} \\right)}.$"
-        ).with_channel("final"),
-
-        # Example 3: Sequences and differences
-        Message.from_role_and_content(
-            Role.USER,
-            "Sequence $A$ is a geometric sequence. Sequence $B$ is an arithmetic sequence. Each sequence stops as soon as one of its terms is greater than $300.$ What is the least positive difference between a number selected from sequence $A$ and a number selected from sequence $B?$\\n\\n$\\bullet$ Sequence $A:$ $2,$ $4,$ $8,$ $16,$ $32,$ $\\ldots$\\n\\n$\\bullet$ Sequence $B:$ $20,$ $40,$ $60,$ $80,$ $100,$ $\\ldots$"
-        ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
-            "The terms of sequence $A$ are $2,$ $4,$ $8,$ $16,$ $32,$ $64,$ $128,$ $256,$ $512.$ The terms of sequence $B$ start from $20$ and go up by $20$ each time, so sequence $B$ is precisely all multiples of $20$ from $20$ to $320.$ We thus need to see which term in sequence $A$ is closest to a multiple of $20.$ $16,$ $64,$ and $256$ are the closest, each being $4$ away from a multiple of $20.$ So the least positive difference between a term in sequence $A$ and one in sequence $B$ is $\\boxed{4}.$"
-        ).with_channel("final"),
-
-        # Example 4: Probability and Deal or No Deal
-        Message.from_role_and_content(
-            Role.USER,
-            "In the game Deal or No Deal, participants choose a box at random from a set of $26,$ one containing each of the following values: \\begin{tabular}{|c|c|}\\hline\\$.01&\\$1,000\\\\\\hline\\$1&\\$5,000\\\\\\hline\\$5&\\$10,000\\\\\\hline\\$10&\\$25,000\\\\\\hline\\$25&\\$50,000\\\\\\hline\\$50&\\$75,000\\\\\\hline\\$75&\\$100,000\\\\\\hline\\$100&\\$200,000\\\\\\hline\\$200&\\$300,000\\\\\\hline\\$300&\\$400,000\\\\\\hline\\$400&\\$500,000\\\\\\hline\\$500&\\$750,000\\\\\\hline\\$750&\\$1,000,000\\\\\\hline\\end{tabular} After choosing a box, participants eliminate other boxes by opening them, showing the amount of money in the box to the crowd, and then removing that box (and its money!) from the game. What is the minimum number of boxes a participant needs to eliminate in order to have a half chance of holding at least $\\$100,\\!000$ as his or her chosen box?"
-        ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
-            "Seven of the boxes contain at least this amount. If a participant is going to be holding one of these boxes with a probability of $1/2,$ there can be at most $7$ other boxes left. This means that at least $26-7-7=\\boxed{12}$ boxes must be eliminated."
-        ).with_channel("final"),
-
-        # Example 5: Domain of composite function
-        Message.from_role_and_content(
-            Role.USER,
-            "Find the domain of the function $f(x) = \\tan(\\arccos(x^2)).$"
-        ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
-            "For $\\arccos (x^2)$ to be defined, we must have $-1 \\le x^2 \\le 1,$ which is satisfied only for $-1 \\le x \\le 1.$  Then $\\arccos (x^2)$ will always return an angle between 0 and $\\frac{\\pi}{2}.$  Then $\\tan (\\arccos(x^2))$ is defined, unless $\\arccos(x^2) = \\frac{\\pi}{2}.$  This occurs only when $x = 0.$\\n\\nTherefore, the domain of $f(x)$ is $\\boxed{[-1,0) \\cup (0,1]}.$"
-        ).with_channel("final"),
-
-        # The actual problem to solve
-        Message.from_role_and_content(
-            Role.USER,
-            user_query,
-        )
     ]
 
+
+def _add_multishot_examples(messages, examples):
+    """
+    Adds multi-shot examples to a message list.
+    
+    Args:
+        messages: List of messages to append examples to
+        examples: List of tuples (user_content, assistant_content) representing examples
+        
+    Returns:
+        list: Updated messages list with examples added
+    """
+    for user_content, assistant_content in examples:
+        messages.append(Message.from_role_and_content(Role.USER, user_content))
+        messages.append(
+            Message.from_role_and_content(Role.ASSISTANT, assistant_content).with_channel("final")
+        )
+    return messages
+
+
+def _finalize_conversation(messages, user_query):
+    """
+    Adds the user query, creates the conversation, and renders tokens.
+    
+    Args:
+        messages: List of messages (system, developer, and optionally examples)
+        user_query: The actual user query to solve
+        
+    Returns:
+        tuple: (conversation_object, token_list) ready for model completion
+    """
+    # Load the Harmony encoding for gpt-oss models
+    enc = load_harmony_encoding(HarmonyEncodingName.HARMONY_GPT_OSS)
+    
+    # Add the actual problem to solve
+    messages.append(Message.from_role_and_content(Role.USER, user_query))
+    
     # Create the conversation
     convo = Conversation.from_messages(messages)
-
+    
     # Render the conversation for completion (ready to send to the model)
     tokens = enc.render_conversation_for_completion(convo, Role.ASSISTANT)
-
+    
     return convo, tokens
+
+
+def create_math500_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
+    """
+    Creates a multi-shot prompt for mathematical problem solving using Harmony format.
+
+    Returns:
+        tuple: (conversation_object, token_list) ready for model completion
+    """
+    instructions = (
+        "You are a math expert that solves problems step-by-step. "
+        "Always show your work clearly and put your final answer in \\boxed{answer} format. "
+        f"{MOD_PROMPT} "
+        "Follow the format shown in the examples below. "
+    )
+    
+    messages = _create_base_messages(reasoning_effort, instructions)
+    
+    # Define multi-shot examples
+    examples = [
+        # Example 1: Square areas and side lengths
+        (
+            "The areas of three squares are 16, 49 and 169. What is the average (mean) of their side lengths?",
+            "Since the areas of the three squares are 16, 49 and 169, then their side lengths are $\\sqrt{16}=4$, $\\sqrt{49}=7$ and $\\sqrt{169}=13$, respectively.\\n\\nThus, the average of their side lengths is $$\\frac{4+7+13}{3}=\\boxed{8}.$$"
+        ),
+        # Example 2: Floor function equation
+        (
+            "Find all $x$ such that $\\lfloor \\lfloor 2x \\rfloor - 1/2 \\rfloor = \\lfloor x + 2 \\rfloor.$",
+            "Observe that $\\lfloor 2x \\rfloor$ is an integer, so it follows that $\\lfloor \\lfloor 2x \\rfloor - 1/2 \\rfloor = \\lfloor 2x \\rfloor - 1$. Also, $\\lfloor x + 2 \\rfloor = \\lfloor x \\rfloor + 2$. Thus, our equation becomes $$\\lfloor 2x \\rfloor = \\lfloor x \\rfloor + 3.$$Let $n = \\lfloor x \\rfloor,$ so $n \\le x < n + 1.$\\n\\nIf $x < n + \\frac{1}{2},$ then $2n \\le x < 2n + 1,$ so $\\lfloor 2x \\rfloor = 2n,$ and\\n\\[2n = n + 3,\\]which means $n = 3.$\\n\\nIf $x \\ge n + \\frac{1}{2},$ then $2n + 1 \\le x < 2n + 2,$ so $\\lfloor 2x \\rfloor = 2n + 1,$ and\\n\\[2n + 1 = n + 3,\\]which means $n = 2.$\\n\\nTherefore, the set of solutions is $x \\in \\boxed{\\left[ \\frac{5}{2}, \\frac{7}{2} \\right)}.$"
+        ),
+        # Example 3: Sequences and differences
+        (
+            "Sequence $A$ is a geometric sequence. Sequence $B$ is an arithmetic sequence. Each sequence stops as soon as one of its terms is greater than $300.$ What is the least positive difference between a number selected from sequence $A$ and a number selected from sequence $B?$\\n\\n$\\bullet$ Sequence $A:$ $2,$ $4,$ $8,$ $16,$ $32,$ $\\ldots$\\n\\n$\\bullet$ Sequence $B:$ $20,$ $40,$ $60,$ $80,$ $100,$ $\\ldots$",
+            "The terms of sequence $A$ are $2,$ $4,$ $8,$ $16,$ $32,$ $64,$ $128,$ $256,$ $512.$ The terms of sequence $B$ start from $20$ and go up by $20$ each time, so sequence $B$ is precisely all multiples of $20$ from $20$ to $320.$ We thus need to see which term in sequence $A$ is closest to a multiple of $20.$ $16,$ $64,$ and $256$ are the closest, each being $4$ away from a multiple of $20.$ So the least positive difference between a term in sequence $A$ and one in sequence $B$ is $\\boxed{4}.$"
+        ),
+        # Example 4: Probability and Deal or No Deal
+        (
+            "In the game Deal or No Deal, participants choose a box at random from a set of $26,$ one containing each of the following values: \\begin{tabular}{|c|c|}\\hline\\$.01&\\$1,000\\\\\\hline\\$1&\\$5,000\\\\\\hline\\$5&\\$10,000\\\\\\hline\\$10&\\$25,000\\\\\\hline\\$25&\\$50,000\\\\\\hline\\$50&\\$75,000\\\\\\hline\\$75&\\$100,000\\\\\\hline\\$100&\\$200,000\\\\\\hline\\$200&\\$300,000\\\\\\hline\\$300&\\$400,000\\\\\\hline\\$400&\\$500,000\\\\\\hline\\$500&\\$750,000\\\\\\hline\\$750&\\$1,000,000\\\\\\hline\\end{tabular} After choosing a box, participants eliminate other boxes by opening them, showing the amount of money in the box to the crowd, and then removing that box (and its money!) from the game. What is the minimum number of boxes a participant needs to eliminate in order to have a half chance of holding at least $\\$100,\\!000$ as his or her chosen box?",
+            "Seven of the boxes contain at least this amount. If a participant is going to be holding one of these boxes with a probability of $1/2,$ there can be at most $7$ other boxes left. This means that at least $26-7-7=\\boxed{12}$ boxes must be eliminated."
+        ),
+        # Example 5: Domain of composite function
+        (
+            "Find the domain of the function $f(x) = \\tan(\\arccos(x^2)).$",
+            "For $\\arccos (x^2)$ to be defined, we must have $-1 \\le x^2 \\le 1,$ which is satisfied only for $-1 \\le x \\le 1.$  Then $\\arccos (x^2)$ will always return an angle between 0 and $\\frac{\\pi}{2}.$  Then $\\tan (\\arccos(x^2))$ is defined, unless $\\arccos(x^2) = \\frac{\\pi}{2}.$  This occurs only when $x = 0.$\\n\\nTherefore, the domain of $f(x)$ is $\\boxed{[-1,0) \\cup (0,1]}.$"
+        ),
+    ]
+    
+    _add_multishot_examples(messages, examples)
+    
+    return _finalize_conversation(messages, user_query)
 
 
 def create_aime1983_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
@@ -132,41 +156,15 @@ def create_aime1983_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
     Returns:
         tuple: (conversation_object, token_list) ready for model completion
     """
-
-    # Load the Harmony encoding for gpt-oss models
-    enc = load_harmony_encoding(HarmonyEncodingName.HARMONY_GPT_OSS)
-
-    # Create the system message with required channels
-    system_message = (
-        SystemContent.new()
-        .with_reasoning_effort(reasoning_effort)
-        .with_conversation_start_date("2025-09-30")
-        .with_required_channels(["analysis", "commentary", "final"])
+    instructions = (
+        "You are a math expert that solves problems step-by-step. "
+        f"{MOD_PROMPT} "
+        "The final line of your response should contain the final answer as an integer enclosed in \\boxed{answer}."
     )
-
-    # Create the developer message with instructions
-    developer_message = (
-        DeveloperContent.new()
-        .with_instructions(
-            "You are a math expert that solves problems step-by-step. "
-            "The final line of your response should contain the final answer as an integer enclosed in \\boxed{answer}."
-        )
-    )
-
-    messages = [
-        # System and developer setup
-        Message.from_role_and_content(Role.SYSTEM, system_message),
-        Message.from_role_and_content(Role.DEVELOPER, developer_message),
-        Message.from_role_and_content(Role.USER, user_query),
-    ]
-
-    # Create the conversation
-    convo = Conversation.from_messages(messages)
-
-    # Render the conversation for completion (ready to send to the model)
-    tokens = enc.render_conversation_for_completion(convo, Role.ASSISTANT)
-
-    return convo, tokens
+    
+    messages = _create_base_messages(reasoning_effort, instructions)
+    
+    return _finalize_conversation(messages, user_query)
 
 
 def create_livecodebench_prompt(
@@ -177,41 +175,16 @@ def create_livecodebench_prompt(
     Returns:
         tuple: (conversation_object, token_list) ready for model completion
     """
-
-    # Load the Harmony encoding for gpt-oss models
-    enc = load_harmony_encoding(HarmonyEncodingName.HARMONY_GPT_OSS)
-
-    # Create the system message with required channels
-    system_message = (
-        SystemContent.new()
-        .with_reasoning_effort(reasoning_effort)
-        .with_conversation_start_date("2025-09-30")
-        .with_required_channels(["analysis", "commentary", "final"])
+    instructions = (
+        "You are a python coding expert that solves problems step-by-step. "
+        "You must provide the reasoning to arriving at your solution and the code to solve the problem."
+        f"{MOD_PROMPT} "
+        "The code should be enclosed within ```python delimiters."
     )
-
-    # Create the developer message with instructions
-    developer_message = (
-        DeveloperContent.new()
-        .with_instructions(
-            "You are a python coding expert that solves problems step-by-step. "
-            "You must provide the reasoning to arriving at your solution and the code to solve the problem."
-            "The code should be enclosed within ```python delimiters."
-        )
-    )
-
-    messages = [
-        # System and developer setup
-        Message.from_role_and_content(Role.SYSTEM, system_message),
-        Message.from_role_and_content(Role.DEVELOPER, developer_message),
-        Message.from_role_and_content(Role.USER, user_query),
-    ]
-
-    convo = Conversation.from_messages(messages)
-
-    # Render the conversation for completion (ready to send to the model)
-    tokens = enc.render_conversation_for_completion(convo, Role.ASSISTANT)
-
-    return convo, tokens
+    
+    messages = _create_base_messages(reasoning_effort, instructions)
+    
+    return _finalize_conversation(messages, user_query)
 
 
 def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
@@ -221,97 +194,46 @@ def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
     Returns:
         tuple: (conversation_object, token_list) ready for model completion
     """
-
-    # Load the Harmony encoding for gpt-oss models
-    enc = load_harmony_encoding(HarmonyEncodingName.HARMONY_GPT_OSS)
-
-    # Create the system message with required channels
-    system_message = (
-        SystemContent.new()
-        .with_reasoning_effort(reasoning_effort)
-        .with_conversation_start_date("2025-09-30")
-        .with_required_channels(["analysis", "commentary", "final"])
+    instructions = (
+        "You are an expert test-taker that answers multiple choice questions accurately. "
+        f"{MOD_PROMPT} "
+        "After your reasoning, provide your final answer on a new line in the format: 'Answer: X' where X is the letter choice."
     )
-
-    # Create the developer message with instructions
-    developer_message = (
-        DeveloperContent.new()
-        .with_instructions(
-            "You are an expert test-taker that answers multiple choice questions accurately. "
-            "After your reasoning, provide your final answer on a new line in the format: 'Answer: X' where X is the letter choice."
-        )
-    )
-
-    # Create the conversation with multi-shot examples
-    messages = [
-        # System and developer setup
-        Message.from_role_and_content(Role.SYSTEM, system_message),
-        Message.from_role_and_content(Role.DEVELOPER, developer_message),
-
+    
+    messages = _create_base_messages(reasoning_effort, instructions)
+    
+    # Define multi-shot examples
+    examples = [
         # Example 1: Abstract Algebra - Ring Theory
-        Message.from_role_and_content(
-            Role.USER,
-            "The symmetric group $S_n$ has $n!$ elements, hence it is not true that $S_{10}$ has 10 elements.\\nFind the characteristic of the ring 2Z.\\nA) 0\\nB) 30\\nC) 3\\nD) 10\\nE) 12\\nF) 50\\nG) 2\\nH) 100\\nI) 20\\nJ) 5"
-        ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
+        (
+            "The symmetric group $S_n$ has $n!$ elements, hence it is not true that $S_{10}$ has 10 elements.\\nFind the characteristic of the ring 2Z.\\nA) 0\\nB) 30\\nC) 3\\nD) 10\\nE) 12\\nF) 50\\nG) 2\\nH) 100\\nI) 20\\nJ) 5",
             "Answer: A"
-        ).with_channel("final"),
-
+        ),
         # Example 2: Linear Algebra - Transformations
-        Message.from_role_and_content(
-            Role.USER,
-            "Let V be the set of all real polynomials p(x). Let transformations T, S be defined on V by T:p(x) -> xp(x) and S:p(x) -> p'(x) = d/dx p(x), and interpret (ST)(p(x)) as S(T(p(x))). Which of the following is true?\\nA) ST + TS is the identity map of V onto itself.\\nB) TS = 0\\nC) ST = 1\\nD) ST - TS = 0\\nE) ST = T\\nF) ST = 0\\nG) ST = TS\\nH) ST - TS is the identity map of V onto itself.\\nI) TS = T\\nJ) ST = S"
-        ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
+        (
+            "Let V be the set of all real polynomials p(x). Let transformations T, S be defined on V by T:p(x) -> xp(x) and S:p(x) -> p'(x) = d/dx p(x), and interpret (ST)(p(x)) as S(T(p(x))). Which of the following is true?\\nA) ST + TS is the identity map of V onto itself.\\nB) TS = 0\\nC) ST = 1\\nD) ST - TS = 0\\nE) ST = T\\nF) ST = 0\\nG) ST = TS\\nH) ST - TS is the identity map of V onto itself.\\nI) TS = T\\nJ) ST = S",
             "Answer: H"
-        ).with_channel("final"),
-
+        ),
         # Example 3: Number Theory - Diophantine Equations
-        Message.from_role_and_content(
-            Role.USER,
-            "Let A be the set of all ordered pairs of integers (m, n) such that 7m + 12n = 22. What is the greatest negative number in the set B = {m + n : (m, n) ∈ A}?\\nA) -5\\nB) 0\\nC) -3\\nD) -7\\nE) -4\\nF) -6\\nG) -1\\nH) -2\\nI) -9\\nJ) N/A"
-        ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
+        (
+            "Let A be the set of all ordered pairs of integers (m, n) such that 7m + 12n = 22. What is the greatest negative number in the set B = {m + n : (m, n) ∈ A}?\\nA) -5\\nB) 0\\nC) -3\\nD) -7\\nE) -4\\nF) -6\\nG) -1\\nH) -2\\nI) -9\\nJ) N/A",
             "Answer: E"
-        ).with_channel("final"),
-
+        ),
         # Example 4: Differential Equations - Salt Tank Problem
-        Message.from_role_and_content(
-            Role.USER,
-            "A tank initially contains a salt solution of 3 grams of salt dissolved in 100 liters of water. A salt solution containing 0.02 grams of salt per liter of water is sprayed into the tank at a rate of 4 liters per minute. The sprayed solution is continually mixed with the salt solution in the tank, and the mixture flows out of the tank at a rate of 4 liters per minute. If the mixing is instantaneous, how many grams of salt are in the tank after 100 minutes have elapsed?\\nA) 3 + e^-2\\nB) 2 - e^-4\\nC) 2 - e^-2\\nD) 3 + e^-4\\nE) 2 + e^-3\\nF) 2 - e^-3\\nG) 3 - e^-2\\nH) 2 + e^-2\\nI) 2 + e^-4\\nJ) 2"
-        ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
+        (
+            "A tank initially contains a salt solution of 3 grams of salt dissolved in 100 liters of water. A salt solution containing 0.02 grams of salt per liter of water is sprayed into the tank at a rate of 4 liters per minute. The sprayed solution is continually mixed with the salt solution in the tank, and the mixture flows out of the tank at a rate of 4 liters per minute. If the mixing is instantaneous, how many grams of salt are in the tank after 100 minutes have elapsed?\\nA) 3 + e^-2\\nB) 2 - e^-4\\nC) 2 - e^-2\\nD) 3 + e^-4\\nE) 2 + e^-3\\nF) 2 - e^-3\\nG) 3 - e^-2\\nH) 2 + e^-2\\nI) 2 + e^-4\\nJ) 2",
             "Answer: I"
-        ).with_channel("final"),
-
-        # Example 5: Basic Arithmetic - Division
-        Message.from_role_and_content(
-            Role.USER,
-            "A total of 30 players will play basketball at a park. There will be exactly 5 players on each team. Which statement correctly explains how to find the number of teams needed?\\nA) Multiply 5 by 5 to find 25 teams.\\nB) Divide 30 by 5 to find 6 teams.\\nC) Add 5 to 30 to find 35 teams.\\nD) Subtract 30 from 5 to find -25 teams.\\nE) Divide 5 by 30 to find 0.1667 teams.\\nF) Add 5 to 30 then divide by 2 to find 17.5 teams.\\nG) N/A\\nH) N/A\\nI) N/A\\nJ) N/A"
         ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
+        # Example 5: Basic Arithmetic - Division
+        (
+            "A total of 30 players will play basketball at a park. There will be exactly 5 players on each team. Which statement correctly explains how to find the number of teams needed?\\nA) Multiply 5 by 5 to find 25 teams.\\nB) Divide 30 by 5 to find 6 teams.\\nC) Add 5 to 30 to find 35 teams.\\nD) Subtract 30 from 5 to find -25 teams.\\nE) Divide 5 by 30 to find 0.1667 teams.\\nF) Add 5 to 30 then divide by 2 to find 17.5 teams.\\nG) N/A\\nH) N/A\\nI) N/A\\nJ) N/A",
             "Answer: B"
-        ).with_channel("final"),
-
-        # The actual problem to solve
-        Message.from_role_and_content(
-            Role.USER,
-            user_query,
-        )
+        ),
     ]
-
-    # Create the conversation
-    convo = Conversation.from_messages(messages)
-
-    # Render the conversation for completion (ready to send to the model)
-    tokens = enc.render_conversation_for_completion(convo, Role.ASSISTANT)
-
-    return convo, tokens
+    
+    _add_multishot_examples(messages, examples)
+    
+    return _finalize_conversation(messages, user_query)
 
 
 def create_gpqa_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
@@ -321,67 +243,31 @@ def create_gpqa_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
     Returns:
         tuple: (conversation_object, token_list) ready for model completion
     """
-
-    # Load the Harmony encoding for gpt-oss models
-    enc = load_harmony_encoding(HarmonyEncodingName.HARMONY_GPT_OSS)
-
-    # Create the system message with required channels
-    system_message = (
-        SystemContent.new()
-        .with_reasoning_effort(reasoning_effort)
-        .with_conversation_start_date("2025-09-30")
-        .with_required_channels(["analysis", "commentary", "final"])
+    instructions = (
+        "You are an expert in organic chemistry and biochemistry who answers scientific questions accurately. "
+        f"{MOD_PROMPT} "
+        "After your reasoning, provide your final answer on a new line in the format: 'Answer: X' where X is the letter choice."
     )
-
-    # Create the developer message with instructions
-    developer_message = (
-        DeveloperContent.new()
-        .with_instructions(
-            "You are an expert in organic chemistry and biochemistry who answers scientific questions accurately. "
-            "After your reasoning, provide your final answer on a new line in the format: 'Answer: X' where X is the letter choice."
-        )
-    )
-
-    # Create the conversation with multi-shot examples
-    messages = [
-        # System and developer setup
-        Message.from_role_and_content(Role.SYSTEM, system_message),
-        Message.from_role_and_content(Role.DEVELOPER, developer_message),
-
+    
+    messages = _create_base_messages(reasoning_effort, instructions)
+    
+    # Define multi-shot examples
+    examples = [
         # Example 1: Molecular Biology - Gene Therapy
-        Message.from_role_and_content(
-            Role.USER,
-            "A large gene has dozens of exons, of which the central ones code for folded triple helical repeats that connect the cytoskeleton with sarcolemma and extracellular space. Each exon usually codes for one folded triple alpha helix. The most common mutations of the gene are central exon deletions that create out-of-frame peptides and progressive degenerative organ waste. A solution is to deliver a Morpholino that recognizes the 5' end of the out-of-frame exon in pre-mRNA. The molecule prevents binding of the spliceosome and creates exon skipping and in-frame joining. Several missing exons are well tolerated by an organism. Which structure below is not involved in the proposed therapy?\\nA) polyA tail\\nB) lariat\\nC) antisense\\nD) R-loops"
-        ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
+        (
+            "A large gene has dozens of exons, of which the central ones code for folded triple helical repeats that connect the cytoskeleton with sarcolemma and extracellular space. Each exon usually codes for one folded triple alpha helix. The most common mutations of the gene are central exon deletions that create out-of-frame peptides and progressive degenerative organ waste. A solution is to deliver a Morpholino that recognizes the 5' end of the out-of-frame exon in pre-mRNA. The molecule prevents binding of the spliceosome and creates exon skipping and in-frame joining. Several missing exons are well tolerated by an organism. Which structure below is not involved in the proposed therapy?\\nA) polyA tail\\nB) lariat\\nC) antisense\\nD) R-loops",
             "The text describes the dystrophin gene and the FDA-approved oligonucleotide therapy that causes exon skipping by creating a functional, albeit shorter, dystrophin protein. Morpholino is bound to the pre-mRNA in an antisense orientation. Every splicing mechanism creates the lariat molecule that is circular with a 3' tail and soon degraded. The spliced RNA is polyadenylated at the 3' end. R-loops are triple helix of DNA and the pre-mRNA and a consequence of the RNA transcription, not splicing and RNA maturation.\\n\\nAnswer: D"
-        ).with_channel("final"),
-
-        # Example 2: Stereochemistry - Optical Activity
-        Message.from_role_and_content(
-            Role.USER,
-            "How many of the following compounds exhibit optical activity?\\n1-methyl-4-(prop-1-en-2-yl)cyclohex-1-ene\\n2,3,3,3-tetrafluoroprop-1-ene\\ndi(cyclohex-2-en-1-ylidene)methane\\n5-(5-methylhexan-2-ylidene)cyclopenta-1,3-diene\\n3-(2-methylbut-1-en-1-ylidene)cyclohex-1-ene\\n[1,1'-biphenyl]-3,3'-diol\\n8,8-dichlorobicyclo[4.2.0]octan-7-one\\ncyclopent-2-en-1-one\\nA) 6\\nB) 5\\nC) 4\\nD) 3"
         ),
-        Message.from_role_and_content(
-            Role.ASSISTANT,
+        # Example 2: Stereochemistry - Optical Activity
+        (
+            "How many of the following compounds exhibit optical activity?\\n1-methyl-4-(prop-1-en-2-yl)cyclohex-1-ene\\n2,3,3,3-tetrafluoroprop-1-ene\\ndi(cyclohex-2-en-1-ylidene)methane\\n5-(5-methylhexan-2-ylidene)cyclopenta-1,3-diene\\n3-(2-methylbut-1-en-1-ylidene)cyclohex-1-ene\\n[1,1'-biphenyl]-3,3'-diol\\n8,8-dichlorobicyclo[4.2.0]octan-7-one\\ncyclopent-2-en-1-one\\nA) 6\\nB) 5\\nC) 4\\nD) 3",
             "The compounds 1-methyl-4-(prop-1-en-2-yl)cyclohex-1-ene, 3-(2-methylbut-1-en-1-ylidene)cyclohex-1-ene, di(cyclohex-2-en-1-ylidene)methane, and 8,8-dichlorobicyclo[4.2.0]octan-7-one are chiral molecules and thus will be optically active.\\n\\nAnswer: C"
-        ).with_channel("final"),
-
-        # The actual problem to solve
-        Message.from_role_and_content(
-            Role.USER,
-            user_query,
-        )
+        ),
     ]
-
-    # Create the conversation
-    convo = Conversation.from_messages(messages)
-
-    # Render the conversation for completion (ready to send to the model)
-    tokens = enc.render_conversation_for_completion(convo, Role.ASSISTANT)
-
-    return convo, tokens
+    
+    _add_multishot_examples(messages, examples)
+    
+    return _finalize_conversation(messages, user_query)
 
 
 def process_row(args):

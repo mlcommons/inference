@@ -1867,7 +1867,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
     else:
         avg_power = sum(power_list) / len(power_list)
         power_duration = (power_end - power_begin).total_seconds()
-        if scenario_fixed in ["Offline", "Server"]:
+        if scenario_fixed in ["Offline", "Server", "Interactive"]:
             # In Offline and Server scenarios, the power metric is in W.
             power_metric = avg_power
             avg_power_efficiency = res / avg_power
@@ -3205,7 +3205,7 @@ def check_compliance_acc_dir(test_dir, model, config):
                             break
                         else:
                             required_delta_perc = config.get_delta_perc(
-                                model, acc_type[0]
+                                model, acc_type
                             )
                             delta_perc = (
                                 abs(

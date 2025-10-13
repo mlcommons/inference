@@ -9,7 +9,7 @@ while [[ $# -gt 0 ]]; do
             dp=$2
             shift 2
             ;;
-        --model-path)
+        --model_path)
             model_path=$2
             shift 2
             ;;

@@ -137,16 +137,25 @@ def send_single_request(args_tuple):
         timeout=timeout)
 
     try:
+        # Track latency: time from request sent to response received
+        start_time = time.time()
         response = client.send_request(input_ids, max_tokens=max_tokens)
-        return sample_id, response
+        end_time = time.time()
+        latency = end_time - start_time
+        return sample_id, response, latency
     except Exception as e:
         logger.error(f"Request {sample_id} failed: {e}")
-        return sample_id, {"error": str(e)}
+        # Return None for latency on error
+        return sample_id, {"error": str(e)}, None
 
 
 def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
-                           max_tokens: int = 100, max_concurrency: int = 128, temperature: float = 0.001, top_k: int = 1, timeout: int = 1200) -> List[Dict[str, Any]]:
-    """Send all requests to SGLang server in parallel using multiprocessing."""
+                           max_tokens: int = 100, max_concurrency: int = 128, temperature: float = 0.001, top_k: int = 1, timeout: int = 1200):
+    """Send all requests to SGLang server in parallel using multiprocessing.
+    
+    Returns:
+        tuple: (responses, latencies) - List of responses and list of latencies in seconds
+    """
     num_samples = len(tokenized_df)
     logger.info(
         f"Sending {num_samples} requests to server with {max_concurrency} concurrent workers...")
@@ -162,7 +171,7 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
 
     with Pool(processes=min(max_concurrency, num_samples)) as pool:
         results = list(tqdm(
-            pool.imap(send_single_request, args_list),
+            pool.imap_unordered(send_single_request, args_list),
             total=len(args_list),
             desc="Sending requests",
             unit="request"
@@ -171,13 +180,22 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
     # Sort results by sample_id to maintain order
     results.sort(key=lambda x: x[0])
     responses = [result[1] for result in results]
+    latencies = [result[2] for result in results]
 
     total_time = time.time() - start_time
     logger.info(
         f"Completed {num_samples} requests in {total_time:.2f} seconds")
     logger.info(f"Average rate: {num_samples/total_time:.2f} requests/sec")
+    
+    # Log latency statistics
+    valid_latencies = [lat for lat in latencies if lat is not None]
+    if valid_latencies:
+        avg_latency = sum(valid_latencies) / len(valid_latencies)
+        min_latency = min(valid_latencies)
+        max_latency = max(valid_latencies)
+        logger.info(f"Latency stats - Avg: {avg_latency:.3f}s, Min: {min_latency:.3f}s, Max: {max_latency:.3f}s")
 
-    return responses
+    return responses, latencies
 
 
 def extract_response_ids(
@@ -228,8 +246,8 @@ def detokenize_output_ids(response_ids: List[List[int]]) -> List[str]:
 
 
 def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]],
-                   detokenized_texts: List[str], tokenized_df: pd.DataFrame,
-                   output_file: str = None) -> pd.DataFrame:
+                   detokenized_texts: List[str], latencies: List[float], 
+                   tokenized_df: pd.DataFrame, output_file: str = None) -> pd.DataFrame:
     """Save all responses to DataFrame and optionally to pickle file."""
     logger.info("Processing responses and updating DataFrame...")
 
@@ -242,6 +260,7 @@ def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]
     result_df['tok_model_output'] = response_ids
     result_df['tok_model_output_len'] = [
         len(token_ids) for token_ids in response_ids]  # Length of output_ids
+    result_df['infer_time'] = latencies  # E2E latency in seconds
 
     # Calculate output token lengths for logging
     output_token_lengths = []
@@ -258,7 +277,7 @@ def save_responses(responses: List[Dict[str, Any]], response_ids: List[List[int]
 
     logger.info(f"Updated DataFrame with shape: {result_df.shape}")
     logger.info(
-        f"Updated columns: model_output, tok_model_output, tok_model_output_len")
+        f"Updated columns: model_output, tok_model_output, tok_model_output_len, infer_time")
     logger.info(
         f"Average output token length: {sum(output_token_lengths)/len(output_token_lengths):.1f}")
 
@@ -283,7 +302,7 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
         logger.info(f"Limited to first {max_samples} samples")
 
     # Step 2: Send all requests in parallel
-    responses = send_requests_parallel(
+    responses, latencies = send_requests_parallel(
         tokenized_df,
         server_url,
         max_tokens,
@@ -303,6 +322,7 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
         responses,
         response_ids,
         detokenized_texts,
+        latencies,
         tokenized_df,
         output_file)
 

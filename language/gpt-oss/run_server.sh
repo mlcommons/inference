@@ -1,6 +1,7 @@
 #!/bin/bash
 
-dp=2
+dp=1
+model_path=openai/gpt-oss-120b
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -8,12 +9,16 @@ while [[ $# -gt 0 ]]; do
             dp=$2
             shift 2
             ;;
+        --model-path)
+            model_path=$2
+            shift 2
+            ;;
     esac
 done
 
 set -x;
 python3 -m sglang.launch_server \
-    --model-path openai/gpt-oss-120b \
+    --model-path $model_path \
     --host 0.0.0.0 \
     --port 30000 \
     --tp-size=1 \

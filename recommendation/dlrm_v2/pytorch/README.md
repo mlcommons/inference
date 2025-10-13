@@ -106,7 +106,7 @@ N/A | pytorch | <2GB | -
 #### Download model through MLCFlow Automation
 
 ```
-mlcr get,ml-model,get,ml-model,dlrm,_pytorch,_weight_sharded,_rclone --outdirname=<path_to_download> -j
+mlcr get,ml-model,get,ml-model,dlrm,_pytorch,_fp32,_weight_sharded,_r2-downloader --outdirname=<path_to_download> -j
 ```
 
 #### Manual method

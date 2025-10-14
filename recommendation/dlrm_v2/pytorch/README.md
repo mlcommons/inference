@@ -78,7 +78,7 @@ CFLAGS="-std=c++14" python setup.py develop --user
 #### Download dataset through MLCFlow Automation
 
 ```
-mlcr get,preprocessed,dataset,criteo,_validation --outdirname=<path_to_download> -j
+mlcr get,preprocessed,dataset,criteo,_r2-downloader,_mlc,_validation --outdirname=<path_to_download> -j
 ```
 
 #### Download the preprocessed dataset using the MLCommons R2 Downloader (more information about the MLC R2 Downloader, including how to run it on Windows, can be found [here](https://inference.mlcommons-storage.org)).

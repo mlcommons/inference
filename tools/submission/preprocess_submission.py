@@ -141,10 +141,8 @@ def change_folder_name_in_path(path, old_folder_name, new_folder_name):
 
 
 def clean_model_dir(model_results_dir):
-    model_measurements_dir = change_folder_name_in_path(
-        model_results_dir, "results", "measurements")
-    model_compliance_dir = change_folder_name_in_path(
-        model_results_dir, "results", "compliance")
+    model_measurements_dir = model_results_dir
+    model_compliance_dir = model_results_dir
 
     print(f"rmtree {model_results_dir}")
     if os.path.exists(model_results_dir):

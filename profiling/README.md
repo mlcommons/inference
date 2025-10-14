@@ -112,6 +112,14 @@ python3 prefix_caching_dashboard.py \
 - `--export-file FILE` - Output file path for exported fields (default: exported_data.txt)
 - `--export-format FORMAT` - Export format: txt, json, csv (default: txt)
 
+### Debug Mode
+- `--debug` - Enable debug mode to create groups of similar prompts
+- `--debug-prefix-len LENGTH` - Prefix length for debug grouping (default: 128)
+- `--debug-min-group-size SIZE` - Minimum group size for debug output (default: 2)
+- `--debug-output FILE` - Output file for debug groups (default: debug_groups.txt)
+- `--debug-robust` - Use robust block-based hashing for more accurate grouping
+- `--debug-block-size SIZE` - Token block size for robust hashing (default: 16)
+
 ### vLLM Integration (Optional)
 - `--vllm-metrics-url URL` - Prometheus text endpoint for vLLM (e.g., http://localhost:8000/metrics)
 - `--vllm-metrics-file FILE` - Path to a text dump of /metrics
@@ -224,15 +232,64 @@ python3 prefix_caching_dashboard.py \
     --vllm-metrics-file vllm_metrics.txt
 ```
 
-### 7. Combined Operations
+### 7. Debug Mode - Similar Prompt Grouping
 
 ```bash
-# Inspect, export, and analyze
+# Debug mode with pre-tokenized data
+python3 prefix_caching_dashboard.py \
+    --file data.pkl \
+    --token-column token_ids \
+    --debug \
+    --debug-prefix-len 64 \
+    --debug-min-group-size 3
+
+# Debug mode with text data
+python3 prefix_caching_dashboard.py \
+    --file data.jsonl \
+    --tokenizer gpt2 \
+    --debug \
+    --debug-prefix-len 128 \
+    --debug-min-group-size 2 \
+    --debug-output similar_prompts.txt
+
+# Debug mode with custom settings
+python3 prefix_caching_dashboard.py \
+    --file data.pkl \
+    --token-column token_ids \
+    --debug \
+    --debug-prefix-len 32 \
+    --debug-min-group-size 5 \
+    --debug-output large_groups.txt
+
+# Robust debug mode with block-based hashing
+python3 prefix_caching_dashboard.py \
+    --file data.pkl \
+    --token-column token_ids \
+    --debug \
+    --debug-robust \
+    --debug-block-size 8 \
+    --debug-prefix-len 64
+
+# Robust debug mode with different block sizes
+python3 prefix_caching_dashboard.py \
+    --file data.pkl \
+    --token-column token_ids \
+    --debug \
+    --debug-robust \
+    --debug-block-size 16 \
+    --debug-min-group-size 3
+```
+
+### 8. Combined Operations
+
+```bash
+# Inspect, export, debug, and analyze
 python3 prefix_caching_dashboard.py \
     --file data.pkl \
     --inspect \
     --export-fields prompt,response \
     --export-file prompts.txt \
+    --debug \
     --token-column token_ids \
     --plots
 ```
@@ -244,7 +301,8 @@ python3 prefix_caching_dashboard.py \
 1. **`metric_summary.txt`** - Human-readable report with all computed metrics
 2. **`pdi_curve.png`** - Plot showing Prefix Diversity Index curve
 3. **`prefix_overlap_histogram.png`** - Histogram of prefix overlap lengths
-4. **Exported data files** - Based on `--export-file` and `--export-format` options
+4. **`debug_groups.txt`** - Groups of similar prompts (when using `--debug`)
+5. **Exported data files** - Based on `--export-file` and `--export-format` options
 
 ### Sample Output
 
@@ -277,6 +335,40 @@ PDI  (Prefix Diversity Index) curve:
   - L= 128: 0.6123
   - L= 256: 0.5456
   - L= 512: 0.4789
+```
+
+### Debug Mode Output
+
+When using `--debug`, the tool creates a file showing groups of similar prompts:
+
+```
+Debug Mode - Similar Prompt Groups
+==================================================
+
+Prefix length: 64
+Minimum group size: 2
+Total groups found: 15
+Total prompts in groups: 45
+
+Group 1 (Hash: a1b2c3d4e5f6g7h8...)
+Size: 3 prompts
+----------------------------------------
+Row 5:
+  Text: What is the capital of France?
+  prompt: What is the capital of France?
+  Tokens (8): [2068, 318, 262, 4647, 290, 299, 30]
+
+Row 12:
+  Text: What is the capital of Germany?
+  prompt: What is the capital of Germany?
+  Tokens (8): [2068, 318, 262, 4647, 290, 299, 30]
+
+Row 23:
+  Text: What is the capital of Italy?
+  prompt: What is the capital of Italy?
+  Tokens (8): [2068, 318, 262, 4647, 290, 299, 30]
+
+==================================================
 ```
 
 ## File Format Support

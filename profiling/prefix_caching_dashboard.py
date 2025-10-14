@@ -51,6 +51,18 @@ Usage examples:
     python3 prefix_efficiency_dashboard.py \
         --file data.pkl --export-fields prompt,response --export-format json --export-file data.json
 
+    # Debug mode - group similar prompts
+    python3 prefix_efficiency_dashboard.py \
+        --file data.pkl --token-column token_ids --debug --debug-prefix-len 64
+
+    # Debug mode with text data
+    python3 prefix_efficiency_dashboard.py \
+        --file data.jsonl --tokenizer gpt2 --debug --debug-min-group-size 3
+
+    # Robust debug mode with block-based hashing
+    python3 prefix_efficiency_dashboard.py \
+        --file data.pkl --token-column token_ids --debug --debug-robust --debug-block-size 8
+
 Author: ChatGPT
 """
 
@@ -274,6 +286,132 @@ def load_dataframe(args) -> pd.DataFrame:
     df.attrs['is_sampled'] = args.sample_size and args.sample_size > 0 and args.sample_size < original_row_count
     
     return df
+
+
+# -------------------------------
+# Debug Mode - Similar Prompt Grouping
+# -------------------------------
+def create_debug_groups(df: pd.DataFrame, prefix_len: int, min_group_size: int, output_file: str, hash_name: str = "md5", token_column: str = None, use_robust: bool = False, block_size: int = 16, similarity_threshold: float = 0.3) -> None:
+    """
+    Create groups of similar prompts based on prefix sharing.
+    
+    Args:
+        df: DataFrame with token data
+        prefix_len: Prefix length to use for grouping
+        min_group_size: Minimum number of prompts in a group to include
+        output_file: Output file path
+        hash_name: Hash function to use
+        token_column: Name of the token column to use
+        use_robust: Whether to use robust block-based hashing
+        block_size: Token block size for robust hashing
+        similarity_threshold: Similarity threshold for robust grouping
+    """
+    print(f"Creating debug groups with prefix length {prefix_len}...")
+    if use_robust:
+        print(f"Using robust block-based hashing with block size {block_size}")
+    
+    # Determine which token column to use
+    if token_column and token_column in df.columns:
+        token_col = token_column
+    elif 'token_ids' in df.columns:
+        token_col = 'token_ids'
+    else:
+        # Find the first token column
+        token_detection = detect_tokenized_data(df)
+        if token_detection['is_tokenized']:
+            token_col = token_detection['primary_token_column']
+        else:
+            raise ValueError("No token column found for debug mode")
+    
+    print(f"Using token column: {token_col}")
+    
+    if use_robust:
+        # Use robust similarity-based hashing
+        token_ids_list = [ids[:prefix_len] for ids in df[token_col]]
+        groups = find_similar_prefixes(token_ids_list, block_size, hash_name, similarity_threshold)
+        
+        # Convert to simple format for compatibility
+        filtered_groups = {}
+        for group_key, group_data in groups.items():
+            indices = group_data['indices']
+            if len(indices) >= min_group_size:
+                filtered_groups[group_key] = indices
+    else:
+        # Use simple prefix hashing
+        prefix_hashes = df[token_col].apply(lambda ids: hash_prefix(ids[:prefix_len], hash_name=hash_name))
+        
+        # Group by prefix hash
+        groups = {}
+        for idx, hash_val in enumerate(prefix_hashes):
+            if hash_val not in groups:
+                groups[hash_val] = []
+            groups[hash_val].append(idx)
+        
+        # Filter groups by minimum size
+        filtered_groups = {hash_val: indices for hash_val, indices in groups.items() if len(indices) >= min_group_size}
+    
+    print(f"Found {len(filtered_groups)} groups with {min_group_size}+ similar prompts")
+    
+    # Write debug output
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write("Debug Mode - Similar Prompt Groups\n")
+        f.write("=" * 50 + "\n\n")
+        f.write(f"Prefix length: {prefix_len}\n")
+        f.write(f"Minimum group size: {min_group_size}\n")
+        f.write(f"Hashing method: {'Robust similarity-based' if use_robust else 'Simple prefix'}\n")
+        if use_robust:
+            f.write(f"Block size: {block_size}\n")
+            f.write(f"Similarity threshold: {similarity_threshold}\n")
+        f.write(f"Total groups found: {len(filtered_groups)}\n")
+        f.write(f"Total prompts in groups: {sum(len(indices) for indices in filtered_groups.values())}\n\n")
+        
+        for group_idx, (hash_val, indices) in enumerate(filtered_groups.items(), 1):
+            f.write(f"Group {group_idx} (Hash: {hash_val[:16]}...)\n")
+            f.write(f"Size: {len(indices)} prompts\n")
+            f.write("-" * 40 + "\n")
+            
+            for prompt_idx in indices:
+                row = df.iloc[prompt_idx]
+                f.write(f"Row {prompt_idx + 1}:\n")
+                
+                # Show text if available
+                if 'text' in df.columns:
+                    text = row['text']
+                    if isinstance(text, str) and len(text) > 200:
+                        text = text[:197] + "..."
+                    f.write(f"  Text: {text}\n")
+                
+                # Show original prompt field if different from text
+                for col in df.columns:
+                    if col not in ['text', 'token_ids'] and col in ['prompt', 'instruction', 'input']:
+                        value = row[col]
+                        if pd.notna(value) and str(value).strip():
+                            if isinstance(value, str) and len(value) > 200:
+                                value = value[:197] + "..."
+                            f.write(f"  {col}: {value}\n")
+                
+                # Show token info
+                if token_col in row:
+                    token_ids = row[token_col]
+                    if isinstance(token_ids, (list, tuple)):
+                        f.write(f"  {token_col} ({len(token_ids)}): {token_ids[:10]}{'...' if len(token_ids) > 10 else ''}\n")
+                    elif hasattr(token_ids, '__len__'):
+                        f.write(f"  {token_col} ({len(token_ids)}): {token_ids[:10].tolist()}{'...' if len(token_ids) > 10 else ''}\n")
+                
+                f.write("\n")
+            
+            f.write("\n" + "=" * 50 + "\n\n")
+    
+    print(f"✅ Debug groups written to {output_file}")
+    
+    # Print summary statistics
+    group_sizes = [len(indices) for indices in filtered_groups.values()]
+    if group_sizes:
+        print(f"Group size statistics:")
+        print(f"  Min: {min(group_sizes)}")
+        print(f"  Max: {max(group_sizes)}")
+        print(f"  Mean: {sum(group_sizes) / len(group_sizes):.2f}")
+        print(f"  Total prompts grouped: {sum(group_sizes)}")
 
 
 # -------------------------------
@@ -660,6 +798,182 @@ def hash_prefix(token_ids: Sequence[int], hash_name: str = "md5") -> str:
         return hashlib.sha256(repr(token_ids).encode("utf-8")).hexdigest()
 
 
+def hash_token_blocks(token_ids: Sequence[int], block_size: int = 16, hash_name: str = "md5") -> str:
+    """
+    Compute hash using token blocks with chaining for more robust prefix matching.
+    
+    Args:
+        token_ids: Sequence of token IDs
+        block_size: Number of tokens per block (default: 16)
+        hash_name: Hash function to use
+    
+    Returns:
+        Final chained hash as hex string
+    """
+    if not token_ids:
+        return ""
+    
+    # Split tokens into blocks
+    blocks = []
+    for i in range(0, len(token_ids), block_size):
+        block = token_ids[i:i + block_size]
+        blocks.append(block)
+    
+    # Hash each block
+    block_hashes = []
+    for block in blocks:
+        # Convert block to bytes
+        b = bytes(str(block), 'utf-8')
+        if hash_name == "md5":
+            block_hash = hashlib.md5(b).hexdigest()
+        elif hash_name == "sha1":
+            block_hash = hashlib.sha1(b).hexdigest()
+        elif hash_name == "sha256":
+            block_hash = hashlib.sha256(b).hexdigest()
+        else:
+            # fallback to python hash but stabilized via sha256 of repr
+            block_hash = hashlib.sha256(repr(block).encode("utf-8")).hexdigest()
+        block_hashes.append(block_hash)
+    
+    # Chain the block hashes
+    if len(block_hashes) == 1:
+        return block_hashes[0]
+    
+    # Create final hash from chained block hashes
+    chained = "|".join(block_hashes)
+    b = bytes(chained, 'utf-8')
+    if hash_name == "md5":
+        return hashlib.md5(b).hexdigest()
+    elif hash_name == "sha1":
+        return hashlib.sha1(b).hexdigest()
+    elif hash_name == "sha256":
+        return hashlib.sha256(b).hexdigest()
+    else:
+        # fallback to python hash but stabilized via sha256 of repr
+        return hashlib.sha256(repr(chained).encode("utf-8")).hexdigest()
+
+
+def compute_token_overlap(tokens1: Sequence[int], tokens2: Sequence[int], min_overlap: int = 4) -> float:
+    """
+    Compute overlap ratio between two token sequences.
+    
+    Args:
+        tokens1: First token sequence
+        tokens2: Second token sequence
+        min_overlap: Minimum overlap required to consider sequences similar
+    
+    Returns:
+        Overlap ratio (0.0 to 1.0)
+    """
+    if not tokens1 or not tokens2:
+        return 0.0
+    
+    # Convert to sets for intersection
+    set1 = set(tokens1)
+    set2 = set(tokens2)
+    
+    # Compute Jaccard similarity
+    intersection = len(set1.intersection(set2))
+    union = len(set1.union(set2))
+    
+    if union == 0:
+        return 0.0
+    
+    jaccard = intersection / union
+    
+    # Also check for sequential overlap (common prefix)
+    min_len = min(len(tokens1), len(tokens2))
+    sequential_overlap = 0
+    for i in range(min_len):
+        if tokens1[i] == tokens2[i]:
+            sequential_overlap += 1
+        else:
+            break
+    
+    sequential_ratio = sequential_overlap / min_len if min_len > 0 else 0.0
+    
+    # Combine both metrics
+    return max(jaccard, sequential_ratio)
+
+
+def find_similar_prefixes(token_ids_list: List[Sequence[int]], block_size: int = 16, hash_name: str = "md5", similarity_threshold: float = 0.3) -> Dict[str, List[int]]:
+    """
+    Find similar prefixes using similarity-based clustering.
+    
+    Args:
+        token_ids_list: List of token ID sequences
+        block_size: Base block size for hashing (used for block-based grouping)
+        hash_name: Hash function to use
+        similarity_threshold: Minimum similarity threshold for grouping
+    
+    Returns:
+        Dictionary mapping group key to list of indices with similar prefixes
+    """
+    print(f"Finding similar prefixes with similarity threshold: {similarity_threshold}")
+    
+    # First, try block-based exact matching for efficiency
+    block_groups = {}
+    block_sizes = [block_size // 2, block_size, block_size * 2] if block_size > 1 else [1, 2, 4]
+    block_sizes = [bs for bs in block_sizes if bs > 0]
+    
+    for block_size_curr in block_sizes:
+        for idx, token_ids in enumerate(token_ids_list):
+            prefix_hash = hash_token_blocks(token_ids, block_size_curr, hash_name)
+            if prefix_hash not in block_groups:
+                block_groups[prefix_hash] = []
+            block_groups[prefix_hash].append(idx)
+    
+    # Then, use similarity-based clustering for more flexible grouping
+    similarity_groups = {}
+    processed = set()
+    
+    for i, tokens1 in enumerate(token_ids_list):
+        if i in processed:
+            continue
+            
+        # Find all sequences similar to tokens1
+        similar_indices = [i]
+        for j, tokens2 in enumerate(token_ids_list):
+            if i != j and j not in processed:
+                overlap = compute_token_overlap(tokens1, tokens2)
+                if overlap >= similarity_threshold:
+                    similar_indices.append(j)
+        
+        if len(similar_indices) > 1:
+            # Create group
+            group_key = f"similarity_{i}_{len(similar_indices)}"
+            similarity_groups[group_key] = {
+                'indices': sorted(similar_indices),
+                'similarity_threshold': similarity_threshold,
+                'representative': i
+            }
+            processed.update(similar_indices)
+    
+    # Merge block-based and similarity-based groups
+    merged_groups = {}
+    
+    # Add block-based groups
+    for hash_val, indices in block_groups.items():
+        if len(indices) > 1:
+            group_key = f"block_{hash_val[:8]}_{len(indices)}"
+            merged_groups[group_key] = {
+                'indices': sorted(indices),
+                'type': 'block_based',
+                'hash': hash_val
+            }
+    
+    # Add similarity-based groups
+    for group_key, group_data in similarity_groups.items():
+        merged_groups[group_key] = {
+            'indices': group_data['indices'],
+            'type': 'similarity_based',
+            'similarity_threshold': group_data['similarity_threshold'],
+            'representative': group_data['representative']
+        }
+    
+    return merged_groups
+
+
 # -------------------------------
 # Metrics
 # -------------------------------
@@ -849,6 +1163,15 @@ def main():
     parser.add_argument("--export-fields", type=str, help="Comma-separated list of fields to export to text file")
     parser.add_argument("--export-file", type=str, help="Output file path for exported fields (default: exported_data.txt)")
     parser.add_argument("--export-format", type=str, default="txt", choices=["txt", "json", "csv"], help="Export format (default: txt)")
+    
+    # Debug mode options
+    parser.add_argument("--debug", action="store_true", help="Enable debug mode to create groups of similar prompts")
+    parser.add_argument("--debug-prefix-len", type=int, default=128, help="Prefix length for debug grouping (default: 128)")
+    parser.add_argument("--debug-min-group-size", type=int, default=2, help="Minimum group size for debug output (default: 2)")
+    parser.add_argument("--debug-output", type=str, default="debug_groups.txt", help="Output file for debug groups (default: debug_groups.txt)")
+    parser.add_argument("--debug-robust", action="store_true", help="Use robust block-based hashing for debug mode")
+    parser.add_argument("--debug-block-size", type=int, default=16, help="Token block size for robust hashing (default: 16)")
+    parser.add_argument("--debug-similarity-threshold", type=float, default=0.3, help="Similarity threshold for robust grouping (default: 0.3)")
 
     args = parser.parse_args()
 
@@ -900,12 +1223,58 @@ def main():
         export_fields(df, fields_to_export, output_file, args.export_format)
         
         # If only export is requested, exit after exporting
-        if not any([args.plots, args.vllm_metrics_url, args.vllm_metrics_file]):
+        if not any([args.plots, args.vllm_metrics_url, args.vllm_metrics_file, args.debug]):
             print("\nData export complete.")
             return
 
-    # Only proceed with metrics computation if not just inspecting or exporting
-    if not (args.inspect and not any([args.plots, args.vllm_metrics_url, args.vllm_metrics_file, args.export_fields])):
+    # Handle debug mode if requested
+    if args.debug:
+        # Check if we have tokenized data for debug mode
+        has_token_data = False
+        
+        # Check if we have a token column (either specified or auto-detected)
+        if args.token_column and args.token_column in df.columns:
+            has_token_data = True
+            print(f"Using specified token column '{args.token_column}' for debug mode")
+        else:
+            # Check for auto-detected token columns
+            token_detection = detect_tokenized_data(df)
+            if token_detection['is_tokenized']:
+                has_token_data = True
+                print(f"Using auto-detected token column '{token_detection['primary_token_column']}' for debug mode")
+            elif 'token_ids' in df.columns:
+                has_token_data = True
+                print(f"Using 'token_ids' column for debug mode")
+        
+        if not has_token_data:
+            if needs_tokenizer and args.tokenizer:
+                print(f"Tokenizing data for debug mode...")
+                tokenizer = AutoTokenizer.from_pretrained(args.tokenizer, trust_remote_code=True)
+                df = tokenize_dataframe(df, tokenizer, args.debug_prefix_len, args.token_column)
+            else:
+                print("Error: Debug mode requires tokenized data or a tokenizer", file=sys.stderr)
+                sys.exit(1)
+        
+        # Determine which token column to use for debug
+        debug_token_col = None
+        if args.token_column and args.token_column in df.columns:
+            debug_token_col = args.token_column
+        elif 'token_ids' in df.columns:
+            debug_token_col = 'token_ids'
+        else:
+            token_detection = detect_tokenized_data(df)
+            if token_detection['is_tokenized']:
+                debug_token_col = token_detection['primary_token_column']
+        
+        create_debug_groups(df, args.debug_prefix_len, args.debug_min_group_size, args.debug_output, args.hash, debug_token_col, args.debug_robust, args.debug_block_size, args.debug_similarity_threshold)
+        
+        # If only debug is requested, exit after creating groups
+        if not any([args.plots, args.vllm_metrics_url, args.vllm_metrics_file]):
+            print("\nDebug mode complete.")
+            return
+
+    # Only proceed with metrics computation if not just inspecting, exporting, or debugging
+    if not (args.inspect and not any([args.plots, args.vllm_metrics_url, args.vllm_metrics_file, args.export_fields, args.debug])):
         # Load tokenizer only if needed
         tokenizer = None
         if needs_tokenizer:

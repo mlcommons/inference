@@ -73,7 +73,7 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 ### Download model through MLCFlow Automation
 
 ```
-mlcr get,ml-model,mixtral --outdirname=<path_to_download> -j
+mlcr get,ml-model,mixtral,_r2-downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
 ### Get Checkpoint
@@ -95,16 +95,14 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 **Validation**
 
 ```
-mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_validation --outdirname=<path to download> -j
+mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_validation,_r2-downloader --outdirname=<path to download> -j
 ```
 
 **Calibration**
 
 ```
-mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_calibration --outdirname=<path to download> -j
+mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_calibration,_r2-downloader --outdirname=<path to download> -j
 ```
-
-- Adding `_wget` tag to the run command will change the download tool from `rclone` to `wget`.
 
 ### Preprocessed
 

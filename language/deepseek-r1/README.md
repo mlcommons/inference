@@ -13,6 +13,14 @@ You can also do pip install mlc-scripts and then use `mlcr` commands for downloa
 - DeepSeek-R1 model is automatically downloaded as part of setup
 - Checkpoint conversion is done transparently when needed.
 
+**Using MLCFlow Automation**
+
+Download the model using the MLCFlow Automation:
+
+```
+mlcr get,ml-model,deepseek-r1,_r2-downloader,_mlc --outdirname=<path to download> -j
+```
+
 **Using the MLC R2 Downloader**
 
 Download the model using the MLCommons R2 Downloader:

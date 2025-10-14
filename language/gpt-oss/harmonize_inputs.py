@@ -29,11 +29,11 @@ MOD_PROMPT = "Do not repeat steps and output the final answer immediately once y
 def _create_base_messages(reasoning_effort, instructions):
     """
     Creates system and developer messages for a conversation.
-    
+
     Args:
         reasoning_effort: ReasoningEffort enum value
         instructions: String containing developer instructions
-        
+
     Returns:
         list: List containing system and developer messages
     """
@@ -57,18 +57,19 @@ def _create_base_messages(reasoning_effort, instructions):
 def _add_multishot_examples(messages, examples):
     """
     Adds multi-shot examples to a message list.
-    
+
     Args:
         messages: List of messages to append examples to
         examples: List of tuples (user_content, assistant_content) representing examples
-        
+
     Returns:
         list: Updated messages list with examples added
     """
     for user_content, assistant_content in examples:
         messages.append(Message.from_role_and_content(Role.USER, user_content))
         messages.append(
-            Message.from_role_and_content(Role.ASSISTANT, assistant_content).with_channel("final")
+            Message.from_role_and_content(
+                Role.ASSISTANT, assistant_content).with_channel("final")
         )
     return messages
 
@@ -76,26 +77,26 @@ def _add_multishot_examples(messages, examples):
 def _finalize_conversation(messages, user_query):
     """
     Adds the user query, creates the conversation, and renders tokens.
-    
+
     Args:
         messages: List of messages (system, developer, and optionally examples)
         user_query: The actual user query to solve
-        
+
     Returns:
         tuple: (conversation_object, token_list) ready for model completion
     """
     # Load the Harmony encoding for gpt-oss models
     enc = load_harmony_encoding(HarmonyEncodingName.HARMONY_GPT_OSS)
-    
+
     # Add the actual problem to solve
     messages.append(Message.from_role_and_content(Role.USER, user_query))
-    
+
     # Create the conversation
     convo = Conversation.from_messages(messages)
-    
+
     # Render the conversation for completion (ready to send to the model)
     tokens = enc.render_conversation_for_completion(convo, Role.ASSISTANT)
-    
+
     return convo, tokens
 
 
@@ -112,9 +113,9 @@ def create_math500_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         f"{MOD_PROMPT} "
         "Follow the format shown in the examples below. "
     )
-    
+
     messages = _create_base_messages(reasoning_effort, instructions)
-    
+
     # Define multi-shot examples
     examples = [
         # Example 1: Square areas and side lengths
@@ -143,9 +144,9 @@ def create_math500_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
             "For $\\arccos (x^2)$ to be defined, we must have $-1 \\le x^2 \\le 1,$ which is satisfied only for $-1 \\le x \\le 1.$  Then $\\arccos (x^2)$ will always return an angle between 0 and $\\frac{\\pi}{2}.$  Then $\\tan (\\arccos(x^2))$ is defined, unless $\\arccos(x^2) = \\frac{\\pi}{2}.$  This occurs only when $x = 0.$\n\nTherefore, the domain of $f(x)$ is $\\boxed{[-1,0) \\cup (0,1]}.$"
         ),
     ]
-    
+
     _add_multishot_examples(messages, examples)
-    
+
     return _finalize_conversation(messages, user_query)
 
 
@@ -161,9 +162,9 @@ def create_aime1983_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         f"{MOD_PROMPT} "
         "The final line of your response should contain the final answer as an integer enclosed in \\boxed{answer}."
     )
-    
+
     messages = _create_base_messages(reasoning_effort, instructions)
-    
+
     return _finalize_conversation(messages, user_query)
 
 
@@ -181,9 +182,9 @@ def create_livecodebench_prompt(
         f"{MOD_PROMPT} "
         "The code should be enclosed within ```python delimiters."
     )
-    
+
     messages = _create_base_messages(reasoning_effort, instructions)
-    
+
     return _finalize_conversation(messages, user_query)
 
 
@@ -199,9 +200,9 @@ def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         f"{MOD_PROMPT} "
         "After your reasoning, provide your final answer on a new line in the format: 'Answer: X' where X is the letter choice."
     )
-    
+
     messages = _create_base_messages(reasoning_effort, instructions)
-    
+
     # Define multi-shot examples
     examples = [
         # Example 1: Abstract Algebra - Ring Theory
@@ -230,9 +231,9 @@ def create_mmlu_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
             "Answer: B"
         ),
     ]
-    
+
     _add_multishot_examples(messages, examples)
-    
+
     return _finalize_conversation(messages, user_query)
 
 
@@ -248,9 +249,9 @@ def create_gpqa_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
         f"{MOD_PROMPT} "
         "After your reasoning, provide your final answer on a new line in the format: 'Answer: X' where X is the letter choice."
     )
-    
+
     messages = _create_base_messages(reasoning_effort, instructions)
-    
+
     # Define multi-shot examples
     examples = [
         # Example 1: Molecular Biology - Gene Therapy
@@ -264,9 +265,9 @@ def create_gpqa_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
             "The compounds 1-methyl-4-(prop-1-en-2-yl)cyclohex-1-ene, 3-(2-methylbut-1-en-1-ylidene)cyclohex-1-ene, di(cyclohex-2-en-1-ylidene)methane, and 8,8-dichlorobicyclo[4.2.0]octan-7-one are chiral molecules and thus will be optically active.\n\nAnswer: C"
         ),
     ]
-    
+
     _add_multishot_examples(messages, examples)
-    
+
     return _finalize_conversation(messages, user_query)
 
 

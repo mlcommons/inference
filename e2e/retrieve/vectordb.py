@@ -19,6 +19,7 @@ class VectorDB(RagDB):
             reranker_model: str = None,
             device: str = "auto",
             vector_index_method: str = "hnsw",
+            ivf_nprobe: int = 10,
             benchmark: bool = False,
             **kwargs
         ):
@@ -26,6 +27,7 @@ class VectorDB(RagDB):
         self._retriever_model_name = retriever_model
         self._reranker_model_name = reranker_model
         self._vector_index_method = vector_index_method
+        self._ivf_nprobe = ivf_nprobe
 
         # Initialize embedding model with device configuration
         model_kwargs = {'device': self._device}
@@ -100,6 +102,12 @@ class VectorDB(RagDB):
         
         3. IVF (Inverted File):
            - Clustering-based approximate search
+           - Parameters:
+             * nlist: number of clusters (auto-adjusted to ~2*sqrt(N))
+             * nprobe: clusters to search per query (default: 10)
+               - nprobe=1: fastest but lowest accuracy (~80-90%)
+               - nprobe=10: good balance (~95-98% accuracy)
+               - nprobe=50: high accuracy (~99%) but slower
            - Pros: Memory efficient, good for large datasets, faster than flat
            - Cons: Requires training, slightly lower recall than HNSW
            - Best for: Very large datasets (>1M), when memory is limited
@@ -167,7 +175,11 @@ class VectorDB(RagDB):
         
         print(f"Training IVF index on {n_samples} samples...")
         self._index.train(embeddings_array)
-        print(f"IVF index trained successfully with {self._index.nlist} clusters")
+        
+        # Set nprobe (number of clusters to search) for better accuracy
+        self._index.nprobe = self._ivf_nprobe
+        print(f"IVF index trained successfully with {self._index.nlist} clusters, nprobe={self._ivf_nprobe}")
+        print(f"  → Will search {self._ivf_nprobe} clusters per query (~{100*self._ivf_nprobe/self._index.nlist:.1f}% of clusters)")
     
     def _calculate_index_output_size(self):
         """Calculate the size of VectorDB output data (db file - metadata).
@@ -356,3 +368,8 @@ class VectorDB(RagDB):
         self._vector_store = FAISS.deserialize_from_bytes(embeddings=self._embedding_model,
             serialized=data,
             allow_dangerous_deserialization=True) # <--- USE WITH CAUTION - Only deserialize files you trust
+        
+        # If it's an IVF index, restore nprobe setting
+        if self._vector_index_method == "ivf" and hasattr(self._vector_store.index, 'nprobe'):
+            self._vector_store.index.nprobe = self._ivf_nprobe
+            print(f"Restored IVF index with nprobe={self._ivf_nprobe}")

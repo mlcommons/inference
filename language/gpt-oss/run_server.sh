@@ -13,6 +13,10 @@ while [[ $# -gt 0 ]]; do
             model_path=$2
             shift 2
             ;;
+        *)
+            echo "Unknown argument: $1"
+            exit 1
+            ;;
     esac
 done
 
@@ -28,4 +32,4 @@ python3 -m sglang.launch_server \
     --chunked-prefill-size 16384 \
     --ep-size=1 \
     --quantization mxfp4 \
-    --stream-interval 50
+    --stream-interval 500 

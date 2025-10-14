@@ -1,4 +1,4 @@
-# Submission Structure
+# Submission directory structure
 
 The following diagram describes the submission structure 
 
@@ -48,3 +48,10 @@ The following diagram describes the submission structure
 │   │   └── systems
 ...
 ```
+
+## Description of placeholders
+
+**<system_desc_id_X>:** Descriptive name of the system. 
+**<benchmark_name>:** Name of the inference benchmark. E.g llama3.1-405b, rgat.
+**<scenario>:** Name of the benchmarking scenario. One of `["SingleStream", "MultiStream", "Offline", "Server", "Interactive"]`
+**<TEST0X>:** Compliance test number. E.g TEST01

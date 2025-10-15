@@ -270,6 +270,7 @@ def create_gpqa_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
 
     return _finalize_conversation(messages, user_query)
 
+
 def create_healthbench_prompt(prompt, reasoning_effort=ReasoningEffort.HIGH):
     """
     Creates a zero-shot prompt for healthbench problem solving using Harmony format.
@@ -303,6 +304,7 @@ def create_healthbench_prompt(prompt, reasoning_effort=ReasoningEffort.HIGH):
 
     return _finalize_conversation(messages, None)
 
+
 def process_row(args):
     """
     Worker function to process a single row from the dataframe.
@@ -315,7 +317,7 @@ def process_row(args):
     """
     index, row, dataset_function_map = args
     dataset_name = row["dataset"]
-    
+
     if dataset_name == "healthbench":
         user_query = row["prompt"]
     else:

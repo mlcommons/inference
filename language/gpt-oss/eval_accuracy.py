@@ -43,6 +43,7 @@ logger = logging.getLogger(__name__)
 # Input Validation
 # =============================================================================
 
+
 def validate_dataframe(df: pd.DataFrame) -> None:
     """Validate input DataFrame has required columns."""
     if not isinstance(df, pd.DataFrame):

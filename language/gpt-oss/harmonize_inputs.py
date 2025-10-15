@@ -74,7 +74,7 @@ def _add_multishot_examples(messages, examples):
     return messages
 
 
-def _finalize_conversation(messages, user_query):
+def _finalize_conversation(messages, user_query=None):
     """
     Adds the user query, creates the conversation, and renders tokens.
 
@@ -89,8 +89,8 @@ def _finalize_conversation(messages, user_query):
     enc = load_harmony_encoding(HarmonyEncodingName.HARMONY_GPT_OSS)
 
     # Add the actual problem to solve
-    messages.append(Message.from_role_and_content(Role.USER, user_query))
-
+    if user_query is not None:
+        messages.append(Message.from_role_and_content(Role.USER, user_query))
     # Create the conversation
     convo = Conversation.from_messages(messages)
 
@@ -270,6 +270,38 @@ def create_gpqa_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
 
     return _finalize_conversation(messages, user_query)
 
+def create_healthbench_prompt(prompt, reasoning_effort=ReasoningEffort.HIGH):
+    """
+    Creates a zero-shot prompt for healthbench problem solving using Harmony format.
+    prompt: list of messages (message: Dict[str, str] (content, role)) giving conversation history
+
+    Returns:
+        tuple: (conversation_object, token_list) ready for model completion
+    """
+    instructions = (
+        "Your task is to answer the following health-related query as a responsible assistant."
+        "Provide responses that are factually accurate, up-to-date, and consistent with current clinical guidelines. Adjust the detail, terminology, and tone based on the user’s apparent background (layperson or healthcare professional)."
+        "If the evidence is limited or uncertain, clearly acknowledge this in your answer. When essential information is missing for a safe, thorough response, ask clarifying questions before proceeding."
+        "Do not provide specific medical diagnoses or emergency recommendations unless explicitly appropriate and safe to do so."
+        "All responses should promote user safety, accuracy, completeness, clear communication, and adherence to user instructions while maintaining clinical standards."
+    )
+
+    messages = _create_base_messages(reasoning_effort, instructions)
+
+    role_map = {
+        "user": Role.USER,
+        "assistant": Role.ASSISTANT
+    }
+
+    for message in prompt:
+        role = message["role"]
+        assert role in role_map, f"Unknown role: {role}"
+        role = role_map[role]
+
+        content = message["content"]
+        messages.append(Message.from_role_and_content(role, content))
+
+    return _finalize_conversation(messages, None)
 
 def process_row(args):
     """
@@ -283,7 +315,11 @@ def process_row(args):
     """
     index, row, dataset_function_map = args
     dataset_name = row["dataset"]
-    user_query = row["question"]
+    
+    if dataset_name == "healthbench":
+        user_query = row["prompt"]
+    else:
+        user_query = row["question"]
 
     try:
         # Get the appropriate function based on dataset type
@@ -350,6 +386,7 @@ if __name__ == "__main__":
         'math500': create_math500_prompt,
         'mmlu_pro': create_mmlu_prompt,
         'mmlu': create_mmlu_prompt,
+        'healthbench': create_healthbench_prompt,
     }
 
     # Prepare data for parallel processing

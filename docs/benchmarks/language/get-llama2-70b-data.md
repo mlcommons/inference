@@ -9,38 +9,21 @@ hide:
 
 The benchmark implementation run command will automatically download the validation and calibration datasets and do the necessary preprocessing. In case you want to download only the datasets, you can use the below commands.
 
-=== "Nvidia Preprocessed Dataset"
+=== "Preprocessed Dataset"
 
     === "Validation"
         LLAMA2-70b validation run uses the Open ORCA dataset.
     
         ### Get Preprocessed Validation Dataset
         ```
-        mlcr get,dataset,preprocessed,openorca,_validation,_mlcommons,_nvidia -j
+        mlcr get,dataset,preprocessed,openorca,_validation,_r2-downloader,_mlc -j
         ```
 
     === "Calibration"
 
         ### Get Preprocessed Calibration dataset
         ```
-        mlcr get,dataset,preprocessed,openorca,_calibration,_mlcommons,_nvidia -j
-        ```
-
-=== "MLCommons Preprocessed Dataset"
-
-    === "Validation"
-        LLAMA2-70b validation run uses the Open ORCA dataset.
-    
-        ### Get Preprocessed Validation Dataset
-        ```
-        mlcr get,dataset,preprocessed,openorca,_validation -j
-        ```
-
-    === "Calibration"
-
-        ### Get Preprocessed Calibration dataset
-        ```
-        mlcr get,dataset,preprocessed,openorca,_calibration -j
+        mlcr get,dataset,preprocessed,openorca,_calibration,_r2-downloader,_mlc -j
         ```
 
 === "Unprocessed Dataset"
@@ -69,13 +52,13 @@ The benchmark implementation run command will automatically download the require
 
     === "Pytorch"
 
-        === "From MLCOMMONS storage"
-
-            > **Note:**  One has to accept the [MLCommons Llama 2 License Confidentiality Notice](https://llama2.mlcommons.org/) to access the model files in MLCOMMONS storage. 
-
-            ### Get the Official MLPerf LLAMA2-70B model from MLCOMMONS storage
+        === "From MLCOMMONS Storage"
+    
+            > **Note:**  One has to accept the [MLCommons Llama 2 License Confidentiality Notice](https://llama2.mlcommons.org/) to access the model files in MLCOMMONS Storage. 
+    
+            ### Get the Official MLPerf LLAMA2-70B model from MLCOMMONS Google Drive
             ```
-            mlcr get,ml-model,llama2-70b,_fp32,_pytorch -j
+            mlcr get,ml-model,llama2-70b,_pytorch,_r2-downloader,_70b,_mlc -j
             ```
 
         === "From Hugging Face repo"

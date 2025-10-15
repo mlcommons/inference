@@ -13,14 +13,14 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset
     ```
-    mlcr get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
+    mlcr get,dataset,mlperf,inference,llama3,_validation,_r2-downloader --outdirname=<path to download> -j
     ```
     
 === "Calibration"
 
     ### Get Calibration Dataset
     ```
-    mlcr get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
+    mlcr get,dataset,mlperf,inference,llama3,_calibration,_r2-downloader --outdirname=<path to download> -j
     ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_LLAMA3_405B_DATASET>` could be provided to download the dataset to a specific location.
@@ -30,13 +30,13 @@ The benchmark implementation run command will automatically download the require
 
 === "Pytorch"
 
-    === "From MLCOMMONS Google Drive"
+    === "From MLCOMMONS Storage"
 
-        > **Note:**  One has to accept the [MLCommons Llama 3.1 License Confidentiality Notice](http://llama3-1.mlcommons.org/) to access the model files in MLCOMMONS Google Drive. 
+        > **Note:**  One has to accept the [MLCommons Llama 3.1 License Confidentiality Notice](http://llama3-1.mlcommons.org/) to access the model files in MLCOMMONS Storage. 
 
         ### Get the Official MLPerf LLAMA3.1-405B model from MLCOMMONS Google Drive
         ```
-        mlcr get,ml-model,llama3 -j
+        mlcr get,ml-model,llama3,_mlc,_r2-downloader,_405b --outdirname=<path to download> -j
         ```
 
     === "From Hugging Face repo"

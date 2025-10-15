@@ -156,7 +156,7 @@ class BM25DB(RagDB):
         
         return total_size
     
-    def ingest(self, passages: List[str], metadatas: List[Dict[str, Any]], num_threads: int = 4):
+    def ingest(self, passages: List[str], metadatas: List[dict], **kwargs):
         """Ingest passages using BM25 indexing with performance monitoring."""
         
         # Start unified timer (handles both benchmark and non-benchmark modes)
@@ -164,7 +164,7 @@ class BM25DB(RagDB):
         
         self._doc_list = passages
         self._passages_metadata = metadatas
-        self._num_threads = num_threads
+        self._num_threads = kwargs.get('num_threads', 4)
         total_chars = sum(len(passage) for passage in passages)
         
         corpus_tokens = self._track_component("bm25_tokenization", total_chars, len(passages),

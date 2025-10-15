@@ -20,6 +20,7 @@ class VectorDB(RagDB):
             device: str = "auto",
             vector_index_method: str = "hnsw",
             ivf_nprobe: int = 10,
+            load_embeddings: bool = True,
             benchmark: bool = False,
             **kwargs
         ):
@@ -28,6 +29,7 @@ class VectorDB(RagDB):
         self._reranker_model_name = reranker_model
         self._vector_index_method = vector_index_method
         self._ivf_nprobe = ivf_nprobe
+        self._load_embeddings = load_embeddings
 
         # Initialize embedding model with device configuration
         model_kwargs = {'device': self._device}
@@ -181,6 +183,48 @@ class VectorDB(RagDB):
         print(f"IVF index trained successfully with {self._index.nlist} clusters, nprobe={self._ivf_nprobe}")
         print(f"  → Will search {self._ivf_nprobe} clusters per query (~{100*self._ivf_nprobe/self._index.nlist:.1f}% of clusters)")
     
+    def _get_embeddings_cache_path(self, passages_path: str) -> str:
+        """Get the cache path for embeddings based on passages file path."""
+        from pathlib import Path
+        passages_path = Path(passages_path)
+        # Replace extension with .emb.pkl
+        cache_path = passages_path.with_suffix('.emb.pkl')
+        return str(cache_path)
+    
+    def _save_embeddings_cache(self, embeddings: list, passages_path: str):
+        """Save embeddings to a pickle file for reuse."""
+        import os, pickle
+        from pathlib import Path
+        
+        cache_path = self._get_embeddings_cache_path(passages_path)
+        Path(cache_path).parent.mkdir(parents=True, exist_ok=True)
+        
+        if os.path.exists(cache_path):
+            print(f"Embeddings cache exists: {cache_path}")
+            return
+
+        with open(cache_path, 'wb') as f:
+            pickle.dump(embeddings, f)
+        print(f"💾 Saved embeddings cache to {cache_path}")
+    
+    def _load_embeddings_cache(self, passages_path: str) -> list:
+        """Load embeddings from cache if available."""
+        import pickle
+        from pathlib import Path
+        
+        cache_path = self._get_embeddings_cache_path(passages_path)
+        if not Path(cache_path).exists():
+            return None
+        
+        try:
+            with open(cache_path, 'rb') as f:
+                embeddings = pickle.load(f)
+            print(f"✓ Loaded embeddings from cache: {cache_path}")
+            return embeddings
+        except Exception as e:
+            print(f"⚠️  Failed to load embeddings cache: {e}")
+            return None
+    
     def _calculate_index_output_size(self):
         """Calculate the size of VectorDB output data (db file - metadata).
         
@@ -213,94 +257,56 @@ class VectorDB(RagDB):
         if 'num_threads' in kwargs:
             print(f"Warning: num_threads parameter is not used in VectorDB, ignoring")
         
+        # Extract passages source path for embeddings caching
+        passages_path = kwargs.get('passages_path', None)
+        
         # Start timing (works for both benchmark and non-benchmark modes)
         ingestion_start = self._start_ingestion_timer()
         
-        # Auto-enable incremental indexing for scaling analysis when benchmarking
-        # and we have enough documents to make it meaningful
-        if (self._benchmark and self._monitor and len(passages) >= 500):
-            batch_size = max(1000, len(passages) // 10)  # 10 batches, minimum 1000 docs per batch
-            return self._ingest_incremental(passages, metadatas, batch_size, ingestion_start)
-        
         total_chars = sum(len(passage) for passage in passages)
         
-        embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
-                                          lambda: self._embedding_model.embed_documents(passages),
-                                          is_pipeline_input=True)
-        
-        # Calculate embedding size in bytes for accurate throughput measurement
-        embedding_bytes = len(passages) * self._embedding_dimension * self._embedding_bytes_per_element
-        
-        # Train IVF index if needed (first time adding embeddings)
-        if self._vector_index_method == "ivf" and not self._index.is_trained:
-            self._train_vector_index(self._index, embeddings)
-        
-        # Add embeddings to vector store
-        self._track_component("faiss_indexing", embedding_bytes, len(passages),
-                             lambda: self._vector_store.add_embeddings(
-                                 list(zip(passages, embeddings)), metadatas),
-                             is_pipeline_output=True)
-        
-        # Store ingestion metrics for later reporting (after serialization)
-        self._ingestion_start = ingestion_start
-        self._ingestion_item_count = len(passages)
-        self._ingestion_total_chars = total_chars
-        
-        # Keep track of ingested documents
-        self._doc_list.extend(passages)
-    
-    def _ingest_incremental(self, passages: List[str], metadatas: List[dict], batch_size: int, ingestion_start: float):
-        """Ingest in batches to study indexing scaling trends."""
-        import time
-        
-        print(f"🔬 Incremental indexing analysis: {len(passages)} docs in batches of {batch_size}")
-        
-        total_chars = sum(len(passage) for passage in passages)
-        
-        embeddings = self._track_component("embedding_generation", total_chars, len(passages),
-                                         lambda: self._embedding_model.embed_documents(passages),
-                                         is_pipeline_input=True)
+        # Handle embeddings: try to load from cache or generate new ones
+        embeddings = None
+
+        if self._load_embeddings and passages_path:
+            embeddings = self._load_embeddings_cache(passages_path)
+
+        # Generate embeddings if not cached
+        if embeddings is None:
+            embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
+                                              lambda: self._embedding_model.embed_documents(passages),
+                                              is_pipeline_input=True)
         
         # Train IVF index if needed (before adding any embeddings)
         if self._vector_index_method == "ivf" and not self._index.is_trained:
             self._train_vector_index(self._index, embeddings)
         
-        # Track total indexing time for benchmark component
+        # Determine batch size: single batch for small datasets, multiple batches for scaling analysis
+        track_incremental = self._benchmark and self._monitor and len(passages) >= 500
+        if track_incremental:
+            batch_size = max(1000, len(passages) // 10)  # 10 batches, minimum 1000 docs per batch
+            print(f"🔬 Incremental indexing analysis: {len(passages)} docs in batches of {batch_size}")
+        else:
+            batch_size = len(passages)  # Single batch
+        
+        # Track total indexing time for component metrics
+        import time
         indexing_component_start = time.perf_counter()
         
-        # Now add to index in batches to track scaling
+        # Process in batches
         for i in range(0, len(passages), batch_size):
             batch_end = min(i + batch_size, len(passages))
-            batch_passages = passages[i:batch_end]
-            batch_metadatas = metadatas[i:batch_end] if metadatas else [{}] * (batch_end - i)
-            batch_embeddings = embeddings[i:batch_end]
-            
-            # Track current DB size before adding this batch
-            db_size_before = len(self._doc_list)
-            
-            # Time just the indexing operation
-            indexing_start = time.perf_counter()
-            self._vector_store.add_embeddings(
-                list(zip(batch_passages, batch_embeddings)), 
-                batch_metadatas
-            )
-            indexing_end = time.perf_counter()
-            indexing_time = indexing_end - indexing_start
-            
-            # Track this batch's performance
-            self._monitor.track_incremental_indexing(
-                db_size_before=db_size_before,
-                batch_size=len(batch_passages),
-                indexing_time=indexing_time
-            )
-            
-            # Update our document list
-            self._doc_list.extend(batch_passages)
-            
+            self._ingest_single_batch(passages, metadatas, embeddings, i, batch_end, track_incremental)
+        
         indexing_component_end = time.perf_counter()
         indexing_component_duration = indexing_component_end - indexing_component_start
         
-        if self._benchmark and self._monitor:
+        # Create component metrics for the entire indexing operation
+        if not track_incremental:
+            # For single batch, component was tracked inside _ingest_single_batch
+            pass
+        elif self._monitor:
+            # For incremental, create component metrics here for the entire operation
             embedding_bytes = len(passages) * self._embedding_dimension * self._embedding_bytes_per_element
             
             from ingestion_monitor import ComponentMetrics
@@ -316,10 +322,69 @@ class VectorDB(RagDB):
                 is_pipeline_output=True
             )
         
-        # Store ingestion metrics for later reporting (after serialization)
+        # Store ingestion metrics for later reporting
         self._ingestion_start = ingestion_start
         self._ingestion_item_count = len(passages)
         self._ingestion_total_chars = total_chars
+        
+        # Save embeddings to cache 
+        if self._load_embeddings and passages_path:
+            self._save_embeddings_cache(embeddings, passages_path)
+
+    def _ingest_single_batch(self, passages: List[str], metadatas: List[dict], embeddings: list,
+                            batch_start: int, batch_end: int, track_incremental: bool):
+        """Ingest a batch of passages. Can be used for single or incremental indexing.
+        
+        Args:
+            passages: All passages
+            metadatas: All metadata
+            embeddings: All embeddings
+            batch_start: Start index for this batch
+            batch_end: End index for this batch (exclusive)
+            track_incremental: Whether to track this batch for incremental analysis
+        """
+        import time
+        
+        # Extract batch data
+        batch_passages = passages[batch_start:batch_end]
+        batch_metadatas = metadatas[batch_start:batch_end] if metadatas else [{}] * (batch_end - batch_start)
+        batch_embeddings = embeddings[batch_start:batch_end]
+        
+        # Track DB size before adding (for incremental tracking)
+        db_size_before = len(self._doc_list) if track_incremental else 0
+        
+        # Calculate embedding size for this batch
+        batch_embedding_bytes = len(batch_passages) * self._embedding_dimension * self._embedding_bytes_per_element
+        
+        # Time and execute indexing operation
+        indexing_start = time.perf_counter()
+        
+        if track_incremental:
+            # For incremental: just add embeddings without component tracking
+            self._vector_store.add_embeddings(
+                list(zip(batch_passages, batch_embeddings)), 
+                batch_metadatas
+            )
+        else:
+            # For single batch: use component tracking
+            self._track_component("faiss_indexing", batch_embedding_bytes, len(batch_passages),
+                                 lambda: self._vector_store.add_embeddings(
+                                     list(zip(batch_passages, batch_embeddings)), batch_metadatas),
+                                 is_pipeline_output=True)
+        
+        indexing_end = time.perf_counter()
+        indexing_time = indexing_end - indexing_start
+        
+        # Update document list
+        self._doc_list.extend(batch_passages)
+        
+        # Track for incremental analysis if requested
+        if track_incremental and self._monitor:
+            self._monitor.track_incremental_indexing(
+                db_size_before=db_size_before,
+                batch_size=len(batch_passages),
+                indexing_time=indexing_time
+            )
     
     def lookup(self, query: str, k: int):
         results = self._vector_store.similarity_search(query, k=k)

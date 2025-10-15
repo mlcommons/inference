@@ -155,7 +155,7 @@ class RagDB(abc.ABC):
         doc_list = [p.pop('passage') for p in passage_data]
         passage_metadata = [p for p in passage_data]  # All keys except 'passage' are metadata
         print(f"Ingesting {len(doc_list)} passages from JSON file {file_path}")
-        return self.ingest(doc_list, passage_metadata, **kwargs)
+        return self.ingest(doc_list, passage_metadata, passages_path=file_path, **kwargs)
 
     def ingest_from_path(self, source_path: str, **kwargs):
         """Handle both file and folder ingestion.

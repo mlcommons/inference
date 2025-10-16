@@ -9,7 +9,24 @@ hide:
 
 The benchmark implementation run command will automatically download the validation and calibration datasets and do the necessary preprocessing. In case you want to download only the datasets, you can use the below commands.
 
-=== "Preprocessed Dataset"
+=== "Nvidia Preprocessed Dataset"
+
+    === "Validation"
+        LLAMA2-70b validation run uses the Open ORCA dataset.
+    
+        ### Get Preprocessed Validation Dataset
+        ```
+        mlcr get,dataset,preprocessed,openorca,_validation,_mlcommons,_nvidia -j
+        ```
+
+    === "Calibration"
+
+        ### Get Preprocessed Calibration dataset
+        ```
+        mlcr get,dataset,preprocessed,openorca,_calibration,_mlcommons,_nvidia -j
+        ```
+
+=== "MLCommons Preprocessed Dataset"
 
     === "Validation"
         LLAMA2-70b validation run uses the Open ORCA dataset.
@@ -24,6 +41,7 @@ The benchmark implementation run command will automatically download the validat
         ### Get Preprocessed Calibration dataset
         ```
         mlcr get,dataset,preprocessed,openorca,_calibration,_r2-downloader,_mlc -j
+        ```
         ```
 
 === "Unprocessed Dataset"

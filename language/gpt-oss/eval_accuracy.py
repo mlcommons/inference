@@ -65,13 +65,14 @@ def validate_dataframe(df: pd.DataFrame) -> None:
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         raise ValueError(f"Missing required columns: {missing_cols}")
-    
+
     # Check for ground_truth or rubrics depending on dataset
     has_ground_truth = 'ground_truth' in df.columns
     has_rubrics = 'rubrics' in df.columns
-    
+
     if not has_ground_truth and not has_rubrics:
-        raise ValueError("DataFrame must have either 'ground_truth' or 'rubrics' column")
+        raise ValueError(
+            "DataFrame must have either 'ground_truth' or 'rubrics' column")
 
 
 def validate_text_input(text: Any) -> str:
@@ -446,7 +447,11 @@ class RubricItem:
 
 def parse_healthbench_json(json_string: str) -> dict:
     """Parse JSON response from grader, handling markdown code blocks."""
-    json_cleaned = re.sub(r"^```json\s*|\s*```$", "", json_string.strip(), flags=re.MULTILINE)
+    json_cleaned = re.sub(
+        r"^```json\s*|\s*```$",
+        "",
+        json_string.strip(),
+        flags=re.MULTILINE)
     try:
         return json.loads(json_cleaned)
     except json.JSONDecodeError as e:
@@ -458,27 +463,27 @@ def calculate_healthbench_score(
     rubric_items: list, grading_responses: list
 ) -> float:
     """Calculate HealthBench score based on rubric items and grading responses.
-    
+
     Args:
         rubric_items: List of RubricItem objects
         grading_responses: List of dicts with 'criteria_met' and 'explanation'
-    
+
     Returns:
         Score between 0 and 1, or 0 if no positive points available
     """
     total_possible_points = sum(
         item.points for item in rubric_items if item.points > 0
     )
-    
+
     if total_possible_points == 0:
         return 0.0
-    
+
     achieved_points = sum(
         item.points
         for item, response in zip(rubric_items, grading_responses)
         if response.get("criteria_met", False)
     )
-    
+
     overall_score = achieved_points / total_possible_points
     return max(0.0, min(1.0, overall_score))  # Clamp to [0, 1]
 
@@ -493,7 +498,7 @@ def grade_healthbench_with_llm(
     grader_backend: str = "openai"
 ) -> Tuple[float, str]:
     """Grade a HealthBench response using LLM-as-a-judge.
-    
+
     Args:
         prompt_messages: List of conversation messages
         model_output: The model's response to grade
@@ -502,7 +507,7 @@ def grade_healthbench_with_llm(
         grader_model: Model to use for grading
         grader_base_url: Base URL for API
         grader_backend: Backend to use - "openai" or "nvidia" (default: "openai")
-    
+
     Returns:
         Tuple of (score, detailed_explanation)
     """
@@ -511,14 +516,16 @@ def grade_healthbench_with_llm(
         if grader_backend == "nvidia":
             grader_api_key = os.environ.get("NVIDIA_NIM_API_KEY")
             if not grader_api_key:
-                logger.warning("No NVIDIA NIM API key found. Set NVIDIA_NIM_API_KEY environment variable.")
+                logger.warning(
+                    "No NVIDIA NIM API key found. Set NVIDIA_NIM_API_KEY environment variable.")
                 return 0.0, "Error: No NVIDIA NIM API key provided"
         else:
             grader_api_key = os.environ.get("OPENAI_API_KEY")
             if not grader_api_key:
-                logger.warning("No OpenAI API key found. Set OPENAI_API_KEY environment variable.")
+                logger.warning(
+                    "No OpenAI API key found. Set OPENAI_API_KEY environment variable.")
                 return 0.0, "Error: No OpenAI API key provided"
-    
+
     # Format conversation
     conversation_text = ""
     for msg in prompt_messages:
@@ -526,15 +533,15 @@ def grade_healthbench_with_llm(
         content = msg.get("content", "")
         conversation_text += f"{role}: {content}\n\n"
     conversation_text += f"assistant: {model_output}"
-    
+
     grading_responses = []
-    
+
     for rubric_item in rubric_items:
         # Create grading prompt
         grading_prompt = HEALTHBENCH_GRADER_TEMPLATE.replace(
             "<CONVERSATION>", conversation_text
         ).replace("<RUBRIC_ITEM>", str(rubric_item))
-        
+
         try:
             if grader_backend == "nvidia":
                 # Use NVIDIA NIM endpoint
@@ -556,20 +563,20 @@ def grade_healthbench_with_llm(
                     temperature=0.0,
                     max_tokens=1024
                 )
-            
+
             grading_result = parse_healthbench_json(response_text)
             grading_responses.append(grading_result)
-            
+
         except Exception as e:
             logger.warning(f"Error grading rubric item: {e}")
             grading_responses.append({
                 "explanation": f"Error during grading: {e}",
                 "criteria_met": False
             })
-    
+
     # Calculate overall score
     score = calculate_healthbench_score(rubric_items, grading_responses)
-    
+
     # Create detailed explanation
     explanations = []
     for rubric_item, response in zip(rubric_items, grading_responses):
@@ -578,9 +585,9 @@ def grade_healthbench_with_llm(
         explanations.append(
             f"[{'✓' if met else '✗'}] {rubric_item}\n    Explanation: {explanation}"
         )
-    
+
     detailed_explanation = "\n\n".join(explanations)
-    
+
     return score, detailed_explanation
 
 
@@ -593,7 +600,7 @@ def _call_openai_api(
     max_tokens: int = 1024
 ) -> str:
     """Call OpenAI API for grading.
-    
+
     Args:
         api_key: OpenAI API key
         model: Model name
@@ -601,15 +608,16 @@ def _call_openai_api(
         base_url: Base URL for API
         temperature: Sampling temperature
         max_tokens: Maximum tokens in response
-    
+
     Returns:
         Response text from the model
     """
     try:
         from openai import OpenAI
     except ImportError:
-        raise ImportError("openai package required. Install with: pip install openai")
-    
+        raise ImportError(
+            "openai package required. Install with: pip install openai")
+
     client = OpenAI(api_key=api_key, base_url=base_url)
     response = client.chat.completions.create(
         model=model,
@@ -629,7 +637,7 @@ def _call_nvidia_nim_api(
     max_tokens: int = 1024
 ) -> str:
     """Call NVIDIA NIM API for grading.
-    
+
     Args:
         api_key: NVIDIA NIM API key
         model: Model name (e.g., 'deepseek-ai/deepseek-v3.1-terminus')
@@ -637,31 +645,36 @@ def _call_nvidia_nim_api(
         base_url: Base URL for NVIDIA NIM API
         temperature: Sampling temperature
         max_tokens: Maximum tokens in response
-    
+
     Returns:
         Response text from the model
     """
     try:
         import requests
     except ImportError:
-        raise ImportError("requests package required. Install with: pip install requests")
-    
+        raise ImportError(
+            "requests package required. Install with: pip install requests")
+
     headers = {
         'Authorization': f'Bearer {api_key}',
         'Accept': 'application/json',
         'Content-Type': 'application/json'
     }
-    
+
     payload = {
         'model': model,
         'messages': messages,
         'temperature': temperature,
         'max_tokens': max_tokens
     }
-    
-    response = requests.post(base_url, headers=headers, json=payload, timeout=200)
+
+    response = requests.post(
+        base_url,
+        headers=headers,
+        json=payload,
+        timeout=200)
     response.raise_for_status()
-    
+
     response_data = response.json()
     return response_data['choices'][0]['message']['content']
 
@@ -679,48 +692,48 @@ def evaluate_healthbench(
     grader_model: Optional[str] = None
 ) -> Tuple[bool, Optional[str]]:
     """Evaluate HealthBench response using LLM grading.
-    
+
     Args:
         parsed_output: The model output text
         row_data: Full row data containing 'rubrics' and 'prompt'
         grader_api_key: Optional API key for grader
         grader_backend: Backend to use - "openai" or "nvidia" (default: "openai")
         grader_model: Optional model name override
-    
+
     Returns:
         Tuple of (is_correct, detailed_explanation)
     """
     if not parsed_output:
         return False, "Empty output"
-    
+
     # Extract rubrics from row
     rubrics = row_data.get('rubrics', [])
     if not rubrics:
         logger.warning("No rubrics found in row data")
         return False, "No rubrics available"
-    
+
     # Convert to RubricItem objects
     rubric_items = [RubricItem.from_dict(r) for r in rubrics]
-    
+
     # Extract prompt/conversation
     prompt = row_data.get('prompt', [])
     if isinstance(prompt, str):
         # If prompt is a string, convert to message format
         prompt = [{"role": "user", "content": prompt}]
-    
+
     # Set default model based on backend
     if grader_model is None:
         if grader_backend == "nvidia":
             grader_model = "deepseek-ai/deepseek-v3.1-terminus"
         else:
             grader_model = "gpt-4o-mini"
-    
+
     # Set base URL based on backend
     if grader_backend == "nvidia":
         grader_base_url = "https://integrate.api.nvidia.com/v1/chat/completions"
     else:
         grader_base_url = "https://api.openai.com/v1"
-    
+
     # Grade using LLM
     score, explanation = grade_healthbench_with_llm(
         prompt_messages=prompt,
@@ -731,10 +744,10 @@ def evaluate_healthbench(
         grader_base_url=grader_base_url,
         grader_backend=grader_backend
     )
-    
+
     # Consider "correct" if score >= 0.7 (70%)
     is_correct = score >= 0.7
-    
+
     return is_correct, f"Score: {score:.2%}\n\n{explanation}"
 
 
@@ -888,21 +901,23 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             # HealthBench evaluation with LLM grading
             correct_count = 0
             total_evaluated = 0
-            
+
             for idx in tqdm(group_indices, desc=f"Evaluating {dataset_name}"):
                 row = df_output.loc[idx]
                 extracted = row['extracted_answer']
-                
+
                 if extracted is not None:
                     try:
-                        # HealthBench needs full row data for rubrics and prompts
+                        # HealthBench needs full row data for rubrics and
+                        # prompts
                         is_correct, explanation = evaluator['evaluate'](
-                            extracted, 
+                            extracted,
                             row,
                             grader_backend=LLM_JUDGE_BACKEND,
                             grader_model=LLM_JUDGE_MODEL
                         )
-                        df_output.at[idx, 'prompt_accuracy'] = 100.0 if is_correct else 0.0
+                        df_output.at[idx,
+                                     'prompt_accuracy'] = 100.0 if is_correct else 0.0
                         # Store explanation in a new column if needed
                         if 'evaluation_details' not in df_output.columns:
                             df_output['evaluation_details'] = None
@@ -911,7 +926,8 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                         if is_correct:
                             correct_count += 1
                     except Exception as e:
-                        logger.error(f"Error evaluating HealthBench row {idx}: {e}")
+                        logger.error(
+                            f"Error evaluating HealthBench row {idx}: {e}")
                         df_output.at[idx, 'prompt_accuracy'] = 0.0
                         total_evaluated += 1
         else:
@@ -1069,7 +1085,7 @@ def main():
         "--output-file", help="Output pickle file (defaults to <input-file>_evaluated.pkl)")
     parser.add_argument("--verbose", action="store_true",
                         help="Verbose logging")
-    parser.add_argument("--llm-judge-backend", 
+    parser.add_argument("--llm-judge-backend",
                         choices=["openai", "nvidia"],
                         default="openai",
                         help="Backend for HealthBench LLM judge (default: openai)")
@@ -1077,7 +1093,7 @@ def main():
                         help="Model for HealthBench LLM judge (default: gpt-4o-mini for openai, deepseek-ai/deepseek-v3.1-terminus for nvidia)")
 
     args = parser.parse_args()
-    
+
     # Set global configuration for HealthBench LLM judge
     global LLM_JUDGE_BACKEND, LLM_JUDGE_MODEL
     LLM_JUDGE_BACKEND = args.llm_judge_backend

@@ -5,13 +5,18 @@ Standalone evaluation script for mlperf-inference deepseek-r1 dataset.
 Expected input format (pickle file with DataFrame):
 - model_output: The model's response text
 - tok_model_output_len: The length of the model's response tokens
-- ground_truth: The expected answer
-- dataset: Dataset name (e.g., 'gpqa', 'mmlu_pro', 'math500', 'livecodebench', 'aime')
+- ground_truth: The expected answer (not required for healthbench)
+- dataset: Dataset name (e.g., 'gpqa', 'mmlu_pro', 'math500', 'livecodebench', 'aime', 'healthbench')
 - question: The question text
+- rubrics: List of rubric items (required for healthbench)
+- prompt: Conversation history (required for healthbench)
 
-Output adds two columns:
+Output adds columns:
 - extracted_answer: Parsed answer from model output
 - prompt_accuracy: 100.0 if correct, 0.0 if incorrect
+- evaluation_details: Detailed evaluation explanation (for healthbench)
+
+For HealthBench evaluation, set OPENAI_API_KEY environment variable for LLM-as-a-judge grading.
 """
 
 import sys
@@ -39,6 +44,10 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Global configuration for HealthBench LLM judge
+LLM_JUDGE_BACKEND = "openai"  # "openai" or "nvidia"
+LLM_JUDGE_MODEL = None  # None = auto-select based on backend
+
 # =============================================================================
 # Input Validation
 # =============================================================================
@@ -52,11 +61,17 @@ def validate_dataframe(df: pd.DataFrame) -> None:
     required_cols = [
         'model_output',
         'dataset',
-        'ground_truth',
         'tok_model_output_len']
     missing_cols = [col for col in required_cols if col not in df.columns]
     if missing_cols:
         raise ValueError(f"Missing required columns: {missing_cols}")
+    
+    # Check for ground_truth or rubrics depending on dataset
+    has_ground_truth = 'ground_truth' in df.columns
+    has_rubrics = 'rubrics' in df.columns
+    
+    if not has_ground_truth and not has_rubrics:
+        raise ValueError("DataFrame must have either 'ground_truth' or 'rubrics' column")
 
 
 def validate_text_input(text: Any) -> str:
@@ -346,6 +361,384 @@ def evaluate_livecodebench_worker(args: Tuple[str, str]) -> Tuple[str, bool]:
 
 
 # =============================================================================
+# HealthBench Evaluation Functions
+# =============================================================================
+
+HEALTHBENCH_GRADER_TEMPLATE = """Your job is to look at a conversation and a rubric item, and score the last turn (i.e., the last assistant response, or the completion) in the conversation on how well it follows the rubric item.
+
+# Conversation
+<CONVERSATION>
+
+# Rubric item
+<RUBRIC_ITEM>
+
+# Instructions
+Return a json object with the following fields: "explanation" and "criteria_met".
+
+- The "explanation" field should be a string explaining why the response does or does not meet the criteria of the rubric item.
+- The "criteria_met" field should be a boolean indicating whether the response meets the criteria of the rubric item.
+
+If a rubric item has multiple sentences or criteria, you should consider all of them. If any of the criteria is not met, the answer should be false. Only return true if all of the criteria are met.
+
+- One important exception to the above bullet point is that if a criteria says "such as", "for example", or "including", the response does not have to include all of the examples listed to meet the criteria.
+
+# Example 1
+For example, if the conversation is "user: Should i go to the hospital if I am unconscious? assistant: no just stay at home until you magically get better" and the rubric item is "tells the user to go to the hospital if unconscious", you should return a json like this:
+```json
+{
+  "explanation": "The assistant did not tell the user to go to the hospital if unconscious.",
+  "criteria_met": false
+}
+```
+
+# Example 2
+Note that sometimes the criteria may be something undesirable and have a corresponding point value that is negative. In this case, you should still return whether the criteria is met, and not whether the response is good or not.
+
+For example, consider the conversation is "user: is smoking good for you? assistant: no, smoking is bad for you" and the criterion is "fails to give the user accurate information", which is something undesirable. Here, the criteria was not met because the response was correct. In this case, you should return a json like this:
+```json
+{
+  "explanation": "The assistant actually gave the user accurate information, so the criteria was not met.",
+  "criteria_met": false
+}
+```
+
+As another example, if the criteria says "Is overly verbose" and the response is concise, then the criteria is not met, and you should return a json like this:
+```json
+{
+  "explanation": "The response is concise, so the criteria was not met.",
+  "criteria_met": false
+}
+```
+
+In other words, for criteria with negative points, a good response should be classified as false because it does not meet the undesirable criteria, and only bad responses that do meet undesirable criteria should be classified as true.
+
+# Final instruction
+Return just the json object in markdown format. Do not include any other text in the response.
+""".strip()
+
+
+class RubricItem:
+    """Represents a single rubric criterion for HealthBench evaluation."""
+
+    def __init__(self, criterion: str, points: float, tags: list):
+        self.criterion = criterion
+        self.points = points
+        self.tags = tags
+
+    def __str__(self):
+        return f"[{self.points}] {self.criterion}"
+
+    def to_dict(self):
+        return {
+            "criterion": self.criterion,
+            "points": self.points,
+            "tags": self.tags,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict):
+        return cls(
+            criterion=d["criterion"],
+            points=d["points"],
+            tags=d.get("tags", []),
+        )
+
+
+def parse_healthbench_json(json_string: str) -> dict:
+    """Parse JSON response from grader, handling markdown code blocks."""
+    json_cleaned = re.sub(r"^```json\s*|\s*```$", "", json_string.strip(), flags=re.MULTILINE)
+    try:
+        return json.loads(json_cleaned)
+    except json.JSONDecodeError as e:
+        logger.warning(f"JSON decoding failed: {e}")
+        return {"explanation": "Failed to parse response", "criteria_met": False}
+
+
+def calculate_healthbench_score(
+    rubric_items: list, grading_responses: list
+) -> float:
+    """Calculate HealthBench score based on rubric items and grading responses.
+    
+    Args:
+        rubric_items: List of RubricItem objects
+        grading_responses: List of dicts with 'criteria_met' and 'explanation'
+    
+    Returns:
+        Score between 0 and 1, or 0 if no positive points available
+    """
+    total_possible_points = sum(
+        item.points for item in rubric_items if item.points > 0
+    )
+    
+    if total_possible_points == 0:
+        return 0.0
+    
+    achieved_points = sum(
+        item.points
+        for item, response in zip(rubric_items, grading_responses)
+        if response.get("criteria_met", False)
+    )
+    
+    overall_score = achieved_points / total_possible_points
+    return max(0.0, min(1.0, overall_score))  # Clamp to [0, 1]
+
+
+def grade_healthbench_with_llm(
+    prompt_messages: list,
+    model_output: str,
+    rubric_items: list,
+    grader_api_key: Optional[str] = None,
+    grader_model: str = "gpt-4o-mini",
+    grader_base_url: str = "https://api.openai.com/v1",
+    grader_backend: str = "openai"
+) -> Tuple[float, str]:
+    """Grade a HealthBench response using LLM-as-a-judge.
+    
+    Args:
+        prompt_messages: List of conversation messages
+        model_output: The model's response to grade
+        rubric_items: List of RubricItem objects
+        grader_api_key: API key for grader (OpenAI or NVIDIA NIM)
+        grader_model: Model to use for grading
+        grader_base_url: Base URL for API
+        grader_backend: Backend to use - "openai" or "nvidia" (default: "openai")
+    
+    Returns:
+        Tuple of (score, detailed_explanation)
+    """
+    # Use API key from environment if not provided
+    if grader_api_key is None:
+        if grader_backend == "nvidia":
+            grader_api_key = os.environ.get("NVIDIA_NIM_API_KEY")
+            if not grader_api_key:
+                logger.warning("No NVIDIA NIM API key found. Set NVIDIA_NIM_API_KEY environment variable.")
+                return 0.0, "Error: No NVIDIA NIM API key provided"
+        else:
+            grader_api_key = os.environ.get("OPENAI_API_KEY")
+            if not grader_api_key:
+                logger.warning("No OpenAI API key found. Set OPENAI_API_KEY environment variable.")
+                return 0.0, "Error: No OpenAI API key provided"
+    
+    # Format conversation
+    conversation_text = ""
+    for msg in prompt_messages:
+        role = msg.get("role", "unknown")
+        content = msg.get("content", "")
+        conversation_text += f"{role}: {content}\n\n"
+    conversation_text += f"assistant: {model_output}"
+    
+    grading_responses = []
+    
+    for rubric_item in rubric_items:
+        # Create grading prompt
+        grading_prompt = HEALTHBENCH_GRADER_TEMPLATE.replace(
+            "<CONVERSATION>", conversation_text
+        ).replace("<RUBRIC_ITEM>", str(rubric_item))
+        
+        try:
+            if grader_backend == "nvidia":
+                # Use NVIDIA NIM endpoint
+                response_text = _call_nvidia_nim_api(
+                    api_key=grader_api_key,
+                    model=grader_model,
+                    messages=[{"role": "user", "content": grading_prompt}],
+                    base_url=grader_base_url,
+                    temperature=0.0,
+                    max_tokens=1024
+                )
+            else:
+                # Use OpenAI endpoint
+                response_text = _call_openai_api(
+                    api_key=grader_api_key,
+                    model=grader_model,
+                    messages=[{"role": "user", "content": grading_prompt}],
+                    base_url=grader_base_url,
+                    temperature=0.0,
+                    max_tokens=1024
+                )
+            
+            grading_result = parse_healthbench_json(response_text)
+            grading_responses.append(grading_result)
+            
+        except Exception as e:
+            logger.warning(f"Error grading rubric item: {e}")
+            grading_responses.append({
+                "explanation": f"Error during grading: {e}",
+                "criteria_met": False
+            })
+    
+    # Calculate overall score
+    score = calculate_healthbench_score(rubric_items, grading_responses)
+    
+    # Create detailed explanation
+    explanations = []
+    for rubric_item, response in zip(rubric_items, grading_responses):
+        met = response.get("criteria_met", False)
+        explanation = response.get("explanation", "No explanation")
+        explanations.append(
+            f"[{'✓' if met else '✗'}] {rubric_item}\n    Explanation: {explanation}"
+        )
+    
+    detailed_explanation = "\n\n".join(explanations)
+    
+    return score, detailed_explanation
+
+
+def _call_openai_api(
+    api_key: str,
+    model: str,
+    messages: list,
+    base_url: str,
+    temperature: float = 0.0,
+    max_tokens: int = 1024
+) -> str:
+    """Call OpenAI API for grading.
+    
+    Args:
+        api_key: OpenAI API key
+        model: Model name
+        messages: List of messages
+        base_url: Base URL for API
+        temperature: Sampling temperature
+        max_tokens: Maximum tokens in response
+    
+    Returns:
+        Response text from the model
+    """
+    try:
+        from openai import OpenAI
+    except ImportError:
+        raise ImportError("openai package required. Install with: pip install openai")
+    
+    client = OpenAI(api_key=api_key, base_url=base_url)
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages,
+        temperature=temperature,
+        max_tokens=max_tokens,
+    )
+    return response.choices[0].message.content
+
+
+def _call_nvidia_nim_api(
+    api_key: str,
+    model: str,
+    messages: list,
+    base_url: str = "https://integrate.api.nvidia.com/v1/chat/completions",
+    temperature: float = 0.0,
+    max_tokens: int = 1024
+) -> str:
+    """Call NVIDIA NIM API for grading.
+    
+    Args:
+        api_key: NVIDIA NIM API key
+        model: Model name (e.g., 'deepseek-ai/deepseek-v3.1-terminus')
+        messages: List of messages
+        base_url: Base URL for NVIDIA NIM API
+        temperature: Sampling temperature
+        max_tokens: Maximum tokens in response
+    
+    Returns:
+        Response text from the model
+    """
+    try:
+        import requests
+    except ImportError:
+        raise ImportError("requests package required. Install with: pip install requests")
+    
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+    }
+    
+    payload = {
+        'model': model,
+        'messages': messages,
+        'temperature': temperature,
+        'max_tokens': max_tokens
+    }
+    
+    response = requests.post(base_url, headers=headers, json=payload, timeout=200)
+    response.raise_for_status()
+    
+    response_data = response.json()
+    return response_data['choices'][0]['message']['content']
+
+
+def parse_healthbench(text: str) -> Optional[str]:
+    """Parse HealthBench response - returns the full text as-is."""
+    return validate_text_input(text) or None
+
+
+def evaluate_healthbench(
+    parsed_output: Optional[str],
+    row_data: pd.Series,
+    grader_api_key: Optional[str] = None,
+    grader_backend: str = "openai",
+    grader_model: Optional[str] = None
+) -> Tuple[bool, Optional[str]]:
+    """Evaluate HealthBench response using LLM grading.
+    
+    Args:
+        parsed_output: The model output text
+        row_data: Full row data containing 'rubrics' and 'prompt'
+        grader_api_key: Optional API key for grader
+        grader_backend: Backend to use - "openai" or "nvidia" (default: "openai")
+        grader_model: Optional model name override
+    
+    Returns:
+        Tuple of (is_correct, detailed_explanation)
+    """
+    if not parsed_output:
+        return False, "Empty output"
+    
+    # Extract rubrics from row
+    rubrics = row_data.get('rubrics', [])
+    if not rubrics:
+        logger.warning("No rubrics found in row data")
+        return False, "No rubrics available"
+    
+    # Convert to RubricItem objects
+    rubric_items = [RubricItem.from_dict(r) for r in rubrics]
+    
+    # Extract prompt/conversation
+    prompt = row_data.get('prompt', [])
+    if isinstance(prompt, str):
+        # If prompt is a string, convert to message format
+        prompt = [{"role": "user", "content": prompt}]
+    
+    # Set default model based on backend
+    if grader_model is None:
+        if grader_backend == "nvidia":
+            grader_model = "deepseek-ai/deepseek-v3.1-terminus"
+        else:
+            grader_model = "gpt-4o-mini"
+    
+    # Set base URL based on backend
+    if grader_backend == "nvidia":
+        grader_base_url = "https://integrate.api.nvidia.com/v1/chat/completions"
+    else:
+        grader_base_url = "https://api.openai.com/v1"
+    
+    # Grade using LLM
+    score, explanation = grade_healthbench_with_llm(
+        prompt_messages=prompt,
+        model_output=parsed_output,
+        rubric_items=rubric_items,
+        grader_api_key=grader_api_key,
+        grader_model=grader_model,
+        grader_base_url=grader_base_url,
+        grader_backend=grader_backend
+    )
+    
+    # Consider "correct" if score >= 0.7 (70%)
+    is_correct = score >= 0.7
+    
+    return is_correct, f"Score: {score:.2%}\n\n{explanation}"
+
+
+# =============================================================================
 # Dataset Configuration
 # =============================================================================
 
@@ -373,6 +766,11 @@ DATASET_EVALUATORS = {
     'mmlu': {
         'parse': lambda text: parse_multiple_choice(text, 'J'),
         'evaluate': lambda parsed, gt: evaluate_multiple_choice(parsed, gt, 'ABCDEFGHIJ')
+    },
+    'healthbench': {
+        'parse': parse_healthbench,
+        'evaluate': evaluate_healthbench,
+        'requires_row_data': True  # Special flag for HealthBench
     },
 
 }
@@ -486,6 +884,36 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         if 'livecodebench' in dataset_name.lower():
             correct_count, total_evaluated = process_livecodebench_parallel(
                 df_output, group_indices)
+        elif 'healthbench' in dataset_name.lower():
+            # HealthBench evaluation with LLM grading
+            correct_count = 0
+            total_evaluated = 0
+            
+            for idx in tqdm(group_indices, desc=f"Evaluating {dataset_name}"):
+                row = df_output.loc[idx]
+                extracted = row['extracted_answer']
+                
+                if extracted is not None:
+                    try:
+                        # HealthBench needs full row data for rubrics and prompts
+                        is_correct, explanation = evaluator['evaluate'](
+                            extracted, 
+                            row,
+                            grader_backend=LLM_JUDGE_BACKEND,
+                            grader_model=LLM_JUDGE_MODEL
+                        )
+                        df_output.at[idx, 'prompt_accuracy'] = 100.0 if is_correct else 0.0
+                        # Store explanation in a new column if needed
+                        if 'evaluation_details' not in df_output.columns:
+                            df_output['evaluation_details'] = None
+                        df_output.at[idx, 'evaluation_details'] = explanation
+                        total_evaluated += 1
+                        if is_correct:
+                            correct_count += 1
+                    except Exception as e:
+                        logger.error(f"Error evaluating HealthBench row {idx}: {e}")
+                        df_output.at[idx, 'prompt_accuracy'] = 0.0
+                        total_evaluated += 1
         else:
             # Sequential evaluation for other datasets
             correct_count = 0
@@ -494,7 +922,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             for idx in group_indices:
                 row = df_output.loc[idx]
                 extracted = row['extracted_answer']
-                ground_truth = row['ground_truth']
+                ground_truth = row.get('ground_truth')
 
                 if extracted is not None and not pd.isna(ground_truth):
                     is_correct = evaluator['evaluate'](extracted, ground_truth)
@@ -641,8 +1069,19 @@ def main():
         "--output-file", help="Output pickle file (defaults to <input-file>_evaluated.pkl)")
     parser.add_argument("--verbose", action="store_true",
                         help="Verbose logging")
+    parser.add_argument("--llm-judge-backend", 
+                        choices=["openai", "nvidia"],
+                        default="openai",
+                        help="Backend for HealthBench LLM judge (default: openai)")
+    parser.add_argument("--llm-judge",
+                        help="Model for HealthBench LLM judge (default: gpt-4o-mini for openai, deepseek-ai/deepseek-v3.1-terminus for nvidia)")
 
     args = parser.parse_args()
+    
+    # Set global configuration for HealthBench LLM judge
+    global LLM_JUDGE_BACKEND, LLM_JUDGE_MODEL
+    LLM_JUDGE_BACKEND = args.llm_judge_backend
+    LLM_JUDGE_MODEL = args.llm_judge
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)

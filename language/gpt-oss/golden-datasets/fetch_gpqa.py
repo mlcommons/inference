@@ -17,10 +17,16 @@ df_diamond = ds_diamond['train'].to_pandas()
 
 # df = pd.concat([df_diamond, df_main, df_extended], ignore_index=True)
 df = df_diamond
-df = df[['Question', 'Correct Answer', 'High-level domain', 'Incorrect Answer 1', 'Incorrect Answer 2', 'Incorrect Answer 3']]
+df = df[['Question',
+         'Correct Answer',
+         'High-level domain',
+         'Incorrect Answer 1',
+         'Incorrect Answer 2',
+         'Incorrect Answer 3']]
 
 for idx, row in df.iterrows():
-    options = [str(row[col]) for col in ['Incorrect Answer 1', 'Incorrect Answer 2', 'Incorrect Answer 3']]
+    options = [str(row[col]) for col in ['Incorrect Answer 1',
+                                         'Incorrect Answer 2', 'Incorrect Answer 3']]
     options.append(str(row['Correct Answer']))
     random.shuffle(options)
     answer_idx = options.index(str(row['Correct Answer']))
@@ -32,7 +38,11 @@ for idx, row in df.iterrows():
     df.loc[idx, 'Question'] = question
     df.loc[idx, 'ground_truth'] = answer
 
-df.rename(columns={'High-level domain': 'domain', 'Question': 'question'}, inplace=True)
+df.rename(
+    columns={
+        'High-level domain': 'domain',
+        'Question': 'question'},
+    inplace=True)
 df['dataset'] = 'gpqa'
 
 breakpoint()

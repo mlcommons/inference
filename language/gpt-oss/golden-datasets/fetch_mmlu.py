@@ -16,7 +16,7 @@ for row in df.itertuples():
     base_question = row.base_question
     options = row.choices
     question = f"{base_question}"
-    for idx,option in enumerate(options):
+    for idx, option in enumerate(options):
         question += f"\n{chr(65+idx)}) {option}"
     df.loc[row.Index, 'question'] = question
     df.loc[row.Index, 'ground_truth'] = f"{chr(65+row.answer)}"

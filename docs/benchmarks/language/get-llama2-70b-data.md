@@ -74,7 +74,7 @@ The benchmark implementation run command will automatically download the require
     
             > **Note:**  One has to accept the [MLCommons Llama 2 License Confidentiality Notice](https://llama2.mlcommons.org/) to access the model files in MLCOMMONS Storage. 
     
-            ### Get the Official MLPerf LLAMA2-70B model from MLCOMMONS Google Drive
+            ### Get the Official MLPerf LLAMA2-70B model from MLCOMMONS Storage
             ```
             mlcr get,ml-model,llama2-70b,_pytorch,_r2-downloader,_70b,_mlc -j
             ```

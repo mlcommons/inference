@@ -1,0 +1,5 @@
+Verifying performance.
+reference score = 28.46
+test score = 26.29
+test score:26.29 ref+threshold: 31.306000000000004
+TEST PASS

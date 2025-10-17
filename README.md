@@ -14,7 +14,7 @@ pip install mlc-scripts
 
 ## Generate the Submission Tree
 
-### Basic Command(submission_round_4.1)
+### Basic Command(submission_round_5.1)
 ```bash
 mlc run script --tags=generate,mlperf,inference,submission \
 --results_dir=submission-examples/submission_round_4.1/closed \
@@ -23,7 +23,7 @@ mlc run script --tags=generate,mlperf,inference,submission \
 --quiet \
 --submitter=MLCommons \
 --division=closed \
---version=v4.1 \
+--version=v5.1 \
 --clean
 ```
 
@@ -524,7 +524,7 @@ operating_system           Ubuntu 22.04.4 LTS (Linux kernel 6.5.0-44-gene...  ..
 notes                      SKU: sai240L-F-A-ES. Powered by the KRAI X and...  ...                                      H200 TGP 700W
 compliance                                                                 1  ...                                                  1
 errors                                                                     0  ...                                                  0
-version                                                                 v5.0  ...                                               v5.0
+version                                                                 v5.1  ...                                               v5.1
 inferred                                                                   0  ...                                                  0
 has_power                                                              False  ...                                              False
 Units                                                           Latency (ms)  ...                                          Samples/s
@@ -538,7 +538,6 @@ INFO:root:       ! call "postprocess" from /home/arjun/CM/repos/gateoverflow@mlp
 </details>
 
 The example submissions used for testing were selectively obtained from:
-- [MLPerf Inference v5.0 Results](https://github.com/mlcommons/inference_results_v5.0)
-- [MLPerf Inference v4.1 Results](https://github.com/mlcommons/inference_results_v4.1)
+- [MLPerf Inference v5.1 Results](https://github.com/mlcommons/inference_results_v5.1)
 These submissions were used to demonstrate the submission generation process and validate the functionality of the mlc-scripts for `submission generation` and `submission checker`. 
 Special thanks to **[MLCommons](https://github.com/mlcommons)** and the **submitting organizations** for making their results publicly available.

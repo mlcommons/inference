@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import List, Dict, Optional, Tuple
 from tqdm import tqdm
 from abc import ABC, abstractmethod
+from multiprocessing import Pool
 
 try:
     from bs4 import BeautifulSoup, NavigableString, Tag
@@ -304,7 +305,8 @@ class DocumentProcessor:
     """Unified document processor that handles both PDF and HTML files."""
     
     def __init__(self, preserve_tables: bool = True, preserve_lists: bool = True, 
-                 text_boundary: str = "sentence", benchmark: bool = False):
+                 text_boundary: str = "sentence", benchmark: bool = False,
+                 processes: int = 4):
         """
         Initialize document processor.
         
@@ -313,7 +315,9 @@ class DocumentProcessor:
             preserve_lists: Whether to preserve list structure (HTML only) 
             text_boundary: Text boundary optimization - "sentence" (default), "word", or "none"
             benchmark: Enable performance monitoring
+            processes: Number of parallel processes for document processing
         """
+        self.processes = processes
         self.extractors = {
             '.pdf': PDFExtractor(),
         }
@@ -329,6 +333,11 @@ class DocumentProcessor:
         self.benchmark = benchmark
         self.monitor = None
         
+        # Store config for worker processes
+        self.preserve_tables = preserve_tables
+        self.preserve_lists = preserve_lists
+        self.text_boundary = text_boundary
+        
         # Initialize monitoring if benchmark mode enabled
         if self.benchmark:
             from ingestion_monitor import IngestionMonitor
@@ -340,6 +349,61 @@ class DocumentProcessor:
         for extractor in self.extractors.values():
             extensions.extend(extractor.get_supported_extensions())
         return list(set(extensions))
+    
+    @staticmethod
+    def process_single_file(args_tuple: Tuple) -> Optional[Tuple[str, str, List[str], str]]:
+        """
+        Process a single document file (worker function for multiprocessing).
+        
+        Args:
+            args_tuple: (doc_file_path, output_dir, url_mapping, preserve_tables, 
+                        preserve_lists, text_boundary, fixed_length, fixed_overlap,
+                        max_passage_length, passage_overlap)
+        
+        Returns:
+            Tuple of (output_filename, text, passages, original_url) or None if processing failed
+        """
+        (doc_file_path, output_dir, url_mapping, preserve_tables, preserve_lists, 
+         text_boundary, fixed_length, fixed_overlap, max_passage_length, passage_overlap) = args_tuple
+        
+        doc_file = Path(doc_file_path)
+        file_extension = doc_file.suffix.lower()
+        
+        # Create appropriate extractor
+        if file_extension == '.pdf':
+            extractor = PDFExtractor()
+        elif file_extension in ['.html', '.htm'] and BeautifulSoup is not None:
+            extractor = HTMLExtractor(preserve_tables, preserve_lists, text_boundary)
+        else:
+            return None
+        
+        # Extract text
+        try:
+            text = extractor.extract_text(str(doc_file))
+            if text is None:
+                return None
+        except Exception as e:
+            print(f"Error extracting text from {doc_file}: {e}")
+            return None
+        
+        # Split text into passages
+        try:
+            if fixed_length:
+                passages = split_into_fixed_passages(text, fixed_length, fixed_overlap or 32)
+            else:
+                passages = split_into_passages(text, max_passage_length, passage_overlap)
+        except Exception as e:
+            print(f"Error splitting text for {doc_file}: {e}")
+            return None
+        
+        # Get original URL
+        base_filename = get_base_filename(doc_file.name)
+        original_url = url_mapping.get(base_filename, "")
+        
+        # Generate output filename
+        output_filename = doc_file.stem + ".txt"
+        
+        return (output_filename, text, passages, original_url, doc_file.name)
     
     def process_documents(self, input_dir: str, output_dir: str, json_file: Optional[str] = None,
                          max_passage_length: int = 512, passage_overlap: int = 50, 
@@ -381,6 +445,8 @@ class DocumentProcessor:
         if max_files:
             document_files = document_files[:max_files]
         
+        print(f"Processing {len(document_files)} documents with {self.processes} parallel processes...")
+        
         all_passages = []
         passage_id = 0
 
@@ -388,31 +454,47 @@ class DocumentProcessor:
         if self.benchmark and self.monitor:
             self.monitor.start_ingestion()
 
-        for doc_file in tqdm(document_files, desc="Processing documents"):
-            file_extension = doc_file.suffix.lower()
-            
-            if file_extension not in self.extractors:
-                continue
-            
-            # Process single document with optional monitoring
-            text = self._process_document(doc_file, file_extension)
-            if text is None:
-                continue
-            
-            # Split text into passages with optional monitoring
-            passages = self._process_text_chunking(text, fixed_length, fixed_overlap, 
-                                                 max_passage_length, passage_overlap)
-            
-            # Save text file
-            output_filename = doc_file.stem + ".txt"
-            output_file_path = output_path / output_filename
-            with open(output_file_path, 'w', encoding='utf-8') as f:
-                f.write(text)
-            
-            # Add passages to collection if JSON output requested
-            if json_file:
-                passage_id = self._add_passages_to_collection(
-                    doc_file, passages, all_passages, passage_id)
+        # Prepare arguments for multiprocessing
+        process_args = [
+            (str(doc_file), str(output_path), self.url_mapping, 
+             self.preserve_tables, self.preserve_lists, self.text_boundary,
+             fixed_length, fixed_overlap, max_passage_length, passage_overlap)
+            for doc_file in document_files
+        ]
+        
+        # Process documents in parallel with progress bar
+        with Pool(processes=self.processes) as pool:
+            with tqdm(total=len(document_files), desc="Processing documents") as pbar:
+                for result in pool.imap(self.process_single_file, process_args):
+                    if result is None:
+                        pbar.update(1)
+                        continue
+                    
+                    output_filename, text, passages, original_url, doc_filename = result
+                    
+                    # Save text file
+                    output_file_path = output_path / output_filename
+                    try:
+                        with open(output_file_path, 'w', encoding='utf-8') as f:
+                            f.write(text)
+                    except Exception as e:
+                        print(f"Error writing {output_file_path}: {e}")
+                        pbar.update(1)
+                        continue
+                    
+                    # Add passages to collection if JSON output requested
+                    if json_file:
+                        for passage in passages:
+                            passage_metadata = create_passage_metadata(
+                                doc_filename, passage_id, original_url=original_url)
+                            
+                            all_passages.append({
+                                **passage_metadata,
+                                'passage': passage,
+                            })
+                            passage_id += 1
+                    
+                    pbar.update(1)
 
         # Finalize monitoring and report
         self._report_processing_performance()
@@ -510,6 +592,8 @@ def main():
     parser.add_argument("--text-boundary", choices=["sentence", "word", "none"], 
                        default="sentence",
                        help="Text boundary optimization: 'sentence' (default), 'word', or 'none'")
+    parser.add_argument("--processes", type=int, default=4,
+                       help="Number of parallel processes for document processing (default: 4)")
     parser.add_argument("--benchmark", action="store_true",
                        help="Enable performance monitoring and detailed component analysis")
 
@@ -519,7 +603,8 @@ def main():
         preserve_tables=not args.no_tables,
         preserve_lists=not args.no_lists,
         text_boundary=args.text_boundary,
-        benchmark=args.benchmark
+        benchmark=args.benchmark,
+        processes=args.processes
     )
     
     processor.process_documents(

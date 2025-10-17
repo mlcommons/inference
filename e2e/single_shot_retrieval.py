@@ -6,6 +6,7 @@ import pandas as pd
 from retrieve import VectorDB, BM25DB
 from evaluation import evaluate_retrieval_query, run_evaluation
 from utils import set_deterministic_seeds
+from params import add_all_args
 
 # Taken below from frames: https://huggingface.co/datasets/google/frames-benchmark
 DEFAULT_QUERY = "Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?"
@@ -14,58 +15,18 @@ DEFAULT_QUERY = "Who won the French Open Mens Singles tournament the year that N
 
 if __name__ == "__main__":
     args = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
-    args.add_argument("--ingest", type=str, default=None, help="Path to ingest data from:\n"
-                        "  - JSON array file: 'passage' will be the passage text, all other keys will be metadata\n"
-                        "    Example: [{'index': int, 'pdf_filename': str, 'passage': str}]\n"
-                        "  - Folder: For BM25, ingests all .txt files in the folder\n"
-                        "Ignored if --database is provided")
-    args.add_argument("--database", "--db", type=str, default=None, help="Path to the database file\n"
-                        "If provided, --ingest will be ignored\n"
-                        "Default: 'bm25.db' for BM25, 'vector.db' for vector")
-    args.add_argument("--query", type=str, default=DEFAULT_QUERY, help="Query to search for")
-    args.add_argument("--dataset", type=str, default="data/frames_dataset.tsv")
-    args.add_argument("--device", type=str, default="auto", help="Device to run the models on (e.g., 'cpu', 'cuda', 'xpu', or 'auto')")
-    args.add_argument("--eval", nargs="?", const=True, type=lambda x: int(x) if x.isdigit() else True, 
-                     help="Run evaluation on dataset. Optionally specify number of queries to evaluate (e.g., --eval 100)")
-    args.add_argument("--retriever_model", type=str, default="intfloat/e5-base-v2")
-    args.add_argument("--reranker_model", type=str, default="colbert-ir/colbertv2.0", help="Model to use for reranking - unused for now")
-    args.add_argument("--retrieval_method", type=str, default="bm25", choices=["bm25", "vector"], 
-                      help="Retrieval method: 'bm25' for BM25 lexical search, 'vector' for dense vector search")
-    args.add_argument("--threads", type=int, default=4, help="Number of threads for BM25 retrieval (BM25 only). Indexing is single-threaded by default")
-    args.add_argument("--bm25_k1", type=float, default=None, help="BM25 k1 parameter (term frequency saturation). Higher values = more weight on term frequency. Default: 1.5")
-    args.add_argument("--bm25_b", type=float, default=None, help="BM25 b parameter (document length normalization). 0=no normalization, 1=full normalization. Default: 0.75")
-    args.add_argument("--bm25_method", type=str, default=None, choices=["lucene", "robertson", "bm25+"], 
-                      help="BM25 variant: 'lucene' (default), 'robertson' (original), 'bm25+' (improved)")
-    args.add_argument("--bm25_delta", type=float, default=None, help="BM25 delta parameter (for BM25L/BM25+). Default: 0.5")
-    args.add_argument("--bm25_backend", type=str, default=None, choices=["numpy", "numba", "auto"],
-                      help="BM25 backend: 'numpy' (default), 'numba' (faster), 'auto' (detect)")
-    args.add_argument("--bm25_stopwords", type=str, default=None, help="Stopwords for BM25 tokenization. Default: 'en'")
-    args.add_argument("--bm25_show_progress", action="store_true", help="Show progress bars during BM25 indexing")
-    args.add_argument("--bm25_stemmer", type=str, default=None, choices=["porter", "snowball", "lancaster", "pystemmer"],
-                      help="Stemmer for BM25 tokenization: 'porter' (balanced), 'snowball' (modern), 'lancaster' (aggressive), 'pystemmer' (fast C-based)")
-    args.add_argument("--vector_index_method", type=str, default="hnsw", 
-                      choices=["flat", "hnsw", "ivf"], 
-                      help="Vector index method: 'flat' (exact search, slow), 'hnsw' (approximate, fast, default), 'ivf' (inverted file, memory efficient)")
-    args.add_argument("--ivf_nprobe", type=int, default=10,
-                      help="IVF nprobe parameter: number of clusters to search per query (1-100). Higher = better accuracy but slower. Default: 10")
-    args.add_argument("--load-embeddings", action="store_true", default=False,
-                      help="Load embeddings from .emb.pkl cache if available (default: False)")
-    args.add_argument("--num_embedding_devices", type=int, default=1,
-                      help="Number of devices to use for parallel embedding generation (supports XPU, CUDA, CPU). Default: 1 (single device)")
-    args.add_argument("--no-save", action="store_true", help="Skip saving database to disk (useful for optimization trials)")
-    args.add_argument("--no-rerank", action="store_true", help="Skip reranking step for fair comparison between retrieval methods")
-    args.add_argument("--retrieval_strategy", type=str, default="fixed_k", 
-                      choices=["fixed_k", "top_p", "relative"], 
-                      help="Retrieval strategy: 'fixed_k' (traditional), 'top_p' (nucleus sampling), 'relative' (score-based)")
-    args.add_argument("--top_k_retriever", type=int, default=25)
-    args.add_argument("--top_k_reranking", type=int, default=10)
-    args.add_argument("--top_p", type=float, default=0.9, help="Top-p threshold for nucleus sampling (0.8-0.95)")
-    args.add_argument("--relative_ratio", type=float, default=0.75, help="Relative threshold ratio (0.7-0.9)")
-    args.add_argument("--max_results", type=int, default=100, help="Maximum results to consider for adaptive methods")
-    args.add_argument("--seed", type=int, default=42, 
-                     help="Random seed for reproducible results (default: 42)")
-    args.add_argument("--benchmark", action="store_true",
-                     help="Run ingestion performance benchmarking")
+    
+    # Add all parameters from centralized definitions
+    # This includes: Common, General, BM25, Vector, Strategy, and Reranking parameters
+    add_all_args(args)
+    
+    # Special handling for --eval argument (needs custom type)
+    # Override the default eval argument with custom type
+    for action in args._actions:
+        if '--eval' in action.option_strings:
+            action.type = lambda x: int(x) if x.isdigit() else True
+            action.const = True
+            break
 
     args = args.parse_args()    # Set deterministic seeds for reproducible results
     set_deterministic_seeds(args.seed)

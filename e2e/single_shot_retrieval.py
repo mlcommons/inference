@@ -83,11 +83,18 @@ if __name__ == "__main__":
     if args.eval:
         import json
         max_queries = args.eval if isinstance(args.eval, int) and not isinstance(args.eval, bool) and args.eval > 0 else None
+        
+        # Build strategy_params with correct parameter names for filter function
+        strategy_params = {"max_results": args.max_results}
+        if args.retrieval_strategy == "top_p":
+            strategy_params["p"] = args.top_p
+        elif args.retrieval_strategy == "relative":
+            strategy_params["ratio"] = args.relative_ratio
+        
         metrics = run_evaluation(rag_db, args.dataset, 
                       top_k_retriever=args.top_k_retriever, top_k_reranking=args.top_k_reranking,
                       max_queries=max_queries, no_rerank=args.no_rerank,
-                      retrieval_strategy=args.retrieval_strategy, top_p=args.top_p, 
-                      relative_ratio=args.relative_ratio, max_results=args.max_results)
+                      retrieval_strategy=args.retrieval_strategy, **strategy_params)
         
         # Save results for optimization
         results_data = {

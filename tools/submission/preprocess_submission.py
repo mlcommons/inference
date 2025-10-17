@@ -51,6 +51,9 @@ def get_args():
     parser.add_argument("--nodelete-failed",
                         help="do not delete failed results (submission checker will fail)",
                         default=False, action="store_true")
+    parser.add_argument("--keep-structure",
+                        help="keep folder structure (newer versions of submission checker might fail)",
+                        default=False, action="store_true")
 
     parser.add_argument(
         "--version",
@@ -96,7 +99,7 @@ def delete_empty_dirs(src):
     return False
 
 
-def copy_submission_dir(src, dst, filter_submitter):
+def copy_submission_dir(src, dst, filter_submitter, keep_structure = True):
     """
     Copies the submission tree to output directory for processing
     """
@@ -106,10 +109,26 @@ def copy_submission_dir(src, dst, filter_submitter):
         for submitter in next(os.walk(os.path.join(src, division)))[1]:
             if filter_submitter and submitter != filter_submitter:
                 continue
-            shutil.copytree(
-                os.path.join(src, division, submitter),
-                os.path.join(dst, division, submitter),
-            )
+            if keep_structure:
+                shutil.copytree(
+                    os.path.join(src, division, submitter),
+                    os.path.join(dst, division, submitter),
+                )
+            else:
+                for dir in os.listdir(os.path.join(src, division, submitter)):
+                    if os.path.isdir(os.path.join(src, division, submitter, dir)):
+                        target_dir = "results" if dir in ["compliance", "measurements"] else dir
+                        shutil.copytree(
+                            os.path.join(src, division, submitter, dir),
+                            os.path.join(dst, division, submitter, target_dir),
+                            dirs_exist_ok = True
+                        )
+                for file in os.listdir(os.path.join(src, division, submitter)):
+                    if os.path.isfile(os.path.join(src, division, submitter, file)):
+                        shutil.copyfile(
+                            os.path.join(src, division, submitter, file),
+                            os.path.join(dst, division, submitter, file)
+                        )
 
 
 def change_first_directory_to_open(path):
@@ -247,8 +266,7 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
 
             compliance_is_valid = True
             if is_closed_or_network:
-                compliance_dir = change_folder_name_in_path(
-                    scenario_path, "results", "compliance")
+                compliance_dir = scenario_path
                 if not checker.check_compliance_dir(
                     compliance_dir,
                     mlperf_model,
@@ -262,12 +280,10 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
 
         is_valid = accuracy_is_valid and perf_is_valid and compliance_is_valid
         if not is_valid:  # Remove the scenario result
-            scenario_measurements_path = change_folder_name_in_path(
-                scenario_path, "results", "measurements")
+            scenario_measurements_path = scenario_path
             if scenario in [
                     "Offline", "MultiStream"] and (not accuracy_is_valid or not perf_is_valid) or division == "open":  # they can be inferred
-                scenario_compliance_path = change_folder_name_in_path(
-                    scenario_path, "results", "compliance")
+                scenario_compliance_path = scenario_path
                 log.warning(
                     f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} division. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing...")
                 if os.path.exists(scenario_path):
@@ -278,10 +294,8 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                     shutil.rmtree(scenario_compliance_path)
             elif division in ["closed", "network"]:
                 model_results_path = os.path.dirname(scenario_path)
-                model_measurements_path = change_folder_name_in_path(
-                    model_results_path, "results", "measurements")
-                model_compliance_path = change_folder_name_in_path(
-                    model_results_path, "results", "compliance")
+                model_measurements_path = model_results_path
+                model_compliance_path = model_results_path
                 model_code_path = os.path.join(
                     change_folder_name_in_path(
                         log_path, "results", "code"), model)
@@ -301,8 +315,7 @@ def clean_invalid_results(args, log_path, config, system_desc, system_json,
                             f"{scenario} scenario result is invalid for {system_desc}: {model} in {division} and open divisions. Accuracy: {accuracy_is_valid}, Performance: {perf_is_valid}. Removing it...")
                         if os.path.exists(scenario_path):
                             shutil.rmtree(scenario_path)
-                        scenario_measurements_path = change_folder_name_in_path(
-                            scenario_path, "results", "measurements")
+                        scenario_measurements_path = scenario_path
                         if os.path.exists(scenario_measurements_path):
                             shutil.rmtree(scenario_measurements_path)
                     if not os.path.exists(target_results_path):
@@ -367,9 +380,7 @@ def infer_scenario_results(args, config):
                 continue
 
             # process results
-            for directory in ["results", "measurements"] + \
-                    (["compliance"] if division == "closed" else []):
-
+            for directory in ["results"]:
                 log_path = os.path.join(division, submitter, directory)
                 if not os.path.exists(log_path):
                     log.error("no submission in %s", log_path)
@@ -550,7 +561,7 @@ def main():
         log.error(f"output directory {args.output} already exists")
         sys.exit(1)
     os.makedirs(args.output)
-    copy_submission_dir(args.input, args.output, args.submitter)
+    copy_submission_dir(args.input, args.output, args.submitter, args.keep_structure)
     src_dir = args.output
 
     config = checker.Config(
@@ -571,6 +582,9 @@ def main():
 
     return 0
 
+
+if __name__ == "__main__":
+    sys.exit(main())
 
 if __name__ == "__main__":
     sys.exit(main())

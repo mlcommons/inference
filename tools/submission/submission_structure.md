@@ -42,9 +42,8 @@ The following diagram describes the submission structure
 │   │   │   │   │   │   │   │   │   ├── mlperf_log_detail.txt
 │   │   │   │   │   │   │   │   │   └── mlperf_log_summary.txt
 │   │   │   │   │   │   ├── measurements.json
-│   │   │   │   │   │   ├── mlperf.conf
-│   │   │   │   │   │   ├── user.conf
-│   │   │   │   │   │   └── accuracy
+│   │   │   │   │   │   ├── mlperf.conf (optional)
+│   │   │   │   │   │   └── user.conf
 │   │   │   ├── ...
 │   │   │   └── <system_desc_id_n>
 │   │   ├── systems

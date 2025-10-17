@@ -1061,6 +1061,9 @@ class Config:
             self.optional = self.base["optional-scenarios-datacenter-edge"]
         else:
             raise ValueError("invalid system type")
+        
+    def skip_calibration(self):
+        return self.skip_calibration_check or self.version in ["v5.0"]
 
     def get_mlperf_model(self, model, extra_model_mapping=None):
         # preferred - user is already using the official name
@@ -2392,7 +2395,7 @@ def check_results_dir(
                     results[os.path.join(results_path)] = None
 
             #  Check for calibration documentation
-            if not config.skip_calibration_check and division not in ["open"]:
+            if not config.skip_calibration() and division not in ["open"]:
                 calibration_path_root = os.path.join(
                     division, submitter, "calibration.md")
                 calibration_path_doc = os.path.join(
@@ -3026,9 +3029,16 @@ def check_measurement_dir(
                 log.error("%s is having empty %s", measurement_dir, i)
                 is_valid = False
 
-    logging.info("%s", files)
-    if "measurements.json" in files:
-        system_file = "measurements.json"
+    for i in files:
+        if i.startswith(system_desc) and i.endswith(
+                "_" + scenario + ".json"):
+            system_file = i
+            end = len("_" + scenario + ".json")
+            break
+        elif i.startswith(system_desc) and i.endswith(".json"):
+            system_file = i
+            end = len(".json")
+            break
 
 
     weight_data_types = None

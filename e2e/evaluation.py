@@ -104,7 +104,7 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
         results = rag_db.lookup(query, k=top_k_retriever)
     else:
         from retrieve.filter import filter
-        max_results = strategy_params.pop("max_results", 100)
+        max_results = strategy_params.pop("max_results", 20)
         results = filter(rag_db, query, method=retrieval_strategy, 
                        max_results=max_results, **strategy_params)
     retrieval_time = time.perf_counter() - retrieval_start
@@ -112,24 +112,35 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
     # Step 2: Apply reranking if enabled and reranker is available  
     reranking_time = 0.0
     if not no_rerank and hasattr(rag_db, '_reranker_model') and rag_db._reranker_model is not None:
-        reranking_start = time.perf_counter()
-        # Extract text content for reranking (rerank expects strings)
-        passages = [result.page_content for result in results]
-        scored_passages = rag_db.rerank(query, passages)
-        
-        # Reconstruct document objects with reranked order
-        # scored_passages is [(text, score), ...] ordered by score
-        reranked_results = []
-        for text, score in scored_passages:
-            # Find the original document object for this text
-            for doc in results:
-                if doc.page_content == text:
-                    reranked_results.append(doc)
-                    break
-        
-        # Apply top_k_reranking limit AFTER reranking
-        results = reranked_results[:top_k_reranking]
-        reranking_time = time.perf_counter() - reranking_start
+        # Safety check: If no results retrieved, skip reranking
+        if not results:
+            if verbose:
+                print(f"Warning: No documents retrieved for query: {query[:50]}")
+        else:
+            reranking_start = time.perf_counter()
+            # Extract text content for reranking (rerank expects strings)
+            passages = [result.page_content for result in results]
+            scored_passages = rag_db.rerank(query, passages)
+            
+            # Reconstruct document objects with reranked order
+            # scored_passages is [(text, score), ...] ordered by score
+            reranked_results = []
+            for text, score in scored_passages:
+                # Find the original document object for this text
+                for doc in results:
+                    if doc.page_content == text:
+                        reranked_results.append(doc)
+                        break
+            
+            # Apply top_k_reranking limit AFTER reranking
+            # For adaptive strategies (top_p, relative, etc.), respect the number of documents
+            # selected by the strategy, only limit for fixed_k
+            if retrieval_strategy == "fixed_k":
+                results = reranked_results[:top_k_reranking]
+            else:
+                # For adaptive strategies, keep all documents selected by the strategy
+                results = reranked_results
+            reranking_time = time.perf_counter() - reranking_start
     
     # Extract URLs from results in order (maintaining ranking)
     retrieved_urls = []
@@ -149,7 +160,7 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
         # Remove duplicated urls from different passages of the same doc
         matches = len(expected_set.intersection(set(deduplicated_urls)))
         print(f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:3])}{'...' if len(expected_set) > 3 else ''}")
-        print(f"Retrieved ({len(retrieved_urls)}): {retrieved_urls[:3]}{'...' if len(retrieved_urls) > 3 else ''}")
+        print(f"Retrieved ({len(deduplicated_urls)}): {deduplicated_urls[:3]}{'...' if len(deduplicated_urls) > 3 else ''}")
         print(f"Matches: {matches}")
         print(f"P@3: {metrics['precision@3']:.3f}, P@5: {metrics['precision@5']:.3f}, P@10: {metrics['precision@10']:.3f}")
         print(f"R@3: {metrics['recall@3']:.3f}, R@5: {metrics['recall@5']:.3f}, R@10: {metrics['recall@10']:.3f}")

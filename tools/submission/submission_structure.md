@@ -3,8 +3,9 @@
 The following diagram describes the submission structure 
 
 ```
-├── ...
-│   ├── closed                                       
+...
+├── closed
+│   ├── <submitter_name>                                       
 │   │   ├── code
 │   │   │   └── <benchmark_name>
 │   │   ├── results
@@ -42,16 +43,20 @@ The following diagram describes the submission structure
 │   │   │   ├── ...
 │   │   │   └── <system_desc_id_n>.json
 │   │
-│   ├── open                   
+├── open
+│   ├── <submitter_name>                   
 │   │   ├── code
 │   │   ├── results
-│   │   └── systems
+│   │   ├── systems
+│   │   └── model_mapping.json (optional)
 ...
 ```
 
 ## Description of placeholders
 
+**<submitter_name>:** Name of the submitter
 **<system_desc_id_X>:** Descriptive name of the system. 
 **<benchmark_name>:** Name of the inference benchmark. E.g llama3.1-405b, rgat.
 **<scenario>:** Name of the benchmarking scenario. One of `["SingleStream", "MultiStream", "Offline", "Server", "Interactive"]`
 **<TEST0X>:** Compliance test number. E.g TEST01
+**model_mapping.json (optional):** Optional file for the open submission that contains a map from the submitters custom names to the official benchmark names.

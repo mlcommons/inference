@@ -8,6 +8,57 @@ from typing import List
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 from .ragdb import RagDB
 
+# Worker function for parallel embedding generation (must be at module level for multiprocessing)
+def _parallel_embed_worker(device_id, chunk_indices, chunks, result_queue, model_name, encode_kwargs, base_device):
+    """Worker function to generate embeddings on a specific device.
+    
+    This worker processes multiple chunks on a single device to avoid
+    loading the model multiple times.
+    
+    Args:
+        device_id: Device index (0, 1, 2, etc.)
+        chunk_indices: List of chunk indices this worker should process
+        chunks: List of passage chunks to embed
+        result_queue: Multiprocessing queue for results
+        model_name: Name of the embedding model
+        encode_kwargs: Encoding arguments
+        base_device: Base device type from --device option ('xpu', 'cuda', 'cpu')
+    """
+    try:
+        import torch
+        from langchain_huggingface import HuggingFaceEmbeddings
+        
+        # Format device string: CPU doesn't use indices, others do
+        if base_device == 'cpu':
+            device = 'cpu'
+        else:
+            device = f'{base_device}:{device_id}'
+        
+        model_kwargs = {'device': device}
+        
+        # Load model once for this device
+        embedder = HuggingFaceEmbeddings(
+            model_name=model_name,
+            model_kwargs=model_kwargs,
+            encode_kwargs=encode_kwargs
+        )
+        
+        print(f"✓ Device {device}: Loaded model, processing {len(chunks)} chunk(s)")
+        
+        # Process all chunks assigned to this device
+        for chunk_idx, chunk in zip(chunk_indices, chunks):
+            embeddings = embedder.embed_documents(chunk)
+            result_queue.put((chunk_idx, embeddings))
+        
+    except Exception as e:
+        print(f"❌ Error on device {device_id} ({base_device}): {e}")
+        import traceback
+        traceback.print_exc()
+        # Put None for all failed chunks
+        for chunk_idx in chunk_indices:
+            result_queue.put((chunk_idx, None))
+            result_queue.put((chunk_idx, None))
+
 class VectorDB(RagDB):
     @classmethod
     def get_default_db_name(cls) -> str:
@@ -21,6 +72,7 @@ class VectorDB(RagDB):
             vector_index_method: str = "hnsw",
             ivf_nprobe: int = 10,
             load_embeddings: bool = True,
+            num_embedding_devices: int = 1,
             benchmark: bool = False,
             **kwargs
         ):
@@ -30,6 +82,7 @@ class VectorDB(RagDB):
         self._vector_index_method = vector_index_method
         self._ivf_nprobe = ivf_nprobe
         self._load_embeddings = load_embeddings
+        self._num_embedding_devices = num_embedding_devices
 
         # Initialize embedding model with device configuration
         model_kwargs = {'device': self._device}
@@ -225,6 +278,93 @@ class VectorDB(RagDB):
             print(f"⚠️  Failed to load embeddings cache: {e}")
             return None
     
+    def _embed_documents_parallel(self, passages: List[str]) -> list:
+        """Generate embeddings using multiple devices in parallel.
+        
+        Uses the device type from --device option and spawns multiple workers.
+        
+        Args:
+            passages: List of text passages to embed
+            
+        Returns:
+            List of embeddings (one per passage)
+        """
+        import torch
+        import multiprocessing as mp
+        
+        # Use the device type already configured via --device option
+        base_device = self._device  # e.g., 'xpu', 'cuda', 'cpu'
+        
+        # Determine number of available devices based on device type
+        if base_device == 'cpu':
+            # For CPU, use requested number as process count
+            num_devices = self._num_embedding_devices
+        elif base_device == 'xpu' and hasattr(torch, 'xpu'):
+            num_devices = torch.xpu.device_count()
+        elif base_device == 'cuda':
+            num_devices = torch.cuda.device_count()
+        else:
+            # Fallback for unknown device types
+            num_devices = 1
+        
+        num_workers = min(self._num_embedding_devices, num_devices, len(passages))
+        
+        if num_workers <= 1:
+            # Fallback to single device
+            return self._embedding_model.embed_documents(passages)
+        
+        # Set spawn method for device compatibility (required for XPU/CUDA)
+        try:
+            mp.set_start_method('spawn', force=True)
+        except RuntimeError:
+            # Already set, ignore
+            pass
+        
+        print(f"🚀 Parallel embedding on {num_workers} {base_device.upper()} device(s)...")
+        
+        # Split passages into chunks - one chunk per device
+        chunk_size = (len(passages) + num_workers - 1) // num_workers
+        chunks = [passages[i:i + chunk_size] for i in range(0, len(passages), chunk_size)]
+        
+        print(f"   Split {len(passages)} passages into {len(chunks)} chunks (~{chunk_size} passages/device)")
+        
+        # Create result queue and spawn one worker per device
+        result_queue = mp.Queue()
+        processes = []
+        
+        encode_kwargs = {'normalize_embeddings': True}
+        
+        # Spawn one worker per device (not per chunk)
+        for device_id in range(num_workers):
+            if device_id < len(chunks):
+                # Each worker processes one chunk on one device
+                p = mp.Process(target=_parallel_embed_worker, 
+                           args=(device_id, [device_id], [chunks[device_id]], result_queue,
+                                 self._retriever_model_name, encode_kwargs, base_device))
+                p.start()
+                processes.append(p)
+        
+        # Collect results
+        results = {}
+        for _ in range(min(num_workers, len(chunks))):
+            chunk_idx, embeddings = result_queue.get()
+            if embeddings is not None:
+                results[chunk_idx] = embeddings
+        
+        # Wait for all processes to complete
+        for p in processes:
+            p.join()
+        
+        # Combine results in order
+        all_embeddings = []
+        for i in range(len(chunks)):
+            if i in results:
+                all_embeddings.extend(results[i])
+        
+        print(f"✓ Generated {len(all_embeddings)} embeddings across {num_workers} devices")
+        
+        return all_embeddings
+    
     def _calculate_index_output_size(self):
         """Calculate the size of VectorDB output data (db file - metadata).
         
@@ -273,9 +413,16 @@ class VectorDB(RagDB):
 
         # Generate embeddings if not cached
         if embeddings is None:
-            embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
-                                              lambda: self._embedding_model.embed_documents(passages),
-                                              is_pipeline_input=True)
+            if self._num_embedding_devices > 1:
+                # Use parallel embedding generation across multiple devices
+                embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
+                                                  lambda: self._embed_documents_parallel(passages),
+                                                  is_pipeline_input=True)
+            else:
+                # Single device embedding generation
+                embeddings = self._track_component("embedding_generation", total_chars, len(passages), 
+                                                  lambda: self._embedding_model.embed_documents(passages),
+                                                  is_pipeline_input=True)
         
         # Train IVF index if needed (before adding any embeddings)
         if self._vector_index_method == "ivf" and not self._index.is_trained:

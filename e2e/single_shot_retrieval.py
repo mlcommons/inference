@@ -50,6 +50,8 @@ if __name__ == "__main__":
                       help="IVF nprobe parameter: number of clusters to search per query (1-100). Higher = better accuracy but slower. Default: 10")
     args.add_argument("--load-embeddings", action="store_true", default=False,
                       help="Load embeddings from .emb.pkl cache if available (default: False)")
+    args.add_argument("--num_embedding_devices", type=int, default=1,
+                      help="Number of devices to use for parallel embedding generation (supports XPU, CUDA, CPU). Default: 1 (single device)")
     args.add_argument("--no-save", action="store_true", help="Skip saving database to disk (useful for optimization trials)")
     args.add_argument("--no-rerank", action="store_true", help="Skip reranking step for fair comparison between retrieval methods")
     args.add_argument("--retrieval_strategy", type=str, default="fixed_k", 
@@ -88,7 +90,7 @@ if __name__ == "__main__":
                         delta=args.bm25_delta, backend=args.bm25_backend, stopwords=args.bm25_stopwords, 
                         show_progress=args.bm25_show_progress, stemmer=args.bm25_stemmer, 
                         vector_index_method=args.vector_index_method, ivf_nprobe=args.ivf_nprobe,
-                        load_embeddings=args.load_embeddings,
+                        load_embeddings=args.load_embeddings, num_embedding_devices=args.num_embedding_devices,
                         benchmark=args.benchmark)
 
     if os.path.exists(db_file_path):

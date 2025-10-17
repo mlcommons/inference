@@ -19,9 +19,18 @@ The following diagram describes the submission structure
 │   │   │   │   │   │   │   └── mlperf_log_summary.txt
 │   │   │   │   │   │   ├── performance
 │   │   │   │   │   │   │   ├── run_1
-│   │   │   │   │   │   │   │   ├── mlperf_log_accuracy.txt
 │   │   │   │   │   │   │   │   ├── mlperf_log_detail.txt
 │   │   │   │   │   │   │   │   └── mlperf_log_summary.txt
+│   │   │   │   │   │   │   ├── power (only for power submissions)
+│   │   │   │   │   │   │   │   ├── client.json
+│   │   │   │   │   │   │   │   ├── client.log
+│   │   │   │   │   │   │   │   ├── ptd_log.txt
+│   │   │   │   │   │   │   │   ├── server.json
+│   │   │   │   │   │   │   │   └── server.log
+│   │   │   │   │   │   │   ├── ranging (only for power submissions)
+│   │   │   │   │   │   │   │   ├── mlperf_log_detail.txt
+│   │   │   │   │   │   │   │   ├── mlperf_log_summary.txt
+│   │   │   │   │   │   │   │   └── spl.txt
 │   │   │   │   │   │   ├── <TEST0X>
 │   │   │   │   │   │   │   ├── accuracy
 │   │   │   │   │   │   │   │   ├── accuracy.txt

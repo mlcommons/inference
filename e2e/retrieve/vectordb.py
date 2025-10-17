@@ -536,6 +536,23 @@ class VectorDB(RagDB):
     def lookup(self, query: str, k: int):
         results = self._vector_store.similarity_search(query, k=k)
         return results
+    
+    def lookup_with_scores(self, query: str, k: int):
+        """
+        Lookup documents with similarity scores.
+        Returns list of (document, score) tuples.
+        
+        Note: FAISS returns L2 distances (lower is better), but we convert to
+        similarity scores (higher is better) for consistency with BM25.
+        """
+        results_with_scores = self._vector_store.similarity_search_with_score(query, k=k)
+        
+        # FAISS returns (document, distance) where distance is L2 distance (lower is better)
+        # Convert to similarity score (higher is better) by negating
+        # This makes it consistent with BM25 scores for filtering algorithms
+        results_with_similarity = [(doc, -distance) for doc, distance in results_with_scores]
+        
+        return results_with_similarity
 
     def rerank(self, query: str, passages: List[str]):
         assert self._reranker_model is not None, "Reranker model not initialized"

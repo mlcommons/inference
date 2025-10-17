@@ -223,7 +223,7 @@ COMMON_PARAMS = [
         name="max_results",
         arg_names=["--max_results"],
         type=int,
-        default=100,
+        default=20,
         help="Maximum results to consider for adaptive methods",
         category="common",
         applies_to=["both"]
@@ -622,12 +622,13 @@ def get_default_params(method: str) -> Dict[str, Any]:
     
     return {p.name: p.default for p in params}
 
-def format_params_for_cli(params: Dict[str, Any]) -> List[str]:
+def format_params_for_cli(params: Dict[str, Any], skip_defaults: bool = True) -> List[str]:
     """
     Format parameter dictionary as CLI arguments.
     
     Args:
         params: Dictionary of parameter name -> value
+        skip_defaults: If True, skip parameters that match their default values
     
     Returns:
         List of CLI argument strings
@@ -639,6 +640,11 @@ def format_params_for_cli(params: Dict[str, Any]) -> List[str]:
             continue
         
         param_def = PARAM_BY_NAME[name]
+        
+        # Skip if value matches default (when skip_defaults=True)
+        if skip_defaults and value == param_def.default:
+            continue
+        
         cli_arg = param_def.arg_names[0]
         
         if param_def.action == "store_true":

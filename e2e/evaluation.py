@@ -1,16 +1,18 @@
 """
 Retrieval Evaluation Metrics Module
 
-This module provides comprehensive retrieval metrics including:
+This module provides comprehensive retrieval evaluation metrics including:
 - Precision@k, Recall@k, F1@k
 - Mean Average Precision (MAP)
 - Comprehensive retrieval metrics
+- Detailed dataset analysis by reasoning type and answer link count
 
 Designed for reuse across different retrieval systems including multi-hop QA.
 """
 
 import pandas as pd
 from typing import List, Dict, Any, Optional
+from collections import defaultdict
 
 
 def calculate_retrieval_metrics(expected_urls: List[str], retrieved_urls: List[str], k_values: List[int] = [1, 3, 5, 10]) -> Dict[str, float]:
@@ -161,11 +163,15 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
     expected_set = set(url for url in expected_urls if url and url.strip())
     metrics = calculate_retrieval_metrics(list(expected_set), deduplicated_urls)
     
+    # Track both passages and unique documents
+    num_passages = len(results)
+    num_unique_docs = len(deduplicated_urls)
+    
     if verbose:
         print(f"Query: {query:50}")
         matches = len(expected_set.intersection(set(deduplicated_urls)))
         print(f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:3])}{'...' if len(expected_set) > 3 else ''}")
-        print(f"Retrieved ({len(deduplicated_urls)}): {deduplicated_urls[:3]}{'...' if len(deduplicated_urls) > 3 else ''}")
+        print(f"Retrieved ({num_passages} passages, {num_unique_docs} unique docs): {deduplicated_urls[:3]}{'...' if num_unique_docs > 3 else ''}")
         print(f"Matches: {matches}")
 
         metric_categories = [
@@ -218,7 +224,8 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
         'retrieval_time': retrieval_time,
         'reranking_time': reranking_time, 
         'total_retrieval_time': total_time,
-        'retrieved_docs_count': len(results),
+        'retrieved_passages_count': len(results),
+        'retrieved_docs_count': num_unique_docs,
         'docs_per_second': docs_per_second
     }
     
@@ -243,7 +250,8 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
 def run_evaluation(rag_db, dataset_path: str, 
                                top_k_retriever: int = 50, top_k_reranking: int = 10, 
                                max_queries: Optional[int] = None, no_rerank: bool = False,
-                               retrieval_strategy: str = "fixed_k", **strategy_params) -> Dict[str, float]:
+                               retrieval_strategy: str = "fixed_k", detailed_analysis: bool = False,
+                               **strategy_params) -> Dict[str, float]:
     """
     Run comprehensive evaluation on a dataset with detailed metrics reporting.
     
@@ -255,6 +263,7 @@ def run_evaluation(rag_db, dataset_path: str,
         max_queries: Maximum number of queries to evaluate (None = all)
         no_rerank: Skip reranking step for fair comparison between retrieval methods
         retrieval_strategy: Strategy for retrieval ("fixed_k", "top_p", "relative")
+        detailed_analysis: If True, print detailed breakdown by reasoning types and link counts
         **strategy_params: Parameters for adaptive retrieval strategies
         
     Returns:
@@ -272,6 +281,7 @@ def run_evaluation(rag_db, dataset_path: str,
     
     # Aggregate metrics collection
     total_metrics = {}
+    all_query_metrics = []  # Store individual query metrics for detailed analysis
     retrieval_times = []
     reranking_times = []
     total_times = []
@@ -293,6 +303,10 @@ def run_evaluation(rag_db, dataset_path: str,
                 retrieval_strategy=retrieval_strategy, **strategy_params
             )
             
+            # Store metrics for detailed analysis if requested
+            if detailed_analysis:
+                all_query_metrics.append(metrics)
+            
             # Collect retrieval performance metrics for statistics
             if 'retrieval_time' in metrics:
                 retrieval_times.append(metrics['retrieval_time'])
@@ -313,8 +327,9 @@ def run_evaluation(rag_db, dataset_path: str,
         avg_metrics = {name: total / valid_queries for name, total in total_metrics.items()}
         
         # Display results
+        results_title = "OVERALL EVALUATION RESULTS" if detailed_analysis else "EVALUATION RESULTS"
         print(f"\n" + "="*60)
-        print(f"EVALUATION RESULTS ({valid_queries} queries)")
+        print(f"{results_title} ({valid_queries} queries)")
         print(f"="*60)
         print(f"PRECISION METRICS:")
         print(f"  Precision@N:                {avg_metrics.get('precision@N', 0.0):.3f}")
@@ -351,6 +366,10 @@ def run_evaluation(rag_db, dataset_path: str,
         print(f"")
         print(f"RANKING METRICS:")
         print(f"  Mean Average Precision:     {avg_metrics['average_precision']:.3f}")
+        print(f"")
+        print(f"RETRIEVAL STATISTICS:")
+        print(f"  Avg Passages Retrieved:     {avg_metrics.get('retrieved_passages_count', 0.0):.1f}")
+        print(f"  Avg Unique Docs (N):        {avg_metrics.get('retrieved_docs_count', 0.0):.1f}")
         
         # Add retrieval performance statistics if we have retrieval data
         if retrieval_times and hasattr(rag_db, '_benchmark') and rag_db._benchmark:
@@ -381,7 +400,231 @@ def run_evaluation(rag_db, dataset_path: str,
         
         print(f"="*60)
         
+        # Print detailed analysis if requested
+        if detailed_analysis:
+            _print_detailed_analysis(df, all_query_metrics, valid_queries)
+        
         return avg_metrics
     else:
         print("No valid queries found!")
         return {}
+
+
+def _print_detailed_analysis(df: pd.DataFrame, all_query_metrics: List[Dict[str, Any]], 
+                            valid_queries: int) -> None:
+    """
+    Print detailed dataset analysis broken down by reasoning types and answer link counts.
+    (Internal helper function for run_evaluation)
+    
+    Args:
+        df: DataFrame with dataset (must have 'reasoning_types' column)
+        all_query_metrics: List of metrics dictionaries for each query
+        valid_queries: Number of valid queries processed
+    """
+    if valid_queries == 0:
+        return
+    
+    print("\n" + "="*80)
+    print("DETAILED DATASET ANALYSIS")
+    print("="*80)
+    
+    # Prepare data - match metrics with reasoning types and link counts
+    analysis_data = []
+    for idx, metrics in enumerate(all_query_metrics):
+        if idx < len(df):
+            row = df.iloc[idx]
+            reasoning_types = row.get('reasoning_types', 'Unknown')
+            
+            # Count Wikipedia links
+            num_links = sum(1 for col in df.columns 
+                          if col.startswith('wikipedia_link_') and pd.notna(row[col]))
+            
+            analysis_data.append({
+                'reasoning_types': reasoning_types,
+                'num_links': num_links,
+                'metrics': metrics
+            })
+    
+    # === ANALYSIS 1: By Reasoning Classification ===
+    print("\n" + "-"*80)
+    print("ANALYSIS BY REASONING CLASSIFICATION")
+    print("-"*80)
+    
+    # Group by reasoning types
+    reasoning_groups = defaultdict(list)
+    for data in analysis_data:
+        reasoning_groups[data['reasoning_types']].append(data['metrics'])
+    
+    # Calculate averages for each reasoning type
+    reasoning_results = []
+    for reasoning_type, metrics_list in reasoning_groups.items():
+        if not metrics_list:
+            continue
+        
+        avg_metrics = {}
+        for key in ['precision@N', 'recall@N', 'f1@N', 'average_precision']:
+            values = [m.get(key, 0.0) for m in metrics_list]
+            avg_metrics[key] = sum(values) / len(values)
+        
+        reasoning_results.append({
+            'type': reasoning_type,
+            'count': len(metrics_list),
+            **avg_metrics
+        })
+    
+    # Sort by count (most common first)
+    reasoning_results.sort(key=lambda x: x['count'], reverse=True)
+    
+    # Print top reasoning types
+    print(f"\nTop reasoning type combinations:")
+    print(f"{'Reasoning Type':<50} {'Count':>6} {'P@N':>6} {'R@N':>6} {'F1@N':>6} {'MAP':>6}")
+    print("-"*80)
+    
+    for i, result in enumerate(reasoning_results):
+        rt = result['type'][:48] if len(result['type']) > 48 else result['type']
+        print(f"{rt:<50} {result['count']:6d} "
+              f"{result['precision@N']:6.3f} {result['recall@N']:6.3f} "
+              f"{result['f1@N']:6.3f} {result['average_precision']:6.3f}")
+    
+    # === ANALYSIS 2: By Individual Reasoning Tags ===
+    print(f"\n" + "-"*80)
+    print("ANALYSIS BY INDIVIDUAL REASONING TAGS")
+    print("-"*80)
+    
+    # Parse reasoning tags (split by |)
+    tag_groups = defaultdict(list)
+    for data in analysis_data:
+        tags = [tag.strip() for tag in data['reasoning_types'].split('|')]
+        for tag in tags:
+            tag_groups[tag].append(data['metrics'])
+    
+    tag_results = []
+    for tag, metrics_list in tag_groups.items():
+        if not metrics_list:
+            continue
+        
+        avg_metrics = {}
+        for key in ['precision@N', 'recall@N', 'f1@N', 'average_precision']:
+            values = [m.get(key, 0.0) for m in metrics_list]
+            avg_metrics[key] = sum(values) / len(values)
+        
+        tag_results.append({
+            'tag': tag,
+            'count': len(metrics_list),
+            'percentage': len(metrics_list) / valid_queries * 100,
+            **avg_metrics
+        })
+    
+    # Sort by count
+    tag_results.sort(key=lambda x: x['count'], reverse=True)
+    
+    print(f"\nPerformance by reasoning tag:")
+    print(f"{'Tag':<30} {'Count':>6} {'%':>6} {'P@N':>6} {'R@N':>6} {'F1@N':>6} {'MAP':>6}")
+    print("-"*80)
+    
+    for result in tag_results:
+        tag = result['tag'][:28] if len(result['tag']) > 28 else result['tag']
+        print(f"{tag:<30} {result['count']:6d} {result['percentage']:5.1f}% "
+              f"{result['precision@N']:6.3f} {result['recall@N']:6.3f} "
+              f"{result['f1@N']:6.3f} {result['average_precision']:6.3f}")
+    
+    # === ANALYSIS 3: By Number of Answer Links ===
+    print(f"\n" + "-"*80)
+    print("ANALYSIS BY NUMBER OF ANSWER LINKS (Multi-hop Analysis)")
+    print("-"*80)
+    
+    # Group by number of links
+    link_groups = defaultdict(list)
+    for data in analysis_data:
+        link_groups[data['num_links']].append(data['metrics'])
+    
+    link_results = []
+    for num_links, metrics_list in link_groups.items():
+        if not metrics_list:
+            continue
+        
+        avg_metrics = {}
+        for key in ['precision@N', 'recall@N', 'f1@N', 'average_precision']:
+            values = [m.get(key, 0.0) for m in metrics_list]
+            avg_metrics[key] = sum(values) / len(values)
+        
+        # Classify complexity
+        if num_links <= 2:
+            complexity = "Simple"
+        elif num_links <= 4:
+            complexity = "Multi-hop"
+        else:
+            complexity = "Complex"
+        
+        link_results.append({
+            'num_links': num_links,
+            'complexity': complexity,
+            'count': len(metrics_list),
+            'percentage': len(metrics_list) / valid_queries * 100,
+            **avg_metrics
+        })
+    
+    # Sort by number of links
+    link_results.sort(key=lambda x: x['num_links'])
+    
+    print(f"\nPerformance by number of Wikipedia links (reasoning hops):")
+    print(f"{'Links':>5} {'Complexity':<12} {'Count':>6} {'%':>6} {'P@N':>6} {'R@N':>6} {'F1@N':>6} {'MAP':>6}")
+    print("-"*80)
+    
+    for result in link_results:
+        print(f"{result['num_links']:5d} {result['complexity']:<12} "
+              f"{result['count']:6d} {result['percentage']:5.1f}% "
+              f"{result['precision@N']:6.3f} {result['recall@N']:6.3f} "
+              f"{result['f1@N']:6.3f} {result['average_precision']:6.3f}")
+    
+    # Summary by complexity category
+    print(f"\n" + "-"*80)
+    print("SUMMARY BY COMPLEXITY LEVEL")
+    print("-"*80)
+    
+    complexity_groups = defaultdict(list)
+    for result in link_results:
+        for _ in range(result['count']):
+            # Get original metrics for this group
+            complexity_groups[result['complexity']].append({
+                'precision@N': result['precision@N'],
+                'recall@N': result['recall@N'],
+                'f1@N': result['f1@N'],
+                'average_precision': result['average_precision']
+            })
+    
+    # Calculate totals
+    complexity_summary = []
+    for complexity in ["Simple", "Multi-hop", "Complex"]:
+        if complexity not in complexity_groups:
+            continue
+        
+        metrics_list = complexity_groups[complexity]
+        count = len(metrics_list)
+        
+        # Recalculate from link_results
+        matching_results = [r for r in link_results if r['complexity'] == complexity]
+        total_count = sum(r['count'] for r in matching_results)
+        
+        # Weighted average
+        weighted_metrics = {}
+        for key in ['precision@N', 'recall@N', 'f1@N', 'average_precision']:
+            weighted_sum = sum(r[key] * r['count'] for r in matching_results)
+            weighted_metrics[key] = weighted_sum / total_count if total_count > 0 else 0.0
+        
+        complexity_summary.append({
+            'complexity': complexity,
+            'count': total_count,
+            'percentage': total_count / valid_queries * 100,
+            **weighted_metrics
+        })
+    
+    print(f"\n{'Complexity':<12} {'Count':>6} {'%':>6} {'P@N':>6} {'R@N':>6} {'F1@N':>6} {'MAP':>6}")
+    print("-"*80)
+    
+    for result in complexity_summary:
+        print(f"{result['complexity']:<12} {result['count']:6d} {result['percentage']:5.1f}% "
+              f"{result['precision@N']:6.3f} {result['recall@N']:6.3f} "
+              f"{result['f1@N']:6.3f} {result['average_precision']:6.3f}")
+    
+    print("="*80)

@@ -91,10 +91,12 @@ if __name__ == "__main__":
         elif args.retrieval_strategy == "relative":
             strategy_params["ratio"] = args.relative_ratio
         
+        # Run evaluation with detailed analysis enabled
         metrics = run_evaluation(rag_db, args.dataset, 
                       top_k_retriever=args.top_k_retriever, top_k_reranking=args.top_k_reranking,
                       max_queries=max_queries, no_rerank=args.no_rerank,
-                      retrieval_strategy=args.retrieval_strategy, **strategy_params)
+                      retrieval_strategy=args.retrieval_strategy, detailed_analysis=True,
+                      **strategy_params)
         
         # Save results for optimization
         results_data = {

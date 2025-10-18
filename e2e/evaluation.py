@@ -1,7 +1,7 @@
 """
 Retrieval Evaluation Metrics Module
 
-This module provides comprehensive retrieval evaluation metrics including:
+This module provides comprehensive retrieval metrics including:
 - Precision@k, Recall@k, F1@k
 - Mean Average Precision (MAP)
 - Comprehensive retrieval metrics
@@ -36,28 +36,34 @@ def calculate_retrieval_metrics(expected_urls: List[str], retrieved_urls: List[s
     
     metrics = {}
     
-    # Calculate Precision@k, Recall@k, F1@k for different k values
-    for k in k_values:
+    # Calculate metrics for different k values, including @N (actual retrieved count)
+    num_retrieved = len(retrieved_urls)
+    num_expected = len(expected_set)
+    k_values_with_n = k_values + [num_retrieved]  # Add N to k_values
+    
+    for k in k_values_with_n:
+        # Determine the label (use 'N' for the actual retrieved count)
+        k_label = 'N' if k == num_retrieved else str(k)
+        
+        # Get top k documents
         top_k = retrieved_urls[:k]
         top_k_set = set(top_k)
-        
-        # Calculate metrics
         relevant_retrieved = len(expected_set.intersection(top_k_set))
         
         # Precision@k: fraction of retrieved documents that are relevant
         precision_k = relevant_retrieved / k if k > 0 else 0.0
-        metrics[f'precision@{k}'] = precision_k
+        metrics[f'precision@{k_label}'] = precision_k
         
         # Recall@k: fraction of relevant documents that are retrieved
-        recall_k = relevant_retrieved / len(expected_set) if len(expected_set) > 0 else 0.0
-        metrics[f'recall@{k}'] = recall_k
+        recall_k = relevant_retrieved / num_expected if num_expected > 0 else 0.0
+        metrics[f'recall@{k_label}'] = recall_k
         
         # F1@k: harmonic mean of precision and recall
         if precision_k + recall_k > 0:
             f1_k = 2 * (precision_k * recall_k) / (precision_k + recall_k)
         else:
             f1_k = 0.0
-        metrics[f'f1@{k}'] = f1_k
+        metrics[f'f1@{k_label}'] = f1_k
     
     # Mean Average Precision (MAP) - considers ranking order
     ap_sum = 0.0
@@ -157,14 +163,26 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
     
     if verbose:
         print(f"Query: {query:50}")
-        # Remove duplicated urls from different passages of the same doc
         matches = len(expected_set.intersection(set(deduplicated_urls)))
         print(f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:3])}{'...' if len(expected_set) > 3 else ''}")
         print(f"Retrieved ({len(deduplicated_urls)}): {deduplicated_urls[:3]}{'...' if len(deduplicated_urls) > 3 else ''}")
         print(f"Matches: {matches}")
-        print(f"P@3: {metrics['precision@3']:.3f}, P@5: {metrics['precision@5']:.3f}, P@10: {metrics['precision@10']:.3f}")
-        print(f"R@3: {metrics['recall@3']:.3f}, R@5: {metrics['recall@5']:.3f}, R@10: {metrics['recall@10']:.3f}")
-        print(f"F1@10: {metrics['f1@10']:.3f}, MAP: {metrics['average_precision']:.3f}")
+
+        metric_categories = [
+            ("P", "precision"),
+            ("R", "recall"),
+            ("F1", "f1")
+        ]
+
+        for label, metric_prefix in metric_categories:
+            parts = [f"{label}@N: {metrics[f'{metric_prefix}@N']:.3f}"]
+            for k in [3, 5, 10]:
+                key = f"{metric_prefix}@{k}"
+                if key in metrics:
+                    parts.append(f"{label}@{k}: {metrics[key]:.3f}")
+            print(", ".join(parts))
+
+        print(f"MAP: {metrics['average_precision']:.3f}")
         print("-" * 80)
     
     # Print detailed results for single query mode
@@ -299,22 +317,37 @@ def run_evaluation(rag_db, dataset_path: str,
         print(f"EVALUATION RESULTS ({valid_queries} queries)")
         print(f"="*60)
         print(f"PRECISION METRICS:")
-        print(f"  Precision@1:                {avg_metrics['precision@1']:.3f}")
-        print(f"  Precision@3:                {avg_metrics['precision@3']:.3f}")
-        print(f"  Precision@5:                {avg_metrics['precision@5']:.3f}")
-        print(f"  Precision@10:               {avg_metrics['precision@10']:.3f}")
+        print(f"  Precision@N:                {avg_metrics.get('precision@N', 0.0):.3f}")
+        if 'precision@1' in avg_metrics:
+            print(f"  Precision@1:                {avg_metrics['precision@1']:.3f}")
+        if 'precision@3' in avg_metrics:
+            print(f"  Precision@3:                {avg_metrics['precision@3']:.3f}")
+        if 'precision@5' in avg_metrics:
+            print(f"  Precision@5:                {avg_metrics['precision@5']:.3f}")
+        if 'precision@10' in avg_metrics:
+            print(f"  Precision@10:               {avg_metrics['precision@10']:.3f}")
         print(f"")
         print(f"RECALL METRICS:")
-        print(f"  Recall@1:                   {avg_metrics['recall@1']:.3f}")
-        print(f"  Recall@3:                   {avg_metrics['recall@3']:.3f}")
-        print(f"  Recall@5:                   {avg_metrics['recall@5']:.3f}")
-        print(f"  Recall@10:                  {avg_metrics['recall@10']:.3f}")
+        print(f"  Recall@N:                   {avg_metrics.get('recall@N', 0.0):.3f}")
+        if 'recall@1' in avg_metrics:
+            print(f"  Recall@1:                   {avg_metrics['recall@1']:.3f}")
+        if 'recall@3' in avg_metrics:
+            print(f"  Recall@3:                   {avg_metrics['recall@3']:.3f}")
+        if 'recall@5' in avg_metrics:
+            print(f"  Recall@5:                   {avg_metrics['recall@5']:.3f}")
+        if 'recall@10' in avg_metrics:
+            print(f"  Recall@10:                  {avg_metrics['recall@10']:.3f}")
         print(f"")
         print(f"F1 METRICS:")
-        print(f"  F1@1:                       {avg_metrics['f1@1']:.3f}")
-        print(f"  F1@3:                       {avg_metrics['f1@3']:.3f}")
-        print(f"  F1@5:                       {avg_metrics['f1@5']:.3f}")
-        print(f"  F1@10:                      {avg_metrics['f1@10']:.3f}")
+        print(f"  F1@N:                       {avg_metrics.get('f1@N', 0.0):.3f}")
+        if 'f1@1' in avg_metrics:
+            print(f"  F1@1:                       {avg_metrics['f1@1']:.3f}")
+        if 'f1@3' in avg_metrics:
+            print(f"  F1@3:                       {avg_metrics['f1@3']:.3f}")
+        if 'f1@5' in avg_metrics:
+            print(f"  F1@5:                       {avg_metrics['f1@5']:.3f}")
+        if 'f1@10' in avg_metrics:
+            print(f"  F1@10:                      {avg_metrics['f1@10']:.3f}")
         print(f"")
         print(f"RANKING METRICS:")
         print(f"  Mean Average Precision:     {avg_metrics['average_precision']:.3f}")

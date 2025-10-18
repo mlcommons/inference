@@ -22,9 +22,22 @@ from typing import List, Tuple, Any, Dict
 import math
 
 
-def softmax(scores: List[float]) -> List[float]:
-    """Convert scores to probabilities using softmax."""
-    exp_scores = [math.exp(s) for s in scores]
+def softmax(scores: List[float], temperature: float = 1.0) -> List[float]:
+    """Convert scores to probabilities using softmax with temperature scaling.
+    
+    Args:
+        scores: List of scores to convert
+        temperature: Temperature parameter (lower = sharper distribution)
+                    - temperature = 1.0: standard softmax
+                    - temperature < 1.0: sharper (more weight on top scores)
+                    - temperature > 1.0: smoother (more uniform)
+    
+    Returns:
+        List of probabilities that sum to 1.0
+    """
+    # Apply temperature scaling
+    scaled_scores = [s / temperature for s in scores]
+    exp_scores = [math.exp(s) for s in scaled_scores]
     sum_exp = sum(exp_scores)
     return [exp_s / sum_exp for exp_s in exp_scores]
 
@@ -44,7 +57,24 @@ def top_p_filter(results_with_scores: List[Tuple[Any, float]], p: float = 0.9) -
         return []
     
     scores = [score for _, score in results_with_scores]
-    probs = softmax(scores)
+    
+    #print(f"\n[DEBUG top_p_filter] p={p}, num_candidates={len(scores)}")
+    #print(f"[DEBUG] Score range: [{min(scores):.4f}, {max(scores):.4f}]")
+    #print(f"[DEBUG] Score mean: {sum(scores)/len(scores):.4f}")
+    #print(f"[DEBUG] First 10 scores: {[f'{s:.4f}' for s in scores[:10]]}")
+    
+    # Use temperature scaling to sharpen the distribution
+    # Lower temperature = more discriminative (top docs get higher probability)
+    # For vector embeddings with compressed L2 distances, use very low temperature
+    # Temperature = 0.01 to 0.05 for L2 distances in range [0.27-0.42]
+    temperature = 1
+    #temperature = 0.02
+    probs = softmax(scores, temperature=temperature)
+    
+    #print(f"[DEBUG] Temperature: {temperature}")
+    #print(f"[DEBUG] Probability range: [{min(probs):.6f}, {max(probs):.6f}]")
+    #print(f"[DEBUG] First 10 probs: {[f'{p:.6f}' for p in probs[:10]]}")
+    #print(f"[DEBUG] Prob sum: {sum(probs):.6f}")
     
     cumulative_prob = 0.0
     selected_results = []
@@ -54,6 +84,7 @@ def top_p_filter(results_with_scores: List[Tuple[Any, float]], p: float = 0.9) -
         selected_results.append(result)
         
         if cumulative_prob >= p:
+            print(f"[DEBUG] Selected {i+1} documents (cumulative_prob={cumulative_prob:.4f} >= p={p})")
             break
     
     return selected_results
@@ -86,20 +117,40 @@ def score_threshold_filter(results_with_scores: List[Tuple[Any, float]],
 def relative_threshold_filter(results_with_scores: List[Tuple[Any, float]], 
                              ratio: float = 0.8) -> List[Any]:
     """
-    Relative threshold: Keep results within ratio * max_score.
+    Relative threshold: Keep top ratio fraction of results based on score range.
+    
+    For both positive and negative scores:
+    - Calculates score range between best and worst
+    - Keeps only results within top ratio% of that range
     
     Args:
-        results_with_scores: List of (result, score) tuples
-        ratio: Fraction of max score to use as threshold (0.7-0.9 typical)
+        results_with_scores: List of (result, score) tuples (sorted desc, best first)
+        ratio: Fraction of score range to keep (0.7-0.9 typical)
+               e.g., 0.9 means keep top 90% of score range
     
     Returns:
         Filtered results list
+    
+    Example with negative scores:
+        Scores: [-0.42, -0.43, -0.44, ..., -0.49]
+        best=-0.42, worst=-0.49, range=0.07
+        ratio=0.9 → cutoff_range = 0.07 * 0.9 = 0.063
+        threshold = -0.42 - 0.063 = -0.483
+        Keeps: scores >= -0.483 (top 90% of range)
     """
     if not results_with_scores:
         return []
     
-    max_score = max(score for _, score in results_with_scores)
-    threshold = ratio * max_score
+    # Get best and worst scores
+    best_score = results_with_scores[0][1]
+    worst_score = results_with_scores[-1][1]
+    
+    # Calculate the score range
+    score_range = best_score - worst_score  # Always positive since sorted desc
+    
+    # Calculate threshold: start from best, move down by (1-ratio) of range
+    cutoff_distance = score_range * (1 - ratio)
+    threshold = best_score - cutoff_distance
     
     return score_threshold_filter(results_with_scores, threshold, higher_better=True)
 
@@ -177,12 +228,7 @@ def filter(rag_db, query: str, method: str = "top_p",
     else:
         raise ValueError(f"Database {type(rag_db)} doesn't support score-based retrieval")
     
-    # Handle different score formats (Vector vs BM25)
-    if isinstance(rag_db.__class__.__name__, str) and "Vector" in rag_db.__class__.__name__:
-        # Vector scores are (result, distance) - convert to (result, similarity)
-        # Assuming L2 distance, convert to similarity: similarity = 1 / (1 + distance)
-        results_with_scores = [(result, 1.0 / (1.0 + score)) for result, score in results_with_scores]
-    
+    # Results already have proper similarity scores (higher is better) from lookup_with_scores
     # Sort by score (descending - higher is better)
     results_with_scores.sort(key=lambda x: x[1], reverse=True)
     

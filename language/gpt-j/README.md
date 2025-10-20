@@ -9,7 +9,7 @@ You can also do `pip install mlc-scripts` and then use `mlcr` commands for downl
 ### Download model through MLCFlow Automation
 
 ```
-mlcr get,ml-model,gptj,_pytorch --outdirname=<path_to_download> -j
+mlcr get,ml-model,gptj,_fp32,_pytorch,_r2-downloader --outdirname=<path_to_download> -j
 ```
 
 ### Download dataset through MLCFlow Automation

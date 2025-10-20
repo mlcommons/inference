@@ -119,12 +119,7 @@ cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 ```
 
 **External Model download using MLCFlow Automation**
-You can download the model automatically via the below command
-```
-mlcr get,ml-model,llama3,_hf,_meta-llama/Llama-3.1-8B-Instruct --hf_token=<huggingface access token> -j
-```
-
-### Download huggingface model through MLC
+You can download the model automatically through HuggingFace via the below command
 
 ```
 mlcr get,ml-model,llama3,_meta-llama/Llama-3.1-8B-Instruct,_hf --outdirname=${CHECKPOINT_PATH} --hf_token=<huggingface access token> -j

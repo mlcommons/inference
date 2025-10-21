@@ -17,6 +17,41 @@ from typing import List
 from legacy_helpers import __levenshtein
 
 
+def assemble_stream(stream):
+    # 'stream' is a list of sentence fragments (strings)
+    committed_list = []
+    prev_list = []
+    for clip in stream:
+#        print("clip: " + str(clip))
+        wordlist = clip.split()
+        merged = []
+        max_metric = -1
+#        print("prev: " + str(" ".join(prev_list)))
+#        print("list: " + str(" ".join(wordlist)))
+        if len(committed_list) == 0:
+            committed_list = wordlist
+            prev_list = wordlist
+            continue
+
+        for i in range(len(prev_list)):
+            for j in range(len(wordlist)):
+                merged = prev_list[:(len(prev_list)-i)] + wordlist[j:]
+                metric = len(merged) - __levenshtein(merged, prev_list) - __levenshtein(merged, wordlist)
+                if (metric > max_metric) or  (metric == max_metric and j > i):
+                    max_metric = metric
+                    new_commit = committed_list[:(len(committed_list)-i)] + wordlist[j:]
+#                    print("new_commit: " + str(new_commit))
+        try:
+            committed_list = new_commit
+        except NameError:
+            committed_list = committed_list
+        prev_list = wordlist
+#        print("committed_list: " + str(" ".join(committed_list)))
+#        print(" ")
+        
+    return " ".join(committed_list)
+
+
 def compute_wer_with_concatenation(prediction, reference):
     """
     Compute WER considering concatenated words as correct matches using kaldialign

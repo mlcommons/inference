@@ -46,3 +46,15 @@ python utils/repackage_librispeech.py --manifest ${DATA_DIR}/dev-all.json \
 	                              --data_dir ${DATA_DIR} \
 				      --output_dir ${DATA_DIR}/dev-all-repack \
 				      --output_json /data/dev-all-repack.json
+
+# Repackages Librispeech into fully-constructed samples (median ~180s)
+python utils/long_librispeech.py --manifest ${DATA_DIR}/dev-all.json \
+                                      --data_dir ${DATA_DIR} \
+                                      --output_dir ${DATA_DIR}/dev-all-extended \
+                                      --output_json /data/dev-all-extended.json
+
+# Repackages Librispeech into server-sized samples from the extended
+python utils/stream_librispeech.py --manifest ${DATA_DIR}/dev-all-extended.json \
+                                      --data_dir ${DATA_DIR} \
+                                      --output_dir ${DATA_DIR}/dev-all-server \
+                                      --output_json /data/dev-all-server.json

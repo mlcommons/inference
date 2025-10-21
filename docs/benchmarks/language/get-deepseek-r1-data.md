@@ -11,12 +11,11 @@ The benchmark implementation run command will automatically download the validat
 
 === "Validation"
 
-    ### Get Validation Dataset
-    ```
-    mlcr get,preprocessed,dataset,deepseek-r1,_validation,_mlc,_rclone --outdirname=<path to download> -j
-    ```
 
-=== "Calibration"
+  ### Get Validation Dataset
+  ```
+  mlcr get,preprocessed,dataset,deepseek-r1,_validation,_mlc,_r2-downloader --outdirname=<path to download> -j
+  ```
 
     ### Get Calibration Dataset
     ```

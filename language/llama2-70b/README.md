@@ -5,7 +5,7 @@
 + Streamer for communicating with loadgen has quite some overhead. This is only meant to provide functional implementation
 + For custom/optimized implementations of this benchmark it is important to include the :
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
-        - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
+        - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/TEST06/)
 
 
 ## Automated command to run the benchmark via MLCFlow
@@ -72,7 +72,7 @@ MLCommons hosts the model and preprocessed dataset for download **exclusively by
 ### Download model through MLCFlow Automation
 
 ```
-mlcr get,ml-model,llama2-70b,_pytorch -j --outdirname=<Download path> -j
+mlcr get,ml-model,llama2-70b,_pytorch,_r2-downloader,_70b,_mlc --outdirname=<Download path> -j
 ```
 
 ### External Download (Not recommended for official submission)
@@ -82,7 +82,6 @@ mlcr get,ml-model,llama2-70b,_pytorch -j --outdirname=<Download path> -j
 export CHECKPOINT_PATH=${PWD}/Llama-2-70b-chat-hf
 git lfs install
 git clone https://huggingface.co/meta-llama/Llama-2-70b-chat-hf ${CHECKPOINT_PATH}
-
 ```
 
 ## Get Dataset
@@ -92,13 +91,13 @@ git clone https://huggingface.co/meta-llama/Llama-2-70b-chat-hf ${CHECKPOINT_PAT
 **Validation**
 
 ```
-mlcr get,dataset,preprocessed,openorca,_validation --outdirname=<path_to_download> -j
+mlcr get,dataset,preprocessed,openorca,_validation,_r2-downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
 **Calibration**
 
 ```
-mlcr get,dataset,preprocessed,openorca,_calibration --outdirname=<path_to_download> -j
+mlcr get,dataset,preprocessed,openorca,_calibration,_r2-downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
 ### Download Unprocessed dataset through MLCFlow Automation

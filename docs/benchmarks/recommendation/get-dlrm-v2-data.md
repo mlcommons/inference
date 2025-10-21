@@ -14,7 +14,7 @@ The benchmark implementation run command will automatically download the validat
 
     ### Get Validation Dataset
     ```
-    mlcr get,dataset,criteo,_validation -j
+    mlcr get,preprocessed,dataset,criteo,_r2-downloader,_mlc -j
     ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_CRITEO_DATASET>` could be provided to download the dataset to a specific location.
@@ -28,7 +28,7 @@ Get the Official MLPerf DLRM v2 Model
 
     ### Pytorch
     ```
-    mlcr get,ml-model,dlrm,_pytorch,_weight_sharded,_rclone -j
+    mlcr get,ml-model,dlrm,_pytorch,_fp32,_weight_sharded,_r2-downloader -j
     ```
 
 

@@ -15,7 +15,7 @@ The benchmark implementation run command will automatically download the validat
 
         ### Get Validation Dataset
         ```
-        mlcr get,dataset,imagenet,validation -j
+        mlcr get,dataset,imagenet,validation,_full -j
         ```
     === "Calibration"
         ResNet50 calibration dataset consist of 500 images selected from the Imagenet 2012 validation dataset. There are 2 alternative options for the calibration dataset.
@@ -32,7 +32,7 @@ The benchmark implementation run command will automatically download the validat
     ### Get ResNet50 preprocessed dataset
 
     ```
-    mlcr get,dataset,image-classification,imagenet,preprocessed,_pytorch -j
+    mlcr get,dataset,image-classification,imagenet,preprocessed,_pytorch,_full-j
     ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_IMAGENET_DATASET>` could be provided to download the dataset to a specific location.
@@ -52,7 +52,7 @@ Get the Official MLPerf ResNet50 Model
 
     ### Onnx
     ```
-    mlcr get,ml-model,resnet50,_onnx -j
+    mlcr get,ml-model,resnet50,image-classification,_onnx -j
     ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_RESNET50_MODEL>` could be provided to download the model to a specific location.

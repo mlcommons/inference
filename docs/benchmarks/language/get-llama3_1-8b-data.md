@@ -10,14 +10,14 @@ hide:
 The benchmark implementation run command will automatically download the validation and calibration datasets and do the necessary preprocessing. In case you want to download only the datasets, you can use the below commands.
 
 === "Validation"
-
+    
     === "Full dataset (Datacenter)"
 
         ### Get Validation Dataset
         ```
         mlcr get,dataset,cnndm,_validation,_datacenter,_llama3,_mlc,_r2-downloader --outdirname=<path to download> -j
         ```
-    
+
     === "5000 samples (Edge)"
 
         ### Get Validation Dataset
@@ -26,7 +26,8 @@ The benchmark implementation run command will automatically download the validat
         ```
 
 === "Calibration"
-
+        ```
+        
     ### Get Calibration Dataset
     ```
     mlcr get,dataset,cnndm,_calibration,_llama3,_mlc,_r2-downloader --outdirname=<path to download> -j

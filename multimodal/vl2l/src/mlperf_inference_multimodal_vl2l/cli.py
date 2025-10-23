@@ -6,7 +6,8 @@ import typer
 
 app = typer.Typer()
 
-@app.callback()
+
+@app.command()
 def main():
     """VL2L benchmark CLI"""
     typer.echo("Hello, World!")

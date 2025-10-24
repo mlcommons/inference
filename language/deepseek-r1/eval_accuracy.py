@@ -773,7 +773,7 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
         'tokens_per_sample': mean_output_len,
         'num-samples': len(df_evaluated),
     }
-    
+
     print("\nResults\n")
     print(results)
 

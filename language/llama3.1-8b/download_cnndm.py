@@ -100,8 +100,8 @@ def preprocess_function(sample, padding="max_length"):
     # create list of samples
     inputs = []
 
-    #print(f"Num samples: {len(sample[text_column])}")
-    #for i in range(0, len(sample[text_column])):
+    # print(f"Num samples: {len(sample[text_column])}")
+    # for i in range(0, len(sample[text_column])):
     x = dict()
     x["instruction"] = instruction_template
     x["input"] = sample[text_column]
@@ -109,7 +109,7 @@ def preprocess_function(sample, padding="max_length"):
         instruction_template[instruction].format_map(x)
     )
     x["output"] = sample[summary_column]
-    #inputs.append(x)
+    # inputs.append(x)
     model_inputs = dict()
     model_inputs["text"] = x
 

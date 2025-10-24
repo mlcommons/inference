@@ -20,6 +20,8 @@ import os
 import subprocess
 import sys
 import shutil
+import hashlib
+import re
 
 sys.path.append(os.getcwd())
 
@@ -161,15 +163,11 @@ def main():
         print("Error: This script requires Python v3.3 or later")
         exit()
 
-    get_perf_lines_cmd = "wc -l " + perf_log + "| awk '{print $1}'"
-    num_perf_lines = int(
-        subprocess.check_output(get_perf_lines_cmd, shell=True).decode("utf-8")
-    )
+    with open(perf_log, "r") as file:
+        num_perf_lines = sum(1 for _ in file)
 
-    get_acc_lines_cmd = "wc -l " + acc_log + "| awk '{print $1}'"
-    num_acc_lines = int(
-        subprocess.check_output(get_acc_lines_cmd, shell=True).decode("utf-8")
-    )
+    with open(acc_log, "r") as file:
+        num_acc_lines = sum(1 for _ in file)
 
     num_acc_log_entries = num_acc_lines - 2
     num_perf_log_entries = num_perf_lines - 2
@@ -189,42 +187,38 @@ def main():
             continue
 
         # calculate md5sum of line in perf mode accuracy_log
-        perf_md5sum_cmd = (
-            "head -n "
-            + str(perf_line + 1)
-            + " "
-            + perf_log
-            + "| tail -n 1| sed -r 's/,//g' | sed -r 's/\"seq_id\" : \\S+//g' | md5sum"
-        )
-        # print(perf_md5sum_cmd)
-        perf_md5sum = subprocess.check_output(perf_md5sum_cmd, shell=True).decode(
-            "utf-8"
-        )
+        # read the specific line
+        with open(perf_log, "r") as f:
+            for i, line in enumerate(f):
+                if i == perf_line:
+                    line_content = line.strip()
+                    break
 
-        # get qsl idx
-        get_qsl_idx_cmd = (
-            "head -n "
-            + str(perf_line + 1)
-            + " "
-            + perf_log
-            + "| tail -n 1| awk -F\": |,\" '{print $4}'"
-        )
-        qsl_idx = (
-            subprocess.check_output(get_qsl_idx_cmd, shell=True)
-            .decode("utf-8")
-            .rstrip()
-        )
+        # remove commas and remove 'seq_id' key-value
+        clean_line = line_content.replace(",", "")
+        clean_line = re.sub(r'"seq_id"\s*:\s*\S+', '', clean_line)
+
+        # calculate md5sum
+        perf_md5sum = hashlib.md5(clean_line.encode("utf-8")).hexdigest()
+
+        # extract qsl idx
+        fields = re.split(r": |,", line_content)
+        qsl_idx = fields[3].strip()
 
         # calculate md5sum of line in acc mode accuracy_log
-        acc_md5sum_cmd = (
-            'grep "qsl_idx\\" : '
-            + qsl_idx
-            + '," '
-            + acc_log
-            + "| sed -r 's/,//g' | sed -r 's/\"seq_id\" : \\S+//g' | md5sum"
-        )
-        acc_md5sum = subprocess.check_output(
-            acc_md5sum_cmd, shell=True).decode("utf-8")
+        acc_matches = []
+        with open(acc_log, "r") as f:
+            for line in f:
+                if f'"qsl_idx" : {qsl_idx},' in line:
+                    acc_matches.append(line.strip())
+
+        # join all matching lines together
+        acc_line = "\n".join(acc_matches)
+
+        acc_line = acc_line.replace(",", "")
+        acc_line = re.sub(r'"seq_id"\s*:\s*\S+', '', acc_line)
+
+        acc_md5sum = hashlib.md5(acc_line.encode("utf-8")).hexdigest()
 
         if perf_md5sum != acc_md5sum:
             num_perf_log_data_mismatch += 1

@@ -495,6 +495,130 @@ class VLLMMetricsCollector:
             self.thread.join(timeout=5)
         self.storage.close()
         self.logger.info("Metrics collection stopped")
+    
+    def postprocess_metrics(self, input_file: str, output_file: str = None) -> None:
+        """
+        Postprocess collected metrics and create processed version.
+        
+        This method reads the raw metrics file, processes counter metrics to deltas,
+        and saves both the original (with .raw extension) and processed versions.
+        
+        Args:
+            input_file: Path to the raw metrics file
+            output_file: Path for processed metrics file (auto-generated if None)
+        """
+        if output_file is None:
+            # Generate output filename
+            base_name = os.path.splitext(input_file)[0]
+            output_file = f"{base_name}_processed.json"
+        
+        # Create .raw backup of original file
+        raw_file = f"{os.path.splitext(input_file)[0]}.raw"
+        if os.path.exists(input_file) and not os.path.exists(raw_file):
+            import shutil
+            shutil.copy2(input_file, raw_file)
+            self.logger.info(f"Original metrics saved to {raw_file}")
+        
+        # Load metrics type information
+        metrics_types = self._load_metrics_types()
+        
+        # Process the metrics file
+        self._process_metrics_file(input_file, output_file, metrics_types)
+        
+        self.logger.info(f"Processed metrics saved to {output_file}")
+    
+    def _load_metrics_types(self) -> Dict[str, str]:
+        """Load metrics type information from metrics_info.txt file."""
+        metrics_types = {}
+        metrics_info_file = os.path.join(os.path.dirname(__file__), 'metrics_info.txt')
+        
+        try:
+            with open(metrics_info_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#') and ':' in line:
+                        metric_name, metric_type = line.split(':', 1)
+                        metrics_types[metric_name.strip()] = metric_type.strip()
+        except FileNotFoundError:
+            self.logger.warning(f"Metrics info file not found: {metrics_info_file}")
+        except Exception as e:
+            self.logger.error(f"Error loading metrics types: {e}")
+        
+        return metrics_types
+    
+    def _process_metrics_file(self, input_file: str, output_file: str, metrics_types: Dict[str, str]) -> None:
+        """Process metrics file based on metric types."""
+        import json
+        import pandas as pd
+        
+        # Load raw metrics
+        with open(input_file, 'r') as f:
+            raw_metrics = json.load(f)
+        
+        if not raw_metrics:
+            self.logger.warning("No metrics data found in input file")
+            return
+        
+        # Convert to DataFrame for processing
+        df = pd.DataFrame(raw_metrics)
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        
+        # Group by metric name and process each type
+        processed_metrics = []
+        
+        for metric_name in df['metric_name'].unique():
+            metric_data = df[df['metric_name'] == metric_name].copy()
+            metric_data = metric_data.sort_values('timestamp')
+            
+            # Get metric type
+            metric_type = self._get_metric_type(metric_name, metrics_types)
+            
+            # Process based on type
+            if metric_type == 'COUNTER':
+                metric_data = self._process_counter_metric(metric_data)
+            elif metric_type == 'HISTOGRAM':
+                metric_data = self._process_histogram_metric(metric_data)
+            # GAUGE and others remain unchanged
+            
+            # Convert back to list of dicts
+            for _, row in metric_data.iterrows():
+                processed_metrics.append({
+                    'timestamp': row['timestamp'].isoformat(),
+                    'metric_name': row['metric_name'],
+                    'value': row['value'],
+                    'labels': row['labels']
+                })
+        
+        # Save processed metrics
+        with open(output_file, 'w') as f:
+            json.dump(processed_metrics, f, indent=2)
+    
+    def _get_metric_type(self, metric_name: str, metrics_types: Dict[str, str]) -> str:
+        """Get metric type from loaded types."""
+        if metric_name.endswith('_bucket') or metric_name.endswith('_count') or metric_name.endswith('_sum'):
+            return 'HISTOGRAM'
+        
+        if metric_name in metrics_types:
+            return metrics_types[metric_name]
+        
+        return 'GAUGE'
+    
+    def _process_counter_metric(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Process counter metrics by calculating deltas."""
+        if len(df) < 2:
+            return df
+        
+        df_processed = df.copy()
+        df_processed['value'] = df_processed['value'].diff().fillna(df_processed['value'].iloc[0])
+        df_processed['value'] = df_processed['value'].clip(lower=0)
+        
+        return df_processed
+    
+    def _process_histogram_metric(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Process histogram metrics (placeholder)."""
+        # TODO: Implement histogram processing
+        self.logger.info("Histogram processing not yet implemented - returning raw values")
+        return df
 
 
 def signal_handler(signum, frame):
@@ -549,6 +673,10 @@ def main():
                        help='Job name for Prometheus Pushgateway')
     parser.add_argument('--instance',
                        help='Instance name for Prometheus Pushgateway')
+    parser.add_argument('--postprocess',
+                       help='Postprocess an existing metrics file')
+    parser.add_argument('--output-processed',
+                       help='Output file for processed metrics')
     
     args = parser.parse_args()
     
@@ -572,6 +700,18 @@ def main():
         )
     elif args.storage_type == 'prometheus-file':
         storage = PrometheusFileStorage(f"{args.output}.prom")
+    
+    # Handle postprocessing mode
+    if args.postprocess:
+        collector = VLLMMetricsCollector(
+            metrics_endpoint=args.endpoint,
+            storage=storage,
+            metrics_to_collect=args.metrics,
+            collection_interval=args.interval,
+            timeout=args.timeout
+        )
+        collector.postprocess_metrics(args.postprocess, args.output_processed)
+        return
     
     # Create metrics collector
     collector = VLLMMetricsCollector(

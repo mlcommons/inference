@@ -1,0 +1,49 @@
+# vLLM Metrics Type Information
+# This file defines the type of each metric for proper visualization
+# Format: metric_name:type
+# Types: GAUGE, COUNTER, HISTOGRAM, SUMMARY
+
+# Request and Performance Metrics
+vllm:num_requests_running:GAUGE
+vllm:num_requests_waiting:GAUGE
+vllm:num_requests_finished:COUNTER
+vllm:num_requests_cancelled:COUNTER
+vllm:num_requests_failed:COUNTER
+
+# Token Metrics
+vllm:generation_tokens_total:COUNTER
+vllm:request_input_tokens:GAUGE
+vllm:request_output_tokens:COUNTER
+
+# Success/Failure Metrics
+vllm:request_success_total:COUNTER
+vllm:request_failure_total:COUNTER
+
+# GPU Metrics
+vllm:gpu_utilization:GAUGE
+vllm:gpu_memory_used:GAUGE
+vllm:gpu_memory_total:GAUGE
+vllm:gpu_memory_free:GAUGE
+
+# Latency and Duration Metrics (Histograms)
+vllm:request_duration:HISTOGRAM
+vllm:request_ttft:HISTOGRAM
+vllm:request_itl:HISTOGRAM
+vllm:request_latency:HISTOGRAM
+
+# Cache Metrics
+vllm:kv_cache_usage_ratio:GAUGE
+vllm:kv_cache_used:GAUGE
+vllm:kv_cache_total:GAUGE
+
+# Throughput Metrics
+vllm:tokens_per_second:GAUGE
+vllm:requests_per_second:GAUGE
+
+# System Metrics
+vllm:cpu_utilization:GAUGE
+vllm:memory_used:GAUGE
+vllm:memory_total:GAUGE
+
+# Histogram Components (automatically detected by suffix)
+# _bucket, _count, _sum suffixes are handled as histogram components

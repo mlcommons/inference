@@ -2,6 +2,211 @@
 hide:
   - toc
 ---
+# MLPerf Inference Submission Guide
+
+This document provides a step-by-step overview of the **MLPerf Inference submission process**.  
+It is designed for both **new submitters** and those with limited prior experience with MLPerf benchmarking.  
+
+---
+
+## 1. Prerequisites and Agreements
+
+For doing the MLPerf Inference Submission, ensure that all **required agreements** are completed:
+
+- **Sign the relevant agreements:**
+  
+    - Contributor License Agreement (CLA)
+    - Trademark Agreement
+    - Power EULA (optional, only if submitting power measurements)
+
+- **Provide contact details:**
+  
+    - Primary and secondary **GitHub handles**
+    - Primary and secondary **Point of Contact (POC) email addresses**
+
+
+👉 **Links:**  
+<placeholder_for_CLA_link>  
+<placeholder_for_trademark_agreement_link>  
+<placeholder_for_power_EULA_link>  
+
+---
+
+## 2. Overview of MLPerf Inference Benchmarking
+
+MLPerf Inference is a benchmarking suite designed to measure **performance of machine learning models** on different hardware and software systems.
+
+### Benchmark Timings
+- MLPerf Inference benchmarking happens **twice per year**:
+  - **.0 Round** – February  
+  - **.1 Round** – August  
+
+---
+
+### Divisions
+MLPerf supports two divisions, allowing flexibility in reimplementation:
+
+- **Closed Division:**  
+  Focused on fair “apples-to-apples” comparison using the same model and reference setup.  
+  See rules: <placeholder_for_closed_division_rules>
+
+- **Open Division:**  
+  Allows innovation such as retraining or model substitution.  
+  See rules: <placeholder_for_open_division_rules>
+
+---
+
+### Categories
+Results are grouped into **categories** based on system availability:
+
+- **Available:** All components are available for purchase or rent.  
+- **Preview:** Expected to become Available in the next submission round.  
+- **Research, Development, or Internal (RDI):** Experimental or internal systems.
+
+---
+
+### System Types
+Two system types are supported:
+
+- **Datacenter:** Large-scale server-class systems.  
+- **Edge:** Devices and platforms designed for embedded or low-power environments.
+
+The **System Under Test (SUT)** can be classified under either, depending on the use case.
+
+---
+
+### LoadGen (Load Generator)
+**LoadGen** is the C++ benchmarking harness (with Python bindings) used across all MLPerf Inference submissions.  
+It handles:
+
+- Query generation and scheduling 
+- logging  
+- Latency tracking  
+- Accuracy validation  
+- Final metric computation  
+
+---
+
+### Scenarios
+Each benchmark defines one or more **scenarios** to reflect real-world usage.  
+See more details here:  
+<placeholder_for_scenarios_doc_link>
+
+- **Datacenter:** Offline, Server, Interactive  
+- **Edge:** SingleStream, MultiStream, Offline  
+
+Scenario requirements depend on both **system type** and **benchmark model**.  
+Refer to the **Benchmark Info page** for details:  
+<placeholder_for_benchmark_info_link>
+
+---
+
+## 3. Common Steps in Benchmarking
+
+Below are the **general steps** followed in the MLPerf Inference benchmarking process.
+
+1. **Determine Division, System Type, and Category**  
+   Decide whether your submission will be Closed/Open, Edge/Datacenter, and Available/Preview/RDI.
+
+2. **Identify Required Scenarios**  
+   Based on your chosen configuration, identify which scenarios must be run.
+
+3. **Download Required Resources**
+   - **Benchmark Source Repository** (Reference or vendor implementation):  
+     <placeholder_for_inference_repo_link>
+   - **Datasets**  
+     <placeholder_for_dataset_download_link>
+   - **Models**  
+     <placeholder_for_model_download_link>
+
+4. **Configure Environment**  
+   Set up the required dependencies, environment variables, and system configurations for benchmarking.  
+   <placeholder_for_env_setup_doc_link>
+
+5. **Run Benchmarks**  
+   Execute benchmarks for the required scenarios, divisions, and categories.  
+   Adjust target QPS or latency to meet accuracy and performance requirements.  
+   *(Refer to model-specific documentation for actual command usage.)*
+
+6. **Run Accuracy Checker**  
+   Verify that the output results meet accuracy thresholds.  
+   <placeholder_for_accuracy_checker_doc_link>
+
+7. **Repeat for All Intended Benchmarks**  
+   Perform the above steps for every model you plan to submit.
+
+---
+
+## 4. Preparing Results for Submission
+
+After benchmark runs are complete, follow these steps to prepare your submission package.
+
+1. **Arrange Results**  
+   Organize results according to the structure defined here:  
+   <placeholder_for_submission_structure_doc_link>
+
+2. **Preprocess Submission**  
+   Use the preprocessing script from the inference repository to validate and format results:  
+   <placeholder_for_preprocess_script_link>
+
+3. **Run Submission Checker**  
+   The checker validates completeness and correctness, producing a final `.tar.gz` file for submission.  
+   <placeholder_for_submission_checker_link>
+
+4. **Upload to Submission Portal**  
+   Use the MLCommons **Submission UI** to upload your final tarball.  
+   <placeholder_for_submission_UI_link>
+
+---
+
+## 5. Manual vs Automated Submission
+
+There are **two ways** to prepare and submit your results:
+
+### Manual Submission
+Each of the above steps (from benchmarking to submission) can be performed manually.  
+This approach gives full control but is time-consuming and prone to errors.
+
+### Automated Submission (CLI)
+MLCommons provides a **Submission CLI** that automates:
+
+- Result structuring
+- Preprocessing
+- Checker validation
+- Final tarball creation and upload
+
+This reduces manual intervention and ensures compliance with submission requirements.  
+See documentation below usage:  
+<placeholder_for_submission_CLI_link>
+
+---
+
+## 6. Additional Resources
+
+- **MLPerf Inference Policies:** <placeholder_for_inference_policies_link>  
+- **Reference Implementations:** <placeholder_for_reference_implementations_link>  
+- **Previous Submission Results:** <placeholder_for_published_results_link>  
+- **Submission FAQ:** <placeholder_for_FAQ_link>
+
+---
+
+## 7. Support
+
+For questions or clarifications:
+- Join the MLPerf Inference mailing list: <placeholder_for_mailing_list_link>  
+- Open an issue in the inference repository: <placeholder_for_github_issues_link>  
+
+---
+
+### Notes
+- Ensure that all agreements and contributor information are completed **before** performing any benchmark runs.  
+- Always use the **latest round’s branch/tag** for submission.  
+- Refer to individual model documentation for scenario-specific configurations.  
+
+---
+
+*This document is maintained by the MLPerf Inference Working Group. For suggestions or updates, please raise a pull request or contact the maintainers.*
+
 
 Click [here](https://docs.google.com/presentation/d/1cmbpZUpVr78EIrhzyMBnnWnjJrD-mZ2vmSb-yETkTA8/edit?usp=sharing) to view the proposal slide for Common Automation for MLPerf Inference Submission Generation through MLCFlow.
 

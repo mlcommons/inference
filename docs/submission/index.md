@@ -11,7 +11,7 @@ It is designed for both **new submitters** and those with limited prior experien
 
 ## 1. Prerequisites and Agreements
 
-For doing the MLPerf Inference Submission, ensure that all **required agreements** are completed:
+For doing the MLPerf Inference Submission, ensure that all **required agreements** are completed. You can skip these if you are doing an unofficial submission.
 
 - **Sign the relevant agreements:**
   

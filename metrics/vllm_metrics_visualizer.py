@@ -402,8 +402,6 @@ class VLLMMetricsVisualizer:
         """
         metrics_types = {}
         metrics_info_file = os.path.join(os.path.dirname(__file__), 'metrics_info.txt')
-        print(f"Looking for metrics_info.txt at: {metrics_info_file}")
-        print(f"File exists: {os.path.exists(metrics_info_file)}")
         
         try:
             with open(metrics_info_file, 'r') as f:
@@ -416,7 +414,6 @@ class VLLMMetricsVisualizer:
                             metric_name = parts[0].strip()
                             metric_type = parts[1].strip()
                             metrics_types[metric_name] = metric_type
-                            print(f"Line {line_num}: Added {metric_name} -> {metric_type}")
                         else:
                             print(f"Line {line_num}: ERROR - Invalid format: {line}")
             
@@ -426,7 +423,6 @@ class VLLMMetricsVisualizer:
         except Exception as e:
             self.logger.error(f"Error loading metrics types: {e}")
         
-        print("Final metrics_types dictionary:", metrics_types)
         return metrics_types
     
     def _get_metric_type(self, metric_name: str) -> str:
@@ -439,46 +435,17 @@ class VLLMMetricsVisualizer:
         Returns:
             str: Metric type (GAUGE, COUNTER, HISTOGRAM, SUMMARY)
         """
-        print(f"Looking up metric type for: '{metric_name}'")
-        print(f"Available metrics in dictionary: {list(self.metrics_types.keys())}")
-        
         # Check for histogram components first
         if metric_name.endswith('_bucket') or metric_name.endswith('_count') or metric_name.endswith('_sum'):
-            print(f"  -> Detected as HISTOGRAM (suffix match)")
             return 'HISTOGRAM'
         
         # Check in loaded types
         if metric_name in self.metrics_types:
-            metric_type = self.metrics_types[metric_name]
-            print(f"  -> Found in dictionary: {metric_type}")
-            return metric_type
+            return self.metrics_types[metric_name]
         
         # Default to GAUGE if not specified
-        print(f"  -> Not found, defaulting to GAUGE")
         return 'GAUGE'
     
-    def _process_counter_metric(self, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Process counter metrics by calculating deltas (differences between consecutive values).
-        
-        Args:
-            df: DataFrame with metric data sorted by timestamp
-            
-        Returns:
-            DataFrame with processed counter values
-        """
-        if len(df) < 2:
-            return df
-        
-        # Calculate deltas (differences between consecutive values)
-        df_processed = df.copy()
-        df_processed['value'] = df_processed['value'].diff().fillna(df_processed['value'].iloc[0])
-        
-        # Remove negative values (can happen with counter resets)
-        df_processed['value'] = df_processed['value'].clip(lower=0)
-        
-        print(df_processed)
-        return df_processed
     
     def _process_histogram_metric(self, df: pd.DataFrame) -> pd.DataFrame:
         """
@@ -499,6 +466,9 @@ class VLLMMetricsVisualizer:
         """
         Process metric data based on its type.
         
+        Note: Counter delta processing is now handled in the metrics collector,
+        so this method only handles histogram processing.
+        
         Args:
             df: DataFrame with metric data
             metric_name: Name of the metric
@@ -506,15 +476,11 @@ class VLLMMetricsVisualizer:
         Returns:
             DataFrame with processed metric data
         """
-        print("Metric name=", metric_name)
         metric_type = self._get_metric_type(metric_name)
-        print("Metric type=", metric_type)
         
-        if metric_type == 'COUNTER':
-            return self._process_counter_metric(df)
-        elif metric_type == 'HISTOGRAM':
+        if metric_type == 'HISTOGRAM':
             return self._process_histogram_metric(df)
-        else:  # GAUGE, SUMMARY, or unknown
+        else:  # GAUGE, COUNTER, SUMMARY, or unknown - no processing needed
             return df
     
     def _detect_format(self, file_path: str) -> str:
@@ -667,7 +633,7 @@ class VLLMMetricsVisualizer:
         # Sort by timestamp
         metric_data = metric_data.sort_values('timestamp')
         
-        # Process metric based on its type
+        # Process metric based on its type (counter deltas handled in collector)
         metric_data = self._process_metric_by_type(metric_data, metric_name)
         
         plt.style.use(self.style)
@@ -906,7 +872,7 @@ class VLLMMetricsVisualizer:
         metric_data1 = metric_data1.sort_values('timestamp')
         metric_data2 = metric_data2.sort_values('timestamp')
         
-        # Process metrics based on their type
+        # Process metrics based on their type (counter deltas handled in collector)
         metric_data1 = self._process_metric_by_type(metric_data1, metric_name)
         metric_data2 = self._process_metric_by_type(metric_data2, metric_name)
         
@@ -1005,7 +971,7 @@ class VLLMMetricsVisualizer:
             metric_data1 = metric_data1.sort_values('timestamp')
             metric_data2 = metric_data2.sort_values('timestamp')
             
-            # Process metrics based on their type
+            # Process metrics based on their type (counter deltas handled in collector)
             metric_data1 = self._process_metric_by_type(metric_data1, metric_name)
             metric_data2 = self._process_metric_by_type(metric_data2, metric_name)
             

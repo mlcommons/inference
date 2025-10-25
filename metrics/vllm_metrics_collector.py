@@ -20,7 +20,7 @@ import argparse
 import signal
 import sys
 import os
-
+import pandas as pd
 
 @dataclass
 class MetricData:
@@ -267,7 +267,9 @@ class VLLMMetricsCollector:
                  storage: MetricsStorage,
                  metrics_to_collect: List[str],
                  collection_interval: int = 10,
-                 timeout: int = 30):
+                 timeout: int = 30,
+                 auto_postprocess: bool = False,
+                 debug_mode: bool = False):
         """
         Initialize the metrics collector.
         
@@ -277,21 +279,29 @@ class VLLMMetricsCollector:
             metrics_to_collect: List of metric names to collect
             collection_interval: Time interval between collections (seconds)
             timeout: Request timeout (seconds)
+            auto_postprocess: Whether to automatically postprocess after collection stops
+            debug_mode: Enable debug mode for additional verification and logging
         """
         self.metrics_endpoint = metrics_endpoint
         self.storage = storage
         self.metrics_to_collect = metrics_to_collect
         self.collection_interval = collection_interval
         self.timeout = timeout
+        self.auto_postprocess = auto_postprocess
+        self.debug_mode = debug_mode
         self.running = False
         self.thread = None
         
         # Setup logging
+        log_level = logging.DEBUG if debug_mode else logging.INFO
         logging.basicConfig(
-            level=logging.INFO,
+            level=log_level,
             format='%(asctime)s - %(levelname)s - %(message)s'
         )
         self.logger = logging.getLogger(__name__)
+        
+        if debug_mode:
+            self.logger.info("Debug mode enabled - additional verification and logging active")
     
     def parse_metrics(self, metrics_text: str) -> List[MetricData]:
         """
@@ -448,6 +458,9 @@ class VLLMMetricsCollector:
         """Main metrics collection loop."""
         self.logger.info(f"Starting metrics collection from {self.metrics_endpoint}")
         
+        if self.debug_mode:
+            self._debug_verify_endpoint()
+        
         while self.running:
             try:
                 # Fetch metrics from endpoint
@@ -459,6 +472,9 @@ class VLLMMetricsCollector:
                 
                 # Parse and store metrics
                 metrics = self.parse_metrics(response.text)
+                
+                if self.debug_mode:
+                    self._debug_verify_metrics(metrics)
                 
                 for metric in metrics:
                     self.storage.store_metric(metric)
@@ -473,6 +489,55 @@ class VLLMMetricsCollector:
             
             # Wait for next collection
             time.sleep(self.collection_interval)
+    
+    def _debug_verify_endpoint(self) -> None:
+        """Debug verification of the metrics endpoint."""
+        try:
+            self.logger.debug("Debug: Verifying metrics endpoint...")
+            response = requests.get(self.metrics_endpoint, timeout=self.timeout)
+            response.raise_for_status()
+            
+            # Check if response contains expected metrics
+            metrics_text = response.text
+            found_metrics = []
+            for target_metric in self.metrics_to_collect:
+                if target_metric in metrics_text:
+                    found_metrics.append(target_metric)
+            
+            self.logger.debug(f"Debug: Found {len(found_metrics)}/{len(self.metrics_to_collect)} target metrics")
+            if found_metrics:
+                self.logger.debug(f"Debug: Found metrics: {found_metrics}")
+            else:
+                self.logger.warning("Debug: No target metrics found in endpoint response")
+                
+        except Exception as e:
+            self.logger.error(f"Debug: Error verifying endpoint: {e}")
+    
+    def _debug_verify_metrics(self, metrics: List[MetricData]) -> None:
+        """Debug verification of parsed metrics."""
+        if not metrics:
+            self.logger.warning("Debug: No metrics parsed from response")
+            return
+        
+        # Check metric types and values
+        metric_names = [m.metric_name for m in metrics]
+        unique_metrics = set(metric_names)
+        
+        self.logger.debug(f"Debug: Parsed {len(metrics)} metrics with {len(unique_metrics)} unique metric names")
+        
+        # Check for target metrics
+        found_targets = [name for name in unique_metrics 
+                        if any(target in name for target in self.metrics_to_collect)]
+        
+        if found_targets:
+            self.logger.debug(f"Debug: Found target metrics: {found_targets}")
+        else:
+            self.logger.warning("Debug: No target metrics found in parsed data")
+        
+        # Check for invalid values
+        invalid_metrics = [m for m in metrics if not isinstance(m.value, (int, float)) or pd.isna(m.value)]
+        if invalid_metrics:
+            self.logger.warning(f"Debug: Found {len(invalid_metrics)} metrics with invalid values")
     
     def start(self) -> None:
         """Start the metrics collection thread."""
@@ -493,8 +558,37 @@ class VLLMMetricsCollector:
         self.running = False
         if self.thread:
             self.thread.join(timeout=5)
+        
+        # Close storage
         self.storage.close()
         self.logger.info("Metrics collection stopped")
+        
+        # Auto-postprocess if enabled
+        if self.auto_postprocess:
+            self._auto_postprocess_metrics()
+    
+    def _auto_postprocess_metrics(self) -> None:
+        """Automatically postprocess metrics after collection stops."""
+        try:
+            # Determine the storage file path based on storage type
+            storage_file = self._get_storage_file_path()
+            if storage_file and os.path.exists(storage_file):
+                self.logger.info("Auto-postprocessing metrics...")
+                self.postprocess_metrics(storage_file)
+            else:
+                self.logger.warning("No storage file found for auto-postprocessing")
+        except Exception as e:
+            self.logger.error(f"Error during auto-postprocessing: {e}")
+    
+    def _get_storage_file_path(self) -> Optional[str]:
+        """Get the file path of the storage backend."""
+        if hasattr(self.storage, 'filename'):
+            return self.storage.filename
+        elif hasattr(self.storage, 'db_path'):
+            return self.storage.db_path
+        elif hasattr(self.storage, 'output_path'):
+            return self.storage.output_path
+        return None
     
     def postprocess_metrics(self, input_file: str, output_file: str = None) -> None:
         """
@@ -502,15 +596,20 @@ class VLLMMetricsCollector:
         
         This method reads the raw metrics file, processes counter metrics to deltas,
         and saves both the original (with .raw extension) and processed versions.
+        Supports both JSON and CSV input formats.
         
         Args:
-            input_file: Path to the raw metrics file
+            input_file: Path to the raw metrics file (JSON or CSV)
             output_file: Path for processed metrics file (auto-generated if None)
         """
         if output_file is None:
-            # Generate output filename
+            # Generate output filename based on input format
             base_name = os.path.splitext(input_file)[0]
-            output_file = f"{base_name}_processed.json"
+            input_ext = os.path.splitext(input_file)[1].lower()
+            if input_ext == '.csv':
+                output_file = f"{base_name}_processed.csv"
+            else:
+                output_file = f"{base_name}_processed.json"
         
         # Create .raw backup of original file
         raw_file = f"{os.path.splitext(input_file)[0]}.raw"
@@ -537,8 +636,12 @@ class VLLMMetricsCollector:
                 for line in f:
                     line = line.strip()
                     if line and not line.startswith('#') and ':' in line:
-                        metric_name, metric_type = line.split(':', 1)
-                        metrics_types[metric_name.strip()] = metric_type.strip()
+                        # Split on the last colon to handle metric names with colons
+                        parts = line.rsplit(':', 1)
+                        if len(parts) == 2:
+                            metric_name = parts[0].strip()
+                            metric_type = parts[1].strip()
+                            metrics_types[metric_name] = metric_type
         except FileNotFoundError:
             self.logger.warning(f"Metrics info file not found: {metrics_info_file}")
         except Exception as e:
@@ -547,21 +650,38 @@ class VLLMMetricsCollector:
         return metrics_types
     
     def _process_metrics_file(self, input_file: str, output_file: str, metrics_types: Dict[str, str]) -> None:
-        """Process metrics file based on metric types."""
+        """Process metrics file based on metric types. Supports both JSON and CSV formats."""
         import json
         import pandas as pd
         
-        # Load raw metrics
-        with open(input_file, 'r') as f:
-            raw_metrics = json.load(f)
+        # Determine input format and load data
+        input_ext = os.path.splitext(input_file)[1].lower()
+        output_ext = os.path.splitext(output_file)[1].lower()
         
-        if not raw_metrics:
+        if input_ext == '.csv':
+            # Load CSV data
+            df = pd.read_csv(input_file)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+            
+            # Parse labels from JSON string if they exist
+            if 'labels' in df.columns:
+                df['labels'] = df['labels'].apply(lambda x: json.loads(x) if isinstance(x, str) and x else {})
+        else:
+            # Load JSON data
+            with open(input_file, 'r') as f:
+                raw_metrics = json.load(f)
+            
+            if not raw_metrics:
+                self.logger.warning("No metrics data found in input file")
+                return
+            
+            # Convert to DataFrame for processing
+            df = pd.DataFrame(raw_metrics)
+            df['timestamp'] = pd.to_datetime(df['timestamp'])
+        
+        if df.empty:
             self.logger.warning("No metrics data found in input file")
             return
-        
-        # Convert to DataFrame for processing
-        df = pd.DataFrame(raw_metrics)
-        df['timestamp'] = pd.to_datetime(df['timestamp'])
         
         # Group by metric name and process each type
         processed_metrics = []
@@ -589,9 +709,16 @@ class VLLMMetricsCollector:
                     'labels': row['labels']
                 })
         
-        # Save processed metrics
-        with open(output_file, 'w') as f:
-            json.dump(processed_metrics, f, indent=2)
+        # Save processed metrics in the appropriate format
+        if output_ext == '.csv':
+            # Save as CSV
+            processed_df = pd.DataFrame(processed_metrics)
+            processed_df['labels'] = processed_df['labels'].apply(lambda x: json.dumps(x))
+            processed_df.to_csv(output_file, index=False)
+        else:
+            # Save as JSON
+            with open(output_file, 'w') as f:
+                json.dump(processed_metrics, f, indent=2)
     
     def _get_metric_type(self, metric_name: str, metrics_types: Dict[str, str]) -> str:
         """Get metric type from loaded types."""
@@ -677,6 +804,12 @@ def main():
                        help='Postprocess an existing metrics file')
     parser.add_argument('--output-processed',
                        help='Output file for processed metrics')
+    parser.add_argument('--auto-postprocess',
+                       action='store_true',
+                       help='Automatically postprocess metrics after collection stops')
+    parser.add_argument('--debug',
+                       action='store_true',
+                       help='Enable debug mode for additional verification and logging')
     
     args = parser.parse_args()
     
@@ -708,7 +841,9 @@ def main():
             storage=storage,
             metrics_to_collect=args.metrics,
             collection_interval=args.interval,
-            timeout=args.timeout
+            timeout=args.timeout,
+            auto_postprocess=False,
+            debug_mode=args.debug
         )
         collector.postprocess_metrics(args.postprocess, args.output_processed)
         return
@@ -719,7 +854,9 @@ def main():
         storage=storage,
         metrics_to_collect=args.metrics,
         collection_interval=args.interval,
-        timeout=args.timeout
+        timeout=args.timeout,
+        auto_postprocess=args.auto_postprocess,
+        debug_mode=args.debug
     )
     
     # Setup signal handlers

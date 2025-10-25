@@ -192,14 +192,77 @@ visualizer.plot_metric("metrics.prom", "vllm_request_duration_seconds_bucket", f
 
 ## Examples
 
-See `visualizer_examples.py` for comprehensive usage examples including:
-- Single metric plotting
-- Multiple metrics plotting
-- Run comparison
-- Different storage formats
-- Summary report generation
-- Custom styling
-- Programmatic usage
+### Complete Workflow Example
+```bash
+# 1. Collect metrics
+python vllm_metrics_collector.py --storage-type csv --output run1_metrics
+
+# 2. Visualize single metric
+python vllm_metrics_visualizer.py \
+    --file run1_metrics.csv \
+    --metric "vllm:gpu_utilization" \
+    --save "gpu_utilization.png"
+
+# 3. Compare two runs
+python vllm_metrics_visualizer.py \
+    --file run1_metrics.csv \
+    --compare-file run2_metrics.csv \
+    --metrics "vllm:gpu_utilization" "vllm:request_latency" \
+    --label1 "Baseline" \
+    --label2 "Optimized" \
+    --save "comparison.png"
+
+# 4. Generate summary report
+python vllm_metrics_visualizer.py \
+    --file run1_metrics.csv \
+    --summary "run1_summary.json"
+```
+
+### Programmatic Example
+```python
+from vllm_metrics_visualizer import VLLMMetricsVisualizer
+
+# Create visualizer with custom styling
+visualizer = VLLMMetricsVisualizer(
+    style='seaborn-v0_8-whitegrid',
+    figsize=(12, 8)
+)
+
+# Load and analyze data
+df = visualizer.load_metrics("metrics.csv")
+available_metrics = visualizer.get_available_metrics("metrics.csv")
+
+print(f"Available metrics: {available_metrics}")
+
+# Plot key performance metrics
+visualizer.plot_multiple_metrics(
+    file_path="metrics.csv",
+    metric_names=[
+        "vllm:num_requests_running",
+        "vllm:gpu_utilization",
+        "vllm:request_latency"
+    ],
+    title="Key Performance Metrics",
+    save_path="performance_metrics.png"
+)
+
+# Compare with baseline
+visualizer.compare_multiple_metrics(
+    file_path1="baseline_metrics.csv",
+    file_path2="optimized_metrics.csv",
+    metric_names=["vllm:gpu_utilization", "vllm:request_latency"],
+    label1="Baseline",
+    label2="Optimized",
+    title="Performance Comparison",
+    save_path="comparison.png"
+)
+
+# Generate comprehensive summary
+summary = visualizer.generate_summary_report(
+    "metrics.csv",
+    "detailed_summary.json"
+)
+```
 
 ## Output Formats
 
@@ -260,6 +323,58 @@ python vllm_metrics_visualizer.py \
     --compare-file run2_metrics.csv \
     --metrics "vllm:gpu_utilization" "vllm:request_latency"
 ```
+
+## Advanced Features
+
+### Custom Plot Styling
+```python
+# Available matplotlib styles
+styles = [
+    'default', 'seaborn-v0_8', 'seaborn-v0_8-darkgrid',
+    'seaborn-v0_8-whitegrid', 'seaborn-v0_8-dark',
+    'seaborn-v0_8-white', 'seaborn-v0_8-ticks'
+]
+
+visualizer = VLLMMetricsVisualizer(style='seaborn-v0_8-darkgrid')
+```
+
+### Batch Processing
+```python
+# Process multiple files
+files = ["run1_metrics.csv", "run2_metrics.csv", "run3_metrics.csv"]
+for file in files:
+    visualizer.plot_metric(
+        file_path=file,
+        metric_name="vllm:gpu_utilization",
+        save_path=f"gpu_util_{file.replace('.csv', '.png')}"
+    )
+```
+
+### Statistical Analysis
+```python
+# Generate detailed statistics
+summary = visualizer.generate_summary_report("metrics.csv", "stats.json")
+
+# Access specific statistics
+gpu_stats = summary['metrics']['vllm:gpu_utilization']
+print(f"GPU Utilization - Mean: {gpu_stats['mean']:.2f}, Std: {gpu_stats['std']:.2f}")
+```
+
+## Error Handling
+
+The visualizer includes robust error handling for:
+- Invalid file formats
+- Missing metrics
+- Data parsing errors
+- Plot generation failures
+- File I/O errors
+
+## Performance Considerations
+
+- **Large datasets**: The visualizer efficiently handles large metrics files
+- **Memory usage**: Optimized for memory efficiency with large datasets
+- **Plot generation**: Fast plotting with matplotlib optimization
+- **File formats**: Efficient parsing for all supported formats
 
 ## Requirements
 

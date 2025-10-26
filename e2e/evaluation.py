@@ -627,4 +627,118 @@ def _print_detailed_analysis(df: pd.DataFrame, all_query_metrics: List[Dict[str,
               f"{result['precision@N']:6.3f} {result['recall@N']:6.3f} "
               f"{result['f1@N']:6.3f} {result['average_precision']:6.3f}")
     
+    # === ANALYSIS 4: Correlation Between Complexity and Reasoning Types ===
+    print(f"\n" + "-"*80)
+    print("CORRELATION: COMPLEXITY vs REASONING TYPES")
+    print("-"*80)
+    
+    # Build correlation matrix: complexity level x reasoning tags
+    complexity_reasoning_data = defaultdict(lambda: defaultdict(list))
+    
+    for data in analysis_data:
+        # Determine complexity
+        num_links = data['num_links']
+        if num_links <= 2:
+            complexity = "Simple"
+        elif num_links <= 4:
+            complexity = "Multi-hop"
+        else:
+            complexity = "Complex"
+        
+        # Extract individual reasoning tags
+        tags = [tag.strip() for tag in data['reasoning_types'].split('|')]
+        for tag in tags:
+            complexity_reasoning_data[complexity][tag].append(data['metrics'])
+    
+    # Calculate statistics for each complexity-reasoning combination
+    print(f"\n1. REASONING TAG DISTRIBUTION BY COMPLEXITY:")
+    print(f"{'Reasoning Tag':<30} {'Simple':>10} {'Multi-hop':>10} {'Complex':>10} {'Total':>10}")
+    print("-"*80)
+    
+    # Get all unique tags
+    all_tags = set()
+    for complexity_data in complexity_reasoning_data.values():
+        all_tags.update(complexity_data.keys())
+    
+    tag_distribution = {}
+    for tag in sorted(all_tags):
+        simple_count = len(complexity_reasoning_data.get('Simple', {}).get(tag, []))
+        multihop_count = len(complexity_reasoning_data.get('Multi-hop', {}).get(tag, []))
+        complex_count = len(complexity_reasoning_data.get('Complex', {}).get(tag, []))
+        total = simple_count + multihop_count + complex_count
+        
+        tag_distribution[tag] = {
+            'simple': simple_count,
+            'multihop': multihop_count,
+            'complex': complex_count,
+            'total': total
+        }
+        
+        tag_display = tag[:28] if len(tag) > 28 else tag
+        print(f"{tag_display:<30} {simple_count:10d} {multihop_count:10d} {complex_count:10d} {total:10d}")
+    
+    # Calculate percentage distribution
+    print(f"\n2. REASONING TAG PERCENTAGE BY COMPLEXITY:")
+    print(f"{'Reasoning Tag':<30} {'Simple %':>10} {'Multi %':>10} {'Complex %':>10}")
+    print("-"*80)
+    
+    for tag in sorted(all_tags):
+        dist = tag_distribution[tag]
+        total = dist['total']
+        if total > 0:
+            simple_pct = (dist['simple'] / total) * 100
+            multihop_pct = (dist['multihop'] / total) * 100
+            complex_pct = (dist['complex'] / total) * 100
+            
+            tag_display = tag[:28] if len(tag) > 28 else tag
+            print(f"{tag_display:<30} {simple_pct:9.1f}% {multihop_pct:9.1f}% {complex_pct:9.1f}%")
+    
+    # Calculate average number of links per reasoning tag
+    print(f"\n3. AVERAGE COMPLEXITY (# LINKS) BY REASONING TAG:")
+    print(f"{'Reasoning Tag':<30} {'Avg Links':>10} {'Count':>10}")
+    print("-"*80)
+    
+    tag_link_stats = defaultdict(list)
+    for data in analysis_data:
+        tags = [tag.strip() for tag in data['reasoning_types'].split('|')]
+        for tag in tags:
+            tag_link_stats[tag].append(data['num_links'])
+    
+    tag_avg_links = []
+    for tag in sorted(all_tags):
+        links = tag_link_stats[tag]
+        if links:
+            avg_links = sum(links) / len(links)
+            tag_avg_links.append((tag, avg_links, len(links)))
+    
+    # Sort by average links (descending)
+    tag_avg_links.sort(key=lambda x: x[1], reverse=True)
+    
+    for tag, avg_links, count in tag_avg_links:
+        tag_display = tag[:28] if len(tag) > 28 else tag
+        print(f"{tag_display:<30} {avg_links:10.2f} {count:10d}")
+    
+    # Performance by complexity x reasoning tag (for top tags only)
+    print(f"\n4. PERFORMANCE BY COMPLEXITY x TOP REASONING TAGS:")
+    print("-"*80)
+    
+    # Get top 5 most common tags
+    top_tags = sorted(tag_distribution.items(), key=lambda x: x[1]['total'], reverse=True)[:5]
+    
+    for tag, _ in top_tags:
+        print(f"\n{tag}:")
+        print(f"{'Complexity':<12} {'Count':>6} {'P@N':>6} {'R@N':>6} {'F1@N':>6} {'MAP':>6}")
+        print("-"*70)
+        
+        for complexity in ["Simple", "Multi-hop", "Complex"]:
+            metrics_list = complexity_reasoning_data.get(complexity, {}).get(tag, [])
+            if metrics_list:
+                count = len(metrics_list)
+                avg_p = sum(m.get('precision@N', 0.0) for m in metrics_list) / count
+                avg_r = sum(m.get('recall@N', 0.0) for m in metrics_list) / count
+                avg_f1 = sum(m.get('f1@N', 0.0) for m in metrics_list) / count
+                avg_map = sum(m.get('average_precision', 0.0) for m in metrics_list) / count
+                
+                print(f"{complexity:<12} {count:6d} {avg_p:6.3f} {avg_r:6.3f} {avg_f1:6.3f} {avg_map:6.3f}")
+    
     print("="*80)

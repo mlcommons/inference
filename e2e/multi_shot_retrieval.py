@@ -35,23 +35,203 @@ import requests
 LLM_SERVICE_URL = "http://127.0.0.1:8123/v1/chat/completions"
 LLM_MODEL = "/model/gpt-oss-120b-int4-AutoRound/"  # Full path with trailing slash as shown in server command
 
+# Prompts
+DOC_GRADER_PROMPT = """\
+Evaluate if DOCUMENTS contain sufficient information to answer the QUERY.
 
-def query_rewriter_llm(original_query: str, max_queries: int = 3, reasoning_effort: str = "medium") -> List[str]:
+QUERY: {question}
+
+DOCUMENTS:
+{context}
+
+Instructions:
+1. Check if documents have ALL information needed to answer the query
+2. Consider the sub-queries attempted (shown below) - a document may be relevant if it helps answer ANY of the sub-queries
+3. Mark each document: 1 (relevant/useful) or 0 (irrelevant/useless)
+
+IMPORTANT: You MUST respond with ONLY valid JSON in this exact format:
+{{"sufficient": "yes", "relevance": [1, 0, 1, ...]}}
+
+- sufficient: "yes" if complete information available, "no" if missing information
+- relevance: array of 0/1 for each document (in order)
+
+Response (JSON only, no other text):"""
+
+QUERY_REWRITER_ITERATIVE_PROMPT = """\
+You are an expert at generating search queries to help answer complex questions using a collection of Wikipedia articles.
+
+Given:
+- The user's original question
+- Relevant facts or documents already gathered so far (if any)
+- History of previous search queries
+
+Your task:
+Generate {k} concise, focused search queries that could be used to find MISSING information from Wikipedia.
+
+Guidelines:
+- Target different aspects of the problem or missing information
+- Avoid duplicating information already in the context
+- Do not reference source filenames or document titles
+- Think step-by-step: identify missing information, then write queries to retrieve it
+- Make queries specific and actionable
+
+[User Question:]
+{user_question}
+
+[Previous Search Queries:]
+{history}
+
+[Known Facts / Retrieved Documents:]
+{results}
+
+Output ONLY a JSON array of {k} search queries. Example: ["query 1", "query 2", "query 3"]"""
+
+
+def doc_grader_llm(question: str, documents: List[str], reasoning_effort: str = "medium",
+                   query_history: Optional[List[str]] = None) -> Dict[str, Any]:
     """
-    Use LLM to decompose a complex query into multiple sub-queries.
+    Use LLM to grade whether documents contain sufficient information to answer the question.
+    
+    Args:
+        question: The user's question
+        documents: List of document texts
+        reasoning_effort: LLM reasoning level
+        query_history: Optional list of sub-queries attempted (for context)
+        
+    Returns:
+        Dict with 'sufficient' (yes/no) and 'relevance' (list of 0/1 for each doc)
+    """
+    # Format documents with numbering
+    context = ""
+    for i, doc in enumerate(documents, 1):
+        context += f"\n[Doc {i}] {doc[:300]}...\n"  # Limit doc length for conciseness
+    
+    # Format query history if provided
+    history_context = ""
+    if query_history:
+        history_context = "\n\nSub-queries attempted so far:\n" + "\n".join(f"- {q}" for q in query_history)
+    
+    prompt = DOC_GRADER_PROMPT.format(question=question, context=context) + history_context
+    
+    # Don't use reasoning for DocGrader - we just need a simple yes/no answer
+    system_message = "You are a helpful assistant that evaluates document relevance. Answer concisely."
+    
+    payload = {
+        "model": LLM_MODEL,
+        "messages": [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0.1,
+        "max_tokens": 20480
+    }
+    
+    try:
+        response = requests.post(LLM_SERVICE_URL, json=payload, timeout=300)
+        response.raise_for_status()
+        result = response.json()
+        
+        message = result['choices'][0]['message']
+        llm_output = message.get('content')
+        
+        # For debugging: check if reasoning_content exists
+        reasoning_content = message.get('reasoning_content', '')
+        if reasoning_content and not llm_output:
+            print(f"    DEBUG: reasoning_content exists but content is empty")
+            print(f"    DEBUG: reasoning_content snippet: {reasoning_content[:200]}")
+        
+        # Use only content field
+        if llm_output is None or not llm_output.strip():
+            print(f"    Warning: LLM returned empty content for DocGrader")
+            return {"sufficient": "no", "relevance": [0] * len(documents)}
+        
+        llm_output = llm_output.strip()
+        
+        print(f"    DocGrader output: {llm_output[:200]}...")
+        
+        # Parse JSON output
+        # Remove markdown code blocks if present
+        if llm_output.startswith("```"):
+            llm_output = llm_output.split("```")[1]
+            if llm_output.startswith("json"):
+                llm_output = llm_output[4:]
+            llm_output = llm_output.strip()
+        
+        grading = json.loads(llm_output)
+        
+        # Validate format
+        if "sufficient" not in grading or "relevance" not in grading:
+            print(f"Warning: Invalid grading format: {grading}")
+            return {"sufficient": "no", "relevance": [0] * len(documents)}
+        
+        # Ensure relevance array matches document count
+        if len(grading["relevance"]) != len(documents):
+            print(f"Warning: Relevance array length mismatch. Expected {len(documents)}, got {len(grading['relevance'])}")
+            # Pad or truncate
+            relevance = grading["relevance"][:len(documents)]
+            while len(relevance) < len(documents):
+                relevance.append(0)
+            grading["relevance"] = relevance
+        
+        return grading
+        
+    except requests.exceptions.RequestException as e:
+        print(f"Error calling DocGrader LLM: {e}")
+        return {"sufficient": "no", "relevance": [0] * len(documents)}
+    except json.JSONDecodeError as e:
+        print(f"Error parsing DocGrader output: {e}")
+        print(f"LLM output: {llm_output[:200]}")
+        return {"sufficient": "no", "relevance": [0] * len(documents)}
+    except Exception as e:
+        print(f"Unexpected error in DocGrader: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"sufficient": "no", "relevance": [0] * len(documents)}
+
+
+def query_rewriter_llm(original_query: str, max_queries: int = 3, reasoning_effort: str = "medium",
+                       history: Optional[List[str]] = None, retrieved_docs: Optional[List[str]] = None) -> List[str]:
+    """
+    Use LLM to decompose a complex query into multiple sub-queries, or generate new queries
+    based on iterative feedback.
     
     Args:
         original_query: The original complex query
         max_queries: Maximum number of sub-queries to generate (default: 3)
-        reasoning: Reasoning level (kept for compatibility, not used in standard vLLM)
+        reasoning_effort: LLM reasoning level (low/medium/high)
+        history: Optional list of previous search queries (for iterative mode)
+        retrieved_docs: Optional list of retrieved document texts (for iterative mode)
         
     Returns:
-        List of sub-queries (including original if appropriate)
+        List of sub-queries
     """
     
-    system_prompt = """You are an expert at decomposing complex multi-hop questions into simpler sub-questions.
+    # Determine if this is initial decomposition or iterative refinement
+    is_iterative = history is not None and retrieved_docs is not None
+    
+    if is_iterative:
+        # Iterative mode: Generate new queries based on what's been retrieved
+        history_text = "\n".join(f"- {q}" for q in history) if history else "None yet"
+        
+        results_text = ""
+        for i, doc in enumerate(retrieved_docs, 1):
+            results_text += f"\n[Document {i}]\n{doc[:300]}...\n"
+        
+        if not results_text:
+            results_text = "None yet"
+        
+        prompt = QUERY_REWRITER_ITERATIVE_PROMPT.format(
+            k=max_queries,
+            user_question=original_query,
+            history=history_text,
+            results=results_text
+        )
+        system_prompt = f"You are a helpful assistant that generates search queries. Reasoning: {reasoning_effort}."
+    else:
+        # Initial decomposition mode
+        system_prompt = f"""You are an expert at decomposing complex multi-hop questions into simpler sub-questions. Reasoning: {reasoning_effort}.
 
-Your task: Given a complex question, break it down into 1-3 simpler sub-questions that, when answered together, would help answer the original question.
+Your task: Given a complex question, break it down into 1-{max_queries} simpler sub-questions that, when answered together, would help answer the original question.
 
 Guidelines:
 1. Identify the key facts/entities needed to answer the question
@@ -63,8 +243,7 @@ Guidelines:
 Output format: Return ONLY a JSON array of sub-questions, nothing else.
 Example: ["What year did X happen?", "Who won Y in that year?"]
 """
-
-    user_prompt = f"""Original question: {original_query}
+        prompt = f"""Original question: {original_query}
 
 Decompose this into at most {max_queries} sub-questions. Return only the JSON array."""
 
@@ -72,18 +251,14 @@ Decompose this into at most {max_queries} sub-questions. Return only the JSON ar
         "model": LLM_MODEL,
         "messages": [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
+            {"role": "user", "content": prompt}
         ],
-        "temperature": 0.3,  # Low temperature for consistent decomposition
-        "reasoning_effort": reasoning_effort,
-        "max_tokens": 500
+        "temperature": 0.3,
+        "max_tokens": 20480
     }
     
     try:
-        #print(f"Calling LLM service at {LLM_SERVICE_URL} with model {LLM_MODEL}...")
         response = requests.post(LLM_SERVICE_URL, json=payload, timeout=60)
-        
-        #print(f"Response status: {response.status_code}")
         
         if response.status_code != 200:
             print(f"Error response: {response.text[:500]}")
@@ -92,24 +267,33 @@ Decompose this into at most {max_queries} sub-questions. Return only the JSON ar
         
         result = response.json()
         
-        # Handle cases where content might be None (e.g., with reasoning models)
+        # Use only content field
         message = result['choices'][0]['message']
         llm_output = message.get('content')
         
-        if llm_output is None:
-            print(f"Warning: LLM returned None content. Full response: {json.dumps(result, indent=2)[:500]}")
-            print(f"Falling back to original query")
+        # For debugging: check if reasoning_content exists
+        reasoning_content = message.get('reasoning_content', '')
+        if reasoning_content and not llm_output:
+            print(f"DEBUG: reasoning_content exists but content is empty")
+            print(f"DEBUG: reasoning_content snippet: {reasoning_content[:200]}")
+        
+        if llm_output is None or not llm_output.strip():
+            print(f"Warning: LLM returned empty content for query rewriting")
             return [original_query]
         
         llm_output = llm_output.strip()
-        print(f"LLM output: {llm_output[:200]}...")
         
-        # Parse JSON output
-        # Handle cases where LLM wraps in markdown code blocks
+        if not is_iterative:
+            print(f"LLM output: {llm_output[:200]}...")
+        
+        # Parse JSON output - handle markdown code blocks
         if llm_output.startswith("```json"):
             llm_output = llm_output.replace("```json", "").replace("```", "").strip()
         elif llm_output.startswith("```"):
-            llm_output = llm_output.replace("```", "").strip()
+            llm_output = llm_output.split("```")[1]
+            if llm_output.startswith("json"):
+                llm_output = llm_output[4:]
+            llm_output = llm_output.strip()
         
         sub_queries = json.loads(llm_output)
         
@@ -125,14 +309,15 @@ Decompose this into at most {max_queries} sub-questions. Return only the JSON ar
         if not sub_queries:
             return [original_query]
         
-        print(f"\n{'='*80}")
-        print(f"QUERY DECOMPOSITION")
-        print(f"{'='*80}")
-        print(f"Original: {original_query}")
-        print(f"Sub-queries ({len(sub_queries)}):")
-        for i, sq in enumerate(sub_queries, 1):
-            print(f"  {i}. {sq}")
-        print(f"{'='*80}\n")
+        if not is_iterative:
+            print(f"\n{'='*80}")
+            print(f"QUERY DECOMPOSITION")
+            print(f"{'='*80}")
+            print(f"Original: {original_query}")
+            print(f"Sub-queries ({len(sub_queries)}):")
+            for i, sq in enumerate(sub_queries, 1):
+                print(f"  {i}. {sq}")
+            print(f"{'='*80}\n")
         
         return sub_queries
         
@@ -314,6 +499,221 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
     return metrics
 
 
+def multi_shot_iterative_retrieval(rag_db, original_query: str, expected_urls: List[str],
+                                    max_sub_queries: int = 3,
+                                    top_k_retriever: int = 10,
+                                    top_k_reranking: int = 10,
+                                    max_iterations: int = 10,
+                                    no_rerank: bool = False,
+                                    retrieval_strategy: str = "fixed_k",
+                                    verbose: bool = True,
+                                    reasoning_effort: str = "medium",
+                                    **strategy_params) -> Dict[str, Any]:
+    """
+    Perform iterative multi-shot retrieval with DocGrader feedback loop.
+    
+    Algorithm:
+    1. Generate initial search queries
+    2. Retrieve documents
+    3. Use DocGrader to check if sufficient
+    4. If not sufficient: generate new queries based on what's missing, go to step 2
+    5. Repeat until sufficient or max_iterations reached
+    
+    Args:
+        rag_db: RAG database instance
+        original_query: Original user question
+        expected_urls: Expected ground truth URLs for evaluation
+        max_sub_queries: Maximum number of sub-queries per iteration
+        top_k_retriever: Number of documents to retrieve per sub-query
+        top_k_reranking: Final number of documents to return
+        max_iterations: Maximum number of retrieval iterations (default: 10)
+        no_rerank: Skip reranking step
+        retrieval_strategy: Strategy for retrieval
+        verbose: Print detailed information
+        reasoning_effort: LLM reasoning level
+        **strategy_params: Additional parameters for retrieval strategy
+        
+    Returns:
+        Dictionary containing evaluation metrics and iteration statistics
+    """
+    
+    start_time = time.perf_counter()
+    
+    # Track iteration history
+    query_history = []
+    all_retrieved_docs = []  # List of (url, content) tuples
+    all_retrieved_urls = set()
+    iteration_times = []
+    
+    sufficient = False
+    iteration = 0
+    
+    if verbose:
+        print(f"\n{'='*80}")
+        print(f"ITERATIVE MULTI-SHOT RETRIEVAL")
+        print(f"{'='*80}")
+        print(f"Original Query: {original_query}")
+        print(f"Max iterations: {max_iterations}")
+        print(f"Max sub-queries per iteration: {max_sub_queries}")
+        print(f"{'='*80}\n")
+    
+    while not sufficient and iteration < max_iterations:
+        iteration += 1
+        iteration_start = time.perf_counter()
+        
+        if verbose:
+            print(f"\n{'─'*80}")
+            print(f"ITERATION {iteration}/{max_iterations}")
+            print(f"{'─'*80}")
+        
+        # Step 1: Generate queries (initial or iterative)
+        if iteration == 1:
+            # Initial decomposition
+            sub_queries = query_rewriter_llm(original_query, max_queries=max_sub_queries, 
+                                            reasoning_effort=reasoning_effort)
+        else:
+            # Iterative query generation based on what we have so far
+            relevant_docs_text = [doc[1] for doc in all_retrieved_docs]  # Extract content
+            sub_queries = query_rewriter_llm(
+                original_query, max_queries=max_sub_queries, reasoning_effort=reasoning_effort,
+                history=query_history, retrieved_docs=relevant_docs_text
+            )
+        
+        query_history.extend(sub_queries)
+        
+        if verbose:
+            print(f"\nGenerated {len(sub_queries)} queries:")
+            for i, q in enumerate(sub_queries, 1):
+                print(f"  {i}. {q}")
+        
+        # Step 2: Retrieve for each sub-query
+        num_sub_queries = len(sub_queries)
+        docs_per_subquery = max(1, top_k_retriever // num_sub_queries)
+        
+        iteration_results = []
+        
+        for i, sub_query in enumerate(sub_queries, 1):
+            if verbose:
+                print(f"\n  Retrieving for query {i}: {sub_query[:60]}...")
+            
+            # Retrieve
+            if retrieval_strategy == "fixed_k":
+                results = rag_db.lookup(sub_query, k=docs_per_subquery)
+            else:
+                from retrieve.filter import filter
+                original_max_results = strategy_params.get("max_results", 20)
+                adjusted_max_results = max(1, original_max_results // num_sub_queries)
+                strategy_params_copy = strategy_params.copy()
+                strategy_params_copy["max_results"] = adjusted_max_results
+                results = filter(rag_db, sub_query, method=retrieval_strategy, **strategy_params_copy)
+            
+            # Add to iteration results (avoid duplicates)
+            for result in results:
+                if 'original_url' in result.metadata and result.metadata['original_url']:
+                    url = result.metadata['original_url']
+                    if url not in all_retrieved_urls:
+                        all_retrieved_urls.add(url)
+                        all_retrieved_docs.append((url, result.page_content))
+                        iteration_results.append(result)
+            
+            if verbose:
+                print(f"    Retrieved {len(results)} docs, {len(iteration_results)} new unique docs this iteration")
+        
+        if verbose:
+            print(f"\n  Total unique docs so far: {len(all_retrieved_docs)}")
+        
+        # Step 3: Grade documents with query history context
+        if verbose:
+            print(f"\n  Grading documents...")
+        
+        doc_contents = [doc[1] for doc in all_retrieved_docs]
+        grading = doc_grader_llm(original_query, doc_contents, 
+                                reasoning_effort=reasoning_effort,
+                                query_history=query_history)
+        
+        sufficient = (grading["sufficient"].lower() == "yes")
+        relevance = grading["relevance"]
+        
+        if verbose:
+            print(f"    Sufficient: {grading['sufficient']}")
+            print(f"    Relevant docs: {sum(relevance)}/{len(relevance)}")
+            print(f"    Relevance array: {relevance}")
+        
+        # Step 4: Keep only relevant documents (abandon irrelevant ones)
+        # Documents marked as irrelevant by DocGrader are removed from consideration
+        filtered_docs = []
+        for i, (url, content) in enumerate(all_retrieved_docs):
+            if i < len(relevance) and relevance[i] == 1:
+                filtered_docs.append((url, content))
+        
+        all_retrieved_docs = filtered_docs
+        
+        if verbose:
+            print(f"    Kept {len(all_retrieved_docs)} relevant docs (abandoned {len(doc_contents) - len(all_retrieved_docs)} irrelevant)")
+        
+        iteration_time = time.perf_counter() - iteration_start
+        iteration_times.append(iteration_time)
+        
+        if sufficient:
+            if verbose:
+                print(f"\n  ✓ Sufficient information found!")
+            break
+        
+        if iteration >= max_iterations:
+            if verbose:
+                print(f"\n  ⚠ Maximum iterations reached")
+            break
+    
+    # Final processing
+    total_time = time.perf_counter() - start_time
+    
+    # Extract URLs
+    retrieved_urls = [url for url, _ in all_retrieved_docs]
+    
+    # Limit to top_k_reranking
+    retrieved_urls = retrieved_urls[:top_k_reranking]
+    
+    # Calculate metrics
+    from evaluation import calculate_retrieval_metrics
+    expected_set = set(url for url in expected_urls if url and url.strip())
+    metrics = calculate_retrieval_metrics(list(expected_set), retrieved_urls)
+    
+    # Add iteration statistics
+    metrics.update({
+        'total_time': total_time,
+        'num_iterations': iteration,
+        'total_queries': len(query_history),
+        'final_docs_count': len(retrieved_urls),
+        'sufficient': sufficient,
+        'avg_iteration_time': sum(iteration_times) / len(iteration_times) if iteration_times else 0
+    })
+    
+    # Print final results
+    if verbose:
+        print(f"\n{'='*80}")
+        print(f"ITERATIVE MULTI-SHOT RETRIEVAL RESULTS")
+        print(f"{'='*80}")
+        print(f"Original Query: {original_query[:100]}...")
+        print(f"Iterations: {iteration}")
+        print(f"Total queries issued: {len(query_history)}")
+        print(f"Sufficient: {'Yes' if sufficient else 'No'}")
+        print(f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:3])}{'...' if len(expected_set) > 3 else ''}")
+        print(f"Retrieved ({len(retrieved_urls)} unique docs): {retrieved_urls[:3]}{'...' if len(retrieved_urls) > 3 else ''}")
+        matches = len(expected_set.intersection(set(retrieved_urls)))
+        print(f"Matches: {matches}")
+        print(f"\nMetrics:")
+        print(f"  P@N: {metrics.get('precision@N', 0.0):.3f}")
+        print(f"  R@N: {metrics.get('recall@N', 0.0):.3f}")
+        print(f"  F1@N: {metrics.get('f1@N', 0.0):.3f}")
+        print(f"  MAP: {metrics.get('average_precision', 0.0):.3f}")
+        print(f"\nTiming:")
+        print(f"  Avg per iteration: {metrics['avg_iteration_time']*1000:.1f}ms")
+        print(f"  Total: {total_time*1000:.1f}ms")
+        print(f"{'='*80}\n")
+    
+    return metrics
+
+
 def run_multi_shot_evaluation(rag_db, dataset_path: str,
                               max_sub_queries: int = 3,
                               top_k_retriever: int = 50,
@@ -324,6 +724,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                               reasoning_effort: str = "medium",
                               detailed_analysis: bool = False,
                               difficulty: int = 0,
+                              max_iterations: int = 10,
                               **strategy_params) -> Dict[str, float]:
     """
     Run multi-shot evaluation on a dataset.
@@ -340,6 +741,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         reasoning_effort: LLM reasoning level
         detailed_analysis: Enable detailed complexity-based analysis
         difficulty: Minimum number of answer links required (0 = no filtering)
+        max_iterations: Maximum iterations for iterative retrieval (default: 10)
         **strategy_params: Additional parameters for retrieval strategy
         
     Returns:
@@ -357,7 +759,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         max_queries = len(df)
     
     print(f"\n{'='*80}")
-    print(f"MULTI-SHOT EVALUATION")
+    print(f"MULTI-SHOT EVALUATION (ITERATIVE MODE)")
     print(f"{'='*80}")
     print(f"Dataset: {dataset_path}")
     print(f"Queries: {max_queries}")
@@ -365,6 +767,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
     print(f"Retrieval strategy: {retrieval_strategy}")
     print(f"LLM reasoning effort: {reasoning_effort}")
     print(f"Detailed analysis: {detailed_analysis}")
+    print(f"Max iterations: {max_iterations}")
     if difficulty > 0:
         print(f"Difficulty filter: >= {difficulty} answer links")
     print(f"{'='*80}\n")
@@ -383,11 +786,13 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                 expected_urls.append(row[col].strip())
         
         if expected_urls:
-            metrics = multi_shot_retrieval(
+            # Multi-shot is inherently iterative, always use iterative retrieval
+            metrics = multi_shot_iterative_retrieval(
                 rag_db, row['Prompt'], expected_urls,
                 max_sub_queries=max_sub_queries,
                 top_k_retriever=top_k_retriever,
                 top_k_reranking=top_k_reranking,
+                max_iterations=max_iterations,
                 no_rerank=no_rerank,
                 retrieval_strategy=retrieval_strategy,
                 verbose=True,
@@ -459,6 +864,8 @@ if __name__ == "__main__":
     args.add_argument('--reasoning', type=str, default='medium',
                      choices=['low', 'medium', 'high'],
                      help='LLM reasoning level for query decomposition (default: medium)')
+    args.add_argument('--max-iterations', type=int, default=10,
+                     help='Maximum number of retrieval iterations (default: 10)')
     
     # Special handling for --eval argument
     for action in args._actions:
@@ -529,6 +936,7 @@ if __name__ == "__main__":
             reasoning_effort=args.reasoning,
             detailed_analysis=True,  # Enable detailed complexity analysis
             difficulty=args.difficulty,
+            max_iterations=args.max_iterations,
             **strategy_params
         )
         

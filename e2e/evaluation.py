@@ -13,6 +13,7 @@ Designed for reuse across different retrieval systems including multi-hop QA.
 import pandas as pd
 from typing import List, Dict, Any, Optional
 from collections import defaultdict
+from utils import filter_dataset_by_difficulty
 
 
 def calculate_retrieval_metrics(expected_urls: List[str], retrieved_urls: List[str], k_values: List[int] = [1, 3, 5, 10]) -> Dict[str, float]:
@@ -251,6 +252,7 @@ def run_evaluation(rag_db, dataset_path: str,
                                top_k_retriever: int = 50, top_k_reranking: int = 10, 
                                max_queries: Optional[int] = None, no_rerank: bool = False,
                                retrieval_strategy: str = "fixed_k", detailed_analysis: bool = False,
+                               difficulty: int = 0,
                                **strategy_params) -> Dict[str, float]:
     """
     Run comprehensive evaluation on a dataset with detailed metrics reporting.
@@ -264,12 +266,16 @@ def run_evaluation(rag_db, dataset_path: str,
         no_rerank: Skip reranking step for fair comparison between retrieval methods
         retrieval_strategy: Strategy for retrieval ("fixed_k", "top_p", "relative")
         detailed_analysis: If True, print detailed breakdown by reasoning types and link counts
+        difficulty: Minimum number of answer links required (0 = no filtering)
         **strategy_params: Parameters for adaptive retrieval strategies
         
     Returns:
         Dictionary of averaged metrics across all queries
     """
     df = pd.read_csv(dataset_path, sep='\t')
+    
+    # Filter by difficulty if specified
+    df = filter_dataset_by_difficulty(df, difficulty)
     
     # Limit number of queries if specified
     if isinstance(max_queries, int) and max_queries > 0:

@@ -96,6 +96,7 @@ if __name__ == "__main__":
                       top_k_retriever=args.top_k_retriever, top_k_reranking=args.top_k_reranking,
                       max_queries=max_queries, no_rerank=args.no_rerank,
                       retrieval_strategy=args.retrieval_strategy, detailed_analysis=True,
+                      difficulty=args.difficulty,
                       **strategy_params)
         
         # Save results for optimization

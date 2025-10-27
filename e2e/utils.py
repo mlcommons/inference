@@ -39,3 +39,30 @@ def set_deterministic_seeds(seed: int = 42) -> None:
     """
     import torch
     torch.manual_seed(seed)
+
+
+def filter_dataset_by_difficulty(df, difficulty: int = 0):
+    """
+    Filter dataset by minimum number of answer links (difficulty level).
+    
+    Args:
+        df: pandas DataFrame with dataset
+        difficulty: Minimum number of answer links required (0 = no filtering)
+        
+    Returns:
+        Filtered DataFrame with queries having >= difficulty answer links
+    """
+    if difficulty <= 0:
+        return df
+    
+    # Count answer links for each row
+    link_counts = df.apply(
+        lambda row: sum(1 for col in df.columns 
+                       if col.startswith('wikipedia_link_') and row.notna()[col]), 
+        axis=1
+    )
+    
+    filtered_df = df[link_counts >= difficulty].reset_index(drop=True)
+    print(f"Filtered dataset by difficulty >= {difficulty}: {len(filtered_df)} queries remaining (from {len(df)} total)")
+    
+    return filtered_df

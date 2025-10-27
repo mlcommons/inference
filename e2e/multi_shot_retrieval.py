@@ -26,7 +26,7 @@ os.environ['NO_PROXY'] = '127.0.0.1,localhost,' + original_no_proxy
 
 from retrieve import VectorDB, BM25DB
 from evaluation import evaluate_retrieval_query, run_evaluation
-from utils import set_deterministic_seeds
+from utils import set_deterministic_seeds, filter_dataset_by_difficulty
 from params import add_all_args
 import requests
 
@@ -190,23 +190,24 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
     decomposition_time = time.perf_counter() - decomposition_start
     
     # Step 2: Retrieve for each sub-query
-    # Adjust retrieval budget: retrieve N/k docs per sub-query to maintain total of N docs
+    # Strategy: Retrieve N/k docs per sub-query to ensure balanced representation from each sub-query
+    # This prevents bias toward first sub-query when taking top_k_reranking from concatenated results
     retrieval_start = time.perf_counter()
     all_results = []
     seen_urls = set()
     
-    # Calculate docs per sub-query (ensure at least 1 doc per sub-query)
+    # Calculate docs per sub-query (ensure at least 1)
     num_sub_queries = len(sub_queries)
     docs_per_subquery = max(1, top_k_retriever // num_sub_queries)
     
     if verbose:
-        print(f"\nRetrieval strategy: {num_sub_queries} sub-queries x {docs_per_subquery} docs = ~{num_sub_queries * docs_per_subquery} total")
+        print(f"\nRetrieval strategy: {num_sub_queries} sub-queries × {docs_per_subquery} docs/query = ~{num_sub_queries * docs_per_subquery} total")
     
     for i, sub_query in enumerate(sub_queries, 1):
         if verbose:
             print(f"\nRetrieving for sub-query {i}: {sub_query[:80]}...")
         
-        # Retrieve using the same logic as single-shot, but with adjusted k
+        # Retrieve using adjusted k for balanced representation
         if retrieval_strategy == "fixed_k":
             results = rag_db.lookup(sub_query, k=docs_per_subquery)
         else:
@@ -249,12 +250,17 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                         reranked_results.append(doc)
                         break
             
-            # Apply top_k_reranking limit
-            all_results = reranked_results[:top_k_reranking]
+            all_results = reranked_results
             reranking_time = time.perf_counter() - reranking_start
             
             if verbose:
-                print(f"\nReranked to top-{len(all_results)} documents")
+                print(f"\nReranked {len(all_results)} documents")
+    
+    # Apply top_k_reranking limit (whether reranked or not)
+    all_results = all_results[:top_k_reranking]
+    
+    if verbose and len(all_results) > 0:
+        print(f"\nFinal result set: {len(all_results)} documents")
     
     # Step 4: Extract URLs and deduplicate
     retrieved_urls = []
@@ -317,6 +323,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                               retrieval_strategy: str = "fixed_k",
                               reasoning_effort: str = "medium",
                               detailed_analysis: bool = False,
+                              difficulty: int = 0,
                               **strategy_params) -> Dict[str, float]:
     """
     Run multi-shot evaluation on a dataset.
@@ -332,6 +339,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         retrieval_strategy: Strategy for retrieval
         reasoning_effort: LLM reasoning level
         detailed_analysis: Enable detailed complexity-based analysis
+        difficulty: Minimum number of answer links required (0 = no filtering)
         **strategy_params: Additional parameters for retrieval strategy
         
     Returns:
@@ -339,6 +347,9 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
     """
     
     df = pd.read_csv(dataset_path, sep='\t')
+    
+    # Filter by difficulty if specified
+    df = filter_dataset_by_difficulty(df, difficulty)
     
     if isinstance(max_queries, int) and max_queries > 0:
         df = df.head(max_queries)
@@ -354,6 +365,8 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
     print(f"Retrieval strategy: {retrieval_strategy}")
     print(f"LLM reasoning effort: {reasoning_effort}")
     print(f"Detailed analysis: {detailed_analysis}")
+    if difficulty > 0:
+        print(f"Difficulty filter: >= {difficulty} answer links")
     print(f"{'='*80}\n")
     
     total_metrics = {}
@@ -515,6 +528,7 @@ if __name__ == "__main__":
             retrieval_strategy=args.retrieval_strategy,
             reasoning_effort=args.reasoning,
             detailed_analysis=True,  # Enable detailed complexity analysis
+            difficulty=args.difficulty,
             **strategy_params
         )
         

@@ -162,6 +162,15 @@ COMMON_PARAMS = [
         applies_to=["both"]
     ),
     ParamDef(
+        name="difficulty",
+        arg_names=["--difficulty"],
+        type=int,
+        default=0,
+        help="Minimum number of answer links (difficulty level). Filters out queries with fewer answer links. Default is 0 (no filtering)",
+        category="common",
+        applies_to=["both"]
+    ),
+    ParamDef(
         name="retriever_model",
         arg_names=["--retriever_model"],
         type=str,

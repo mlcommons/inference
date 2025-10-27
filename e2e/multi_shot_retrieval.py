@@ -36,85 +36,154 @@ LLM_SERVICE_URL = "http://127.0.0.1:8123/v1/chat/completions"
 LLM_MODEL = "/model/gpt-oss-120b-int4-AutoRound/"  # Full path with trailing slash as shown in server command
 
 # Prompts
-DOC_GRADER_PROMPT = """\
-Evaluate if DOCUMENTS contain sufficient information to answer the QUERY.
+QUERY_REWRITER_PROMPT = """\
+You are an expert at decomposing complex questions, evaluating document relevance, and generating targeted search queries.
 
-QUERY: {question}
+ORIGINAL QUESTION: {question}
 
-DOCUMENTS:
+DOCUMENTS RETRIEVED:
 {context}
 
-Instructions:
-1. Check if documents have ALL information needed to answer the query
-2. Consider the sub-queries attempted (shown below) - a document may be relevant if it helps answer ANY of the sub-queries
-3. Mark each document: 1 (relevant/useful) or 0 (irrelevant/useless)
-
-IMPORTANT: You MUST respond with ONLY valid JSON in this exact format:
-{{"sufficient": "yes", "relevance": [1, 0, 1, ...]}}
-
-- sufficient: "yes" if complete information available, "no" if missing information
-- relevance: array of 0/1 for each document (in order)
-
-Response (JSON only, no other text):"""
-
-QUERY_REWRITER_ITERATIVE_PROMPT = """\
-You are an expert at generating search queries to help answer complex questions using a collection of Wikipedia articles.
-
-Given:
-- The user's original question
-- Relevant facts or documents already gathered so far (if any)
-- History of previous search queries
-
-Your task:
-Generate {k} concise, focused search queries that could be used to find MISSING information from Wikipedia.
-
-Guidelines:
-- Target different aspects of the problem or missing information
-- Avoid duplicating information already in the context
-- Do not reference source filenames or document titles
-- Think step-by-step: identify missing information, then write queries to retrieve it
-- Make queries specific and actionable
-
-[User Question:]
-{user_question}
-
-[Previous Search Queries:]
+SEARCH HISTORY (queries → results):
 {history}
 
-[Known Facts / Retrieved Documents:]
-{results}
+PREVIOUS FEEDBACK:
+{feedback}
 
-Output ONLY a JSON array of {k} search queries. Example: ["query 1", "query 2", "query 3"]"""
+STEP-BY-STEP PROCESS:
+
+**STEP 1: DECOMPOSE THE QUESTION** (do this mentally first)
+Break the original question into atomic facts needed:
+- What entities/people are mentioned?
+- What properties/attributes are needed for each entity?
+- What is the final computation/combination required?
+
+Example: "If X has first name from A's mother and surname from B's mother's maiden name, what is X?"
+→ Need: 1) Who is A? 2) A's mother's first name 3) Who is B? 4) B's mother's maiden name 5) Combine
+
+**STEP 2: EVALUATE NEW DOCUMENTS**
+- KEPT docs are already confirmed relevant
+- For each NEW document, mark 1 if it provides ANY of the atomic facts, 0 otherwise
+- Don't overthink - if doc mentions a relevant entity/fact, keep it
+
+**STEP 3: CHECK IF SUFFICIENT**
+Do KEPT documents contain ALL atomic facts needed?
+- YES → Go to STEP 4 (Answer)
+- NO → Go to STEP 5 (Generate Queries)
+
+**STEP 4: ANSWER (only if KEPT docs have ALL facts)**
+Show explicit reasoning:
+```
+Step 1: Question asks for [X]. From KEPT Doc [N]: "[quote]" → X = [value]
+Step 2: Question asks for [Y]. From KEPT Doc [M]: "[quote]" → Y = [value]
+Step 3: Combine X + Y → Final Answer = [result]
+```
+
+**STEP 5: GENERATE QUERIES (if facts are missing)**
+- Identify EXACTLY which atomic fact is missing
+- Generate {k} targeted queries to find that fact
+- CRITICAL: Check SEARCH HISTORY - NEVER repeat a query
+- If previous queries failed for an entity:
+  * Did you identify the WRONG entity? (e.g., wrong person, wrong date)
+  * Try different phrasing: "entity name biography", "entity property", "list of entities"
+  * Search for the specific sub-question directly
+
+RESPONSE FORMAT (JSON only):
+
+**If SUFFICIENT (KEPT docs have ALL atomic facts):**
+{{
+  "relevance": [1, 0, 1, ...],
+  "reasoning": "Step 1: Need [X]. From KEPT Doc [N]: '[quote]' → X=[value]. Step 2: ...",
+  "answer": "Your final answer"
+}}
+
+**If NOT SUFFICIENT (missing facts):**
+{{
+  "relevance": [1, 0, 1, ...],
+  "queries": ["targeted query 1 for missing fact", "different phrasing query 2", ...],
+  "feedback": "Missing: [specific fact]. Previous '[failed query]' likely searched wrong entity/phrasing. Try [different approach]."
+}}
+
+CRITICAL RULES:
+- "relevance" array must match number of NEW documents exactly (empty [] if no NEW docs)
+- NEVER answer without KEPT documents (always need retrieval first)
+- NEVER repeat queries from SEARCH HISTORY
+- Feedback must explain WHY previous approach failed and WHAT to do differently
+
+Response (JSON only):"""
 
 
-def doc_grader_llm(question: str, documents: List[str], reasoning_effort: str = "medium",
-                   query_history: Optional[List[str]] = None) -> Dict[str, Any]:
+def query_rewriter(question: str, new_documents: List[str],
+                   kept_documents: List[str],
+                   max_queries: int = 3,
+                   reasoning_effort: str = "medium",
+                   query_history: Optional[List[str]] = None,
+                   query_results: Optional[List[int]] = None,
+                   previous_feedback: str = "") -> Dict[str, Any]:
     """
-    Use LLM to grade whether documents contain sufficient information to answer the question.
+    Evaluates documents AND generates new queries in one LLM call.
     
     Args:
-        question: The user's question
-        documents: List of document texts
+        question: The user's original question
+        new_documents: List of NEW document texts to evaluate
+        kept_documents: List of KEPT document texts (already marked relevant)
+        max_queries: Maximum number of new queries to generate
         reasoning_effort: LLM reasoning level
-        query_history: Optional list of sub-queries attempted (for context)
+        query_history: List of previous search queries
+        query_results: List of number of documents found for each query (parallel to query_history)
+        previous_feedback: Feedback from previous iteration about what's missing
         
     Returns:
-        Dict with 'sufficient' (yes/no) and 'relevance' (list of 0/1 for each doc)
+        Dict with:
+        - 'relevance' (list of 0/1 for ONLY new_documents)
+        - 'queries' (list of new search queries, empty if answer provided)
+        - 'feedback' (what's missing, empty if answer provided)
+        - 'answer' (final answer if sufficient, empty otherwise)
     """
-    # Format documents with numbering
-    context = ""
-    for i, doc in enumerate(documents, 1):
-        context += f"\n[Doc {i}] {doc[:300]}...\n"  # Limit doc length for conciseness
+    # Format KEPT documents
+    kept_context = ""
+    if kept_documents:
+        for i, doc in enumerate(kept_documents, 1):
+            kept_context += f"\n[KEPT {i}] {doc[:300]}...\n"
+    else:
+        kept_context = "None"
     
-    # Format query history if provided
-    history_context = ""
+    # Format NEW documents
+    new_context = ""
+    if new_documents:
+        for i, doc in enumerate(new_documents, 1):
+            new_context += f"\n[NEW {i}] {doc[:300]}...\n"
+    else:
+        new_context = "None"
+    
+    # Combine for context
+    context = f"KEPT DOCUMENTS (already relevant):\n{kept_context}\n\nNEW DOCUMENTS (evaluate these):\n{new_context}"
+    
+    # Format query history with results
+    history_text = ""
     if query_history:
-        history_context = "\n\nSub-queries attempted so far:\n" + "\n".join(f"- {q}" for q in query_history)
+        if query_results and len(query_results) == len(query_history):
+            for q, num_docs in zip(query_history, query_results):
+                result_str = f"→ {num_docs} docs found" if num_docs > 0 else "→ 0 docs (FAILED)"
+                history_text += f"• Query: {q}\n  {result_str}\n"
+        else:
+            # Fallback if query_results not provided
+            history_text = "\n".join(f"• {q}" for q in query_history)
+    else:
+        history_text = "None yet (first iteration)"
     
-    prompt = DOC_GRADER_PROMPT.format(question=question, context=context) + history_context
+    # Previous feedback
+    feedback_text = previous_feedback if previous_feedback else "None yet"
     
-    # Don't use reasoning for DocGrader - we just need a simple yes/no answer
-    system_message = "You are a helpful assistant that evaluates document relevance. Answer concisely."
+    prompt = QUERY_REWRITER_PROMPT.format(
+        question=question,
+        context=context,
+        history=history_text,
+        feedback=feedback_text,
+        k=max_queries
+    )
+    
+    system_message = f"You are a helpful assistant that evaluates documents and generates search queries. Reasoning: {reasoning_effort}."
     
     payload = {
         "model": LLM_MODEL,
@@ -122,12 +191,12 @@ def doc_grader_llm(question: str, documents: List[str], reasoning_effort: str = 
             {"role": "system", "content": system_message},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.1,
+        "temperature": 0.3,
         "max_tokens": 20480
     }
     
     try:
-        response = requests.post(LLM_SERVICE_URL, json=payload, timeout=300)
+        response = requests.post(LLM_SERVICE_URL, json=payload, timeout=60)
         response.raise_for_status()
         result = response.json()
         
@@ -142,51 +211,83 @@ def doc_grader_llm(question: str, documents: List[str], reasoning_effort: str = 
         
         # Use only content field
         if llm_output is None or not llm_output.strip():
-            print(f"    Warning: LLM returned empty content for DocGrader")
-            return {"sufficient": "no", "relevance": [0] * len(documents)}
+            print(f"    Warning: LLM returned empty content")
+            return {
+                "relevance": [0] * len(new_documents),
+                "queries": [question] if not query_history else [],
+                "feedback": "LLM returned empty response",
+                "answer": ""
+            }
         
         llm_output = llm_output.strip()
         
-        print(f"    DocGrader output: {llm_output[:200]}...")
+        print(f"    Combined output: {llm_output[:200]}...")
         
-        # Parse JSON output
-        # Remove markdown code blocks if present
+        # Parse JSON output - handle markdown code blocks
         if llm_output.startswith("```"):
             llm_output = llm_output.split("```")[1]
             if llm_output.startswith("json"):
                 llm_output = llm_output[4:]
             llm_output = llm_output.strip()
         
-        grading = json.loads(llm_output)
+        result_data = json.loads(llm_output)
         
-        # Validate format
-        if "sufficient" not in grading or "relevance" not in grading:
-            print(f"Warning: Invalid grading format: {grading}")
-            return {"sufficient": "no", "relevance": [0] * len(documents)}
+        # Validate format - no longer require "sufficient" field
+        required_fields = ["relevance"]
+        for field in required_fields:
+            if field not in result_data:
+                print(f"Warning: Missing required field '{field}' in response")
+                result_data[field] = [0] * len(new_documents)
         
-        # Ensure relevance array matches document count
-        if len(grading["relevance"]) != len(documents):
-            print(f"Warning: Relevance array length mismatch. Expected {len(documents)}, got {len(grading['relevance'])}")
-            # Pad or truncate
-            relevance = grading["relevance"][:len(documents)]
-            while len(relevance) < len(documents):
+        # Ensure we have either "answer" OR "queries"+"feedback"
+        if "answer" not in result_data:
+            result_data["answer"] = ""
+        if "queries" not in result_data:
+            result_data["queries"] = []
+        if "feedback" not in result_data:
+            result_data["feedback"] = ""
+        
+        # Ensure relevance array matches NEW document count
+        if len(result_data["relevance"]) != len(new_documents):
+            print(f"Warning: Relevance array length mismatch. Expected {len(new_documents)}, got {len(result_data['relevance'])}")
+            relevance = result_data["relevance"][:len(new_documents)]
+            while len(relevance) < len(new_documents):
                 relevance.append(0)
-            grading["relevance"] = relevance
+            result_data["relevance"] = relevance
         
-        return grading
+        # Ensure queries is a list
+        if not isinstance(result_data["queries"], list):
+            result_data["queries"] = []
+        
+        return result_data
         
     except requests.exceptions.RequestException as e:
-        print(f"Error calling DocGrader LLM: {e}")
-        return {"sufficient": "no", "relevance": [0] * len(documents)}
+        print(f"Error calling combined LLM: {e}")
+        return {
+            "relevance": [0] * len(new_documents),
+            "queries": [question] if not query_history else [],
+            "feedback": f"API error: {str(e)}",
+            "answer": ""
+        }
     except json.JSONDecodeError as e:
-        print(f"Error parsing DocGrader output: {e}")
+        print(f"Error parsing LLM output: {e}")
         print(f"LLM output: {llm_output[:200]}")
-        return {"sufficient": "no", "relevance": [0] * len(documents)}
+        return {
+            "relevance": [0] * len(new_documents),
+            "queries": [question] if not query_history else [],
+            "feedback": f"JSON parse error: {str(e)}",
+            "answer": ""
+        }
     except Exception as e:
-        print(f"Unexpected error in DocGrader: {e}")
+        print(f"Unexpected error: {e}")
         import traceback
         traceback.print_exc()
-        return {"sufficient": "no", "relevance": [0] * len(documents)}
+        return {
+            "relevance": [0] * len(new_documents),
+            "queries": [question] if not query_history else [],
+            "feedback": f"Unexpected error: {str(e)}",
+            "answer": ""
+        }
 
 
 def query_rewriter_llm(original_query: str, max_queries: int = 3, reasoning_effort: str = "medium",
@@ -339,183 +440,23 @@ Decompose this into at most {max_queries} sub-questions. Return only the JSON ar
 
 
 def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
+                         expected_answer: str = "",
                          max_sub_queries: int = 3,
-                         top_k_retriever: int = 50, 
+                         top_k_retriever: int = 10,
                          top_k_reranking: int = 10,
+                         max_iterations: int = 10,
                          no_rerank: bool = False,
                          retrieval_strategy: str = "fixed_k",
                          verbose: bool = True,
                          reasoning_effort: str = "medium",
                          **strategy_params) -> Dict[str, Any]:
     """
-    Perform multi-shot retrieval with query decomposition.
-    
-    Args:
-        rag_db: RAG database instance
-        original_query: Original complex query
-        expected_urls: Expected ground truth URLs for evaluation
-        max_sub_queries: Maximum number of sub-queries to generate
-        top_k_retriever: Number of documents to retrieve per sub-query
-        top_k_reranking: Number of documents after final reranking
-        no_rerank: Skip reranking step
-        retrieval_strategy: Strategy for retrieval
-        verbose: Print detailed information
-        reasoning_effort: LLM reasoning level
-        **strategy_params: Additional parameters for retrieval strategy
-        
-    Returns:
-        Dictionary containing evaluation metrics
-    """
-    
-    start_time = time.perf_counter()
-    
-    # Step 1: Query Decomposition
-    decomposition_start = time.perf_counter()
-    sub_queries = query_rewriter_llm(original_query, max_queries=max_sub_queries, reasoning_effort=reasoning_effort)
-    decomposition_time = time.perf_counter() - decomposition_start
-    
-    # Step 2: Retrieve for each sub-query
-    # Strategy: Retrieve N/k docs per sub-query to ensure balanced representation from each sub-query
-    # This prevents bias toward first sub-query when taking top_k_reranking from concatenated results
-    retrieval_start = time.perf_counter()
-    all_results = []
-    seen_urls = set()
-    
-    # Calculate docs per sub-query (ensure at least 1)
-    num_sub_queries = len(sub_queries)
-    docs_per_subquery = max(1, top_k_retriever // num_sub_queries)
-    
-    if verbose:
-        print(f"\nRetrieval strategy: {num_sub_queries} sub-queries × {docs_per_subquery} docs/query = ~{num_sub_queries * docs_per_subquery} total")
-    
-    for i, sub_query in enumerate(sub_queries, 1):
-        if verbose:
-            print(f"\nRetrieving for sub-query {i}: {sub_query[:80]}...")
-        
-        # Retrieve using adjusted k for balanced representation
-        if retrieval_strategy == "fixed_k":
-            results = rag_db.lookup(sub_query, k=docs_per_subquery)
-        else:
-            from retrieve.filter import filter
-            # Adjust max_results proportionally for non-fixed strategies
-            original_max_results = strategy_params.get("max_results", 20)
-            adjusted_max_results = max(1, original_max_results // num_sub_queries)
-            strategy_params_copy = strategy_params.copy()
-            strategy_params_copy["max_results"] = adjusted_max_results
-            results = filter(rag_db, sub_query, method=retrieval_strategy, **strategy_params_copy)
-        
-        # Deduplicate by URL across sub-queries
-        for result in results:
-            if 'original_url' in result.metadata and result.metadata['original_url']:
-                url = result.metadata['original_url']
-                if url not in seen_urls:
-                    all_results.append(result)
-                    seen_urls.add(url)
-        
-        if verbose:
-            print(f"  Retrieved {len(results)} passages, {len(all_results)} unique docs so far")
-    
-    retrieval_time = time.perf_counter() - retrieval_start
-    
-    # Step 3: Optional Reranking
-    reranking_time = 0.0
-    if not no_rerank and hasattr(rag_db, '_reranker_model') and rag_db._reranker_model is not None:
-        if all_results:
-            reranking_start = time.perf_counter()
-            
-            # Rerank combined results using original query
-            passages = [result.page_content for result in all_results]
-            scored_passages = rag_db.rerank(original_query, passages)
-            
-            # Reconstruct document objects with reranked order
-            reranked_results = []
-            for text, score in scored_passages:
-                for doc in all_results:
-                    if doc.page_content == text:
-                        reranked_results.append(doc)
-                        break
-            
-            all_results = reranked_results
-            reranking_time = time.perf_counter() - reranking_start
-            
-            if verbose:
-                print(f"\nReranked {len(all_results)} documents")
-    
-    # Apply top_k_reranking limit (whether reranked or not)
-    all_results = all_results[:top_k_reranking]
-    
-    if verbose and len(all_results) > 0:
-        print(f"\nFinal result set: {len(all_results)} documents")
-    
-    # Step 4: Extract URLs and deduplicate
-    retrieved_urls = []
-    for result in all_results:
-        if 'original_url' in result.metadata and result.metadata['original_url']:
-            retrieved_urls.append(result.metadata['original_url'])
-    
-    deduplicated_urls = list(dict.fromkeys(retrieved_urls))
-    
-    # Step 5: Calculate Metrics
-    from evaluation import calculate_retrieval_metrics
-    expected_set = set(url for url in expected_urls if url and url.strip())
-    metrics = calculate_retrieval_metrics(list(expected_set), deduplicated_urls)
-    
-    # Add timing information
-    total_time = time.perf_counter() - start_time
-    metrics.update({
-        'decomposition_time': decomposition_time,
-        'retrieval_time': retrieval_time,
-        'reranking_time': reranking_time,
-        'total_time': total_time,
-        'num_sub_queries': len(sub_queries),
-        'retrieved_passages_count': len(all_results),
-        'retrieved_docs_count': len(deduplicated_urls)
-    })
-    
-    # Print results
-    if verbose:
-        print(f"\n{'='*80}")
-        print(f"MULTI-SHOT RETRIEVAL RESULTS")
-        print(f"{'='*80}")
-        print(f"Original Query: {original_query[:100]}...")
-        print(f"Sub-queries: {len(sub_queries)}")
-        print(f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:3])}{'...' if len(expected_set) > 3 else ''}")
-        print(f"Retrieved ({len(all_results)} passages, {len(deduplicated_urls)} unique docs): {deduplicated_urls[:3]}{'...' if len(deduplicated_urls) > 3 else ''}")
-        matches = len(expected_set.intersection(set(deduplicated_urls)))
-        print(f"Matches: {matches}")
-        print(f"\nMetrics:")
-        print(f"  P@N: {metrics.get('precision@N', 0.0):.3f}")
-        print(f"  R@N: {metrics.get('recall@N', 0.0):.3f}")
-        print(f"  F1@N: {metrics.get('f1@N', 0.0):.3f}")
-        print(f"  MAP: {metrics.get('average_precision', 0.0):.3f}")
-        print(f"\nTiming:")
-        print(f"  Decomposition: {decomposition_time*1000:.1f}ms")
-        print(f"  Retrieval: {retrieval_time*1000:.1f}ms")
-        if reranking_time > 0:
-            print(f"  Reranking: {reranking_time*1000:.1f}ms")
-        print(f"  Total: {total_time*1000:.1f}ms")
-        print(f"{'='*80}\n")
-    
-    return metrics
-
-
-def multi_shot_iterative_retrieval(rag_db, original_query: str, expected_urls: List[str],
-                                    max_sub_queries: int = 3,
-                                    top_k_retriever: int = 10,
-                                    top_k_reranking: int = 10,
-                                    max_iterations: int = 10,
-                                    no_rerank: bool = False,
-                                    retrieval_strategy: str = "fixed_k",
-                                    verbose: bool = True,
-                                    reasoning_effort: str = "medium",
-                                    **strategy_params) -> Dict[str, Any]:
-    """
-    Perform iterative multi-shot retrieval with DocGrader feedback loop.
+    Multi-shot retrieval with iterative query refinement and document evaluation.
     
     Algorithm:
-    1. Generate initial search queries
-    2. Retrieve documents
-    3. Use DocGrader to check if sufficient
+    1. Generate initial search queries based on the original question
+    2. Retrieve documents for each query
+    3. Evaluate documents and check if sufficient to answer
     4. If not sufficient: generate new queries based on what's missing, go to step 2
     5. Repeat until sufficient or max_iterations reached
     
@@ -541,16 +482,20 @@ def multi_shot_iterative_retrieval(rag_db, original_query: str, expected_urls: L
     
     # Track iteration history
     query_history = []
-    all_retrieved_docs = []  # List of (url, content) tuples
+    query_results = []  # Track how many docs each query found
+    kept_docs = []  # List of (url, content) tuples that were marked relevant
+    new_docs = []   # List of (url, content) tuples just retrieved this iteration
     all_retrieved_urls = set()
     iteration_times = []
+    previous_feedback = ""  # Feedback from previous iteration
     
     sufficient = False
     iteration = 0
+    final_answer = ""
     
     if verbose:
         print(f"\n{'='*80}")
-        print(f"ITERATIVE MULTI-SHOT RETRIEVAL")
+        print(f"MULTI-SHOT RETRIEVAL")
         print(f"{'='*80}")
         print(f"Original Query: {original_query}")
         print(f"Max iterations: {max_iterations}")
@@ -566,35 +511,91 @@ def multi_shot_iterative_retrieval(rag_db, original_query: str, expected_urls: L
             print(f"ITERATION {iteration}/{max_iterations}")
             print(f"{'─'*80}")
         
-        # Step 1: Generate queries (initial or iterative)
-        if iteration == 1:
-            # Initial decomposition
-            sub_queries = query_rewriter_llm(original_query, max_queries=max_sub_queries, 
-                                            reasoning_effort=reasoning_effort)
-        else:
-            # Iterative query generation based on what we have so far
-            relevant_docs_text = [doc[1] for doc in all_retrieved_docs]  # Extract content
-            sub_queries = query_rewriter_llm(
-                original_query, max_queries=max_sub_queries, reasoning_effort=reasoning_effort,
-                history=query_history, retrieved_docs=relevant_docs_text
-            )
+        # Step 1: Use combined function to grade NEW docs AND generate new queries
+        if verbose:
+            print(f"\n  Evaluating documents and generating queries...")
         
-        query_history.extend(sub_queries)
+        kept_contents = [doc[1] for doc in kept_docs]
+        new_contents = [doc[1] for doc in new_docs]
+        
+        result = query_rewriter(
+            original_query, 
+            new_documents=new_contents,
+            kept_documents=kept_contents,
+            max_queries=max_sub_queries,
+            reasoning_effort=reasoning_effort,
+            query_history=query_history,
+            query_results=query_results,
+            previous_feedback=previous_feedback
+        )
+        
+        # Check if we have an answer (sufficient)
+        sufficient = bool(result.get("answer", "").strip())
+        relevance = result["relevance"]  # Only for NEW documents
+        sub_queries = result["queries"]
+        previous_feedback = result["feedback"]
+        final_answer = result.get("answer", "")
+        reasoning_steps = result.get("reasoning", "")
         
         if verbose:
-            print(f"\nGenerated {len(sub_queries)} queries:")
-            for i, q in enumerate(sub_queries, 1):
-                print(f"  {i}. {q}")
+            print(f"    Sufficient: {'yes' if sufficient else 'no'}")
+            print(f"    Kept docs: {len(kept_docs)}")
+            if new_contents:
+                print(f"    New docs evaluated: {len(new_contents)}")
+                print(f"    Relevant new docs: {sum(relevance)}/{len(relevance)}")
+                print(f"    Relevance array: {relevance}")
+            if reasoning_steps:
+                print(f"    Reasoning: {reasoning_steps[:300]}...")
+            if not sufficient:
+                print(f"    Feedback: {previous_feedback}")
+                print(f"    Generated {len(sub_queries)} new queries")
         
-        # Step 2: Retrieve for each sub-query
+        # Filter NEW documents by relevance and add to kept_docs
+        if new_contents:
+            for i, (url, content) in enumerate(new_docs):
+                if i < len(relevance) and relevance[i] == 1:
+                    kept_docs.append((url, content))
+            
+            if verbose:
+                print(f"    Added {sum(relevance)} new docs to kept set")
+                print(f"    Total kept docs now: {len(kept_docs)}")
+        
+        # Clear new_docs for next iteration
+        new_docs = []
+        
+        # If sufficient, we're done
+        if sufficient:
+            if verbose:
+                print(f"\n  ✓ Sufficient information found!")
+                if final_answer:
+                    print(f"  Answer: {final_answer[:200]}...")
+            iteration_times.append(time.perf_counter() - iteration_start)
+            break
+        
+        # If no queries generated, break
+        if not sub_queries:
+            if verbose:
+                print(f"\n  ⚠ No new queries generated, stopping")
+            iteration_times.append(time.perf_counter() - iteration_start)
+            break
+        
+        if verbose:
+            print(f"\n  New queries:")
+            for i, q in enumerate(sub_queries, 1):
+                print(f"    {i}. {q}")
+        
+        # Step 2: Retrieve for each sub-query and track results
         num_sub_queries = len(sub_queries)
         docs_per_subquery = max(1, top_k_retriever // num_sub_queries)
         
         iteration_results = []
+        per_query_counts = []  # Track new docs found by each query
         
         for i, sub_query in enumerate(sub_queries, 1):
             if verbose:
                 print(f"\n  Retrieving for query {i}: {sub_query[:60]}...")
+            
+            query_start_count = len(new_docs)  # Track docs before this query
             
             # Retrieve
             if retrieval_strategy == "fixed_k":
@@ -607,57 +608,32 @@ def multi_shot_iterative_retrieval(rag_db, original_query: str, expected_urls: L
                 strategy_params_copy["max_results"] = adjusted_max_results
                 results = filter(rag_db, sub_query, method=retrieval_strategy, **strategy_params_copy)
             
-            # Add to iteration results (avoid duplicates)
+            # Add to new_docs for evaluation (avoid duplicates)
             for result in results:
                 if 'original_url' in result.metadata and result.metadata['original_url']:
                     url = result.metadata['original_url']
                     if url not in all_retrieved_urls:
                         all_retrieved_urls.add(url)
-                        all_retrieved_docs.append((url, result.page_content))
+                        new_docs.append((url, result.page_content))
                         iteration_results.append(result)
             
+            # Track how many NEW docs this query found
+            docs_found_by_query = len(new_docs) - query_start_count
+            per_query_counts.append(docs_found_by_query)
+            
             if verbose:
-                print(f"    Retrieved {len(results)} docs, {len(iteration_results)} new unique docs this iteration")
+                print(f"    Retrieved {len(results)} docs, {docs_found_by_query} new unique docs from this query")
+        
+        # Add queries and their results to history
+        for sub_query, count in zip(sub_queries, per_query_counts):
+            query_history.append(sub_query)
+            query_results.append(count)
         
         if verbose:
-            print(f"\n  Total unique docs so far: {len(all_retrieved_docs)}")
-        
-        # Step 3: Grade documents with query history context
-        if verbose:
-            print(f"\n  Grading documents...")
-        
-        doc_contents = [doc[1] for doc in all_retrieved_docs]
-        grading = doc_grader_llm(original_query, doc_contents, 
-                                reasoning_effort=reasoning_effort,
-                                query_history=query_history)
-        
-        sufficient = (grading["sufficient"].lower() == "yes")
-        relevance = grading["relevance"]
-        
-        if verbose:
-            print(f"    Sufficient: {grading['sufficient']}")
-            print(f"    Relevant docs: {sum(relevance)}/{len(relevance)}")
-            print(f"    Relevance array: {relevance}")
-        
-        # Step 4: Keep only relevant documents (abandon irrelevant ones)
-        # Documents marked as irrelevant by DocGrader are removed from consideration
-        filtered_docs = []
-        for i, (url, content) in enumerate(all_retrieved_docs):
-            if i < len(relevance) and relevance[i] == 1:
-                filtered_docs.append((url, content))
-        
-        all_retrieved_docs = filtered_docs
-        
-        if verbose:
-            print(f"    Kept {len(all_retrieved_docs)} relevant docs (abandoned {len(doc_contents) - len(all_retrieved_docs)} irrelevant)")
+            print(f"  Total kept docs: {len(kept_docs)}, new docs to evaluate: {len(new_docs)}")
         
         iteration_time = time.perf_counter() - iteration_start
         iteration_times.append(iteration_time)
-        
-        if sufficient:
-            if verbose:
-                print(f"\n  ✓ Sufficient information found!")
-            break
         
         if iteration >= max_iterations:
             if verbose:
@@ -667,8 +643,8 @@ def multi_shot_iterative_retrieval(rag_db, original_query: str, expected_urls: L
     # Final processing
     total_time = time.perf_counter() - start_time
     
-    # Extract URLs
-    retrieved_urls = [url for url, _ in all_retrieved_docs]
+    # Extract URLs from kept_docs
+    retrieved_urls = [url for url, _ in kept_docs]
     
     # Limit to top_k_reranking
     retrieved_urls = retrieved_urls[:top_k_reranking]
@@ -691,12 +667,16 @@ def multi_shot_iterative_retrieval(rag_db, original_query: str, expected_urls: L
     # Print final results
     if verbose:
         print(f"\n{'='*80}")
-        print(f"ITERATIVE MULTI-SHOT RETRIEVAL RESULTS")
+        print(f"MULTI-SHOT RETRIEVAL RESULTS")
         print(f"{'='*80}")
         print(f"Original Query: {original_query[:100]}...")
         print(f"Iterations: {iteration}")
         print(f"Total queries issued: {len(query_history)}")
         print(f"Sufficient: {'Yes' if sufficient else 'No'}")
+        if final_answer:
+            print(f"LLM Answer: {final_answer}")
+        if expected_answer:
+            print(f"Expected Answer: {expected_answer}")
         print(f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:3])}{'...' if len(expected_set) > 3 else ''}")
         print(f"Retrieved ({len(retrieved_urls)} unique docs): {retrieved_urls[:3]}{'...' if len(retrieved_urls) > 3 else ''}")
         matches = len(expected_set.intersection(set(retrieved_urls)))
@@ -759,7 +739,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         max_queries = len(df)
     
     print(f"\n{'='*80}")
-    print(f"MULTI-SHOT EVALUATION (ITERATIVE MODE)")
+    print(f"MULTI-SHOT EVALUATION")
     print(f"{'='*80}")
     print(f"Dataset: {dataset_path}")
     print(f"Queries: {max_queries}")
@@ -785,10 +765,14 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
             if col.startswith('wikipedia_link_') and pd.notna(row[col]):
                 expected_urls.append(row[col].strip())
         
+        # Extract expected answer
+        expected_answer = row.get('Answer', '').strip() if 'Answer' in row and pd.notna(row.get('Answer')) else ""
+        
         if expected_urls:
-            # Multi-shot is inherently iterative, always use iterative retrieval
-            metrics = multi_shot_iterative_retrieval(
+            # Multi-shot retrieval with iterative refinement
+            metrics = multi_shot_retrieval(
                 rag_db, row['Prompt'], expected_urls,
+                expected_answer=expected_answer,
                 max_sub_queries=max_sub_queries,
                 top_k_retriever=top_k_retriever,
                 top_k_reranking=top_k_reranking,

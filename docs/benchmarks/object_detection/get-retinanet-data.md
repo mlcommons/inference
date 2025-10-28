@@ -16,7 +16,7 @@ The benchmark implementation run command will automatically download the validat
 
         ### Get Validation Dataset
         ```
-        mlcr get,dataset,openimages,_validation -j
+        mlcr get,dataset,openimages,original,_validation -j
         ```
 
     === "Calibration"
@@ -24,14 +24,14 @@ The benchmark implementation run command will automatically download the validat
 
         ### Get OpenImages Calibration dataset
         ```
-        mlcr get,dataset,openimages,_calibration -j
+        mlcr get,dataset,openimages,original,_calibration -j
         ```
 
 === "Preprocessed"
 
     ### Get Preprocessed OpenImages dataset
     ```
-    get,dataset,object-detection,open-images,openimages,preprocessed,_validation -j 
+    mlcr get,dataset,object-detection,open-images,openimages,preprocessed,_validation -j 
     ```
 
 - `--outdirname=<PATH_TO_DOWNLOAD_OPENIMAGES_DATASET>` could be provided to download the dataset to a specific location.

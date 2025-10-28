@@ -46,7 +46,8 @@ def define_env(env):
             if "99.9" not in model and implementation_tips:
                 content += f"\n{pre_space}!!! tip\n\n"
                 content += f"{pre_space}    - MLCommons reference implementations are only meant to provide a rules compliant reference implementation for the submitters and in most cases are not best performing. If you want to benchmark any system, it is advisable to use the vendor MLPerf implementation for that system like Nvidia, Intel etc.\n\n"
-
+                if model.lower() in ["sdxl"]:
+                    content += f"\n{pre_space}> **Note:** {model.upper()} reference implementation does not support multithreading.\n\n"
             if not devices:
                 devices = ["CPU", "CUDA", "ROCm"]
 
@@ -140,10 +141,10 @@ def define_env(env):
                 categories = ["Datacenter"]
             elif model.lower() in ["pointpainting"]:
                 categories = ["Edge"]
-            elif model.lower() in ["bert-99.9", "dlrm", "llama2", "mixtral", "llama3", "deepseek-r1"]:
+            elif model.lower() in ["bert-99.9", "dlrm", "llama2", "mixtral", "llama3_1-405b-99.9", "llama3_1-405b-99", "deepseek-r1"]:
                 categories = ["Datacenter"]
             else:
-                categories = ["Edge", "Datacenter"]
+                categories = ["Datacenter", "Edge"]
 
         # model name
         content += f"{pre_space}{model.upper()}\n\n"
@@ -160,6 +161,8 @@ def define_env(env):
                     scenarios.remove("Offline")
                 if model.lower() in ["whisper"]:
                     scenarios.remove("SingleStream")
+                if model.lower() == "llama3_1-8b":
+                    model = "llama3_1-8b-edge"
             elif category == "Datacenter":
                 scenarios = ["Offline", "Server"]
                 if model.lower() in ["whisper"]:
@@ -301,8 +304,9 @@ def define_env(env):
                                 content += f"{cur_space3}The above command should get you to an interactive shell inside the docker container and do a quick test run for the Offline scenario. Once inside the docker container please do the below commands to do the accuracy + performance runs for {scenario_text}.\n\n"
                                 content += f"{cur_space3}<details>\n"
                                 content += f"{cur_space3}<summary> Please click here to see more options for the docker launch </summary>\n\n"
-                                content += f"{cur_space3}* `--docker_mlc_repo=<Custom MLC GitHub repo URL in username@repo format>`: to use a custom fork of cm4mlops repository inside the docker image\n\n"
-                                content += f"{cur_space3}* `--docker_mlc_repo_branch=<Custom MLC GitHub repo Branch>`: to checkout a custom branch of the cloned cm4mlops repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_privileged`: to launch the container in privileged mode\n\n"
+                                content += f"{cur_space3}* `--docker_mlc_repo=<Custom MLC GitHub repo URL in username@repo format>`: to use a custom fork of mlperf-automations repository inside the docker image\n\n"
+                                content += f"{cur_space3}* `--docker_mlc_repo_branch=<Custom MLC GitHub repo Branch>`: to checkout a custom branch of the cloned mlperf-automations repository inside the docker image\n\n"
                                 content += f"{cur_space3}* `--docker_cache=no`: to not use docker cache during the image build\n"
 
                                 if implementation.lower() == "nvidia":
@@ -582,7 +586,7 @@ def define_env(env):
             info += f"{pre_space}    - In valid execution mode, the query count for performance mode can be adjusted using `--env.MLC_MLPERF_LOADGEN_QUERY_COUNT=<query_count>`.\n\n"
 
         if implementation.lower() == "reference" and model.lower() not in [
-                "pointpainting", "llama3_1-8b", "deepseek-r1", "whisper"]:
+                "pointpainting", "llama3_1-8b", "llama3_1-8b-edge", "deepseek-r1", "whisper"]:
 
             info += f"{pre_space}    - `_r4.1-dev` could also be given instead of `_r5.0-dev` if you want to run the benchmark with the MLPerf version being 4.1.\n\n"
         if model == "rgat":
@@ -608,16 +612,17 @@ def define_env(env):
 
             if model == "sdxl":
                 info += f"{pre_space}    - `--env.MLC_MLPERF_MODEL_SDXL_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
-            elif "llama3" in model.lower():
+            elif "llama3_1-405b" in model.lower():
                 info += f"{pre_space}    - `--env.MLC_MLPERF_MODEL_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
                 info += f"{pre_space}    - `--env.MLC_MLPERF_DATASET_LLAMA3_DOWNLOAD_TO_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
-            elif model.lower() in ["llama3_1-8b", "whisper", "deepseek-r1"]:
+            elif model.lower() in ["llama3_1-8b", "llama3_1-8b-edge", "whisper", "deepseek-r1"]:
                 info += f"{pre_space}    - `--env.MLC_USE_ML_MODEL_FROM_HOST=yes` option can be used to download the model on the host so that it can be reused across different container lanuches. \n\n"
                 info += f"{pre_space}    - `--env.MLC_USE_DATASET_FROM_HOST=yes` option can be used to download the dataset on the host so that it can be reused across different container lanuches. \n\n"
 
             if implementation.lower() == "nvidia":
                 info += f"{pre_space}    - Default batch size is assigned based on [GPU memory](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1129) or the [specified GPU](https://github.com/mlcommons/cm4mlops/blob/dd0c35856969c68945524d5c80414c615f5fe42c/script/app-mlperf-inference-nvidia/_cm.yaml#L1370). Please click more option for *docker launch* or *run command* to see how to specify the GPU name.\n\n"
                 info += f"{pre_space}    - When run with `--all_models=yes`, all the benchmark models of NVIDIA implementation can be executed within the same container.\n\n"
+                info += f"{pre_space}    - If you encounter an error related to ulimit or max locked memory during the run_harness step, please refer to the [this](https://github.com/mlcommons/mlperf-automations/issues/664) issue for details and resolution steps.\n\n"
         else:
             if model == "sdxl":
                 info += f"\n{pre_space}!!! tip\n\n"

@@ -142,7 +142,8 @@ class Task(ABC):
                     (i.e., the sample index into the dataset).
             """
 
-            async def _query_endpoint_async(query_sample: lg.QuerySample) -> None:
+            async def _query_endpoint_async(
+                    query_sample: lg.QuerySample) -> None:
                 """Query the endpoint through the async OpenAI API client."""
                 messages = self.loaded_samples[query_sample.index]
                 response = await self.openai_api_client.chat.completions.create(
@@ -161,7 +162,8 @@ class Task(ABC):
                     len(content),
                 )
 
-            async def _issue_queries_async(query_samples: list[lg.QuerySample]) -> None:
+            async def _issue_queries_async(
+                    query_samples: list[lg.QuerySample]) -> None:
                 """Issue queries to the inference endpoint."""
                 query_sample_responses = await asyncio.gather(
                     *[
@@ -185,7 +187,8 @@ class Task(ABC):
                     *[
                         t
                         for t in asyncio.all_tasks(self.event_loop)
-                        # Current task is this one that waits for pending queries.
+                        # Current task is this one that waits for pending
+                        # queries.
                         if t is not asyncio.current_task()
                     ],
                     return_exceptions=True,
@@ -204,7 +207,8 @@ class MMMU(Task):
     """The MMMU task."""
 
     @staticmethod
-    def formulate_messages(self, sample: dict[str, Any]) -> list[dict[str, Any]]:
+    def formulate_messages(
+            self, sample: dict[str, Any]) -> list[dict[str, Any]]:
         """Formulate the messages for chat completion.
 
         Args:

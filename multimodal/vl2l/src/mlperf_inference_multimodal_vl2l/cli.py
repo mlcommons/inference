@@ -112,7 +112,8 @@ class TestSettings(BaseModel):
         settings.scenario = self.senario.to_lgtype()
         settings.mode = self.mode.to_lgtype()
         settings.offline_expected_qps = self.offline_expected_qps
-        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
+        settings.min_duration_ms = round(
+            self.min_duration.total_seconds() * 1000)
         settings.use_token_latencies = True
         return settings
 
@@ -168,7 +169,8 @@ class Dataset(BaseModel):
     ] = None
 
 
-def create_task(dataset: Dataset, model: Model, openai_api_client: AsyncOpenAI) -> Task:
+def create_task(dataset: Dataset, model: Model,
+                openai_api_client: AsyncOpenAI) -> Task:
     """Convert the dataset configuration to its corresponding task."""
     match dataset.task:
         case Dataset.Task.MMMU:
@@ -180,7 +182,8 @@ def create_task(dataset: Dataset, model: Model, openai_api_client: AsyncOpenAI) 
                 case "MMMU/MMMU":
                     return MMMU(dataset, model, openai_api_client)
                 case "Shopify/the-catalogue-public-beta":
-                    return ShopifyGlobalCatalogue(dataset, model, openai_api_client)
+                    return ShopifyGlobalCatalogue(
+                        dataset, model, openai_api_client)
                 case _:
                     raise Dataset.UnknownTaskError(dataset.task)
         case _:

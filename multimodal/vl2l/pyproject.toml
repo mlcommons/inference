@@ -8,12 +8,21 @@ classifiers = [
   "Intended Audience :: Developers",
   "Operating System :: POSIX :: Linux",
 ]
-requires-python = ">=3.14"
-dependencies = ["typer", "loguru", "pydantic", "mlcommons_loadgen", "pydantic-typer"]
+requires-python = ">=3.13"
+dependencies = [
+  "datasets",
+  "loguru",
+  "matplotlib",
+  "mlcommons_loadgen",
+  "openai[aiohttp]",
+  "pydantic",
+  "pydantic-typer",
+  "typer",
+]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-dev = ["mypy", "pytest"]
+dev = ["black", "ruff", "mypy", "shellcheck-py", "pytest"]
 
 [project.scripts]
 mlperf-inf-mm-vl2l = "mlperf_inference_multimodal_vl2l.cli:app"
@@ -47,3 +56,11 @@ convention = "google"
 [tool.mypy]
 check_untyped_defs = true
 plugins = ['pydantic.mypy']
+
+[[tool.mypy.overrides]]
+module = "pydantic_typer"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "mlperf_loadgen"
+ignore_missing_imports = true

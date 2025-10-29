@@ -26,7 +26,17 @@ all_columns = list(all_columns)
 
 df = pd.DataFrame(all_rows, columns=all_columns)
 df['dataset'] = 'livecodebench'
-df.drop(columns=['private_test_cases', 'metadata', 'public_test_cases', 'contest_id', 'platform', 'difficulty', 'contest_date', 'question_title'], inplace=True)
+df.drop(
+    columns=[
+        'private_test_cases',
+        'metadata',
+        'public_test_cases',
+        'contest_id',
+        'platform',
+        'difficulty',
+        'contest_date',
+        'question_title'],
+    inplace=True)
 
 starter_prompt = """
 ### Format: You will use the following starter code to write the solution to the problem and enclose your code within delimiters.
@@ -37,8 +47,10 @@ starter_prompt = """
 
 for idx, row in df.iterrows():
     starter_code = row['starter_code']
-    starter_prompt_filled = starter_prompt.replace('<<starter_code>>', starter_code)
-    df.loc[idx, 'question'] = df.loc[idx, 'question_content'] + starter_prompt_filled
+    starter_prompt_filled = starter_prompt.replace(
+        '<<starter_code>>', starter_code)
+    df.loc[idx, 'question'] = df.loc[idx,
+                                     'question_content'] + starter_prompt_filled
 
 df.rename(columns={'question_id': 'ground_truth'}, inplace=True)
 df.to_pickle(os.path.join(args.dataset_folder, 'lcb.pkl'))

@@ -1,13 +1,20 @@
 from datasets import load_dataset
 import pandas as pd
 import random
+import argparse
+import os
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dataset_folder", type=str, default="dataset")
+args = parser.parse_args()
+
 random.seed(42)
 
 # Login using e.g. `huggingface-cli login` to access this dataset
 ds_diamond = load_dataset("Idavidrein/gpqa", "gpqa_diamond")
-ds_experts = load_dataset("Idavidrein/gpqa", "gpqa_experts")
-ds_main = load_dataset("Idavidrein/gpqa", "gpqa_main")
-ds_extended = load_dataset("Idavidrein/gpqa", "gpqa_extended")
+# ds_experts = load_dataset("Idavidrein/gpqa", "gpqa_experts")
+# ds_main = load_dataset("Idavidrein/gpqa", "gpqa_main")
+# ds_extended = load_dataset("Idavidrein/gpqa", "gpqa_extended")
 
 df_diamond = ds_diamond['train'].to_pandas()
 # df_experts = ds_experts['train'].to_pandas()
@@ -22,7 +29,7 @@ df = df[['Question',
          'High-level domain',
          'Incorrect Answer 1',
          'Incorrect Answer 2',
-         'Incorrect Answer 3']]
+         'Incorrect Answer 3']].copy()
 
 for idx, row in df.iterrows():
     options = [str(row[col]) for col in ['Incorrect Answer 1',
@@ -45,5 +52,4 @@ df.rename(
     inplace=True)
 df['dataset'] = 'gpqa'
 
-breakpoint()
-df.to_pickle('gpqa.pkl')
+df.to_pickle(os.path.join(args.dataset_folder, 'gpqa_diamond.pkl'))

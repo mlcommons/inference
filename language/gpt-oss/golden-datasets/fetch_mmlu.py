@@ -1,10 +1,14 @@
 import pandas as pd
 from datasets import load_dataset
+import argparse
+import os
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dataset_folder", type=str, default="dataset")
+args = parser.parse_args()
 
 ds = load_dataset("cais/mmlu", "all")
 df = ds['auxiliary_train'].to_pandas()
-
-breakpoint()
 
 for col in ['subject']:
     df.drop(col, axis=1, inplace=True)
@@ -21,5 +25,4 @@ for row in df.itertuples():
     df.loc[row.Index, 'question'] = question
     df.loc[row.Index, 'ground_truth'] = f"{chr(65+row.answer)}"
 
-breakpoint()
-df.to_pickle('mmlu.pkl')
+df.to_pickle(os.path.join(args.dataset_folder, 'mmlu.pkl'))

@@ -310,12 +310,12 @@ def process_row(args):
     Worker function to process a single row from the dataframe.
 
     Args:
-        args: tuple of (index, row, dataset_function_map)
+        args: tuple of (index, row, dataset_function_map, reasoning_effort)
 
     Returns:
         tuple: (index, convo, tokens, dataset_name) or (index, None, None, dataset_name, error)
     """
-    index, row, dataset_function_map = args
+    index, row, dataset_function_map, reasoning_effort = args
     dataset_name = row["dataset"]
 
     if dataset_name == "healthbench":
@@ -327,7 +327,7 @@ def process_row(args):
         # Get the appropriate function based on dataset type
         if dataset_name in dataset_function_map:
             create_prompt_func = dataset_function_map[dataset_name]
-            convo, tokens = create_prompt_func(user_query)
+            convo, tokens = create_prompt_func(user_query, reasoning_effort)
             return (index, convo, tokens, dataset_name)
         else:
             error_msg = f"Unknown dataset '{dataset_name}' at index {index}"
@@ -383,6 +383,7 @@ if __name__ == "__main__":
     # Create mapping from dataset names to prompt creation functions
     dataset_function_map = {
         'aime1983': create_aime1983_prompt,
+        'aime2025': create_aime1983_prompt,
         'gpqa': create_gpqa_prompt,
         'livecodebench': create_livecodebench_prompt,
         'math500': create_math500_prompt,
@@ -392,7 +393,7 @@ if __name__ == "__main__":
     }
 
     # Prepare data for parallel processing
-    process_args = [(index, row, dataset_function_map)
+    process_args = [(index, row, dataset_function_map, reasoning_effort)
                     for index, row in df.iterrows()]
 
     # Don't use more processes than we have rows
@@ -420,13 +421,6 @@ if __name__ == "__main__":
     # Process results and modify original DataFrame
     successful_count = 0
     error_count = 0
-
-    # Set reference columns to None
-    df['ref_accuracy'] = None
-    df['ref_extracted_answer'] = None
-    df['ref_output'] = None
-    df['tok_ref_output'] = None
-    df['tok_ref_output_len'] = None
 
     # Set templated text input to None (if it exists)
     if 'templated_text_input' in df.columns:
@@ -482,10 +476,8 @@ if __name__ == "__main__":
     # Verify input and output have identical column lists
     input_columns = list(pd.read_pickle(args.data_file).columns)
     output_columns = list(df.columns)
-    if input_columns != output_columns:
-        print(f"WARNING: Column lists differ!")
-        print(f"Input columns: {input_columns}")
-        print(f"Output columns: {output_columns}")
+    print(f"Input columns: {input_columns}")
+    print(f"Output columns: {output_columns}")
 
     # Save the modified DataFrame as pickle
     print("Saving modified DataFrame to pickle...")
@@ -498,4 +490,3 @@ if __name__ == "__main__":
     print(f"  - Total processed: {successful_count + error_count} queries")
     print(f"  - Modified DataFrame shape: {df.shape}")
     print(f"  - Updated columns: tok_input, tok_input_len, text_input")
-    print(f"  - Set to None: ref_accuracy, ref_extracted_answer, ref_output, tok_ref_output, tok_ref_output_len, templated_text_input")

@@ -1,14 +1,17 @@
 import os
-import sys
 import glob
 import json
 import pandas as pd
+import argparse
+import os
 
-# Replace this with your dataset folder path
-dataset_folder = sys.argv[1]
+parser = argparse.ArgumentParser()
+parser.add_argument("--dataset_folder", type=str, default="dataset")
+parser.add_argument("--healthbench_folder", type=str, default="healthbench")
+args = parser.parse_args()
 
 # Find all jsonl files (update the path and pattern to match actual data)
-files = glob.glob(os.path.join(dataset_folder, "*.jsonl"))
+files = glob.glob(os.path.join(args.healthbench_folder, "*.jsonl"))
 
 all_rows = []
 all_columns = set()
@@ -33,5 +36,4 @@ for file in files:
 # Create DataFrame
 df = pd.DataFrame(all_rows, columns=all_columns)
 df['dataset'] = 'healthbench'
-breakpoint()
-df.to_pickle('healthbench.pkl')
+df.to_pickle(os.path.join(args.dataset_folder, 'healthbench.pkl'))

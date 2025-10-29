@@ -32,7 +32,7 @@ from functools import lru_cache
 from typing import Dict, Any, Optional, Tuple, Union
 import pandas as pd
 from tqdm import tqdm
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 import multiprocessing
 from pathlib import Path
 
@@ -44,9 +44,15 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Suppress verbose HTTP logs from OpenAI/httpx client
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
+
 # Global configuration for HealthBench LLM judge
-LLM_JUDGE_BACKEND = "openai"  # "openai" or "nvidia"
-LLM_JUDGE_MODEL = None  # None = auto-select based on backend
+LLM_JUDGE_BASE_URL = None  # None = default to OpenAI API
+LLM_JUDGE_MODEL = None  # None = auto-select based on base URL
+LLM_JUDGE_API_KEY = None  # None = auto-select from environment
+LLM_JUDGE_MAX_WORKERS = None  # None = auto-select based on rubric count
 
 # =============================================================================
 # Input Validation
@@ -175,13 +181,31 @@ def parse_aime_answer(text: str) -> Optional[int]:
 
 
 def parse_code(text: str) -> Optional[str]:
-    """Parse code from ```python code block."""
+    """Parse code from ```python or plain ``` code block.
+    
+    Priority:
+    1. Last ```python block
+    2. Last plain ``` block (if it looks like Python code)
+    """
     text = validate_text_input(text)
     if not text:
         return None
 
-    match = re.search(r"```python(.*?)```", text, re.DOTALL)
-    return match.group(1).strip() if match else None
+    # Try ```python blocks first (most specific)
+    python_matches = list(re.finditer(r"```python(.*?)```", text, re.DOTALL))
+    if python_matches:
+        return python_matches[-1].group(1).strip()
+    
+    # Fall back to plain ``` blocks
+    plain_matches = list(re.finditer(r"```(.*?)```", text, re.DOTALL))
+    if plain_matches:
+        # Get the last match
+        code = plain_matches[-1].group(1).strip()
+        # Remove language tag if present (e.g., ```python\n or ```py\n)
+        code = re.sub(r'^(?:python|py)\s*\n', '', code, flags=re.IGNORECASE)
+        return code
+    
+    return None
 
 
 # =============================================================================
@@ -280,7 +304,7 @@ def load_lcb_benchmark() -> Dict[str, Any]:
         from lcb_runner.runner.scenario_router import build_prompt_benchmark
 
         mock_args = argparse.Namespace(
-            scenario=Scenario.codegeneration, release_version="release_v1",
+            scenario=Scenario.codegeneration, release_version="release_v6",
             subset="code_generation", language="python", not_fast=False,
             start_date=None, end_date=None, k=[1], num_samples=1,
             timeout=60, num_workers=1, num_process_evaluate=1,
@@ -297,17 +321,37 @@ def load_lcb_benchmark() -> Dict[str, Any]:
 
 
 def evaluate_livecodebench(code: Optional[str], question_id: str) -> bool:
-    """Evaluate LiveCodeBench code generation."""
+    """Evaluate LiveCodeBench code generation.
+    
+    Returns:
+        bool: True if all tests passed, False otherwise
+    """
+    result, _ = evaluate_livecodebench_detailed(code, question_id)
+    return result
+
+
+def evaluate_livecodebench_detailed(code: Optional[str], question_id: str) -> Tuple[bool, str]:
+    """Evaluate LiveCodeBench code generation with detailed results.
+    
+    Returns:
+        Tuple[bool, str]: (passed, detailed_reason)
+            - passed: True if all tests passed, False otherwise
+            - detailed_reason: Description of test results or error
+    """
     if not code or not question_id:
-        return False
+        return False, "No code or question_id provided"
 
     lcb_dir = os.path.abspath(os.path.join(
         os.path.dirname(__file__), "submodules", "LiveCodeBench"))
-    benchmark_map = load_lcb_benchmark()
+    
+    try:
+        benchmark_map = load_lcb_benchmark()
+    except Exception as e:
+        return False, f"Failed to load benchmark: {type(e).__name__}: {e}"
 
     instance = benchmark_map.get(question_id)
     if not instance:
-        return False
+        return False, f"Question ID '{question_id}' not found in benchmark"
 
     original_cwd = os.getcwd()
     temp_dir = f"/tmp/temp_lcb_eval_{question_id}_{int(time.time())}"
@@ -322,7 +366,7 @@ def evaluate_livecodebench(code: Optional[str], question_id: str) -> bool:
         from lcb_runner.runner.scenario_router import sort_and_extract_save_results, get_metrics
 
         mock_args = argparse.Namespace(
-            scenario=Scenario.codegeneration, release_version="release_v1",
+            scenario=Scenario.codegeneration, release_version="release_v6",
             subset="code_generation", language="python", not_fast=False,
             start_date=None, end_date=None, k=[1], num_samples=1,
             timeout=60, num_workers=1, num_process_evaluate=1,
@@ -343,22 +387,60 @@ def evaluate_livecodebench(code: Optional[str], question_id: str) -> bool:
         )
 
         graded = extract_instance_results(instance_results)
-        return graded and graded[0] and graded[0][0]
+        passed = graded and graded[0] and graded[0][0]
+        
+        # Try to extract detailed results
+        detailed_reason = ""
+        try:
+            if combined_results and len(combined_results) > 0:
+                result_info = combined_results[0]
+                if hasattr(result_info, 'result') and result_info.result:
+                    # Extract test results
+                    test_results = result_info.result
+                    if isinstance(test_results, dict):
+                        detailed_reason = f"Test results: {test_results}"
+                    elif isinstance(test_results, list):
+                        num_passed = sum(1 for r in test_results if r)
+                        num_total = len(test_results)
+                        detailed_reason = f"Passed {num_passed}/{num_total} test cases"
+                    else:
+                        detailed_reason = f"Result: {test_results}"
+                elif hasattr(result_info, 'status'):
+                    detailed_reason = f"Status: {result_info.status}"
+        except Exception:
+            pass
+        
+        if not detailed_reason:
+            if passed:
+                detailed_reason = "All tests passed"
+            else:
+                detailed_reason = "Failed one or more test cases"
+        
+        return passed, detailed_reason
 
+    except Exception as e:
+        return False, f"Evaluation error: {type(e).__name__}: {str(e)[:200]}"
     finally:
         os.chdir(original_cwd)
         shutil.rmtree(temp_dir, ignore_errors=True)
         os.environ.pop('TQDM_DISABLE', None)
 
 
-def evaluate_livecodebench_worker(args: Tuple[str, str]) -> Tuple[str, bool]:
-    """Worker function for parallel LiveCodeBench evaluation."""
+def evaluate_livecodebench_worker(args: Tuple[str, str]) -> Tuple[str, bool, str]:
+    """Worker function for parallel LiveCodeBench evaluation.
+    
+    Returns:
+        Tuple[str, bool, str]: (question_id, passed, detailed_reason)
+    """
     code, question_id = args
 
     try:
-        return question_id, evaluate_livecodebench(code, question_id)
-    except Exception:
-        return question_id, False
+        passed, reason = evaluate_livecodebench_detailed(code, question_id)
+        return question_id, passed, reason
+    except Exception as e:
+        error_msg = f"Error evaluating {question_id}: {type(e).__name__}: {e}"
+        logger.warning(error_msg)
+        return question_id, False, error_msg
 
 
 # =============================================================================
@@ -456,6 +538,8 @@ def parse_healthbench_json(json_string: str) -> dict:
         return json.loads(json_cleaned)
     except json.JSONDecodeError as e:
         logger.warning(f"JSON decoding failed: {e}")
+        logger.warning(f"Raw LLM response (first 500 chars): {json_string[:500]}")
+        logger.warning(f"Cleaned response (first 500 chars): {json_cleaned[:500]}")
         return {"explanation": "Failed to parse response", "criteria_met": False}
 
 
@@ -495,7 +579,8 @@ def grade_healthbench_with_llm(
     grader_api_key: Optional[str] = None,
     grader_model: str = "gpt-4o-mini",
     grader_base_url: str = "https://api.openai.com/v1",
-    grader_backend: str = "openai"
+    grader_backend: str = "openai",
+    max_workers: Optional[int] = None
 ) -> Tuple[float, str]:
     """Grade a HealthBench response using LLM-as-a-judge.
 
@@ -507,6 +592,7 @@ def grade_healthbench_with_llm(
         grader_model: Model to use for grading
         grader_base_url: Base URL for API
         grader_backend: Backend to use - "openai" or "nvidia" (default: "openai")
+        max_workers: Max concurrent requests for rubric grading (default: all rubrics in parallel)
 
     Returns:
         Tuple of (score, detailed_explanation)
@@ -515,16 +601,23 @@ def grade_healthbench_with_llm(
     if grader_api_key is None:
         if grader_backend == "nvidia":
             grader_api_key = os.environ.get("NVIDIA_NIM_API_KEY")
-            if not grader_api_key:
+            # Check if it's an official NVIDIA URL that requires a key
+            if not grader_api_key and "nvidia.com" in grader_base_url.lower():
                 logger.warning(
                     "No NVIDIA NIM API key found. Set NVIDIA_NIM_API_KEY environment variable.")
                 return 0.0, "Error: No NVIDIA NIM API key provided"
         else:
             grader_api_key = os.environ.get("OPENAI_API_KEY")
-            if not grader_api_key:
+            # Check if it's an official OpenAI URL that requires a key
+            if not grader_api_key and "api.openai.com" in grader_base_url.lower():
                 logger.warning(
                     "No OpenAI API key found. Set OPENAI_API_KEY environment variable.")
                 return 0.0, "Error: No OpenAI API key provided"
+
+        # For local servers, use a dummy key if none provided
+        if grader_api_key is None:
+            grader_api_key = "dummy-key-for-local-server"
+            logger.info(f"Using local server at {grader_base_url}, no API key required")
 
     # Format conversation
     conversation_text = ""
@@ -534,17 +627,22 @@ def grade_healthbench_with_llm(
         conversation_text += f"{role}: {content}\n\n"
     conversation_text += f"assistant: {model_output}"
 
-    grading_responses = []
-
+    # Prepare all grading prompts
+    grading_tasks = []
     for rubric_item in rubric_items:
-        # Create grading prompt
         grading_prompt = HEALTHBENCH_GRADER_TEMPLATE.replace(
             "<CONVERSATION>", conversation_text
         ).replace("<RUBRIC_ITEM>", str(rubric_item))
+        grading_tasks.append((rubric_item, grading_prompt))
 
+    # Submit all requests concurrently for server-side batching
+    grading_responses = []
+    
+    def _grade_single_rubric(task_data):
+        """Helper to grade a single rubric item."""
+        rubric_item, grading_prompt = task_data
         try:
             if grader_backend == "nvidia":
-                # Use NVIDIA NIM endpoint
                 response_text = _call_nvidia_nim_api(
                     api_key=grader_api_key,
                     model=grader_model,
@@ -554,7 +652,6 @@ def grade_healthbench_with_llm(
                     max_tokens=1024
                 )
             else:
-                # Use OpenAI endpoint
                 response_text = _call_openai_api(
                     api_key=grader_api_key,
                     model=grader_model,
@@ -563,16 +660,20 @@ def grade_healthbench_with_llm(
                     temperature=0.0,
                     max_tokens=1024
                 )
-
-            grading_result = parse_healthbench_json(response_text)
-            grading_responses.append(grading_result)
-
+            return parse_healthbench_json(response_text)
         except Exception as e:
             logger.warning(f"Error grading rubric item: {e}")
-            grading_responses.append({
+            return {
                 "explanation": f"Error during grading: {e}",
                 "criteria_met": False
-            })
+            }
+    
+    # Use ThreadPoolExecutor to send all requests concurrently
+    # The server can batch these together for efficient processing
+    # Default to sending all rubric items in parallel if max_workers not specified
+    num_workers = max_workers if max_workers is not None else len(grading_tasks)
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        grading_responses = list(executor.map(_grade_single_rubric, grading_tasks))
 
     # Calculate overall score
     score = calculate_healthbench_score(rubric_items, grading_responses)
@@ -688,29 +789,31 @@ def evaluate_healthbench(
     parsed_output: Optional[str],
     row_data: pd.Series,
     grader_api_key: Optional[str] = None,
-    grader_backend: str = "openai",
-    grader_model: Optional[str] = None
-) -> Tuple[bool, Optional[str]]:
+    grader_base_url: Optional[str] = None,
+    grader_model: Optional[str] = None,
+    max_workers: Optional[int] = None
+) -> Tuple[float, Optional[str]]:
     """Evaluate HealthBench response using LLM grading.
 
     Args:
         parsed_output: The model output text
         row_data: Full row data containing 'rubrics' and 'prompt'
         grader_api_key: Optional API key for grader
-        grader_backend: Backend to use - "openai" or "nvidia" (default: "openai")
+        grader_base_url: Base URL for API (default: OpenAI API)
         grader_model: Optional model name override
+        max_workers: Max concurrent requests for rubric grading
 
     Returns:
-        Tuple of (is_correct, detailed_explanation)
+        Tuple of (score, detailed_explanation) where score is 0.0-1.0
     """
     if not parsed_output:
-        return False, "Empty output"
+        return 0.0, "Empty output"
 
     # Extract rubrics from row
     rubrics = row_data.get('rubrics', [])
     if not rubrics:
         logger.warning("No rubrics found in row data")
-        return False, "No rubrics available"
+        return 0.0, "No rubrics available"
 
     # Convert to RubricItem objects
     rubric_items = [RubricItem.from_dict(r) for r in rubrics]
@@ -721,18 +824,21 @@ def evaluate_healthbench(
         # If prompt is a string, convert to message format
         prompt = [{"role": "user", "content": prompt}]
 
-    # Set default model based on backend
-    if grader_model is None:
-        if grader_backend == "nvidia":
-            grader_model = "deepseek-ai/deepseek-v3.1-terminus"
-        else:
-            grader_model = "gpt-4o-mini"
-
-    # Set base URL based on backend
-    if grader_backend == "nvidia":
-        grader_base_url = "https://integrate.api.nvidia.com/v1/chat/completions"
-    else:
+    # Set default base URL if not provided
+    if grader_base_url is None:
         grader_base_url = "https://api.openai.com/v1"
+
+    # Auto-detect backend based on URL
+    if "nvidia.com" in grader_base_url.lower():
+        grader_backend = "nvidia"
+        # Set default model for NVIDIA if not specified
+        if grader_model is None:
+            grader_model = "deepseek-ai/deepseek-v3.1-terminus"
+    else:
+        grader_backend = "openai"
+        # Set default model for OpenAI if not specified
+        if grader_model is None:
+            grader_model = "gpt-4o-mini"
 
     # Grade using LLM
     score, explanation = grade_healthbench_with_llm(
@@ -742,13 +848,13 @@ def evaluate_healthbench(
         grader_api_key=grader_api_key,
         grader_model=grader_model,
         grader_base_url=grader_base_url,
-        grader_backend=grader_backend
+        grader_backend=grader_backend,
+        max_workers=max_workers
     )
 
-    # Consider "correct" if score >= 0.7 (70%)
-    is_correct = score >= 0.7
-
-    return is_correct, f"Score: {score:.2%}\n\n{explanation}"
+    # Return the score (0.0 to 1.0) and detailed explanation
+    # Note: score is returned as-is, not converted to binary pass/fail
+    return score, f"Score: {score:.2%}\n\n{explanation}"
 
 
 # =============================================================================
@@ -839,6 +945,10 @@ def process_livecodebench_parallel(
     if not work_items:
         return 0, 0
 
+    # Ensure evaluation_details column exists
+    if 'evaluation_details' not in df.columns:
+        df['evaluation_details'] = None
+
     # Process in parallel
     max_workers = min(multiprocessing.cpu_count(), len(work_items))
     logger.info(
@@ -858,17 +968,220 @@ def process_livecodebench_parallel(
             idx = future_to_idx[future]
 
             try:
-                question_id, is_correct = future.result(timeout=30)
+                question_id, is_correct, detailed_reason = future.result(timeout=30)
                 df.at[idx, 'prompt_accuracy'] = 100.0 if is_correct else 0.0
+                df.at[idx, 'evaluation_details'] = detailed_reason
                 total_evaluated += 1
                 if is_correct:
                     correct_count += 1
             except Exception as e:
                 logger.error(f"Error evaluating row {idx}: {e}")
                 df.at[idx, 'prompt_accuracy'] = 0.0
+                df.at[idx, 'evaluation_details'] = f"Error: {e}"
                 total_evaluated += 1
 
     return correct_count, total_evaluated
+
+
+def evaluate_healthbench_batch(
+    df: pd.DataFrame,
+    group_indices: pd.Index,
+    grader_api_key: Optional[str] = None,
+    grader_base_url: Optional[str] = None,
+    grader_model: Optional[str] = None,
+    max_workers: Optional[int] = None
+) -> Dict[int, Tuple[float, str]]:
+    """Evaluate all HealthBench rows with batched rubric grading across all rows.
+    
+    Args:
+        df: DataFrame containing the data
+        group_indices: Indices of rows to evaluate
+        grader_api_key: Optional API key for grader
+        grader_base_url: Base URL for API
+        grader_model: Model name
+        max_workers: Max concurrent requests
+    
+    Returns:
+        Dictionary mapping row index to (score, explanation) tuple
+    """
+    # Set default base URL if not provided
+    if grader_base_url is None:
+        grader_base_url = "https://api.openai.com/v1"
+    
+    # Auto-detect backend based on URL
+    if "nvidia.com" in grader_base_url.lower():
+        grader_backend = "nvidia"
+        if grader_model is None:
+            grader_model = "deepseek-ai/deepseek-v3.1-terminus"
+    else:
+        grader_backend = "openai"
+        if grader_model is None:
+            grader_model = "gpt-4o-mini"
+    
+    # Handle API key
+    if grader_api_key is None:
+        if grader_backend == "nvidia":
+            grader_api_key = os.environ.get("NVIDIA_NIM_API_KEY")
+            if not grader_api_key and "nvidia.com" in grader_base_url.lower():
+                logger.warning("No NVIDIA NIM API key found. Set NVIDIA_NIM_API_KEY environment variable.")
+                return {idx: (0.0, "Error: No NVIDIA NIM API key provided") for idx in group_indices}
+        else:
+            grader_api_key = os.environ.get("OPENAI_API_KEY")
+            if not grader_api_key and "api.openai.com" in grader_base_url.lower():
+                logger.warning("No OpenAI API key found. Set OPENAI_API_KEY environment variable.")
+                return {idx: (0.0, "Error: No OpenAI API key provided") for idx in group_indices}
+        
+        if grader_api_key is None:
+            grader_api_key = "dummy-key-for-local-server"
+            logger.info(f"Using local server at {grader_base_url}, no API key required")
+    
+    # Prepare all grading tasks for all rows
+    all_tasks = []
+    row_rubric_map = {}  # Maps task_id to (row_idx, rubric_idx)
+    task_id = 0
+    
+    for idx in group_indices:
+        row = df.loc[idx]
+        extracted = row.get('extracted_answer')
+        
+        if extracted is None or pd.isna(extracted):
+            row_rubric_map[f"row_{idx}_skip"] = (idx, None)
+            continue
+        
+        # Extract rubrics and prompt
+        rubrics = row.get('rubrics', [])
+        if not rubrics:
+            logger.warning(f"No rubrics found for row {idx}")
+            row_rubric_map[f"row_{idx}_skip"] = (idx, None)
+            continue
+        
+        rubric_items = [RubricItem.from_dict(r) for r in rubrics]
+        prompt = row.get('prompt', [])
+        if isinstance(prompt, str):
+            prompt = [{"role": "user", "content": prompt}]
+        
+        # Format conversation
+        conversation_text = ""
+        for msg in prompt:
+            role = msg.get("role", "unknown")
+            content = msg.get("content", "")
+            conversation_text += f"{role}: {content}\n\n"
+        conversation_text += f"assistant: {extracted}"
+        
+        # Create grading tasks for all rubrics in this row
+        for rubric_idx, rubric_item in enumerate(rubric_items):
+            grading_prompt = HEALTHBENCH_GRADER_TEMPLATE.replace(
+                "<CONVERSATION>", conversation_text
+            ).replace("<RUBRIC_ITEM>", str(rubric_item))
+            
+            all_tasks.append({
+                'task_id': task_id,
+                'prompt': grading_prompt,
+                'backend': grader_backend
+            })
+            row_rubric_map[task_id] = (idx, rubric_idx, rubric_item)
+            task_id += 1
+    
+    if not all_tasks:
+        logger.warning("No grading tasks to process")
+        return {}
+    
+    logger.info(f"Batching {len(all_tasks)} rubric grading requests across {len(group_indices)} rows")
+    
+    # Define grading function
+    def _grade_single_task(task):
+        """Grade a single rubric item."""
+        try:
+            if task['backend'] == "nvidia":
+                response_text = _call_nvidia_nim_api(
+                    api_key=grader_api_key,
+                    model=grader_model,
+                    messages=[{"role": "user", "content": task['prompt']}],
+                    base_url=grader_base_url,
+                    temperature=0.0,
+                    max_tokens=1024
+                )
+            else:
+                response_text = _call_openai_api(
+                    api_key=grader_api_key,
+                    model=grader_model,
+                    messages=[{"role": "user", "content": task['prompt']}],
+                    base_url=grader_base_url,
+                    temperature=0.0,
+                    max_tokens=1024
+                )
+            return task['task_id'], parse_healthbench_json(response_text)
+        except Exception as e:
+            logger.warning(f"Error grading task {task['task_id']}: {e}")
+            return task['task_id'], {
+                "explanation": f"Error during grading: {e}",
+                "criteria_met": False
+            }
+    
+    # Send all requests concurrently for server-side batching
+    num_workers = max_workers if max_workers is not None else len(all_tasks)
+    grading_results = {}
+    
+    with ThreadPoolExecutor(max_workers=num_workers) as executor:
+        futures = {executor.submit(_grade_single_task, task): task['task_id'] for task in all_tasks}
+        
+        for future in tqdm(as_completed(futures), total=len(futures), desc="Grading HealthBench (batched)"):
+            try:
+                task_id, result = future.result(timeout=60)
+                grading_results[task_id] = result
+            except Exception as e:
+                task_id = futures[future]
+                logger.error(f"Error processing task {task_id}: {e}")
+                grading_results[task_id] = {
+                    "explanation": f"Error during grading: {e}",
+                    "criteria_met": False
+                }
+    
+    # Reconstruct results per row
+    row_results = {}
+    rows_rubrics = {}  # Group results by row: {row_idx: {rubric_idx: (rubric_item, grading_result)}}
+    
+    for task_id, grading_result in grading_results.items():
+        if task_id not in row_rubric_map:
+            continue
+        
+        row_idx, rubric_idx, rubric_item = row_rubric_map[task_id]
+        
+        if row_idx not in rows_rubrics:
+            rows_rubrics[row_idx] = {}
+        
+        rows_rubrics[row_idx][rubric_idx] = (rubric_item, grading_result)
+    
+    # Calculate scores for each row
+    for row_idx, rubric_data in rows_rubrics.items():
+        # Sort by rubric_idx to maintain correct order
+        sorted_rubrics = sorted(rubric_data.items(), key=lambda x: x[0])
+        rubric_items = [item for _, (item, _) in sorted_rubrics]
+        grading_responses = [response for _, (_, response) in sorted_rubrics]
+        
+        # Calculate overall score
+        score = calculate_healthbench_score(rubric_items, grading_responses)
+        
+        # Create detailed explanation
+        explanations = []
+        for rubric_item, response in zip(rubric_items, grading_responses):
+            met = response.get("criteria_met", False)
+            explanation = response.get("explanation", "No explanation")
+            explanations.append(
+                f"[{'✓' if met else '✗'}] {rubric_item}\n    Explanation: {explanation}"
+            )
+        
+        detailed_explanation = f"Score: {score:.2%}\n\n" + "\n\n".join(explanations)
+        row_results[row_idx] = (score, detailed_explanation)
+    
+    # Handle skipped rows
+    for key, value in row_rubric_map.items():
+        if isinstance(key, str) and key.startswith("row_") and key.endswith("_skip"):
+            row_idx = value[0]
+            if row_idx not in row_results:
+                row_results[row_idx] = (0.0, "Empty output or no rubrics")
+    
+    return row_results
 
 
 def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
@@ -878,6 +1191,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     df_output = df.copy()
     df_output['extracted_answer'] = None
     df_output['prompt_accuracy'] = 0.0
+    df_output['evaluation_details'] = None  # Add evaluation details column
 
     # Process by dataset
     for dataset_name, group_indices in tqdm(df_output.groupby('dataset').groups.items(),
@@ -890,46 +1204,42 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
         for idx in group_indices:
             row = df_output.loc[idx]
             raw_output = validate_text_input(row['model_output'])
-            df_output.at[idx, 'extracted_answer'] = evaluator['parse'](
-                raw_output)
+            extracted = evaluator['parse'](raw_output)
+            df_output.at[idx, 'extracted_answer'] = extracted
+            
+            # Set initial evaluation details for rows without extracted answers
+            if extracted is None or pd.isna(extracted):
+                df_output.at[idx, 'evaluation_details'] = "No code extracted from model output"
 
         # Evaluate answers
         if 'livecodebench' in dataset_name.lower():
             correct_count, total_evaluated = process_livecodebench_parallel(
                 df_output, group_indices)
         elif 'healthbench' in dataset_name.lower():
-            # HealthBench evaluation with LLM grading
-            correct_count = 0
+            # HealthBench evaluation with LLM grading - batched across all rows
+            total_score = 0.0
             total_evaluated = 0
-
-            for idx in tqdm(group_indices, desc=f"Evaluating {dataset_name}"):
-                row = df_output.loc[idx]
-                extracted = row['extracted_answer']
-
-                if extracted is not None:
-                    try:
-                        # HealthBench needs full row data for rubrics and
-                        # prompts
-                        is_correct, explanation = evaluator['evaluate'](
-                            extracted,
-                            row,
-                            grader_backend=LLM_JUDGE_BACKEND,
-                            grader_model=LLM_JUDGE_MODEL
-                        )
-                        df_output.at[idx,
-                                     'prompt_accuracy'] = 100.0 if is_correct else 0.0
-                        # Store explanation in a new column if needed
-                        if 'evaluation_details' not in df_output.columns:
-                            df_output['evaluation_details'] = None
-                        df_output.at[idx, 'evaluation_details'] = explanation
-                        total_evaluated += 1
-                        if is_correct:
-                            correct_count += 1
-                    except Exception as e:
-                        logger.error(
-                            f"Error evaluating HealthBench row {idx}: {e}")
-                        df_output.at[idx, 'prompt_accuracy'] = 0.0
-                        total_evaluated += 1
+            
+            # Process all rows with batched grading
+            results = evaluate_healthbench_batch(
+                df_output,
+                group_indices,
+                grader_api_key=LLM_JUDGE_API_KEY,
+                grader_base_url=LLM_JUDGE_BASE_URL,
+                grader_model=LLM_JUDGE_MODEL,
+                max_workers=LLM_JUDGE_MAX_WORKERS
+            )
+            
+            # Store results
+            for idx, (score, explanation) in results.items():
+                # Store score as percentage (0-100)
+                df_output.at[idx, 'prompt_accuracy'] = score * 100.0
+                # Store explanation in a new column if needed
+                if 'evaluation_details' not in df_output.columns:
+                    df_output['evaluation_details'] = None
+                df_output.at[idx, 'evaluation_details'] = explanation
+                total_evaluated += 1
+                total_score += score
         else:
             # Sequential evaluation for other datasets
             correct_count = 0
@@ -950,9 +1260,16 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
         # Log results
         if total_evaluated > 0:
-            accuracy = correct_count / total_evaluated * 100
-            logger.info(
-                f"{dataset_name} results: {correct_count}/{total_evaluated} correct ({accuracy:.1f}% accuracy)")
+            if 'healthbench' in dataset_name.lower():
+                # For HealthBench, report average score
+                avg_score = total_score / total_evaluated * 100
+                logger.info(
+                    f"{dataset_name} results: Average score {avg_score:.1f}% ({total_evaluated} samples)")
+            else:
+                # For other datasets, report accuracy
+                accuracy = correct_count / total_evaluated * 100
+                logger.info(
+                    f"{dataset_name} results: {correct_count}/{total_evaluated} correct ({accuracy:.1f}% accuracy)")
 
     return df_output
 
@@ -983,10 +1300,22 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
     # tok_model_output_len is now a required column
     mean_output_len = float(df_evaluated['tok_model_output_len'].mean())
 
+    # Check if this is HealthBench dataset
+    is_healthbench = False
+    if 'dataset' in df_evaluated.columns:
+        datasets = df_evaluated['dataset'].unique()
+        is_healthbench = any('healthbench' in str(ds).lower() for ds in datasets)
+
+    # Use appropriate metric name
+    if is_healthbench:
+        metric_key = 'healthbench_score'
+    else:
+        metric_key = 'exact_match'
+
     results = {
         # 'evaluated': int(evaluated),
         # 'correct': int(correct),
-        'exact_match': float(accuracy),
+        metric_key: float(accuracy),
         'tokens_per_sample': mean_output_len,
         'num-samples': len(df_evaluated),
     }
@@ -1085,19 +1414,27 @@ def main():
         "--output-file", help="Output pickle file (defaults to <input-file>_evaluated.pkl)")
     parser.add_argument("--verbose", action="store_true",
                         help="Verbose logging")
-    parser.add_argument("--llm-judge-backend",
-                        choices=["openai", "nvidia"],
-                        default="openai",
-                        help="Backend for HealthBench LLM judge (default: openai)")
+    parser.add_argument("--llm-judge-base-url",
+                        help="Base URL for HealthBench LLM judge API (default: https://api.openai.com/v1). "
+                             "For local servers like SGLang, use http://localhost:8000/v1")
     parser.add_argument("--llm-judge",
-                        help="Model for HealthBench LLM judge (default: gpt-4o-mini for openai, deepseek-ai/deepseek-v3.1-terminus for nvidia)")
+                        help="Model for HealthBench LLM judge (default: gpt-4o-mini for OpenAI-compatible APIs, "
+                             "deepseek-ai/deepseek-v3.1-terminus for NVIDIA)")
+    parser.add_argument("--llm-judge-api-key",
+                        help="API key for HealthBench LLM judge (default: read from OPENAI_API_KEY or NVIDIA_NIM_API_KEY env var). "
+                             "Not required for local servers.")
+    parser.add_argument("--llm-judge-max-workers", type=int,
+                        help="Max concurrent requests per row for HealthBench rubric grading (default: all rubrics in parallel). "
+                             "Useful for rate limiting or controlling server load.")
 
     args = parser.parse_args()
 
     # Set global configuration for HealthBench LLM judge
-    global LLM_JUDGE_BACKEND, LLM_JUDGE_MODEL
-    LLM_JUDGE_BACKEND = args.llm_judge_backend
+    global LLM_JUDGE_BASE_URL, LLM_JUDGE_MODEL, LLM_JUDGE_API_KEY, LLM_JUDGE_MAX_WORKERS
+    LLM_JUDGE_BASE_URL = args.llm_judge_base_url
     LLM_JUDGE_MODEL = args.llm_judge
+    LLM_JUDGE_API_KEY = args.llm_judge_api_key
+    LLM_JUDGE_MAX_WORKERS = args.llm_judge_max_workers
 
     if args.verbose:
         logging.getLogger().setLevel(logging.DEBUG)

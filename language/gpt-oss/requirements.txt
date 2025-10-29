@@ -6,3 +6,5 @@ pooch>=1.0
 scikit-learn>=0.20.0
 soxr>=0.3.2
 absl-py>=2.3.1
+lazy-loader>=0.1
+datasets>=2.0.0,<3.0.0

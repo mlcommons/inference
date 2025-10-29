@@ -28,6 +28,7 @@ class RagDB(abc.ABC):
         
         if device == "auto":
             if torch.hpu.is_available():
+                print("Using HPU device")
                 return "hpu"
             elif torch.cuda.is_available():
                 print("Using CUDA device")

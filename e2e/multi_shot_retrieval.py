@@ -444,7 +444,7 @@ Decompose this into at most {max_queries} sub-questions. Return only the JSON ar
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.3,
+        "temperature": 0.1,
         "max_tokens": max_tokens,
         "reasoning_effort": reasoning_effort
     }

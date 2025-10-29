@@ -52,63 +52,65 @@ PREVIOUS FEEDBACK:
 
 STEP-BY-STEP PROCESS:
 
-**STEP 1: DECOMPOSE THE QUESTION** (do this mentally first)
-Break the original question into atomic facts needed:
-- What entities/people are mentioned?
-- What properties/attributes are needed for each entity?
-- What is the final computation/combination required?
+**STEP 1: UNDERSTAND WHAT YOU NEED**
 
-Example: "If X has first name from A's mother and surname from B's mother's maiden name, what is X?"
-→ Need: 1) Who is A? 2) A's mother's first name 3) Who is B? 4) B's mother's maiden name 5) Combine
+Break the question into parts. Pay attention to:
+- **Ordinals** ("15th", "2nd"): Need to count from a list
+- **Time references** ("when X", "as of Y"): Need timeline/chronology  
+- **"Last time"**: Means most recent occurrence, not current
 
-**STEP 2: EVALUATE NEW DOCUMENTS**
-- KEPT docs are already confirmed relevant
-- For each NEW document, mark 1 if it provides ANY of the atomic facts, 0 otherwise
-- Don't overthink - if doc mentions a relevant entity/fact, keep it
+**STEP 2: KEEP HELPFUL DOCUMENTS**
+Mark NEW doc as 1 if relevant to any part of the question.
+Mark as 0 only if completely unrelated.
+**When unsure → 1**
 
-**STEP 3: CHECK IF SUFFICIENT**
-Do KEPT documents contain ALL atomic facts needed?
-- YES → Go to STEP 4 (Answer)
-- NO → Go to STEP 5 (Generate Queries)
+**STEP 3: CAN YOU ANSWER?**
+Check KEPT docs: Have you found all needed facts with clear evidence?
+YES → STEP 4 | NO → STEP 5
 
-**STEP 4: ANSWER (only if KEPT docs have ALL facts)**
-Show explicit reasoning:
+**STEP 4: PROVIDE ANSWER**
+Show your work:
 ```
-Step 1: Question asks for [X]. From KEPT Doc [N]: "[quote]" → X = [value]
-Step 2: Question asks for [Y]. From KEPT Doc [M]: "[quote]" → Y = [value]
-Step 3: Combine X + Y → Final Answer = [result]
+[Fact 1]: From Doc [N]: "[quote]" → [value]
+[Fact 2]: From Doc [M]: "[quote]" → [value]
+Answer: [result]
 ```
 
-**STEP 5: GENERATE QUERIES (if facts are missing)**
-- Identify EXACTLY which atomic fact is missing
-- Generate {k} targeted queries to find that fact
-- CRITICAL: Check SEARCH HISTORY - NEVER repeat a query
-- If previous queries failed for an entity:
-  * Did you identify the WRONG entity? (e.g., wrong person, wrong date)
-  * Try different phrasing: "entity name biography", "entity property", "list of entities"
-  * Search for the specific sub-question directly
+**STEP 5: SEARCH FOR MISSING INFO**
+
+**To verify ordinals/rankings:** Search "list of [category]" first
+
+**To find entity info:** Try multiple approaches:
+- Direct: "[entity name]"
+- With context: "[entity] [attribute/role]"
+- Via list: "list of [category containing entity]"
+
+**If failing 3+ times:** 
+- Try searching parent/related entity
+- Revisit KEPT docs - is entity name wrong?
+- Search broader category
 
 RESPONSE FORMAT (JSON only):
 
-**If SUFFICIENT (KEPT docs have ALL atomic facts):**
+**If SUFFICIENT (have all atomic facts in KEPT docs):**
 {{
   "relevance": [1, 0, 1, ...],
-  "reasoning": "Step 1: Need [X]. From KEPT Doc [N]: '[quote]' → X=[value]. Step 2: ...",
+  "reasoning": "Step 1: [fact]. KEPT Doc [N]: '[quote]' → [value]. Step 2: ...",
   "answer": "Your final answer"
 }}
 
-**If NOT SUFFICIENT (missing facts):**
+**If NOT SUFFICIENT (missing information):**
 {{
   "relevance": [1, 0, 1, ...],
-  "queries": ["targeted query 1 for missing fact", "different phrasing query 2", ...],
-  "feedback": "Missing: [specific fact]. Previous '[failed query]' likely searched wrong entity/phrasing. Try [different approach]."
+  "queries": ["query using appropriate strategy", "alternative approach", "backup strategy"],
+  "feedback": "Missing: [what]. Previous: [why failed]. Next: [what strategy to try]."
 }}
 
 CRITICAL RULES:
-- "relevance" array must match number of NEW documents exactly (empty [] if no NEW docs)
-- NEVER answer without KEPT documents (always need retrieval first)
-- NEVER repeat queries from SEARCH HISTORY
-- Feedback must explain WHY previous approach failed and WHAT to do differently
+- "relevance" length must match NEW documents count exactly (empty [] if none)
+- NEVER answer without KEPT documents
+- NEVER repeat queries from SEARCH HISTORY  
+- Always use different strategy when previous queries failed
 
 Response (JSON only):"""
 
@@ -586,10 +588,14 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         
         # Step 2: Retrieve for each sub-query and track results
         num_sub_queries = len(sub_queries)
-        docs_per_subquery = max(1, top_k_retriever // num_sub_queries)
+        #docs_per_subquery = max(1, top_k_retriever // num_sub_queries)
+        docs_per_subquery = max(1, top_k_retriever)
         
         iteration_results = []
         per_query_counts = []  # Track new docs found by each query
+        
+        # Calculate target docs per subquery after reranking
+        target_docs_per_subquery = max(3, top_k_retriever // num_sub_queries)
         
         for i, sub_query in enumerate(sub_queries, 1):
             if verbose:
@@ -603,10 +609,31 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             else:
                 from retrieve.filter import filter
                 original_max_results = strategy_params.get("max_results", 20)
-                adjusted_max_results = max(1, original_max_results // num_sub_queries)
+                #adjusted_max_results = max(1, original_max_results // num_sub_queries)
+                adjusted_max_results = max(1, original_max_results)
                 strategy_params_copy = strategy_params.copy()
                 strategy_params_copy["max_results"] = adjusted_max_results
                 results = filter(rag_db, sub_query, method=retrieval_strategy, **strategy_params_copy)
+            
+            # Apply per-subquery reranking if enabled
+            if not no_rerank and len(results) > target_docs_per_subquery:
+                if verbose:
+                    print(f"    Reranking {len(results)} docs for this subquery to top {target_docs_per_subquery}...")
+                
+                # Extract contents for reranking
+                contents = [r.page_content for r in results]
+                scored_passages = rag_db.rerank(sub_query, contents)
+                
+                # Reorder results by reranking scores and take top-k
+                reranked_indices = [i for i, _ in sorted(enumerate(scored_passages), 
+                                                         key=lambda x: x[1][1], reverse=True)]
+                results = [results[idx] for idx in reranked_indices[:target_docs_per_subquery]]
+                
+                if verbose:
+                    print(f"    After reranking: keeping top {len(results)} docs")
+            elif len(results) > target_docs_per_subquery:
+                # No reranking, just limit to target
+                results = results[:target_docs_per_subquery]
             
             # Add to new_docs for evaluation (avoid duplicates)
             for result in results:
@@ -646,7 +673,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
     # Extract URLs from kept_docs
     retrieved_urls = [url for url, _ in kept_docs]
     
-    # Limit to top_k_reranking
+    # Limit to top_k_reranking (reranking already done per-subquery)
     retrieved_urls = retrieved_urls[:top_k_reranking]
     
     # Calculate metrics
@@ -696,7 +723,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
 
 def run_multi_shot_evaluation(rag_db, dataset_path: str,
                               max_sub_queries: int = 3,
-                              top_k_retriever: int = 50,
+                              top_k_retriever: int = 10,
                               top_k_reranking: int = 10,
                               max_queries: Optional[int] = None,
                               no_rerank: bool = False,

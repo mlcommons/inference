@@ -22,7 +22,7 @@ def _parallel_embed_worker(device_id, chunk_indices, chunks, result_queue, model
         result_queue: Multiprocessing queue for results
         model_name: Name of the embedding model
         encode_kwargs: Encoding arguments
-        base_device: Base device type from --device option ('xpu', 'cuda', 'cpu')
+        base_device: Base device type from --device option ('xpu', 'cuda', 'hpu', 'cpu')
     """
     try:
         import torch
@@ -293,12 +293,16 @@ class VectorDB(RagDB):
         import multiprocessing as mp
         
         # Use the device type already configured via --device option
-        base_device = self._device  # e.g., 'xpu', 'cuda', 'cpu'
+        base_device = self._device  # e.g., 'xpu', 'cuda', 'cpu', 'hpu'
         
         # Determine number of available devices based on device type
         if base_device == 'cpu':
             # For CPU, use requested number as process count
             num_devices = self._num_embedding_devices
+        elif base_device == 'hpu' and hasattr(torch, 'hpu'):
+            #num_devices = torch.hpu.device_count()
+            # Disable parallel embedding for hpu for now
+            num_devices = 1
         elif base_device == 'xpu' and hasattr(torch, 'xpu'):
             num_devices = torch.xpu.device_count()
         elif base_device == 'cuda':

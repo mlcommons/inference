@@ -268,8 +268,8 @@ GENERAL_PARAMS = [
         arg_names=["--device"],
         type=str,
         default="auto",
-        help="Device to use (auto/xpu/cuda/cpu)",
-        choices=["auto", "xpu", "cuda", "cpu"],
+        help="Device to use (auto/cpu/hpu/xpu/cuda/cpu)",
+        choices=["auto", "xpu", "cuda", "cpu", "hpu"],
         category="general",
         applies_to=["both"]
     ),
@@ -290,6 +290,33 @@ GENERAL_PARAMS = [
         help="Number of devices to use for parallel embedding generation (supports XPU, CUDA, CPU)",
         category="general",
         applies_to=["vector"]
+    ),
+    ParamDef(
+        name="llm_service_url",
+        arg_names=["--llm_service_url"],
+        type=str,
+        default="http://127.0.0.1:8123/v1/chat/completions",
+        help="URL for the LLM service endpoint",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="llm_model",
+        arg_names=["--llm_model"],
+        type=str,
+        default="auto",
+        help="LLM model name/path (auto to detect from service)",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="max_tokens",
+        arg_names=["--max_tokens"],
+        type=str,
+        default="auto",
+        help="Maximum tokens for LLM response (auto to detect from service, or specify number)",
+        category="general",
+        applies_to=["both"]
     ),
 ]
 

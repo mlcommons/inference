@@ -26,14 +26,10 @@ os.environ['NO_PROXY'] = '127.0.0.1,localhost,' + original_no_proxy
 
 from retrieve import VectorDB, BM25DB
 from evaluation import evaluate_retrieval_query, run_evaluation
-from utils import set_deterministic_seeds, filter_dataset_by_difficulty
+from utils import (set_deterministic_seeds, filter_dataset_by_difficulty, 
+                   setup_llm_config, get_device_config)
 from params import add_all_args
 import requests
-
-
-# LLM Service Configuration
-LLM_SERVICE_URL = "http://127.0.0.1:8123/v1/chat/completions"
-LLM_MODEL = "/model/gpt-oss-120b-int4-AutoRound/"  # Full path with trailing slash as shown in server command
 
 # Prompts
 QUERY_REWRITER_PROMPT = """\
@@ -121,7 +117,8 @@ def query_rewriter(question: str, new_documents: List[str],
                    reasoning_effort: str = "medium",
                    query_history: Optional[List[str]] = None,
                    query_results: Optional[List[int]] = None,
-                   previous_feedback: str = "") -> Dict[str, Any]:
+                   previous_feedback: str = "",
+                   llm_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Evaluates documents AND generates new queries in one LLM call.
     
@@ -187,18 +184,28 @@ def query_rewriter(question: str, new_documents: List[str],
     
     system_message = f"You are a helpful assistant that evaluates documents and generates search queries. Reasoning: {reasoning_effort}."
     
+    # Use LLM config if provided, otherwise use defaults
+    if llm_config:
+        model_name = llm_config["model_name"]
+        service_url = llm_config["service_url"]
+        max_tokens = llm_config["max_tokens"]
+    else:
+        model_name = "/mnt/weka/data/pytorch/llama3.3/Meta-Llama-3.3-70B-Instruct/"
+        service_url = "http://127.0.0.1:8123/v1/chat/completions"
+        max_tokens = 10240
+
     payload = {
-        "model": LLM_MODEL,
+        "model": model_name,
         "messages": [
             {"role": "system", "content": system_message},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.3,
-        "max_tokens": 20480
+        "max_tokens": max_tokens
     }
-    
+
     try:
-        response = requests.post(LLM_SERVICE_URL, json=payload, timeout=60)
+        response = requests.post(service_url, json=payload, timeout=60)
         response.raise_for_status()
         result = response.json()
         
@@ -293,7 +300,8 @@ def query_rewriter(question: str, new_documents: List[str],
 
 
 def query_rewriter_llm(original_query: str, max_queries: int = 3, reasoning_effort: str = "medium",
-                       history: Optional[List[str]] = None, retrieved_docs: Optional[List[str]] = None) -> List[str]:
+                       history: Optional[List[str]] = None, retrieved_docs: Optional[List[str]] = None,
+                       llm_config: Optional[Dict[str, Any]] = None) -> List[str]:
     """
     Use LLM to decompose a complex query into multiple sub-queries, or generate new queries
     based on iterative feedback.
@@ -350,18 +358,28 @@ Example: ["What year did X happen?", "Who won Y in that year?"]
 
 Decompose this into at most {max_queries} sub-questions. Return only the JSON array."""
 
+    # Use LLM config if provided, otherwise use defaults
+    if llm_config:
+        model_name = llm_config["model_name"]
+        service_url = llm_config["service_url"]
+        max_tokens = llm_config["max_tokens"]
+    else:
+        model_name = "/mnt/weka/data/pytorch/llama3.3/Meta-Llama-3.3-70B-Instruct/"
+        service_url = "http://127.0.0.1:8123/v1/chat/completions"
+        max_tokens = 10240
+
     payload = {
-        "model": LLM_MODEL,
+        "model": model_name,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.3,
-        "max_tokens": 20480
+        "max_tokens": max_tokens
     }
     
     try:
-        response = requests.post(LLM_SERVICE_URL, json=payload, timeout=60)
+        response = requests.post(service_url, json=payload, timeout=60)
         
         if response.status_code != 200:
             print(f"Error response: {response.text[:500]}")
@@ -451,6 +469,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                          retrieval_strategy: str = "fixed_k",
                          verbose: bool = True,
                          reasoning_effort: str = "medium",
+                         llm_config: Optional[Dict[str, Any]] = None,
                          **strategy_params) -> Dict[str, Any]:
     """
     Multi-shot retrieval with iterative query refinement and document evaluation.
@@ -528,7 +547,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             reasoning_effort=reasoning_effort,
             query_history=query_history,
             query_results=query_results,
-            previous_feedback=previous_feedback
+            previous_feedback=previous_feedback,
+            llm_config=llm_config
         )
         
         # Check if we have an answer (sufficient)
@@ -732,6 +752,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                               detailed_analysis: bool = False,
                               difficulty: int = 0,
                               max_iterations: int = 10,
+                              llm_config: Optional[Dict[str, Any]] = None,
                               **strategy_params) -> Dict[str, float]:
     """
     Run multi-shot evaluation on a dataset.
@@ -808,6 +829,7 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                 retrieval_strategy=retrieval_strategy,
                 verbose=True,
                 reasoning_effort=reasoning_effort,
+                llm_config=llm_config,
                 **strategy_params
             )
             
@@ -890,6 +912,14 @@ if __name__ == "__main__":
     # Set deterministic seeds
     set_deterministic_seeds(args.seed)
     
+    # Setup LLM configuration with auto-detection
+    llm_config = setup_llm_config(args)
+    print(f"LLM Config: {llm_config}")
+    
+    # Setup device-specific environment
+    device_config = get_device_config()
+    print(f"Device Config: {device_config}")
+    
     # Initialize database
     if args.retrieval_method == "bm25":
         db_class = BM25DB
@@ -948,6 +978,7 @@ if __name__ == "__main__":
             detailed_analysis=True,  # Enable detailed complexity analysis
             difficulty=args.difficulty,
             max_iterations=args.max_iterations,
+            llm_config=llm_config,
             **strategy_params
         )
         
@@ -979,5 +1010,6 @@ if __name__ == "__main__":
             retrieval_strategy=args.retrieval_strategy,
             verbose=True,
             reasoning_effort=args.reasoning,
+            llm_config=llm_config,
             **strategy_params
         )

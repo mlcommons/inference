@@ -182,7 +182,7 @@ def parse_aime_answer(text: str) -> Optional[int]:
 
 def parse_code(text: str) -> Optional[str]:
     """Parse code from ```python or plain ``` code block.
-    
+
     Priority:
     1. Last ```python block
     2. Last plain ``` block (if it looks like Python code)
@@ -195,7 +195,7 @@ def parse_code(text: str) -> Optional[str]:
     python_matches = list(re.finditer(r"```python(.*?)```", text, re.DOTALL))
     if python_matches:
         return python_matches[-1].group(1).strip()
-    
+
     # Fall back to plain ``` blocks
     plain_matches = list(re.finditer(r"```(.*?)```", text, re.DOTALL))
     if plain_matches:
@@ -204,7 +204,7 @@ def parse_code(text: str) -> Optional[str]:
         # Remove language tag if present (e.g., ```python\n or ```py\n)
         code = re.sub(r'^(?:python|py)\s*\n', '', code, flags=re.IGNORECASE)
         return code
-    
+
     return None
 
 
@@ -322,7 +322,7 @@ def load_lcb_benchmark() -> Dict[str, Any]:
 
 def evaluate_livecodebench(code: Optional[str], question_id: str) -> bool:
     """Evaluate LiveCodeBench code generation.
-    
+
     Returns:
         bool: True if all tests passed, False otherwise
     """
@@ -330,9 +330,10 @@ def evaluate_livecodebench(code: Optional[str], question_id: str) -> bool:
     return result
 
 
-def evaluate_livecodebench_detailed(code: Optional[str], question_id: str) -> Tuple[bool, str]:
+def evaluate_livecodebench_detailed(
+        code: Optional[str], question_id: str) -> Tuple[bool, str]:
     """Evaluate LiveCodeBench code generation with detailed results.
-    
+
     Returns:
         Tuple[bool, str]: (passed, detailed_reason)
             - passed: True if all tests passed, False otherwise
@@ -343,7 +344,7 @@ def evaluate_livecodebench_detailed(code: Optional[str], question_id: str) -> Tu
 
     lcb_dir = os.path.abspath(os.path.join(
         os.path.dirname(__file__), "submodules", "LiveCodeBench"))
-    
+
     try:
         benchmark_map = load_lcb_benchmark()
     except Exception as e:
@@ -388,7 +389,7 @@ def evaluate_livecodebench_detailed(code: Optional[str], question_id: str) -> Tu
 
         graded = extract_instance_results(instance_results)
         passed = graded and graded[0] and graded[0][0]
-        
+
         # Try to extract detailed results
         detailed_reason = ""
         try:
@@ -409,13 +410,13 @@ def evaluate_livecodebench_detailed(code: Optional[str], question_id: str) -> Tu
                     detailed_reason = f"Status: {result_info.status}"
         except Exception:
             pass
-        
+
         if not detailed_reason:
             if passed:
                 detailed_reason = "All tests passed"
             else:
                 detailed_reason = "Failed one or more test cases"
-        
+
         return passed, detailed_reason
 
     except Exception as e:
@@ -426,9 +427,10 @@ def evaluate_livecodebench_detailed(code: Optional[str], question_id: str) -> Tu
         os.environ.pop('TQDM_DISABLE', None)
 
 
-def evaluate_livecodebench_worker(args: Tuple[str, str]) -> Tuple[str, bool, str]:
+def evaluate_livecodebench_worker(
+        args: Tuple[str, str]) -> Tuple[str, bool, str]:
     """Worker function for parallel LiveCodeBench evaluation.
-    
+
     Returns:
         Tuple[str, bool, str]: (question_id, passed, detailed_reason)
     """
@@ -538,8 +540,10 @@ def parse_healthbench_json(json_string: str) -> dict:
         return json.loads(json_cleaned)
     except json.JSONDecodeError as e:
         logger.warning(f"JSON decoding failed: {e}")
-        logger.warning(f"Raw LLM response (first 500 chars): {json_string[:500]}")
-        logger.warning(f"Cleaned response (first 500 chars): {json_cleaned[:500]}")
+        logger.warning(
+            f"Raw LLM response (first 500 chars): {json_string[:500]}")
+        logger.warning(
+            f"Cleaned response (first 500 chars): {json_cleaned[:500]}")
         return {"explanation": "Failed to parse response", "criteria_met": False}
 
 
@@ -617,7 +621,8 @@ def grade_healthbench_with_llm(
         # For local servers, use a dummy key if none provided
         if grader_api_key is None:
             grader_api_key = "dummy-key-for-local-server"
-            logger.info(f"Using local server at {grader_base_url}, no API key required")
+            logger.info(
+                f"Using local server at {grader_base_url}, no API key required")
 
     # Format conversation
     conversation_text = ""
@@ -637,7 +642,7 @@ def grade_healthbench_with_llm(
 
     # Submit all requests concurrently for server-side batching
     grading_responses = []
-    
+
     def _grade_single_rubric(task_data):
         """Helper to grade a single rubric item."""
         rubric_item, grading_prompt = task_data
@@ -667,13 +672,18 @@ def grade_healthbench_with_llm(
                 "explanation": f"Error during grading: {e}",
                 "criteria_met": False
             }
-    
+
     # Use ThreadPoolExecutor to send all requests concurrently
     # The server can batch these together for efficient processing
-    # Default to sending all rubric items in parallel if max_workers not specified
-    num_workers = max_workers if max_workers is not None else len(grading_tasks)
+    # Default to sending all rubric items in parallel if max_workers not
+    # specified
+    num_workers = max_workers if max_workers is not None else len(
+        grading_tasks)
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        grading_responses = list(executor.map(_grade_single_rubric, grading_tasks))
+        grading_responses = list(
+            executor.map(
+                _grade_single_rubric,
+                grading_tasks))
 
     # Calculate overall score
     score = calculate_healthbench_score(rubric_items, grading_responses)
@@ -968,7 +978,8 @@ def process_livecodebench_parallel(
             idx = future_to_idx[future]
 
             try:
-                question_id, is_correct, detailed_reason = future.result(timeout=30)
+                question_id, is_correct, detailed_reason = future.result(
+                    timeout=30)
                 df.at[idx, 'prompt_accuracy'] = 100.0 if is_correct else 0.0
                 df.at[idx, 'evaluation_details'] = detailed_reason
                 total_evaluated += 1
@@ -992,7 +1003,7 @@ def evaluate_healthbench_batch(
     max_workers: Optional[int] = None
 ) -> Dict[int, Tuple[float, str]]:
     """Evaluate all HealthBench rows with batched rubric grading across all rows.
-    
+
     Args:
         df: DataFrame containing the data
         group_indices: Indices of rows to evaluate
@@ -1000,14 +1011,14 @@ def evaluate_healthbench_batch(
         grader_base_url: Base URL for API
         grader_model: Model name
         max_workers: Max concurrent requests
-    
+
     Returns:
         Dictionary mapping row index to (score, explanation) tuple
     """
     # Set default base URL if not provided
     if grader_base_url is None:
         grader_base_url = "https://api.openai.com/v1"
-    
+
     # Auto-detect backend based on URL
     if "nvidia.com" in grader_base_url.lower():
         grader_backend = "nvidia"
@@ -1017,49 +1028,54 @@ def evaluate_healthbench_batch(
         grader_backend = "openai"
         if grader_model is None:
             grader_model = "gpt-4o-mini"
-    
+
     # Handle API key
     if grader_api_key is None:
         if grader_backend == "nvidia":
             grader_api_key = os.environ.get("NVIDIA_NIM_API_KEY")
             if not grader_api_key and "nvidia.com" in grader_base_url.lower():
-                logger.warning("No NVIDIA NIM API key found. Set NVIDIA_NIM_API_KEY environment variable.")
-                return {idx: (0.0, "Error: No NVIDIA NIM API key provided") for idx in group_indices}
+                logger.warning(
+                    "No NVIDIA NIM API key found. Set NVIDIA_NIM_API_KEY environment variable.")
+                return {idx: (0.0, "Error: No NVIDIA NIM API key provided")
+                        for idx in group_indices}
         else:
             grader_api_key = os.environ.get("OPENAI_API_KEY")
             if not grader_api_key and "api.openai.com" in grader_base_url.lower():
-                logger.warning("No OpenAI API key found. Set OPENAI_API_KEY environment variable.")
-                return {idx: (0.0, "Error: No OpenAI API key provided") for idx in group_indices}
-        
+                logger.warning(
+                    "No OpenAI API key found. Set OPENAI_API_KEY environment variable.")
+                return {idx: (0.0, "Error: No OpenAI API key provided")
+                        for idx in group_indices}
+
         if grader_api_key is None:
             grader_api_key = "dummy-key-for-local-server"
-            logger.info(f"Using local server at {grader_base_url}, no API key required")
-    
+            logger.info(
+                f"Using local server at {grader_base_url}, no API key required")
+
     # Prepare all grading tasks for all rows
     all_tasks = []
     row_rubric_map = {}  # Maps task_id to (row_idx, rubric_idx)
     task_id = 0
-    
+
     for idx in group_indices:
         row = df.loc[idx]
         extracted = row.get('extracted_answer')
-        
+
         if extracted is None or pd.isna(extracted):
             row_rubric_map[f"row_{idx}_skip"] = (idx, None)
             continue
-        
+
         # Extract rubrics and prompt
         rubrics = row.get('rubrics', [])
         if not rubrics:
             logger.warning(f"No rubrics found for row {idx}")
             row_rubric_map[f"row_{idx}_skip"] = (idx, None)
             continue
-        
+
         rubric_items = [RubricItem.from_dict(r) for r in rubrics]
         prompt = row.get('prompt', [])
         if isinstance(prompt, str):
             prompt = [{"role": "user", "content": prompt}]
-        
+
         # Format conversation
         conversation_text = ""
         for msg in prompt:
@@ -1067,13 +1083,13 @@ def evaluate_healthbench_batch(
             content = msg.get("content", "")
             conversation_text += f"{role}: {content}\n\n"
         conversation_text += f"assistant: {extracted}"
-        
+
         # Create grading tasks for all rubrics in this row
         for rubric_idx, rubric_item in enumerate(rubric_items):
             grading_prompt = HEALTHBENCH_GRADER_TEMPLATE.replace(
                 "<CONVERSATION>", conversation_text
             ).replace("<RUBRIC_ITEM>", str(rubric_item))
-            
+
             all_tasks.append({
                 'task_id': task_id,
                 'prompt': grading_prompt,
@@ -1081,13 +1097,14 @@ def evaluate_healthbench_batch(
             })
             row_rubric_map[task_id] = (idx, rubric_idx, rubric_item)
             task_id += 1
-    
+
     if not all_tasks:
         logger.warning("No grading tasks to process")
         return {}
-    
-    logger.info(f"Batching {len(all_tasks)} rubric grading requests across {len(group_indices)} rows")
-    
+
+    logger.info(
+        f"Batching {len(all_tasks)} rubric grading requests across {len(group_indices)} rows")
+
     # Define grading function
     def _grade_single_task(task):
         """Grade a single rubric item."""
@@ -1117,15 +1134,19 @@ def evaluate_healthbench_batch(
                 "explanation": f"Error during grading: {e}",
                 "criteria_met": False
             }
-    
+
     # Send all requests concurrently for server-side batching
     num_workers = max_workers if max_workers is not None else len(all_tasks)
     grading_results = {}
-    
+
     with ThreadPoolExecutor(max_workers=num_workers) as executor:
-        futures = {executor.submit(_grade_single_task, task): task['task_id'] for task in all_tasks}
-        
-        for future in tqdm(as_completed(futures), total=len(futures), desc="Grading HealthBench (batched)"):
+        futures = {
+            executor.submit(
+                _grade_single_task,
+                task): task['task_id'] for task in all_tasks}
+
+        for future in tqdm(as_completed(futures), total=len(
+                futures), desc="Grading HealthBench (batched)"):
             try:
                 task_id, result = future.result(timeout=60)
                 grading_results[task_id] = result
@@ -1136,32 +1157,34 @@ def evaluate_healthbench_batch(
                     "explanation": f"Error during grading: {e}",
                     "criteria_met": False
                 }
-    
+
     # Reconstruct results per row
     row_results = {}
-    rows_rubrics = {}  # Group results by row: {row_idx: {rubric_idx: (rubric_item, grading_result)}}
-    
+    # Group results by row: {row_idx: {rubric_idx: (rubric_item,
+    # grading_result)}}
+    rows_rubrics = {}
+
     for task_id, grading_result in grading_results.items():
         if task_id not in row_rubric_map:
             continue
-        
+
         row_idx, rubric_idx, rubric_item = row_rubric_map[task_id]
-        
+
         if row_idx not in rows_rubrics:
             rows_rubrics[row_idx] = {}
-        
+
         rows_rubrics[row_idx][rubric_idx] = (rubric_item, grading_result)
-    
+
     # Calculate scores for each row
     for row_idx, rubric_data in rows_rubrics.items():
         # Sort by rubric_idx to maintain correct order
         sorted_rubrics = sorted(rubric_data.items(), key=lambda x: x[0])
         rubric_items = [item for _, (item, _) in sorted_rubrics]
         grading_responses = [response for _, (_, response) in sorted_rubrics]
-        
+
         # Calculate overall score
         score = calculate_healthbench_score(rubric_items, grading_responses)
-        
+
         # Create detailed explanation
         explanations = []
         for rubric_item, response in zip(rubric_items, grading_responses):
@@ -1170,17 +1193,19 @@ def evaluate_healthbench_batch(
             explanations.append(
                 f"[{'✓' if met else '✗'}] {rubric_item}\n    Explanation: {explanation}"
             )
-        
-        detailed_explanation = f"Score: {score:.2%}\n\n" + "\n\n".join(explanations)
+
+        detailed_explanation = f"Score: {score:.2%}\n\n" + \
+            "\n\n".join(explanations)
         row_results[row_idx] = (score, detailed_explanation)
-    
+
     # Handle skipped rows
     for key, value in row_rubric_map.items():
-        if isinstance(key, str) and key.startswith("row_") and key.endswith("_skip"):
+        if isinstance(key, str) and key.startswith(
+                "row_") and key.endswith("_skip"):
             row_idx = value[0]
             if row_idx not in row_results:
                 row_results[row_idx] = (0.0, "Empty output or no rubrics")
-    
+
     return row_results
 
 
@@ -1206,10 +1231,11 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             raw_output = validate_text_input(row['model_output'])
             extracted = evaluator['parse'](raw_output)
             df_output.at[idx, 'extracted_answer'] = extracted
-            
+
             # Set initial evaluation details for rows without extracted answers
             if extracted is None or pd.isna(extracted):
-                df_output.at[idx, 'evaluation_details'] = "No code extracted from model output"
+                df_output.at[idx,
+                             'evaluation_details'] = "No code extracted from model output"
 
         # Evaluate answers
         if 'livecodebench' in dataset_name.lower():
@@ -1219,7 +1245,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             # HealthBench evaluation with LLM grading - batched across all rows
             total_score = 0.0
             total_evaluated = 0
-            
+
             # Process all rows with batched grading
             results = evaluate_healthbench_batch(
                 df_output,
@@ -1229,7 +1255,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 grader_model=LLM_JUDGE_MODEL,
                 max_workers=LLM_JUDGE_MAX_WORKERS
             )
-            
+
             # Store results
             for idx, (score, explanation) in results.items():
                 # Store score as percentage (0-100)
@@ -1304,7 +1330,8 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
     is_healthbench = False
     if 'dataset' in df_evaluated.columns:
         datasets = df_evaluated['dataset'].unique()
-        is_healthbench = any('healthbench' in str(ds).lower() for ds in datasets)
+        is_healthbench = any('healthbench' in str(ds).lower()
+                             for ds in datasets)
 
     # Use appropriate metric name
     if is_healthbench:

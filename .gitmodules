@@ -10,3 +10,6 @@
 [submodule "language/deepseek-r1/submodules/LiveCodeBench"]
 	path = language/deepseek-r1/submodules/LiveCodeBench
 	url = https://github.com/LiveCodeBench/LiveCodeBench
+[submodule "text_to_video/submodules/VBench"]
+	path = text_to_video/submodules/VBench
+	url = https://github.com/Vchitect/VBench

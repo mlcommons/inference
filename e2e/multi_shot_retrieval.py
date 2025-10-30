@@ -50,89 +50,91 @@ For each NEW document:
 **If there are NO NEW documents to evaluate, skip this task and go to TASK 3**
 
 SUMMARY REQUIREMENTS: 
-- Include specific names, dates, locations, numbers, and relationships
-- Preserve mother's names, maiden names, birth places, assassination details, etc.
-- Keep family relationships and biographical details intact
-- Don't just say "contains information about X" - specify WHAT information
+- Extract and preserve specific details
+- only facts from the document
 
 TASK 2: CHECK IF SUFFICIENT AND CONNECT INFORMATION
-Review KEPT documents and summaries. Look for connections between entities:
-- If you have "Person A is the 15th X" and "Person A's mother is Y", you can connect them
-- If you have "Event happened in Year Z" and "Person was at Position in Year Z", connect them
-- If you have partial chain (A→B, B→C), look for missing links to complete (A→B→C→D)
-If you have all facts with clear evidence and connections, provide final answer.
+Review ALL KEPT documents and summaries. Actively connect facts across documents:
+- Identify entities by matching names across summaries 
+- Chain relationships (A → B → C)
+- Cross-reference dates/events 
+- Build complete chains: Person → Family member → Attribute, or Event → Year → Cross-reference
+If you can construct a complete answer chain with specific names/facts from kept documents, provide final answer.
 
 TASK 3: GENERATE QUERIES (if not sufficient)
-Decompose the complex question into at most {k} simpler sub-queries that, when answered together, would help answer the original question.
-First, analyze failed queries in SEARCH HISTORY. For each failed query (0 docs), identify WHY it failed:
-- Too specific/combined terms: Break into single entities  
-- Wrong terminology: Try official names, abbreviations, alternative spellings
-- Missing context: Search broader category first
+Analyze what's MISSING to complete the answer, then generate at most {k} strategic queries.
 
-MULTI-HOP STRATEGY by reasoning type:
-- Temporal reasoning: Search specific years, dates, "as of [date]", event timelines, chronological lists
-- Multiple constraints: Find each constraint separately (e.g., "15th first lady" then "her mother" separately)  
-- Tabular/Numerical reasoning: Search for data tables, census data, statistics, rankings, population figures
-- Entity chains: Break chains (Person → Birth location → Population data, or Event → Year → Other events that year)
+CRITICAL ANALYSIS OF FAILURES:
+Look at SEARCH HISTORY. If a query returned 0 documents OR if same query failed 2+ times:
+- **STOP IMMEDIATELY** - This approach is not working
+- **ESCALATE TO BROADER SEARCH** - Get the main Wikipedia article first
+- **DO NOT REUSE FAILED PATTERNS** - Varying descriptions of the same thing won't help
 
-ATOMIC EXAMPLES (use these patterns for ANY complex question):
-- Entity + Attribute: "Barack Obama birth place", "Tesla Model S price", "Nuclear Blast first Billboard 200 band"
-- Family Relationships: "Harriet Lane mother", "James Garfield family", "Pietro Barbo papal name" 
-- Temporal Queries: "FIFA World Cup winner 2018", "London Champions League winners", "Charlotte Bronte 1847 book"
-- Numerical/Rankings: "Dewey decimal classification literature", "tallest buildings New York 2024", "Billboard 200 chart history"
-- Specific Names: Always use exact names from documents rather than descriptions
+ESCALATION STRATEGIES (use when stuck 3+ iterations):
 
-QUERY GENERATION RULES (CRITICAL - READ CAREFULLY):
-1. **USE SPECIFIC NAMES FROM DOCUMENTS**: If you found "Harriet Lane" in documents, search "Harriet Lane mother" NOT "15th first lady mother"
-2. **USE EXACT KEYWORDS**: If documents mention "Nuclear Blast", "James Garfield", "Pietro Barbo" - USE THESE EXACT NAMES
-3. **CONNECT INFORMATION**: If you have "Harriet Lane = 15th first lady" and need her mother, search "Harriet Lane mother Jane"
-4. **ONE CONCEPT PER QUERY**: Don't combine multiple facts in one search
-5. **AVOID DESCRIPTIONS**: Never use "second assassinated president" if you found "James Garfield"
-6. **NEVER REPEAT SEARCHES**: Check SEARCH HISTORY carefully to avoid duplicates
-7. **BUILD ON FINDINGS**: Use names/facts from summaries to create precise next searches
+**When repeated queries fail:**
+1. **Get full article first**: Search just the entity name to get their complete Wikipedia page
+2. **Search related entities**: If can't find X's mother, search for X's siblings, X's biography, X's family tree
+3. **Use list articles**: "List of presidents", "List of first ladies", "Timeline of X"
+4. **Try alternate names**: Full formal name, nickname, maiden name, married name
+
+STRATEGIC QUERY PATTERNS:
+
+**For People/Biography:**
+- Full article: Just the person's name "Harriet Lane"
+- Family: "Person X family", "Person X parents"  
+- Specific relative: "Person X" then extract family, don't search "Person X mother" repeatedly
+
+**For Events/Dates:**
+- Specific year: "X 2012 winner"
+- Timeline: "X dates", "List of X events"
+- Cross-reference: "List tallest buildings X City"
+
+**For Numerical/Classification:**
+- List/table: "Billboard 200 Nuclear Blast records", "Dewey Decimal X"
+
+**Progressive refinement strategy:**
+1. **Get main articles FIRST**: Search entity names to get full Wikipedia pages
+2. **Extract connections**: From articles, identify related entities and search those
+3. **Get details**: Once you have related entities, search for their specific attributes
+4. **Cross-verify**: Use list articles to confirm order/position/relationships
+
+QUERY GENERATION RULES (FOLLOW EXACTLY):
+1. **GET FULL ARTICLES FIRST**: To find family/biographical info about Person X, search "Person X" alone to get their complete Wikipedia article with infobox and family details
+2. **USE ENTITY NAMES, NOT DESCRIPTIONS**: Once you identify an entity name, always use the name in queries, never use descriptions
+3. **ONE CONCEPT PER QUERY**: Each query should target one piece of information
+4. **NEVER REPEAT FAILURES**: Check SEARCH HISTORY - if a query pattern failed (0 docs or 3+ attempts), use a completely different approach
+5. **ESCALATE WHEN STUCK**: After a failed attempt on same information, escalate to broader queries:
+   - Search the main entity name alone (get full Wikipedia article)
+   - Search "List of X" for ordinal/positional questions
+   - Search related entities instead
 
 RESPONSE FORMAT:
 **If there are NEW documents:**
-If sufficient: {{"relevance": [1,0,1], "summaries": ["Entity A has attribute X and connection Y", "", "Entity B was discovered by Person C in year Z"], "answer": "Final answer based on connected facts"}}
-If not: {{"relevance": [1,0,1], "summaries": ["Entity A (dates) served as Role under Person B, making them the Nth person", "", "Entity C was Event in Year, making them the Position after Entity D"], "queries": ["Entity A specific detail", "Entity C family information"], "feedback": "Missing: Specific details needed. Next: Search using exact names found."}}
+If sufficient: {{"relevance": [1,0,1], "summaries": ["Person served as X from dates, family details include mother named Y with maiden name Z", "", "Person was Nth X, mother was Y Z with maiden name Ballou"], "answer": "Y Z"}}
+If not: {{"relevance": [1,0,1], "summaries": ["Person A served from dates, mentioned as related to B", "", "Person C was Nth X, mother mentioned as Y"], "queries": ["Person A", "Person C family"], "feedback": "Found: Entity names and roles. Missing: Complete family details. Next: Get full biographical articles."}}
 
 **If there are NO NEW documents:**
-{{"relevance": [], "summaries": [], "queries": ["main entity keyword", "secondary entity keyword"], "feedback": "Starting search for required information."}}
-
-EXAMPLES OF CONNECTING INFORMATION:
-- "Jane Eyre by Charlotte Brontë published 1847, Dewey classification 823 for English fiction"
-- "Chelsea won UEFA Champions League 2012, France held FIFA World Cup at that time"  
-- "Meshuggah first Nuclear Blast band on Billboard 200 at position 165, vocalist Jens Kidman"
+{{"relevance": [], "summaries": [], "queries": ["Nth position holder name", "specific event list"], "feedback": "Starting with direct entity/list searches."}}
 
 CRITICAL REQUIREMENTS:
 - If NO NEW documents: return empty arrays: "relevance": [], "summaries": []  
 - If {len_new_docs} NEW documents: return exactly {len_new_docs} relevance scores and {len_new_docs} summaries
-- For relevant docs (relevance=1): summary MUST contain specific facts, names, dates, numbers
+- For relevant docs (relevance=1): summary MUST extract specific facts (names, dates, relationships, family details from infobox/text)
 - For irrelevant docs (relevance=0): summary MUST be empty string ""
-- USE EXACT NAMES from documents in your next queries, not generic descriptions
-- Connect information: if you found "X is Y" and need "Y's Z", search "X Z" using the specific name
-- Each query must be genuinely different from SEARCH HISTORY and use specific keywords
-- Count your arrays before responding - this is critical for system stability
+- **ESCALATION TRIGGER**: If same query type failed 3+ times, MUST escalate to full article or list search
+- Make queries SHORT and SIMPLE (2-4 words best) - Wikipedia article titles are short
+- Search entity names alone to get complete biographical articles with family sections
+- Wikipedia infoboxes contain: parents, born, died, spouse, children - search person's name to get this
 
 FORMAT VALIDATION: Array lengths MUST match document count - double check before responding!
-KEYWORD USAGE: Always use specific names/terms found in documents for next queries!
+SEARCH STRATEGY: Simple entity names work better than complex descriptive queries!
 Respond only in JSON format"""
 
 
-def summarize_document(doc_content: str, max_length: int = 100) -> str:
-    """Summarize document content to key facts."""
-    # Simple extractive summarization - take first sentence and key phrases
-    sentences = doc_content.split('.')[:2]  # First 2 sentences
-    summary = '. '.join(sentences).strip()
-    
-    if len(summary) > max_length:
-        summary = summary[:max_length] + "..."
-    
-    return summary if summary else doc_content[:max_length] + "..."
 
-
-def query_rewriter(question: str, new_documents: List[str],
-                   kept_documents: List[str],
+def query_rewriter(question: str, new_documents: List[tuple],
+                   kept_documents: List[tuple],
                    max_queries: int = 3,
                    reasoning_effort: str = "medium",
                    query_history: Optional[List[str]] = None,
@@ -164,21 +166,15 @@ def query_rewriter(question: str, new_documents: List[str],
     kept_context = ""
     if kept_documents:
         for i, doc in enumerate(kept_documents, 1):
-            # Use the doc as-is if it's already a summary, otherwise summarize
-            if len(doc) <= 200:  # Likely already a summary
-                kept_context += f"\n[KEPT {i}] {doc}\n"
-            else:
-                summary = summarize_document(doc, max_length=150)
-                kept_context += f"\n[KEPT {i}] {summary}\n"
+            kept_context += f"\n[KEPT {i}] {doc[2]}\n"
     else:
         kept_context = "None"
     
-    # Format NEW documents with summaries
+    # Format NEW documents 
     new_context = ""
     if new_documents:
         for i, doc in enumerate(new_documents, 1):
-            summary = summarize_document(doc, max_length=150)
-            new_context += f"\n[NEW {i}] {summary}\n"
+            new_context += f"\n[NEW {i}] {doc[1]}\n"
     else:
         new_context = "None"
     
@@ -198,9 +194,9 @@ def query_rewriter(question: str, new_documents: List[str],
         
         history_parts = []
         if failed_queries:
-            history_parts.append(f"FAILED: {', '.join(failed_queries[-3:])}")  # Last 3 failures
+            history_parts.append(f"FAILED: {', '.join(failed_queries)}")  # Last 3 failures
         if successful_queries:
-            history_parts.append(f"SUCCESS: {', '.join(successful_queries[-2:])}")  # Last 2 successes
+            history_parts.append(f"SUCCESS: {', '.join(successful_queries)}")  # Last 2 successes
         
         history_text = "; ".join(history_parts) if history_parts else "No queries yet"
     else:
@@ -208,13 +204,10 @@ def query_rewriter(question: str, new_documents: List[str],
     
     # Build feedback history - show progression of what was tried and learned
     if feedback_history and len(feedback_history) > 0:
-        # Show last 2-3 unique feedback entries to show progression
         unique_feedback = []
         for fb in reversed(feedback_history):
             if fb and fb not in unique_feedback:
                 unique_feedback.append(fb)
-            if len(unique_feedback) >= 3:
-                break
         
         if unique_feedback:
             feedback_text = "PREVIOUS ATTEMPTS: " + " → ".join(reversed(unique_feedback))
@@ -223,6 +216,10 @@ def query_rewriter(question: str, new_documents: List[str],
     else:
         feedback_text = f"Iteration {len(query_history) + 1 if query_history else 1} - Initial search"
     
+    print(f"Context: {context}")
+    print(f"History: {history_text}")
+    print(f"Feedback: {feedback_text}")
+
     prompt = QUERY_REWRITER_PROMPT.format(
         question=question,
         context=context,
@@ -232,7 +229,10 @@ def query_rewriter(question: str, new_documents: List[str],
         len_new_docs=len(new_documents)
     )
     
-    system_message = f"You are an expert at multi-hop reasoning and strategic search. CRITICAL: Never repeat failed queries. Always try completely different approaches when queries return 0 docs. Focus on atomic facts and progressive strategies. Reasoning: {reasoning_effort}."
+    system_message = f"""You are an expert at multi-hop reasoning and strategic search. 
+                        CRITICAL: Never repeat failed queries. 
+                        Always try completely different approaches when queries return 0 docs. 
+                        Focus on atomic facts and progressive strategies."""
     
     # Use LLM config if provided, otherwise use defaults
     if llm_config:
@@ -281,8 +281,6 @@ def query_rewriter(question: str, new_documents: List[str],
         
         llm_output = llm_output.strip()
         
-        print(f"    Combined output: {llm_output[:200]}...")
-        
         # Parse JSON output - handle markdown code blocks
         if llm_output.startswith("```"):
             llm_output = llm_output.split("```")[1]
@@ -292,7 +290,7 @@ def query_rewriter(question: str, new_documents: List[str],
         
         result_data = json.loads(llm_output)
         
-        # Validate format - no longer require "sufficient" field
+        # Validate format 
         required_fields = ["relevance"]
         for field in required_fields:
             if field not in result_data:
@@ -409,10 +407,10 @@ def query_rewriter_llm(original_query: str, max_queries: int = 3, reasoning_effo
             history=history_text,
             results=results_text
         )
-        system_prompt = f"You are a helpful assistant that generates search queries. Reasoning: {reasoning_effort}."
+        system_prompt = f"You are a helpful assistant that generates search queries."
     else:
         # Initial decomposition mode
-        system_prompt = f"""You are an expert at decomposing complex multi-hop questions into simpler sub-questions. Reasoning: {reasoning_effort}.
+        system_prompt = f"""You are an expert at decomposing complex multi-hop questions into simpler sub-questions.
 
 Your task: Given a complex question, break it down into 1-{max_queries} simpler sub-questions that, when answered together, would help answer the original question.
 
@@ -447,7 +445,8 @@ Decompose this into at most {max_queries} sub-questions. Return only the JSON ar
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.3,
-        "max_tokens": max_tokens
+        "max_tokens": max_tokens,
+        "reasoning_effort": reasoning_effort
     }
     
     try:
@@ -611,25 +610,11 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         
         # Aggressive summarization: use summaries after iteration 2 to improve information connection
         total_content_length = sum(len(doc[1]) for doc in kept_docs)
-        # Use summaries if we have more than 2 docs OR after iteration 2, to help LLM connect information better
-        use_summaries = len(kept_docs) > 2 or iteration > 2
-        
-        if use_summaries:
-            kept_contents = [doc[2] if len(doc) >= 3 and doc[2] else doc[1] for doc in kept_docs]
-            if verbose:
-                summary_count = sum(1 for doc in kept_docs if len(doc) >= 3 and doc[2])
-                print(f"    Using {summary_count}/{len(kept_docs)} document summaries for better information connection")
-        else:
-            kept_contents = [doc[1] for doc in kept_docs]  # Use full content for first few iterations
-            if verbose:
-                print(f"    Using full document content for {len(kept_docs)} docs (early iteration for detail)")
-        new_contents = [doc[1] for doc in new_docs]
-        print("    new contents", new_contents)
 
         result = query_rewriter(
             original_query, 
-            new_documents=new_contents,
-            kept_documents=kept_contents,
+            new_documents=new_docs,
+            kept_documents=kept_docs,
             max_queries=max_sub_queries,
             reasoning_effort=reasoning_effort,
             query_history=query_history,
@@ -642,7 +627,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         # Check if we have an answer (sufficient)
         sufficient = bool(result.get("answer", "").strip())
         relevance = result["relevance"]  # Only for NEW documents
-        summaries = result.get("summaries", [""] * len(new_contents))  # Summaries for NEW documents
+        summaries = result.get("summaries", [""] * len(new_docs))  # Summaries for NEW documents
         sub_queries = result["queries"]
         current_feedback = result["feedback"]
         final_answer = result.get("answer", "")
@@ -657,8 +642,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         if verbose:
             print(f"    Sufficient: {'yes' if sufficient else 'no'}")
             print(f"    Kept docs: {len(kept_docs)}")
-            if new_contents:
-                print(f"    New docs evaluated: {len(new_contents)}")
+            if new_docs:
+                print(f"    New docs evaluated: {len(new_docs)}")
                 print(f"    Relevant new docs: {sum(relevance)}/{len(relevance)}")
                 print(f"    Relevance array: {relevance}")
                 # Show summary quality
@@ -667,7 +652,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                     print(f"    Generated summaries: {len(non_empty_summaries)}/{len(summaries)} non-empty")
                     for i, summary in enumerate(summaries):
                         if summary.strip() and relevance[i] == 1:
-                            print(f"      Summary {i+1}: {summary[:100]}...")
+                            print(f"      Summary {i+1}: {summary}...")
             if reasoning_steps:
                 print(f"    Reasoning: {reasoning_steps[:300]}...")
             if not sufficient:
@@ -675,7 +660,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                 print(f"    Generated {len(sub_queries)} new queries")
         
         # Filter NEW documents by relevance and add to kept_docs
-        if new_contents:
+        if new_docs:
             for i, (url, content) in enumerate(new_docs):
                 if i < len(relevance) and relevance[i] == 1:
                     summary = summaries[i] if i < len(summaries) and summaries[i] else ""

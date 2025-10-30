@@ -33,82 +33,57 @@ import requests
 
 # Prompts
 QUERY_REWRITER_PROMPT = """\
-You are an expert at decomposing complex questions, evaluating document relevance, and generating targeted search queries.
+You evaluate documents and generate search queries for complex multi-hop questions.
 
-ORIGINAL QUESTION: {question}
+QUESTION: {question}
+DOCUMENTS: {context}
+SEARCH HISTORY: {history}
+FEEDBACK: {feedback}
 
-DOCUMENTS RETRIEVED:
-{context}
+TASK 1: EVALUATE NEW DOCUMENTS
+Mark each NEW document: 1 if relevant to the corresponding sub-query, 0 if irrelevant.
 
-SEARCH HISTORY (queries → results):
-{history}
+TASK 2: CHECK IF SUFFICIENT
+Review KEPT documents. If you have all facts with clear evidence, provide final answer with below JSON format.
 
-PREVIOUS FEEDBACK:
-{feedback}
+TASK 3: GENERATE FEEDBACK
+Generate feedback for future iterations. What information is still missing? What strategies have failed? What will you try next?
+Be concise, precise and helpful.
 
-STEP-BY-STEP PROCESS:
+TASK 4: GENERATE QUERIES (if not sufficient)
+Decompose the complex question into at most {k} simpler sub-queries that, when answered together, would help answer the original question.
+First, analyze failed queries in SEARCH HISTORY. For each failed query (0 docs), identify WHY it failed:
+- Too specific/combined terms: Break into single entities  
+- Wrong terminology: Try official names, abbreviations, alternative spellings
+- Missing context: Search broader category first
 
-**STEP 1: UNDERSTAND WHAT YOU NEED**
+MULTI-HOP STRATEGY by reasoning type:
+- Temporal reasoning: Search specific years, dates, "as of [date]", event timelines, chronological lists
+- Multiple constraints: Find each constraint separately (e.g., "15th first lady" then "her mother" separately)  
+- Tabular/Numerical reasoning: Search for data tables, census data, statistics, rankings, population figures
+- Entity chains: Break chains (Person → Birth location → Population data, or Event → Year → Other events that year)
 
-Break the question into parts. Pay attention to:
-- **Ordinals** ("15th", "2nd"): Need to count from a list
-- **Time references** ("when X", "as of Y"): Need timeline/chronology  
-- **"Last time"**: Means most recent occurrence, not current
+ATOMIC EXAMPLES:
+Instead of: "15th first lady of the United States' mother's first name" 
+Try: "Harriet Lane" (if found) then "Harriet Lane mother" then "Jane Buchanan Lane"
 
-**STEP 2: KEEP HELPFUL DOCUMENTS**
-Mark NEW doc as 1 if relevant to any part of the question.
-Mark as 0 only if completely unrelated.
-**When unsure → 1**
+Instead of: "second assassinated president's mother's maiden name"
+Try: "James Garfield" then "Garfield mother" then "Eliza Ballou Garfield"
 
-**STEP 3: CAN YOU ANSWER?**
-Check KEPT docs: Have you found all needed facts with clear evidence?
-YES → STEP 4 | NO → STEP 5
+QUERY GENERATION RULES:
+- Search ONE entity/concept per query
+- Make sure a query is decomposed small enough and targets distinct information
+- Use official names or keywords from documents you've already found, instead of description
+- NEVER repeat any query from SEARCH HISTORY
+- Try completely different keywords to rephrase if previous failed
+- Avoid writing sub-queries that will retrieve already retrieved documents
 
-**STEP 4: PROVIDE ANSWER**
-Show your work:
-```
-[Fact 1]: From Doc [N]: "[quote]" → [value]
-[Fact 2]: From Doc [M]: "[quote]" → [value]
-Answer: [result]
-```
+RESPONSE FORMAT:
+If sufficient: {{"relevance": [1,0,1], "answer": "Direct answer"}}
+If not: {{"relevance": [1,0,1], "queries": ["completely new approach 1", "different strategy 2"], "feedback": "Missing: X. Tried: Y failed. Next: Z strategy"}}
 
-**STEP 5: SEARCH FOR MISSING INFO**
-
-**To verify ordinals/rankings:** Search "list of [category]" first
-
-**To find entity info:** Try multiple approaches:
-- Direct: "[entity name]"
-- With context: "[entity] [attribute/role]"
-- Via list: "list of [category containing entity]"
-
-**If failing 3+ times:** 
-- Try searching parent/related entity
-- Revisit KEPT docs - is entity name wrong?
-- Search broader category
-
-RESPONSE FORMAT (JSON only):
-
-**If SUFFICIENT (have all atomic facts in KEPT docs):**
-{{
-  "relevance": [1, 0, 1, ...],
-  "reasoning": "Step 1: [fact]. KEPT Doc [N]: '[quote]' → [value]. Step 2: ...",
-  "answer": "Your final answer"
-}}
-
-**If NOT SUFFICIENT (missing information):**
-{{
-  "relevance": [1, 0, 1, ...],
-  "queries": ["query using appropriate strategy", "alternative approach", "backup strategy"],
-  "feedback": "Missing: [what]. Previous: [why failed]. Next: [what strategy to try]."
-}}
-
-CRITICAL RULES:
-- "relevance" length must match NEW documents count exactly (empty [] if none)
-- NEVER answer without KEPT documents
-- NEVER repeat queries from SEARCH HISTORY  
-- Always use different strategy when previous queries failed
-
-Response (JSON only):"""
+Note: relevance array must match NEW documents count exactly. Each query must be genuinely different from SEARCH HISTORY.
+Respond only in JSON format"""
 
 
 def query_rewriter(question: str, new_documents: List[str],
@@ -158,21 +133,32 @@ def query_rewriter(question: str, new_documents: List[str],
     # Combine for context
     context = f"KEPT DOCUMENTS (already relevant):\n{kept_context}\n\nNEW DOCUMENTS (evaluate these):\n{new_context}"
     
-    # Format query history with results
-    history_text = ""
+    # Format query history with results - focus on failures for learning
     if query_history:
+        failed_queries = []
+        successful_queries = []
         if query_results and len(query_results) == len(query_history):
             for q, num_docs in zip(query_history, query_results):
-                result_str = f"→ {num_docs} docs found" if num_docs > 0 else "→ 0 docs (FAILED)"
-                history_text += f"• Query: {q}\n  {result_str}\n"
-        else:
-            # Fallback if query_results not provided
-            history_text = "\n".join(f"• {q}" for q in query_history)
+                if num_docs == 0:
+                    failed_queries.append(q)
+                else:
+                    successful_queries.append(f"{q} ({num_docs} docs)")
+        
+        history_parts = []
+        if failed_queries:
+            history_parts.append(f"FAILED: {', '.join(failed_queries[-3:])}")  # Last 3 failures
+        if successful_queries:
+            history_parts.append(f"SUCCESS: {', '.join(successful_queries[-2:])}")  # Last 2 successes
+        
+        history_text = "; ".join(history_parts) if history_parts else "No queries yet"
     else:
-        history_text = "None yet (first iteration)"
+        history_text = "No queries yet"
     
-    # Previous feedback
-    feedback_text = previous_feedback if previous_feedback else "None yet"
+    # Previous feedback - provide context about iteration number and previous failures
+    if previous_feedback and previous_feedback.strip() and previous_feedback != "None yet":
+        feedback_text = previous_feedback
+    else:
+        feedback_text = f"Iteration 1 - Initial search" if not query_history else f"Iteration {len(set(query_history)) + 1}"
     
     prompt = QUERY_REWRITER_PROMPT.format(
         question=question,
@@ -182,7 +168,7 @@ def query_rewriter(question: str, new_documents: List[str],
         k=max_queries
     )
     
-    system_message = f"You are a helpful assistant that evaluates documents and generates search queries. Reasoning: {reasoning_effort}."
+    system_message = f"You are an expert at multi-hop reasoning and strategic search. CRITICAL: Never repeat failed queries. Always try completely different approaches when queries return 0 docs. Focus on atomic facts and progressive strategies. Reasoning: {reasoning_effort}."
     
     # Use LLM config if provided, otherwise use defaults
     if llm_config:
@@ -200,7 +186,7 @@ def query_rewriter(question: str, new_documents: List[str],
             {"role": "system", "content": system_message},
             {"role": "user", "content": prompt}
         ],
-        "temperature": 0.3,
+        "temperature": 0.1,
         "max_tokens": max_tokens
     }
 

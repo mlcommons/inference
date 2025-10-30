@@ -5,7 +5,6 @@ hide:
 # MLPerf Inference Submission Guide
 
 This document provides a step-by-step overview of the **MLPerf Inference submission process**.  
-It is designed for both **new submitters** and those with limited prior experience with MLPerf benchmarking.  
 
 ---
 
@@ -23,11 +22,6 @@ For doing the MLPerf Inference Submission, ensure that your company is a member 
     - Trademark Agreement (Contact `support@mlcommons.org` to request the trademark agreement.)
     - Power EULA (optional, only if submitting power measurements which can be requested by sending an email to `support@mlcommons.org`)
 
-- **Provide contact details:**
-  
-    - Primary and secondary **GitHub handles**
-    - Primary and secondary **Point of Contact (POC) email addresses**
-
 The submitting organizations/individuals are obliged to follow the below guidelines:
 
 - [**Results Guidelines**](https://github.com/mlcommons/policies/blob/master/MLPerf_Results_Messaging_Guidelines.adoc)
@@ -43,19 +37,6 @@ MLPerf Inference is a benchmarking suite designed to measure **performance of ma
 - MLPerf Inference benchmarking happens **twice per year**:
   - **.0 Round** – February  
   - **.1 Round** – August  
-
----
-
-### Divisions
-MLPerf supports two divisions, allowing flexibility in reimplementation:
-
-- **Closed Division:**  
-  Focused on fair “apples-to-apples” comparison using the same model and reference setup.  
-  See [rules](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#61-closed-division).
-
-- **Open Division:**  
-  Allows innovation such as retraining or model substitution.  
-  See [rules](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#63-open-division).
 
 ---
 
@@ -78,18 +59,6 @@ The **System Under Test (SUT)** can be classified under either, depending on the
 
 ---
 
-### LoadGen (Load Generator)
-**LoadGen** is the C++ benchmarking harness (with Python bindings) used across all MLPerf Inference submissions.  
-It handles:
-
-- Query generation and scheduling 
-- logging  
-- Latency tracking  
-- Accuracy validation  
-- Final metric computation  
-
----
-
 ### Scenarios
 Each benchmark defines one or more **scenarios** to reflect real-world usage.  
 See more details [here](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#3-scenarios)
@@ -99,6 +68,30 @@ See more details [here](https://github.com/mlcommons/inference_policies/blob/mas
 
 Scenario requirements depend on both **system type** and **benchmark model**.  
 Refer to the [**Benchmark Info page**](../index.md) for details.
+
+---
+
+### Divisions
+MLPerf supports two divisions, allowing flexibility in reimplementation:
+
+- **Closed Division:**  
+  Focused on fair “apples-to-apples” comparison using the same model and reference setup. All applicable scenarios for a given benchmark are mandatory to be submitted. 
+  See [rules](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#61-closed-division).
+
+- **Open Division:**  
+  Allows innovation such as retraining or model substitution. One or more scenario of any benchmark can be submitted.
+  See [rules](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc#63-open-division).
+
+---
+### LoadGen (Load Generator)
+**LoadGen** is the C++ benchmarking harness (with Python bindings) used across all MLPerf Inference submissions.  
+It handles:
+
+- Query generation and scheduling 
+- logging  
+- Latency tracking  
+- Accuracy validation  
+- Final metric computation  
 
 ---
 

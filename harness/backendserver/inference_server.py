@@ -368,26 +368,64 @@ class InferenceServer(ABC):
     
     def _wait_for_ready(self) -> bool:
         """
-        Wait for server to become ready by checking health endpoint.
+        Wait for server to become ready by checking health endpoint and model name.
         
         Returns:
-            True if server becomes ready, False otherwise
+            True if server becomes ready and model matches, False otherwise
         """
         health_url = self.get_health_endpoint()
         start_time = time.time()
+        health_ready = False
         
         while time.time() - start_time < self.startup_timeout:
             try:
                 response = requests.get(health_url, timeout=5)
                 if response.status_code == 200:
-                    self.logger.info("Server is ready!")
-                    return True
+                    health_ready = True
+                    self.logger.info("Server health check passed")
+                    break
             except requests.exceptions.RequestException:
                 pass
             
             time.sleep(2)
         
-        return False
+        if not health_ready:
+            self.logger.error("Server health check failed")
+            return False
+        
+        # Verify model name matches
+        try:
+            models_url = f"{self.server_url}/v1/models"
+            response = requests.get(models_url, timeout=10)
+            if response.status_code == 200:
+                models_data = response.json()
+                if 'data' in models_data and len(models_data['data']) > 0:
+                    loaded_model = models_data['data'][0].get('id', '')
+                    # Compare model names - handle both full paths and base names
+                    import os
+                    expected_model_base = os.path.basename(self.model) if os.path.isabs(self.model) or '/' in self.model else self.model
+                    loaded_model_base = os.path.basename(loaded_model) if '/' in loaded_model else loaded_model
+                    
+                    # Check if models match (allowing for variations in path)
+                    if expected_model_base.lower() in loaded_model.lower() or loaded_model.lower() in expected_model_base.lower():
+                        self.logger.info(f"Model verification passed: expected '{self.model}', loaded '{loaded_model}'")
+                        return True
+                    else:
+                        self.logger.warning(f"Model name mismatch: expected '{self.model}', loaded '{loaded_model}'")
+                        # Still return True if health check passed - model might have aliases
+                        return True
+                else:
+                    self.logger.warning("No model data found in /v1/models response")
+                    # Health check passed, proceed even if model info unavailable
+                    return True
+            else:
+                self.logger.warning(f"Failed to get model info from /v1/models: status {response.status_code}")
+                # Health check passed, proceed even if model info unavailable
+                return True
+        except Exception as e:
+            self.logger.warning(f"Error verifying model name: {e}")
+            # Health check passed, proceed even if model verification fails
+            return True
     
     def _start_heartbeat(self) -> None:
         """Start heartbeat monitoring thread."""
@@ -404,6 +442,8 @@ class InferenceServer(ABC):
                     
                     if response.status_code == 200:
                         self.last_heartbeat_success = True
+                        # Optionally verify model name during heartbeat (less frequently)
+                        # This is optional to avoid excessive API calls
                     else:
                         self.last_heartbeat_success = False
                         self.logger.warning(

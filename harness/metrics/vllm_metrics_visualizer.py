@@ -639,14 +639,14 @@ class VLLMMetricsVisualizer:
         plt.style.use(self.style)
         fig, ax = plt.subplots(figsize=self.figsize)
         
-        # Create sample numbers for x-axis (0, 1, 2, ...)
-        sample_numbers = range(len(metric_data))
+        # Create sample numbers for x-axis (0, 1, 2, ...) - ensure integers
+        sample_numbers = [int(x) for x in range(len(metric_data))]
         
         if show_labels and 'labels' in metric_data.columns:
             # Plot different label combinations separately
             for labels, group in metric_data.groupby('labels'):
                 label_str = ', '.join([f"{k}={v}" for k, v in labels.items()]) if labels else 'default'
-                group_sample_numbers = range(len(group))
+                group_sample_numbers = [int(x) for x in range(len(group))]
                 ax.plot(group_sample_numbers, group['value'], label=label_str, marker='o', markersize=3)
             
             ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
@@ -747,8 +747,8 @@ class VLLMMetricsVisualizer:
             
             metric_data = metric_data.sort_values('timestamp')
             
-            # Create sample numbers for x-axis
-            sample_numbers = range(len(metric_data))
+            # Create sample numbers for x-axis - ensure integers
+            sample_numbers = [int(x) for x in range(len(metric_data))]
             
             # Handle labeled metrics (like histogram buckets with 'le' labels)
             if 'labels' in metric_data.columns and not metric_data['labels'].isna().all():
@@ -763,7 +763,7 @@ class VLLMMetricsVisualizer:
                     # Get original labels for display
                     original_labels = group['labels'].iloc[0] if not group['labels'].isna().iloc[0] else {}
                     label_str = ', '.join([f"{k}={v}" for k, v in original_labels.items()]) if original_labels else 'default'
-                    group_sample_numbers = range(len(group))
+                    group_sample_numbers = [int(x) for x in range(len(group))]
                     ax.plot(group_sample_numbers, group['value'], label=label_str, marker='o', markersize=2)
                 
                 # Add legend if multiple label groups exist
@@ -876,10 +876,10 @@ class VLLMMetricsVisualizer:
         metric_data1 = self._process_metric_by_type(metric_data1, metric_name)
         metric_data2 = self._process_metric_by_type(metric_data2, metric_name)
         
-        # Create sample numbers for x-axis (same range for both)
+        # Create sample numbers for x-axis (same range for both) - ensure integers
         max_samples = max(len(metric_data1), len(metric_data2))
-        sample_numbers1 = range(len(metric_data1))
-        sample_numbers2 = range(len(metric_data2))
+        sample_numbers1 = [int(x) for x in range(len(metric_data1))]
+        sample_numbers2 = [int(x) for x in range(len(metric_data2))]
         
         plt.style.use(self.style)
         fig, ax = plt.subplots(figsize=self.figsize)
@@ -975,9 +975,9 @@ class VLLMMetricsVisualizer:
             metric_data1 = self._process_metric_by_type(metric_data1, metric_name)
             metric_data2 = self._process_metric_by_type(metric_data2, metric_name)
             
-            # Create sample numbers for x-axis
-            sample_numbers1 = range(len(metric_data1))
-            sample_numbers2 = range(len(metric_data2))
+            # Create sample numbers for x-axis - ensure integers
+            sample_numbers1 = [int(x) for x in range(len(metric_data1))]
+            sample_numbers2 = [int(x) for x in range(len(metric_data2))]
             
             # Plot both runs as line graphs
             ax.plot(sample_numbers1, metric_data1['value'], 

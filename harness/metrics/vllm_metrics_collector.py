@@ -697,7 +697,7 @@ class VLLMMetricsCollector:
             if metric_type == 'COUNTER':
                 metric_data = self._process_counter_metric(metric_data)
             elif metric_type == 'HISTOGRAM':
-                metric_data = self._process_histogram_metric(metric_data)
+                metric_data = self._process_histogram_metric_df(metric_data)
             # GAUGE and others remain unchanged
             
             # Convert back to list of dicts
@@ -741,8 +741,19 @@ class VLLMMetricsCollector:
         
         return df_processed
     
-    def _process_histogram_metric(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Process histogram metrics (placeholder)."""
+    def _process_histogram_metric_df(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Process histogram metrics DataFrame (for post-processing).
+        
+        This method is used during auto-postprocessing to process histogram metrics
+        in a DataFrame format. It's separate from _process_histogram_metric which
+        is used during metric parsing.
+        
+        Args:
+            df: DataFrame with histogram metric data
+            
+        Returns:
+            DataFrame with processed histogram values
+        """
         # TODO: Implement histogram processing
         self.logger.info("Histogram processing not yet implemented - returning raw values")
         return df

@@ -11,6 +11,8 @@ import time
 import logging
 import argparse
 import subprocess
+import signal
+import atexit
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -105,7 +107,7 @@ class Llama31_8BHarness:
                  num_samples: int = 13368,
                  output_dir: str = "./harness_output",
                  enable_metrics: bool = False,
-                 metrics_interval: int = 10,
+                 metrics_interval: int = 15,
                  mlflow_tracking_uri: Optional[str] = None,
                  mlflow_experiment_name: Optional[str] = None,
                  mlflow_output_dir: Optional[str] = None):
@@ -200,6 +202,10 @@ class Llama31_8BHarness:
         self.stderr_file = None
         self.original_stdout = None
         self.original_stderr = None
+        
+        # Signal handling
+        self._cleanup_on_exit = False
+        self._setup_signal_handlers()
     
     def _initialize_mlflow(self):
         """Initialize MLflow client if configured."""
@@ -259,6 +265,66 @@ class Llama31_8BHarness:
         if self.stderr_file:
             self.stderr_file.close()
             self.stderr_file = None
+    
+    def _setup_signal_handlers(self):
+        """Setup signal handlers for graceful shutdown."""
+        def signal_handler(signum, frame):
+            """Handle shutdown signals (SIGINT, SIGTERM)."""
+            signal_name = signal.Signals(signum).name
+            self.logger.warning(f"Received {signal_name} signal. Initiating graceful shutdown...")
+            self._cleanup_on_exit = True
+            self._emergency_cleanup()
+            sys.exit(130 if signum == signal.SIGINT else 143)  # Standard exit codes for signals
+        
+        # Register signal handlers
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+        # Register atexit handler as backup
+        atexit.register(self._emergency_cleanup)
+    
+    def _emergency_cleanup(self):
+        """Perform emergency cleanup of server and processes."""
+        try:
+            self.logger.info("Performing emergency cleanup...")
+            
+            # Stop metrics collector if running
+            if self.metrics_collector and hasattr(self.metrics_collector, 'running'):
+                try:
+                    if self.metrics_collector.running:
+                        self.metrics_collector.stop()
+                except Exception as e:
+                    self.logger.warning(f"Error stopping metrics collector during cleanup: {e}")
+            
+            # Stop server if started
+            if self.server and self.server_started:
+                try:
+                    self.logger.info("Stopping server during emergency cleanup...")
+                    self.stop_server()
+                except Exception as e:
+                    self.logger.warning(f"Error stopping server during cleanup: {e}")
+            
+            # Cleanup client if initialized
+            if self.client:
+                try:
+                    self.logger.info("Cleaning up client during emergency cleanup...")
+                    self.client.cleanup()
+                except Exception as e:
+                    self.logger.warning(f"Error cleaning up client during cleanup: {e}")
+            
+            # End MLflow run if active
+            if self.mlflow_client:
+                try:
+                    self.mlflow_client.end_run()
+                except Exception as e:
+                    self.logger.warning(f"Error ending MLflow run during cleanup: {e}")
+            
+            # Restore stdout/stderr redirection
+            self._restore_stdout_redirection()
+            
+            self.logger.info("Emergency cleanup completed")
+        except Exception as e:
+            self.logger.error(f"Error during emergency cleanup: {e}")
     
     def _collect_environment_info(self):
         """Collect environment information."""
@@ -392,7 +458,8 @@ class Llama31_8BHarness:
                     'vllm:num_requests_running',
                     'vllm:generation_tokens_total',
                     'vllm:prompt_tokens_total',
-                    'vllm:kv_cache_usage_perc'
+                    'vllm:kv_cache_usage_perc',
+                    'vllm:time_to_first_token_seconds'
                 ],
                 collection_interval=self.metrics_interval,
                 timeout=30,

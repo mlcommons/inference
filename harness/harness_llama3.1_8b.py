@@ -391,12 +391,8 @@ class Llama31_8BHarness:
                 metrics_to_collect=[
                     'vllm:num_requests_running',
                     'vllm:generation_tokens_total',
-                    'vllm:request_success_total',
-                    'vllm:request_failure_total',
-                    'vllm:request_latency',
-                    'vllm:gpu_utilization',
-                    'vllm:gpu_memory_used',
-                    'vllm:kv_cache_usage_ratio'
+                    'vllm:prompt_tokens_total',
+                    'vllm:kv_cache_usage_perc'
                 ],
                 collection_interval=self.metrics_interval,
                 timeout=30,
@@ -701,9 +697,9 @@ class Llama31_8BHarness:
             # Generate visualizations for metrics that are available
             visualization_configs = [
                 {
-                    'metric': 'vllm:gpu_utilization',
-                    'title': 'GPU Utilization Over Time',
-                    'filename': f'gpu_utilization_{timestamp}.png'
+                    'metric': 'vllm:generation_tokens_total',
+                    'title': 'Generation Tokens Total over Time',
+                    'filename': f'generation_tokens_total_{timestamp}.png'
                 },
                 {
                     'metric': 'vllm:num_requests_running',
@@ -711,14 +707,14 @@ class Llama31_8BHarness:
                     'filename': f'requests_running_{timestamp}.png'
                 },
                 {
-                    'metric': 'vllm:request_latency',
-                    'title': 'Request Latency Over Time',
-                    'filename': f'request_latency_{timestamp}.png'
+                    'metric': 'vllm:prompt_tokens_total',
+                    'title': 'Prompt tokens total over time',
+                    'filename': f'prompt_tokens_total_{timestamp}.png'
                 },
                 {
-                    'metric': 'vllm:gpu_memory_used',
-                    'title': 'GPU Memory Usage Over Time',
-                    'filename': f'gpu_memory_{timestamp}.png'
+                    'metric': 'vllm:kv_cache_usage_perc',
+                    'title': 'KV cache usage percentage over time',
+                    'filename': f'kv_cache_usage_perc_{timestamp}.png'
                 }
             ]
             
@@ -726,7 +722,7 @@ class Llama31_8BHarness:
             for viz in visualization_configs:
                 # Check if metric is available before trying to plot
                 if available_metrics and viz['metric'] not in available_metrics:
-                    self.logger.debug(f"Metric {viz['metric']} not available in metrics file, skipping")
+                    self.logger.info(f"Metric {viz['metric']} not available in metrics file, skipping")
                     continue
                 
                 try:

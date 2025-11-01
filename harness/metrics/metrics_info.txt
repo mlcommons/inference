@@ -32,7 +32,7 @@ vllm:request_itl:HISTOGRAM
 vllm:request_latency:HISTOGRAM
 
 # Cache Metrics
-vllm:kv_cache_usage_ratio:GAUGE
+vllm:kv_cache_usage_perc:GAUGE
 vllm:kv_cache_used:GAUGE
 vllm:kv_cache_total:GAUGE
 
@@ -44,6 +44,7 @@ vllm:requests_per_second:GAUGE
 vllm:cpu_utilization:GAUGE
 vllm:memory_used:GAUGE
 vllm:memory_total:GAUGE
+
 
 # Histogram Components (automatically detected by suffix)
 # _bucket, _count, _sum suffixes are handled as histogram components

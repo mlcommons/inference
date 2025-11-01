@@ -245,10 +245,54 @@ class Llama31_8BHarness:
             sys.stdout = self.stdout_file
             sys.stderr = self.stderr_file
             
+            # Update logging handlers to use redirected streams
+            # The issue is that logging handlers maintain references to the original streams
+            # We need to update all StreamHandlers to use the new file streams
+            root_logger = logging.getLogger()
+            for handler in root_logger.handlers[:]:  # Use slice copy to avoid modification during iteration
+                if isinstance(handler, logging.StreamHandler):
+                    # Check what stream this handler is using
+                    handler_stream = handler.stream
+                    # Update if it's using stdout or stderr (could be original or current)
+                    if handler_stream is self.original_stdout or handler_stream is sys.stdout or (hasattr(handler_stream, 'fileno') and handler_stream.fileno() == 1):
+                        handler.setStream(self.stdout_file)
+                        handler.flush()
+                    elif handler_stream is self.original_stderr or handler_stream is sys.stderr or (hasattr(handler_stream, 'fileno') and handler_stream.fileno() == 2):
+                        handler.setStream(self.stderr_file)
+                        handler.flush()
+            
+            # Also update handlers for all loggers (including this specific logger)
+            for logger_name in logging.Logger.manager.loggerDict:
+                logger = logging.getLogger(logger_name)
+                for handler in logger.handlers[:]:
+                    if isinstance(handler, logging.StreamHandler):
+                        handler_stream = handler.stream
+                        if handler_stream is self.original_stdout or handler_stream is sys.stdout or (hasattr(handler_stream, 'fileno') and handler_stream.fileno() == 1):
+                            handler.setStream(self.stdout_file)
+                            handler.flush()
+                        elif handler_stream is self.original_stderr or handler_stream is sys.stderr or (hasattr(handler_stream, 'fileno') and handler_stream.fileno() == 2):
+                            handler.setStream(self.stderr_file)
+                            handler.flush()
+            
+            # Force flush to ensure the message goes to file
+            self.stdout_file.flush()
+            self.stderr_file.flush()
+            
+            # Log to the redirected stream (will go to file now)
+            print(f"Stdout redirected to: {stdout_file_path}", file=self.stdout_file, flush=True)
+            print(f"Stderr redirected to: {stderr_file_path}", file=self.stderr_file, flush=True)
+            
             self.logger.info(f"Stdout redirected to: {stdout_file_path}")
             self.logger.info(f"Stderr redirected to: {stderr_file_path}")
+            
+            # Force flush again after logging
+            self.stdout_file.flush()
+            self.stderr_file.flush()
         except Exception as e:
-            self.logger.warning(f"Failed to setup stdout redirection: {e}")
+            # Use print since logger might not work yet
+            print(f"Failed to setup stdout redirection: {e}", file=self.original_stderr if self.original_stderr else sys.stderr)
+            if self.logger:
+                self.logger.warning(f"Failed to setup stdout redirection: {e}")
     
     def _restore_stdout_redirection(self):
         """Restore original stdout and stderr."""

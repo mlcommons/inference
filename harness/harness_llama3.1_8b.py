@@ -12,6 +12,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any
+import subprocess
 
 # Add harness directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -106,11 +107,12 @@ class Llama31_8BHarness:
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
         # Create subdirectories for organized output
-        self.harness_output_dir = self.output_dir / "harness"
+        self.harness_output_dir = self.output_dir / "harness_output"
         self.server_output_dir = self.output_dir / "server"
         self.metrics_output_dir = self.output_dir / "metrics"
         self.visualizations_output_dir = self.output_dir / "visualizations"
         self.mlperf_output_dir = self.output_dir / "mlperf"
+        self.environment_output_dir = self.output_dir / "environment"
         
         # Create all subdirectories
         self.harness_output_dir.mkdir(parents=True, exist_ok=True)
@@ -118,6 +120,7 @@ class Llama31_8BHarness:
         self.metrics_output_dir.mkdir(parents=True, exist_ok=True)
         self.visualizations_output_dir.mkdir(parents=True, exist_ok=True)
         self.mlperf_output_dir.mkdir(parents=True, exist_ok=True)
+        self.environment_output_dir.mkdir(parents=True, exist_ok=True)
         
         self.logger.info(f"Output directory structure created at: {self.output_dir}")
         self.logger.info(f"  - Harness output: {self.harness_output_dir}")
@@ -125,6 +128,13 @@ class Llama31_8BHarness:
         self.logger.info(f"  - Metrics: {self.metrics_output_dir}")
         self.logger.info(f"  - Visualizations: {self.visualizations_output_dir}")
         self.logger.info(f"  - MLPerf logs: {self.mlperf_output_dir}")
+        self.logger.info(f"  - Environment info: {self.environment_output_dir}")
+        
+        # Setup stdout redirection to harness_output
+        self._setup_stdout_redirection()
+        
+        # Collect environment information
+        self._collect_environment_info()
         
         # Components
         self.server = None
@@ -134,6 +144,69 @@ class Llama31_8BHarness:
         
         # State
         self.server_started = False
+        
+        # Stdout redirection
+        self.stdout_file = None
+        self.stderr_file = None
+        self.original_stdout = None
+        self.original_stderr = None
+    
+    def _setup_stdout_redirection(self):
+        """Setup stdout and stderr redirection to harness_output directory."""
+        try:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            stdout_file_path = self.harness_output_dir / f"harness_stdout_{timestamp}.log"
+            stderr_file_path = self.harness_output_dir / f"harness_stderr_{timestamp}.log"
+            
+            # Open files for stdout and stderr
+            self.stdout_file = open(stdout_file_path, 'w', buffering=1)
+            self.stderr_file = open(stderr_file_path, 'w', buffering=1)
+            
+            # Save original stdout/stderr
+            self.original_stdout = sys.stdout
+            self.original_stderr = sys.stderr
+            
+            # Redirect stdout and stderr
+            sys.stdout = self.stdout_file
+            sys.stderr = self.stderr_file
+            
+            self.logger.info(f"Stdout redirected to: {stdout_file_path}")
+            self.logger.info(f"Stderr redirected to: {stderr_file_path}")
+        except Exception as e:
+            self.logger.warning(f"Failed to setup stdout redirection: {e}")
+    
+    def _restore_stdout_redirection(self):
+        """Restore original stdout and stderr."""
+        if self.original_stdout:
+            sys.stdout = self.original_stdout
+            sys.stdout.flush()
+        if self.original_stderr:
+            sys.stderr = self.original_stderr
+            sys.stderr.flush()
+        
+        if self.stdout_file:
+            self.stdout_file.close()
+            self.stdout_file = None
+        if self.stderr_file:
+            self.stderr_file.close()
+            self.stderr_file = None
+    
+    def _collect_environment_info(self):
+        """Collect environment information."""
+        try:
+            from environment.environment_info import EnvironmentInfoCollector
+            
+            collector = EnvironmentInfoCollector(self.environment_output_dir)
+            results = collector.collect_all()
+            
+            self.logger.info("Environment information collected:")
+            self.logger.info(f"  - Successfully collected: {list(results.get('success', {}).keys())}")
+            if results.get('errors'):
+                self.logger.warning(f"  - Errors: {list(results['errors'].keys())}")
+        except ImportError as e:
+            self.logger.warning(f"Could not import environment info collector: {e}")
+        except Exception as e:
+            self.logger.warning(f"Error collecting environment info: {e}")
     
     def start_server(self):
         """Start inference server if not using external API."""
@@ -233,9 +306,11 @@ class Llama31_8BHarness:
             return
         
         try:
-            # Use metrics subdirectory
-            metrics_file = self.metrics_output_dir / f"metrics_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-            storage = JSONStorage(str(metrics_file))
+            # Use metrics subdirectory - default to CSV format
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            metrics_file = self.metrics_output_dir / f"metrics_{timestamp}.csv"
+            from metrics.vllm_metrics_collector import CSVStorage
+            storage = CSVStorage(str(metrics_file))
             
             self.metrics_collector = VLLMMetricsCollector(
                 metrics_endpoint=f"{self.api_server_url}/metrics",
@@ -252,7 +327,7 @@ class Llama31_8BHarness:
                 ],
                 collection_interval=self.metrics_interval,
                 timeout=30,
-                auto_postprocess=True,
+                auto_postprocess=True,  # Enable auto-postprocessing to create processed file
                 debug_mode=True
             )
             
@@ -368,7 +443,19 @@ class Llama31_8BHarness:
             self.logger.info("=" * 80)
             self.logger.info(f"Test duration: {test_duration:.2f} seconds")
             
-            # Generate metrics visualizations
+            # Stop metrics collector before generating visualizations
+            # (metrics file is finalized when collector stops)
+            if metrics_started and self.metrics_collector:
+                try:
+                    self.logger.info("Stopping metrics collector...")
+                    self.metrics_collector.stop()
+                    # Wait for file to be written and processed (if auto_postprocess enabled)
+                    # Auto-postprocessing happens in stop() method, so wait a bit for processed file
+                    time.sleep(1.0)  # Increased delay to ensure processed file is created
+                except Exception as e:
+                    self.logger.warning(f"Error stopping metrics collector: {e}")
+            
+            # Generate metrics visualizations after collector is stopped
             if self.enable_metrics and self.metrics_collector:
                 self._generate_metrics_visualizations()
             
@@ -391,13 +478,16 @@ class Llama31_8BHarness:
             # Cleanup in reverse order of initialization
             self.logger.info("Performing cleanup...")
             
-            # Stop metrics collector
+            # Stop metrics collector if not already stopped (in case of exception)
             if metrics_started and self.metrics_collector:
                 try:
-                    self.logger.info("Stopping metrics collector...")
-                    self.metrics_collector.stop()
+                    # Check if already stopped
+                    if hasattr(self.metrics_collector, 'running') and self.metrics_collector.running:
+                        self.logger.info("Stopping metrics collector in finally block...")
+                        self.metrics_collector.stop()
+                        time.sleep(0.5)
                 except Exception as e:
-                    self.logger.warning(f"Error stopping metrics collector: {e}")
+                    self.logger.warning(f"Error stopping metrics collector in finally: {e}")
             
             # Cleanup client
             if client_initialized and self.client:
@@ -415,6 +505,9 @@ class Llama31_8BHarness:
                 except Exception as e:
                     self.logger.warning(f"Error stopping server: {e}")
             
+            # Restore stdout/stderr redirection
+            self._restore_stdout_redirection()
+            
             self.logger.info("Cleanup completed")
     
     def _load_samples_to_ram(self, query_samples):
@@ -428,19 +521,43 @@ class Llama31_8BHarness:
     def _generate_metrics_visualizations(self):
         """Generate metrics visualizations after test."""
         if not self.metrics_collector or not self.metrics_visualizer:
+            self.logger.warning("Metrics collector or visualizer not available")
             return
         
         try:
+            # Set matplotlib backend for headless environments
+            import matplotlib
+            matplotlib.use('Agg')  # Use non-interactive backend
+            
             storage_file = self.metrics_collector._get_storage_file_path()
-            if not storage_file or not os.path.exists(storage_file):
-                self.logger.warning("No metrics file found for visualization")
+            if not storage_file:
+                self.logger.warning("No storage file path available from metrics collector")
                 return
+            
+            if not os.path.exists(storage_file):
+                self.logger.warning(f"Metrics file not found: {storage_file}")
+                return
+            
+            # Check if file has content
+            if os.path.getsize(storage_file) == 0:
+                self.logger.warning(f"Metrics file is empty: {storage_file}")
+                return
+            
+            self.logger.info(f"Generating visualizations from metrics file: {storage_file}")
+            
+            # Get available metrics from the file
+            try:
+                available_metrics = self.metrics_visualizer.get_available_metrics(storage_file)
+                self.logger.info(f"Available metrics in file: {available_metrics}")
+            except Exception as e:
+                self.logger.warning(f"Could not get available metrics: {e}", exc_info=True)
+                available_metrics = []
             
             # Use visualizations subdirectory (already created in __init__)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             
-            # Generate visualizations
-            visualizations = [
+            # Generate visualizations for metrics that are available
+            visualization_configs = [
                 {
                     'metric': 'vllm:gpu_utilization',
                     'title': 'GPU Utilization Over Time',
@@ -450,24 +567,78 @@ class Llama31_8BHarness:
                     'metric': 'vllm:num_requests_running',
                     'title': 'Running Requests Over Time',
                     'filename': f'requests_running_{timestamp}.png'
+                },
+                {
+                    'metric': 'vllm:request_latency',
+                    'title': 'Request Latency Over Time',
+                    'filename': f'request_latency_{timestamp}.png'
+                },
+                {
+                    'metric': 'vllm:gpu_memory_used',
+                    'title': 'GPU Memory Usage Over Time',
+                    'filename': f'gpu_memory_{timestamp}.png'
                 }
             ]
             
-            for viz in visualizations:
+            successful_viz = 0
+            for viz in visualization_configs:
+                # Check if metric is available before trying to plot
+                if available_metrics and viz['metric'] not in available_metrics:
+                    self.logger.debug(f"Metric {viz['metric']} not available in metrics file, skipping")
+                    continue
+                
                 try:
                     save_path = self.visualizations_output_dir / viz['filename']
+                    self.logger.info(f"Generating visualization for {viz['metric']}...")
+                    
+                    # Try to use processed file if available (handles dict labels better)
+                    # Check for processed CSV/JSON file
+                    base_name = os.path.splitext(storage_file)[0]
+                    processed_csv = f"{base_name}_processed.csv"
+                    processed_json = f"{base_name}_processed.json"
+                    
+                    # Use processed file if it exists, otherwise use original
+                    viz_file = storage_file
+                    if os.path.exists(processed_csv):
+                        viz_file = processed_csv
+                        self.logger.info(f"Using processed CSV file for visualization: {viz_file}")
+                    elif os.path.exists(processed_json):
+                        viz_file = processed_json
+                        self.logger.info(f"Using processed JSON file for visualization: {viz_file}")
+                    
+                    # Use show_labels=False to avoid pandas groupby on dict labels
+                    # (This is a workaround for the unhashable dict issue)
                     self.metrics_visualizer.plot_metric(
-                        file_path=storage_file,
+                        file_path=viz_file,
                         metric_name=viz['metric'],
                         title=viz['title'],
-                        save_path=str(save_path)
+                        save_path=str(save_path),
+                        show_labels=False  # Disable label grouping to avoid dict unhashable error
                     )
-                    self.logger.info(f"Generated visualization: {save_path}")
+                    # Close plot to free memory
+                    import matplotlib.pyplot as plt
+                    plt.close('all')
+                    self.logger.info(f"✓ Generated visualization: {save_path}")
+                    successful_viz += 1
+                except ValueError as e:
+                    # Metric not found in data
+                    self.logger.warning(f"Metric {viz['metric']} not found in data: {e}")
                 except Exception as e:
-                    self.logger.error(f"Failed to generate visualization {viz['filename']}: {e}")
+                    self.logger.error(f"Failed to generate visualization {viz['filename']}: {e}", exc_info=True)
+                    # Close plot even on error
+                    try:
+                        import matplotlib.pyplot as plt
+                        plt.close('all')
+                    except:
+                        pass
+            
+            if successful_viz > 0:
+                self.logger.info(f"Successfully generated {successful_viz} visualization(s) in {self.visualizations_output_dir}")
+            else:
+                self.logger.warning("No visualizations were generated. Check if metrics file contains valid data.")
         
         except Exception as e:
-            self.logger.error(f"Error generating visualizations: {e}")
+            self.logger.error(f"Error generating visualizations: {e}", exc_info=True)
 
 
 def main():

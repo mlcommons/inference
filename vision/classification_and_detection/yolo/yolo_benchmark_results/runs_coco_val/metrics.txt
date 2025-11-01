@@ -1,0 +1,48 @@
+================================================================================
+Timestamp: 2025-10-30T00:08:32
+Host: macOS-26.0.1-arm64-arm-64bit | Python: 3.11.13 | Processor: arm
+VAL_DIR: /Volumes/T7 Shield/MLCommon/yolo/datasets/coco/images/val2017
+DATA_YAML: /Volumes/T7 Shield/MLCommon/yolo/datasets/coco_val_only.yaml
+Models: yolo11s.pt
+--------------------------------------------------------------------------------
+Discovered images: 5000
+
+[yolo11s] --- EXPORT + EVAL ---
+[yolo11s][CoreML] predict: 5000 imgs, 108.30s, 46.17 img/s
+[yolo11s][CoreML] mAP50-95=0.5252 | mAP50=0.6634 | speed(ms) pre/inf/post=0.573299850767944/13.753231837181374/0.08172124429838731
+[yolo11s][ONNX]   predict: 5000 imgs, 477.45s, 10.47 img/s
+[yolo11s][ONNX]   mAP50-95=0.5262 | mAP50=0.6638 | speed(ms) pre/inf/post=0.6793928029364906/86.38641513794427/0.10911881694337353
+
+Done. Metrics appended to: /Volumes/T7 Shield/MLCommon/yolo/runs_coco_val/metrics_small.txt
+================================================================================
+Timestamp: 2025-10-30T00:34:26
+Host: macOS-26.0.1-arm64-arm-64bit | Python: 3.11.13 | Processor: arm
+VAL_DIR: /Volumes/T7 Shield/MLCommon/yolo/datasets/coco/images/val2017
+DATA_YAML: /Volumes/T7 Shield/MLCommon/yolo/datasets/coco_val_only.yaml
+Models: yolo11n.pt
+--------------------------------------------------------------------------------
+Discovered images: 5000
+
+[yolo11n] --- EXPORT + EVAL ---
+[yolo11n][CoreML] predict: 5000 imgs, 90.96s, 54.97 img/s
+[yolo11n][CoreML] mAP50-95=0.4658 | mAP50=0.5982 | speed(ms) pre/inf/post=0.6517729411134496/11.438227668043693/0.07948487789835781
+[yolo11n][ONNX]   predict: 5000 imgs, 223.84s, 22.34 img/s
+[yolo11n][ONNX]   mAP50-95=0.4662 | mAP50=0.5993 | speed(ms) pre/inf/post=0.6231963686062955/37.85684239022667/0.11305100991157815
+
+Done. Metrics appended to: /Volumes/T7 Shield/MLCommon/yolo/runs_coco_val/metrics_small.txt
+================================================================================
+Timestamp: 2025-10-30T00:51:46
+Host: macOS-26.0.1-arm64-arm-64bit | Python: 3.11.13 | Processor: arm
+VAL_DIR: /Volumes/T7 Shield/MLCommon/yolo/datasets/coco/images/val2017
+DATA_YAML: /Volumes/T7 Shield/MLCommon/yolo/datasets/coco_val_only.yaml
+Models: yolo11m.pt
+--------------------------------------------------------------------------------
+Discovered images: 5000
+
+[yolo11m] --- EXPORT + EVAL ---
+[yolo11m][CoreML] predict: 5000 imgs, 149.26s, 33.50 img/s
+[yolo11m][CoreML] mAP50-95=0.5639 | mAP50=0.6983 | speed(ms) pre/inf/post=0.59999501981074/22.165189576765986/0.07974841259419918
+[yolo11m][ONNX]   predict: 5000 imgs, 1168.76s, 4.28 img/s
+[yolo11m][ONNX]   mAP50-95=0.5650 | mAP50=0.6984 | speed(ms) pre/inf/post=0.4301598571124487/222.40597772514448/0.11276278817094862
+
+Done. Metrics appended to: /Volumes/T7 Shield/MLCommon/yolo/runs_coco_val/metrics_small.txt

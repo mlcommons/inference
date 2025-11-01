@@ -1,0 +1,59 @@
+# Example YAML configuration for inference server
+# This file demonstrates how to configure an inference server
+
+# Backend type: 'vllm' or 'sglang'
+backend: vllm
+
+# Model name or path
+model: RedHatAI/Meta-Llama-3.1-8B-FP8
+
+# Server port
+port: 8000
+
+# Output directory for server logs
+#output_dir: ./test_dir
+
+# Heartbeat configuration
+heartbeat_interval: 100      # Interval between heartbeat checks (seconds)
+heartbeat_timeout: 30      # Timeout for heartbeat checks (seconds)
+startup_timeout: 600       # Timeout for server startup (seconds)
+
+# Debug mode - verify cleanup of server and child processes
+# Especially useful for tensor parallel/data parallel setups
+debug_mode: false          # Enable debug mode for process cleanup verification
+
+# Path to Python binary (default: 'python')
+#binary_path: python
+
+# Custom launch command (optional - overrides default command generation)
+# If specified, this command will be used instead of the backend's default command
+# launch_command:
+#   - python
+#   - -m
+#   - vllm.entrypoints.openai.api_server
+#   - --model
+#   - meta-llama/Llama-2-7b-hf
+#   - --port
+#   - "8000"
+
+# Environment variables to set
+env_vars:
+  CUDA_VISIBLE_DEVICES: "4,5,6,7"
+  OMP_NUM_THREADS: "16"
+  # Add any other environment variables here
+
+# Backend-specific configuration
+config:
+  # For vLLM
+  api_server_args:
+    - --tensor-parallel-size
+    - "1"
+    - --gpu-memory-utilization
+    - "0.9"
+    # Add any other vLLM arguments here
+  
+  # For SGLang
+  # server_args:
+  #   - --tp
+  #   - "1"
+

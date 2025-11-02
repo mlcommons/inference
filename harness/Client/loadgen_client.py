@@ -299,7 +299,7 @@ class LoadGenOfflineClient(LoadGenClient):
             "stream": False
         }
         
-        response = requests.post(self.completions_endpoint, json=api_payload, timeout=300)
+        response = requests.post(self.completions_endpoint, json=api_payload, timeout=None)
         if response.status_code != 200:
             raise RuntimeError(f"API request failed: {response.status_code} - {response.text}")
         
@@ -337,6 +337,8 @@ class LoadGenOfflineClient(LoadGenClient):
             response_size = len(token_bytes)
             
             response = lg.QuerySampleResponse(query_id, response_data, response_size, token_count)
+            self.logger.info(f"Query {query_id}: {token_count} tokens")
+            self.logger.debug(f"Query {query_id}: Response: {text_response}")
             lg.QuerySamplesComplete([response])
     
     def _send_error_responses(self, batch: List['lg.QuerySample']) -> None:
@@ -505,7 +507,7 @@ class LoadGenServerClient(LoadGenClient):
                     json=json_data,
                     verify=False,
                     stream=True,
-                    timeout=300
+                    timeout=None
                 ) as resp:
                     if resp.status_code != 200:
                         self.logger.error(f"API server returned status {resp.status_code}: {resp.text}")

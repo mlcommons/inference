@@ -5,7 +5,7 @@
 backend: vllm
 
 # Model name or path
-model: RedHatAI/Meta-Llama-3.1-8B-FP8
+model: RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8
 
 # Server port
 port: 8000

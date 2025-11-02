@@ -254,6 +254,7 @@ class MLflowClient:
             Dictionary of metric names to values
         """
         metrics = {}
+        scenario = None  # Will be detected from file
         
         try:
             with open(summary_file, 'r') as f:
@@ -266,6 +267,13 @@ class MLflowClient:
             for line in lines:
                 orig_line = line  # Keep original for debugging
                 line = line.strip()
+                
+                # Detect scenario early from "Scenario : Server" or "Scenario : Offline"
+                if scenario is None and 'Scenario :' in line:
+                    scenario_str = line.split(':', 1)[1].strip() if ':' in line else ''
+                    scenario = 'Server' if 'Server' in scenario_str else 'Offline'
+                    metrics['loadgen_scenario_server'] = 1.0 if scenario == 'Server' else 0.0
+                    self.logger.info(f"Detected scenario from summary file: {scenario}")
                 
                 # Check for section headers - they appear before separator lines
                 if 'Additional Stats' in line:
@@ -297,7 +305,12 @@ class MLflowClient:
                         if len(parts) == 2:
                             try:
                                 value = float(parts[1].strip())
-                                metrics['loadgen_samples_per_second'] = value
+                                # Store both specific and generic names
+                                if 'completed' in line.lower():
+                                    metrics['loadgen_completed_samples_per_second'] = value
+                                    metrics['loadgen_samples_per_second'] = value  # Generic alias
+                                else:
+                                    metrics['loadgen_samples_per_second'] = value
                             except ValueError:
                                 pass
                     
@@ -308,11 +321,16 @@ class MLflowClient:
                         if len(parts) == 2:
                             try:
                                 value = float(parts[1].strip())
-                                metrics['loadgen_tokens_per_second'] = value
+                                # Store both specific and generic names
+                                if 'completed' in line.lower():
+                                    metrics['loadgen_completed_tokens_per_second'] = value
+                                    metrics['loadgen_tokens_per_second'] = value  # Generic alias
+                                else:
+                                    metrics['loadgen_tokens_per_second'] = value
                             except ValueError:
                                 pass
                 
-                # Extract Scheduled samples per second (Server scenario) - in Additional Stats
+                # Extract Scheduled samples per second (Server scenario only) - in Additional Stats
                 if in_additional_stats and 'Scheduled samples per second' in line:
                     parts = line.split(':', 1)
                     if len(parts) == 2:
@@ -323,6 +341,7 @@ class MLflowClient:
                             pass
                 
                 # Extract latency metrics (Additional Stats section)
+                # Note: Server scenario also has "Completed tokens per second" repeated here
                 if in_additional_stats:
                     # Min/Max/Mean latency
                     if 'Min latency (ns)' in line and ':' in line:
@@ -376,7 +395,8 @@ class MLflowClient:
                                 except ValueError:
                                     pass
                     
-                    # First Token latency metrics (Server scenario)
+                    # First Token latency metrics (Server scenario only)
+                    # These only appear in Server scenario summaries
                     if 'Min First Token latency (ns)' in line and ':' in line:
                         parts = line.split(':', 1)
                         if len(parts) == 2:
@@ -428,7 +448,8 @@ class MLflowClient:
                                 except ValueError:
                                     pass
                     
-                    # Time to Output Token metrics (Server scenario)
+                    # Time to Output Token metrics (Server scenario only)
+                    # These only appear in Server scenario summaries
                     if 'Min Time to Output Token (ns)' in line and ':' in line:
                         parts = line.split(':', 1)
                         if len(parts) == 2:
@@ -517,8 +538,17 @@ class MLflowClient:
                         except (ValueError, IndexError):
                             pass
             
+            # Log scenario-specific metrics summary
             if metrics:
-                self.logger.info(f"Extracted {len(metrics)} LoadGen metrics from summary file")
+                scenario_detected = scenario or "Unknown"
+                # Count Server-specific metrics
+                server_metrics = [k for k in metrics.keys() if any(term in k.lower() for term in ['ttft', 'tpot', 'scheduled', 'completed_samples', 'completed_tokens'])]
+                self.logger.info(f"Extracted {len(metrics)} LoadGen metrics from summary file (Scenario: {scenario_detected})")
+                if server_metrics and scenario_detected == 'Server':
+                    self.logger.info(f"Server-specific metrics found: {len(server_metrics)} metrics including TTFT, TPOT, Scheduled, and Completed throughput")
+                    # List key Server metrics
+                    key_server_metrics = [k for k in server_metrics if any(term in k for term in ['ttft', 'tpot', 'scheduled', 'completed'])]
+                    self.logger.debug(f"Server metrics: {sorted(key_server_metrics)}")
             else:
                 self.logger.warning("No metrics extracted from summary file")
                 

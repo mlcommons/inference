@@ -110,7 +110,9 @@ class Llama31_8BHarness:
                  metrics_interval: int = 15,
                  mlflow_tracking_uri: Optional[str] = None,
                  mlflow_experiment_name: Optional[str] = None,
-                 mlflow_output_dir: Optional[str] = None):
+                 mlflow_output_dir: Optional[str] = None,
+                 server_coalesce_queries: Optional[bool] = None,
+                 server_target_qps: Optional[float] = None):
         """
         Initialize harness.
         
@@ -129,6 +131,8 @@ class Llama31_8BHarness:
             mlflow_tracking_uri: MLflow tracking server URI (e.g., http://localhost:5000)
             mlflow_experiment_name: MLflow experiment name
             mlflow_output_dir: Output directory to upload to MLflow (defaults to output_dir)
+            server_coalesce_queries: Enable query coalescing for Server scenario (Server only)
+            server_target_qps: Target queries per second for Server scenario (Server only)
         """
         self.model_name = model_name
         self.dataset_path = dataset_path
@@ -141,6 +145,8 @@ class Llama31_8BHarness:
         self.output_dir = Path(output_dir)
         self.enable_metrics = enable_metrics
         self.metrics_interval = metrics_interval
+        self.server_coalesce_queries = server_coalesce_queries
+        self.server_target_qps = server_target_qps
         
         # MLflow configuration
         self.mlflow_tracking_uri = mlflow_tracking_uri
@@ -590,7 +596,15 @@ class Llama31_8BHarness:
             settings = lg.TestSettings()
             if self.scenario == "Server":
                 settings.scenario = lg.TestScenario.Server
-                settings.sample_concatenate_permutation = True
+                
+                # Set Server-specific parameters if provided
+                if self.server_coalesce_queries is not None:
+                    settings.server_coalesce_queries = self.server_coalesce_queries
+                    self.logger.info(f"Server coalesce queries set to: {self.server_coalesce_queries}")
+                
+                if self.server_target_qps is not None:
+                    settings.server_target_qps = self.server_target_qps
+                    self.logger.info(f"Server target QPS set to: {self.server_target_qps}")
             else:
                 settings.scenario = lg.TestScenario.Offline
             
@@ -601,6 +615,18 @@ class Llama31_8BHarness:
             
             settings.use_token_latencies = True
             settings.FromConfig(user_conf, lg_model_name, self.scenario, 1)
+
+            if self.scenario == "Server":
+                settings.scenario = lg.TestScenario.Server
+                
+                # Set Server-specific parameters if provided
+                if self.server_coalesce_queries is not None:
+                    settings.server_coalesce_queries = self.server_coalesce_queries
+                    self.logger.info(f"Server coalesce queries set to: {self.server_coalesce_queries}")
+                
+                if self.server_target_qps is not None:
+                    settings.server_target_qps = self.server_target_qps
+                    self.logger.info(f"Server target QPS set to: {self.server_target_qps}")
             
             # Configure logging - use mlperf subdirectory
             log_output_settings = lg.LogOutputSettings()
@@ -918,6 +944,24 @@ def main():
     parser.add_argument("--mlflow-port", type=int, default=5000,
                        help="MLflow tracking server port")
     
+    # Server scenario arguments
+    def str_to_bool(value):
+        """Convert string to boolean."""
+        if isinstance(value, bool):
+            return value
+        if value.lower() in ('true', '1', 'yes', 'on'):
+            return True
+        elif value.lower() in ('false', '0', 'no', 'off'):
+            return False
+        else:
+            raise argparse.ArgumentTypeError(f'Boolean value expected, got: {value}')
+    
+    parser.add_argument("--server-coalesce-queries", type=str_to_bool,
+                       default=None, metavar='BOOL',
+                       help="Enable query coalescing for Server scenario (Server only, true/false/1/0/yes/no)")
+    parser.add_argument("--server-target-qps", type=float, default=None,
+                       help="Target queries per second for Server scenario (Server only)")
+    
     args = parser.parse_args()
     
     # Configure logging
@@ -952,7 +996,9 @@ def main():
         enable_metrics=args.enable_metrics,
         mlflow_tracking_uri=mlflow_tracking_uri,
         mlflow_experiment_name=args.mlflow_experiment_name,
-        mlflow_output_dir=args.mlflow_output_dir
+        mlflow_output_dir=args.mlflow_output_dir,
+        server_coalesce_queries=args.server_coalesce_queries,
+        server_target_qps=args.server_target_qps
     )
     
     results = harness.run(user_conf=args.user_conf, lg_model_name=args.lg_model_name)

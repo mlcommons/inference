@@ -76,10 +76,6 @@ def evaluate(dataset, predictions, max_examples=None):
             if max_examples and max_examples == total:
                 break
             for qa in paragraph["qas"]:
-                total += 1
-                if max_examples and max_examples == total:
-                    break
-
                 if qa["id"] not in predictions:
                     message = (
                         "Unanswered question " +
@@ -94,6 +90,9 @@ def evaluate(dataset, predictions, max_examples=None):
                 )
                 f1 += metric_max_over_ground_truths(
                     f1_score, prediction, ground_truths)
+                total += 1
+                if max_examples and max_examples == total:
+                    break
 
     exact_match = 100.0 * exact_match / total
     f1 = 100.0 * f1 / total

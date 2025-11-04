@@ -80,7 +80,15 @@ pip install  dgl -f https://data.dgl.ai/wheels/torch-2.1/repo.html
 ### Download model through MLCFlow Automation
 
 ```
-mlcr get,ml-model,rgat --outdirname=<path_to_download>
+mlcr get,ml-model,rgat,_r2-downloader,_mlcommons --outdirname=<path_to_download>
+```
+
+### Download the model using MLC R2 Downloader
+
+Download the model using the MLCommons R2 Downloader:
+
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/rgat-model.uri
 ```
 
 ### Download model using Rclone

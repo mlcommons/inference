@@ -5,7 +5,9 @@ from __future__ import annotations
 import array
 import asyncio
 import base64
+import random
 import threading
+import time
 from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import TYPE_CHECKING, Any
@@ -13,9 +15,14 @@ from typing import TYPE_CHECKING, Any
 import mlperf_loadgen as lg
 from datasets import load_dataset
 from loguru import logger
-from openai import AsyncOpenAI
+from pympler import asizeof
 
 if TYPE_CHECKING:
+    from openai import AsyncOpenAI
+    from openai.types.chat.chat_completion_message_param import (
+        ChatCompletionMessageParam,
+    )
+
     from .cli import Dataset as DatasetCLI
     from .cli import Model as ModelCLI
 
@@ -28,6 +35,7 @@ class Task(ABC):
         dataset_cli: DatasetCLI,
         model_cli: ModelCLI,
         openai_api_client: AsyncOpenAI,
+        random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
 
@@ -35,18 +43,20 @@ class Task(ABC):
             dataset_cli: The dataset configuration passed in from the CLI.
             model_cli: The model configuration passed in from the CLI.
             openai_api_client: The OpenAI API client to use for the task.
+            random_seed: The random seed to use for the task.
         """
+        random.seed(random_seed)
         self.dataset = load_dataset(
             dataset_cli.repo_id,
             token=dataset_cli.token,
         )
         self.model_cli = model_cli
-        self.loaded_samples: dict[int, Any] = {}
+        self.loaded_messages: dict[int, list[ChatCompletionMessageParam]] = {}
         self.openai_api_client = openai_api_client
         self.event_loop = self._create_event_loop_in_separate_thread()
 
     @staticmethod
-    def _create_event_loop_in_separate_thread() -> asyncio.EventLoop:
+    def _create_event_loop_in_separate_thread() -> asyncio.AbstractEventLoop:
         """Create a dedicated event loop in a separate thread.
 
         This event loop is where async calls to the serving endpoint via OpenAI API
@@ -69,7 +79,7 @@ class Task(ABC):
 
     @staticmethod
     @abstractmethod
-    def formulate_messages(sample: dict[str, Any]) -> list[dict[str, Any]]:
+    def formulate_messages(sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
         """Formulate the messages for chat completion.
 
         Args:
@@ -95,8 +105,33 @@ class Task(ABC):
 
         This is used to set the `performance_sample_count` parameter in the LoadGen QSL
         constructor.
+
+        We estimate this value by assuming that we reserve 1GB of host memory for
+        storing the samples, and we try to estimate how many samples can fit in that
+        1GB of memory. If this value is bigger than the total number of samples, we will
+        just load all samples into host memory.
         """
-        return round(len(self.dataset) * 0.1)
+        num_estimation_samples = 10
+        allowed_memory_footprint = 1024 * 1024 * 1024  # 1GB
+        estimation_indices = random.sample(
+            range(self.total_num_samples),
+            k=num_estimation_samples,
+        )
+        estimation_samples = [
+            self.formulate_messages(self.dataset[i]) for i in estimation_indices
+        ]
+        avg_messages_footprint = sum(
+            asizeof.asizeof(m) for m in estimation_samples
+        ) / len(estimation_samples)
+        result = min(
+            round(allowed_memory_footprint / avg_messages_footprint),
+            self.total_num_samples,
+        )
+        logger.info(
+            "Estimated maximum number of samples to load into the host memory is {}.",
+            result,
+        )
+        return result
 
     def construct_qsl(self) -> int:
         """Construct the LoadGen QSL for the task."""
@@ -108,7 +143,7 @@ class Task(ABC):
                 query_sample_indices: The indices of the samples to load to host memory.
             """
             for index in query_sample_indices:
-                self.loaded_samples[index] = self.formulate_messages(
+                self.loaded_messages[index] = self.formulate_messages(
                     self.dataset[index],
                 )
 
@@ -116,10 +151,11 @@ class Task(ABC):
             """Called by LoadGen to unload samples from host memory after testing.
 
             Args:
-                query_sample_indices: The indices of the samples to unload from host memory.
+                query_sample_indices: The indices of the samples to unload from host
+                    memory.
             """
             for index in query_sample_indices:
-                sample_to_unload = self.loaded_samples.pop(index, None)
+                sample_to_unload = self.loaded_messages.pop(index, None)
                 del sample_to_unload
 
         return lg.ConstructQSL(
@@ -136,22 +172,34 @@ class Task(ABC):
             """Called by the LoadGen to issue queries to the inference endpoint.
 
             Args:
-                query_samples: The list of query samples to issue to the inference endpoint.
-                    Each query sample contains (1) `id`: `lg.ResponseId` (i.e., unique
-                    identifier for the response), and (2) `index`: `lg.QuerySampleIndex`
-                    (i.e., the sample index into the dataset).
+                query_samples: The list of query samples to issue to the inference
+                    endpoint. Each query sample contains (1) `id`: `lg.ResponseId`
+                    (i.e., unique identifier for the response), and (2) `index`:
+                    `lg.QuerySampleIndex` (i.e., the sample index into the dataset).
             """
 
-            async def _query_endpoint_async(
-                    query_sample: lg.QuerySample) -> None:
+            async def _query_endpoint_async(query_sample: lg.QuerySample) -> None:
                 """Query the endpoint through the async OpenAI API client."""
-                messages = self.loaded_samples[query_sample.index]
+                messages = self.loaded_messages[query_sample.index]
+                logger.trace(
+                    "Issuing query sample index: {} with response ID: {}",
+                    query_sample.index,
+                    query_sample.id,
+                )
+                tic = time.perf_counter()
                 response = await self.openai_api_client.chat.completions.create(
                     model=self.model_cli.repo_id,
                     messages=messages,
                 )
-                logger.info("Response: {}", response)
+                logger.trace(
+                    "Received response (ID: {}) from endpoint after {} seconds: {}",
+                    query_sample.id,
+                    time.perf_counter() - tic,
+                    response,
+                )
                 content = response.choices[0].message.content
+                if content is None:
+                    content = ""
                 bytes_array = array.array("B", content.encode("utf-8"))
                 address, length = bytes_array.buffer_info()
                 size_in_bytes = length * bytes_array.itemsize
@@ -162,8 +210,7 @@ class Task(ABC):
                     len(content),
                 )
 
-            async def _issue_queries_async(
-                    query_samples: list[lg.QuerySample]) -> None:
+            async def _issue_queries_async(query_samples: list[lg.QuerySample]) -> None:
                 """Issue queries to the inference endpoint."""
                 query_sample_responses = await asyncio.gather(
                     *[
@@ -183,7 +230,7 @@ class Task(ABC):
 
             async def _wait_for_pending_queries_async() -> None:
                 """Wait for all pending queries to complete."""
-                await asyncio.gather(
+                results = await asyncio.gather(
                     *[
                         t
                         for t in asyncio.all_tasks(self.event_loop)
@@ -193,30 +240,17 @@ class Task(ABC):
                     ],
                     return_exceptions=True,
                 )
+                for result in results:
+                    if isinstance(result, Exception):
+                        raise result
 
             future = asyncio.run_coroutine_threadsafe(
                 _wait_for_pending_queries_async(),
                 self.event_loop,
             )
-            future.result()  # Block until all pending queries are complete.
+            future.result()
 
         return lg.ConstructSUT(_issue_queries, _flush_queries)
-
-
-class MMMU(Task):
-    """The MMMU task."""
-
-    @staticmethod
-    def formulate_messages(
-            self, sample: dict[str, Any]) -> list[dict[str, Any]]:
-        """Formulate the messages for chat completion.
-
-        Args:
-            sample: The sample to formulate the messages for.
-
-        Returns:
-            The messages for chat completion.
-        """
 
 
 class ShopifyGlobalCatalogue(Task):
@@ -227,6 +261,7 @@ class ShopifyGlobalCatalogue(Task):
         dataset_cli: DatasetCLI,
         model_cli: ModelCLI,
         openai_api_client: AsyncOpenAI,
+        random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
 
@@ -234,13 +269,19 @@ class ShopifyGlobalCatalogue(Task):
             dataset_cli: The dataset configuration passed in from the CLI.
             model_cli: The model configuration passed in from the CLI.
             openai_api_client: The OpenAI API client to use for the task.
+            random_seed: The random seed to use for the task.
         """
-        super().__init__(dataset_cli, model_cli, openai_api_client)
+        super().__init__(
+            dataset_cli=dataset_cli,
+            model_cli=model_cli,
+            openai_api_client=openai_api_client,
+            random_seed=random_seed,
+        )
         # Shopify only released the train split so far.
         self.dataset = self.dataset["train"]
 
     @staticmethod
-    def formulate_messages(sample: dict[str, Any]) -> list[dict[str, Any]]:
+    def formulate_messages(sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
         """Formulate the messages for chat completion.
 
         Args:
@@ -274,7 +315,8 @@ class ShopifyGlobalCatalogue(Task):
                         "type": "text",
                         "text": (
                             f"The title of the product is: {sample['title']}\n\n"
-                            f"The description of the product is: {sample['description']}"
+                            f"The description of the product is: "
+                            f"{sample['description']}"
                         ),
                     },
                     {

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from datetime import timedelta
 from enum import StrEnum, auto
 from typing import Annotated
@@ -11,8 +12,9 @@ from loguru import logger
 from openai import AsyncOpenAI, DefaultAioHttpClient
 from pydantic import BaseModel, Field
 from pydantic_typer import Typer
+from typer import Option
 
-from .task import MMMU, ShopifyGlobalCatalogue, Task
+from .task import ShopifyGlobalCatalogue
 
 app = Typer()
 
@@ -97,7 +99,7 @@ class TestSettings(BaseModel):
         Field(
             description="The expected QPS for the offline scenario.",
         ),
-    ] = 10
+    ] = 100
 
     min_duration: Annotated[
         timedelta,
@@ -112,8 +114,7 @@ class TestSettings(BaseModel):
         settings.scenario = self.senario.to_lgtype()
         settings.mode = self.mode.to_lgtype()
         settings.offline_expected_qps = self.offline_expected_qps
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
         settings.use_token_latencies = True
         return settings
 
@@ -124,35 +125,11 @@ class Model(BaseModel):
     repo_id: Annotated[
         str,
         Field(description="The HuggingFace repository ID of the model."),
-    ] = "Qwen/Qwen3-VL-30B-A3B-Instruct"
+    ] = "Qwen/Qwen3-VL-235B-A22B-Instruct"
 
 
 class Dataset(BaseModel):
     """Specifies a dataset on HuggingFace."""
-
-    class Task(StrEnum):
-        """The task for the VL2L benchmark."""
-
-        SHOPIFY_GLOBAL_CATALOG = auto()
-        MMMU = auto()
-
-    class UnknownTaskError(ValueError):
-        """The exception raised when an unknown task is encountered."""
-
-        def __init__(self, task: Dataset.Task) -> None:
-            """Initialize the exception."""
-            super().__init__(f"Unknown task: {task}")
-
-    task: Annotated[
-        Dataset.Task | None,
-        Field(
-            description=(
-                "The vision-language-to-language task to run the benchmark for. If not "
-                "specified, the task will be derived from the HuggingFace repository ID"
-                " of the dataset."
-            ),
-        ),
-    ] = None
 
     repo_id: Annotated[
         str,
@@ -169,25 +146,35 @@ class Dataset(BaseModel):
     ] = None
 
 
-def create_task(dataset: Dataset, model: Model,
-                openai_api_client: AsyncOpenAI) -> Task:
-    """Convert the dataset configuration to its corresponding task."""
-    match dataset.task:
-        case Dataset.Task.MMMU:
-            return MMMU(dataset, model, openai_api_client)
-        case Dataset.Task.SHOPIFY_GLOBAL_CATALOG:
-            return ShopifyGlobalCatalogue(dataset, model, openai_api_client)
-        case None:
-            match dataset.repo_id:
-                case "MMMU/MMMU":
-                    return MMMU(dataset, model, openai_api_client)
-                case "Shopify/the-catalogue-public-beta":
-                    return ShopifyGlobalCatalogue(
-                        dataset, model, openai_api_client)
-                case _:
-                    raise Dataset.UnknownTaskError(dataset.task)
-        case _:
-            raise Dataset.UnknownTaskError(dataset.task)
+class Verbosity(StrEnum):
+    """The verbosity level of the logger."""
+
+    TRACE = auto()
+    """The trace verbosity level."""
+
+    DEBUG = auto()
+    """The debug verbosity level."""
+
+    INFO = auto()
+    """The info verbosity level (default)."""
+
+
+class Endpoint(BaseModel):
+    """Specifies the OpenAI API endpoint to use for the VL2L benchmark."""
+
+    url: Annotated[
+        str,
+        Field(
+            description=(
+                "The URL of the OpenAI API endpoint that the inference requests will be"
+                " sent to."
+            ),
+        ),
+    ] = "http://localhost:8000/v1"
+    api_key: Annotated[
+        str,
+        Field(description="The API key to authenticate the inference requests."),
+    ] = ""
 
 
 @app.command()
@@ -196,25 +183,39 @@ def main(
     settings: TestSettings,
     model: Model,
     dataset: Dataset,
-    endpoint: str = "http://localhost:8000/v1",
-    openai_api_key: str = "",
+    endpoint: Endpoint,
+    random_seed: Annotated[
+        int,
+        Option(help="The seed for the random number generator used by the benchmark."),
+    ] = 12345,
+    verbosity: Annotated[
+        Verbosity,
+        Option(help="The verbosity level of the logger."),
+    ] = Verbosity.INFO,
 ) -> None:
     """Main CLI for running the VL2L benchmark."""
+    logger.remove()
+    logger.add(sys.stdout, level=verbosity.value.upper())
     logger.info("Running VL2L benchmark with settings: {}", settings)
+    logger.info("Running VL2L benchmark with model: {}", model)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info("Running VL2L benchmark with endpoint: {}", endpoint)
+    logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
+    logger.info("Running VL2L benchmark with random seed: {}", random_seed)
     lg_settings = settings.to_lgtype()
-    task = create_task(
-        dataset,
-        model,
-        AsyncOpenAI(
-            base_url=endpoint,
+    task = ShopifyGlobalCatalogue(
+        dataset_cli=dataset,
+        model_cli=model,
+        openai_api_client=AsyncOpenAI(
+            base_url=endpoint.url,
             http_client=DefaultAioHttpClient(),
-            api_key=openai_api_key,
+            api_key=endpoint.api_key,
         ),
+        random_seed=random_seed,
     )
     sut = task.construct_sut()
     qsl = task.construct_qsl()
+    logger.info("Starting the VL2L benchmark with LoadGen...")
     lg.StartTest(sut, qsl, lg_settings)
+    logger.info("The VL2L benchmark with LoadGen completed.")
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)

@@ -34,7 +34,16 @@ echo "Running ruff..."
 ruff check --fix "${PROJECT_ROOT}"/src/
 
 echo "Running mypy..."
-mypy --config-file="${PROJECT_ROOT}"/pyproject.toml --install-types "${PROJECT_ROOT}"/src/
+mypy --config-file="${PROJECT_ROOT}"/pyproject.toml \
+     --install-types \
+     "${PROJECT_ROOT}"/src/
 
 echo "Running shellcheck..."
 find "${PROJECT_ROOT}" -type f -name "*.sh" -exec shellcheck -ax {} +
+
+echo "Running trufflehog..."
+docker run --rm \
+           -it \
+           -v "${PROJECT_ROOT}":/to-scan \
+           trufflesecurity/trufflehog:latest \
+           filesystem /to-scan

@@ -8,7 +8,7 @@ classifiers = [
   "Intended Audience :: Developers",
   "Operating System :: POSIX :: Linux",
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
   "datasets",
   "loguru",

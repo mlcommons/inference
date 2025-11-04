@@ -23,7 +23,7 @@ on how to install Miniconda on your host machine. Then, you can create a new con
 environment via:
 
 ```bash
-conda create -n mlperf-inf-mm-vl2l python=3.13
+conda create -n mlperf-inf-mm-vl2l python=3.12
 ```
 
 ### Install LoadGen

@@ -28,13 +28,6 @@ class TestScenario(StrEnum):
     OFFLINE = auto()
     """Run the benchmark in offline/batch scenario."""
 
-    class UnknownValueError(ValueError):
-        """The exception raised when an unknown test scenario is encountered."""
-
-        def __init__(self, test_scenario: TestScenario) -> None:
-            """Initialize the exception."""
-            super().__init__(f"Unknown test scenario: {test_scenario}")
-
     def to_lgtype(self) -> lg.TestScenario:
         """Convert the test scenario to its corresponding LoadGen type."""
         match self:
@@ -43,7 +36,15 @@ class TestScenario(StrEnum):
             case TestScenario.OFFLINE:
                 return lg.TestScenario.Offline
             case _:
-                raise TestScenario.UnknownValueError(self)
+                raise UnknownTestScenarioValueError(self)
+
+
+class UnknownTestScenarioValueError(ValueError):
+    """The exception raised when an unknown test scenario is encountered."""
+
+    def __init__(self, test_scenario: TestScenario) -> None:
+        """Initialize the exception."""
+        super().__init__(f"Unknown test scenario: {test_scenario}")
 
 
 class TestMode(StrEnum):
@@ -55,13 +56,6 @@ class TestMode(StrEnum):
     ACCURACY_ONLY = auto()
     """Run the benchmark to evaluate model quality."""
 
-    class UnknownValueError(ValueError):
-        """The exception raised when an unknown test mode is encountered."""
-
-        def __init__(self, test_mode: TestMode) -> None:
-            """Initialize the exception."""
-            super().__init__(f"Unknown test mode: {test_mode}")
-
     def to_lgtype(self) -> lg.TestMode:
         """Convert the test mode to its corresponding LoadGen type."""
         match self:
@@ -70,7 +64,15 @@ class TestMode(StrEnum):
             case TestMode.ACCURACY_ONLY:
                 return lg.TestMode.AccuracyOnly
             case _:
-                raise TestMode.UnknownValueError(self)
+                raise UnknownTestModeValueError(self)
+
+
+class UnknownTestModeValueError(ValueError):
+    """The exception raised when an unknown test mode is encountered."""
+
+    def __init__(self, test_mode: TestMode) -> None:
+        """Initialize the exception."""
+        super().__init__(f"Unknown test mode: {test_mode}")
 
 
 class TestSettings(BaseModel):
@@ -114,8 +116,7 @@ class TestSettings(BaseModel):
         settings.scenario = self.senario.to_lgtype()
         settings.mode = self.mode.to_lgtype()
         settings.offline_expected_qps = self.offline_expected_qps
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
         settings.use_token_latencies = True
         return settings
 
@@ -200,9 +201,7 @@ def main(
     logger.info("Running VL2L benchmark with settings: {}", settings)
     logger.info("Running VL2L benchmark with model: {}", model)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info(
-        "Running VL2L benchmark with OpenAI API endpoint: {}",
-        endpoint)
+    logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
     logger.info("Running VL2L benchmark with random seed: {}", random_seed)
     lg_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(

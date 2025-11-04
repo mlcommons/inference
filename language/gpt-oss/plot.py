@@ -151,31 +151,53 @@ def main():
     # Load data
     df = load_data(args.pkl_path)
 
-    # Filter for 100% accuracy
-    df_100 = df[df['prompt_accuracy'] == 100.0]
-    print(
-        f"\nFiltered {len(df_100)} rows with prompt_accuracy == 100 (out of {len(df)} total)\n")
+    # Check if dataset column exists
+    has_dataset = 'dataset' in df.columns
+    if not has_dataset:
+        print("\nNote: 'dataset' column not found - skipping per-dataset histograms")
+        # Add a dummy dataset column for compatibility with existing code
+        df['dataset'] = 'default'
+
+    # Check if prompt_accuracy column exists
+    has_accuracy = 'prompt_accuracy' in df.columns
+    
+    if has_accuracy:
+        # Filter for 100% accuracy
+        df_100 = df[df['prompt_accuracy'] == 100.0].copy()
+        print(
+            f"\nFiltered {len(df_100)} rows with prompt_accuracy == 100 (out of {len(df)} total)\n")
+    else:
+        print("\nNote: 'prompt_accuracy' column not found - skipping accuracy-based histograms\n")
+        # Create empty dataframe with dataset column for consistency
+        df_100 = pd.DataFrame(columns=df.columns)
 
     print("=" * 60)
     print("CREATING ISL HISTOGRAMS")
     print("=" * 60)
 
     # 1. Per dataset ISL histogram
-    create_per_dataset_histogram(
-        df, 'tok_input_len',
-        'Token Input Length (ISL)',
-        '1_per_dataset_ISL.png',
-        args.output_dir)
+    if has_dataset:
+        create_per_dataset_histogram(
+            df, 'tok_input_len',
+            'Token Input Length (ISL)',
+            '1_per_dataset_ISL.png',
+            args.output_dir)
+    else:
+        print("Skipping per-dataset ISL: dataset column not found")
 
     # 2. Per dataset ISL histogram (accuracy == 100)
-    if len(df_100) > 0:
+    if has_dataset and has_accuracy and len(df_100) > 0:
         create_per_dataset_histogram(
             df_100, 'tok_input_len',
             'Token Input Length (ISL) - 100% Accuracy',
             '2_per_dataset_ISL_acc100.png',
             args.output_dir)
+    elif not has_dataset:
+        print("Skipping per-dataset ISL (acc==100): dataset column not found")
+    elif not has_accuracy:
+        print("Skipping per-dataset ISL (acc==100): prompt_accuracy column not found")
     else:
-        print("Skipping per-dataset ISL (acc==100): no data")
+        print("Skipping per-dataset ISL (acc==100): no data with 100% accuracy")
 
     # 3. Full ISL histogram
     create_full_histogram(
@@ -185,35 +207,44 @@ def main():
         args.output_dir)
 
     # 4. Full ISL histogram (accuracy == 100)
-    if len(df_100) > 0:
+    if has_accuracy and len(df_100) > 0:
         create_full_histogram(
             df_100, 'tok_input_len',
             'Token Input Length (ISL) - 100% Accuracy',
             '4_full_ISL_acc100.png',
             args.output_dir)
+    elif has_accuracy:
+        print("Skipping full ISL (acc==100): no data with 100% accuracy")
     else:
-        print("Skipping full ISL (acc==100): no data")
+        print("Skipping full ISL (acc==100): prompt_accuracy column not found")
 
     print("\n" + "=" * 60)
     print("CREATING OSL HISTOGRAMS")
     print("=" * 60)
 
     # 5. Per dataset OSL histogram
-    create_per_dataset_histogram(
-        df, 'tok_model_output_len',
-        'Token Output Length (OSL)',
-        '5_per_dataset_OSL.png',
-        args.output_dir)
+    if has_dataset:
+        create_per_dataset_histogram(
+            df, 'tok_model_output_len',
+            'Token Output Length (OSL)',
+            '5_per_dataset_OSL.png',
+            args.output_dir)
+    else:
+        print("Skipping per-dataset OSL: dataset column not found")
 
     # 6. Per dataset OSL histogram (accuracy == 100)
-    if len(df_100) > 0:
+    if has_dataset and has_accuracy and len(df_100) > 0:
         create_per_dataset_histogram(
             df_100, 'tok_model_output_len',
             'Token Output Length (OSL) - 100% Accuracy',
             '6_per_dataset_OSL_acc100.png',
             args.output_dir)
+    elif not has_dataset:
+        print("Skipping per-dataset OSL (acc==100): dataset column not found")
+    elif not has_accuracy:
+        print("Skipping per-dataset OSL (acc==100): prompt_accuracy column not found")
     else:
-        print("Skipping per-dataset OSL (acc==100): no data")
+        print("Skipping per-dataset OSL (acc==100): no data with 100% accuracy")
 
     # 7. Full OSL histogram
     create_full_histogram(
@@ -223,14 +254,16 @@ def main():
         args.output_dir)
 
     # 8. Full OSL histogram (accuracy == 100)
-    if len(df_100) > 0:
+    if has_accuracy and len(df_100) > 0:
         create_full_histogram(
             df_100, 'tok_model_output_len',
             'Token Output Length (OSL) - 100% Accuracy',
             '8_full_OSL_acc100.png',
             args.output_dir)
+    elif has_accuracy:
+        print("Skipping full OSL (acc==100): no data with 100% accuracy")
     else:
-        print("Skipping full OSL (acc==100): no data")
+        print("Skipping full OSL (acc==100): prompt_accuracy column not found")
 
     print(f"\n{'=' * 60}")
     print(f"All histograms saved to {args.output_dir}/")

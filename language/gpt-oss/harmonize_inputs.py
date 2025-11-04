@@ -281,7 +281,7 @@ def create_healthbench_prompt(prompt, reasoning_effort=ReasoningEffort.HIGH):
     """
     instructions = (
         "Your task is to answer the following health-related query as a responsible assistant."
-        "Provide responses that are factually accurate, up-to-date, and consistent with current clinical guidelines. Adjust the detail, terminology, and tone based on the user’s apparent background (layperson or healthcare professional)."
+        "Provide responses that are factually accurate, up-to-date, and consistent with current clinical guidelines. Adjust the detail, terminology, and tone based on the user's apparent background (layperson or healthcare professional)."
         "If the evidence is limited or uncertain, clearly acknowledge this in your answer. When essential information is missing for a safe, thorough response, ask clarifying questions before proceeding."
         "Do not provide specific medical diagnoses or emergency recommendations unless explicitly appropriate and safe to do so."
         "All responses should promote user safety, accuracy, completeness, clear communication, and adherence to user instructions while maintaining clinical standards."
@@ -305,6 +305,43 @@ def create_healthbench_prompt(prompt, reasoning_effort=ReasoningEffort.HIGH):
     return _finalize_conversation(messages, None)
 
 
+def create_arxiv_summarization_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
+    """
+    Creates a zero-shot prompt for arXiv paper summarization using Harmony format.
+
+    Returns:
+        tuple: (conversation_object, token_list) ready for model completion
+    """
+    instructions = (
+        "You are an expert at reading and summarizing academic research papers. "
+        "Your task is to provide clear, concise, and accurate summaries of research papers. "
+        "Focus on the key contributions, methodology, results, and implications. "
+        "Structure your summary to be accessible while maintaining technical accuracy."
+    )
+
+    messages = _create_base_messages(reasoning_effort, instructions)
+
+    return _finalize_conversation(messages, user_query)
+
+
+def create_default_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
+    """
+    Creates a default zero-shot prompt for general problem solving using Harmony format.
+    This is used when no specific dataset is specified.
+
+    Returns:
+        tuple: (conversation_object, token_list) ready for model completion
+    """
+    instructions = (
+        "You are a helpful AI assistant that solves user questions. "
+        "Provide a well-structured answer to the user's question."
+    )
+
+    messages = _create_base_messages(reasoning_effort, instructions)
+
+    return _finalize_conversation(messages, user_query)
+
+
 def process_row(args):
     """
     Worker function to process a single row from the dataframe.
@@ -316,12 +353,26 @@ def process_row(args):
         tuple: (index, convo, tokens, dataset_name) or (index, None, None, dataset_name, error)
     """
     index, row, dataset_function_map, reasoning_effort = args
-    dataset_name = row["dataset"]
+    
+    # Check if dataset column exists, use default if not
+    if "dataset" in row:
+        dataset_name = row["dataset"]
+    else:
+        dataset_name = "default"
 
     if dataset_name == "healthbench":
         user_query = row["prompt"]
     else:
-        user_query = row["question"]
+        # Try to get question from common column names
+        if "question" in row:
+            user_query = row["question"]
+        elif "prompt" in row:
+            user_query = row["prompt"]
+        elif "query" in row:
+            user_query = row["query"]
+        else:
+            error_msg = f"No query column found (tried: question, prompt, query) at index {index}"
+            return (index, None, None, dataset_name, error_msg)
 
     try:
         # Get the appropriate function based on dataset type
@@ -364,16 +415,20 @@ if __name__ == "__main__":
 
     # Filter by dataset if specified
     if args.dataset is not None:
-        original_len = len(df)
-        available_datasets = sorted(df['dataset'].unique().tolist())
-        df = df[df['dataset'] == args.dataset].copy()
-        print(
-            f"Filtered to dataset '{args.dataset}': {len(df)} rows (from {original_len} total)")
-        if len(df) == 0:
-            print(f"ERROR: No rows found for dataset '{args.dataset}'")
-            print(f"Available datasets: {available_datasets}")
-            import sys
-            sys.exit(1)
+        if 'dataset' not in df.columns:
+            print(f"WARNING: No 'dataset' column found in dataframe. Cannot filter by dataset.")
+            print(f"All rows will be processed using the default prompt function.")
+        else:
+            original_len = len(df)
+            available_datasets = sorted(df['dataset'].unique().tolist())
+            df = df[df['dataset'] == args.dataset].copy()
+            print(
+                f"Filtered to dataset '{args.dataset}': {len(df)} rows (from {original_len} total)")
+            if len(df) == 0:
+                print(f"ERROR: No rows found for dataset '{args.dataset}'")
+                print(f"Available datasets: {available_datasets}")
+                import sys
+                sys.exit(1)
 
     # Apply row limit if specified
     if args.max_rows is not None:
@@ -384,12 +439,14 @@ if __name__ == "__main__":
     dataset_function_map = {
         'aime1983': create_aime1983_prompt,
         'aime2025': create_aime1983_prompt,
+        'arxiv_summarization': create_arxiv_summarization_prompt,
         'gpqa': create_gpqa_prompt,
         'livecodebench': create_livecodebench_prompt,
         'math500': create_math500_prompt,
         'mmlu_pro': create_mmlu_prompt,
         'mmlu': create_mmlu_prompt,
         'healthbench': create_healthbench_prompt,
+        'default': create_default_prompt,
     }
 
     # Prepare data for parallel processing

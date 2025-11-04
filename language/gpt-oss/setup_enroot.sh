@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-mkdir -p $sqsh_location
+# mkdir -p $sqsh_location
 enroot import -o $sqsh_location/$sandbox_name.sqsh docker://$docker_image
 enroot create --name $sandbox_name $sqsh_location/$sandbox_name.sqsh
 # enroot start --mount $(pwd):$(pwd) --root --rw $sandbox_name

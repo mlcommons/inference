@@ -118,14 +118,15 @@ class OpenAIClient:
     def send_request(
             self, input_ids: List[int], max_tokens: int = 100) -> Dict[str, Any]:
         """Send a single request to the OpenAI-compatible server.
-        
+
         Note: OpenAI API expects text input, so we need to decode the input_ids first.
         """
         try:
             # Decode input_ids to text
             tokenizer = get_tokenizer()
-            prompt_text = tokenizer.decode(input_ids, skip_special_tokens=False)
-            
+            prompt_text = tokenizer.decode(
+                input_ids, skip_special_tokens=False)
+
             # Make request to OpenAI-compatible API
             response = self.client.completions.create(
                 model=self.model,
@@ -135,14 +136,15 @@ class OpenAIClient:
                 top_p=1.0,  # Use top_p instead of top_k for OpenAI
                 logprobs=0,  # Request logprobs to get token IDs
             )
-            
+
             # Convert OpenAI response to SGLang-compatible format
             choice = response.choices[0]
             output_text = choice.text
-            
+
             # Tokenize the output to get output_ids
-            output_ids = tokenizer.encode(output_text, add_special_tokens=False)
-            
+            output_ids = tokenizer.encode(
+                output_text, add_special_tokens=False)
+
             # Build compatible response format
             result = {
                 "output_ids": output_ids,
@@ -153,9 +155,9 @@ class OpenAIClient:
                     "total_tokens": response.usage.total_tokens,
                 }
             }
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"OpenAI request failed: {e}")
             return {"error": str(e)}
@@ -234,13 +236,13 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
                            max_tokens: int = 100, max_concurrency: int = 128, temperature: float = 0.001, top_k: int = 1, timeout: int = 1200,
                            client_type: str = "sglang", api_key: str = None, model: str = "gpt-4", pass_k: int = 1):
     """Send all requests to server in parallel using multiprocessing.
-    
+
     Args:
         client_type: Type of client to use ("sglang" or "openai")
         api_key: API key for OpenAI client (optional, will use env var if not provided)
         model: Model name for OpenAI client
         pass_k: Number of inference passes per sample for pass@k strategy
-    
+
     Returns:
         tuple: (responses_by_pass, latencies_by_pass) - Dict mapping (sample_id, pass_num) to response/latency
     """
@@ -279,14 +281,16 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
     logger.info(
         f"Completed {total_requests} requests in {total_time:.2f} seconds")
     logger.info(f"Average rate: {total_requests/total_time:.2f} requests/sec")
-    
+
     # Log latency statistics
-    valid_latencies = [lat for lat in latencies_by_pass.values() if lat is not None]
+    valid_latencies = [
+        lat for lat in latencies_by_pass.values() if lat is not None]
     if valid_latencies:
         avg_latency = sum(valid_latencies) / len(valid_latencies)
         min_latency = min(valid_latencies)
         max_latency = max(valid_latencies)
-        logger.info(f"Latency stats - Avg: {avg_latency:.3f}s, Min: {min_latency:.3f}s, Max: {max_latency:.3f}s")
+        logger.info(
+            f"Latency stats - Avg: {avg_latency:.3f}s, Min: {min_latency:.3f}s, Max: {max_latency:.3f}s")
 
     return responses_by_pass, latencies_by_pass
 
@@ -294,12 +298,12 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
 def extract_response_ids(
         responses_by_pass: Dict[tuple, Dict[str, Any]], tokenized_df: pd.DataFrame, pass_k: int) -> Dict[tuple, List[int]]:
     """Extract response output_ids from SGLang responses for all passes.
-    
+
     Args:
         responses_by_pass: Dict mapping (sample_id, pass_num) to response
         tokenized_df: DataFrame with samples
         pass_k: Number of passes per sample
-    
+
     Returns:
         Dict mapping (sample_id, pass_num) to output_ids list
     """
@@ -307,7 +311,7 @@ def extract_response_ids(
 
     response_ids_by_pass = {}
     total_responses = len(tokenized_df) * pass_k
-    
+
     with tqdm(total=total_responses, desc="Extracting responses", unit="response") as pbar:
         for idx, row in tokenized_df.iterrows():
             for pass_num in range(pass_k):
@@ -315,7 +319,8 @@ def extract_response_ids(
                 response_id = []
                 if "error" not in response and "output_ids" in response:
                     try:
-                        # SGLang returns the generated token IDs in the 'output_ids' field
+                        # SGLang returns the generated token IDs in the
+                        # 'output_ids' field
                         response_id = response["output_ids"]
                     except Exception as e:
                         logger.warning(
@@ -327,13 +332,14 @@ def extract_response_ids(
     return response_ids_by_pass
 
 
-def detokenize_output_ids(response_ids_by_pass: Dict[tuple, List[int]], pass_k: int) -> Dict[tuple, str]:
+def detokenize_output_ids(
+        response_ids_by_pass: Dict[tuple, List[int]], pass_k: int) -> Dict[tuple, str]:
     """Detokenize output_ids back to text using AutoTokenizer for all passes.
-    
+
     Args:
         response_ids_by_pass: Dict mapping (sample_id, pass_num) to output_ids
         pass_k: Number of passes per sample
-    
+
     Returns:
         Dict mapping (sample_id, pass_num) to detokenized text
     """
@@ -357,13 +363,13 @@ def detokenize_output_ids(response_ids_by_pass: Dict[tuple, List[int]], pass_k: 
     return detokenized_texts_by_pass
 
 
-def save_responses(responses_by_pass: Dict[tuple, Dict[str, Any]], 
+def save_responses(responses_by_pass: Dict[tuple, Dict[str, Any]],
                    response_ids_by_pass: Dict[tuple, List[int]],
-                   detokenized_texts_by_pass: Dict[tuple, str], 
-                   latencies_by_pass: Dict[tuple, float], 
+                   detokenized_texts_by_pass: Dict[tuple, str],
+                   latencies_by_pass: Dict[tuple, float],
                    tokenized_df: pd.DataFrame, pass_k: int, output_file: str = None) -> pd.DataFrame:
     """Save all responses to DataFrame and optionally to pickle file.
-    
+
     Args:
         responses_by_pass: Dict mapping (sample_id, pass_num) to response
         response_ids_by_pass: Dict mapping (sample_id, pass_num) to output_ids
@@ -372,7 +378,7 @@ def save_responses(responses_by_pass: Dict[tuple, Dict[str, Any]],
         tokenized_df: Original DataFrame with samples
         pass_k: Number of passes per sample
         output_file: Optional output pickle file
-    
+
     Returns:
         DataFrame with columns for each pass (e.g., model_output_0, model_output_1, ...)
     """
@@ -388,18 +394,18 @@ def save_responses(responses_by_pass: Dict[tuple, Dict[str, Any]],
         tok_model_outputs = []
         tok_model_output_lens = []
         infer_times = []
-        
+
         for idx in tokenized_df.index:
             key = (idx, pass_num)
             detokenized_text = detokenized_texts_by_pass.get(key, "")
             response_ids = response_ids_by_pass.get(key, [])
             latency = latencies_by_pass.get(key, None)
-            
+
             model_outputs.append(detokenized_text)
             tok_model_outputs.append(response_ids)
             tok_model_output_lens.append(len(response_ids))
             infer_times.append(latency)
-        
+
         # Add columns with suffixes
         result_df[f'model_output_{pass_num}'] = model_outputs
         result_df[f'tok_model_output_{pass_num}'] = tok_model_outputs
@@ -414,7 +420,9 @@ def save_responses(responses_by_pass: Dict[tuple, Dict[str, Any]],
             response = responses_by_pass.get(key, {})
             response_ids = response_ids_by_pass.get(key, [])
             try:
-                output_token_length = response.get("meta_info", {}).get("completion_tokens", len(response_ids))
+                output_token_length = response.get(
+                    "meta_info", {}).get(
+                    "completion_tokens", len(response_ids))
                 all_output_token_lengths.append(output_token_length)
             except Exception as e:
                 logger.warning(
@@ -422,7 +430,8 @@ def save_responses(responses_by_pass: Dict[tuple, Dict[str, Any]],
                 all_output_token_lengths.append(len(response_ids))
 
     logger.info(f"Updated DataFrame with shape: {result_df.shape}")
-    new_columns = [f'model_output_{i}, tok_model_output_{i}, tok_model_output_len_{i}, infer_time_{i}' for i in range(pass_k)]
+    new_columns = [
+        f'model_output_{i}, tok_model_output_{i}, tok_model_output_len_{i}, infer_time_{i}' for i in range(pass_k)]
     logger.info(f"Added columns for {pass_k} passes: {', '.join(new_columns)}")
     if all_output_token_lengths:
         logger.info(
@@ -443,7 +452,7 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
                      timeout: int = 1200, client_type: str = "sglang", api_key: str = None, model: str = "gpt-4",
                      pass_k: int = 1) -> pd.DataFrame:
     """Main processing function that handles requests and response extraction.
-    
+
     Args:
         pass_k: Number of inference passes per sample for pass@k strategy
     """
@@ -468,10 +477,12 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
         pass_k)
 
     # Step 3: Extract response output_ids for all passes
-    response_ids_by_pass = extract_response_ids(responses_by_pass, tokenized_df, pass_k)
+    response_ids_by_pass = extract_response_ids(
+        responses_by_pass, tokenized_df, pass_k)
 
     # Step 4: Detokenize output_ids to text for model_output for all passes
-    detokenized_texts_by_pass = detokenize_output_ids(response_ids_by_pass, pass_k)
+    detokenized_texts_by_pass = detokenize_output_ids(
+        response_ids_by_pass, pass_k)
 
     # Step 5: Save all results and return DataFrame
     result_df = save_responses(
@@ -519,7 +530,8 @@ def main():
     args = parser.parse_args()
 
     # Test connection
-    logger.info(f"Testing server connection to {args.server_url} using {args.client_type} client...")
+    logger.info(
+        f"Testing server connection to {args.server_url} using {args.client_type} client...")
     if args.client_type == "openai":
         test_client = OpenAIClient(
             server_url=args.server_url,
@@ -534,7 +546,7 @@ def main():
             temperature=args.temperature,
             top_k=args.top_k,
             timeout=args.timeout)
-    
+
     test_response = test_client.send_request(input_ids=[1, 2, 3], max_tokens=5)
     if "error" in test_response:
         logger.error(f"Server connection failed: {test_response['error']}")
@@ -543,7 +555,8 @@ def main():
             logger.error(
                 "  python -m sglang.launch_server --model-path openai/gpt-oss-120b --mem-fraction-static 0.98 --tp 8")
         else:
-            logger.error("Make sure your OpenAI API key is valid and the server URL is correct.")
+            logger.error(
+                "Make sure your OpenAI API key is valid and the server URL is correct.")
         return
     logger.info("Server connection successful")
 
@@ -570,7 +583,7 @@ def main():
     logger.info(f"  - Number of passes per sample: {args.pass_k}")
     logger.info(
         f"  - Average input token length: {result_df['tok_input_len'].mean():.1f}")
-    
+
     # Calculate average output length across all passes
     if args.pass_k == 1:
         avg_output_len = result_df['tok_model_output_len_0'].mean()
@@ -578,10 +591,13 @@ def main():
     else:
         all_output_lens = []
         for i in range(args.pass_k):
-            all_output_lens.extend(result_df[f'tok_model_output_len_{i}'].tolist())
-        avg_output_len = sum(all_output_lens) / len(all_output_lens) if all_output_lens else 0
-        logger.info(f"  - Average output token length (across all passes): {avg_output_len:.1f}")
-        
+            all_output_lens.extend(
+                result_df[f'tok_model_output_len_{i}'].tolist())
+        avg_output_len = sum(all_output_lens) / \
+            len(all_output_lens) if all_output_lens else 0
+        logger.info(
+            f"  - Average output token length (across all passes): {avg_output_len:.1f}")
+
     if args.output:
         logger.info(f"  - Results saved to: {args.output}")
     else:

@@ -79,8 +79,7 @@ class Task(ABC):
 
     @staticmethod
     @abstractmethod
-    def formulate_messages(
-            sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
+    def formulate_messages(sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
         """Formulate the messages for chat completion.
 
         Args:
@@ -179,8 +178,7 @@ class Task(ABC):
                     `lg.QuerySampleIndex` (i.e., the sample index into the dataset).
             """
 
-            async def _query_endpoint_async(
-                    query_sample: lg.QuerySample) -> None:
+            async def _query_endpoint_async(query_sample: lg.QuerySample) -> None:
                 """Query the endpoint through the async OpenAI API client."""
                 messages = self.loaded_messages[query_sample.index]
                 logger.trace(
@@ -205,28 +203,22 @@ class Task(ABC):
                 bytes_array = array.array("B", content.encode("utf-8"))
                 address, length = bytes_array.buffer_info()
                 size_in_bytes = length * bytes_array.itemsize
-                return lg.QuerySampleResponse(
-                    query_sample.id,
-                    address,
-                    size_in_bytes,
-                    len(content),
-                )
-
-            async def _issue_queries_async(
-                    query_samples: list[lg.QuerySample]) -> None:
-                """Issue queries to the inference endpoint."""
-                query_sample_responses = await asyncio.gather(
-                    *[
-                        _query_endpoint_async(query_sample)
-                        for query_sample in query_samples
+                lg.QuerySamplesComplete(
+                    [
+                        lg.QuerySampleResponse(
+                            query_sample.id,
+                            address,
+                            size_in_bytes,
+                            len(content),
+                        ),
                     ],
                 )
-                lg.QuerySamplesComplete(query_sample_responses)
 
-            asyncio.run_coroutine_threadsafe(
-                _issue_queries_async(query_samples),
-                self.event_loop,
-            )
+            for query_sample in query_samples:
+                asyncio.run_coroutine_threadsafe(
+                    _query_endpoint_async(query_sample),
+                    self.event_loop,
+                )
 
         def _flush_queries() -> None:
             """Called by the LoadGen to indicate that all queries have been issued."""
@@ -284,8 +276,7 @@ class ShopifyGlobalCatalogue(Task):
         self.dataset = self.dataset["train"]
 
     @staticmethod
-    def formulate_messages(
-            sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
+    def formulate_messages(sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
         """Formulate the messages for chat completion.
 
         Args:

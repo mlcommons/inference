@@ -2,10 +2,10 @@
 # This file demonstrates how to configure an inference server
 
 # Backend type: 'vllm' or 'sglang'
-backend: vllm
+backend: sglang
 
 # Model name or path
-model: deepseek-ai/DeepSeek-R1-0528
+model: RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8
 
 # Server port
 port: 8000
@@ -16,7 +16,7 @@ port: 8000
 # Heartbeat configuration
 heartbeat_interval: 100      # Interval between heartbeat checks (seconds)
 heartbeat_timeout: 30      # Timeout for heartbeat checks (seconds)
-startup_timeout: 1200       # Timeout for server startup (seconds)
+startup_timeout: 600       # Timeout for server startup (seconds)
 
 # Debug mode - verify cleanup of server and child processes
 # Especially useful for tensor parallel/data parallel setups
@@ -38,9 +38,8 @@ debug_mode: false          # Enable debug mode for process cleanup verification
 
 # Environment variables to set
 env_vars:
-  CUDA_VISIBLE_DEVICES: "0,1,2,3,4,5,6,7"
+  CUDA_VISIBLE_DEVICES: "4,5,6,7"
   OMP_NUM_THREADS: "16"
-  VLLM_STATS_LOG_INTERVAL: "5"
   # Add any other environment variables here
 
 # Backend-specific configuration
@@ -48,10 +47,10 @@ config:
   # For vLLM
   api_server_args:
     - --tensor-parallel-size
-    - "8"
-    - --gpu-memory-utilization
+    - "1"
+    - --mem-fraction-static
     - "0.9"
-    - "--no-enable-prefix-caching"
+    - --enable-metrics
     # Add any other vLLM arguments here
   
   # For SGLang

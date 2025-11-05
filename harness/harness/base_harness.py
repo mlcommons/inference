@@ -499,6 +499,38 @@ class BaseHarness:
             return
         
         try:
+            # Detect backend type from server config
+            backend = self.server_config.get('backend', 'vllm').lower()
+            
+            # Define metrics to collect based on backend
+            if backend == 'sglang':
+                metrics_to_collect = [
+                    'sglang:num_running_reqs',
+                    'sglang:num_used_tokens',
+                    'sglang:token_usage',
+                    'sglang:gen_throughput',
+                    'sglang:num_queue_reqs',
+                    'sglang:cache_hit_rate',
+                    'sglang:utilization',
+                    'sglang:num_prefill_prealloc_queue_reqs',
+                    'sglang:num_prefill_inflight_queue_reqs',
+                    'sglang:num_decode_prealloc_queue_reqs',
+                    'sglang:num_decode_transfer_queue_reqs'
+                ]
+                self.logger.info(f"Initializing metrics collection for SGLang backend")
+            else:
+                # Default to vLLM metrics
+                metrics_to_collect = [
+                    'vllm:num_requests_running',
+                    'vllm:generation_tokens_total',
+                    'vllm:prompt_tokens_total',
+                    'vllm:kv_cache_usage_perc',
+                    'vllm:time_to_first_token_seconds',
+                    'vllm:prefix_cache_queries_total',
+                    'vllm:prefix_cache_hits_total'
+                ]
+                self.logger.info(f"Initializing metrics collection for vLLM backend")
+            
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             metrics_file = self.metrics_output_dir / f"metrics_{timestamp}.csv"
             
@@ -510,15 +542,7 @@ class BaseHarness:
             self.metrics_collector = VLLMMetricsCollector(
                 metrics_endpoint=f"{self.api_server_url}/metrics",
                 storage=storage,
-                metrics_to_collect=[
-                    'vllm:num_requests_running',
-                    'vllm:generation_tokens_total',
-                    'vllm:prompt_tokens_total',
-                    'vllm:kv_cache_usage_perc',
-                    'vllm:time_to_first_token_seconds',
-                    'vllm:prefix_cache_queries_total',
-                    'vllm:prefix_cache_hits_total'
-                ],
+                metrics_to_collect=metrics_to_collect,
                 collection_interval=self.metrics_interval,
                 timeout=30,
                 auto_postprocess=True,
@@ -526,7 +550,9 @@ class BaseHarness:
             )
             
             self.metrics_visualizer = VLLMMetricsVisualizer()
+            self.metrics_backend = backend  # Store backend for visualization
             self.logger.info(f"Metrics collection initialized: {metrics_file}")
+            self.logger.info(f"Collecting {len(metrics_to_collect)} metrics for {backend} backend")
             
         except Exception as e:
             self.logger.error(f"Failed to initialize metrics: {e}")
@@ -659,38 +685,84 @@ class BaseHarness:
             
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             
-            visualization_configs = [
-                {
-                    'metric': 'vllm:generation_tokens_total',
-                    'title': 'Generation Tokens Total over Time',
-                    'filename': f'generation_tokens_total_{timestamp}.png'
-                },
-                {
-                    'metric': 'vllm:num_requests_running',
-                    'title': 'Running Requests Over Time',
-                    'filename': f'requests_running_{timestamp}.png'
-                },
-                {
-                    'metric': 'vllm:prompt_tokens_total',
-                    'title': 'Prompt tokens total over time',
-                    'filename': f'prompt_tokens_total_{timestamp}.png'
-                },
-                {
-                    'metric': 'vllm:kv_cache_usage_perc',
-                    'title': 'KV cache usage percentage over time',
-                    'filename': f'kv_cache_usage_perc_{timestamp}.png'
-                },
-                {
-                    'metric': 'vllm:prefix_cache_queries_total',
-                    'title': 'Prefix cache queries total over time',
-                    'filename': f'prefix_cache_queries_total_{timestamp}.png'
-                },
-                {
-                    'metric': 'vllm:prefix_cache_hits_total',
-                    'title': 'Prefix cache hits total over time',
-                    'filename': f'prefix_cache_hits_total_{timestamp}.png'
-                }
-            ]
+            # Get backend type for visualization configs
+            backend = getattr(self, 'metrics_backend', None)
+            if not backend:
+                backend = self.server_config.get('backend', 'vllm').lower()
+            
+            # Define visualization configs based on backend
+            if backend == 'sglang':
+                visualization_configs = [
+                    {
+                        'metric': 'sglang:gen_throughput',
+                        'title': 'Generation Throughput (tokens/s) over Time',
+                        'filename': f'gen_throughput_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'sglang:num_running_reqs',
+                        'title': 'Running Requests Over Time',
+                        'filename': f'num_running_reqs_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'sglang:num_used_tokens',
+                        'title': 'Used Tokens over Time',
+                        'filename': f'num_used_tokens_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'sglang:token_usage',
+                        'title': 'Token Usage over Time',
+                        'filename': f'token_usage_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'sglang:cache_hit_rate',
+                        'title': 'Cache Hit Rate over Time',
+                        'filename': f'cache_hit_rate_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'sglang:utilization',
+                        'title': 'Utilization over Time',
+                        'filename': f'utilization_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'sglang:num_queue_reqs',
+                        'title': 'Queue Requests over Time',
+                        'filename': f'num_queue_reqs_{timestamp}.png'
+                    }
+                ]
+            else:
+                # Default to vLLM metrics
+                visualization_configs = [
+                    {
+                        'metric': 'vllm:generation_tokens_total',
+                        'title': 'Generation Tokens Total over Time',
+                        'filename': f'generation_tokens_total_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'vllm:num_requests_running',
+                        'title': 'Running Requests Over Time',
+                        'filename': f'requests_running_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'vllm:prompt_tokens_total',
+                        'title': 'Prompt tokens total over time',
+                        'filename': f'prompt_tokens_total_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'vllm:kv_cache_usage_perc',
+                        'title': 'KV cache usage percentage over time',
+                        'filename': f'kv_cache_usage_perc_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'vllm:prefix_cache_queries_total',
+                        'title': 'Prefix cache queries total over time',
+                        'filename': f'prefix_cache_queries_total_{timestamp}.png'
+                    },
+                    {
+                        'metric': 'vllm:prefix_cache_hits_total',
+                        'title': 'Prefix cache hits total over time',
+                        'filename': f'prefix_cache_hits_total_{timestamp}.png'
+                    }
+                ]
             
             successful_viz = 0
             for viz in visualization_configs:

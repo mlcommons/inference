@@ -1,0 +1,125 @@
+# HELP sglang:num_running_reqs The number of running requests.
+# TYPE sglang:num_running_reqs gauge
+sglang:num_running_reqs{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:num_used_tokens The number of used tokens.
+# TYPE sglang:num_used_tokens gauge
+sglang:num_used_tokens{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:token_usage The token usage.
+# TYPE sglang:token_usage gauge
+sglang:token_usage{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:swa_token_usage The token usage for SWA layers.
+# TYPE sglang:swa_token_usage gauge
+sglang:swa_token_usage{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:gen_throughput The generation throughput (token/s).
+# TYPE sglang:gen_throughput gauge
+sglang:gen_throughput{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:num_queue_reqs The number of requests in the waiting queue.
+# TYPE sglang:num_queue_reqs gauge
+sglang:num_queue_reqs{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:num_grammar_queue_reqs The number of requests in the grammar waiting queue.
+# TYPE sglang:num_grammar_queue_reqs gauge
+sglang:num_grammar_queue_reqs{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:num_running_reqs_offline_batch The number of running low-priority offline batch requests(label is 'batch').
+# TYPE sglang:num_running_reqs_offline_batch gauge
+sglang:num_running_reqs_offline_batch{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:cache_hit_rate The prefix cache hit rate.
+# TYPE sglang:cache_hit_rate gauge
+sglang:cache_hit_rate{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:spec_accept_length The average acceptance length of speculative decoding.
+# TYPE sglang:spec_accept_length gauge
+sglang:spec_accept_length{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:num_prefill_prealloc_queue_reqs The number of requests in the prefill prealloc queue.
+# TYPE sglang:num_prefill_prealloc_queue_reqs gauge
+sglang:num_prefill_prealloc_queue_reqs{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:num_prefill_inflight_queue_reqs The number of requests in the prefill inflight queue.
+# TYPE sglang:num_prefill_inflight_queue_reqs gauge
+sglang:num_prefill_inflight_queue_reqs{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:num_decode_prealloc_queue_reqs The number of requests in the decode prealloc queue.
+# TYPE sglang:num_decode_prealloc_queue_reqs gauge
+sglang:num_decode_prealloc_queue_reqs{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:num_decode_transfer_queue_reqs The number of requests in the decode transfer queue.
+# TYPE sglang:num_decode_transfer_queue_reqs gauge
+sglang:num_decode_transfer_queue_reqs{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:kv_transfer_speed_gb_s The transfer speed of the KV cache in GB/s.
+# TYPE sglang:kv_transfer_speed_gb_s gauge
+sglang:kv_transfer_speed_gb_s{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:kv_transfer_latency_ms The transfer latency of the KV cache in ms.
+# TYPE sglang:kv_transfer_latency_ms gauge
+sglang:kv_transfer_latency_ms{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:total_retracted_reqs The total number of retracted requests due to kvcache full.
+# TYPE sglang:total_retracted_reqs gauge
+sglang:total_retracted_reqs{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:utilization The utilization.
+# TYPE sglang:utilization gauge
+sglang:utilization{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:engine_startup_time The time taken for the engine to start up.
+# TYPE sglang:engine_startup_time gauge
+sglang:engine_startup_time{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:engine_load_weights_time The time taken for the engine to load weights.
+# TYPE sglang:engine_load_weights_time gauge
+sglang:engine_load_weights_time{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:num_retracted_reqs The number of retracted requests.
+# TYPE sglang:num_retracted_reqs gauge
+sglang:num_retracted_reqs{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pid="1895965",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:num_paused_reqs The number of paused requests by async weight sync.
+# TYPE sglang:num_paused_reqs gauge
+sglang:num_paused_reqs{engine_type="unified",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8",pid="1895965",pp_rank="0",tp_rank="0"} 0.0
+# HELP sglang:time_to_first_token_seconds Histogram of time to first token in seconds.
+# TYPE sglang:time_to_first_token_seconds histogram
+sglang:time_to_first_token_seconds_sum{model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 0.5402500629425049
+sglang:time_to_first_token_seconds_bucket{le="0.1",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 0.0
+sglang:time_to_first_token_seconds_bucket{le="0.2",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 0.0
+sglang:time_to_first_token_seconds_bucket{le="0.4",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 0.0
+sglang:time_to_first_token_seconds_bucket{le="0.6",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="0.8",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="1.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="2.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="4.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="6.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="8.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="10.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="20.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="40.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="60.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="80.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="100.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="200.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="400.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_bucket{le="+Inf",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:time_to_first_token_seconds_count{model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+# HELP sglang:e2e_request_latency_seconds Histogram of End-to-end request latency in seconds
+# TYPE sglang:e2e_request_latency_seconds histogram
+sglang:e2e_request_latency_seconds_sum{model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 0.5402379035949707
+sglang:e2e_request_latency_seconds_bucket{le="0.1",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 0.0
+sglang:e2e_request_latency_seconds_bucket{le="0.2",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 0.0
+sglang:e2e_request_latency_seconds_bucket{le="0.4",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 0.0
+sglang:e2e_request_latency_seconds_bucket{le="0.6",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="0.8",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="1.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="2.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="4.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="6.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="8.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="10.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="20.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="40.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="60.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="80.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="100.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="200.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="400.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="600.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="1200.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="1800.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="2400.0",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_bucket{le="+Inf",model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+sglang:e2e_request_latency_seconds_count{model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0
+# HELP sglang:prompt_tokens_total Number of prefill tokens processed.
+# TYPE sglang:prompt_tokens_total counter
+sglang:prompt_tokens_total{model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 7.0
+# HELP sglang:generation_tokens_total Number of generation tokens processed.
+# TYPE sglang:generation_tokens_total counter
+sglang:generation_tokens_total{model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 8.0
+# HELP sglang:num_requests_total Number of requests processed.
+# TYPE sglang:num_requests_total counter
+sglang:num_requests_total{model_name="RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8"} 1.0

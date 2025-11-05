@@ -814,7 +814,11 @@ class SGLangServer(InferenceServer):
         
         # SGLang specific configuration
         self.binary_path = self.config.get('binary_path', 'python')
+        # Check for server_args first, fall back to api_server_args for backward compatibility
         raw_server_args = self.config.get('server_args', [])
+        if not raw_server_args:
+            # Fall back to api_server_args if server_args is not provided
+            raw_server_args = self.config.get('api_server_args', [])
         # Normalize arguments to handle dict format and flags
         self.server_args = normalize_server_args(raw_server_args)
     

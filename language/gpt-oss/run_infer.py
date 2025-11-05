@@ -1,21 +1,18 @@
 #!/usr/bin/env python3
 """
-Script to send pre-tokenized requests to inference server (SGLang or OpenAI).
+Script to send pre-tokenized requests to SGLang server.
 
 Usage:
     python run_infer.py --input-tokens tokenized_data.pkl [options]
 
 Arguments:
     --input-tokens     Path to pickle file containing pre-tokenized data from harmony-tokens.py
-    --server-url       Server URL (default: http://localhost:30000)
+    --server-url       SGLang server URL (default: http://localhost:30000)
     --max-samples      Maximum number of samples to process (default: all)
     --max-tokens       Maximum tokens to generate per request (default: 100)
     --max-concurrency  Maximum number of concurrent requests (default: 256)
     --output           Output pickle file for responses (optional)
     --pass-k           Number of inference passes per sample for pass@k strategy (default: 1)
-    --client-type      Client type: sglang or openai (default: sglang)
-    --api-key          API key for OpenAI client (optional)
-    --model            Model name for OpenAI client (default: gpt-4)
 """
 
 import requests
@@ -28,7 +25,6 @@ from multiprocessing import Pool
 import pandas as pd
 from tqdm import tqdm
 from transformers import AutoTokenizer
-from openai import OpenAI
 
 # Set up logging
 logging.basicConfig(
@@ -94,75 +90,6 @@ class SGLangClient:
             return {"error": str(e)}
 
 
-class OpenAIClient:
-    def __init__(self,
-                 server_url: str = "https://api.openai.com/v1",
-                 temperature: float = 0.001,
-                 top_k: int = 1,
-                 timeout: int = 1200,
-                 api_key: str = None,
-                 model: str = "gpt-4"
-                 ):
-        self.base_url = server_url
-        self.temperature = temperature
-        self.top_k = top_k
-        self.timeout = timeout
-        self.model = model
-        # Initialize OpenAI client
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url=server_url,
-            timeout=timeout
-        )
-
-    def send_request(
-            self, input_ids: List[int], max_tokens: int = 100) -> Dict[str, Any]:
-        """Send a single request to the OpenAI-compatible server.
-
-        Note: OpenAI API expects text input, so we need to decode the input_ids first.
-        """
-        try:
-            # Decode input_ids to text
-            tokenizer = get_tokenizer()
-            prompt_text = tokenizer.decode(
-                input_ids, skip_special_tokens=False)
-
-            # Make request to OpenAI-compatible API
-            response = self.client.completions.create(
-                model=self.model,
-                prompt=prompt_text,
-                max_tokens=max_tokens,
-                temperature=self.temperature,
-                top_p=1.0,  # Use top_p instead of top_k for OpenAI
-                logprobs=0,  # Request logprobs to get token IDs
-            )
-
-            # Convert OpenAI response to SGLang-compatible format
-            choice = response.choices[0]
-            output_text = choice.text
-
-            # Tokenize the output to get output_ids
-            output_ids = tokenizer.encode(
-                output_text, add_special_tokens=False)
-
-            # Build compatible response format
-            result = {
-                "output_ids": output_ids,
-                "text": output_text,
-                "meta_info": {
-                    "completion_tokens": response.usage.completion_tokens,
-                    "prompt_tokens": response.usage.prompt_tokens,
-                    "total_tokens": response.usage.total_tokens,
-                }
-            }
-
-            return result
-
-        except Exception as e:
-            logger.error(f"OpenAI request failed: {e}")
-            return {"error": str(e)}
-
-
 def load_tokenized_data(data_file: str) -> pd.DataFrame:
     """Load pre-tokenized data from pickle file produced by harmony-tokens.py."""
     logger.info(f"Loading tokenized data from {data_file}")
@@ -201,23 +128,14 @@ def load_tokenized_data(data_file: str) -> pd.DataFrame:
 
 def send_single_request(args_tuple):
     """Send a single request - used by multiprocessing pool."""
-    input_ids, max_tokens, server_url, sample_id, pass_num, temperature, top_k, timeout, client_type, api_key, model = args_tuple
+    input_ids, max_tokens, server_url, sample_id, pass_num, temperature, top_k, timeout = args_tuple
 
-    # Create a new client for this process based on client_type
-    if client_type == "openai":
-        client = OpenAIClient(
-            server_url=server_url,
-            temperature=temperature,
-            top_k=top_k,
-            timeout=timeout,
-            api_key=api_key,
-            model=model)
-    else:  # default to sglang
-        client = SGLangClient(
-            server_url=server_url,
-            temperature=temperature,
-            top_k=top_k,
-            timeout=timeout)
+    # Create a new client for this process
+    client = SGLangClient(
+        server_url=server_url,
+        temperature=temperature,
+        top_k=top_k,
+        timeout=timeout)
 
     try:
         # Track latency: time from request sent to response received
@@ -234,13 +152,10 @@ def send_single_request(args_tuple):
 
 def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
                            max_tokens: int = 100, max_concurrency: int = 128, temperature: float = 0.001, top_k: int = 1, timeout: int = 1200,
-                           client_type: str = "sglang", api_key: str = None, model: str = "gpt-4", pass_k: int = 1):
-    """Send all requests to server in parallel using multiprocessing.
-
+                           pass_k: int = 1):
+    """Send all requests to SGLang server in parallel using multiprocessing.
+    
     Args:
-        client_type: Type of client to use ("sglang" or "openai")
-        api_key: API key for OpenAI client (optional, will use env var if not provided)
-        model: Model name for OpenAI client
         pass_k: Number of inference passes per sample for pass@k strategy
 
     Returns:
@@ -249,7 +164,7 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
     num_samples = len(tokenized_df)
     total_requests = num_samples * pass_k
     logger.info(
-        f"Sending {total_requests} requests ({num_samples} samples × {pass_k} passes) to server with {max_concurrency} concurrent workers using {client_type} client...")
+        f"Sending {total_requests} requests ({num_samples} samples × {pass_k} passes) to server with {max_concurrency} concurrent workers...")
 
     # Prepare arguments for multiprocessing - create pass_k requests per sample
     args_list = []
@@ -257,7 +172,7 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
         for pass_num in range(pass_k):
             args_list.append((
                 row['tok_input'], max_tokens, server_url,
-                idx, pass_num, temperature, top_k, timeout, client_type, api_key, model
+                idx, pass_num, temperature, top_k, timeout
             ))
 
     start_time = time.time()
@@ -449,8 +364,7 @@ def save_responses(responses_by_pass: Dict[tuple, Dict[str, Any]],
 def process_requests(tokenized_df: pd.DataFrame, server_url: str,
                      max_samples: int = None, max_tokens: int = 100,
                      max_concurrency: int = 128, output_file: str = None, temperature: float = 0.001, top_k: int = 1,
-                     timeout: int = 1200, client_type: str = "sglang", api_key: str = None, model: str = "gpt-4",
-                     pass_k: int = 1) -> pd.DataFrame:
+                     timeout: int = 1200, pass_k: int = 1) -> pd.DataFrame:
     """Main processing function that handles requests and response extraction.
 
     Args:
@@ -471,9 +385,6 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
         temperature,
         top_k,
         timeout,
-        client_type,
-        api_key,
-        model,
         pass_k)
 
     # Step 3: Extract response output_ids for all passes
@@ -499,11 +410,11 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Send pre-tokenized requests to inference server (SGLang or OpenAI)")
+        description="Send pre-tokenized requests to SGLang server")
     parser.add_argument("--input-tokens", required=True,
                         help="Path to pickle file containing pre-tokenized data from harmony-tokens.py")
     parser.add_argument("--server-url", default="http://localhost:30000",
-                        help="Server URL (default: http://localhost:30000 for SGLang, https://api.openai.com/v1 for OpenAI)")
+                        help="SGLang server URL (default: http://localhost:30000)")
     parser.add_argument("--max-samples", type=int, default=None,
                         help="Maximum number of samples to process (default: all)")
     parser.add_argument("--max-tokens", type=int, default=100,
@@ -520,43 +431,23 @@ def main():
                         help="Top-k for sampling (default: 1)")
     parser.add_argument("--timeout", type=int, default=1200,
                         help="Timeout for requests (default: 1200)")
-    parser.add_argument("--client-type", choices=["sglang", "openai"], default="sglang",
-                        help="Client type to use: sglang or openai (default: sglang)")
-    parser.add_argument("--api-key", default=None,
-                        help="API key for OpenAI client (optional, will use OPENAI_API_KEY env var if not provided)")
-    parser.add_argument("--model", default="gpt-4",
-                        help="Model name for OpenAI client (default: gpt-4)")
 
     args = parser.parse_args()
 
     # Test connection
-    logger.info(
-        f"Testing server connection to {args.server_url} using {args.client_type} client...")
-    if args.client_type == "openai":
-        test_client = OpenAIClient(
-            server_url=args.server_url,
-            temperature=args.temperature,
-            top_k=args.top_k,
-            timeout=args.timeout,
-            api_key=args.api_key,
-            model=args.model)
-    else:
-        test_client = SGLangClient(
-            server_url=args.server_url,
-            temperature=args.temperature,
-            top_k=args.top_k,
-            timeout=args.timeout)
-
+    logger.info(f"Testing server connection to {args.server_url}...")
+    test_client = SGLangClient(
+        server_url=args.server_url,
+        temperature=args.temperature,
+        top_k=args.top_k,
+        timeout=args.timeout)
+    
     test_response = test_client.send_request(input_ids=[1, 2, 3], max_tokens=5)
     if "error" in test_response:
         logger.error(f"Server connection failed: {test_response['error']}")
-        if args.client_type == "sglang":
-            logger.error("Make sure your SGLang server is running. Try:")
-            logger.error(
-                "  python -m sglang.launch_server --model-path openai/gpt-oss-120b --mem-fraction-static 0.98 --tp 8")
-        else:
-            logger.error(
-                "Make sure your OpenAI API key is valid and the server URL is correct.")
+        logger.error("Make sure your SGLang server is running. Try:")
+        logger.error(
+            "  python -m sglang.launch_server --model-path openai/gpt-oss-120b --mem-fraction-static 0.98 --tp 8")
         return
     logger.info("Server connection successful")
 
@@ -572,9 +463,6 @@ def main():
                                  temperature=args.temperature,
                                  top_k=args.top_k,
                                  timeout=args.timeout,
-                                 client_type=args.client_type,
-                                 api_key=args.api_key,
-                                 model=args.model,
                                  pass_k=args.pass_k)
 
     # Print summary

@@ -479,10 +479,6 @@ if __name__ == "__main__":
     successful_count = 0
     error_count = 0
 
-    # Set templated text input to None (if it exists)
-    if 'templated_text_input' in df.columns:
-        df['templated_text_input'] = None
-
     # Initialize columns for harmony tokenized input
     df['tok_input'] = None
     df['tok_input_len'] = None

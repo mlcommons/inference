@@ -77,7 +77,7 @@ class UnknownTestModeValueError(ValueError):
 class TestSettings(BaseModel):
     """The test settings for the MLPerf inference LoadGen."""
 
-    senario: Annotated[
+    scenario: Annotated[
         TestScenario,
         Field(
             description=(
@@ -112,11 +112,10 @@ class TestSettings(BaseModel):
     def to_lgtype(self) -> lg.TestSettings:
         """Convert the test settings to its corresponding LoadGen type."""
         settings = lg.TestSettings()
-        settings.scenario = self.senario.to_lgtype()
+        settings.scenario = self.scenario.to_lgtype()
         settings.mode = self.mode.to_lgtype()
         settings.offline_expected_qps = self.offline_expected_qps
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
         settings.use_token_latencies = True
         return settings
 
@@ -201,9 +200,7 @@ def main(
     logger.info("Running VL2L benchmark with settings: {}", settings)
     logger.info("Running VL2L benchmark with model: {}", model)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info(
-        "Running VL2L benchmark with OpenAI API endpoint: {}",
-        endpoint)
+    logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
     logger.info("Running VL2L benchmark with random seed: {}", random_seed)
     lg_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(

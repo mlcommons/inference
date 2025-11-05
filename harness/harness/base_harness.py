@@ -515,7 +515,9 @@ class BaseHarness:
                     'vllm:generation_tokens_total',
                     'vllm:prompt_tokens_total',
                     'vllm:kv_cache_usage_perc',
-                    'vllm:time_to_first_token_seconds'
+                    'vllm:time_to_first_token_seconds',
+                    'vllm:prefix_cache_queries_total',
+                    'vllm:prefix_cache_hits_total'
                 ],
                 collection_interval=self.metrics_interval,
                 timeout=30,
@@ -677,6 +679,16 @@ class BaseHarness:
                     'metric': 'vllm:kv_cache_usage_perc',
                     'title': 'KV cache usage percentage over time',
                     'filename': f'kv_cache_usage_perc_{timestamp}.png'
+                },
+                {
+                    'metric': 'vllm:prefix_cache_queries_total',
+                    'title': 'Prefix cache queries total over time',
+                    'filename': f'prefix_cache_queries_total_{timestamp}.png'
+                },
+                {
+                    'metric': 'vllm:prefix_cache_hits_total',
+                    'title': 'Prefix cache hits total over time',
+                    'filename': f'prefix_cache_hits_total_{timestamp}.png'
                 }
             ]
             

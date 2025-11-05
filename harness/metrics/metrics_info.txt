@@ -15,6 +15,10 @@ vllm:generation_tokens_total:COUNTER
 vllm:request_input_tokens:GAUGE
 vllm:request_output_tokens:COUNTER
 
+#Prefix metrics
+vllm:prefix_cache_queries_total:COUNTER
+vllm:prefix_cache_hits_total:COUNTER
+
 # Success/Failure Metrics
 vllm:request_success_total:COUNTER
 vllm:request_failure_total:COUNTER

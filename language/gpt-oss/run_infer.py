@@ -154,7 +154,7 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
                            max_tokens: int = 100, max_concurrency: int = 128, temperature: float = 0.001, top_k: int = 1, timeout: int = 1200,
                            pass_k: int = 1):
     """Send all requests to SGLang server in parallel using multiprocessing.
-    
+
     Args:
         pass_k: Number of inference passes per sample for pass@k strategy
 
@@ -441,7 +441,7 @@ def main():
         temperature=args.temperature,
         top_k=args.top_k,
         timeout=args.timeout)
-    
+
     test_response = test_client.send_request(input_ids=[1, 2, 3], max_tokens=5)
     if "error" in test_response:
         logger.error(f"Server connection failed: {test_response['error']}")

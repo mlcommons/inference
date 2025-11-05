@@ -61,7 +61,7 @@ LLM_JUDGE_MAX_WORKERS = None  # None = auto-select based on rubric count
 
 def detect_pass_k(df: pd.DataFrame) -> int:
     """Detect if DataFrame has pass@k format and return k.
-    
+
     Returns:
         Number of passes (k) if pass@k format detected, otherwise 1
     """
@@ -69,11 +69,11 @@ def detect_pass_k(df: pd.DataFrame) -> int:
     pass_k = 0
     while f'model_output_{pass_k}' in df.columns:
         pass_k += 1
-    
+
     # If no _0 suffix found, check for single model_output column
     if pass_k == 0 and 'model_output' in df.columns:
         return 1
-    
+
     return pass_k
 
 
@@ -84,21 +84,23 @@ def validate_dataframe(df: pd.DataFrame) -> None:
 
     # Detect pass@k format
     pass_k = detect_pass_k(df)
-    
+
     if pass_k == 0:
-        raise ValueError("No model_output columns found (expected 'model_output' or 'model_output_0', 'model_output_1', etc.)")
-    
+        raise ValueError(
+            "No model_output columns found (expected 'model_output' or 'model_output_0', 'model_output_1', etc.)")
+
     # Check for dataset column
     if 'dataset' not in df.columns:
         raise ValueError("Missing required column: 'dataset'")
-    
+
     # Check for tok_model_output_len (either single or with suffixes)
     has_tok_len = False
     if pass_k == 1:
         has_tok_len = 'tok_model_output_len' in df.columns
     else:
-        has_tok_len = all(f'tok_model_output_len_{i}' in df.columns for i in range(pass_k))
-    
+        has_tok_len = all(
+            f'tok_model_output_len_{i}' in df.columns for i in range(pass_k))
+
     if not has_tok_len:
         raise ValueError("Missing required tok_model_output_len column(s)")
 
@@ -970,7 +972,7 @@ def process_row(row: pd.Series) -> Dict[str, Any]:
 
 
 def process_livecodebench_parallel(
-        df: pd.DataFrame, 
+        df: pd.DataFrame,
         group_indices: pd.Index,
         extracted_answer_col: str = 'extracted_answer',
         prompt_accuracy_col: str = 'prompt_accuracy',
@@ -978,7 +980,7 @@ def process_livecodebench_parallel(
         pass_label: str = '',
         executor: Optional[ProcessPoolExecutor] = None) -> Tuple[int, int]:
     """Process LiveCodeBench items in parallel.
-    
+
     Args:
         df: DataFrame with data
         group_indices: Indices to process
@@ -987,7 +989,7 @@ def process_livecodebench_parallel(
         evaluation_details_col: Column name for evaluation details
         pass_label: Label for logging (e.g., 'pass 0', 'pass 1')
         executor: Optional ProcessPoolExecutor to reuse (for performance)
-    
+
     Returns:
         Tuple of (correct_count, total_evaluated)
     """
@@ -1042,7 +1044,8 @@ def process_livecodebench_parallel(
                 if is_correct:
                     correct_count += 1
             except Exception as e:
-                logger.error(f"Error evaluating row {idx}{' ' + pass_label if pass_label else ''}: {e}")
+                logger.error(
+                    f"Error evaluating row {idx}{' ' + pass_label if pass_label else ''}: {e}")
                 df.at[idx, prompt_accuracy_col] = 0.0
                 df.at[idx, evaluation_details_col] = f"Error: {e}"
                 total_evaluated += 1
@@ -1163,7 +1166,8 @@ def evaluate_healthbench_batch(
             task_id += 1
 
     if not all_tasks:
-        logger.warning(f"No grading tasks to process{' for ' + pass_label if pass_label else ''}")
+        logger.warning(
+            f"No grading tasks to process{' for ' + pass_label if pass_label else ''}")
         return {}
 
     logger.info(
@@ -1276,7 +1280,7 @@ def evaluate_healthbench_batch(
 
 def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     """Process entire dataframe with optimized batch processing.
-    
+
     Supports both single-pass and pass@k formats:
     - Single-pass: model_output -> extracted_answer, prompt_accuracy
     - Pass@k: model_output_0, model_output_1, ... -> extracted_answer_0, prompt_accuracy_0, ...
@@ -1285,40 +1289,44 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
     validate_dataframe(df)
 
     df_output = df.copy()
-    
+
     # Detect pass@k
     pass_k = detect_pass_k(df)
     logger.info(f"Detected pass@k format with k={pass_k}")
-    
+
     # Initialize columns for each pass
     for pass_num in range(pass_k):
         suffix = f'_{pass_num}' if pass_k > 1 else ''
         df_output[f'extracted_answer{suffix}'] = None
         df_output[f'prompt_accuracy{suffix}'] = 0.0
         df_output[f'evaluation_details{suffix}'] = None
-    
+
     # Add aggregated columns for pass@k
     if pass_k > 1:
         df_output['prompt_accuracy'] = 0.0  # Will be max of all passes
         df_output['evaluation_details'] = None  # Will aggregate details
 
     # Check if we have LiveCodeBench datasets to evaluate
-    has_livecodebench = any('livecodebench' in str(ds).lower() 
-                           for ds in df_output['dataset'].unique())
-    
-    # Pre-load LiveCodeBench benchmark and create shared process pool for all LCB evaluations
+    has_livecodebench = any('livecodebench' in str(ds).lower()
+                            for ds in df_output['dataset'].unique())
+
+    # Pre-load LiveCodeBench benchmark and create shared process pool for all
+    # LCB evaluations
     lcb_executor = None
     if has_livecodebench:
         try:
-            logger.info("Pre-loading LiveCodeBench benchmark for worker processes...")
-            # Load benchmark in main process before forking - workers will inherit via copy-on-write
+            logger.info(
+                "Pre-loading LiveCodeBench benchmark for worker processes...")
+            # Load benchmark in main process before forking - workers will
+            # inherit via copy-on-write
             _ = load_lcb_benchmark()
             logger.info("LiveCodeBench benchmark loaded successfully")
-            
+
             # Create a single process pool for all LCB evaluations
             max_workers = multiprocessing.cpu_count()
             lcb_executor = ProcessPoolExecutor(max_workers=max_workers)
-            logger.info(f"Created shared ProcessPoolExecutor with {max_workers} workers for LiveCodeBench")
+            logger.info(
+                f"Created shared ProcessPoolExecutor with {max_workers} workers for LiveCodeBench")
         except Exception as e:
             logger.warning(f"Failed to pre-load LiveCodeBench benchmark: {e}")
             logger.warning("Will fall back to per-evaluation loading")
@@ -1336,10 +1344,10 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 extracted_answer_col = f'extracted_answer{suffix}'
                 prompt_accuracy_col = f'prompt_accuracy{suffix}'
                 evaluation_details_col = f'evaluation_details{suffix}'
-                
+
                 logger.info(
                     f"Processing {len(group_indices)} rows for dataset '{dataset_name}', pass {pass_num}")
-                
+
                 # Parse answers for all rows in this dataset for this pass
                 for idx in group_indices:
                     row = df_output.loc[idx]
@@ -1347,16 +1355,18 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                     extracted = evaluator['parse'](raw_output)
                     df_output.at[idx, extracted_answer_col] = extracted
 
-                    # Set initial evaluation details for rows without extracted answers
+                    # Set initial evaluation details for rows without extracted
+                    # answers
                     if extracted is None or pd.isna(extracted):
-                        df_output.at[idx, evaluation_details_col] = "No answer extracted from model output"
+                        df_output.at[idx,
+                                     evaluation_details_col] = "No answer extracted from model output"
 
                 # Evaluate answers for this pass
                 pass_label_str = f'(pass {pass_num})' if pass_k > 1 else ''
-                
+
                 if 'livecodebench' in dataset_name.lower():
                     correct_count, total_evaluated = process_livecodebench_parallel(
-                        df_output, 
+                        df_output,
                         group_indices,
                         extracted_answer_col=extracted_answer_col,
                         prompt_accuracy_col=prompt_accuracy_col,
@@ -1365,7 +1375,8 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                         executor=lcb_executor  # Reuse shared executor
                     )
                 elif 'healthbench' in dataset_name.lower():
-                    # HealthBench evaluation with LLM grading - batched across all rows
+                    # HealthBench evaluation with LLM grading - batched across
+                    # all rows
                     total_score = 0.0
                     total_evaluated = 0
 
@@ -1399,8 +1410,10 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                         ground_truth = row.get('ground_truth')
 
                         if extracted is not None and not pd.isna(ground_truth):
-                            is_correct = evaluator['evaluate'](extracted, ground_truth)
-                            df_output.at[idx, prompt_accuracy_col] = 100.0 if is_correct else 0.0
+                            is_correct = evaluator['evaluate'](
+                                extracted, ground_truth)
+                            df_output.at[idx,
+                                         prompt_accuracy_col] = 100.0 if is_correct else 0.0
                             total_evaluated += 1
                             if is_correct:
                                 correct_count += 1
@@ -1417,30 +1430,33 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                         accuracy = correct_count / total_evaluated * 100
                         logger.info(
                             f"{dataset_name} pass {pass_num} results: {correct_count}/{total_evaluated} correct ({accuracy:.1f}% accuracy)")
-            
+
             # Aggregate results across all passes (take max)
             if pass_k > 1:
-                logger.info(f"Aggregating results across {pass_k} passes for dataset '{dataset_name}'")
+                logger.info(
+                    f"Aggregating results across {pass_k} passes for dataset '{dataset_name}'")
                 for idx in group_indices:
                     # Get all accuracy values for this row
                     accuracies = []
                     for pass_num in range(pass_k):
                         acc = df_output.at[idx, f'prompt_accuracy_{pass_num}']
                         accuracies.append(acc if not pd.isna(acc) else 0.0)
-                    
+
                     # Set aggregated accuracy as max
                     max_accuracy = max(accuracies)
                     df_output.at[idx, 'prompt_accuracy'] = max_accuracy
-                    
+
                     # Find which pass achieved max accuracy
                     max_pass = accuracies.index(max_accuracy)
-                    df_output.at[idx, 'evaluation_details'] = f"Best pass: {max_pass} (accuracy: {max_accuracy:.1f}%)"
+                    df_output.at[idx,
+                                 'evaluation_details'] = f"Best pass: {max_pass} (accuracy: {max_accuracy:.1f}%)"
 
         return df_output
     finally:
         # Clean up shared LiveCodeBench executor
         if lcb_executor is not None:
-            logger.info("Shutting down shared LiveCodeBench ProcessPoolExecutor")
+            logger.info(
+                "Shutting down shared LiveCodeBench ProcessPoolExecutor")
             lcb_executor.shutdown(wait=True)
 
 
@@ -1464,26 +1480,30 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
 
     # Detect pass@k
     pass_k = detect_pass_k(df_evaluated)
-    
+
     # Calculate statistics
     if pass_k > 1:
         # For pass@k, use the aggregated prompt_accuracy (max across passes)
-        evaluated = df_evaluated['extracted_answer_0'].notna().sum()  # Count from first pass
+        # Count from first pass
+        evaluated = df_evaluated['extracted_answer_0'].notna().sum()
         correct = (df_evaluated['prompt_accuracy'] > 0).sum()
         accuracy = df_evaluated['prompt_accuracy'].mean()
-        
+
         # Calculate average token length across all passes
         all_output_lens = []
         for i in range(pass_k):
-            all_output_lens.extend(df_evaluated[f'tok_model_output_len_{i}'].tolist())
-        mean_output_len = float(sum(all_output_lens) / len(all_output_lens)) if all_output_lens else 0.0
+            all_output_lens.extend(
+                df_evaluated[f'tok_model_output_len_{i}'].tolist())
+        mean_output_len = float(
+            sum(all_output_lens) /
+            len(all_output_lens)) if all_output_lens else 0.0
     else:
         # Single pass format
         suffix = '' if 'extracted_answer' in df_evaluated.columns else '_0'
         evaluated = df_evaluated[f'extracted_answer{suffix}'].notna().sum()
         correct = (df_evaluated[f'prompt_accuracy{suffix}'] > 0).sum()
         accuracy = df_evaluated[f'prompt_accuracy{suffix}'].mean()
-        
+
         # tok_model_output_len is now a required column
         tok_len_col = 'tok_model_output_len' if 'tok_model_output_len' in df_evaluated.columns else 'tok_model_output_len_0'
         mean_output_len = float(df_evaluated[tok_len_col].mean())
@@ -1508,7 +1528,7 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
         'tokens_per_sample': mean_output_len,
         'num-samples': len(df_evaluated),
     }
-    
+
     if pass_k > 1:
         results['pass_k'] = pass_k
         # Also report individual pass accuracies

@@ -305,7 +305,8 @@ def create_healthbench_prompt(prompt, reasoning_effort=ReasoningEffort.HIGH):
     return _finalize_conversation(messages, None)
 
 
-def create_arxiv_summarization_prompt(user_query, reasoning_effort=ReasoningEffort.HIGH):
+def create_arxiv_summarization_prompt(
+        user_query, reasoning_effort=ReasoningEffort.HIGH):
     """
     Creates a zero-shot prompt for arXiv paper summarization using Harmony format.
 
@@ -353,7 +354,7 @@ def process_row(args):
         tuple: (index, convo, tokens, dataset_name) or (index, None, None, dataset_name, error)
     """
     index, row, dataset_function_map, reasoning_effort = args
-    
+
     # Check if dataset column exists, use default if not
     if "dataset" in row:
         dataset_name = row["dataset"]
@@ -416,7 +417,8 @@ if __name__ == "__main__":
     # Filter by dataset if specified
     if args.dataset is not None:
         if 'dataset' not in df.columns:
-            print(f"WARNING: No 'dataset' column found in dataframe. Cannot filter by dataset.")
+            print(
+                f"WARNING: No 'dataset' column found in dataframe. Cannot filter by dataset.")
             print(f"All rows will be processed using the default prompt function.")
         else:
             original_len = len(df)

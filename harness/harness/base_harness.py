@@ -598,11 +598,55 @@ class BaseHarness:
         
         try:
             storage_file = self.metrics_collector._get_storage_file_path()
-            if not storage_file or not os.path.exists(storage_file) or os.path.getsize(storage_file) == 0:
-                self.logger.warning(f"Metrics file not available: {storage_file}")
+            self.logger.info(f"Looking for metrics file: {storage_file}")
+            
+            if not storage_file:
+                self.logger.warning("No storage file path available from metrics collector")
+                # Try to find metrics files in the metrics output directory
+                self.logger.info(f"Searching for metrics files in: {self.metrics_output_dir}")
+                metrics_files = list(self.metrics_output_dir.glob("metrics_*.csv")) + \
+                               list(self.metrics_output_dir.glob("metrics_*.json")) + \
+                               list(self.metrics_output_dir.glob("*_processed.csv")) + \
+                               list(self.metrics_output_dir.glob("*_processed.json"))
+                if metrics_files:
+                    # Sort by modification time and use most recent
+                    metrics_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                    storage_file = str(metrics_files[0])
+                    self.logger.info(f"Found metrics file: {storage_file}")
+                else:
+                    self.logger.warning(f"No metrics files found in {self.metrics_output_dir}")
+                    self.logger.warning("Metrics may not have been collected. Check if:")
+                    self.logger.warning("  1. Server metrics endpoint is accessible")
+                    self.logger.warning("  2. Server was started with metrics enabled")
+                    self.logger.warning("  3. Metrics collection thread was running")
+                    return
+            
+            if not os.path.exists(storage_file):
+                self.logger.warning(f"Metrics file does not exist: {storage_file}")
+                # Try to find metrics files in the metrics output directory
+                self.logger.info(f"Searching for metrics files in: {self.metrics_output_dir}")
+                metrics_files = list(self.metrics_output_dir.glob("metrics_*.csv")) + \
+                               list(self.metrics_output_dir.glob("metrics_*.json")) + \
+                               list(self.metrics_output_dir.glob("*_processed.csv")) + \
+                               list(self.metrics_output_dir.glob("*_processed.json"))
+                if metrics_files:
+                    # Sort by modification time and use most recent
+                    metrics_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+                    storage_file = str(metrics_files[0])
+                    self.logger.info(f"Using found metrics file: {storage_file}")
+                else:
+                    self.logger.warning(f"No metrics files found in {self.metrics_output_dir}")
+                    self.logger.warning("Metrics may not have been collected. Check if:")
+                    self.logger.warning("  1. Server metrics endpoint is accessible")
+                    self.logger.warning("  2. Server was started with metrics enabled")
+                    self.logger.warning("  3. Metrics collection thread was running")
+                    return
+            
+            if os.path.getsize(storage_file) == 0:
+                self.logger.warning(f"Metrics file is empty: {storage_file}")
                 return
             
-            self.logger.info(f"Generating visualizations from metrics file: {storage_file}")
+            self.logger.info(f"Generating visualizations from metrics file: {storage_file} (size: {os.path.getsize(storage_file)} bytes)")
             
             try:
                 available_metrics = self.metrics_visualizer.get_available_metrics(storage_file)
@@ -674,9 +718,11 @@ class BaseHarness:
                         pass
             
             if successful_viz > 0:
-                self.logger.info(f"Successfully generated {successful_viz} visualization(s)")
+                self.logger.info(f"Successfully generated {successful_viz} visualization(s) in {self.visualizations_output_dir}")
+            else:
+                self.logger.warning(f"No visualizations were generated. Check if metrics file contains the expected metrics.")
         except Exception as e:
-            self.logger.error(f"Error generating visualizations: {e}")
+            self.logger.error(f"Error generating visualizations: {e}", exc_info=True)
     
     def save_metadata(self, test_results: Dict[str, Any]):
         """
@@ -818,6 +864,33 @@ class BaseHarness:
             # Initialize metrics if enabled
             if self.enable_metrics:
                 self.initialize_metrics()
+                # Start metrics collection before LoadGen test
+                if self.metrics_collector:
+                    try:
+                        # Wait a moment for server to be fully ready
+                        if not self.api_server_url:
+                            # Server was just started, wait for it to be ready
+                            time.sleep(2)
+                        
+                        # Verify metrics endpoint is accessible
+                        metrics_url = f"{self.api_server_url}/metrics"
+                        self.logger.info(f"Verifying metrics endpoint: {metrics_url}")
+                        try:
+                            import requests
+                            response = requests.get(metrics_url, timeout=5)
+                            if response.status_code == 200:
+                                self.logger.info(f"Metrics endpoint is accessible (status: {response.status_code})")
+                            else:
+                                self.logger.warning(f"Metrics endpoint returned status {response.status_code}")
+                        except Exception as e:
+                            self.logger.warning(f"Could not verify metrics endpoint: {e}")
+                            self.logger.warning("Metrics collection may not work. Continuing anyway...")
+                        
+                        self.metrics_collector.start()
+                        self.logger.info("Metrics collection started")
+                    except Exception as e:
+                        self.logger.error(f"Failed to start metrics collection: {e}", exc_info=True)
+                        self.enable_metrics = False
             
             # Setup LoadGen settings
             settings = self.setup_loadgen_settings(user_conf, lg_model_name)
@@ -888,12 +961,27 @@ class BaseHarness:
             
             # Stop metrics collection if enabled
             if self.enable_metrics and self.metrics_collector:
-                self.metrics_collector.stop()
-                self.logger.info("Metrics collection stopped")
+                try:
+                    self.logger.info("Stopping metrics collection...")
+                    if hasattr(self.metrics_collector, 'running') and self.metrics_collector.running:
+                        self.metrics_collector.stop()
+                        # Wait a moment for postprocessing to complete if auto_postprocess is enabled
+                        if self.metrics_collector.auto_postprocess:
+                            self.logger.info("Waiting for metrics postprocessing to complete...")
+                            time.sleep(2)  # Give more time for postprocessing
+                        self.logger.info("Metrics collection stopped")
+                    else:
+                        self.logger.warning("Metrics collector was not running")
+                except Exception as e:
+                    self.logger.error(f"Error stopping metrics collection: {e}", exc_info=True)
             
             # Generate visualizations if metrics enabled
-            if self.enable_metrics:
+            if self.enable_metrics and self.metrics_collector:
+                # Wait a bit more to ensure metrics file is fully written and postprocessed
+                time.sleep(0.5)
                 self._generate_metrics_visualizations()
+            elif self.enable_metrics:
+                self.logger.warning("Metrics were enabled but collector was not initialized - skipping visualizations")
             
             # Call post-run processing hook (for model-specific customizations)
             self._post_run_processing()
@@ -906,13 +994,61 @@ class BaseHarness:
             # Upload to MLflow if configured
             if self.mlflow_client and self.mlflow_experiment_name:
                 try:
-                    self.mlflow_client.upload_results(
+                    self.logger.info("=" * 80)
+                    self.logger.info("UPLOADING RESULTS TO MLFLOW")
+                    self.logger.info("=" * 80)
+                    
+                    # Start MLflow run if not already started
+                    if not self.mlflow_client.current_run:
+                        self.mlflow_client.start_run()
+                    
+                    # Log parameters from harness config
+                    params = {
+                        'model_name': self.model_name,
+                        'dataset_name': self.dataset_name or Path(self.dataset_path).stem,
+                        'framework': self.server_config.get('backend', 'vllm'),
+                        'scenario': self.scenario,
+                        'test_mode': self.test_mode,
+                        'batch_size': str(self.batch_size),
+                        'num_samples': str(self.num_samples)
+                    }
+                    
+                    # Add Server-specific parameters if present
+                    if self.server_coalesce_queries is not None:
+                        params['server_coalesce_queries'] = str(self.server_coalesce_queries)
+                    if self.server_target_qps is not None:
+                        params['server_target_qps'] = str(self.server_target_qps)
+                    
+                    # Filter out None values
+                    params = {k: v for k, v in params.items() if v is not None and v != ''}
+                    self.mlflow_client.log_parameters(params)
+                    
+                    # Log metrics
+                    self.mlflow_client.log_client_metrics(test_results)
+                    
+                    # Generate and log description
+                    description = self.mlflow_client.get_client_description(test_results)
+                    self.mlflow_client.log_description(description)
+                    
+                    # Upload artifacts
+                    self.mlflow_client.upload_artifacts(
                         output_dir=str(self.mlflow_output_dir),
-                        metadata_file=str(self.mlflow_output_dir / "mlflow_metadata.yaml")
+                        include_subdirs=True
                     )
-                    self.logger.info("Results uploaded to MLflow")
+                    
+                    # End MLflow run
+                    self.mlflow_client.end_run()
+                    
+                    self.logger.info("Successfully uploaded results to MLflow")
+                    self.logger.info("=" * 80)
                 except Exception as e:
-                    self.logger.warning(f"Failed to upload to MLflow: {e}")
+                    self.logger.warning(f"Failed to upload to MLflow: {e}", exc_info=True)
+                    # Try to end run even on error
+                    try:
+                        if self.mlflow_client and self.mlflow_client.current_run:
+                            self.mlflow_client.end_run()
+                    except:
+                        pass
             
             self.logger.info("✓ Test completed successfully")
             
@@ -929,20 +1065,69 @@ class BaseHarness:
                 pass
         
         finally:
-            # Cleanup - but wait a bit to ensure all responses are sent
-            # LoadGen might still be processing responses
+            # Cleanup - ensure proper order and graceful shutdown
+            self.logger.info("Performing cleanup...")
+            
             try:
                 # Give LoadGen a moment to finish processing all responses
                 if test_results.get('status') == 'success':
                     self.logger.info("Waiting for LoadGen to complete all response processing...")
                     time.sleep(2)  # Brief wait to ensure all responses are processed
-                
-                if self.client:
+            except Exception as e:
+                self.logger.warning(f"Error during wait: {e}")
+            
+            # Stop metrics collector if not already stopped
+            if self.enable_metrics and self.metrics_collector:
+                try:
+                    if hasattr(self.metrics_collector, 'running') and self.metrics_collector.running:
+                        self.logger.info("Stopping metrics collector in finally block...")
+                        self.metrics_collector.stop()
+                        time.sleep(0.5)
+                except Exception as e:
+                    self.logger.warning(f"Error stopping metrics collector in finally: {e}")
+            
+            # Cleanup client
+            if self.client:
+                try:
+                    self.logger.info("Cleaning up client...")
                     self.client.cleanup()
-                self.stop_server()
+                    # Small grace period for offline scenario
+                    if self.scenario == "Offline":
+                        time.sleep(0.5)
+                except Exception as e:
+                    self.logger.warning(f"Error cleaning up client: {e}")
+            
+            # Stop server (only if we started it)
+            if self.server_started:
+                try:
+                    self.logger.info("Stopping server...")
+                    # Grace period before shutdown
+                    time.sleep(1.0)
+                    self.stop_server()
+                except Exception as e:
+                    self.logger.warning(f"Error stopping server: {e}")
+            
+            # End MLflow run if still active (should have been ended already, but ensure it's closed)
+            if self.mlflow_client and self.mlflow_client.current_run:
+                try:
+                    self.logger.info("Ending MLflow run in cleanup...")
+                    self.mlflow_client.end_run()
+                except Exception as e:
+                    self.logger.warning(f"Error ending MLflow run in cleanup: {e}")
+            
+            # Restore stdout/stderr redirection
+            try:
+                self._restore_stdout_redirection()
+            except Exception as e:
+                self.logger.warning(f"Error restoring stdout/stderr: {e}")
+            
+            # Custom cleanup hook
+            try:
                 self._cleanup_custom()
             except Exception as e:
-                self.logger.error(f"Error during cleanup: {e}")
+                self.logger.warning(f"Error in custom cleanup: {e}")
+            
+            self.logger.info("Cleanup completed")
         
         return test_results
     

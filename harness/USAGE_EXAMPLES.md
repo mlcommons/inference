@@ -17,6 +17,18 @@ This document provides detailed examples for using the MLPerf Inference Harness 
  python harness_main.py --model-category llama3.1-8b --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8  --dataset-path cnn_eval.json --dataset-name llama3.1-8b --server-config backendserver/simple.yaml --scenario Server --test-mode performance --batch-size 13368 --num-samples 13368 --output-dir TEST-SERVER --lg-model-name llama3_1-8b --server-target-qps 40
  ```
 
+### Sample command for Deepseek
+```bash
+ python harness_main.py --model-category deepseek-r1 --model deepseek-ai/DeepSeek-R1-0528 --dataset-path mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl --dataset-name deepseek-r1 --scenario Offline --test-mode performance --batch-size 4388 --num-samples 4388 --output-dir <output_dir> --lg-model-name deepseek-r1 --server-config backendserver/deepseek.yaml --mlflow-experiment-name testing-stuff --mlflow-host ip --enable-metrics
+ ```
+
+### Sample command with MLflow auto-upload
+```bash
+ python harness_main.py --model-category llama3.1-8b --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8  --dataset-path cnn_eval.json --dataset-name llama3.1-8b --server-config backendserver/simple.yaml --scenario Server --test-mode performance --batch-size 13368 --num-samples 13368 --output-dir TEST-SERVER-2 --lg-model-name llama3_1-8b --server-target-qps 40 --mlflow-experiment-name testing-stuff --mlflow-host 150.239.115.202
+ ```
+
+**Note:** When `--mlflow-experiment-name` and `--mlflow-host` are provided, results are automatically uploaded to MLflow after the test completes successfully. No separate upload step is needed.
+
 ## Basic Usage
 
 ### Example 1: Simplest Case - Using Model Name Auto-Detection
@@ -81,86 +93,7 @@ python harness/harness_main.py \
 ### Example 5: DeepSeek R1 Model
 
 ```bash
-python language/deepseek-r1/harness_deepseek_r1.py \
-    --model deepseek-ai/DeepSeek-R1-0528 \
-    --dataset-path ./deepseek_dataset.pkl \
-    --dataset-name deepseek-r1
-```
-
-### Example 6: Using Model Config File
-
-```bash
-# Model config is auto-loaded from configs/models/llama3.1-8b.yaml
-python harness/harness_main.py \
-    --model llama3.1-8b \
-    --dataset-path ./cnn_eval.json
-```
-
-## Dataset Configuration
-
-### Example 7: Using Dataset Config File
-
-```bash
-# Specify exact config file to use
-python harness/harness_main.py \
-    --model meta-llama/Llama-3.1-8B-Instruct \
-    --dataset-path ./my_dataset.pkl \
-    --dataset-config-file configs/datasets/my-dataset.yaml
-```
-
-### Example 8: Overriding Column Names
-
-```bash
-# Override column mappings without creating config file
-python harness/harness_main.py \
-    --model my-model/MyModel \
-    --dataset-path ./dataset.pkl \
-    --input-column prompt \
-    --input-ids-column token_ids \
-    --output-column target
-```
-
-### Example 9: Combining Config and Overrides
-
-```bash
-# Use config file but override specific column
-python harness/harness_main.py \
-    --model meta-llama/Llama-3.1-8B-Instruct \
-    --dataset-path ./cnn_eval.json \
-    --dataset-config-file configs/datasets/llama3.1-8b.yaml \
-    --input-column custom_input  # Overrides config's input_column
-```
-
-### Example 10: Different Dataset Formats
-
-```bash
-# JSON dataset
-python harness/harness_main.py \
-    --model llama3.1-8b \
-    --dataset-path ./cnn_eval.json \
-    --dataset-name llama3.1-8b
-
-# Pickle dataset
-python harness/harness_main.py \
-    --model deepseek-r1 \
-    --dataset-path ./deepseek_dataset.pkl \
-    --dataset-name deepseek-r1
-
-# CSV dataset (needs config with column mappings)
-python harness/harness_main.py \
-    --model my-model \
-    --dataset-path ./my_dataset.csv \
-    --dataset-name my-dataset
-```
-
-## Endpoint Configuration
-
-### Example 11: Using Completions Endpoint (Default)
-
-```bash
-# Explicitly specify completions endpoint
-python harness/harness_main.py \
-    --model llama3.1-8b \
+model llama3.1-8b \
     --dataset-path ./cnn_eval.json \
     --api-server-url http://localhost:8000 \
     --endpoint-type completions

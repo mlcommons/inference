@@ -226,6 +226,16 @@ class DatasetProcessor:
         if hasattr(self, 'processed_data') and PANDAS_AVAILABLE:
             df = self.processed_data
             
+            # Print dataset column names and types
+            self.logger.info("=" * 80)
+            self.logger.info("DATASET COLUMNS AND TYPES")
+            self.logger.info("=" * 80)
+            for col_name, col_type in df.dtypes.items():
+                self.logger.info(f"  {col_name}: {col_type}")
+            self.logger.info(f"Total columns: {len(df.columns)}")
+            self.logger.info(f"Total rows: {len(df)}")
+            self.logger.info("=" * 80)
+            
             # Extract input column
             if self.input_column in df.columns:
                 self.input = df[self.input_column].tolist()
@@ -255,6 +265,33 @@ class DatasetProcessor:
             
         elif hasattr(self, 'raw_data'):
             # Handle raw dict/list data
+            # Print dataset column names and types for raw data
+            self.logger.info("=" * 80)
+            self.logger.info("DATASET COLUMNS AND TYPES")
+            self.logger.info("=" * 80)
+            if isinstance(self.raw_data, dict):
+                # Dict with lists as values
+                for key, value in self.raw_data.items():
+                    if isinstance(value, list) and len(value) > 0:
+                        sample_type = type(value[0]).__name__
+                        self.logger.info(f"  {key}: list[{sample_type}] (length: {len(value)})")
+                    else:
+                        self.logger.info(f"  {key}: {type(value).__name__}")
+                self.logger.info(f"Total columns: {len(self.raw_data)}")
+            elif isinstance(self.raw_data, list):
+                # List of dicts
+                if len(self.raw_data) > 0:
+                    first_item = self.raw_data[0]
+                    if isinstance(first_item, dict):
+                        for key, value in first_item.items():
+                            self.logger.info(f"  {key}: {type(value).__name__}")
+                        self.logger.info(f"Total columns: {len(first_item)}")
+                        self.logger.info(f"Total rows: {len(self.raw_data)}")
+                    else:
+                        self.logger.info(f"  (list item type: {type(first_item).__name__})")
+                        self.logger.info(f"Total items: {len(self.raw_data)}")
+            self.logger.info("=" * 80)
+            
             if isinstance(self.raw_data, dict):
                 # Dict with lists as values
                 self.input = self.raw_data.get(self.input_column, [])

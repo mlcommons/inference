@@ -59,18 +59,48 @@ LLM_JUDGE_MAX_WORKERS = None  # None = auto-select based on rubric count
 # =============================================================================
 
 
+def detect_pass_k(df: pd.DataFrame) -> int:
+    """Detect if DataFrame has pass@k format and return k.
+    
+    Returns:
+        Number of passes (k) if pass@k format detected, otherwise 1
+    """
+    # Check for model_output_0, model_output_1, etc.
+    pass_k = 0
+    while f'model_output_{pass_k}' in df.columns:
+        pass_k += 1
+    
+    # If no _0 suffix found, check for single model_output column
+    if pass_k == 0 and 'model_output' in df.columns:
+        return 1
+    
+    return pass_k
+
+
 def validate_dataframe(df: pd.DataFrame) -> None:
     """Validate input DataFrame has required columns."""
     if not isinstance(df, pd.DataFrame):
         raise ValueError("Input must be a pandas DataFrame")
 
-    required_cols = [
-        'model_output',
-        'dataset',
-        'tok_model_output_len']
-    missing_cols = [col for col in required_cols if col not in df.columns]
-    if missing_cols:
-        raise ValueError(f"Missing required columns: {missing_cols}")
+    # Detect pass@k format
+    pass_k = detect_pass_k(df)
+    
+    if pass_k == 0:
+        raise ValueError("No model_output columns found (expected 'model_output' or 'model_output_0', 'model_output_1', etc.)")
+    
+    # Check for dataset column
+    if 'dataset' not in df.columns:
+        raise ValueError("Missing required column: 'dataset'")
+    
+    # Check for tok_model_output_len (either single or with suffixes)
+    has_tok_len = False
+    if pass_k == 1:
+        has_tok_len = 'tok_model_output_len' in df.columns
+    else:
+        has_tok_len = all(f'tok_model_output_len_{i}' in df.columns for i in range(pass_k))
+    
+    if not has_tok_len:
+        raise ValueError("Missing required tok_model_output_len column(s)")
 
     # Check for ground_truth or rubrics depending on dataset
     has_ground_truth = 'ground_truth' in df.columns
@@ -940,13 +970,30 @@ def process_row(row: pd.Series) -> Dict[str, Any]:
 
 
 def process_livecodebench_parallel(
-        df: pd.DataFrame, group_indices: pd.Index) -> Tuple[int, int]:
-    """Process LiveCodeBench items in parallel."""
+        df: pd.DataFrame, 
+        group_indices: pd.Index,
+        extracted_answer_col: str = 'extracted_answer',
+        prompt_accuracy_col: str = 'prompt_accuracy',
+        evaluation_details_col: str = 'evaluation_details',
+        pass_label: str = '') -> Tuple[int, int]:
+    """Process LiveCodeBench items in parallel.
+    
+    Args:
+        df: DataFrame with data
+        group_indices: Indices to process
+        extracted_answer_col: Column name for extracted answers
+        prompt_accuracy_col: Column name for accuracy results
+        evaluation_details_col: Column name for evaluation details
+        pass_label: Label for logging (e.g., 'pass 0', 'pass 1')
+    
+    Returns:
+        Tuple of (correct_count, total_evaluated)
+    """
     # Prepare work items
     work_items = []
     for idx in group_indices:
         row = df.loc[idx]
-        extracted = row.get('extracted_answer')
+        extracted = row.get(extracted_answer_col)
         ground_truth = row.get('ground_truth')
 
         if extracted is not None and not pd.isna(ground_truth):
@@ -956,13 +1003,14 @@ def process_livecodebench_parallel(
         return 0, 0
 
     # Ensure evaluation_details column exists
-    if 'evaluation_details' not in df.columns:
-        df['evaluation_details'] = None
+    if evaluation_details_col not in df.columns:
+        df[evaluation_details_col] = None
 
     # Process in parallel
     max_workers = min(multiprocessing.cpu_count(), len(work_items))
+    desc = f"Evaluating LiveCodeBench{' ' + pass_label if pass_label else ''}"
     logger.info(
-        f"Evaluating {len(work_items)} LiveCodeBench items with {max_workers} workers")
+        f"Evaluating {len(work_items)} LiveCodeBench items{' ' + pass_label if pass_label else ''} with {max_workers} workers")
 
     correct_count = 0
     total_evaluated = 0
@@ -974,21 +1022,21 @@ def process_livecodebench_parallel(
         }
 
         for future in tqdm(as_completed(future_to_idx, timeout=1200),
-                           total=len(future_to_idx), desc="Evaluating LiveCodeBench"):
+                           total=len(future_to_idx), desc=desc):
             idx = future_to_idx[future]
 
             try:
                 question_id, is_correct, detailed_reason = future.result(
                     timeout=30)
-                df.at[idx, 'prompt_accuracy'] = 100.0 if is_correct else 0.0
-                df.at[idx, 'evaluation_details'] = detailed_reason
+                df.at[idx, prompt_accuracy_col] = 100.0 if is_correct else 0.0
+                df.at[idx, evaluation_details_col] = detailed_reason
                 total_evaluated += 1
                 if is_correct:
                     correct_count += 1
             except Exception as e:
-                logger.error(f"Error evaluating row {idx}: {e}")
-                df.at[idx, 'prompt_accuracy'] = 0.0
-                df.at[idx, 'evaluation_details'] = f"Error: {e}"
+                logger.error(f"Error evaluating row {idx}{' ' + pass_label if pass_label else ''}: {e}")
+                df.at[idx, prompt_accuracy_col] = 0.0
+                df.at[idx, evaluation_details_col] = f"Error: {e}"
                 total_evaluated += 1
 
     return correct_count, total_evaluated
@@ -1000,7 +1048,9 @@ def evaluate_healthbench_batch(
     grader_api_key: Optional[str] = None,
     grader_base_url: Optional[str] = None,
     grader_model: Optional[str] = None,
-    max_workers: Optional[int] = None
+    max_workers: Optional[int] = None,
+    extracted_answer_col: str = 'extracted_answer',
+    pass_label: str = ''
 ) -> Dict[int, Tuple[float, str]]:
     """Evaluate all HealthBench rows with batched rubric grading across all rows.
 
@@ -1011,6 +1061,8 @@ def evaluate_healthbench_batch(
         grader_base_url: Base URL for API
         grader_model: Model name
         max_workers: Max concurrent requests
+        extracted_answer_col: Column name for extracted answers (e.g., 'extracted_answer_0')
+        pass_label: Label for logging (e.g., 'pass 0')
 
     Returns:
         Dictionary mapping row index to (score, explanation) tuple
@@ -1058,7 +1110,7 @@ def evaluate_healthbench_batch(
 
     for idx in group_indices:
         row = df.loc[idx]
-        extracted = row.get('extracted_answer')
+        extracted = row.get(extracted_answer_col)
 
         if extracted is None or pd.isna(extracted):
             row_rubric_map[f"row_{idx}_skip"] = (idx, None)
@@ -1099,11 +1151,11 @@ def evaluate_healthbench_batch(
             task_id += 1
 
     if not all_tasks:
-        logger.warning("No grading tasks to process")
+        logger.warning(f"No grading tasks to process{' for ' + pass_label if pass_label else ''}")
         return {}
 
     logger.info(
-        f"Batching {len(all_tasks)} rubric grading requests across {len(group_indices)} rows")
+        f"Batching {len(all_tasks)} rubric grading requests{' for ' + pass_label if pass_label else ''} across {len(group_indices)} rows")
 
     # Define grading function
     def _grade_single_task(task):
@@ -1145,8 +1197,9 @@ def evaluate_healthbench_batch(
                 _grade_single_task,
                 task): task['task_id'] for task in all_tasks}
 
+        desc = f"Grading HealthBench{' ' + pass_label if pass_label else ''} (batched)"
         for future in tqdm(as_completed(futures), total=len(
-                futures), desc="Grading HealthBench (batched)"):
+                futures), desc=desc):
             try:
                 task_id, result = future.result(timeout=60)
                 grading_results[task_id] = result
@@ -1210,92 +1263,143 @@ def evaluate_healthbench_batch(
 
 
 def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
-    """Process entire dataframe with optimized batch processing."""
+    """Process entire dataframe with optimized batch processing.
+    
+    Supports both single-pass and pass@k formats:
+    - Single-pass: model_output -> extracted_answer, prompt_accuracy
+    - Pass@k: model_output_0, model_output_1, ... -> extracted_answer_0, prompt_accuracy_0, ...
+              and aggregated prompt_accuracy = max(prompt_accuracy_0, prompt_accuracy_1, ...)
+    """
     validate_dataframe(df)
 
     df_output = df.copy()
-    df_output['extracted_answer'] = None
-    df_output['prompt_accuracy'] = 0.0
-    df_output['evaluation_details'] = None  # Add evaluation details column
+    
+    # Detect pass@k
+    pass_k = detect_pass_k(df)
+    logger.info(f"Detected pass@k format with k={pass_k}")
+    
+    # Initialize columns for each pass
+    for pass_num in range(pass_k):
+        suffix = f'_{pass_num}' if pass_k > 1 else ''
+        df_output[f'extracted_answer{suffix}'] = None
+        df_output[f'prompt_accuracy{suffix}'] = 0.0
+        df_output[f'evaluation_details{suffix}'] = None
+    
+    # Add aggregated columns for pass@k
+    if pass_k > 1:
+        df_output['prompt_accuracy'] = 0.0  # Will be max of all passes
+        df_output['evaluation_details'] = None  # Will aggregate details
 
     # Process by dataset
     for dataset_name, group_indices in tqdm(df_output.groupby('dataset').groups.items(),
                                             desc="Processing datasets"):
         evaluator = get_evaluator(dataset_name)
 
-        # Parse answers for all rows in this dataset
-        logger.info(
-            f"Processing {len(group_indices)} rows for dataset '{dataset_name}'")
-        for idx in group_indices:
-            row = df_output.loc[idx]
-            raw_output = validate_text_input(row['model_output'])
-            extracted = evaluator['parse'](raw_output)
-            df_output.at[idx, 'extracted_answer'] = extracted
-
-            # Set initial evaluation details for rows without extracted answers
-            if extracted is None or pd.isna(extracted):
-                df_output.at[idx,
-                             'evaluation_details'] = "No code extracted from model output"
-
-        # Evaluate answers
-        if 'livecodebench' in dataset_name.lower():
-            correct_count, total_evaluated = process_livecodebench_parallel(
-                df_output, group_indices)
-        elif 'healthbench' in dataset_name.lower():
-            # HealthBench evaluation with LLM grading - batched across all rows
-            total_score = 0.0
-            total_evaluated = 0
-
-            # Process all rows with batched grading
-            results = evaluate_healthbench_batch(
-                df_output,
-                group_indices,
-                grader_api_key=LLM_JUDGE_API_KEY,
-                grader_base_url=LLM_JUDGE_BASE_URL,
-                grader_model=LLM_JUDGE_MODEL,
-                max_workers=LLM_JUDGE_MAX_WORKERS
-            )
-
-            # Store results
-            for idx, (score, explanation) in results.items():
-                # Store score as percentage (0-100)
-                df_output.at[idx, 'prompt_accuracy'] = score * 100.0
-                # Store explanation in a new column if needed
-                if 'evaluation_details' not in df_output.columns:
-                    df_output['evaluation_details'] = None
-                df_output.at[idx, 'evaluation_details'] = explanation
-                total_evaluated += 1
-                total_score += score
-        else:
-            # Sequential evaluation for other datasets
-            correct_count = 0
-            total_evaluated = 0
-
+        # Process each pass
+        for pass_num in range(pass_k):
+            suffix = f'_{pass_num}' if pass_k > 1 else ''
+            model_output_col = f'model_output{suffix}'
+            extracted_answer_col = f'extracted_answer{suffix}'
+            prompt_accuracy_col = f'prompt_accuracy{suffix}'
+            evaluation_details_col = f'evaluation_details{suffix}'
+            
+            logger.info(
+                f"Processing {len(group_indices)} rows for dataset '{dataset_name}', pass {pass_num}")
+            
+            # Parse answers for all rows in this dataset for this pass
             for idx in group_indices:
                 row = df_output.loc[idx]
-                extracted = row['extracted_answer']
-                ground_truth = row.get('ground_truth')
+                raw_output = validate_text_input(row[model_output_col])
+                extracted = evaluator['parse'](raw_output)
+                df_output.at[idx, extracted_answer_col] = extracted
 
-                if extracted is not None and not pd.isna(ground_truth):
-                    is_correct = evaluator['evaluate'](extracted, ground_truth)
-                    df_output.at[idx,
-                                 'prompt_accuracy'] = 100.0 if is_correct else 0.0
+                # Set initial evaluation details for rows without extracted answers
+                if extracted is None or pd.isna(extracted):
+                    df_output.at[idx, evaluation_details_col] = "No answer extracted from model output"
+
+            # Evaluate answers for this pass
+            pass_label_str = f'(pass {pass_num})' if pass_k > 1 else ''
+            
+            if 'livecodebench' in dataset_name.lower():
+                correct_count, total_evaluated = process_livecodebench_parallel(
+                    df_output, 
+                    group_indices,
+                    extracted_answer_col=extracted_answer_col,
+                    prompt_accuracy_col=prompt_accuracy_col,
+                    evaluation_details_col=evaluation_details_col,
+                    pass_label=pass_label_str
+                )
+            elif 'healthbench' in dataset_name.lower():
+                # HealthBench evaluation with LLM grading - batched across all rows
+                total_score = 0.0
+                total_evaluated = 0
+
+                # Process all rows with batched grading for this pass
+                results = evaluate_healthbench_batch(
+                    df_output,
+                    group_indices,
+                    grader_api_key=LLM_JUDGE_API_KEY,
+                    grader_base_url=LLM_JUDGE_BASE_URL,
+                    grader_model=LLM_JUDGE_MODEL,
+                    max_workers=LLM_JUDGE_MAX_WORKERS,
+                    extracted_answer_col=extracted_answer_col,
+                    pass_label=pass_label_str
+                )
+
+                # Store results for this pass
+                for idx, (score, explanation) in results.items():
+                    # Store score as percentage (0-100)
+                    df_output.at[idx, prompt_accuracy_col] = score * 100.0
+                    df_output.at[idx, evaluation_details_col] = explanation
                     total_evaluated += 1
-                    if is_correct:
-                        correct_count += 1
-
-        # Log results
-        if total_evaluated > 0:
-            if 'healthbench' in dataset_name.lower():
-                # For HealthBench, report average score
-                avg_score = total_score / total_evaluated * 100
-                logger.info(
-                    f"{dataset_name} results: Average score {avg_score:.1f}% ({total_evaluated} samples)")
+                    total_score += score
             else:
-                # For other datasets, report accuracy
-                accuracy = correct_count / total_evaluated * 100
-                logger.info(
-                    f"{dataset_name} results: {correct_count}/{total_evaluated} correct ({accuracy:.1f}% accuracy)")
+                # Sequential evaluation for other datasets
+                correct_count = 0
+                total_evaluated = 0
+
+                for idx in group_indices:
+                    row = df_output.loc[idx]
+                    extracted = row[extracted_answer_col]
+                    ground_truth = row.get('ground_truth')
+
+                    if extracted is not None and not pd.isna(ground_truth):
+                        is_correct = evaluator['evaluate'](extracted, ground_truth)
+                        df_output.at[idx, prompt_accuracy_col] = 100.0 if is_correct else 0.0
+                        total_evaluated += 1
+                        if is_correct:
+                            correct_count += 1
+
+            # Log results for this pass
+            if total_evaluated > 0:
+                if 'healthbench' in dataset_name.lower():
+                    # For HealthBench, report average score
+                    avg_score = total_score / total_evaluated * 100
+                    logger.info(
+                        f"{dataset_name} pass {pass_num} results: Average score {avg_score:.1f}% ({total_evaluated} samples)")
+                else:
+                    # For other datasets, report accuracy
+                    accuracy = correct_count / total_evaluated * 100
+                    logger.info(
+                        f"{dataset_name} pass {pass_num} results: {correct_count}/{total_evaluated} correct ({accuracy:.1f}% accuracy)")
+        
+        # Aggregate results across all passes (take max)
+        if pass_k > 1:
+            logger.info(f"Aggregating results across {pass_k} passes for dataset '{dataset_name}'")
+            for idx in group_indices:
+                # Get all accuracy values for this row
+                accuracies = []
+                for pass_num in range(pass_k):
+                    acc = df_output.at[idx, f'prompt_accuracy_{pass_num}']
+                    accuracies.append(acc if not pd.isna(acc) else 0.0)
+                
+                # Set aggregated accuracy as max
+                max_accuracy = max(accuracies)
+                df_output.at[idx, 'prompt_accuracy'] = max_accuracy
+                
+                # Find which pass achieved max accuracy
+                max_pass = accuracies.index(max_accuracy)
+                df_output.at[idx, 'evaluation_details'] = f"Best pass: {max_pass} (accuracy: {max_accuracy:.1f}%)"
 
     return df_output
 
@@ -1318,13 +1422,31 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
     if logger is None:
         logger = logging.getLogger(__name__)
 
+    # Detect pass@k
+    pass_k = detect_pass_k(df_evaluated)
+    
     # Calculate statistics
-    evaluated = df_evaluated['extracted_answer'].notna().sum()
-    correct = (df_evaluated['prompt_accuracy'] > 0).sum()
-    accuracy = df_evaluated['prompt_accuracy'].mean()
-
-    # tok_model_output_len is now a required column
-    mean_output_len = float(df_evaluated['tok_model_output_len'].mean())
+    if pass_k > 1:
+        # For pass@k, use the aggregated prompt_accuracy (max across passes)
+        evaluated = df_evaluated['extracted_answer_0'].notna().sum()  # Count from first pass
+        correct = (df_evaluated['prompt_accuracy'] > 0).sum()
+        accuracy = df_evaluated['prompt_accuracy'].mean()
+        
+        # Calculate average token length across all passes
+        all_output_lens = []
+        for i in range(pass_k):
+            all_output_lens.extend(df_evaluated[f'tok_model_output_len_{i}'].tolist())
+        mean_output_len = float(sum(all_output_lens) / len(all_output_lens)) if all_output_lens else 0.0
+    else:
+        # Single pass format
+        suffix = '' if 'extracted_answer' in df_evaluated.columns else '_0'
+        evaluated = df_evaluated[f'extracted_answer{suffix}'].notna().sum()
+        correct = (df_evaluated[f'prompt_accuracy{suffix}'] > 0).sum()
+        accuracy = df_evaluated[f'prompt_accuracy{suffix}'].mean()
+        
+        # tok_model_output_len is now a required column
+        tok_len_col = 'tok_model_output_len' if 'tok_model_output_len' in df_evaluated.columns else 'tok_model_output_len_0'
+        mean_output_len = float(df_evaluated[tok_len_col].mean())
 
     # Check if this is HealthBench dataset
     is_healthbench = False
@@ -1346,6 +1468,13 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
         'tokens_per_sample': mean_output_len,
         'num-samples': len(df_evaluated),
     }
+    
+    if pass_k > 1:
+        results['pass_k'] = pass_k
+        # Also report individual pass accuracies
+        for i in range(pass_k):
+            pass_acc = df_evaluated[f'prompt_accuracy_{i}'].mean()
+            results[f'{metric_key}_pass_{i}'] = float(pass_acc)
 
     print("\nResults\n")
     print(results)

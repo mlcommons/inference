@@ -1,0 +1,21 @@
+# ============================================================================
+# DeepSeek R1 Dataset Configuration
+# ============================================================================
+
+name: deepseek-r1
+description: "Configuration for DeepSeek R1 dataset"
+
+fields:
+  input_column: "text_input"
+  input_ids_column: "tok_input"
+  output_column: "ref_output"
+  # input_lens_column: null  # Will be calculated from tok_input
+
+file_format: "auto"  # auto, json, pickle, csv
+
+total_sample_count: 4388
+
+model_specific:
+  # Model-specific settings can be added here
+  default_model_name: "deepseek-ai/DeepSeek-R1-0528"
+

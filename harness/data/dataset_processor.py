@@ -19,6 +19,14 @@ except ImportError:
     PANDAS_AVAILABLE = False
     logging.warning("pandas not available. Some dataset operations may fail.")
 
+# Import dataset configuration
+try:
+    from .dataset_config import DatasetConfigLoader, DatasetConfig
+    CONFIG_AVAILABLE = True
+except ImportError:
+    CONFIG_AVAILABLE = False
+    logging.warning("Dataset config not available. Using default field mappings.")
+
 
 class DatasetProcessor:
     """
@@ -35,28 +43,61 @@ class DatasetProcessor:
     def __init__(self, 
                  dataset_path: str,
                  model_name: Optional[str] = None,
-                 input_column: str = "input",
-                 input_ids_column: str = "tok_input",
-                 output_column: str = "output",
-                 total_sample_count: Optional[int] = None):
+                 input_column: Optional[str] = None,
+                 input_ids_column: Optional[str] = None,
+                 output_column: Optional[str] = None,
+                 total_sample_count: Optional[int] = None,
+                 dataset_name: Optional[str] = None,
+                 config_dir: Optional[str] = None):
         """
         Initialize dataset processor.
         
         Args:
             dataset_path: Path to dataset file (JSON, pickle, or CSV)
-            model_name: Optional model name for logging
-            input_column: Column name for input text (default: "input")
-            input_ids_column: Column name for tokenized input IDs (default: "tok_input")
-            output_column: Column name for output/targets (default: "output")
-            total_sample_count: Maximum number of samples to load (None = all)
+            model_name: Optional model name for logging and config lookup
+            input_column: Column name for input text (overrides config if provided)
+            input_ids_column: Column name for tokenized input IDs (overrides config if provided)
+            output_column: Column name for output/targets (overrides config if provided)
+            total_sample_count: Maximum number of samples to load (None = all, overrides config)
+            dataset_name: Name of dataset for config lookup (auto-detected from path if None)
+            config_dir: Directory containing dataset config files (defaults to harness/data/configs/)
         """
         self.logger = logging.getLogger(self.__class__.__name__)
         self.dataset_path = Path(dataset_path)
         self.model_name = model_name or "unknown"
-        self.input_column = input_column
-        self.input_ids_column = input_ids_column
-        self.output_column = output_column
-        self.total_sample_count = total_sample_count
+        
+        # Try to load dataset configuration
+        dataset_config = None
+        if CONFIG_AVAILABLE:
+            try:
+                # Auto-detect dataset name from path if not provided
+                if dataset_name is None:
+                    dataset_name = self.dataset_path.stem
+                
+                config_loader = DatasetConfigLoader(config_dir=config_dir)
+                dataset_config = config_loader.load_dataset_config(dataset_name, model_name)
+                self.logger.info(f"Loaded dataset config for '{dataset_name}'")
+            except Exception as e:
+                self.logger.warning(f"Could not load dataset config: {e}. Using defaults.")
+        
+        # Use config values if available, otherwise use provided or default values
+        if dataset_config:
+            self.input_column = input_column or dataset_config.fields.input_column
+            self.input_ids_column = input_ids_column or dataset_config.fields.input_ids_column
+            self.output_column = output_column or dataset_config.fields.output_column
+            self.input_lens_column = dataset_config.fields.input_lens_column
+            self.total_sample_count = total_sample_count or dataset_config.total_sample_count
+            self.file_format = dataset_config.file_format
+            self.model_specific = dataset_config.model_specific
+        else:
+            # Fallback to defaults or provided values
+            self.input_column = input_column or "input"
+            self.input_ids_column = input_ids_column or "tok_input"
+            self.output_column = output_column or "output"
+            self.input_lens_column = None
+            self.total_sample_count = total_sample_count
+            self.file_format = "auto"
+            self.model_specific = {}
         
         # Dataset data (standardized format)
         self.input: List[str] = []
@@ -76,23 +117,39 @@ class DatasetProcessor:
         
         self.logger.info(f"Loading dataset from: {self.dataset_path}")
         self.logger.info(f"File extension: {ext}")
+        self.logger.info(f"Using columns: input='{self.input_column}', input_ids='{self.input_ids_column}', output='{self.output_column}'")
         
-        if ext == '.json':
-            self._load_json()
-        elif ext == '.pkl' or ext == '.pickle':
-            self._load_pickle()
-        elif ext == '.csv':
-            self._load_csv()
+        # Determine file format
+        if hasattr(self, 'file_format') and self.file_format != "auto":
+            format_map = {
+                'json': self._load_json,
+                'pickle': self._load_pickle,
+                'pkl': self._load_pickle,
+                'csv': self._load_csv
+            }
+            loader = format_map.get(self.file_format.lower())
+            if loader:
+                loader()
+            else:
+                raise ValueError(f"Unsupported file format: {self.file_format}")
         else:
-            # Try to auto-detect format
-            self.logger.warning(f"Unknown extension {ext}, attempting auto-detection")
-            try:
+            # Auto-detect format
+            if ext == '.json':
                 self._load_json()
-            except:
+            elif ext == '.pkl' or ext == '.pickle':
+                self._load_pickle()
+            elif ext == '.csv':
+                self._load_csv()
+            else:
+                # Try to auto-detect format
+                self.logger.warning(f"Unknown extension {ext}, attempting auto-detection")
                 try:
-                    self._load_pickle()
+                    self._load_json()
                 except:
-                    raise ValueError(f"Could not auto-detect format for {self.dataset_path}")
+                    try:
+                        self._load_pickle()
+                    except:
+                        raise ValueError(f"Could not auto-detect format for {self.dataset_path}")
         
         # Process and standardize data
         self._process_data()
@@ -190,8 +247,11 @@ class DatasetProcessor:
                 self.logger.warning(f"Column '{self.output_column}' not found")
                 self.targets = []
             
-            # Calculate input lengths
-            self.input_lens = [len(ids) if isinstance(ids, list) else 0 for ids in self.input_ids]
+            # Calculate input lengths (use column if available, otherwise calculate)
+            if hasattr(self, 'input_lens_column') and self.input_lens_column and self.input_lens_column in df.columns:
+                self.input_lens = df[self.input_lens_column].tolist()
+            else:
+                self.input_lens = [len(ids) if isinstance(ids, list) else 0 for ids in self.input_ids]
             
         elif hasattr(self, 'raw_data'):
             # Handle raw dict/list data

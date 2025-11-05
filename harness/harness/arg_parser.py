@@ -28,7 +28,7 @@ def add_common_harness_args(parser: argparse.ArgumentParser):
         parser: ArgumentParser instance to add arguments to
     """
     # Core arguments
-    parser.add_argument("--model", type=str, required=True, help="Model name or path")
+    parser.add_argument("--model", type=str, required=False, default=None, help="Model name or path")
     parser.add_argument("--dataset-path", type=str, required=True, help="Path to dataset file")
     parser.add_argument("--scenario", type=str, default="Offline", choices=["Offline", "Server"],
                        help="LoadGen scenario")
@@ -42,6 +42,21 @@ def add_common_harness_args(parser: argparse.ArgumentParser):
     parser.add_argument("--server-config", type=str, default=None, help="Server config YAML file")
     parser.add_argument("--user-conf", type=str, default="user.conf", help="LoadGen user config")
     parser.add_argument("--log-level", type=str, default="INFO", help="Logging level")
+    
+    # Dataset configuration arguments
+    parser.add_argument("--dataset-config-file", type=str, default=None,
+                       help="Path to specific dataset config YAML file (overrides auto-detection)")
+    parser.add_argument("--input-column", type=str, default=None,
+                       help="Override input column name (overrides config)")
+    parser.add_argument("--input-ids-column", type=str, default=None,
+                       help="Override input_ids column name (overrides config)")
+    parser.add_argument("--output-column", type=str, default=None,
+                       help="Override output column name (overrides config)")
+    
+    # API endpoint arguments
+    parser.add_argument("--endpoint-type", type=str, default="completions",
+                       choices=["completions", "chat_completions"],
+                       help="API endpoint type: 'completions' or 'chat_completions' (default: completions)")
     
     # MLflow arguments
     parser.add_argument("--mlflow-experiment-name", type=str, default=None,
@@ -59,6 +74,9 @@ def add_common_harness_args(parser: argparse.ArgumentParser):
                        help="Enable query coalescing for Server scenario (Server only, true/false/1/0/yes/no)")
     parser.add_argument("--server-target-qps", type=float, default=None,
                        help="Target queries per second for Server scenario (Server only)")
+    parser.add_argument("--target-qps", type=float, default=None,
+                       dest='server_target_qps',
+                       help="Target queries per second for Server scenario (alias for --server-target-qps, Server only)")
 
 
 def parse_common_harness_args(args):
@@ -83,6 +101,10 @@ def parse_common_harness_args(args):
     if args.mlflow_experiment_name:
         mlflow_tracking_uri = f"http://{args.mlflow_host}:{args.mlflow_port}"
     
+    # Add endpoint_type to server_config so client can use it
+    if args.endpoint_type:
+        server_config['endpoint_type'] = args.endpoint_type
+    
     return {
         'model_name': args.model,
         'dataset_path': args.dataset_path,
@@ -98,6 +120,10 @@ def parse_common_harness_args(args):
         'mlflow_experiment_name': args.mlflow_experiment_name,
         'mlflow_output_dir': args.mlflow_output_dir,
         'server_coalesce_queries': args.server_coalesce_queries,
-        'server_target_qps': args.server_target_qps
+        'server_target_qps': args.server_target_qps,
+        'dataset_config_file': args.dataset_config_file,
+        'input_column': args.input_column,
+        'input_ids_column': args.input_ids_column,
+        'output_column': args.output_column
     }
 

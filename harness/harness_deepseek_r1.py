@@ -1,7 +1,7 @@
 # ============================================================================
-# harness_llama3.1_8b.py
-# ----------------------
-# Harness implementation for Llama 3.1 8B model
+# harness_deepseek_r1.py
+# -----------------------
+# Harness implementation for DeepSeek R1 model
 # Inherits common functionality from BaseHarness
 # ============================================================================
 
@@ -28,41 +28,33 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Import base harness (now includes dataset configuration support)
 from harness.base_harness import BaseHarness
 
-# Import MLPerf Loadgen
-try:
-    import mlperf_loadgen as lg
-except ImportError:
-    print("mlperf_loadgen is not installed.")
-    print("Please install it from the MLPerf Inference repository.")
-    sys.exit(1)
 
-
-class Llama31_8BHarness(BaseHarness):
+class DeepSeekR1Harness(BaseHarness):
     """
-    Harness for Llama 3.1 8B model with MLPerf Loadgen.
+    Harness for DeepSeek R1 model with MLPerf Loadgen.
     
-    Extends BaseHarness with Llama31_8B-specific functionality.
+    Extends BaseHarness with DeepSeek R1-specific functionality.
     Most functionality is handled by BaseHarness using dataset configuration.
     This class can be used to add model-specific customizations if needed.
     """
     
     def __init__(self, **kwargs):
         """
-        Initialize Llama 3.1 8B harness.
+        Initialize DeepSeek R1 harness.
         
         All arguments are passed to BaseHarness.
-        The dataset configuration is automatically loaded from llama3.1-8b.yaml
+        The dataset configuration is automatically loaded from deepseek-r1.yaml
         """
         # Ensure dataset_name is set if not provided
         if 'dataset_name' not in kwargs:
-            kwargs['dataset_name'] = 'llama3.1-8b'
+            kwargs['dataset_name'] = 'deepseek-r1'
         
         # Call parent constructor
         super().__init__(**kwargs)
         
-        self.logger.info("Llama 3.1 8B harness initialized")
+        self.logger.info("DeepSeek R1 harness initialized")
     
-    def run(self, user_conf: str = "user.conf", lg_model_name: str = "llama3_1-8b") -> Dict[str, Any]:
+    def run(self, user_conf: str = "user.conf", lg_model_name: str = "deepseek_r1") -> Dict[str, Any]:
         """
         Run the harness test.
         
@@ -83,15 +75,15 @@ def main():
     """Main entry point for harness."""
     from harness.arg_parser import add_common_harness_args, parse_common_harness_args
     
-    parser = argparse.ArgumentParser(description="MLPerf Harness for Llama 3.1 8B")
+    parser = argparse.ArgumentParser(description="MLPerf Harness for DeepSeek R1")
     
     # Add common harness arguments
     add_common_harness_args(parser)
     
-    # Add Llama31_8B-specific arguments
-    parser.add_argument("--lg-model-name", type=str, default="llama3_1-8b", help="LoadGen model name")
-    parser.add_argument("--dataset-name", type=str, default="llama3.1-8b",
-                       help="Dataset name for config lookup (default: llama3.1-8b)")
+    # Add DeepSeek R1-specific arguments
+    parser.add_argument("--lg-model-name", type=str, default="deepseek_r1", help="LoadGen model name")
+    parser.add_argument("--dataset-name", type=str, default="deepseek-r1",
+                       help="Dataset name for config lookup (default: deepseek-r1)")
     
     args = parser.parse_args()
     
@@ -109,7 +101,7 @@ def main():
     harness_config['dataset_name'] = args.dataset_name
     
     # Create and run harness
-    harness = Llama31_8BHarness(**harness_config)
+    harness = DeepSeekR1Harness(**harness_config)
     
     results = harness.run(user_conf=args.user_conf, lg_model_name=args.lg_model_name)
     
@@ -126,3 +118,4 @@ def main():
 
 if __name__ == "__main__":
     sys.exit(main())
+

@@ -1,0 +1,14 @@
+# ============================================================================
+# vLLM Backend Configuration
+# ============================================================================
+
+name: vllm
+description: "vLLM backend configuration"
+
+endpoints:
+  - completions
+  - chat_completions
+
+# Additional backend-specific settings
+default_endpoint: completions
+

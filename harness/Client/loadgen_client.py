@@ -93,8 +93,14 @@ class LoadGenClient(BaseClient):
         # API mode components
         self.tokenizer = None
         self.completions_endpoint = None
+        self.chat_completions_endpoint = None
         self.health_endpoint = None
         self.server_ready = False
+        
+        # Endpoint type: 'completions' or 'chat_completions'
+        self.endpoint_type = config.get('endpoint_type', 'completions') if config else 'completions'
+        if self.endpoint_type not in ['completions', 'chat_completions']:
+            raise ValueError(f"Invalid endpoint_type: {self.endpoint_type}. Must be 'completions' or 'chat_completions'")
         
         # Server scenario specific components (for async processing)
         self.num_workers = config.get('num_workers', 1) if config else 1
@@ -107,18 +113,35 @@ class LoadGenClient(BaseClient):
         if self.api_server_url:
             self.api_server_url = self.api_server_url.rstrip('/')
             self.completions_endpoint = f"{self.api_server_url}/v1/completions"
+            self.chat_completions_endpoint = f"{self.api_server_url}/v1/chat/completions"
             self.health_endpoint = f"{self.api_server_url}/health"
+            
+            # Validate endpoint based on backend config
+            self._validate_endpoint()
     
     def initialize(self) -> None:
         """Initialize LoadGen client."""
         self.logger.info(f"Initializing LoadGen client (scenario: {self.scenario})")
         
-        # Load dataset
+        # Load dataset with configuration support
         self.logger.info(f"Loading dataset from: {self.dataset_path}")
+        
+        # Extract dataset configuration from config if available
+        dataset_name = self.config.get('dataset_name')
+        input_column = self.config.get('input_column')
+        input_ids_column = self.config.get('input_ids_column')
+        output_column = self.config.get('output_column')
+        config_dir = self.config.get('config_dir')
+        
         self.dataset = DatasetProcessor(
             dataset_path=self.dataset_path,
             model_name=self.model_name,
-            total_sample_count=self.num_samples
+            total_sample_count=self.num_samples,
+            dataset_name=dataset_name,
+            input_column=input_column,
+            input_ids_column=input_ids_column,
+            output_column=output_column,
+            config_dir=config_dir
         )
         
         # Print dataset statistics
@@ -182,6 +205,35 @@ class LoadGenClient(BaseClient):
             self.logger.warning(f"Could not initialize tokenizer: {e}")
             self.tokenizer = None
     
+    def _validate_endpoint(self):
+        """Validate that the requested endpoint exists for the backend."""
+        if not self.api_server_url:
+            return
+        
+        backend = self.config.get('backend', 'vllm') if self.config else 'vllm'
+        
+        # Load backend config to check available endpoints
+        try:
+            from data.backend_config import BackendConfigLoader
+            backend_loader = BackendConfigLoader()
+            backend_config = backend_loader.load_backend_config(backend)
+            
+            # Check if endpoint is available
+            available_endpoints = backend_config.get('endpoints', [])
+            if self.endpoint_type not in available_endpoints:
+                raise ValueError(
+                    f"Endpoint '{self.endpoint_type}' is not available for backend '{backend}'. "
+                    f"Available endpoints: {available_endpoints}"
+                )
+            
+            self.logger.info(f"Validated endpoint '{self.endpoint_type}' for backend '{backend}'")
+        except ImportError:
+            # Backend config not available, skip validation
+            self.logger.warning("Backend config loader not available, skipping endpoint validation")
+        except Exception as e:
+            # If backend config doesn't exist or other error, log warning but continue
+            self.logger.warning(f"Could not validate endpoint: {e}")
+    
     def _wait_for_server_ready(self, timeout: int = 600):
         """Wait for API server to become ready."""
         if not self.api_server_url:
@@ -224,6 +276,62 @@ class LoadGenClient(BaseClient):
         """
         pass
     
+    def get_sut(self):
+        """
+        Get SystemUnderTest object for LoadGen.
+        
+        Returns:
+            LoadGen SUT object constructed from issue_query and flush_queries methods
+        """
+        return lg.ConstructSUT(self.issue_query, self.flush_queries)
+    
+    def get_qsl(self):
+        """
+        Get QuerySampleLibrary object for LoadGen.
+        
+        Returns:
+            LoadGen QSL object constructed from dataset and callbacks
+        """
+        if not self.dataset:
+            raise RuntimeError("Dataset not initialized. Call initialize() first.")
+        
+        total_count = self.dataset.total_sample_count
+        # Use num_samples as performance_count to ensure all samples are processed
+        # In offline scenario, LoadGen will create queries based on samples_per_query
+        # but we want to ensure all num_samples are available
+        performance_count = min(self.num_samples, total_count)
+        
+        self.logger.info(f"Constructing QSL: total_count={total_count}, performance_count={performance_count}, num_samples={self.num_samples}")
+        
+        return lg.ConstructQSL(
+            total_count,
+            performance_count,
+            self._load_samples_to_ram,
+            self._unload_samples_from_ram
+        )
+    
+    def _load_samples_to_ram(self, query_sample_indices):
+        """
+        LoadGen callback: Load samples to RAM.
+        
+        Args:
+            query_sample_indices: List of QuerySampleIndex objects
+        """
+        # Samples are already loaded in DatasetProcessor
+        # This is a no-op as samples are pre-loaded
+        pass
+    
+    def _unload_samples_from_ram(self, query_sample_indices):
+        """
+        LoadGen callback: Unload samples from RAM.
+        
+        Args:
+            query_sample_indices: List of QuerySampleIndex objects
+        """
+        # Samples are kept in memory for the duration of the test
+        # This is a no-op
+        pass
+    
     def cleanup(self) -> None:
         """Cleanup resources."""
         self.logger.info("Cleaning up LoadGen client")
@@ -244,27 +352,46 @@ class LoadGenOfflineClient(LoadGenClient):
         total_samples = len(query_samples)
         num_batches = (total_samples + self.batch_size - 1) // self.batch_size
         
-        self.logger.info(f"Processing {total_samples} queries in {num_batches} batches")
+        self.logger.info("=" * 80)
+        self.logger.info(f"OFFLINE SCENARIO: Processing {total_samples} queries in {num_batches} batches")
+        self.logger.info(f"Batch size: {self.batch_size}, Total samples: {total_samples}")
+        self.logger.info("=" * 80)
         
+        processed_samples = 0
         for batch_idx in range(num_batches):
             start = batch_idx * self.batch_size
             end = min((batch_idx + 1) * self.batch_size, total_samples)
             batch = query_samples[start:end]
+            batch_size = len(batch)
+            
+            self.logger.info(f"Processing batch {batch_idx + 1}/{num_batches} ({batch_size} samples)")
             
             try:
                 if self.api_server_url:
                     self._process_api_batch(batch)
+                    processed_samples += batch_size
+                    self.logger.info(f"✓ Batch {batch_idx + 1}/{num_batches} completed ({processed_samples}/{total_samples} samples processed)")
                 else:
                     self.logger.warning("Local model processing not yet implemented")
                     # TODO: Implement local model processing
+                    self._send_error_responses(batch)
+                    processed_samples += batch_size
                 
                 self.batch_counter += 1
             except Exception as e:
-                self.logger.error(f"Error processing batch {batch_idx}: {e}")
+                self.logger.error(f"Error processing batch {batch_idx + 1}/{num_batches}: {e}", exc_info=True)
                 self._send_error_responses(batch)
+                processed_samples += batch_size
+        
+        self.logger.info("=" * 80)
+        self.logger.info(f"All batches completed: {processed_samples}/{total_samples} samples processed")
+        self.logger.info("=" * 80)
     
     def _process_api_batch(self, batch: List['lg.QuerySample']) -> None:
         """Process a batch via API."""
+        batch_size = len(batch)
+        self.logger.debug(f"Processing API batch with {batch_size} samples")
+        
         # Prepare text prompts
         text_prompts = []
         original_query_ids = []
@@ -288,30 +415,98 @@ class LoadGenOfflineClient(LoadGenClient):
             else:
                 text_prompts.append(" ".join([str(t) for t in input_ids]))
         
-        # Send API request
-        api_payload = {
-            "model": self.model_name,
-            "prompt": text_prompts,
-            "max_tokens": 128,
-            "temperature": 0.0,
-            "top_p": 1.0,
-            "top_k": 1,
-            "stream": False
-        }
+        self.logger.debug(f"Prepared {len(text_prompts)} prompts for API batch")
         
-        response = requests.post(self.completions_endpoint, json=api_payload, timeout=None)
+        # Determine endpoint based on endpoint_type
+        if self.endpoint_type == 'chat_completions':
+            endpoint = self.chat_completions_endpoint
+            # Format for chat completions API - handle batch requests
+            # For chat completions, we need to send each prompt separately or use array format
+            # Most APIs support array format for batch processing
+            if len(text_prompts) == 1:
+                # Single prompt
+                api_payload = {
+                    "model": self.model_name,
+                    "messages": [{"role": "user", "content": text_prompts[0]}],
+                    "max_tokens": 128,
+                    "temperature": 0.0,
+                    "top_p": 1.0,
+                    "stream": False
+                }
+            else:
+                # Batch: send as array of messages arrays
+                # Note: Some APIs may require separate requests for batch
+                api_payload = {
+                    "model": self.model_name,
+                    "messages": [[{"role": "user", "content": prompt}] for prompt in text_prompts],
+                    "max_tokens": 128,
+                    "temperature": 0.0,
+                    "top_p": 1.0,
+                    "stream": False
+                }
+        else:
+            endpoint = self.completions_endpoint
+            # Format for completions API
+            api_payload = {
+                "model": self.model_name,
+                "prompt": text_prompts,
+                "max_tokens": 128,
+                "temperature": 0.0,
+                "top_p": 1.0,
+                "top_k": 1,
+                "stream": False
+            }
+        
+        self.logger.debug(f"Sending API batch request to {endpoint} with {len(text_prompts)} prompts")
+        response = requests.post(endpoint, json=api_payload, timeout=None)
         if response.status_code != 200:
             raise RuntimeError(f"API request failed: {response.status_code} - {response.text}")
         
         api_result = response.json()
-        choices = api_result.get("choices", [])
+        self.logger.debug(f"Received API response with {len(api_result.get('choices', []))} choices")
+        
+        # Extract choices based on endpoint type
+        if self.endpoint_type == 'chat_completions':
+            # Chat completions: handle batch vs single response
+            all_choices = api_result.get("choices", [])
+            if isinstance(all_choices, list) and len(all_choices) > 0:
+                # Check if first element is a list (batch) or dict (single)
+                if isinstance(all_choices[0], list):
+                    # Batch response: flatten list of lists
+                    choices = []
+                    for choice_group in all_choices:
+                        for choice in choice_group:
+                            if isinstance(choice, dict) and "message" in choice:
+                                choices.append({"text": choice["message"].get("content", "")})
+                            else:
+                                choices.append(choice)
+                else:
+                    # Single response or array of choices
+                    choices = []
+                    for choice in all_choices:
+                        if isinstance(choice, dict) and "message" in choice:
+                            choices.append({"text": choice["message"].get("content", "")})
+                        else:
+                            choices.append(choice)
+            else:
+                choices = []
+        else:
+            # Completions endpoint returns choices with text
+            choices = api_result.get("choices", [])
         
         # Process responses
         self._process_api_responses(choices, original_query_ids, original_query_indexes)
     
     def _process_api_responses(self, choices: List[Dict], query_ids: List[int], query_indexes: List[int]) -> None:
         """Process API responses and send to Loadgen."""
+        self.logger.debug(f"Processing {len(choices)} API responses for {len(query_ids)} queries")
+        
+        responses = []
         for i, choice in enumerate(choices):
+            if i >= len(query_ids):
+                self.logger.warning(f"More choices than query IDs: {len(choices)} choices, {len(query_ids)} query IDs")
+                break
+                
             query_id = query_ids[i]
             query_index = query_indexes[i]
             
@@ -323,7 +518,7 @@ class LoadGenOfflineClient(LoadGenClient):
                 try:
                     token_ids = self.tokenizer.encode(text_response, add_special_tokens=False)
                 except Exception as e:
-                    self.logger.warning(f"Error encoding response: {e}")
+                    self.logger.warning(f"Error encoding response for query {query_id}: {e}")
                     token_ids = [1, 2, 3]  # Fallback
             else:
                 token_ids = [1, 2, 3]  # Fallback
@@ -337,9 +532,15 @@ class LoadGenOfflineClient(LoadGenClient):
             response_size = len(token_bytes)
             
             response = lg.QuerySampleResponse(query_id, response_data, response_size, token_count)
-            self.logger.info(f"Query {query_id}: {token_count} tokens")
-            self.logger.debug(f"Query {query_id}: Response: {text_response}")
-            lg.QuerySamplesComplete([response])
+            responses.append(response)
+            self.logger.debug(f"Query {query_id} (index {query_index}): {token_count} tokens")
+        
+        # Send all responses to LoadGen
+        if responses:
+            lg.QuerySamplesComplete(responses)
+            self.logger.debug(f"Sent {len(responses)} responses to LoadGen")
+        else:
+            self.logger.warning(f"No responses to send for batch (expected {len(query_ids)} responses)")
     
     def _send_error_responses(self, batch: List['lg.QuerySample']) -> None:
         """Send error responses for a batch."""
@@ -483,17 +684,31 @@ class LoadGenServerClient(LoadGenClient):
             'Content-Type': 'application/json',
         }
         
-        json_data = {
-            'model': self.model_name,
-            'prompt': input_text,
-            'max_tokens': 128,
-            'min_tokens': 1,
-            'temperature': 0.0,
-            'stream': True,
-            'top_p': 1.0,
-            'top_k': 1.0,
-            'seed': 42
-        }
+        # Determine endpoint and payload based on endpoint_type
+        if self.endpoint_type == 'chat_completions':
+            endpoint_url = self.chat_completions_endpoint
+            json_data = {
+                'model': self.model_name,
+                'messages': [{"role": "user", "content": input_text}],
+                'max_tokens': 128,
+                'temperature': 0.0,
+                'stream': True,
+                'top_p': 1.0,
+                'seed': 42
+            }
+        else:
+            endpoint_url = self.completions_endpoint
+            json_data = {
+                'model': self.model_name,
+                'prompt': input_text,
+                'max_tokens': 128,
+                'min_tokens': 1,
+                'temperature': 0.0,
+                'stream': True,
+                'top_p': 1.0,
+                'top_k': 1.0,
+                'seed': 42
+            }
         
         token_s_cache = []
         first = True
@@ -502,7 +717,7 @@ class LoadGenServerClient(LoadGenClient):
             try:
                 s = requests.Session()
                 with s.post(
-                    f'{self.api_server_url}/v1/completions',
+                    endpoint_url,
                     headers=headers,
                     json=json_data,
                     verify=False,
@@ -536,7 +751,14 @@ class LoadGenServerClient(LoadGenClient):
                                             )
                                         continue
                                     
-                                    token_s = data["choices"][0]["text"]
+                                    # Extract token based on endpoint type
+                                    if self.endpoint_type == 'chat_completions':
+                                        # Chat completions uses delta.content
+                                        delta = data["choices"][0].get("delta", {})
+                                        token_s = delta.get("content", "")
+                                    else:
+                                        # Completions uses text
+                                        token_s = data["choices"][0].get("text", "")
                                     
                                     if token_s == "":
                                         continue

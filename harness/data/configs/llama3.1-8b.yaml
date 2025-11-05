@@ -1,0 +1,21 @@
+# ============================================================================
+# Llama 3.1 8B Dataset Configuration
+# ============================================================================
+
+name: llama3.1-8b
+description: "Configuration for Llama 3.1 8B dataset"
+
+fields:
+  input_column: "input"
+  input_ids_column: "tok_input"
+  output_column: "output"
+  # input_lens_column: null  # Will be calculated from tok_input
+
+file_format: "auto"  # auto, json, pickle, csv
+
+total_sample_count: 13368
+
+model_specific:
+  # Model-specific settings can be added here
+  default_model_name: "meta-llama/Llama-3.1-8B-Instruct"
+

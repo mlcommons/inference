@@ -94,7 +94,12 @@ class BaseHarness:
                  mlflow_experiment_name: Optional[str] = None,
                  mlflow_output_dir: Optional[str] = None,
                  server_coalesce_queries: Optional[bool] = None,
-                 server_target_qps: Optional[float] = None):
+                 server_target_qps: Optional[float] = None,
+                 dataset_name: Optional[str] = None,
+                 dataset_config_file: Optional[str] = None,
+                 input_column: Optional[str] = None,
+                 input_ids_column: Optional[str] = None,
+                 output_column: Optional[str] = None):
         """
         Initialize base harness.
         
@@ -115,6 +120,11 @@ class BaseHarness:
             mlflow_output_dir: Output directory to upload to MLflow (defaults to output_dir)
             server_coalesce_queries: Enable query coalescing for Server scenario (Server only)
             server_target_qps: Target queries per second for Server scenario (Server only)
+            dataset_name: Dataset name for config lookup
+            dataset_config_file: Path to specific dataset config YAML file
+            input_column: Override input column name
+            input_ids_column: Override input_ids column name
+            output_column: Override output column name
         """
         self.model_name = model_name
         self.dataset_path = dataset_path
@@ -129,6 +139,13 @@ class BaseHarness:
         self.metrics_interval = metrics_interval
         self.server_coalesce_queries = server_coalesce_queries
         self.server_target_qps = server_target_qps
+        
+        # Dataset configuration
+        self.dataset_name = dataset_name
+        self.dataset_config_file = dataset_config_file
+        self.input_column = input_column
+        self.input_ids_column = input_ids_column
+        self.output_column = output_column
         
         # MLflow configuration
         self.mlflow_tracking_uri = mlflow_tracking_uri
@@ -425,8 +442,34 @@ class BaseHarness:
             self.logger.info("Inference server stopped")
     
     def initialize_client(self):
-        """Initialize LoadGen client."""
+        """Initialize LoadGen client with dataset configuration."""
         self.logger.info(f"Initializing LoadGen client (scenario: {self.scenario})")
+        
+        # Update server config with dataset field mappings
+        client_config = self.server_config.copy() if self.server_config else {}
+        if hasattr(self, 'dataset_config') and self.dataset_config:
+            client_config.update({
+                'dataset_name': getattr(self, 'dataset_name', None),
+                'input_column': self.dataset_config.fields.input_column,
+                'input_ids_column': self.dataset_config.fields.input_ids_column,
+                'output_column': self.dataset_config.fields.output_column,
+            })
+        else:
+            # Fallback if dataset_config not loaded yet
+            client_config.update({
+                'dataset_name': getattr(self, 'dataset_name', None),
+                'input_column': getattr(self, 'input_column', None),
+                'input_ids_column': getattr(self, 'input_ids_column', None),
+                'output_column': getattr(self, 'output_column', None),
+            })
+        
+        # Ensure endpoint_type is in config
+        if 'endpoint_type' not in client_config:
+            client_config['endpoint_type'] = self.server_config.get('endpoint_type', 'completions') if self.server_config else 'completions'
+        
+        # Ensure backend is in config for endpoint validation
+        if 'backend' not in client_config:
+            client_config['backend'] = self.server_config.get('backend', 'vllm') if self.server_config else 'vllm'
         
         self.client = create_loadgen_client(
             scenario=self.scenario,
@@ -436,7 +479,7 @@ class BaseHarness:
             api_server_url=self.api_server_url,
             batch_size=self.batch_size,
             num_samples=self.num_samples,
-            config=self.server_config
+            config=client_config
         )
         
         self.client.initialize()
@@ -498,19 +541,20 @@ class BaseHarness:
         Returns:
             Configured TestSettings object
         """
+        self.logger.info("=" * 80)
+        self.logger.info("SETTING UP LOADGEN TEST SETTINGS")
+        self.logger.info("=" * 80)
+        self.logger.info(f"User config file: {user_conf}")
+        self.logger.info(f"LoadGen model name: {lg_model_name}")
+        self.logger.info(f"Scenario: {self.scenario}")
+        self.logger.info(f"Test mode: {self.test_mode}")
+        
         settings = lg.TestSettings()
         
         if self.scenario == "Server":
             settings.scenario = lg.TestScenario.Server
-            
-            # Set Server-specific parameters if provided
-            if self.server_coalesce_queries is not None:
-                settings.server_coalesce_queries = self.server_coalesce_queries
-                self.logger.info(f"Server coalesce queries set to: {self.server_coalesce_queries}")
-            
-            if self.server_target_qps is not None:
-                settings.server_target_qps = self.server_target_qps
-                self.logger.info(f"Server target QPS set to: {self.server_target_qps}")
+            # Note: Server-specific parameters are set in run() method after settings.FromConfig()
+            # This is because we want to allow config file values to be set first, then override if needed
         else:
             settings.scenario = lg.TestScenario.Offline
         
@@ -520,7 +564,25 @@ class BaseHarness:
             settings.mode = lg.TestMode.PerformanceOnly
         
         settings.use_token_latencies = True
+        
+        self.logger.info(f"Loading LoadGen settings from config: {user_conf}, model: {lg_model_name}")
         settings.FromConfig(user_conf, lg_model_name, self.scenario, 1)
+        self.logger.info("LoadGen settings loaded successfully")
+        self.logger.info("=" * 80)
+        
+        # For offline scenario, ensure samples_per_query is set to process all samples
+        # LoadGen will coalesce all samples into one query, but we need to ensure
+        # samples_per_query is at least num_samples to process all samples
+        if self.scenario == "Offline":
+            # Get the configured samples_per_query from settings
+            # If it's too small, we need to ensure it's at least num_samples
+            # Note: LoadGen calculates samples_per_query from config, but we want to ensure
+            # all num_samples are processed. In offline mode, LoadGen creates one query
+            # with samples_per_query samples, so we need samples_per_query >= num_samples
+            # However, we can't directly set samples_per_query, it comes from config
+            # So we rely on the config file having the correct samples_per_query value
+            self.logger.info(f"Offline scenario: LoadGen will create queries with samples_per_query from config")
+            self.logger.info(f"Ensure your user.conf has samples_per_query >= {self.num_samples} to process all samples")
         
         return settings
     
@@ -673,5 +735,235 @@ class BaseHarness:
     
     def _unload_samples_from_ram(self, query_samples):
         """LoadGen callback - no action needed."""
+        pass
+    
+    def run(self, user_conf: str = "user.conf", lg_model_name: str = "default") -> Dict[str, Any]:
+        """
+        Run the harness test.
+        
+        This method orchestrates the entire test flow:
+        1. Load dataset configuration (if needed)
+        2. Start server (if needed)
+        3. Initialize client
+        4. Initialize metrics
+        5. Setup LoadGen settings
+        6. Run LoadGen test
+        7. Stop metrics and generate visualizations
+        8. Save metadata
+        9. Cleanup
+        
+        Args:
+            user_conf: User configuration file for LoadGen
+            lg_model_name: Model name for LoadGen
+        
+        Returns:
+            Dictionary with test results
+        """
+        start_time = time.time()
+        test_results = {
+            'status': 'error',
+            'duration': 0,
+            'error': None
+        }
+        
+        try:
+            # Load dataset configuration if needed
+            from data.dataset_config import DatasetConfigLoader
+            
+            config_loader = DatasetConfigLoader()
+            
+            # Determine dataset name if not provided
+            if not self.dataset_name:
+                # Try to extract from dataset path
+                dataset_name = Path(self.dataset_path).stem
+                self.dataset_name = dataset_name
+            else:
+                dataset_name = self.dataset_name
+            
+            # Load dataset config
+            self.dataset_config = config_loader.load_dataset_config(
+                dataset_name=dataset_name,
+                model_name=self.model_name,
+                config_file=self.dataset_config_file
+            )
+            
+            # Override column names if provided programmatically
+            if self.input_column:
+                self.dataset_config.fields.input_column = self.input_column
+            if self.input_ids_column:
+                self.dataset_config.fields.input_ids_column = self.input_ids_column
+            if self.output_column:
+                self.dataset_config.fields.output_column = self.output_column
+            
+            # Update server config with dataset field mappings
+            if not self.server_config:
+                self.server_config = {}
+            self.server_config.update({
+                'dataset_name': self.dataset_name,
+                'input_column': self.dataset_config.fields.input_column,
+                'input_ids_column': self.dataset_config.fields.input_ids_column,
+                'output_column': self.dataset_config.fields.output_column,
+            })
+            
+            # Call pre-run setup hook (for model-specific customizations)
+            self._pre_run_setup()
+            
+            # Start server if needed
+            if not self.api_server_url and self.server_config:
+                self.start_server()
+            
+            # Initialize client
+            self.initialize_client()
+            
+            # Initialize metrics if enabled
+            if self.enable_metrics:
+                self.initialize_metrics()
+            
+            # Setup LoadGen settings
+            settings = self.setup_loadgen_settings(user_conf, lg_model_name)
+            if self.scenario == "Server":
+                # Only set server_target_qps if it's not None
+                if self.server_target_qps is not None:
+                    settings.server_target_qps = self.server_target_qps
+                    self.logger.info(f"Server target QPS set to: {self.server_target_qps}")
+                else:
+                    self.logger.info("Server target QPS not set (using value from config)")
+                
+                # Only set server_coalesce_queries if it's not None
+                if self.server_coalesce_queries is not None:
+                    settings.server_coalesce_queries = self.server_coalesce_queries
+                    self.logger.info(f"Server coalesce queries set to: {self.server_coalesce_queries}")
+                else:
+                    self.logger.info("Server coalesce queries not set (using value from config)")
+                #settings.server_num_threads = self.server_num_threads
+                #self.logger.info(f"Server num threads set to: {self.server_num_threads}")
+                #settings.server_num_warmup_queries = self.server_num_warmup_queries
+                #self.logger.info(f"Server num warmup queries set to: {self.server_num_warmup_queries}")
+            
+            # Run LoadGen test
+            self.logger.info("=" * 80)
+            self.logger.info("STARTING LOADGEN TEST")
+            self.logger.info("=" * 80)
+            self.logger.info(f"Scenario: {self.scenario}")
+            self.logger.info(f"Test Mode: {self.test_mode}")
+            self.logger.info(f"Model: {self.model_name}")
+            self.logger.info(f"Dataset: {self.dataset_path}")
+            self.logger.info(f"Batch size: {self.batch_size}")
+            self.logger.info(f"Number of samples: {self.num_samples}")
+            self.logger.info(f"Total dataset samples: {self.client.dataset.total_sample_count if self.client.dataset else 'N/A'}")
+            self.logger.info("=" * 80)
+            
+            # Configure LoadGen logging to use mlperf subdirectory
+            log_output_settings = lg.LogOutputSettings()
+            log_output_settings.outdir = str(self.mlperf_output_dir)
+            log_output_settings.copy_summary_to_stdout = True
+            
+            log_settings = lg.LogSettings()
+            log_settings.log_output = log_output_settings
+            log_settings.enable_trace = False
+            
+            self.logger.info(f"MLPerf LoadGen output directory: {self.mlperf_output_dir}")
+            
+            # Get SUT and QSL
+            sut = self.client.get_sut()
+            qsl = self.client.get_qsl()
+            
+            # Start LoadGen test - this will block until all samples are processed
+            self.logger.info("Calling lg.StartTestWithLogSettings() - this will block until all samples are processed...")
+            self.logger.info(f"MLPerf logs will be saved to: {self.mlperf_output_dir}")
+            test_start_time = time.time()
+            
+            try:
+                lg.StartTestWithLogSettings(sut, qsl, settings, log_settings)
+                test_duration = time.time() - test_start_time
+                self.logger.info(f"LoadGen test completed in {test_duration:.2f} seconds")
+            except Exception as e:
+                test_duration = time.time() - test_start_time
+                self.logger.error(f"LoadGen test failed after {test_duration:.2f} seconds: {e}", exc_info=True)
+                raise
+            
+            self.logger.info("=" * 80)
+            self.logger.info("LOADGEN TEST COMPLETED")
+            self.logger.info("=" * 80)
+            
+            # Stop metrics collection if enabled
+            if self.enable_metrics and self.metrics_collector:
+                self.metrics_collector.stop()
+                self.logger.info("Metrics collection stopped")
+            
+            # Generate visualizations if metrics enabled
+            if self.enable_metrics:
+                self._generate_metrics_visualizations()
+            
+            # Call post-run processing hook (for model-specific customizations)
+            self._post_run_processing()
+            
+            # Save metadata
+            test_results['status'] = 'success'
+            test_results['duration'] = time.time() - start_time
+            self.save_metadata(test_results)
+            
+            # Upload to MLflow if configured
+            if self.mlflow_client and self.mlflow_experiment_name:
+                try:
+                    self.mlflow_client.upload_results(
+                        output_dir=str(self.mlflow_output_dir),
+                        metadata_file=str(self.mlflow_output_dir / "mlflow_metadata.yaml")
+                    )
+                    self.logger.info("Results uploaded to MLflow")
+                except Exception as e:
+                    self.logger.warning(f"Failed to upload to MLflow: {e}")
+            
+            self.logger.info("✓ Test completed successfully")
+            
+        except Exception as e:
+            test_results['status'] = 'error'
+            test_results['error'] = str(e)
+            test_results['duration'] = time.time() - start_time
+            self.logger.error(f"Test failed: {e}", exc_info=True)
+            
+            # Save metadata even on failure
+            try:
+                self.save_metadata(test_results)
+            except:
+                pass
+        
+        finally:
+            # Cleanup - but wait a bit to ensure all responses are sent
+            # LoadGen might still be processing responses
+            try:
+                # Give LoadGen a moment to finish processing all responses
+                if test_results.get('status') == 'success':
+                    self.logger.info("Waiting for LoadGen to complete all response processing...")
+                    time.sleep(2)  # Brief wait to ensure all responses are processed
+                
+                if self.client:
+                    self.client.cleanup()
+                self.stop_server()
+                self._cleanup_custom()
+            except Exception as e:
+                self.logger.error(f"Error during cleanup: {e}")
+        
+        return test_results
+    
+    def _pre_run_setup(self):
+        """
+        Hook for model-specific pre-run setup.
+        Override in subclasses to add custom initialization.
+        """
+        pass
+    
+    def _post_run_processing(self):
+        """
+        Hook for model-specific post-run processing.
+        Override in subclasses to add custom processing after test.
+        """
+        pass
+    
+    def _cleanup_custom(self):
+        """
+        Hook for model-specific cleanup.
+        Override in subclasses to add custom cleanup logic.
+        """
         pass
 

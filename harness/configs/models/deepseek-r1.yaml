@@ -1,0 +1,14 @@
+# ============================================================================
+# DeepSeek R1 Model Configuration
+# ============================================================================
+
+name: deepseek-r1
+description: "Model configuration for DeepSeek R1"
+
+model_specific:
+  default_model_name: "deepseek-ai/DeepSeek-R1-0528"
+  default_dataset: "deepseek-r1"
+
+# Model-specific settings can be added here
+# Example: custom tokenizer settings, generation parameters, etc.
+

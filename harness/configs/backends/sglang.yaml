@@ -1,0 +1,14 @@
+# ============================================================================
+# SGLang Backend Configuration
+# ============================================================================
+
+name: sglang
+description: "SGLang backend configuration"
+
+endpoints:
+  - completions
+  - chat_completions
+
+# Additional backend-specific settings
+default_endpoint: completions
+

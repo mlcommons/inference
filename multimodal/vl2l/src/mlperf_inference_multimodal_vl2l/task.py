@@ -15,15 +15,16 @@ from typing import TYPE_CHECKING, Any
 import mlperf_loadgen as lg
 from datasets import load_dataset
 from loguru import logger
+from openai import AsyncOpenAI, DefaultAioHttpClient
 from pympler import asizeof
 
 if TYPE_CHECKING:
-    from openai import AsyncOpenAI
     from openai.types.chat.chat_completion_message_param import (
         ChatCompletionMessageParam,
     )
 
     from .cli import Dataset as DatasetCLI
+    from .cli import Endpoint as EndpointCLI
     from .cli import Model as ModelCLI
 
 
@@ -34,7 +35,7 @@ class Task(ABC):
         self,
         dataset_cli: DatasetCLI,
         model_cli: ModelCLI,
-        openai_api_client: AsyncOpenAI,
+        endpoint_cli: EndpointCLI,
         random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
@@ -42,7 +43,7 @@ class Task(ABC):
         Args:
             dataset_cli: The dataset configuration passed in from the CLI.
             model_cli: The model configuration passed in from the CLI.
-            openai_api_client: The OpenAI API client to use for the task.
+            endpoint_cli: The endpoint configuration passed in from the CLI.
             random_seed: The random seed to use for the task.
         """
         random.seed(random_seed)
@@ -51,12 +52,30 @@ class Task(ABC):
             token=dataset_cli.token,
         )
         self.model_cli = model_cli
+        self.openai_api_client = AsyncOpenAI(
+            base_url=endpoint_cli.url,
+            http_client=DefaultAioHttpClient(),
+            api_key=endpoint_cli.api_key,
+        )
+        self.event_loop, self.event_loop_thread = (
+            self._create_event_loop_in_separate_thread()
+        )
         self.loaded_messages: dict[int, list[ChatCompletionMessageParam]] = {}
-        self.openai_api_client = openai_api_client
-        self.event_loop = self._create_event_loop_in_separate_thread()
+
+    def __del__(self) -> None:
+        """Clean up the resources used by the task."""
+        logger.trace("Cleaning up the resources used by the task...")
+        asyncio.run_coroutine_threadsafe(
+            self.openai_api_client.close(),
+            self.event_loop,
+        ).result()
+        self.event_loop.call_soon_threadsafe(self.event_loop.stop)
+        self.event_loop_thread.join()
 
     @staticmethod
-    def _create_event_loop_in_separate_thread() -> asyncio.AbstractEventLoop:
+    def _create_event_loop_in_separate_thread() -> (
+        tuple[asyncio.AbstractEventLoop, threading.Thread]
+    ):
         """Create a dedicated event loop in a separate thread.
 
         This event loop is where async calls to the serving endpoint via OpenAI API
@@ -75,7 +94,7 @@ class Task(ABC):
             daemon=True,
         )
         event_loop_thread.start()
-        return event_loop
+        return event_loop, event_loop_thread
 
     @staticmethod
     @abstractmethod
@@ -255,7 +274,7 @@ class ShopifyGlobalCatalogue(Task):
         self,
         dataset_cli: DatasetCLI,
         model_cli: ModelCLI,
-        openai_api_client: AsyncOpenAI,
+        endpoint_cli: EndpointCLI,
         random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
@@ -263,13 +282,13 @@ class ShopifyGlobalCatalogue(Task):
         Args:
             dataset_cli: The dataset configuration passed in from the CLI.
             model_cli: The model configuration passed in from the CLI.
-            openai_api_client: The OpenAI API client to use for the task.
+            endpoint_cli: The endpoint configuration passed in from the CLI.
             random_seed: The random seed to use for the task.
         """
         super().__init__(
             dataset_cli=dataset_cli,
             model_cli=model_cli,
-            openai_api_client=openai_api_client,
+            endpoint_cli=endpoint_cli,
             random_seed=random_seed,
         )
         # Shopify only released the train split so far.

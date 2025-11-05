@@ -9,7 +9,6 @@ from typing import Annotated
 
 import mlperf_loadgen as lg
 from loguru import logger
-from openai import AsyncOpenAI, DefaultAioHttpClient
 from pydantic import BaseModel, Field
 from pydantic_typer import Typer
 from typer import Option
@@ -207,11 +206,7 @@ def main(
     task = ShopifyGlobalCatalogue(
         dataset_cli=dataset,
         model_cli=model,
-        openai_api_client=AsyncOpenAI(
-            base_url=endpoint.url,
-            http_client=DefaultAioHttpClient(),
-            api_key=endpoint.api_key,
-        ),
+        endpoint_cli=endpoint,
         random_seed=random_seed,
     )
     sut = task.construct_sut()

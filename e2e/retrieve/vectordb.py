@@ -88,9 +88,14 @@ class VectorDB(RagDB):
         self._load_embeddings = load_embeddings
         self._num_embedding_devices = num_embedding_devices
 
+<<<<<<< HEAD
         if self._device == "hpu":
             import habana_frameworks.torch.core as htcore
             os.environ["PT_HPU_LAZY_MODE"] = "1"
+=======
+        #import habana_frameworks.torch.core as htcore
+        #os.environ["PT_HPU_LAZY_MODE"] = "1"
+>>>>>>> 9b26053 (HPU reranking+embedding workaround (run on CPU))
 
         # Initialize embedding model with device configuration
         model_kwargs = {'device': self._device}

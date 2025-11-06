@@ -304,9 +304,7 @@ class VectorDB(RagDB):
             # For CPU, use requested number as process count
             num_devices = self._num_embedding_devices
         elif base_device == 'hpu' and hasattr(torch, 'hpu'):
-            #num_devices = torch.hpu.device_count()
-            # Disable parallel embedding for hpu for now
-            num_devices = 1
+            num_devices = torch.hpu.device_count()
         elif base_device == 'xpu' and hasattr(torch, 'xpu'):
             num_devices = torch.xpu.device_count()
         elif base_device == 'cuda':

@@ -11,7 +11,7 @@ Designed for reuse across different retrieval systems including multi-hop QA.
 """
 
 import pandas as pd
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple, Union
 from collections import defaultdict
 from utils import filter_dataset_by_difficulty
 
@@ -87,7 +87,8 @@ def calculate_retrieval_metrics(expected_urls: List[str], retrieved_urls: List[s
 def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str], 
                          top_k_retriever: int = 50, top_k_reranking: int = 10,
                          verbose: bool = True, no_rerank: bool = False,
-                         retrieval_strategy: str = "fixed_k", print_results: bool = False, **strategy_params) -> Dict[str, Any]:
+                         retrieval_strategy: str = "fixed_k", print_results: bool = False,
+                         return_results: bool = False, **strategy_params) -> Union[Dict[str, Any], Tuple[Dict[str, Any], List[Any]]]:
     """
     Evaluate a single retrieval query and return comprehensive retrieval metrics.
     
@@ -103,7 +104,7 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
         **strategy_params: Parameters for adaptive retrieval strategies
         
     Returns:
-        Dictionary containing all metrics
+        Dictionary containing all metrics. When return_results=True, returns a tuple of (metrics_dict, retrieved_results).
     """
     import time
     
@@ -245,15 +246,18 @@ def evaluate_retrieval_query(rag_db, query: str, expected_urls: List[str],
         print()
     
     # Return metrics dict with retrieval performance
-    return {**metrics, **retrieval_metrics}
+    merged_metrics = {**metrics, **retrieval_metrics}
+    if return_results:
+        return merged_metrics, results
+    return merged_metrics
 
 
 def run_evaluation(rag_db, dataset_path: str, 
                                top_k_retriever: int = 50, top_k_reranking: int = 10, 
                                max_queries: Optional[int] = None, no_rerank: bool = False,
                                retrieval_strategy: str = "fixed_k", detailed_analysis: bool = False,
-                               difficulty: int = 0,
-                               **strategy_params) -> Dict[str, float]:
+                               difficulty: int = 0, collect_results: bool = False,
+                               **strategy_params) -> Union[Dict[str, float], Tuple[Dict[str, float], List[Dict[str, Any]]]]:
     """
     Run comprehensive evaluation on a dataset with detailed metrics reporting.
     
@@ -267,10 +271,11 @@ def run_evaluation(rag_db, dataset_path: str,
         retrieval_strategy: Strategy for retrieval ("fixed_k", "top_p", "relative")
         detailed_analysis: If True, print detailed breakdown by reasoning types and link counts
         difficulty: Minimum number of answer links required (0 = no filtering)
+        collect_results: If True, also collect retrieval outputs for each query
         **strategy_params: Parameters for adaptive retrieval strategies
         
     Returns:
-        Dictionary of averaged metrics across all queries
+        Dictionary of averaged metrics across all queries. When collect_results=True, returns a tuple of (metrics_dict, collected_results).
     """
     df = pd.read_csv(dataset_path, sep='\t')
     
@@ -292,6 +297,7 @@ def run_evaluation(rag_db, dataset_path: str,
     reranking_times = []
     total_times = []
     docs_per_sec_list = []
+    collected_queries = [] if collect_results else None
     valid_queries = 0
     
     for idx, row in df.iterrows():
@@ -303,11 +309,41 @@ def run_evaluation(rag_db, dataset_path: str,
         
         if expected_urls:
             # Get comprehensive metrics for this query
-            metrics = evaluate_retrieval_query(
+            metrics_output = evaluate_retrieval_query(
                 rag_db, row['Prompt'], expected_urls, 
                 top_k_retriever, top_k_reranking, verbose=True, no_rerank=no_rerank,
-                retrieval_strategy=retrieval_strategy, **strategy_params
+                retrieval_strategy=retrieval_strategy, return_results=collect_results,
+                **strategy_params
             )
+            if collect_results:
+                metrics, retrieved_docs = metrics_output
+                doc_entries = []
+                seen_urls = set()
+                for doc in retrieved_docs:
+                    url = None
+                    if hasattr(doc, 'metadata'):
+                        url = doc.metadata.get('original_url') or doc.metadata.get('source')
+                        content = doc.page_content
+                    elif isinstance(doc, dict):
+                        url = doc.get('url')
+                        content = doc.get('content', "")
+                    else:
+                        content = ""
+                    if url and url in seen_urls:
+                        continue
+                    entry = {
+                        "url": url,
+                        "content": content[:2000]
+                    }
+                    doc_entries.append(entry)
+                    if url:
+                        seen_urls.add(url)
+                collected_queries.append({
+                    "prompt": row['Prompt'],
+                    "docs": doc_entries
+                })
+            else:
+                metrics = metrics_output
             
             # Store metrics for detailed analysis if requested
             if detailed_analysis:
@@ -410,9 +446,13 @@ def run_evaluation(rag_db, dataset_path: str,
         if detailed_analysis:
             _print_detailed_analysis(df, all_query_metrics, valid_queries)
         
+        if collect_results:
+            return avg_metrics, collected_queries or []
         return avg_metrics
     else:
         print("No valid queries found!")
+        if collect_results:
+            return {}, []
         return {}
 
 

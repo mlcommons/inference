@@ -128,7 +128,7 @@ COMMON_PARAMS = [
         name="database",
         arg_names=["--database", "--db"],
         type=str,
-        default=None,
+        default="vector.db",
         help="Path to the database file\nIf provided, --ingest will be ignored\nDefault: 'bm25.db' for BM25, 'vector.db' for vector",
         category="common",
         applies_to=["both"]
@@ -192,7 +192,7 @@ COMMON_PARAMS = [
         name="retrieval_method",
         arg_names=["--retrieval_method"],
         type=str,
-        default="bm25",
+        default="vector",
         help="Retrieval method: 'bm25' for BM25 lexical search, 'vector' for dense vector search",
         choices=["bm25", "vector"],
         category="common",
@@ -315,6 +315,16 @@ GENERAL_PARAMS = [
         type=str,
         default="auto",
         help="Maximum tokens for LLM response (auto to detect from service, or specify number)",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="generate_answer",
+        arg_names=["--generate-answer"],
+        type=bool,
+        default=False,
+        help="Generate LLM answer outputs and save them alongside retrieval results",
+        action="store_true",
         category="general",
         applies_to=["both"]
     ),

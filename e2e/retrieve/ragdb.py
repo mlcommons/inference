@@ -238,4 +238,3 @@ class RagDB(abc.ABC):
     def device(self) -> str:
         """Get the device being used."""
         return self._device
-

@@ -1,3 +1,4 @@
+import os
 import faiss
 import torch
 import numpy as np
@@ -83,6 +84,9 @@ class VectorDB(RagDB):
         self._ivf_nprobe = ivf_nprobe
         self._load_embeddings = load_embeddings
         self._num_embedding_devices = num_embedding_devices
+
+        #import habana_frameworks.torch.core as htcore
+        #os.environ["PT_HPU_LAZY_MODE"] = "1"
 
         # Initialize embedding model with device configuration
         model_kwargs = {'device': self._device}

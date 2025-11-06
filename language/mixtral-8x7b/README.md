@@ -73,7 +73,7 @@ CPU-only setup, as well as any GPU versions for applicable libraries like PyTorc
 ### Download model through MLCFlow Automation
 
 ```
-mlcr get,ml-model,mixtral --outdirname=<path_to_download> -j
+mlcr get,ml-model,mixtral,_r2-downloader,_mlc --outdirname=<path_to_download> -j
 ```
 
 ### Get Checkpoint
@@ -102,13 +102,13 @@ rclone copy mlc-inference:mlcommons-inference-wg-public/mixtral_8x7b/mixtral-8x7
 **Validation**
 
 ```
-mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_validation --outdirname=<path to download> -j
+mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_r2-downloader,_validation --outdirname=<path to download> -j
 ```
 
 **Calibration**
 
 ```
-mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_calibration --outdirname=<path to download> -j
+mlcr get,dataset-mixtral,openorca-mbxp-gsm8k-combined,_r2-downloader,_calibration --outdirname=<path to download> -j
 ```
 
 - Adding `_wget` tag to the run command will change the download tool from `rclone` to `wget`.

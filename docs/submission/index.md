@@ -158,6 +158,18 @@ If there are multiple systems where MLPerf results are collected, the same proce
        --commit_message="Results on <HW name> added by <Name>" \
        --quiet
     ```
+
+    > **Note:** The path to the locally synced submission directory from the output below can be used in the next step by passing it to the `--submission_dir` argument.
+    <details>
+  	<summary>Click to see the sample output</summary>
+	```
+  	[2025-07-23 16:36:56,399 module.py:2197 INFO] - 
+    
+    Path to the locally synced submission directory: mysubmissions/mlperf_submission
+
+    
+ 	```
+    </details>
     
     ```mermaid
         flowchart LR
@@ -192,15 +204,16 @@ Once you have all the results on the system, you can upload them to the MLCommon
     ```
     mlcr run,mlperf,submission,checker,inference \
     --submitter_id=<> \
-    --submission_dir=<Path to the submission folder>
-    ```
+    --submission_dir=<Path to the locally synced submission directory> --quiet
+    ``` 
+    
 === "via Browser"
     You can do the following command to generate the final submission tar file and then upload to the [MLCommons Submission UI](https://submissions-ui.mlcommons.org/submission). 
     ```
     mlcr run,mlperf,submission,checker,inference \
     --submission_dir=<Path to the submission folder> \
     --tar=yes \
-    --submission_tar_file=mysubmission.tar.gz
+    --submission_tar_file=mysubmission.tar.gz --quiet
     ```
     
 ```mermaid

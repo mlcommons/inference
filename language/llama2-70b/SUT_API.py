@@ -230,69 +230,78 @@ class SUT:
     def process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic"""
 
-        while True:
-            qitem = self.query_queue.get()
-            if qitem is None:
-                break
+        async def process():
+            # init common http client to take advantage of connection pooling
+            async with httpx.AsyncClient(
+                verify=False,
+                # timeouts: 10s to connect, 10mins to complete request
+                timeout=httpx.Timeout(600.0, connect=10.0),
+            ) as self._http:
+                while True:
+                    qitem = self.query_queue.get()
+                    if qitem is None:
+                        break
 
-            query_ids = [q.index for q in qitem]
+                    query_ids = [q.index for q in qitem]
 
-            fname = "q" + "_".join([str(i) for i in query_ids])
-            fname = f"run_outputs/{fname}.pkl"
-            _p = Path(fname)
-            if self.use_cached_outputs and _p.exists():
-                # Read cache
-                with _p.open(mode="rb") as f:
-                    d = pickle.load(f)
-                processed_output = d["outputs"]
-                tik1 = None
-                tik2 = None
-                tik3 = None
-                tok = None
-            else:
-                tik1 = time.time()
+                    fname = "q" + "_".join([str(i) for i in query_ids])
+                    fname = f"run_outputs/{fname}.pkl"
+                    _p = Path(fname)
+                    if self.use_cached_outputs and _p.exists():
+                        # Read cache
+                        with _p.open(mode="rb") as f:
+                            d = pickle.load(f)
+                        processed_output = d["outputs"]
+                        tik1 = None
+                        tik2 = None
+                        tik3 = None
+                        tok = None
+                    else:
+                        tik1 = time.time()
 
-                # collect prompt tokens for selected query ids
-                prompts = [self.data_object.input_ids[i].tolist() for i in query_ids]
+                        # collect prompt tokens for selected query ids
+                        prompts = [self.data_object.input_ids[i].tolist() for i in query_ids]
 
-                tik2 = time.time()
+                        tik2 = time.time()
 
-                # NOTE(mgoin): I don't think threading is necessary since we are submitting all queries in one request
-                # The API server should take care of mini-batches and scheduling
-                if len(self.api_servers) > 0:
-                    outputs = asyncio.run(self.query_servers(prompts))
-                else:
-                    print(
-                        "Error: Specify at least one API to which the request is to be sent!"
-                    )
-                    exit(1)
+                        # NOTE(mgoin): I don't think threading is necessary since we are submitting all queries in one request
+                        # The API server should take care of mini-batches and scheduling
+                        if len(self.api_servers) > 0:
+                            outputs = await self.query_servers(prompts)
+                        else:
+                            print(
+                                "Error: Specify at least one API to which the request is to be sent!"
+                            )
+                            exit(1)
 
-                tik3 = time.time()
+                        tik3 = time.time()
 
-            processed_output = self.tokenizer(outputs)["input_ids"]
-            # for i in range(len(qitem)):
-            for i in range(len(processed_output)):
-                # NOTE(mgoin): Not optimal to make numpy arrays just to
-                # serialize
-                unpadded = np.array(processed_output[i])
-                n_tokens = unpadded.shape[0]
-                response_array = array.array("B", unpadded.tobytes())
-                bi = response_array.buffer_info()
-                response = [lg.QuerySampleResponse(qitem[i].id, bi[0], bi[1], n_tokens)]
-                lg.QuerySamplesComplete(response)
+                    processed_output = self.tokenizer(outputs)["input_ids"]
+                    # for i in range(len(qitem)):
+                    for i in range(len(processed_output)):
+                        # NOTE(mgoin): Not optimal to make numpy arrays just to
+                        # serialize
+                        unpadded = np.array(processed_output[i])
+                        n_tokens = unpadded.shape[0]
+                        response_array = array.array("B", unpadded.tobytes())
+                        bi = response_array.buffer_info()
+                        response = [lg.QuerySampleResponse(qitem[i].id, bi[0], bi[1], n_tokens)]
+                        lg.QuerySamplesComplete(response)
 
-            tok = time.time()
+                    tok = time.time()
 
-            with self.sample_counter_lock:
-                self.sample_counter += len(qitem)
-                print(f"Samples run: {self.sample_counter}")
-                if tik1:
-                    print(f"\tBatchMaker time: {tik2 - tik1}")
-                    print(f"\tInference time: {tik3 - tik2}")
-                    print(f"\tPostprocess time: {tok - tik3}")
-                    print(f"\t==== Total time: {tok - tik1}")
-                else:
-                    print(f"\tLoaded from cache: {_p}")
+                    with self.sample_counter_lock:
+                        self.sample_counter += len(qitem)
+                        print(f"Samples run: {self.sample_counter}")
+                        if tik1:
+                            print(f"\tBatchMaker time: {tik2 - tik1}")
+                            print(f"\tInference time: {tik3 - tik2}")
+                            print(f"\tPostprocess time: {tok - tik3}")
+                            print(f"\t==== Total time: {tok - tik1}")
+                        else:
+                            print(f"\tLoaded from cache: {_p}")
+
+        asyncio.run(process())
 
     def get_sut(self):
         self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries)

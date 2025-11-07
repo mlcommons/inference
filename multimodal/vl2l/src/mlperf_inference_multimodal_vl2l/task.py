@@ -98,7 +98,8 @@ class Task(ABC):
 
     @staticmethod
     @abstractmethod
-    def formulate_messages(sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
+    def formulate_messages(
+            sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
         """Formulate the messages for chat completion.
 
         Args:
@@ -197,7 +198,8 @@ class Task(ABC):
                     `lg.QuerySampleIndex` (i.e., the sample index into the dataset).
             """
 
-            async def _query_endpoint_async(query_sample: lg.QuerySample) -> None:
+            async def _query_endpoint_async(
+                    query_sample: lg.QuerySample) -> None:
                 """Query the endpoint through the async OpenAI API client."""
                 messages = self.loaded_messages[query_sample.index]
                 logger.trace(
@@ -295,7 +297,8 @@ class ShopifyGlobalCatalogue(Task):
         self.dataset = self.dataset["train"]
 
     @staticmethod
-    def formulate_messages(sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
+    def formulate_messages(
+            sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
         """Formulate the messages for chat completion.
 
         Args:

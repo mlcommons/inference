@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """
-Script to send pre-tokenized requests to TensorRT-LLM server via OpenAI endpoint.
+Script to send text prompts to TensorRT-LLM server via OpenAI completions endpoint.
 
 Usage:
     python run_infer_trtllm.py --input-tokens tokenized_data.pkl [options]
 
 Arguments:
-    --input-tokens     Path to pickle file containing pre-tokenized data from harmony-tokens.py
+    --input-tokens     Path to pickle file containing data with text_input column from harmony-tokens.py
     --server-url       TensorRT-LLM server URL (default: localhost:8000)
     --max-samples      Maximum number of samples to process (default: all)
     --max-tokens       Maximum tokens to generate per request (default: 100)
@@ -95,12 +95,12 @@ class TRTLLMClient:
         )
         
     async def send_request(
-            self, input_ids: List[int], max_tokens: int = 100,
+            self, prompt: str, max_tokens: int = 100,
             sample_id: int = 0, pass_num: int = 0) -> Tuple[int, int, Dict[str, Any], float]:
         """Send a single request to the TensorRT-LLM server.
         
         Args:
-            input_ids: List of input token IDs
+            prompt: Text prompt to send
             max_tokens: Maximum tokens to generate
             sample_id: Sample identifier
             pass_num: Pass number for pass@k strategy
@@ -108,17 +108,16 @@ class TRTLLMClient:
         Returns:
             Tuple of (sample_id, pass_num, response, latency)
         """
-        # Prepare generation parameters using OpenAI chat completions format
+        # Prepare generation parameters using OpenAI completions format (as per TensorRT-LLM docs)
         gen_params = {
             "model": self.model_name,
+            "prompt": prompt,
             "max_tokens": max_tokens,
             "temperature": self.temperature,
             "top_p": self.top_p,
             "stream": False,
-            "messages": [],  # Empty messages for token-based input
             "extra_body": {
-                # TensorRT-LLM specific parameters passed in extra_body
-                "prompt_token_ids": input_ids,
+                # TensorRT-LLM specific parameters
                 "min_tokens": 1,
                 "top_k": self.top_k,
             },
@@ -130,13 +129,13 @@ class TRTLLMClient:
             
             # Use semaphore for concurrency control
             async with self.concurrency_semaphore:
-                completion = await self.async_client.chat.completions.create(**gen_params)
+                completion = await self.async_client.completions.create(**gen_params)
             
             end_time = time.time()
             latency = end_time - start_time
             
-            # Extract response text
-            response_text = completion.choices[0].message.content
+            # Extract response text from completions format
+            response_text = completion.choices[0].text
             
             # Tokenize the response to get output_ids (similar to SGLang format)
             tokenizer = get_tokenizer()
@@ -164,35 +163,36 @@ class TRTLLMClient:
 
 
 def load_tokenized_data(data_file: str) -> pd.DataFrame:
-    """Load pre-tokenized data from pickle file produced by harmony-tokens.py."""
-    logger.info(f"Loading tokenized data from {data_file}")
+    """Load data from pickle file produced by harmony-tokens.py."""
+    logger.info(f"Loading data from {data_file}")
     
     # Load DataFrame from pickle
     df = pd.read_pickle(data_file)
     logger.info(f"Loaded DataFrame with shape: {df.shape}")
     
-    # Check if tok_input column exists and has valid data
-    if 'tok_input' in df.columns:
-        # Check for any None values in tok_input (indicating failed tokenization)
-        failed_mask = df['tok_input'].isna()
+    # Check if text_input column exists and has valid data
+    if 'text_input' in df.columns:
+        # Check for any None values in text_input
+        failed_mask = df['text_input'].isna()
         failed_count = failed_mask.sum()
         
         if failed_count > 0:
             failed_indices = df[failed_mask].index.unique()
-            error_msg = f"Found {failed_count} failed tokenized samples at indices: {failed_indices.tolist()}"
+            error_msg = f"Found {failed_count} samples with missing text_input at indices: {failed_indices.tolist()}"
             logger.error(error_msg)
             raise AssertionError(error_msg)
         
         # Check first sample
-        first_tokens = df.iloc[0]['tok_input']
-        if isinstance(first_tokens, list):
-            logger.info(f"First sample token length: {len(first_tokens)}")
+        first_text = df.iloc[0]['text_input']
+        if isinstance(first_text, str):
+            logger.info(f"First sample text length: {len(first_text)} characters")
         else:
-            logger.warning("tok_input column exists but first sample is not a list")
+            logger.warning("text_input column exists but first sample is not a string")
         
-        logger.info(f"All {len(df)} samples were successfully tokenized")
+        logger.info(f"All {len(df)} samples have valid text_input")
     else:
-        logger.warning("No 'tok_input' column found in DataFrame")
+        logger.error("No 'text_input' column found in DataFrame")
+        raise ValueError("DataFrame must contain 'text_input' column")
     
     return df
 
@@ -231,7 +231,7 @@ async def send_requests_async(
     for idx, row in tokenized_df.iterrows():
         for pass_num in range(pass_k):
             task = client.send_request(
-                row['tok_input'],
+                row['text_input'],
                 max_tokens=max_tokens,
                 sample_id=idx,
                 pass_num=pass_num
@@ -478,9 +478,9 @@ async def process_requests_async(tokenized_df: pd.DataFrame, server_url: str,
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Send pre-tokenized requests to TensorRT-LLM server via OpenAI endpoint")
+        description="Send text prompts to TensorRT-LLM server via OpenAI completions endpoint")
     parser.add_argument("--input-tokens", required=True,
-                        help="Path to pickle file containing pre-tokenized data from harmony-tokens.py")
+                        help="Path to pickle file containing data with text_input column from harmony-tokens.py")
     parser.add_argument("--server-url", default="localhost:8000",
                         help="TensorRT-LLM server URL (default: localhost:8000)")
     parser.add_argument("--max-samples", type=int, default=None,
@@ -519,7 +519,7 @@ def main():
         
         try:
             _, _, test_response, _ = await client.send_request(
-                input_ids=[1, 2, 3], max_tokens=5, sample_id=0, pass_num=0)
+                prompt="Test", max_tokens=5, sample_id=0, pass_num=0)
             if "error" in test_response:
                 logger.error(f"Server connection failed: {test_response['error']}")
                 logger.error("Make sure your TensorRT-LLM server is running with OpenAI endpoint enabled.")
@@ -578,4 +578,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
 

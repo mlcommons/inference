@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from datetime import timedelta
 from enum import StrEnum, auto
-from typing import Annotated, Any
+from typing import Annotated
 
 import mlperf_loadgen as lg
 from loguru import logger
@@ -105,13 +105,16 @@ class TestSettings(BaseModel):
     min_duration: Annotated[
         timedelta,
         Field(
-            description="The minimum testing duration (in seconds or ISO 8601 format like PT5S).",
+            description=(
+                "The minimum testing duration (in seconds or ISO 8601 format like"
+                " PT5S)."
+            ),
         ),
     ] = timedelta(seconds=5)
 
     @field_validator("min_duration", mode="before")
     @classmethod
-    def parse_min_duration(cls, value: Any) -> timedelta:
+    def parse_min_duration(cls, value: timedelta | float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value

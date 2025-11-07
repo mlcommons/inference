@@ -5,11 +5,11 @@ from __future__ import annotations
 import sys
 from datetime import timedelta
 from enum import StrEnum, auto
-from typing import Annotated
+from typing import Annotated, Any
 
 import mlperf_loadgen as lg
 from loguru import logger
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from pydantic_typer import Typer
 from typer import Option
 
@@ -105,9 +105,27 @@ class TestSettings(BaseModel):
     min_duration: Annotated[
         timedelta,
         Field(
-            description="The minimum testing duration.",
+            description="The minimum testing duration (in seconds or ISO 8601 format like PT5S).",
         ),
     ] = timedelta(seconds=5)
+
+    @field_validator("min_duration", mode="before")
+    @classmethod
+    def parse_min_duration(cls, value: Any) -> timedelta:
+        """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
+        if isinstance(value, timedelta):
+            return value
+        if isinstance(value, (int, float)):
+            return timedelta(seconds=value)
+        if isinstance(value, str):
+            # Try to parse as a number first
+            try:
+                return timedelta(seconds=float(value))
+            except ValueError:
+                # If it fails, it might be ISO 8601 format
+                # Let pydantic's default parser handle it
+                pass
+        return value
 
     def to_lgtype(self) -> lg.TestSettings:
         """Convert the test settings to its corresponding LoadGen type."""

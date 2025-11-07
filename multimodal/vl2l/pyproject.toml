@@ -16,7 +16,7 @@ dependencies = [
   "mlcommons_loadgen",
   "openai[aiohttp]",
   "pydantic",
-  "pydantic-typer",
+  "pydantic-typer @ git+https://github.com/CentML/pydantic-typer.git@wangshangsam/preserve-full-annotated-type",
   "pympler",
   "typer",
 ]

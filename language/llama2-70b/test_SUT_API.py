@@ -25,7 +25,7 @@ def sut() -> Iterable[SUT]:
             dataset_path="dataset_path",
             total_sample_count=10,
             device="cpu",
-            api_servers=["http://server1", "http://server2"],
+            api_server=["http://server1", "http://server2"],
             api_model_name="dummy_model_name",
             workers=1,
         )

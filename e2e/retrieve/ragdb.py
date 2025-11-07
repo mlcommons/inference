@@ -150,10 +150,18 @@ class RagDB(abc.ABC):
     def ingest_from_file(self, file_path: str, **kwargs):
         """Ingest data from a JSON file. Default implementation for JSON files."""
         import json
-        
-        passage_data = json.load(open(file_path))
-        doc_list = [p.pop('passage') for p in passage_data]
-        passage_metadata = [p for p in passage_data]  # All keys except 'passage' are metadata
+
+        with open(file_path, 'r', encoding='utf-8') as f:
+            payload = json.load(f)
+
+        passage_data = payload.get('passages', [])
+
+        doc_list = []
+        passage_metadata = []
+        for entry in passage_data:
+            doc_list.append(entry['passage'])
+            passage_metadata.append({k: v for k, v in entry.items() if k != 'passage'})
+
         print(f"Ingesting {len(doc_list)} passages from JSON file {file_path}")
         return self.ingest(doc_list, passage_metadata, passages_path=file_path, **kwargs)
 
@@ -230,3 +238,4 @@ class RagDB(abc.ABC):
     def device(self) -> str:
         """Get the device being used."""
         return self._device
+

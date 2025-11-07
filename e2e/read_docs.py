@@ -503,9 +503,13 @@ class DocumentProcessor:
         if json_file and all_passages:
             json_path = Path(json_file)
             json_path.parent.mkdir(parents=True, exist_ok=True)
-            
+
+            payload = {
+                "base_dir": str(output_path.resolve()),
+                "passages": all_passages
+            }
             with open(json_path, 'w', encoding='utf-8') as f:
-                json.dump(all_passages, f, indent=2, ensure_ascii=False)
+                json.dump(payload, f, indent=2, ensure_ascii=False)
             
             print(f"Saved {len(all_passages)} passages to {json_file}")
     

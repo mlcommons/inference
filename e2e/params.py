@@ -21,7 +21,6 @@ import argparse
 # ============================================================================
 # Parameter Definitions
 # ============================================================================
-
 class ParamDef:
     """Parameter definition with metadata."""
     def __init__(self, 
@@ -315,6 +314,35 @@ GENERAL_PARAMS = [
         type=str,
         default="auto",
         help="Maximum tokens for LLM response (auto to detect from service, or specify number)",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="base_doc_dir",
+        arg_names=["--base-doc-dir"],
+        type=str,
+        default="doc_html",
+        help="Directory containing full documents to use when --full-doc-context is enabled",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="save_results",
+        arg_names=["--save-results"],
+        type=bool,
+        default=True,
+        help="Save experiment outputs to result_single_shot.json (use --no-save-results to disable)",
+        action=argparse.BooleanOptionalAction,
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="full_doc_context",
+        arg_names=["--full-doc-context"],
+        type=bool,
+        default=False,
+        help="Load full source documents for LLM context instead of retrieved passages",
+        action="store_true",
         category="general",
         applies_to=["both"]
     ),

@@ -11,7 +11,7 @@ Designed for reuse across different retrieval systems including multi-hop QA.
 """
 
 import pandas as pd
-from typing import List, Dict, Any, Optional, Tuple, Union
+from typing import List, Dict, Any, Optional, Tuple, Union, Callable
 from collections import defaultdict
 from utils import filter_dataset_by_difficulty
 
@@ -257,6 +257,7 @@ def run_evaluation(rag_db, dataset_path: str,
                                max_queries: Optional[int] = None, no_rerank: bool = False,
                                retrieval_strategy: str = "fixed_k", detailed_analysis: bool = False,
                                difficulty: int = 0, collect_results: bool = False,
+                               result_handler: Optional[Callable[[str, List[Any], Dict[str, Any]], Optional[Any]]] = None,
                                **strategy_params) -> Union[Dict[str, float], Tuple[Dict[str, float], List[Dict[str, Any]]]]:
     """
     Run comprehensive evaluation on a dataset with detailed metrics reporting.
@@ -272,6 +273,7 @@ def run_evaluation(rag_db, dataset_path: str,
         detailed_analysis: If True, print detailed breakdown by reasoning types and link counts
         difficulty: Minimum number of answer links required (0 = no filtering)
         collect_results: If True, also collect retrieval outputs for each query
+        result_handler: Optional callback invoked per query with (prompt, retrieved_docs, metrics)
         **strategy_params: Parameters for adaptive retrieval strategies
         
     Returns:
@@ -309,14 +311,20 @@ def run_evaluation(rag_db, dataset_path: str,
         
         if expected_urls:
             # Get comprehensive metrics for this query
+            need_results = collect_results or (result_handler is not None)
             metrics_output = evaluate_retrieval_query(
                 rag_db, row['Prompt'], expected_urls, 
                 top_k_retriever, top_k_reranking, verbose=True, no_rerank=no_rerank,
-                retrieval_strategy=retrieval_strategy, return_results=collect_results,
+                retrieval_strategy=retrieval_strategy, return_results=need_results,
                 **strategy_params
             )
-            if collect_results:
+            if need_results:
                 metrics, retrieved_docs = metrics_output
+            else:
+                metrics = metrics_output
+                retrieved_docs = []
+
+            if collect_results and retrieved_docs:
                 doc_entries = []
                 seen_urls = set()
                 for doc in retrieved_docs:
@@ -342,8 +350,9 @@ def run_evaluation(rag_db, dataset_path: str,
                     "prompt": row['Prompt'],
                     "docs": doc_entries
                 })
-            else:
-                metrics = metrics_output
+
+            if result_handler:
+                result_handler(row['Prompt'], retrieved_docs, metrics)
             
             # Store metrics for detailed analysis if requested
             if detailed_analysis:

@@ -83,7 +83,7 @@ class SUT:
     def __init__(
         self,
         model_path=None,
-        api_servers=None,
+        api_server=None,
         api_model_name=None,
         dtype="bfloat16",
         device="cpu",
@@ -100,7 +100,7 @@ class SUT:
         self.device = device
         self.api_servers = []
         if api_servers:
-            self.api_servers.extend(api_servers)
+            self.api_servers.extend(api_server)
         self.api_model_name = api_model_name
         self.device = device
 

@@ -1,32 +1,23 @@
-import os
-import time
-import numpy as np
 import array
-import torch
-from torch.nn.functional import pad
-from torch.utils.data import DataLoader
-from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaForCausalLM
-from transformers.generation.streamers import BaseStreamer
-
+import asyncio
 import json
-import pickle
-import time
-import threading
-import tqdm
-import queue
-
 import logging
-from typing import TYPE_CHECKING, Optional, List
+import pickle
+import queue
+import threading
+import time
+from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 
-import more_itertools as mit
-from concurrent.futures.thread import ThreadPoolExecutor
-
-import requests
-from urllib3.exceptions import InsecureRequestWarning
-
+import httpx
 import mlperf_loadgen as lg
+import more_itertools as mit
+import numpy as np
+import requests
+import torch
 from dataset import Dataset
+from transformers import AutoTokenizer
+from transformers.generation.streamers import BaseStreamer
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("Llama-70B-SUT")
@@ -92,7 +83,7 @@ class SUT:
     def __init__(
         self,
         model_path=None,
-        api_server=None,
+        api_servers=None,
         api_model_name=None,
         dtype="bfloat16",
         device="cpu",
@@ -108,8 +99,8 @@ class SUT:
         self.model_path = model_path or "meta-llama/Llama-2-70b-chat-hf"
         self.device = device
         self.api_servers = []
-        if api_server:
-            self.api_servers.append(api_server)
+        if api_servers:
+            self.api_servers.extend(api_servers)
         self.api_model_name = api_model_name
         self.device = device
 
@@ -162,6 +153,9 @@ class SUT:
         self.sample_counter = 0
         self.sample_counter_lock = threading.Lock()
 
+        # init common http client to take advantage of connection pooling
+        self._http = httpx.AsyncClient(verify=False)
+
     def start(self):
         # Create worker threads
         for j in range(self.num_workers):
@@ -176,37 +170,49 @@ class SUT:
         for worker in self.worker_threads:
             worker.join()
 
-    def query_api_vllm(self, inputs, idx):
+    async def query(self, prompt: list[int], api_server: str) -> str:
+        """Query LLM API server to get output tokens for given input prompt tokens.
+
+        Args:
+            prompt: Input prompt tokens to be sent to the API server.
+            api_server: URL of the API server to which the request is to be sent.
+        Returns:
+            Output tokens from the API server.
+        """
         headers = {
             "Content-Type": "application/json",
         }
         json_data = {
             "model": self.api_model_name,
-            "prompt": inputs,
+            "prompt": prompt,
             "min_tokens": 1,
             "max_tokens": 1024,
         }
 
-        response_code = 0
-        print(f"Server path {self.api_servers[idx]}/v1/completions")
-        while response_code != 200:
-            try:
-                response = requests.post(
-                    f"{self.api_servers[idx]}/v1/completions",
-                    headers=headers,
-                    json=json_data,
-                    verify=False,
-                )
-                response_code = response.status_code
-            except Exception as e:
-                print(e)
-                print("connection failure")
-                break
-        return [resp["text"] for resp in json.loads(response.text)["choices"]]
+        response = await self._http.post(
+            f"{api_server}/v1/completions",
+            headers=headers,
+            json=json_data,
+        )
+        # only return top ranked completion from the server
+        return json.loads(response.text)["choices"][0]["text"]
 
-    def api_action_handler(self, chunk, server_idx):
-        output = self.query_api_vllm(chunk, server_idx)
-        return output
+    async def query_servers(self, prompts: list[list[int]]) -> list[str]:
+        """Query LLM API servers to get output tokens for given input prompt tokens.
+
+        Args:
+            prompts: List of input prompt tokens to be sent to the API servers.
+        Returns:
+            List of output tokens for each prompt in the given prompts.
+        """
+        # subdivide full prompts load among servers for even distribution
+        outputs = []
+        for api_server, server_prompts in zip(
+            self.api_servers, mit.divide(len(self.api_servers), prompts)
+        ):
+            for prompt in server_prompts:
+                outputs.append(self.query(prompt, api_server))
+        return await asyncio.gather(*outputs)
 
     def process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic"""
@@ -231,52 +237,17 @@ class SUT:
                 tik3 = None
                 tok = None
             else:
-                # Construct / collate batch
-                max_seq_len = 1024
-
                 tik1 = time.time()
 
-                # OpenAI-API servers don't require padding and can take input tokens
-                # directly, so we build our input_ids_tensor as a jagged list
-                input_ids_tensor = []
-                for q in qitem:
-                    # input_ids_tensor.append(self.data_object.input_ids[q.index].tolist())
-                    input_ids_tensor += self.data_object.input_ids[q.index].tolist(
-                    )
-
-                # NOTE(mgoin): I don't think this has to be a torch tensor
-                # input_ids_tensor = torch.cat(input_ids_tensor)
-
-                # print(input_ids_tensor)
-
-                assert len(input_ids_tensor) <= self.batch_size
+                # collect prompt tokens for selected query ids
+                prompts = [self.data_object.input_ids[i].tolist() for i in query_ids]
 
                 tik2 = time.time()
 
                 # NOTE(mgoin): I don't think threading is necessary since we are submitting all queries in one request
-                # The API server should take care of mini-batches and
-                # scheduling
-                if self.api_servers:
-                    """
-                    decoded = self.tokenizer.batch_decode(input_ids_tensor)
-                    cleaned = [entry.replace('</s>','').replace('<s>','') for entry in decoded]
-                    cleaned_chunks = [list(c) for c in mit.divide(len(self.api_servers), cleaned)]
-                    """
-                    cleaned_chunks = [input_ids_tensor]
-                    with ThreadPoolExecutor(
-                        max_workers=len(self.api_servers)
-                    ) as executor:
-                        # needs to be tested
-                        output_chunks = list(
-                            executor.map(
-                                self.api_action_handler,
-                                cleaned_chunks,
-                                range(len(self.api_servers)),
-                            )
-                        )
-                    output = []
-                    for row in output_chunks:
-                        output += row
+                # The API server should take care of mini-batches and scheduling
+                if len(self.api_servers) > 0:
+                    outputs = asyncio.run(self.query_servers(prompts))
                 else:
                     print(
                         "Error: Specify at least one API to which the request is to be sent!"
@@ -285,7 +256,7 @@ class SUT:
 
                 tik3 = time.time()
 
-            processed_output = self.tokenizer(output)["input_ids"]
+            processed_output = self.tokenizer(outputs)["input_ids"]
             # for i in range(len(qitem)):
             for i in range(len(processed_output)):
                 # NOTE(mgoin): Not optimal to make numpy arrays just to
@@ -294,12 +265,7 @@ class SUT:
                 n_tokens = unpadded.shape[0]
                 response_array = array.array("B", unpadded.tobytes())
                 bi = response_array.buffer_info()
-                response = [
-                    lg.QuerySampleResponse(
-                        qitem[i].id,
-                        bi[0],
-                        bi[1],
-                        n_tokens)]
+                response = [lg.QuerySampleResponse(qitem[i].id, bi[0], bi[1], n_tokens)]
                 lg.QuerySamplesComplete(response)
 
             tok = time.time()
@@ -328,13 +294,16 @@ class SUT:
     def issue_queries(self, query_samples):
         """Receives samples from loadgen and adds them to queue. Users may choose to batch here"""
 
-        list_prompts_tokens = []
-        list_prompts_attn_masks = []
-
         print(f"IssueQuery started with {len(query_samples)} samples")
+        # issue at least 1 sample per api_server by including at least len(api_server) samples
+        n_servers = len(self.api_servers)
+        batch_size = self.batch_size * n_servers
+        print(
+            f"IssueQuery: Effective batch size for multiple API servers: n_servers={n_servers} batch_size={batch_size}"
+        )
         while len(query_samples) > 0:
-            self.query_queue.put(query_samples[: self.batch_size])
-            query_samples = query_samples[self.batch_size:]
+            self.query_queue.put(query_samples[:batch_size])
+            query_samples = query_samples[batch_size:]
         print(f"IssueQuery done")
 
     def flush_queries(self):
@@ -360,7 +329,7 @@ class SUTServer(SUT):
 
         super().__init__(
             model_path=model_path,
-            api_server=None,
+            api_servers=None,
             api_model_name=None,
             dtype=dtype,
             device=device,
@@ -384,8 +353,7 @@ class SUTServer(SUT):
             self.worker_threads[j] = worker
 
         # Create first token response thread
-        self.ft_response_thread = threading.Thread(
-            target=self.process_first_tokens)
+        self.ft_response_thread = threading.Thread(target=self.process_first_tokens)
         self.ft_response_thread.start()
 
     def process_first_tokens(self):
@@ -435,14 +403,12 @@ class SUTServer(SUT):
                     for line in resp.iter_lines():
                         if line:
                             decoded = line.decode()
-                            if decoded.startswith(
-                                    "data") and "[DONE]" not in decoded:
+                            if decoded.startswith("data") and "[DONE]" not in decoded:
                                 inter = json.loads(decoded[6:])["choices"][0][
                                     "logprobs"
                                 ]
                                 if "top_logprobs" in inter:
-                                    token_s = list(
-                                        inter["top_logprobs"][0].keys())[0]
+                                    token_s = list(inter["top_logprobs"][0].keys())[0]
                                     token = self.llama_vocab[token_s]
                                     if first:
                                         self.first_token_queue.put(
@@ -468,9 +434,7 @@ class SUTServer(SUT):
             print("WARNING: caught low token count")
             print(input_ids_tensor)
             print(output_tokens)
-        response_array = array.array(
-            "B", np.array(
-                output_tokens, np.int32).tobytes())
+        response_array = array.array("B", np.array(output_tokens, np.int32).tobytes())
         bi = response_array.buffer_info()
         response = [lg.QuerySampleResponse(qitem_id, bi[0], bi[1], n_tokens)]
         lg.QuerySamplesComplete(response)
@@ -520,9 +484,7 @@ class SUTServer(SUT):
                     "B", np.array(output_tokens, np.int32).tobytes()
                 )
                 bi = response_array.buffer_info()
-                response = [
-                    lg.QuerySampleResponse(
-                        qitem.id, bi[0], bi[1], n_tokens)]
+                response = [lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)]
                 lg.QuerySamplesComplete(response)
 
     def issue_queries(self, query_samples):

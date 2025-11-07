@@ -160,6 +160,7 @@ class SUT:
             timeout=httpx.Timeout(600.0, connect=10.0),
         )
 
+
     def start(self):
         # Create worker threads
         for j in range(self.num_workers):
@@ -209,7 +210,7 @@ class SUT:
             text = ""
         return text
 
-    def query_servers(self, prompts: list[list[int]]) -> list[str]:
+    async def query_servers(self, prompts: list[list[int]]) -> list[str]:
         """Query LLM API servers to get output tokens for given input prompt tokens.
 
         Args:
@@ -224,9 +225,7 @@ class SUT:
         ):
             for prompt in server_prompts:
                 outputs.append(self.query(prompt, api_server))
-        async def _query():
-            return await asyncio.gather(*outputs)
-        return asyncio.run(_query())
+        return await asyncio.gather(*outputs)
 
     def process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic"""
@@ -254,16 +253,14 @@ class SUT:
                 tik1 = time.time()
 
                 # collect prompt tokens for selected query ids
-                prompts = [
-                    self.data_object.input_ids[i].tolist() for i in query_ids
-                ]
+                prompts = [self.data_object.input_ids[i].tolist() for i in query_ids]
 
                 tik2 = time.time()
 
                 # NOTE(mgoin): I don't think threading is necessary since we are submitting all queries in one request
                 # The API server should take care of mini-batches and scheduling
                 if len(self.api_servers) > 0:
-                    outputs = self.query_servers(prompts)
+                    outputs = asyncio.run(self.query_servers(prompts))
                 else:
                     print(
                         "Error: Specify at least one API to which the request is to be sent!"
@@ -281,9 +278,7 @@ class SUT:
                 n_tokens = unpadded.shape[0]
                 response_array = array.array("B", unpadded.tobytes())
                 bi = response_array.buffer_info()
-                response = [
-                    lg.QuerySampleResponse(qitem[i].id, bi[0], bi[1], n_tokens)
-                ]
+                response = [lg.QuerySampleResponse(qitem[i].id, bi[0], bi[1], n_tokens)]
                 lg.QuerySamplesComplete(response)
 
             tok = time.time()

@@ -99,7 +99,7 @@ class SUT:
         self.model_path = model_path or "meta-llama/Llama-2-70b-chat-hf"
         self.device = device
         self.api_servers = []
-        if api_servers:
+        if api_server:
             self.api_servers.extend(api_server)
         self.api_model_name = api_model_name
         self.device = device

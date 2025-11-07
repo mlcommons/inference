@@ -121,7 +121,8 @@ class TestSettings(BaseModel):
 
     @field_validator("min_duration", mode="before")
     @classmethod
-    def parse_min_duration(cls, value: timedelta | float | str) -> timedelta | str:
+    def parse_min_duration(cls, value: timedelta |
+                           float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value

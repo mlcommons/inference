@@ -153,13 +153,6 @@ class SUT:
         self.sample_counter = 0
         self.sample_counter_lock = threading.Lock()
 
-        # init common http client to take advantage of connection pooling
-        self._http = httpx.AsyncClient(
-            verify=False,
-            # timeouts: 10s to connect, 10mins to complete request
-            timeout=httpx.Timeout(600.0, connect=10.0),
-        )
-
     def start(self):
         # Create worker threads
         for j in range(self.num_workers):
@@ -174,10 +167,11 @@ class SUT:
         for worker in self.worker_threads:
             worker.join()
 
-    async def query_batch(self, prompt: list[list[int]], api_server: str) -> list[str]:
+    async def query_batch(self, http: httpx.AsyncClient, prompt: list[list[int]], api_server: str) -> list[str]:
         """Query LLM API server to get output tokens for given input prompt batch.
 
         Args:
+            http: httpx AsyncClient for making HTTP requests.
             prompt: Batch of Input prompt tokens to be sent to the API server.
             api_server: URL of the API server to which the request is to be sent.
         Returns
@@ -197,7 +191,7 @@ class SUT:
             print(
                 f"query_batch: Sending prompts to API server: n_prompts={len(prompt)} api_server={api_server}"
             )
-            response = await self._http.post(
+            response = await http.post(
                 f"{api_server}/v1/completions",
                 headers=headers,
                 json=json_data,
@@ -214,10 +208,11 @@ class SUT:
             completions = []
         return completions
 
-    async def query_servers(self, prompts: list[list[int]]) -> list[str]:
+    async def query_servers(self, http: httpx.AsyncClient, prompts: list[list[int]]) -> list[str]:
         """Query LLM API servers to get output tokens for given input prompt tokens.
 
         Args:
+            http: httpx AsyncClient for making HTTP requests.
             prompts: List of input prompt tokens to be sent to the API servers.
         Returns:
             List of output tokens for each prompt in the given prompts.
@@ -232,7 +227,7 @@ class SUT:
         for api_server, server_prompts in zip(
             self.api_servers, mit.divide(len(self.api_servers), prompts)
         ):
-            promises.append(self.query_batch(list(server_prompts), api_server))
+            promises.append(self.query_batch(http, list(server_prompts), api_server))
 
         outputs = [o for outs in await asyncio.gather(*promises) for o in outs]
 
@@ -247,7 +242,7 @@ class SUT:
                 verify=False,
                 # 1hr timeout
                 timeout=httpx.Timeout(3600),
-            ) as self._http:
+            ) as http:
                 while True:
                     qitem = self.query_queue.get()
                     if qitem is None:
@@ -283,7 +278,7 @@ class SUT:
                         # NOTE(mgoin): I don't think threading is necessary since we are submitting all queries in one request
                         # The API server should take care of mini-batches and scheduling
                         if len(self.api_servers) > 0:
-                            outputs = await self.query_servers(input_ids_tensor)
+                            outputs = await self.query_servers(http, input_ids_tensor)
                         else:
                             print(
                                 "Error: Specify at least one API to which the request is to be sent!"

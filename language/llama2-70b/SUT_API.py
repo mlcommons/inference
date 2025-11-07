@@ -234,8 +234,8 @@ class SUT:
             # init common http client to take advantage of connection pooling
             async with httpx.AsyncClient(
                 verify=False,
-                # timeouts: 10s to connect, 10mins to complete request
-                timeout=httpx.Timeout(600.0, connect=10.0),
+                # 1hr timeout
+                timeout=httpx.Timeout(3600),
             ) as self._http:
                 while True:
                     qitem = self.query_queue.get()

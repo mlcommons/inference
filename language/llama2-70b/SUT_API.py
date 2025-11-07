@@ -6,7 +6,7 @@ import pickle
 import queue
 import threading
 import time
-from concurrent.futures.thread import ThreadPoolExecutor
+import traceback
 from pathlib import Path
 
 import httpx
@@ -189,13 +189,21 @@ class SUT:
             "max_tokens": 1024,
         }
 
-        response = await self._http.post(
-            f"{api_server}/v1/completions",
-            headers=headers,
-            json=json_data,
-        )
-        # only return top ranked completion from the server
-        return json.loads(response.text)["choices"][0]["text"]
+        try:
+            response = await self._http.post(
+                f"{api_server}/v1/completions",
+                headers=headers,
+                json=json_data,
+            )
+            # only return top ranked completion from the server
+            text = json.loads(response.text)["choices"][0]["text"]
+        except Exception as e:
+            # log exception trace
+            print("[ERROR] Exception occurred while querying API server:")
+            traceback.print_exception(e)
+
+            text = ""
+        return text
 
     async def query_servers(self, prompts: list[list[int]]) -> list[str]:
         """Query LLM API servers to get output tokens for given input prompt tokens.
@@ -300,7 +308,7 @@ class SUT:
         print(f"IssueQuery started with {len(query_samples)} samples")
         while len(query_samples) > 0:
             self.query_queue.put(query_samples[: self.batch_size])
-            query_samples = query_samples[self.batch_size:]
+            query_samples = query_samples[self.batch_size :]
         print(f"IssueQuery done")
 
     def flush_queries(self):

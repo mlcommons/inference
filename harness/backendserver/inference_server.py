@@ -935,6 +935,9 @@ def start_server_from_config(config_file: str, overrides: Optional[Dict[str, Any
     """
     config = load_server_config(config_file)
     
+    # Store original model from config for logging
+    original_model = config.get('model')
+    
     # Apply overrides if provided
     if overrides:
         for key, value in overrides.items():
@@ -949,8 +952,18 @@ def start_server_from_config(config_file: str, overrides: Optional[Dict[str, Any
     backend = config.get('backend', 'vllm')
     model = config.get('model')
     
+    # Log model override if it occurred
+    logger = logging.getLogger(__name__)
+    if overrides and 'model' in overrides:
+        if original_model and original_model != model:
+            logger.info(f"Model override applied: '{original_model}' (from YAML) -> '{model}' (from command line)")
+        elif not original_model:
+            logger.info(f"Model set from command line: '{model}' (not in YAML config)")
+    elif original_model:
+        logger.info(f"Using model from YAML config: '{model}'")
+    
     if model is None:
-        raise ValueError("'model' is required in configuration file")
+        raise ValueError("'model' is required in configuration file or as override")
     
     # Extract optional parameters
     port = config.get('port', 8000)
@@ -1009,7 +1022,26 @@ def start_server_from_config(config_file: str, overrides: Optional[Dict[str, Any
     if launch_command:
         # Custom launch command - create a custom server class
         profile_prefix = config.get('_profile_prefix', [])
-        custom_launch_cmd = launch_command
+        custom_launch_cmd = list(launch_command)  # Make a copy to avoid modifying original
+        
+        # Replace model in launch command if --model argument exists
+        # This ensures command line model override takes precedence even with custom launch_command
+        logger = logging.getLogger(__name__)
+        if model and '--model' in custom_launch_cmd:
+            model_idx = custom_launch_cmd.index('--model')
+            if model_idx + 1 < len(custom_launch_cmd):
+                old_model_in_cmd = custom_launch_cmd[model_idx + 1]
+                if old_model_in_cmd != model:
+                    logger.info(f"Replacing model in custom launch_command: '{old_model_in_cmd}' -> '{model}'")
+                custom_launch_cmd[model_idx + 1] = model
+            else:
+                # --model flag exists but no value, append model
+                logger.info(f"Adding model value to --model flag in custom launch_command: {model}")
+                custom_launch_cmd.append(model)
+        elif model and '--model' not in custom_launch_cmd:
+            # No --model in command, add it
+            logger.info(f"Adding --model argument to custom launch_command: {model}")
+            custom_launch_cmd.extend(['--model', model])
         
         class CustomServer(InferenceServer):
             def get_backend_name(self):

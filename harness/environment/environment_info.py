@@ -228,12 +228,36 @@ class EnvironmentInfoCollector:
             'cpu_count': os.cpu_count(),
         }
         
+        # Collect lscpu output
+        lscpu_output = None
+        try:
+            self.logger.info("Collecting lscpu information...")
+            result = subprocess.run(
+                ['lscpu'],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            lscpu_output = result.stdout
+            self.logger.info("Successfully collected lscpu information")
+        except FileNotFoundError:
+            self.logger.warning("lscpu command not found - skipping CPU details")
+        except subprocess.CalledProcessError as e:
+            self.logger.warning(f"lscpu command failed: {e.stderr}")
+        except Exception as e:
+            self.logger.warning(f"Error collecting lscpu info: {e}")
+        
         # Save to file
         system_info_file = self.output_dir / "system_info.txt"
         with open(system_info_file, 'w') as f:
             f.write("=== System Information ===\n\n")
             for key, value in system_info.items():
                 f.write(f"{key}: {value}\n")
+            
+            # Add lscpu output if available
+            if lscpu_output:
+                f.write("\n\n=== CPU Information (lscpu) ===\n\n")
+                f.write(lscpu_output)
         
         self.logger.info(f"System info saved to: {system_info_file}")
         return system_info

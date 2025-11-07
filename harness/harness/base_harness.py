@@ -93,6 +93,7 @@ class BaseHarness:
                  mlflow_tracking_uri: Optional[str] = None,
                  mlflow_experiment_name: Optional[str] = None,
                  mlflow_output_dir: Optional[str] = None,
+                 mlflow_description: Optional[str] = None,
                  server_coalesce_queries: Optional[bool] = None,
                  server_target_qps: Optional[float] = None,
                  dataset_name: Optional[str] = None,
@@ -119,6 +120,7 @@ class BaseHarness:
             mlflow_tracking_uri: MLflow tracking server URI (e.g., http://localhost:5000)
             mlflow_experiment_name: MLflow experiment name
             mlflow_output_dir: Output directory to upload to MLflow (defaults to output_dir)
+            mlflow_description: Optional description for MLflow run (overrides auto-generated description)
             server_coalesce_queries: Enable query coalescing for Server scenario (Server only)
             server_target_qps: Target queries per second for Server scenario (Server only)
             dataset_name: Dataset name for config lookup
@@ -156,6 +158,7 @@ class BaseHarness:
         self.mlflow_tracking_uri = mlflow_tracking_uri
         self.mlflow_experiment_name = mlflow_experiment_name
         self.mlflow_output_dir = Path(mlflow_output_dir) if mlflow_output_dir else self.output_dir
+        self.mlflow_description = mlflow_description
         self.mlflow_client = None
         
         # Setup logging
@@ -402,8 +405,12 @@ class BaseHarness:
                 'output_dir': str(self.server_output_dir)
             }
             
+            # Always override model from command line if provided
             if self.model_name:
                 overrides['model'] = self.model_name
+                self.logger.info(f"Overriding model from command line: {self.model_name}")
+            else:
+                self.logger.warning("No model specified via --model argument. Using model from YAML config if available.")
             
             # Add engine arguments if provided
             if self.engine_args:
@@ -878,7 +885,8 @@ class BaseHarness:
             'mlflow_config': {
                 'tracking_uri': self.mlflow_tracking_uri,
                 'experiment_name': self.mlflow_experiment_name,
-                'output_dir': str(self.mlflow_output_dir)
+                'output_dir': str(self.mlflow_output_dir),
+                'description': self.mlflow_description
             },
             'timestamp': datetime.now().isoformat()
         }
@@ -1135,6 +1143,24 @@ class BaseHarness:
                     if self.server_target_qps is not None:
                         params['server_target_qps'] = str(self.server_target_qps)
                     
+                    # Add engine arguments if provided
+                    if self.engine_args:
+                        params['engine_args'] = ' '.join(self.engine_args)
+                    
+                    # Add server config arguments from YAML
+                    server_config_args = self.server_config.get('config', {})
+                    if server_config_args:
+                        # For vLLM, check api_server_args
+                        if 'api_server_args' in server_config_args:
+                            api_args = server_config_args['api_server_args']
+                            if api_args:
+                                params['server_api_server_args'] = ' '.join(str(arg) for arg in api_args)
+                        # For SGLang, check server_args
+                        if 'server_args' in server_config_args:
+                            sglang_args = server_config_args['server_args']
+                            if sglang_args:
+                                params['server_server_args'] = ' '.join(str(arg) for arg in sglang_args)
+                    
                     # Filter out None values
                     params = {k: v for k, v in params.items() if v is not None and v != ''}
                     self.mlflow_client.log_parameters(params)
@@ -1142,8 +1168,11 @@ class BaseHarness:
                     # Log metrics
                     self.mlflow_client.log_client_metrics(test_results)
                     
-                    # Generate and log description
-                    description = self.mlflow_client.get_client_description(test_results)
+                    # Generate and log description (use custom if provided)
+                    if self.mlflow_description:
+                        description = self.mlflow_description
+                    else:
+                        description = self.mlflow_client.get_client_description(test_results)
                     self.mlflow_client.log_description(description)
                     
                     # Upload artifacts

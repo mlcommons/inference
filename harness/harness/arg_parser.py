@@ -67,6 +67,8 @@ def add_common_harness_args(parser: argparse.ArgumentParser):
                        help="MLflow tracking server hostname")
     parser.add_argument("--mlflow-port", type=int, default=5000,
                        help="MLflow tracking server port")
+    parser.add_argument("--mlflow-description", type=str, default=None,
+                       help="Optional description for MLflow run (overrides auto-generated description)")
     
     # Server scenario arguments
     parser.add_argument("--server-coalesce-queries", type=str_to_bool,
@@ -127,6 +129,7 @@ def parse_common_harness_args(args):
         'mlflow_tracking_uri': mlflow_tracking_uri,
         'mlflow_experiment_name': args.mlflow_experiment_name,
         'mlflow_output_dir': args.mlflow_output_dir,
+        'mlflow_description': args.mlflow_description,
         'server_coalesce_queries': args.server_coalesce_queries,
         'server_target_qps': args.server_target_qps,
         'dataset_config_file': args.dataset_config_file,

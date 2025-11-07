@@ -156,6 +156,14 @@ Examples:
                                help="LoadGen model name for config lookup (e.g., llama3_1-8b, llama2_70b, deepseek_r1). "
                                     "If not provided, will be auto-detected from model category")
     
+    # Add engine arguments LAST (must be last when using REMAINDER)
+    # This allows --engine-args to consume all remaining arguments, including those starting with --
+    engine_group = parser.add_argument_group('Engine Arguments')
+    engine_group.add_argument("--engine-args", type=str, nargs=argparse.REMAINDER, default=None,
+                               help="Engine arguments to override server config (e.g., --engine-args --tensor-parallel-size 2 --gpu-memory-utilization 0.8). "
+                                    "These arguments will be passed to the inference server and override any values in the server config file. "
+                                    "All arguments after --engine-args are consumed as engine arguments.")
+    
     args = parser.parse_args()
     
     # Validate required arguments

@@ -12,9 +12,14 @@ This document provides detailed examples for using the MLPerf Inference Harness 
 6. [Scenario Examples](#scenario-examples)
 7. [Advanced Examples](#advanced-examples)
 
-### Sample command
+### Sample command for Server
 ```bash
  python harness_main.py --model-category llama3.1-8b --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8  --dataset-path cnn_eval.json --dataset-name llama3.1-8b --server-config backendserver/simple.yaml --scenario Server --test-mode performance --batch-size 13368 --num-samples 13368 --output-dir TEST-SERVER --lg-model-name llama3_1-8b --server-target-qps 40
+ ```
+
+### Sample command for sglang
+```bash
+ python harness_main.py --model-category llama3.1-8b --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8  --dataset-path /mnt/data/datasets/llama3.1-8b/cnn_eval.json  --dataset-name llama3.1-8b --server-config backendserver/sglang.yaml --scenario Offline --test-mode performance --batch-size 13368 --num-samples 13368 --output-dir TEST-SGLANG --lg-model-name llama3_1-8b --enable-metrics
  ```
 
 ### Sample command for Deepseek
@@ -486,6 +491,92 @@ python harness/harness_main.py \
 # Compare results
 ```
 
+## Engine Arguments
+
+### Example 32: Overriding Engine Arguments from Command Line
+
+The `--engine-args` option allows you to override engine arguments specified in the server config file. This is useful for quick testing or when you want to override specific settings without modifying the config file.
+
+```bash
+# Override tensor parallel size and GPU memory utilization
+python harness_main.py \
+    --model-category llama3.1-8b \
+    --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8 \
+    --dataset-path cnn_eval.json \
+    --dataset-name llama3.1-8b \
+    --server-config backendserver/simple.yaml \
+    --scenario Offline \
+    --test-mode performance \
+    --batch-size 13368 \
+    --num-samples 13368 \
+    --engine-args --tensor-parallel-size 2 --gpu-memory-utilization 0.8
+```
+
+**What happens:**
+- The engine arguments (`--tensor-parallel-size 2 --gpu-memory-utilization 0.8`) override any corresponding values in the server config file
+- For vLLM backend, these are passed as `api_server_args`
+- For SGLang backend, these are passed as `server_args`
+
+### Example 33: Overriding Multiple Engine Arguments
+
+```bash
+# Override multiple vLLM engine arguments
+python harness_main.py \
+    --model-category llama3.1-8b \
+    --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8 \
+    --dataset-path cnn_eval.json \
+    --dataset-name llama3.1-8b \
+    --server-config backendserver/simple.yaml \
+    --scenario Server \
+    --test-mode performance \
+    --engine-args --tensor-parallel-size 4 --gpu-memory-utilization 0.9 --max-model-len 8192
+```
+
+### Example 34: Overriding SGLang Engine Arguments
+
+```bash
+# Override SGLang server arguments
+python harness_main.py \
+    --model-category llama3.1-8b \
+    --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8 \
+    --dataset-path cnn_eval.json \
+    --dataset-name llama3.1-8b \
+    --server-config backendserver/sglang.yaml \
+    --scenario Offline \
+    --test-mode performance \
+    --engine-args --tp 2 --mem-fraction-static 0.9
+```
+
+### Example 35: Using Engine Arguments Without Config File
+
+You can also use `--engine-args` when not using a server config file. In this case, the engine arguments are passed directly to the server:
+
+```bash
+python harness_main.py \
+    --model llama3.1-8b \
+    --dataset-path ./cnn_eval.json \
+    --api-server-url http://localhost:8000 \
+    --engine-args --tensor-parallel-size 2 --gpu-memory-utilization 0.8
+```
+
+**Note:** When using `--api-server-url`, engine arguments are ignored since the server is already running externally.
+
+### Example 36: Engine Arguments with Server Scenario
+
+```bash
+# Override engine arguments for Server scenario
+python harness_main.py \
+    --model-category llama3.1-8b \
+    --model RedHatAI/Meta-Llama-3.1-8B-Instruct-FP8 \
+    --dataset-path cnn_eval.json \
+    --dataset-name llama3.1-8b \
+    --server-config backendserver/simple.yaml \
+    --scenario Server \
+    --test-mode performance \
+    --server-target-qps 50 \
+    --engine-args --tensor-parallel-size 2 --gpu-memory-utilization 0.85
+```
+
 ## Quick Reference
 
 ### Common Options
@@ -507,4 +598,5 @@ python harness/harness_main.py \
 | `--num-samples` | Number of samples | 13368 |
 | `--enable-metrics` | Enable metrics collection | False |
 | `--mlflow-experiment-name` | MLflow experiment name | None |
+| `--engine-args` | Engine arguments to override server config | None |
 

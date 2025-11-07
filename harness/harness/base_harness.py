@@ -99,7 +99,8 @@ class BaseHarness:
                  dataset_config_file: Optional[str] = None,
                  input_column: Optional[str] = None,
                  input_ids_column: Optional[str] = None,
-                 output_column: Optional[str] = None):
+                 output_column: Optional[str] = None,
+                 engine_args: Optional[list] = None):
         """
         Initialize base harness.
         
@@ -125,6 +126,7 @@ class BaseHarness:
             input_column: Override input column name
             input_ids_column: Override input_ids column name
             output_column: Override output column name
+            engine_args: List of engine arguments to override server config (e.g., ['--tensor-parallel-size', '2'])
         """
         self.model_name = model_name
         self.dataset_path = dataset_path
@@ -146,6 +148,9 @@ class BaseHarness:
         self.input_column = input_column
         self.input_ids_column = input_ids_column
         self.output_column = output_column
+        
+        # Engine arguments for overriding server config
+        self.engine_args = engine_args
         
         # MLflow configuration
         self.mlflow_tracking_uri = mlflow_tracking_uri
@@ -400,6 +405,23 @@ class BaseHarness:
             if self.model_name:
                 overrides['model'] = self.model_name
             
+            # Add engine arguments if provided
+            if self.engine_args:
+                # Determine backend to know which key to use
+                backend = self.server_config.get('backend', 'vllm')
+                # For vLLM, use 'api_server_args'; for SGLang, use 'server_args'
+                args_key = 'api_server_args' if backend == 'vllm' else 'server_args'
+                
+                # Merge with existing config if present
+                if 'config' not in overrides:
+                    overrides['config'] = {}
+                if args_key not in overrides['config']:
+                    overrides['config'][args_key] = []
+                
+                # Append engine args (they will override config file values)
+                overrides['config'][args_key] = list(self.engine_args)
+                self.logger.info(f"Adding engine arguments to override config: {args_key} = {self.engine_args}")
+            
             self.logger.info(f"Starting server from config file: {config_file}")
             self.logger.info(f"Applying overrides: {overrides}")
             
@@ -414,6 +436,16 @@ class BaseHarness:
             env_vars = self.server_config.get('env_vars', {})
             server_config = self.server_config.get('config', {})
             debug_mode = self.server_config.get('debug_mode', False)
+            
+            # Add engine arguments if provided
+            if self.engine_args:
+                # Determine which key to use based on backend
+                args_key = 'api_server_args' if backend == 'vllm' else 'server_args'
+                if args_key not in server_config:
+                    server_config[args_key] = []
+                # Override with provided engine args
+                server_config[args_key] = list(self.engine_args)
+                self.logger.info(f"Adding engine arguments: {args_key} = {self.engine_args}")
             
             self.logger.info(f"Starting server with output directory: {server_output_dir}")
             

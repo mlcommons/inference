@@ -77,6 +77,9 @@ def add_common_harness_args(parser: argparse.ArgumentParser):
     parser.add_argument("--target-qps", type=float, default=None,
                        dest='server_target_qps',
                        help="Target queries per second for Server scenario (alias for --server-target-qps, Server only)")
+    
+    # Note: --engine-args is NOT added here because it must be added last (after all other arguments)
+    # when using argparse.REMAINDER. It should be added in harness_main.py after all other arguments.
 
 
 def parse_common_harness_args(args):
@@ -105,6 +108,11 @@ def parse_common_harness_args(args):
     if args.endpoint_type:
         server_config['endpoint_type'] = args.endpoint_type
     
+    # Add engine_args if provided
+    engine_args = None
+    if args.engine_args:
+        engine_args = list(args.engine_args)
+    
     return {
         'model_name': args.model,
         'dataset_path': args.dataset_path,
@@ -124,6 +132,7 @@ def parse_common_harness_args(args):
         'dataset_config_file': args.dataset_config_file,
         'input_column': args.input_column,
         'input_ids_column': args.input_ids_column,
-        'output_column': args.output_column
+        'output_column': args.output_column,
+        'engine_args': engine_args
     }
 

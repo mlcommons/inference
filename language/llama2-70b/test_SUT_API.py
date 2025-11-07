@@ -32,8 +32,7 @@ def sut() -> Iterable[SUT]:
 
 
 @pytest.mark.asyncio
-async def test_query(sut: SUT):
-
+async def test_query_batch(sut: SUT):
     for api_server in sut.api_servers:
         # mock the HTTP post method to return a dummy response from LLM API server
         with patch.object(sut._http, "post") as mock_post:
@@ -41,11 +40,11 @@ async def test_query(sut: SUT):
                 '{"choices": [{"text": "Output 1"}, {"text": "Output 2"}]}'
             )
 
-            prompt = [1, 2]
-            output = await sut.query(prompt, api_server)
+            prompt = [[1, 2]]
+            outputs = await sut.query_batch(prompt, api_server)
 
             # only the first output is returned
-            assert output == "Output 1"
+            assert outputs == ["Output 1", "Output 2"]
             mock_post.assert_called_once()
 
 
@@ -53,10 +52,14 @@ async def test_query(sut: SUT):
 async def test_query_api_servers(sut: SUT):
     test_inputs = [[1], [2], [3], [4]]
 
-    with patch.object(sut, "query") as mock_query_api_vllm:
-        mock_query_api_vllm.return_value = "Output"
+    with patch.object(sut, "query_batch") as mock_query_api_vllm:
+        # compute expected batch size Distributing data over api_servers
+        n_batch = len(test_inputs) // len(sut.api_servers)
+
+        mock_query_api_vllm.return_value = ["Outputs"] * n_batch
 
         outputs = await sut.query_servers(test_inputs)
 
-        assert outputs == ["Output"] * len(test_inputs)
-        assert mock_query_api_vllm.call_count == len(test_inputs)
+        assert outputs == ["Outputs"] * len(test_inputs)
+        # expect 2 calls, one batch for each api_server
+        assert mock_query_api_vllm.call_count == 2

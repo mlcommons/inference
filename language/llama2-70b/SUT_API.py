@@ -160,7 +160,6 @@ class SUT:
             timeout=httpx.Timeout(600.0, connect=10.0),
         )
 
-
     def start(self):
         # Create worker threads
         for j in range(self.num_workers):
@@ -175,14 +174,14 @@ class SUT:
         for worker in self.worker_threads:
             worker.join()
 
-    async def query(self, prompt: list[int], api_server: str) -> str:
-        """Query LLM API server to get output tokens for given input prompt tokens.
+    async def query_batch(self, prompt: list[list[int]], api_server: str) -> list[str]:
+        """Query LLM API server to get output tokens for given input prompt batch.
 
         Args:
-            prompt: Input prompt tokens to be sent to the API server.
+            prompt: Batch of Input prompt tokens to be sent to the API server.
             api_server: URL of the API server to which the request is to be sent.
-        Returns:
-            Output tokens from the API server.
+        Returns
+            Batch of output completion text from the LLM API server.
         """
         headers = {
             "Content-Type": "application/json",
@@ -195,20 +194,25 @@ class SUT:
         }
 
         try:
+            print(
+                f"query_batch: Sending prompts to API server: n_prompts={len(prompt)} api_server={api_server}"
+            )
             response = await self._http.post(
                 f"{api_server}/v1/completions",
                 headers=headers,
                 json=json_data,
             )
-            # only return top ranked completion from the server
-            text = json.loads(response.text)["choices"][0]["text"]
+            completions = [c["text"] for c in json.loads(response.text)["choices"]]
+            print(
+                f"query_batch: Received completions from API server: n_prompts={len(prompt)} api_server={api_server}"
+            )
         except Exception as e:
-            # log exception trace
+            # log exception trace: necessary as mlperf swallows exceptions
             print("[ERROR] Exception occurred while querying API server:")
             traceback.print_exception(e)
 
-            text = ""
-        return text
+            completions = []
+        return completions
 
     async def query_servers(self, prompts: list[list[int]]) -> list[str]:
         """Query LLM API servers to get output tokens for given input prompt tokens.
@@ -219,13 +223,20 @@ class SUT:
             List of output tokens for each prompt in the given prompts.
         """
         # subdivide full prompts load among servers for even distribution
-        outputs = []
+        print(
+            "query_servers: Distributing prompts over API servers: "
+            f"n_prompts={len(prompts)} n_servers={len(self.api_servers)}"
+        )
+
+        promises = []
         for api_server, server_prompts in zip(
             self.api_servers, mit.divide(len(self.api_servers), prompts)
         ):
-            for prompt in server_prompts:
-                outputs.append(self.query(prompt, api_server))
-        return await asyncio.gather(*outputs)
+            promises.append(self.query_batch(list(server_prompts), api_server))
+
+        outputs = [o for outs in await asyncio.gather(*promises) for o in outs]
+
+        return outputs
 
     def process_queries(self):
         """Processor of the queued queries. User may choose to add batching logic"""
@@ -259,15 +270,20 @@ class SUT:
                     else:
                         tik1 = time.time()
 
+                        # OpenAI-API servers don't require padding and can take input tokens
+                        # directly, so we build our input_ids_tensor as a jagged list
+                        input_ids_tensor = []
+                        for q in qitem:
+                            input_ids_tensor += self.data_object.input_ids[
+                                q.index
+                            ].tolist()
                         # collect prompt tokens for selected query ids
-                        prompts = [self.data_object.input_ids[i].tolist() for i in query_ids]
-
                         tik2 = time.time()
 
                         # NOTE(mgoin): I don't think threading is necessary since we are submitting all queries in one request
                         # The API server should take care of mini-batches and scheduling
                         if len(self.api_servers) > 0:
-                            outputs = await self.query_servers(prompts)
+                            outputs = await self.query_servers(input_ids_tensor)
                         else:
                             print(
                                 "Error: Specify at least one API to which the request is to be sent!"
@@ -285,7 +301,9 @@ class SUT:
                         n_tokens = unpadded.shape[0]
                         response_array = array.array("B", unpadded.tobytes())
                         bi = response_array.buffer_info()
-                        response = [lg.QuerySampleResponse(qitem[i].id, bi[0], bi[1], n_tokens)]
+                        response = [
+                            lg.QuerySampleResponse(qitem[i].id, bi[0], bi[1], n_tokens)
+                        ]
                         lg.QuerySamplesComplete(response)
 
                     tok = time.time()

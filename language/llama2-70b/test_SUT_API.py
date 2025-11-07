@@ -25,7 +25,7 @@ def sut() -> Iterable[SUT]:
             dataset_path="dataset_path",
             total_sample_count=10,
             device="cpu",
-            api_servers=["http://server1", "http://server2"],
+            api_server=["http://server1", "http://server2"],
             api_model_name="dummy_model_name",
             workers=1,
         )
@@ -49,14 +49,13 @@ async def test_query(sut: SUT):
             mock_post.assert_called_once()
 
 
-@pytest.mark.asyncio
-async def test_query_api_servers(sut: SUT):
+def test_query_api_servers(sut: SUT):
     test_inputs = [[1], [2], [3], [4]]
 
     with patch.object(sut, "query") as mock_query_api_vllm:
         mock_query_api_vllm.return_value = "Output"
 
-        outputs = await sut.query_servers(test_inputs)
+        outputs = sut.query_servers(test_inputs)
 
         assert outputs == ["Output"] * len(test_inputs)
         assert mock_query_api_vllm.call_count == len(test_inputs)

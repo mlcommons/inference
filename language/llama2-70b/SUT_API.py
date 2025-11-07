@@ -167,7 +167,9 @@ class SUT:
         for worker in self.worker_threads:
             worker.join()
 
-    async def query_batch(self, http: httpx.AsyncClient, prompt: list[list[int]], api_server: str) -> list[str]:
+    async def query_batch(
+        self, http: httpx.AsyncClient, prompt: list[list[int]], api_server: str
+    ) -> list[str]:
         """Query LLM API server to get output tokens for given input prompt batch.
 
         Args:
@@ -185,6 +187,9 @@ class SUT:
             "prompt": prompt,
             "min_tokens": 1,
             "max_tokens": 1024,
+            "n": 1,
+            "temperature": 1.0,
+            "top_p": 0.001,
         }
 
         try:
@@ -208,7 +213,9 @@ class SUT:
             completions = []
         return completions
 
-    async def query_servers(self, http: httpx.AsyncClient, prompts: list[list[int]]) -> list[str]:
+    async def query_servers(
+        self, http: httpx.AsyncClient, prompts: list[list[int]]
+    ) -> list[str]:
         """Query LLM API servers to get output tokens for given input prompt tokens.
 
         Args:

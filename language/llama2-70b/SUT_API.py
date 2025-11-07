@@ -294,16 +294,13 @@ class SUT:
     def issue_queries(self, query_samples):
         """Receives samples from loadgen and adds them to queue. Users may choose to batch here"""
 
+        list_prompts_tokens = []
+        list_prompts_attn_masks = []
+
         print(f"IssueQuery started with {len(query_samples)} samples")
-        # issue at least 1 sample per api_server by including at least len(api_server) samples
-        n_servers = len(self.api_servers)
-        batch_size = self.batch_size * n_servers
-        print(
-            f"IssueQuery: Effective batch size for multiple API servers: n_servers={n_servers} batch_size={batch_size}"
-        )
         while len(query_samples) > 0:
-            self.query_queue.put(query_samples[:batch_size])
-            query_samples = query_samples[batch_size:]
+            self.query_queue.put(query_samples[: self.batch_size])
+            query_samples = query_samples[self.batch_size:]
         print(f"IssueQuery done")
 
     def flush_queries(self):

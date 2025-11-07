@@ -104,7 +104,6 @@ class SUT:
         self.api_model_name = api_model_name
         self.device = device
 
-        batch_size = total_sample_count
         self.batch_size = batch_size
 
         # dtype

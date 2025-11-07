@@ -153,7 +153,12 @@ class SUT:
         self.sample_counter_lock = threading.Lock()
 
         # init common http client to take advantage of connection pooling
-        self._http = httpx.AsyncClient(verify=False)
+        self._http = httpx.AsyncClient(
+            verify=False,
+            # timeouts: 10s to connect, 10mins to complete request
+            timeout=httpx.Timeout(600.0, connect=10.0),
+        )
+
 
     def start(self):
         # Create worker threads

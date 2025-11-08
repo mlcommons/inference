@@ -32,6 +32,9 @@ def _parallel_embed_worker(device_id, chunk_indices, chunks, result_queue, model
         # Format device string: CPU doesn't use indices, others do
         if base_device == 'cpu':
             device = 'cpu'
+        elif base_device == 'hpu':
+            device = 'hpu'
+            import habana_frameworks.torch.core as htcore
         else:
             device = f'{base_device}:{device_id}'
         
@@ -85,8 +88,9 @@ class VectorDB(RagDB):
         self._load_embeddings = load_embeddings
         self._num_embedding_devices = num_embedding_devices
 
-        #import habana_frameworks.torch.core as htcore
-        #os.environ["PT_HPU_LAZY_MODE"] = "1"
+        if self._device == "hpu":
+            import habana_frameworks.torch.core as htcore
+            os.environ["PT_HPU_LAZY_MODE"] = "1"
 
         # Initialize embedding model with device configuration
         model_kwargs = {'device': self._device}

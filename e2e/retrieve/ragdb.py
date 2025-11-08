@@ -28,19 +28,15 @@ class RagDB(abc.ABC):
         
         if device == "auto":
             if torch.hpu.is_available():
-                print("Falling back to CPU for reranker as HPU is not supported.")
-                #print("Using HPU device for reranking")
-                #os.environ["PT_HPU_LAZY_MODE"] = "0"
-                #return "hpu"
-                return "cpu"
+                return "hpu"
             elif torch.cuda.is_available():
-                print("Using CUDA device for reranking")
+                print("Using CUDA device")
                 return "cuda"
             elif torch.xpu.is_available():
                 print("Using XPU device for reranking")
                 return "xpu"
             else:
-                print("Using CPU device for reranking")
+                print("Using CPU device")
                 return "cpu"
         else:
             return device
@@ -66,11 +62,11 @@ class RagDB(abc.ABC):
         
         self._reranker_model = AutoModelForSequenceClassification.from_pretrained(self._reranker_model_name)
         self._reranker_tokenizer = AutoTokenizer.from_pretrained(self._reranker_model_name)
-        
-        if self._device == "hpu":
+        device = self._device 
+        if device == "hpu":
             print("Falling back to CPU for reranker as HPU is not supported.")
-            self._device = "cpu"
-        self._reranker_model = self._reranker_model.to(self._device)
+            device = "cpu"
+        self._reranker_model = self._reranker_model.to(device)
         self._reranker_model.eval()
     
     def _track_component(self, name: str, total_chars: int, item_count: int, func, 

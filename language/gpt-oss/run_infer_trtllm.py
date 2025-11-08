@@ -1,18 +1,26 @@
 #!/usr/bin/env python3
 """
 Script to send text prompts to TensorRT-LLM server via OpenAI completions endpoint.
+Supports round-robin load balancing across multiple server endpoints.
 
 Usage:
     python run_infer_trtllm.py --input-tokens tokenized_data.pkl [options]
 
 Arguments:
     --input-tokens     Path to pickle file containing data with text_input column from harmony-tokens.py
-    --server-url       TensorRT-LLM server URL (default: localhost:8000)
+    --server-url       TensorRT-LLM server URL(s) - comma-separated for round-robin (e.g., "localhost:8000,localhost:8001")
     --max-samples      Maximum number of samples to process (default: all)
     --max-tokens       Maximum tokens to generate per request (default: 100)
     --max-concurrency  Maximum number of concurrent requests (default: 256)
     --output           Output pickle file for responses (optional)
     --pass-k           Number of inference passes per sample for pass@k strategy (default: 1)
+
+Examples:
+    # Single server
+    python run_infer_trtllm.py --input-tokens data.pkl --server-url localhost:8000
+    
+    # Multiple servers with round-robin
+    python run_infer_trtllm.py --input-tokens data.pkl --server-url localhost:8000,localhost:8001,localhost:8002
 """
 
 import asyncio
@@ -32,6 +40,10 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Suppress verbose HTTP logs from httpx and openai
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("openai").setLevel(logging.WARNING)
+
 # Initialize tokenizer
 MODEL_NAME = "openai/gpt-oss-120b"
 tokenizer = None
@@ -48,16 +60,22 @@ def get_tokenizer():
 
 
 class TRTLLMClient:
-    """Client for TensorRT-LLM server using OpenAI-compatible endpoint."""
+    """Client for TensorRT-LLM server using OpenAI-compatible endpoint with round-robin support."""
     
     def __init__(self,
-                 server_url: str = "localhost:8000",
+                 server_urls: List[str] = None,
                  temperature: float = 0.001,
                  top_k: int = 1,
                  top_p: float = 1.0,
                  max_concurrency: int = 256,
                  timeout: int = 1200):
-        self.server_url = server_url
+        # Support multiple server URLs for round-robin load balancing
+        if server_urls is None:
+            server_urls = ["localhost:8000"]
+        self.server_urls = server_urls
+        self.num_servers = len(server_urls)
+        self.current_server_index = 0
+        
         self.temperature = temperature
         self.top_k = top_k
         self.top_p = top_p
@@ -65,39 +83,54 @@ class TRTLLMClient:
         self.timeout = timeout
         self.model_name = MODEL_NAME
         
-        # Initialize async OpenAI client
-        self.http_client = None
-        self.async_client = None
+        # Initialize async OpenAI clients (one per server)
+        self.http_clients = []
+        self.async_clients = []
         self.concurrency_semaphore = None
         
+        logger.info(f"Initialized client with {self.num_servers} server(s): {', '.join(self.server_urls)}")
+        
     async def initialize(self):
-        """Initialize OpenAI client and HTTP client."""
+        """Initialize OpenAI clients for all servers."""
         # Create semaphore for concurrency control
         self.concurrency_semaphore = asyncio.Semaphore(self.max_concurrency)
         
-        # Setup HTTP client with proper connection limits for high concurrency
-        self.http_client = httpx.AsyncClient(
-            timeout=httpx.Timeout(self.timeout),
-            limits=httpx.Limits(
-                max_keepalive_connections=self.max_concurrency * 2,
-                max_connections=self.max_concurrency * 2,
-            ),
-            http2=True
-        )
+        # Create HTTP and OpenAI clients for each server
+        for server_url in self.server_urls:
+            # Setup HTTP client with proper connection limits for high concurrency
+            http_client = httpx.AsyncClient(
+                timeout=httpx.Timeout(self.timeout),
+                limits=httpx.Limits(
+                    max_keepalive_connections=self.max_concurrency * 2,
+                    max_connections=self.max_concurrency * 2,
+                ),
+                http2=True
+            )
+            
+            # Setup OpenAI client with the configured HTTP client
+            async_client = AsyncOpenAI(
+                api_key='dummy',  # TensorRT-LLM server doesn't require real API key
+                base_url=f"http://{server_url}/v1/",
+                timeout=self.timeout,
+                max_retries=10,
+                http_client=http_client,
+            )
+            
+            self.http_clients.append(http_client)
+            self.async_clients.append(async_client)
         
-        # Setup OpenAI client with the configured HTTP client
-        self.async_client = AsyncOpenAI(
-            api_key='dummy',  # TensorRT-LLM server doesn't require real API key
-            base_url=f"http://{self.server_url}/v1/",
-            timeout=self.timeout,
-            max_retries=10,
-            http_client=self.http_client,
-        )
+        logger.info(f"Initialized {len(self.async_clients)} OpenAI client(s)")
         
+    def _get_next_client(self) -> AsyncOpenAI:
+        """Get the next client using round-robin selection."""
+        client = self.async_clients[self.current_server_index]
+        self.current_server_index = (self.current_server_index + 1) % self.num_servers
+        return client
+    
     async def send_request(
             self, prompt: str, max_tokens: int = 100,
             sample_id: int = 0, pass_num: int = 0) -> Tuple[int, int, Dict[str, Any], float]:
-        """Send a single request to the TensorRT-LLM server.
+        """Send a single request to the TensorRT-LLM server using round-robin.
         
         Args:
             prompt: Text prompt to send
@@ -127,9 +160,12 @@ class TRTLLMClient:
             # Track latency: time from request sent to response received
             start_time = time.time()
             
+            # Select client using round-robin
+            client = self._get_next_client()
+            
             # Use semaphore for concurrency control
             async with self.concurrency_semaphore:
-                completion = await self.async_client.completions.create(**gen_params)
+                completion = await client.completions.create(**gen_params)
             
             end_time = time.time()
             latency = end_time - start_time
@@ -157,9 +193,10 @@ class TRTLLMClient:
             return sample_id, pass_num, {"error": str(e)}, None
     
     async def shutdown(self):
-        """Clean up resources."""
-        if self.http_client:
-            await self.http_client.aclose()
+        """Clean up resources for all clients."""
+        for http_client in self.http_clients:
+            if http_client:
+                await http_client.aclose()
 
 
 def load_tokenized_data(data_file: str) -> pd.DataFrame:
@@ -198,13 +235,14 @@ def load_tokenized_data(data_file: str) -> pd.DataFrame:
 
 
 async def send_requests_async(
-        tokenized_df: pd.DataFrame, server_url: str,
+        tokenized_df: pd.DataFrame, server_urls: List[str],
         max_tokens: int = 100, max_concurrency: int = 256,
         temperature: float = 0.001, top_k: int = 1, top_p: float = 1.0,
         timeout: int = 1200, pass_k: int = 1):
-    """Send all requests to TensorRT-LLM server asynchronously.
+    """Send all requests to TensorRT-LLM server(s) asynchronously with round-robin load balancing.
     
     Args:
+        server_urls: List of server URLs for round-robin load balancing
         pass_k: Number of inference passes per sample for pass@k strategy
         
     Returns:
@@ -213,11 +251,11 @@ async def send_requests_async(
     num_samples = len(tokenized_df)
     total_requests = num_samples * pass_k
     logger.info(
-        f"Sending {total_requests} requests ({num_samples} samples × {pass_k} passes) to server with {max_concurrency} concurrent workers...")
+        f"Sending {total_requests} requests ({num_samples} samples × {pass_k} passes) with {max_concurrency} concurrent workers...")
     
-    # Initialize client
+    # Initialize client with multiple servers for round-robin
     client = TRTLLMClient(
-        server_url=server_url,
+        server_urls=server_urls,
         temperature=temperature,
         top_k=top_k,
         top_p=top_p,
@@ -427,7 +465,7 @@ def save_responses(responses_by_pass: Dict[tuple, Dict[str, Any]],
     return result_df
 
 
-async def process_requests_async(tokenized_df: pd.DataFrame, server_url: str,
+async def process_requests_async(tokenized_df: pd.DataFrame, server_urls: List[str],
                                  max_samples: int = None, max_tokens: int = 100,
                                  max_concurrency: int = 256, output_file: str = None,
                                  temperature: float = 0.001, top_k: int = 1, top_p: float = 1.0,
@@ -435,6 +473,7 @@ async def process_requests_async(tokenized_df: pd.DataFrame, server_url: str,
     """Main processing function that handles requests and response extraction.
     
     Args:
+        server_urls: List of server URLs for round-robin load balancing
         pass_k: Number of inference passes per sample for pass@k strategy
     """
     
@@ -446,7 +485,7 @@ async def process_requests_async(tokenized_df: pd.DataFrame, server_url: str,
     # Step 2: Send all requests asynchronously (k passes per sample)
     responses_by_pass, latencies_by_pass = await send_requests_async(
         tokenized_df,
-        server_url,
+        server_urls,
         max_tokens,
         max_concurrency,
         temperature,
@@ -482,7 +521,7 @@ def main():
     parser.add_argument("--input-tokens", required=True,
                         help="Path to pickle file containing data with text_input column from harmony-tokens.py")
     parser.add_argument("--server-url", default="localhost:8000",
-                        help="TensorRT-LLM server URL (default: localhost:8000)")
+                        help="TensorRT-LLM server URL(s) - comma-separated for round-robin load balancing (default: localhost:8000)")
     parser.add_argument("--max-samples", type=int, default=None,
                         help="Maximum number of samples to process (default: all)")
     parser.add_argument("--max-tokens", type=int, default=100,
@@ -504,11 +543,15 @@ def main():
     
     args = parser.parse_args()
     
+    # Parse comma-separated server URLs
+    server_urls = [url.strip() for url in args.server_url.split(',')]
+    logger.info(f"Configured {len(server_urls)} server(s) for round-robin load balancing")
+    
     # Test connection
     async def test_connection():
-        logger.info(f"Testing server connection to {args.server_url}...")
+        logger.info(f"Testing server connection(s)...")
         client = TRTLLMClient(
-            server_url=args.server_url,
+            server_urls=server_urls,
             temperature=args.temperature,
             top_k=args.top_k,
             top_p=args.top_p,
@@ -522,7 +565,7 @@ def main():
                 prompt="Test", max_tokens=5, sample_id=0, pass_num=0)
             if "error" in test_response:
                 logger.error(f"Server connection failed: {test_response['error']}")
-                logger.error("Make sure your TensorRT-LLM server is running with OpenAI endpoint enabled.")
+                logger.error("Make sure your TensorRT-LLM server(s) are running with OpenAI endpoint enabled.")
                 return False
             logger.info("Server connection successful")
             return True
@@ -538,7 +581,7 @@ def main():
     
     # Process requests and get result DataFrame
     result_df = asyncio.run(process_requests_async(
-        tokenized_df, args.server_url,
+        tokenized_df, server_urls,
         max_samples=args.max_samples,
         max_tokens=args.max_tokens,
         max_concurrency=args.max_concurrency,

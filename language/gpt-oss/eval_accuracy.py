@@ -1044,7 +1044,8 @@ def process_livecodebench_parallel(
                 if is_correct:
                     correct_count += 1
             except TimeoutError as e:
-                logger.warning(f"Timeout evaluating row {idx} (question_id: {df.at[idx, 'ground_truth'] if 'ground_truth' in df.columns else 'unknown'}){' ' + pass_label if pass_label else ''}: Test execution exceeded 25s timeout")
+                logger.warning(
+                    f"Timeout evaluating row {idx} (question_id: {df.at[idx, 'ground_truth'] if 'ground_truth' in df.columns else 'unknown'}){' ' + pass_label if pass_label else ''}: Test execution exceeded 25s timeout")
                 df.at[idx, prompt_accuracy_col] = 0.0
                 df.at[idx, evaluation_details_col] = "Timeout: Test execution exceeded time limit"
                 total_evaluated += 1

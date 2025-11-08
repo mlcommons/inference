@@ -32,7 +32,7 @@ from functools import lru_cache
 from typing import Dict, Any, Optional, Tuple, Union
 import pandas as pd
 from tqdm import tqdm
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed, TimeoutError
 import multiprocessing
 from pathlib import Path
 
@@ -402,7 +402,7 @@ def evaluate_livecodebench_detailed(
             scenario=Scenario.codegeneration, release_version="release_v6",
             subset="code_generation", language="python", not_fast=False,
             start_date=None, end_date=None, k=[1], num_samples=1,
-            timeout=60, num_workers=1, num_process_evaluate=1,
+            timeout=20, num_workers=1, num_process_evaluate=1,
             model_name="inline_handler_eval", output_dir=temp_dir,
             prompt_type="custom", continue_existing=False, evaluate=True,
         )
@@ -1037,12 +1037,17 @@ def process_livecodebench_parallel(
 
             try:
                 question_id, is_correct, detailed_reason = future.result(
-                    timeout=30)
+                    timeout=25)
                 df.at[idx, prompt_accuracy_col] = 100.0 if is_correct else 0.0
                 df.at[idx, evaluation_details_col] = detailed_reason
                 total_evaluated += 1
                 if is_correct:
                     correct_count += 1
+            except TimeoutError as e:
+                logger.warning(f"Timeout evaluating row {idx} (question_id: {df.at[idx, 'ground_truth'] if 'ground_truth' in df.columns else 'unknown'}){' ' + pass_label if pass_label else ''}: Test execution exceeded 25s timeout")
+                df.at[idx, prompt_accuracy_col] = 0.0
+                df.at[idx, evaluation_details_col] = "Timeout: Test execution exceeded time limit"
+                total_evaluated += 1
             except Exception as e:
                 logger.error(
                     f"Error evaluating row {idx}{' ' + pass_label if pass_label else ''}: {e}")

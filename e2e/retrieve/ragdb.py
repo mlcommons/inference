@@ -33,7 +33,7 @@ class RagDB(abc.ABC):
                 print("Using CUDA device")
                 return "cuda"
             elif torch.xpu.is_available():
-                print("Using XPU device for reranking")
+                print("Using XPU device")
                 return "xpu"
             else:
                 print("Using CPU device")

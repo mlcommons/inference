@@ -26,7 +26,7 @@ except ImportError as e:
     BeautifulSoup = None
 
 from text_splitter import split_into_passages, split_into_fixed_passages, create_passage_metadata
-from utils import load_url_mapping, get_base_filename
+from utils import load_url_mapping, get_base_filename, save_url_mapping
 
 
 class BaseDocumentExtractor(ABC):
@@ -396,7 +396,7 @@ class DocumentProcessor:
             print(f"Error splitting text for {doc_file}: {e}")
             return None
         
-        # Get original URL
+        # Get original URL (from mapping or HTML metadata)
         base_filename = get_base_filename(doc_file.name)
         original_url = url_mapping.get(base_filename, "")
         
@@ -427,6 +427,11 @@ class DocumentProcessor:
         output_path.mkdir(parents=True, exist_ok=True)
 
         self.url_mapping = load_url_mapping(input_dir)
+
+        # Ensure downstream consumers (e.g., BM25 ingestion) can always locate
+        # the URL mapping, even if no additional processing happens.
+        if self.url_mapping:
+            save_url_mapping(str(output_path), self.url_mapping)
 
         # Find all supported document files
         supported_extensions = self.get_supported_extensions()
@@ -471,6 +476,9 @@ class DocumentProcessor:
                         continue
                     
                     output_filename, text, passages, original_url, doc_filename = result
+                    base_filename = get_base_filename(doc_filename)
+                    if original_url:
+                        self.url_mapping[base_filename] = original_url
                     
                     # Save text file
                     output_file_path = output_path / output_filename
@@ -512,6 +520,11 @@ class DocumentProcessor:
                 json.dump(payload, f, indent=2, ensure_ascii=False)
             
             print(f"Saved {len(all_passages)} passages to {json_file}")
+
+        # Persist URL mapping alongside processed documents for downstream ingestion
+        if self.url_mapping:
+            save_url_mapping(str(output_path), self.url_mapping)
+            print(f"Saved URL mapping for {len(self.url_mapping)} documents to {output_path / 'url_mapping.json'}")
     
     def _process_document(self, doc_file: Path, file_extension: str) -> Optional[str]:
         """Process a single document with optional monitoring."""

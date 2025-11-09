@@ -257,7 +257,7 @@ class HTMLExtractor(BaseDocumentExtractor):
         selectors_to_remove = [
             # Navigation and interface elements
             '#mw-navigation', '.navbox', '.navigation-box', 
-            '.sidebar', '.infobox', '.ambox', '.tmbox',
+            '.ambox', '.tmbox',
             # Edit links and metadata
             '.mw-editsection', '.edit-section', '.editlink',
             # References and citations (keep text but remove citation numbers)

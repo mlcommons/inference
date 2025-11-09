@@ -78,16 +78,35 @@ def _extract_json_dict(content: str) -> Optional[dict]:
 
 def call_judge(session: requests.Session, service_url: str, model: str, question: str, gold: str, pred: str):
     prompt = (
-        "You judge whether the model answer matches the gold answer. "
-        "Return JSON with keys score (1 or 0) and explanation.\n\n"
+        "You judge whether the model answer correctly answers the question based on semantic equivalence to the gold answer.\n\n"
+        "GRADING RULES:\n"
+        "1. If model answer and gold answer are EXACTLY the same (ignoring case/punctuation), score 1\n"
+        "2. Focus on whether the model answer contains the KEY INFORMATION that answers the question\n"
+        "3. Minor differences are acceptable:\n"
+        "   - Missing articles (a, an, the)\n"
+        "   - Missing units when the number is correct (e.g., '50' vs '50 years')\n"
+        "   - Additional correct details not in gold answer\n"
+        "   - Different word order for lists (e.g., 'A and B' vs 'B, A')\n"
+        "   - Missing location qualifiers when answer is already specific (e.g., 'Las Vegas' vs 'Las Vegas, Nevada')\n"
+        "   - Different formatting (e.g., 'Dwight D. Eisenhower' vs 'Dwight D Eisenhower')\n"
+        "   - Brief answers that directly answer the question vs verbose gold answers\n"
+        "4. Score 0 ONLY if:\n"
+        "   - Model answer is factually wrong\n"
+        "   - Model answer is missing ESSENTIAL information that changes the meaning\n"
+        "   - Model answer does NOT answer what the question asked\n"
+        "5. Do NOT penalize for:\n"
+        "   - Lack of context/explanation when question doesn't require it\n"
+        "   - Different level of detail if core answer is correct\n"
+        "   - Missing information the question didn't ask for\n\n"
         f"Question: {question}\n"
         f"Gold Answer: {gold}\n"
-        f"Model Answer: {pred}\n"
+        f"Model Answer: {pred}\n\n"
+        "Return JSON with keys score (1 or 0) and explanation."
     )
     payload = {
         "model": model,
         "messages": [
-            {"role": "system", "content": "You are a strict grading assistant."},
+            {"role": "system", "content": "You are a lenient grading assistant focused on semantic correctness, not exact string matching."},
             {"role": "user", "content": prompt}
         ],
         "temperature": 0.0,

@@ -7,7 +7,7 @@ from pathlib import Path
 from functools import lru_cache
 from retrieve import VectorDB, BM25DB
 from evaluation import evaluate_retrieval_query, run_evaluation
-from utils import set_deterministic_seeds, setup_llm_config
+from utils import set_deterministic_seeds, setup_llm_config, serialize_cli_args
 from params import add_all_args
 
 # Taken below from frames: https://huggingface.co/datasets/google/frames-benchmark
@@ -22,16 +22,6 @@ def _get_metadata(doc):
     if isinstance(doc, dict):
         return doc
     return {}
-
-
-def _serialize_params(args):
-    params = {}
-    for key, value in vars(args).items():
-        if isinstance(value, (str, int, float, bool)) or value is None:
-            params[key] = value
-        else:
-            params[key] = str(value)
-    return params
 
 
 @lru_cache(maxsize=256)
@@ -271,7 +261,7 @@ if __name__ == "__main__":
         if args.save_results:
             with open("result_single_shot.json", "w") as f:
                 json.dump({
-                    "params": _serialize_params(args),
+                    "params": serialize_cli_args(args),
                     "results": answer_records
                 }, f, indent=2)
         exit(0)  # Exit after evaluation
@@ -326,7 +316,7 @@ if __name__ == "__main__":
                 record["llm_answer"] = answer_value
             with open("result_single_shot.json", "w") as f:
                 json.dump({
-                    "params": _serialize_params(args),
+                    "params": serialize_cli_args(args),
                     "results": [record]
                 }, f, indent=2)
         toc = time.time()

@@ -16,7 +16,7 @@ import argparse
 import json
 import time
 import os
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 import pandas as pd
 
 # Set no_proxy to bypass proxy for localhost/127.0.0.1
@@ -26,8 +26,13 @@ os.environ['NO_PROXY'] = '127.0.0.1,localhost,' + original_no_proxy
 
 from retrieve import VectorDB, BM25DB
 from evaluation import evaluate_retrieval_query, run_evaluation
-from utils import (set_deterministic_seeds, filter_dataset_by_difficulty, 
-                   setup_llm_config, get_device_config)
+from utils import (
+    set_deterministic_seeds,
+    filter_dataset_by_difficulty,
+    setup_llm_config,
+    get_device_config,
+    serialize_cli_args,
+)
 from params import add_all_args
 import requests
 
@@ -703,7 +708,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         per_query_counts = []  # Track new docs found by each query
         
         # Calculate target docs per subquery after reranking
-        target_docs_per_subquery = max(3, top_k_retriever // num_sub_queries)
+        #target_docs_per_subquery = max(5, top_k_retriever // num_sub_queries)
+        target_docs_per_subquery = top_k_retriever
         
         for i, sub_query in enumerate(sub_queries, 1):
             if verbose:
@@ -803,6 +809,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         'sufficient': sufficient,
         'avg_iteration_time': sum(iteration_times) / len(iteration_times) if iteration_times else 0
     })
+    metrics['retrieved_urls'] = retrieved_urls
+    metrics['final_answer'] = final_answer.strip() if final_answer else ""
     
     # Print final results
     if verbose:
@@ -817,8 +825,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             print(f"LLM Answer: {final_answer}")
         if expected_answer:
             print(f"Expected Answer: {expected_answer}")
-        print(f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:3])}{'...' if len(expected_set) > 3 else ''}")
-        print(f"Retrieved ({len(retrieved_urls)} unique docs): {retrieved_urls[:3]}{'...' if len(retrieved_urls) > 3 else ''}")
+        print(f"Expected ({len(expected_set)}): {sorted(list(expected_set)[:5])}{'...' if len(expected_set) > 5 else ''}")
+        print(f"Retrieved ({len(retrieved_urls)} unique docs): {retrieved_urls[:5]}{'...' if len(retrieved_urls) > 5 else ''}")
         matches = len(expected_set.intersection(set(retrieved_urls)))
         print(f"Matches: {matches}")
         print(f"\nMetrics:")
@@ -834,19 +842,23 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
     return metrics
 
 
-def run_multi_shot_evaluation(rag_db, dataset_path: str,
-                              max_sub_queries: int = 3,
-                              top_k_retriever: int = 10,
-                              top_k_reranking: int = 10,
-                              max_queries: Optional[int] = None,
-                              no_rerank: bool = False,
-                              retrieval_strategy: str = "fixed_k",
-                              reasoning_effort: str = "medium",
-                              detailed_analysis: bool = False,
-                              difficulty: int = 0,
-                              max_iterations: int = 10,
-                              llm_config: Optional[Dict[str, Any]] = None,
-                              **strategy_params) -> Dict[str, float]:
+def run_multi_shot_evaluation(
+    rag_db,
+    dataset_path: str,
+    max_sub_queries: int = 5,
+    top_k_retriever: int = 10,
+    top_k_reranking: int = 10,
+    max_queries: Optional[int] = None,
+    no_rerank: bool = False,
+    retrieval_strategy: str = "fixed_k",
+    reasoning_effort: str = "medium",
+    detailed_analysis: bool = False,
+    difficulty: int = 0,
+    max_iterations: int = 5,
+    llm_config: Optional[Dict[str, Any]] = None,
+    result_handler: Optional[Callable[[str, Dict[str, Any]], None]] = None,
+    **strategy_params,
+) -> Dict[str, float]:
     """
     Run multi-shot evaluation on a dataset.
     
@@ -865,6 +877,8 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
         max_iterations: Maximum iterations for iterative retrieval (default: 10)
         **strategy_params: Additional parameters for retrieval strategy
         
+        Optional result_handler: callable receiving (prompt, metrics) per query
+
     Returns:
         Dictionary of averaged metrics
     """
@@ -925,12 +939,13 @@ def run_multi_shot_evaluation(rag_db, dataset_path: str,
                 llm_config=llm_config,
                 **strategy_params
             )
+            if result_handler:
+                result_handler(row['Prompt'], metrics)
             
             # Accumulate metrics
             for metric_name, value in metrics.items():
-                if metric_name not in total_metrics:
-                    total_metrics[metric_name] = 0.0
-                total_metrics[metric_name] += value
+                if isinstance(value, (int, float)):
+                    total_metrics[metric_name] = total_metrics.get(metric_name, 0.0) + float(value)
             
             valid_queries += 1
             
@@ -1059,6 +1074,23 @@ if __name__ == "__main__":
     if args.eval:
         max_queries = args.eval if isinstance(args.eval, int) and not isinstance(args.eval, bool) and args.eval > 0 else None
         
+        answer_records: List[Dict[str, Any]] = []
+
+        def handle_result(prompt: str, metrics: Dict[str, Any]) -> None:
+            raw_answer = metrics.get("final_answer", "")
+            if not isinstance(raw_answer, str):
+                raw_answer = str(raw_answer)
+            answer_text = raw_answer.strip() or "Unknown"
+            if args.generate_answer:
+                print(f"LLM Answer: {answer_text}")
+            if args.save_results:
+                record = {
+                    "prompt": prompt,
+                    "retrieved_urls": metrics.get("retrieved_urls", []),
+                    "llm_answer": answer_text,
+                }
+                answer_records.append(record)
+
         metrics = run_multi_shot_evaluation(
             rag_db, args.dataset,
             max_sub_queries=args.max_sub_queries,
@@ -1072,6 +1104,7 @@ if __name__ == "__main__":
             difficulty=args.difficulty,
             max_iterations=args.max_iterations,
             llm_config=llm_config,
+            result_handler=handle_result if (args.generate_answer or args.save_results) else None,
             **strategy_params
         )
         
@@ -1087,6 +1120,14 @@ if __name__ == "__main__":
             json.dump(results_data, f, indent=2)
         
         print(f"Results saved to multi_shot_results.json")
+
+        if args.save_results:
+            with open("result_multi_shot.json", "w") as f:
+                json.dump({
+                    "params": serialize_cli_args(args),
+                    "results": answer_records,
+                }, f, indent=2)
+            print("Compatible results saved to result_multi_shot.json")
         
     else:
         # Single query multi-shot retrieval

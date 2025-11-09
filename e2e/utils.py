@@ -35,6 +35,17 @@ def save_url_mapping(directory: str, url_mapping: Dict[str, str]) -> None:
         json.dump(url_mapping, f, indent=2, ensure_ascii=False)
 
 
+def serialize_cli_args(args: Any) -> Dict[str, Any]:
+    """Convert parsed CLI args into JSON-serializable primitive types."""
+    params: Dict[str, Any] = {}
+    for key, value in vars(args).items():
+        if isinstance(value, (str, int, float, bool)) or value is None:
+            params[key] = value
+        else:
+            params[key] = str(value)
+    return params
+
+
 def set_deterministic_seeds(seed: int = 42) -> None:
     """Set PyTorch seed for reproducible results.
     

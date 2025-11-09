@@ -985,13 +985,13 @@ if __name__ == "__main__":
     add_all_args(args)
     
     # Add multi-shot specific parameters
-    args.add_argument('--max-sub-queries', type=int, default=3,
-                     help='Maximum number of sub-queries to generate (default: 3)')
+    args.add_argument('--max-sub-queries', type=int, default=5,
+                     help='Maximum number of sub-queries to generate (default: 5)')
     args.add_argument('--reasoning', type=str, default='medium',
                      choices=['low', 'medium', 'high'],
                      help='LLM reasoning level for query decomposition (default: medium)')
-    args.add_argument('--max-iterations', type=int, default=10,
-                     help='Maximum number of retrieval iterations (default: 10)')
+    args.add_argument('--max-iterations', type=int, default=5,
+                     help='Maximum number of retrieval iterations (default: 5)')
     
     # Special handling for --eval argument
     for action in args._actions:

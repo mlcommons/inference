@@ -238,8 +238,7 @@ class BM25DB(RagDB):
         print(f"Loaded {len(doc_list)} documents from {folder_path}")
         
         # Call regular ingest method
-        num_threads = kwargs.get('num_threads', 4)
-        self.ingest(doc_list, passage_metadata, num_threads=num_threads, **kwargs)
+        self.ingest(doc_list, passage_metadata, **kwargs)
 
     def lookup(self, query: str, k: int) -> List[Any]:
         """Retrieve top-k passages using BM25."""
@@ -326,7 +325,7 @@ class BM25DB(RagDB):
         
         # Save database file
         db_path = Path(path)
-        
+
         data = {
             'type': 'BM25DB',
             'bm25_directory': str(bm25_dir),
@@ -406,6 +405,8 @@ class BM25DB(RagDB):
         
         self._passages_metadata = data['passages_metadata']
         self._num_threads = data.get('num_threads', 4)
+        if self._num_threads is None:
+            self._num_threads = 4
         # Use the data directory based on the database path, or fallback to saved directory
         default_bm25_dir = self.get_data_dir(path)
         bm25_directory = data.get('bm25_directory', default_bm25_dir)

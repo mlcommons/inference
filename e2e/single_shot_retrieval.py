@@ -203,8 +203,6 @@ def _generate_llm_answer(query, doc_entries, llm_config):
         raise last_error
     raise RuntimeError("LLM answer generation failed without a specific error")
 
-
-
 if __name__ == "__main__":
     args = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
     

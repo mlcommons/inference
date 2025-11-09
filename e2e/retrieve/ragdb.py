@@ -25,6 +25,10 @@ class RagDB(abc.ABC):
     def _determine_device(self, device: str) -> str:
         """Determine the best device to use."""
         import torch
+        try:
+            import habana_frameworks.torch as htcore
+        except:
+            pass
         
         if device == "auto":
             if torch.hpu.is_available():

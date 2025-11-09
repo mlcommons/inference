@@ -7,13 +7,11 @@ from pathlib import Path
 from functools import lru_cache
 from retrieve import VectorDB, BM25DB
 from evaluation import evaluate_retrieval_query, run_evaluation
-from utils import set_deterministic_seeds, setup_llm_config, serialize_cli_args
+from utils import set_deterministic_seeds, setup_llm_config, serialize_cli_args, is_token_limit_error
 from params import add_all_args
 
 # Taken below from frames: https://huggingface.co/datasets/google/frames-benchmark
 DEFAULT_QUERY = "Who won the French Open Mens Singles tournament the year that New York City FC won their first MLS Cup title?"
-MAX_PASSAGE_PREVIEW = 4096
-FULL_DOC_MAX_CHARS = 39000
 
 
 def _get_metadata(doc):
@@ -32,11 +30,12 @@ def _read_text(path: str) -> str:
     return path_obj.read_text(encoding="utf-8", errors="ignore")
 
 
-def _load_document_text(metadata, base_dir=None, default_base_dir="doc_html", max_chars=FULL_DOC_MAX_CHARS):
+def _load_document_text(metadata, base_dir=None, default_base_dir="doc_html", max_chars=None):
     target_dir = base_dir or default_base_dir
     base_filename = metadata.get("base_filename")
     if not base_filename:
         return "", None
+
 
     base_path = Path(target_dir)
     candidates = [
@@ -49,13 +48,35 @@ def _load_document_text(metadata, base_dir=None, default_base_dir="doc_html", ma
         candidate_path = str(candidate)
         content = _read_text(candidate_path)
         if content:
-            return content[:max_chars], candidate_path
+            if max_chars and max_chars > 0:
+                content = content[:max_chars]
+            return content, candidate_path
     return "", None
 
 
-def _convert_results_to_entries(results, limit=5, full_doc=False, base_dir=None, default_base_dir="doc_html"):
-    entries = []
+def _uniform_clip_texts(texts, total_limit):
+    if total_limit is None or total_limit <= 0 or not texts:
+        return list(texts)
+    count = len(texts)
+    if count == 0:
+        return []
+    per_doc, remainder = divmod(total_limit, count)
+    if per_doc <= 0 and remainder == 0:
+        return [""] * count
+    clipped = []
+    for idx, text in enumerate(texts):
+        extra = 1 if idx < remainder else 0
+        limit = per_doc + extra
+        if limit <= 0:
+            clipped.append("")
+        else:
+            clipped.append(text[:limit])
+    return clipped
+
+
+def _convert_results_to_entries(results, limit=5, full_doc=False, base_dir=None, default_base_dir="doc_html", context_char_limit=None):
     seen_ids = set()
+    records = []
     count = 0
     for doc in results:
         metadata = _get_metadata(doc)
@@ -63,6 +84,7 @@ def _convert_results_to_entries(results, limit=5, full_doc=False, base_dir=None,
         doc_id = url or metadata.get("base_filename")
         if doc_id and doc_id in seen_ids:
             continue
+
         if full_doc:
             content, source_path = _load_document_text(
                 metadata,
@@ -70,19 +92,34 @@ def _convert_results_to_entries(results, limit=5, full_doc=False, base_dir=None,
                 default_base_dir=default_base_dir
             )
             if not content:
-                content = getattr(doc, "page_content", metadata.get("content", ""))[:MAX_PASSAGE_PREVIEW]
+                fallback = getattr(doc, "page_content", metadata.get("content", ""))
+                content = fallback
         else:
-            content = getattr(doc, "page_content", metadata.get("content", ""))[:MAX_PASSAGE_PREVIEW]
+            content = getattr(doc, "page_content", metadata.get("content", ""))
             source_path = None
-        entry = {"url": url, "content": content}
-        if source_path:
-            entry["source_path"] = source_path
-        entries.append(entry)
+
+        records.append((url, content, source_path))
         if doc_id:
             seen_ids.add(doc_id)
         count += 1
         if limit and limit > 0 and count >= limit:
             break
+
+    raw_contents = [content for (_, content, _) in records]
+    clipped_contents = _uniform_clip_texts(raw_contents, context_char_limit)
+
+    entries = []
+    for idx, (url, raw_content, source_path) in enumerate(records):
+        clipped_content = clipped_contents[idx] if idx < len(clipped_contents) else raw_content
+        entry = {
+            "url": url,
+            "content": clipped_content,
+            "raw_content": raw_content,
+        }
+        if source_path:
+            entry["source_path"] = source_path
+        entries.append(entry)
+
     return entries
 
 
@@ -99,38 +136,72 @@ def _extract_unique_urls(results):
 
 
 def _generate_llm_answer(query, doc_entries, llm_config):
-    context_parts = []
-    for idx, doc in enumerate(doc_entries, 1):
-        source = doc.get("url") or "Unknown source"
-        snippet = doc.get("content", "").strip()
-        context_parts.append(f"[{idx}] Source: {source}\n{snippet}")
-    evidence_block = "\n\n".join(context_parts) if context_parts else "No supporting documents were retrieved."
-    user_prompt = (
-        "Answer the question using only the provided evidence."
-        " Respond with a single word or short phrase, or 'Unknown' if the evidence is insufficient.\n\n"
-        f"Question:\n{query}\n\nEvidence:\n{evidence_block}"
-    )
-    max_tokens = llm_config["max_tokens"]
-    if isinstance(max_tokens, int):
-        max_tokens = min(max_tokens, 256)
-    else:
-        max_tokens = 256
-    payload = {
-        "model": llm_config["model_name"],
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are a concise retrieval QA assistant who trusts the supplied context."
-            },
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": 0.0,
-        "max_tokens": max_tokens
-    }
-    response = requests.post(llm_config["service_url"], json=payload, timeout=60)
-    response.raise_for_status()
-    data = response.json()
-    return data["choices"][0]["message"]["content"].strip()
+    def build_evidence_block(char_limit):
+        raw_texts = [doc.get("raw_content") or doc.get("content", "") or "" for doc in doc_entries]
+        clipped = _uniform_clip_texts(raw_texts, char_limit)
+        parts = []
+        for idx, doc in enumerate(doc_entries, 1):
+            doc["content"] = clipped[idx - 1]
+            source = doc.get("url") or "Unknown source"
+            snippet = doc["content"].strip()
+            parts.append(f"[{idx}] Source: {source}\n{snippet}")
+        return "\n\n".join(parts) if parts else "No supporting documents were retrieved."
+
+    base_char_limit = llm_config.get("context_char_limit", 0)
+    if base_char_limit <= 0:
+        base_char_limit = sum(len(doc.get("raw_content", doc.get("content", "")) or "") for doc in doc_entries)
+
+    output_token_limit = llm_config.get("output_token_limit")
+
+    attempt_limit = base_char_limit
+    min_limit = max(256, attempt_limit // 4) if attempt_limit else 256
+    retry_factor = 0.6
+    max_attempts = 4
+
+    last_error = None
+    for attempt in range(max_attempts):
+        evidence_block = build_evidence_block(attempt_limit)
+        user_prompt = (
+            "Answer the question using only the provided evidence."
+            " Respond with a few words or short phrase, or 'Unknown' if the evidence is insufficient.\n\n"
+            f"Question:\n{query}\n\nEvidence:\n{evidence_block}"
+        )
+
+        payload = {
+            "model": llm_config["model_name"],
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "You are a concise retrieval QA assistant who trusts the supplied context."
+                },
+                {"role": "user", "content": user_prompt}
+            ],
+            "temperature": 0.0,
+            "max_tokens": output_token_limit
+        }
+
+        try:
+            response = requests.post(llm_config["service_url"], json=payload, timeout=60)
+            response.raise_for_status()
+            data = response.json()
+            return data["choices"][0]["message"]["content"].strip()
+        except requests.exceptions.HTTPError as http_err:
+            last_error = http_err
+            if is_token_limit_error(http_err.response, str(http_err)) and attempt < max_attempts - 1:
+                new_limit = int(attempt_limit * retry_factor)
+                attempt_limit = max(min_limit, new_limit)
+                continue
+            raise
+        except requests.exceptions.RequestException as req_err:
+            last_error = req_err
+            raise
+        except json.JSONDecodeError as json_err:
+            last_error = json_err
+            raise
+
+    if last_error:
+        raise last_error
+    raise RuntimeError("LLM answer generation failed without a specific error")
 
 
 
@@ -149,9 +220,19 @@ if __name__ == "__main__":
             action.const = True
             break
 
-    args = args.parse_args()    # Set deterministic seeds for reproducible results
+    args = args.parse_args()
+
+    context_token_limit = args.llm_context_token_limit 
+    chars_per_token = args.llm_chars_per_token 
+    context_char_limit = int(context_token_limit * chars_per_token)
+
+    # Set deterministic seeds for reproducible results
     set_deterministic_seeds(args.seed)
     llm_config = setup_llm_config(args) if args.generate_answer else None
+    if llm_config:
+        context_char_limit = llm_config.get("context_char_limit", context_char_limit)
+        context_token_limit = llm_config.get("context_token_limit", context_token_limit)
+        chars_per_token = llm_config.get("chars_per_token", chars_per_token)
     doc_base_dir = args.base_doc_dir
 
     # Initialize the appropriate database class
@@ -222,7 +303,8 @@ if __name__ == "__main__":
                     retrieved_docs,
                     limit=5,
                     full_doc=args.full_doc_context,
-                    base_dir=doc_base_dir
+                    base_dir=doc_base_dir,
+                    context_char_limit=context_char_limit
                 )
                 answer_text = _generate_llm_answer(prompt, doc_entries, llm_config)
                 print(f"LLM Answer: {answer_text}")
@@ -302,7 +384,8 @@ if __name__ == "__main__":
                 retrieved_docs,
                 limit=5,
                 full_doc=args.full_doc_context,
-                base_dir=doc_base_dir
+                base_dir=doc_base_dir,
+                context_char_limit=context_char_limit
             )
             answer_value = _generate_llm_answer(args.query, doc_entries, llm_config)
             print(f"LLM Answer: {answer_value}")

@@ -254,7 +254,7 @@ COMMON_PARAMS = [
         action="store_true",
         category="common",
         applies_to=["both"]
-    ),
+    )
 ]
 
 # ============================================================================
@@ -309,11 +309,29 @@ GENERAL_PARAMS = [
         applies_to=["both"]
     ),
     ParamDef(
-        name="max_tokens",
-        arg_names=["--max_tokens"],
+        name="llm_output_token_limit",
+        arg_names=["--llm-output-token-limit", "--max_tokens"],
         type=str,
-        default="auto",
-        help="Maximum tokens for LLM response (auto to detect from service, or specify number)",
+        default="2048",
+        help="Maximum tokens the LLM may generate in a response (auto to detect from service, or specify number)",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="llm_context_token_limit",
+        arg_names=["--llm-context-token-limit"],
+        type=int,
+        default=40960,
+        help="Maximum total tokens for retrieval context sent to the LLM (set 0 to disable clipping)",
+        category="general",
+        applies_to=["both"]
+    ),
+    ParamDef(
+        name="llm_chars_per_token",
+        arg_names=["--llm-chars-per-token"],
+        type=float,
+        default=4.0,
+        help="Average characters per token used when converting token budgets to character budgets",
         category="general",
         applies_to=["both"]
     ),
@@ -770,7 +788,6 @@ def print_param_info(method: Optional[str] = None):
 # Main (for testing/documentation)
 # ============================================================================
 
-if __name__ == "__main__":
     import sys
     
     if len(sys.argv) > 1 and sys.argv[1] == "list":

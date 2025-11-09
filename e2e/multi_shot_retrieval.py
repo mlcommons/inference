@@ -16,7 +16,7 @@ import argparse
 import json
 import time
 import os
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional, Callable, Tuple, Set
 import pandas as pd
 
 # Set no_proxy to bypass proxy for localhost/127.0.0.1
@@ -32,110 +32,62 @@ from utils import (
     setup_llm_config,
     get_device_config,
     serialize_cli_args,
+    is_token_limit_error,
 )
 from params import add_all_args
 import requests
 
 # Prompts
-QUERY_REWRITER_PROMPT = """\
-You evaluate documents and generate search queries for complex multi-hop questions.
+QUERY_REWRITER_PROMPT = """You help plan the next search steps for answering a complex question.
 
-QUESTION: {question}
-DOCUMENTS: {context}
-SEARCH HISTORY: {history}
-FEEDBACK: {feedback_history}
+QUESTION:
+{question}
 
-TASK 1: EVALUATE AND SUMMARIZE NEW DOCUMENTS
-**ONLY if there are NEW documents to evaluate:**
-For each NEW document:
-- Mark: 1 if relevant to any part of question, 0 if irrelevant
-- MANDATORY: If marked as relevant (1), you MUST provide a detailed summary preserving ALL key facts, names, dates, numbers, and relationships mentioned in the document that could be useful for answering the question
-- If marked as irrelevant (0), provide empty string ""
+RETRIEVED CONTEXT:
+{context}
 
-**If there are NO NEW documents to evaluate, skip this task and go to TASK 3**
+QUERY HISTORY:
+{history}
 
-SUMMARY REQUIREMENTS: 
-- Extract and preserve specific details
-- only facts from the document
+FEEDBACK HISTORY:
+{feedback_history}
 
-TASK 2: CHECK IF SUFFICIENT AND CONNECT INFORMATION
-Review ALL KEPT documents and summaries. Actively connect facts across documents:
-- Identify entities by matching names across summaries 
-- Chain relationships (A → B → C)
-- Cross-reference dates/events 
-- Build complete chains: Person → Family member → Attribute, or Event → Year → Cross-reference
-If you can construct a complete answer chain with specific names/facts from kept documents, provide final answer.
+INSTRUCTIONS:
+- Study the context to understand what facts are already known.
+- If the context already contains enough evidence to answer the question, set "answer" to the short final answer and leave "queries" empty.
+- Otherwise, propose up to {k} new search queries that move us closer to the answer. Each query must be distinct from everything in the history or prior feedback wording.
+- When previous approaches failed, change tactics—broaden scope, pivot to related entities, or ask for canonical pages—never repeat old patterns.
+- Provide concise "feedback" describing the remaining gap or next plan of attack.
 
-TASK 3: GENERATE QUERIES (if not sufficient)
-Analyze what's MISSING to complete the answer, then generate at most {k} strategic queries.
+RESPONSE FORMAT (JSON ONLY):
+{{
+    "answer": "<short final answer or empty if unknown>",
+    "queries": ["<query1>", "<query2>", ...],
+    "feedback": "<what to do next or why we are stuck>",
+    "reasoning": "<optional brief chain of thought to justify the plan>"
+}}
 
-CRITICAL ANALYSIS OF FAILURES:
-Look at SEARCH HISTORY. If a query returned 0 documents OR if same query failed 2+ times:
-- **STOP IMMEDIATELY** - This approach is not working
-- **ESCALATE TO BROADER SEARCH** - Get the main Wikipedia article first
-- **DO NOT REUSE FAILED PATTERNS** - Varying descriptions of the same thing won't help
+Return exactly this structure and nothing else."""
 
-ESCALATION STRATEGIES (use when stuck 3+ iterations):
 
-**When repeated queries fail:**
-1. **Get full article first**: Search just the entity name to get their complete Wikipedia page
-2. **Search related entities**: If can't find X's mother, search for X's siblings, X's biography, X's family tree
-3. **Use list articles**: "List of presidents", "List of first ladies", "Timeline of X"
-4. **Try alternate names**: Full formal name, nickname, maiden name, married name
-
-STRATEGIC QUERY PATTERNS:
-
-**For People/Biography:**
-- Full article: Just the person's name "Harriet Lane"
-- Family: "Person X family", "Person X parents"  
-- Specific relative: "Person X" then extract family, don't search "Person X mother" repeatedly
-
-**For Events/Dates:**
-- Specific year: "X 2012 winner"
-- Timeline: "X dates", "List of X events"
-- Cross-reference: "List tallest buildings X City"
-
-**For Numerical/Classification:**
-- List/table: "Billboard 200 Nuclear Blast records", "Dewey Decimal X"
-
-**Progressive refinement strategy:**
-1. **Get main articles FIRST**: Search entity names to get full Wikipedia pages
-2. **Extract connections**: From articles, identify related entities and search those
-3. **Get details**: Once you have related entities, search for their specific attributes
-4. **Cross-verify**: Use list articles to confirm order/position/relationships
-
-QUERY GENERATION RULES (FOLLOW EXACTLY):
-1. **GET FULL ARTICLES FIRST**: To find family/biographical info about Person X, search "Person X" alone to get their complete Wikipedia article with infobox and family details
-2. **USE ENTITY NAMES, NOT DESCRIPTIONS**: Once you identify an entity name, always use the name in queries, never use descriptions
-3. **ONE CONCEPT PER QUERY**: Each query should target one piece of information
-4. **NEVER REPEAT FAILURES**: Check SEARCH HISTORY - if a query pattern failed (0 docs or 3+ attempts), use a completely different approach
-5. **ESCALATE WHEN STUCK**: After a failed attempt on same information, escalate to broader queries:
-   - Search the main entity name alone (get full Wikipedia article)
-   - Search "List of X" for ordinal/positional questions
-   - Search related entities instead
-
-RESPONSE FORMAT:
-**If there are NEW documents:**
-If sufficient: {{"relevance": [1,0,1], "summaries": ["Person served as X from dates, family details include mother named Y with maiden name Z", "", "Person was Nth X, mother was Y Z with maiden name Ballou"], "answer": "Y Z"}}
-If not: {{"relevance": [1,0,1], "summaries": ["Person A served from dates, mentioned as related to B", "", "Person C was Nth X, mother mentioned as Y"], "queries": ["Person A", "Person C family"], "feedback": "Found: Entity names and roles. Missing: Complete family details. Next: Get full biographical articles."}}
-
-**If there are NO NEW documents:**
-{{"relevance": [], "summaries": [], "queries": ["Nth position holder name", "specific event list"], "feedback": "Starting with direct entity/list searches."}}
-
-CRITICAL REQUIREMENTS:
-- If NO NEW documents: return empty arrays: "relevance": [], "summaries": []  
-- If {len_new_docs} NEW documents: return exactly {len_new_docs} relevance scores and {len_new_docs} summaries
-- For relevant docs (relevance=1): summary MUST extract specific facts (names, dates, relationships, family details from infobox/text)
-- For irrelevant docs (relevance=0): summary MUST be empty string ""
-- **ESCALATION TRIGGER**: If same query type failed 3+ times, MUST escalate to full article or list search
-- Make queries SHORT and SIMPLE (2-4 words best) - Wikipedia article titles are short
-- Search entity names alone to get complete biographical articles with family sections
-- Wikipedia infoboxes contain: parents, born, died, spouse, children - search person's name to get this
-
-FORMAT VALIDATION: Array lengths MUST match document count - double check before responding!
-SEARCH STRATEGY: Simple entity names work better than complex descriptive queries!
-Respond only in JSON format"""
-
+def _uniform_clip_texts(texts: List[str], total_limit: int) -> List[str]:
+    if total_limit is None or total_limit <= 0 or not texts:
+        return list(texts)
+    count = len(texts)
+    if count == 0:
+        return []
+    per_doc, remainder = divmod(total_limit, count)
+    if per_doc <= 0 and remainder == 0:
+        return [""] * count
+    clipped: List[str] = []
+    for idx, text in enumerate(texts):
+        extra = 1 if idx < remainder else 0
+        limit = per_doc + extra
+        if limit <= 0:
+            clipped.append("")
+        else:
+            clipped.append(text[:limit])
+    return clipped
 
 
 def query_rewriter(question: str, new_documents: List[tuple],
@@ -146,10 +98,11 @@ def query_rewriter(question: str, new_documents: List[tuple],
                    query_results: Optional[List[int]] = None,
                    previous_feedback: str = "",
                    feedback_history: Optional[List[str]] = None,
-                   llm_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                   llm_config: Optional[Dict[str, Any]] = None,
+                   context_char_limit: int = 0) -> Dict[str, Any]:
     """
     Evaluates documents AND generates new queries in one LLM call.
-    
+
     Args:
         question: The user's original question
         new_documents: List of NEW document texts to evaluate
@@ -159,219 +112,180 @@ def query_rewriter(question: str, new_documents: List[tuple],
         query_history: List of previous search queries
         query_results: List of number of documents found for each query (parallel to query_history)
         previous_feedback: Feedback from previous iteration about what's missing
-        
+        context_char_limit: Maximum characters to include per document snippet in the prompt
+
     Returns:
         Dict with:
-        - 'relevance' (list of 0/1 for ONLY new_documents)
-        - 'queries' (list of new search queries, empty if answer provided)
-        - 'feedback' (what's missing, empty if answer provided)
-        - 'answer' (final answer if sufficient, empty otherwise)
+        - 'queries': list of new query strings (empty if answer provided)
+        - 'feedback': short description of remaining gaps
+        - 'answer': final answer if sufficient, otherwise empty string
+        - 'reasoning': optional short justification string
     """
-    # Format KEPT documents with summaries
-    kept_context = ""
-    if kept_documents:
-        for i, doc in enumerate(kept_documents, 1):
-            kept_context += f"\n[KEPT {i}] {doc[2]}\n"
-    else:
-        kept_context = "None"
-    
-    # Format NEW documents 
-    new_context = ""
-    if new_documents:
-        for i, doc in enumerate(new_documents, 1):
-            new_context += f"\n[NEW {i}] {doc[1]}\n"
-    else:
-        new_context = "None"
-    
-    # Combine for context
-    context = f"KEPT DOCUMENTS (already relevant):\n{kept_context}\n\nNEW DOCUMENTS (evaluate these):\n{new_context}"
-    
-    # Format query history with results - focus on failures for learning
-    if query_history:
-        failed_queries = []
-        successful_queries = []
-        if query_results and len(query_results) == len(query_history):
-            for q, num_docs in zip(query_history, query_results):
-                if num_docs == 0:
-                    failed_queries.append(q)
-                else:
-                    successful_queries.append(f"{q} ({num_docs} docs)")
-        
-        history_parts = []
-        if failed_queries:
-            history_parts.append(f"FAILED: {', '.join(failed_queries)}")  # Last 3 failures
-        if successful_queries:
-            history_parts.append(f"SUCCESS: {', '.join(successful_queries)}")  # Last 2 successes
-        
-        history_text = "; ".join(history_parts) if history_parts else "No queries yet"
-    else:
-        history_text = "No queries yet"
-    
-    # Build feedback history - show progression of what was tried and learned
-    if feedback_history and len(feedback_history) > 0:
-        unique_feedback = []
-        for fb in reversed(feedback_history):
-            if fb and fb not in unique_feedback:
-                unique_feedback.append(fb)
-        
-        if unique_feedback:
-            feedback_text = "PREVIOUS ATTEMPTS: " + " → ".join(reversed(unique_feedback))
-        else:
-            feedback_text = f"Iteration {len(query_history) + 1 if query_history else 1}"
-    else:
-        feedback_text = f"Iteration {len(query_history) + 1 if query_history else 1} - Initial search"
-    
-    print(f"Context: {context}")
-    print(f"History: {history_text}")
-    print(f"Feedback: {feedback_text}")
+    combined_texts = [doc[1] or "" for doc in kept_documents] + [doc[1] or "" for doc in new_documents]
 
-    prompt = QUERY_REWRITER_PROMPT.format(
-        question=question,
-        context=context,
-        history=history_text,
-        feedback_history=feedback_text,
-        k=max_queries,
-        len_new_docs=len(new_documents)
-    )
-    
-    system_message = f"""You are an expert at multi-hop reasoning and strategic search. 
-                        CRITICAL: Never repeat failed queries. 
-                        Always try completely different approaches when queries return 0 docs. 
-                        Focus on atomic facts and progressive strategies."""
-    
-    # Use LLM config if provided, otherwise use defaults
+    base_char_limit = context_char_limit if context_char_limit and context_char_limit > 0 else sum(len(text) for text in combined_texts)
+    attempt_limit = base_char_limit
+    min_limit = max(512, attempt_limit // 4) if attempt_limit else 512
+    retry_factor = 0.6
+    max_attempts = 4
+
     if llm_config:
+        output_token_limit = llm_config.get("output_token_limit")
         model_name = llm_config["model_name"]
         service_url = llm_config["service_url"]
-        max_tokens = llm_config["max_tokens"]
-    else:
-        model_name = "/mnt/weka/data/pytorch/llama3.3/Meta-Llama-3.3-70B-Instruct/"
-        service_url = "http://127.0.0.1:8123/v1/chat/completions"
-        max_tokens = 10240
 
-    payload = {
-        "model": model_name,
-        "messages": [
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": prompt}
-        ],
-        "temperature": 0.1,
-        "max_tokens": max_tokens
-    }
+    def build_sections(char_limit):
+        clipped_all = _uniform_clip_texts(combined_texts, char_limit)
+        kept_count = len(kept_documents)
+        kept_clipped = clipped_all[:kept_count]
+        new_clipped = clipped_all[kept_count:]
 
-    try:
-        response = requests.post(service_url, json=payload, timeout=60)
-        response.raise_for_status()
-        result = response.json()
-        
-        message = result['choices'][0]['message']
-        llm_output = message.get('content')
-        
-        # For debugging: check if reasoning_content exists
-        reasoning_content = message.get('reasoning_content', '')
-        if reasoning_content and not llm_output:
-            print(f"    DEBUG: reasoning_content exists but content is empty")
-            print(f"    DEBUG: reasoning_content snippet: {reasoning_content[:200]}")
-        
-        # Use only content field
-        if llm_output is None or not llm_output.strip():
-            print(f"    Warning: LLM returned empty content")
-            return {
-                "relevance": [0] * len(new_documents),
-                "summaries": [""] * len(new_documents),
-                "queries": [question] if not query_history else [],
-                "feedback": "LLM returned empty response",
-                "answer": ""
-            }
-        
-        llm_output = llm_output.strip()
-        
-        # Parse JSON output - handle markdown code blocks
-        if llm_output.startswith("```"):
-            llm_output = llm_output.split("```")[1]
-            if llm_output.startswith("json"):
-                llm_output = llm_output[4:]
+        def format_block(label: str, docs: List[Tuple[str, str]], clipped: List[str]) -> str:
+            if not docs:
+                return f"{label}:\n  (none)"
+            parts = [f"{label}:"]
+            for idx, ((url, _), text) in enumerate(zip(docs, clipped), 1):
+                parts.append(f"[{label.split()[0]} {idx}] {url or 'Unknown source'}")
+                parts.append(text)
+            return "\n".join(parts)
+
+        return format_block("KEPT DOCUMENTS", kept_documents, kept_clipped), format_block("NEW DOCUMENTS", new_documents, new_clipped)
+
+    def format_history_block(items: List[str], label: str, max_items: int) -> str:
+        if not items:
+            return "(none)"
+        trimmed = items[-max_items:]
+        lines = [f"- {item}" for item in trimmed if item]
+        return "\n".join(lines) if lines else "(none)"
+
+    last_error: Optional[Exception] = None
+
+    for attempt in range(max_attempts):
+        kept_section, new_section = build_sections(attempt_limit)
+        context = f"{kept_section}\n\n{new_section}"
+
+        history_text = format_history_block(query_history or [], "History", 10)
+        feedback_text = format_history_block(feedback_history or [], "Feedback", 5)
+
+        print(f"Context: {context}")
+        print(f"History: {history_text}")
+        print(f"Feedback: {feedback_text}")
+
+        prompt = QUERY_REWRITER_PROMPT.format(
+            question=question,
+            context=context,
+            history=history_text,
+            feedback_history=feedback_text,
+            k=max_queries,
+        )
+
+        payload = {
+            "model": model_name,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert at multi-hop reasoning and strategic search. "
+                        "CRITICAL: Never repeat failed queries. "
+                        "Always try meaningfully different queries, names, representations. "
+                        "Focus on atomic facts and progressive strategies."
+                    ),
+                },
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.1,
+            "max_tokens": output_token_limit,
+        }
+
+        try:
+            response = requests.post(service_url, json=payload, timeout=60)
+            response.raise_for_status()
+            result = response.json()
+
+            message = result["choices"][0]["message"]
+            llm_output = message.get("content")
+
+            if llm_output is None or not llm_output.strip():
+                print("    Warning: LLM returned empty content")
+                return {
+                    "answer": "",
+                    "queries": [],
+                    "feedback": "LLM returned empty response",
+                    "reasoning": "",
+                }
+
             llm_output = llm_output.strip()
-        
-        result_data = json.loads(llm_output)
-        
-        # Validate format 
-        required_fields = ["relevance"]
-        for field in required_fields:
-            if field not in result_data:
-                print(f"Warning: Missing required field '{field}' in response")
-                result_data[field] = [0] * len(new_documents)
-        
-        # Ensure we have either "answer" OR "queries"+"feedback"
-        if "answer" not in result_data:
-            result_data["answer"] = ""
-        if "queries" not in result_data:
-            result_data["queries"] = []
-        if "feedback" not in result_data:
-            result_data["feedback"] = ""
-        if "summaries" not in result_data:
-            result_data["summaries"] = [""] * len(new_documents)
-        
-        # Ensure relevance array matches NEW document count - fix mismatches by padding/truncating
-        if len(result_data["relevance"]) != len(new_documents):
-            print(f"Warning: Relevance array length mismatch. Expected {len(new_documents)}, got {len(result_data['relevance'])}. Auto-fixing.")
-            relevance = result_data["relevance"][:len(new_documents)]  # Truncate if too long
-            while len(relevance) < len(new_documents):  # Pad with 0s if too short
-                relevance.append(0)
-            result_data["relevance"] = relevance
-            print(f"Fixed relevance array: {relevance}")
-        
-        # Ensure summaries array matches NEW document count - fix mismatches by padding/truncating  
-        if len(result_data["summaries"]) != len(new_documents):
-            print(f"Warning: Summaries array length mismatch. Expected {len(new_documents)}, got {len(result_data['summaries'])}. Auto-fixing.")
-            summaries = result_data["summaries"][:len(new_documents)]  # Truncate if too long
-            while len(summaries) < len(new_documents):  # Pad with empty strings if too short
-                summaries.append("")
-            result_data["summaries"] = summaries
-            print(f"Fixed summaries array length: {len(summaries)}")
-        
-        # Validate that relevant documents have non-empty summaries
-        for i, (rel, summary) in enumerate(zip(result_data["relevance"], result_data["summaries"])):
-            if rel == 1 and not summary.strip():
-                print(f"Warning: Document {i+1} marked relevant but has empty summary. This defeats the summarization purpose.")
-                # Don't auto-fix here - let it be empty to debug the issue
-        
-        # Ensure queries is a list
-        if not isinstance(result_data["queries"], list):
-            result_data["queries"] = []
-        
-        return result_data
-        
-    except requests.exceptions.RequestException as e:
-        print(f"Error calling combined LLM: {e}")
-        return {
-            "relevance": [0] * len(new_documents),
-            "summaries": [""] * len(new_documents),
-            "queries": [question] if not query_history else [],
-            "feedback": f"API error: {str(e)}",
-            "answer": ""
-        }
-    except json.JSONDecodeError as e:
-        print(f"Error parsing LLM output: {e}")
-        print(f"LLM output: {llm_output[:200]}")
-        return {
-            "relevance": [0] * len(new_documents),
-            "summaries": [""] * len(new_documents),
-            "queries": [question] if not query_history else [],
-            "feedback": f"JSON parse error: {str(e)}",
-            "answer": ""
-        }
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        import traceback
-        traceback.print_exc()
-        return {
-            "relevance": [0] * len(new_documents),
-            "summaries": [""] * len(new_documents),
-            "queries": [question] if not query_history else [],
-            "feedback": f"Unexpected error: {str(e)}",
-            "answer": ""
-        }
+
+            if llm_output.startswith("```json"):
+                llm_output = llm_output.replace("```json", "").replace("```", "").strip()
+            elif llm_output.startswith("```"):
+                llm_output = llm_output.split("```", 2)[1].strip()
+                if llm_output.startswith("json"):
+                    llm_output = llm_output[4:].strip()
+
+            result_data = json.loads(llm_output)
+
+            if "answer" not in result_data:
+                result_data["answer"] = ""
+            if "queries" not in result_data or not isinstance(result_data["queries"], list):
+                result_data["queries"] = []
+            if "feedback" not in result_data:
+                result_data["feedback"] = ""
+            if "reasoning" not in result_data:
+                result_data["reasoning"] = ""
+
+            return result_data
+
+        except requests.exceptions.HTTPError as http_err:
+            last_error = http_err
+            if is_token_limit_error(http_err.response, str(http_err)) and attempt < max_attempts - 1:
+                new_limit = int(attempt_limit * retry_factor)
+                attempt_limit = max(min_limit, new_limit)
+                continue
+            return {
+                "answer": "",
+                "queries": [question] if not query_history else [],
+                "feedback": f"API error: {http_err}",
+                "reasoning": "",
+            }
+        except requests.exceptions.RequestException as req_err:
+            last_error = req_err
+            return {
+                "answer": "",
+                "queries": [question] if not query_history else [],
+                "feedback": f"API error: {req_err}",
+                "reasoning": "",
+            }
+        except json.JSONDecodeError as json_err:
+            last_error = json_err
+            print(f"Error parsing LLM output: {json_err}")
+            print(f"LLM output: {llm_output[:200] if 'llm_output' in locals() else ''}")
+            return {
+                "answer": "",
+                "queries": [question] if not query_history else [],
+                "feedback": f"JSON parse error: {json_err}",
+                "reasoning": "",
+            }
+        except Exception as exc:
+            last_error = exc
+            import traceback
+            traceback.print_exc()
+            return {
+                "answer": "",
+                "queries": [question] if not query_history else [],
+                "feedback": f"Unexpected error: {exc}",
+                "reasoning": "",
+            }
+
+    if last_error:
+        raise last_error
+
+    return {
+        "answer": "",
+        "queries": [question] if not query_history else [],
+        "feedback": "Failed to generate response",
+        "reasoning": "",
+    }
 
 
 def query_rewriter_llm(original_query: str, max_queries: int = 3, reasoning_effort: str = "medium",
@@ -437,11 +351,7 @@ Decompose this into at most {max_queries} sub-questions. Return only the JSON ar
     if llm_config:
         model_name = llm_config["model_name"]
         service_url = llm_config["service_url"]
-        max_tokens = llm_config["max_tokens"]
-    else:
-        model_name = "/mnt/weka/data/pytorch/llama3.3/Meta-Llama-3.3-70B-Instruct/"
-        service_url = "http://127.0.0.1:8123/v1/chat/completions"
-        max_tokens = 10240
+        max_tokens = llm_config.get("output_token_limit")
 
     payload = {
         "model": model_name,
@@ -546,6 +456,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
                          verbose: bool = True,
                          reasoning_effort: str = "medium",
                          llm_config: Optional[Dict[str, Any]] = None,
+                         context_char_limit: int = 0,
                          **strategy_params) -> Dict[str, Any]:
     """
     Multi-shot retrieval with iterative query refinement and document evaluation.
@@ -569,6 +480,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         retrieval_strategy: Strategy for retrieval
         verbose: Print detailed information
         reasoning_effort: LLM reasoning level
+    context_char_limit: Maximum characters to keep per document snippet used for LLM context
         **strategy_params: Additional parameters for retrieval strategy
         
     Returns:
@@ -580,7 +492,7 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
     # Track iteration history
     query_history = []
     query_results = []  # Track how many docs each query found
-    kept_docs = []  # List of (url, content, summary) tuples that were marked relevant
+    kept_docs: List[Tuple[str, str]] = []  # Accumulated (url, content) pairs
     new_docs = []   # List of (url, content) tuples just retrieved this iteration
     all_retrieved_urls = set()
     iteration_times = []
@@ -613,9 +525,6 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         if verbose:
             print(f"\n  Evaluating documents and generating queries...")
         
-        # Aggressive summarization: use summaries after iteration 2 to improve information connection
-        total_content_length = sum(len(doc[1]) for doc in kept_docs)
-
         result = query_rewriter(
             original_query, 
             new_documents=new_docs,
@@ -626,16 +535,16 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             query_results=query_results,
             previous_feedback=previous_feedback,
             feedback_history=feedback_history,
-            llm_config=llm_config
+            llm_config=llm_config,
+            context_char_limit=context_char_limit
         )
         
         # Check if we have an answer (sufficient)
-        sufficient = bool(result.get("answer", "").strip())
-        relevance = result["relevance"]  # Only for NEW documents
-        summaries = result.get("summaries", [""] * len(new_docs))  # Summaries for NEW documents
-        sub_queries = result["queries"]
-        current_feedback = result["feedback"]
-        final_answer = result.get("answer", "")
+        answer_text = result.get("answer", "") or ""
+        sufficient = bool(answer_text.strip())
+        sub_queries = result.get("queries", [])
+        current_feedback = result.get("feedback", "")
+        final_answer = answer_text
         reasoning_steps = result.get("reasoning", "")
         
         # Add to feedback history if it's new and meaningful
@@ -648,31 +557,20 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
             print(f"    Sufficient: {'yes' if sufficient else 'no'}")
             print(f"    Kept docs: {len(kept_docs)}")
             if new_docs:
-                print(f"    New docs evaluated: {len(new_docs)}")
-                print(f"    Relevant new docs: {sum(relevance)}/{len(relevance)}")
-                print(f"    Relevance array: {relevance}")
-                # Show summary quality
-                if summaries:
-                    non_empty_summaries = [s for s in summaries if s.strip()]
-                    print(f"    Generated summaries: {len(non_empty_summaries)}/{len(summaries)} non-empty")
-                    for i, summary in enumerate(summaries):
-                        if summary.strip() and relevance[i] == 1:
-                            print(f"      Summary {i+1}: {summary}...")
+                print(f"    New docs available: {len(new_docs)}")
             if reasoning_steps:
                 print(f"    Reasoning: {reasoning_steps[:300]}...")
             if not sufficient:
                 print(f"    Feedback: {previous_feedback}")
                 print(f"    Generated {len(sub_queries)} new queries")
         
-        # Filter NEW documents by relevance and add to kept_docs
+        # Keep all newly retrieved documents for future context
         if new_docs:
-            for i, (url, content) in enumerate(new_docs):
-                if i < len(relevance) and relevance[i] == 1:
-                    summary = summaries[i] if i < len(summaries) and summaries[i] else ""
-                    kept_docs.append((url, content, summary))
-            
+            for url, content in new_docs:
+                kept_docs.append((url, content))
+
             if verbose:
-                print(f"    Added {sum(relevance)} new docs to kept set")
+                print(f"    Added {len(new_docs)} docs to kept set")
                 print(f"    Total kept docs now: {len(kept_docs)}")
         
         # Clear new_docs for next iteration
@@ -785,12 +683,12 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
     total_time = time.perf_counter() - start_time
     
     # Extract URLs from kept_docs
-    retrieved_urls = []
-    for doc in kept_docs:
-        if len(doc) >= 3:
-            retrieved_urls.append(doc[0])  # url is first element
-        elif len(doc) == 2:  # Handle old format for backward compatibility
-            retrieved_urls.append(doc[0])  # url is first element
+    retrieved_urls: List[str] = []
+    seen_urls: Set[str] = set()
+    for url, _ in kept_docs:
+        if url and url not in seen_urls:
+            seen_urls.add(url)
+            retrieved_urls.append(url)
     
     # Limit to top_k_reranking (reranking already done per-subquery)
     retrieved_urls = retrieved_urls[:top_k_reranking]
@@ -810,7 +708,8 @@ def multi_shot_retrieval(rag_db, original_query: str, expected_urls: List[str],
         'avg_iteration_time': sum(iteration_times) / len(iteration_times) if iteration_times else 0
     })
     metrics['retrieved_urls'] = retrieved_urls
-    metrics['final_answer'] = final_answer.strip() if final_answer else ""
+    cleaned_answer = final_answer.strip() if isinstance(final_answer, str) else str(final_answer)
+    metrics['final_answer'] = cleaned_answer if cleaned_answer else "Unknown"
     
     # Print final results
     if verbose:
@@ -856,6 +755,7 @@ def run_multi_shot_evaluation(
     difficulty: int = 0,
     max_iterations: int = 5,
     llm_config: Optional[Dict[str, Any]] = None,
+    context_char_limit: int = 0,
     result_handler: Optional[Callable[[str, Dict[str, Any]], None]] = None,
     **strategy_params,
 ) -> Dict[str, float]:
@@ -875,6 +775,7 @@ def run_multi_shot_evaluation(
         detailed_analysis: Enable detailed complexity-based analysis
         difficulty: Minimum number of answer links required (0 = no filtering)
         max_iterations: Maximum iterations for iterative retrieval (default: 10)
+    context_char_limit: Maximum characters to keep per document snippet used for LLM context
         **strategy_params: Additional parameters for retrieval strategy
         
         Optional result_handler: callable receiving (prompt, metrics) per query
@@ -937,6 +838,7 @@ def run_multi_shot_evaluation(
                 verbose=True,
                 reasoning_effort=reasoning_effort,
                 llm_config=llm_config,
+                context_char_limit=context_char_limit,
                 **strategy_params
             )
             if result_handler:
@@ -971,7 +873,7 @@ def run_multi_shot_evaluation(
         print(f"  Mean Average Precision:     {avg_metrics.get('average_precision', 0.0):.3f}")
         print(f"\nRETRIEVAL STATISTICS:")
         print(f"  Avg Sub-queries:            {avg_metrics.get('num_sub_queries', 0.0):.1f}")
-        print(f"  Avg Passages Retrieved:     {avg_metrics.get('retrieved_passages_count', 0.0):.1f}")
+        print(f"  Avg Passages Retrieved:     {avg_metrics.get('retrieval_time', 0.0):.1f}")
         print(f"  Avg Unique Docs (N):        {avg_metrics.get('retrieved_docs_count', 0.0):.1f}")
         print(f"\nTIMING:")
         print(f"  Avg Decomposition Time:     {avg_metrics.get('decomposition_time', 0.0)*1000:.1f}ms")
@@ -1019,10 +921,19 @@ if __name__ == "__main__":
     
     # Set deterministic seeds
     set_deterministic_seeds(args.seed)
+
+    context_token_limit = args.llm_context_token_limit 
+    chars_per_token = args.llm_chars_per_token 
+    context_char_limit = int(context_token_limit * chars_per_token)
     
     # Setup LLM configuration with auto-detection
     llm_config = setup_llm_config(args)
+    if llm_config:
+        context_token_limit = llm_config.get("context_token_limit", context_token_limit)
+        chars_per_token = llm_config.get("chars_per_token", chars_per_token)
+        context_char_limit = llm_config.get("context_char_limit", context_char_limit)
     print(f"LLM Config: {llm_config}")
+    print(f"Context limits -> tokens: {context_token_limit}, chars: {context_char_limit}, chars/token: {chars_per_token}")
     
     # Setup device-specific environment
     device_config = get_device_config()
@@ -1069,7 +980,7 @@ if __name__ == "__main__":
         strategy_params["p"] = args.top_p
     elif args.retrieval_strategy == "relative":
         strategy_params["ratio"] = args.relative_ratio
-    
+
     # Run evaluation or single query
     if args.eval:
         max_queries = args.eval if isinstance(args.eval, int) and not isinstance(args.eval, bool) and args.eval > 0 else None
@@ -1104,6 +1015,7 @@ if __name__ == "__main__":
             difficulty=args.difficulty,
             max_iterations=args.max_iterations,
             llm_config=llm_config,
+            context_char_limit=context_char_limit,
             result_handler=handle_result if (args.generate_answer or args.save_results) else None,
             **strategy_params
         )
@@ -1145,5 +1057,6 @@ if __name__ == "__main__":
             verbose=True,
             reasoning_effort=args.reasoning,
             llm_config=llm_config,
+            context_char_limit=context_char_limit,
             **strategy_params
         )

@@ -11,6 +11,18 @@ from pathlib import Path
 from typing import Dict, Optional, Union, Any
 
 
+DEFAULT_CHARS_PER_TOKEN = 4.0
+TOKEN_LIMIT_ERROR_PATTERNS = (
+    "max context length",
+    "maximum context length",
+    "context length exceeded",
+    "token limit",
+    "too many tokens",
+    "request too large",
+    "context window",
+)
+
+
 
 def load_url_mapping(directory: str) -> Dict[str, str]:
     """Load URL mapping from url_mapping.json in specified directory."""
@@ -194,29 +206,77 @@ def get_device_config():
 
 def setup_llm_config(args):
     """Setup LLM configuration with auto-detection."""
-    # Resolve device
     device = resolve_config_value(args.device, detect_device)
-    
-    # Resolve model name
+
     model_name = resolve_config_value(
-        args.llm_model, 
-        get_model_name_from_service, 
-        args.llm_service_url
+        args.llm_model,
+        get_model_name_from_service,
+        args.llm_service_url,
     )
-    
-    # Resolve max tokens
-    if isinstance(args.max_tokens, str):
-        max_tokens = resolve_config_value(
-            args.max_tokens,
+
+    output_token_limit = args.llm_output_token_limit
+    if isinstance(output_token_limit, str):
+        output_token_limit = resolve_config_value(
+            output_token_limit,
             get_max_tokens_from_service,
-            args.llm_service_url
+            args.llm_service_url,
         )
-    else:
-        max_tokens = args.max_tokens
-    
+
+    if isinstance(output_token_limit, str):
+        try:
+            output_token_limit = int(output_token_limit)
+        except ValueError:
+            output_token_limit = get_max_tokens_from_service(args.llm_service_url)
+
+    context_token_limit = args.llm_context_token_limit
+    if isinstance(context_token_limit, str):
+        try:
+            context_token_limit = int(context_token_limit)
+        except ValueError:
+            context_token_limit = get_max_tokens_from_service(args.llm_service_url)
+
+    chars_per_token = args.llm_chars_per_token
+    if not isinstance(chars_per_token, (int, float)) or chars_per_token <= 0:
+        chars_per_token = DEFAULT_CHARS_PER_TOKEN
+
+    context_char_limit = int(context_token_limit * chars_per_token) if context_token_limit and context_token_limit > 0 else 0
+
     return {
         "service_url": args.llm_service_url,
         "model_name": model_name,
-        "max_tokens": max_tokens,
-        "device": device
+        "output_token_limit": output_token_limit,
+        "context_token_limit": context_token_limit,
+        "context_char_limit": context_char_limit,
+        "chars_per_token": chars_per_token,
+        "device": device,
     }
+
+
+def is_token_limit_error(response: Optional[requests.Response] = None, message: Optional[str] = None) -> bool:
+    candidates = []
+    if response is not None:
+        try:
+            data = response.json()
+            if isinstance(data, dict):
+                if "error" in data and isinstance(data["error"], dict):
+                    candidates.append(str(data["error"].get("message", "")))
+                elif "message" in data:
+                    candidates.append(str(data.get("message", "")))
+        except ValueError:
+            pass
+        candidates.append(response.text or "")
+        status_code = response.status_code
+    else:
+        status_code = None
+
+    if message:
+        candidates.append(message)
+
+    combined = " ".join(filter(None, candidates)).lower()
+    if not combined:
+        return False
+
+    if status_code in {400, 401, 403, 413, 422}:
+        return any(pattern in combined for pattern in TOKEN_LIMIT_ERROR_PATTERNS)
+
+    return any(pattern in combined for pattern in TOKEN_LIMIT_ERROR_PATTERNS)

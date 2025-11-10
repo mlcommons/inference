@@ -64,8 +64,13 @@ pip install multimodal/vl2l/
 
 For developers, install `mlperf-inf-mm-vl2l` and the development tools with:
 
+- On Bash
 ```bash
 pip install multimodal/vl2l/[dev]
+```
+- On Zsh
+```zsh
+pip install multimodal/vl2l/"[dev]"
 ```
 
 After installation, you can check the CLI flags that `mlperf-inf-mm-vl2l` can take with:

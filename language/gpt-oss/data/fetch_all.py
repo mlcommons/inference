@@ -5,9 +5,18 @@ import argparse
 import os
 import json
 
-parser = argparse.ArgumentParser(description="Fetch and combine AIME, GPQA, and LiveCodeBench datasets")
-parser.add_argument("--output_path", type=str, default="./combined_dataset.pkl", help="Full path to output pickle file")
-parser.add_argument("--lcb_folder", type=str, default="lcb", help="Folder containing LiveCodeBench repo cloned from HuggingFace")
+parser = argparse.ArgumentParser(
+    description="Fetch and combine AIME, GPQA, and LiveCodeBench datasets")
+parser.add_argument(
+    "--output_path",
+    type=str,
+    default="./combined_dataset.pkl",
+    help="Full path to output pickle file")
+parser.add_argument(
+    "--lcb_folder",
+    type=str,
+    default="lcb",
+    help="Folder containing LiveCodeBench repo cloned from HuggingFace")
 args = parser.parse_args()
 
 # Ensure output folder exists
@@ -63,16 +72,16 @@ df_gpqa = ds_diamond['train'].to_pandas()
 
 # df = pd.concat([df_diamond, df_main, df_extended], ignore_index=True)
 df_gpqa = df_gpqa[['Question',
-                    'Correct Answer',
-                    'High-level domain',
-                    'Incorrect Answer 1',
-                    'Incorrect Answer 2',
-                    'Incorrect Answer 3']].copy()
+                   'Correct Answer',
+                   'High-level domain',
+                   'Incorrect Answer 1',
+                   'Incorrect Answer 2',
+                   'Incorrect Answer 3']].copy()
 
 # Format questions with multiple choice options
 for idx, row in df_gpqa.iterrows():
     options = [str(row[col]) for col in ['Incorrect Answer 1',
-                                          'Incorrect Answer 2', 'Incorrect Answer 3']]
+                                         'Incorrect Answer 2', 'Incorrect Answer 3']]
     options.append(str(row['Correct Answer']))
     random.shuffle(options)
     answer_idx = options.index(str(row['Correct Answer']))
@@ -147,7 +156,7 @@ for idx, row in df_lcb.iterrows():
     starter_prompt_filled = starter_prompt.replace(
         '<<starter_code>>', starter_code)
     df_lcb.loc[idx, 'question'] = df_lcb.loc[idx,
-                                              'question_content'] + starter_prompt_filled
+                                             'question_content'] + starter_prompt_filled
 
 df_lcb.rename(columns={'question_id': 'ground_truth'}, inplace=True)
 
@@ -175,4 +184,3 @@ df_combined.to_pickle(args.output_path)
 
 print(f"\n✓ Combined dataset saved to: {args.output_path}")
 print("=" * 80)
-

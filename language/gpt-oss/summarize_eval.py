@@ -32,7 +32,8 @@ def detect_pass_k(df: pd.DataFrame) -> int:
     return pass_k
 
 
-def calculate_dataset_stats(df: pd.DataFrame, dataset_name: str, pass_num: int = None, pass_k: int = 1) -> Dict[str, Any]:
+def calculate_dataset_stats(df: pd.DataFrame, dataset_name: str,
+                            pass_num: int = None, pass_k: int = 1) -> Dict[str, Any]:
     """Calculate statistics for a specific dataset and pass.
 
     Args:
@@ -46,16 +47,19 @@ def calculate_dataset_stats(df: pd.DataFrame, dataset_name: str, pass_num: int =
     """
     # Filter to this dataset
     dataset_df = df[df['dataset'] == dataset_name]
-    
+
     # Determine column suffixes
     if pass_num is None:
         # Aggregated results
         accuracy_col = 'prompt_accuracy' if 'prompt_accuracy' in dataset_df.columns else 'prompt_accuracy_0'
-        
-        # For aggregated pass@k, count answered as any sample with at least one extracted answer
+
+        # For aggregated pass@k, count answered as any sample with at least one
+        # extracted answer
         if pass_k > 1:
             # Check if any pass has an extracted answer
-            answered_mask = pd.Series([False] * len(dataset_df), index=dataset_df.index)
+            answered_mask = pd.Series(
+                [False] * len(dataset_df),
+                index=dataset_df.index)
             for i in range(pass_k):
                 col = f'extracted_answer_{i}'
                 if col in dataset_df.columns:
@@ -70,20 +74,20 @@ def calculate_dataset_stats(df: pd.DataFrame, dataset_name: str, pass_num: int =
         extracted_col = f'extracted_answer{suffix}'
         accuracy_col = f'prompt_accuracy{suffix}'
         answered = dataset_df[extracted_col].notna().sum()
-    
+
     # Calculate statistics
     total = len(dataset_df)
     correct = (dataset_df[accuracy_col] > 0).sum()
-    
+
     # Calculate percentage (correct / total)
     if total > 0:
         pct_correct = (correct / total) * 100
     else:
         pct_correct = 0.0
-    
+
     # Calculate mean accuracy (handles HealthBench partial scores)
     mean_accuracy = dataset_df[accuracy_col].mean()
-    
+
     return {
         'dataset': dataset_name,
         'total': int(total),
@@ -94,7 +98,8 @@ def calculate_dataset_stats(df: pd.DataFrame, dataset_name: str, pass_num: int =
     }
 
 
-def print_summary_table(stats_list: List[Dict[str, Any]], title: str = "Summary"):
+def print_summary_table(
+        stats_list: List[Dict[str, Any]], title: str = "Summary"):
     """Print a formatted summary table.
 
     Args:
@@ -106,27 +111,31 @@ def print_summary_table(stats_list: List[Dict[str, Any]], title: str = "Summary"
     print('=' * 85)
     print(f"{'Dataset':<20} {'Total':>8} {'Answered':>10} {'Correct':>10} {'Accuracy':>12}")
     print('-' * 85)
-    
+
     for stats in stats_list:
         dataset_name = stats['dataset']
         total = stats['total']
         answered = stats['answered']
         correct = stats['correct']
         pct_correct = stats['pct_correct']
-        
+
         # Format the row
-        print(f"{dataset_name:<20} {total:>8} {answered:>10} {correct:>10} {pct_correct:>11.2f}%")
-    
+        print(
+            f"{dataset_name:<20} {total:>8} {answered:>10} {correct:>10} {pct_correct:>11.2f}%")
+
     # Print totals
     if len(stats_list) > 1:
         total_samples = sum(s['total'] for s in stats_list)
         total_answered = sum(s['answered'] for s in stats_list)
         total_correct = sum(s['correct'] for s in stats_list)
-        overall_pct = (total_correct / total_samples * 100) if total_samples > 0 else 0.0
-        
+        overall_pct = (
+            total_correct /
+            total_samples *
+            100) if total_samples > 0 else 0.0
+
         print('-' * 85)
         print(f"{'OVERALL':<20} {total_samples:>8} {total_answered:>10} {total_correct:>10} {overall_pct:>11.2f}%")
-    
+
     print('=' * 85)
 
 
@@ -140,45 +149,51 @@ def summarize_evaluation(pickle_path: str):
     print(f"Loading evaluation results from: {pickle_path}")
     with open(pickle_path, 'rb') as f:
         df = pickle.load(f)
-    
+
     print(f"Loaded {len(df)} samples")
-    
+
     # Detect pass@k format
     pass_k = detect_pass_k(df)
-    print(f"Detected format: pass@{pass_k}" if pass_k > 1 else "Detected format: single-pass")
-    
+    print(f"Detected format: pass@{pass_k}" if pass_k >
+          1 else "Detected format: single-pass")
+
     # Get list of datasets
     datasets = sorted(df['dataset'].unique())
     print(f"Datasets found: {', '.join(datasets)}")
-    
+
     # Calculate statistics for each dataset
     if pass_k > 1:
         # Show per-pass statistics
         for pass_num in range(pass_k):
             stats_list = []
             for dataset in datasets:
-                stats = calculate_dataset_stats(df, dataset, pass_num=pass_num, pass_k=pass_k)
+                stats = calculate_dataset_stats(
+                    df, dataset, pass_num=pass_num, pass_k=pass_k)
                 stats_list.append(stats)
-            
+
             print_summary_table(stats_list, title=f"Pass {pass_num} Results")
-        
+
         # Show aggregated (pass@k) statistics
         print("\n")
         stats_list = []
         for dataset in datasets:
-            stats = calculate_dataset_stats(df, dataset, pass_num=None, pass_k=pass_k)
+            stats = calculate_dataset_stats(
+                df, dataset, pass_num=None, pass_k=pass_k)
             stats_list.append(stats)
-        
-        print_summary_table(stats_list, title=f"Aggregated Pass@{pass_k} Results (Max Across Passes)")
+
+        print_summary_table(
+            stats_list,
+            title=f"Aggregated Pass@{pass_k} Results (Max Across Passes)")
     else:
         # Single pass - just show the results
         stats_list = []
         for dataset in datasets:
-            stats = calculate_dataset_stats(df, dataset, pass_num=None, pass_k=pass_k)
+            stats = calculate_dataset_stats(
+                df, dataset, pass_num=None, pass_k=pass_k)
             stats_list.append(stats)
-        
+
         print_summary_table(stats_list, title="Evaluation Results")
-    
+
     # Print column information for reference
     print("\nColumn Information:")
     print(f"  - Total: Total number of samples in the dataset")
@@ -188,36 +203,41 @@ def summarize_evaluation(pickle_path: str):
         print(f"  - Answered: Number of samples with extracted answers")
     print(f"  - Correct: Number of correct answers (accuracy > 0)")
     print(f"  - Accuracy: Percentage of total samples that were correct (correct / total)")
-    
+
     if pass_k > 1:
         print(f"\nPass@{pass_k} Note:")
         print(f"  - Per-pass results show individual pass performance")
-        print(f"  - Aggregated results show the maximum accuracy achieved across all {pass_k} passes")
-        print(f"  - A sample is considered correct if ANY of the {pass_k} attempts were correct")
-        print(f"  - A sample is considered answered if ANY of the {pass_k} attempts extracted an answer")
+        print(
+            f"  - Aggregated results show the maximum accuracy achieved across all {pass_k} passes")
+        print(
+            f"  - A sample is considered correct if ANY of the {pass_k} attempts were correct")
+        print(
+            f"  - A sample is considered answered if ANY of the {pass_k} attempts extracted an answer")
 
 
 def main():
     parser = argparse.ArgumentParser(
         description="Summarize evaluation results by dataset")
-    parser.add_argument("input_file", 
+    parser.add_argument("input_file",
                         help="Path to evaluated pickle file from eval_accuracy.py")
     parser.add_argument("--json", action="store_true",
                         help="Output results in JSON format (for programmatic use)")
-    
+
     args = parser.parse_args()
-    
+
     # Check if input file exists
     if not Path(args.input_file).exists():
-        print(f"Error: Input file not found: {args.input_file}", file=sys.stderr)
+        print(
+            f"Error: Input file not found: {args.input_file}",
+            file=sys.stderr)
         sys.exit(1)
-    
+
     # Check if file has _evaluated suffix (warn if not)
     if "_evaluated" not in args.input_file:
         print(f"Warning: Input file does not contain '_evaluated' suffix. "
-              f"Make sure this is an evaluated pickle file from eval_accuracy.py", 
+              f"Make sure this is an evaluated pickle file from eval_accuracy.py",
               file=sys.stderr)
-    
+
     try:
         summarize_evaluation(args.input_file)
     except Exception as e:
@@ -229,4 +249,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

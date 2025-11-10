@@ -52,12 +52,14 @@ class SGLangClient:
                  server_url: str = "http://localhost:30000",
                  temperature: float = 0.001,
                  top_k: int = 1,
+                 top_p: float = 1.0,
                  timeout: int = 1200
                  ):
         self.base_url = server_url
         self.session = requests.Session()
         self.temperature = temperature
         self.top_k = top_k
+        self.top_p = top_p
         self.timeout = timeout
 
     def send_request(
@@ -70,6 +72,7 @@ class SGLangClient:
                 "max_new_tokens": max_tokens,
                 "temperature": self.temperature,
                 "top_k": self.top_k,
+                "top_p": self.top_p,
             }
         }
 
@@ -128,13 +131,14 @@ def load_tokenized_data(data_file: str) -> pd.DataFrame:
 
 def send_single_request(args_tuple):
     """Send a single request - used by multiprocessing pool."""
-    input_ids, max_tokens, server_url, sample_id, pass_num, temperature, top_k, timeout = args_tuple
+    input_ids, max_tokens, server_url, sample_id, pass_num, temperature, top_k, top_p, timeout = args_tuple
 
     # Create a new client for this process
     client = SGLangClient(
         server_url=server_url,
         temperature=temperature,
         top_k=top_k,
+        top_p=top_p,
         timeout=timeout)
 
     try:
@@ -151,7 +155,7 @@ def send_single_request(args_tuple):
 
 
 def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
-                           max_tokens: int = 100, max_concurrency: int = 128, temperature: float = 0.001, top_k: int = 1, timeout: int = 1200,
+                           max_tokens: int = 100, max_concurrency: int = 128, temperature: float = 0.001, top_k: int = 1, top_p: float = 1.0, timeout: int = 1200,
                            pass_k: int = 1):
     """Send all requests to SGLang server in parallel using multiprocessing.
 
@@ -172,7 +176,7 @@ def send_requests_parallel(tokenized_df: pd.DataFrame, server_url: str,
         for pass_num in range(pass_k):
             args_list.append((
                 row['tok_input'], max_tokens, server_url,
-                idx, pass_num, temperature, top_k, timeout
+                idx, pass_num, temperature, top_k, top_p, timeout
             ))
 
     start_time = time.time()
@@ -363,7 +367,7 @@ def save_responses(responses_by_pass: Dict[tuple, Dict[str, Any]],
 
 def process_requests(tokenized_df: pd.DataFrame, server_url: str,
                      max_samples: int = None, max_tokens: int = 100,
-                     max_concurrency: int = 128, output_file: str = None, temperature: float = 0.001, top_k: int = 1,
+                     max_concurrency: int = 128, output_file: str = None, temperature: float = 0.001, top_k: int = 1, top_p: float = 1.0,
                      timeout: int = 1200, pass_k: int = 1) -> pd.DataFrame:
     """Main processing function that handles requests and response extraction.
 
@@ -384,6 +388,7 @@ def process_requests(tokenized_df: pd.DataFrame, server_url: str,
         max_concurrency,
         temperature,
         top_k,
+        top_p,
         timeout,
         pass_k)
 
@@ -429,6 +434,8 @@ def main():
                         help="Temperature for sampling (default: 0.001)")
     parser.add_argument("--top-k", type=int, default=1,
                         help="Top-k for sampling (default: 1)")
+    parser.add_argument("--top-p", type=float, default=1.0,
+                        help="Top-p for sampling (default: 1.0)")
     parser.add_argument("--timeout", type=int, default=1200,
                         help="Timeout for requests (default: 1200)")
 
@@ -440,6 +447,7 @@ def main():
         server_url=args.server_url,
         temperature=args.temperature,
         top_k=args.top_k,
+        top_p=args.top_p,
         timeout=args.timeout)
 
     test_response = test_client.send_request(input_ids=[1, 2, 3], max_tokens=5)
@@ -462,6 +470,7 @@ def main():
                                  output_file=args.output,
                                  temperature=args.temperature,
                                  top_k=args.top_k,
+                                 top_p=args.top_p,
                                  timeout=args.timeout,
                                  pass_k=args.pass_k)
 

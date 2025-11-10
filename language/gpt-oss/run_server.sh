@@ -1,5 +1,7 @@
 #!/bin/bash
 
+pip install -r requirements.txt
+
 dp=1
 model_path=openai/gpt-oss-120b
 eagle_path=""

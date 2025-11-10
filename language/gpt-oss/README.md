@@ -6,108 +6,43 @@ This is the reference implementation for GPT-OSS-120B. This is a proposal and is
 * Model: `openai/gpt-oss-120b`, commit id: [`b5c939d`](https://huggingface.co/openai/gpt-oss-120b/tree/b5c939de8f754692c1647ca79fbf85e8c1e70f8a)
 * Dataset: For now, we are re-using the `deepseek-r1` dataset.
 
-## Preprocessing considerations
-* For all other LLMs in MLPerf, tokenization has not been part of the benchmark and has been assumed a static preprocessing step
-* With the introduction of OpenAI's [harmony format](https://github.com/openai/harmony/tree/main) - the format must be agreed upon for consistent benchmarking. 
-* Knobs:
-  - reasoning_effort: HIGH
+## Environment setup
+Work on reference implementation is done using the sglang container `lmsysorg/sglang:v0.5.4.post2`. For enroot setup, a script is provided under [`setup_enroot.sh`](./setup_enroot.sh). For all sections below, we shall assume this environment is instantiated.
 
-An input to the `gpt-oss` model is first formatted into a `conversation` - an ordered list of messages.
-Each message has:
-* `role`: The sender of the message
-* `content`
-* `channel`: (choices `final/analysis/commentary`, we use `final` only in prompts)
-
-
-### Preamble:
-Each converstation starts with a message from `System` and `Developer` respectively.
-```json
- "messages": [
-    {
-      "role": "system",
-      "content": "model_identity=' ... 
-        reasoning_effort=<ReasoningEffort.HIGH: 'High'>
-        channel_config=ChannelConfig(
-          valid_channels=['analysis', 'commentary', 'final',
-          channel_required=True
-        )
-        tools=None
-        ...."
-    },
-    {
-      "role": "developer",
-      "content": "system_prompt"
-    },
+## Fetch accuracy eval dataset
+To create the accruracy_eval pkl file: 
+```bash
+$ ./preprocess.sh
 ```
 
-### Multi-shot examples
-Some queries may have multi-shot examples. For these, the `User` and `Assistant` roles are assigned.
-```json
-    {
-      "role": "user",
-      "content": "example_question"
-    },
-    {
-      "role": "assistant",
-      "content": "example_answer",
-      "channel": "final"
-    },
-```
-
-### Lastly, user query
-```json
-    {
-      "role": "user",
-      "content": "actual question"
-    }
-```
+This does the following: 
+- clones `https://huggingface.co/datasets/livecodebench/code_generation_lite` under `data/lcb`
+- creates a `data/accuracy_eval_raw.pkl` with `aime1983-2024, gpqa_diamond, lcb-v1_v5` samples.
+- converts the prompt into harmony format, and tokenizes them under `data/accuracy_eval_tokenized.pkl` using `HIGH` reasoning effort. 
+  - This step uses multiprocessing with a default of 32 parallel workers (hardcoded). Please reduce this if you see `pyo3_runtime.PanicException` errors. 
 
 ## Running the reference implementation: SGLang
-[`SGLang`](https://github.com/sgl-project/sglang) is the framework of choice to run the reference implementation.
-
-### Fetch the docker image
-SGLang docker image will be used: `lmsysorg/sglang:v0.5.3rc1`. Steps below are to be run in an environment from this image
-
-### Preprocess the dataset
-```bash
-python3 harmonize_inputs.py \
-    --data-file mlperf_dsr1_fp8_ref_eval.pkl \
-    --num-processes 32 \
-    --output-file out/mlperf_gptoss_inputs.pkl \
-    --reasoning-effort low|medium|high
-```
 
 ### Run the server
 ```bash
-python3 -m sglang.launch_server \
-    --model-path openai/gpt-oss-120b \
-    --host 0.0.0.0 \
-    --port 30000 \
-    --tp-size=1 \
-    --data-parallel-size=$dp \
-    --max-running-requests 256 \
-    --mem-fraction-static 0.85 \
-    --chunked-prefill-size 16384 \
-    --ep-size=1 \
-    --quantization mxfp4 \
-    --stream-interval 50
+./run_server.sh \
+  --model_path path_to_gpt_oss_120b_model \  # optional, defaults to fetching from HF
+  --dp N  # optional, defaults to 1. Set this to number of accelerators
 ```
+The script uses `python3 -m sglang.launch_server` tp instantiate the model, with `tp=pp=ep=1`, and `dp` as specified. 
 
 ### Run the inference
 ```bash
 python3 run_infer.py \
-    --input-tokens out/mlperf_gptoss_inputs.pkl \
-    --max-tokens 20480 \
+    --input-tokens data/accuracy_eval_tokenized.pkl \
+    --max-tokens 32768 \
     --max-concurrency 4096 \
-    --output out/mlperf_gptoss_inferred.pkl
+    --timeout 2400 \
+    --output data/accuracy_eval_inferred.pkl \
+    --pass-k 5
 ```
 
 ### Evaluate the responses
-We use the `deepseek-r1` evaluation environment to evaluate the model responses and calculate accuracy
-
 ```bash
-cd $repo_root/language/deepseek-r1
-./launch_docker.sh --backend sglang
-setup.sh
-(.venv_sglang) $ python3 eval_accuracy.py --input-file mlperf_gptoss_inferred.pkl
+python3 eval_accuracy.py --input-file data/accuracy_eval_inferred.pkl
 ```

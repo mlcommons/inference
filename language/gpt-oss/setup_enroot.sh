@@ -1,8 +1,8 @@
 #!/bin/bash
 
 sqsh_location=$(readlink -f $(dirname $0))/sqsh_files
-sandbox_name=sglang
-docker_image=lmsysorg/sglang:dev-cu13
+sandbox_name=sglang_v0.5.4.post2
+docker_image=lmsysorg/sglang:v0.5.4.post2
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -22,7 +22,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# mkdir -p $sqsh_location
+mkdir -p $sqsh_location
 enroot import -o $sqsh_location/$sandbox_name.sqsh docker://$docker_image
 enroot create --name $sandbox_name $sqsh_location/$sandbox_name.sqsh
 # enroot start --mount $(pwd):$(pwd) --root --rw $sandbox_name

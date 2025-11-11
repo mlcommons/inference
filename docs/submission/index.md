@@ -7,6 +7,17 @@ hide:
 This document provides a step-by-step overview of the **MLPerf Inference submission process**.  
 It is designed for both **new submitters** and those with limited prior experience with MLPerf benchmarking.  
 
+## Table of Contents
+- [1. Prerequisites and Agreements](#1-prerequisites-and-agreements)
+- [2. Overview of MLPerf Inference Benchmarking](#2-overview-of-mlperf-inference-benchmarking)
+- [3. Common Steps in Benchmarking](#3-common-steps-in-benchmarking)
+- [4. Preparing Results for Submission](#4-preparing-results-for-submission)
+- [5. Manual vs Automated Submission](#5-manual-vs-automated-submission)
+- [6. Additional Resources](#6-additional-resources)
+- [7. Troubleshooting]()
+- [8. Support](#7-support)
+- [Notes](#notes)
+
 ---
 
 ## 1. Prerequisites and Agreements
@@ -190,7 +201,11 @@ See [documentation](submission-cli.md) for usage.
 
 ---
 
-## 7. Support
+## 7. Troubleshooting
+
+---
+
+## 8. Support
 
 For questions or clarifications:
 

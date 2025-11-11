@@ -460,7 +460,8 @@ def evaluate_livecodebench_worker(
             with redirect_stdout(devnull), redirect_stderr(devnull):
                 # Also set environment variable to disable tqdm
                 os.environ['TQDM_DISABLE'] = '1'
-                passed, reason = evaluate_livecodebench_detailed(code, question_id)
+                passed, reason = evaluate_livecodebench_detailed(
+                    code, question_id)
                 return question_id, passed, reason
     except Exception as e:
         error_msg = f"Error evaluating {question_id}: {type(e).__name__}: {e}"
@@ -535,7 +536,8 @@ def process_row(row: pd.Series) -> Dict[str, Any]:
     }
 
 
-def process_dataframe(df: pd.DataFrame, num_lcb_workers: int = 64) -> pd.DataFrame:
+def process_dataframe(df: pd.DataFrame,
+                      num_lcb_workers: int = 64) -> pd.DataFrame:
     """Process entire dataframe with optimized batch processing.
 
     Args:

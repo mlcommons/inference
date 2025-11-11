@@ -588,7 +588,8 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                                                 desc="Processing datasets"):
             evaluator = get_evaluator(dataset_name)
 
-            # For LiveCodeBench, always use batched evaluation across all passes
+            # For LiveCodeBench, always use batched evaluation across all
+            # passes
             is_livecodebench = 'livecodebench' in dataset_name.lower()
             if is_livecodebench:
                 # Validate prerequisites for batched LCB evaluation
@@ -596,7 +597,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                     raise RuntimeError(
                         "LiveCodeBench evaluation requires a shared executor, but it was not initialized. "
                         "This may indicate the LiveCodeBench benchmark failed to load.")
-                
+
                 # Parse all passes first
                 logger.info(
                     f"Parsing {len(group_indices)} rows for dataset '{dataset_name}' across {pass_k} passes")

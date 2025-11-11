@@ -106,7 +106,7 @@ class TRTLLMClient:
                 ),
                 http2=True
             )
-            
+
             # Setup OpenAI client with the configured HTTP client
             async_client = AsyncOpenAI(
                 api_key='dummy',  # TensorRT-LLM server doesn't require real API key
@@ -115,7 +115,7 @@ class TRTLLMClient:
                 max_retries=10,
                 http_client=http_client,
             )
-            
+
             self.http_clients.append(http_client)
             self.async_clients.append(async_client)
         
@@ -137,11 +137,20 @@ class TRTLLMClient:
             max_tokens: Maximum tokens to generate
             sample_id: Sample identifier
             pass_num: Pass number for pass@k strategy
-            
+
         Returns:
             Tuple of (sample_id, pass_num, response, latency)
         """
         # Prepare generation parameters using OpenAI completions format (as per TensorRT-LLM docs)
+        extra_body = {
+            # TensorRT-LLM specific parameters
+            "min_tokens": 1,
+        }
+
+        # Only include top_k if it's not 0 (so it can default to None on server side)
+        if self.top_k != 0:
+            extra_body["top_k"] = self.top_k
+
         gen_params = {
             "model": self.model_name,
             "prompt": prompt,
@@ -149,34 +158,30 @@ class TRTLLMClient:
             "temperature": self.temperature,
             "top_p": self.top_p,
             "stream": False,
-            "extra_body": {
-                # TensorRT-LLM specific parameters
-                "min_tokens": 1,
-                "top_k": self.top_k,
-            },
+            "extra_body": extra_body,
         }
-        
+
         try:
             # Track latency: time from request sent to response received
             start_time = time.time()
-            
+
             # Select client using round-robin
             client = self._get_next_client()
-            
+
             # Use semaphore for concurrency control
             async with self.concurrency_semaphore:
                 completion = await client.completions.create(**gen_params)
-            
+
             end_time = time.time()
             latency = end_time - start_time
-            
+
             # Extract response text from completions format
             response_text = completion.choices[0].text
-            
+
             # Tokenize the response to get output_ids (similar to SGLang format)
             tokenizer = get_tokenizer()
             output_ids = tokenizer.encode(response_text, add_special_tokens=False)
-            
+
             # Format response similar to SGLang format for compatibility
             response = {
                 "output_ids": output_ids,
@@ -185,9 +190,9 @@ class TRTLLMClient:
                     "completion_tokens": len(output_ids),
                 }
             }
-            
+
             return sample_id, pass_num, response, latency
-            
+
         except Exception as e:
             logger.error(f"Request {sample_id} (pass {pass_num}) failed: {e}")
             return sample_id, pass_num, {"error": str(e)}, None
@@ -419,7 +424,7 @@ def save_responses(responses_by_pass: Dict[tuple, Dict[str, Any]],
             detokenized_text = detokenized_texts_by_pass.get(key, "")
             response_ids = response_ids_by_pass.get(key, [])
             latency = latencies_by_pass.get(key, None)
-            
+
             model_outputs.append(detokenized_text)
             tok_model_outputs.append(response_ids)
             tok_model_output_lens.append(len(response_ids))

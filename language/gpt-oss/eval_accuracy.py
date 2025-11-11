@@ -30,6 +30,7 @@ from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError
 import multiprocessing
 from pathlib import Path
+from contextlib import redirect_stdout, redirect_stderr
 
 # MLPerf log processing imports
 import numpy as np
@@ -387,7 +388,7 @@ def evaluate_livecodebench_detailed(
             scenario=Scenario.codegeneration, release_version="release_v6",
             subset="code_generation", language="python", not_fast=False,
             start_date=None, end_date=None, k=[1], num_samples=1,
-            timeout=20, num_workers=1, num_process_evaluate=1,
+            timeout=60, num_workers=1, num_process_evaluate=1,
             model_name="inline_handler_eval", output_dir=temp_dir,
             prompt_type="custom", continue_existing=False, evaluate=True,
         )
@@ -453,12 +454,17 @@ def evaluate_livecodebench_worker(
     """
     code, question_id = args
 
+    # Suppress all stdout/stderr from worker processes to prevent pollution
     try:
-        passed, reason = evaluate_livecodebench_detailed(code, question_id)
-        return question_id, passed, reason
+        with open(os.devnull, 'w') as devnull:
+            with redirect_stdout(devnull), redirect_stderr(devnull):
+                # Also set environment variable to disable tqdm
+                os.environ['TQDM_DISABLE'] = '1'
+                passed, reason = evaluate_livecodebench_detailed(code, question_id)
+                return question_id, passed, reason
     except Exception as e:
         error_msg = f"Error evaluating {question_id}: {type(e).__name__}: {e}"
-        logger.warning(error_msg)
+        # Don't use logger here as it might output to stdout in worker process
         return question_id, False, error_msg
 
 
@@ -529,8 +535,12 @@ def process_row(row: pd.Series) -> Dict[str, Any]:
     }
 
 
-def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+def process_dataframe(df: pd.DataFrame, num_lcb_workers: int = 64) -> pd.DataFrame:
     """Process entire dataframe with optimized batch processing.
+
+    Args:
+        df: Input DataFrame to evaluate
+        num_lcb_workers: Maximum number of parallel workers for LiveCodeBench evaluation
 
     Supports both single-pass and pass@k formats:
     - Single-pass: model_output -> extracted_answer, prompt_accuracy
@@ -574,7 +584,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
             logger.info("LiveCodeBench benchmark loaded successfully")
 
             # Create a single process pool for all LCB evaluations
-            max_workers = multiprocessing.cpu_count()
+            max_workers = min(multiprocessing.cpu_count(), num_lcb_workers)
             lcb_executor = ProcessPoolExecutor(max_workers=max_workers)
             logger.info(
                 f"Created shared ProcessPoolExecutor with {max_workers} workers for LiveCodeBench")
@@ -635,7 +645,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                 if all_work_items:
                     # Submit all work at once for maximum parallelism
                     max_workers = min(
-                        multiprocessing.cpu_count(), len(all_work_items), 64)
+                        multiprocessing.cpu_count(), len(all_work_items), num_lcb_workers)
                     logger.info(
                         f"Evaluating {len(all_work_items)} LiveCodeBench items across {pass_k} passes with {max_workers} workers")
 
@@ -658,7 +668,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
                         try:
                             question_id, is_correct, detailed_reason = future.result(
-                                timeout=25)
+                                timeout=80)
                             df_output.at[idx,
                                          prompt_accuracy_col] = 100.0 if is_correct else 0.0
                             df_output.at[idx,
@@ -668,7 +678,7 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                                 pass_results[pass_num]['correct'] += 1
                         except TimeoutError:
                             logger.warning(
-                                f"Timeout evaluating row {idx} pass {pass_num}: Test execution exceeded 25s timeout")
+                                f"Timeout evaluating row {idx} pass {pass_num}: Test execution exceeded 80s timeout")
                             df_output.at[idx, prompt_accuracy_col] = 0.0
                             df_output.at[idx,
                                          evaluation_details_col] = "Timeout: Test execution exceeded time limit"
@@ -841,19 +851,21 @@ def print_evaluation_results(df_evaluated: pd.DataFrame,
 
 def process_and_save_dataframe(df: pd.DataFrame,
                                output_dir: Optional[Union[str, Path]] = None,
-                               base_filename: Optional[str] = None) -> Tuple[pd.DataFrame, str]:
+                               base_filename: Optional[str] = None,
+                               num_lcb_workers: int = 64) -> Tuple[pd.DataFrame, str]:
     """Process dataframe for evaluation and save the results.
 
     Args:
         df: Input DataFrame to evaluate
         output_dir: Directory to save the evaluated pickle file (defaults to same dir as source)
         base_filename: Base filename for output (defaults to auto-generated)
+        num_lcb_workers: Maximum number of parallel workers for LiveCodeBench evaluation
 
     Returns:
         Tuple of (evaluated_dataframe, saved_file_path)
     """
     # Process the dataframe
-    df_evaluated = process_dataframe(df)
+    df_evaluated = process_dataframe(df, num_lcb_workers=num_lcb_workers)
 
     # Determine output path
     if output_dir is None:
@@ -927,6 +939,8 @@ def main():
                         help="Input file (pickle DataFrame or MLPerf JSON log)")
     parser.add_argument(
         "--output-file", help="Output pickle file (defaults to <input-file>_evaluated.pkl)")
+    parser.add_argument("--num-lcb-workers", type=int, default=64,
+                        help="Maximum number of parallel workers for LiveCodeBench evaluation (default: 64)")
     parser.add_argument("--verbose", action="store_true",
                         help="Verbose logging")
 
@@ -968,7 +982,8 @@ def main():
     df_evaluated, saved_file_path = process_and_save_dataframe(
         df,
         output_dir=output_dir,
-        base_filename=output_filename
+        base_filename=output_filename,
+        num_lcb_workers=args.num_lcb_workers
     )
 
     # Print evaluation results with unified function

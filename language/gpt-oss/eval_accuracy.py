@@ -1382,7 +1382,8 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
 
                 if all_work_items:
                     # Submit all work at once for maximum parallelism
-                    max_workers = min(multiprocessing.cpu_count(), len(all_work_items), 64)
+                    max_workers = min(
+                        multiprocessing.cpu_count(), len(all_work_items), 64)
                     logger.info(
                         f"Evaluating {len(all_work_items)} LiveCodeBench items across {pass_k} passes with {max_workers} workers")
 
@@ -1392,19 +1393,23 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                     }
 
                     # Collect results and assign to appropriate pass columns
-                    pass_results = {i: {'correct': 0, 'total': 0} for i in range(pass_k)}
-                    
+                    pass_results = {i: {'correct': 0, 'total': 0}
+                                    for i in range(pass_k)}
+
                     for future in tqdm(as_completed(future_to_metadata, timeout=1200),
-                                       total=len(future_to_metadata), 
+                                       total=len(future_to_metadata),
                                        desc=f"Evaluating LiveCodeBench (all passes)"):
                         idx, pass_num = future_to_metadata[future]
                         prompt_accuracy_col = f'prompt_accuracy_{pass_num}'
                         evaluation_details_col = f'evaluation_details_{pass_num}'
 
                         try:
-                            question_id, is_correct, detailed_reason = future.result(timeout=25)
-                            df_output.at[idx, prompt_accuracy_col] = 100.0 if is_correct else 0.0
-                            df_output.at[idx, evaluation_details_col] = detailed_reason
+                            question_id, is_correct, detailed_reason = future.result(
+                                timeout=25)
+                            df_output.at[idx,
+                                         prompt_accuracy_col] = 100.0 if is_correct else 0.0
+                            df_output.at[idx,
+                                         evaluation_details_col] = detailed_reason
                             pass_results[pass_num]['total'] += 1
                             if is_correct:
                                 pass_results[pass_num]['correct'] += 1
@@ -1412,13 +1417,15 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                             logger.warning(
                                 f"Timeout evaluating row {idx} pass {pass_num}: Test execution exceeded 25s timeout")
                             df_output.at[idx, prompt_accuracy_col] = 0.0
-                            df_output.at[idx, evaluation_details_col] = "Timeout: Test execution exceeded time limit"
+                            df_output.at[idx,
+                                         evaluation_details_col] = "Timeout: Test execution exceeded time limit"
                             pass_results[pass_num]['total'] += 1
                         except Exception as e:
                             logger.error(
                                 f"Error evaluating row {idx} pass {pass_num}: {e}")
                             df_output.at[idx, prompt_accuracy_col] = 0.0
-                            df_output.at[idx, evaluation_details_col] = f"Error: {e}"
+                            df_output.at[idx,
+                                         evaluation_details_col] = f"Error: {e}"
                             pass_results[pass_num]['total'] += 1
 
                     # Log results for each pass
@@ -1431,7 +1438,8 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                                 f"{dataset_name} pass {pass_num} results: {correct}/{total} correct ({accuracy:.1f}% accuracy)")
 
             else:
-                # Original sequential pass processing for non-LCB or single-pass LCB
+                # Original sequential pass processing for non-LCB or
+                # single-pass LCB
                 for pass_num in range(pass_k):
                     suffix = f'_{pass_num}' if pass_k > 1 else ''
                     model_output_col = f'model_output{suffix}'
@@ -1490,8 +1498,10 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                         # Store results for this pass
                         for idx, (score, explanation) in results.items():
                             # Store score as percentage (0-100)
-                            df_output.at[idx, prompt_accuracy_col] = score * 100.0
-                            df_output.at[idx, evaluation_details_col] = explanation
+                            df_output.at[idx,
+                                         prompt_accuracy_col] = score * 100.0
+                            df_output.at[idx,
+                                         evaluation_details_col] = explanation
                             total_evaluated += 1
                             total_score += score
                     else:
@@ -1504,7 +1514,8 @@ def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
                             extracted = row[extracted_answer_col]
                             ground_truth = row.get('ground_truth')
 
-                            if extracted is not None and not pd.isna(ground_truth):
+                            if extracted is not None and not pd.isna(
+                                    ground_truth):
                                 is_correct = evaluator['evaluate'](
                                     extracted, ground_truth)
                                 df_output.at[idx,

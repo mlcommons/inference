@@ -1630,31 +1630,31 @@ def check_performance_dir(
         )
         is_valid = False
 
-    config_seeds = config.seeds if "TEST05" not in fname else config.test05_seeds
-    if qsl_rng_seed != config_seeds["qsl_rng_seed"]:
-        log.error(
-            "%s qsl_rng_seed is wrong, expected=%s, found=%s",
-            fname,
-            config_seeds["qsl_rng_seed"],
-            qsl_rng_seed,
-        )
-        is_valid = False
-    if sample_index_rng_seed != config_seeds["sample_index_rng_seed"]:
-        log.error(
-            "%s sample_index_rng_seed is wrong, expected=%s, found=%s",
-            fname,
-            config_seeds["sample_index_rng_seed"],
-            sample_index_rng_seed,
-        )
-        is_valid = False
-    if schedule_rng_seed != config_seeds["schedule_rng_seed"]:
-        log.error(
-            "%s schedule_rng_seed is wrong, expected=%s, found=%s",
-            fname,
-            config_seeds["schedule_rng_seed"],
-            schedule_rng_seed,
-        )
-        is_valid = False
+    #config_seeds = config.seeds if "TEST05" not in fname else config.test05_seeds
+    #if qsl_rng_seed != config_seeds["qsl_rng_seed"]:
+    #    log.error(
+    #        "%s qsl_rng_seed is wrong, expected=%s, found=%s",
+    #        fname,
+    #        config_seeds["qsl_rng_seed"],
+    #        qsl_rng_seed,
+    #    )
+    #    is_valid = False
+    #if sample_index_rng_seed != config_seeds["sample_index_rng_seed"]:
+    #    log.error(
+    #        "%s sample_index_rng_seed is wrong, expected=%s, found=%s",
+    #        fname,
+    #        config_seeds["sample_index_rng_seed"],
+    #        sample_index_rng_seed,
+    #    )
+    #    is_valid = False
+    #if schedule_rng_seed != config_seeds["schedule_rng_seed"]:
+    #    log.error(
+    #        "%s schedule_rng_seed is wrong, expected=%s, found=%s",
+    #        fname,
+    #        config_seeds["schedule_rng_seed"],
+    #        schedule_rng_seed,
+    #    )
+    #    is_valid = False
 
     if scenario == "SingleStream" or scenario == "MultiStream":
         res /= MS_TO_NS

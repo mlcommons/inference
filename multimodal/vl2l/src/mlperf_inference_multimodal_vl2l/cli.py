@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import os
 from datetime import timedelta
 from enum import StrEnum, auto
 from typing import Annotated
@@ -102,6 +103,33 @@ class TestSettings(BaseModel):
         ),
     ] = 100
 
+    server_expected_qps: Annotated[
+        float,
+        Field(
+            description="The expected QPS for the server scenario.",
+        ),
+    ] = 1
+
+    server_target_latency: Annotated[
+        int,
+        Field(description="Expected latency for Server scenario "
+        "(will be converted to ns)"),
+    ] = 100
+
+
+    server_ttft_latency: Annotated[
+        int,
+        Field(description="token ttft latency parameter "
+        "(used when use_token_latencies is enabled)"),
+    ] = 100_000_000
+
+    server_tpot_latency: Annotated[
+        int,
+        Field(description="token tpot latency parameter "
+        "(used when use_token_latencies is enabled)"),
+    ] = 100_000_000
+
+    # The test runs until both min duration and min query count have been met
     min_duration: Annotated[
         timedelta,
         Field(
@@ -112,12 +140,19 @@ class TestSettings(BaseModel):
         ),
     ] = timedelta(seconds=5)
 
+    min_query_count: Annotated[
+        int,
+        Field(
+            description="The minimum testing query count",
+        ),
+    ] = 100
+
     use_token_latencies: Annotated[
         bool,
         Field(
-            description="When set to True, LoadGen will track TTFT and TPOT.",
+            description="When set, LoadGen will track TTFT and TPOT.",
         ),
-    ] = True
+    ] = False
 
     @field_validator("min_duration", mode="before")
     @classmethod
@@ -144,8 +179,13 @@ class TestSettings(BaseModel):
         settings.scenario = self.scenario.to_lgtype()
         settings.mode = self.mode.to_lgtype()
         settings.offline_expected_qps = self.offline_expected_qps
+        settings.server_target_qps = self.server_expected_qps
+        settings.server_target_latency_ns = round(self.server_target_latency * 1e9)
+        settings.ttft_latency = self.server_ttft_latency
+        settings.tpot_latency = self.server_tpot_latency
         settings.min_duration_ms = round(
             self.min_duration.total_seconds() * 1000)
+        settings.min_query_count = self.min_query_count
         settings.use_token_latencies = self.use_token_latencies
         return settings
 
@@ -223,6 +263,10 @@ def main(
         Verbosity,
         Option(help="The verbosity level of the logger."),
     ] = Verbosity.INFO,
+    output_log_dir: Annotated[
+        str,
+        Option(help="Location of output logs"),
+    ] = "output",
 ) -> None:
     """Main CLI for running the VL2L benchmark."""
     logger.remove()
@@ -239,12 +283,20 @@ def main(
         dataset_cli=dataset,
         model_cli=model,
         endpoint_cli=endpoint,
+        scenario = settings.scenario,
         random_seed=random_seed,
     )
     sut = task.construct_sut()
     qsl = task.construct_qsl()
+    # log settings
+    os.makedirs(output_log_dir, exist_ok=True)
+    log_output_settings = lg.LogOutputSettings()
+    log_output_settings.outdir = output_log_dir
+    log_output_settings.copy_summary_to_stdout = True
+    log_settings = lg.LogSettings()
+    log_settings.log_output = log_output_settings
     logger.info("Starting the VL2L benchmark with LoadGen...")
-    lg.StartTest(sut, qsl, lg_settings)
+    lg.StartTestWithLogSettings(sut, qsl, lg_settings, log_settings)
     logger.info("The VL2L benchmark with LoadGen completed.")
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)

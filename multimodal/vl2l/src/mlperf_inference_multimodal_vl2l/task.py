@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from .cli import Dataset as DatasetCLI
     from .cli import Endpoint as EndpointCLI
     from .cli import Model as ModelCLI
+    from .cli import TestScenario
 
 
 class Task(ABC):
@@ -36,6 +37,7 @@ class Task(ABC):
         dataset_cli: DatasetCLI,
         model_cli: ModelCLI,
         endpoint_cli: EndpointCLI,
+        scenario: TestScenario,
         random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
@@ -47,6 +49,7 @@ class Task(ABC):
             random_seed: The random seed to use for the task.
         """
         random.seed(random_seed)
+        self.scenario = scenario
         self.dataset = load_dataset(
             dataset_cli.repo_id,
             token=dataset_cli.token,
@@ -188,6 +191,9 @@ class Task(ABC):
     def construct_sut(self) -> int:
         """Construct the LoadGen SUT for the task."""
 
+        # avoid circular import
+        from .cli import TestScenario
+        
         def _issue_queries(query_samples: list[lg.QuerySample]) -> None:
             """Called by the LoadGen to issue queries to the inference endpoint.
 
@@ -241,6 +247,77 @@ class Task(ABC):
                     self.event_loop,
                 )
 
+        def _issue_queries_server(query_samples: list[lg.QuerySample]) -> None:
+            """Called by the LoadGen to issue queries to the inference endpoint.
+
+            Args:
+                query_samples: The list of query samples to issue to the inference
+                    endpoint. Each query sample contains (1) `id`: `lg.ResponseId`
+                    (i.e., unique identifier for the response), and (2) `index`:
+                    `lg.QuerySampleIndex` (i.e., the sample index into the dataset).
+            """
+
+            async def _query_endpoint_async(
+                    query_sample: lg.QuerySample) -> None:
+                """Query the endpoint through the async OpenAI API client."""
+                messages = self.loaded_messages[query_sample.index]
+                logger.trace(
+                    "Issuing query sample index: {} with response ID: {}",
+                    query_sample.index,
+                    query_sample.id,
+                )
+                ttft_set = False
+                out_tokens = []
+                stream = await self.openai_api_client.chat.completions.create(
+                    stream=True,
+                    model=self.model_cli.repo_id,
+                    messages=messages,
+                )
+                # iterate asynchronously
+                async for chunk in stream:
+                    choices = getattr(chunk, "choices", None)
+                    if not choices:
+                        continue
+                    # first non-empty token -> TTFT
+                    delta = chunk.choices[0].delta
+                    text = getattr(delta, "content", None)
+                    if text:
+                        if ttft_set is False:
+                            bytes_array = array.array("B", text.encode("utf-8"))
+                            address, length = bytes_array.buffer_info()
+                            size_in_bytes = length * bytes_array.itemsize
+                            lg.FirstTokenComplete([
+                                lg.QuerySampleResponse(query_sample.id,
+                                                       address,
+                                                       size_in_bytes,
+                                                       len(text)),
+                            ])
+
+                            ttft_set = True
+                        out_tokens.append(text)
+
+                # when the stream ends, total latency
+                content = "".join(out_tokens)
+                bytes_array = array.array("B", content.encode("utf-8"))
+                address, length = bytes_array.buffer_info()
+                size_in_bytes = length * bytes_array.itemsize
+                lg.QuerySamplesComplete(
+                    [
+                        lg.QuerySampleResponse(
+                            query_sample.id,
+                            address,
+                            size_in_bytes,
+                            len(content),
+                        ),
+                    ],
+                )
+
+            for query_sample in query_samples:
+                asyncio.run_coroutine_threadsafe(
+                    _query_endpoint_async(query_sample),
+                    self.event_loop,
+                )
+
         def _flush_queries() -> None:
             """Called by the LoadGen to indicate that all queries have been issued."""
 
@@ -266,6 +343,8 @@ class Task(ABC):
             )
             future.result()
 
+        if self.scenario == TestScenario.SERVER:
+            return lg.ConstructSUT(_issue_queries_server, _flush_queries)
         return lg.ConstructSUT(_issue_queries, _flush_queries)
 
 
@@ -277,6 +356,7 @@ class ShopifyGlobalCatalogue(Task):
         dataset_cli: DatasetCLI,
         model_cli: ModelCLI,
         endpoint_cli: EndpointCLI,
+        scenario: TestScenario,
         random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
@@ -291,6 +371,7 @@ class ShopifyGlobalCatalogue(Task):
             dataset_cli=dataset_cli,
             model_cli=model_cli,
             endpoint_cli=endpoint_cli,
+            scenario = scenario,
             random_seed=random_seed,
         )
         # Shopify only released the train split so far.

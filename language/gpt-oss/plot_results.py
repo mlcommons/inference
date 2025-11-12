@@ -254,7 +254,7 @@ def main():
     datasets = sorted(datasets_no_overall)
     if 'overall' in data:
         datasets.append('overall')
-    
+
     print(f"Generating plots for {len(datasets)} datasets...\n")
 
     for dataset in datasets:

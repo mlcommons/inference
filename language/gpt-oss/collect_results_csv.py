@@ -78,13 +78,13 @@ def extract_results(json_data: Dict[str, Any]) -> Dict[str, Dict[str, int]]:
     pass_k = json_data['pass_k']
     results = defaultdict(dict)
     overall_results = {}
-    
+
     # Extract per-pass results
     if 'per_pass_results' in json_data:
         for pass_result in json_data['per_pass_results']:
             pass_num = pass_result['pass_number']
             run_label = f"run_{pass_num + 1}"  # Convert 0-indexed to 1-indexed
-            
+
             # Calculate sum of individual datasets for verification
             sum_correct = 0
             for dataset_stat in pass_result['datasets']:
@@ -92,18 +92,18 @@ def extract_results(json_data: Dict[str, Any]) -> Dict[str, Dict[str, int]]:
                 correct = dataset_stat['correct']
                 results[dataset_name][run_label] = correct
                 sum_correct += correct
-            
+
             # Extract overall from JSON
             if 'overall' in pass_result:
                 overall_correct = pass_result['overall']['correct']
                 overall_results[run_label] = overall_correct
-                
+
                 # Assert that the sum matches the overall
                 assert sum_correct == overall_correct, (
                     f"Mismatch in {run_label}: sum of datasets ({sum_correct}) != "
                     f"overall ({overall_correct})"
                 )
-    
+
     # Extract aggregated results
     if 'aggregated_results' in json_data:
         # Calculate sum of individual datasets for verification
@@ -113,18 +113,18 @@ def extract_results(json_data: Dict[str, Any]) -> Dict[str, Dict[str, int]]:
             correct = dataset_stat['correct']
             results[dataset_name][f'pass@{pass_k}'] = correct
             sum_correct += correct
-        
+
         # Extract overall from JSON
         if 'overall' in json_data['aggregated_results']:
             overall_correct = json_data['aggregated_results']['overall']['correct']
             overall_results[f'pass@{pass_k}'] = overall_correct
-            
+
             # Assert that the sum matches the overall
             assert sum_correct == overall_correct, (
                 f"Mismatch in pass@{pass_k}: sum of datasets ({sum_correct}) != "
                 f"overall ({overall_correct})"
             )
-    
+
     # Handle single-pass results
     elif 'results' in json_data:
         # Calculate sum of individual datasets for verification
@@ -135,23 +135,23 @@ def extract_results(json_data: Dict[str, Any]) -> Dict[str, Dict[str, int]]:
             results[dataset_name]['run_1'] = correct
             results[dataset_name]['pass@1'] = correct
             sum_correct += correct
-        
+
         # Extract overall from JSON if available
         if 'overall' in json_data['results']:
             overall_correct = json_data['results']['overall']['correct']
             overall_results['run_1'] = overall_correct
             overall_results['pass@1'] = overall_correct
-            
+
             # Assert that the sum matches the overall
             assert sum_correct == overall_correct, (
                 f"Mismatch in run_1: sum of datasets ({sum_correct}) != "
                 f"overall ({overall_correct})"
             )
-    
+
     # Add overall results
     if overall_results:
         results['overall'] = overall_results
-    
+
     return dict(results)
 
 
@@ -202,25 +202,27 @@ def collect_to_csv(json_files: List[str], output_csv: str,
     # Sort datasets (use provided order or alphabetical)
     # Always put 'overall' at the end
     all_datasets_no_overall = all_datasets - {'overall'}
-    
+
     if dataset_order:
         # Use provided order, put remaining datasets at the end
         sorted_datasets = []
         for ds in dataset_order:
             if ds.lower() in [d.lower() for d in all_datasets_no_overall]:
                 # Find the actual dataset name (case-sensitive)
-                actual_name = next(d for d in all_datasets_no_overall if d.lower() == ds.lower())
+                actual_name = next(
+                    d for d in all_datasets_no_overall if d.lower() == ds.lower())
                 sorted_datasets.append(actual_name)
         # Add any datasets not in the order list (excluding 'overall')
-        remaining = sorted([d for d in all_datasets_no_overall if d not in sorted_datasets])
+        remaining = sorted(
+            [d for d in all_datasets_no_overall if d not in sorted_datasets])
         sorted_datasets.extend(remaining)
     else:
         sorted_datasets = sorted(all_datasets_no_overall)
-    
+
     # Add 'overall' at the end if it exists
     if 'overall' in all_datasets:
         sorted_datasets.append('overall')
-    
+
     # Write CSV
     with open(output_csv, 'w', newline='') as f:
         writer = csv.writer(f)

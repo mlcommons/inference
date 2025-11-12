@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import sys
 import os
+import sys
 from datetime import timedelta
 from enum import StrEnum, auto
 from typing import Annotated
@@ -111,22 +111,39 @@ class TestSettings(BaseModel):
     ] = 1
 
     server_target_latency: Annotated[
-        int,
+        float,
         Field(description="Expected latency for Server scenario "
+<<<<<<< HEAD
               "(will be converted to ns)"),
     ] = 100
+=======
+        "(will be converted to ns)"),
+    ] = 0.1
+>>>>>>> bdab32d (fix command values and lint)
 
     server_ttft_latency: Annotated[
-        int,
+        float,
         Field(description="token ttft latency parameter "
+<<<<<<< HEAD
               "(used when use_token_latencies is enabled)"),
     ] = 100_000_000
+=======
+        "(used when use_token_latencies is enabled). "
+        "Will be converted to ns"),
+    ] = 0.1
+>>>>>>> bdab32d (fix command values and lint)
 
     server_tpot_latency: Annotated[
-        int,
+        float,
         Field(description="token tpot latency parameter "
+<<<<<<< HEAD
               "(used when use_token_latencies is enabled)"),
     ] = 100_000_000
+=======
+        "(used when use_token_latencies is enabled). "
+        "Will be converted to ns"),
+    ] = 0.1
+>>>>>>> bdab32d (fix command values and lint)
 
     # The test runs until both min duration and min query count have been met
     min_duration: Annotated[
@@ -179,10 +196,16 @@ class TestSettings(BaseModel):
         settings.mode = self.mode.to_lgtype()
         settings.offline_expected_qps = self.offline_expected_qps
         settings.server_target_qps = self.server_expected_qps
+<<<<<<< HEAD
         settings.server_target_latency_ns = round(
             self.server_target_latency * 1e9)
         settings.ttft_latency = self.server_ttft_latency
         settings.tpot_latency = self.server_tpot_latency
+=======
+        settings.server_target_latency_ns = round(self.server_target_latency * 1e9)
+        settings.ttft_latency = round(self.server_ttft_latency * 1e9)
+        settings.tpot_latency = round(self.server_tpot_latency * 1e9)
+>>>>>>> bdab32d (fix command values and lint)
         settings.min_duration_ms = round(
             self.min_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count

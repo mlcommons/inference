@@ -190,10 +190,9 @@ class Task(ABC):
 
     def construct_sut(self) -> int:
         """Construct the LoadGen SUT for the task."""
-
         # avoid circular import
         from .cli import TestScenario
-        
+
         def _issue_queries(query_samples: list[lg.QuerySample]) -> None:
             """Called by the LoadGen to issue queries to the inference endpoint.
 

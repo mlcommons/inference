@@ -282,7 +282,8 @@ class Task(ABC):
                     text = getattr(delta, "content", None)
                     if text:
                         if ttft_set is False:
-                            bytes_array = array.array("B", text.encode("utf-8"))
+                            bytes_array = array.array(
+                                "B", text.encode("utf-8"))
                             address, length = bytes_array.buffer_info()
                             size_in_bytes = length * bytes_array.itemsize
                             lg.FirstTokenComplete([
@@ -370,7 +371,7 @@ class ShopifyGlobalCatalogue(Task):
             dataset_cli=dataset_cli,
             model_cli=model_cli,
             endpoint_cli=endpoint_cli,
-            scenario = scenario,
+            scenario=scenario,
             random_seed=random_seed,
         )
         # Shopify only released the train split so far.

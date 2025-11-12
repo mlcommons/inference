@@ -249,8 +249,12 @@ def main():
     print()
 
     # Generate plots for each dataset separately
-    datasets = sorted(data.keys())
-
+    # Always put 'overall' at the end
+    datasets_no_overall = [d for d in data.keys() if d != 'overall']
+    datasets = sorted(datasets_no_overall)
+    if 'overall' in data:
+        datasets.append('overall')
+    
     print(f"Generating plots for {len(datasets)} datasets...\n")
 
     for dataset in datasets:

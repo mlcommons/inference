@@ -113,21 +113,21 @@ class TestSettings(BaseModel):
     server_target_latency: Annotated[
         float,
         Field(description="Expected latency for Server scenario "
-        "(will be converted to ns)"),
+              "(will be converted to ns)"),
     ] = 0.1
 
     server_ttft_latency: Annotated[
         float,
         Field(description="token ttft latency parameter "
-        "(used when use_token_latencies is enabled). "
-        "Will be converted to ns"),
+              "(used when use_token_latencies is enabled). "
+              "Will be converted to ns"),
     ] = 0.1
 
     server_tpot_latency: Annotated[
         float,
         Field(description="token tpot latency parameter "
-        "(used when use_token_latencies is enabled). "
-        "Will be converted to ns"),
+              "(used when use_token_latencies is enabled). "
+              "Will be converted to ns"),
     ] = 0.1
 
     # The test runs until both min duration and min query count have been met
@@ -155,8 +155,8 @@ class TestSettings(BaseModel):
         ),
     ] = False
 
-    @ field_validator("min_duration", mode="before")
-    @ classmethod
+    @field_validator("min_duration", mode="before")
+    @classmethod
     def parse_min_duration(cls, value: timedelta |
                            float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
@@ -181,7 +181,8 @@ class TestSettings(BaseModel):
         settings.mode = self.mode.to_lgtype()
         settings.offline_expected_qps = self.offline_expected_qps
         settings.server_target_qps = self.server_expected_qps
-        settings.server_target_latency_ns = round(self.server_target_latency * 1e9)
+        settings.server_target_latency_ns = round(
+            self.server_target_latency * 1e9)
         settings.ttft_latency = round(self.server_ttft_latency * 1e9)
         settings.tpot_latency = round(self.server_tpot_latency * 1e9)
         settings.min_duration_ms = round(
@@ -249,7 +250,7 @@ class Endpoint(BaseModel):
     ] = ""
 
 
-@ app.command()
+@app.command()
 def main(
     *,
     settings: TestSettings,
@@ -259,15 +260,15 @@ def main(
     random_seed: Annotated[
         int,
         Option(help="The seed for the random number generator used by the benchmark."),
-    ]=12345,
+    ] = 12345,
     verbosity: Annotated[
         Verbosity,
         Option(help="The verbosity level of the logger."),
-    ]=Verbosity.INFO,
+    ] = Verbosity.INFO,
     output_log_dir: Annotated[
         str,
         Option(help="Location of output logs"),
-    ]="output",
+    ] = "output",
 ) -> None:
     """Main CLI for running the VL2L benchmark."""
     logger.remove()

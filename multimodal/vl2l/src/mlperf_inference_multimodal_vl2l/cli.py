@@ -150,7 +150,7 @@ class TestSettings(BaseModel):
     use_token_latencies: Annotated[
         bool,
         Field(
-            description="When set, LoadGen will track TTFT and TPOT.",
+            description="When set to True, LoadGen will track TTFT and TPOT.",
         ),
     ] = False
 

@@ -113,20 +113,19 @@ class TestSettings(BaseModel):
     server_target_latency: Annotated[
         int,
         Field(description="Expected latency for Server scenario "
-        "(will be converted to ns)"),
+              "(will be converted to ns)"),
     ] = 100
-
 
     server_ttft_latency: Annotated[
         int,
         Field(description="token ttft latency parameter "
-        "(used when use_token_latencies is enabled)"),
+              "(used when use_token_latencies is enabled)"),
     ] = 100_000_000
 
     server_tpot_latency: Annotated[
         int,
         Field(description="token tpot latency parameter "
-        "(used when use_token_latencies is enabled)"),
+              "(used when use_token_latencies is enabled)"),
     ] = 100_000_000
 
     # The test runs until both min duration and min query count have been met
@@ -180,7 +179,8 @@ class TestSettings(BaseModel):
         settings.mode = self.mode.to_lgtype()
         settings.offline_expected_qps = self.offline_expected_qps
         settings.server_target_qps = self.server_expected_qps
-        settings.server_target_latency_ns = round(self.server_target_latency * 1e9)
+        settings.server_target_latency_ns = round(
+            self.server_target_latency * 1e9)
         settings.ttft_latency = self.server_ttft_latency
         settings.tpot_latency = self.server_tpot_latency
         settings.min_duration_ms = round(
@@ -283,7 +283,7 @@ def main(
         dataset_cli=dataset,
         model_cli=model,
         endpoint_cli=endpoint,
-        scenario = settings.scenario,
+        scenario=settings.scenario,
         random_seed=random_seed,
     )
     sut = task.construct_sut()

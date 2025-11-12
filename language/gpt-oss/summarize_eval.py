@@ -10,9 +10,47 @@ import argparse
 import pickle
 import sys
 import json
+import glob
 from pathlib import Path
 from typing import Dict, Any, List
 import pandas as pd
+
+
+def expand_glob_patterns(patterns: List[str]) -> List[str]:
+    """Expand glob patterns to actual file paths.
+
+    Args:
+        patterns: List of file paths or glob patterns (e.g., '*.pkl', 'data/*_evaluated.pkl')
+
+    Returns:
+        List of actual file paths (sorted)
+    """
+    expanded_files = []
+
+    for pattern in patterns:
+        # If it's a literal file path that exists, use it directly
+        if Path(pattern).exists() and not any(
+                c in pattern for c in ['*', '?', '[', ']']):
+            expanded_files.append(pattern)
+        else:
+            # Try to expand as a glob pattern
+            matches = glob.glob(pattern)
+            if matches:
+                expanded_files.extend(matches)
+            else:
+                # If no matches and it's not a glob pattern, report the file as
+                # missing
+                if not any(c in pattern for c in ['*', '?', '[', ']']):
+                    print(
+                        f"Warning: File not found: {pattern}",
+                        file=sys.stderr)
+                else:
+                    print(
+                        f"Warning: No files matched pattern: {pattern}",
+                        file=sys.stderr)
+
+    # Remove duplicates and sort
+    return sorted(set(expanded_files))
 
 
 def detect_pass_k(df: pd.DataFrame) -> int:
@@ -283,34 +321,50 @@ def summarize_evaluation(pickle_path: str, json_output: bool = False) -> str:
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Summarize evaluation results by dataset")
-    parser.add_argument("input_file",
-                        help="Path to evaluated pickle file from eval_accuracy.py")
+        description="Summarize evaluation results by dataset. Supports glob patterns.",
+        epilog="Examples:\n"
+               "  %(prog)s results_evaluated.pkl\n"
+               "  %(prog)s data/*_evaluated.pkl\n"
+               "  %(prog)s --json data/accuracy_eval_*_evaluated.pkl",
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("input_files", nargs='+',
+                        help="One or more paths to evaluated pickle files or glob patterns (e.g., '*.pkl', 'data/*_evaluated.pkl')")
     parser.add_argument("--json", action="store_true",
                         help="Output results in JSON format (for programmatic use)")
 
     args = parser.parse_args()
 
-    # Check if input file exists
-    if not Path(args.input_file).exists():
+    # Expand glob patterns
+    expanded_files = expand_glob_patterns(args.input_files)
+
+    if not expanded_files:
         print(
-            f"Error: Input file not found: {args.input_file}",
+            "Error: No files found matching the provided patterns",
             file=sys.stderr)
         sys.exit(1)
 
-    # Check if file has _evaluated suffix (warn if not)
-    if "_evaluated" not in args.input_file:
-        print(f"Warning: Input file does not contain '_evaluated' suffix. "
-              f"Make sure this is an evaluated pickle file from eval_accuracy.py",
-              file=sys.stderr)
+    print(f"Found {len(expanded_files)} file(s) to process:")
+    for f in expanded_files:
+        print(f"  - {f}")
+    print()
 
-    try:
-        summarize_evaluation(args.input_file, json_output=args.json)
-    except Exception as e:
-        print(f"Error processing file: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    # Process each file
+    for input_file in expanded_files:
+        # Check if file has _evaluated suffix (warn if not)
+        if "_evaluated" not in input_file:
+            print(f"Warning: Input file does not contain '_evaluated' suffix. "
+                  f"Make sure this is an evaluated pickle file from eval_accuracy.py",
+                  file=sys.stderr)
+
+        try:
+            summarize_evaluation(input_file, json_output=args.json)
+            print()  # Add spacing between files
+        except Exception as e:
+            print(f"Error processing file {input_file}: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
+            # Continue processing other files
+            continue
 
 
 if __name__ == "__main__":

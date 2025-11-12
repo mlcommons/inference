@@ -9,6 +9,7 @@ including per-pass statistics and aggregated pass@k results.
 import argparse
 import pickle
 import sys
+import json
 from pathlib import Path
 from typing import Dict, Any, List
 import pandas as pd
@@ -139,11 +140,15 @@ def print_summary_table(
     print('=' * 85)
 
 
-def summarize_evaluation(pickle_path: str):
+def summarize_evaluation(pickle_path: str, json_output: bool = False) -> str:
     """Load and summarize evaluation results.
 
     Args:
         pickle_path: Path to evaluated pickle file
+        json_output: If True, save results to JSON file instead of printing
+
+    Returns:
+        Path to JSON file if json_output=True, otherwise empty string
     """
     # Load the pickle file
     print(f"Loading evaluation results from: {pickle_path}")
@@ -155,15 +160,24 @@ def summarize_evaluation(pickle_path: str):
     # Detect pass@k format
     pass_k = detect_pass_k(df)
     print(f"Detected format: pass@{pass_k}" if pass_k >
-          1 else "Detected format: single-pass")
+            1 else "Detected format: single-pass")
 
     # Get list of datasets
     datasets = sorted(df['dataset'].unique())
     print(f"Datasets found: {', '.join(datasets)}")
 
+    # Structure to hold all results
+    results_data = {
+        'input_file': pickle_path,
+        'total_samples': len(df),
+        'pass_k': pass_k,
+        'datasets': list(datasets),
+    }
+
     # Calculate statistics for each dataset
     if pass_k > 1:
-        # Show per-pass statistics
+        # Collect per-pass statistics
+        per_pass_results = []
         for pass_num in range(pass_k):
             stats_list = []
             for dataset in datasets:
@@ -173,6 +187,19 @@ def summarize_evaluation(pickle_path: str):
 
             print_summary_table(stats_list, title=f"Pass {pass_num} Results")
 
+            per_pass_results.append({
+                'pass_number': pass_num,
+                'datasets': stats_list,
+                'overall': {
+                    'total': sum(s['total'] for s in stats_list),
+                    'answered': sum(s['answered'] for s in stats_list),
+                    'correct': sum(s['correct'] for s in stats_list),
+                    'accuracy': (sum(s['correct'] for s in stats_list) / sum(s['total'] for s in stats_list) * 100) if sum(s['total'] for s in stats_list) > 0 else 0.0
+                }
+            })
+
+        results_data['per_pass_results'] = per_pass_results
+
         # Show aggregated (pass@k) statistics
         print("\n")
         stats_list = []
@@ -181,6 +208,18 @@ def summarize_evaluation(pickle_path: str):
                 df, dataset, pass_num=None, pass_k=pass_k)
             stats_list.append(stats)
 
+        aggregated_results = {
+            'datasets': stats_list,
+            'overall': {
+                'total': sum(s['total'] for s in stats_list),
+                'answered': sum(s['answered'] for s in stats_list),
+                'correct': sum(s['correct'] for s in stats_list),
+                'accuracy': (sum(s['correct'] for s in stats_list) / sum(s['total'] for s in stats_list) * 100) if sum(s['total'] for s in stats_list) > 0 else 0.0
+            }
+        }
+        results_data['aggregated_results'] = aggregated_results
+
+        # Always print summary table
         print_summary_table(
             stats_list,
             title=f"Aggregated Pass@{pass_k} Results (Max Across Passes)")
@@ -192,6 +231,18 @@ def summarize_evaluation(pickle_path: str):
                 df, dataset, pass_num=None, pass_k=pass_k)
             stats_list.append(stats)
 
+        single_pass_results = {
+            'datasets': stats_list,
+            'overall': {
+                'total': sum(s['total'] for s in stats_list),
+                'answered': sum(s['answered'] for s in stats_list),
+                'correct': sum(s['correct'] for s in stats_list),
+                'accuracy': (sum(s['correct'] for s in stats_list) / sum(s['total'] for s in stats_list) * 100) if sum(s['total'] for s in stats_list) > 0 else 0.0
+            }
+        }
+        results_data['results'] = single_pass_results
+
+        # Always print summary table
         print_summary_table(stats_list, title="Evaluation Results")
 
     # Print column information for reference
@@ -213,6 +264,21 @@ def summarize_evaluation(pickle_path: str):
             f"  - A sample is considered correct if ANY of the {pass_k} attempts were correct")
         print(
             f"  - A sample is considered answered if ANY of the {pass_k} attempts extracted an answer")
+
+    # Save to JSON if requested
+    if json_output:
+        # Generate output filename: input_file_summarize.json
+        input_path = Path(pickle_path)
+        output_filename = input_path.stem + "_summarize.json"
+        output_path = input_path.parent / output_filename
+
+        with open(output_path, 'w') as f:
+            json.dump(results_data, f, indent=2)
+
+        print(f"\nSummary saved to: {output_path}")
+        return str(output_path)
+
+    return ""
 
 
 def main():
@@ -239,7 +305,7 @@ def main():
               file=sys.stderr)
 
     try:
-        summarize_evaluation(args.input_file)
+        summarize_evaluation(args.input_file, json_output=args.json)
     except Exception as e:
         print(f"Error processing file: {e}", file=sys.stderr)
         import traceback

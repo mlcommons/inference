@@ -160,7 +160,7 @@ def summarize_evaluation(pickle_path: str, json_output: bool = False) -> str:
     # Detect pass@k format
     pass_k = detect_pass_k(df)
     print(f"Detected format: pass@{pass_k}" if pass_k >
-            1 else "Detected format: single-pass")
+          1 else "Detected format: single-pass")
 
     # Get list of datasets
     datasets = sorted(df['dataset'].unique())

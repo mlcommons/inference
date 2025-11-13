@@ -7,6 +7,37 @@ hide:
 This document provides a step-by-step overview of the **MLPerf Inference submission process**.  
 It is designed for both **new submitters** and those with limited prior experience with MLPerf benchmarking.  
 
+---
+
+```mermaid
+
+%%{init: {"themeVariables": { "fontSize": "12px" }}}%%
+flowchart TD
+    A([Start]) --> B[Prerequisites & Agreements]
+
+    %% Setup phase
+    B --> C[Set up Benchmark Environment]
+
+     %% Iterative benchmarking loop
+    subgraph L[For Each Benchmark]
+        direction TB
+        C --> D[Download Assets]
+        D --> E[Run Benchmarks]
+        E --> F[Validate Accuracy]
+        F --> G{More Benchmarks to Run?}
+        G -->|Yes| C
+    end
+
+    %% Submission preparation
+    G -->|No| H[Prepare Results Structure]
+    H --> I[Run Submission Checker]
+    I --> J[Generate Final Tarball]
+    J --> K[Upload via Submission UI]
+    K --> L1([End])
+```
+
+---
+
 ## Table of Contents
 - [1. Prerequisites and Agreements](#1-prerequisites-and-agreements)
 - [2. Overview of MLPerf Inference Benchmarking](#2-overview-of-mlperf-inference-benchmarking)
@@ -52,8 +83,9 @@ MLPerf Inference is a benchmarking suite designed to measure **performance of ma
 
 ### Benchmark Timings
 - MLPerf Inference benchmarking happens **twice per year**:
-  - **.0 Round** – February  
-  - **.1 Round** – August  
+
+      - **.0 Round** – February  
+      - **.1 Round** – August  
 
 ---
 
@@ -124,25 +156,25 @@ Below are the **general steps** followed in the MLPerf Inference benchmarking pr
    Based on your chosen configuration, identify which scenarios must be run.
 
 3. **Download Required Resources**
-   - **Benchmark Source Repository** (Reference or vendor implementation):  
-     <placeholder_for_inference_repo_link>
-   - **Datasets**  
-     <placeholder_for_dataset_download_link>
-   - **Models**  
-     <placeholder_for_model_download_link>
+
+      - **Benchmark Source Repository** ([Reference](https://github.com/mlcommons/inference) or vendor implementation):  
+
+      - **Datasets**  
+
+      - **Models**  
 
 4. **Configure Environment**  
-   Set up the required dependencies, environment variables, and system configurations for benchmarking.  
-   <placeholder_for_env_setup_doc_link>
+   Set up the required dependencies, environment variables, and system configurations for benchmarking.
+
+      Please refer to [this](https://github.com/mlcommons/mlperf-automations/blob/dev/script/get-mlperf-inference-sut-description/README.md) README for instructions on how to automatically generate the system description file for your SUT.
 
 5. **Run Benchmarks**  
    Execute benchmarks for the required scenarios, divisions, and categories.  
    Adjust target QPS or latency to meet accuracy and performance requirements.  
-   *(Refer to model-specific documentation for actual command usage.)*
+   *(Refer to model-specific documentations for actual command usage.)*
 
 6. **Run Accuracy Checker**  
    Verify that the output results meet accuracy thresholds.  
-   <placeholder_for_accuracy_checker_doc_link>
 
 7. **Repeat for All Intended Benchmarks**  
    Perform the above steps for every model you plan to submit.
@@ -154,20 +186,16 @@ Below are the **general steps** followed in the MLPerf Inference benchmarking pr
 After benchmark runs are complete, follow these steps to prepare your submission package.
 
 1. **Arrange Results**  
-   Organize results according to the structure defined here:  
-   <placeholder_for_submission_structure_doc_link>
+   Organize results according to the structure defined [here](https://github.com/mlcommons/policies/blob/master/submission_rules.adoc#563-inference).
 
 2. **Preprocess Submission**  
-   Use the preprocessing script from the inference repository to validate and format results:  
-   <placeholder_for_preprocess_script_link>
+   Use the [preprocessing script](https://github.com/mlcommons/inference/blob/master/tools/submission/preprocess_submission.py) from the inference repository to validate and format results.
 
 3. **Run Submission Checker**  
-   The checker validates completeness and correctness, producing a final `.tar.gz` file for submission.  
-   <placeholder_for_submission_checker_link>
+   The [checker](https://github.com/mlcommons/inference/blob/master/tools/submission/submission_checker.py) validates completeness and correctness, producing a final `.tar.gz` file for submission.
 
 4. **Upload to Submission Portal**  
-   Use the MLCommons **Submission UI** to upload your final tarball.  
-   <placeholder_for_submission_UI_link>
+   Use the MLCommons **Submission UI**, the link to which will be shared at the time of submission, to upload your final tarball.
 
 ---
 
@@ -194,6 +222,7 @@ See [documentation](submission-cli.md) for usage.
 
 ## 6. Additional Resources
 
+- [**MLPerf General Policies**](https://github.com/mlcommons/policies/tree/master)
 - [**MLPerf Inference Policies**](https://github.com/mlcommons/inference_policies/tree/master)  
 - [**Reference Implementations**](https://github.com/mlcommons/inference)  
 - [**Previous Submission Results**](https://github.com/orgs/mlcommons/repositories?q=inference_results_v)

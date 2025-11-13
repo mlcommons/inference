@@ -122,13 +122,13 @@ class TestSettings(BaseModel):
 
     server_ttft_latency: Annotated[
         timedelta,
-        Field(description="token ttft latency constrain for result validation"
+        Field(description="ttft latency constrain for result validation"
               "(used when use_token_latencies is enabled)."),
     ] = timedelta(seconds=1)
 
     server_tpot_latency: Annotated[
         timedelta,
-        Field(description="token tpot latency constrain for result validation"
+        Field(description="tpot latency constrain for result validation"
               "(used when use_token_latencies is enabled)."),
     ] = timedelta(seconds=1)
 

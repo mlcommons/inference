@@ -106,29 +106,31 @@ class TestSettings(BaseModel):
     server_expected_qps: Annotated[
         float,
         Field(
-            description="The expected QPS for the server scenario.",
+            description="The expected QPS for the server scenario. "
+            "Loadgen will try to send as many request as necessary "
+            "to achieve this value",
         ),
     ] = 1
 
     server_target_latency: Annotated[
-        float,
-        Field(description="Expected latency for Server scenario "
-              "(will be converted to ns)"),
-    ] = 0.1
+        timedelta,
+        Field(description="""Expected latency constrain for Server scenario.
+        This is a constrain that we expect depending on the argument server_expected_qps
+        When server_expected_qps increases, we expect the latency to also increase.
+        When server_expected_qps decreases, we expect the latency to also decrease"""),
+    ] = timedelta(seconds=1)
 
     server_ttft_latency: Annotated[
-        float,
-        Field(description="token ttft latency parameter "
-              "(used when use_token_latencies is enabled). "
-              "Will be converted to ns"),
-    ] = 0.1
+        timedelta,
+        Field(description="token ttft latency constrain for result validation"
+              "(used when use_token_latencies is enabled)."),
+    ] = timedelta(seconds=1)
 
     server_tpot_latency: Annotated[
-        float,
-        Field(description="token tpot latency parameter "
-              "(used when use_token_latencies is enabled). "
-              "Will be converted to ns"),
-    ] = 0.1
+        timedelta,
+        Field(description="token tpot latency constrain for result validation"
+              "(used when use_token_latencies is enabled)."),
+    ] = timedelta(seconds=1)
 
     # The test runs until both min duration and min query count have been met
     min_duration: Annotated[
@@ -155,7 +157,11 @@ class TestSettings(BaseModel):
         ),
     ] = False
 
-    @field_validator("min_duration", mode="before")
+    @field_validator("server_target_latency",
+                     "server_ttft_latency",
+                     "server_tpot_latency",
+                     "min_duration",
+                     mode="before")
     @classmethod
     def parse_min_duration(cls, value: timedelta |
                            float | str) -> timedelta | str:
@@ -182,14 +188,39 @@ class TestSettings(BaseModel):
         settings.offline_expected_qps = self.offline_expected_qps
         settings.server_target_qps = self.server_expected_qps
         settings.server_target_latency_ns = round(
-            self.server_target_latency * 1e9)
-        settings.ttft_latency = round(self.server_ttft_latency * 1e9)
-        settings.tpot_latency = round(self.server_tpot_latency * 1e9)
+            self.server_target_latency.total_seconds() * 1e9)
+        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
         settings.min_duration_ms = round(
             self.min_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.use_token_latencies = self.use_token_latencies
         return settings
+
+class LogOutputSettings(BaseModel):
+    """The test log output settings for the MLPerf inference LoadGen."""
+    output_log_dir: Annotated[
+        str,
+        Field(
+            description="Where to save the output files from the benchmark",
+        ),
+    ] = "output"
+    print_to_stdout: Annotated[
+        bool,
+        Field(
+            description="Print results of performance test to terminal",
+        ),
+    ] = True
+
+    def to_lgtype(self) -> lg.LogSettings:
+        """Convert the test mode to its corresponding LoadGen type."""
+        os.makedirs(self.output_log_dir, exist_ok=True)
+        log_output_settings = lg.LogOutputSettings()
+        log_output_settings.outdir = self.output_log_dir
+        log_output_settings.copy_summary_to_stdout = self.print_to_stdout
+        log_settings = lg.LogSettings()
+        log_settings.log_output = log_output_settings
+        return log_settings
 
 
 class Model(BaseModel):
@@ -254,6 +285,7 @@ class Endpoint(BaseModel):
 def main(
     *,
     settings: TestSettings,
+    output_settings: LogOutputSettings,
     model: Model,
     dataset: Dataset,
     endpoint: Endpoint,
@@ -265,10 +297,6 @@ def main(
         Verbosity,
         Option(help="The verbosity level of the logger."),
     ] = Verbosity.INFO,
-    output_log_dir: Annotated[
-        str,
-        Option(help="Location of output logs"),
-    ] = "output",
 ) -> None:
     """Main CLI for running the VL2L benchmark."""
     logger.remove()
@@ -281,6 +309,7 @@ def main(
         endpoint)
     logger.info("Running VL2L benchmark with random seed: {}", random_seed)
     lg_settings = settings.to_lgtype()
+    log_settings = output_settings.to_lgtype()
     task = ShopifyGlobalCatalogue(
         dataset_cli=dataset,
         model_cli=model,
@@ -290,13 +319,6 @@ def main(
     )
     sut = task.construct_sut()
     qsl = task.construct_qsl()
-    # log settings
-    os.makedirs(output_log_dir, exist_ok=True)
-    log_output_settings = lg.LogOutputSettings()
-    log_output_settings.outdir = output_log_dir
-    log_output_settings.copy_summary_to_stdout = True
-    log_settings = lg.LogSettings()
-    log_settings.log_output = log_output_settings
     logger.info("Starting the VL2L benchmark with LoadGen...")
     lg.StartTestWithLogSettings(sut, qsl, lg_settings, log_settings)
     logger.info("The VL2L benchmark with LoadGen completed.")

@@ -46,6 +46,7 @@ class Task(ABC):
             dataset_cli: The dataset configuration passed in from the CLI.
             model_cli: The model configuration passed in from the CLI.
             endpoint_cli: The endpoint configuration passed in from the CLI.
+            scenario: Declare if the benchmark is for performance or accuracy scenario
             random_seed: The random seed to use for the task.
         """
         random.seed(random_seed)
@@ -235,7 +236,7 @@ class Task(ABC):
                             query_sample.id,
                             address,
                             size_in_bytes,
-                            len(content),
+                            int(response.usage.completion_tokens),
                         ),
                     ],
                 )
@@ -246,7 +247,7 @@ class Task(ABC):
                     self.event_loop,
                 )
 
-        def _issue_queries_server(query_samples: list[lg.QuerySample]) -> None:
+        def _issue_streaming_queries(query_samples: list[lg.QuerySample]) -> None:
             """Called by the LoadGen to issue queries to the inference endpoint.
 
             Args:
@@ -266,14 +267,22 @@ class Task(ABC):
                     query_sample.id,
                 )
                 ttft_set = False
-                out_tokens = []
+                word_array = []
                 stream = await self.openai_api_client.chat.completions.create(
                     stream=True,
                     model=self.model_cli.repo_id,
                     messages=messages,
+                    stream_options={"include_usage": True},
                 )
                 # iterate asynchronously
+                total_tokens = 0
                 async for chunk in stream:
+
+                    # This is the final chunk and will not have 'choices'
+                    if chunk.usage is not None:
+                        total_tokens=int(chunk.usage.completion_tokens)
+
+                    # If it's not the usage chunk, process it as a content chunk
                     choices = getattr(chunk, "choices", None)
                     if not choices:
                         continue
@@ -290,14 +299,14 @@ class Task(ABC):
                                 lg.QuerySampleResponse(query_sample.id,
                                                        address,
                                                        size_in_bytes,
-                                                       len(text)),
+                                                       1),
                             ])
-
                             ttft_set = True
-                        out_tokens.append(text)
+                        word_array.append(text)
+
 
                 # when the stream ends, total latency
-                content = "".join(out_tokens)
+                content = "".join(word_array)
                 bytes_array = array.array("B", content.encode("utf-8"))
                 address, length = bytes_array.buffer_info()
                 size_in_bytes = length * bytes_array.itemsize
@@ -307,7 +316,7 @@ class Task(ABC):
                             query_sample.id,
                             address,
                             size_in_bytes,
-                            len(content),
+                            total_tokens,
                         ),
                     ],
                 )
@@ -343,9 +352,9 @@ class Task(ABC):
             )
             future.result()
 
-        if self.scenario == TestScenario.SERVER:
-            return lg.ConstructSUT(_issue_queries_server, _flush_queries)
-        return lg.ConstructSUT(_issue_queries, _flush_queries)
+        return lg.ConstructSUT(_issue_streaming_queries
+                               if self.scenario is TestScenario.SERVER
+                               else _issue_queries, _flush_queries)
 
 
 class ShopifyGlobalCatalogue(Task):
@@ -365,6 +374,7 @@ class ShopifyGlobalCatalogue(Task):
             dataset_cli: The dataset configuration passed in from the CLI.
             model_cli: The model configuration passed in from the CLI.
             endpoint_cli: The endpoint configuration passed in from the CLI.
+            scenario: Declare if the benchmark is for performance or accuracy scenario
             random_seed: The random seed to use for the task.
         """
         super().__init__(

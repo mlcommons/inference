@@ -231,7 +231,7 @@ See [documentation](submission-cli.md) for usage.
 
 For questions or clarifications:
 
-- Join the [MLPerf Inference mailing list]().
+- Join the [MLPerf Inference mailing list](https://groups.google.com/a/mlcommons.org/g/inference) — you can contact the group via **inference@mlcommons.org**.
 - Open an issue in the [inference repository](https://github.com/mlcommons/inference/issues).
 
 ---

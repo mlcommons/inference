@@ -247,7 +247,8 @@ class Task(ABC):
                     self.event_loop,
                 )
 
-        def _issue_streaming_queries(query_samples: list[lg.QuerySample]) -> None:
+        def _issue_streaming_queries(
+                query_samples: list[lg.QuerySample]) -> None:
             """Called by the LoadGen to issue queries to the inference endpoint.
 
             Args:
@@ -280,9 +281,10 @@ class Task(ABC):
 
                     # This is the final chunk and will not have 'choices'
                     if chunk.usage is not None:
-                        total_tokens=int(chunk.usage.completion_tokens)
+                        total_tokens = int(chunk.usage.completion_tokens)
 
-                    # If it's not the usage chunk, process it as a content chunk
+                    # If it's not the usage chunk, process it as a content
+                    # chunk
                     choices = getattr(chunk, "choices", None)
                     if not choices:
                         continue
@@ -303,7 +305,6 @@ class Task(ABC):
                             ])
                             ttft_set = True
                         word_array.append(text)
-
 
                 # when the stream ends, total latency
                 content = "".join(word_array)

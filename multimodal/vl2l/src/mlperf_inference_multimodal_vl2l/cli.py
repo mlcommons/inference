@@ -189,13 +189,16 @@ class TestSettings(BaseModel):
         settings.server_target_qps = self.server_expected_qps
         settings.server_target_latency_ns = round(
             self.server_target_latency.total_seconds() * 1e9)
-        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
+        settings.ttft_latency = round(
+            self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(
+            self.server_tpot_latency.total_seconds() * 1e9)
         settings.min_duration_ms = round(
             self.min_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.use_token_latencies = self.use_token_latencies
         return settings
+
 
 class LogOutputSettings(BaseModel):
     """The test log output settings for the MLPerf inference LoadGen."""

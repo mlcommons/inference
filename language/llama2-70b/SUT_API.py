@@ -368,12 +368,13 @@ class SUTServer(SUT):
 
         super().__init__(
             model_path=model_path,
-            api_servers=None,
-            api_model_name=None,
+            api_server=api_server,
+            api_model_name=api_model_name,
             dtype=dtype,
             device=device,
             total_sample_count=total_sample_count,
             dataset_path=dataset_path,
+            batch_size=batch_size,
             workers=workers,
         )
 

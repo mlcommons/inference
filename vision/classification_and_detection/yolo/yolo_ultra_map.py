@@ -19,6 +19,7 @@ COCO_MAP = {
     74: 85, 75: 86, 76: 87, 77: 88, 78: 89, 79: 90
 }
 
+
 def run_ultralytics_val(model_path, data_yaml):
     model = YOLO(model_path)
     results = model.val(data=data_yaml)
@@ -28,6 +29,7 @@ def run_ultralytics_val(model_path, data_yaml):
     print(f"Recall: {recall:.4f}")
     print(f"mAP@0.5: {map50:.4f}")
     print(f"mAP@0.5:0.95: {map5095:.4f}")
+
 
 def run_pycoco_eval(model_path, image_dir, annotation_file, output_json):
     model = YOLO(model_path)
@@ -41,7 +43,8 @@ def run_pycoco_eval(model_path, image_dir, annotation_file, output_json):
         results = model(image_path)
         result = results[0]
 
-        for box, cls, conf in zip(result.boxes.xywhn, result.boxes.cls, result.boxes.conf):
+        for box, cls, conf in zip(
+                result.boxes.xywhn, result.boxes.cls, result.boxes.conf):
             x_center, y_center, width, height = box.tolist()
             x = x_center - width / 2
             y = y_center - height / 2
@@ -63,13 +66,26 @@ def run_pycoco_eval(model_path, image_dir, annotation_file, output_json):
     coco_eval.accumulate()
     coco_eval.summarize()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="YOLOv11x COCO Evaluation")
     parser.add_argument('--option', type=int, choices=[1, 2], required=True,
                         help="Evaluation option: 1 for Ultralytics, 2 for pycocotools")
-    parser.add_argument('--model', type=str, default='yolo11x.pt', help="Path to YOLOv11x model")
-    parser.add_argument('--data', type=str, default='coco.yaml', help="Path to coco.yaml file")
-    parser.add_argument('--images', type=str, default='val2017', help="Path to COCO val2017 images")
+    parser.add_argument(
+        '--model',
+        type=str,
+        default='yolo11x.pt',
+        help="Path to YOLOv11x model")
+    parser.add_argument(
+        '--data',
+        type=str,
+        default='coco.yaml',
+        help="Path to coco.yaml file")
+    parser.add_argument(
+        '--images',
+        type=str,
+        default='val2017',
+        help="Path to COCO val2017 images")
     parser.add_argument('--annotations', type=str, default='annotations/instances_val2017.json',
                         help="Path to COCO annotations JSON file")
     parser.add_argument('--output_json', type=str, default='predictions.json',
@@ -80,5 +96,8 @@ if __name__ == "__main__":
     if args.option == 1:
         run_ultralytics_val(args.model, args.data)
     elif args.option == 2:
-        run_pycoco_eval(args.model, args.images, args.annotations, args.output_json)
-
+        run_pycoco_eval(
+            args.model,
+            args.images,
+            args.annotations,
+            args.output_json)

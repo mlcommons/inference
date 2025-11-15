@@ -47,7 +47,8 @@ print(f"Copied {len(safe_images)} images to {output_images_dir}")
 
 # Filter annotations for safe images
 safe_image_ids = {img["id"] for img in safe_images}
-safe_annotations = [ann for ann in coco["annotations"] if ann["image_id"] in safe_image_ids]
+safe_annotations = [ann for ann in coco["annotations"]
+                    if ann["image_id"] in safe_image_ids]
 
 # Build new COCO annotation structure
 safe_coco = {

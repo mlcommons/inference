@@ -17,9 +17,14 @@ with open(ann_file, "r") as f:
 licenses = {l["id"]: l for l in coco["licenses"]}
 
 # Define safe licenses: CC-BY and CC-BY-SA
-#safe_keywords = ["creativecommons.org/licenses/by/", "creativecommons.org/licenses/by-sa/"]
-#safe_keywords = ["creativecommons.org/licenses/by/", "creativecommons.org/licenses/by-sa/", "creativecommons.org/licenses/by-nc" , "creativecommons.org/licenses/by-nc-nd" , "creativecommons.org/licenses/by-nd", "creativecommons.org/licenses/by-nc-sa" ]
-safe_keywords = ["creativecommons.org/licenses/by/", "creativecommons.org/licenses/by-sa/",  "creativecommons.org/licenses/by-nd", "flickr.com/commons/usage", "www.usa.gov"]
+# safe_keywords = ["creativecommons.org/licenses/by/", "creativecommons.org/licenses/by-sa/"]
+# safe_keywords = ["creativecommons.org/licenses/by/", "creativecommons.org/licenses/by-sa/", "creativecommons.org/licenses/by-nc" , "creativecommons.org/licenses/by-nc-nd" , "creativecommons.org/licenses/by-nd", "creativecommons.org/licenses/by-nc-sa" ]
+safe_keywords = [
+    "creativecommons.org/licenses/by/",
+    "creativecommons.org/licenses/by-sa/",
+    "creativecommons.org/licenses/by-nd",
+    "flickr.com/commons/usage",
+    "www.usa.gov"]
 
 
 safe_images = []
@@ -39,4 +44,4 @@ for img in safe_images:
     if os.path.exists(src):
         shutil.copy2(src, dst)
 
-print(f"Copied {len(safe_images)} images to {output_dir}") 
+print(f"Copied {len(safe_images)} images to {output_dir}")

@@ -28,14 +28,11 @@ class Dataset:
         perf_count_override=None,
         dataset_path=None,
         device="cpu",
-        shuffle=True,
-        random_seed=42,
     ):
         self.model_name = model_name or "meta-llama/Llama-2-70b-chat-hf"
         self.dataset_path = dataset_path
         self.max_length = 1024
         self.device = device
-        self.shuffle = shuffle
 
         # self.total_sample_count = total_sample_count
 
@@ -70,11 +67,6 @@ class Dataset:
         processed_data = pd.read_pickle(self.dataset_path)
 
         input_tokens = processed_data["tok_input"]
-        
-        # shuffle dataset to evenly distribute prompt load
-        if self.shuffle:
-            random.seed(42)
-            random.shuffle(input_tokens)
 
         self.input_ids = []
         self.input_lens = []

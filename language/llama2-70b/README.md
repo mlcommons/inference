@@ -187,6 +187,23 @@ python3 -u main.py --scenario Offline \
         --device cuda:0 2>&1 | tee offline_performance_log.log
 ```
 
+For models hosted over an OpenAI-compatible LLM API endpoint (eg. via VLLM, TensorRT-LLM):
+
+```
+python3 -u main.py --scenario Offline \
+        --vllm \
+        --api-model-name ${MODEL_NAME} \
+        --api-server ${API_BASE} \
+        --model-path ${CHECKPOINT_PATH} \
+        --user-conf user.conf \
+        --total-sample-count 24576 \
+        --dataset-path ${DATASET_PATH} \
+        --output-log-dir offline-logs
+```
+
+- `<API_BASE>` is the base URL of the OpenAI-compatible endpoint eg. `http://server1:8000/`
+- **Multinode** multiple LLM API endpoints can be provided by specifying `--api-server` multiple times.
+
 ### Server
 ```
 python -u main.py --scenario Server \
@@ -199,7 +216,7 @@ python -u main.py --scenario Server \
                 --output-log-dir server-logs
 ```
 
-The ServerSUT was not tested for GPU runs.
+The ServerSUT was not tested for GPU or LLM API runs.
 
 
 ## Run Accuracy Benchmarks
@@ -210,6 +227,7 @@ OUTPUT_LOG_DIR=offline-accuracy-logs
 
 mkdir -p "run_outputs"  # The script will dump all the outputs to 'run_outputs'.
 
+# for normal runs:
 python -u main.py --scenario Offline \
                 --model-path ${CHECKPOINT_PATH} \
                 --accuracy \
@@ -241,6 +259,20 @@ python consolidate_results.py --dataset-path ${DATASET_PATH} --model-dir ${CHECK
 For the GPU run - The above steps have been automated in `run_accuracy.sh`. You can also modify this script to use
 `--device cpu` to adapt it to a CPU-only run.
 
+For models hosted over an OpenAI-compatible LLM API endpoint, 
+replace the `python -m main.py` command normal run instructions with:
+```sh
+python3 -u main.py --scenario Offline \
+        --vllm \
+        --api-model-name ${MODEL_NAME} \
+        --api-server ${API_BASE} \
+        --model-path ${CHECKPOINT_PATH} \
+        --user-conf user.conf \
+        --total-sample-count 24576 \
+        --dataset-path ${DATASET_PATH} \
+        --output-log-dir ${OUTPUT_LOG_DIR} \
+        --accuracy
+```
 
 ### Server
 ```

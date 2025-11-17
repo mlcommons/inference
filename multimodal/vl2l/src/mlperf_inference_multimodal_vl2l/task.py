@@ -289,22 +289,23 @@ class Task(ABC):
                     if not choices:
                         continue
                     # first non-empty token -> TTFT
-                    delta = chunk.choices[0].delta
+                    delta = choices[0].delta
                     text = getattr(delta, "content", None)
-                    if text:
-                        if ttft_set is False:
-                            bytes_array = array.array(
-                                "B", text.encode("utf-8"))
-                            address, length = bytes_array.buffer_info()
-                            size_in_bytes = length * bytes_array.itemsize
-                            lg.FirstTokenComplete([
-                                lg.QuerySampleResponse(query_sample.id,
-                                                       address,
-                                                       size_in_bytes,
-                                                       1),
-                            ])
-                            ttft_set = True
-                        word_array.append(text)
+                    if not text:
+                        continue
+                    if ttft_set is False:
+                        bytes_array = array.array(
+                            "B", text.encode("utf-8"))
+                        address, length = bytes_array.buffer_info()
+                        size_in_bytes = length * bytes_array.itemsize
+                        lg.FirstTokenComplete([
+                            lg.QuerySampleResponse(query_sample.id,
+                                                    address,
+                                                    size_in_bytes,
+                                                    1),
+                        ])
+                        ttft_set = True
+                    word_array.append(text)
 
                 # when the stream ends, total latency
                 content = "".join(word_array)

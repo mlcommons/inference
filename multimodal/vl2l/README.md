@@ -107,13 +107,13 @@ docker run --gpus all \                                 # Use all the GPUs on th
 Performance only mode:
 
 ```bash
-mlperf-inf-mm-vl2l --settings.scenario offline --settings.mode performance_only
+mlperf-inf-mm-vl2l --settings.test.scenario offline --settings.test.mode performance_only
 ```
 
 Accuracy only mode:
 
 ```bash
-mlperf-inf-mm-vl2l --settings.scenario offline --settings.mode accuracy_only
+mlperf-inf-mm-vl2l --settings.test.scenario offline --settings.test.mode accuracy_only
 ```
 
 ### Run the benchmark for the Server scenario
@@ -121,13 +121,13 @@ mlperf-inf-mm-vl2l --settings.scenario offline --settings.mode accuracy_only
 Performance only mode:
 
 ```bash
-mlperf-inf-mm-vl2l --settings.scenario server --settings.mode performance_only
+mlperf-inf-mm-vl2l --settings.test.scenario server --settings.test.mode performance_only
 ```
 
 Accuracy only mode:
 
 ```bash
-mlperf-inf-mm-vl2l --settings.scenario server --settings.mode accuracy_only
+mlperf-inf-mm-vl2l --settings.test.scenario server --settings.test.mode accuracy_only
 ```
 
 ## Developer Guide

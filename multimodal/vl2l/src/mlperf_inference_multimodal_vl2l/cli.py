@@ -186,9 +186,9 @@ class TestSettings(BaseModel):
         bool,
         Field(
             description="""By default,
-            the Server scenario will use server_target_latency as constrain.
-            When set to True, the Server scenario will uset server_ttft_latency
-            and tpot server_tpot_latency.""",
+            the Server scenario will use server_target_latency as the constraint.
+            When set to True, the Server scenario will use server_ttft_latency
+            and server_tpot_latency as the constraint.""",
         ),
     ] = False
 

@@ -300,9 +300,9 @@ class Task(ABC):
                         size_in_bytes = length * bytes_array.itemsize
                         lg.FirstTokenComplete([
                             lg.QuerySampleResponse(query_sample.id,
-                                                    address,
-                                                    size_in_bytes,
-                                                    1),
+                                                   address,
+                                                   size_in_bytes,
+                                                   1),
                         ])
                         ttft_set = True
                     word_array.append(text)

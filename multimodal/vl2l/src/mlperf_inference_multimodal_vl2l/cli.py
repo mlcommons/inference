@@ -168,11 +168,9 @@ class TestSettings(BaseModel):
     min_duration: Annotated[
         timedelta,
         Field(
-            description=
-                """The minimum testing duration
+            description="""The minimum testing duration
                 (in seconds or ISO 8601 format like PT5S).
-                The benchmark runs until this value has been met."""
-            ,
+                The benchmark runs until this value has been met.""",
         ),
     ] = timedelta(seconds=5)
 
@@ -201,7 +199,7 @@ class TestSettings(BaseModel):
                      mode="before")
     @classmethod
     def parse_timedelta(cls, value: timedelta |
-                           float | str) -> timedelta | str:
+                        float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -326,6 +324,7 @@ class LogSettings(BaseModel):
         log_settings.enable_trace = self.enable_trace
         return log_settings
 
+
 class Settings(BaseModel):
     """Combine the settings for the test and logging of LoadGen."""
     test: Annotated[
@@ -347,7 +346,6 @@ class Settings(BaseModel):
         test_settings = self.test.to_lgtype()
         log_settings = self.logging.to_lgtype()
         return (test_settings, log_settings)
-
 
 
 class Model(BaseModel):

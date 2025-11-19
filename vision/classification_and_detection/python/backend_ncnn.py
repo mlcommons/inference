@@ -18,7 +18,7 @@ class BackendNCNN(backend.Backend):
         """image_format. For ncnn it is NCHW."""
         return "NCHW"
 
-    def load(self, model_path, inputs=None, outputs=None):
+    def load(self, model_path, inputs=None, outputs=None, threads=None):
         param_file, bin_file = f"{model_path}.param", f"{model_path}.bin"
         if param_file.endswith("resnet50_v1.param"):
             # download model files if doesn't

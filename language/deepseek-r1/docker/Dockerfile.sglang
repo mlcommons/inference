@@ -1,41 +1,17 @@
 # SGLang Backend Dockerfile
-FROM nvidia/cuda:12.6.0-devel-ubuntu22.04
+FROM lmsysorg/sglang:v0.5.2-cu129-b200
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PIP_BREAK_SYSTEM_PACKAGES=1
 ENV MLPERF_BACKEND=sglang
 
-# Install Python and system dependencies
-RUN apt-get update && apt-get install -y \
-    software-properties-common \
-    && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update && apt-get install -y \
-    python3.10 \
-    python3.10-dev \
-    python3.10-distutils \
-    python3-pip \
-    git \
-    git-lfs \
-    curl \
-    wget \
-    ca-certificates \
-    cmake \
-    build-essential \
-    ninja-build \
-    pybind11-dev \
-    pkg-config \
-    sudo \
-    libnuma-dev \
-    htop \
-    && rm -rf /var/lib/apt/lists/*
-
-# Set Python 3.10 as default
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 1 && \
-    update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1
-
-# Install pip for Python 3.10
-RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+# Make /root accessible to non-root users so they can access /root/.cargo and /root/.rustup
+# This is needed because flashinfer/tvm_ffi tries to search these paths
+RUN chmod a+rX /root && \
+    if [ -d /root/.cargo ]; then chmod -R a+rX /root/.cargo 2>/dev/null || true; fi && \
+    if [ -d /root/.rustup ]; then chmod -R a+rX /root/.rustup 2>/dev/null || true; fi && \
+    if [ -d /root/.cargo/bin ]; then cp -a /root/.cargo/bin/* /usr/local/bin/ 2>/dev/null || true; fi
 
 # Install UV package manager system-wide
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh && \

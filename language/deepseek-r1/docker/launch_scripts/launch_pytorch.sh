@@ -203,11 +203,22 @@ else
 	INFERENCE_MOUNT="-v ${INFERENCE_TMP}:/inference"
 fi
 
+# Setup model cache directory mount
+# If --model-cache-dir is provided, mount it to /raid/data/$USER/
+# If not provided, mount /raid/data/$USER/ from host
+if [ -n "$MODEL_CACHE_DIR" ]; then
+	MODEL_CACHE_MOUNT="-v ${MODEL_CACHE_DIR}:/raid/data/${USER_NAME}"
+	echo "Model cache directory: ${MODEL_CACHE_DIR} -> /raid/data/${USER_NAME}"
+else
+	MODEL_CACHE_MOUNT="-v /raid/data/${USER_NAME}:/raid/data/${USER_NAME}"
+	echo "Model cache directory: /raid/data/${USER_NAME} (host) -> /raid/data/${USER_NAME} (container)"
+fi
+
 # Run the Docker container with all mounts (same as main docker setup)
 docker run $DOCKER_RUN_OPTS $DOCKER_RUN_ARGS \
 	$GPU_OPTS \
 	-v /home/mlperf_inference_storage:/home/mlperf_inference_storage \
-	-v /raid/data:/raid/data \
+	$MODEL_CACHE_MOUNT \
 	-e HISTFILE="${WORK_DIR}/.bash_history" \
 	--env "CCACHE_DIR=${CCACHE_DIR}" \
 	--env "USER=${USER_NAME}" \

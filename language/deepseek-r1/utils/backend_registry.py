@@ -98,7 +98,7 @@ BACKEND_REGISTRY = {
             # NOTE(vir): sg-lang crash without +2 additional
             "context_length": MAX_ISL + MAX_OSL + MAX_TEMPLATE_TOKS + 2,
             "max_tokens": MAX_OSL,
-            "mem_fraction_static": 0.90,
+            "mem_fraction_static": 0.85,
             "random_seed": 42,
             "dtype": "auto",
             "trust_remote_code": True,
@@ -106,14 +106,20 @@ BACKEND_REGISTRY = {
             "enable_flashinfer": True,
             "enable_dp_attention": True,
             "dp": 8,
-            "cuda_graph_max_bs": 512,
             "temperature": 0.0,
             "top_p": 1.0,
             "seed": 42,
-            "max_running_requests": 512,  # concurrency
+            "max_running_requests": 128,  # concurrency
             "request_timeout": None,
             "server_startup_timeout": 1800,
             "health_check_interval": 5,
+
+
+            # True: enable with DS-R1 interactive scenario MTP config
+            'enable_speculative_decode': True,
+            'speculative_algorithm': 'EAGLE', # EAGLE1/2 style decoding with DS-R1 MTP Head
+            'speculative_num_steps': 3,
+            'speculative_topk': 1, # Linear (no draft-trees)
         },
         'env_vars': {
             'CUDA_MODULE_LOADING': 'LAZY',

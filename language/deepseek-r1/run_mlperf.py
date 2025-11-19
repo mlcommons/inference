@@ -46,7 +46,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
     # Scenario selection (no backend argument, auto-detected)
     parser.add_argument("--mode", type=str, default="offline",
-                        choices=["offline", "server"],
+                        choices=["offline", "server", "interactive"],
                         help="MLPerf scenario mode")
 
     # MLPerf configuration
@@ -82,7 +82,7 @@ def configure_loadgen(scenario: str,
     """Configure LoadGen test settings.
 
     Args:
-        scenario: MLPerf scenario ("offline" or "server")
+        scenario: MLPerf scenario ("offline", "server", or "interactive")
         accuracy_mode: Whether to run in accuracy mode
         mlperf_conf: Path to MLPerf config file
         user_conf: Path to user config file
@@ -97,10 +97,17 @@ def configure_loadgen(scenario: str,
     # Set scenario
     if scenario.lower() == "offline":
         settings.scenario = lg.TestScenario.Offline
-    elif scenario.lower() == "server":
+        config_scenario = "Offline"
+    elif scenario.lower() == "server" or scenario.lower() == "interactive":
         settings.scenario = lg.TestScenario.Server
+        config_scenario = "Server"
     else:
         raise ValueError(f"Unknown scenario: {scenario}")
+    
+    # Adjust model name for interactive mode to use separate config
+    # LoadGen will look for "deepseek-r1-interactive.Server" config section
+    if scenario.lower() == "interactive":
+        model_name = f"{model_name}-interactive"
 
     # Set mode
     if accuracy_mode:
@@ -110,9 +117,9 @@ def configure_loadgen(scenario: str,
 
     # Load configurations if files exist
     if mlperf_conf and Path(mlperf_conf).exists():
-        settings.FromConfig(mlperf_conf, model_name, scenario, 2)
+        settings.FromConfig(mlperf_conf, model_name, config_scenario, 2)
     if user_conf and Path(user_conf).exists():
-        settings.FromConfig(user_conf, model_name, scenario, 1)
+        settings.FromConfig(user_conf, model_name, config_scenario, 1)
 
     return settings
 
@@ -247,12 +254,12 @@ def main():
                     dataset_strings=strings_for_sut,
                     name=f"{backend_name}_offline_sut"
                 )
-            else:  # server
+            else:  # server or interactive
                 sut = ServerSUT(
                     backend=backend,
                     dataset=dataset_for_sut,
                     dataset_strings=strings_for_sut,
-                    name=f"{backend_name}_server_sut"
+                    name=f"{backend_name}_{args.mode}_sut"
                 )
 
             # Create QSL
@@ -268,11 +275,10 @@ def main():
             )
 
             # Update settings with dataset info
-            # TODO(vir): these should be in mlperf.conf
-            settings.max_query_count = len(tokenized_prompts)
-            settings.min_query_count = len(tokenized_prompts)
-            settings.use_token_latencies = True
-            settings.server_coalesce_queries = True
+            # settings.max_query_count = len(tokenized_prompts)
+            # settings.min_query_count = len(tokenized_prompts)
+            # settings.use_token_latencies = True
+            # settings.server_coalesce_queries = True
 
             # Configure logging
             log_settings = lg.LogSettings()

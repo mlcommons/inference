@@ -231,7 +231,8 @@ def main():
                     backend, tokenized_prompts, text_prompts=prompts)
 
             # Process raw results into standardized format using shared utility
-            # Filter out errors from raw_results and corresponding rows in df_output
+            # Filter out errors from raw_results and corresponding rows in
+            # df_output
             valid_indices = []
             valid_results = []
             for i, res in enumerate(raw_results):
@@ -239,12 +240,15 @@ def main():
                     valid_indices.append(i)
                     valid_results.append(res)
                 else:
-                    print(f"Skipping prompt {i} due to error: {res.get('error', 'Unknown error')}")
-            
+                    print(
+                        f"Skipping prompt {i} due to error: {res.get('error', 'Unknown error')}")
+
             if len(valid_results) < len(raw_results):
-                print(f"Filtered out {len(raw_results) - len(valid_results)} failed prompts")
+                print(
+                    f"Filtered out {len(raw_results) - len(valid_results)} failed prompts")
                 raw_results = valid_results
-                df_output = df_output.iloc[valid_indices].reset_index(drop=True)
+                df_output = df_output.iloc[valid_indices].reset_index(
+                    drop=True)
 
             print("Processing results...")
             standardized_results = process_inference_results(

@@ -127,8 +127,10 @@ class SGLangBackend(BaseBackend):
         # Add optimization flags
         if self.config['enable_speculative_decode']:
             cmd.extend(['--speculative-algorithm', 'EAGLE'])
-            cmd.extend(['--speculative-num-steps', str(self.config['speculative_num_steps'])])
-            cmd.extend(['--speculative-eagle-topk', str(self.config['speculative_topk'])])
+            cmd.extend(['--speculative-num-steps',
+                        str(self.config['speculative_num_steps'])])
+            cmd.extend(['--speculative-eagle-topk',
+                        str(self.config['speculative_topk'])])
 
         elif self.config['enable_torch_compile']:
             cmd.append('--enable-torch-compile')

@@ -19,6 +19,8 @@ dependencies = [
   "pydantic-typer @ git+https://github.com/CentML/pydantic-typer.git@wangshangsam/preserve-full-annotated-type",
   "pympler",
   "typer",
+  "scikit-learn",
+  "tabulate",
 ]
 dynamic = ["version"]
 

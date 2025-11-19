@@ -38,6 +38,7 @@ class Task(ABC):
         model_cli: ModelCLI,
         endpoint_cli: EndpointCLI,
         scenario: TestScenario,
+        min_query_count: int,
         random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
@@ -47,6 +48,7 @@ class Task(ABC):
             model_cli: The model configuration passed in from the CLI.
             endpoint_cli: The endpoint configuration passed in from the CLI.
             scenario: Declare if the benchmark is for performance or accuracy scenario
+            min_query_count: Number of samples to use for evaluation
             random_seed: The random seed to use for the task.
         """
         random.seed(random_seed)
@@ -65,6 +67,7 @@ class Task(ABC):
             self._create_event_loop_in_separate_thread()
         )
         self.loaded_messages: dict[int, list[ChatCompletionMessageParam]] = {}
+        self.min_query_count = min_query_count
 
     def __del__(self) -> None:
         """Clean up the resources used by the task."""
@@ -121,7 +124,7 @@ class Task(ABC):
         This is used to set the `total_sample_count` parameter in the LoadGen QSL
         constructor.
         """
-        return len(self.dataset)
+        return min(len(self.dataset), self.min_query_count)
 
     @property
     def max_num_samples_in_host_memory(self) -> int:
@@ -368,6 +371,7 @@ class ShopifyGlobalCatalogue(Task):
         model_cli: ModelCLI,
         endpoint_cli: EndpointCLI,
         scenario: TestScenario,
+        min_query_count: int,
         random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
@@ -377,6 +381,7 @@ class ShopifyGlobalCatalogue(Task):
             model_cli: The model configuration passed in from the CLI.
             endpoint_cli: The endpoint configuration passed in from the CLI.
             scenario: Declare if the benchmark is for performance or accuracy scenario
+            min_query_count: Number of samples to use for evaluation
             random_seed: The random seed to use for the task.
         """
         super().__init__(
@@ -384,6 +389,7 @@ class ShopifyGlobalCatalogue(Task):
             model_cli=model_cli,
             endpoint_cli=endpoint_cli,
             scenario=scenario,
+            min_query_count=min_query_count,
             random_seed=random_seed,
         )
         # Shopify only released the train split so far.
@@ -401,7 +407,7 @@ class ShopifyGlobalCatalogue(Task):
             The messages for chat completion.
         """
         image_file = BytesIO()
-        sample["image"].save(image_file, format="PNG")
+        sample["product_image"].save(image_file, format="PNG")
         image_bytes = image_file.getvalue()
         image_base64 = base64.b64encode(image_bytes)
         image_base64_string = image_base64.decode("utf-8")
@@ -411,11 +417,9 @@ class ShopifyGlobalCatalogue(Task):
                 "content": (
                     "Please analyze the following product and provide the following "
                     "fields in JSON format:\n"
-                    "- category\n"
-                    "- standardized_title\n"
-                    "- standardized_description\n"
-                    "- brands\n"
+                    "- brand\n"
                     "- is_secondhand\n"
+                    "- category\n"
                 ),
             },
             {
@@ -424,9 +428,13 @@ class ShopifyGlobalCatalogue(Task):
                     {
                         "type": "text",
                         "text": (
-                            f"The title of the product is: {sample['title']}\n\n"
+                            f"The title of the product is: {sample['product_title']}\n"
                             f"The description of the product is: "
-                            f"{sample['description']}"
+                            f"{sample['product_description']}\n\n",
+                            "These are the possible product categories: ",
+                            f"{sample['potential_product_categories']}.",
+                            "You must choose only one and return the answer"
+                            " as string and not as a list",
                         ),
                     },
                     {

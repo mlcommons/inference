@@ -14,6 +14,7 @@ from pydantic import BaseModel, DirectoryPath, Field, field_validator
 from pydantic_typer import Typer
 from typer import Option
 
+from .evaluation import Evaluator
 from .task import ShopifyGlobalCatalogue
 
 app = Typer()
@@ -347,6 +348,22 @@ class Settings(BaseModel):
         log_settings = self.logging.to_lgtype()
         return (test_settings, log_settings)
 
+class Evaluation(BaseModel):
+    """Evaluate the results of the accuracy scenario."""
+    enable_evaluation: Annotated[
+        bool,
+        Field(
+            description="Evaluate the results of the accuracy scenario.",
+        ),
+    ] = False
+
+    filename: Annotated[
+        Path,
+        Field(
+            description="Location of the accuracy file.",
+        ),
+    ] = Path("./output/mlperf_log_accuracy.json")
+
 
 class Model(BaseModel):
     """Specifies the model to use for the VL2L benchmark."""
@@ -413,6 +430,7 @@ def main(
     model: Model,
     dataset: Dataset,
     endpoint: Endpoint,
+    evaluation: Evaluation,
     random_seed: Annotated[
         int,
         Option(help="The seed for the random number generator used by the benchmark."),
@@ -423,27 +441,33 @@ def main(
     ] = Verbosity.INFO,
 ) -> None:
     """Main CLI for running the VL2L benchmark."""
-    logger.remove()
-    logger.add(sys.stdout, level=verbosity.value.upper())
-    logger.info("Running VL2L benchmark with settings: {}", settings)
-    logger.info("Running VL2L benchmark with model: {}", model)
-    logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info(
-        "Running VL2L benchmark with OpenAI API endpoint: {}",
-        endpoint)
-    logger.info("Running VL2L benchmark with random seed: {}", random_seed)
-    test_settings, log_settings = settings.to_lgtype()
-    task = ShopifyGlobalCatalogue(
-        dataset_cli=dataset,
-        model_cli=model,
-        endpoint_cli=endpoint,
-        scenario=settings.test.scenario,
-        random_seed=random_seed,
-    )
-    sut = task.construct_sut()
-    qsl = task.construct_qsl()
-    logger.info("Starting the VL2L benchmark with LoadGen...")
-    lg.StartTestWithLogSettings(sut, qsl, test_settings, log_settings)
-    logger.info("The VL2L benchmark with LoadGen completed.")
-    lg.DestroyQSL(qsl)
-    lg.DestroySUT(sut)
+    if evaluation.enable_evaluation:
+        logger.info("Evaluating the accuracy file")
+        evaluator = Evaluator(filename=evaluation.filename, dataset_cli=dataset)
+        evaluator.run_evaluation()
+    else:
+        logger.remove()
+        logger.add(sys.stdout, level=verbosity.value.upper())
+        logger.info("Running VL2L benchmark with settings: {}", settings)
+        logger.info("Running VL2L benchmark with model: {}", model)
+        logger.info("Running VL2L benchmark with dataset: {}", dataset)
+        logger.info(
+            "Running VL2L benchmark with OpenAI API endpoint: {}",
+            endpoint)
+        logger.info("Running VL2L benchmark with random seed: {}", random_seed)
+        test_settings, log_settings = settings.to_lgtype()
+        task = ShopifyGlobalCatalogue(
+            dataset_cli=dataset,
+            model_cli=model,
+            endpoint_cli=endpoint,
+            scenario=settings.test.scenario,
+            min_query_count=settings.test.min_query_count,
+            random_seed=random_seed,
+        )
+        sut = task.construct_sut()
+        qsl = task.construct_qsl()
+        logger.info("Starting the VL2L benchmark with LoadGen...")
+        lg.StartTestWithLogSettings(sut, qsl, test_settings, log_settings)
+        logger.info("The VL2L benchmark with LoadGen completed.")
+        lg.DestroyQSL(qsl)
+        lg.DestroySUT(sut)

@@ -498,8 +498,7 @@ class SGLangBackend(BaseBackend):
 
             except Exception as e:
                 print(f"\nError generating completion: {e}")
-                raise RuntimeError(
-                    f"SGLang backend failed to generate tokens for prompt: {prompt[:100]}...")
+                results.append({'error': str(e)})
 
         return results
 
@@ -537,8 +536,7 @@ class SGLangBackend(BaseBackend):
 
             except Exception as e:
                 print(f"\nError generating completion for prompt {idx}: {e}")
-                raise RuntimeError(
-                    f"SGLang backend failed to generate tokens for prompt {idx}: {e}")
+                return idx, {'error': str(e)}
 
     @require_initialized
     def generate_async(self,

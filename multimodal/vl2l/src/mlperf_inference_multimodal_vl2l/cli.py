@@ -378,7 +378,7 @@ class Dataset(BaseModel):
     ] = None
 
     split: Annotated[
-        Literal["train","test"],
+        Literal["train", "test"],
         Field(description="choose between train or test split"),
     ] = "train"
 
@@ -412,6 +412,7 @@ class Endpoint(BaseModel):
         str,
         Field(description="The API key to authenticate the inference requests."),
     ] = ""
+
 
 @app.command()
 def evaluate(
@@ -459,7 +460,7 @@ def benchmark(
         dataset_cli=dataset,
         model_cli=model,
         endpoint_cli=endpoint,
-        settings = settings.test,
+        settings=settings.test,
         random_seed=random_seed,
     )
     sut = task.construct_sut()

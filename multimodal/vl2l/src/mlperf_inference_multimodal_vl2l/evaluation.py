@@ -15,6 +15,7 @@ from tabulate import tabulate
 if TYPE_CHECKING:
     from .cli import Dataset as DatasetCLI
 
+
 def get_hierarchical_components(predicted_path: str,
                                 true_path: str,
                                 separator: str = " > ") -> tuple[int, int, int]:
@@ -43,8 +44,8 @@ def get_hierarchical_components(predicted_path: str,
 
     # Iterate through the paths simultaneously
     for pred_cat, true_cat in zip(predicted_categories,
-                                    true_categories,
-                                    strict=False):
+                                  true_categories,
+                                  strict=False):
         if pred_cat == true_cat:
             intersection_count += 1
         else:
@@ -55,6 +56,7 @@ def get_hierarchical_components(predicted_path: str,
     true_length = len(true_categories)
 
     return intersection_count, pred_length, true_length
+
 
 def calculate_hierarchical_metrics(data: list[tuple[str, str]]) -> float:
     """Calculates the aggregate hP, hR, and hF scores for a list of samples.
@@ -87,6 +89,7 @@ def calculate_hierarchical_metrics(data: list[tuple[str, str]]) -> float:
 
     return 0.0 if hp + hr == 0 else 2 * (hp * hr) / (hp + hr)
 
+
 def calculate_exact_match(generated_text: str, original_text: str) -> float:
     """Calculates binary Exact Match (EM) score.
 
@@ -103,6 +106,7 @@ def calculate_exact_match(generated_text: str, original_text: str) -> float:
     orig = original_text.strip().lower()
 
     return 1.0 if gen == orig else 0.0
+
 
 def alt_f1_score(data: list[tuple[str, str]]) -> float:
     """Alt method to calculate hierarchical F1."""
@@ -137,6 +141,7 @@ def alt_f1_score(data: list[tuple[str, str]]) -> float:
     # 5. Calculate Score
     return f1(y_true, y_pred)
 
+
 def run_evaluation(filename: FilePath, dataset: "DatasetCLI") -> None:
     """Main function to run the evaluation."""
     with Path.open(filename) as f:
@@ -157,24 +162,23 @@ def run_evaluation(filename: FilePath, dataset: "DatasetCLI") -> None:
         pred_item = json.loads(pred_text_decode)
         ground_truth_item = original_data[idx]
         category_dataset_pred_src.append((pred_item["category"],
-                                            ground_truth_item["ground_truth_category"]))
+                                          ground_truth_item["ground_truth_category"]))
         is_secondhand_pred.append(int(pred_item["is_secondhand"]))
-        is_secondhand_src.append(int(ground_truth_item["ground_truth_is_secondhand"]))
+        is_secondhand_src.append(
+            int(ground_truth_item["ground_truth_is_secondhand"]))
 
     category_f1_score = calculate_hierarchical_metrics(
         category_dataset_pred_src)
     hiclass_f1 = alt_f1_score(category_dataset_pred_src)
     is_secondhand_f1_score = f1_score(is_secondhand_src,
-                                        is_secondhand_pred)
+                                      is_secondhand_pred)
 
     data = [
         ["category", category_f1_score, hiclass_f1],
         ["is_secondhand", is_secondhand_f1_score],
     ]
 
-    logger.info("Results:\n{}",tabulate(data,
-                                        headers=["Fields", "F1 Score",
-                                                 "HiClass F1 Score"],
-                                        tablefmt="fancy_grid"))
-
-
+    logger.info("Results:\n{}", tabulate(data,
+                                         headers=["Fields", "F1 Score",
+                                                  "HiClass F1 Score"],
+                                         tablefmt="fancy_grid"))

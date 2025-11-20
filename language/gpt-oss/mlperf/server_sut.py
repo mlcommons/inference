@@ -32,7 +32,7 @@ class StreamingQueryState:
 
 class ServerSUT(BaseSUT):
     """Server scenario SUT with streaming support.
-    
+
     Properly reports FirstTokenComplete and QuerySamplesComplete to LoadGen.
     """
 
@@ -49,7 +49,7 @@ class ServerSUT(BaseSUT):
         progress_bar=None
     ):
         """Initialize the Server SUT.
-        
+
         Args:
             backend: Backend instance for inference (must support streaming)
             dataset: List of tokenized prompts
@@ -67,36 +67,40 @@ class ServerSUT(BaseSUT):
         self.top_k = top_k
         self.top_p = top_p
         self.num_workers = num_workers
-        
+
         # Query queue and streaming state
         self.query_queue = queue.Queue()
         self.active_streams: Dict[int, StreamingQueryState] = {}
         self.active_streams_lock = threading.Lock()
-        
+
         # Worker threads
         self.workers = []
         self.should_stop = threading.Event()
-        
+
         # Progress tracking
         self.queries_completed = 0
         self.progress_lock = threading.Lock()
-        
+
         # Event loop for async streaming
         self.loop = None
         self.loop_thread = None
-        
-        logger.info(f"ServerSUT configured with num_workers={num_workers} (streaming enabled)")
+
+        logger.info(
+            f"ServerSUT configured with num_workers={num_workers} (streaming enabled)")
 
     def start(self) -> lg.ConstructSUT:
         """Start the SUT and worker threads."""
         # Start event loop thread for async streaming
         self._start_event_loop()
-        
+
         # Start worker threads
         self._start_workers()
-        
+
         # Create LoadGen SUT
-        self.sut = lg.ConstructSUT(self.issue_queries, self.flush_queries, self.name)
+        self.sut = lg.ConstructSUT(
+            self.issue_queries,
+            self.flush_queries,
+            self.name)
         logger.info(f"{self.name} started with streaming support")
         return self.sut
 
@@ -106,14 +110,14 @@ class ServerSUT(BaseSUT):
             self.loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self.loop)
             self.loop.run_forever()
-        
+
         self.loop_thread = threading.Thread(target=run_loop, daemon=True)
         self.loop_thread.start()
-        
+
         # Wait for loop to be ready
         while self.loop is None:
             time.sleep(0.001)
-        
+
         logger.info("Async event loop started")
 
     def _start_workers(self):
@@ -137,9 +141,10 @@ class ServerSUT(BaseSUT):
                 except queue.Empty:
                     continue
                 except KeyboardInterrupt:
-                    logger.info("Worker thread interrupted, exiting gracefully...")
+                    logger.info(
+                        "Worker thread interrupted, exiting gracefully...")
                     break
-                
+
                 # Schedule async streaming processing
                 if self.loop and not self.should_stop.is_set():
                     future = asyncio.run_coroutine_threadsafe(
@@ -147,20 +152,20 @@ class ServerSUT(BaseSUT):
                         self.loop
                     )
                     # Don't wait for completion - it happens asynchronously
-                    
+
         except Exception as e:
             logger.error(f"Worker thread error: {e}", exc_info=True)
 
     async def _process_streaming_query(self, query_sample: lg.QuerySample):
         """Process a single query with streaming support.
-        
+
         Args:
             query_sample: MLPerf LoadGen query sample
         """
         query_id = query_sample.id
         sample_idx = query_sample.index
         input_ids = self.dataset[sample_idx]
-        
+
         # Initialize streaming state
         state = StreamingQueryState(
             query_sample=query_sample,
@@ -173,10 +178,10 @@ class ServerSUT(BaseSUT):
             start_time=time.time(),
             finished=False
         )
-        
+
         with self.active_streams_lock:
             self.active_streams[query_id] = state
-        
+
         try:
             # Stream tokens from backend
             async for chunk in self.backend.generate_stream(
@@ -191,30 +196,33 @@ class ServerSUT(BaseSUT):
                     state.accumulated_tokens.extend(chunk["delta_token_ids"])
                 if chunk.get("delta_text"):
                     state.accumulated_text += chunk["delta_text"]
-                
+
                 # Send FirstTokenComplete on first token
-                if chunk.get("is_first_token") and not state.first_token_received:
+                if chunk.get(
+                        "is_first_token") and not state.first_token_received:
                     state.first_token_received = True
                     state.first_token_time = time.time()
                     await self._send_first_token_complete(state)
-                
+
                 # Check if finished
                 if chunk.get("is_finished"):
                     state.finished = True
                     await self._send_final_response(state)
                     break
-            
+
             # If no explicit finish signal, send final response
             if not state.finished:
                 state.finished = True
                 await self._send_final_response(state)
-                
+
         except Exception as e:
-            logger.error(f"Error processing streaming query {query_id}: {e}", exc_info=True)
+            logger.error(
+                f"Error processing streaming query {query_id}: {e}",
+                exc_info=True)
             # Send empty response to unblock LoadGen
             try:
                 await self._send_final_response(state)
-            except:
+            except BaseException:
                 pass
         finally:
             # Clean up
@@ -224,15 +232,17 @@ class ServerSUT(BaseSUT):
     async def _send_first_token_complete(self, state: StreamingQueryState):
         """Send FirstTokenComplete to LoadGen for TTFT measurement."""
         try:
-            logger.debug(f"First token for query {state.query_id} at {state.first_token_time - state.start_time:.3f}s")
-            
+            logger.debug(
+                f"First token for query {state.query_id} at {state.first_token_time - state.start_time:.3f}s")
+
             # Convert tokens to numpy array
             if state.accumulated_tokens:
-                token_array = np.ascontiguousarray(state.accumulated_tokens, dtype=np.int32)
+                token_array = np.ascontiguousarray(
+                    state.accumulated_tokens, dtype=np.int32)
             else:
                 # Need at least an empty array
                 token_array = np.array([], dtype=np.int32)
-            
+
             # Create response
             response = lg.QuerySampleResponse(
                 state.query_id,
@@ -240,18 +250,21 @@ class ServerSUT(BaseSUT):
                 token_array.nbytes,
                 len(token_array)
             )
-            
+
             # Report to LoadGen
             lg.FirstTokenComplete([response])
-            
+
         except Exception as e:
-            logger.error(f"Error sending FirstTokenComplete for query {state.query_id}: {e}", exc_info=True)
+            logger.error(
+                f"Error sending FirstTokenComplete for query {state.query_id}: {e}",
+                exc_info=True)
 
     async def _send_final_response(self, state: StreamingQueryState):
         """Send final QuerySamplesComplete to LoadGen."""
         try:
-            logger.debug(f"Final response for query {state.query_id}, {len(state.accumulated_tokens)} tokens")
-            
+            logger.debug(
+                f"Final response for query {state.query_id}, {len(state.accumulated_tokens)} tokens")
+
             # Store results
             self.results[state.query_id] = {
                 "output_ids": state.accumulated_tokens,
@@ -261,13 +274,14 @@ class ServerSUT(BaseSUT):
                     "ttft": state.first_token_time - state.start_time if state.first_token_time else None,
                 }
             }
-            
+
             # Convert tokens to numpy array
             if state.accumulated_tokens:
-                token_array = np.ascontiguousarray(state.accumulated_tokens, dtype=np.int32)
+                token_array = np.ascontiguousarray(
+                    state.accumulated_tokens, dtype=np.int32)
             else:
                 token_array = np.array([], dtype=np.int32)
-            
+
             # Create response
             response = lg.QuerySampleResponse(
                 state.query_id,
@@ -275,25 +289,27 @@ class ServerSUT(BaseSUT):
                 token_array.nbytes,
                 len(token_array)
             )
-            
+
             # Report to LoadGen
             lg.QuerySamplesComplete([response])
-            
+
             # Update progress bar (force refresh for async updates)
             if self.progress_bar is not None:
                 with self.progress_lock:
                     self.queries_completed += 1
                     self.progress_bar.update(1)
                     self.progress_bar.refresh()  # Force redraw from async context
-                    
+
         except Exception as e:
-            logger.error(f"Error sending final response for query {state.query_id}: {e}", exc_info=True)
+            logger.error(
+                f"Error sending final response for query {state.query_id}: {e}",
+                exc_info=True)
 
     def issue_queries(self, query_samples: List[lg.QuerySample]) -> None:
         """Issue queries to the SUT.
-        
+
         In Server mode, queries are added to a queue for worker threads.
-        
+
         Args:
             query_samples: List of MLPerf LoadGen query samples
         """
@@ -302,23 +318,23 @@ class ServerSUT(BaseSUT):
 
     def flush_queries(self) -> None:
         """Flush all pending queries.
-        
+
         Wait for all issued queries to complete.
         """
         logger.info("Flushing server queries...")
-        
+
         # Wait for queue to empty and all streams to complete
         while True:
             queue_empty = self.query_queue.empty()
-            
+
             with self.active_streams_lock:
                 no_active_streams = len(self.active_streams) == 0
-            
+
             if queue_empty and no_active_streams:
                 break
-            
+
             time.sleep(0.01)
-        
+
         logger.info("Server queries flushed")
 
     def stop(self) -> None:
@@ -326,24 +342,24 @@ class ServerSUT(BaseSUT):
         if self.should_stop.is_set():
             logger.info(f"{self.name} already stopping or stopped.")
             return
-        
+
         logger.info(f"Stopping {self.name}...")
         self.should_stop.set()
-        
+
         # Wait for workers
         for i, worker in enumerate(self.workers):
             logger.info(f"Waiting for worker {i+1}/{len(self.workers)}...")
             worker.join(timeout=5)
             if worker.is_alive():
                 logger.warning(f"Worker {i+1} did not terminate gracefully")
-        
+
         # Stop event loop
         if self.loop:
             self.loop.call_soon_threadsafe(self.loop.stop)
             if self.loop_thread:
                 self.loop_thread.join(timeout=2)
-        
+
         logger.info("All workers stopped")
-        
+
         # Destroy LoadGen SUT
         super().stop()

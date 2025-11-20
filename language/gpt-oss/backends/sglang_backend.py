@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class SGLangBackend(BaseBackend):
     """SGLang inference backend using HTTP API.
-    
+
     Connects to an SGLang server running the gpt-oss model.
     """
 
@@ -26,7 +26,7 @@ class SGLangBackend(BaseBackend):
         **kwargs
     ):
         """Initialize SGLang backend.
-        
+
         Args:
             server_url: URL of the SGLang server
             timeout: Request timeout in seconds
@@ -79,14 +79,14 @@ class SGLangBackend(BaseBackend):
         top_p: float
     ) -> Dict[str, Any]:
         """Send a single request to the SGLang server.
-        
+
         Args:
             input_ids: Token IDs for the prompt
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             top_k: Top-k parameter
             top_p: Top-p parameter
-            
+
         Returns:
             Response dictionary from the server
         """
@@ -127,7 +127,7 @@ class SGLangBackend(BaseBackend):
         **kwargs
     ) -> List[Dict[str, Any]]:
         """Generate responses for a batch of prompts.
-        
+
         Args:
             prompts: List of token ID sequences
             max_tokens: Maximum tokens to generate per prompt
@@ -135,7 +135,7 @@ class SGLangBackend(BaseBackend):
             top_k: Top-k sampling parameter
             top_p: Top-p (nucleus) sampling parameter
             **kwargs: Additional parameters (ignored)
-            
+
         Returns:
             List of response dictionaries with keys:
                 - output_ids: List of generated token IDs
@@ -143,7 +143,8 @@ class SGLangBackend(BaseBackend):
                 - metadata: Additional metadata (latencies, etc.)
         """
         if not self.initialized:
-            raise RuntimeError("Backend not initialized. Call initialize() first.")
+            raise RuntimeError(
+                "Backend not initialized. Call initialize() first.")
 
         results = []
         for prompt_ids in prompts:
@@ -190,16 +191,16 @@ class SGLangBackend(BaseBackend):
         **kwargs
     ) -> AsyncIterator[Dict[str, Any]]:
         """Generate response with streaming support.
-        
+
         Yields incremental responses as tokens are generated.
-        
+
         Args:
             input_ids: Token IDs for the prompt
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
             top_k: Top-k parameter
             top_p: Top-p parameter
-            
+
         Yields:
             Dict with:
                 - delta_token_ids: List of new token IDs in this chunk
@@ -210,8 +211,9 @@ class SGLangBackend(BaseBackend):
                 - metadata: Additional info (TTFT, etc.)
         """
         if not self.initialized:
-            raise RuntimeError("Backend not initialized. Call initialize() first.")
-        
+            raise RuntimeError(
+                "Backend not initialized. Call initialize() first.")
+
         payload = {
             "input_ids": input_ids,
             "sampling_params": {
@@ -222,13 +224,13 @@ class SGLangBackend(BaseBackend):
             },
             "stream": True  # Enable streaming
         }
-        
+
         start_time = time.time()
         first_token_time = None
         accumulated_token_ids = []
         accumulated_text = ""
         is_first = True
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(
@@ -238,7 +240,8 @@ class SGLangBackend(BaseBackend):
                 ) as response:
                     if response.status != 200:
                         error_text = await response.text()
-                        logger.error(f"Streaming request failed: {response.status} - {error_text}")
+                        logger.error(
+                            f"Streaming request failed: {response.status} - {error_text}")
                         yield {
                             "delta_token_ids": [],
                             "delta_text": "",
@@ -249,40 +252,41 @@ class SGLangBackend(BaseBackend):
                             "metadata": {}
                         }
                         return
-                    
+
                     # Read streaming response
                     async for line in response.content:
                         if not line:
                             continue
-                        
+
                         # SGLang sends data as "data: {...}\n\n"
                         line_str = line.decode('utf-8').strip()
                         if not line_str.startswith('data:'):
                             continue
-                        
+
                         try:
-                            json_str = line_str[5:].strip()  # Remove "data:" prefix
+                            # Remove "data:" prefix
+                            json_str = line_str[5:].strip()
                             if json_str == '[DONE]':
                                 break
-                            
+
                             chunk = json.loads(json_str)
-                            
+
                             # Extract token information from chunk
                             delta_token_ids = chunk.get("token_ids", [])
                             delta_text = chunk.get("text", "")
-                            
+
                             if delta_token_ids:
                                 accumulated_token_ids.extend(delta_token_ids)
                             if delta_text:
                                 accumulated_text += delta_text
-                            
+
                             # Mark first token timing
                             if is_first and delta_token_ids:
                                 first_token_time = time.time()
                                 is_first = False
-                            
+
                             is_finished = chunk.get("finished", False)
-                            
+
                             yield {
                                 "delta_token_ids": delta_token_ids,
                                 "delta_text": delta_text,
@@ -296,14 +300,15 @@ class SGLangBackend(BaseBackend):
                                     **chunk.get("meta_info", {})
                                 }
                             }
-                            
+
                             if is_finished:
                                 break
-                                
+
                         except json.JSONDecodeError as e:
-                            logger.warning(f"Failed to parse streaming chunk: {e}")
+                            logger.warning(
+                                f"Failed to parse streaming chunk: {e}")
                             continue
-                            
+
         except asyncio.TimeoutError:
             logger.error(f"Streaming request timed out after {self.timeout}s")
             yield {
@@ -334,4 +339,3 @@ class SGLangBackend(BaseBackend):
             self.session = None
         self.initialized = False
         logger.info("SGLang backend cleaned up")
-

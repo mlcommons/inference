@@ -11,16 +11,17 @@ logger = logging.getLogger(__name__)
 
 class BaseSUT(abc.ABC):
     """Base class for MLPerf inference System Under Test (SUT).
-    
+
     This class defines the interface that all SUTs must implement for MLPerf
     inference benchmarks. It provides two main methods:
     - issue_queries: to enqueue prompt tokens
     - flush_queries: to await completion of all issued queries
     """
 
-    def __init__(self, backend, dataset: List[List[int]], name: str = "BaseSUT", progress_bar=None):
+    def __init__(
+            self, backend, dataset: List[List[int]], name: str = "BaseSUT", progress_bar=None):
         """Initialize the base SUT.
-        
+
         Args:
             backend: Backend instance for inference
             dataset: List of tokenized prompts
@@ -38,10 +39,10 @@ class BaseSUT(abc.ABC):
     @abc.abstractmethod
     def issue_queries(self, query_samples: List[lg.QuerySample]) -> None:
         """Issue queries to the SUT.
-        
+
         This method should enqueue the provided query samples for processing.
         It should return immediately without waiting for completion.
-        
+
         Args:
             query_samples: List of MLPerf LoadGen query samples to process
         """
@@ -50,7 +51,7 @@ class BaseSUT(abc.ABC):
     @abc.abstractmethod
     def flush_queries(self) -> None:
         """Flush all pending queries.
-        
+
         This method should wait for all previously issued queries to complete
         before returning. It's called by LoadGen to ensure all work is done.
         """
@@ -58,7 +59,7 @@ class BaseSUT(abc.ABC):
 
     def start(self) -> lg.ConstructSUT:
         """Start the SUT and return the LoadGen SUT handle.
-        
+
         Returns:
             LoadGen SUT handle for use with LoadGen
         """
@@ -75,7 +76,7 @@ class BaseSUT(abc.ABC):
 
     def get_results(self) -> Dict[int, Any]:
         """Get all results from completed queries.
-        
+
         Returns:
             Dictionary mapping query IDs to results
         """
@@ -88,4 +89,3 @@ class BaseSUT(abc.ABC):
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Context manager exit."""
         self.stop()
-

@@ -7,10 +7,10 @@ performance and accuracy benchmarking.
 Usage:
     # Offline scenario (performance)
     python run_mlperf.py --mode offline --input-file data/accuracy_eval_tokenized.pkl
-    
+
     # Server scenario (performance)
     python run_mlperf.py --mode server --input-file data/accuracy_eval_tokenized.pkl
-    
+
     # Accuracy mode
     python run_mlperf.py --mode offline --accuracy --input-file data/accuracy_eval_tokenized.pkl
 """
@@ -173,7 +173,7 @@ def configure_loadgen(
     model_name: str = "gpt-oss"
 ) -> lg.TestSettings:
     """Configure LoadGen test settings.
-    
+
     Args:
         scenario: MLPerf scenario ("offline" or "server")
         accuracy_mode: Whether to run in accuracy mode
@@ -181,7 +181,7 @@ def configure_loadgen(
         user_conf: Path to user config file
         log_dir: Directory for logs
         model_name: Model name for configuration
-        
+
     Returns:
         LoadGen TestSettings
     """
@@ -221,7 +221,7 @@ def main():
     """Main function."""
     parser = create_argument_parser()
     args = parser.parse_args()
-    
+
     # Track resources for cleanup
     sut = None
     qsl = None
@@ -232,13 +232,13 @@ def main():
     def do_cleanup():
         """Perform cleanup once and only once."""
         nonlocal cleanup_done, pbar, sut, qsl, backend
-        
+
         if cleanup_done:
             return
         cleanup_done = True
-        
+
         logger.info("Performing cleanup...")
-        
+
         # 1. Close progress bar first (before any LoadGen cleanup)
         try:
             if pbar is not None:
@@ -247,11 +247,11 @@ def main():
                 logger.debug("  ✓ Progress bar closed")
         except Exception as e:
             logger.debug(f"  ! Error closing progress bar: {e}")
-        
+
         # Small delay to let LoadGen internal threads finish
         import time
         time.sleep(0.5)
-        
+
         # 2. Stop SUT (this will stop worker threads and flush)
         try:
             if sut is not None:
@@ -261,7 +261,7 @@ def main():
                 logger.info("    ✓ SUT stopped")
         except Exception as e:
             logger.warning(f"    ! Error stopping SUT: {e}")
-        
+
         # 3. Destroy QSL
         try:
             if qsl is not None and qsl.qsl is not None:
@@ -271,7 +271,7 @@ def main():
                 logger.info("    ✓ QSL destroyed")
         except Exception as e:
             logger.warning(f"    ! Error destroying QSL: {e}")
-        
+
         # 4. Cleanup backend last
         try:
             if backend is not None and backend.initialized:
@@ -285,7 +285,8 @@ def main():
     try:
         # Create output directories
         output_dir = Path(args.output_dir)
-        log_dir = output_dir / args.mode / ("accuracy" if args.accuracy else "performance")
+        log_dir = output_dir / args.mode / \
+            ("accuracy" if args.accuracy else "performance")
         log_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info("=" * 80)
@@ -308,7 +309,7 @@ def main():
             prompts = dataset_info["prompts"]
             df = dataset_info["dataframe"]
             pbar.update(1)
-        
+
         logger.info(f"Loaded {len(prompts)} prompts from dataset")
 
         # Initialize backend
@@ -323,7 +324,7 @@ def main():
 
         # Initialize backend
         backend.initialize()
-        
+
         # Create progress bar for real-time updates
         pbar = tqdm(
             total=len(prompts),
@@ -334,7 +335,7 @@ def main():
             mininterval=0.1,  # Update display every 0.1s minimum
             smoothing=0.1      # Smooth display updates
         )
-        
+
         # Create SUT with progress bar
         logger.info(f"Creating {args.mode} SUT...")
         if args.mode == "offline":
@@ -371,7 +372,7 @@ def main():
             qsl.load_query_samples,
             qsl.unload_query_samples
         )
-        
+
         # Configure LoadGen
         settings = configure_loadgen(
             scenario=args.mode,
@@ -400,7 +401,7 @@ def main():
             log_settings
         )
         logger.info("LoadGen test completed successfully")
-        
+
         # Give LoadGen a moment to finish internal cleanup
         import time
         time.sleep(0.2)
@@ -425,7 +426,8 @@ def main():
             logger.info("=" * 80)
             logger.info("Accuracy mode completed!")
             logger.info("To evaluate accuracy, run:")
-            logger.info(f"  python eval_accuracy.py --input-file {log_dir}/mlperf_log_accuracy.json")
+            logger.info(
+                f"  python eval_accuracy.py --input-file {log_dir}/mlperf_log_accuracy.json")
             logger.info("=" * 80)
 
     except KeyboardInterrupt:
@@ -438,7 +440,7 @@ def main():
         logger.info("=" * 80)
         # Exit immediately to prevent finally block from running
         os._exit(130)  # Use os._exit to skip finally block
-        
+
     except Exception as e:
         logger.error("\n" + "=" * 80)
         logger.error(f"❌ Error during test: {e}")
@@ -448,7 +450,7 @@ def main():
         logger.error("=" * 80)
         # Exit immediately to prevent finally block from running
         os._exit(1)
-    
+
     finally:
         # Only run cleanup if not already done (normal exit path)
         if not cleanup_done:
@@ -460,4 +462,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

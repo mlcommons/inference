@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class OfflineSUT(BaseSUT):
     """Offline scenario System Under Test.
-    
+
     In the Offline scenario, all queries are issued at once and can be
     processed in any order. This allows for maximum batching and throughput.
     """
@@ -32,7 +32,7 @@ class OfflineSUT(BaseSUT):
         max_concurrency: int = 128
     ):
         """Initialize the Offline SUT.
-        
+
         Args:
             backend: Backend instance for inference
             dataset: List of tokenized prompts
@@ -51,26 +51,27 @@ class OfflineSUT(BaseSUT):
         self.top_p = top_p
         self.pending_queries = []
         self.max_concurrency = max_concurrency
-        
-        logger.info(f"OfflineSUT configured with max_concurrency={max_concurrency} (backend handles batching)")
+
+        logger.info(
+            f"OfflineSUT configured with max_concurrency={max_concurrency} (backend handles batching)")
 
     def issue_queries(self, query_samples: List[lg.QuerySample]) -> None:
         """Issue queries to the SUT.
-        
+
         In Offline mode, we accumulate all queries and process them in batch.
-        
+
         Args:
             query_samples: List of MLPerf LoadGen query samples
         """
         logger.info(f"Received {len(query_samples)} queries")
-        
+
         # Store queries for batch processing
         for qs in query_samples:
             self.pending_queries.append(qs)
 
     def flush_queries(self) -> None:
         """Process all accumulated queries with concurrent requests.
-        
+
         Sends individual requests concurrently up to max_concurrency limit.
         SGLang handles batching internally via continuous batching.
         """
@@ -78,18 +79,20 @@ class OfflineSUT(BaseSUT):
             logger.info("No pending queries to flush")
             return
 
-        logger.info(f"Flushing {len(self.pending_queries)} queries with max_concurrency={self.max_concurrency}")
+        logger.info(
+            f"Flushing {len(self.pending_queries)} queries with max_concurrency={self.max_concurrency}")
         start_time = time.time()
 
         from concurrent.futures import ThreadPoolExecutor, as_completed
-        
+
         def process_single_query(query_sample):
             """Process a single query (backend batches automatically via continuous batching)."""
             query_id = query_sample.id
             input_ids = self.dataset[query_sample.index]
-            
+
             # Call backend with single query
-            # SGLang will batch this with other concurrent requests automatically
+            # SGLang will batch this with other concurrent requests
+            # automatically
             responses = self.backend.generate(
                 prompts=[input_ids],  # Single query as list
                 max_tokens=self.max_tokens,
@@ -97,23 +100,27 @@ class OfflineSUT(BaseSUT):
                 top_k=self.top_k,
                 top_p=self.top_p
             )
-            
+
             return query_id, query_sample, responses[0]
-        
+
         try:
             # Process queries in parallel with max_concurrency
-            logger.info(f"Submitting {len(self.pending_queries)} queries to {self.max_concurrency} concurrent workers...")
+            logger.info(
+                f"Submitting {len(self.pending_queries)} queries to {self.max_concurrency} concurrent workers...")
             with ThreadPoolExecutor(max_workers=self.max_concurrency) as executor:
                 # Submit all queries at once
-                futures = [executor.submit(process_single_query, qs) for qs in self.pending_queries]
-                
+                futures = [
+                    executor.submit(
+                        process_single_query,
+                        qs) for qs in self.pending_queries]
+
                 # Process results as they complete
                 completed_count = 0
                 for future in as_completed(futures):
                     try:
                         query_id, query_sample, response = future.result()
                         output_ids = response.get("output_ids", [])
-                        
+
                         # Store results
                         self.results[query_id] = {
                             "output_ids": output_ids,
@@ -124,7 +131,8 @@ class OfflineSUT(BaseSUT):
                         # Convert output_ids to numpy array for LoadGen
                         # LoadGen expects int32 token IDs as a contiguous array
                         if output_ids:
-                            token_array = np.ascontiguousarray(output_ids, dtype=np.int32)
+                            token_array = np.ascontiguousarray(
+                                output_ids, dtype=np.int32)
                             output_data_ptr = token_array.ctypes.data
                             output_data_size = token_array.nbytes
                         else:
@@ -132,7 +140,7 @@ class OfflineSUT(BaseSUT):
                             token_array = np.array([], dtype=np.int32)
                             output_data_ptr = 0
                             output_data_size = 0
-                        
+
                         # Create response for LoadGen
                         response_array = [
                             lg.QuerySampleResponse(
@@ -141,22 +149,25 @@ class OfflineSUT(BaseSUT):
                                 output_data_size
                             )
                         ]
-                        
+
                         # Report completion to LoadGen
                         lg.QuerySamplesComplete(response_array)
-                        
+
                         # Update progress bar
                         if self.progress_bar is not None:
                             self.progress_bar.update(1)
                             self.progress_bar.refresh()
-                        
+
                         completed_count += 1
-                        # Log progress at debug level only (tqdm shows progress)
+                        # Log progress at debug level only (tqdm shows
+                        # progress)
                         if completed_count % 100 == 0:
-                            logger.debug(f"Completed {completed_count}/{len(self.pending_queries)} queries")
-                    
+                            logger.debug(
+                                f"Completed {completed_count}/{len(self.pending_queries)} queries")
+
                     except Exception as e:
-                        logger.error(f"Error processing query: {e}", exc_info=True)
+                        logger.error(
+                            f"Error processing query: {e}", exc_info=True)
 
             elapsed = time.time() - start_time
             logger.info(
@@ -170,4 +181,3 @@ class OfflineSUT(BaseSUT):
         finally:
             # Clear pending queries
             self.pending_queries = []
-

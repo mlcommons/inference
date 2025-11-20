@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 
 class QuerySampleLibrary:
     """Query Sample Library implementation.
-    
+
     This class manages the dataset of samples that LoadGen will query.
     """
 
     def __init__(self, dataset: List[List[int]]):
         """Initialize the Query Sample Library.
-        
+
         Args:
             dataset: List of tokenized prompts (list of token ID lists)
         """
@@ -26,7 +26,7 @@ class QuerySampleLibrary:
 
     def load_query_samples(self, sample_indices: List[int]) -> None:
         """Load specified query samples into memory.
-        
+
         Args:
             sample_indices: List of sample indices to load
         """
@@ -35,7 +35,7 @@ class QuerySampleLibrary:
 
     def unload_query_samples(self, sample_indices: List[int]) -> None:
         """Unload specified query samples from memory.
-        
+
         Args:
             sample_indices: List of sample indices to unload
         """
@@ -63,4 +63,3 @@ class QuerySampleLibrary:
             lg.DestroyQSL(self.qsl)
             self.qsl = None
             logger.info("QSL destroyed")
-

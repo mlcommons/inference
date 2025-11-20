@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 
 class BaseBackend(abc.ABC):
     """Abstract base class for inference backends.
-    
+
     All backends must implement this interface to work with the MLPerf SUT.
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """Initialize the backend.
-        
+
         Args:
             config: Optional configuration dictionary
         """
@@ -40,7 +40,7 @@ class BaseBackend(abc.ABC):
         **kwargs
     ) -> List[Dict[str, Any]]:
         """Generate responses for a batch of prompts.
-        
+
         Args:
             prompts: List of token ID sequences
             max_tokens: Maximum tokens to generate per prompt
@@ -48,7 +48,7 @@ class BaseBackend(abc.ABC):
             top_k: Top-k sampling parameter
             top_p: Top-p (nucleus) sampling parameter
             **kwargs: Additional backend-specific parameters
-            
+
         Returns:
             List of response dictionaries with keys:
                 - output_ids: List of generated token IDs
@@ -75,4 +75,3 @@ class BaseBackend(abc.ABC):
     def is_initialized(self) -> bool:
         """Check if backend is initialized."""
         return self.initialized
-

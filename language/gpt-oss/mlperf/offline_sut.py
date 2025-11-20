@@ -135,18 +135,21 @@ class OfflineSUT(BaseSUT):
                                 output_ids, dtype=np.int32)
                             output_data_ptr = token_array.ctypes.data
                             output_data_size = token_array.nbytes
+                            n_tokens = len(output_ids)
                         else:
                             # Empty response
                             token_array = np.array([], dtype=np.int32)
                             output_data_ptr = 0
                             output_data_size = 0
+                            n_tokens = 0
 
-                        # Create response for LoadGen
+                        # Create response for LoadGen with token count
                         response_array = [
                             lg.QuerySampleResponse(
                                 query_id,
                                 output_data_ptr,
-                                output_data_size
+                                output_data_size,
+                                n_tokens  # Number of output tokens for tokens/sec metric
                             )
                         ]
 

@@ -49,7 +49,20 @@ class SGLangBackend(BaseBackend):
             return
 
         logger.info(f"Connecting to SGLang server at {self.server_url}")
+        
+        # Create session with larger connection pool for high concurrency
+        # Default pool size is 10, but we may have 100s-1000s of concurrent requests
         self.session = requests.Session()
+        
+        # Increase connection pool size to support high concurrency
+        adapter = requests.adapters.HTTPAdapter(
+            pool_connections=100,  # Number of connection pools to cache
+            pool_maxsize=1000,     # Maximum number of connections to save in the pool
+            max_retries=3,         # Retry failed requests
+            pool_block=False       # Don't block when pool is full, create new connections
+        )
+        self.session.mount('http://', adapter)
+        self.session.mount('https://', adapter)
 
         # Test connection with a simple request
         try:

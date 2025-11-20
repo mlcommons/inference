@@ -6,14 +6,15 @@ import sys
 from datetime import timedelta
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 import mlperf_loadgen as lg
 from loguru import logger
-from pydantic import BaseModel, DirectoryPath, Field, field_validator
+from pydantic import BaseModel, DirectoryPath, Field, FilePath, field_validator
 from pydantic_typer import Typer
 from typer import Option
 
+from .evaluation import run_evaluation
 from .task import ShopifyGlobalCatalogue
 
 app = Typer()
@@ -178,7 +179,9 @@ class TestSettings(BaseModel):
         int,
         Field(
             description="""The minimum testing query count.
-            The benchmark runs until this value has been met.""",
+            The benchmark runs until this value has been met.
+            if min_query_count is less than the total number of samples in the dataset,
+            only the first min_query_count samples will be used during testing.""",
         ),
     ] = 100
 
@@ -374,6 +377,11 @@ class Dataset(BaseModel):
         ),
     ] = None
 
+    split: Annotated[
+        Literal["train", "test"],
+        Field(description="choose between train or test split"),
+    ] = "train"
+
 
 class Verbosity(StrEnum):
     """The verbosity level of the logger."""
@@ -407,7 +415,22 @@ class Endpoint(BaseModel):
 
 
 @app.command()
-def main(
+def evaluate(
+    filename: Annotated[
+        FilePath,
+        Option(
+            help="Location of the accuracy file.",
+        ),
+    ],
+    dataset: Dataset,
+) -> None:
+    """Evaluate the accuracy of the VLM responses."""
+    logger.info("Evaluating the accuracy file")
+    run_evaluation(filename=filename, dataset=dataset)
+
+
+@app.command()
+def benchmark(
     *,
     settings: Settings,
     model: Model,
@@ -437,7 +460,7 @@ def main(
         dataset_cli=dataset,
         model_cli=model,
         endpoint_cli=endpoint,
-        scenario=settings.test.scenario,
+        settings=settings.test,
         random_seed=random_seed,
     )
     sut = task.construct_sut()

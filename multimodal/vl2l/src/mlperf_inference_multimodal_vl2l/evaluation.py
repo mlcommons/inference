@@ -4,173 +4,177 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import numpy as np
 from datasets import load_dataset
+from hiclass.metrics import f1
 from loguru import logger
+from pydantic import FilePath
 from sklearn.metrics import f1_score
 from tabulate import tabulate
 
 if TYPE_CHECKING:
     from .cli import Dataset as DatasetCLI
 
-class Evaluator:
-    """Class used to evaluate the accuracy of the VLM."""
+def get_hierarchical_components(predicted_path: str,
+                                true_path: str,
+                                separator: str = " > ") -> tuple[int, int, int]:
+    """Calculates the components for Hierarchical Precision.
 
-    def __init__(self, filename: Path, dataset_cli: "DatasetCLI")-> None:
-        """Initialize class.
+    Args:
+        predicted_path: Categories predicted by the VLM.
+        true_path: Ground truth categories.
+        separator: String used to separate each category.
 
-        Args:
-            filename: Location of the accuracy file.
-            dataset_cli: The dataset configuration passed in from the CLI.
-        """
-        self.filename = filename
-        self.dataset = dataset_cli
+    Returns:
+        Tuple of number of intersections,
+        correctly predicted categories and
+        ground truth categories.
+    """
+    # 1. Split the paths into categories (nodes)
+    predicted_categories = [c.strip() for c in predicted_path.split(separator)]
+    true_categories = [c.strip() for c in true_path.split(separator)]
 
-        self.verify_file_exists()
+    # Check for empty paths
+    if not predicted_categories or not true_categories:
+        return 0, len(predicted_categories), len(true_categories)
 
+    # 2. Count the intersection (longest common prefix)
+    intersection_count = 0
 
-    def verify_file_exists(self) -> None:
-        """Verify if the accuracy file exists."""
-        if not self.filename.exists():
-            error_message = f"File :{self.filename.as_posix()} does not exists."
-            raise RuntimeError(error_message)
+    # Iterate through the paths simultaneously
+    for pred_cat, true_cat in zip(predicted_categories,
+                                    true_categories,
+                                    strict=False):
+        if pred_cat == true_cat:
+            intersection_count += 1
+        else:
+            # Stop as soon as a mismatch is found (enforces hierarchical match)
+            break
 
-    def get_hierarchical_components(self, predicted_path: str,
-                                    true_path: str,
-                                    separator: str = " > ") -> tuple[int, int, int]:
-        """Calculates the components for Hierarchical Precision.
+    pred_length = len(predicted_categories)
+    true_length = len(true_categories)
 
-        Args:
-            predicted_path: Categories predicted by the VLM.
-            true_path: Ground truth categories.
-            separator: String used to separate each category.
+    return intersection_count, pred_length, true_length
 
-        Returns:
-            Tuple of number of intersections,
-            correctly predicted categories and
-            ground truth categories.
-        """
-        # 1. Split the paths into categories (nodes)
-        predicted_categories = [c.strip() for c in predicted_path.split(separator)]
-        true_categories = [c.strip() for c in true_path.split(separator)]
+def calculate_hierarchical_metrics(data: list[tuple[str, str]]) -> float:
+    """Calculates the aggregate hP, hR, and hF scores for a list of samples.
 
-        # Check for empty paths
-        if not predicted_categories or not true_categories:
-            return 0, len(predicted_categories), len(true_categories)
+    Args:
+        data: A list of tuples, where each tuple is
+            (predicted_path_str, true_path_str).
 
-        # 2. Count the intersection (longest common prefix)
-        intersection_count = 0
+    Returns:
+        F1 score
+    """
+    total_intersection = 0
+    total_predicted_length = 0
+    total_true_length = 0
 
-        # Iterate through the paths simultaneously
-        for pred_cat, true_cat in zip(predicted_categories,
-                                      true_categories,
-                                      strict=False):
-            if pred_cat == true_cat:
-                intersection_count += 1
-            else:
-                # Stop as soon as a mismatch is found (enforces hierarchical match)
-                break
+    # 1. Aggregate the components across all samples
+    for pred_path, true_path in data:
+        intersection, pred_len, true_len = \
+            get_hierarchical_components(pred_path, true_path)
 
-        pred_length = len(predicted_categories)
-        true_length = len(true_categories)
+        total_intersection += intersection
+        total_predicted_length += pred_len
+        total_true_length += true_len
 
-        return intersection_count, pred_length, true_length
+    # 2. Calculate hP and hR
+    hp = total_intersection / total_predicted_length \
+        if total_predicted_length > 0 else 0.0
+    hr = total_intersection / total_true_length \
+        if total_true_length > 0 else 0.0
 
-    def calculate_hierarchical_metrics(self, data: list) -> float:
-        """Calculates the aggregate hP, hR, and hF scores for a list of samples.
+    return 0.0 if hp + hr == 0 else 2 * (hp * hr) / (hp + hr)
 
-        Args:
-            data: A list of tuples, where each tuple is
-                (predicted_path_str, true_path_str).
+def calculate_exact_match(generated_text: str, original_text: str) -> float:
+    """Calculates binary Exact Match (EM) score.
 
-        Returns:
-            F1 score
-        """
-        total_intersection = 0
-        total_predicted_length = 0
-        total_true_length = 0
+    We clean the text (lowercase, strip whitespace) for a fairer comparison.
 
-        # 1. Aggregate the components across all samples
-        for pred_path, true_path in data:
-            intersection, pred_len, true_len = \
-                self.get_hierarchical_components(pred_path, true_path)
+    Args:
+        generated_text: Output from the VLM.
+        original_text: Ground truth information from the dataset.
 
-            total_intersection += intersection
-            total_predicted_length += pred_len
-            total_true_length += true_len
+    Returns:
+        1 if the values match or 0 otherwise
+    """
+    gen = generated_text.strip().lower()
+    orig = original_text.strip().lower()
 
-        # 2. Calculate hP and hR
-        hp = total_intersection / total_predicted_length \
-            if total_predicted_length > 0 else 0.0
-        hr = total_intersection / total_true_length \
-            if total_true_length > 0 else 0.0
+    return 1.0 if gen == orig else 0.0
 
-        return 0.0 if hp + hr == 0 else 2 * (hp * hr) / (hp + hr)
+def alt_f1_score(data: list[tuple[str, str]]) -> float:
+    """Alt method to calculate hierarchical F1."""
+    y_pred_raw = []
+    y_true_raw = []
 
-    def calculate_exact_match(self, generated_text: str, original_text: str) -> float:
-        """Calculates binary Exact Match (EM) score.
+    for pred, src in data:
+        path1 = pred.split(" > ")
+        path2 = src.split(" > ")
 
-        We clean the text (lowercase, strip whitespace) for a fairer comparison.
+        y_pred_raw.append(path1)
+        y_true_raw.append(path2)
 
-        Args:
-            generated_text: Output from the VLM.
-            original_text: Ground truth information from the dataset.
+    # 2. Find the global maximum length across ALL samples
+    # We check the longest path in both true and pred lists
+    max_len = max(len(p) for p in y_true_raw + y_pred_raw)
 
-        Returns:
-            1 if the values match or 0 otherwise
-        """
-        gen = generated_text.strip().lower()
-        orig = original_text.strip().lower()
+    # 3. Pad all lists to the global max_len
+    for i in range(len(y_true_raw)):
+        # Pad Truth
+        pad_len_true = max_len - len(y_true_raw[i])
+        y_true_raw[i] += [""] * pad_len_true
 
-        return 1.0 if gen == orig else 0.0
+        # Pad Prediction
+        pad_len_pred = max_len - len(y_pred_raw[i])
+        y_pred_raw[i] += [""] * pad_len_pred
 
+    # 4. Convert to numpy arrays
+    y_true = np.array(y_true_raw)
+    y_pred = np.array(y_pred_raw)
 
-    def run_evaluation(self) -> None:
-        """Main function to run the evaluation."""
-        with Path.open(self.filename) as f:
-            model_output = json.load(f)
+    # 5. Calculate Score
+    return f1(y_true, y_pred)
 
-        original_data = load_dataset(
-            self.dataset.repo_id,
-            token=self.dataset.token,
-        )["train"]
+def run_evaluation(filename: FilePath, dataset: "DatasetCLI") -> None:
+    """Main function to run the evaluation."""
+    with Path.open(filename) as f:
+        model_output = json.load(f)
 
-        category_dataset_pred_src = []
-        is_secondhand_pred = []
-        is_secondhand_src = []
-        for elem in model_output:
-            byte_data = bytes.fromhex(elem["data"])
-            idx = elem["qsl_idx"]
-            pred_text_decode = byte_data.decode("utf-8")
-            """
-            Model response is similar to:
-            ```json
-             {
-             .....
-             }
-            ```
-            Need to find open and close brackets
-            """
-            start_index = pred_text_decode.find("{")
-            end_index = pred_text_decode.rfind("}") + 1
-            pred_item = json.loads(pred_text_decode[start_index:end_index])
-            ground_truth_item = original_data[idx]
-            category_dataset_pred_src.append((pred_item["category"],
-                                              ground_truth_item["ground_truth_category"]))
-            is_secondhand_pred.append(int(pred_item["is_secondhand"]))
-            is_secondhand_src.append(int(ground_truth_item["ground_truth_is_secondhand"]))
+    original_data = load_dataset(
+        dataset.repo_id,
+        dataset.token,
+    )[dataset.split]
 
-        category_f1_score = self.calculate_hierarchical_metrics(
-            category_dataset_pred_src)
-        is_secondhand_f1_score = f1_score(is_secondhand_src,
-                                          is_secondhand_pred)
+    category_dataset_pred_src = []
+    is_secondhand_pred = []
+    is_secondhand_src = []
+    for elem in model_output:
+        byte_data = bytes.fromhex(elem["data"])
+        idx = elem["qsl_idx"]
+        pred_text_decode = byte_data.decode("utf-8")
+        pred_item = json.loads(pred_text_decode)
+        ground_truth_item = original_data[idx]
+        category_dataset_pred_src.append((pred_item["category"],
+                                            ground_truth_item["ground_truth_category"]))
+        is_secondhand_pred.append(int(pred_item["is_secondhand"]))
+        is_secondhand_src.append(int(ground_truth_item["ground_truth_is_secondhand"]))
 
-        data = [
-            ["category", category_f1_score],
-            ["is_secondhand", is_secondhand_f1_score],
-        ]
+    category_f1_score = calculate_hierarchical_metrics(
+        category_dataset_pred_src)
+    hiclass_f1 = alt_f1_score(category_dataset_pred_src)
+    is_secondhand_f1_score = f1_score(is_secondhand_src,
+                                        is_secondhand_pred)
 
-        logger.info("Results:\n{}",tabulate(data,
-                                            headers=["Fields", "F1 Score"],
-                                            tablefmt="fancy_grid"))
+    data = [
+        ["category", category_f1_score, hiclass_f1],
+        ["is_secondhand", is_secondhand_f1_score],
+    ]
+
+    logger.info("Results:\n{}",tabulate(data,
+                                        headers=["Fields", "F1 Score",
+                                                 "HiClass F1 Score"],
+                                        tablefmt="fancy_grid"))
 
 

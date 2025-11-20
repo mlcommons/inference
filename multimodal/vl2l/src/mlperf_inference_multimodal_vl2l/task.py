@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from .cli import Dataset as DatasetCLI
     from .cli import Endpoint as EndpointCLI
     from .cli import Model as ModelCLI
-    from .cli import TestScenario
+    from .cli import TestSettings
 
 
 class Task(ABC):
@@ -37,8 +37,7 @@ class Task(ABC):
         dataset_cli: DatasetCLI,
         model_cli: ModelCLI,
         endpoint_cli: EndpointCLI,
-        scenario: TestScenario,
-        min_query_count: int,
+        settings: TestSettings,
         random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
@@ -47,12 +46,11 @@ class Task(ABC):
             dataset_cli: The dataset configuration passed in from the CLI.
             model_cli: The model configuration passed in from the CLI.
             endpoint_cli: The endpoint configuration passed in from the CLI.
-            scenario: Declare if the benchmark is for performance or accuracy scenario
-            min_query_count: Number of samples to use for evaluation
+            settings: Parameters of the current benchmark
             random_seed: The random seed to use for the task.
         """
         random.seed(random_seed)
-        self.scenario = scenario
+        self.scenario = settings.scenario
         self.dataset = load_dataset(
             dataset_cli.repo_id,
             token=dataset_cli.token,
@@ -67,7 +65,7 @@ class Task(ABC):
             self._create_event_loop_in_separate_thread()
         )
         self.loaded_messages: dict[int, list[ChatCompletionMessageParam]] = {}
-        self.min_query_count = min_query_count
+        self.min_query_count = settings.min_query_count
 
     def __del__(self) -> None:
         """Clean up the resources used by the task."""
@@ -370,8 +368,7 @@ class ShopifyGlobalCatalogue(Task):
         dataset_cli: DatasetCLI,
         model_cli: ModelCLI,
         endpoint_cli: EndpointCLI,
-        scenario: TestScenario,
-        min_query_count: int,
+        settings: TestSettings,
         random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
@@ -380,20 +377,18 @@ class ShopifyGlobalCatalogue(Task):
             dataset_cli: The dataset configuration passed in from the CLI.
             model_cli: The model configuration passed in from the CLI.
             endpoint_cli: The endpoint configuration passed in from the CLI.
-            scenario: Declare if the benchmark is for performance or accuracy scenario
-            min_query_count: Number of samples to use for evaluation
+            settings: Parameters of the current benchmark
             random_seed: The random seed to use for the task.
         """
         super().__init__(
             dataset_cli=dataset_cli,
             model_cli=model_cli,
             endpoint_cli=endpoint_cli,
-            scenario=scenario,
-            min_query_count=min_query_count,
+            settings=settings,
             random_seed=random_seed,
         )
         # Shopify only released the train split so far.
-        self.dataset = self.dataset["train"]
+        self.dataset = self.dataset[dataset_cli.split]
 
     @staticmethod
     def formulate_messages(
@@ -414,13 +409,29 @@ class ShopifyGlobalCatalogue(Task):
         return [
             {
                 "role": "system",
-                "content": (
-                    "Please analyze the following product and provide the following "
-                    "fields in JSON format:\n"
-                    "- brand\n"
-                    "- is_secondhand\n"
-                    "- category\n"
-                ),
+                "content": """
+                Please analyze the product from the user prompt
+                and provide the following fields in a valid JSON object:
+                - category
+                - brand
+                - is_secondhand
+
+                You must choose only one, which is the most appropriate/correct,
+                category out of the list of possible product categories.
+
+                Your response should only contain a valid JSON object and nothing more.
+                The JSON object should match the followng JSON schema:
+                ```json
+                {
+                "type": "object",
+                "properties": {
+                    "category": {"type": "string"},
+                    "brand": {"type": "string"},
+                    "is_secondhand": {"type": "boolean"}
+                    }
+                }
+                ```
+                """,
             },
             {
                 "role": "user",

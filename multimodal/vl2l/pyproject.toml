@@ -21,6 +21,7 @@ dependencies = [
   "typer",
   "scikit-learn",
   "tabulate",
+  "hiclass",
 ]
 dynamic = ["version"]
 

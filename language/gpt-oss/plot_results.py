@@ -10,6 +10,7 @@ Creates two plots:
 import argparse
 import sys
 import csv
+import re
 from pathlib import Path
 from typing import Dict, List
 from collections import defaultdict
@@ -17,7 +18,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def load_csv_data(csv_path: str) -> Dict[str, Dict[str, List[int]]]:
+def load_csv_data(csv_path: str) -> Dict[str, Dict[str, List[float]]]:
     """Load CSV data and organize by dataset.
 
     Returns:
@@ -25,7 +26,8 @@ def load_csv_data(csv_path: str) -> Dict[str, Dict[str, List[int]]]:
             'aime': {
                 'run_1': [735, 752, 765, ...],
                 'run_2': [740, 754, 765, ...],
-                'pass@5': [875, 875, 885, ...]
+                'pass@5': [875, 875, 885, ...],
+                'pass@1 with 5 repeats: (average of run_k)': [861, 857, ...]
             },
             'gpqa': {...},
             ...
@@ -40,7 +42,8 @@ def load_csv_data(csv_path: str) -> Dict[str, Dict[str, List[int]]]:
             for key, value in row.items():
                 if key != 'dataset' and value:
                     try:
-                        data[dataset][key].append(int(value))
+                        # Try to parse as float to support decimal values
+                        data[dataset][key].append(float(value))
                     except ValueError:
                         continue
 
@@ -48,12 +51,12 @@ def load_csv_data(csv_path: str) -> Dict[str, Dict[str, List[int]]]:
 
 
 def create_combined_box_plot(dataset_name: str,
-                             dataset_data: Dict[str, List[int]],
+                             dataset_data: Dict[str, List[float]],
                              run_columns: List[str],
                              passk_columns: List[str],
                              output_file: str,
                              ylabel: str = "Correct Count"):
-    """Create separate box plots for individual runs and pass@k in the same figure.
+    """Create separate box plots for individual runs, pass@k, and computed averages in the same figure.
 
     Args:
         dataset_name: Name of the dataset
@@ -75,7 +78,23 @@ def create_combined_box_plot(dataset_name: str,
         if col in dataset_data and dataset_data[col]:
             passk_data.extend(dataset_data[col])
 
-    if not all_runs_data and not passk_data:
+    # Compute averages from individual runs (average across runs for each trial)
+    average_data = []
+    if run_columns:
+        # Find the number of trials (minimum length across all run columns)
+        num_trials = min(len(dataset_data.get(col, [])) for col in run_columns if col in dataset_data)
+        
+        # For each trial, compute the average across all runs
+        for trial_idx in range(num_trials):
+            trial_values = []
+            for col in run_columns:
+                if col in dataset_data and trial_idx < len(dataset_data[col]):
+                    trial_values.append(dataset_data[col][trial_idx])
+            
+            if trial_values:
+                average_data.append(np.mean(trial_values))
+
+    if not all_runs_data and not passk_data and not average_data:
         print(f"Warning: No data to plot for {dataset_name}")
         return
 
@@ -84,6 +103,8 @@ def create_combined_box_plot(dataset_name: str,
     if all_runs_data:
         num_plots += 1
     if passk_data:
+        num_plots += 1
+    if average_data:
         num_plots += 1
 
     if num_plots == 0:
@@ -146,6 +167,7 @@ def create_combined_box_plot(dataset_name: str,
     # Plot pass@k
     if passk_data:
         ax = axes[plot_idx]
+        plot_idx += 1
 
         passk_label = passk_columns[0] if len(passk_columns) == 1 else 'Pass@k'
 
@@ -184,6 +206,51 @@ def create_combined_box_plot(dataset_name: str,
         n_samples = len(passk_data)
 
         stats_text = f"n={n_samples}\nμ={mean_val:.1f}\nσ={std_val:.1f}\nmin={min_val}\nmax={max_val}"
+        props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
+        ax.text(0.02, 0.98, stats_text, transform=ax.transAxes, fontsize=9,
+                verticalalignment='top', bbox=props, family='monospace')
+
+    # Plot computed averages
+    if average_data:
+        ax = axes[plot_idx]
+
+        average_label = 'Pass@1 (avg of runs)'
+
+        bp = ax.boxplot([average_data], positions=[0], widths=0.5,
+                        patch_artist=True, showmeans=True,
+                        whis=[0, 100], showfliers=False,
+                        meanprops=dict(marker='D', markerfacecolor='red',
+                                       markeredgecolor='red', markersize=8))
+
+        # Color the box
+        bp['boxes'][0].set_facecolor(plt.cm.Set3(0.9))
+        bp['boxes'][0].set_alpha(0.7)
+
+        # Add scatter plot of individual points
+        # Add small random jitter to x-position for visibility
+        np.random.seed(42)  # For reproducibility
+        x_jitter = np.random.normal(0, 0.04, size=len(average_data))
+        ax.scatter(x_jitter, average_data, alpha=0.4, s=30,
+                   color='darkgreen', zorder=3, edgecolors='black', linewidth=0.5)
+
+        # Set labels
+        ax.set_xticks([0])
+        ax.set_xticklabels([average_label], fontsize=12)
+        ax.set_ylabel(ylabel, fontsize=12)
+        ax.set_title(
+            f"{dataset_name} - {average_label}",
+            fontsize=13,
+            fontweight='bold')
+        ax.grid(True, axis='y', alpha=0.3, linestyle='--')
+
+        # Add statistics
+        mean_val = np.mean(average_data)
+        std_val = np.std(average_data)
+        min_val = np.min(average_data)
+        max_val = np.max(average_data)
+        n_samples = len(average_data)
+
+        stats_text = f"n={n_samples}\nμ={mean_val:.1f}\nσ={std_val:.1f}\nmin={min_val:.1f}\nmax={max_val:.1f}"
         props = dict(boxstyle='round', facecolor='wheat', alpha=0.3)
         ax.text(0.02, 0.98, stats_text, transform=ax.transAxes, fontsize=9,
                 verticalalignment='top', bbox=props, family='monospace')
@@ -234,10 +301,12 @@ def main():
         all_columns.update(dataset_data.keys())
 
     # Separate run columns from pass@k columns
+    # Use regex to match only exact pass@k format (e.g., pass@5, pass@10)
     run_columns = sorted(
         [col for col in all_columns if col.startswith('run_')])
+    passk_pattern = re.compile(r'^pass@\d+$')
     passk_columns = sorted(
-        [col for col in all_columns if col.startswith('pass@')])
+        [col for col in all_columns if passk_pattern.match(col)])
 
     if not run_columns and not passk_columns:
         print("Error: No run or pass@k columns found in CSV", file=sys.stderr)
@@ -246,6 +315,7 @@ def main():
     print(f"Found {len(run_columns)} run columns: {', '.join(run_columns)}")
     print(
         f"Found {len(passk_columns)} pass@k columns: {', '.join(passk_columns)}")
+    print(f"Will compute averages from individual runs")
     print()
 
     # Generate plots for each dataset separately
@@ -260,7 +330,7 @@ def main():
     for dataset in datasets:
         dataset_data = data[dataset]
 
-        # Create combined plot: Individual Runs (all combined) vs Pass@k
+        # Create combined plot: Individual Runs (all combined) vs Pass@k vs Computed Averages
         if run_columns or passk_columns:
             output_file = output_dir / f"{args.prefix}_{dataset}.png"
             print(f"Creating combined box plot for {dataset}...")

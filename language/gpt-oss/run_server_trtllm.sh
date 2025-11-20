@@ -5,6 +5,7 @@ for var in $(compgen -v | grep '^SLURM_'); do unset "$var"; done
 model_path=openai/gpt-oss-120b
 extra_args=""
 output_dir=./data
+eagle_path=nvidia/gpt-oss-120b-Eagle3-v2
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -12,12 +13,16 @@ while [[ $# -gt 0 ]]; do
             model_path=$2
             shift 2
             ;;
-	--output_dir)
-	    output_dir=$2
-	    shift 2
-	    ;;
+        --output_dir)
+            output_dir=$2
+            shift 2
+            ;;
+        --eagle_path)
+            eagle_path=$2
+            shift 2
+            ;;
         *)
-	    extra_args="$extra_args $2"
+            extra_args="$extra_args $2"
             ;;
     esac
 done
@@ -29,11 +34,11 @@ enable_autotuner: false
 cuda_graph_config:
     max_batch_size: 256
     enable_padding: true
-      # speculative_config:
-      #     decoding_type: Eagle
-      #     max_draft_len: 3
-      #     speculative_model_dir: 
-      #     eagle3_layers_to_capture: [-1]
+speculative_config:
+    decoding_type: Eagle
+    max_draft_len: 4
+    speculative_model_dir: $eagle_path
+    eagle3_layers_to_capture: [-1]
 kv_cache_config:
     enable_block_reuse: false
     free_gpu_memory_fraction: 0.9

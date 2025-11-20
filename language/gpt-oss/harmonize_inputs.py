@@ -442,6 +442,7 @@ if __name__ == "__main__":
         'aime1983': create_aime1983_prompt,
         'aime2025': create_aime1983_prompt,
         'arxiv_summarization': create_arxiv_summarization_prompt,
+        'pubmed_summarization': create_arxiv_summarization_prompt,
         'gpqa': create_gpqa_prompt,
         'livecodebench': create_livecodebench_prompt,
         'math500': create_math500_prompt,

@@ -515,19 +515,21 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
     // Checks if we have exceeded max_duration.
     if (settings.max_duration.count() != 0 &&
         duration > settings.max_duration) {
-      LogDetail([thread_idx, duration](AsyncDetail& detail) {
+      if (settings.enforce_max_duration) {
+        LogDetail([thread_idx, duration](AsyncDetail& detail) {
 #if USE_NEW_LOGGING_FORMAT
-        std::stringstream ss;
-        ss << "IssueQueryThread " << thread_idx
-           << " Ending early: Max test duration reached." << " duration_ns "
-           << duration.count();
-        MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
+          std::stringstream ss;
+          ss << "IssueQueryThread " << thread_idx
+             << " Ending early: Max test duration reached." << " duration_ns "
+             << duration.count();
+          MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
 #else
-        detail.Error("IssueQueryThread ", std::to_string(thread_idx),
-                     " Ending early: Max test duration reached.", "duration_ns",
-                     std::to_string(duration.count()));
+          detail.Error("IssueQueryThread ", std::to_string(thread_idx),
+                       " Ending early: Max test duration reached.",
+                       "duration_ns", std::to_string(duration.count()));
 #endif
-      });
+        });
+      }
       ran_out_of_generated_queries = false;
       break;
     }

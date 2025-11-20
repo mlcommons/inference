@@ -318,6 +318,8 @@ PYBIND11_MODULE(mlperf_loadgen, m) {
       .def_readwrite("max_duration_ms", &TestSettings::max_duration_ms)
       .def_readwrite("min_query_count", &TestSettings::min_query_count)
       .def_readwrite("max_query_count", &TestSettings::max_query_count)
+      def_readwrite("enforce_max_duration",
+                    &TestSettings::enforce_max_duration)
       .def_readwrite("qsl_rng_seed", &TestSettings::qsl_rng_seed)
       .def_readwrite("sample_index_rng_seed",
                      &TestSettings::sample_index_rng_seed)

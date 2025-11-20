@@ -78,19 +78,21 @@ def create_combined_box_plot(dataset_name: str,
         if col in dataset_data and dataset_data[col]:
             passk_data.extend(dataset_data[col])
 
-    # Compute averages from individual runs (average across runs for each trial)
+    # Compute averages from individual runs (average across runs for each
+    # trial)
     average_data = []
     if run_columns:
         # Find the number of trials (minimum length across all run columns)
-        num_trials = min(len(dataset_data.get(col, [])) for col in run_columns if col in dataset_data)
-        
+        num_trials = min(len(dataset_data.get(col, []))
+                         for col in run_columns if col in dataset_data)
+
         # For each trial, compute the average across all runs
         for trial_idx in range(num_trials):
             trial_values = []
             for col in run_columns:
                 if col in dataset_data and trial_idx < len(dataset_data[col]):
                     trial_values.append(dataset_data[col][trial_idx])
-            
+
             if trial_values:
                 average_data.append(np.mean(trial_values))
 
@@ -330,7 +332,8 @@ def main():
     for dataset in datasets:
         dataset_data = data[dataset]
 
-        # Create combined plot: Individual Runs (all combined) vs Pass@k vs Computed Averages
+        # Create combined plot: Individual Runs (all combined) vs Pass@k vs
+        # Computed Averages
         if run_columns or passk_columns:
             output_file = output_dir / f"{args.prefix}_{dataset}.png"
             print(f"Creating combined box plot for {dataset}...")

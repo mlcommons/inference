@@ -62,12 +62,30 @@ def create_per_dataset_histogram(df, column_name, title, filename, output_dir):
         p50 = dataset_data.quantile(0.50)
         p75 = dataset_data.quantile(0.75)
         p99 = dataset_data.quantile(0.99)
-        
-        ax.axvline(p50, color='green', linestyle='--', linewidth=2, alpha=0.7, label=f'50th: {p50:.1f}')
-        ax.axvline(p75, color='orange', linestyle='--', linewidth=2, alpha=0.7, label=f'75th: {p75:.1f}')
-        ax.axvline(p99, color='red', linestyle='--', linewidth=2, alpha=0.7, label=f'99th: {p99:.1f}')
+
+        ax.axvline(
+            p50,
+            color='green',
+            linestyle='--',
+            linewidth=2,
+            alpha=0.7,
+            label=f'50th: {p50:.1f}')
+        ax.axvline(
+            p75,
+            color='orange',
+            linestyle='--',
+            linewidth=2,
+            alpha=0.7,
+            label=f'75th: {p75:.1f}')
+        ax.axvline(
+            p99,
+            color='red',
+            linestyle='--',
+            linewidth=2,
+            alpha=0.7,
+            label=f'99th: {p99:.1f}')
         ax.legend(loc='upper right', fontsize=8)
-        
+
         # Add statistics
         mean_val = dataset_data.mean()
         median_val = dataset_data.median()
@@ -90,7 +108,8 @@ def create_per_dataset_histogram(df, column_name, title, filename, output_dir):
     plt.close()
 
 
-def create_full_histogram(df, column_name, title, filename, output_dir, save_bins=False):
+def create_full_histogram(df, column_name, title,
+                          filename, output_dir, save_bins=False):
     """Create a single histogram combining all datasets."""
     print(f"Creating {filename}...")
     print(f"  Total samples: {len(df)}")
@@ -121,10 +140,13 @@ def create_full_histogram(df, column_name, title, filename, output_dir, save_bin
     p50 = df[column_name].quantile(0.50)
     p75 = df[column_name].quantile(0.75)
     p99 = df[column_name].quantile(0.99)
-    
-    plt.axvline(p50, color='green', linestyle='--', linewidth=2, alpha=0.7, label=f'50th percentile: {p50:.1f}')
-    plt.axvline(p75, color='orange', linestyle='--', linewidth=2, alpha=0.7, label=f'75th percentile: {p75:.1f}')
-    plt.axvline(p99, color='red', linestyle='--', linewidth=2, alpha=0.7, label=f'99th percentile: {p99:.1f}')
+
+    plt.axvline(p50, color='green', linestyle='--', linewidth=2,
+                alpha=0.7, label=f'50th percentile: {p50:.1f}')
+    plt.axvline(p75, color='orange', linestyle='--', linewidth=2,
+                alpha=0.7, label=f'75th percentile: {p75:.1f}')
+    plt.axvline(p99, color='red', linestyle='--', linewidth=2,
+                alpha=0.7, label=f'99th percentile: {p99:.1f}')
     plt.legend(loc='upper right', fontsize=10)
 
     # Add statistics
@@ -152,11 +174,11 @@ def create_full_histogram(df, column_name, title, filename, output_dir, save_bin
     plt.savefig(f'{output_dir}/{filename}', dpi=300, bbox_inches='tight')
     print(f"  Saved to {output_dir}/{filename}")
     plt.close()
-    
+
     # Save bin data to CSV if requested
     if save_bins:
         csv_filename = filename.replace('.png', '_bins.csv')
-        
+
         # Create bin data DataFrame
         bin_data = pd.DataFrame({
             'bin_lower': bin_edges[:-1],
@@ -164,16 +186,19 @@ def create_full_histogram(df, column_name, title, filename, output_dir, save_bin
             'bin_center': (bin_edges[:-1] + bin_edges[1:]) / 2,
             'count': counts.astype(int)
         })
-        
+
         csv_path = f'{output_dir}/{csv_filename}'
-        
+
         # Save with header containing percentile information
         with open(csv_path, 'w') as f:
-            f.write(f'# Percentiles: 50th={p50:.2f}, 75th={p75:.2f}, 99th={p99:.2f}\n')
-            f.write(f'# Mean={mean_val:.2f}, Median={median_val:.2f}, Std={std_val:.2f}\n')
-            f.write(f'# Min={min_val}, Max={max_val}, Total samples={len(df)}\n')
+            f.write(
+                f'# Percentiles: 50th={p50:.2f}, 75th={p75:.2f}, 99th={p99:.2f}\n')
+            f.write(
+                f'# Mean={mean_val:.2f}, Median={median_val:.2f}, Std={std_val:.2f}\n')
+            f.write(
+                f'# Min={min_val}, Max={max_val}, Total samples={len(df)}\n')
             bin_data.to_csv(f, index=False)
-        
+
         print(f"  Saved bin data to {csv_path}")
 
 
@@ -203,7 +228,7 @@ def main():
 
     # Check if prompt_accuracy column exists
     has_accuracy = 'prompt_accuracy' in df.columns
-    
+
     # Determine which output length column to use
     if 'tok_model_output_len' in df.columns:
         output_len_col = 'tok_model_output_len'
@@ -211,8 +236,9 @@ def main():
         output_len_col = 'tok_model_output_len_0'
         print("\nNote: 'tok_model_output_len' not found, using 'tok_model_output_len_0' instead")
     else:
-        raise ValueError("Neither 'tok_model_output_len' nor 'tok_model_output_len_0' column found in data")
-    
+        raise ValueError(
+            "Neither 'tok_model_output_len' nor 'tok_model_output_len_0' column found in data")
+
     if has_accuracy:
         # Filter for 100% accuracy
         df_100 = df[df['prompt_accuracy'] == 100.0].copy()

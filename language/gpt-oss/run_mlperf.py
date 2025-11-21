@@ -6,13 +6,13 @@ performance and accuracy benchmarking.
 
 Usage:
     # Offline scenario (performance)
-    python run_mlperf.py --mode offline --input-file data/accuracy_eval_tokenized.pkl
+    python run_mlperf.py --scenario offline --input-file data/accuracy_eval_tokenized.pkl
 
     # Server scenario (performance)
-    python run_mlperf.py --mode server --input-file data/accuracy_eval_tokenized.pkl
+    python run_mlperf.py --scenario server --input-file data/accuracy_eval_tokenized.pkl
 
     # Accuracy mode
-    python run_mlperf.py --mode offline --accuracy --input-file data/accuracy_eval_tokenized.pkl
+    python run_mlperf.py --scenario offline --accuracy --input-file data/accuracy_eval_tokenized.pkl
 """
 
 import argparse
@@ -71,11 +71,11 @@ def create_argument_parser() -> argparse.ArgumentParser:
 
     # Scenario selection
     parser.add_argument(
-        "--mode",
+        "--scenario",
         type=str,
         default="offline",
         choices=["offline", "server"],
-        help="MLPerf scenario mode"
+        help="MLPerf scenario (offline or server)"
     )
 
     # Dataset
@@ -296,7 +296,7 @@ def main():
     try:
         # Create output directories
         output_dir = Path(args.output_dir)
-        log_dir = output_dir / args.mode / \
+        log_dir = output_dir / args.scenario / \
             ("accuracy" if args.accuracy else "performance")
         log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -304,7 +304,7 @@ def main():
         logger.info("MLPerf Inference Benchmark Runner for GPT-OSS")
         logger.info("=" * 80)
         logger.info(f"Backend: {args.backend}")
-        logger.info(f"Mode: {args.mode}")
+        logger.info(f"Scenario: {args.scenario}")
         logger.info(f"Accuracy: {args.accuracy}")
         logger.info(f"Input file: {args.input_file}")
         logger.info(f"Output directory: {log_dir}")
@@ -370,7 +370,7 @@ def main():
         # - Server: Incremented as queries arrive
         pbar = tqdm(
             total=0,  # Will be updated dynamically by SUT
-            desc=f"MLPerf {args.mode}",
+            desc=f"MLPerf {args.scenario}",
             unit="query",
             leave=True,
             position=0,
@@ -381,8 +381,8 @@ def main():
         )
 
         # Create SUT with progress bar
-        logger.debug(f"Creating {args.mode} SUT...")
-        if args.mode == "offline":
+        logger.debug(f"Creating {args.scenario} SUT...")
+        if args.scenario == "offline":
             sut = OfflineSUT(
                 backend=backend,
                 dataset=prompts,
@@ -419,7 +419,7 @@ def main():
 
         # Configure LoadGen
         settings = configure_loadgen(
-            scenario=args.mode,
+            scenario=args.scenario,
             accuracy_mode=args.accuracy,
             mlperf_conf=args.mlperf_conf,
             user_conf=args.user_conf,

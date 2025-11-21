@@ -39,7 +39,7 @@ Then, run a benchmark script that uses the client to send/recv requests.
 ### Run the inference
 ```bash
 python3 run_mlperf.py --help
-usage: run_mlperf.py [-h] [--mode {offline,server}] --input-file INPUT_FILE [--max-samples MAX_SAMPLES] [--mlperf-conf MLPERF_CONF]
+usage: run_mlperf.py [-h] [--scenario {offline,server}] --input-file INPUT_FILE [--max-samples MAX_SAMPLES] [--mlperf-conf MLPERF_CONF]
                      [--user-conf USER_CONF] [--accuracy] [--output-dir OUTPUT_DIR] [--backend {sglang}] [--server-url SERVER_URL]
                      [--generation-config GENERATION_CONFIG] [--max-new-tokens MAX_NEW_TOKENS] [--num-workers NUM_WORKERS]
                      [--max-concurrency MAX_CONCURRENCY]
@@ -48,7 +48,7 @@ Run MLPerf inference benchmarks for gpt-oss
 
 options:
   -h, --help            show this help message and exit
-  --mode {offline,server}
+  --scenario {offline,server}
                         MLPerf scenario mode
   --input-file INPUT_FILE
                         Path to tokenized dataset (pickle file)

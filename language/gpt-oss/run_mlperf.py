@@ -45,21 +45,21 @@ logger = logging.getLogger(__name__)
 
 def load_generation_config(config_path: str) -> Dict[str, Any]:
     """Load generation configuration from JSON file.
-    
+
     Args:
         config_path: Path to generation_config.json
-        
+
     Returns:
         Dictionary with generation parameters
     """
     logger.info(f"Loading generation config from {config_path}")
-    
+
     with open(config_path, 'r') as f:
         config = json.load(f)
-    
+
     # Filter out comment fields (starting with _)
     gen_params = {k: v for k, v in config.items() if not k.startswith('_')}
-    
+
     return gen_params
 
 
@@ -145,7 +145,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
         default="generation_config.json",
         help="Path to generation configuration JSON file"
     )
-    
+
     parser.add_argument(
         "--max-new-tokens",
         type=int,
@@ -211,7 +211,8 @@ def configure_loadgen(
 
     # Load configurations if files exist
     # conf_type: 2 = mlperf.conf, 1 = user.conf
-    # LoadGen tracks config calls and only allows one user.conf for official submissions
+    # LoadGen tracks config calls and only allows one user.conf for official
+    # submissions
     if mlperf_conf and Path(mlperf_conf).exists():
         logger.debug(f"Loading MLPerf config from {mlperf_conf}")
         settings.FromConfig(mlperf_conf, model_name, scenario.capitalize(), 2)
@@ -325,20 +326,21 @@ def main():
         # Load generation configuration
         logger.info("Loading generation configuration...")
         gen_config = load_generation_config(args.generation_config)
-        
+
         # Extract generation parameters with defaults
         # CLI override takes precedence over config file
         if args.max_new_tokens is not None:
             max_tokens = args.max_new_tokens
-            logger.info(f"Using max_new_tokens from CLI override: {max_tokens}")
+            logger.info(
+                f"Using max_new_tokens from CLI override: {max_tokens}")
         else:
             max_tokens = gen_config.get('max_new_tokens', 10240)
             logger.info(f"Using max_new_tokens from config: {max_tokens}")
-        
+
         temperature = gen_config.get('temperature', 1.0)
         top_k = gen_config.get('top_k', -1)
         top_p = gen_config.get('top_p', 1.0)
-        
+
         logger.info("Generation parameters:")
         logger.info(f"  max_new_tokens: {max_tokens}")
         logger.info(f"  temperature: {temperature}")

@@ -160,14 +160,15 @@ class ServerSUT(BaseSUT):
         except Exception as e:
             logger.error(f"Worker thread error: {e}", exc_info=True)
 
-    async def _process_streaming_query_tracked(self, query_sample: lg.QuerySample):
+    async def _process_streaming_query_tracked(
+            self, query_sample: lg.QuerySample):
         """Wrapper that tracks the async task for cancellation."""
         task = asyncio.current_task()
-        
+
         # Add to active tasks
         with self.active_tasks_lock:
             self.active_tasks.add(task)
-        
+
         try:
             await self._process_streaming_query(query_sample)
         finally:
@@ -238,8 +239,10 @@ class ServerSUT(BaseSUT):
                 await self._send_final_response(state)
 
         except asyncio.CancelledError:
-            # Task was cancelled (e.g., KeyboardInterrupt during graceful shutdown)
-            logger.info(f"Streaming query {query_id} cancelled during shutdown")
+            # Task was cancelled (e.g., KeyboardInterrupt during graceful
+            # shutdown)
+            logger.info(
+                f"Streaming query {query_id} cancelled during shutdown")
             # Don't send response to LoadGen - we're shutting down
             raise  # Re-raise to mark task as cancelled
         except Exception as e:
@@ -258,7 +261,7 @@ class ServerSUT(BaseSUT):
 
     async def _send_first_token_complete(self, state: StreamingQueryState):
         """Send FirstTokenComplete to LoadGen for TTFT measurement.
-        
+
         Only sends the first token for TTFT measurement.
         """
         try:
@@ -269,11 +272,13 @@ class ServerSUT(BaseSUT):
             if state.accumulated_tokens and len(state.accumulated_tokens) > 0:
                 # Extract only the first token
                 first_token_only = [state.accumulated_tokens[0]]
-                token_array = np.ascontiguousarray(first_token_only, dtype=np.int32)
+                token_array = np.ascontiguousarray(
+                    first_token_only, dtype=np.int32)
             else:
                 # No tokens yet - this shouldn't happen but handle gracefully
                 token_array = np.array([], dtype=np.int32)
-                logger.warning(f"FirstTokenComplete called but no tokens accumulated for query {state.query_id}")
+                logger.warning(
+                    f"FirstTokenComplete called but no tokens accumulated for query {state.query_id}")
 
             # Create response
             response = lg.QuerySampleResponse(
@@ -285,7 +290,8 @@ class ServerSUT(BaseSUT):
 
             # Report to LoadGen
             lg.FirstTokenComplete([response])
-            logger.debug(f"Sent FirstTokenComplete for query {state.query_id}: 1 token")
+            logger.debug(
+                f"Sent FirstTokenComplete for query {state.query_id}: 1 token")
 
         except Exception as e:
             logger.error(
@@ -312,7 +318,8 @@ class ServerSUT(BaseSUT):
 
             if state.accumulated_tokens and len(state.accumulated_tokens) > 1:
                 remaining_tokens = state.accumulated_tokens[1:]
-                token_array = np.ascontiguousarray(remaining_tokens, dtype=np.int32)
+                token_array = np.ascontiguousarray(
+                    remaining_tokens, dtype=np.int32)
             else:
                 token_array = np.array([], dtype=np.int32)
 
@@ -355,7 +362,8 @@ class ServerSUT(BaseSUT):
         # Update progress bar total dynamically as queries arrive
         if self.progress_bar is not None:
             with self.progress_lock:
-                self.progress_bar.total = (self.progress_bar.total or 0) + len(query_samples)
+                self.progress_bar.total = (
+                    self.progress_bar.total or 0) + len(query_samples)
                 self.progress_bar.refresh()
 
         for qs in query_samples:
@@ -395,13 +403,13 @@ class ServerSUT(BaseSUT):
         tasks_to_cancel = []
         with self.active_tasks_lock:
             tasks_to_cancel = list(self.active_tasks)
-        
+
         if tasks_to_cancel:
             logger.info(f"Cancelling {len(tasks_to_cancel)} active tasks")
             for task in tasks_to_cancel:
                 if not task.done():
                     task.cancel()
-        
+
         # Clear pending queries from queue
         pending_count = 0
         try:
@@ -410,7 +418,7 @@ class ServerSUT(BaseSUT):
                 pending_count += 1
         except queue.Empty:
             pass
-        
+
         if pending_count > 0:
             logger.info(f"Cleared {pending_count} pending queries from queue")
 
@@ -419,7 +427,8 @@ class ServerSUT(BaseSUT):
             for i, worker in enumerate(self.workers):
                 worker.join(timeout=5)
                 if worker.is_alive():
-                    logger.warning(f"Worker {i+1} did not terminate gracefully")
+                    logger.warning(
+                        f"Worker {i+1} did not terminate gracefully")
                 pbar.update(1)
 
         # Stop event loop

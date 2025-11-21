@@ -35,6 +35,7 @@ TestSettingsInternal::TestSettingsInternal(
       target_duration(std::chrono::milliseconds(requested.min_duration_ms)),
       min_duration(std::chrono::milliseconds(requested.min_duration_ms)),
       max_duration(std::chrono::milliseconds(requested.max_duration_ms)),
+      enforce_max_duration(requested.enforce_max_duration),
       min_query_count(requested.min_query_count),
       max_query_count(requested.max_query_count),
       min_sample_count(0),
@@ -428,6 +429,7 @@ void TestSettingsInternal::LogEffectiveSettings() const {
                s.target_duration.count());
     MLPERF_LOG(detail, "effective_min_duration_ms", s.min_duration.count());
     MLPERF_LOG(detail, "effective_max_duration_ms", s.max_duration.count());
+    MLPERF_LOG(detail, "effective_enforce_max_duration", s.enforce_max_duration);
     MLPERF_LOG(detail, "effective_min_query_count", s.min_query_count);
     MLPERF_LOG(detail, "effective_max_query_count", s.max_query_count);
     MLPERF_LOG(detail, "effective_min_sample_count", s.min_sample_count);
@@ -775,6 +777,8 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
 
   lookupkv(model, scenario, "min_duration", &min_duration_ms, nullptr);
   lookupkv(model, scenario, "max_duration", &max_duration_ms, nullptr);
+  if (lookupkv(model, scenario, "enforce_max_duration", &val, nullptr))
+    enforce_max_duration = (val == 1) ? true : false;
   lookupkv(model, scenario, "min_query_count", &min_query_count, nullptr);
   lookupkv(model, scenario, "max_query_count", &max_query_count, nullptr);
   lookupkv(model, scenario, "performance_sample_count_override",

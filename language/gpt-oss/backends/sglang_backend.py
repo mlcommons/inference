@@ -222,18 +222,20 @@ class SGLangBackend(BaseBackend):
 
         Yields:
             Dict with:
-                - delta_token_ids: List of new token IDs in this chunk (estimated during streaming)
+                - delta_token_ids: List of new token IDs in this chunk
                 - delta_text: New text in this chunk
                 - is_first_token: True if this is the first token
                 - is_finished: True if generation is complete
-                - accumulated_token_ids: All tokens generated so far (accurate in final chunk)
-                - metadata: Additional info (TTFT, etc.)
+                - accumulated_token_ids: All tokens generated so far
+                - metadata: Additional info (TTFT, completion_tokens, etc.)
                 
         Note:
-            SGLang's streaming API returns text incrementally but may not return token_ids 
-            per chunk. We estimate token counts from text length during streaming (~4 chars/token).
-            The FINAL chunk (when finished=True) should contain the complete 'output_ids' array
-            with accurate token IDs, which we use for LoadGen's token/sec metrics.
+            SGLang's streaming API behavior:
+            - Returns 'output_ids', 'text', and 'meta_info' in each chunk
+            - 'output_ids' can have retractions (length can decrease between chunks)
+            - 'meta_info.completion_tokens' is the RELIABLE cumulative token count
+            - 'finish_reason' in meta_info indicates completion (not a 'finished' flag)
+            - We use completion_tokens for accurate LoadGen token/sec metrics
         """
         if not self.initialized:
             raise RuntimeError(
@@ -298,45 +300,52 @@ class SGLangBackend(BaseBackend):
 
                             # Extract text delta
                             delta_text = chunk.get("text", "")
-                            
-                            # Check if this is the final chunk
-                            is_finished = chunk.get("finished", False)
-                            
-                            # For token IDs:
-                            # - SGLang may not return incremental token_ids in each streaming chunk
-                            # - But should return full output_ids in the FINAL chunk when finished=True
-                            # - For intermediate chunks, we estimate token count from text length
-                            delta_token_ids = []
-                            
-                            if is_finished and "output_ids" in chunk:
-                                # Final chunk: use the complete output_ids from SGLang
-                                all_output_ids = chunk["output_ids"]
-                                accumulated_token_ids = all_output_ids
-                                delta_token_ids = []  # Already accumulated
-                                logger.debug(f"Received final output_ids: {len(all_output_ids)} tokens")
-                            elif is_finished and "output_ids" not in chunk:
-                                # Final chunk but no output_ids - log warning
-                                logger.warning(
-                                    f"Final chunk received but no 'output_ids' field found. "
-                                    f"Using estimated token count: {len(accumulated_token_ids)}. "
-                                    f"For accurate token metrics, ensure SGLang returns 'output_ids' in streaming responses."
-                                )
-                            elif "token_ids" in chunk:
-                                # Incremental token IDs (if SGLang provides them)
-                                delta_token_ids = chunk["token_ids"]
-                            elif delta_text:
-                                # Estimate token count from text delta (rough approximation)
-                                # Average ~4 characters per token for English text
-                                estimated_tokens = max(1, len(delta_text) // 4)
-                                # Create placeholder token IDs for counting purposes
-                                # These are NOT real token IDs, just for LoadGen metrics
-                                delta_token_ids = [0] * estimated_tokens
 
-                            # Update accumulated state (only if not already set by final chunk)
-                            if not (is_finished and "output_ids" in chunk):
-                                # Accumulate incrementally (estimated or incremental token IDs)
-                                if delta_token_ids:
+                            # Check if this is the final chunk
+                            # SGLang uses 'finish_reason' in meta_info, not 'finished' flag
+                            meta_info = chunk.get("meta_info", {})
+                            finish_reason = meta_info.get("finish_reason")
+                            is_finished = (finish_reason is not None and finish_reason != "null") or chunk.get("finished", False)
+
+                            # Extract token information from chunk
+                            # SGLang's output_ids can have retractions, so use meta_info.completion_tokens
+                            # which is the reliable cumulative count
+                            chunk_output_ids = chunk.get("output_ids", [])
+                            completion_tokens = meta_info.get("completion_tokens", 0)
+                            
+                            if completion_tokens > 0:
+                                # Use completion_tokens as the authoritative count
+                                previous_count = len(accumulated_token_ids)
+                                
+                                if completion_tokens > previous_count:
+                                    # New tokens generated
+                                    num_new_tokens = completion_tokens - previous_count
+                                    
+                                    if chunk_output_ids and len(chunk_output_ids) >= num_new_tokens:
+                                        # Use actual token IDs from chunk
+                                        delta_token_ids = chunk_output_ids[-num_new_tokens:] if num_new_tokens > 0 else []
+                                    else:
+                                        # Fallback: create placeholder tokens for counting
+                                        delta_token_ids = list(range(previous_count, completion_tokens))
+                                    
                                     accumulated_token_ids.extend(delta_token_ids)
+                                else:
+                                    delta_token_ids = []
+                                
+                            else:
+                                # No completion_tokens - fallback to output_ids or text estimation
+                                if chunk_output_ids:
+                                    delta_token_ids = chunk_output_ids
+                                    accumulated_token_ids.extend(delta_token_ids)
+                                elif delta_text:
+                                    # Estimate from text length
+                                    estimated_tokens = max(1, len(delta_text) // 4)
+                                    delta_token_ids = [0] * estimated_tokens
+                                    accumulated_token_ids.extend(delta_token_ids)
+                                else:
+                                    delta_token_ids = []
+                            
+                            # Accumulate text
                             if delta_text:
                                 accumulated_text += delta_text
 

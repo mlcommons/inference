@@ -171,7 +171,7 @@ def configure_loadgen(
     mlperf_conf: Optional[str] = None,
     user_conf: Optional[str] = None,
     log_dir: Optional[str] = None,
-    model_name: str = "gpt-oss"
+    model_name: str = "gpt-oss-120b"
 ) -> lg.TestSettings:
     """Configure LoadGen test settings.
 
@@ -356,7 +356,7 @@ def main():
                 temperature=args.temperature,
                 top_k=args.top_k,
                 top_p=args.top_p,
-                name=f"gpt-oss_offline_sut",
+                name=f"gpt-oss-120b_offline_sut",
                 progress_bar=pbar,
                 max_concurrency=args.max_concurrency
             )
@@ -369,7 +369,7 @@ def main():
                 top_k=args.top_k,
                 top_p=args.top_p,
                 num_workers=args.num_workers,
-                name=f"gpt-oss_server_sut",
+                name=f"gpt-oss-120b_server_sut",
                 progress_bar=pbar
             )
 

@@ -39,6 +39,11 @@ Then, run a benchmark script that uses the client to send/recv requests.
 ### Run the inference
 ```bash
 python3 run_mlperf.py --help
+usage: run_mlperf.py [-h] [--mode {offline,server}] --input-file INPUT_FILE [--max-samples MAX_SAMPLES] [--mlperf-conf MLPERF_CONF]
+                     [--user-conf USER_CONF] [--accuracy] [--output-dir OUTPUT_DIR] [--backend {sglang}] [--server-url SERVER_URL]
+                     [--generation-config GENERATION_CONFIG] [--max-new-tokens MAX_NEW_TOKENS] [--num-workers NUM_WORKERS]
+                     [--max-concurrency MAX_CONCURRENCY]
+
 Run MLPerf inference benchmarks for gpt-oss
 
 options:
@@ -59,14 +64,40 @@ options:
   --backend {sglang}    Backend to use for inference
   --server-url SERVER_URL
                         Server URL for backend (SGLang)
-  --max-tokens MAX_TOKENS
-                        Maximum tokens to generate
-  --temperature TEMPERATURE
-                        Sampling temperature
-  --top-k TOP_K         Top-k sampling parameter
-  --top-p TOP_P         Top-p sampling parameter
+  --generation-config GENERATION_CONFIG
+                        Path to generation configuration JSON file
+  --max-new-tokens MAX_NEW_TOKENS
+                        Override max_new_tokens from generation config (default: use value from config)
   --num-workers NUM_WORKERS
                         Number of worker threads (for server scenario)
   --max-concurrency MAX_CONCURRENCY
                         Maximum concurrent requests to backend (SGLang handles batching internally)
+
+```
+
+### Evaluate the accuracy
+Run `run_mlperf.py` with `--accuracy`, and then use the generated `mlperf_log_accuracy.json` to evaluate the accuracy of the run. Usage is as below.
+```bash
+python3 eval_mlperf_accuracy.py --help
+usage: eval_mlperf_accuracy.py [-h] --mlperf-log MLPERF_LOG --reference-data REFERENCE_DATA [--tokenizer TOKENIZER] [--output-file OUTPUT_FILE]
+                               [--save-outputs SAVE_OUTPUTS] [--num-lcb-workers NUM_LCB_WORKERS] [--verbose]
+
+Evaluate MLPerf accuracy logs for gpt-oss-120b
+
+options:
+  -h, --help            show this help message and exit
+  --mlperf-log MLPERF_LOG
+                        Path to mlperf_log_accuracy.json
+  --reference-data REFERENCE_DATA
+                        Path to reference pickle file (DataFrame with dataset, ground_truth, etc.)
+  --tokenizer TOKENIZER
+                        HuggingFace tokenizer name or path
+  --output-file OUTPUT_FILE
+                        Output JSON file for results (optional)
+  --save-outputs SAVE_OUTPUTS
+                        Save detokenized outputs to pickle file (ordered by qsl_idx) for debugging
+  --num-lcb-workers NUM_LCB_WORKERS
+                        Number of parallel workers for LiveCodeBench evaluation (default: 64)
+  --verbose             Verbose logging
+
 ```

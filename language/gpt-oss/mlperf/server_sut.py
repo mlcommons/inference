@@ -5,6 +5,7 @@ import asyncio
 import logging
 import numpy as np
 import queue
+import sys
 import threading
 import time
 from dataclasses import dataclass
@@ -336,6 +337,7 @@ class ServerSUT(BaseSUT):
                     self.queries_completed += 1
                     self.progress_bar.update(1)
                     self.progress_bar.refresh()  # Force redraw from async context
+                    sys.stdout.flush()  # Force flush for immediate display in async/threaded context
 
         except Exception as e:
             logger.error(

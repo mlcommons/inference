@@ -60,7 +60,6 @@ def load_generation_config(config_path: str) -> Dict[str, Any]:
     # Filter out comment fields (starting with _)
     gen_params = {k: v for k, v in config.items() if not k.startswith('_')}
     
-    logger.info(f"Generation config loaded: {gen_params}")
     return gen_params
 
 
@@ -146,6 +145,13 @@ def create_argument_parser() -> argparse.ArgumentParser:
         default="generation_config.json",
         help="Path to generation configuration JSON file"
     )
+    
+    parser.add_argument(
+        "--max-new-tokens",
+        type=int,
+        default=None,
+        help="Override max_new_tokens from generation config (default: use value from config)"
+    )
 
     # Server scenario specific
     parser.add_argument(
@@ -207,13 +213,13 @@ def configure_loadgen(
     # conf_type: 2 = mlperf.conf, 1 = user.conf
     # LoadGen tracks config calls and only allows one user.conf for official submissions
     if mlperf_conf and Path(mlperf_conf).exists():
-        logger.info(f"Loading MLPerf config from {mlperf_conf}")
+        logger.debug(f"Loading MLPerf config from {mlperf_conf}")
         settings.FromConfig(mlperf_conf, model_name, scenario.capitalize(), 2)
     else:
         logger.warning(f"MLPerf config not found: {mlperf_conf}")
 
     if user_conf and Path(user_conf).exists():
-        logger.info(f"Loading user config from {user_conf}")
+        logger.debug(f"Loading user config from {user_conf}")
         settings.FromConfig(user_conf, model_name, scenario.capitalize(), 1)
     else:
         logger.warning(f"User config not found: {user_conf}")
@@ -304,7 +310,7 @@ def main():
         logger.info("=" * 80)
 
         # Load dataset
-        logger.info("Loading tokenized dataset...")
+        logger.debug("Loading tokenized dataset...")
         with tqdm(total=1, desc="Loading dataset", unit="file") as pbar:
             dataset_info = load_tokenized_dataset(
                 args.input_file,
@@ -321,7 +327,14 @@ def main():
         gen_config = load_generation_config(args.generation_config)
         
         # Extract generation parameters with defaults
-        max_tokens = gen_config.get('max_new_tokens', 10240)
+        # CLI override takes precedence over config file
+        if args.max_new_tokens is not None:
+            max_tokens = args.max_new_tokens
+            logger.info(f"Using max_new_tokens from CLI override: {max_tokens}")
+        else:
+            max_tokens = gen_config.get('max_new_tokens', 10240)
+            logger.info(f"Using max_new_tokens from config: {max_tokens}")
+        
         temperature = gen_config.get('temperature', 1.0)
         top_k = gen_config.get('top_k', -1)
         top_p = gen_config.get('top_p', 1.0)
@@ -333,7 +346,7 @@ def main():
         logger.info(f"  top_p: {top_p}")
 
         # Initialize backend
-        logger.info(f"Initializing {args.backend} backend...")
+        logger.debug(f"Initializing {args.backend} backend...")
         if args.backend == "sglang":
             # Set pool size to match max_concurrency with small safety margin
             # This prevents "connection pool is full" warnings
@@ -343,7 +356,6 @@ def main():
                 timeout=1200,
                 max_pool_size=pool_size
             )
-            logger.info(f"Backend configured with connection pool size: {pool_size} (from max_concurrency={args.max_concurrency})")
         else:
             raise ValueError(f"Unknown backend: {args.backend}")
 
@@ -362,11 +374,12 @@ def main():
             position=0,
             mininterval=0.1,
             smoothing=0.1,
-            dynamic_ncols=True
+            dynamic_ncols=True,
+            file=sys.stdout  # Force unbuffered output for async updates
         )
 
         # Create SUT with progress bar
-        logger.info(f"Creating {args.mode} SUT...")
+        logger.debug(f"Creating {args.mode} SUT...")
         if args.mode == "offline":
             sut = OfflineSUT(
                 backend=backend,
@@ -417,12 +430,9 @@ def main():
         log_settings.log_output.copy_summary_to_stdout = True
         log_settings.enable_trace = False
 
-        # Start the SUT
-        logger.info("Starting SUT...")
-        sut.start()
-
-        # Run test
+        # Start the SUT and run test
         logger.info("Running LoadGen test...")
+        sut.start()
         lg.StartTestWithLogSettings(
             sut.sut,
             qsl.qsl,

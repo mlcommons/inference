@@ -5,6 +5,7 @@ import logging
 import numpy as np
 import time
 from typing import List, Dict, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import mlperf_loadgen as lg
 from tqdm import tqdm
 from .base_sut import BaseSUT
@@ -88,10 +89,13 @@ class OfflineSUT(BaseSUT):
             f"Flushing {len(self.pending_queries)} queries with max_concurrency={self.max_concurrency}")
         start_time = time.time()
 
-        from concurrent.futures import ThreadPoolExecutor, as_completed
-
         def process_single_query(query_sample):
             """Process a single query (backend batches automatically via continuous batching)."""
+            # Check if we should stop (e.g., KeyboardInterrupt)
+            if self.should_stop.is_set():
+                logger.info(f"Skipping query {query_sample.id} due to shutdown")
+                return None, None, None
+            
             query_id = query_sample.id
             input_ids = self.dataset[query_sample.index]
 
@@ -121,9 +125,24 @@ class OfflineSUT(BaseSUT):
 
                 # Process results as they complete
                 completed_count = 0
+                cancelled_count = 0
+                
                 for future in as_completed(futures):
+                    # Check if shutdown was requested
+                    if self.should_stop.is_set():
+                        logger.info("Shutdown requested, cancelling remaining futures...")
+                        for f in futures:
+                            f.cancel()
+                        cancelled_count = sum(1 for f in futures if f.cancelled())
+                        logger.info(f"Cancelled {cancelled_count} pending futures")
+                        break
                     try:
                         query_id, query_sample, response = future.result()
+                        
+                        # Skip if query was cancelled/skipped
+                        if query_id is None:
+                            continue
+                        
                         output_ids = response.get("output_ids", [])
 
                         # Store results
@@ -178,10 +197,16 @@ class OfflineSUT(BaseSUT):
                             f"Error processing query: {e}", exc_info=True)
 
             elapsed = time.time() - start_time
-            logger.info(
-                f"Completed {len(self.pending_queries)} queries in {elapsed:.2f}s "
-                f"({len(self.pending_queries)/elapsed:.2f} QPS)"
-            )
+            if cancelled_count > 0:
+                logger.info(
+                    f"Completed {completed_count} queries, cancelled {cancelled_count} queries "
+                    f"in {elapsed:.2f}s"
+                )
+            else:
+                logger.info(
+                    f"Completed {len(self.pending_queries)} queries in {elapsed:.2f}s "
+                    f"({len(self.pending_queries)/elapsed:.2f} QPS)"
+                )
 
         except Exception as e:
             logger.error(f"Error during concurrent flush: {e}", exc_info=True)

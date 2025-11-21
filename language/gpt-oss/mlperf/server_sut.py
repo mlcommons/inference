@@ -10,6 +10,7 @@ import time
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 import mlperf_loadgen as lg
+from tqdm import tqdm
 
 from .base_sut import BaseSUT
 
@@ -73,9 +74,12 @@ class ServerSUT(BaseSUT):
         self.active_streams: Dict[int, StreamingQueryState] = {}
         self.active_streams_lock = threading.Lock()
 
+        # Track active async tasks for cancellation on KeyboardInterrupt
+        self.active_tasks = set()
+        self.active_tasks_lock = threading.Lock()
+
         # Worker threads
         self.workers = []
-        self.should_stop = threading.Event()
 
         # Progress tracking
         self.queries_completed = 0
@@ -144,20 +148,38 @@ class ServerSUT(BaseSUT):
                         "Worker thread interrupted, exiting gracefully...")
                     break
 
-                # Schedule async streaming processing
+                # Schedule async streaming processing and track task
                 if self.loop and not self.should_stop.is_set():
-                    future = asyncio.run_coroutine_threadsafe(
-                        self._process_streaming_query(query_sample),
-                        self.loop
-                    )
+                    # Create the coroutine
+                    coro = self._process_streaming_query_tracked(query_sample)
+                    # Schedule it on the event loop
+                    future = asyncio.run_coroutine_threadsafe(coro, self.loop)
                     # Don't wait for completion - it happens asynchronously
 
         except Exception as e:
             logger.error(f"Worker thread error: {e}", exc_info=True)
 
+    async def _process_streaming_query_tracked(self, query_sample: lg.QuerySample):
+        """Wrapper that tracks the async task for cancellation."""
+        task = asyncio.current_task()
+        
+        # Add to active tasks
+        with self.active_tasks_lock:
+            self.active_tasks.add(task)
+        
+        try:
+            await self._process_streaming_query(query_sample)
+        finally:
+            # Remove from active tasks
+            with self.active_tasks_lock:
+                self.active_tasks.discard(task)
+
     async def _process_streaming_query(self, query_sample: lg.QuerySample):
         """Process a single query with streaming support.
 
+        Token reporting to LoadGen:
+        1. When first token arrives → lg.FirstTokenComplete([token_0])
+        2. When generation finishes → lg.QuerySamplesComplete([token_1, token_2, ..., token_n])
         Args:
             query_sample: MLPerf LoadGen query sample
         """
@@ -214,6 +236,11 @@ class ServerSUT(BaseSUT):
                 state.finished = True
                 await self._send_final_response(state)
 
+        except asyncio.CancelledError:
+            # Task was cancelled (e.g., KeyboardInterrupt during graceful shutdown)
+            logger.info(f"Streaming query {query_id} cancelled during shutdown")
+            # Don't send response to LoadGen - we're shutting down
+            raise  # Re-raise to mark task as cancelled
         except Exception as e:
             logger.error(
                 f"Error processing streaming query {query_id}: {e}",
@@ -229,18 +256,23 @@ class ServerSUT(BaseSUT):
                 self.active_streams.pop(query_id, None)
 
     async def _send_first_token_complete(self, state: StreamingQueryState):
-        """Send FirstTokenComplete to LoadGen for TTFT measurement."""
+        """Send FirstTokenComplete to LoadGen for TTFT measurement.
+        
+        Only sends the first token for TTFT measurement.
+        """
         try:
             logger.debug(
                 f"First token for query {state.query_id} at {state.first_token_time - state.start_time:.3f}s")
 
-            # Convert tokens to numpy array
-            if state.accumulated_tokens:
-                token_array = np.ascontiguousarray(
-                    state.accumulated_tokens, dtype=np.int32)
+            # LoadGen uses this to measure Time To First Token (TTFT)
+            if state.accumulated_tokens and len(state.accumulated_tokens) > 0:
+                # Extract only the first token
+                first_token_only = [state.accumulated_tokens[0]]
+                token_array = np.ascontiguousarray(first_token_only, dtype=np.int32)
             else:
-                # Need at least an empty array
+                # No tokens yet - this shouldn't happen but handle gracefully
                 token_array = np.array([], dtype=np.int32)
+                logger.warning(f"FirstTokenComplete called but no tokens accumulated for query {state.query_id}")
 
             # Create response
             response = lg.QuerySampleResponse(
@@ -252,6 +284,7 @@ class ServerSUT(BaseSUT):
 
             # Report to LoadGen
             lg.FirstTokenComplete([response])
+            logger.debug(f"Sent FirstTokenComplete for query {state.query_id}: 1 token")
 
         except Exception as e:
             logger.error(
@@ -259,12 +292,14 @@ class ServerSUT(BaseSUT):
                 exc_info=True)
 
     async def _send_final_response(self, state: StreamingQueryState):
-        """Send final QuerySamplesComplete to LoadGen."""
+        """Send final QuerySamplesComplete to LoadGen. (send all tokens except the first one)
+        """
         try:
+            num_total_tokens = len(state.accumulated_tokens)
             logger.debug(
-                f"Final response for query {state.query_id}, {len(state.accumulated_tokens)} tokens")
+                f"Final response for query {state.query_id}: {num_total_tokens} total tokens")
 
-            # Store results
+            # Store results (all tokens for internal tracking)
             self.results[state.query_id] = {
                 "output_ids": state.accumulated_tokens,
                 "output_text": state.accumulated_text,
@@ -274,10 +309,9 @@ class ServerSUT(BaseSUT):
                 }
             }
 
-            # Convert tokens to numpy array
-            if state.accumulated_tokens:
-                token_array = np.ascontiguousarray(
-                    state.accumulated_tokens, dtype=np.int32)
+            if state.accumulated_tokens and len(state.accumulated_tokens) > 1:
+                remaining_tokens = state.accumulated_tokens[1:]
+                token_array = np.ascontiguousarray(remaining_tokens, dtype=np.int32)
             else:
                 token_array = np.array([], dtype=np.int32)
 
@@ -291,6 +325,10 @@ class ServerSUT(BaseSUT):
 
             # Report to LoadGen
             lg.QuerySamplesComplete([response])
+            logger.debug(
+                f"Sent QuerySamplesComplete for query {state.query_id}: "
+                f"{len(token_array)} remaining tokens (total: {num_total_tokens})"
+            )
 
             # Update progress bar (force refresh for async updates)
             if self.progress_bar is not None:
@@ -348,15 +386,39 @@ class ServerSUT(BaseSUT):
             logger.info(f"{self.name} already stopping or stopped.")
             return
 
-        logger.info(f"Stopping {self.name}...")
-        self.should_stop.set()
+        super().stop()
 
-        # Wait for workers
-        for i, worker in enumerate(self.workers):
-            logger.info(f"Waiting for worker {i+1}/{len(self.workers)}...")
-            worker.join(timeout=5)
-            if worker.is_alive():
-                logger.warning(f"Worker {i+1} did not terminate gracefully")
+        # Cancel all active streaming tasks
+        logger.info("Cancelling active streaming tasks...")
+        tasks_to_cancel = []
+        with self.active_tasks_lock:
+            tasks_to_cancel = list(self.active_tasks)
+        
+        if tasks_to_cancel:
+            logger.info(f"Cancelling {len(tasks_to_cancel)} active tasks")
+            for task in tasks_to_cancel:
+                if not task.done():
+                    task.cancel()
+        
+        # Clear pending queries from queue
+        pending_count = 0
+        try:
+            while True:
+                self.query_queue.get_nowait()
+                pending_count += 1
+        except queue.Empty:
+            pass
+        
+        if pending_count > 0:
+            logger.info(f"Cleared {pending_count} pending queries from queue")
+
+        # Wait for workers with progress bar
+        with tqdm(total=len(self.workers), desc="Stopping workers", unit="worker") as pbar:
+            for i, worker in enumerate(self.workers):
+                worker.join(timeout=5)
+                if worker.is_alive():
+                    logger.warning(f"Worker {i+1} did not terminate gracefully")
+                pbar.update(1)
 
         # Stop event loop
         if self.loop:

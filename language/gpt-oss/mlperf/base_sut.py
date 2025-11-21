@@ -3,6 +3,7 @@
 
 import abc
 import logging
+import threading
 from typing import List, Dict, Any, Optional
 import mlperf_loadgen as lg
 
@@ -34,6 +35,10 @@ class BaseSUT(abc.ABC):
         self.sut = None
         self.results = {}
         self.progress_bar = progress_bar
+        
+        # Graceful shutdown support (set on KeyboardInterrupt)
+        self.should_stop = threading.Event()
+        
         logger.info(f"Initializing {self.name}")
 
     @abc.abstractmethod
@@ -68,7 +73,18 @@ class BaseSUT(abc.ABC):
         return self.sut
 
     def stop(self) -> None:
-        """Stop the SUT and clean up resources."""
+        """Stop the SUT and clean up resources.
+        
+        Signals graceful shutdown and allows subclasses to cancel pending work.
+        """
+        logger.info(f"Stopping {self.name}...")
+        
+        # Signal all workers/tasks to stop
+        self.should_stop.set()
+        
+        # Subclasses should override to add their own cleanup
+        # (e.g., cancel tasks, clear queues)
+        
         if self.sut:
             lg.DestroySUT(self.sut)
             self.sut = None

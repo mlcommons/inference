@@ -16,12 +16,13 @@ Usage:
 """
 
 import argparse
+import json
 import logging
 import os
 import sys
 import threading
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 import mlperf_loadgen as lg
 import pandas as pd
@@ -40,6 +41,27 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+
+def load_generation_config(config_path: str) -> Dict[str, Any]:
+    """Load generation configuration from JSON file.
+    
+    Args:
+        config_path: Path to generation_config.json
+        
+    Returns:
+        Dictionary with generation parameters
+    """
+    logger.info(f"Loading generation config from {config_path}")
+    
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    
+    # Filter out comment fields (starting with _)
+    gen_params = {k: v for k, v in config.items() if not k.startswith('_')}
+    
+    logger.info(f"Generation config loaded: {gen_params}")
+    return gen_params
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
@@ -117,33 +139,12 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help="Server URL for backend (SGLang)"
     )
 
-    # Generation parameters
+    # Generation configuration
     parser.add_argument(
-        "--max-tokens",
-        type=int,
-        default=32768,
-        help="Maximum tokens to generate"
-    )
-
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.001,
-        help="Sampling temperature"
-    )
-
-    parser.add_argument(
-        "--top-k",
-        type=int,
-        default=1,
-        help="Top-k sampling parameter"
-    )
-
-    parser.add_argument(
-        "--top-p",
-        type=float,
-        default=1.0,
-        help="Top-p sampling parameter"
+        "--generation-config",
+        type=str,
+        default="generation_config.json",
+        help="Path to generation configuration JSON file"
     )
 
     # Server scenario specific
@@ -203,15 +204,17 @@ def configure_loadgen(
         settings.mode = lg.TestMode.PerformanceOnly
 
     # Load configurations if files exist
+    # conf_type: 2 = mlperf.conf, 1 = user.conf
+    # LoadGen tracks config calls and only allows one user.conf for official submissions
     if mlperf_conf and Path(mlperf_conf).exists():
         logger.info(f"Loading MLPerf config from {mlperf_conf}")
-        settings.FromConfig(mlperf_conf, model_name, scenario.capitalize())
+        settings.FromConfig(mlperf_conf, model_name, scenario.capitalize(), 2)
     else:
         logger.warning(f"MLPerf config not found: {mlperf_conf}")
 
     if user_conf and Path(user_conf).exists():
         logger.info(f"Loading user config from {user_conf}")
-        settings.FromConfig(user_conf, model_name, scenario.capitalize())
+        settings.FromConfig(user_conf, model_name, scenario.capitalize(), 1)
     else:
         logger.warning(f"User config not found: {user_conf}")
 
@@ -313,6 +316,22 @@ def main():
 
         logger.info(f"Loaded {len(prompts)} prompts from dataset")
 
+        # Load generation configuration
+        logger.info("Loading generation configuration...")
+        gen_config = load_generation_config(args.generation_config)
+        
+        # Extract generation parameters with defaults
+        max_tokens = gen_config.get('max_new_tokens', 10240)
+        temperature = gen_config.get('temperature', 1.0)
+        top_k = gen_config.get('top_k', -1)
+        top_p = gen_config.get('top_p', 1.0)
+        
+        logger.info("Generation parameters:")
+        logger.info(f"  max_new_tokens: {max_tokens}")
+        logger.info(f"  temperature: {temperature}")
+        logger.info(f"  top_k: {top_k}")
+        logger.info(f"  top_p: {top_p}")
+
         # Initialize backend
         logger.info(f"Initializing {args.backend} backend...")
         if args.backend == "sglang":
@@ -352,10 +371,10 @@ def main():
             sut = OfflineSUT(
                 backend=backend,
                 dataset=prompts,
-                max_tokens=args.max_tokens,
-                temperature=args.temperature,
-                top_k=args.top_k,
-                top_p=args.top_p,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_k=top_k,
+                top_p=top_p,
                 name=f"gpt-oss-120b_offline_sut",
                 progress_bar=pbar,
                 max_concurrency=args.max_concurrency
@@ -364,10 +383,10 @@ def main():
             sut = ServerSUT(
                 backend=backend,
                 dataset=prompts,
-                max_tokens=args.max_tokens,
-                temperature=args.temperature,
-                top_k=args.top_k,
-                top_p=args.top_p,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_k=top_k,
+                top_p=top_p,
                 num_workers=args.num_workers,
                 name=f"gpt-oss-120b_server_sut",
                 progress_bar=pbar

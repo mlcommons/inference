@@ -6,6 +6,14 @@ This is the reference implementation for GPT-OSS-120B. This is a proposal and is
 * Model: `openai/gpt-oss-120b`, commit id: [`b5c939d`](https://huggingface.co/openai/gpt-oss-120b/tree/b5c939de8f754692c1647ca79fbf85e8c1e70f8a)
 * Dataset: Please request access at [this link](https://drive.google.com/drive/folders/1DCfEXHqe69okrqKbSyV-8VUw413JqpPY?usp=drive_link) - **this is a tentative dataset**
 
+Verify the dataset contents by computing the `sha1sum`:
+```bash
+$ sha1sum gptoss-*-eval.pkl
+35228fcf5581b916e70920748baf2c016ea2c06b  gptoss-acc-eval.pkl
+ddec911ad479fc4b30ef1c050c9dea63134c090e  gptoss-perf-eval.pkl
+
+```
+
 ## Environment setup
 Work on reference implementation is done using the sglang containers at [https://hub.docker.com/r/lmsysorg/sglang/tags](https://hub.docker.com/r/lmsysorg/sglang/tags). For enroot setup, a script is provided under [`setup_enroot.sh`](./setup_enroot.sh). For all sections below, we shall assume this environment is instantiated.
 

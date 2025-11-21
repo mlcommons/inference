@@ -23,6 +23,7 @@ class SGLangBackend(BaseBackend):
         self,
         server_url: str = "http://localhost:30000",
         timeout: int = 1200,
+        max_pool_size: int = 2000,  # Default pool size for high concurrency
         **kwargs
     ):
         """Initialize SGLang backend.
@@ -30,16 +31,19 @@ class SGLangBackend(BaseBackend):
         Args:
             server_url: URL of the SGLang server
             timeout: Request timeout in seconds
+            max_pool_size: Maximum connection pool size (should be >= max_concurrency)
             **kwargs: Additional configuration
         """
         config = {
             "server_url": server_url,
             "timeout": timeout,
+            "max_pool_size": max_pool_size,
             **kwargs
         }
         super().__init__(config)
         self.server_url = server_url
         self.timeout = timeout
+        self.max_pool_size = max_pool_size
         self.session = None
 
     def initialize(self) -> None:
@@ -49,18 +53,19 @@ class SGLangBackend(BaseBackend):
             return
 
         logger.info(f"Connecting to SGLang server at {self.server_url}")
-
+        logger.info(f"Configuring connection pool with max_pool_size={self.max_pool_size}")
         # Create session with larger connection pool for high concurrency
         # Default pool size is 10, but we may have 100s-1000s of concurrent
         # requests
         self.session = requests.Session()
 
         # Increase connection pool size to support high concurrency
+        # pool_maxsize should be >= max_concurrency to avoid "pool is full" warnings
         adapter = requests.adapters.HTTPAdapter(
-            pool_connections=100,  # Number of connection pools to cache
-            pool_maxsize=1000,     # Maximum number of connections to save in the pool
-            max_retries=3,         # Retry failed requests
-            pool_block=False       # Don't block when pool is full, create new connections
+            pool_connections=min(100, self.max_pool_size // 10),  # Number of connection pools to cache
+            pool_maxsize=self.max_pool_size,     # Maximum number of connections in the pool
+            max_retries=3,                       # Retry failed requests
+            pool_block=False                     # Don't block when pool is full, create new connections
         )
         self.session.mount('http://', adapter)
         self.session.mount('https://', adapter)
@@ -217,12 +222,18 @@ class SGLangBackend(BaseBackend):
 
         Yields:
             Dict with:
-                - delta_token_ids: List of new token IDs in this chunk
+                - delta_token_ids: List of new token IDs in this chunk (estimated during streaming)
                 - delta_text: New text in this chunk
                 - is_first_token: True if this is the first token
                 - is_finished: True if generation is complete
-                - accumulated_token_ids: All tokens generated so far
+                - accumulated_token_ids: All tokens generated so far (accurate in final chunk)
                 - metadata: Additional info (TTFT, etc.)
+                
+        Note:
+            SGLang's streaming API returns text incrementally but may not return token_ids 
+            per chunk. We estimate token counts from text length during streaming (~4 chars/token).
+            The FINAL chunk (when finished=True) should contain the complete 'output_ids' array
+            with accurate token IDs, which we use for LoadGen's token/sec metrics.
         """
         if not self.initialized:
             raise RuntimeError(
@@ -285,21 +296,54 @@ class SGLangBackend(BaseBackend):
 
                             chunk = json.loads(json_str)
 
-                            # Extract token information from chunk
-                            delta_token_ids = chunk.get("token_ids", [])
+                            # Extract text delta
                             delta_text = chunk.get("text", "")
+                            
+                            # Check if this is the final chunk
+                            is_finished = chunk.get("finished", False)
+                            
+                            # For token IDs:
+                            # - SGLang may not return incremental token_ids in each streaming chunk
+                            # - But should return full output_ids in the FINAL chunk when finished=True
+                            # - For intermediate chunks, we estimate token count from text length
+                            delta_token_ids = []
+                            
+                            if is_finished and "output_ids" in chunk:
+                                # Final chunk: use the complete output_ids from SGLang
+                                all_output_ids = chunk["output_ids"]
+                                accumulated_token_ids = all_output_ids
+                                delta_token_ids = []  # Already accumulated
+                                logger.debug(f"Received final output_ids: {len(all_output_ids)} tokens")
+                            elif is_finished and "output_ids" not in chunk:
+                                # Final chunk but no output_ids - log warning
+                                logger.warning(
+                                    f"Final chunk received but no 'output_ids' field found. "
+                                    f"Using estimated token count: {len(accumulated_token_ids)}. "
+                                    f"For accurate token metrics, ensure SGLang returns 'output_ids' in streaming responses."
+                                )
+                            elif "token_ids" in chunk:
+                                # Incremental token IDs (if SGLang provides them)
+                                delta_token_ids = chunk["token_ids"]
+                            elif delta_text:
+                                # Estimate token count from text delta (rough approximation)
+                                # Average ~4 characters per token for English text
+                                estimated_tokens = max(1, len(delta_text) // 4)
+                                # Create placeholder token IDs for counting purposes
+                                # These are NOT real token IDs, just for LoadGen metrics
+                                delta_token_ids = [0] * estimated_tokens
 
-                            if delta_token_ids:
-                                accumulated_token_ids.extend(delta_token_ids)
+                            # Update accumulated state (only if not already set by final chunk)
+                            if not (is_finished and "output_ids" in chunk):
+                                # Accumulate incrementally (estimated or incremental token IDs)
+                                if delta_token_ids:
+                                    accumulated_token_ids.extend(delta_token_ids)
                             if delta_text:
                                 accumulated_text += delta_text
 
                             # Mark first token timing
-                            if is_first and delta_token_ids:
+                            if is_first and (delta_token_ids or delta_text):
                                 first_token_time = time.time()
                                 is_first = False
-
-                            is_finished = chunk.get("finished", False)
 
                             yield {
                                 "delta_token_ids": delta_token_ids,

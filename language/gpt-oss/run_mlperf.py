@@ -19,6 +19,7 @@ import argparse
 import logging
 import os
 import sys
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -315,25 +316,34 @@ def main():
         # Initialize backend
         logger.info(f"Initializing {args.backend} backend...")
         if args.backend == "sglang":
+            # Set pool size to match max_concurrency with small safety margin
+            # This prevents "connection pool is full" warnings
+            pool_size = int(args.max_concurrency * 1.1)  # 10% safety margin
             backend = SGLangBackend(
                 server_url=args.server_url,
-                timeout=1200
+                timeout=1200,
+                max_pool_size=pool_size
             )
+            logger.info(f"Backend configured with connection pool size: {pool_size} (from max_concurrency={args.max_concurrency})")
         else:
             raise ValueError(f"Unknown backend: {args.backend}")
 
         # Initialize backend
         backend.initialize()
 
-        # Create progress bar for real-time updates
+        # Create progress bar early so subsequent logs print below it
+        # Total will be dynamically updated by SUT based on actual queries from LoadGen:
+        # - Offline: Set once when all queries arrive
+        # - Server: Incremented as queries arrive
         pbar = tqdm(
-            total=len(prompts),
+            total=0,  # Will be updated dynamically by SUT
             desc=f"MLPerf {args.mode}",
             unit="query",
             leave=True,
             position=0,
-            mininterval=0.1,  # Update display every 0.1s minimum
-            smoothing=0.1      # Smooth display updates
+            mininterval=0.1,
+            smoothing=0.1,
+            dynamic_ncols=True
         )
 
         # Create SUT with progress bar

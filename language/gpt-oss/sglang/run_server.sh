@@ -5,6 +5,7 @@ pip install -r requirements.txt
 dp=1
 model_path=openai/gpt-oss-120b
 eagle_path=""
+stream_interval=500
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -18,6 +19,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --eagle_path)
             eagle_path=$2
+            shift 2
+            ;;
+        --stream_interval)
+            stream_interval=$2
             shift 2
             ;;
         *)
@@ -36,7 +41,7 @@ args=" --model-path $model_path \
     --mem-fraction-static 0.85 \
     --chunked-prefill-size 16384 \
     --ep-size=1 \
-    --stream-interval 500 "
+    --stream-interval $stream_interval "
 
 if [ -n "$eagle_path" ]; then
     args="$args --speculative-draft-model-path $eagle_path \

@@ -65,6 +65,11 @@ class OfflineSUT(BaseSUT):
         """
         logger.info(f"Received {len(query_samples)} queries")
 
+        # Update progress bar total (Offline gets all queries at once)
+        if self.progress_bar is not None:
+            self.progress_bar.total = len(query_samples)
+            self.progress_bar.refresh()
+
         # Store queries for batch processing
         for qs in query_samples:
             self.pending_queries.append(qs)

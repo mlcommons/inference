@@ -99,8 +99,7 @@ class ServerSUT(BaseSUT):
         # Create LoadGen SUT
         self.sut = lg.ConstructSUT(
             self.issue_queries,
-            self.flush_queries,
-            self.name)
+            self.flush_queries)
         logger.info(f"{self.name} started with streaming support")
         return self.sut
 
@@ -313,6 +312,12 @@ class ServerSUT(BaseSUT):
         Args:
             query_samples: List of MLPerf LoadGen query samples
         """
+        # Update progress bar total dynamically as queries arrive
+        if self.progress_bar is not None:
+            with self.progress_lock:
+                self.progress_bar.total = (self.progress_bar.total or 0) + len(query_samples)
+                self.progress_bar.refresh()
+
         for qs in query_samples:
             self.query_queue.put(qs)
 

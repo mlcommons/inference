@@ -46,7 +46,7 @@ class Task(ABC):
             dataset_cli: The dataset configuration passed in from the CLI.
             model_cli: The model configuration passed in from the CLI.
             endpoint_cli: The endpoint configuration passed in from the CLI.
-            settings: Parameters of the current benchmark
+            settings: Parameters of the current benchmark.
             random_seed: The random seed to use for the task.
         """
         random.seed(random_seed)
@@ -54,7 +54,9 @@ class Task(ABC):
         self.dataset = load_dataset(
             dataset_cli.repo_id,
             token=dataset_cli.token,
+            split="+".join(dataset_cli.split),
         )
+        logger.info(f"LEN: {len(self.dataset)}")
         self.model_cli = model_cli
         self.openai_api_client = AsyncOpenAI(
             base_url=endpoint_cli.url,
@@ -377,7 +379,7 @@ class ShopifyGlobalCatalogue(Task):
             dataset_cli: The dataset configuration passed in from the CLI.
             model_cli: The model configuration passed in from the CLI.
             endpoint_cli: The endpoint configuration passed in from the CLI.
-            settings: Parameters of the current benchmark
+            settings: Parameters of the current benchmark.
             random_seed: The random seed to use for the task.
         """
         super().__init__(
@@ -387,8 +389,6 @@ class ShopifyGlobalCatalogue(Task):
             settings=settings,
             random_seed=random_seed,
         )
-        # Shopify only released the train split so far.
-        self.dataset = self.dataset[dataset_cli.split]
 
     @staticmethod
     def formulate_messages(
@@ -409,44 +409,45 @@ class ShopifyGlobalCatalogue(Task):
         return [
             {
                 "role": "system",
-                "content": """
-                Please analyze the product from the user prompt
-                and provide the following fields in a valid JSON object:
-                - category
-                - brand
-                - is_secondhand
-
-                You must choose only one, which is the most appropriate/correct,
-                category out of the list of possible product categories.
-
-                Your response should only contain a valid JSON object and nothing more.
-                The JSON object should match the followng JSON schema:
-                ```json
-                {
-                "type": "object",
-                "properties": {
-                    "category": {"type": "string"},
-                    "brand": {"type": "string"},
-                    "is_secondhand": {"type": "boolean"}
-                    }
-                }
-                ```
-                """,
+                "content": """Please analyze the product from the user prompt
+and provide the following fields in a valid JSON object:
+- category
+- brand
+- is_secondhand
+You must choose only one, which is the most appropriate/correct,
+category out of the list of possible product categories.
+Your response should only contain a valid JSON object and nothing more.
+The JSON object should match the followng JSON schema:
+```json
+{
+  "type": "object",
+  "properties": {
+    "category": {"type": "string"},
+    "brand": {"type": "string"},
+    "is_secondhand": {"type": "boolean"}
+  }
+}
+```
+""",
             },
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": (
-                            f"The title of the product is: {sample['product_title']}\n"
-                            f"The description of the product is: "
-                            f"{sample['product_description']}\n\n",
-                            "These are the possible product categories: ",
-                            f"{sample['potential_product_categories']}.",
-                            "You must choose only one and return the answer"
-                            " as string and not as a list",
-                        ),
+                        "text": f"""The title of the product is the following:
+```text
+{sample['product_title']}
+```
+The description of the product is the following:
+```text
+{sample['product_description']}
+```
+The following are the possible product categories:
+```json
+{sample['potential_product_categories']}
+```
+""",
                     },
                     {
                         "type": "image_url",

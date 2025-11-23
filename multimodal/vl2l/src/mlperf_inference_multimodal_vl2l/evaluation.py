@@ -1,5 +1,7 @@
 """Task definitions for the VL2L benchmark."""
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -8,11 +10,12 @@ import numpy as np
 from datasets import load_dataset
 from hiclass.metrics import f1
 from loguru import logger
-from pydantic import FilePath
 from sklearn.metrics import f1_score
 from tabulate import tabulate
 
 if TYPE_CHECKING:
+    from pydantic import FilePath
+
     from .cli import Dataset as DatasetCLI
 
 
@@ -58,8 +61,8 @@ def get_hierarchical_components(predicted_path: str,
     return intersection_count, pred_length, true_length
 
 
-def calculate_hierarchical_metrics(data: list[tuple[str, str]]) -> float:
-    """Calculates the aggregate hP, hR, and hF scores for a list of samples.
+def calculate_hierarchical_f1(data: list[tuple[str, str]]) -> float:
+    """Calculates the aggregate hF scores for a list of samples.
 
     Args:
         data: A list of tuples, where each tuple is
@@ -107,9 +110,30 @@ def calculate_exact_match(generated_text: str, original_text: str) -> float:
 
     return 1.0 if gen == orig else 0.0
 
+def calculate_secondhand_f1(data: list[tuple[str, str]]) -> float:
+    """Calculate F1 score of is_secondhand field.
 
-def alt_f1_score(data: list[tuple[str, str]]) -> float:
-    """Alt method to calculate hierarchical F1."""
+    Args:
+         data: List of tuples of predicted and true values
+    Returs:
+        f1 score
+    """
+    y_pred = []
+    y_src = []
+    for pred, src in data:
+        y_pred.append(pred)
+        y_src.append(src)
+
+    return f1_score(y_src, y_pred)
+
+def calculate_hiclass_f1(data: list[tuple[str, str]]) -> float:
+    """Alt method to calculate hierarchical F1.
+
+    Args:
+         data: List of tuples of predicted and true values
+    Returs:
+        f1 score
+    """
     y_pred_raw = []
     y_true_raw = []
 
@@ -142,7 +166,7 @@ def alt_f1_score(data: list[tuple[str, str]]) -> float:
     return f1(y_true, y_pred)
 
 
-def run_evaluation(filename: FilePath, dataset: "DatasetCLI") -> None:
+def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
     """Main function to run the evaluation."""
     with Path.open(filename) as f:
         model_output = json.load(f)
@@ -150,11 +174,11 @@ def run_evaluation(filename: FilePath, dataset: "DatasetCLI") -> None:
     original_data = load_dataset(
         dataset.repo_id,
         dataset.token,
-    )[dataset.split]
+        split="+".join(dataset.split),
+    )
 
     category_dataset_pred_src = []
-    is_secondhand_pred = []
-    is_secondhand_src = []
+    is_secondhand_pred_src = []
     for elem in model_output:
         byte_data = bytes.fromhex(elem["data"])
         idx = elem["qsl_idx"]
@@ -163,15 +187,13 @@ def run_evaluation(filename: FilePath, dataset: "DatasetCLI") -> None:
         ground_truth_item = original_data[idx]
         category_dataset_pred_src.append((pred_item["category"],
                                           ground_truth_item["ground_truth_category"]))
-        is_secondhand_pred.append(int(pred_item["is_secondhand"]))
-        is_secondhand_src.append(
-            int(ground_truth_item["ground_truth_is_secondhand"]))
+        is_secondhand_pred_src.append((int(pred_item["is_secondhand"]),
+                                      int(ground_truth_item["ground_truth_is_secondhand"])))
 
-    category_f1_score = calculate_hierarchical_metrics(
+    category_f1_score = calculate_hierarchical_f1(
         category_dataset_pred_src)
-    hiclass_f1 = alt_f1_score(category_dataset_pred_src)
-    is_secondhand_f1_score = f1_score(is_secondhand_src,
-                                      is_secondhand_pred)
+    hiclass_f1 = calculate_hiclass_f1(category_dataset_pred_src)
+    is_secondhand_f1_score = calculate_secondhand_f1(is_secondhand_pred_src)
 
     data = [
         ["category", category_f1_score, hiclass_f1],

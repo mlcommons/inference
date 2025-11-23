@@ -110,6 +110,7 @@ def calculate_exact_match(generated_text: str, original_text: str) -> float:
 
     return 1.0 if gen == orig else 0.0
 
+
 def calculate_secondhand_f1(data: list[tuple[str, str]]) -> float:
     """Calculate F1 score of is_secondhand field.
 
@@ -125,6 +126,7 @@ def calculate_secondhand_f1(data: list[tuple[str, str]]) -> float:
         y_src.append(src)
 
     return f1_score(y_src, y_pred)
+
 
 def calculate_hiclass_f1(data: list[tuple[str, str]]) -> float:
     """Alt method to calculate hierarchical F1.

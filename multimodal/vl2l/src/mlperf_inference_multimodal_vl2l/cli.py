@@ -20,6 +20,7 @@ from .task import ShopifyGlobalCatalogue
 app = Typer()
 SplitType = Literal["train", "test"]
 
+
 class TestScenario(StrEnum):
     """The test scenario for the MLPerf inference LoadGen."""
 
@@ -396,13 +397,13 @@ class Dataset(BaseModel):
             v = [part.strip() for part in v.split(",") if part.strip()]
 
         if not isinstance(v, list):
-            err="split must be a string or a list of strings"
+            err = "split must be a string or a list of strings"
             raise TypeError(err)
 
         allowed = {"train", "test"}
         for item in v:
             if item not in allowed:
-                msg_err =  f"Invalid split {item!r}. Must be one of: {sorted(allowed)}"
+                msg_err = f"Invalid split {item!r}. Must be one of: {sorted(allowed)}"
                 raise ValueError(msg_err)
         return v
 

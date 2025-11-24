@@ -35,8 +35,8 @@ git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf
 ```
 
 2. Install in editable mode with the development tools.
-- Bash: `pip install mlperf-inference/multimodal/vl2l/[dev]`
-- Zsh: `pip install mlperf-inference/multimodal/vl2l/"[dev]"`
+- Bash: `pip install -e mlperf-inference/multimodal/vl2l/[dev]`
+- Zsh: `pip install -e mlperf-inference/multimodal/vl2l/"[dev]"`
 
 After installation, you can check the CLI flags that `mlperf-inf-mm-vl2l` can take with:
 

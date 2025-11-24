@@ -24,12 +24,12 @@
 #  and binaries. Use one of the gn build targets instead if you want
 #  to avoid poluting the source tree.
 
-from setuptools import Extension, setup
 from pathlib import Path
+
 from pybind11 import get_include
 from pybind11.setup_helpers import Pybind11Extension, build_ext
+from setuptools import setup
 from version_generator import generate_loadgen_version_definitions
-import subprocess
 
 generated_version_source_filename = "generated/version_generated.cc"
 generate_loadgen_version_definitions(generated_version_source_filename, ".")
@@ -42,7 +42,7 @@ public_headers = [
     "test_settings.h",
     "issue_query_controller.h",
     "early_stopping.h",
-    "query_dispatch_library.h"
+    "query_dispatch_library.h",
 ]
 
 lib_headers = [
@@ -54,7 +54,7 @@ lib_headers = [
     "results.h",
     "bindings/c_api.h",
     "version_generator.py",
-    "mlperf_conf.h"
+    "mlperf_conf.h",
 ]
 
 lib_sources = [
@@ -79,10 +79,7 @@ mlperf_loadgen_sources_no_gen = lib_sources + lib_bindings
 mlperf_loadgen_sources = mlperf_loadgen_sources_no_gen + [
     generated_version_source_filename
 ]
-mlperf_long_description = (
-    this_directory /
-    "README.md").read_text(
-        encoding="utf-8")
+mlperf_long_description = (this_directory / "README.md").read_text(encoding="utf-8")
 
 with open("VERSION.txt", "r") as f:
     version = f.read()
@@ -91,20 +88,29 @@ version_split = version.split(".")
 if len(version_split) < 2:
     print("Version is incomplete. Needs a format like 4.1.1 in VERSION file")
 
+# Read requirements from requirements.txt
+install_requires = []
+requirements_file = this_directory / "requirements.txt"
+if requirements_file.exists():
+    with open(requirements_file, "r") as f:
+        install_requires = [
+            line.strip() for line in f if line.strip() and not line.startswith("#")
+        ]
+
 
 try:
-    with open("mlperf.conf", 'r') as file:
+    with open("mlperf.conf", "r") as file:
         conf_contents = file.read()
 
     # Escape backslashes and double quotes
-    conf_contents = conf_contents.replace('\\', '\\\\').replace('"', '\\"')
+    conf_contents = conf_contents.replace("\\", "\\\\").replace('"', '\\"')
 
     # Convert newlines
-    conf_contents = conf_contents.replace('\n', '\\n"\n"')
+    conf_contents = conf_contents.replace("\n", '\\n"\n"')
 
     formatted_content = f'const char* mlperf_conf =\n"{conf_contents}";\n'
 
-    with open("mlperf_conf.h", 'w') as header_file:
+    with open("mlperf_conf.h", "w") as header_file:
         header_file.write(formatted_content)
 
 except IOError as e:
@@ -113,25 +119,26 @@ except IOError as e:
 mlperf_loadgen_module = Pybind11Extension(
     "mlperf_loadgen",
     define_macros=[
-        ("MAJOR_VERSION",
-         version_split[0]),
-        ("MINOR_VERSION",
-         version_split[1])
+        ("MAJOR_VERSION", version_split[0]),
+        ("MINOR_VERSION", version_split[1]),
     ],
     include_dirs=[".", get_include()],
     sources=mlperf_loadgen_sources,
     depends=mlperf_loadgen_headers,
-    extra_compile_args=['-std=c++14', '-O3'],
+    extra_compile_args=["-std=c++14", "-O3"],
 )
 
-setup(name="mlcommons_loadgen",
-      version=version,
-      description="MLPerf Inference LoadGen python bindings",
-      url="https://mlcommons.org/",
-      cmdclass={"build_ext": build_ext},
-      ext_modules=[mlperf_loadgen_module],
-      packages=['mlcommons_loadgen'],
-      package_dir={'mlcommons_loadgen': '.'},
-      include_package_data=True,
-      long_description=mlperf_long_description,
-      long_description_content_type='text/markdown')
+setup(
+    name="mlcommons_loadgen",
+    version=version,
+    description="MLPerf Inference LoadGen python bindings",
+    url="https://mlcommons.org/",
+    cmdclass={"build_ext": build_ext},
+    ext_modules=[mlperf_loadgen_module],
+    packages=["mlcommons_loadgen"],
+    package_dir={"mlcommons_loadgen": "."},
+    include_package_data=True,
+    install_requires=install_requires,
+    long_description=mlperf_long_description,
+    long_description_content_type="text/markdown",
+)

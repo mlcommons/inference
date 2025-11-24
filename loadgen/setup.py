@@ -121,6 +121,7 @@ mlperf_loadgen_module = Pybind11Extension(
     include_dirs=[".", get_include()],
     sources=mlperf_loadgen_sources,
     depends=mlperf_loadgen_headers,
+    extra_compile_args=['-std=c++14', '-O3'],
 )
 
 setup(name="mlcommons_loadgen",

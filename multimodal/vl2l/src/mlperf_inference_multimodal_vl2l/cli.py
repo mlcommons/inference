@@ -381,7 +381,10 @@ class Dataset(BaseModel):
         list[str],
         Field(
             description=(
-                "Dataset splits to use for the benchmark. Eg: train"
+                """Dataset splits to use for the benchmark. Eg: train.
+                You can add multiple splits by calling the same argument
+                multiple times. Eg:
+                --dataset.split test --dataset.split train"""
             ),
         ),
     ] = ["train", "test"]

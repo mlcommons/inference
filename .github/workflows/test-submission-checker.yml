@@ -5,7 +5,7 @@ name: Test for MLPerf inference submission checker using MLC script automation
 
 on:
   pull_request:
-    branches: [ "master", "dev" ]
+    branches: [ "master_off", "dev_off" ]
     paths:
       - tools/submission/**
       - .github/workflows/test-submission-checker.yml

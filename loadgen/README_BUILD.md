@@ -11,7 +11,7 @@ can build and install the `mlperf-loadgen` package via:
 
     git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf_inference
     cd mlperf_inference/loadgen
-    pip install .
+    pip install -e .  # Install in the editable mode because you are a developer.
 
 If you don't need to clone the repo (e.g., you just want to install `mlperf-loadgen`
 from the latest commit of the `master` branch):

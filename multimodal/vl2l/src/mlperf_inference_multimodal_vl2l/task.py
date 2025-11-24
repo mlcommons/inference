@@ -403,7 +403,8 @@ class ShopifyGlobalCatalogue(Task):
             The messages for chat completion.
         """
         image_file = BytesIO()
-        sample["product_image"].save(image_file, format=sample["product_image"].format)
+        sample["product_image"].save(
+            image_file, format=sample["product_image"].format)
         image_bytes = image_file.getvalue()
         image_base64 = base64.b64encode(image_bytes)
         image_base64_string = image_base64.decode("utf-8")

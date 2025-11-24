@@ -79,7 +79,10 @@ mlperf_loadgen_sources_no_gen = lib_sources + lib_bindings
 mlperf_loadgen_sources = mlperf_loadgen_sources_no_gen + [
     generated_version_source_filename
 ]
-mlperf_long_description = (this_directory / "README.md").read_text(encoding="utf-8")
+mlperf_long_description = (
+    this_directory /
+    "README.md").read_text(
+        encoding="utf-8")
 
 with open("VERSION.txt", "r") as f:
     version = f.read()

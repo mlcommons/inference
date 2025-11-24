@@ -3,18 +3,22 @@
 ## Prerequisites
 
     sudo apt-get install libglib2.0-dev python-pip python3-pip
-    pip2 install absl-py numpy
-    pip3 install absl-py numpy
 
 ## Quick Start
 ### Installation - Python
+If you need to clone the repo (e.g., because you are a MLPerf Inference developer), you
+can build and install the `mlperf-loadgen` package via:
 
-    pip install absl-py numpy
     git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf_inference
     cd mlperf_inference/loadgen
-    CFLAGS="-std=c++14 -O3" python -m pip install .
+    pip install .
 
-This will fetch the loadgen source, build and install the loadgen as a python module, and run a simple end-to-end demo.
+If you don't need to clone the repo (e.g., you just want to install `mlperf-loadgen`
+from the latest commit of the `master` branch):
+
+    pip install git+https://github.com/mlcommons/inference.git#subdirectory=loadgen
+
+This will fetch the loadgen source, then build and install the loadgen as a python module.
 
 Alternatively, we provide wheels for several python versions and operating system that can be installed using pip directly.
 

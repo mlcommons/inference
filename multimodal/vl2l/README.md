@@ -2,20 +2,6 @@
 
 ## Quick Start
 
-### Get the source code 
-
-Clone the MLPerf Inference repo via:
-
-```bash
-git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf-inference
-```
-
-Then enter the repo: 
-
-```bash
-cd mlperf-inference/
-```
-
 ### Create a Conda environment
 
 Follow [this link](https://www.anaconda.com/docs/getting-started/miniconda/install#quickstart-install-instructions)
@@ -26,52 +12,31 @@ environment via:
 conda create -n mlperf-inf-mm-vl2l python=3.12
 ```
 
-### Install LoadGen
-
-Update `libstdc++` in the conda environment:
+### (Optionally) Update `libstdc++` in the conda environment:
 
 ```bash
 conda install -c conda-forge libstdcxx-ng
 ```
 
-Install `absl-py` and `numpy`:
-
-```bash
-conda install absl-py numpy
-```
-
-Build and install LoadGen from source:
-
-```bash
-cd loadgen/
-CFLAGS="-std=c++14 -O3" python -m pip install .
-cd ../
-```
-
-Run a quick test to validate that LoadGen was installed correctly:
-
-```bash
-python loadgen/demos/token_metrics/py_demo_server.py
-```
+This is only needed when your local environment doesn't have `libstdc++`.
 
 ### Install the VL2L benchmarking CLI
 
 For users, install `mlperf-inf-mm-vl2l` with:
 
 ```bash
-pip install multimodal/vl2l/
+pip install git+https://github.com/mlcommons/inference.git#subdirectory=multimodal/vl2l
 ```
 
 For developers, install `mlperf-inf-mm-vl2l` and the development tools with:
-
-- On Bash
+1. Clone the MLPerf Inference repo.
 ```bash
-pip install multimodal/vl2l/[dev]
+git clone --recurse-submodules https://github.com/mlcommons/inference.git mlperf-inference
 ```
-- On Zsh
-```zsh
-pip install multimodal/vl2l/"[dev]"
-```
+
+2. Install in editable mode with the development tools.
+- Bash: `pip install mlperf-inference/multimodal/vl2l/[dev]`
+- Zsh: `pip install mlperf-inference/multimodal/vl2l/"[dev]"`
 
 After installation, you can check the CLI flags that `mlperf-inf-mm-vl2l` can take with:
 

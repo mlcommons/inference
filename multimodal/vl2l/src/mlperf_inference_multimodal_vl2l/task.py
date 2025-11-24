@@ -56,7 +56,8 @@ class Task(ABC):
             token=dataset_cli.token,
             split="+".join(dataset_cli.split),
         )
-        logger.info(f"LEN: {len(self.dataset)}")
+        logger.debug("Loaded {} samples from the dataset splits {}.", len(self.dataset),
+                     dataset_cli.split)
         self.model_cli = model_cli
         self.openai_api_client = AsyncOpenAI(
             base_url=endpoint_cli.url,
@@ -402,7 +403,7 @@ class ShopifyGlobalCatalogue(Task):
             The messages for chat completion.
         """
         image_file = BytesIO()
-        sample["product_image"].save(image_file, format="PNG")
+        sample["product_image"].save(image_file, format=sample["product_image"].format)
         image_bytes = image_file.getvalue()
         image_base64 = base64.b64encode(image_bytes)
         image_base64_string = image_base64.decode("utf-8")
@@ -414,8 +415,10 @@ and provide the following fields in a valid JSON object:
 - category
 - brand
 - is_secondhand
+
 You must choose only one, which is the most appropriate/correct,
 category out of the list of possible product categories.
+
 Your response should only contain a valid JSON object and nothing more.
 The JSON object should match the followng JSON schema:
 ```json
@@ -439,10 +442,12 @@ The JSON object should match the followng JSON schema:
 ```text
 {sample['product_title']}
 ```
+
 The description of the product is the following:
 ```text
 {sample['product_description']}
 ```
+
 The following are the possible product categories:
 ```json
 {sample['potential_product_categories']}
@@ -452,7 +457,9 @@ The following are the possible product categories:
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/png;base64,{image_base64_string}",
+                            "url":
+                            f"data:image/{sample['product_image'].format};base64,"
+                            f"{image_base64_string}",
                         },
                     },
                 ],

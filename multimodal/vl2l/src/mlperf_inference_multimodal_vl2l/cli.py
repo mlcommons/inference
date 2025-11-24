@@ -6,7 +6,7 @@ import sys
 from datetime import timedelta
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
 
 import mlperf_loadgen as lg
 from loguru import logger
@@ -18,7 +18,6 @@ from .evaluation import run_evaluation
 from .task import ShopifyGlobalCatalogue
 
 app = Typer()
-SplitType = Literal["train", "test"]
 
 
 class TestScenario(StrEnum):
@@ -382,30 +381,10 @@ class Dataset(BaseModel):
         list[str],
         Field(
             description=(
-                "List of splits in order (e.g. ['train', 'test']). "
-                "Allowed values: 'train', 'test'."
+                "Dataset splits to use for the benchmark. Eg: train"
             ),
         ),
-    ] = ["train"]
-
-    @field_validator("split", mode="before")
-    @classmethod
-    def normalize_and_validate_split(cls, v: str) -> list[str]:
-        """Normalize and validate the input string of field split."""
-        # Allow a single string like "train" or "train,test"
-        if isinstance(v, str):
-            v = [part.strip() for part in v.split(",") if part.strip()]
-
-        if not isinstance(v, list):
-            err = "split must be a string or a list of strings"
-            raise TypeError(err)
-
-        allowed = {"train", "test"}
-        for item in v:
-            if item not in allowed:
-                msg_err = f"Invalid split {item!r}. Must be one of: {sorted(allowed)}"
-                raise ValueError(msg_err)
-        return v
+    ] = ["train", "test"]
 
 
 class Verbosity(StrEnum):

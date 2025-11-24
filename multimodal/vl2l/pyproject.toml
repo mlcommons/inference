@@ -13,7 +13,7 @@ dependencies = [
   "datasets",
   "loguru",
   "matplotlib",
-  "mlcommons_loadgen @ file://../../loadgen",
+  "mlcommons_loadgen @ git+https://github.com/mlcommons/inference.git#subdirectory=loadgen",
   "openai[aiohttp]",
   "pydantic",
   "pydantic-typer @ git+https://github.com/CentML/pydantic-typer.git@wangshangsam/preserve-full-annotated-type",

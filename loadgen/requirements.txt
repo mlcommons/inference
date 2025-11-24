@@ -1,4 +1,3 @@
 pybind11
-libstdcxx-ng
 absl-py
 numpy

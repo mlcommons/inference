@@ -142,9 +142,7 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                 continue
 
             # process results
-            required_dirs = [
-                "results", "compliance"] if division in [
-                "closed", "network"] else ["results"]
+            required_dirs = ["results"]
             for directory in required_dirs:
 
                 log_path = os.path.join(division, submitter, directory)
@@ -164,10 +162,6 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                 name = os.path.join(
                                     log_path, system_desc, model, scenario
                                 )
-                                if directory == "compliance":
-                                    name = os.path.join(
-                                        log_path, system_desc, model, scenario, test
-                                    )
 
                                 hash_val = None
                                 acc_path = os.path.join(name, "accuracy")
@@ -178,7 +172,7 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                     acc_path, "accuracy.txt")
 
                                 # only TEST01 has an accuracy log
-                                if directory == "compliance" and test != "TEST01":
+                                if str(test).startswith("TEST") and test != "TEST01":
                                     continue
                                 if not os.path.exists(acc_log):
                                     log.error("%s missing", acc_log)

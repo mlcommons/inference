@@ -986,3 +986,67 @@ SYSTEM_IMP_REQUIRED_FILES = [
     "weight_data_types",
     "weight_transformations",
 ]
+
+
+PERFORMANCE_LOG_PATH = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_detail.txt",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_detail.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_detail.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_detail.txt",
+}
+
+PERFORMANCE_SUMMARY_PATH = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/performance/run_1/mlperf_log_summary.txt",
+}
+
+ACCURACY_LOG_PATH = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
+}
+
+MEASUREMENTS_PATH = {
+    "v5.0": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{system}.json",
+    "v5.1": "{division}/{submitter}/measurements/{system}/{benchmark}/{scenario}/{system}.json",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/{system}.json",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/{system}.json",
+}
+
+TEST01_PERF_PATH = {
+    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/performance/run_1/mlperf_log_detail.txt",
+    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/performance/run_1/mlperf_log_detail.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/performance/run_1/mlperf_log_detail.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/performance/run_1/mlperf_log_detail.txt",
+}
+
+TEST01_ACC_PATH = {
+    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/accuracy/mlperf_log_detail.txt",
+    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST01/accuracy/mlperf_log_detail.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/accuracy/mlperf_log_detail.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST01/accuracy/mlperf_log_detail.txt",
+}
+
+TEST05_PERF_PATH = {
+    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST05/performance/run_1/mlperf_log_detail.txt",
+    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST05/performance/run_1/mlperf_log_detail.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST05/performance/run_1/mlperf_log_detail.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST05/performance/run_1/mlperf_log_detail.txt",
+}
+
+TEST05_ACC_PATH = {
+    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST05/accuracy/mlperf_log_detail.txt",
+    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST05/accuracy/mlperf_log_detail.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST05/accuracy/mlperf_log_detail.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST05/accuracy/mlperf_log_detail.txt",
+}
+
+TEST06_ACC_PATH = {
+    "v5.0": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
+    "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
+}

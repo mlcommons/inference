@@ -20,7 +20,7 @@ Alternatively, we provide wheels for several python versions and operating syste
 
     pip install mlperf-loadgen
 
-**NOTE:** Take into account that we only update the published wheels after an official release, they may not include the latest changes.
+**NOTE:** The `mlperf-loadgen` PyPI package is automatically updated whenever the `loadgen/` folder in the `master` branch changes or when a release is published, as controlled by the workflow defined [here](https://github.com/mlcommons/inference/blob/master/.github/workflows/build_wheels.yml).
 
 ### Testing your Installation
 The following command will run a simple end-to-end demo:

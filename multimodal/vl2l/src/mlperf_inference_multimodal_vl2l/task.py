@@ -56,8 +56,11 @@ class Task(ABC):
             token=dataset_cli.token,
             split="+".join(dataset_cli.split),
         )
-        logger.debug("Loaded {} samples from the dataset splits {}.", len(self.dataset),
-                     dataset_cli.split)
+        logger.debug(
+            "Loaded {} samples from the dataset splits {}.",
+            len(self.dataset),
+            dataset_cli.split,
+        )
         self.model_cli = model_cli
         self.openai_api_client = AsyncOpenAI(
             base_url=endpoint_cli.url,
@@ -106,8 +109,7 @@ class Task(ABC):
 
     @staticmethod
     @abstractmethod
-    def formulate_messages(
-            sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
+    def formulate_messages(sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
         """Formulate the messages for chat completion.
 
         Args:
@@ -208,42 +210,63 @@ class Task(ABC):
                     `lg.QuerySampleIndex` (i.e., the sample index into the dataset).
             """
 
-            async def _query_endpoint_async(
-                    query_sample: lg.QuerySample) -> None:
+            async def _query_endpoint_async(query_sample: lg.QuerySample) -> None:
                 """Query the endpoint through the async OpenAI API client."""
-                messages = self.loaded_messages[query_sample.index]
-                logger.trace(
-                    "Issuing query sample index: {} with response ID: {}",
-                    query_sample.index,
-                    query_sample.id,
-                )
-                tic = time.perf_counter()
-                response = await self.openai_api_client.chat.completions.create(
-                    model=self.model_cli.repo_id,
-                    messages=messages,
-                )
-                logger.trace(
-                    "Received response (ID: {}) from endpoint after {} seconds: {}",
-                    query_sample.id,
-                    time.perf_counter() - tic,
-                    response,
-                )
-                content = response.choices[0].message.content
-                if content is None:
-                    content = ""
-                bytes_array = array.array("B", content.encode("utf-8"))
-                address, length = bytes_array.buffer_info()
-                size_in_bytes = length * bytes_array.itemsize
-                lg.QuerySamplesComplete(
-                    [
-                        lg.QuerySampleResponse(
-                            query_sample.id,
-                            address,
-                            size_in_bytes,
-                            int(response.usage.completion_tokens),
-                        ),
-                    ],
-                )
+                try:
+                    messages = self.loaded_messages[query_sample.index]
+                    logger.trace(
+                        "Issuing query sample index: {} with response ID: {}",
+                        query_sample.index,
+                        query_sample.id,
+                    )
+                    tic = time.perf_counter()
+                    response = await self.openai_api_client.chat.completions.create(
+                        model=self.model_cli.repo_id,
+                        messages=messages,
+                    )
+                    logger.trace(
+                        "Received response (ID: {}) from endpoint after {} seconds: {}",
+                        query_sample.id,
+                        time.perf_counter() - tic,
+                        response,
+                    )
+                    content = response.choices[0].message.content
+                    if content is None:
+                        content = ""
+                    bytes_array = array.array("B", content.encode("utf-8"))
+                    address, length = bytes_array.buffer_info()
+                    size_in_bytes = length * bytes_array.itemsize
+                    lg.QuerySamplesComplete(
+                        [
+                            lg.QuerySampleResponse(
+                                query_sample.id,
+                                address,
+                                size_in_bytes,
+                                int(response.usage.completion_tokens),
+                            ),
+                        ],
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.exception(
+                        "Error processing query sample index {} with response ID {}.",
+                        query_sample.index,
+                        query_sample.id,
+                    )
+                    # Send empty response to LoadGen to avoid hanging.
+                    empty_content = ""
+                    bytes_array = array.array("B", empty_content.encode("utf-8"))
+                    address, length = bytes_array.buffer_info()
+                    size_in_bytes = length * bytes_array.itemsize
+                    lg.QuerySamplesComplete(
+                        [
+                            lg.QuerySampleResponse(
+                                query_sample.id,
+                                address,
+                                size_in_bytes,
+                                0,
+                            ),
+                        ],
+                    )
 
             for query_sample in query_samples:
                 asyncio.run_coroutine_threadsafe(
@@ -251,8 +274,7 @@ class Task(ABC):
                     self.event_loop,
                 )
 
-        def _issue_streaming_queries(
-                query_samples: list[lg.QuerySample]) -> None:
+        def _issue_streaming_queries(query_samples: list[lg.QuerySample]) -> None:
             """Called by the LoadGen to issue queries to the inference endpoint.
 
             Args:
@@ -262,70 +284,106 @@ class Task(ABC):
                     `lg.QuerySampleIndex` (i.e., the sample index into the dataset).
             """
 
-            async def _query_endpoint_async(
-                    query_sample: lg.QuerySample) -> None:
+            async def _query_endpoint_async(query_sample: lg.QuerySample) -> None:
                 """Query the endpoint through the async OpenAI API client."""
-                messages = self.loaded_messages[query_sample.index]
-                logger.trace(
-                    "Issuing query sample index: {} with response ID: {}",
-                    query_sample.index,
-                    query_sample.id,
-                )
                 ttft_set = False
-                word_array = []
-                stream = await self.openai_api_client.chat.completions.create(
-                    stream=True,
-                    model=self.model_cli.repo_id,
-                    messages=messages,
-                    stream_options={"include_usage": True},
-                )
-                # iterate asynchronously
-                total_tokens = 0
-                async for chunk in stream:
+                try:
+                    messages = self.loaded_messages[query_sample.index]
+                    logger.trace(
+                        "Issuing query sample index: {} with response ID: {}",
+                        query_sample.index,
+                        query_sample.id,
+                    )
+                    word_array = []
+                    stream = await self.openai_api_client.chat.completions.create(
+                        stream=True,
+                        model=self.model_cli.repo_id,
+                        messages=messages,
+                        stream_options={"include_usage": True},
+                    )
+                    # iterate asynchronously
+                    total_tokens = 0
+                    async for chunk in stream:
 
-                    # This is the final chunk and will not have 'choices'
-                    if chunk.usage is not None:
-                        total_tokens = int(chunk.usage.completion_tokens)
+                        # This is the final chunk and will not have 'choices'
+                        if chunk.usage is not None:
+                            total_tokens = int(chunk.usage.completion_tokens)
 
-                    # If it's not the usage chunk, process it as a content
-                    # chunk
-                    choices = getattr(chunk, "choices", None)
-                    if not choices:
-                        continue
-                    # first non-empty token -> TTFT
-                    delta = choices[0].delta
-                    text = getattr(delta, "content", None)
-                    if not text:
-                        continue
-                    if ttft_set is False:
-                        bytes_array = array.array(
-                            "B", text.encode("utf-8"))
-                        address, length = bytes_array.buffer_info()
-                        size_in_bytes = length * bytes_array.itemsize
-                        lg.FirstTokenComplete([
-                            lg.QuerySampleResponse(query_sample.id,
-                                                   address,
-                                                   size_in_bytes,
-                                                   1),
-                        ])
-                        ttft_set = True
-                    word_array.append(text)
+                        # If it's not the usage chunk, process it as a content
+                        # chunk
+                        choices = getattr(chunk, "choices", None)
+                        if not choices:
+                            continue
+                        # first non-empty token -> TTFT
+                        delta = choices[0].delta
+                        text = getattr(delta, "content", None)
+                        if not text:
+                            continue
+                        if ttft_set is False:
+                            bytes_array = array.array("B", text.encode("utf-8"))
+                            address, length = bytes_array.buffer_info()
+                            size_in_bytes = length * bytes_array.itemsize
+                            lg.FirstTokenComplete(
+                                [
+                                    lg.QuerySampleResponse(
+                                        query_sample.id,
+                                        address,
+                                        size_in_bytes,
+                                        1,
+                                    ),
+                                ],
+                            )
+                            ttft_set = True
+                        word_array.append(text)
 
-                # when the stream ends, total latency
-                content = "".join(word_array)
-                bytes_array = array.array("B", content.encode("utf-8"))
-                address, length = bytes_array.buffer_info()
-                size_in_bytes = length * bytes_array.itemsize
-                lg.QuerySamplesComplete(
-                    [
-                        lg.QuerySampleResponse(
-                            query_sample.id,
-                            address,
-                            size_in_bytes,
-                            total_tokens,
-                        ),
-                    ],
-                )
+                    # when the stream ends, total latency
+                    content = "".join(word_array)
+                    bytes_array = array.array("B", content.encode("utf-8"))
+                    address, length = bytes_array.buffer_info()
+                    size_in_bytes = length * bytes_array.itemsize
+                    lg.QuerySamplesComplete(
+                        [
+                            lg.QuerySampleResponse(
+                                query_sample.id,
+                                address,
+                                size_in_bytes,
+                                total_tokens,
+                            ),
+                        ],
+                    )
+                except Exception:  # noqa: BLE001
+                    logger.exception(
+                        "Error processing query sample index {} with response ID {}.",
+                        query_sample.index,
+                        query_sample.id,
+                    )
+                    # Send empty response to LoadGen to avoid hanging.
+                    empty_content = ""
+                    bytes_array = array.array("B", empty_content.encode("utf-8"))
+                    address, length = bytes_array.buffer_info()
+                    size_in_bytes = length * bytes_array.itemsize
+                    # If TTFT was not set, we still need to complete that.
+                    if not ttft_set:
+                        lg.FirstTokenComplete(
+                            [
+                                lg.QuerySampleResponse(
+                                    query_sample.id,
+                                    address,
+                                    size_in_bytes,
+                                    0,
+                                ),
+                            ],
+                        )
+                    lg.QuerySamplesComplete(
+                        [
+                            lg.QuerySampleResponse(
+                                query_sample.id,
+                                address,
+                                size_in_bytes,
+                                0,
+                            ),
+                        ],
+                    )
 
             for query_sample in query_samples:
                 asyncio.run_coroutine_threadsafe(
@@ -358,9 +416,14 @@ class Task(ABC):
             )
             future.result()
 
-        return lg.ConstructSUT(_issue_streaming_queries
-                               if self.scenario is TestScenario.SERVER
-                               else _issue_queries, _flush_queries)
+        return lg.ConstructSUT(
+            (
+                _issue_streaming_queries
+                if self.scenario is TestScenario.SERVER
+                else _issue_queries
+            ),
+            _flush_queries,
+        )
 
 
 class ShopifyGlobalCatalogue(Task):
@@ -392,8 +455,7 @@ class ShopifyGlobalCatalogue(Task):
         )
 
     @staticmethod
-    def formulate_messages(
-            sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
+    def formulate_messages(sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
         """Formulate the messages for chat completion.
 
         Args:
@@ -403,8 +465,8 @@ class ShopifyGlobalCatalogue(Task):
             The messages for chat completion.
         """
         image_file = BytesIO()
-        sample["product_image"].save(
-            image_file, format=sample["product_image"].format)
+        image_format = sample["product_image"].format
+        sample["product_image"].save(image_file, format=image_format)
         image_bytes = image_file.getvalue()
         image_base64 = base64.b64encode(image_bytes)
         image_base64_string = image_base64.decode("utf-8")
@@ -458,8 +520,7 @@ The following are the possible product categories:
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url":
-                            f"data:image/{sample['product_image'].format};base64,"
+                            "url": f"data:image/{image_format};base64,"
                             f"{image_base64_string}",
                         },
                     },

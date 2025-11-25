@@ -1061,7 +1061,7 @@ class Config:
             self.optional = self.base["optional-scenarios-datacenter-edge"]
         else:
             raise ValueError("invalid system type")
-        
+
     def skip_calibration(self):
         return self.skip_calibration_check or self.version in ["v5.0"]
 
@@ -1893,7 +1893,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                ) and scenario in ["SingleStream"]:
+                    ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -3039,7 +3039,6 @@ def check_measurement_dir(
             system_file = i
             end = len(".json")
             break
-
 
     weight_data_types = None
     if system_file:

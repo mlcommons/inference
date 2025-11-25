@@ -98,7 +98,7 @@ class LoadgenParser(BaseParser):
             else:
                 self.logger.warning(
                     "There are multiple messages with key {:} in the log. Emprically choosing the first one.".format(
-                        key
+                        message["key"]
                     )
                 )
 

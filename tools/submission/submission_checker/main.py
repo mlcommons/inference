@@ -2,7 +2,7 @@ import argparse
 import logging
 import os
 
-from .constants import MODEL_CONFIG, CSV_HEAD
+from .constants import MODEL_CONFIG
 from .configuration.configuration import Config
 
 logging.basicConfig(level=logging.INFO)
@@ -15,7 +15,7 @@ def get_args():
     parser.add_argument("--input", required=True, help="submission directory")
     parser.add_argument(
         "--version",
-        default="v4.1",
+        default="v5.1",
         choices=list(MODEL_CONFIG.keys()),
         help="mlperf version",
     )

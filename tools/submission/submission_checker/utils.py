@@ -3,14 +3,14 @@ import os
 
 def list_dir(*path):
     path = os.path.join(*path)
-    return [f for f in os.listdir(
-        path) if os.path.isdir(os.path.join(path, f))]
+    return sorted([f for f in os.listdir(
+        path) if os.path.isdir(os.path.join(path, f))])
 
 
 def list_files(*path):
     path = os.path.join(*path)
-    return [f for f in os.listdir(
-        path) if os.path.isfile(os.path.join(path, f))]
+    return sorted([f for f in os.listdir(
+        path) if os.path.isfile(os.path.join(path, f))])
 
 
 def list_empty_dirs_recursively(*path):

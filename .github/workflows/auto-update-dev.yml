@@ -12,6 +12,7 @@ jobs:
     strategy:
       matrix: 
         branch: [ "dev", "docs" ]
+        
     runs-on: ubuntu-latest
     
     permissions:

@@ -99,7 +99,7 @@ def delete_empty_dirs(src):
     return False
 
 
-def copy_submission_dir(src, dst, filter_submitter, keep_structure = True):
+def copy_submission_dir(src, dst, filter_submitter, keep_structure=True):
     """
     Copies the submission tree to output directory for processing
     """
@@ -116,15 +116,18 @@ def copy_submission_dir(src, dst, filter_submitter, keep_structure = True):
                 )
             else:
                 for dir in os.listdir(os.path.join(src, division, submitter)):
-                    if os.path.isdir(os.path.join(src, division, submitter, dir)):
-                        target_dir = "results" if dir in ["compliance", "measurements"] else dir
+                    if os.path.isdir(os.path.join(
+                            src, division, submitter, dir)):
+                        target_dir = "results" if dir in [
+                            "compliance", "measurements"] else dir
                         shutil.copytree(
                             os.path.join(src, division, submitter, dir),
                             os.path.join(dst, division, submitter, target_dir),
-                            dirs_exist_ok = True
+                            dirs_exist_ok=True
                         )
                 for file in os.listdir(os.path.join(src, division, submitter)):
-                    if os.path.isfile(os.path.join(src, division, submitter, file)):
+                    if os.path.isfile(os.path.join(
+                            src, division, submitter, file)):
                         shutil.copyfile(
                             os.path.join(src, division, submitter, file),
                             os.path.join(dst, division, submitter, file)
@@ -561,7 +564,11 @@ def main():
         log.error(f"output directory {args.output} already exists")
         sys.exit(1)
     os.makedirs(args.output)
-    copy_submission_dir(args.input, args.output, args.submitter, args.keep_structure)
+    copy_submission_dir(
+        args.input,
+        args.output,
+        args.submitter,
+        args.keep_structure)
     src_dir = args.output
 
     config = checker.Config(

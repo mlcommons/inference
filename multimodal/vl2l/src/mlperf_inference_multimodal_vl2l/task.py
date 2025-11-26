@@ -71,7 +71,7 @@ class Task(ABC):
             self._create_event_loop_in_separate_thread()
         )
         self.loaded_messages: dict[int, list[ChatCompletionMessageParam]] = {}
-        self.min_query_count = settings.min_query_count
+        self.settings = settings
 
     def __del__(self) -> None:
         """Clean up the resources used by the task."""
@@ -127,25 +127,30 @@ class Task(ABC):
         This is used to set the `total_sample_count` parameter in the LoadGen QSL
         constructor.
         """
-        return min(len(self.dataset), self.min_query_count)
+        return min(len(self.dataset), self.settings.min_query_count)
+
+    MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES = 100
+    ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES = 1 * 1024 * 1024 * 1024  # 1GB
 
     @property
-    def max_num_samples_in_host_memory(self) -> int:
-        """The maximum number of samples that are guaranteed to fit in host memory.
+    def estimated_num_performance_samples(self) -> int:
+        """The estimated number of performance samples.
 
         This is used to set the `performance_sample_count` parameter in the LoadGen QSL
-        constructor.
+        constructor. In performance mode, the performance samples will be loaded into
+        host memory before testing, and LoadGen will keep sending queries using these
+        performance samples (and repeating them if necessary) until the min_duration
+        and min_query_count are met.
 
-        We estimate this value by assuming that we reserve 1GB of host memory for
-        storing the samples, and we try to estimate how many samples can fit in that
-        1GB of memory. If this value is bigger than the total number of samples, we will
-        just load all samples into host memory.
+        We estimate this value by assuming that we reserve
+        `self.ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES` bytes of host memory for
+        storing the performance samples, and we try to estimate how many samples can fit
+        in that amount of memory. If this value is bigger than the total number of
+        samples, we will just load all samples into host memory.
         """
-        num_estimation_samples = 10
-        allowed_memory_footprint = 1024 * 1024 * 1024  # 1GB
         estimation_indices = random.sample(
             range(self.total_num_samples),
-            k=num_estimation_samples,
+            k=min(self.MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES, self.total_num_samples),
         )
         estimation_samples = [
             self.formulate_messages(self.dataset[i]) for i in estimation_indices
@@ -154,13 +159,24 @@ class Task(ABC):
             asizeof.asizeof(m) for m in estimation_samples
         ) / len(estimation_samples)
         result = min(
-            round(allowed_memory_footprint / avg_messages_footprint),
+            round(
+                self.ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES
+                / avg_messages_footprint,
+            ),
             self.total_num_samples,
         )
-        logger.info(
-            "Estimated maximum number of samples to load into the host memory is {}.",
+        logger.debug(
+            "Estimated number of performance samples that will be loaded into the host"
+            " memory before testing is {}.",
             result,
         )
+        if self.settings.performance_sample_count_override > 0:
+            logger.debug(
+                "However, performance_sample_count_override is set to {} and will "
+                "override the estimated number of performance samples inside the "
+                "LoadGen.",
+                self.settings.performance_sample_count_override,
+            )
         return result
 
     def construct_qsl(self) -> int:
@@ -190,7 +206,7 @@ class Task(ABC):
 
         return lg.ConstructQSL(
             self.total_num_samples,
-            self.max_num_samples_in_host_memory,
+            self.estimated_num_performance_samples,
             _load_samples_to_ram,
             _unload_samples_from_ram,
         )

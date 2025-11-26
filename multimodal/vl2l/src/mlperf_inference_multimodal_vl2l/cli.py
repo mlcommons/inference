@@ -10,12 +10,19 @@ from typing import Annotated
 
 import mlperf_loadgen as lg
 from loguru import logger
-from pydantic import BaseModel, DirectoryPath, Field, FilePath, field_validator
+from pydantic import (
+    BaseModel,
+    DirectoryPath,
+    Field,
+    FilePath,
+    NonNegativeInt,
+    field_validator,
+)
 from pydantic_typer import Typer
 from typer import Option
 
 from .evaluation import run_evaluation
-from .task import ShopifyGlobalCatalogue
+from .task import ShopifyGlobalCatalogue, Task
 
 app = Typer()
 
@@ -145,64 +152,83 @@ class TestSettings(BaseModel):
 
     server_target_latency: Annotated[
         timedelta,
-        Field(description="""Expected latency constraint for Server scenario.
-        This is a constraint that we expect depending
-              on the argument server_expected_qps.
-        When server_expected_qps increases, we expect the latency to also increase.
-        When server_expected_qps decreases, we expect the latency to also decrease."""),
+        Field(
+            description="Expected latency constraint for Server scenario. "
+            "This is a constraint that we expect depending on the argument "
+            "server_expected_qps. When server_expected_qps increases, we expect the "
+            "latency to also increase. When server_expected_qps decreases, we expect "
+            "the latency to also decrease.",
+        ),
     ] = timedelta(seconds=1)
 
     server_ttft_latency: Annotated[
         timedelta,
-        Field(description="""Time to First Token (TTFT)
-              latency constraint result validation"
-              (used when use_token_latencies is enabled)."""),
+        Field(
+            description="Time to First Token (TTFT) latency constraint result "
+            "validation (used when use_token_latencies is enabled).",
+        ),
     ] = timedelta(seconds=1)
 
     server_tpot_latency: Annotated[
         timedelta,
-        Field(description="""Time per Output Token (TPOT)
-              latency constraint result validation"
-              (used when use_token_latencies is enabled)."""),
+        Field(
+            description="Time per Output Token (TPOT) latency constraint result "
+            "validation (used when use_token_latencies is enabled).",
+        ),
     ] = timedelta(seconds=1)
 
     min_duration: Annotated[
         timedelta,
         Field(
-            description="""The minimum testing duration
-                (in seconds or ISO 8601 format like PT5S).
-                The benchmark runs until this value has been met.""",
+            description="The minimum testing duration (in seconds or ISO 8601 format "
+            "like PT5S). The benchmark runs until this value has been met.",
         ),
     ] = timedelta(seconds=5)
 
     min_query_count: Annotated[
         int,
         Field(
-            description="""The minimum testing query count.
-            The benchmark runs until this value has been met.
-            if min_query_count is less than the total number of samples in the dataset,
-            only the first min_query_count samples will be used during testing.""",
+            description="The minimum testing query count. The benchmark runs until this"
+            " value has been met. If min_query_count is less than the total number of "
+            "samples in the dataset, only the first min_query_count samples will be "
+            "used during testing.",
         ),
     ] = 100
+
+    performance_sample_count_override: Annotated[
+        NonNegativeInt,
+        Field(
+            description="The number of samples to use for the performance test. In the "
+            "performance mode, the benchmark will select P random samples from the "
+            "dataset, then send enough queries using these P samples (and repeating "
+            "them if necessary) to reach the min_duration and min_query_count. If a "
+            "non-zero value is passed to this flag, the P will be this value. "
+            "Otherwise, the benchmark will estimate how many samples can be loaded into"
+            f" {Task.ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES} bytes of memory "
+            "based on the memory footprint of randomly selected "
+            f"{Task.MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES} samples (at most), and then"
+            " use this estimation as the value P.",
+        ),
+    ] = 0
 
     use_token_latencies: Annotated[
         bool,
         Field(
-            description="""By default,
-            the Server scenario will use server_target_latency as the constraint.
-            When set to True, the Server scenario will use server_ttft_latency
-            and server_tpot_latency as the constraint.""",
+            description="By default, the Server scenario will use server_target_latency"
+            " as the constraint. When set to True, the Server scenario will use "
+            "server_ttft_latency and server_tpot_latency as the constraint.",
         ),
     ] = False
 
-    @field_validator("server_target_latency",
-                     "server_ttft_latency",
-                     "server_tpot_latency",
-                     "min_duration",
-                     mode="before")
+    @field_validator(
+        "server_target_latency",
+        "server_ttft_latency",
+        "server_tpot_latency",
+        "min_duration",
+        mode="before",
+    )
     @classmethod
-    def parse_timedelta(cls, value: timedelta |
-                        float | str) -> timedelta | str:
+    def parse_timedelta(cls, value: timedelta | float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -226,20 +252,22 @@ class TestSettings(BaseModel):
         settings.offline_expected_qps = self.offline_expected_qps
         settings.server_target_qps = self.server_expected_qps
         settings.server_target_latency_ns = round(
-            self.server_target_latency.total_seconds() * 1e9)
-        settings.ttft_latency = round(
-            self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(
-            self.server_tpot_latency.total_seconds() * 1e9)
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
+            self.server_target_latency.total_seconds() * 1e9,
+        )
+        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
+        settings.performance_sample_count_override = (
+            self.performance_sample_count_override
+        )
         settings.use_token_latencies = self.use_token_latencies
         return settings
 
 
 class LogOutputSettings(BaseModel):
     """The test log output settings for the MLPerf inference LoadGen."""
+
     outdir: Annotated[
         DirectoryPath,
         Field(
@@ -299,6 +327,7 @@ class LogOutputSettings(BaseModel):
 
 class LogSettings(BaseModel):
     """The test log settings for the MLPerf inference LoadGen."""
+
     log_output: Annotated[
         LogOutputSettings,
         Field(
@@ -330,6 +359,7 @@ class LogSettings(BaseModel):
 
 class Settings(BaseModel):
     """Combine the settings for the test and logging of LoadGen."""
+
     test: Annotated[
         TestSettings,
         Field(
@@ -458,9 +488,7 @@ def benchmark(
     logger.info("Running VL2L benchmark with settings: {}", settings)
     logger.info("Running VL2L benchmark with model: {}", model)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info(
-        "Running VL2L benchmark with OpenAI API endpoint: {}",
-        endpoint)
+    logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
     logger.info("Running VL2L benchmark with random seed: {}", random_seed)
     test_settings, log_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(

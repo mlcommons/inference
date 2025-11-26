@@ -172,7 +172,8 @@ def truncate_results_dir(filter_submitter, backup, scenarios_to_skip):
                                     acc_path, "accuracy.txt")
 
                                 # only TEST01 has an accuracy log
-                                if str(test).startswith("TEST") and test != "TEST01":
+                                if str(test).startswith(
+                                        "TEST") and test != "TEST01":
                                     continue
                                 if not os.path.exists(acc_log):
                                     log.error("%s missing", acc_log)

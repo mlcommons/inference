@@ -109,7 +109,8 @@ class Task(ABC):
 
     @staticmethod
     @abstractmethod
-    def formulate_messages(sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
+    def formulate_messages(
+            sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
         """Formulate the messages for chat completion.
 
         Args:
@@ -226,7 +227,8 @@ class Task(ABC):
                     `lg.QuerySampleIndex` (i.e., the sample index into the dataset).
             """
 
-            async def _query_endpoint_async(query_sample: lg.QuerySample) -> None:
+            async def _query_endpoint_async(
+                    query_sample: lg.QuerySample) -> None:
                 """Query the endpoint through the async OpenAI API client."""
                 try:
                     messages = self.loaded_messages[query_sample.index]
@@ -270,7 +272,8 @@ class Task(ABC):
                     )
                     # Send empty response to LoadGen to avoid hanging.
                     empty_content = ""
-                    bytes_array = array.array("B", empty_content.encode("utf-8"))
+                    bytes_array = array.array(
+                        "B", empty_content.encode("utf-8"))
                     address, length = bytes_array.buffer_info()
                     size_in_bytes = length * bytes_array.itemsize
                     lg.QuerySamplesComplete(
@@ -290,7 +293,8 @@ class Task(ABC):
                     self.event_loop,
                 )
 
-        def _issue_streaming_queries(query_samples: list[lg.QuerySample]) -> None:
+        def _issue_streaming_queries(
+                query_samples: list[lg.QuerySample]) -> None:
             """Called by the LoadGen to issue queries to the inference endpoint.
 
             Args:
@@ -300,7 +304,8 @@ class Task(ABC):
                     `lg.QuerySampleIndex` (i.e., the sample index into the dataset).
             """
 
-            async def _query_endpoint_async(query_sample: lg.QuerySample) -> None:
+            async def _query_endpoint_async(
+                    query_sample: lg.QuerySample) -> None:
                 """Query the endpoint through the async OpenAI API client."""
                 ttft_set = False
                 try:
@@ -336,7 +341,8 @@ class Task(ABC):
                         if not text:
                             continue
                         if ttft_set is False:
-                            bytes_array = array.array("B", text.encode("utf-8"))
+                            bytes_array = array.array(
+                                "B", text.encode("utf-8"))
                             address, length = bytes_array.buffer_info()
                             size_in_bytes = length * bytes_array.itemsize
                             lg.FirstTokenComplete(
@@ -375,7 +381,8 @@ class Task(ABC):
                     )
                     # Send empty response to LoadGen to avoid hanging.
                     empty_content = ""
-                    bytes_array = array.array("B", empty_content.encode("utf-8"))
+                    bytes_array = array.array(
+                        "B", empty_content.encode("utf-8"))
                     address, length = bytes_array.buffer_info()
                     size_in_bytes = length * bytes_array.itemsize
                     # If TTFT was not set, we still need to complete that.
@@ -471,7 +478,8 @@ class ShopifyGlobalCatalogue(Task):
         )
 
     @staticmethod
-    def formulate_messages(sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
+    def formulate_messages(
+            sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
         """Formulate the messages for chat completion.
 
         Args:

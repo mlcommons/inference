@@ -240,7 +240,8 @@ class Task(ABC):
                     response = await self.openai_api_client.chat.completions.create(
                         model=self.model_cli.repo_id,
                         messages=sample.messages,
-                        response_format=sample.response_format.model_dump(by_alias=True),
+                        response_format=sample.response_format.model_dump(
+                            by_alias=True),
                     )
                     logger.trace(
                         "Received response (ID: {}) from endpoint after {} seconds: {}",
@@ -321,7 +322,8 @@ class Task(ABC):
                         model=self.model_cli.repo_id,
                         messages=sample.messages,
                         stream_options={"include_usage": True},
-                        response_format=sample.response_format.model_dump(by_alias=True),
+                        response_format=sample.response_format.model_dump(
+                            by_alias=True),
                     )
                     # iterate asynchronously
                     total_tokens = 0
@@ -495,7 +497,7 @@ class ShopifyGlobalCatalogue(Task):
         image_bytes = image_file.getvalue()
         image_base64 = base64.b64encode(image_bytes)
         image_base64_string = image_base64.decode("utf-8")
-        messages =  [
+        messages = [
             {
                 "role": "system",
                 "content": """Please analyze the product from the user prompt

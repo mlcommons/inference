@@ -20,6 +20,7 @@ from pydantic import (
 MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES = 100
 ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES = 1 * 1024 * 1024 * 1024  # 1GB
 
+
 class TestScenario(StrEnum):
     """The test scenario for the MLPerf inference LoadGen."""
 
@@ -447,11 +448,13 @@ class Endpoint(BaseModel):
         Field(description="The API key to authenticate the inference requests."),
     ] = ""
 
+
 class ProductMetadata(BaseModel):
     """Json format for the expected responses from the VLM."""
     category: str
     brands: str
     is_secondhand: bool
+
 
 class LoadedSample(BaseModel):
     """Sample format to be used by LoadGen."""

@@ -10,34 +10,25 @@ import threading
 import time
 from abc import ABC, abstractmethod
 from io import BytesIO
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import mlperf_loadgen as lg
 from datasets import load_dataset
 from loguru import logger
 from openai import AsyncOpenAI, DefaultAioHttpClient
-from pydantic import BaseModel
 from pympler import asizeof
 
-
-class ProductMetadata(BaseModel):
-    """Json format for the expected responses from the VLM."""
-    category: str
-    brands: str
-    is_secondhand: bool
-
-
-json_schema = ProductMetadata.model_json_schema()
-
-if TYPE_CHECKING:
-    from openai.types.chat.chat_completion_message_param import (
-        ChatCompletionMessageParam,
-    )
-
-    from .cli import Dataset as DatasetCLI
-    from .cli import Endpoint as EndpointCLI
-    from .cli import Model as ModelCLI
-    from .cli import TestSettings
+from .schema import (
+    ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES,
+    MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES,
+    Dataset,
+    Endpoint,
+    LoadedSample,
+    Model,
+    ProductMetadata,
+    TestScenario,
+    TestSettings,
+)
 
 
 class Task(ABC):
@@ -45,9 +36,9 @@ class Task(ABC):
 
     def __init__(
         self,
-        dataset_cli: DatasetCLI,
-        model_cli: ModelCLI,
-        endpoint_cli: EndpointCLI,
+        dataset_cli: Dataset,
+        model_cli: Model,
+        endpoint_cli: Endpoint,
         settings: TestSettings,
         random_seed: int = 12345,
     ) -> None:
@@ -81,7 +72,7 @@ class Task(ABC):
         self.event_loop, self.event_loop_thread = (
             self._create_event_loop_in_separate_thread()
         )
-        self.loaded_messages: dict[int, list[ChatCompletionMessageParam]] = {}
+        self.loaded_samples: dict[int, LoadedSample] = {}
         self.settings = settings
 
     def __del__(self) -> None:
@@ -120,8 +111,8 @@ class Task(ABC):
 
     @staticmethod
     @abstractmethod
-    def formulate_messages(
-            sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
+    def formulate_loaded_sample(
+            sample: dict[str, Any]) -> LoadedSample:
         """Formulate the messages for chat completion.
 
         Args:
@@ -140,9 +131,6 @@ class Task(ABC):
         constructor.
         """
         return min(len(self.dataset), self.settings.min_query_count)
-
-    MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES = 100
-    ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES = 1 * 1024 * 1024 * 1024  # 1GB
 
     @property
     def estimated_num_performance_samples(self) -> int:
@@ -163,18 +151,18 @@ class Task(ABC):
         estimation_indices = random.sample(
             range(self.total_num_samples),
             k=min(
-                self.MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES,
+                MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES,
                 self.total_num_samples),
         )
         estimation_samples = [
-            self.formulate_messages(self.dataset[i]) for i in estimation_indices
+            self.formulate_loaded_sample(self.dataset[i]) for i in estimation_indices
         ]
         avg_messages_footprint = sum(
             asizeof.asizeof(m) for m in estimation_samples
         ) / len(estimation_samples)
         result = min(
             round(
-                self.ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES
+                ALLOWED_MEMORY_FOOTPRINT_PERFORMANCE_SAMPLES
                 / avg_messages_footprint,
             ),
             self.total_num_samples,
@@ -203,7 +191,7 @@ class Task(ABC):
                 query_sample_indices: The indices of the samples to load to host memory.
             """
             for index in query_sample_indices:
-                self.loaded_messages[index] = self.formulate_messages(
+                self.loaded_samples[index] = self.formulate_loaded_sample(
                     self.dataset[index],
                 )
 
@@ -215,7 +203,7 @@ class Task(ABC):
                     memory.
             """
             for index in query_sample_indices:
-                sample_to_unload = self.loaded_messages.pop(index, None)
+                sample_to_unload = self.loaded_samples.pop(index, None)
                 del sample_to_unload
 
         return lg.ConstructQSL(
@@ -227,8 +215,6 @@ class Task(ABC):
 
     def construct_sut(self) -> int:
         """Construct the LoadGen SUT for the task."""
-        # avoid circular import
-        from .cli import TestScenario
 
         def _issue_queries(query_samples: list[lg.QuerySample]) -> None:
             """Called by the LoadGen to issue queries to the inference endpoint.
@@ -244,7 +230,7 @@ class Task(ABC):
                     query_sample: lg.QuerySample) -> None:
                 """Query the endpoint through the async OpenAI API client."""
                 try:
-                    messages = self.loaded_messages[query_sample.index]
+                    sample = self.loaded_samples[query_sample.index]
                     logger.trace(
                         "Issuing query sample index: {} with response ID: {}",
                         query_sample.index,
@@ -253,14 +239,8 @@ class Task(ABC):
                     tic = time.perf_counter()
                     response = await self.openai_api_client.chat.completions.create(
                         model=self.model_cli.repo_id,
-                        messages=messages,
-                        response_format={
-                            "type": "json_schema",
-                            "json_schema": {
-                                "name": "product",
-                                "schema": json_schema,
-                            },
-                        },
+                        messages=sample.messages,
+                        response_format=sample.response_format.model_dump(by_alias=True),
                     )
                     logger.trace(
                         "Received response (ID: {}) from endpoint after {} seconds: {}",
@@ -329,7 +309,7 @@ class Task(ABC):
                 """Query the endpoint through the async OpenAI API client."""
                 ttft_set = False
                 try:
-                    messages = self.loaded_messages[query_sample.index]
+                    sample = self.loaded_samples[query_sample.index]
                     logger.trace(
                         "Issuing query sample index: {} with response ID: {}",
                         query_sample.index,
@@ -339,15 +319,9 @@ class Task(ABC):
                     stream = await self.openai_api_client.chat.completions.create(
                         stream=True,
                         model=self.model_cli.repo_id,
-                        messages=messages,
+                        messages=sample.messages,
                         stream_options={"include_usage": True},
-                        response_format={
-                            "type": "json_schema",
-                            "json_schema": {
-                                "name": "product",
-                                "schema": json_schema,
-                            },
-                        },
+                        response_format=sample.response_format.model_dump(by_alias=True),
                     )
                     # iterate asynchronously
                     total_tokens = 0
@@ -481,9 +455,9 @@ class ShopifyGlobalCatalogue(Task):
 
     def __init__(
         self,
-        dataset_cli: DatasetCLI,
-        model_cli: ModelCLI,
-        endpoint_cli: EndpointCLI,
+        dataset_cli: Dataset,
+        model_cli: Model,
+        endpoint_cli: Endpoint,
         settings: TestSettings,
         random_seed: int = 12345,
     ) -> None:
@@ -505,8 +479,8 @@ class ShopifyGlobalCatalogue(Task):
         )
 
     @staticmethod
-    def formulate_messages(
-            sample: dict[str, Any]) -> list[ChatCompletionMessageParam]:
+    def formulate_loaded_sample(
+            sample: dict[str, Any]) -> LoadedSample:
         """Formulate the messages for chat completion.
 
         Args:
@@ -521,7 +495,7 @@ class ShopifyGlobalCatalogue(Task):
         image_bytes = image_file.getvalue()
         image_base64 = base64.b64encode(image_bytes)
         image_base64_string = image_base64.decode("utf-8")
-        return [
+        messages =  [
             {
                 "role": "system",
                 "content": """Please analyze the product from the user prompt
@@ -578,3 +552,14 @@ The following are the possible product categories:
                 ],
             },
         ]
+
+        return LoadedSample(
+            messages=messages,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "product_metadata",
+                    "schema": ProductMetadata.model_json_schema(),
+                },
+            },
+        )

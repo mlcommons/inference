@@ -16,7 +16,17 @@ import mlperf_loadgen as lg
 from datasets import load_dataset
 from loguru import logger
 from openai import AsyncOpenAI, DefaultAioHttpClient
+from pydantic import BaseModel
 from pympler import asizeof
+
+
+class ProductMetadata(BaseModel):
+    """Json format for the expected responses from the VLM."""
+    category: str
+    brands: str
+    is_secondhand: bool
+
+json_schema = ProductMetadata.model_json_schema()
 
 if TYPE_CHECKING:
     from openai.types.chat.chat_completion_message_param import (
@@ -243,6 +253,13 @@ class Task(ABC):
                     response = await self.openai_api_client.chat.completions.create(
                         model=self.model_cli.repo_id,
                         messages=messages,
+                        response_format={
+                            "type": "json_schema",
+                            "json_schema": {
+                                "name": "product",
+                                "schema": json_schema,
+                            },
+                        },
                     )
                     logger.trace(
                         "Received response (ID: {}) from endpoint after {} seconds: {}",
@@ -323,6 +340,13 @@ class Task(ABC):
                         model=self.model_cli.repo_id,
                         messages=messages,
                         stream_options={"include_usage": True},
+                        response_format={
+                            "type": "json_schema",
+                            "json_schema": {
+                                "name": "product",
+                                "schema": json_schema,
+                            },
+                        },
                     )
                     # iterate asynchronously
                     total_tokens = 0

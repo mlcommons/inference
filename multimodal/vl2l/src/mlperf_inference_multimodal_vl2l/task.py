@@ -26,6 +26,7 @@ class ProductMetadata(BaseModel):
     brands: str
     is_secondhand: bool
 
+
 json_schema = ProductMetadata.model_json_schema()
 
 if TYPE_CHECKING:

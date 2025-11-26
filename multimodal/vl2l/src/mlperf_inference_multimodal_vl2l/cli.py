@@ -198,7 +198,7 @@ class TestSettings(BaseModel):
     performance_sample_count_override: Annotated[
         NonNegativeInt,
         Field(
-            description="The number of samples to use for the performance test. In the " # noqa: S608
+            description="The number of samples to use for the performance test. In the "  # noqa: S608
             "performance mode, the benchmark will select P random samples from the "
             "dataset, then send enough queries using these P samples (and repeating "
             "them if necessary) to reach the min_duration and min_query_count. If a "

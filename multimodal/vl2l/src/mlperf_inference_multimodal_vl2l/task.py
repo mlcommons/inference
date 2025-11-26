@@ -151,7 +151,9 @@ class Task(ABC):
         """
         estimation_indices = random.sample(
             range(self.total_num_samples),
-            k=min(self.MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES, self.total_num_samples),
+            k=min(
+                self.MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES,
+                self.total_num_samples),
         )
         estimation_samples = [
             self.formulate_messages(self.dataset[i]) for i in estimation_indices

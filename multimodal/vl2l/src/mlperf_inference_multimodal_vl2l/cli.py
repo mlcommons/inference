@@ -228,7 +228,8 @@ class TestSettings(BaseModel):
         mode="before",
     )
     @classmethod
-    def parse_timedelta(cls, value: timedelta | float | str) -> timedelta | str:
+    def parse_timedelta(cls, value: timedelta | float |
+                        str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -254,9 +255,12 @@ class TestSettings(BaseModel):
         settings.server_target_latency_ns = round(
             self.server_target_latency.total_seconds() * 1e9,
         )
-        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
-        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
+        settings.ttft_latency = round(
+            self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(
+            self.server_tpot_latency.total_seconds() * 1e9)
+        settings.min_duration_ms = round(
+            self.min_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.performance_sample_count_override = (
             self.performance_sample_count_override
@@ -488,7 +492,9 @@ def benchmark(
     logger.info("Running VL2L benchmark with settings: {}", settings)
     logger.info("Running VL2L benchmark with model: {}", model)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
+    logger.info(
+        "Running VL2L benchmark with OpenAI API endpoint: {}",
+        endpoint)
     logger.info("Running VL2L benchmark with random seed: {}", random_seed)
     test_settings, log_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(

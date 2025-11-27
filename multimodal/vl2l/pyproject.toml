@@ -60,6 +60,9 @@ max-args = 10
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
+
 [tool.mypy]
 check_untyped_defs = true
 plugins = ['pydantic.mypy']

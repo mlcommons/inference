@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+from datetime import UTC, datetime
 from typing import Annotated
 
 import mlperf_loadgen as lg
@@ -52,12 +53,26 @@ def benchmark(
     """Main CLI for running the VL2L benchmark."""
     logger.remove()
     logger.add(sys.stdout, level=verbosity.value.upper())
+    datetime_str_in_log_filename = (
+        datetime.now(tz=UTC).astimezone().strftime("%FT%TZ_")
+        if settings.logging.log_output.prefix_with_datetime
+        else ""
+    )
+    logger.add(
+        settings.logging.log_output.outdir
+        / (
+            f"{settings.logging.log_output.prefix}"
+            f"{datetime_str_in_log_filename}"
+            "benchmark"
+            f"{settings.logging.log_output.suffix}"
+            ".txt"
+        ),
+        level=verbosity.value.upper(),
+    )
     logger.info("Running VL2L benchmark with settings: {}", settings)
     logger.info("Running VL2L benchmark with model: {}", model)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info(
-        "Running VL2L benchmark with OpenAI API endpoint: {}",
-        endpoint)
+    logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
     logger.info("Running VL2L benchmark with random seed: {}", random_seed)
     test_settings, log_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(

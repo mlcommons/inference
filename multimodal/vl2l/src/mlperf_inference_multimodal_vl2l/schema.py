@@ -1,4 +1,7 @@
-"""Schema definitions to be used."""
+"""Schema definitions of various data structures in the VL2L benchmark."""
+
+from __future__ import annotations
+
 from datetime import timedelta
 from enum import StrEnum, auto
 from pathlib import Path
@@ -6,11 +9,10 @@ from typing import Annotated
 
 import mlperf_loadgen as lg
 from openai.types import ResponseFormatJSONSchema
-from openai.types.chat.chat_completion_message_param import (
-    ChatCompletionMessageParam,
-)
+from openai.types.chat import ChatCompletionMessageParam
 from pydantic import (
     BaseModel,
+    ConfigDict,
     DirectoryPath,
     Field,
     NonNegativeInt,
@@ -96,98 +98,73 @@ class LoggingMode(StrEnum):
             case LoggingMode.ASYNC_POLL:
                 return lg.LoggingMode.AsyncPoll
             case _:
-                raise UnknownLoggingModeValueError
+                raise UnknownLoggingModeValueError(self)
 
 
 class UnknownLoggingModeValueError(ValueError):
     """The exception raised when an unknown logging mode is encountered."""
 
-    def __init__(self, test_mode: TestMode) -> None:
+    def __init__(self, logging_mode: LoggingMode) -> None:
         """Initialize the exception."""
-        super().__init__(f"Unknown logging mode: {test_mode}")
+        super().__init__(f"Unknown logging mode: {logging_mode}")
 
 
-class TestSettings(BaseModel):
+class BaseModelWithAttributeDescriptionsFromDocstrings(BaseModel):
+    """Base model that automatically adds attribute descriptions from docstrings."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True, extra="forbid")
+    """Pydantic settings for
+    - Automatically add the attribute descriptions from docstrings.
+    - Forbid extra attributes.
+    """
+
+
+class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     """The test settings for the MLPerf inference LoadGen."""
 
-    scenario: Annotated[
-        TestScenario,
-        Field(
-            description=(
-                "The MLPerf inference benchmarking scenario to run the benchmark in."
-            ),
-        ),
-    ] = TestScenario.OFFLINE
+    scenario: TestScenario = TestScenario.OFFLINE
+    """The MLPerf inference benchmarking scenario to run the benchmark in."""
 
-    mode: Annotated[
-        TestMode,
-        Field(
-            description=(
-                "Whether you want to run the benchmark for performance or accuracy."
-            ),
-        ),
-    ] = TestMode.PERFORMANCE_ONLY
+    mode: TestMode = TestMode.PERFORMANCE_ONLY
+    """Whether you want to run the benchmark for performance measurement or accuracy
+    evaluation.
+    """
 
-    offline_expected_qps: Annotated[
-        float,
-        Field(
-            description="The expected QPS for the offline scenario.",
-        ),
-    ] = 100
+    offline_expected_qps: float = 100
+    """The expected QPS for the offline scenario."""
 
-    server_expected_qps: Annotated[
-        float,
-        Field(
-            description="The expected QPS for the server scenario. "
-            "Loadgen will try to send as many request as necessary "
-            "to achieve this value.",
-        ),
-    ] = 1
+    server_expected_qps: float = 1
+    """The expected QPS for the server scenario. Loadgen will try to send as many
+    request as necessary to achieve this value.
+    """
 
-    server_target_latency: Annotated[
-        timedelta,
-        Field(
-            description="Expected latency constraint for Server scenario. "
-            "This is a constraint that we expect depending on the argument "
-            "server_expected_qps. When server_expected_qps increases, we expect the "
-            "latency to also increase. When server_expected_qps decreases, we expect "
-            "the latency to also decrease.",
-        ),
-    ] = timedelta(seconds=1)
+    server_target_latency: timedelta = timedelta(seconds=1)
+    """Expected latency constraint for Server scenario. This is a constraint that we
+    expect depending on the argument server_expected_qps. When server_expected_qps
+    increases, we expect the latency to also increase. When server_expected_qps
+    decreases, we expect the latency to also decrease.
+    """
 
-    server_ttft_latency: Annotated[
-        timedelta,
-        Field(
-            description="Time to First Token (TTFT) latency constraint result "
-            "validation (used when use_token_latencies is enabled).",
-        ),
-    ] = timedelta(seconds=1)
+    server_ttft_latency: timedelta = timedelta(seconds=1)
+    """Time to First Token (TTFT) latency constraint result validation (used when
+    use_token_latencies is enabled).
+    """
 
-    server_tpot_latency: Annotated[
-        timedelta,
-        Field(
-            description="Time per Output Token (TPOT) latency constraint result "
-            "validation (used when use_token_latencies is enabled).",
-        ),
-    ] = timedelta(seconds=1)
+    server_tpot_latency: timedelta = timedelta(seconds=1)
+    """Time per Output Token (TPOT) latency constraint result validation (used when
+    use_token_latencies is enabled).
+    """
 
-    min_duration: Annotated[
-        timedelta,
-        Field(
-            description="The minimum testing duration (in seconds or ISO 8601 format "
-            "like PT5S). The benchmark runs until this value has been met.",
-        ),
-    ] = timedelta(seconds=5)
+    min_duration: timedelta = timedelta(seconds=5)
+    """The minimum testing duration (in seconds or ISO 8601 format like `PT5S`). The
+    benchmark runs until this value has been met.
+    """
 
-    min_query_count: Annotated[
-        int,
-        Field(
-            description="The minimum testing query count. The benchmark runs until this"
-            " value has been met. If min_query_count is less than the total number of "
-            "samples in the dataset, only the first min_query_count samples will be "
-            "used during testing.",
-        ),
-    ] = 100
+    min_query_count: int = 100
+    """The minimum testing query count. The benchmark runs until this value has been
+    met. If min_query_count is less than the total number of samples in the dataset,
+    only the first min_query_count samples will be used during testing.
+    """
 
     performance_sample_count_override: Annotated[
         NonNegativeInt,
@@ -205,14 +182,11 @@ class TestSettings(BaseModel):
         ),
     ] = 0
 
-    use_token_latencies: Annotated[
-        bool,
-        Field(
-            description="By default, the Server scenario will use server_target_latency"
-            " as the constraint. When set to True, the Server scenario will use "
-            "server_ttft_latency and server_tpot_latency as the constraint.",
-        ),
-    ] = False
+    use_token_latencies: bool = False
+    """By default, the Server scenario will use `server_target_latency` as the
+    constraint. When set to True, the Server scenario will use `server_ttft_latency` and
+    `server_tpot_latency` as the constraint.
+    """
 
     @field_validator(
         "server_target_latency",
@@ -222,8 +196,7 @@ class TestSettings(BaseModel):
         mode="before",
     )
     @classmethod
-    def parse_timedelta(cls, value: timedelta | float |
-                        str) -> timedelta | str:
+    def parse_timedelta(cls, value: timedelta | float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -249,12 +222,9 @@ class TestSettings(BaseModel):
         settings.server_target_latency_ns = round(
             self.server_target_latency.total_seconds() * 1e9,
         )
-        settings.ttft_latency = round(
-            self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(
-            self.server_tpot_latency.total_seconds() * 1e9)
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
+        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.performance_sample_count_override = (
             self.performance_sample_count_override
@@ -263,49 +233,30 @@ class TestSettings(BaseModel):
         return settings
 
 
-class LogOutputSettings(BaseModel):
+class LogOutputSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     """The test log output settings for the MLPerf inference LoadGen."""
 
-    outdir: Annotated[
-        DirectoryPath,
-        Field(
-            description="Where to save the output files from the benchmark.",
-        ),
-    ] = DirectoryPath("output")
-    prefix: Annotated[
-        str,
-        Field(
-            description="Modify the filenames of the logs with a prefix.",
-        ),
-    ] = "mlperf_log_"
-    suffix: Annotated[
-        str,
-        Field(
-            description="Modify the filenames of the logs with a suffix.",
-        ),
-    ] = ""
-    prefix_with_datetime: Annotated[
-        bool,
-        Field(
-            description="Modify the filenames of the logs with a datetime.",
-        ),
-    ] = False
-    copy_detail_to_stdout: Annotated[
-        bool,
-        Field(
-            description="Print details of performance test to stdout.",
-        ),
-    ] = False
-    copy_summary_to_stdout: Annotated[
-        bool,
-        Field(
-            description="Print results of performance test to terminal.",
-        ),
-    ] = True
+    outdir: DirectoryPath = DirectoryPath("./output")
+    """Where to save the output files from the benchmark."""
+
+    prefix: str = "mlperf_log_"
+    """Modify the filenames of the logs with a prefix."""
+
+    suffix: str = ""
+    """Modify the filenames of the logs with a suffix."""
+
+    prefix_with_datetime: bool = False
+    """Modify the filenames of the logs with a datetime."""
+
+    copy_detail_to_stdout: bool = False
+    """Print details of performance test to stdout."""
+
+    copy_summary_to_stdout: bool = True
+    """Print results of performance test to terminal."""
 
     @field_validator("outdir", mode="before")
     @classmethod
-    def parse_directory_field(cls, value: str) -> None:
+    def parse_directory_field(cls, value: str) -> Path:
         """Verify and create the output directory to store log files."""
         path = Path(value)
         path.mkdir(exist_ok=True)
@@ -323,28 +274,17 @@ class LogOutputSettings(BaseModel):
         return log_output_settings
 
 
-class LogSettings(BaseModel):
+class LogSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
     """The test log settings for the MLPerf inference LoadGen."""
 
-    log_output: Annotated[
-        LogOutputSettings,
-        Field(
-            description="Log output settings",
-        ),
-    ] = LogOutputSettings
-    log_mode: Annotated[
-        LoggingMode,
-        Field(
-            description="""How and when logging should be
-            sampled and stringified at runtime""",
-        ),
-    ] = LoggingMode.ASYNC_POLL
-    enable_trace: Annotated[
-        bool,
-        Field(
-            description="Enable trace",
-        ),
-    ] = True
+    log_output: LogOutputSettings = LogOutputSettings()
+    """Log output settings"""
+
+    log_mode: LoggingMode = LoggingMode.ASYNC_POLL
+    """How and when logging should be sampled and stringified at runtime"""
+
+    enable_trace: bool = True
+    """Enable trace"""
 
     def to_lgtype(self) -> lg.LogSettings:
         """Convert log settings to its corresponding LoadGen type."""
@@ -355,22 +295,14 @@ class LogSettings(BaseModel):
         return log_settings
 
 
-class Settings(BaseModel):
+class Settings(BaseModelWithAttributeDescriptionsFromDocstrings):
     """Combine the settings for the test and logging of LoadGen."""
 
-    test: Annotated[
-        TestSettings,
-        Field(
-            description="Test settings parameters.",
-        ),
-    ] = TestSettings
+    test: TestSettings
+    """Test settings parameters."""
 
-    logging: Annotated[
-        LogSettings,
-        Field(
-            description="Test logging parameters",
-        ),
-    ] = LogSettings
+    logging: LogSettings
+    """Test logging parameters."""
 
     def to_lgtype(self) -> tuple[lg.TestSettings, lg.LogSettings]:
         """Return test and log settings for LoadGen."""
@@ -379,43 +311,28 @@ class Settings(BaseModel):
         return (test_settings, log_settings)
 
 
-class Model(BaseModel):
+class Model(BaseModelWithAttributeDescriptionsFromDocstrings):
     """Specifies the model to use for the VL2L benchmark."""
 
-    repo_id: Annotated[
-        str,
-        Field(description="The HuggingFace repository ID of the model."),
-    ] = "Qwen/Qwen3-VL-235B-A22B-Instruct"
+    repo_id: str = "Qwen/Qwen3-VL-235B-A22B-Instruct"
+    """The HuggingFace repository ID of the model."""
 
 
-class Dataset(BaseModel):
+class Dataset(BaseModelWithAttributeDescriptionsFromDocstrings):
     """Specifies a dataset on HuggingFace."""
 
-    repo_id: Annotated[
-        str,
-        Field(description="The HuggingFace repository ID of the dataset."),
-    ] = "Shopify/the-catalogue-public-beta"
+    repo_id: str = "Shopify/the-catalogue-public-beta"
+    """The HuggingFace repository ID of the dataset."""
 
-    token: Annotated[
-        str | None,
-        Field(
-            description=(
-                "The token to access the HuggingFace repository of the dataset."
-            ),
-        ),
-    ] = None
+    token: str | None = None
+    """The token to access the HuggingFace repository of the dataset."""
 
-    split: Annotated[
-        list[str],
-        Field(
-            description=(
-                """Dataset splits to use for the benchmark. Eg: train.
-                You can add multiple splits by calling the same argument
-                multiple times. Eg:
-                --dataset.split test --dataset.split train"""
-            ),
-        ),
-    ] = ["train", "test"]
+    split: list[str] = ["train", "test"]
+    """Dataset splits to use for the benchmark, e.g., "train" and "test". You can add
+    multiple splits by repeating the same CLI flag multiple times, e.g.:
+    --dataset.split test --dataset.split train
+    The testing dataset is a concatenation of these splits in the same order.
+    """
 
 
 class Verbosity(StrEnum):
@@ -431,32 +348,58 @@ class Verbosity(StrEnum):
     """The info verbosity level (default)."""
 
 
-class Endpoint(BaseModel):
+class Endpoint(BaseModelWithAttributeDescriptionsFromDocstrings):
     """Specifies the OpenAI API endpoint to use for the VL2L benchmark."""
 
-    url: Annotated[
-        str,
-        Field(
-            description=(
-                "The URL of the OpenAI API endpoint that the inference requests will be"
-                " sent to."
-            ),
-        ),
-    ] = "http://localhost:8000/v1"
-    api_key: Annotated[
-        str,
-        Field(description="The API key to authenticate the inference requests."),
-    ] = ""
+    url: str = "http://localhost:8000/v1"
+    """The URL of the OpenAI API endpoint that the inference requests are sent to."""
+
+    api_key: str = ""
+    """The API key to authenticate the inference requests."""
 
 
-class ProductMetadata(BaseModel):
+class ProductMetadata(BaseModelWithAttributeDescriptionsFromDocstrings):
     """Json format for the expected responses from the VLM."""
+
     category: str
-    brands: str
+    """The complete category of the product, e.g.,
+    "Clothing & Accessories > Clothing > Shirts > Polo Shirts".
+    Each categorical level is separated by " > ".
+    """
+
+    brands: list[str]
+    """The brands of the product, e.g., ["giorgio armani", "hugo boss"]."""
+
     is_secondhand: bool
+    """True if the product is second-hand, False otherwise."""
 
 
-class LoadedSample(BaseModel):
+class LoadedSample(BaseModelWithAttributeDescriptionsFromDocstrings):
     """Sample format to be used by LoadGen."""
+
     messages: list[ChatCompletionMessageParam]
+    """The messages to be sent for chat completion to the VLM inference endpoint."""
+
     response_format: ResponseFormatJSONSchema
+    """The response format to be used during guided decoding."""
+
+    @field_validator("messages", mode="after")
+    @classmethod
+    def ensure_content_is_list(
+        cls,
+        messages: list[ChatCompletionMessageParam],
+    ) -> list[ChatCompletionMessageParam]:
+        """If the content is a `ValidatorIterator`, convert it back to a list.
+
+        This is to workaround a Pydantic bug. See
+        https://github.com/pydantic/pydantic/issues/9467 for more details.
+        """
+        for message in messages:
+            if (
+                "content" in message
+                and message["content"].__class__.__module__
+                == "pydantic_core._pydantic_core"
+                and message["content"].__class__.__name__ == "ValidatorIterator"
+            ):
+                message["content"] = list(message["content"])  # type: ignore[arg-type]
+        return messages

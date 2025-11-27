@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 from datasets import load_dataset
-from hiclass.metrics import f1
+from hiclass.metrics import f1  # type: ignore[import-untyped]
 from loguru import logger
-from sklearn.metrics import f1_score
+from pydantic import ValidationError
+from sklearn.metrics import f1_score  # type: ignore[import-untyped]
 from tabulate import tabulate
 
 if TYPE_CHECKING:
@@ -18,10 +19,14 @@ if TYPE_CHECKING:
 
     from .cli import Dataset as DatasetCLI
 
+from .schema import ProductMetadata
 
-def get_hierarchical_components(predicted_path: str,
-                                true_path: str,
-                                separator: str = " > ") -> tuple[int, int, int]:
+
+def get_hierarchical_components(
+    predicted_path: str,
+    true_path: str,
+    separator: str = " > ",
+) -> tuple[int, int, int]:
     """Calculates the components for Hierarchical Precision.
 
     Args:
@@ -46,9 +51,7 @@ def get_hierarchical_components(predicted_path: str,
     intersection_count = 0
 
     # Iterate through the paths simultaneously
-    for pred_cat, true_cat in zip(predicted_categories,
-                                  true_categories,
-                                  strict=False):
+    for pred_cat, true_cat in zip(predicted_categories, true_categories, strict=False):
         if pred_cat == true_cat:
             intersection_count += 1
         else:
@@ -77,18 +80,22 @@ def calculate_hierarchical_f1(data: list[tuple[str, str]]) -> float:
 
     # 1. Aggregate the components across all samples
     for pred_path, true_path in data:
-        intersection, pred_len, true_len = \
-            get_hierarchical_components(pred_path, true_path)
+        intersection, pred_len, true_len = get_hierarchical_components(
+            pred_path,
+            true_path,
+        )
 
         total_intersection += intersection
         total_predicted_length += pred_len
         total_true_length += true_len
 
     # 2. Calculate hP and hR
-    hp = total_intersection / total_predicted_length \
-        if total_predicted_length > 0 else 0.0
-    hr = total_intersection / total_true_length \
-        if total_true_length > 0 else 0.0
+    hp = (
+        total_intersection / total_predicted_length
+        if total_predicted_length > 0
+        else 0.0
+    )
+    hr = total_intersection / total_true_length if total_true_length > 0 else 0.0
 
     return 0.0 if hp + hr == 0 else 2 * (hp * hr) / (hp + hr)
 
@@ -111,7 +118,7 @@ def calculate_exact_match(generated_text: str, original_text: str) -> float:
     return 1.0 if gen == orig else 0.0
 
 
-def calculate_secondhand_f1(data: list[tuple[str, str]]) -> float:
+def calculate_secondhand_f1(data: list[tuple[bool, bool]]) -> float:
     """Calculate F1 score of is_secondhand field.
 
     Args:
@@ -182,18 +189,30 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
     category_dataset_pred_src = []
     is_secondhand_pred_src = []
     for elem in model_output:
-        byte_data = bytes.fromhex(elem["data"])
         idx = elem["qsl_idx"]
-        pred_text_decode = byte_data.decode("utf-8")
-        pred_item = json.loads(pred_text_decode)
+        response = bytes.fromhex(elem["data"]).decode("utf-8")
+        try:
+            pred_item = ProductMetadata.model_validate_json(response)
+        except ValidationError:
+            logger.exception(
+                "Response\n{}\n(for the sample at index {}) cannot be validated against"
+                " the expected schema\n{}\n. Thus, this submission result is invalid.",
+                response,
+                idx,
+                json.dumps(ProductMetadata.model_json_schema(), indent=2),
+            )
         ground_truth_item = original_data[idx]
-        category_dataset_pred_src.append((pred_item["category"],
-                                          ground_truth_item["ground_truth_category"]))
-        is_secondhand_pred_src.append((int(pred_item["is_secondhand"]),
-                                      int(ground_truth_item["ground_truth_is_secondhand"])))
+        category_dataset_pred_src.append(
+            (pred_item.category, ground_truth_item["ground_truth_category"]),
+        )
+        is_secondhand_pred_src.append(
+            (
+                pred_item.is_secondhand,
+                ground_truth_item["ground_truth_is_secondhand"],
+            ),
+        )
 
-    category_f1_score = calculate_hierarchical_f1(
-        category_dataset_pred_src)
+    category_f1_score = calculate_hierarchical_f1(category_dataset_pred_src)
     hiclass_f1 = calculate_hiclass_f1(category_dataset_pred_src)
     is_secondhand_f1_score = calculate_secondhand_f1(is_secondhand_pred_src)
 
@@ -202,7 +221,11 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
         ["is_secondhand", is_secondhand_f1_score],
     ]
 
-    logger.info("Results:\n{}", tabulate(data,
-                                         headers=["Fields", "F1 Score",
-                                                  "HiClass F1 Score"],
-                                         tablefmt="fancy_grid"))
+    logger.info(
+        "Results:\n{}",
+        tabulate(
+            data,
+            headers=["Fields", "F1 Score", "HiClass F1 Score"],
+            tablefmt="fancy_grid",
+        ),
+    )

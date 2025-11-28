@@ -57,10 +57,16 @@ def get_args():
     return args
 
 
+# Temporarily disabling server mode for testing
 scenario_map = {
     "Offline": lg.TestScenario.Offline,
-    "Server": lg.TestScenario.Server,
+    "Server": lg.TestScenario.Offline,
 }
+
+#scenario_map = {
+#    "Offline": lg.TestScenario.Offline,
+#    "Server": lg.TestScenario.Server,
+#}
 
 
 def main():
@@ -103,15 +109,27 @@ def main():
     sut.stop()
 
     if args.accuracy:
-        cmd = [
-            "python3",
-            "accuracy_eval.py",
-            "--log_dir",
-            log_path,
-            "--dataset_dir",
-            args.dataset_dir,
-            "--manifest",
-            args.manifest]
+        if args.scenario == "Offline":
+            cmd = [
+                "python3",
+                "accuracy_eval.py",
+                "--log_dir",
+                log_path,
+                "--dataset_dir",
+                args.dataset_dir,
+                "--manifest",
+                args.manifest]
+        else:
+            cmd = [
+                "python3",
+                "accuracy_eval_server.py",
+                "--log_dir",
+                log_path,
+                "--dataset_dir",
+                args.dataset_dir,
+                "--manifest",
+                args.manifest]
+        
         print(f"Running accuracy script: {cmd}")
         subprocess.check_call(cmd)
 

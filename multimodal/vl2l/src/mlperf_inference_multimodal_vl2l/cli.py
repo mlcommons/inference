@@ -13,7 +13,7 @@ from pydantic_typer import Typer
 from typer import Option
 
 from .evaluation import run_evaluation
-from .schema import Dataset, Endpoint, Model, Settings, Verbosity
+from .schema import Dataset, Endpoint, Settings, Verbosity
 from .task import ShopifyGlobalCatalogue
 
 app = Typer()
@@ -38,7 +38,6 @@ def evaluate(
 def benchmark(
     *,
     settings: Settings,
-    model: Model,
     dataset: Dataset,
     endpoint: Endpoint,
     random_seed: Annotated[
@@ -70,17 +69,13 @@ def benchmark(
         level=verbosity.value.upper(),
     )
     logger.info("Running VL2L benchmark with settings: {}", settings)
-    logger.info("Running VL2L benchmark with model: {}", model)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
-    logger.info(
-        "Running VL2L benchmark with OpenAI API endpoint: {}",
-        endpoint)
+    logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
     logger.info("Running VL2L benchmark with random seed: {}", random_seed)
     test_settings, log_settings = settings.to_lgtype()
     task = ShopifyGlobalCatalogue(
-        dataset_cli=dataset,
-        model_cli=model,
-        endpoint_cli=endpoint,
+        dataset=dataset,
+        endpoint=endpoint,
         settings=settings.test,
         random_seed=random_seed,
     )

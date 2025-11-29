@@ -51,8 +51,7 @@ def get_hierarchical_components(
     intersection_count = 0
 
     # Iterate through the paths simultaneously
-    for pred_cat, true_cat in zip(
-            predicted_categories, true_categories, strict=False):
+    for pred_cat, true_cat in zip(predicted_categories, true_categories, strict=False):
         if pred_cat == true_cat:
             intersection_count += 1
         else:
@@ -183,7 +182,7 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
 
     original_data = load_dataset(
         dataset.repo_id,
-        dataset.token,
+        token=dataset.token,
         split="+".join(dataset.split),
     )
 

@@ -196,8 +196,7 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         mode="before",
     )
     @classmethod
-    def parse_timedelta(cls, value: timedelta | float |
-                        str) -> timedelta | str:
+    def parse_timedelta(cls, value: timedelta | float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -223,12 +222,9 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         settings.server_target_latency_ns = round(
             self.server_target_latency.total_seconds() * 1e9,
         )
-        settings.ttft_latency = round(
-            self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(
-            self.server_tpot_latency.total_seconds() * 1e9)
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
+        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.performance_sample_count_override = (
             self.performance_sample_count_override
@@ -361,6 +357,19 @@ class Endpoint(BaseModelWithAttributeDescriptionsFromDocstrings):
     api_key: str = ""
     """The API key to authenticate the inference requests."""
 
+    model: Model
+    """The model to use for the VL2L benchmark, i.e., the model that was deployed behind
+    this OpenAI API endpoint.
+    """
+
+    use_guided_decoding: bool = True
+    """If True, the benchmark will enable guided decoding for the requests. This
+    requires the endpoint (and the inference engine behind it) to support guided
+    decoding. If False, the response from the endpoint might not be directly parsable
+    by the response JSON schema (e.g., the JSON object might be fenced in a
+    ```json ... ``` code block).
+    """
+
 
 class ProductMetadata(BaseModelWithAttributeDescriptionsFromDocstrings):
     """Json format for the expected responses from the VLM."""
@@ -384,7 +393,7 @@ class LoadedSample(BaseModelWithAttributeDescriptionsFromDocstrings):
     messages: list[ChatCompletionMessageParam]
     """The messages to be sent for chat completion to the VLM inference endpoint."""
 
-    response_format: ResponseFormatJSONSchema
+    response_format: ResponseFormatJSONSchema | None = None
     """The response format to be used during guided decoding."""
 
     @field_validator("messages", mode="after")
@@ -405,6 +414,5 @@ class LoadedSample(BaseModelWithAttributeDescriptionsFromDocstrings):
                 == "pydantic_core._pydantic_core"
                 and message["content"].__class__.__name__ == "ValidatorIterator"
             ):
-                message["content"] = list(
-                    message["content"])  # type: ignore[arg-type]
+                message["content"] = list(message["content"])  # type: ignore[arg-type]
         return messages

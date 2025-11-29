@@ -25,7 +25,6 @@ from .schema import (
     Dataset,
     Endpoint,
     LoadedSample,
-    Model,
     ProductMetadata,
     TestScenario,
     TestSettings,
@@ -37,38 +36,35 @@ class Task(ABC):
 
     def __init__(
         self,
-        dataset_cli: Dataset,
-        model_cli: Model,
-        endpoint_cli: Endpoint,
+        dataset: Dataset,
+        endpoint: Endpoint,
         settings: TestSettings,
         random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
 
         Args:
-            dataset_cli: The dataset configuration passed in from the CLI.
-            model_cli: The model configuration passed in from the CLI.
-            endpoint_cli: The endpoint configuration passed in from the CLI.
+            dataset: The dataset configuration passed in from the CLI.
+            endpoint: The endpoint configuration passed in from the CLI.
             settings: Parameters of the current benchmark.
             random_seed: The random seed to use for the task.
         """
         random.seed(random_seed)
-        self.scenario = settings.scenario
         self.dataset = load_dataset(
-            dataset_cli.repo_id,
-            token=dataset_cli.token,
-            split="+".join(dataset_cli.split),
+            dataset.repo_id,
+            token=dataset.token,
+            split="+".join(dataset.split),
         )
         logger.debug(
             "Loaded {} samples from the dataset splits {}.",
             len(self.dataset),
-            dataset_cli.split,
+            dataset.split,
         )
-        self.model_cli = model_cli
+        self.endpoint = endpoint
         self.openai_api_client = AsyncOpenAI(
-            base_url=endpoint_cli.url,
+            base_url=endpoint.url,
             http_client=DefaultAioHttpClient(),
-            api_key=endpoint_cli.api_key,
+            api_key=endpoint.api_key,
         )
         self.event_loop, self.event_loop_thread = (
             self._create_event_loop_in_separate_thread()
@@ -110,9 +106,8 @@ class Task(ABC):
         event_loop_thread.start()
         return event_loop, event_loop_thread
 
-    @staticmethod
     @abstractmethod
-    def formulate_loaded_sample(sample: dict[str, Any]) -> LoadedSample:
+    def formulate_loaded_sample(self, sample: dict[str, Any]) -> LoadedSample:
         """Formulate the sample to be loaded into host memory before testing.
 
         Args:
@@ -150,9 +145,7 @@ class Task(ABC):
         """
         estimation_indices = random.sample(
             range(self.total_num_samples),
-            k=min(
-                MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES,
-                self.total_num_samples),
+            k=min(MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES, self.total_num_samples),
         )
         estimation_samples = [
             self.formulate_loaded_sample(self.dataset[i]) for i in estimation_indices
@@ -212,8 +205,7 @@ class Task(ABC):
             _unload_samples_from_ram,
         )
 
-    async def _query_endpoint_async_batch(
-            self, query_sample: lg.QuerySample) -> None:
+    async def _query_endpoint_async_batch(self, query_sample: lg.QuerySample) -> None:
         """Query the endpoint through the async OpenAI API client."""
         try:
             sample = self.loaded_samples[query_sample.index]
@@ -231,11 +223,15 @@ class Task(ABC):
             )
             tic = time.perf_counter()
             response = await self.openai_api_client.chat.completions.create(  # type: ignore[call-overload]
-                model=self.model_cli.repo_id,
+                model=self.endpoint.model.repo_id,
                 messages=sample.messages,
-                response_format=sample.response_format.model_dump(
-                    mode="json",
-                    by_alias=True,
+                response_format=(
+                    sample.response_format.model_dump(
+                        mode="json",
+                        by_alias=True,
+                    )
+                    if sample.response_format is not None
+                    else None
                 ),
             )
             logger.debug(
@@ -286,8 +282,7 @@ class Task(ABC):
                 ],
             )
 
-    async def _query_endpoint_async_stream(
-            self, query_sample: lg.QuerySample) -> None:
+    async def _query_endpoint_async_stream(self, query_sample: lg.QuerySample) -> None:
         """Query the endpoint through the async OpenAI API client."""
         ttft_set = False
         try:
@@ -307,12 +302,16 @@ class Task(ABC):
             word_array = []
             stream = await self.openai_api_client.chat.completions.create(  # type: ignore[call-overload]
                 stream=True,
-                model=self.model_cli.repo_id,
+                model=self.endpoint.model.repo_id,
                 messages=sample.messages,
                 stream_options={"include_usage": True},
-                response_format=sample.response_format.model_dump(
-                    mode="json",
-                    by_alias=True,
+                response_format=(
+                    sample.response_format.model_dump(
+                        mode="json",
+                        by_alias=True,
+                    )
+                    if sample.response_format is not None
+                    else None
                 ),
             )
             # iterate asynchronously
@@ -415,7 +414,7 @@ class Task(ABC):
                 asyncio.run_coroutine_threadsafe(
                     (
                         self._query_endpoint_async_stream(query_sample)
-                        if self.scenario is TestScenario.SERVER
+                        if self.settings.scenario is TestScenario.SERVER
                         else self._query_endpoint_async_batch(query_sample)
                     ),
                     self.event_loop,
@@ -454,31 +453,27 @@ class ShopifyGlobalCatalogue(Task):
 
     def __init__(
         self,
-        dataset_cli: Dataset,
-        model_cli: Model,
-        endpoint_cli: Endpoint,
+        dataset: Dataset,
+        endpoint: Endpoint,
         settings: TestSettings,
         random_seed: int = 12345,
     ) -> None:
         """Initialize the task.
 
         Args:
-            dataset_cli: The dataset configuration passed in from the CLI.
-            model_cli: The model configuration passed in from the CLI.
-            endpoint_cli: The endpoint configuration passed in from the CLI.
+            dataset: The dataset configuration passed in from the CLI.
+            endpoint: The endpoint configuration passed in from the CLI.
             settings: Parameters of the current benchmark.
             random_seed: The random seed to use for the task.
         """
         super().__init__(
-            dataset_cli=dataset_cli,
-            model_cli=model_cli,
-            endpoint_cli=endpoint_cli,
+            dataset=dataset,
+            endpoint=endpoint,
             settings=settings,
             random_seed=random_seed,
         )
 
-    @staticmethod
-    def formulate_loaded_sample(sample: dict[str, Any]) -> LoadedSample:
+    def formulate_loaded_sample(self, sample: dict[str, Any]) -> LoadedSample:
         """Formulate the sample to be loaded into host memory before testing.
 
         Args:
@@ -546,12 +541,16 @@ The following are the possible product categories:
 
         return LoadedSample(
             messages=messages,
-            response_format={
-                "type": "json_schema",
-                "json_schema": {
-                    "name": "product_metadata",
-                    "schema": ProductMetadata.model_json_schema(),
-                    "strict": True,
-                },
-            },
+            response_format=(
+                {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "product_metadata",
+                        "schema": ProductMetadata.model_json_schema(),
+                        "strict": True,
+                    },
+                }
+                if self.endpoint.use_guided_decoding
+                else None
+            ),
         )

@@ -145,7 +145,9 @@ class Task(ABC):
         """
         estimation_indices = random.sample(
             range(self.total_num_samples),
-            k=min(MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES, self.total_num_samples),
+            k=min(
+                MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES,
+                self.total_num_samples),
         )
         estimation_samples = [
             self.formulate_loaded_sample(self.dataset[i]) for i in estimation_indices
@@ -205,7 +207,8 @@ class Task(ABC):
             _unload_samples_from_ram,
         )
 
-    async def _query_endpoint_async_batch(self, query_sample: lg.QuerySample) -> None:
+    async def _query_endpoint_async_batch(
+            self, query_sample: lg.QuerySample) -> None:
         """Query the endpoint through the async OpenAI API client."""
         try:
             sample = self.loaded_samples[query_sample.index]
@@ -282,7 +285,8 @@ class Task(ABC):
                 ],
             )
 
-    async def _query_endpoint_async_stream(self, query_sample: lg.QuerySample) -> None:
+    async def _query_endpoint_async_stream(
+            self, query_sample: lg.QuerySample) -> None:
         """Query the endpoint through the async OpenAI API client."""
         ttft_set = False
         try:

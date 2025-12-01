@@ -271,6 +271,15 @@ struct TestSettings {
   /// \brief Infer token latencies
   bool infer_token_latencies = false;
   uint64_t token_latency_scaling_factor;
+  
+  /// \brief Enable repeated sampling in accuracy mode
+  /// \details When enabled, each sample is issued
+  /// repeats_per_sample times and multiple responses are collected.
+  /// This is used for code generation benchmarks like gpt-oss where multiple
+  /// solutions are generated and evaluated (pass@k metric).
+  /// Default is 1 (single sample). Set to k (e.g., 5 for pass@5) to enable.
+  /// Must be 1 for PerformanceOnly mode.
+  uint64_t repeats_per_sample = 1;
   /**@}*/
 };
 

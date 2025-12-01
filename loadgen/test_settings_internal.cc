@@ -54,7 +54,8 @@ TestSettingsInternal::TestSettingsInternal(
       server_ttft_latency(requested.server_ttft_latency),
       server_tpot_latency(requested.server_tpot_latency),
       infer_token_latencies(requested.infer_token_latencies),
-      token_latency_scaling_factor(requested.token_latency_scaling_factor) {
+      token_latency_scaling_factor(requested.token_latency_scaling_factor),
+      repeats_per_sample(requested.repeats_per_sample) {
   // Target QPS, target latency, and max_async_queries.
   switch (requested.scenario) {
     case TestScenario::SingleStream:
@@ -779,6 +780,7 @@ int TestSettings::FromConfig(const std::string &path, const std::string &model,
   lookupkv(model, scenario, "max_query_count", &max_query_count, nullptr);
   lookupkv(model, scenario, "performance_sample_count_override",
            &performance_sample_count_override, nullptr);
+  lookupkv(model, scenario, "repeats_per_sample", &repeats_per_sample, nullptr);
   lookupkv(model, "SingleStream", "target_latency", nullptr,
            &single_stream_expected_latency_ns, 1000 * 1000);
   lookupkv(model, "MultiStream", "target_latency", nullptr,

@@ -1,1 +1,3 @@
 pybind11
+absl-py
+numpy

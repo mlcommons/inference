@@ -43,21 +43,33 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def load_mlperf_log(log_path: str) -> List[Dict[str, Any]]:
+def load_mlperf_log(log_path: str) -> Tuple[List[Dict[str, Any]], int]:
     """Load MLPerf accuracy JSON log.
     
     Args:
         log_path: Path to mlperf_log_accuracy.json
         
     Returns:
-        List of log entries with seq_id, qsl_idx, data (hex), token_count
+        Tuple of (log_data, num_repeats)
+        - log_data: List of log entries with seq_id, qsl_idx, repeat_idx, data (hex), token_count
+        - num_repeats: Number of repeats per sample (pass@k value)
     """
     logger.info(f"Loading MLPerf log from {log_path}")
     with open(log_path, 'r') as f:
         log_data = json.load(f)
     
+    # Detect number of repeats from repeat_idx field
+    max_repeat_idx = 0
+    for entry in log_data:
+        repeat_idx = entry.get('repeat_idx', 0)
+        max_repeat_idx = max(max_repeat_idx, repeat_idx)
+    
+    num_repeats = max_repeat_idx + 1
+    
     logger.info(f"Loaded {len(log_data)} log entries")
-    return log_data
+    logger.info(f"Detected repeats_per_sample = {num_repeats} (pass@{num_repeats} format)")
+    
+    return log_data, num_repeats
 
 
 def decode_hex_to_tokens(hex_data: str) -> List[int]:
@@ -121,10 +133,11 @@ def process_livecodebench_batch(
     work_items = []
     entry_metadata = []  # Store (entry, qsl_idx, ref_row, token_ids, model_output)
     
-    logger.info(f"Parsing {len(entries)} {dataset_name} samples...")
-    for entry in tqdm(entries, desc=f"Parsing {dataset_name}", unit="sample"):
+    logger.info(f"Parsing {len(entries)} {dataset_name} entries...")
+    for entry in tqdm(entries, desc=f"Parsing {dataset_name}", unit="entry"):
         seq_id = entry['seq_id']
         qsl_idx = entry['qsl_idx']
+        repeat_idx = entry.get('repeat_idx', 0)
         hex_data = entry['data']
         
         ref_row = reference_df.iloc[qsl_idx]
@@ -140,6 +153,7 @@ def process_livecodebench_batch(
         entry_metadata.append({
             'entry': entry,
             'qsl_idx': qsl_idx,
+            'repeat_idx': repeat_idx,
             'ref_row': ref_row,
             'token_ids': token_ids,
             'model_output': model_output,
@@ -188,6 +202,7 @@ def process_livecodebench_batch(
     for idx, metadata in enumerate(entry_metadata):
         entry = metadata['entry']
         qsl_idx = metadata['qsl_idx']
+        repeat_idx = metadata['repeat_idx']
         token_ids = metadata['token_ids']
         model_output = metadata['model_output']
         extracted_code = metadata['extracted_code']
@@ -204,6 +219,7 @@ def process_livecodebench_batch(
         result = {
             'seq_id': entry['seq_id'],
             'qsl_idx': qsl_idx,
+            'repeat_idx': repeat_idx,
             'dataset': dataset_name,
             'is_correct': is_correct,
             'extracted_answer': str(extracted_code)[:200] if extracted_code is not None else None,
@@ -218,6 +234,7 @@ def process_livecodebench_batch(
         if args.save_outputs:
             output_record = {
                 'qsl_idx': qsl_idx,
+                'repeat_idx': repeat_idx,
                 'seq_id': entry['seq_id'],
                 'dataset': dataset_name,
                 'ground_truth': ground_truth,
@@ -327,7 +344,7 @@ def main():
         logging.getLogger().setLevel(logging.DEBUG)
     
     # Load MLPerf log
-    mlperf_log = load_mlperf_log(args.mlperf_log)
+    mlperf_log, num_repeats = load_mlperf_log(args.mlperf_log)
     
     # Load reference data
     logger.info(f"Loading reference data from {args.reference_data}")
@@ -336,6 +353,7 @@ def main():
     
     logger.info(f"Reference data shape: {reference_df.shape}")
     logger.info(f"Reference columns: {list(reference_df.columns)}")
+    logger.info(f"Evaluation mode: pass@{num_repeats}" if num_repeats > 1 else "Evaluation mode: single-pass")
     
     # Log unique datasets in reference data
     if 'dataset' in reference_df.columns:
@@ -369,12 +387,17 @@ def main():
     logger.info(f"Loading tokenizer: {args.tokenizer}")
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     
-    # Group MLPerf log entries by dataset
+    # Group MLPerf log entries by dataset and track repeats
     logger.info("Grouping MLPerf log entries by dataset...")
     dataset_entries = defaultdict(list)
     
+    # Track unique (qsl_idx, repeat_idx) pairs to verify coverage
+    qsl_repeat_pairs = set()
+    
     for entry in mlperf_log:
         qsl_idx = entry['qsl_idx']
+        repeat_idx = entry.get('repeat_idx', 0)
+        
         if qsl_idx >= len(reference_df):
             logger.warning(f"qsl_idx {qsl_idx} out of range (max: {len(reference_df)-1})")
             continue
@@ -382,10 +405,16 @@ def main():
         ref_row = reference_df.iloc[qsl_idx]
         dataset_name = validate_dataset_name(ref_row['dataset'])
         dataset_entries[dataset_name].append(entry)
+        qsl_repeat_pairs.add((qsl_idx, repeat_idx))
+    
+    # Count unique qsl_idx values
+    unique_qsl_indices = set(pair[0] for pair in qsl_repeat_pairs)
     
     logger.info(f"Grouped entries by dataset:")
     for ds_name, entries in sorted(dataset_entries.items()):
-        logger.info(f"  {ds_name}: {len(entries)} samples")
+        logger.info(f"  {ds_name}: {len(entries)} entries")
+    logger.info(f"Unique samples (qsl_idx): {len(unique_qsl_indices)}")
+    logger.info(f"Total entries (samples × repeats): {len(qsl_repeat_pairs)}")
     
     # Pre-load LiveCodeBench benchmark if needed
     lcb_executor = None
@@ -408,7 +437,13 @@ def main():
     logger.info("\nProcessing MLPerf log entries by dataset...")
     
     results = []
-    dataset_stats = defaultdict(lambda: {"correct": 0, "total": 0})
+    # Track stats for each repeat and aggregated
+    dataset_stats = defaultdict(lambda: {
+        "per_repeat": {i: {"correct": 0, "total": 0} for i in range(num_repeats)},
+        "aggregated": {"correct": 0, "total": 0}  # pass@k: at least one correct
+    })
+    # Track results per (qsl_idx, repeat_idx) for aggregation
+    qsl_results = defaultdict(lambda: {i: None for i in range(num_repeats)})
     outputs_data = []  # For saving detokenized outputs
     
     try:
@@ -431,16 +466,25 @@ def main():
                 if args.save_outputs:
                     outputs_data.extend(outputs_batch)
                 
-                # Update stats
+                # Update per-repeat stats and track for aggregation
                 for res in results_batch:
-                    dataset_stats[dataset_name]["total"] += 1
-                    if res['is_correct']:
-                        dataset_stats[dataset_name]["correct"] += 1
+                    repeat_idx = res['repeat_idx']
+                    qsl_idx = res['qsl_idx']
+                    is_correct = res['is_correct']
+                    
+                    # Track result for aggregation
+                    qsl_results[(dataset_name, qsl_idx)][repeat_idx] = is_correct
+                    
+                    # Update per-repeat stats
+                    dataset_stats[dataset_name]["per_repeat"][repeat_idx]["total"] += 1
+                    if is_correct:
+                        dataset_stats[dataset_name]["per_repeat"][repeat_idx]["correct"] += 1
             else:
                 # Sequential evaluation for non-LCB datasets
-                for entry in tqdm(entries, desc=f"Evaluating {dataset_name}", unit="sample"):
+                for entry in tqdm(entries, desc=f"Evaluating {dataset_name}", unit="entry"):
                     seq_id = entry['seq_id']
                     qsl_idx = entry['qsl_idx']
+                    repeat_idx = entry.get('repeat_idx', 0)
                     hex_data = entry['data']
                     
                     ref_row = reference_df.iloc[qsl_idx]
@@ -456,7 +500,7 @@ def main():
                             model_output, ground_truth, dataset_name
                         )
                     except Exception as e:
-                        logger.warning(f"Evaluation error for qsl_idx={qsl_idx}, dataset={dataset_name}: {e}")
+                        logger.warning(f"Evaluation error for qsl_idx={qsl_idx}, repeat={repeat_idx}, dataset={dataset_name}: {e}")
                         is_correct = False
                         extracted = None
                         eval_details = f"Evaluation error: {e}"
@@ -465,6 +509,7 @@ def main():
                     result = {
                         'seq_id': seq_id,
                         'qsl_idx': qsl_idx,
+                        'repeat_idx': repeat_idx,
                         'dataset': dataset_name,
                         'is_correct': is_correct,
                         'extracted_answer': str(extracted) if extracted is not None else None,
@@ -479,6 +524,7 @@ def main():
                     if args.save_outputs:
                         output_record = {
                             'qsl_idx': qsl_idx,
+                            'repeat_idx': repeat_idx,
                             'seq_id': seq_id,
                             'dataset': dataset_name,
                             'ground_truth': ground_truth,
@@ -490,10 +536,13 @@ def main():
                         }
                         outputs_data.append(output_record)
                     
-                    # Update stats
-                    dataset_stats[dataset_name]["total"] += 1
+                    # Track result for this (qsl_idx, repeat_idx)
+                    qsl_results[(dataset_name, qsl_idx)][repeat_idx] = is_correct
+                    
+                    # Update per-repeat stats
+                    dataset_stats[dataset_name]["per_repeat"][repeat_idx]["total"] += 1
                     if is_correct:
-                        dataset_stats[dataset_name]["correct"] += 1
+                        dataset_stats[dataset_name]["per_repeat"][repeat_idx]["correct"] += 1
     
     finally:
         # Clean up LiveCodeBench executor
@@ -502,25 +551,66 @@ def main():
             lcb_executor.shutdown(wait=True)
             os.environ.pop('TQDM_DISABLE', None)
     
-    # Calculate overall stats
-    total_correct = sum(stats["correct"] for stats in dataset_stats.values())
-    total_samples = sum(stats["total"] for stats in dataset_stats.values())
+    # Aggregate results across repeats (pass@k logic)
+    logger.info("\nAggregating results across repeats...")
+    for (dataset_name, qsl_idx), repeat_results in qsl_results.items():
+        # Check if ANY repeat is correct (pass@k)
+        is_pass_k_correct = any(
+            result for result in repeat_results.values() if result is not None and result
+        )
+        
+        # Update aggregated stats
+        dataset_stats[dataset_name]["aggregated"]["total"] += 1
+        if is_pass_k_correct:
+            dataset_stats[dataset_name]["aggregated"]["correct"] += 1
+    
+    # Calculate overall stats (aggregated pass@k if num_repeats > 1, else per-repeat[0])
+    if num_repeats > 1:
+        total_correct = sum(stats["aggregated"]["correct"] for stats in dataset_stats.values())
+        total_samples = sum(stats["aggregated"]["total"] for stats in dataset_stats.values())
+    else:
+        total_correct = sum(stats["per_repeat"][0]["correct"] for stats in dataset_stats.values())
+        total_samples = sum(stats["per_repeat"][0]["total"] for stats in dataset_stats.values())
+    
     overall_accuracy = (total_correct / total_samples * 100) if total_samples > 0 else 0.0
     
     # Print results
     print("\n" + "=" * 80)
     print("MLPerf Accuracy Evaluation Results")
     print("=" * 80)
-    print(f"Total samples: {total_samples}")
-    print(f"Overall accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
+    print(f"Evaluation mode: pass@{num_repeats}" if num_repeats > 1 else "Evaluation mode: single-pass")
+    print(f"Total unique samples: {total_samples}")
+    print(f"Overall pass@{num_repeats} accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})" if num_repeats > 1 
+          else f"Overall accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
     print("=" * 80)
-    print("\nPer-Dataset Breakdown:")
-    print("-" * 80)
     
-    for dataset_name in sorted(dataset_stats.keys()):
-        stats = dataset_stats[dataset_name]
-        accuracy = (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0.0
-        print(f"{dataset_name:20s}: {accuracy:6.2f}% ({stats['correct']:4d}/{stats['total']:4d})")
+    if num_repeats > 1:
+        print("\nPer-Dataset pass@k Results (aggregated):")
+        print("-" * 80)
+        for dataset_name in sorted(dataset_stats.keys()):
+            stats = dataset_stats[dataset_name]["aggregated"]
+            if stats["total"] > 0:
+                accuracy = (stats["correct"] / stats["total"] * 100)
+                print(f"{dataset_name:20s}: {accuracy:6.2f}% ({stats['correct']:4d}/{stats['total']:4d})")
+        
+        print("\n" + "=" * 80)
+        print("Per-Dataset, Per-Repeat Breakdown:")
+        print("-" * 80)
+        for dataset_name in sorted(dataset_stats.keys()):
+            print(f"\n{dataset_name}:")
+            for repeat_idx in range(num_repeats):
+                stats = dataset_stats[dataset_name]["per_repeat"][repeat_idx]
+                if stats["total"] > 0:
+                    accuracy = (stats["correct"] / stats["total"] * 100)
+                    print(f"  Repeat {repeat_idx}: {accuracy:6.2f}% ({stats['correct']:4d}/{stats['total']:4d})")
+    else:
+        print("\nPer-Dataset Breakdown:")
+        print("-" * 80)
+        for dataset_name in sorted(dataset_stats.keys()):
+            stats = dataset_stats[dataset_name]["per_repeat"][0]
+            if stats["total"] > 0:
+                accuracy = (stats["correct"] / stats["total"] * 100)
+                print(f"{dataset_name:20s}: {accuracy:6.2f}% ({stats['correct']:4d}/{stats['total']:4d})")
     
     print("=" * 80)
     
@@ -528,8 +618,8 @@ def main():
     if args.save_outputs:
         logger.info(f"Saving detokenized outputs to {args.save_outputs}...")
         
-        # Sort by qsl_idx for ordered output
-        outputs_data_sorted = sorted(outputs_data, key=lambda x: x['qsl_idx'])
+        # Sort by (qsl_idx, repeat_idx) for ordered output
+        outputs_data_sorted = sorted(outputs_data, key=lambda x: (x['qsl_idx'], x.get('repeat_idx', 0)))
         
         # Convert to DataFrame for easier inspection
         outputs_df = pd.DataFrame(outputs_data_sorted)
@@ -545,19 +635,46 @@ def main():
     
     # Save detailed results if requested
     if args.output_file:
+        # Build per-dataset stats
+        per_dataset_stats = {}
+        for dataset_name, stats in dataset_stats.items():
+            if num_repeats > 1:
+                # Aggregated pass@k stats
+                agg_stats = stats["aggregated"]
+                per_dataset_stats[dataset_name] = {
+                    "pass_k": num_repeats,
+                    "aggregated": {
+                        "correct": agg_stats["correct"],
+                        "total": agg_stats["total"],
+                        "accuracy": (agg_stats["correct"] / agg_stats["total"] * 100) if agg_stats["total"] > 0 else 0.0
+                    },
+                    "per_repeat": {}
+                }
+                # Add per-repeat stats
+                for repeat_idx in range(num_repeats):
+                    repeat_stats = stats["per_repeat"][repeat_idx]
+                    if repeat_stats["total"] > 0:
+                        per_dataset_stats[dataset_name]["per_repeat"][repeat_idx] = {
+                            "correct": repeat_stats["correct"],
+                            "total": repeat_stats["total"],
+                            "accuracy": (repeat_stats["correct"] / repeat_stats["total"] * 100)
+                        }
+            else:
+                # Single-pass stats
+                single_stats = stats["per_repeat"][0]
+                per_dataset_stats[dataset_name] = {
+                    "correct": single_stats["correct"],
+                    "total": single_stats["total"],
+                    "accuracy": (single_stats["correct"] / single_stats["total"] * 100) if single_stats["total"] > 0 else 0.0
+                }
+
         output_data = {
             "summary": {
+                "num_repeats": num_repeats,
                 "total_samples": total_samples,
                 "total_correct": total_correct,
                 "overall_accuracy": overall_accuracy,
-                "per_dataset": {
-                    dataset: {
-                        "correct": stats["correct"],
-                        "total": stats["total"],
-                        "accuracy": (stats["correct"] / stats["total"] * 100) if stats["total"] > 0 else 0.0
-                    }
-                    for dataset, stats in dataset_stats.items()
-                }
+                "per_dataset": per_dataset_stats
             },
             "detailed_results": results if args.verbose else None
         }

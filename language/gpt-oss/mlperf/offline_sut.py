@@ -66,9 +66,11 @@ class OfflineSUT(BaseSUT):
         """
         logger.info(f"Received {len(query_samples)} queries")
 
-        # Update progress bar total (Offline gets all queries at once)
+        # Update progress bar total by accumulating (for repeats_per_sample > 1)
+        # LoadGen may call issue_queries multiple times for repeated sampling
         if self.progress_bar is not None:
-            self.progress_bar.total = len(query_samples)
+            self.progress_bar.total = (
+                self.progress_bar.total or 0) + len(query_samples)
             self.progress_bar.refresh()
 
         # Store queries for batch processing

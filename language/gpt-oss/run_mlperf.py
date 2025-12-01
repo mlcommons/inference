@@ -169,6 +169,13 @@ def create_argument_parser() -> argparse.ArgumentParser:
         help="Maximum concurrent requests to backend (SGLang handles batching internally)"
     )
 
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=1200,
+        help="Timeout for HTTP requests in seconds (default: 1200)"
+    )
+
     return parser
 
 
@@ -355,7 +362,7 @@ def main():
             pool_size = int(args.max_concurrency * 1.1)  # 10% safety margin
             backend = SGLangBackend(
                 server_url=args.server_url,
-                timeout=1200,
+                timeout=args.timeout,
                 max_pool_size=pool_size
             )
         else:

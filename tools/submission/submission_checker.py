@@ -1062,6 +1062,9 @@ class Config:
         else:
             raise ValueError("invalid system type")
 
+    def skip_calibration(self):
+        return self.skip_calibration_check or self.version in ["v5.0"]
+
     def get_mlperf_model(self, model, extra_model_mapping=None):
         # preferred - user is already using the official name
         if model in self.models:
@@ -1890,7 +1893,7 @@ def get_power_metric(config, scenario_fixed, log_path, is_valid, res):
                 samples_per_query = 8
 
             if (scenario_fixed in ["MultiStream"]
-                ) and scenario in ["SingleStream"]:
+                    ) and scenario in ["SingleStream"]:
                 power_metric = (
                     avg_power * power_duration * samples_per_query * 1000 / num_queries
                 )
@@ -2267,8 +2270,6 @@ def check_results_dir(
             if filter_submitter and submitter != filter_submitter:
                 continue
             results_path = os.path.join(division, submitter, "results")
-            measurements_path = os.path.join(
-                division, submitter, "measurements")
             systems_path = os.path.join(division, submitter, "systems")
             if not os.path.exists(results_path):
                 continue
@@ -2374,8 +2375,6 @@ def check_results_dir(
                         extra_model_mapping = json.load(fp)
 
             if not config.skip_all_systems_with_results:
-                measurement_diff = list(
-                    set(list_dir(measurements_path)) - set(list_dir(results_path)))
                 systems_diff = list(
                     set(
                         [
@@ -2386,15 +2385,6 @@ def check_results_dir(
                     )
                     - set(list_dir(results_path))
                 )
-                if len(measurement_diff) > 0:
-                    log.error(
-                        "%s/%s/measurements has the following directories with no results: %s",
-                        division,
-                        submitter,
-                        measurement_diff,
-                    )
-                    results[os.path.join(results_path)] = None
-
                 if len(systems_diff) > 0:
                     log.error(
                         "%s/%s/systems has the following files with no results: %s",
@@ -2405,7 +2395,7 @@ def check_results_dir(
                     results[os.path.join(results_path)] = None
 
             #  Check for calibration documentation
-            if not config.skip_calibration_check and division not in ["open"]:
+            if not config.skip_calibration() and division not in ["open"]:
                 calibration_path_root = os.path.join(
                     division, submitter, "calibration.md")
                 calibration_path_doc = os.path.join(
@@ -2568,7 +2558,7 @@ def check_results_dir(
                         measurement_dir = os.path.join(
                             division,
                             submitter,
-                            "measurements",
+                            "results",
                             system_desc,
                             model_name,
                             scenario,
@@ -2797,7 +2787,7 @@ def check_results_dir(
                             compliance_dir = os.path.join(
                                 division,
                                 submitter,
-                                "compliance",
+                                "results",
                                 system_desc,
                                 model_name,
                                 scenario,
@@ -3064,15 +3054,7 @@ def check_measurement_dir(
                     log.error(
                         "%s, field %s is missing meaningful value", fname, k)
 
-        impl = system_file[len(system_desc) + 1: -end]
         code_dir = os.path.join(root, "code", model)
-        if os.path.isfile(code_dir):
-            with open(code_dir, "r") as f:
-                line = f.read()
-                code_dir = os.path.join(root, "code", line.strip(), impl)
-        else:
-            code_dir = os.path.join(root, "code", model, impl)
-
         if not os.path.exists(code_dir):
             # see if the code dir is per model
             if not os.path.exists(os.path.dirname(code_dir)):
@@ -3080,7 +3062,7 @@ def check_measurement_dir(
                 is_valid = False
 
     else:
-        log.error("%s is missing %s*.json", fname, system_desc)
+        log.error("%s is missing %s*.json", fname, system_file)
         is_valid = False
 
     return is_valid, weight_data_types
@@ -3205,7 +3187,7 @@ def check_compliance_acc_dir(test_dir, model, config):
                             break
                         else:
                             required_delta_perc = config.get_delta_perc(
-                                model, acc_type[0]
+                                model, acc_type
                             )
                             delta_perc = (
                                 abs(

@@ -5,7 +5,7 @@
 + Streamer for communicating with loadgen has quite some overhead. This is only meant to provide functional implementation
 + For custom/optimized implementations of this benchmark it is important to include the :
         - For server scenario, it is necessary to call `lg.FirstTokenComplete(response)` for each query. This way the first token will be reported and it's latency will be measured.
-        - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/nvidia/TEST06/)
+        - For all scenarios, when calling `lg.QuerySamplesComplete(response)`, it is necessary that each of the elements in response is a `lg.QuerySampleResponse` that contains the number of tokens (can be create this way: `lg.QuerySampleResponse(qitem.id, bi[0], bi[1], n_tokens)`). The number of tokens reported should match with the number of tokens on your answer and this will be checked in [TEST06](../../compliance/TEST06/)
 
 ## Automated command to run the benchmark via MLCFlow
 
@@ -106,11 +106,10 @@ MLCommons hosts the model for download **exclusively by MLCommons Members**. You
 
 ### Download model through MLCFlow Automation
 
-**From MLCOMMONS Google Drive**
-
+**From MLCOMMONS Storage**
 
 ```
-mlcr get,ml-model,llama3 --outdirname=${CHECKPOINT_PATH} -j
+mlcr get,ml-model,llama3,_mlc,_r2-downloader,_405b --outdirname=${CHECKPOINT_PATH} -j
 ```
 
 **From HuggingFace**
@@ -140,16 +139,34 @@ cd ${CHECKPOINT_PATH} && git checkout be673f326cab4cd22ccfef76109faf68e41aa5f1
 **Validation**
 
 ```
-mlcr get,dataset,mlperf,inference,llama3,_validation --outdirname=<path to download> -j
+mlcr get,dataset,mlperf,inference,llama3,_validation,_r2-downloader --outdirname=<path to download> -j
 ```
 
 **Calibration**
 
 ```
-mlcr get,dataset,mlperf,inference,llama3,_calibration --outdirname=<path to download> -j
+mlcr get,dataset,mlperf,inference,llama3,_calibration,_r2-downloader --outdirname=<path to download> -j
 ```
 
 ### Preprocessed
+
+**Using R2-Downloader**
+
+Download the model using the MLCommons R2 Downloader:
+
+Validation:
+
+```bash
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/llama3-1-405b-dataset-8313.uri
+```
+
+Calibration:
+
+```
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) https://inference.mlcommons-storage.org/metadata/llama3-1-405b-calibration-dataset-512.uri
+```
+
+**Using RClone**
 
 You can use Rclone to download the preprocessed dataset from a Cloudflare R2 bucket.
 

@@ -46,7 +46,6 @@ python reference_mlperf.py \
     --manifest ${MANIFEST_FILE} \
     --scenario ${SCENARIO} \
     --log_dir ${RUN_LOGS} \
-    --num_workers ${NUM_INSTS} \
-    "--accuracy"
+    --num_workers ${NUM_INSTS} 
 
 echo "Time Stop: $(date +%s)"

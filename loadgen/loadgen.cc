@@ -294,7 +294,7 @@ std::vector<QueryMetadata> GenerateQueries(
     // For MultiStream, loaded samples is properly padded.
     // For Offline, we create a 'remainder' query at the end of this function.
     min_queries = loaded_samples.size() / samples_per_query;
-    
+
     // For repeated sampling, multiply min_queries by repeats
     if (mode == TestMode::AccuracyOnly) {
       min_queries *= settings.repeats_per_sample;
@@ -407,15 +407,17 @@ std::vector<QueryMetadata> GenerateQueries(
                                : sample_distribution(sample_rng)];
       }
     }
-    
-    // Handle repeated sampling: create repeats_per_sample queries for the same sample(s)
-    // In PerformanceOnly mode, this is always 1 (single query per sample)
+
+    // Handle repeated sampling: create repeats_per_sample queries for the same
+    // sample(s) In PerformanceOnly mode, this is always 1 (single query per
+    // sample)
     for (uint64_t k = 0; k < settings.repeats_per_sample; k++) {
-      queries.emplace_back(samples, timestamp, response_delegate, sequence_gen, k);
+      queries.emplace_back(samples, timestamp, response_delegate, sequence_gen,
+                           k);
       prev_timestamp = timestamp;
       timestamp += schedule_distribution(schedule_rng);
     }
-    
+
     // In equal_issue mode, the min_queries will be bumped up by a multiple of
     // the dataset size if the test time has not met the threshold.
     if (enable_equal_issue && (queries.size() >= min_queries) &&
@@ -435,10 +437,11 @@ std::vector<QueryMetadata> GenerateQueries(
       for (auto& s : samples) {
         s = loaded_samples[sample_distribution(sample_rng)];
       }
-      
+
       // Handle repeated sampling for remainder query as well
       for (uint64_t k = 0; k < settings.repeats_per_sample; k++) {
-        queries.emplace_back(samples, timestamp, response_delegate, sequence_gen, k);
+        queries.emplace_back(samples, timestamp, response_delegate,
+                             sequence_gen, k);
       }
     }
   }

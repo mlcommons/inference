@@ -88,7 +88,7 @@ struct TestSettingsInternal {
 
   bool infer_token_latencies = false;
   int64_t token_latency_scaling_factor;
-  
+
   uint64_t repeats_per_sample;
 };
 

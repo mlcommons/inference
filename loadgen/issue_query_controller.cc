@@ -460,8 +460,8 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
 #if USE_NEW_LOGGING_FORMAT
             std::stringstream ss;
             ss << "IssueQueryThread " << thread_idx
-               << " Ending early: Too many outstanding queries."
-               << " issued " << queries_issued_total << " outstanding "
+               << " Ending early: Too many outstanding queries." << " issued "
+               << queries_issued_total << " outstanding "
                << queries_outstanding;
             MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
 #else
@@ -500,8 +500,8 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
 #if USE_NEW_LOGGING_FORMAT
         std::stringstream ss;
         ss << "IssueQueryThread " << thread_idx
-           << " Ending early: Max query count reached."
-           << " query_count " << queries_issued;
+           << " Ending early: Max query count reached." << " query_count "
+           << queries_issued;
         MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
 #else
         detail.Error("IssueQueryThread ", std::to_string(thread_idx),
@@ -520,8 +520,8 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
 #if USE_NEW_LOGGING_FORMAT
         std::stringstream ss;
         ss << "IssueQueryThread " << thread_idx
-           << " Ending early: Max test duration reached."
-           << " duration_ns " << duration.count();
+           << " Ending early: Max test duration reached." << " duration_ns "
+           << duration.count();
         MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
 #else
         detail.Error("IssueQueryThread ", std::to_string(thread_idx),

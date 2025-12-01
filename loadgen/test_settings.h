@@ -271,7 +271,7 @@ struct TestSettings {
   /// \brief Infer token latencies
   bool infer_token_latencies = false;
   uint64_t token_latency_scaling_factor;
-  
+
   /// \brief Enable repeated sampling in accuracy mode
   /// \details When enabled, each sample is issued
   /// repeats_per_sample times and multiple responses are collected.

@@ -288,16 +288,16 @@ void AsyncLog::LogAccuracy(uint64_t seq_id, const QuerySampleIndex qsl_idx,
   *accuracy_out_ << (accuracy_needs_comma_ ? ",\n{ " : "\n{ ");
 
   if (!use_tokens_) {
-    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx,
-            "repeat_idx", repeat_index, "data", response);
+    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "repeat_idx",
+            repeat_index, "data", response);
   } else if (!needs_first_token_) {
-    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx,
-            "repeat_idx", repeat_index, "data", response, "token_count", n_tokens);
+    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "repeat_idx",
+            repeat_index, "data", response, "token_count", n_tokens);
   } else {
     const size_t i = seq_id - latencies_first_sample_sequence_id_;
-    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx,
-            "repeat_idx", repeat_index, "data", response, "token_data",
-            token_records_[i], "token_count", n_tokens);
+    LogArgs(accuracy_out_, "seq_id", seq_id, "qsl_idx", qsl_idx, "repeat_idx",
+            repeat_index, "data", response, "token_data", token_records_[i],
+            "token_count", n_tokens);
   }
 
   *accuracy_out_ << " }";
@@ -814,8 +814,7 @@ void Logger::CollectTlsLoggerStats(TlsLogger* tls_logger) {
   if (max_entry_vector_size > kTlsLogReservedEntryCount) {
 #if USE_NEW_LOGGING_FORMAT
     std::stringstream msg;
-    msg << "Logging allocation detected:"
-        << " tid: " << tls_logger->Tid()
+    msg << "Logging allocation detected:" << " tid: " << tls_logger->Tid()
         << " reserved_entries: " << kTlsLogReservedEntryCount
         << " max_entries: " << max_entry_vector_size;
     MLPERF_LOG_WARNING((*this), "warning_generic_message", msg.str());

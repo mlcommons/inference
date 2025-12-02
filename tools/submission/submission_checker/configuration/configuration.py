@@ -23,7 +23,6 @@ class Config:
         # TODO: Load values from 
         self.models = self.base["models"]
         self.seeds = self.base["seeds"]
-        self.test05_seeds = self.base["test05_seeds"]
         self.accuracy_target = self.base["accuracy-target"]
         self.accuracy_delta_perc = self.base["accuracy-delta-perc"]
         self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
@@ -73,6 +72,8 @@ class Config:
             model = "bert-99.9"
         elif "bert-99" in model:
             model = "bert-99"
+        elif "llama3_1-405b" in model:
+            model = "llama3.1-405b"
         # map again
         mlperf_model = self.base["model_mapping"].get(model, model)
         return mlperf_model

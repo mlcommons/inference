@@ -485,7 +485,8 @@ if __name__ == "__main__":
 
     # Load tokenizer for decoding tokens to text
     print("Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained("openai/gpt-oss-120b", trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        "openai/gpt-oss-120b", trust_remote_code=True)
     print("Tokenizer loaded successfully")
 
     # Initialize columns for harmony tokenized input
@@ -508,7 +509,8 @@ if __name__ == "__main__":
 
             # Decode tokens to text using the tokenizer
             tokens_list = tokens.tolist() if hasattr(tokens, 'tolist') else list(tokens)
-            text_input = tokenizer.decode(tokens_list, skip_special_tokens=False)
+            text_input = tokenizer.decode(
+                tokens_list, skip_special_tokens=False)
 
             # Update the original DataFrame with successful data
             df.at[index, 'tok_input'] = tokens_list

@@ -168,7 +168,9 @@ class LocalProcessDeployer(EndpointDeployer):
         """Start the local process."""
         cmd = self._build_command()
         logger.info("Starting local process with command: {}", cmd)
-        logger.info("Starting local process with environment variables: {}", os.environ)
+        logger.info(
+            "Starting local process with environment variables: {}",
+            os.environ)
 
         # Get log file paths
         stdout_file_path = get_log_file_path(
@@ -189,8 +191,12 @@ class LocalProcessDeployer(EndpointDeployer):
         )
 
         logger.info("Started local process with PID: {}", process.pid)
-        logger.info("Local process stdout will be logged to: {}", stdout_file_path)
-        logger.info("Local process stderr will be logged to: {}", stderr_file_path)
+        logger.info(
+            "Local process stdout will be logged to: {}",
+            stdout_file_path)
+        logger.info(
+            "Local process stderr will be logged to: {}",
+            stderr_file_path)
 
         self._process = process
 
@@ -203,7 +209,8 @@ class LocalProcessDeployer(EndpointDeployer):
         # Try graceful termination first
         self._process.terminate()
         try:
-            self._process.wait(timeout=self.endpoint.shutdown_timeout.total_seconds())
+            self._process.wait(
+                timeout=self.endpoint.shutdown_timeout.total_seconds())
             logger.info("Local process terminated gracefully")
         except subprocess.TimeoutExpired:
             logger.warning(

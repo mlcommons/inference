@@ -425,7 +425,8 @@ class PositionalVllmCliFlagError(ValueError):
 class BlacklistedVllmCliFlagError(ValueError):
     """The exception raised when a blacklisted vllm CLI flag is encountered."""
 
-    BLACKLIST: ClassVar[list[str]] = ["--model", "--host", "--port", "--api-key"]
+    BLACKLIST: ClassVar[list[str]] = [
+        "--model", "--host", "--port", "--api-key"]
 
     def __init__(self, flag: str) -> None:
         """Initialize the exception."""

@@ -32,7 +32,8 @@ def get_log_file_path(key: str, settings: Settings) -> Path:
     )
 
 
-def setup_loguru_for_benchmark(settings: Settings, verbosity: Verbosity) -> None:
+def setup_loguru_for_benchmark(
+        settings: Settings, verbosity: Verbosity) -> None:
     """Setup the loguru logger for running the benchmark."""
     logger.remove()
     logger.add(sys.stdout, level=verbosity.value.upper())

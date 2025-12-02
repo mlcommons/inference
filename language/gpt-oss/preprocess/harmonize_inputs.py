@@ -12,6 +12,7 @@ import os
 import pandas as pd
 from multiprocessing import Pool, cpu_count
 from tqdm import tqdm
+from transformers import AutoTokenizer
 from openai_harmony import (
     load_harmony_encoding,
     HarmonyEncodingName,
@@ -482,6 +483,11 @@ if __name__ == "__main__":
     successful_count = 0
     error_count = 0
 
+    # Load tokenizer for decoding tokens to text
+    print("Loading tokenizer...")
+    tokenizer = AutoTokenizer.from_pretrained("openai/gpt-oss-120b", trust_remote_code=True)
+    print("Tokenizer loaded successfully")
+
     # Initialize columns for harmony tokenized input
     df['tok_input'] = None
     df['tok_input_len'] = None
@@ -500,34 +506,14 @@ if __name__ == "__main__":
             index, convo, tokens, dataset_name = result
             successful_count += 1
 
-            # Convert conversation to string format
-            conversation_parts = []
-            for message in convo.messages:
-                # Get role from message.author.role
-                role = message.author.role.value if hasattr(
-                    message.author.role, 'value') else str(
-                    message.author.role)
-
-                # Get content from message.content (which is a list)
-                content_parts = []
-                for content_item in message.content:
-                    if hasattr(content_item, 'text'):
-                        content_parts.append(content_item.text)
-                    else:
-                        content_parts.append(str(content_item))
-                content = ' '.join(content_parts)
-
-                # Format as "Role: content"
-                conversation_parts.append(f"{role}: {content}")
-
-            conversation_string = '\n'.join(conversation_parts)
+            # Decode tokens to text using the tokenizer
+            tokens_list = tokens.tolist() if hasattr(tokens, 'tolist') else list(tokens)
+            text_input = tokenizer.decode(tokens_list, skip_special_tokens=False)
 
             # Update the original DataFrame with successful data
-            df.at[index, 'tok_input'] = tokens.tolist() if hasattr(
-                tokens, 'tolist') else list(tokens)
-            df.at[index, 'tok_input_len'] = len(
-                tokens) if hasattr(tokens, '__len__') else 0
-            df.at[index, 'text_input'] = conversation_string
+            df.at[index, 'tok_input'] = tokens_list
+            df.at[index, 'tok_input_len'] = len(tokens_list)
+            df.at[index, 'text_input'] = text_input
 
     # Verify input and output have identical column lists
     input_columns = list(pd.read_pickle(args.data_file).columns)

@@ -80,12 +80,8 @@ def validate_dataframe(df: pd.DataFrame) -> None:
         raise ValueError("Missing required column: 'dataset'")
 
     # Check for tok_model_output_len (either single or with suffixes)
-    has_tok_len = False
-    if pass_k == 1:
-        has_tok_len = 'tok_model_output_len' in df.columns
-    else:
-        has_tok_len = all(
-            f'tok_model_output_len_{i}' in df.columns for i in range(pass_k))
+    has_tok_len = all(
+        f'tok_model_output_len_{i}' in df.columns for i in range(pass_k))
 
     if not has_tok_len:
         raise ValueError("Missing required tok_model_output_len column(s)")

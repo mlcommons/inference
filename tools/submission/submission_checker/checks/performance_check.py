@@ -1,10 +1,230 @@
 from .base import BaseCheck
+from ..constants import *
+from ..loader import SubmissionLogs
+from ..configuration.configuration import Config
+import os
 
 class PerformanceCheck(BaseCheck):
-    def __init__(self, log, path, parsed_log):
+    def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
         super().__init__(log, path)
-        self.parsed_log = parsed_log
-        self.checks.append(self.sample_check)
+        self.submission_logs = submission_logs
+        self.mlperf_log = self.submission_logs.performance_log
+        self.system_json = self.submission_logs.system_json
+        self.config = config
+        self.model = self.submission_logs.loader_data.get("benchmark", "")
+        self.model_mapping = self.submission_logs.loader_data.get("model_mapping", {})
+        self.model = self.config.get_mlperf_model(self.model, self.model_mapping)
+        self.scenario = self.submission_logs.loader_data.get("scenario", "")
+        self.division = self.submission_logs.loader_data.get("division", "")
+        self.setup_checks()
 
-    def sample_check(self):
+    def setup_checks(self):
+        self.checks.append(self.missing_check)
+        self.checks.append(self.loadgen_errors_check)
+        self.checks.append(self.equal_issue_check)
+        self.checks.append(self.performance_sample_count_check)
+        self.checks.append(self.seeds_check)
+        self.checks.append(self.latency_check)
+        self.checks.append(self.min_query_count_check)
+        self.checks.append(self.min_duration_check)
+        self.checks.append(self.network_check)
+
+    
+    def missing_check(self):
+        if self.mlperf_log is None:
+            self.log.error("Performance log missing at %s", self.path)
+            return False
+        return True
+    
+    def loadgen_errors_check(self):
+        if self.mlperf_log.has_error():
+            if self.config.ignore_uncommited:
+                has_other_errors = False
+                for error in self.mlperf_log.get_errors():
+                    if "Loadgen built with uncommitted changes!" not in error["value"]:
+                        has_other_errors = True
+            self.log.error("%s contains errors:", self.path)
+            for error in self.mlperf_log.get_errors():
+                self.log.error("%s", error["value"])
+
+            if not self.config.ignore_uncommited or has_other_errors:
+                self.log.error(
+                    "%s has loadgen errors, number of errors: %s", self.path, self.mlperf_log.num_errors()
+                )
+                return False
+        return True
+
+    
+    def equal_issue_check(self):
+        if self.config.requires_equal_issue(self.model, self.division) and self.mlperf_log["effective_sample_concatenate_permutation"]:
+            self.log.error("%s requires equal issue mode (sample_concatenate_permutation), expected=true, found=false", self.path)
+            return False
+        return True
+    
+    def performance_sample_count_check(self):
+        required_performance_sample_count = self.config.get_performance_sample_count(self.model)
+        performance_sample_count = self.mlperf_log["effective_performance_sample_count"]
+        if performance_sample_count < required_performance_sample_count:
+            self.log.error(
+                "%s performance_sample_count, found %d, needs to be >= %d",
+                self.path,
+                performance_sample_count,
+                required_performance_sample_count,
+            )
+            return False
+        return True
+    
+    def seeds_check(self):
+        config_seeds = self.config.seeds
+        qsl_rng_seed = self.mlperf_log["effective_qsl_rng_seed"]
+        sample_index_rng_seed = self.mlperf_log["effective_sample_index_rng_seed"]
+        schedule_rng_seed = self.mlperf_log["effective_schedule_rng_seed"]
+        is_valid = True
+        if qsl_rng_seed != config_seeds["qsl_rng_seed"]:
+            self.log.error(
+                "%s qsl_rng_seed is wrong, expected=%s, found=%s",
+                self.path,
+                config_seeds["qsl_rng_seed"],
+                qsl_rng_seed,
+            )
+            is_valid = False
+        if sample_index_rng_seed != config_seeds["sample_index_rng_seed"]:
+            self.log.error(
+                "%s sample_index_rng_seed is wrong, expected=%s, found=%s",
+                self.path,
+                config_seeds["sample_index_rng_seed"],
+                sample_index_rng_seed,
+            )
+            is_valid = False
+        if schedule_rng_seed != config_seeds["schedule_rng_seed"]:
+            self.log.error(
+                "%s schedule_rng_seed is wrong, expected=%s, found=%s",
+                self.path,
+                config_seeds["schedule_rng_seed"],
+                schedule_rng_seed,
+            )
+            is_valid = False
+        return is_valid
+    
+    def latency_check(self):
+        uses_early_stopping = self.config.uses_early_stopping(self.scenario)
+        if uses_early_stopping:
+            # check if early_stopping condition was met
+            if not self.mlperf_log["early_stopping_met"]:
+                early_stopping_result = self.mlperf_log["early_stopping_result"]
+                self.log.error(
+                    "Early stopping condition was not met, msg=%s",
+                    early_stopping_result,
+                )
+                return False
+            # If the scenario has a target latency (Server scenario), check
+            # that the target latency that was passed to the early stopping
+            # is less than the target latency.
+            target_latency = self.config.latency_constraint.get(
+                self.model, dict()).get(self.scenario)
+            if target_latency:
+                early_stopping_latency_ns = self.mlperf_log["effective_target_latency_ns"]
+                self.log.info(
+                    "Target latency: %s, Early Stopping Latency: %s, Scenario: %s",
+                    target_latency,
+                    early_stopping_latency_ns,
+                    self.scenario,
+                )
+                if early_stopping_latency_ns > target_latency:
+                    self.log.error(
+                        "%s Latency constraint with early stopping not met, expected=%s, found=%s",
+                        self.path,
+                        target_latency,
+                        early_stopping_latency_ns,
+                    )
+                    return False
+        else:
+            # check if the benchmark meets latency constraint
+            latency_99_percentile = self.mlperf_log["result_99.00_percentile_latency_ns"]
+            target_latency = self.config.latency_constraint.get(
+                self.model, dict()).get(self.scenario)
+            self.log.info(
+                "Target latency: %s, Latency: %s, Scenario: %s",
+                target_latency,
+                latency_99_percentile,
+                self.scenario,
+            )
+            if target_latency:
+                if latency_99_percentile > target_latency:
+                    self.log.error(
+                        "%s Latency constraint not met, expected=%s, found=%s",
+                        self.path,
+                        target_latency,
+                        latency_99_percentile,
+                    )
+                    return False
+        return True
+
+    def min_query_count_check(self):
+        uses_early_stopping = self.config.uses_early_stopping(self.scenario)
+        min_query_count = self.mlperf_log["effective_min_query_count"]
+        samples_per_query = self.mlperf_log["effective_samples_per_query"]
+        if not uses_early_stopping:
+            required_min_query_count = self.config.get_min_query_count(self.model, self.scenario)
+            if required_min_query_count and min_query_count < required_min_query_count:
+                self.log.error(
+                    "%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
+                    self.path,
+                    required_min_query_count,
+                    min_query_count,
+                )
+                return False
+        if self.scenario.lower() == "offline" and (
+                samples_per_query < OFFLINE_MIN_SPQ_SINCE_V4[self.model]) and self.division.lower() == "closed":
+            self.log.error(
+                "%s Required minimum samples per query not met by user config, Expected=%s, Found=%s",
+                self.path,
+                OFFLINE_MIN_SPQ_SINCE_V4[self.model],
+                samples_per_query,
+            )
+            return False
+        return True
+    
+    def min_duration_check(self):
+        required_min_duration = TEST_DURATION_MS
+        min_duration = self.mlperf_log["effective_min_duration_ms"]
+        if min_duration < required_min_duration:
+            self.log.error(
+                "%s Test duration less than 600s in user config. expected=%s, found=%s",
+                self.path,
+                required_min_duration,
+                min_duration,
+            )
+            return False
+        return True
+    
+    def network_check(self):
+        is_network_mode_sys_spec_str = self.system_json.get(SYSTEM_DESC_IS_NETWORK_MODE)
+        is_network_system = (
+            is_network_mode_sys_spec_str.lower() == "true"
+            if is_network_mode_sys_spec_str is not None
+            else False
+        )
+        # verify that the system corresponds the division
+        is_valid = True
+        expected_state_by_division = {"network": True, "closed": False}
+        if self.division in expected_state_by_division:
+            is_valid = expected_state_by_division[self.division] is is_network_system
+        if not is_valid:
+            self.log.error(
+                f"{self.path} incorrect network mode (={is_network_system}) for division '{self.division}'"
+            )
+            return False
+
+
+        sut_name = self.mlperf_log["sut_name"]
+        if is_network_system:
+            # for network mode verify the SUT name is valid, according to the rules
+            # (must include "Network SUT" in name)
+            if NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME not in sut_name:
+                self.log.error(
+                    f"{self.path} invalid sut name for network mode. expecting the substring '{NETWORK_MODE_REQUIRED_SUBSTRING_IN_SUT_NAME}' got '{sut_name}'"
+                )
+                return False
+
         return True

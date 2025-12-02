@@ -116,9 +116,10 @@ class LoadgenParser(BaseParser):
     def num_errors(self):
         """Get number of errors in the log."""
         count = 0
-        for message in self.messages:
-            if message["metadata"]["is_error"]:
-                count += 1
+        for key in self.messages:
+            for message in self.messages[key]:
+                if message["metadata"]["is_error"]:
+                    count += 1
         return count
 
     def num_warnings(self):
@@ -142,9 +143,10 @@ class LoadgenParser(BaseParser):
         Get all the error messages in the log.
         """
         results = []
-        for message in self.messages:
-            if message["metadata"]["is_error"]:
-                results.append(message)
+        for key in self.messages:
+            for message in self.messages[key]:
+                if message["metadata"]["is_error"]:
+                    results.append(message)
         return results
 
     def get_warnings(self):

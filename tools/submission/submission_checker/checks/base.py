@@ -20,24 +20,22 @@ class BaseCheck(ABC):
         """
         valid = True
         errors = []
-        for check in check:
-            v, msg = self.execute(check)
+        for check in self.checks:
+            v = self.execute(check)
             valid &= v
-            if not v:
-                errors.append(msg)
-        return valid, errors
+            if not valid:
+                return False
+        return valid
             
-    def execute(check):
+    def execute(self, check):
         return check()
     
     def __call__(self):
         """Allows the check instance to be called like a function."""
         self.log("Starting check...")
-        valid, errors = self.run_checks()
+        valid = self.run_checks()
         if valid:
             self.log.info("Checks passed")
         else:
             self.log.error("%s Checks failed", self.path)
-            for error in errors:
-                self.log.error(error)
         return valid

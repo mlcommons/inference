@@ -693,6 +693,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "rgat": 788379,
     "deepseek-r1": 4388,
     "whisper": 1633,
+    "pointpainting": 24576,
 }
 
 SCENARIO_MAPPING = {
@@ -1049,4 +1050,12 @@ TEST06_ACC_PATH = {
     "v5.1": "{division}/{submitter}/compliance/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/TEST06/accuracy/mlperf_log_detail.txt",
+}
+
+
+SYSTEM_PATH = {
+    "v5.0": "{division}/{submitter}/systems/{system}.json",
+    "v5.1": "{division}/{submitter}/systems/{system}.json",
+    "v6.0": "{division}/{submitter}/systems/{system}.json",
+    "default": "{division}/{submitter}/systems/{system}.json",
 }

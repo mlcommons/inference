@@ -21,6 +21,12 @@ if TYPE_CHECKING:
 
 from .schema import ProductMetadata
 
+# Initialize the Generator
+# As of NumPy 1.17+,
+# this isolates the random state,
+# which is safer for reproducibility and parallel processing.
+rng = np.random.default_rng()
+
 
 def get_hierarchical_components(
     predicted_path: str,
@@ -51,7 +57,8 @@ def get_hierarchical_components(
     intersection_count = 0
 
     # Iterate through the paths simultaneously
-    for pred_cat, true_cat in zip(predicted_categories, true_categories, strict=False):
+    for pred_cat, true_cat in zip(
+            predicted_categories, true_categories, strict=False):
         if pred_cat == true_cat:
             intersection_count += 1
         else:
@@ -187,7 +194,10 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
     )
 
     category_dataset_pred_src = []
+    category_rand_pred_src = []
     is_secondhand_pred_src = []
+    is_secondhand_rand_pred_src = []
+
     for elem in model_output:
         idx = elem["qsl_idx"]
         response = bytes.fromhex(elem["data"]).decode("utf-8")
@@ -211,21 +221,42 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
                 ground_truth_item["ground_truth_is_secondhand"],
             ),
         )
+        # random category selection
+        # Uniform distribution is the default
+        rand_cat = rng.choice(ground_truth_item["potential_product_categories"],
+                              size=1).tolist()[0]
+        category_rand_pred_src.append((rand_cat,
+                                       ground_truth_item["ground_truth_category"]))
+
+        # random is_secondhand selection
+        rand_is_secondhand = rng.choice([True, False], size=1).tolist()[0]
+        is_secondhand_rand_pred_src.append((rand_is_secondhand,
+                                            ground_truth_item["ground_truth_is_secondhand"]))
 
     category_f1_score = calculate_hierarchical_f1(category_dataset_pred_src)
-    hiclass_f1 = calculate_hiclass_f1(category_dataset_pred_src)
+    hiclass_f1_score = calculate_hiclass_f1(category_dataset_pred_src)
     is_secondhand_f1_score = calculate_secondhand_f1(is_secondhand_pred_src)
 
+    rand_cat_f1_score = calculate_hierarchical_f1(category_rand_pred_src)
+    rand_hiclass_f1_score = calculate_hierarchical_f1(category_rand_pred_src)
+    rand_is_seconhand_f1_score = calculate_secondhand_f1(
+        is_secondhand_rand_pred_src)
+
     data = [
-        ["category", category_f1_score, hiclass_f1],
-        ["is_secondhand", is_secondhand_f1_score],
+        ["category", category_f1_score, hiclass_f1_score,
+         rand_cat_f1_score, rand_hiclass_f1_score],
+        ["is_secondhand", is_secondhand_f1_score, 0,
+         rand_is_seconhand_f1_score, 0],
     ]
 
     logger.info(
         "Results:\n{}",
         tabulate(
             data,
-            headers=["Fields", "F1 Score", "HiClass F1 Score"],
+            headers=["Fields", "F1 Score",
+                     "HiClass F1 Score",
+                     "F1 Score Random Selection",
+                     "HiClass F1 Score Random Selection"],
             tablefmt="fancy_grid",
         ),
     )

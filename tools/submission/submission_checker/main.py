@@ -4,6 +4,8 @@ import os
 
 from .constants import MODEL_CONFIG
 from .configuration.configuration import Config
+from .loader import Loader
+from .checks.performance_check import PerformanceCheck
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -93,6 +95,11 @@ def main():
     else:
         scenarios_to_skip = []
 
+    loader = Loader(args.input, args.version)
+    for logs in loader.load():
+        performance_checks = PerformanceCheck(log, logs.loader_data["perf_path"], config, logs)
+        performance_checks.run_checks()
+
     with open(args.csv, "w") as csv:
         # Output summary
         pass
@@ -117,45 +124,45 @@ def main():
         "Results=%d, NoResults=%d, Power Results=%d",
         with_results,
         len(results) - with_results,
-        None,
+        0,
     )
 
     log.info("---")
     log.info(
         "Closed Results=%d, Closed Power Results=%d\n",
-        None,
-        None,
+        0,
+        0,
     )
     log.info(
         "Open Results=%d, Open Power Results=%d\n",
-        None,
-        None,
+        0,
+        0,
     )
     log.info(
         "Network Results=%d, Network Power Results=%d\n",
-        None,
-        None,
+        0,
+        0,
     )
     log.info("---")
 
     log.info(
         "Systems=%d, Power Systems=%d",
-        None,
-        None)
+        0,
+        0)
     log.info(
         "Closed Systems=%d, Closed Power Systems=%d",
-        None,
-        None,
+        0,
+        0,
     )
     log.info(
         "Open Systems=%d, Open Power Systems=%d",
-        None,
-        None,
+        0,
+        0,
     )
     log.info(
         "Network Systems=%d, Network Power Systems=%d",
-        None,
-        None,
+        0,
+        0,
     )
     log.info("---")
     if len(results) != with_results:

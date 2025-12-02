@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import timedelta
 from enum import StrEnum, auto
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, ClassVar, Self
 
 import mlperf_loadgen as lg
 from openai.types import ResponseFormatJSONSchema
@@ -17,6 +17,7 @@ from pydantic import (
     Field,
     NonNegativeInt,
     field_validator,
+    model_validator,
 )
 
 MAX_NUM_ESTIMATION_PERFORMANCE_SAMPLES = 100
@@ -369,6 +370,65 @@ class Endpoint(BaseModelWithAttributeDescriptionsFromDocstrings):
     by the response JSON schema (e.g., the JSON object might be fenced in a
     ```json ... ``` code block).
     """
+
+
+class EndpointToDeploy(Endpoint):
+    """Specifies the endpoint to deploy for the VL2L benchmark."""
+
+    startup_timeout: timedelta = timedelta(minutes=20)
+    """The timeout for the endpoint to start up."""
+
+    shutdown_timeout: timedelta = timedelta(minutes=1)
+    """The timeout for the endpoint to shut down."""
+
+    poll_interval: timedelta = timedelta(seconds=60)
+    """The interval to poll the endpoint for readiness."""
+
+    healthcheck_timeout: timedelta = timedelta(seconds=5)
+    """The timeout for the healthcheck request to the endpoint."""
+
+
+class VllmEndpoint(EndpointToDeploy):
+    """Specifies how to deploy an OpenAI API endpoint in vLLM for benchmarking."""
+
+    cli: list[str] = []
+    """The CLI arguments to pass to `vllm serve`. This excludes vllm's `--host`,
+    `--port`, --api-key` and `--model` CLI arguments which will be determined by
+    the `url`, `api_key` and `model` fields of this schema."""
+
+    @model_validator(mode="after")
+    def validate_cli(self) -> Self:
+        """Validate the vllm CLI arguments."""
+        for flag in self.cli:
+            if not flag.startswith(("--", "-")):
+                raise PositionalVllmCliFlagError(flag)
+            if flag.split("=", 1)[0] in BlacklistedVllmCliFlagError.BLACKLIST:
+                raise BlacklistedVllmCliFlagError(flag)
+        return self
+
+
+class PositionalVllmCliFlagError(ValueError):
+    """The exception raised when a positional vllm CLI flag is encountered."""
+
+    def __init__(self, flag: str) -> None:
+        """Initialize the exception."""
+        super().__init__(
+            f"Positional vllm CLI flag: {flag} is not allowed. Only optional flags are "
+            "allowed to be passed to `--vllm.cli`.",
+        )
+
+
+class BlacklistedVllmCliFlagError(ValueError):
+    """The exception raised when a blacklisted vllm CLI flag is encountered."""
+
+    BLACKLIST: ClassVar[list[str]] = ["--model", "--host", "--port", "--api-key"]
+
+    def __init__(self, flag: str) -> None:
+        """Initialize the exception."""
+        super().__init__(
+            f"Blacklisted vllm CLI flag: {flag} is not allowed. The blacklisted flags"
+            f"are {self.BLACKLIST}.",
+        )
 
 
 class ProductMetadata(BaseModelWithAttributeDescriptionsFromDocstrings):

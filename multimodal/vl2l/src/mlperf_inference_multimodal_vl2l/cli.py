@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-from datetime import UTC, datetime
 from typing import Annotated
 
 import mlperf_loadgen as lg
@@ -12,11 +10,19 @@ from pydantic import FilePath  # noqa: TC002
 from pydantic_typer import Typer
 from typer import Option
 
+from .deploy import LocalVllmDeployer
 from .evaluation import run_evaluation
-from .schema import Dataset, Endpoint, Settings, Verbosity
+from .log import setup_loguru_for_benchmark
+from .schema import Dataset, Endpoint, Settings, Verbosity, VllmEndpoint
 from .task import ShopifyGlobalCatalogue
 
 app = Typer()
+benchmark_app = Typer()
+app.add_typer(
+    benchmark_app,
+    name="benchmark",
+    help="Main CLI for running the VL2L benchmark.",
+)
 
 
 @app.command()
@@ -34,8 +40,8 @@ def evaluate(
     run_evaluation(filename=filename, dataset=dataset)
 
 
-@app.command()
-def benchmark(
+@benchmark_app.command(name="endpoint")
+def benchmark_endpoint(
     *,
     settings: Settings,
     dataset: Dataset,
@@ -49,25 +55,27 @@ def benchmark(
         Option(help="The verbosity level of the logger."),
     ] = Verbosity.INFO,
 ) -> None:
-    """Main CLI for running the VL2L benchmark."""
-    logger.remove()
-    logger.add(sys.stdout, level=verbosity.value.upper())
-    datetime_str_in_log_filename = (
-        datetime.now(tz=UTC).astimezone().strftime("%FT%TZ_")
-        if settings.logging.log_output.prefix_with_datetime
-        else ""
+    """Benchmark an already deployed OpenAI API endpoint.
+
+    This is suitable when you have already deployed an OpenAI API endpoint that is
+    accessible via a URL (and an API key, if applicable).
+    """
+    setup_loguru_for_benchmark(settings=settings, verbosity=verbosity)
+    _run_benchmark(
+        settings=settings,
+        dataset=dataset,
+        endpoint=endpoint,
+        random_seed=random_seed,
     )
-    logger.add(
-        settings.logging.log_output.outdir
-        / (
-            f"{settings.logging.log_output.prefix}"
-            f"{datetime_str_in_log_filename}"
-            "benchmark"
-            f"{settings.logging.log_output.suffix}"
-            ".txt"
-        ),
-        level=verbosity.value.upper(),
-    )
+
+
+def _run_benchmark(
+    settings: Settings,
+    dataset: Dataset,
+    endpoint: Endpoint,
+    random_seed: int,
+) -> None:
+    """Run the VL2L benchmark."""
     logger.info("Running VL2L benchmark with settings: {}", settings)
     logger.info("Running VL2L benchmark with dataset: {}", dataset)
     logger.info("Running VL2L benchmark with OpenAI API endpoint: {}", endpoint)
@@ -86,3 +94,33 @@ def benchmark(
     logger.info("The VL2L benchmark with LoadGen completed.")
     lg.DestroyQSL(qsl)
     lg.DestroySUT(sut)
+
+
+@benchmark_app.command(name="vllm")
+def benchmark_vllm(
+    *,
+    settings: Settings,
+    dataset: Dataset,
+    vllm: VllmEndpoint,
+    random_seed: Annotated[
+        int,
+        Option(help="The seed for the random number generator used by the benchmark."),
+    ] = 12345,
+    verbosity: Annotated[
+        Verbosity,
+        Option(help="The verbosity level of the logger."),
+    ] = Verbosity.INFO,
+) -> None:
+    """Deploy the endpoint using vLLM into a healthy state and then benchmark it.
+
+    This is suitable when you have access to the `vllm serve` command in the local
+    environment where this benchmarking CLI is running.
+    """
+    setup_loguru_for_benchmark(settings=settings, verbosity=verbosity)
+    with LocalVllmDeployer(endpoint=vllm, settings=settings):
+        _run_benchmark(
+            settings=settings,
+            dataset=dataset,
+            endpoint=vllm,
+            random_seed=random_seed,
+        )

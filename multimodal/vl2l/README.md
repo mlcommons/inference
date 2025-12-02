@@ -85,13 +85,13 @@ docker run --gpus all \                                 # Use all the GPUs on th
 Performance only mode:
 
 ```bash
-mlperf-inf-mm-vl2l --settings.test.scenario offline --settings.test.mode performance_only
+mlperf-inf-mm-vl2l benchmark endpoint --settings.test.scenario offline --settings.test.mode performance_only
 ```
 
 Accuracy only mode:
 
 ```bash
-mlperf-inf-mm-vl2l --settings.test.scenario offline --settings.test.mode accuracy_only
+mlperf-inf-mm-vl2l benchmark endpoint --settings.test.scenario offline --settings.test.mode accuracy_only
 ```
 
 ### Run the benchmark for the Server scenario
@@ -99,13 +99,13 @@ mlperf-inf-mm-vl2l --settings.test.scenario offline --settings.test.mode accurac
 Performance only mode:
 
 ```bash
-mlperf-inf-mm-vl2l --settings.test.scenario server --settings.test.mode performance_only
+mlperf-inf-mm-vl2l benchmark endpoint --settings.test.scenario server --settings.test.mode performance_only
 ```
 
 Accuracy only mode:
 
 ```bash
-mlperf-inf-mm-vl2l --settings.test.scenario server --settings.test.mode accuracy_only
+mlperf-inf-mm-vl2l benchmark endpoint --settings.test.scenario server --settings.test.mode accuracy_only
 ```
 
 ## Docker
@@ -115,7 +115,30 @@ CLI into the container images of the inference engine. This is useful when you h
 run both the inference engine and the VL2L benchmarking CLI inside the same container,
 for example, in a situation where you must use a GPU cluster managed by 
 [Slurm](https://slurm.schedmd.com/) with [enroot](https://github.com/nvidia/enroot) and
-[pyxis](https://github.com/NVIDIA/pyxis)
+[pyxis](https://github.com/NVIDIA/pyxis).
+
+### Benchmark against vLLM inside the container
+
+If you are running `mlperf-inf-mm-vl2l` inside a local environment that has access to
+vLLM (such as inside a container that was created using the 
+[docker/vllm-cuda.Dockerfile](docker/vllm-cuda.Dockerfile)), you can use a single
+`mlperf-inf-mm-vl2l benchmark vllm` command to achieve:
+
+1. Deploy an endpoint using vLLM.
+2. Wait for the endpoint to be healthy.
+3. Run the benchmark against that endpoint.
+
+For example, inside the container, you can run the Offline scenario Performance only
+mode with:
+
+```bash
+mlperf-inf-mm-vl2l benchmark vllm \
+    --vllm.model.repo_id Qwen/Qwen3-VL-235B-A22B-Instruct \
+    --vllm.arg=--tensor-parallel-size=8 \
+    --vllm.arg=--limit-mm-per-prompt.video=0 \
+    --settings.test.scenario offline \
+    --settings.test.mode performance_only
+```
 
 ## Developer Guide
 

@@ -17,10 +17,9 @@ class Config:
         self.ignore_uncommited = ignore_uncommited
         self.skip_power_check = skip_power_check
         self.load_config(version)
-        
 
     def load_config(self, version):
-        # TODO: Load values from 
+        # TODO: Load values from
         self.models = self.base["models"]
         self.seeds = self.base["seeds"]
         if self.base.get("test05_seeds"):
@@ -100,7 +99,7 @@ class Config:
 
     def get_accuracy_upper_limit(self, model):
         return self.accuracy_upper_limit.get(model, None)
-    
+
     def get_accuracy_values(self, model):
         patterns = []
         acc_targets = []
@@ -147,7 +146,7 @@ class Config:
         if model not in self.min_queries:
             raise ValueError("model not known: " + model)
         return self.min_queries[model].get(scenario)
-    
+
     def get_dataset_size(self, model):
         model = self.get_mlperf_model(model)
         if model not in self.dataset_size:
@@ -187,7 +186,7 @@ class Config:
             ]
             and self.version in ["v4.1"]
         )
-    
+
     def get_llm_models(self):
         return [
             "llama2-70b-99",
@@ -197,6 +196,6 @@ class Config:
             "mixtral-8x7b",
             "llama3.1-405b",
             "llama3.1-8b",
-            "llama3.1-8b-edge", 
+            "llama3.1-8b-edge",
             "deepseek-r1"
         ]

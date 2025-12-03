@@ -3,8 +3,10 @@ from ..constants import *
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
 
+
 class PerformanceCheck(BaseCheck):
-    def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
+    def __init__(self, log, path, config: Config,
+                 submission_logs: SubmissionLogs):
         super().__init__(log, path)
         self.name = "performance checks"
         self.submission_logs = submission_logs
@@ -12,9 +14,12 @@ class PerformanceCheck(BaseCheck):
         self.system_json = self.submission_logs.system_json
         self.config = config
         self.model = self.submission_logs.loader_data.get("benchmark", "")
-        self.model_mapping = self.submission_logs.loader_data.get("model_mapping", {})
-        self.model = self.config.get_mlperf_model(self.model, self.model_mapping)
-        self.scenario_fixed = self.submission_logs.loader_data.get("scenario", "")
+        self.model_mapping = self.submission_logs.loader_data.get(
+            "model_mapping", {})
+        self.model = self.config.get_mlperf_model(
+            self.model, self.model_mapping)
+        self.scenario_fixed = self.submission_logs.loader_data.get(
+            "scenario", "")
         self.scenario = self.mlperf_log["effective_scenario"]
         self.division = self.submission_logs.loader_data.get("division", "")
         self.setup_checks()
@@ -36,7 +41,7 @@ class PerformanceCheck(BaseCheck):
             self.log.error("Performance log missing at %s", self.path)
             return False
         return True
-    
+
     def loadgen_errors_check(self):
         if self.mlperf_log.has_error():
             if self.config.ignore_uncommited:
@@ -56,13 +61,17 @@ class PerformanceCheck(BaseCheck):
         return True
 
     def equal_issue_check(self):
-        if self.config.requires_equal_issue(self.model, self.division) and self.mlperf_log["effective_sample_concatenate_permutation"]:
-            self.log.error("%s requires equal issue mode (sample_concatenate_permutation), expected=true, found=false", self.path)
+        if self.config.requires_equal_issue(
+                self.model, self.division) and self.mlperf_log["effective_sample_concatenate_permutation"]:
+            self.log.error(
+                "%s requires equal issue mode (sample_concatenate_permutation), expected=true, found=false",
+                self.path)
             return False
         return True
-    
+
     def performance_sample_count_check(self):
-        required_performance_sample_count = self.config.get_performance_sample_count(self.model)
+        required_performance_sample_count = self.config.get_performance_sample_count(
+            self.model)
         performance_sample_count = self.mlperf_log["effective_performance_sample_count"]
         if performance_sample_count < required_performance_sample_count:
             self.log.error(
@@ -73,7 +82,7 @@ class PerformanceCheck(BaseCheck):
             )
             return False
         return True
-    
+
     def seeds_check(self):
         config_seeds = self.config.seeds
         qsl_rng_seed = self.mlperf_log["effective_qsl_rng_seed"]
@@ -105,7 +114,7 @@ class PerformanceCheck(BaseCheck):
             )
             is_valid = False
         return is_valid
-    
+
     def latency_check(self):
         uses_early_stopping = self.config.uses_early_stopping(self.scenario)
         if uses_early_stopping:
@@ -165,7 +174,8 @@ class PerformanceCheck(BaseCheck):
         min_query_count = self.mlperf_log["effective_min_query_count"]
         samples_per_query = self.mlperf_log["effective_samples_per_query"]
         if not uses_early_stopping:
-            required_min_query_count = self.config.get_min_query_count(self.model, self.scenario)
+            required_min_query_count = self.config.get_min_query_count(
+                self.model, self.scenario)
             if required_min_query_count and min_query_count < required_min_query_count:
                 self.log.error(
                     "%s Required minimum Query Count not met by user config, Expected=%s, Found=%s",
@@ -184,7 +194,7 @@ class PerformanceCheck(BaseCheck):
             )
             return False
         return True
-    
+
     def min_duration_check(self):
         required_min_duration = TEST_DURATION_MS
         min_duration = self.mlperf_log["effective_min_duration_ms"]
@@ -197,9 +207,10 @@ class PerformanceCheck(BaseCheck):
             )
             return False
         return True
-    
+
     def network_check(self):
-        is_network_mode_sys_spec_str = self.system_json.get(SYSTEM_DESC_IS_NETWORK_MODE)
+        is_network_mode_sys_spec_str = self.system_json.get(
+            SYSTEM_DESC_IS_NETWORK_MODE)
         is_network_system = (
             is_network_mode_sys_spec_str.lower() == "true"
             if is_network_mode_sys_spec_str is not None
@@ -216,7 +227,6 @@ class PerformanceCheck(BaseCheck):
             )
             return False
 
-
         sut_name = self.mlperf_log["sut_name"]
         if is_network_system:
             # for network mode verify the SUT name is valid, according to the rules
@@ -228,7 +238,6 @@ class PerformanceCheck(BaseCheck):
                 return False
 
         return True
-    
 
     def llm_check(self):
         if self.model in self.config.get_llm_models():

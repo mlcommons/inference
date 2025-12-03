@@ -5,8 +5,10 @@ from ..configuration.configuration import Config
 import re
 import os
 
+
 class AccuracyCheck(BaseCheck):
-    def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
+    def __init__(self, log, path, config: Config,
+                 submission_logs: SubmissionLogs):
         super().__init__(log, path)
         self.name = "accuracy checks"
         self.submission_logs = submission_logs
@@ -15,9 +17,12 @@ class AccuracyCheck(BaseCheck):
         self.accuracy_json = self. submission_logs.accuracy_json
         self.config = config
         self.model = self.submission_logs.loader_data.get("benchmark", "")
-        self.model_mapping = self.submission_logs.loader_data.get("model_mapping", {})
-        self.model = self.config.get_mlperf_model(self.model, self.model_mapping)
-        self.scenario_fixed = self.submission_logs.loader_data.get("scenario", "")
+        self.model_mapping = self.submission_logs.loader_data.get(
+            "model_mapping", {})
+        self.model = self.config.get_mlperf_model(
+            self.model, self.model_mapping)
+        self.scenario_fixed = self.submission_logs.loader_data.get(
+            "scenario", "")
         self.scenario = self.mlperf_log["effective_scenario"]
         self.division = self.submission_logs.loader_data.get("division", "")
         self.setup_checks()
@@ -97,7 +102,7 @@ class AccuracyCheck(BaseCheck):
             is_valid = False
 
         return is_valid
-    
+
     def accuracy_json_check(self):
         if not os.path.exists(self.accuracy_json):
             self.log.error("%s is missing", self.accuracy_json)
@@ -107,7 +112,7 @@ class AccuracyCheck(BaseCheck):
                 self.log.error("%s is not truncated", self.accuracy_json)
                 return False
         return True
-    
+
     def loadgen_errors_check(self):
         if self.mlperf_log.has_error():
             if self.config.ignore_uncommited:
@@ -125,7 +130,7 @@ class AccuracyCheck(BaseCheck):
                 )
                 return False
         return True
-    
+
     def dataset_check(self):
         qsl_total_count = self.mlperf_log["qsl_reported_total_count"]
         expected_qsl_total_count = self.config.get_dataset_size(self.model)

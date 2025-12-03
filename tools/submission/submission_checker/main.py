@@ -98,8 +98,10 @@ def main():
 
     loader = Loader(args.input, args.version)
     for logs in loader.load():
-        performance_checks = PerformanceCheck(log, logs.loader_data["perf_path"], config, logs)
-        accuracy_checks = AccuracyCheck(log, logs.loader_data["acc_path"], config, logs)
+        performance_checks = PerformanceCheck(
+            log, logs.loader_data["perf_path"], config, logs)
+        accuracy_checks = AccuracyCheck(
+            log, logs.loader_data["acc_path"], config, logs)
         performance_checks()
         accuracy_checks()
 
@@ -119,7 +121,6 @@ def main():
     for k, v in sorted(results.items()):
         if v is None:
             log.error("NoResults %s", k)
-
 
     # print summary
     log.info("---")

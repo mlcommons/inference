@@ -533,7 +533,7 @@ def main():
                     with open(args.reference_data, 'rb') as f:
                         reference_df = pickle.load(f)
                     logger.info("Auto-detected Pickle format")
-            
+
             logger.info(f"✓ Reference data loaded: {reference_df.shape}")
             logger.info(f"  Columns: {list(reference_df.columns)}")
         except Exception as e:

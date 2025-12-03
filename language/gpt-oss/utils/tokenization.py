@@ -102,10 +102,12 @@ def load_tokenized_dataset(
         # Try to auto-detect based on file content
         try:
             df = pd.read_parquet(dataset_path)
-            logger.info(f"Auto-detected Parquet format, loaded DataFrame with shape: {df.shape}")
+            logger.info(
+                f"Auto-detected Parquet format, loaded DataFrame with shape: {df.shape}")
         except Exception:
             df = pd.read_pickle(dataset_path)
-            logger.info(f"Auto-detected Pickle format, loaded DataFrame with shape: {df.shape}")
+            logger.info(
+                f"Auto-detected Pickle format, loaded DataFrame with shape: {df.shape}")
 
     # Convert numpy arrays to native Python types for JSON serialization
     for col in df.columns:

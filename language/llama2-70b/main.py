@@ -50,10 +50,7 @@ def get_args():
         help="Model name",
     )
     parser.add_argument("--dataset-path", type=str, default=None, help="")
-    parser.add_argument(
-        "--accuracy",
-        action="store_true",
-        help="Run accuracy mode")
+    parser.add_argument("--accuracy", action="store_true", help="Run accuracy mode")
     parser.add_argument(
         "--dtype",
         type=str,
@@ -107,7 +104,11 @@ def get_args():
         default=1,
         help="Number of workers to process queries",
     )
-    parser.add_argument("--vllm", action="store_true", help="vllm mode")
+    parser.add_argument(
+        "--vllm",
+        action="store_true",
+        help="Access model via OpenAI-compatiable API: API mode (aka vllm mode)",
+    )
     parser.add_argument(
         "--api-model-name",
         type=str,
@@ -117,8 +118,9 @@ def get_args():
     parser.add_argument(
         "--api-server",
         type=str,
-        default=None,
-        help="Specify an api endpoint call to use api mode",
+        action="append",
+        default=[],
+        help="Specify an api endpoints to use in OpenAI-compatiable API mode (aka vllm mode)",
     )
     parser.add_argument(
         "--lg-model-name",
@@ -141,13 +143,12 @@ def main():
     args = get_args()
 
     if args.vllm:
-        resp = verify_model_name(
-            args.api_model_name,
-            args.api_server + "/v1/models")
-        if resp["error"]:
-            print(f"\n\n\033[91mError:\033[0m", end=" ")
-            print(resp["error"])
-            sys.exit(1)
+        for server in args.api_server:
+            resp = verify_model_name(args.api_model_name, server + "/v1/models")
+            if resp["error"]:
+                print(f"\n\n\033[91mError:\033[0m", end=" ")
+                print(resp["error"])
+                sys.exit(1)
 
     settings = lg.TestSettings()
     settings.scenario = scenario_map[args.scenario.lower()]
@@ -203,12 +204,7 @@ def main():
     sut.start()
     lgSUT = lg.ConstructSUT(sut.issue_queries, sut.flush_queries)
     log.info("Starting Benchmark run")
-    lg.StartTestWithLogSettings(
-        lgSUT,
-        sut.qsl,
-        settings,
-        log_settings,
-        args.audit_conf)
+    lg.StartTestWithLogSettings(lgSUT, sut.qsl, settings, log_settings, args.audit_conf)
 
     # Stop sut after completion
     sut.stop()

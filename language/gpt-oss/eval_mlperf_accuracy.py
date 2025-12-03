@@ -28,6 +28,7 @@ from typing import Dict, Any, List, Tuple
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed, TimeoutError
 
+import numpy as np
 import pandas as pd
 from transformers import AutoTokenizer
 from tqdm import tqdm
@@ -313,7 +314,7 @@ def main():
         "--reference-data",
         type=str,
         required=True,
-        help="Path to reference pickle file (DataFrame with dataset, ground_truth, etc.)"
+        help="Path to reference parquet or pickle file (DataFrame with dataset, ground_truth, etc.)"
     )
     parser.add_argument(
         "--tokenizer",
@@ -355,8 +356,30 @@ def main():
 
     # Load reference data
     logger.info(f"Loading reference data from {args.reference_data}")
-    with open(args.reference_data, 'rb') as f:
-        reference_df = pickle.load(f)
+    if args.reference_data.endswith('.parquet'):
+        reference_df = pd.read_parquet(args.reference_data)
+        logger.info("Loaded reference data from Parquet file")
+    elif args.reference_data.endswith('.pkl') or args.reference_data.endswith('.pickle'):
+        with open(args.reference_data, 'rb') as f:
+            reference_df = pickle.load(f)
+        logger.info("Loaded reference data from Pickle file")
+    else:
+        # Try parquet first, then pickle
+        try:
+            reference_df = pd.read_parquet(args.reference_data)
+            logger.info("Auto-detected Parquet format")
+        except Exception:
+            with open(args.reference_data, 'rb') as f:
+                reference_df = pickle.load(f)
+            logger.info("Auto-detected Pickle format")
+
+    # Convert numpy arrays to native Python types for JSON serialization
+    for col in reference_df.columns:
+        # Check if column contains numpy arrays
+        if reference_df[col].dtype == object:
+            reference_df[col] = reference_df[col].apply(
+                lambda x: x.tolist() if isinstance(x, np.ndarray) else x
+            )
 
     logger.info(f"Reference data shape: {reference_df.shape}")
     logger.info(f"Reference columns: {list(reference_df.columns)}")
@@ -457,7 +480,9 @@ def main():
     dataset_stats = defaultdict(lambda: {
         "per_repeat": {i: {"correct": 0, "total": 0} for i in range(num_repeats)},
         # pass@k: at least one correct
-        "aggregated": {"correct": 0, "total": 0}
+        "aggregated": {"correct": 0, "total": 0},
+        # pass@1 with k repeats: average correctness across repeats
+        "averaged": {"correct_sum": 0, "total": 0}
     })
     # Track results per (qsl_idx, repeat_idx) for aggregation
     qsl_results = defaultdict(lambda: {i: None for i in range(num_repeats)})
@@ -580,10 +605,15 @@ def main():
             result for result in repeat_results.values() if result is not None and result
         )
 
-        # Update aggregated stats
+        # Update aggregated stats (pass@k)
         dataset_stats[dataset_name]["aggregated"]["total"] += 1
         if is_pass_k_correct:
             dataset_stats[dataset_name]["aggregated"]["correct"] += 1
+
+        # Update averaged stats (pass@1 with k repeats)
+        correct_count = sum(1 for result in repeat_results.values() if result is not None and result)
+        dataset_stats[dataset_name]["averaged"]["correct_sum"] += correct_count
+        dataset_stats[dataset_name]["averaged"]["total"] += 1
 
     # Calculate overall stats (aggregated pass@k if num_repeats > 1, else
     # per-repeat[0])
@@ -592,6 +622,15 @@ def main():
                             for stats in dataset_stats.values())
         total_samples = sum(stats["aggregated"]["total"]
                             for stats in dataset_stats.values())
+        
+        # Calculate overall pass@1 with k repeats accuracy
+        total_averaged_correct_sum = sum(stats["averaged"]["correct_sum"]
+                                         for stats in dataset_stats.values())
+        total_averaged_samples = sum(stats["averaged"]["total"]
+                                      for stats in dataset_stats.values())
+        overall_averaged_accuracy = (
+            total_averaged_correct_sum / (total_averaged_samples * num_repeats) * 100
+        ) if total_averaged_samples > 0 else 0.0
     else:
         total_correct = sum(stats["per_repeat"][0]["correct"]
                             for stats in dataset_stats.values())
@@ -610,8 +649,11 @@ def main():
     print(f"Evaluation mode: pass@{num_repeats}" if num_repeats >
           1 else "Evaluation mode: single-pass")
     print(f"Total unique samples: {total_samples}")
-    print(f"Overall pass@{num_repeats} accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})" if num_repeats > 1
-          else f"Overall accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
+    if num_repeats > 1:
+        print(f"Overall pass@{num_repeats} accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
+        print(f"Overall pass@1 with {num_repeats} repeats: {overall_averaged_accuracy:.2f}%")
+    else:
+        print(f"Overall accuracy: {overall_accuracy:.2f}% ({total_correct}/{total_samples})")
     print("=" * 80)
 
     if num_repeats > 1:
@@ -623,6 +665,16 @@ def main():
                 accuracy = (stats["correct"] / stats["total"] * 100)
                 print(
                     f"{dataset_name:20s}: {accuracy:6.2f}% ({stats['correct']:4d}/{stats['total']:4d})")
+
+        print("\nPer-Dataset pass@1 with k repeats Results:")
+        print("-" * 80)
+        for dataset_name in sorted(dataset_stats.keys()):
+            stats = dataset_stats[dataset_name]["averaged"]
+            if stats["total"] > 0:
+                accuracy = (stats["correct_sum"] / (stats["total"] * num_repeats) * 100)
+                avg_correct = stats["correct_sum"] / stats["total"]
+                print(
+                    f"{dataset_name:20s}: {accuracy:6.2f}% (avg {avg_correct:.2f}/{num_repeats} correct per sample)")
 
         print("\n" + "=" * 80)
         print("Per-Dataset, Per-Repeat Breakdown:")
@@ -678,12 +730,18 @@ def main():
             if num_repeats > 1:
                 # Aggregated pass@k stats
                 agg_stats = stats["aggregated"]
+                avg_stats = stats["averaged"]
                 per_dataset_stats[dataset_name] = {
                     "pass_k": num_repeats,
                     "aggregated": {
                         "correct": agg_stats["correct"],
                         "total": agg_stats["total"],
                         "accuracy": (agg_stats["correct"] / agg_stats["total"] * 100) if agg_stats["total"] > 0 else 0.0
+                    },
+                    "averaged": {
+                        "correct_sum": avg_stats["correct_sum"],
+                        "total": avg_stats["total"],
+                        "accuracy": (avg_stats["correct_sum"] / (avg_stats["total"] * num_repeats) * 100) if avg_stats["total"] > 0 else 0.0
                     },
                     "per_repeat": {}
                 }
@@ -711,6 +769,7 @@ def main():
                 "total_samples": total_samples,
                 "total_correct": total_correct,
                 "overall_accuracy": overall_accuracy,
+                "overall_averaged_accuracy": overall_averaged_accuracy if num_repeats > 1 else None,
                 "per_dataset": per_dataset_stats
             },
             "detailed_results": results if args.verbose else None

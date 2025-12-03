@@ -6,13 +6,8 @@ This is the reference implementation for GPT-OSS-120B. This is a proposal and is
 * Model: `openai/gpt-oss-120b`, commit id: [`b5c939d`](https://huggingface.co/openai/gpt-oss-120b/tree/b5c939de8f754692c1647ca79fbf85e8c1e70f8a)
 * Dataset: Please request access at [this link](https://drive.google.com/drive/folders/1DCfEXHqe69okrqKbSyV-8VUw413JqpPY?usp=drive_link) - **this is a tentative dataset**
 
-Verify the dataset contents by computing the `sha1sum`:
-```bash
-$ sha1sum gptoss-*-eval.pkl
-35228fcf5581b916e70920748baf2c016ea2c06b  gptoss-acc-eval.pkl
-ddec911ad479fc4b30ef1c050c9dea63134c090e  gptoss-perf-eval.pkl
+Datasets are now provided in **Parquet format** (recommended) for better performance and smaller file size (50% smaller than pickle). Pickle format is still supported for backward compatibility.
 
-```
 
 ## Environment setup
 Work on reference implementation is done using the sglang containers at [https://hub.docker.com/r/lmsysorg/sglang/tags](https://hub.docker.com/r/lmsysorg/sglang/tags). For enroot setup, a script is provided under [`setup_enroot.sh`](./setup_enroot.sh). For all sections below, we shall assume this environment is instantiated.
@@ -37,6 +32,32 @@ The script uses `python3 -m sglang.launch_server` tp instantiate the model, with
 
 Then, run a benchmark script that uses the client to send/recv requests.
 ### Run the inference
+
+**Note:** All scripts now support both Parquet (`.parquet`) and Pickle (`.pkl`) formats for dataset files. Parquet is recommended as it offers:
+- 50% smaller file size
+- Faster loading times
+- Cross-language compatibility
+- Type-safe schema preservation
+
+Example usage:
+```bash
+# first, install loadgen
+pip install $(git rev-parse --show-toplevel)/loadgen
+
+# Using Parquet format (recommended)
+python3 run_mlperf.py \
+  --scenario offline \
+  --input-file /path/to/dataset.parquet \
+  --accuracy
+
+# Using Pickle format (backward compatible)
+python3 run_mlperf.py \
+  --scenario offline \
+  --input-file /path/to/dataset.pkl \
+  --accuracy
+```
+
+Full command-line options:
 ```bash
 python3 run_mlperf.py --help
 usage: run_mlperf.py [-h] [--scenario {offline,server}] --input-file INPUT_FILE [--max-samples MAX_SAMPLES] [--mlperf-conf MLPERF_CONF]
@@ -51,7 +72,7 @@ options:
   --scenario {offline,server}
                         MLPerf scenario mode
   --input-file INPUT_FILE
-                        Path to tokenized dataset (pickle file)
+                        Path to tokenized dataset (parquet or pickle file)
   --max-samples MAX_SAMPLES
                         Maximum number of samples to use (None for all)
   --mlperf-conf MLPERF_CONF
@@ -76,7 +97,24 @@ options:
 ```
 
 ### Evaluate the accuracy
-Run `run_mlperf.py` with `--accuracy`, and then use the generated `mlperf_log_accuracy.json` to evaluate the accuracy of the run. Usage is as below.
+Run `run_mlperf.py` with `--accuracy`, and then use the generated `mlperf_log_accuracy.json` to evaluate the accuracy of the run.
+
+Example usage:
+```bash
+# Using Parquet format (recommended)
+python3 eval_mlperf_accuracy.py \
+  --mlperf-log mlperf_results/offline/accuracy/mlperf_log_accuracy.json \
+  --reference-data /path/to/acc_eval_inputs.parquet \
+  --tokenizer openai/gpt-oss-120b
+
+# Using Pickle format (backward compatible)
+python3 eval_mlperf_accuracy.py \
+  --mlperf-log mlperf_results/offline/accuracy/mlperf_log_accuracy.json \
+  --reference-data /path/to/acc_eval_inputs.pkl \
+  --tokenizer openai/gpt-oss-120b
+```
+
+Full command-line options:
 ```bash
 python3 eval_mlperf_accuracy.py --help
 usage: eval_mlperf_accuracy.py [-h] --mlperf-log MLPERF_LOG --reference-data REFERENCE_DATA [--tokenizer TOKENIZER] [--output-file OUTPUT_FILE]
@@ -89,7 +127,7 @@ options:
   --mlperf-log MLPERF_LOG
                         Path to mlperf_log_accuracy.json
   --reference-data REFERENCE_DATA
-                        Path to reference pickle file (DataFrame with dataset, ground_truth, etc.)
+                        Path to reference parquet or pickle file (DataFrame with dataset, ground_truth, etc.)
   --tokenizer TOKENIZER
                         HuggingFace tokenizer name or path
   --output-file OUTPUT_FILE

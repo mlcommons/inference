@@ -91,7 +91,7 @@ def parse_args() -> argparse.Namespace:
         "--reference-data",
         type=str,
         default=None,
-        help="Path to reference pickle file (DataFrame with prompts, dataset, etc.) - optional"
+        help="Path to reference parquet or pickle file (DataFrame with prompts, dataset, etc.) - optional"
     )
 
     parser.add_argument(
@@ -517,8 +517,23 @@ def main():
     if args.reference_data:
         logger.info(f"Loading reference data from {args.reference_data}")
         try:
-            with open(args.reference_data, 'rb') as f:
-                reference_df = pickle.load(f)
+            if args.reference_data.endswith('.parquet'):
+                reference_df = pd.read_parquet(args.reference_data)
+                logger.info("Loaded reference data from Parquet file")
+            elif args.reference_data.endswith('.pkl') or args.reference_data.endswith('.pickle'):
+                with open(args.reference_data, 'rb') as f:
+                    reference_df = pickle.load(f)
+                logger.info("Loaded reference data from Pickle file")
+            else:
+                # Try parquet first, then pickle
+                try:
+                    reference_df = pd.read_parquet(args.reference_data)
+                    logger.info("Auto-detected Parquet format")
+                except Exception:
+                    with open(args.reference_data, 'rb') as f:
+                        reference_df = pickle.load(f)
+                    logger.info("Auto-detected Pickle format")
+            
             logger.info(f"✓ Reference data loaded: {reference_df.shape}")
             logger.info(f"  Columns: {list(reference_df.columns)}")
         except Exception as e:

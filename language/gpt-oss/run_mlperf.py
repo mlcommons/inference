@@ -83,7 +83,7 @@ def create_argument_parser() -> argparse.ArgumentParser:
         "--input-file",
         type=str,
         required=True,
-        help="Path to tokenized dataset (pickle file)"
+        help="Path to tokenized dataset (parquet or pickle file)"
     )
 
     parser.add_argument(

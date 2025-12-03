@@ -3,6 +3,7 @@
 
 import logging
 from typing import List, Dict, Any, Optional
+import numpy as np
 import pandas as pd
 from transformers import AutoTokenizer
 
@@ -76,10 +77,10 @@ def load_tokenized_dataset(
     dataset_path: str,
     max_samples: Optional[int] = None
 ) -> Dict[str, Any]:
-    """Load a tokenized dataset from pickle file.
+    """Load a tokenized dataset from parquet or pickle file.
 
     Args:
-        dataset_path: Path to the pickle file containing tokenized data
+        dataset_path: Path to the parquet or pickle file containing tokenized data
         max_samples: Maximum number of samples to load (None for all)
 
     Returns:
@@ -90,9 +91,29 @@ def load_tokenized_dataset(
     """
     logger.info(f"Loading tokenized dataset from {dataset_path}")
 
-    # Load DataFrame from pickle
-    df = pd.read_pickle(dataset_path)
-    logger.info(f"Loaded DataFrame with shape: {df.shape}")
+    # Load DataFrame based on file extension
+    if dataset_path.endswith('.parquet'):
+        df = pd.read_parquet(dataset_path)
+        logger.info(f"Loaded Parquet DataFrame with shape: {df.shape}")
+    elif dataset_path.endswith('.pkl') or dataset_path.endswith('.pickle'):
+        df = pd.read_pickle(dataset_path)
+        logger.info(f"Loaded Pickle DataFrame with shape: {df.shape}")
+    else:
+        # Try to auto-detect based on file content
+        try:
+            df = pd.read_parquet(dataset_path)
+            logger.info(f"Auto-detected Parquet format, loaded DataFrame with shape: {df.shape}")
+        except Exception:
+            df = pd.read_pickle(dataset_path)
+            logger.info(f"Auto-detected Pickle format, loaded DataFrame with shape: {df.shape}")
+
+    # Convert numpy arrays to native Python types for JSON serialization
+    for col in df.columns:
+        # Check if column contains numpy arrays
+        if df[col].dtype == object:
+            df[col] = df[col].apply(
+                lambda x: x.tolist() if isinstance(x, np.ndarray) else x
+            )
 
     # Limit samples if specified
     if max_samples is not None:

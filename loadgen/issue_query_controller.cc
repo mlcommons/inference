@@ -30,7 +30,8 @@ namespace loadgen {
 QueryMetadata::QueryMetadata(
     const std::vector<QuerySampleIndex>& query_sample_indices,
     std::chrono::nanoseconds scheduled_delta,
-    ResponseDelegate* response_delegate, SequenceGen* sequence_gen)
+    ResponseDelegate* response_delegate, SequenceGen* sequence_gen,
+    uint64_t repeat_index)
     : scheduled_delta(scheduled_delta),
       response_delegate(response_delegate),
       sequence_id(sequence_gen->NextQueryId()),
@@ -38,7 +39,7 @@ QueryMetadata::QueryMetadata(
   samples_.reserve(query_sample_indices.size());
   for (QuerySampleIndex qsi : query_sample_indices) {
     samples_.push_back({this, sequence_gen->NextSampleId(), qsi,
-                        sequence_gen->NextAccLogRng()});
+                        sequence_gen->NextAccLogRng(), repeat_index});
   }
   query_to_send.reserve(query_sample_indices.size());
   for (auto& s : samples_) {
@@ -459,8 +460,8 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
 #if USE_NEW_LOGGING_FORMAT
             std::stringstream ss;
             ss << "IssueQueryThread " << thread_idx
-               << " Ending early: Too many outstanding queries." << " issued "
-               << queries_issued_total << " outstanding "
+               << " Ending early: Too many outstanding queries."
+               << " issued " << queries_issued_total << " outstanding "
                << queries_outstanding;
             MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
 #else
@@ -499,8 +500,8 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
 #if USE_NEW_LOGGING_FORMAT
         std::stringstream ss;
         ss << "IssueQueryThread " << thread_idx
-           << " Ending early: Max query count reached." << " query_count "
-           << queries_issued;
+           << " Ending early: Max query count reached."
+           << " query_count " << queries_issued;
         MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
 #else
         detail.Error("IssueQueryThread ", std::to_string(thread_idx),
@@ -519,8 +520,8 @@ void IssueQueryController::IssueQueriesInternal(size_t query_stride,
 #if USE_NEW_LOGGING_FORMAT
         std::stringstream ss;
         ss << "IssueQueryThread " << thread_idx
-           << " Ending early: Max test duration reached." << " duration_ns "
-           << duration.count();
+           << " Ending early: Max test duration reached."
+           << " duration_ns " << duration.count();
         MLPERF_LOG_ERROR(detail, "error_runtime", ss.str());
 #else
         detail.Error("IssueQueryThread ", std::to_string(thread_idx),

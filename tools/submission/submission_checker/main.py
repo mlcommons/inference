@@ -6,6 +6,7 @@ from .constants import MODEL_CONFIG
 from .configuration.configuration import Config
 from .loader import Loader
 from .checks.performance_check import PerformanceCheck
+from .checks.accuracy_check import AccuracyCheck
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("main")
@@ -98,7 +99,9 @@ def main():
     loader = Loader(args.input, args.version)
     for logs in loader.load():
         performance_checks = PerformanceCheck(log, logs.loader_data["perf_path"], config, logs)
-        performance_checks.run_checks()
+        accuracy_checks = AccuracyCheck(log, logs.loader_data["acc_path"], config, logs)
+        performance_checks()
+        accuracy_checks()
 
     with open(args.csv, "w") as csv:
         # Output summary

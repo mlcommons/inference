@@ -693,7 +693,7 @@ OFFLINE_MIN_SPQ_SINCE_V4 = {
     "rgat": 788379,
     "deepseek-r1": 4388,
     "whisper": 1633,
-    "pointpainting": 24576,
+    "pointpainting": 6636,
 }
 
 SCENARIO_MAPPING = {
@@ -1008,6 +1008,20 @@ ACCURACY_LOG_PATH = {
     "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
     "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
     "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_detail.txt",
+}
+
+ACCURACY_RESULT_PATH = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/accuracy.txt",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/accuracy.txt",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/accuracy.txt",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/accuracy.txt",
+}
+
+ACCURACY_JSON_PATH = {
+    "v5.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
+    "v5.1": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
+    "v6.0": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
+    "default": "{division}/{submitter}/results/{system}/{benchmark}/{scenario}/accuracy/mlperf_log_accuracy.json",
 }
 
 MEASUREMENTS_PATH = {

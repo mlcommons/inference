@@ -10,6 +10,7 @@ class BaseCheck(ABC):
         self.checks = []
         self.log = log
         self.path = path
+        self.name = "base checks"
         pass
 
     def run_checks(self):
@@ -32,10 +33,10 @@ class BaseCheck(ABC):
     
     def __call__(self):
         """Allows the check instance to be called like a function."""
-        self.log("Starting check...")
+        self.log.info("Starting %s for: %s", self.name, self.path)
         valid = self.run_checks()
         if valid:
-            self.log.info("Checks passed")
+            self.log.info("All %s checks passed for: %s", self.name, self.path)
         else:
-            self.log.error("%s Checks failed", self.path)
+            self.log.error("Some %s Checks failed for: %s", self.name, self.path)
         return valid

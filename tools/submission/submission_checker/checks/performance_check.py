@@ -2,11 +2,11 @@ from .base import BaseCheck
 from ..constants import *
 from ..loader import SubmissionLogs
 from ..configuration.configuration import Config
-import os
 
 class PerformanceCheck(BaseCheck):
     def __init__(self, log, path, config: Config, submission_logs: SubmissionLogs):
         super().__init__(log, path)
+        self.name = "performance checks"
         self.submission_logs = submission_logs
         self.mlperf_log = self.submission_logs.performance_log
         self.system_json = self.submission_logs.system_json
@@ -14,7 +14,8 @@ class PerformanceCheck(BaseCheck):
         self.model = self.submission_logs.loader_data.get("benchmark", "")
         self.model_mapping = self.submission_logs.loader_data.get("model_mapping", {})
         self.model = self.config.get_mlperf_model(self.model, self.model_mapping)
-        self.scenario = self.submission_logs.loader_data.get("scenario", "")
+        self.scenario_fixed = self.submission_logs.loader_data.get("scenario", "")
+        self.scenario = self.mlperf_log["effective_scenario"]
         self.division = self.submission_logs.loader_data.get("division", "")
         self.setup_checks()
 
@@ -28,8 +29,8 @@ class PerformanceCheck(BaseCheck):
         self.checks.append(self.min_query_count_check)
         self.checks.append(self.min_duration_check)
         self.checks.append(self.network_check)
+        self.checks.append(self.llm_check)
 
-    
     def missing_check(self):
         if self.mlperf_log is None:
             self.log.error("Performance log missing at %s", self.path)
@@ -54,7 +55,6 @@ class PerformanceCheck(BaseCheck):
                 return False
         return True
 
-    
     def equal_issue_check(self):
         if self.config.requires_equal_issue(self.model, self.division) and self.mlperf_log["effective_sample_concatenate_permutation"]:
             self.log.error("%s requires equal issue mode (sample_concatenate_permutation), expected=true, found=false", self.path)
@@ -227,4 +227,36 @@ class PerformanceCheck(BaseCheck):
                 )
                 return False
 
+        return True
+    
+
+    def llm_check(self):
+        if self.model in self.config.get_llm_models():
+            if self.mlperf_log["requested_use_token_latencies"]:
+                if self.scenario not in ["Server", "Interactive"]:
+                    # For offline, singlestream and multistream no further checks are
+                    # necessary
+                    return True
+                else:
+                    limits = LLM_LATENCY_LIMITS[self.model][self.scenario]
+                    if (
+                        self.mlperf_log["result_first_token_99.00_percentile_latency_ns"]
+                        < limits["ttft"]
+                        and self.mlperf_log["result_time_per_output_token_99.00_percentile_ns"]
+                        < limits["tpot"]
+                    ):
+                        return True
+            else:
+                self.log.error(
+                    f"use_token_latencies flag needs to be enabled for Llama2 benchmark")
+                return False
+
+            self.log.error(
+                'Failed extra check for TTFT and TPOT. Obtained: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f. Required: TTFT 99-tile: %.4f, TPOT 99-tile: %.4f',
+                self.mlperf_log["result_first_token_99.00_percentile_latency_ns"],
+                self.mlperf_log["result_time_per_output_token_99.00_percentile_ns"],
+                limits["ttft"],
+                limits["tpot"]
+            )
+            return False
         return True

@@ -1,4 +1,4 @@
-from ..constants import MODEL_CONFIG
+from ..constants import MODEL_CONFIG, ACC_PATTERN
 
 
 class Config:
@@ -23,10 +23,13 @@ class Config:
         # TODO: Load values from 
         self.models = self.base["models"]
         self.seeds = self.base["seeds"]
+        if self.base.get("test05_seeds"):
+            self.test05_seeds = self.base["test05_seeds"]
         self.accuracy_target = self.base["accuracy-target"]
         self.accuracy_delta_perc = self.base["accuracy-delta-perc"]
         self.accuracy_upper_limit = self.base.get("accuracy-upper-limit", {})
         self.performance_sample_count = self.base["performance-sample-count"]
+        self.dataset_size = self.base["dataset-size"]
         self.latency_constraint = self.base.get("latency-constraint", {})
         self.min_queries = self.base.get("min-queries", {})
         self.required = None
@@ -97,6 +100,30 @@ class Config:
 
     def get_accuracy_upper_limit(self, model):
         return self.accuracy_upper_limit.get(model, None)
+    
+    def get_accuracy_values(self, model):
+        patterns = []
+        acc_targets = []
+        acc_types = []
+        acc_limits = []
+        up_patterns = []
+        acc_limit_check = False
+
+        target = self.get_accuracy_target(model)
+        acc_upper_limit = self.get_accuracy_upper_limit(model)
+        if acc_upper_limit is not None:
+            for i in range(0, len(acc_upper_limit), 2):
+                acc_type, acc_target = acc_upper_limit[i: i + 2]
+                acc_limits.append(acc_target)
+                up_patterns.append(ACC_PATTERN[acc_type])
+
+        for i in range(0, len(target), 2):
+            acc_type, acc_target = target[i: i + 2]
+            patterns.append(ACC_PATTERN[acc_type])
+            acc_targets.append(acc_target)
+            acc_types.append(acc_type)
+
+        return patterns, acc_targets, acc_types, acc_limits, up_patterns, acc_upper_limit
 
     def get_performance_sample_count(self, model):
         model = self.get_mlperf_model(model)
@@ -120,6 +147,12 @@ class Config:
         if model not in self.min_queries:
             raise ValueError("model not known: " + model)
         return self.min_queries[model].get(scenario)
+    
+    def get_dataset_size(self, model):
+        model = self.get_mlperf_model(model)
+        if model not in self.dataset_size:
+            raise ValueError("model not known: " + model)
+        return self.dataset_size[model]
 
     def get_delta_perc(self, model, metric):
         if model in self.accuracy_delta_perc:
@@ -154,3 +187,16 @@ class Config:
             ]
             and self.version in ["v4.1"]
         )
+    
+    def get_llm_models(self):
+        return [
+            "llama2-70b-99",
+            "llama2-70b-99.9",
+            "llama2-70b-interactive-99",
+            "llama2-70b-interactive-99.9",
+            "mixtral-8x7b",
+            "llama3.1-405b",
+            "llama3.1-8b",
+            "llama3.1-8b-edge", 
+            "deepseek-r1"
+        ]

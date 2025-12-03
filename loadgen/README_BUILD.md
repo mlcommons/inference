@@ -18,9 +18,9 @@ This will fetch the loadgen source, build and install the loadgen as a python mo
 
 Alternatively, we provide wheels for several python versions and operating system that can be installed using pip directly.
 
-    pip install mlperf-loadgen
+    pip install mlcommons-loadgen
 
-**NOTE:** Take into account that we only update the published wheels after an official release, they may not include the latest changes.
+**NOTE:** The `mlcommons-loadgen` PyPI package is automatically updated whenever the `loadgen/` folder in the `master` branch changes or when a release is published, as controlled by the workflow defined [here](https://github.com/mlcommons/inference/blob/master/.github/workflows/build_wheels.yml).
 
 ### Testing your Installation
 The following command will run a simple end-to-end demo:

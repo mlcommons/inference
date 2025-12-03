@@ -19,6 +19,9 @@ dependencies = [
   "pydantic-typer @ git+https://github.com/CentML/pydantic-typer.git@wangshangsam/preserve-full-annotated-type",
   "pympler",
   "typer",
+  "scikit-learn",
+  "tabulate",
+  "hiclass",
 ]
 dynamic = ["version"]
 
@@ -56,6 +59,9 @@ max-args = 10
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ruff.lint.flake8-type-checking]
+runtime-evaluated-base-classes = ["pydantic.BaseModel"]
 
 [tool.mypy]
 check_untyped_defs = true

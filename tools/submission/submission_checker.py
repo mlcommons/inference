@@ -1664,7 +1664,8 @@ def check_performance_dir(
     min_query_count = mlperf_log["effective_min_query_count"]
     samples_per_query = mlperf_log["effective_samples_per_query"]
     min_duration = mlperf_log["effective_min_duration_ms"]
-    enforce_max_duration = mlperf_log.get("effective_enforce_max_duration", True)
+    enforce_max_duration = mlperf_log.get(
+        "effective_enforce_max_duration", True)
     min_queries_met = mlperf_log["result_min_queries_met"]
     equal_issue_used_check = (
         mlperf_log["effective_sample_concatenate_permutation"] == True

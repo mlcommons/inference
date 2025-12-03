@@ -316,9 +316,9 @@ def create_arxiv_summarization_prompt(
     """
     instructions = (
         "You are an expert at reading and summarizing academic research papers. "
-        "Your task is to provide clear, concise, and accurate summaries of research papers. "
-        "Focus on the key contributions, methodology, results, and implications. "
-        "Structure your summary to be accessible while maintaining technical accuracy."
+        "Your task is to provide clear and comprehensive summaries. "
+        "Cover the research purpose, methods, main findings, and significance. "
+        "Be thorough but avoid unnecessary details. Ignore citations and references."
     )
 
     messages = _create_base_messages(reasoning_effort, instructions)

@@ -117,9 +117,9 @@ BACKEND_REGISTRY = {
 
             # True: enable with DS-R1 interactive scenario MTP config
             'enable_speculative_decode': False,
-            'speculative_algorithm': 'EAGLE', # EAGLE style decoding with DS-R1 MTP Head
+            'speculative_algorithm': 'EAGLE',  # EAGLE style decoding with DS-R1 MTP Head
             'speculative_num_steps': 3,
-            'speculative_topk': 1, # Linear (no draft-trees)
+            'speculative_topk': 1,  # Linear (no draft-trees)
         },
         'env_vars': {
             'CUDA_MODULE_LOADING': 'LAZY',

@@ -103,7 +103,7 @@ def configure_loadgen(scenario: str,
         config_scenario = "Server"
     else:
         raise ValueError(f"Unknown scenario: {scenario}")
-    
+
     # Adjust model name for interactive mode to use separate config
     # LoadGen will look for "deepseek-r1-interactive.Server" config section
     if scenario.lower() == "interactive":

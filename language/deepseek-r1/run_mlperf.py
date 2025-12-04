@@ -36,6 +36,8 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.root.handlers[0].setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
@@ -269,8 +271,8 @@ def main():
 
             # Update settings with dataset info
             # TODO(vir): these should be in mlperf.conf
-            settings.max_query_count = len(tokenized_prompts)
-            settings.min_query_count = len(tokenized_prompts)
+            settings.max_query_count = len(tokenized_prompts) * 6
+            settings.min_query_count = len(tokenized_prompts) * 6
             settings.use_token_latencies = True
             settings.server_coalesce_queries = True
 
@@ -335,9 +337,9 @@ def main():
 
                 # Save results
                 # FIXME(vir): output pickle is empty so dont save, okay since accuracy run anyways uses mlperf_log_accuracy.json
-                # saved_file = save_results(df_output, output_file_base, add_timestamp=True)
-                # logger.info(f"Results saved to: {saved_file}")
-                # logger.info(f"Output columns: {list(df_output.columns)}")
+                saved_file = save_results(df_output, output_file_base, add_timestamp=True)
+                logger.info(f"Results saved to: {saved_file}")
+                logger.info(f"Output columns: {list(df_output.columns)}")
 
             except Exception as e:
                 logger.error(f"Error processing results: {e}")

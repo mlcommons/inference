@@ -141,7 +141,7 @@ BACKEND_REGISTRY = {
             "temperature": 0.0,
             "top_p": 1.0,
             "seed": 42,
-            "max_running_requests": 512,  # concurrency
+            "max_running_requests": 8320,  # concurrency
             "request_timeout": None,
         },
         'env_vars': {}

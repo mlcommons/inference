@@ -119,6 +119,32 @@ BACKEND_REGISTRY = {
             'CUDA_MODULE_LOADING': 'LAZY',
             'NCCL_TREE_THRESHOLD': '0',
         }
+    },
+    'openai': {
+        'class_path': 'backends.openai_backend.OpenAIBackend',
+        'input_type': 'text',
+        'uses_chat_template': False,
+        'supports_async': True,
+        'supports_streaming': True,
+        'compatible_runners': ['eval', 'mlperf'],
+        'required_torchrun': False,
+        'config': {
+            "model": "deepseek-ai/DeepSeek-R1",
+            "model_revision": MODEL_REVISION,
+            "served_model_name": "deepseek-r1",
+            "tokenizer": "deepseek-ai/DeepSeek-R1",
+            "host": "127.0.0.1",
+            "port": 8000,
+            "api_key": None,
+            "max_tokens": MAX_OSL,
+            "random_seed": 42,
+            "temperature": 0.0,
+            "top_p": 1.0,
+            "seed": 42,
+            "max_running_requests": 512,  # concurrency
+            "request_timeout": None,
+        },
+        'env_vars': {}
     }
 }
 

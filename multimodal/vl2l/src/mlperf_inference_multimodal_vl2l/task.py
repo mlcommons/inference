@@ -53,6 +53,7 @@ class Task(ABC):
         self.dataset = load_dataset(
             dataset.repo_id,
             token=dataset.token,
+            revision=dataset.revision,
             split="+".join(dataset.split),
         )
         logger.debug(
@@ -498,7 +499,7 @@ class ShopifyGlobalCatalogue(Task):
                 "content": f"""Please analyze the product from the user prompt
 and provide the following fields in a valid JSON object:
 - category
-- brands
+- brand
 - is_secondhand
 
 You must choose only one, which is the most appropriate, correct, and specifc

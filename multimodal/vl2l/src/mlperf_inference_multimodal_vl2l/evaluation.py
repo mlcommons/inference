@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import TYPE_CHECKING
-
+from rapidfuzz import fuzz
 import numpy as np
 from datasets import load_dataset
 from hiclass.metrics import f1  # type: ignore[import-untyped]
@@ -106,23 +106,33 @@ def calculate_hierarchical_f1(data: list[tuple[str, str]]) -> float:
 
     return 0.0 if hp + hr == 0 else 2 * (hp * hr) / (hp + hr)
 
+def calculate_brand_score(data: list[tuple[str, str]]) -> float:
 
-def calculate_exact_match(generated_text: str, original_text: str) -> float:
-    """Calculates binary Exact Match (EM) score.
+    matches = []
+    for pred, src in data:
+        norm_truth = src.strip().lower()
+        norm_pred = pred.strip().lower()
+        
+        # Exact Match
+        if norm_truth == norm_pred:
+            matches.append(1)
+            continue
+            
+        # Fuzzy Match (Handles typos like "Adodas")
+        # fuzz.ratio calculates edit distance similarity (0-100)
+        score = fuzz.ratio(norm_truth, norm_pred)
+        
+        # Threshold: If > 90/100 similarity, count as correct
+        if score > 90:
+            matches.append(1)
+        else:
+            matches.append(0)
 
-    We clean the text (lowercase, strip whitespace) for a fairer comparison.
+    # Calculate the Score
+    # For 1-to-1 extraction, Accuracy = Recall = Micro F1
+    final_score = sum(matches) / len(matches)
+    return final_score
 
-    Args:
-        generated_text: Output from the VLM.
-        original_text: Ground truth information from the dataset.
-
-    Returns:
-        1 if the values match or 0 otherwise
-    """
-    gen = generated_text.strip().lower()
-    orig = original_text.strip().lower()
-
-    return 1.0 if gen == orig else 0.0
 
 
 def calculate_secondhand_f1(data: list[tuple[bool, bool]]) -> float:
@@ -197,6 +207,7 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
     category_rand_pred_src = []
     is_secondhand_pred_src = []
     is_secondhand_rand_pred_src = []
+    brand_pred_src = []
 
     for elem in model_output:
         idx = elem["qsl_idx"]
@@ -232,10 +243,13 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
         rand_is_secondhand = rng.choice([True, False], size=1).tolist()[0]
         is_secondhand_rand_pred_src.append((rand_is_secondhand,
                                             ground_truth_item["ground_truth_is_secondhand"]))
+        
+        brand_pred_src.append((pred_item.brand, ground_truth_item["ground_truth_brand"]))
 
     category_f1_score = calculate_hierarchical_f1(category_dataset_pred_src)
     hiclass_f1_score = calculate_hiclass_f1(category_dataset_pred_src)
     is_secondhand_f1_score = calculate_secondhand_f1(is_secondhand_pred_src)
+    brand_score = calculate_brand_score(brand_pred_src)
 
     rand_cat_f1_score = calculate_hierarchical_f1(category_rand_pred_src)
     rand_hiclass_f1_score = calculate_hierarchical_f1(category_rand_pred_src)
@@ -244,9 +258,10 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
 
     data = [
         ["category", category_f1_score, hiclass_f1_score,
-         rand_cat_f1_score, rand_hiclass_f1_score],
+         rand_cat_f1_score, rand_hiclass_f1_score, 0],
         ["is_secondhand", is_secondhand_f1_score, 0,
-         rand_is_seconhand_f1_score, 0],
+         rand_is_seconhand_f1_score, 0, 0],
+         ["brand", 0, 0, 0, 0, brand_score]
     ]
 
     logger.info(
@@ -256,7 +271,8 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
             headers=["Fields", "F1 Score",
                      "HiClass F1 Score",
                      "F1 Score Random Selection",
-                     "HiClass F1 Score Random Selection"],
+                     "HiClass F1 Score Random Selection",
+                     "Brand F1 Score"],
             tablefmt="fancy_grid",
         ),
     )

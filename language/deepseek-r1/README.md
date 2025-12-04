@@ -188,21 +188,21 @@ PyTorch backend uses distributed execution with `torchrun` and `run_mlperf_mpi.p
 
 ### MLPerf Command Line Options
 
-| Option         | Description                    | Default          |
-| -------------- | ------------------------------ | ---------------- |
+| Option         | Description                                | Default          |
+| -------------- | ------------------------------------------ | ---------------- |
 | `--mode`       | Scenario mode (offline/server/interactive) | `offline`        |
-| `--accuracy`   | Run accuracy test              | `False`          |
-| `--output-dir` | Output directory for results   | `mlperf_results` |
+| `--accuracy`   | Run accuracy test                          | `False`          |
+| `--output-dir` | Output directory for results               | `mlperf_results` |
 
 ### Backend Support Matrix
 
 The following table shows which backends support different evaluation and MLPerf operations:
 
-| Backend     | `run_eval.py` | `run_mlperf.py --mode=offline` | `run_mlperf.py --mode=server` |`run_mlperf.py --mode=server` |
-| ----------- | ------------- | ------------------------------ | ----------------------------- | ---------------------------- |
-| pytorch-fp8 | x             | x                              |                               |                              |
-| vllm-fp8    | x             | x                              |                               |                              |
-| sglang-fp8  | x             | x                              | x                             | x                            |
+| Backend     | `run_eval.py` | `run_mlperf.py --mode=offline` | `run_mlperf.py --mode=server` | `run_mlperf.py --mode=interactive` |
+| ----------- | ------------- | ------------------------------ | ----------------------------- | ---------------------------------- |
+| pytorch-fp8 | x             | x                              |                               |                                    |
+| vllm-fp8    | x             | x                              |                               |                                    |
+| sglang-fp8  | x             | x                              | x                             | x                                  |
 
 > **Note**: For PyTorch backend, use the `_mpi` versions with `torchrun`. For vLLM and SGLang backends, use the single-process versions without `_mpi`.
 

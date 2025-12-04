@@ -275,10 +275,11 @@ def main():
             )
 
             # Update settings with dataset info
-            # settings.max_query_count = len(tokenized_prompts)
-            # settings.min_query_count = len(tokenized_prompts)
-            # settings.use_token_latencies = True
-            # settings.server_coalesce_queries = True
+            # TODO(vir): these should be in mlperf.conf
+            settings.max_query_count = len(tokenized_prompts)
+            settings.min_query_count = len(tokenized_prompts)
+            settings.use_token_latencies = True
+            settings.server_coalesce_queries = True
 
             # Configure logging
             log_settings = lg.LogSettings()

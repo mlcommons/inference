@@ -136,13 +136,25 @@ class OpenAIBackend(BaseBackend):
                 base_url=base_url,
                 api_key=api_key,
                 timeout=timeout_config,
-                max_retries=10
+                max_retries=10,
+                http_client=httpx.Client(
+                    limits=httpx.Limits(
+                        max_connections=self.config['max_running_requests'],
+                        max_keepalive_connections=self.config['max_running_requests'] // 2
+                    )
+                )
             )
             self.async_client = AsyncOpenAI(
                 base_url=base_url,
                 api_key=api_key,
                 timeout=timeout_config,
-                max_retries=10
+                max_retries=10,
+                http_client=httpx.AsyncClient(
+                    limits=httpx.Limits(
+                        max_connections=self.config['max_running_requests'],
+                        max_keepalive_connections=self.config['max_running_requests'] // 2
+                    )
+                )
             )
             self._async_semaphore = asyncio.Semaphore(
                 self.config['max_running_requests'])

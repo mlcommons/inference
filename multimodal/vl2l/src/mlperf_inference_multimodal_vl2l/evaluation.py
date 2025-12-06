@@ -107,6 +107,7 @@ def calculate_hierarchical_f1(data: list[tuple[str, str]]) -> float:
 
     return 0.0 if hp + hr == 0 else 2 * (hp * hr) / (hp + hr)
 
+
 def calculate_brand_f1_score(data: list[tuple[str, str]]) -> float:
     """Calculate the F1 score of brand field.
 
@@ -141,7 +142,6 @@ def calculate_brand_f1_score(data: list[tuple[str, str]]) -> float:
     # Calculate the Score
     # For 1-to-1 extraction, Accuracy = Recall = Micro F1
     return sum(matches) / len(matches)
-
 
 
 def calculate_secondhand_f1(data: list[tuple[bool, bool]]) -> float:
@@ -271,7 +271,7 @@ def run_evaluation(filename: FilePath, dataset: DatasetCLI) -> None:
          rand_cat_f1_score, rand_hiclass_f1_score, 0],
         ["is_secondhand", is_secondhand_f1_score, 0,
          rand_is_seconhand_f1_score, 0, 0],
-         ["brand", 0, 0, 0, 0, brand_score],
+        ["brand", 0, 0, 0, 0, brand_score],
     ]
 
     logger.info(

@@ -13,6 +13,14 @@ The full coco dataset has images that are not compliant with MLC legal rules. In
 `python filter_coco_safe_images.py` to create a new folder with just the images that comply with license agreements  
 `python create_safe_annotations.py` to create the correct associated annotations file, needed for the mAP accuracy score calcuations.
 
+The dataset has been uploaded the MLC S3 bucket, instructions for how to pull the safe dataset to come shortly. This is what your dataset path should look like:\
+coco_safe/\
+├── annotations/\
+&nbsp;&nbsp;&nbsp;&nbsp;instances_val2017_safe.json\
+└── val2017_safe/\
+    &nbsp;&nbsp;&nbsp;&nbsp;1525 images\
+coco_safe.checksums
+
 ## How to run yolo_loadgen.py
 Examples usage:  
 Perf run  
@@ -40,3 +48,8 @@ Example output is under inference/vision/classification_and_detection/yolo_resul
 `--data` -> yaml file that contains the path to the dir of images as well as the labels  
 `--annotations` -> path to the annotations json file  
 `--output_json` -> output file  
+
+## How to get accuracy with mlperf_log_accuracy.json file produced by LoadGen using accuracy-coco.py from tools
+https://github.com/mlcommons/inference/blob/master/vision/classification_and_detection/tools/accuracy-coco.py
+
+

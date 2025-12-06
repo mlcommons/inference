@@ -49,7 +49,16 @@ Example output is under inference/vision/classification_and_detection/yolo_resul
 `--annotations` -> path to the annotations json file  
 `--output_json` -> output file  
 
-## How to get accuracy with mlperf_log_accuracy.json file produced by LoadGen using accuracy-coco.py from tools
-https://github.com/mlcommons/inference/blob/master/vision/classification_and_detection/tools/accuracy-coco.py
+## Method in which accuracy will be computed using mlperf_log_accuracy.json
+1. LoadGen runs → creates mlperf_log_accuracy.json (hex-encoded)
+2. yolo_loadgen.py calls validate_accuracy_requirement()
+3. Passes mlperf_log_accuracy.json to yolo_ultra_map.py
+4. yolo_ultra_map.py:
+   - Detects it's a MLPerf log
+   - Decodes hex data → decoded_predictions.json
+   - Evaluates with COCO tools
+   - Validates against threshold
+5. Returns PASS/FAIL
+
 
 

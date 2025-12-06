@@ -332,6 +332,9 @@ class Dataset(BaseModelWithAttributeDescriptionsFromDocstrings):
     token: str | None = None
     """The token to access the HuggingFace repository of the dataset."""
 
+    revision: str | None = None
+    """The revision of the dataset."""
+
     split: list[str] = ["train", "test"]
     """Dataset splits to use for the benchmark, e.g., "train" and "test". You can add
     multiple splits by repeating the same CLI flag multiple times, e.g.:
@@ -445,8 +448,8 @@ class ProductMetadata(BaseModelWithAttributeDescriptionsFromDocstrings):
     Each categorical level is separated by " > ".
     """
 
-    brands: list[str]
-    """The brands of the product, e.g., ["giorgio armani", "hugo boss"]."""
+    brand: str
+    """The brand of the product, e.g., "giorgio armani"."""
 
     is_secondhand: bool
     """True if the product is second-hand, False otherwise."""

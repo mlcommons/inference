@@ -124,11 +124,6 @@ def calculate_brand_f1_score(data: list[tuple[str, str]]) -> float:
         norm_truth = src.strip().lower()
         norm_pred = pred.strip().lower()
 
-        # Exact Match
-        if norm_truth == norm_pred:
-            matches.append(1)
-            continue
-
         # Fuzzy Match (Handles typos like "Adodas")
         # fuzz.ratio calculates edit distance similarity (0-100)
         score = fuzz.ratio(norm_truth, norm_pred)

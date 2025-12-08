@@ -197,8 +197,7 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         mode="before",
     )
     @classmethod
-    def parse_timedelta(cls, value: timedelta | float |
-                        str) -> timedelta | str:
+    def parse_timedelta(cls, value: timedelta | float | str) -> timedelta | str:
         """Parse timedelta from seconds (int/float/str) or ISO 8601 format."""
         if isinstance(value, timedelta):
             return value
@@ -224,12 +223,9 @@ class TestSettings(BaseModelWithAttributeDescriptionsFromDocstrings):
         settings.server_target_latency_ns = round(
             self.server_target_latency.total_seconds() * 1e9,
         )
-        settings.ttft_latency = round(
-            self.server_ttft_latency.total_seconds() * 1e9)
-        settings.tpot_latency = round(
-            self.server_tpot_latency.total_seconds() * 1e9)
-        settings.min_duration_ms = round(
-            self.min_duration.total_seconds() * 1000)
+        settings.ttft_latency = round(self.server_ttft_latency.total_seconds() * 1e9)
+        settings.tpot_latency = round(self.server_tpot_latency.total_seconds() * 1e9)
+        settings.min_duration_ms = round(self.min_duration.total_seconds() * 1000)
         settings.min_query_count = self.min_query_count
         settings.performance_sample_count_override = (
             self.performance_sample_count_override
@@ -425,8 +421,7 @@ class PositionalVllmCliFlagError(ValueError):
 class BlacklistedVllmCliFlagError(ValueError):
     """The exception raised when a blacklisted vllm CLI flag is encountered."""
 
-    BLACKLIST: ClassVar[list[str]] = [
-        "--model", "--host", "--port", "--api-key"]
+    BLACKLIST: ClassVar[list[str]] = ["--model", "--host", "--port", "--api-key"]
 
     def __init__(self, flag: str) -> None:
         """Initialize the exception."""
@@ -445,8 +440,8 @@ class ProductMetadata(BaseModelWithAttributeDescriptionsFromDocstrings):
     Each categorical level is separated by " > ".
     """
 
-    brands: list[str]
-    """The brands of the product, e.g., ["giorgio armani", "hugo boss"]."""
+    brand: str
+    """The brand of the product, e.g., "giorgio armani"."""
 
     is_secondhand: bool
     """True if the product is second-hand, False otherwise."""
@@ -479,6 +474,5 @@ class LoadedSample(BaseModelWithAttributeDescriptionsFromDocstrings):
                 == "pydantic_core._pydantic_core"
                 and message["content"].__class__.__name__ == "ValidatorIterator"
             ):
-                message["content"] = list(
-                    message["content"])  # type: ignore[arg-type]
+                message["content"] = list(message["content"])  # type: ignore[arg-type]
         return messages

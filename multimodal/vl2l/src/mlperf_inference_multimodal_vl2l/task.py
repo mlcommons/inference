@@ -107,8 +107,8 @@ class Task(ABC):
         event_loop_thread.start()
         return event_loop, event_loop_thread
 
-    @abstractmethod
     @staticmethod
+    @abstractmethod
     def formulate_loaded_sample(
         sample: dict[str, Any],
         *,

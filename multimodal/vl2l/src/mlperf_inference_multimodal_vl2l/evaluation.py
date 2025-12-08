@@ -57,7 +57,8 @@ def get_hierarchical_components(
     intersection_count = 0
 
     # Iterate through the paths simultaneously
-    for pred_cat, true_cat in zip(predicted_categories, true_categories, strict=False):
+    for pred_cat, true_cat in zip(
+            predicted_categories, true_categories, strict=False):
         if pred_cat == true_cat:
             intersection_count += 1
         else:
@@ -203,7 +204,8 @@ def calculate_hiclass_f1(
     return f1(y_true, y_pred)
 
 
-def run_evaluation(random_seed: int, filename: FilePath, dataset: DatasetCLI) -> None:
+def run_evaluation(random_seed: int, filename: FilePath,
+                   dataset: DatasetCLI) -> None:
     """Main function to run the evaluation."""
     rng = np.random.default_rng(seed=random_seed)
     with Path.open(filename) as f:
@@ -266,14 +268,16 @@ def run_evaluation(random_seed: int, filename: FilePath, dataset: DatasetCLI) ->
         )
         # random category selection
         # Uniform distribution is the default
-        rand_cat = rng.choice(ground_truth_item["potential_product_categories"])
+        rand_cat = rng.choice(
+            ground_truth_item["potential_product_categories"])
         category_rand_pred_src.append(
             (rand_cat, ground_truth_item["ground_truth_category"]),
         )
         # random is_secondhand selection
         rand_is_secondhand = rng.choice([True, False])
         is_secondhand_rand_pred_src.append(
-            (rand_is_secondhand, ground_truth_item["ground_truth_is_secondhand"]),
+            (rand_is_secondhand,
+             ground_truth_item["ground_truth_is_secondhand"]),
         )
 
     category_f1_score = calculate_hierarchical_f1(category_dataset_pred_src)
@@ -283,7 +287,8 @@ def run_evaluation(random_seed: int, filename: FilePath, dataset: DatasetCLI) ->
 
     rand_cat_f1_score = calculate_hierarchical_f1(category_rand_pred_src)
     rand_hiclass_f1_score = calculate_hiclass_f1(category_rand_pred_src)
-    rand_is_seconhand_f1_score = calculate_secondhand_f1(is_secondhand_rand_pred_src)
+    rand_is_seconhand_f1_score = calculate_secondhand_f1(
+        is_secondhand_rand_pred_src)
     rand_brand_score = calculate_brand_f1_score(
         [
             (

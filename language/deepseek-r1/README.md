@@ -23,6 +23,7 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 ```
 
 To specify a custom download directory, use the `-d` flag:
+
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
   -d /path/to/download/directory \
@@ -53,6 +54,7 @@ bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/he
 This will download the full preprocessed dataset file (`mlperf_deepseek_r1_dataset_4388_fp8_eval.pkl`) and the calibration dataset file (`mlperf_deepseek_r1_calibration_dataset_500_fp8_eval.pkl`).
 
 To specify a custom download directory, use the `-d` flag:
+
 ```bash
 bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) \
   -d /path/to/download/directory \
@@ -115,6 +117,7 @@ setup.sh
 The setup script creates a virtual environment and configures it differently based on the backend:
 
 #### All Backends
+
 - Virtual environment is **activated** after `setup.sh`
 - Activate backend-specific venv using `source .venv_[pytorch|vllm|sglang]/bin/activate`
 - All commands are to be run using the virtual environment
@@ -159,6 +162,7 @@ The reference implementation includes full support for MLPerf inference benchmar
 ### Running MLPerf Benchmarks
 
 #### Offline Scenario
+
 ```bash
 (.venv_BACKEND) $ python run_mlperf.py \
     --mode offline \
@@ -167,6 +171,7 @@ The reference implementation includes full support for MLPerf inference benchmar
 ```
 
 #### Server Scenario
+
 ```bash
 (.venv_BACKEND) $ python run_mlperf.py \
     --mode server \
@@ -205,6 +210,18 @@ The following table shows which backends support different evaluation and MLPerf
 | sglang-fp8  | x             | x                              | x                             | x                                  |
 
 > **Note**: For PyTorch backend, use the `_mpi` versions with `torchrun`. For vLLM and SGLang backends, use the single-process versions without `_mpi`.
+
+## Speculative Decoding
+
+For the DeepSeek-R1 Interactive Scenario, users can enable Speculative Decoding Optimization for the SGLANG Backend by setting the `enable_speculative_decode` flag to `True` in `language/deepseek-r1/utils/backend_registry.py`.
+
+When Enabled, SGLANG backend will run the allowed configuration as per [Inference Policies](https://github.com/mlcommons/inference_policies/blob/master/inference_rules.adoc) (appendix-speculative-decoding):
+
+| Benchmark   | Scenario    | Speculative Decoding Algorithm                             | Configuration                                            | MTP Head                                         |
+| :---        | :---        | :---                                                       | :---                                                     | :---                                             |
+| DeepSeek-r1 | Interactive | EAGLE-style decoding with deepseek-ai/deepseek-r1 MTP head | `speculative-num-steps=3`, `speculative-eagle-topk=1.0`  | https://huggingface.co/deepseek-ai/DeepSeek-R1   |
+
+> Note: ONLY Sglang backend supports speculative-decoding
 
 ## Accuracy Evaluation
 
